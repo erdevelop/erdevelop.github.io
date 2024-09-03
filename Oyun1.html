@@ -1,0 +1,130 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Uzay Gemisi Oyunu</title>
+    <style>
+        body { margin: 0; overflow: hidden; }
+        canvas { background: black; display: block; }
+    </style>
+</head>
+<body>
+    <canvas id="gameCanvas"></canvas>
+    <script>
+        const canvas = document.getElementById('gameCanvas');
+        const ctx = canvas.getContext('2d');
+        canvas.width = window.innerWidth;
+        canvas.height = window.innerHeight;
+
+        const ship = {
+            x: canvas.width / 2 - 25,
+            y: canvas.height - 60,
+            width: 50,
+            height: 50,
+            dx: 0,
+            dy: 0
+        };
+
+        const bullets = [];
+        const enemies = [];
+        const enemyRows = 5;
+        const enemyCols = 6;
+        const enemyWidth = 50;
+        const enemyHeight = 50;
+        const enemyPadding = 10;
+        const enemyOffsetTop = 30;
+        const enemyOffsetLeft = 30;
+
+        for (let r = 0; r < enemyRows; r++) {
+            for (let c = 0; c < enemyCols; c++) {
+                enemies.push({
+                    x: c * (enemyWidth + enemyPadding) + enemyOffsetLeft,
+                    y: r * (enemyHeight + enemyPadding) + enemyOffsetTop,
+                    width: enemyWidth,
+                    height: enemyHeight,
+                    alive: true
+                });
+            }
+        }
+
+        function drawShip() {
+            ctx.fillStyle = 'white';
+            ctx.fillRect(ship.x, ship.y, ship.width, ship.height);
+        }
+
+        function drawBullets() {
+            ctx.fillStyle = 'red';
+            bullets.forEach(bullet => {
+                ctx.fillRect(bullet.x, bullet.y, bullet.width, bullet.height);
+            });
+        }
+
+        function drawEnemies() {
+            ctx.fillStyle = 'green';
+            enemies.forEach(enemy => {
+                if (enemy.alive) {
+                    ctx.fillRect(enemy.x, enemy.y, enemy.width, enemy.height);
+                }
+            });
+        }
+
+        function moveShip() {
+            ship.x += ship.dx;
+            ship.y += ship.dy;
+
+            if (ship.x < 0) ship.x = 0;
+            if (ship.x + ship.width > canvas.width) ship.x = canvas.width - ship.width;
+        }
+
+        function moveBullets() {
+            bullets.forEach((bullet, index) => {
+                bullet.y -= bullet.dy;
+                if (bullet.y < 0) {
+                    bullets.splice(index, 1);
+                }
+            });
+        }
+
+        function detectCollisions() {
+            bullets.forEach((bullet, bIndex) => {
+                enemies.forEach((enemy, eIndex) => {
+                    if (enemy.alive && bullet.x < enemy.x + enemy.width && bullet.x + bullet.width > enemy.x && bullet.y < enemy.y + enemy.height && bullet.y + bullet.height > enemy.y) {
+                        enemy.alive = false;
+                        bullets.splice(bIndex, 1);
+                    }
+                });
+            });
+        }
+
+        function update() {
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+            drawShip();
+            drawBullets();
+            drawEnemies();
+            moveShip();
+            moveBullets();
+            detectCollisions();
+            requestAnimationFrame(update);
+        }
+
+        document.addEventListener('keydown', (e) => {
+            if (e.key === 'ArrowRight') ship.dx = 5;
+            if (e.key === 'ArrowLeft') ship.dx = -5;
+            if (e.key === ' ') {
+                bullets.push({
+                    x: ship.x + ship.width / 2 - 2.5,
+                    y: ship.y,
+                    width: 5,
+                    height: 10,
+                    dy: 5
+                });
+            }
+        });
+
+        document.addEventListener('keyup', (e) => {
+            if (e.key === 'ArrowRight' || e.key === 'ArrowLeft') ship.dx = 0;
+        });
+
+        update();
+    </script>
+</body>
+</html>
