@@ -3,13 +3,28 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Three.js Shapes</title>
+    <title>Three.js Interactive Shapes</title>
     <style>
         body { margin: 0; }
         canvas { display: block; }
+        #shapeName {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            font-size: 32px;
+            font-family: Arial, sans-serif;
+            color: #000;
+            background-color: rgba(255, 255, 255, 0.8);
+            padding: 10px;
+            border-radius: 5px;
+            display: none;
+            z-index: 1000; /* Yazı div'inin ön planda olmasını sağlar */
+        }
     </style>
 </head>
 <body>
+    <div id="shapeName"></div>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
     <script>
         // Sahne oluşturun
@@ -24,114 +39,75 @@
         renderer.setSize(window.innerWidth, window.innerHeight);
         document.body.appendChild(renderer.domElement);
 
-        // Küp oluşturun
-        const geometryCube = new THREE.BoxGeometry();
-        const materialCube = new THREE.MeshBasicMaterial({ color: 0x00ff00 });
-        const cube = new THREE.Mesh(geometryCube, materialCube);
-        cube.position.x = -6;
-        scene.add(cube);
+        // Kenar çizgisi materyali
+        const wireframeMaterial = new THREE.MeshBasicMaterial({ color: 0x000000, wireframe: true });
 
-        // Silindir oluşturun
-        const geometryCylinder = new THREE.CylinderGeometry(1, 1, 2, 32);
-        const materialCylinder = new THREE.MeshBasicMaterial({ color: 0xff0000 });
-        const cylinder = new THREE.Mesh(geometryCylinder, materialCylinder);
-        cylinder.position.x = -3;
-        scene.add(cylinder);
+        // Şekil oluşturma fonksiyonu
+        function createShape(geometry, color, position, name) {
+            const material = new THREE.MeshBasicMaterial({ color: color });
+            const shape = new THREE.Mesh(geometry, material);
+            const wireframe = new THREE.Mesh(geometry, wireframeMaterial);
+            shape.add(wireframe);
+            shape.position.set(position.x, position.y, position.z);
+            shape.rotationSpeed = {
+                x: Math.random() * 0.02 - 0.01,
+                y: Math.random() * 0.02 - 0.01
+            };
+            shape.name = name;
+            scene.add(shape);
+            return shape;
+        }
 
-        // Koni oluşturun
-        const geometryCone = new THREE.ConeGeometry(1, 2, 32);
-        const materialCone = new THREE.MeshBasicMaterial({ color: 0x0000ff });
-        const cone = new THREE.Mesh(geometryCone, materialCone);
-        cone.position.x = 0;
-        scene.add(cone);
+        // Şekilleri oluşturun
+        const shapes = [
+            createShape(new THREE.BoxGeometry(), 0x00ff00, { x: -6, y: 0, z: 0 }, 'Küp'),
+            createShape(new THREE.CylinderGeometry(1, 1, 2, 32), 0xff0000, { x: -3, y: 0, z: 0 }, 'Silindir'),
+            createShape(new THREE.ConeGeometry(1, 2, 32), 0x0000ff, { x: 0, y: 0, z: 0 }, 'Koni'),
+            createShape(new THREE.CylinderGeometry(1, 1, 2, 3), 0xffff00, { x: 3, y: 0, z: 0 }, 'Üçgen Prizma'),
+            createShape(new THREE.BoxGeometry(1, 2, 1), 0xff00ff, { x: 6, y: 0, z: 0 }, 'Kare Prizma'),
+            createShape(new THREE.ConeGeometry(1, 2, 3), 0x00ffff, { x: -6, y: -3, z: 0 }, 'Üçgen Piramit'),
+            createShape(new THREE.CylinderGeometry(0, 1, 2, 4), 0xffa500, { x: -3, y: -3, z: 0 }, 'Dikdörtgen Piramit'),
+            createShape(new THREE.CylinderGeometry(0, 1, 2, 5), 0x8a2be2, { x: 0, y: -3, z: 0 }, 'Beşgen Piramit'),
+            createShape(new THREE.CylinderGeometry(0, 1, 2, 6), 0xdeb887, { x: 3, y: -3, z: 0 }, 'Altıgen Piramit'),
+            createShape(new THREE.CylinderGeometry(1, 1, 2, 5), 0x5f9ea0, { x: 6, y: -3, z: 0 }, 'Beşgen Prizma'),
+            createShape(new THREE.CylinderGeometry(1, 1, 2, 6), 0xd2691e, { x: -6, y: -6, z: 0 }, 'Altıgen Prizma')
+        ];
 
-        // Üçgen prizma oluşturun
-        const geometryTriPrism = new THREE.CylinderGeometry(1, 1, 2, 3);
-        const materialTriPrism = new THREE.MeshBasicMaterial({ color: 0xffff00 });
-        const triPrism = new THREE.Mesh(geometryTriPrism, materialTriPrism);
-        triPrism.position.x = 3;
-        scene.add(triPrism);
+        // Raycaster ve mouse oluşturun
+        const raycaster = new THREE.Raycaster();
+        const mouse = new THREE.Vector2();
 
-        // Kare prizma oluşturun
-        const geometrySquarePrism = new THREE.BoxGeometry(1, 2, 1);
-        const materialSquarePrism = new THREE.MeshBasicMaterial({ color: 0xff00ff });
-        const squarePrism = new THREE.Mesh(geometrySquarePrism, materialSquarePrism);
-        squarePrism.position.x = 6;
-        scene.add(squarePrism);
+        // Mouse hareketi ve tıklama olaylarını dinleyin
+        window.addEventListener('mousemove', onMouseMove, false);
+        window.addEventListener('click', onClick, false);
 
-        // Üçgen piramit oluşturun
-        const geometryTriPyramid = new THREE.ConeGeometry(1, 2, 3);
-        const materialTriPyramid = new THREE.MeshBasicMaterial({ color: 0x00ffff });
-        const triPyramid = new THREE.Mesh(geometryTriPyramid, materialTriPyramid);
-        triPyramid.position.x = -6;
-        triPyramid.position.y = -3;
-        scene.add(triPyramid);
+        function onMouseMove(event) {
+            mouse.x = (event.clientX / window.innerWidth) * 2 - 1;
+            mouse.y = -(event.clientY / window.innerHeight) * 2 + 1;
+        }
 
-        // Dikdörtgen piramit oluşturun
-        const geometryRectPyramid = new THREE.CylinderGeometry(0, 1, 2, 4);
-        const materialRectPyramid = new THREE.MeshBasicMaterial({ color: 0xffa500 });
-        const rectPyramid = new THREE.Mesh(geometryRectPyramid, materialRectPyramid);
-        rectPyramid.position.x = -3;
-        rectPyramid.position.y = -3;
-        scene.add(rectPyramid);
-
-        // Beşgen piramit oluşturun
-        const geometryPentPyramid = new THREE.CylinderGeometry(0, 1, 2, 5);
-        const materialPentPyramid = new THREE.MeshBasicMaterial({ color: 0x8a2be2 });
-        const pentPyramid = new THREE.Mesh(geometryPentPyramid, materialPentPyramid);
-        pentPyramid.position.x = 0;
-        pentPyramid.position.y = -3;
-        scene.add(pentPyramid);
-
-        // Altıgen piramit oluşturun
-        const geometryHexPyramid = new THREE.CylinderGeometry(0, 1, 2, 6);
-        const materialHexPyramid = new THREE.MeshBasicMaterial({ color: 0xdeb887 });
-        const hexPyramid = new THREE.Mesh(geometryHexPyramid, materialHexPyramid);
-        hexPyramid.position.x = 3;
-        hexPyramid.position.y = -3;
-        scene.add(hexPyramid);
-
-        // Beşgen prizma oluşturun
-        const geometryPentPrism = new THREE.CylinderGeometry(1, 1, 2, 5);
-        const materialPentPrism = new THREE.MeshBasicMaterial({ color: 0x5f9ea0 });
-        const pentPrism = new THREE.Mesh(geometryPentPrism, materialPentPrism);
-        pentPrism.position.x = 6;
-        pentPrism.position.y = -3;
-        scene.add(pentPrism);
-
-        // Altıgen prizma oluşturun
-        const geometryHexPrism = new THREE.CylinderGeometry(1, 1, 2, 6);
-        const materialHexPrism = new THREE.MeshBasicMaterial({ color: 0xd2691e });
-        const hexPrism = new THREE.Mesh(geometryHexPrism, materialHexPrism);
-        hexPrism.position.x = -6;
-        hexPrism.position.y = -6;
-        scene.add(hexPrism);
+        function onClick() {
+            raycaster.setFromCamera(mouse, camera);
+            const intersects = raycaster.intersectObjects(scene.children, true);
+            if (intersects.length > 0) {
+                const intersectedObject = intersects[0].object;
+                const shapeNameDiv = document.getElementById('shapeName');
+                shapeNameDiv.innerText = intersectedObject.parent.name;
+                shapeNameDiv.style.display = 'block';
+                setTimeout(() => {
+                    shapeNameDiv.style.display = 'none';
+                }, 3000);
+            }
+        }
 
         // Animasyon fonksiyonu
         function animate() {
             requestAnimationFrame(animate);
-            cube.rotation.x += 0.01;
-            cube.rotation.y += 0.01;
-            cylinder.rotation.x += 0.01;
-            cylinder.rotation.y += 0.01;
-            cone.rotation.x += 0.01;
-            cone.rotation.y += 0.01;
-            triPrism.rotation.x += 0.01;
-            triPrism.rotation.y += 0.01;
-            squarePrism.rotation.x += 0.01;
-            squarePrism.rotation.y += 0.01;
-            triPyramid.rotation.x += 0.01;
-            triPyramid.rotation.y += 0.01;
-            rectPyramid.rotation.x += 0.01;
-            rectPyramid.rotation.y += 0.01;
-            pentPyramid.rotation.x += 0.01;
-            pentPyramid.rotation.y += 0.01;
-            hexPyramid.rotation.x += 0.01;
-            hexPyramid.rotation.y += 0.01;
-            pentPrism.rotation.x += 0.01;
-            pentPrism.rotation.y += 0.01;
-            hexPrism.rotation.x += 0.01;
-            hexPrism.rotation.y += 0.01;
+            shapes.forEach(shape => {
+                shape.rotation.x += shape.rotationSpeed.x;
+                shape.rotation.y += shape.rotationSpeed.y;
+            });
+            raycaster.setFromCamera(mouse, camera);
             renderer.render(scene, camera);
         }
         animate();
