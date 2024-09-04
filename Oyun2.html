@@ -1,0 +1,99 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Basit Oyun</title>
+    <style>
+        body { margin: 0; overflow: hidden; }
+        canvas { display: block; }
+        #score { position: absolute; top: 10px; left: 10px; color: white; font-size: 20px; }
+    </style>
+</head>
+<body>
+    <div id="score">Puan: 0</div>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+    <script>
+        let scene, camera, renderer, cube, score = 0;
+        const objects = [];
+
+        function init() {
+            scene = new THREE.Scene();
+            camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 1000);
+            renderer = new THREE.WebGLRenderer();
+            renderer.setSize(window.innerWidth, window.innerHeight);
+            document.body.appendChild(renderer.domElement);
+
+            const geometry = new THREE.BoxGeometry();
+            const material = new THREE.MeshBasicMaterial({ color: 0x00ff00 });
+            cube = new THREE.Mesh(geometry, material);
+            scene.add(cube);
+
+            camera.position.z = 5;
+
+            document.addEventListener('keydown', onDocumentKeyDown, false);
+            document.addEventListener('touchstart', onDocumentTouchStart, false);
+            document.addEventListener('touchmove', onDocumentTouchMove, false);
+
+            animate();
+        }
+
+        function onDocumentKeyDown(event) {
+            switch (event.keyCode) {
+                case 37: // left arrow
+                    cube.position.x -= 0.1;
+                    break;
+                case 39: // right arrow
+                    cube.position.x += 0.1;
+                    break;
+            }
+        }
+
+        function onDocumentTouchStart(event) {
+            if (event.touches.length == 1) {
+                event.preventDefault();
+                const touch = event.touches[0];
+                cube.userData.touchX = touch.pageX;
+            }
+        }
+
+        function onDocumentTouchMove(event) {
+            if (event.touches.length == 1) {
+                event.preventDefault();
+                const touch = event.touches[0];
+                const deltaX = touch.pageX - cube.userData.touchX;
+                cube.position.x += deltaX * 0.01;
+                cube.userData.touchX = touch.pageX;
+            }
+        }
+
+        function animate() {
+            requestAnimationFrame(animate);
+
+            if (Math.random() < 0.02) {
+                const geometry = Math.random() < 0.5 ? new THREE.SphereGeometry(0.1, 32, 32) : new THREE.BoxGeometry(0.2, 0.2, 0.2);
+                const material = new THREE.MeshBasicMaterial({ color: Math.random() * 0xffffff });
+                const object = new THREE.Mesh(geometry, material);
+                object.position.x = (Math.random() - 0.5) * 10;
+                object.position.y = 5;
+                scene.add(object);
+                objects.push(object);
+            }
+
+            objects.forEach((object, index) => {
+                object.position.y -= 0.05;
+                if (object.position.y < -5) {
+                    scene.remove(object);
+                    objects.splice(index, 1);
+                    score += 10;
+                    document.getElementById('score').innerText = `Puan: ${score}`;
+                }
+            });
+
+            renderer.render(scene, camera);
+        }
+
+        init();
+    </script>
+</body>
+</html>
