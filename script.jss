@@ -7,23 +7,27 @@ renderer.setSize(window.innerWidth, window.innerHeight);
 renderer.setPixelRatio(window.devicePixelRatio);
 camera.position.setZ(30);
 
-const particles = new THREE.BufferGeometry();
-const particleCount = 1000;
-const posArray = new Float32Array(particleCount * 3);
+// Particles
+const particlesGeometry = new THREE.BufferGeometry();
+const particlesCount = 1000;
+const positions = new Float32Array(particlesCount * 3);
 
-for (let i = 0; i < particleCount * 3; i++) {
-    posArray[i] = (Math.random() - 0.5) * 100;
+for (let i = 0; i < particlesCount * 3; i++) {
+    positions[i] = (Math.random() - 0.5) * 100;
 }
 
-particles.setAttribute('position', new THREE.BufferAttribute(posArray, 3));
+particlesGeometry.setAttribute('position', new THREE.BufferAttribute(positions, 3));
 
-const particleMaterial = new THREE.PointsMaterial({ color: 0xffffff });
-const particleMesh = new THREE.Points(particles, particleMaterial);
-scene.add(particleMesh);
+const particlesMaterial = new THREE.PointsMaterial({
+    color: 0xffffff,
+    size: 0.2,
+});
+const particles = new THREE.Points(particlesGeometry, particlesMaterial);
+scene.add(particles);
 
 function animate() {
     requestAnimationFrame(animate);
-    particleMesh.rotation.y += 0.002;
+    particles.rotation.y += 0.002;
     renderer.render(scene, camera);
 }
 animate();
