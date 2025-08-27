@@ -1,0 +1,302 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>Planlama Tahtası — Tam Özellikli</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <style>
+    :root{--bg:#0f172a}
+    body{background:var(--bg);}
+    .board-wrap{height:78vh;background:linear-gradient(180deg,#0b1220 0%, #0f172a 100%);border-radius:12px;box-shadow:0 10px 30px rgba(2,6,23,.6);overflow:hidden}
+    .node{width:260px;min-height:100px;border-radius:12px;box-shadow:0 6px 18px rgba(2,6,23,.45);position:absolute;transform-origin:0 0}
+    .handle{cursor:move}
+    .guide-line{position:absolute;background:rgba(96,165,250,.85);pointer-events:none;z-index:50}
+    .guide-line.h{height:2px;left:0;right:0}
+    .guide-line.v{width:2px;top:0;bottom:0}
+    svg.edges{position:absolute;left:0;top:0;width:100%;height:100%;overflow:visible;pointer-events:none}
+    svg.edges path{cursor:pointer}
+    .selected-edge{stroke:#f97316 !important}
+    .mini{font-size:11px}
+    .panel{background:rgba(255,255,255,.04);backdrop-filter:blur(6px)}
+    input[type="color"]{height:28px;padding:0;border:none}
+  </style>
+</head>
+<body class="p-6 text-slate-100">
+  <div class="max-w-7xl mx-auto">
+    <header class="flex items-center gap-3 mb-4">
+      <h1 class="text-xl font-semibold">🧩 Planlama Tahtası — Tam</h1>
+      <input id="newTitle" class="px-3 py-2 rounded bg-white/5 text-white placeholder:text-white/60" placeholder="Yeni kutu başlığı" />
+      <select id="presetColor" class="px-2 py-2 rounded bg-white/5">
+        <option value="#f97316">Proje (Turuncu)</option>
+        <option value="#10b981">İş (Yeşil)</option>
+        <option value="#60a5fa">Dil (Mavi)</option>
+        <option value="#f43f5e">Alışveriş (Kırmızı)</option>
+      </select>
+      <button id="addBtn" class="ml-2 bg-indigo-600 px-4 py-2 rounded">Kutu Ekle</button>
+
+      <div class="ml-auto flex items-center gap-2">
+        <button id="connectToggle" class="bg-emerald-600 px-3 py-2 rounded">Bağla Modu: Kapalı</button>
+        <button id="edgeDeleteBtn" class="bg-red-600 px-3 py-2 rounded">Seçileni Sil</button>
+        <button id="exportBtn" class="bg-gray-700 px-3 py-2 rounded">JSON Dışa Aktar</button>
+        <button id="importBtn" class="bg-gray-700 px-3 py-2 rounded">JSON İçe Al</button>
+        <button id="resetBtn" class="bg-rose-600 px-3 py-2 rounded">Sıfırla</button>
+      </div>
+    </header>
+
+    <div class="board-wrap relative panel" id="wrap">
+      <svg class="edges" id="edgeSvg"></svg>
+      <div id="guideX" class="guide-line h hidden"></div>
+      <div id="guideY" class="guide-line v hidden"></div>
+      <div id="board" style="position:absolute;inset:0;touch-action:none"></div>
+    </div>
+
+    <section class="mt-4 grid grid-cols-1 md:grid-cols-3 gap-3">
+      <div class="panel p-3 rounded"> <h3 class="font-semibold">Seçili Kenar</h3>
+        <div class="mt-2 flex flex-col gap-2">
+          <label class="text-xs">Renk <input id="selEdgeColor" type="color" /></label>
+          <label class="text-xs">Kalınlık <input id="selEdgeWidth" type="range" min="1" max="10" value="2" /></label>
+          <div class="flex gap-2">
+            <button id="applyEdgeStyle" class="bg-indigo-600 px-3 py-1 rounded">Uygula</button>
+            <button id="clearSelEdge" class="bg-gray-600 px-3 py-1 rounded">Seçimi Kaldır</button>
+          </div>
+        </div>
+      </div>
+
+      <div class="panel p-3 rounded"> <h3 class="font-semibold">İpuçları</h3>
+        <ul class="text-sm mt-2 list-disc list-inside text-white/70">
+          <li>Başlığı çift tıkla — düzenle.</li>
+          <li>Başlığı sürükle — kutuyu taşı.</li>
+          <li>Boş alanda sürükle — pan (kaydırma).</li>
+          <li>Mouse tekerleği — zoom (odak noktasına göre).</li>
+          <li>Bağla Modu: aç → bir kutu seç → diğerine tıkla.</li>
+          <li>Kutuda renk, etiket ve tarih ekleyebilirsin.</li>
+        </ul>
+      </div>
+
+      <div class="panel p-3 rounded"> <h3 class="font-semibold">İşlemler</h3>
+        <div class="mt-2 flex flex-col gap-2">
+          <button id="zoomIn" class="bg-white/5 px-3 py-2 rounded">Zoom +</button>
+          <button id="zoomOut" class="bg-white/5 px-3 py-2 rounded">Zoom -</button>
+          <button id="fitBtn" class="bg-white/5 px-3 py-2 rounded">Hepsini Göster</button>
+        </div>
+      </div>
+    </section>
+  </div>
+
+  <!-- Node Template -->
+  <template id="nodeTpl">
+    <div class="node bg-white text-slate-900" data-id="">
+      <div class="handle px-3 py-2 flex items-center justify-between bg-white/80 rounded-t-xl border-b">
+        <div class="flex items-center gap-2">
+          <div class="dot w-3 h-3 rounded-full" style="background:#60a5fa"></div>
+          <div class="title text-sm font-semibold truncate">Yeni Kutu</div>
+        </div>
+        <div class="flex items-center gap-2">
+          <button class="mini connectBtn bg-emerald-500 text-white px-2 py-1 rounded">Bağla</button>
+          <button class="mini delBtn bg-rose-500 text-white px-2 py-1 rounded">Sil</button>
+        </div>
+      </div>
+      <div class="p-3 text-sm">
+        <textarea class="content w-full p-2 border rounded" rows="3" placeholder="Detay..."></textarea>
+        <div class="mt-2 flex gap-2 items-center">
+          <input type="color" class="colorPick" title="Renk" />
+          <input class="tagInp px-2 py-1 rounded bg-white/5" placeholder="Etiket (virgülle ayır)" />
+          <input type="datetime-local" class="dtInp rounded bg-white/5 px-2 py-1" />
+        </div>
+      </div>
+      <div class="px-3 pb-3 text-[11px] text-slate-400">ID: <span class="nid"></span></div>
+    </div>
+  </template>
+
+  <script>
+    // --- State & Storage ---
+    const LS = 'full-board-v1';
+    let state = { nodes: [], edges: [] };
+    let scale = 1, panX = 0, panY = 0;
+    let connectMode = false, connectFrom = null; // connection in-progress
+    let selectedEdgeId = null;
+
+    const wrap = document.getElementById('wrap');
+    const board = document.getElementById('board');
+    const svg = document.getElementById('edgeSvg');
+    const guideX = document.getElementById('guideX');
+    const guideY = document.getElementById('guideY');
+
+    // Helpers
+    const uid = ()=>Math.random().toString(36).slice(2,9);
+    const clamp = (v,a,b)=>Math.max(a,Math.min(b,v));
+    function save(){ localStorage.setItem(LS, JSON.stringify(state)); }
+    function load(){ try{ state = JSON.parse(localStorage.getItem(LS)) || state; }catch(e){} }
+
+    // Transform helpers
+    function applyTransform(){ board.style.transform = `translate(${panX}px,${panY}px) scale(${scale})`; svg.style.transform = `translate(${panX}px,${panY}px) scale(${scale})`; }
+
+    // --- Node creation / rendering ---
+    function createNodeObj({id,title,x,y,w=260,h=140,color='#60a5fa',tags=[],content='',datetime=null}){
+      return { id, title, x, y, w, h, color, tags, content, datetime };
+    }
+
+    function createNodeEl(node){
+      const tpl = document.getElementById('nodeTpl').content.firstElementChild.cloneNode(true);
+      tpl.dataset.id = node.id; tpl.style.left = node.x + 'px'; tpl.style.top = node.y + 'px'; tpl.style.width = node.w + 'px';
+      tpl.querySelector('.title').textContent = node.title; tpl.querySelector('.nid').textContent = node.id;
+      tpl.querySelector('.content').value = node.content || '';
+      tpl.querySelector('.colorPick').value = node.color || '#60a5fa';
+      tpl.querySelector('.dot').style.background = node.color || '#60a5fa';
+      tpl.querySelector('.tagInp').value = (node.tags||[]).join(',');
+      tpl.querySelector('.dtInp').value = node.datetime || '';
+
+      // delete
+      tpl.querySelector('.delBtn').addEventListener('click', (e)=>{ e.stopPropagation(); removeNode(node.id); });
+      // connect small button
+      tpl.querySelector('.connectBtn').addEventListener('click', (e)=>{ e.stopPropagation(); startConnect(node.id); });
+      // title dblclick
+      tpl.querySelector('.title').addEventListener('dblclick', (e)=>{
+        const nv = prompt('Başlığı değiştir:', node.title);
+        if(nv!==null){ node.title = nv; tpl.querySelector('.title').textContent = nv; save(); drawEdges(); }
+      });
+      // content
+      tpl.querySelector('.content').addEventListener('input', (e)=>{ node.content = e.target.value; save(); });
+      // color
+      tpl.querySelector('.colorPick').addEventListener('input', (e)=>{ node.color = e.target.value; tpl.querySelector('.dot').style.background = e.target.value; save(); });
+      // tags
+      tpl.querySelector('.tagInp').addEventListener('change', (e)=>{ node.tags = e.target.value.split(',').map(s=>s.trim()).filter(Boolean); save(); });
+      // datetime
+      tpl.querySelector('.dtInp').addEventListener('change', (e)=>{ node.datetime = e.target.value; save(); });
+
+      makeDraggable(tpl);
+      return tpl;
+    }
+
+    function addNode(title, x=60, y=60, color='#60a5fa'){
+      const id = uid();
+      const obj = createNodeObj({id, title, x, y, color});
+      state.nodes.push(obj); save(); render();
+      return obj;
+    }
+
+    function removeNode(id){ state.nodes = state.nodes.filter(n=>n.id!==id); state.edges = state.edges.filter(e=> e.from!==id && e.to!==id); save(); render(); }
+
+    function render(){ board.innerHTML = ''; // clear
+      state.nodes.forEach(n=> board.appendChild(createNodeEl(n)) );
+      drawEdges(); applyTransform(); }
+
+    // --- Dragging, snapping & guides ---
+    const SNAP = 10; // pixels
+    function findSnap(el, nx, ny){
+      const bw = board.getBoundingClientRect();
+      const r = el.getBoundingClientRect(); const w = r.width, h = r.height;
+      let x = nx, y = ny; let gx=null, gy=null; let bestX=SNAP+1, bestY=SNAP+1;
+      const others = Array.from(board.querySelectorAll('.node')).filter(o=>o!==el);
+      const ourXs = [nx, nx+w/2, nx+w]; const ourYs = [ny, ny+h/2, ny+h];
+      others.forEach(o=>{
+        const or = o.getBoundingClientRect(); const ox = or.left - bw.left, oy = or.top - bw.top, ow=or.width, oh=or.height;
+        const linesX = [ox, ox+ow/2, ox+ow]; const linesY = [oy, oy+oh/2, oy+oh];
+        linesX.forEach(L=>{ ourXs.forEach((OX)=>{ const d=Math.abs(OX-L); if(d<bestX && d<=SNAP){ bestX=d; const delta=L-OX; x = nx + delta; gx=L; } }); });
+        linesY.forEach(L=>{ ourYs.forEach((OY)=>{ const d=Math.abs(OY-L); if(d<bestY && d<=SNAP){ bestY=d; const delta=L-OY; y = ny + delta; gy=L; } }); });
+      });
+      if(gy!==null) showGuideX(gy); else hideGuideX();
+      if(gx!==null) showGuideY(gx); else hideGuideY();
+      if(gx===null) x = Math.round(x/10)*10; if(gy===null) y = Math.round(y/10)*10;
+      return {x,y};
+    }
+
+    function showGuideX(y){ guideX.classList.remove('hidden'); guideX.style.top = y + 'px'; }
+    function showGuideY(x){ guideY.classList.remove('hidden'); guideY.style.left = x + 'px'; }
+    function hideGuideX(){ guideX.classList.add('hidden'); }
+    function hideGuideY(){ guideY.classList.add('hidden'); }
+    function hideGuides(){ hideGuideX(); hideGuideY(); }
+
+    function makeDraggable(el){
+      const handle = el.querySelector('.handle');
+      let dragging=false, sx=0, sy=0, startX=0, startY=0, nodeObj=null;
+      handle.addEventListener('mousedown', (ev)=>{
+        ev.preventDefault(); ev.stopPropagation(); dragging=true; sx=ev.clientX; sy=ev.clientY; nodeObj = state.nodes.find(n=>n.id===el.dataset.id);
+        startX = nodeObj.x; startY = nodeObj.y; document.addEventListener('mousemove', onMove); document.addEventListener('mouseup', onUp);
+      });
+      function onMove(ev){ if(!dragging) return; let nx = startX + (ev.clientX - sx)/scale; let ny = startY + (ev.clientY - sy)/scale; const snapped = findSnap(el, nx, ny); nodeObj.x = snapped.x; nodeObj.y = snapped.y; el.style.left = nodeObj.x + 'px'; el.style.top = nodeObj.y + 'px'; drawEdges(); }
+      function onUp(){ if(!dragging) return; dragging=false; hideGuides(); save(); document.removeEventListener('mousemove', onMove); document.removeEventListener('mouseup', onUp); }
+    }
+
+    // --- Pan & Zoom ---
+    let panning=false, psx=0, psy=0, startPanX=0, startPanY=0;
+    board.addEventListener('mousedown', (e)=>{ // start pan if click background (not node)
+      if(e.target.closest('.node')) return;
+      panning=true; psx=e.clientX; psy=e.clientY; startPanX = panX; startPanY = panY; document.addEventListener('mousemove', onPanMove); document.addEventListener('mouseup', onPanUp);
+    });
+    function onPanMove(e){ if(!panning) return; panX = startPanX + (e.clientX - psx); panY = startPanY + (e.clientY - psy); applyTransform(); }
+    function onPanUp(){ panning=false; save(); document.removeEventListener('mousemove', onPanMove); document.removeEventListener('mouseup', onPanUp); }
+
+    // wheel zoom (cursor-centered)
+    wrap.addEventListener('wheel', (e)=>{
+      if(e.ctrlKey) return; // allow ctrl+wheel default
+      e.preventDefault(); const rect = wrap.getBoundingClientRect(); const mx = e.clientX - rect.left, my = e.clientY - rect.top; const prevScale = scale; const delta = -e.deltaY; const zoomFactor = Math.exp(delta*0.0012); scale = clamp(scale * zoomFactor, 0.3, 3);
+      // maintain cursor focus
+      panX = mx - (mx - panX) * (scale/prevScale);
+      panY = my - (my - panY) * (scale/prevScale);
+      applyTransform(); save();
+    }, { passive:false });
+
+    // zoom buttons
+    document.getElementById('zoomIn').addEventListener('click', ()=>{ scale=clamp(scale*1.12,0.3,3); applyTransform(); save(); });
+    document.getElementById('zoomOut').addEventListener('click', ()=>{ scale=clamp(scale/1.12,0.3,3); applyTransform(); save(); });
+
+    // fit (simple bounding box)
+    document.getElementById('fitBtn').addEventListener('click', ()=>{
+      if(state.nodes.length===0) return; const W = wrap.clientWidth, H = wrap.clientHeight; let minX=1e9,minY=1e9,maxX=0,maxY=0; state.nodes.forEach(n=>{ minX=Math.min(minX,n.x); minY=Math.min(minY,n.y); maxX=Math.max(maxX,n.x+n.w); maxY=Math.max(maxY,n.y+n.h); }); const bw = maxX-minX, bh = maxY-minY; const s = Math.min(W/bw, H/bh, 1); scale = s*0.9; panX = (W - bw*scale)/2 - minX*scale; panY = (H - bh*scale)/2 - minY*scale; applyTransform(); save(); });
+
+    // --- Edges (Bezier) ---
+    function addEdge(from,to,color='#6366f1',width=2){ if(from===to) return; if(state.edges.some(e=> e.from===from && e.to===to )) return; state.edges.push({ id: uid(), from, to, color, width }); save(); drawEdges(); }
+    function removeEdge(id){ state.edges = state.edges.filter(e=> e.id!==id); if(selectedEdgeId===id) selectedEdgeId=null; save(); drawEdges(); }
+
+    function drawEdges(){ svg.innerHTML = ''; injectDefs(); const B = board.getBoundingClientRect(); state.edges.forEach(ed=>{ const a = state.nodes.find(n=>n.id===ed.from); const b = state.nodes.find(n=>n.id===ed.to); if(!a || !b) return; const ar = { x: a.x + a.w, y: a.y + a.h/2 }; const br = { x: b.x, y: b.y + b.h/2 }; const dx = Math.max(60, Math.abs(br.x - ar.x)/2); const p = `M ${ar.x},${ar.y} C ${ar.x+dx},${ar.y} ${br.x-dx},${br.y} ${br.x},${br.y}`; const path = document.createElementNS('http://www.w3.org/2000/svg','path'); path.setAttribute('d', p); path.setAttribute('fill','none'); path.setAttribute('stroke', ed.color || '#6366f1'); path.setAttribute('stroke-width', ed.width || 2); path.dataset.id = ed.id; path.style.pointerEvents = 'auto'; if(ed.id===selectedEdgeId) path.classList.add('selected-edge'); svg.appendChild(path);
+        // edge click
+        path.addEventListener('click', (ev)=>{ ev.stopPropagation(); selectEdge(ed.id); });
+      }); }
+
+    function injectDefs(){ if(svg.querySelector('defs')) return; const defs = document.createElementNS('http://www.w3.org/2000/svg','defs'); const marker = document.createElementNS('http://www.w3.org/2000/svg','marker'); marker.setAttribute('id','arrow'); marker.setAttribute('markerWidth','10'); marker.setAttribute('markerHeight','10'); marker.setAttribute('refX','10'); marker.setAttribute('refY','5'); marker.setAttribute('orient','auto'); const arrow = document.createElementNS('http://www.w3.org/2000/svg','path'); arrow.setAttribute('d','M0,0 L10,5 L0,10 Z'); arrow.setAttribute('fill','#6366f1'); marker.appendChild(arrow); defs.appendChild(marker); svg.appendChild(defs); svg.setAttribute('marker-end','url(#arrow)'); }
+
+    // select edge
+    function selectEdge(id){ selectedEdgeId = id; const ed = state.edges.find(e=>e.id===id); if(!ed) return; document.getElementById('selEdgeColor').value = ed.color || '#6366f1'; document.getElementById('selEdgeWidth').value = ed.width || 2; drawEdges(); }
+    // apply style
+    document.getElementById('applyEdgeStyle').addEventListener('click', ()=>{
+      if(!selectedEdgeId) return; const ed = state.edges.find(e=>e.id===selectedEdgeId); ed.color = document.getElementById('selEdgeColor').value; ed.width = +document.getElementById('selEdgeWidth').value; save(); drawEdges(); });
+    document.getElementById('clearSelEdge').addEventListener('click', ()=>{ selectedEdgeId=null; drawEdges(); });
+    document.getElementById('edgeDeleteBtn').addEventListener('click', ()=>{ if(selectedEdgeId) removeEdge(selectedEdgeId); });
+
+    // --- Connect mode ---
+    document.getElementById('connectToggle').addEventListener('click', ()=>{ connectMode = !connectMode; updateConnectBtn(); });
+    function updateConnectBtn(){ const b = document.getElementById('connectToggle'); b.textContent = 'Bağla Modu: ' + (connectMode? 'Açık' : 'Kapalı'); b.classList.toggle('bg-emerald-600', connectMode); b.classList.toggle('bg-gray-700', !connectMode); }
+    function startConnect(id){ if(!connectMode){ connectMode = true; updateConnectBtn(); } connectFrom = id; highlightNode(id); }
+
+    function highlightNode(id){ document.querySelectorAll('.node').forEach(n=> n.classList.toggle('ring-4', n.dataset.id===id)); }
+
+    // click on board nodes to finish connect
+    board.addEventListener('click', (e)=>{
+      const nodeEl = e.target.closest('.node'); if(!nodeEl) return; const id = nodeEl.dataset.id; if(connectMode && connectFrom){ addEdge(connectFrom, id); connectFrom = null; connectMode = false; updateConnectBtn(); highlightNode(null); }
+    });
+
+    // --- Import/Export/Reset ---
+    document.getElementById('exportBtn').addEventListener('click', ()=>{ const data = JSON.stringify(state, null, 2); const blob = new Blob([data],{type:'application/json'}); const url = URL.createObjectURL(blob); const a = document.createElement('a'); a.href = url; a.download = 'board-export.json'; a.click(); URL.revokeObjectURL(url); });
+    document.getElementById('importBtn').addEventListener('click', ()=>{ const inp = document.createElement('input'); inp.type='file'; inp.accept='application/json'; inp.onchange = (ev)=>{ const f = ev.target.files[0]; if(!f) return; const r = new FileReader(); r.onload = ()=>{ try{ const dd = JSON.parse(r.result); if(dd.nodes && dd.edges){ state = dd; save(); render(); alert('İçe aktarma başarılı'); } else alert('Geçersiz dosya'); }catch(e){ alert('İçe aktarma hatası'); } }; r.readAsText(f); }; inp.click(); });
+    document.getElementById('resetBtn').addEventListener('click', ()=>{ if(confirm('Tüm veriler silinsin mi?')){ state={nodes:[],edges:[]}; save(); render(); } });
+
+    // add node button
+    document.getElementById('addBtn').addEventListener('click', ()=>{ const t = document.getElementById('newTitle'); const pcol = document.getElementById('presetColor').value; addNode(t.value || 'Yeni Kutu', 80 + Math.random()*80, 60 + Math.random()*80, pcol); t.value=''; });
+
+    // click outside to clear selected edge & connection
+    document.addEventListener('click', (e)=>{ if(!e.target.closest('svg')) selectedEdgeId = null; drawEdges(); });
+
+    // load & init
+    load(); if(state.nodes.length===0){ const a = addNode('İngilizce: 10 kelime', 60, 60, '#60a5fa'); const b = addNode('Markete git', 380, 120, '#f43f5e'); const c = addNode('A Projesi - Sunum', 200, 280, '#f97316'); addEdge(a.id, c.id); addEdge(b.id, c.id); }
+    render(); applyTransform(); updateConnectBtn();
+
+    // window resize redraw
+    window.addEventListener('resize', drawEdges);
+
+    // allow deleting selected edge with Delete key
+    window.addEventListener('keydown',(e)=>{ if(e.key==='Delete' && selectedEdgeId) removeEdge(selectedEdgeId); });
+  </script>
+</body>
+</html>
