@@ -1,0 +1,268 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Mind Map Editor</title>
+    <style>
+        body {
+            margin: 0;
+            overflow: hidden;
+        }
+        #container {
+            position: relative;
+            width: 100vw;
+            height: 100vh;
+        }
+        #toolbar {
+            position: absolute;
+            top: 10px;
+            left: 10px;
+            z-index: 10;
+            background: white;
+            padding: 5px;
+            border: 1px solid #ccc;
+        }
+        #toolbar button {
+            margin-right: 5px;
+        }
+        #map {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            transform-origin: 0 0;
+        }
+        .node {
+            position: absolute;
+            background: #f0f0f0;
+            border: 1px solid #999;
+            padding: 5px 10px;
+            white-space: nowrap;
+            cursor: pointer;
+        }
+        .node input {
+            border: none;
+            background: transparent;
+            outline: none;
+        }
+        .add-btn {
+            margin-left: 10px;
+            background: #4caf50;
+            color: white;
+            border: none;
+            cursor: pointer;
+            padding: 2px 5px;
+        }
+        .line {
+            position: absolute;
+            border-top: 1px solid #999;
+        }
+    </style>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+</head>
+<body>
+    <div id="container">
+        <div id="toolbar">
+            <button onclick="fitToPage()">Fit to Page</button>
+            <button onclick="exportToText()">Text Export</button>
+            <button onclick="exportToPNG()">PNG Export</button>
+            <button onclick="exportToPDF()">PDF Export</button>
+        </div>
+        <div id="map"></div>
+    </div>
+    <script>
+        class Node {
+            constructor(text = 'New Node') {
+                this.text = text;
+                this.children = [];
+            }
+        }
+
+        const root = new Node('Root');
+        let scale = 1;
+        let translateX = 0;
+        let translateY = 0;
+        let isDragging = false;
+        let startX, startY;
+
+        const map = document.getElementById('map');
+        const container = document.getElementById('container');
+
+        // Pan
+        container.addEventListener('mousedown', (e) => {
+            if (e.target.classList.contains('add-btn') || e.target.tagName === 'INPUT') return;
+            isDragging = true;
+            startX = e.clientX - translateX;
+            startY = e.clientY - translateY;
+            container.style.cursor = 'grabbing';
+        });
+
+        container.addEventListener('mousemove', (e) => {
+            if (!isDragging) return;
+            translateX = e.clientX - startX;
+            translateY = e.clientY - startY;
+            updateTransform();
+        });
+
+        container.addEventListener('mouseup', () => {
+            isDragging = false;
+            container.style.cursor = 'default';
+        });
+
+        container.addEventListener('mouseleave', () => {
+            isDragging = false;
+            container.style.cursor = 'default';
+        });
+
+        // Zoom
+        container.addEventListener('wheel', (e) => {
+            e.preventDefault();
+            const delta = e.deltaY > 0 ? -0.1 : 0.1;
+            const newScale = Math.max(0.1, scale + delta);
+            const rect = map.getBoundingClientRect();
+            const mouseX = e.clientX - rect.left;
+            const mouseY = e.clientY - rect.top;
+
+            translateX = mouseX - (mouseX - translateX) * (newScale / scale);
+            translateY = mouseY - (mouseY - translateY) * (newScale / scale);
+            scale = newScale;
+            updateTransform();
+        });
+
+        function updateTransform() {
+            map.style.transform = `translate(${translateX}px, ${translateY}px) scale(${scale})`;
+        }
+
+        // Layout and Render
+        function layoutAndRender() {
+            map.innerHTML = '';
+            const startX = window.innerWidth / (2 * scale); // Center root
+            const startY = window.innerHeight / (2 * scale);
+            layoutNode(root, startX, startY, 0);
+            renderLines(root);
+        }
+
+        function layoutNode(node, x, y, level) {
+            const nodeDiv = document.createElement('div');
+            nodeDiv.className = 'node';
+            nodeDiv.style.left = `${x}px`;
+            nodeDiv.style.top = `${y}px`;
+
+            const input = document.createElement('input');
+            input.value = node.text;
+            input.onchange = (e) => node.text = e.target.value;
+            nodeDiv.appendChild(input);
+
+            const addBtn = document.createElement('button');
+            addBtn.className = 'add-btn';
+            addBtn.innerText = '+';
+            addBtn.onclick = () => {
+                const child = new Node();
+                node.children.push(child);
+                layoutAndRender();
+            };
+            nodeDiv.appendChild(addBtn);
+
+            map.appendChild(nodeDiv);
+
+            let childY = y;
+            const horizontalSpacing = 200;
+            const verticalSpacing = 50;
+
+            node.children.forEach((child, index) => {
+                const childX = x + horizontalSpacing;
+                childY = y + (index - (node.children.length - 1) / 2) * verticalSpacing;
+                layoutNode(child, childX, childY, level + 1);
+            });
+
+            // Store bounds for fit
+            node._div = nodeDiv;
+        }
+
+        function renderLines(node) {
+            node.children.forEach(child => {
+                const parentRect = node._div.getBoundingClientRect();
+                const childRect = child._div.getBoundingClientRect();
+
+                const line = document.createElement('div');
+                line.className = 'line';
+                const left = Math.min(parentRect.right, childRect.left) - map.getBoundingClientRect().left;
+                const top = (parentRect.top + parentRect.height / 2) - map.getBoundingClientRect().top;
+                const width = Math.abs(childRect.left - parentRect.right);
+                line.style.left = `${left}px`;
+                line.style.top = `${top}px`;
+                line.style.width = `${width}px`;
+                const vLineHeight = (childRect.top + childRect.height / 2) - (parentRect.top + parentRect.height / 2);
+                if (vLineHeight !== 0) {
+                    // Simple horizontal line for now, can add vertical if needed
+                }
+                map.appendChild(line);
+
+                renderLines(child);
+            });
+        }
+
+        function fitToPage() {
+            const nodes = document.querySelectorAll('.node');
+            if (nodes.length === 0) return;
+
+            let minX = Infinity, minY = Infinity, maxX = -Infinity, maxY = -Infinity;
+            nodes.forEach(node => {
+                const rect = node.getBoundingClientRect();
+                minX = Math.min(minX, rect.left);
+                minY = Math.min(minY, rect.top);
+                maxX = Math.max(maxX, rect.right);
+                maxY = Math.max(maxY, rect.bottom);
+            });
+
+            const width = maxX - minX;
+            const height = maxY - minY;
+            const viewWidth = window.innerWidth;
+            const viewHeight = window.innerHeight;
+            const newScale = Math.min(viewWidth / width, viewHeight / height) * 0.9;
+
+            translateX = (viewWidth - width * newScale) / 2 - minX * newScale;
+            translateY = (viewHeight - height * newScale) / 2 - minY * newScale;
+            scale = newScale;
+            updateTransform();
+        }
+
+        function exportToText() {
+            const data = JSON.stringify(root, ['text', 'children'], 2);
+            download('mindmap.txt', data);
+        }
+
+        function exportToPNG() {
+            html2canvas(map, {scale: 1 / scale}).then(canvas => {
+                download('mindmap.png', canvas.toDataURL('image/png'));
+            });
+        }
+
+        function exportToPDF() {
+            html2canvas(map, {scale: 1 / scale}).then(canvas => {
+                const imgData = canvas.toDataURL('image/png');
+                const pdf = new jspdf.jsPDF({
+                    orientation: canvas.width > canvas.height ? 'l' : 'p',
+                    unit: 'px',
+                    format: [canvas.width, canvas.height]
+                });
+                pdf.addImage(imgData, 'PNG', 0, 0, canvas.width, canvas.height);
+                pdf.save('mindmap.pdf');
+            });
+        }
+
+        function download(filename, data) {
+            const a = document.createElement('a');
+            a.href = (filename.endsWith('.txt') ? 'data:text/plain;charset=utf-8,' : '') + encodeURIComponent(data);
+            a.download = filename;
+            a.click();
+        }
+
+        // Initial render
+        layoutAndRender();
+    </script>
+</body>
+</html>
