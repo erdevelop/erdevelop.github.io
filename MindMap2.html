@@ -1,0 +1,214 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+<meta charset="UTF-8">
+<title>Mind Map</title>
+<style>
+body { margin:0; font-family:sans-serif; }
+#toolbar {
+  padding:10px; background:#eee; border-bottom:1px solid #ccc;
+}
+#mindmap {
+  width:100vw; height:calc(100vh - 50px);
+  background:#fafafa; cursor:pointer;
+  position:relative;
+}
+.node rect { fill:#fff; stroke:#333; stroke-width:1.5px; rx:8; ry:8; }
+.node text { font-size:14px; user-select:none; }
+.add-btn { cursor:pointer; font-size:16px; font-weight:bold; fill:#0a0; }
+path { stroke:#555; stroke-width:1.5px; fill:none; }
+#popupMenu {
+  position:absolute; display:none; background:#fff; border:1px solid #ccc;
+  padding:4px 6px; border-radius:6px; box-shadow:0 2px 6px rgba(0,0,0,0.2);
+  font-size:14px;
+  z-index:10;
+}
+#popupMenu button { margin:2px; font-size:13px; }
+</style>
+</head>
+<body>
+<div id="toolbar">
+  <button onclick="exportJSON()">JSON Dışa Aktar</button>
+  <input type="file" id="importFile" style="display:none" onchange="importJSON(event)">
+  <button onclick="document.getElementById('importFile').click()">JSON İçe Aktar</button>
+  <button onclick="exportPNG()">PNG İndir</button>
+</div>
+
+<div id="mindmapContainer" style="position:relative">
+  <svg id="mindmap"></svg>
+  <div id="popupMenu">
+    <button id="addNodeBtn">Ekle</button>
+    <button id="cancelBtn">İptal</button>
+  </div>
+</div>
+
+<script>
+const svg = document.getElementById("mindmap");
+const popup = document.getElementById("popupMenu");
+const addBtn = document.getElementById("addNodeBtn");
+const cancelBtn = document.getElementById("cancelBtn");
+
+let nodes = [];
+let links = [];
+let idCounter = 0;
+let popupPos = {x:0, y:0};
+
+// Yeni düğüm oluştur
+function createNode(x, y, text="Yeni Düğüm", parentId=null){
+  const id = ++idCounter;
+  const group = document.createElementNS("http://www.w3.org/2000/svg", "g");
+  group.setAttribute("class", "node");
+  group.setAttribute("transform", `translate(${x},${y})`);
+  group.dataset.id = id;
+
+  const rect = document.createElementNS("http://www.w3.org/2000/svg", "rect");
+  rect.setAttribute("width", 100);
+  rect.setAttribute("height", 40);
+  rect.setAttribute("x", -50);
+  rect.setAttribute("y", -20);
+
+  const label = document.createElementNS("http://www.w3.org/2000/svg", "text");
+  label.setAttribute("text-anchor","middle");
+  label.setAttribute("dy","5");
+  label.textContent = text;
+
+  const plus = document.createElementNS("http://www.w3.org/2000/svg", "text");
+  plus.setAttribute("x", 55);
+  plus.setAttribute("y", -10);
+  plus.setAttribute("class","add-btn");
+  plus.textContent = "+";
+  plus.addEventListener("click", e=>{
+    e.stopPropagation();
+    const pos = group.getCTM();
+    const childX = pos.e + 150;
+    const childY = pos.f + (Math.random()*60-30);
+    const child = createNode(childX, childY, "Alt Düğüm", id);
+    drawLink(id, child.id);
+  });
+
+  group.appendChild(rect);
+  group.appendChild(label);
+  group.appendChild(plus);
+  svg.appendChild(group);
+
+  makeDraggable(group);
+  makeEditable(label, id);
+
+  nodes.push({id, x, y, text, parentId});
+  return {id, x, y, text, parentId};
+}
+
+// Düzenleme
+function makeEditable(textEl, nodeId){
+  textEl.addEventListener("dblclick", e=>{
+    e.stopPropagation();
+    const node = nodes.find(n=>n.id==nodeId);
+    const newText = prompt("Düğüm metni:", node.text);
+    if(newText!==null){ node.text = newText; textEl.textContent=newText; }
+  });
+}
+
+// Spline bağlantı
+function drawLink(parentId, childId){
+  const parent = svg.querySelector(`[data-id='${parentId}']`);
+  const child = svg.querySelector(`[data-id='${childId}']`);
+  const p = parent.getCTM();
+  const c = child.getCTM();
+  const dx = (c.e - p.e)/2;
+  const path = document.createElementNS("http://www.w3.org/2000/svg","path");
+  path.setAttribute("d",`M${p.e},${p.f} C${p.e+dx},${p.f} ${c.e-dx},${c.f} ${c.e},${c.f}`);
+  path.dataset.parent = parentId;
+  path.dataset.child = childId;
+  svg.insertBefore(path, svg.firstChild);
+  links.push({parentId, childId});
+}
+
+// Bağlantı güncelle
+function updateLinks(nodeId){
+  svg.querySelectorAll("path").forEach(path=>{
+    if(path.dataset.parent==nodeId || path.dataset.child==nodeId){
+      const parent = svg.querySelector(`[data-id='${path.dataset.parent}']`).getCTM();
+      const child  = svg.querySelector(`[data-id='${path.dataset.child}']`).getCTM();
+      const dx = (child.e - parent.e)/2;
+      path.setAttribute("d",`M${parent.e},${parent.f} C${parent.e+dx},${parent.f} ${child.e-dx},${child.f} ${child.e},${child.f}`);
+    }
+  });
+}
+
+// Sürükleme
+function makeDraggable(group){
+  let offsetX, offsetY;
+  group.addEventListener("mousedown", e=>{
+    if(e.target.tagName==="rect" || e.target.tagName==="text"){
+      const m=group.getCTM();
+      offsetX=e.clientX - m.e;
+      offsetY=e.clientY - m.f;
+      function onMove(ev){
+        const x=ev.clientX-offsetX;
+        const y=ev.clientY-offsetY;
+        group.setAttribute("transform",`translate(${x},${y})`);
+        updateLinks(group.dataset.id);
+      }
+      function onUp(){ window.removeEventListener("mousemove",onMove); window.removeEventListener("mouseup",onUp); }
+      window.addEventListener("mousemove",onMove);
+      window.addEventListener("mouseup",onUp);
+    }
+  });
+}
+
+// Boş alana tıkla → popup
+svg.addEventListener("click", e=>{
+  if(e.target===svg){
+    popup.style.display="block";
+    popup.style.left = (e.clientX+10)+"px";
+    popup.style.top = (e.clientY+10)+"px";
+    popupPos = {x:e.offsetX, y:e.offsetY};
+  }
+});
+
+// Popup menü
+addBtn.addEventListener("click", ()=>{
+  createNode(popupPos.x, popupPos.y, "Kök Düğüm");
+  popup.style.display="none";
+});
+cancelBtn.addEventListener("click", ()=>{
+  popup.style.display="none";
+});
+
+// JSON
+function exportJSON(){
+  const data={nodes,links};
+  const blob=new Blob([JSON.stringify(data)],{type:"application/json"});
+  const a=document.createElement("a");
+  a.href=URL.createObjectURL(blob);
+  a.download="mindmap.json";
+  a.click();
+}
+function importJSON(event){
+  const file=event.target.files[0];
+  if(!file) return;
+  const reader=new FileReader();
+  reader.onload=function(e){
+    const data=JSON.parse(e.target.result);
+    nodes=[]; links=[];
+    svg.innerHTML="";
+    data.nodes.forEach(n=>{
+      const node=createNode(n.x,n.y,n.text,n.parentId);
+      node.id=n.id; if(n.id>idCounter) idCounter=n.id;
+    });
+    data.links.forEach(l=>{ drawLink(l.parentId,l.childId); });
+  };
+  reader.readAsText(file);
+}
+function exportPNG(){
+  const xml=new XMLSerializer().serializeToString(svg);
+  const svg64=btoa(xml);
+  const image64='data:image/svg+xml;base64,'+svg64;
+  const a=document.createElement("a");
+  a.href=image64;
+  a.download="mindmap.png";
+  a.click();
+}
+</script>
+</body>
+</html>
