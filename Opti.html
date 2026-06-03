@@ -2,7 +2,7 @@
 <html lang="tr">
 <head>
 <meta charset="utf-8">
-<title>Levha Optimizasyon v4 - Detaylı Rapor</title>
+<title>Levha Optimizasyon v7 - Şablon Üretim Motoru</title>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.5.28/jspdf.plugin.autotable.min.js"></script>
 <style>
@@ -19,9 +19,12 @@ button:hover{background-color:#2980b9}
 .btn-pdf:hover{background-color:#c0392b}
 .btn-secondary{background-color:#7f8c8d}
 .btn-secondary:hover{background-color:#6c7a89}
-#canvasContainer{margin-top:15px;overflow-x:auto}
-canvas{border:2px solid #2c3e50;background-color:#fff;margin-bottom:20px;display:block}
-#report{background:#fff;padding:15px;border-top:5px solid #3498db;margin-top:10px;border-radius:4px;box-shadow:0 1px 3px rgba(0,0,0,0.1)}
+#canvasContainer{margin-top:15px; display:flex; flex-wrap:wrap; gap:20px;}
+.pattern-card { border: 2px solid #2c3e50; background: #fff; border-radius: 6px; padding: 10px; width: 100%; max-width: 600px; box-shadow: 0 2px 5px rgba(0,0,0,0.1); }
+.pattern-header { background: #ecf0f1; padding: 10px; border-radius: 4px; font-weight: bold; margin-bottom: 10px; display: flex; justify-content: space-between; border-left: 5px solid #e67e22; }
+.pattern-multiplier { font-size: 16px; color: #d35400; font-weight: 900; }
+canvas{border:1px solid #bdc3c7; background-color:#fff; display:block; width: 100%; height: auto;}
+#report{background:#fff;padding:15px;border-top:5px solid #e67e22;margin-top:10px;border-radius:4px;box-shadow:0 1px 3px rgba(0,0,0,0.1)}
 .unplaced-alert{color:#e74c3c;font-weight:bold;margin-top:5px}
 .config-panel{background:#fff;padding:10px;margin-bottom:15px;border-radius:4px;border:1px solid #ddd}
 .io-controls{margin-bottom:12px;background:#eaeded;padding:8px;border-radius:4px;}
@@ -30,10 +33,11 @@ canvas{border:2px solid #2c3e50;background-color:#fff;margin-bottom:20px;display
 .summary-box { flex: 1; background: #fff; border: 1px solid #bdc3c7; padding: 15px; border-radius: 4px; text-align: center; }
 .summary-box h4 { margin: 0 0 10px 0; color: #7f8c8d; font-size: 14px; }
 .summary-box span { font-size: 24px; font-weight: bold; color: #2c3e50; }
+#statusBadge { display:none; background:#e67e22; color:#fff; padding:10px; font-weight:bold; border-radius:4px; margin-bottom:10px;}
 </style>
 </head>
 <body>
-<h2>Levha Optimizasyon v4 (Detaylı Analiz & PDF)</h2>
+<h2>Levha Optimizasyon v7 (Şablon Üretim / Çarpan Motoru)</h2>
 
 <div class="config-panel">
     <label><b>Kerf / Kesim Bıçak Payı (mm):</b> </label>
@@ -44,33 +48,12 @@ canvas{border:2px solid #2c3e50;background-color:#fff;margin-bottom:20px;display
 <div class="io-controls">
     <input type="file" id="sheetCsvFile" accept=".csv" style="width:auto;">
     <button onclick="importSheetsCSV()">Levha CSV İçe Aktar</button>
-    <button onclick="exportSheetsCSV()" class="btn-secondary">Levha CSV Dışa Aktar</button>
 </div>
 <table id="sheetTable">
-<tr>
-    <th>Kod</th>
-    <th>En (mm)</th>
-    <th>Boy (mm)</th>
-    <th>Aktif</th>
-</tr>
-<tr>
-    <td><input value="L1"></td>
-    <td><input type="number" value="1500"></td>
-    <td><input type="number" value="3000"></td>
-    <td><input type="checkbox" checked></td>
-</tr>
-<tr>
-    <td><input value="L2"></td>
-    <td><input type="number" value="1250"></td>
-    <td><input type="number" value="2500"></td>
-    <td><input type="checkbox" checked></td>
-</tr>
-<tr>
-    <td><input value="L3"></td>
-    <td><input type="number" value="2000"></td>
-    <td><input type="number" value="4000"></td>
-    <td><input type="checkbox" checked></td>
-</tr>
+<tr><th>Kod</th><th>En (mm)</th><th>Boy (mm)</th><th>Aktif</th></tr>
+<tr><td><input value="L1"></td><td><input type="number" value="1500"></td><td><input type="number" value="3000"></td><td><input type="checkbox" checked></td></tr>
+<tr><td><input value="L2"></td><td><input type="number" value="1250"></td><td><input type="number" value="2500"></td><td><input type="checkbox" checked></td></tr>
+<tr><td><input value="L3"></td><td><input type="number" value="2000"></td><td><input type="number" value="4000"></td><td><input type="checkbox" checked></td></tr>
 </table>
 <button onclick="addSheet()">+ Levha Ekle</button>
 
@@ -80,573 +63,303 @@ canvas{border:2px solid #2c3e50;background-color:#fff;margin-bottom:20px;display
 <div class="io-controls">
     <input type="file" id="csvFile" accept=".csv" style="width:auto;">
     <button onclick="importCSV()">Parça CSV İçe Aktar</button>
-    <button onclick="exportCSV()" class="btn-secondary">Parça CSV Dışa Aktar</button>
-    <button onclick="exportPDF()" class="btn-pdf">PDF Aktar (Detaylı Raporlu)</button>
+    <button onclick="exportPDF()" class="btn-pdf">PDF Aktar (Şablonlu Rapor)</button>
 </div>
 
 <table id="partTable">
-<tr>
-    <th>Kod</th>
-    <th>En (mm)</th>
-    <th>Boy (mm)</th>
-    <th>Adet</th>
-    <th>Döndür</th>
-</tr>
-<tr>
-    <td><input value="P001"></td>
-    <td><input type="number" value="500"></td>
-    <td><input type="number" value="1200"></td>
-    <td><input type="number" value="4"></td>
-    <td style="text-align:center"><input type="checkbox" checked></td>
-</tr>
-<tr>
-    <td><input value="P002"></td>
-    <td><input type="number" value="400"></td>
-    <td><input type="number" value="600"></td>
-    <td><input type="number" value="10"></td>
-    <td style="text-align:center"><input type="checkbox" checked></td>
-</tr>
+<tr><th>Kod</th><th>En (mm)</th><th>Boy (mm)</th><th>Adet</th><th>Döndür</th></tr>
+<tr><td><input value="P001"></td><td><input type="number" value="1235"></td><td><input type="number" value="2520"></td><td><input type="number" value="48"></td><td style="text-align:center"><input type="checkbox" checked></td></tr>
+<tr><td><input value="P002"></td><td><input type="number" value="1105"></td><td><input type="number" value="2520"></td><td><input type="number" value="48"></td><td style="text-align:center"><input type="checkbox" checked></td></tr>
 </table>
-
 <button onclick="addPart()">+ Parça Ekle</button>
-<button onclick="optimize()" class="btn-accent" style="font-size:16px; padding:10px 20px;">Optimize Et & Raporla</button>
+<button onclick="triggerOptimization()" class="btn-accent" style="font-size:16px; padding:10px 20px;">Şablonları Oluştur & Optimize Et</button>
 
+<div id="statusBadge">Şablonlar Hesaplanıyor... Lütfen Bekleyin...</div>
 <div id="report" style="display:none;"></div>
 <div id="canvasContainer"></div>
 
 <script>
-// --- Global Veri Saklama (PDF İçin) ---
-let globalReportData = null;
+let globalPatterns = [];
+let globalReportStats = null;
 
-// --- SATIR EKLEME FONKSİYONLARI ---
-function addSheet(){
- let r = document.getElementById("sheetTable").insertRow();
- r.innerHTML=`
- <td><input value="L${document.getElementById("sheetTable").rows.length - 1}"></td>
- <td><input type="number" value="1000"></td>
- <td><input type="number" value="2000"></td>
- <td style="text-align:center"><input type="checkbox" checked></td>
- `;
-}
+// --- ARAYÜZ VE CSV (Değişmedi) ---
+function addSheet(){ let r = document.getElementById("sheetTable").insertRow(); r.innerHTML=`<td><input value="L${document.getElementById("sheetTable").rows.length - 1}"></td><td><input type="number" value="1000"></td><td><input type="number" value="2000"></td><td style="text-align:center"><input type="checkbox" checked></td>`; }
+function addPart(){ let r = document.getElementById("partTable").insertRow(); r.innerHTML=`<td><input value="P00X"></td><td><input type="number" value="500"></td><td><input type="number" value="500"></td><td><input type="number" value="1"></td><td style="text-align:center"><input type="checkbox" checked></td>`; }
+function importSheetsCSV(){ const f = document.getElementById("sheetCsvFile").files[0]; if(!f) return; const rd = new FileReader(); rd.onload = e => { const lines = e.target.result.trim().split(/\r?\n/); const table = document.getElementById("sheetTable"); while(table.rows.length > 1) table.deleteRow(1); let start = lines[0].toUpperCase().includes("KOD") ? 1 : 0; for(let i=start; i<lines.length; i++){ if(!lines[i].trim()) continue; const c = lines[i].split(/[;,]/); if(c.length < 3) continue; let row = table.insertRow(); let isActive = (c[3] === undefined || c[3].trim().toLowerCase() !== "false") ? "checked" : ""; row.innerHTML = `<td><input value="${c[0].trim()}"></td><td><input type="number" value="${c[1].trim()}"></td><td><input type="number" value="${c[2].trim()}"></td><td style="text-align:center"><input type="checkbox" ${isActive}></td>`; } }; rd.readAsText(f,"utf-8"); }
+function importCSV(){ const f = document.getElementById("csvFile").files[0]; if(!f) return; const rd = new FileReader(); rd.onload = e => { const lines = e.target.result.trim().split(/\r?\n/); const table = document.getElementById("partTable"); while(table.rows.length > 1) table.deleteRow(1); let start = lines[0].toUpperCase().includes("KOD") ? 1 : 0; for(let i=start;i<lines.length;i++){ if(!lines[i].trim()) continue; const c = lines[i].split(/[;,]/); if(c.length < 4) continue; let row = table.insertRow(); let checkState = (c[4] === undefined || c[4].trim().toLowerCase() !== "false") ? "checked" : ""; row.innerHTML = `<td><input value="${c[0].trim()}"></td><td><input type="number" value="${c[1].trim()}"></td><td><input type="number" value="${c[2].trim()}"></td><td><input type="number" value="${c[3].trim()}"></td><td style="text-align:center"><input type="checkbox" ${checkState}></td>`; } }; rd.readAsText(f,"utf-8"); }
 
-function addPart(){
- let r = document.getElementById("partTable").insertRow();
- r.innerHTML=`
- <td><input value="P00X"></td>
- <td><input type="number" value="500"></td>
- <td><input type="number" value="500"></td>
- <td><input type="number" value="1"></td>
- <td style="text-align:center"><input type="checkbox" checked></td>
- `;
-}
-
-// --- CSV İŞLEMLERİ ---
-function importSheetsCSV(){
-    const f = document.getElementById("sheetCsvFile").files[0];
-    if(!f){ alert("Lütfen bir Levha CSV dosyası seçiniz"); return; }
-    const rd = new FileReader();
-    rd.onload = e => {
-        const txt = e.target.result.trim();
-        const lines = txt.split(/\r?\n/);
-        const table = document.getElementById("sheetTable");
-        while(table.rows.length > 1){ table.deleteRow(1); }
-        let start = 0;
-        if(lines[0].toUpperCase().includes("KOD")){ start = 1; }
-        for(let i=start; i<lines.length; i++){
-            if(!lines[i].trim()) continue;
-            const c = lines[i].split(/[;,]/);
-            if(c.length < 3) continue;
-            let row = table.insertRow();
-            let isActive = (c[3] === undefined || c[3].trim().toLowerCase() !== "false") ? "checked" : "";
-            row.innerHTML = `
-                <td><input value="${c[0].trim()}"></td>
-                <td><input type="number" value="${c[1].trim()}"></td>
-                <td><input type="number" value="${c[2].trim()}"></td>
-                <td style="text-align:center"><input type="checkbox" ${isActive}></td>
-            `;
-        }
-    };
-    rd.readAsText(f,"utf-8");
-}
-
-function exportSheetsCSV(){
- let csv="KOD,EN,BOY,AKTIF\n";
- document.querySelectorAll("#sheetTable tr").forEach((r,i)=>{
-   if(i===0)return;
-   let inp=r.querySelectorAll("input");
-   csv+=`${inp[0].value},${inp[1].value},${inp[2].value},${inp[3].checked}\n`;
- });
- const blob=new Blob([csv],{type:"text/csv"});
- const a=document.createElement("a");
- a.href=URL.createObjectURL(blob);
- a.download="levhalar.csv";
- a.click();
-}
-
-function importCSV(){
-    const f = document.getElementById("csvFile").files[0];
-    if(!f){ alert("Lütfen bir Parça CSV dosyası seçiniz"); return; }
-    const rd = new FileReader();
-    rd.onload = e => {
-        const txt = e.target.result.trim();
-        const lines = txt.split(/\r?\n/);
-        const table = document.getElementById("partTable");
-        while(table.rows.length > 1){ table.deleteRow(1); }
-        let start = 0;
-        if(lines[0].toUpperCase().includes("KOD")){ start = 1; }
-        for(let i=start;i<lines.length;i++){
-            if(!lines[i].trim()) continue;
-            const c = lines[i].split(/[;,]/);
-            if(c.length < 4) continue;
-            let row = table.insertRow();
-            let checkState = (c[4] === undefined || c[4].trim().toLowerCase() !== "false") ? "checked" : "";
-            row.innerHTML = `
-                <td><input value="${c[0].trim()}"></td>
-                <td><input type="number" value="${c[1].trim()}"></td>
-                <td><input type="number" value="${c[2].trim()}"></td>
-                <td><input type="number" value="${c[3].trim()}"></td>
-                <td style="text-align:center"><input type="checkbox" ${checkState}></td>
-            `;
-        }
-    };
-    rd.readAsText(f,"utf-8");
-}
-
-function exportCSV(){
- let csv="KOD,EN,BOY,ADET,DÖNDÜR\n";
- document.querySelectorAll("#partTable tr").forEach((r,i)=>{
-   if(i===0)return;
-   let inp=r.querySelectorAll("input");
-   csv+=`${inp[0].value},${inp[1].value},${inp[2].value},${inp[3].value},${inp[4].checked}\n`;
- });
- const blob=new Blob([csv],{type:"text/csv"});
- const a=document.createElement("a");
- a.href=URL.createObjectURL(blob);
- a.download="parcalar.csv";
- a.click();
-}
-
-// --- OPTİMİZASYON ANA MOTORU ---
-// --- OPTİMİZASYON ANA MOTORU (Maksimum Verim / Minimum Fire Odaklı) ---
-function optimize(){
- const kerf = parseFloat(document.getElementById("kerf").value) || 0;
- let parts=[];
- let inputPartsStats = {}; 
- 
- document.querySelectorAll("#partTable tr").forEach((r,i)=>{
-   if(i===0)return;
-   let inp=r.querySelectorAll("input");
-   let code=inp[0].value.trim();
-   let w=parseFloat(inp[1].value)||0;
-   let h=parseFloat(inp[2].value)||0;
-   let q=parseInt(inp[3].value)||0;
-   let rotate=inp[4].checked;
-   
-   if(w>0 && h>0 && q>0){
-      inputPartsStats[code] = { code, w, h, targetQty: q, placedQty: 0 };
-      for(let k=0;k<q;k++){
-         parts.push({code, w, h, rotate});
-      }
-   }
- });
-
- parts.sort((a,b)=>(b.w*b.h)-(a.w*a.h));
-
- let sheetTypes = [];
- document.querySelectorAll("#sheetTable tr").forEach((r, i) => {
-    if(i===0) return;
-    let inp = r.querySelectorAll("input");
-    let code = inp[0].value.trim();
-    let w = parseFloat(inp[1].value) || 0;
-    let h = parseFloat(inp[2].value) || 0;
-    let active = inp[3].checked;
-
-    if(active && w > 0 && h > 0) {
-        sheetTypes.push({ code, w, h });
+// --- GUILLOTINE KESİM SINIFI ---
+class GuillotineBin {
+    constructor(width, height, kerf) {
+        this.width = width; this.height = height; this.kerf = kerf;
+        this.freeRects = [{ x: 0, y: 0, w: width, h: height }];
+        this.usedRects = [];
     }
- });
+    insert(w, h, allowRotate = true) {
+        let bestScore = Number.MAX_VALUE;
+        let bestIndex = -1, bestFit = null, rotated = false;
+        let targetW = w + this.kerf, targetH = h + this.kerf;
 
- if(parts.length===0 || sheetTypes.length===0){
-    alert("Lütfen en az bir adet aktif Levha ve kesilecek Parça ölçüsü giriniz.");
-    return;
- }
+        for (let i = 0; i < this.freeRects.length; i++) {
+            let fr = this.freeRects[i];
+            if (fr.w >= targetW && fr.h >= targetH) {
+                let score = (fr.w * fr.h) - (targetW * targetH);
+                if (score < bestScore) { bestScore = score; bestIndex = i; bestFit = { x: fr.x, y: fr.y, w: targetW, h: targetH, realW: w, realH: h }; rotated = false; }
+            }
+            if (allowRotate && fr.w >= targetH && fr.h >= targetW) {
+                let score = (fr.w * fr.h) - (targetW * targetH);
+                if (score < bestScore) { bestScore = score; bestIndex = i; bestFit = { x: fr.x, y: fr.y, w: targetH, h: targetW, realW: w, realH: h }; rotated = true; }
+            }
+        }
 
- let usedSheets = []; 
- let unplaced = [];
-
- while(parts.length > 0) {
-     let bestSheetType = null;
-     let bestBin = null;
-     let bestEfficiency = -1; // YENİ: Parça sayısı yerine Doluluk Oranını baz alacağız
-     let tempPlacedResult = [];
-
-     for(let sheet of sheetTypes) {
-         let testBin = new MaxRectsBin(sheet.w, sheet.h, kerf);
-         let currentPlaced = [];
-         
-         parts.forEach(p => {
-             let rect = testBin.insert(p.w, p.h, p.rotate);
-             if(rect) {
-                 currentPlaced.push({
-                     code: p.code, realW: p.w, realH: p.h,
-                     w: rect.width, h: rect.height, x: rect.x, y: rect.y,
-                     rotated: rect.rotated
-                 });
-             }
-         });
-
-         // YENİ MANTIK: Parça adedine değil, Levhanın net m2 doluluk oranına bak.
-         if(currentPlaced.length > 0) {
-             let usedArea = currentPlaced.reduce((sum, p) => sum + (p.realW * p.realH), 0);
-             let sheetArea = sheet.w * sheet.h;
-             let efficiency = usedArea / sheetArea; // Örn: %85 doluysa 0.85 çıkar
-
-             // Eğer bu plaka, bir önceki test edilen plakadan daha az fire veriyorsa bunu seç
-             if(efficiency > bestEfficiency) {
-                 bestEfficiency = efficiency;
-                 bestSheetType = sheet;
-                 bestBin = testBin;
-                 tempPlacedResult = currentPlaced;
-             }
-         }
-     }
-
-     if(bestEfficiency <= 0) {
-         unplaced = [...parts];
-         break;
-     }
-
-     usedSheets.push({ sheet: bestSheetType, placed: tempPlacedResult });
-
-     tempPlacedResult.forEach(placedPart => {
-         if(inputPartsStats[placedPart.code]) inputPartsStats[placedPart.code].placedQty++;
-         let idx = parts.findIndex(p => p.code === placedPart.code && p.w === placedPart.realW && p.h === placedPart.realH);
-         if(idx !== -1) parts.splice(idx, 1);
-     });
- }
-
- drawAll(usedSheets, kerf);
- generateDetailedReport(usedSheets, unplaced, inputPartsStats);
+        if (bestIndex !== -1) {
+            let fr = this.freeRects.splice(bestIndex, 1)[0];
+            this.splitGuillotine(fr, bestFit);
+            let resultNode = { x: bestFit.x, y: bestFit.y, w: bestFit.w, h: bestFit.h, realW: bestFit.realW, realH: bestFit.realH, rotated: rotated };
+            this.usedRects.push(resultNode);
+            return resultNode;
+        }
+        return null;
+    }
+    splitGuillotine(freeNode, placedNode) {
+        let rightW = freeNode.w - placedNode.w, topH = freeNode.h - placedNode.h;
+        let maxH = Math.max(rightW * freeNode.h, placedNode.w * topH);
+        let maxV = Math.max(rightW * placedNode.h, freeNode.w * topH);
+        
+        if (maxH > maxV) { // Yatay Bölme Eğilimi
+            if (rightW > 0 && freeNode.h > 0) this.freeRects.push({ x: freeNode.x + placedNode.w, y: freeNode.y, w: rightW, h: freeNode.h });
+            if (placedNode.w > 0 && topH > 0) this.freeRects.push({ x: freeNode.x, y: freeNode.y + placedNode.h, w: placedNode.w, h: topH });
+        } else {
+            if (rightW > 0 && placedNode.h > 0) this.freeRects.push({ x: freeNode.x + placedNode.w, y: freeNode.y, w: rightW, h: placedNode.h });
+            if (freeNode.w > 0 && topH > 0) this.freeRects.push({ x: freeNode.x, y: freeNode.y + placedNode.h, w: freeNode.w, h: topH });
+        }
+    }
 }
 
-// --- DETAYLI RAPORLAMA FONKSİYONU ---
-function generateDetailedReport(usedSheets, unplaced, inputPartsStats) {
-    let reportDiv = document.getElementById("report");
-    reportDiv.style.display = "block";
+// --- ŞABLON ÜRETİM MOTORU ---
+function triggerOptimization() {
+    document.getElementById("statusBadge").style.display = "block";
+    document.getElementById("report").style.display = "none";
+    document.getElementById("canvasContainer").innerHTML = "";
+    
+    setTimeout(() => { 
+        runPatternGeneration(); 
+        document.getElementById("statusBadge").style.display = "none";
+    }, 100);
+}
 
-    let totalUsedArea = 0;
-    let totalSheetArea = 0;
+function runPatternGeneration() {
+    const kerf = parseFloat(document.getElementById("kerf").value) || 0;
+    let remainingParts = {}; // Adetleri burada takip edeceğiz
+    let totalRemainingQty = 0;
+    let inputStats = {};
+
+    document.querySelectorAll("#partTable tr").forEach((r,i) => {
+        if(i===0)return; let inp=r.querySelectorAll("input");
+        let code=inp[0].value.trim(), w=parseFloat(inp[1].value)||0, h=parseFloat(inp[2].value)||0, q=parseInt(inp[3].value)||0, rotate=inp[4].checked;
+        if(w>0 && h>0 && q>0) {
+            remainingParts[code] = { code, w, h, qty: q, rotate };
+            inputStats[code] = { code, w, h, targetQty: q, placedQty: 0 };
+            totalRemainingQty += q;
+        }
+    });
+
+    let activeSheets = [];
+    document.querySelectorAll("#sheetTable tr").forEach((r, i) => {
+        if(i===0) return; let inp=r.querySelectorAll("input");
+        let code=inp[0].value.trim(), w=parseFloat(inp[1].value)||0, h=parseFloat(inp[2].value)||0, active=inp[3].checked;
+        if(active && w>0 && h>0) activeSheets.push({ code, w, h });
+    });
+
+    if(totalRemainingQty === 0 || activeSheets.length === 0) { alert("Plaka ve parça giriniz."); return; }
+
+    let finalPatterns = [];
+    let unplaced = [];
+
+    // Çeşitli dizilim stratejileri (Şablon kalitesini artırmak için)
+    let strategies = [
+        (a, b) => (b.w * b.h) - (a.w * a.h),
+        (a, b) => Math.max(b.w, b.h) - Math.max(a.w, a.h),
+        (a, b) => Math.min(b.w, b.h) - Math.min(a.w, a.h)
+    ];
+
+    while(totalRemainingQty > 0) {
+        let bestPattern = null;
+        let bestScore = -1;
+
+        // Kalan parçaları düz bir array'e çevir
+        let flatRemaining = [];
+        for(let code in remainingParts) {
+            for(let k=0; k<remainingParts[code].qty; k++) {
+                flatRemaining.push(remainingParts[code]);
+            }
+        }
+
+        if(flatRemaining.length === 0) break;
+
+        // Bütün plakaları ve stratejileri test edip "En İyi Şablonu" bul
+        for(let sheet of activeSheets) {
+            for(let strat of strategies) {
+                let testParts = [...flatRemaining];
+                testParts.sort(strat);
+
+                let bin = new GuillotineBin(sheet.w, sheet.h, kerf);
+                let placedParts = [];
+                let tally = {}; // Bu şablonda hangi parçadan kaç tane var?
+
+                for(let p of testParts) {
+                    // Optimizasyon: İhtiyaçtan fazlasını bu şablona koyma
+                    if((tally[p.code] || 0) >= remainingParts[p.code].qty) continue; 
+
+                    let rect = bin.insert(p.w, p.h, p.rotate);
+                    if(rect) {
+                        placedParts.push({ code: p.code, realW: rect.realW, realH: rect.realH, w: rect.w, h: rect.h, x: rect.x, y: rect.y, rotated: rect.rotated });
+                        tally[p.code] = (tally[p.code] || 0) + 1;
+                    }
+                }
+
+                if(placedParts.length > 0) {
+                    let usedArea = placedParts.reduce((s, p) => s + (p.realW * p.realH), 0);
+                    let sheetArea = sheet.w * sheet.h;
+                    let efficiency = usedArea / sheetArea;
+                    
+                    // Şablon Çarpanı (Multiplier) Hesaplama
+                    let multiplier = Number.MAX_VALUE;
+                    for(let code in tally) {
+                        multiplier = Math.min(multiplier, Math.floor(remainingParts[code].qty / tally[code]));
+                    }
+
+                    if(multiplier > 0) {
+                        // Aynı efficiency'ye sahipse, daha çok çoğaltılabilen şablonu (multiplier) tercih et
+                        let score = efficiency + (multiplier * 0.0001); 
+
+                        if(score > bestScore) {
+                            bestScore = score;
+                            bestPattern = { sheet: sheet, placed: placedParts, tally: tally, multiplier: multiplier, efficiency: efficiency, usedArea: usedArea, sheetArea: sheetArea };
+                        }
+                    }
+                }
+            }
+        }
+
+        // Eğer en iyi şablon bulunduysa sisteme kaydet ve parçaları stoktan düş
+        if(bestPattern) {
+            finalPatterns.push(bestPattern);
+            for(let code in bestPattern.tally) {
+                let deduct = bestPattern.tally[code] * bestPattern.multiplier;
+                remainingParts[code].qty -= deduct;
+                totalRemainingQty -= deduct;
+                inputStats[code].placedQty += deduct;
+            }
+        } else {
+            // Hiçbir plaka hiçbir şablon üretemiyorsa sığmayanlar kalmıştır
+            for(let code in remainingParts) {
+                if(remainingParts[code].qty > 0) {
+                    for(let k=0; k<remainingParts[code].qty; k++) unplaced.push(remainingParts[code]);
+                }
+            }
+            break;
+        }
+    }
+
+    globalPatterns = finalPatterns;
+    generatePatternReport(finalPatterns, unplaced, inputStats);
+    drawPatterns(finalPatterns, kerf);
+}
+
+// --- ŞABLON (PATTERN) RAPORLAMA ---
+function generatePatternReport(patterns, unplaced, inputStats) {
+    let reportDiv = document.getElementById("report"); reportDiv.style.display = "block";
+    let totalUsedArea = 0, totalSheetArea = 0, totalPlacedPieces = 0, totalSheetsUsed = 0;
     let sheetStats = {};
 
-    usedSheets.forEach(us => {
-        let key = `${us.sheet.code} (${us.sheet.w}x${us.sheet.h})`;
-        if(!sheetStats[key]) {
-            sheetStats[key] = { code: us.sheet.code, w: us.sheet.w, h: us.sheet.h, count: 0, sArea: 0, pArea: 0 };
-        }
+    patterns.forEach(pat => {
+        let key = `${pat.sheet.code} (${pat.sheet.w}x${pat.sheet.h})`;
+        if(!sheetStats[key]) sheetStats[key] = { code: pat.sheet.code, w: pat.sheet.w, h: pat.sheet.h, count: 0, sArea: 0, pArea: 0 };
         
-        let sA = (us.sheet.w * us.sheet.h) / 1000000;
-        let pA = us.placed.reduce((sum, p) => sum + (p.realW * p.realH), 0) / 1000000;
+        let sA = (pat.sheetArea * pat.multiplier) / 1000000;
+        let pA = (pat.usedArea * pat.multiplier) / 1000000;
         
-        sheetStats[key].count++;
+        sheetStats[key].count += pat.multiplier;
         sheetStats[key].sArea += sA;
         sheetStats[key].pArea += pA;
         
-        totalSheetArea += sA;
-        totalUsedArea += pA;
+        totalSheetArea += sA; totalUsedArea += pA;
+        totalSheetsUsed += pat.multiplier;
+        totalPlacedPieces += (pat.placed.length * pat.multiplier);
     });
 
-    let totalPlacedPieces = usedSheets.reduce((s,us)=>s+us.placed.length,0);
     let generalWaste = totalSheetArea > 0 ? (((totalSheetArea - totalUsedArea) / totalSheetArea) * 100).toFixed(2) : "0.00";
 
-    // Global veriye kaydet (PDF'te kullanmak için)
-    globalReportData = {
-        totalSheetArea: totalSheetArea.toFixed(2),
-        totalUsedArea: totalUsedArea.toFixed(2),
-        generalWaste: generalWaste,
-        totalPlacedPieces: totalPlacedPieces,
-        unplacedCount: unplaced.length,
-        sheetStats: Object.values(sheetStats),
-        partStats: Object.values(inputPartsStats)
-    };
+    globalReportStats = { totalSheetArea: totalSheetArea.toFixed(2), totalUsedArea: totalUsedArea.toFixed(2), generalWaste: generalWaste, totalPlacedPieces: totalPlacedPieces, totalSheetsUsed: totalSheetsUsed, unplacedCount: unplaced.length, sheetStats: Object.values(sheetStats), partStats: Object.values(inputStats) };
 
-    // --- HTML Rapor Arayüzünü Çiz ---
-    let html = `<h2>Kesim & Optimizasyon Raporu</h2>`;
-    
-    // Üst Özet Kutuları
-    html += `
-    <div class="summary-grid">
-        <div class="summary-box"><h4>Kullanılan Plaka Alanı</h4><span>${totalSheetArea.toFixed(2)} m²</span></div>
-        <div class="summary-box"><h4>Net Parça Alanı</h4><span>${totalUsedArea.toFixed(2)} m²</span></div>
-        <div class="summary-box"><h4>Genel Fire Oranı</h4><span style="color:#e74c3c">% ${generalWaste}</span></div>
-        <div class="summary-box"><h4>Yerleşen Parça</h4><span>${totalPlacedPieces} Adet</span></div>
-    </div>`;
+    let html = `<h2>Şablonlu Toplu Kesim Raporu</h2>`;
+    html += `<div class="summary-grid"><div class="summary-box"><h4>Kullanılan Toplam Plaka</h4><span>${totalSheetsUsed} Adet</span></div><div class="summary-box"><h4>Toplam Plaka Alanı</h4><span>${totalSheetArea.toFixed(2)} m²</span></div><div class="summary-box"><h4>Genel Fire Oranı</h4><span style="color:#e74c3c">% ${generalWaste}</span></div></div>`;
 
-    if(unplaced.length > 0) {
-        html += `<div class="unplaced-alert">⚠️ DİKKAT: ${unplaced.length} Adet parça aktif plakalara sığmadığı için yerleştirilemedi!</div>`;
-    }
+    if(unplaced.length > 0) html += `<div class="unplaced-alert">⚠️ ${unplaced.length} Adet parça aktif plakalara sığmadı!</div>`;
 
-    // Tablo 1: Plaka Kullanım Özeti
-    html += `<div class="report-section-title">Hangi Levhadan Kaç Adet Kullanıldı? (Plaka Fire Oranları)</div>`;
-    html += `<table><tr><th>Plaka Kodu</th><th>Ebat (mm)</th><th>Kullanım Adedi</th><th>Toplam Alan</th><th>Net Parça Alanı</th><th>Fire Oranı</th></tr>`;
-    globalReportData.sheetStats.forEach(st => {
-        let wastePercent = (((st.sArea - st.pArea) / st.sArea) * 100).toFixed(2);
-        html += `<tr>
-            <td><b>${st.code}</b></td>
-            <td>${st.w} x ${st.h}</td>
-            <td><b>${st.count} Adet</b></td>
-            <td>${st.sArea.toFixed(2)} m²</td>
-            <td>${st.pArea.toFixed(2)} m²</td>
-            <td style="color:#e74c3c; font-weight:bold;">% ${wastePercent}</td>
-        </tr>`;
-    });
+    html += `<div class="report-section-title">Plaka İhtiyaç Listesi</div><table><tr><th>Kod</th><th>Ebat (mm)</th><th>Gereken Adet</th><th>Fire Oranı</th></tr>`;
+    globalReportStats.sheetStats.forEach(st => { html += `<tr><td><b>${st.code}</b></td><td>${st.w} x ${st.h}</td><td><b>${st.count} Adet</b></td><td style="color:#e74c3c; font-weight:bold;">% ${(((st.sArea - st.pArea) / st.sArea) * 100).toFixed(2)}</td></tr>`; });
     html += `</table>`;
-
-    // Tablo 2: Parça Yerleşim Özeti
-    html += `<div class="report-section-title">Parça Yerleşim Durumu</div>`;
-    html += `<table><tr><th>Parça Kodu</th><th>Ebat (mm)</th><th>İstenen Adet</th><th>Yerleşen Adet</th><th>Durum</th></tr>`;
-    globalReportData.partStats.forEach(ps => {
-        let status = ps.placedQty === ps.targetQty ? `<span style="color:green">✔ Tamamlandı</span>` : `<span style="color:red">Sığmadı (${ps.targetQty - ps.placedQty} Eksik)</span>`;
-        html += `<tr>
-            <td><b>${ps.code}</b></td>
-            <td>${ps.w} x ${ps.h}</td>
-            <td>${ps.targetQty}</td>
-            <td><b>${ps.placedQty}</b></td>
-            <td>${status}</td>
-        </tr>`;
-    });
-    html += `</table>`;
-
     reportDiv.innerHTML = html;
 }
 
-function drawAll(usedSheets, kerf) {
-    let container = document.getElementById("canvasContainer");
-    container.innerHTML = ""; 
+// --- ŞABLONLARI (TEKİL OLARAK) ÇİZ VE ÇARPAN YAZ ---
+function drawPatterns(patterns, kerf) {
+    let container = document.getElementById("canvasContainer"); container.innerHTML = ""; 
+    
+    patterns.forEach((pat, index) => {
+        let card = document.createElement("div"); card.className = "pattern-card";
+        
+        let header = document.createElement("div"); header.className = "pattern-header";
+        let wastePct = ((1 - pat.efficiency) * 100).toFixed(2);
+        header.innerHTML = `<div>Şablon ${index + 1}: ${pat.sheet.code} (${pat.sheet.w} x ${pat.sheet.h} mm) <br><span style="font-size:12px; font-weight:normal;">Şablon Firesi: %${wastePct}</span></div>
+                            <div class="pattern-multiplier">BUNU KES:<br>x${pat.multiplier} ADET</div>`;
+        card.appendChild(header);
 
-    usedSheets.forEach((us, index) => {
-        let title = document.createElement("h4");
-        title.innerText = `Levha ${index + 1}: ${us.sheet.code} (${us.sheet.w} x ${us.sheet.h} mm) - Kerf: ${kerf}mm`;
-        container.appendChild(title);
-
-        let canvas = document.createElement("canvas");
-        canvas.width = 1100;
-        canvas.height = 600;
-        container.appendChild(canvas);
+        let canvas = document.createElement("canvas"); canvas.width = 800; canvas.height = 400; card.appendChild(canvas);
+        container.appendChild(card);
 
         let ctx = canvas.getContext("2d");
-        let scale = Math.min((canvas.width - 40) / us.sheet.w, (canvas.height - 40) / us.sheet.h);
-
-        ctx.strokeStyle = "#2c3e50";
-        ctx.lineWidth = 2;
-        ctx.strokeRect(20, 20, us.sheet.w * scale, us.sheet.h * scale);
-        ctx.fillStyle = "#f8f9fa";
-        ctx.fillRect(20, 20, us.sheet.w * scale, us.sheet.h * scale);
-
-        us.placed.forEach(p => {
-            let px = 20 + p.x * scale;
-            let py = 20 + p.y * scale;
-            let pwNet = (p.rotated ? p.realH : p.realW) * scale;
-            let phNet = (p.rotated ? p.realW : p.realH) * scale;
-
-            if(kerf > 0) {
-                ctx.fillStyle = "#e74c3c";
-                ctx.globalAlpha = 0.15;
-                ctx.fillRect(px, py, p.w * scale, p.h * scale);
-                ctx.globalAlpha = 1.0;
-            }
-
-            ctx.lineWidth = 1;
-            ctx.strokeStyle = "#1c2833";
-            ctx.fillStyle = "#3498db"; 
-            ctx.fillRect(px, py, pwNet, phNet);
-            ctx.strokeRect(px, py, pwNet, phNet);
-
-            ctx.fillStyle = "#fff";
-            ctx.font = "bold 11px Arial";
-            ctx.textBaseline = "middle";
-            ctx.textAlign = "center";
-            
-            if(pwNet > 50 && phNet > 25) {
-                ctx.fillText(p.code, px + pwNet/2, py + phNet/2 - 7);
-                ctx.font = "10px Arial";
-                ctx.fillText(p.rotated ? `${p.realH}x${p.realW} [D]` : `${p.realW}x${p.realH}`, px + pwNet/2, py + phNet/2 + 7);
-            } else if(pwNet > 25 && phNet > 12) {
-                ctx.fillText(p.code, px + pwNet/2, py + phNet/2);
-            }
+        let scale = Math.min((canvas.width - 20) / pat.sheet.w, (canvas.height - 20) / pat.sheet.h);
+        
+        ctx.strokeStyle = "#2c3e50"; ctx.lineWidth = 2; ctx.strokeRect(10, 10, pat.sheet.w * scale, pat.sheet.h * scale);
+        ctx.fillStyle = "#f8f9fa"; ctx.fillRect(10, 10, pat.sheet.w * scale, pat.sheet.h * scale);
+        
+        pat.placed.forEach(p => {
+            let px = 10 + p.x * scale, py = 10 + p.y * scale;
+            let pwNet = (p.rotated ? p.realH : p.realW) * scale, phNet = (p.rotated ? p.realW : p.realH) * scale;
+            if(kerf > 0) { ctx.fillStyle = "#e74c3c"; ctx.globalAlpha = 0.15; ctx.fillRect(px, py, p.w * scale, p.h * scale); ctx.globalAlpha = 1.0; }
+            ctx.lineWidth = 1; ctx.strokeStyle = "#1c2833"; ctx.fillStyle = "#3498db"; 
+            ctx.fillRect(px, py, pwNet, phNet); ctx.strokeRect(px, py, pwNet, phNet);
+            ctx.beginPath(); ctx.moveTo(px, py + phNet); ctx.lineTo(px + pwNet, py); ctx.strokeStyle = "rgba(255,255,255,0.4)"; ctx.lineWidth = 0.5; ctx.stroke();
+            ctx.fillStyle = "#fff"; ctx.font = "bold 11px Arial"; ctx.textBaseline = "middle"; ctx.textAlign = "center";
+            if(pwNet > 50 && phNet > 25) { ctx.fillText(p.code, px + pwNet/2, py + phNet/2 - 7); ctx.font = "10px Arial"; ctx.fillText(p.rotated ? `${p.realH}x${p.realW} [D]` : `${p.realW}x${p.realH}`, px + pwNet/2, py + phNet/2 + 7); } else if(pwNet > 25 && phNet > 12) { ctx.fillText(p.code, px + pwNet/2, py + phNet/2); }
         });
     });
 }
 
-class MaxRectsBin {
-    constructor(width, height, kerf = 0) {
-        this.width = width;
-        this.height = height;
-        this.kerf = kerf;
-        this.usedRectangles = [];
-        this.freeRectangles = [{ x: 0, y: 0, width: width, height: height }];
-    }
-    insert(width, height, allowRotate = true) {
-        let bestNode = null;
-        let bestAreaFit = Number.MAX_VALUE;
-        let totalW = width + this.kerf;
-        let totalH = height + this.kerf;
-
-        for (let rect of this.freeRectangles) {
-            if (totalW <= rect.width + this.kerf && totalH <= rect.height + this.kerf) {
-                let areaFit = rect.width * rect.height - totalW * totalH;
-                if (areaFit < bestAreaFit) {
-                    bestNode = { x: rect.x, y: rect.y, width: totalW, height: totalH, rotated: false };
-                    bestAreaFit = areaFit;
-                }
-            }
-            if (allowRotate && totalH <= rect.width + this.kerf && totalW <= rect.height + this.kerf) {
-                let areaFit = rect.width * rect.height - totalH * totalW;
-                if (areaFit < bestAreaFit) {
-                    bestNode = { x: rect.x, y: rect.y, width: totalH, height: totalW, rotated: true };
-                    bestAreaFit = areaFit;
-                }
-            }
-        }
-        if (!bestNode) return null;
-        this.placeRect(bestNode);
-        return bestNode;
-    }
-    placeRect(node) {
-        let count = this.freeRectangles.length;
-        for (let i = 0; i < count; i++) {
-            if (this.splitFreeNode(this.freeRectangles[i], node)) {
-                this.freeRectangles.splice(i, 1);
-                i--; count--;
-            }
-        }
-        this.pruneFreeList();
-        this.usedRectangles.push(node);
-    }
-    splitFreeNode(freeNode, usedNode) {
-        if (usedNode.x >= freeNode.x + freeNode.width || usedNode.x + usedNode.width <= freeNode.x ||
-            usedNode.y >= freeNode.y + freeNode.height || usedNode.y + usedNode.height <= freeNode.y) return false;
-        if (usedNode.x < freeNode.x + freeNode.width && usedNode.x + usedNode.width > freeNode.x) {
-            if (usedNode.y > freeNode.y && usedNode.y < freeNode.y + freeNode.height)
-                this.freeRectangles.push({ x: freeNode.x, y: freeNode.y, width: freeNode.width, height: usedNode.y - freeNode.y });
-            if (usedNode.y + usedNode.height < freeNode.y + freeNode.height)
-                this.freeRectangles.push({ x: freeNode.x, y: usedNode.y + usedNode.height, width: freeNode.width, height: freeNode.y + freeNode.height - (usedNode.y + usedNode.height) });
-        }
-        if (usedNode.y < freeNode.y + freeNode.height && usedNode.y + usedNode.height > freeNode.y) {
-            if (usedNode.x > freeNode.x && usedNode.x < freeNode.x + freeNode.width)
-                this.freeRectangles.push({ x: freeNode.x, y: freeNode.y, width: usedNode.x - freeNode.x, height: freeNode.height });
-            if (usedNode.x + usedNode.width < freeNode.x + freeNode.width)
-                this.freeRectangles.push({ x: usedNode.x + usedNode.width, y: freeNode.y, width: freeNode.x + freeNode.width - (usedNode.x + usedNode.width), height: freeNode.height });
-        }
-        return true;
-    }
-    pruneFreeList() {
-        for (let i = 0; i < this.freeRectangles.length; i++) {
-            for (let j = i + 1; j < this.freeRectangles.length; j++) {
-                if (this.isContainedIn(this.freeRectangles[i], this.freeRectangles[j])) {
-                    this.freeRectangles.splice(i, 1); i--; break;
-                }
-                if (this.isContainedIn(this.freeRectangles[j], this.freeRectangles[i])) {
-                    this.freeRectangles.splice(j, 1); j--;
-                }
-            }
-        }
-    }
-    isContainedIn(a, b) {
-        return (a.x >= b.x && a.y >= b.y && a.x + a.width <= b.x + b.width && a.y + a.height <= b.y + b.height);
-    }
-}
-
-// --- TABLOLU DETAYLI PDF SEKTÖRÜ ---
+// --- ŞABLON BAZLI (KISA) PDF ÇIKTISI ---
 async function exportPDF(){
- if (!globalReportData) { alert("Lütfen önce 'Optimize Et & Raporla' butonuna basınız."); return; }
- const { jsPDF } = window.jspdf;
- if (!jsPDF) { alert("PDF kütüphanesi yüklenemedi!"); return; }
+ if (!globalReportStats) return;
+ const { jsPDF } = window.jspdf; const pdf = new jsPDF({ orientation: "landscape", unit: "mm", format: "a4" });
+ pdf.setFont("Helvetica", "bold"); pdf.setFontSize(20); pdf.setTextColor(44, 62, 80); pdf.text("SABLONLU TOPLU KESIM RAPORU", 15, 20);
+ pdf.setFontSize(11); pdf.setFont("Helvetica", "normal");
+ pdf.text(`Toplam Kullanilan Levha: ${globalReportStats.totalSheetsUsed} Adet | Fire: % ${globalReportStats.generalWaste}`, 15, 28);
  
- const pdf = new jsPDF({ orientation: "landscape", unit: "mm", format: "a4" });
+ let sheetBody = globalReportStats.sheetStats.map(st => [ st.code, `${st.w} x ${st.h}`, `${st.count} Adet`, `% ${(((st.sArea - st.pArea) / st.sArea) * 100).toFixed(2)}` ]);
+ pdf.autoTable({ startY: 35, head: [['Plaka Kodu', 'Ebat', 'Gereken Uretim Adedi', 'Fire Orani']], body: sheetBody, theme: 'grid' });
  
- // 1. Sayfa: Rapor Tabloları
- pdf.setFont("Helvetica", "bold");
- pdf.setFontSize(20);
- pdf.setTextColor(44, 62, 80);
- pdf.text("KESIM VE OPTIMIZASYON RAPORU", 15, 20);
- 
- pdf.setFontSize(11);
- pdf.setFont("Helvetica", "normal");
- pdf.text(`Rapor Tarihi: ${new Date().toLocaleDateString('tr-TR')}`, 15, 28);
- pdf.text(`Toplam Kullanilan Alan: ${globalReportData.totalSheetArea} m2`, 15, 34);
- pdf.text(`Net Parca Alani: ${globalReportData.totalUsedArea} m2`, 15, 40);
- pdf.text(`Toplam Yerlesen Parca: ${globalReportData.totalPlacedPieces} Adet`, 15, 46);
- 
- pdf.setFont("Helvetica", "bold");
- pdf.setTextColor(231, 76, 60);
- pdf.text(`Genel Ortalama Fire Orani: % ${globalReportData.generalWaste}`, 15, 52);
- if(globalReportData.unplacedCount > 0) {
-     pdf.text(`DIKKAT: ${globalReportData.unplacedCount} adet parca levhalara sigmadi!`, 15, 58);
- }
-
- // Plaka Tablosu
- let sheetBody = globalReportData.sheetStats.map(st => [
-     st.code, 
-     `${st.w} x ${st.h}`, 
-     `${st.count} Adet`, 
-     `${st.sArea.toFixed(2)} m2`, 
-     `${st.pArea.toFixed(2)} m2`, 
-     `% ${(((st.sArea - st.pArea) / st.sArea) * 100).toFixed(2)}`
- ]);
-
- pdf.autoTable({
-     startY: 65,
-     head: [['Plaka Kodu', 'Ebat (mm)', 'Kullanim Adedi', 'Toplam Alan', 'Net Parca', 'Fire Orani']],
-     body: sheetBody,
-     theme: 'grid',
-     headStyles: { fillColor: [44, 62, 80] }
- });
-
- // Parça Tablosu
- let partBody = globalReportData.partStats.map(ps => [
-     ps.code,
-     `${ps.w} x ${ps.h}`,
-     ps.targetQty,
-     ps.placedQty,
-     ps.placedQty === ps.targetQty ? "Tamamlandi" : "Eksik / Sigmadi"
- ]);
-
- pdf.autoTable({
-     startY: pdf.lastAutoTable.finalY + 10,
-     head: [['Parca Kodu', 'Ebat (mm)', 'Istenen Adet', 'Yerlesen Adet', 'Durum']],
-     body: partBody,
-     theme: 'grid',
-     headStyles: { fillColor: [52, 152, 219] }
- });
-
- // Şema Sayfaları
  const canvases = document.querySelectorAll("#canvasContainer canvas");
- const titles = document.querySelectorAll("#canvasContainer h4");
+ const headers = document.querySelectorAll(".pattern-header");
  
  for(let i=0; i<canvases.length; i++){
-    pdf.addPage();
-    pdf.setFont("Helvetica", "bold"); 
-    pdf.setFontSize(12);
-    pdf.setTextColor(44, 62, 80);
-    
-    let originalTitle = titles[i] ? titles[i].innerText : `Levha ${i+1}`;
-    let safeTitle = originalTitle.replace(/ı/g, 'i').replace(/Ş/g, 'S').replace(/ş/g, 's')
-                    .replace(/Ğ/g, 'G').replace(/ğ/g, 'g').replace(/Ü/g, 'U')
-                    .replace(/ü/g, 'u').replace(/Ö/g, 'O').replace(/ö/g, 'o')
-                    .replace(/Ç/g, 'C').replace(/ç/g, 'c');
-                    
-    pdf.text(safeTitle, 15, 15);
-    
-    const img = canvases[i].toDataURL("image/png", 1.0);
-    pdf.addImage(img, "PNG", 15, 25, 267, 160);
-    
-    pdf.setFont("Helvetica", "normal");
-    pdf.setFontSize(9);
-    pdf.setTextColor(127, 140, 141);
-    pdf.text(`Sayfa ${i+2} / ${canvases.length + 1}`, 265, 200);
+    pdf.addPage(); pdf.setFont("Helvetica", "bold"); pdf.setFontSize(14);
+    let titleTxt = headers[i].innerText.replace(/\n/g, ' - ').replace(/ı/g, 'i').replace(/Ş/g, 'S').replace(/ş/g, 's').replace(/Ğ/g, 'G').replace(/ğ/g, 'g').replace(/Ü/g, 'U').replace(/ü/g, 'u').replace(/Ö/g, 'O').replace(/ö/g, 'o').replace(/Ç/g, 'C').replace(/ç/g, 'c');
+    pdf.text(titleTxt, 15, 15);
+    pdf.addImage(canvases[i].toDataURL("image/png", 1.0), "PNG", 15, 25, 267, 140);
  }
- 
- pdf.save("detayli_kesim_raporu.pdf");
+ pdf.save("sablonlu_kesim_raporu.pdf");
 }
 </script>
 </body>
