@@ -1038,7 +1038,7 @@ function renderYan() {
           return `<code>#iş-adı @${kelime(k)} …</code> → o işe ${esc(kucuk(SOZ().bekleyen))} açar.<br><code>#iş-adı !tamam</code> → durumu tamamlandı yapar.<br>`; })()}
         Düz metin → seçili işe not yazar. Tüm komutlar için <code>?</code> yaz.
       </div></section>
-      <section class="small">Veriler şimdilik bu tarayıcıda saklanıyor. Ekiple paylaşmak için “Dışa aktar” ile JSON alıp gönderebilirsin; ortak sunucu bağlantısı sonraki adım.</section>`;
+      <section class="small">Giriş yapmadan veriler yalnızca bu tarayıcıda saklanır. Ekiple çalışmak için sağ üstteki ☁ ile giriş yap, sonra proje adının yanındaki “Paylaş” ile davet et.</section>`;
     return;
   }
   const n = C.map.get(ui.sel); const e = C.eff.get(n.id); const kids = C.kids(n.id);
