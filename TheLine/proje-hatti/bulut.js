@@ -24,6 +24,7 @@ const PARCA = 400;
 
 let sb = null, kullanici = null, kanal = null;
 let roller = {};   // proje id → rol
+let sahipler = {}; // proje id → sahibin e-postası
 let taban = {};    // proje id → { ad, meta, satir: { 'tur:id': kanonJSON } }  (sunucudaki son bilinen hal)
 let durum = 'kapali', sonHata = '';
 const yankilar = new Map(); // kendi gönderdiklerimiz, canlı yayından geri dönünce yok sayılır
@@ -48,7 +49,7 @@ function tabandanProje(id, tb) {
   return p;
 }
 function tabanKaydet() {
-  try { localStorage.setItem(TABAN_KEY, JSON.stringify({ uid: kullanici ? kullanici.id : null, taban, roller })); } catch (e) {}
+  try { localStorage.setItem(TABAN_KEY, JSON.stringify({ uid: kullanici ? kullanici.id : null, taban, roller, sahipler })); } catch (e) {}
 }
 function tabanOku() { try { return JSON.parse(localStorage.getItem(TABAN_KEY) || 'null'); } catch (e) { return null; } }
 function yankiIsaretle(k, j) { const l = (yankilar.get(k) || []).filter(x => Date.now() - x.t < 30000); l.push({ j, t: Date.now() }); yankilar.set(k, l); }
@@ -171,6 +172,7 @@ async function sunucudanOku() {
   roller = {}; uy.forEach(u => roller[u.proje_id] = u.rol);
   const ids = Object.keys(roller), gelen = {};
   for (const g of parcala(ids, 100)) {
+    (hatayiAt(await sb.from('uyeler').select('proje_id,eposta').in('proje_id', g).eq('rol', 'sahip')).data || []).forEach(r => { sahipler[r.proje_id] = r.eposta; });
     (hatayiAt(await sb.from('projeler').select('id,ad,meta').in('id', g)).data || []).forEach(r => {
       gelen[r.id] = { ad: r.ad, meta: kanon(r.meta || {}), satir: {} };
     });
@@ -194,6 +196,7 @@ async function cekAsil() {
       gelen = await sunucudanOku();
       if (yazimSayac === s0 && !aktif) break;
     } while (++deneme < 4);
+    const oncekiler = new Set(S.projects.filter(p => p.bulut).map(p => p.id));
     // erişimi kalmayan bulut projeleri: yerel kopya olarak kalsın
     S.projects.filter(p => p.bulut && taban[p.id] && !gelen[p.id]).forEach(p => {
       delete p.bulut; delete taban[p.id];
@@ -220,6 +223,13 @@ async function cekAsil() {
     // kayıtların sırası: işler order alanına göre çiziliyor, dizi sırası önemsiz
     S.projects.forEach(p => { if (p.bulut && typeof etiketTamamla === 'function') etiketTamamla(p); });
     if (!S.projects.some(p => p.id === S.activeId)) S.activeId = S.projects[0] && S.projects[0].id;
+    // seninle yeni paylaşılan proje varsa ona geç
+    const yeniPay = Object.keys(gelen).filter(id => !oncekiler.has(id) && roller[id] !== 'sahip');
+    if (yeniPay.length) {
+      const yp = S.projects.find(p => p.id === yeniPay[0]);
+      S.activeId = yp.id; ui.sel = null; ui.parsiyel = '*'; ui.etiket = '*';
+      toast(`“${yp.name}” projesi seninle paylaşıldı (sahibi: ${kisaAd(sahipler[yp.id]) || '?'})` + (yeniPay.length > 1 ? ` · ${yeniPay.length - 1} proje daha` : ''));
+    }
     geriYigin = []; ileriYigin = []; gecmisDugmeleri();
     yerelYaz(); tabanKaydet();
     guvenliCiz();
@@ -304,11 +314,11 @@ async function oturumDegisti(ses) {
   kullanici = u;
   if (!u) { durumYaz('kapali'); render(); return; }
   const kayitli = tabanOku();
-  if (kayitli && kayitli.uid === u.id) { taban = kayitli.taban || {}; roller = kayitli.roller || {}; }
+  if (kayitli && kayitli.uid === u.id) { taban = kayitli.taban || {}; roller = kayitli.roller || {}; sahipler = kayitli.sahipler || {}; }
   else {
     // bu tarayıcıda önceki başka bir hesabın bulut projeleri kaldıysa temizle
     if (kayitli && kayitli.taban) S.projects = S.projects.filter(p => !(p.bulut && kayitli.taban[p.id]));
-    taban = {}; roller = {};
+    taban = {}; roller = {}; sahipler = {};
   }
   durumYaz('baglaniyor');
   try { const r = await sb.rpc('davetleri_kabul_et'); if (r.data > 0) toast(`${r.data} yeni projeye katıldın`); } catch (e) {}
@@ -321,7 +331,7 @@ function cikisTemizle() {
   S.projects = S.projects.filter(p => !p.bulut);
   if (!S.projects.length) S.projects.push(yeniProje('Yeni proje', ['A']));
   if (!S.projects.some(p => p.id === S.activeId)) { S.activeId = S.projects[0].id; ui.sel = null; }
-  taban = {}; roller = {}; kayitSira = [];
+  taban = {}; roller = {}; sahipler = {}; kayitSira = [];
   try { localStorage.removeItem(TABAN_KEY); } catch (e) {}
   geriYigin = []; ileriYigin = []; gecmisDugmeleri();
   yerelYaz(); render(); konsolCiz();
@@ -392,7 +402,7 @@ yeniProje = function (...a) { const p = asilYeniProje(...a); if (kullanici && sb
 const asilProjeler = renderProjeler;
 renderProjeler = function () {
   asilProjeler();
-  [...document.querySelectorAll('#projSel option')].forEach(o => { const p = S.projects.find(x => x.id === o.value); if (p && p.bulut) o.textContent = '☁ ' + o.textContent; });
+  [...document.querySelectorAll('#projSel option')].forEach(o => { const p = S.projects.find(x => x.id === o.value); if (p && p.bulut) o.textContent = '☁ ' + o.textContent + (roller[p.id] && roller[p.id] !== 'sahip' && sahipler[p.id] ? ' · ' + kisaAd(sahipler[p.id]) : ''); });
   const r = document.getElementById('bulutRozet'); if (!r) return;
   const p = P();
   if (!kullanici) { r.hidden = true; return; }
@@ -400,7 +410,7 @@ renderProjeler = function () {
   r.className = 'bulut-rozet' + (p.bulut ? ' paylasilan' : '') + (salt(p) ? ' salt' : '');
   r.textContent = !p.bulut ? 'Yalnızca bu tarayıcıda · Paylaş' : salt(p) ? '👁 İzleyici' : (roller[p.id] === 'sahip' ? 'Paylaş' : '☁ ' + (ROL_AD[roller[p.id]] || 'Ekip'));
   r.title = !p.bulut ? 'Bu proje yalnızca bu tarayıcıda. Tıkla: buluta taşı ve ekibinle paylaş'
-    : salt(p) ? 'Bu projede yalnızca görüntüleme yetkin var' : 'Üyeler ve davetler';
+    : (salt(p) ? 'Bu projede yalnızca görüntüleme yetkin var' : 'Üyeler ve davetler') + (sahipler[p.id] ? ' · sahibi: ' + sahipler[p.id] : '');
 };
 
 /* ---------- arayüz ---------- */
