@@ -1,0 +1,240 @@
+<!doctype html>
+<html lang="tr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Kelime Notu</title>
+<meta name="description" content="Kelime Notu — yabancı kelimeleri anlamlarıyla kaydet, sırala, sesli dinle ve ezberle. erdevelop">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Nunito:wght@400;600;700;800&display=swap">
+<style>
+  :root {
+    --bg: #8fbfcf;
+    --bg-deep: #5ea9c2;
+    --paper: #ffffff;
+    --ink: #1f3440;
+    --muted: #4f6b78;
+    --line: rgba(31,52,64,.12);
+    --yellow: #e8c650;
+    --yellow-deep: #d4ae33;
+    --red: #e06a6a;
+    --green: #67d39a;
+    --font: 'Nunito', 'Segoe UI', system-ui, sans-serif;
+    color-scheme: light;
+  }
+  * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+  html, body { margin: 0; height: 100%; background: var(--bg); font-family: var(--font); color: var(--ink); }
+  #app { height: 100%; max-width: 560px; margin: 0 auto; display: flex; flex-direction: column; background: var(--bg); }
+
+  header { display: flex; align-items: center; gap: 10px; padding: calc(10px + env(safe-area-inset-top, 0px)) 14px 8px; }
+  header h1 { margin: 0; font-size: 20px; font-weight: 800; flex: 1; }
+  header h1 span { font-weight: 600; color: var(--muted); font-size: 14px; margin-left: 6px; }
+  .chip { border: 0; background: rgba(255,255,255,.55); color: var(--ink); border-radius: 10px; padding: 6px 10px; font: 700 13px var(--font); cursor: pointer; text-decoration: none; }
+  .chip:hover { background: rgba(255,255,255,.8); }
+  .chip.on { background: var(--ink); color: #fff; }
+
+  .search { margin: 0 14px 8px; position: relative; }
+  .search input { width: 100%; border: 0; border-radius: 10px; padding: 9px 12px 9px 34px; font: 600 15px var(--font); background: rgba(255,255,255,.6); color: var(--ink); }
+  .search::before { content: '⌕'; position: absolute; left: 12px; top: 7px; font-size: 17px; color: var(--muted); }
+
+  .list { flex: 1; overflow-y: auto; margin: 0 14px; background: rgba(255,255,255,.35); border-radius: 12px; -webkit-overflow-scrolling: touch; }
+  .row { display: grid; grid-template-columns: 34px 1fr 1fr 28px; gap: 8px; align-items: center; padding: 9px 10px; border-bottom: 1px solid var(--line); cursor: pointer; }
+  .row:last-child { border-bottom: 0; }
+  .row:hover { background: rgba(255,255,255,.35); }
+  .row.new { animation: flash 1.2s; }
+  @keyframes flash { 0% { background: rgba(232,198,80,.8); } 100% { background: transparent; } }
+  .row .n { color: var(--muted); font-size: 13px; font-variant-numeric: tabular-nums; }
+  .row .w { font-weight: 700; word-break: break-word; }
+  .row .m { word-break: break-word; }
+  .row .spk { border: 0; background: none; font-size: 15px; cursor: pointer; color: var(--muted); padding: 0; }
+  .empty { padding: 30px 16px; text-align: center; color: var(--muted); }
+
+  .panel { background: var(--bg-deep); padding: 10px 14px calc(12px + env(safe-area-inset-bottom, 0px)); margin-top: 10px; display: grid; gap: 8px; }
+  .inputs { display: grid; grid-template-columns: 1fr 1fr; gap: 6px; }
+  .inputs input, .no input { width: 100%; border: 0; border-radius: 4px; padding: 10px; font: 600 15px var(--font); background: var(--paper); color: var(--ink); }
+  .inputs input::placeholder, .no input::placeholder { color: #8aa0aa; font-style: italic; font-weight: 400; }
+  .status { font-size: 13px; color: #10303d; min-height: 18px; }
+  .btns { display: grid; grid-template-columns: 1.1fr 1fr 1fr; gap: 6px; }
+  .b { border: 0; border-radius: 4px; padding: 10px 8px; font: 700 14px var(--font); cursor: pointer; color: var(--ink); background: rgba(255,255,255,.7); }
+  .b:active { transform: translateY(1px); }
+  .b.add { background: var(--yellow); grid-row: span 2; font-size: 18px; box-shadow: inset 0 -3px 0 var(--yellow-deep); }
+  .b.sort { background: #f1d977; font-size: 12px; }
+  .b.del { background: var(--red); color: #fff; }
+  .b.quiz { background: var(--ink); color: #fff; }
+  .no { display: grid; grid-template-columns: 1fr auto; gap: 6px; }
+  .no input { padding: 8px; font-size: 14px; }
+  .opts { display: flex; gap: 8px; align-items: center; justify-content: space-between; }
+  .opts label { display: inline-flex; gap: 6px; align-items: center; font-weight: 700; font-size: 14px; cursor: pointer; }
+  .opts input { width: 18px; height: 18px; accent-color: var(--ink); }
+
+  .modal { position: fixed; inset: 0; display: grid; place-items: center; background: rgba(20,40,50,.4); padding: 20px; z-index: 10; }
+  .modal[hidden] { display: none; }
+  .box { background: #b9d3dc; border-radius: 8px; padding: 18px; width: 100%; max-width: 340px; text-align: center; box-shadow: 0 20px 40px rgba(0,0,0,.25); }
+  .box p { margin: 0 0 14px; font-weight: 600; }
+  .box .two { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+  .box .yes { background: var(--red); color: #fff; }
+  .box .no2 { background: var(--green); }
+
+  /* flash cards */
+  .card { background: #fff; border-radius: 16px; padding: 30px 20px; min-height: 170px; display: grid; place-items: center; cursor: pointer; box-shadow: 0 10px 30px rgba(0,0,0,.15); perspective: 800px; }
+  .card .front { font-size: 30px; font-weight: 800; }
+  .card .back { font-size: 20px; color: var(--muted); margin-top: 8px; min-height: 28px; }
+  .quiz-box { max-width: 380px; background: #d6e8ee; }
+  .quiz-box .meta { display: flex; justify-content: space-between; font-size: 13px; color: var(--muted); margin-bottom: 10px; }
+  .quiz-box .two { margin-top: 14px; }
+  .quiz-box .close { margin-top: 10px; background: none; border: 0; color: var(--muted); font: 600 14px var(--font); cursor: pointer; }
+</style>
+</head>
+<body>
+<div id="app">
+  <header>
+    <a class="chip" href="../" aria-label="Ana sayfa">⌂</a>
+    <h1>Kelime Notu<span id="countLbl"></span></h1>
+    <button class="chip" id="quizBtn" type="button">Ezber</button>
+  </header>
+  <div class="search"><input id="q" type="search" placeholder="ara…" aria-label="Kelime ara" autocomplete="off"></div>
+  <div class="list" id="list" role="list"></div>
+
+  <form class="panel" id="form" autocomplete="off">
+    <div class="inputs">
+      <input id="w" placeholder="yeni kelime giriniz…" aria-label="Yeni kelime" enterkeyhint="next">
+      <input id="m" placeholder="kelime anlamını giriniz…" aria-label="Anlamı" enterkeyhint="done">
+    </div>
+    <div class="status" id="status" aria-live="polite">Yeni kelime girişi bekleniyor…</div>
+    <div class="btns">
+      <button class="b add" type="submit">Ekle</button>
+      <button class="b sort" type="button" id="sortW">Kelimeye göre sırala</button>
+      <button class="b sort" type="button" id="sortM">Anlama göre sırala</button>
+      <div class="no"><input id="no" type="number" min="1" inputmode="numeric" placeholder="Sıra no" aria-label="Silinecek sıra numarası"><button class="b del" type="button" id="delNo">Sil</button></div>
+      <button class="b del" type="button" id="delLast">Sondakini sil</button>
+    </div>
+    <div class="opts">
+      <label><input type="checkbox" id="snd" checked> Ses</label>
+      <button class="b" type="button" id="clear">Temizle</button>
+    </div>
+  </form>
+</div>
+
+<div class="modal" id="confirm" hidden>
+  <div class="box">
+    <p>Tüm kelimeleri silmek istediğinize emin misiniz?</p>
+    <div class="two"><button class="b yes" id="yes" type="button">Evet</button><button class="b no2" id="cancel" type="button">Vazgeç</button></div>
+  </div>
+</div>
+
+<div class="modal" id="quiz" hidden>
+  <div class="box quiz-box">
+    <div class="meta"><span id="qProg">1 / 10</span><span id="qScore">✓ 0 · ✗ 0</span></div>
+    <div class="card" id="qCard" tabindex="0" aria-label="Kartı çevir"><div><div class="front" id="qFront"></div><div class="back" id="qBack">dokun, anlamını gör</div></div></div>
+    <div class="two"><button class="b no2" id="know" type="button">Biliyorum</button><button class="b yes" id="dont" type="button">Bilmiyorum</button></div>
+    <button class="close" id="qClose" type="button">Kapat</button>
+  </div>
+</div>
+
+<script>
+(() => {
+  const $ = id => document.getElementById(id);
+  const KEY = 'kelime-notu-v1';
+  const store = {
+    load() { try { return JSON.parse(localStorage.getItem(KEY)); } catch (e) { return null; } },
+    save(v) { try { localStorage.setItem(KEY, JSON.stringify(v)); } catch (e) {} }
+  };
+  let data = store.load() || {
+    words: [{ w: 'hello', m: 'merhaba' }, { w: 'world', m: 'dünya' }, { w: 'welcome', m: 'hoşgeldiniz' }],
+    sound: true
+  };
+  $('snd').checked = data.sound !== false;
+  let lastAdded = -1;
+  const save = () => store.save(data);
+  const esc = s => s.replace(/[&<>"]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
+  const status = t => { $('status').textContent = t; };
+
+  function render() {
+    const q = $('q').value.trim().toLocaleLowerCase('tr');
+    const rows = data.words.map((x, i) => ({ ...x, i })).filter(x => !q || x.w.toLocaleLowerCase('tr').includes(q) || x.m.toLocaleLowerCase('tr').includes(q));
+    $('countLbl').textContent = data.words.length ? data.words.length + ' kelime' : '';
+    if (!rows.length) {
+      $('list').innerHTML = `<div class="empty">${data.words.length ? 'Aramaya uyan kelime yok.' : 'Henüz kelime yok.<br>Aşağıya ilk kelimeni ve anlamını yaz.'}</div>`;
+      return;
+    }
+    $('list').innerHTML = rows.map(x => `<div class="row${x.i === lastAdded ? ' new' : ''}" role="listitem" data-i="${x.i}">
+      <span class="n">${x.i + 1}</span><span class="w">${esc(x.w)}</span><span class="m">${esc(x.m)}</span><button class="spk" type="button" aria-label="Dinle" data-say="${x.i}">🔊</button></div>`).join('');
+    if (lastAdded >= 0) { const el = $('list').querySelector(`[data-i="${lastAdded}"]`); if (el) el.scrollIntoView({ block: 'nearest' }); lastAdded = -1; }
+  }
+
+  // speech
+  function say(text) {
+    if (!$('snd').checked || !('speechSynthesis' in window)) return;
+    try {
+      speechSynthesis.cancel();
+      const u = new SpeechSynthesisUtterance(text);
+      u.lang = /[çğıöşüÇĞİÖŞÜ]/.test(text) ? 'tr-TR' : 'en-US'; u.rate = 0.9;
+      speechSynthesis.speak(u);
+    } catch (e) {}
+  }
+
+  $('form').addEventListener('submit', e => {
+    e.preventDefault();
+    const w = $('w').value.trim(), m = $('m').value.trim();
+    if (!w) { status('Önce kelimeyi yazın.'); $('w').focus(); return; }
+    if (!m) { status('Kelimenin anlamını yazın.'); $('m').focus(); return; }
+    const dup = data.words.findIndex(x => x.w.toLocaleLowerCase('tr') === w.toLocaleLowerCase('tr'));
+    if (dup >= 0) { data.words[dup].m = m; lastAdded = dup; status(`${w} zaten vardı, anlamı güncellendi.`); }
+    else { data.words.push({ w, m }); lastAdded = data.words.length - 1; status(`${w} ve ${m} eklendi.`); }
+    save(); $('w').value = ''; $('m').value = ''; $('q').value = ''; render(); say(w); $('w').focus();
+  });
+  $('w').addEventListener('keydown', e => { if (e.key === 'Enter') { e.preventDefault(); $('m').focus(); } });
+
+  $('sortW').addEventListener('click', () => { data.words.sort((a, b) => a.w.localeCompare(b.w, 'tr')); save(); render(); status('Kelimeye göre sıralandı.'); });
+  $('sortM').addEventListener('click', () => { data.words.sort((a, b) => a.m.localeCompare(b.m, 'tr')); save(); render(); status('Anlama göre sıralandı.'); });
+  $('delNo').addEventListener('click', () => {
+    const n = parseInt($('no').value, 10);
+    if (!n || n < 1 || n > data.words.length) { status(`1 ile ${data.words.length || 1} arasında bir sıra no girin.`); return; }
+    const [x] = data.words.splice(n - 1, 1); save(); render(); $('no').value = ''; status(`${x.w} ve ${x.m} silindi.`);
+  });
+  $('delLast').addEventListener('click', () => {
+    if (!data.words.length) { status('Silinecek kelime yok.'); return; }
+    const x = data.words.pop(); save(); render(); status(`${x.w} ve ${x.m} silindi.`);
+  });
+  $('clear').addEventListener('click', () => { if (data.words.length) $('confirm').hidden = false; else status('Liste zaten boş.'); });
+  $('yes').addEventListener('click', () => { data.words = []; save(); render(); $('confirm').hidden = true; status('Tüm kelimeler silindi. Yeni kelime girişi bekleniyor…'); });
+  $('cancel').addEventListener('click', () => { $('confirm').hidden = true; });
+  $('snd').addEventListener('change', () => { data.sound = $('snd').checked; save(); });
+  $('q').addEventListener('input', render);
+  $('list').addEventListener('click', e => {
+    const sp = e.target.closest('[data-say]'); if (sp) { say(data.words[+sp.dataset.say].w); return; }
+    const row = e.target.closest('.row'); if (row) { $('no').value = +row.dataset.i + 1; status(`${+row.dataset.i + 1}. kelime seçildi: ${data.words[+row.dataset.i].w}`); }
+  });
+
+  // flash-card review
+  let deck = [], qi = 0, ok = 0, bad = 0, flipped = false;
+  function openQuiz() {
+    if (data.words.length < 2) { status('Ezber için en az 2 kelime ekleyin.'); return; }
+    deck = data.words.map((_, i) => i).sort(() => Math.random() - .5).slice(0, 20);
+    qi = 0; ok = 0; bad = 0; $('quiz').hidden = false; showCard();
+  }
+  function showCard() {
+    flipped = false;
+    if (qi >= deck.length) {
+      $('qFront').textContent = `${ok} / ${deck.length}`;
+      $('qBack').textContent = ok === deck.length ? 'Hepsini bildin!' : 'Tekrar denemek için Ezber’e bas.';
+      $('qProg').textContent = 'Bitti'; $('know').disabled = $('dont').disabled = true; return;
+    }
+    $('know').disabled = $('dont').disabled = false;
+    const x = data.words[deck[qi]];
+    $('qFront').textContent = x.w; $('qBack').textContent = 'dokun, anlamını gör';
+    $('qProg').textContent = `${qi + 1} / ${deck.length}`; $('qScore').textContent = `✓ ${ok} · ✗ ${bad}`;
+    say(x.w);
+  }
+  function flip() { if (qi < deck.length && !flipped) { flipped = true; $('qBack').textContent = data.words[deck[qi]].m; } }
+  $('qCard').addEventListener('click', flip);
+  $('qCard').addEventListener('keydown', e => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); flip(); } });
+  $('know').addEventListener('click', () => { ok++; qi++; showCard(); });
+  $('dont').addEventListener('click', () => { bad++; qi++; showCard(); });
+  $('qClose').addEventListener('click', () => { $('quiz').hidden = true; });
+  $('quizBtn').addEventListener('click', openQuiz);
+
+  render();
+})();
+</script>
+</body>
+</html>
