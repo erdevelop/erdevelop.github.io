@@ -5,7 +5,7 @@ registerGame({
     const emojis=['🍎','🌵','⚽','🎧','🚀','🐱','🍋','🎲','🌙','🔑','🎈','🍉'];
     let moves, matched, first, lock, pairs=8, startT;
     const hud=makeHUD(root,[{id:'hamle',label:'Hamle',value:0},{id:'sure',label:'Süre',value:'0sn'}]);
-    const board=E('div',{style:{display:'grid',gap:'8px',maxWidth:'360px',margin:'0 auto'}});
+    const board=E('div',{style:{display:'grid',gap:'8px',width:'min(360px,100%)',margin:'0 auto'}});
     root.append(board);
     const msg=E('div',{class:'g-msg'}); root.append(msg);
     let timer;

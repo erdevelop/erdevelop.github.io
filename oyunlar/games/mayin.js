@@ -4,7 +4,7 @@ registerGame({
   render(root, api){
     const N=9, MINES=10; let g, revealed, flags, over, started, startT, timer, left;
     const hud=makeHUD(root,[{id:'bayrak',label:'Bayrak',value:MINES},{id:'sure',label:'Süre',value:'0'}]);
-    const board=E('div',{style:{display:'grid',gridTemplateColumns:'repeat('+N+',1fr)',gap:'3px',maxWidth:'360px',margin:'0 auto',userSelect:'none'}});
+    const board=E('div',{style:{display:'grid',gridTemplateColumns:'repeat('+N+',1fr)',gap:'3px',width:'min(360px,100%)',margin:'0 auto',userSelect:'none'}});
     root.append(board);
     const msg=E('div',{class:'g-msg'}); root.append(msg);
     let flagMode=false;

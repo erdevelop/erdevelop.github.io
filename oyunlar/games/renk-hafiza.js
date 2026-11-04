@@ -5,7 +5,7 @@ registerGame({
     const cols=[['#e45858','kırmızı'],['#3bb27a','yeşil'],['#6c8cff','mavi'],['#f6c85f','sarı']];
     let seq=[], step=0, playing=false, level=0;
     const hud=makeHUD(root,[{id:'tur',label:'Tur',value:0}]);
-    const grid=E('div',{style:{display:'grid',gridTemplateColumns:'1fr 1fr',gap:'12px',maxWidth:'300px',margin:'0 auto'}});
+    const grid=E('div',{style:{display:'grid',gridTemplateColumns:'1fr 1fr',gap:'12px',width:'min(300px,100%)',margin:'0 auto'}});
     const pads=cols.map((c,i)=>{ const p=E('button'); Object.assign(p.style,{aspectRatio:'1',borderRadius:'18px',background:c[0],opacity:'.55',transition:'opacity .12s,transform .1s',boxShadow:'var(--shadow)'});
       p.onclick=()=>tap(i); grid.append(p); return p; });
     const msg=E('div',{class:'g-msg'},'Diziyi izle, sonra tekrarla.');

@@ -4,7 +4,7 @@ registerGame({
   render(root, api){
     const R=6, C=7; let board, turn, over, wins;
     const hud=makeHUD(root,[{id:'sonuc',label:'Durum',value:'—'},{id:'gal',label:'Galibiyet',value:api.best}]);
-    const grid=E('div',{style:{display:'grid',gridTemplateColumns:'repeat('+C+',1fr)',gap:'5px',maxWidth:'340px',margin:'0 auto',background:'var(--accent)',padding:'8px',borderRadius:'12px'}});
+    const grid=E('div',{style:{display:'grid',gridTemplateColumns:'repeat('+C+',1fr)',gap:'5px',width:'min(340px,100%)',margin:'0 auto',background:'var(--accent)',padding:'8px',borderRadius:'12px'}});
     const cells=[];
     for(let r=0;r<R;r++){ cells[r]=[]; for(let c=0;c<C;c++){ const d=E('button'); Object.assign(d.style,{aspectRatio:'1',borderRadius:'50%',background:'var(--card)',border:'none',transition:'background .12s'});
       d.onclick=()=>play(c); cells[r][c]=d; grid.append(d); } }
