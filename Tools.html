@@ -80,14 +80,10 @@
   .layer-head .lk { width: 18px; height: 18px; fill: none; stroke: var(--hot); stroke-width: 1.6; stroke-linecap: round; stroke-linejoin: round; align-self: center; }
   .relock { margin-left: auto; font: 500 11px var(--f-mono); color: var(--muted); background: none; border: 1px solid var(--line); border-radius: 4px; padding: 3px 8px; cursor: pointer; text-transform: uppercase; }
   .relock:hover { color: var(--hot); border-color: var(--hot); }
-  .gate { display: grid; grid-template-columns: 52px 1fr; gap: 14px; align-items: center; background: var(--panel); border: 1px dashed var(--line); border-radius: 6px; padding: 16px; max-width: 520px; }
-  .gate .ico { color: var(--hot); grid-row: auto; }
-  .gate p { margin: 0 0 8px; color: var(--text); font-size: .9rem; }
-  .gate-row { display: flex; gap: 8px; }
-  .gate input { flex: 1; min-width: 0; font: 400 14px var(--f-mono); color: var(--fg); background: var(--bg); border: 1px solid var(--line); border-radius: 4px; padding: 8px 10px; }
-  .gate input:focus { outline: none; border-color: var(--hot); }
-  .gate button { font: 500 12px var(--f-mono); text-transform: uppercase; color: #fff; background: var(--hot); border: 1px solid var(--hot); border-radius: 4px; padding: 0 14px; cursor: pointer; }
-  .gate small { display: block; min-height: 16px; margin-top: 6px; color: #d24c3f; font: 400 12px var(--f-mono); }
+  .gate { margin-top: 40px; display: flex; }
+  .gate input { width: 180px; font: 400 13px var(--f-mono); color: var(--fg); background: transparent; border: 0; border-bottom: 1px solid var(--line); padding: 6px 2px; opacity: .55; transition: opacity .2s, border-color .2s; }
+  .gate input::placeholder { color: var(--muted); }
+  .gate input:focus { outline: none; opacity: 1; border-color: var(--accent); }
   .gate.shake { animation: shake .35s; }
   @keyframes shake { 25% { transform: translateX(-6px); } 75% { transform: translateX(6px); } }
   @media (prefers-reduced-motion: reduce) { * { transition: none !important; } }
@@ -249,19 +245,18 @@
     const unlocked = window.erLock && erLock.ok();
     $('groups').innerHTML = G.map((g, n) => {
       const locked = g.lock && !unlocked;
-      return `<section class="layer${g.lock ? ' priv' : ''}" data-g ${locked ? 'data-locked' : ''}>
+      if (locked) return `<form class="gate" id="gate" data-g data-locked autocomplete="off"><input type="password" id="pw" placeholder="password" aria-label="password"><span data-n hidden>0</span></form>`;
+      return `<section class="layer${g.lock ? ' priv' : ''}" data-g>
         <div class="layer-head"><span class="swatch"></span><h2>${g.h[lang]}</h2><span class="meta">LAYER 0${n + 1} · <span data-n>${g.items.length}</span></span>
-          ${g.lock ? `<svg class="lk" viewBox="0 0 32 32" aria-hidden="true">${ICON.lock}</svg>${unlocked ? `<button class="relock" type="button" id="relock">${t.relock}</button>` : ''}` : ''}</div>
-        ${locked ? `<form class="gate" id="gate" autocomplete="off"><span class="ico"><svg viewBox="0 0 32 32" aria-hidden="true">${ICON.lock}</svg></span>
-            <div><p>${t.lockT}</p><div class="gate-row"><input type="password" id="pw" placeholder="${t.pw}" aria-label="${t.pw}"><button type="submit">${t.open}</button></div><small id="pwErr"></small></div></form>`
-          : `<div class="grid">${g.items.map(card).join('')}</div>`}
+          ${g.lock ? `<button class="relock" type="button" id="relock">${t.relock}</button>` : ''}</div>
+        <div class="grid">${g.items.map(card).join('')}</div>
       </section>`; }).join('') +
-      `<details class="lab" id="lab" data-g ${open ? 'open' : ''}><summary><span class="swatch"></span><h2>${LAB.h[lang]}</h2><span class="meta">LAYER 0${G.length + 1} · <span data-n>${LAB.items.length}</span></span><span class="tw">${t.show}</span></summary>
+      `<details class="lab" id="lab" data-g ${open ? 'open' : ''}><summary><span class="swatch"></span><h2>${LAB.h[lang]}</h2><span class="meta">LAYER 0${G.length + (unlocked ? 1 : 0)} · <span data-n>${LAB.items.length}</span></span><span class="tw">${t.show}</span></summary>
         <div class="grid">${LAB.items.map(card).join('')}</div></details>`;
     filter(); animateCards();
     if ($('gate')) $('gate').addEventListener('submit', e => { e.preventDefault();
       if (erLock.check($('pw').value)) { render(); }
-      else { $('pwErr').textContent = T[lang].wrong; $('pw').select(); const g = $('gate'); g.classList.remove('shake'); void g.offsetWidth; g.classList.add('shake'); } });
+      else { $('pw').value = ''; const g = $('gate'); g.classList.remove('shake'); void g.offsetWidth; g.classList.add('shake'); } });
     if ($('relock')) $('relock').addEventListener('click', () => { erLock.lock(); render(); });
   }
   function filter() {
