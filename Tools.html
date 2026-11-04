@@ -21,7 +21,7 @@
     color-scheme: dark;
   }
   * { box-sizing: border-box; }
-  html, body { background: var(--bg); }
+  html { background: var(--bg); } body { background: transparent; }
   body { margin: 0; color: var(--fg); font-family: var(--f-body); font-size: 15px; line-height: 1.55; }
   a { color: inherit; }
   :focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
@@ -76,9 +76,40 @@
   footer .wrap { display: flex; justify-content: space-between; gap: 12px; flex-wrap: wrap; }
   footer a:hover { color: var(--accent); }
   @media (prefers-reduced-motion: reduce) { * { transition: none !important; } }
+  /* --- motion: drifting blueprint grid, slow scan line, card reveal, cursor glow, icon draw --- */
+  .bg { position: fixed; inset: 0; z-index: -1; pointer-events: none; overflow: hidden; }
+  .bg .gridf { position: absolute; inset: -80px; opacity: .55;
+    background-image: linear-gradient(var(--grid) 1px, transparent 1px), linear-gradient(90deg, var(--grid) 1px, transparent 1px),
+      linear-gradient(color-mix(in srgb, var(--grid) 60%, transparent) 1px, transparent 1px), linear-gradient(90deg, color-mix(in srgb, var(--grid) 60%, transparent) 1px, transparent 1px);
+    background-size: 80px 80px, 80px 80px, 16px 16px, 16px 16px;
+    -webkit-mask-image: radial-gradient(ellipse at 70% 0%, #000 0%, rgba(0,0,0,.5) 45%, transparent 80%); mask-image: radial-gradient(ellipse at 70% 0%, #000 0%, rgba(0,0,0,.5) 45%, transparent 80%);
+    animation: drift 40s linear infinite; }
+  .bg .scan { position: absolute; left: 0; right: 0; top: 0; height: 120px; background: linear-gradient(transparent, var(--accent-dim), transparent); opacity: .5; animation: scan 14s ease-in-out infinite; }
+  .bg .glow { position: absolute; width: 520px; height: 520px; left: calc(var(--gx, 70vw) - 260px); top: calc(var(--gy, 10vh) - 260px); border-radius: 50%;
+    background: radial-gradient(closest-side, var(--accent-dim), transparent); transition: left .6s ease-out, top .6s ease-out; }
+  @keyframes drift { to { transform: translate(80px, 80px); } }
+  @keyframes scan { 0% { transform: translateY(-140px); } 100% { transform: translateY(110vh); } }
+
+  .card { position: relative; overflow: hidden; }
+  .card::before { content: ""; position: absolute; inset: 0; pointer-events: none; opacity: 0; transition: opacity .25s;
+    background: radial-gradient(260px circle at var(--mx, 50%) var(--my, 50%), var(--accent-dim), transparent 70%); }
+  .card:hover::before { opacity: 1; }
+  .card > * { position: relative; }
+  .card.rv { opacity: 0; transform: translateY(14px); }
+  .card.rv.in { opacity: 1; transform: none; transition: opacity .5s ease, transform .5s cubic-bezier(.2,.7,.2,1), border-color .2s; transition-delay: var(--d, 0s); }
+  .ico svg [pathLength] { stroke-dasharray: 1; stroke-dashoffset: 0; }
+  .card:hover .ico svg [pathLength] { animation: draw .9s ease forwards; }
+  @keyframes draw { 0% { stroke-dashoffset: 1; } 100% { stroke-dashoffset: 0; } }
+  .swatch { animation: blink 3.2s ease-in-out infinite; }
+  @keyframes blink { 0%, 100% { opacity: 1; } 50% { opacity: .35; } }
+  .head h1::after { content: "_"; color: var(--accent); margin-left: 4px; animation: caret 1.1s steps(1) infinite; }
+  @keyframes caret { 50% { opacity: 0; } }
+  @media (prefers-reduced-motion: reduce) { .bg .gridf, .bg .scan, .swatch, .head h1::after, .card:hover .ico svg [pathLength] { animation: none !important; } .card.rv { opacity: 1; transform: none; } }
+
 </style>
 </head>
 <body>
+<div class="bg" aria-hidden="true"><div class="gridf"></div><div class="glow" id="glow"></div><div class="scan"></div></div>
 <div class="topbar">
   <div class="wrap">
     <a class="brand" href="./">erdevelop<span>_</span></a>
@@ -202,7 +233,7 @@
       </section>`).join('') +
       `<details class="lab" id="lab" data-g ${open ? 'open' : ''}><summary><span class="swatch"></span><h2>${LAB.h[lang]}</h2><span class="meta">LAYER 0${G.length + 1} · <span data-n>${LAB.items.length}</span></span><span class="tw">${t.show}</span></summary>
         <div class="grid">${LAB.items.map(card).join('')}</div></details>`;
-    filter();
+    filter(); animateCards();
   }
   function filter() {
     const q = $('q').value.trim().toLocaleLowerCase('tr');
@@ -216,6 +247,22 @@
     $('count').textContent = `${total} ${T[lang].items}`;
     $('empty').style.display = total ? 'none' : 'block';
   }
+
+  // motion helpers
+  let firstPaint = true;
+  function animateCards() {
+    document.querySelectorAll('.ico svg').forEach(svg => svg.querySelectorAll('path, rect, circle, line, polyline, polygon, ellipse').forEach(el => { if (!el.hasAttribute('stroke-dasharray')) el.setAttribute('pathLength', '1'); }));
+    if (!firstPaint) return; firstPaint = false;
+    const cards = [...document.querySelectorAll('#groups .layer .card')];
+    cards.forEach((c, i) => { c.classList.add('rv'); c.style.setProperty('--d', Math.min(i * 0.045, 0.6) + 's'); });
+    requestAnimationFrame(() => requestAnimationFrame(() => cards.forEach(c => c.classList.add('in'))));
+    setTimeout(() => cards.forEach(c => { c.classList.remove('rv', 'in'); c.style.removeProperty('--d'); }), 1400);
+  }
+  document.addEventListener('pointermove', e => {
+    const c = e.target.closest && e.target.closest('.card');
+    if (c) { const r = c.getBoundingClientRect(); c.style.setProperty('--mx', (e.clientX - r.left) + 'px'); c.style.setProperty('--my', (e.clientY - r.top) + 'px'); }
+    if (e.pointerType === 'mouse') { const g = $('glow').style; g.setProperty('--gx', e.clientX + 'px'); g.setProperty('--gy', e.clientY + 'px'); }
+  }, { passive: true });
   $('q').addEventListener('input', filter);
   $('langBtn').addEventListener('click', () => { lang = lang === 'tr' ? 'en' : 'tr'; render(); });
   $('modeBtn').addEventListener('click', () => { mode = mode === 'dark' ? 'light' : 'dark'; store.set('erdevelop-mode', mode); applyMode(); });
