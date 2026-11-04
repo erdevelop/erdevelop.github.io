@@ -94,6 +94,8 @@
       user: window.Auth && window.Auth.current,
       best: (window.Store && window.Store.getBest(g.id)) || 0,
       toast,
+      sound(name){ if(window.FX && typeof FX[name]==='function') FX[name](); },
+      buzz(p){ if(window.FX) FX.buzz(p); },
       onCleanup(fn){ cleanupFns.push(fn); },
       async submitScore(n){
         if(!window.Store) return {best:n,isNew:true,score:n};
@@ -101,6 +103,7 @@
         if(r.isNew && r.best>0){
           toast('🎉 Yeni rekor: '+r.best);
           const bb=$('#bestBadge'); bb.hidden=false; bb.textContent='En iyi: '+r.best;
+          if(window.FX) FX.record();
         }
         return r;
       },
@@ -192,6 +195,45 @@
     $('#accountLabel').textContent = u ? (u.name.length>10?u.name.slice(0,9)+'…':u.name) : 'Giriş';
     renderGrid();
   }
+
+  // ---------- Skor tablosu ----------
+  function scoreboardHTML(){
+    const bests = (window.Store && window.Store.allBests && window.Store.allBests()) || {};
+    const played = games.filter(g=>bests[g.id]>0).sort((a,b)=>bests[b.id]-bests[a.id]);
+    let rows='';
+    const medal=['🥇','🥈','🥉'];
+    played.forEach((g,i)=>{ rows+='<button class="score-row" data-id="'+g.id+'">'+
+      '<span class="score-rank">'+(medal[i]||(i+1))+'</span>'+
+      '<span class="score-name">'+g.title+'</span>'+
+      '<span class="score-val">'+bests[g.id]+'</span></button>'; });
+    const unplayed = games.length - played.length;
+    return '<h3 class="auth-h">🏆 Skorların</h3>'+
+      '<p class="auth-sub">'+(played.length?('En iyi '+played.length+' oyun · '+unplayed+' oyun henüz oynanmadı'):'Henüz skor yok — bir oyun oyna!')+'</p>'+
+      (window.Auth && window.Auth.current ? '' : '<div class="auth-mode-note">İpucu: giriş yaparsan skorların '+(cloud?'her cihazda':'bu cihazda')+' saklanır.</div>')+
+      '<div class="score-list">'+rows+'</div>';
+  }
+  function openScores(){ openModal(scoreboardHTML());
+    body.querySelectorAll('.score-row').forEach(r=> r.onclick=()=>{ const g=games.find(x=>x.id===r.dataset.id); closeModal(); if(g) openGame(g); }); }
+  const scoreBtn=$('#scoreBtn'); if(scoreBtn) scoreBtn.onclick=openScores;
+
+  // ---------- Ses ----------
+  function soundIcon(){ const b=$('#soundBtn'); if(!b||!window.FX) return;
+    b.innerHTML = FX.muted
+      ? '<svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M11 5L6 9H3v6h3l5 4V5z"/><path d="M17 9l4 6M21 9l-4 6"/></svg>'
+      : '<svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M11 5L6 9H3v6h3l5 4V5z"/><path d="M15.5 8.5a5 5 0 0 1 0 7M18.5 5.5a9 9 0 0 1 0 13"/></svg>'; }
+  const soundBtn=$('#soundBtn'); if(soundBtn){ soundIcon(); soundBtn.onclick=()=>{ if(window.FX){ FX.toggle(); soundIcon(); toast(FX.muted?'🔇 Ses kapalı':'🔊 Ses açık'); } }; }
+
+  // ---------- Dokunma sesi (tüm butonlar) ----------
+  document.addEventListener('pointerdown', e=>{
+    if(!window.FX || FX.muted) return;
+    const t=e.target && e.target.closest && e.target.closest('button'); if(!t) return;
+    if(t.closest('#gameMount')||t.classList.contains('card')||t.classList.contains('g-btn')||t.classList.contains('chip')||t.classList.contains('score-row')) FX.tap();
+  }, {passive:true});
+
+  // ---------- Easter egg: markaya 5 kez dokun ----------
+  let brandTaps=0, brandT;
+  $('#homeBtn').addEventListener('click', ()=>{ brandTaps++; clearTimeout(brandT); brandT=setTimeout(()=>brandTaps=0,1500);
+    if(brandTaps>=5){ brandTaps=0; if(window.FX){ FX.record(); } toast('vauvvv! ✨'); } });
 
   // ---------- Başlat ----------
   renderChips(); renderGrid();
