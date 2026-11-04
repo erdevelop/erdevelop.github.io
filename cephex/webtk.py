@@ -174,8 +174,33 @@ def _after_cagri(aid):
     _bitir()
 
 
+_KLASOR = []
+
+
+def _klasor_zip():
+    import os
+    import zipfile
+    while _KLASOR:
+        d = _KLASOR.pop()
+        dos = []
+        for kok, _a, fl in os.walk(d):
+            dos += [os.path.join(kok, f) for f in fl]
+        if dos:
+            os.makedirs("/tmp/indir", exist_ok=True)
+            z = "/tmp/indir/dosyalar.zip"
+            with zipfile.ZipFile(z, "w", zipfile.ZIP_DEFLATED) as zf:
+                for f in dos:
+                    zf.write(f, os.path.relpath(f, d))
+            _B.queue_download(z, "cephe_dosyalar.zip")
+
+
 def _bitir():
     """Bir geri çağrı bittikten sonra: üretilen dosyaları indirmeye sun."""
+    try:
+        _klasor_zip()
+    except Exception:
+        import traceback
+        traceback.print_exc()
     try:
         _B.flush()
     except Exception:
@@ -1659,7 +1684,13 @@ class _FileDialog:
         return _dosya_istegi("save", **kw)
 
     def askdirectory(self, **kw):
-        return ""
+        import os
+        import shutil
+        d = "/tmp/klasor_out"
+        shutil.rmtree(d, ignore_errors=True)
+        os.makedirs(d, exist_ok=True)
+        _KLASOR.append(d)
+        return d
 
     def askopenfilenames(self, **kw):
         r = _dosya_istegi("open", **kw)

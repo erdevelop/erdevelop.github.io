@@ -6094,6 +6094,7 @@ def _yazi_tipi_yolu(kalin):
         else "/usr/share/fonts/truetype/liberation/LiberationSans-Regular.ttf",
         "/usr/share/fonts/truetype/dejavu/DejaVuSans-Bold.ttf" if kalin
         else "/usr/share/fonts/truetype/dejavu/DejaVuSans.ttf",
+        os.path.join(uygulama_klasoru(), "fonts", "DejaVuSans-Bold.ttf" if kalin else "DejaVuSans.ttf"),
     ]
     for y in adaylar:
         if os.path.isfile(y):
