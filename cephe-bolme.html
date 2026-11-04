@@ -1,0 +1,313 @@
+<!doctype html>
+<html lang="tr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Cephe Bölme | erdevelop</title>
+<meta name="description" content="Cephe modülasyonu: genişlik ve yüksekliği hedef modüle göre eşit böl, dikme/kayıt düş, net cam ölçüsünü ve aksları al; AutoCAD script olarak kopyala.">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Chakra+Petch:wght@600;700&family=IBM+Plex+Sans:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500&display=swap">
+<style>
+  :root {
+    --bg: #eef2f6; --panel: #ffffff; --panel-2: #f5f7f9; --grid: #e3e8ed; --line: #cfd8e1;
+    --fg: #1c2833; --text: #45535f; --muted: #74838f; --accent: #2f6fb5; --accent-dim: rgba(47,111,181,.12); --hot: #c8731f;
+    --glass: rgba(120,170,215,.28); --frame: #3d4954; --ok: #2e9b5b; --bad: #d24c3f;
+    --f-display: 'Chakra Petch', 'Segoe UI', sans-serif; --f-body: 'IBM Plex Sans', 'Segoe UI', system-ui, sans-serif; --f-mono: 'IBM Plex Mono', Consolas, monospace;
+    color-scheme: light;
+  }
+  :root[data-mode="dark"] {
+    --bg: #0c1015; --panel: #131921; --panel-2: #10151c; --grid: #1a212a; --line: #26303b;
+    --fg: #dfe6ed; --text: #a9b5c1; --muted: #75838f; --accent: #5aa9ff; --accent-dim: rgba(90,169,255,.14); --hot: #f0a04b;
+    --glass: rgba(90,169,255,.16); --frame: #b8c4cf; --ok: #4cc283; --bad: #ef6b5e;
+    color-scheme: dark;
+  }
+  * { box-sizing: border-box; }
+  html, body { background: var(--bg); }
+  body { margin: 0; color: var(--fg); font-family: var(--f-body); font-size: 15px; line-height: 1.55; }
+  a { color: inherit; }
+  :focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+  .wrap { max-width: 1160px; margin: 0 auto; padding-left: max(16px, env(safe-area-inset-left, 0px)); padding-right: max(16px, env(safe-area-inset-right, 0px)); }
+  .topbar { position: sticky; top: env(safe-area-inset-top, 0px); z-index: 20; background: color-mix(in srgb, var(--bg) 92%, transparent); backdrop-filter: blur(6px); border-bottom: 1px solid var(--line); }
+  body::before { content: ""; position: fixed; inset: 0 0 auto; height: env(safe-area-inset-top, 0px); z-index: 21; background: var(--bg); }
+  .topbar .wrap { display: flex; align-items: center; gap: 10px; padding-block: 10px; }
+  .brand { font: 700 15px var(--f-display); letter-spacing: 1px; text-transform: uppercase; text-decoration: none; }
+  .brand span { color: var(--accent); }
+  .crumb { font: 400 12px var(--f-mono); color: var(--muted); white-space: nowrap; }
+  .crumb a { text-decoration: none; } .crumb a:hover { color: var(--accent); }
+  .sp { flex: 1; }
+  .tb { font: 500 12px var(--f-mono); color: var(--accent); padding: 6px 10px; border: 1px solid var(--line); border-radius: 4px; background: none; cursor: pointer; text-transform: uppercase; }
+  .tb:hover { border-color: var(--accent); }
+
+  h1 { font: 700 clamp(1.7rem, 4.5vw, 2.5rem)/1.05 var(--f-display); margin: 30px 0 8px; text-transform: uppercase; }
+  .lead { margin: 0; color: var(--text); max-width: 70ch; }
+  .layout { display: grid; grid-template-columns: minmax(0, 360px) minmax(0, 1fr); gap: 18px; margin-top: 22px; align-items: start; }
+  @media (max-width: 900px) { .layout { grid-template-columns: 1fr; } }
+  .layout > div { min-width: 0; }
+  .box { background: var(--panel); border: 1px solid var(--line); border-radius: 6px; padding: 16px; min-width: 0; }
+  .box + .box { margin-top: 14px; }
+  .box h2 { margin: 0 0 12px; font: 600 12px var(--f-mono); text-transform: uppercase; letter-spacing: 1px; color: var(--muted); display: flex; justify-content: space-between; gap: 8px; }
+  label.f { display: block; font: 500 12px var(--f-mono); color: var(--muted); margin: 0 0 4px; }
+  input[type=number] { width: 100%; font: 500 15px var(--f-mono); color: var(--fg); background: var(--panel-2); border: 1px solid var(--line); border-radius: 4px; padding: 8px 10px; }
+  input:focus { outline: none; border-color: var(--accent); }
+  .row2 { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px; margin-bottom: 10px; }
+  .seg { display: inline-flex; border: 1px solid var(--line); border-radius: 4px; overflow: hidden; margin-bottom: 10px; }
+  .seg button { font: 500 12px var(--f-mono); padding: 6px 10px; border: 0; background: var(--panel-2); color: var(--muted); cursor: pointer; }
+  .seg button.on { background: var(--accent); color: #fff; }
+  fieldset { border: 1px solid var(--line); border-radius: 6px; padding: 10px 12px 2px; margin: 0 0 12px; min-width: 0; }
+  legend { font: 600 12px var(--f-mono); color: var(--fg); padding: 0 6px; text-transform: uppercase; letter-spacing: .5px; }
+
+  .stats { display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 10px; }
+  .stat { background: var(--panel-2); border: 1px solid var(--line); border-radius: 6px; padding: 10px 12px; min-width: 0; }
+  .stat b { display: block; font: 600 18px var(--f-mono); font-variant-numeric: tabular-nums; line-height: 1.25; overflow-wrap: anywhere; }
+  .stat b small { font-size: 12px; color: var(--muted); font-weight: 400; margin-left: 3px; }
+  .stat span { font: 400 11px var(--f-mono); color: var(--muted); text-transform: uppercase; letter-spacing: .5px; }
+  .stat.hl { border-color: var(--accent); background: var(--accent-dim); }
+
+  .elev { margin-top: 14px; overflow-x: auto; border: 1px solid var(--line); border-radius: 6px; background: var(--panel-2);
+    background-image: linear-gradient(var(--grid) 1px, transparent 1px), linear-gradient(90deg, var(--grid) 1px, transparent 1px); background-size: 20px 20px; }
+  .elev svg { display: block; width: 100%; height: auto; min-width: 520px; }
+
+  .alts { width: 100%; border-collapse: collapse; font: 400 13px var(--f-mono); font-variant-numeric: tabular-nums; }
+  .alts th { text-align: right; color: var(--muted); font-weight: 500; font-size: 11px; text-transform: uppercase; border-bottom: 1px solid var(--line); padding: 5px 6px; }
+  .alts th:first-child, .alts td:first-child { text-align: left; }
+  .alts td { text-align: right; border-bottom: 1px dashed var(--grid); padding: 5px 6px; }
+  .alts tr.cur td { background: var(--accent-dim); font-weight: 600; }
+  .alts tr[data-n] { cursor: pointer; }
+  .alts tr[data-n]:hover td { color: var(--accent); }
+  .ok { color: var(--ok); } .bad { color: var(--bad); }
+  .tables { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 14px; }
+  @media (max-width: 640px) { .tables { grid-template-columns: 1fr; } }
+  .tables h3 { margin: 0 0 6px; font: 600 12px var(--f-mono); color: var(--fg); text-transform: uppercase; }
+
+  pre.out { margin: 0; max-height: 220px; overflow: auto; font: 400 12px/1.5 var(--f-mono); background: var(--panel-2); border: 1px solid var(--line); border-radius: 4px; padding: 10px; color: var(--text); }
+  .btns { display: flex; gap: 8px; flex-wrap: wrap; }
+  .btn { font: 500 12px var(--f-mono); padding: 6px 12px; border: 1px solid var(--line); border-radius: 4px; background: var(--panel); color: var(--fg); cursor: pointer; }
+  .btn:hover { border-color: var(--accent); color: var(--accent); }
+  .btn.primary { background: var(--accent); border-color: var(--accent); color: #fff; }
+  .note { font-size: 12.5px; color: var(--muted); margin: 10px 0 0; }
+  footer { margin-top: 40px; border-top: 1px solid var(--line); padding-block: 18px calc(18px + env(safe-area-inset-bottom, 0px)); font: 400 12px var(--f-mono); color: var(--muted); }
+  footer .wrap { display: flex; justify-content: space-between; gap: 12px; flex-wrap: wrap; }
+</style>
+</head>
+<body>
+<div class="topbar">
+  <div class="wrap">
+    <a class="brand" href="./">erdevelop<span>_</span></a>
+    <span class="crumb">/ <a href="Tools.html">tools</a> / bölme</span>
+    <span class="sp"></span>
+    <button class="tb" type="button" id="modeBtn">DARK</button>
+    <button class="tb" type="button" id="langBtn">EN</button>
+  </div>
+</div>
+
+<main class="wrap">
+  <h1 data-k="title">Cephe bölme</h1>
+  <p class="lead" data-k="lead">Cephe genişliğini ve yüksekliğini hedef modüle göre eşit böl. Dikme ve kayıt genişliği düşülerek net cam ölçüsü, aks listesi ve alternatif bölmeler çıkar; aksları AutoCAD scripti olarak kopyalayabilirsin.</p>
+
+  <div class="layout">
+    <div>
+      <section class="box">
+        <h2 data-k="input">Giriş</h2>
+        <fieldset>
+          <legend data-k="horiz">Yatay · genişlik</legend>
+          <div class="row2">
+            <div><label class="f" for="L" data-k="len">Toplam (mm)</label><input type="number" id="L" value="24000" min="1" step="10"></div>
+            <div><label class="f" for="mw" data-k="mull">Dikme (mm)</label><input type="number" id="mw" value="50" min="0" step="1"></div>
+          </div>
+          <div class="seg" role="group" id="segX"><button type="button" data-v="mod" class="on" data-k="byMod">Hedef modül</button><button type="button" data-v="cnt" data-k="byCnt">Panel adedi</button></div>
+          <div class="row2">
+            <div><label class="f" for="Mx" id="MxL" data-k="target">Hedef modül (mm)</label><input type="number" id="Mx" value="1500" min="1" step="10"></div>
+            <div><label class="f" for="maxX" data-k="maxw">En fazla (mm)</label><input type="number" id="maxX" value="1800" min="0" step="10"></div>
+          </div>
+        </fieldset>
+        <fieldset>
+          <legend data-k="vert">Düşey · yükseklik</legend>
+          <div class="row2">
+            <div><label class="f" for="H" data-k="len">Toplam (mm)</label><input type="number" id="H" value="12800" min="1" step="10"></div>
+            <div><label class="f" for="tw" data-k="tran">Kayıt (mm)</label><input type="number" id="tw" value="50" min="0" step="1"></div>
+          </div>
+          <div class="seg" role="group" id="segY"><button type="button" data-v="mod" class="on" data-k="byMod">Hedef modül</button><button type="button" data-v="cnt" data-k="byCnt">Panel adedi</button></div>
+          <div class="row2">
+            <div><label class="f" for="My" id="MyL" data-k="target">Hedef modül (mm)</label><input type="number" id="My" value="3200" min="1" step="10"></div>
+            <div><label class="f" for="maxY" data-k="maxw">En fazla (mm)</label><input type="number" id="maxY" value="3600" min="0" step="10"></div>
+          </div>
+        </fieldset>
+        <p class="note" data-k="note">Aks ölçüsü = toplam ÷ adet. Net cam = aks − profil genişliği (dikme/kayıt aksa ortalandığı varsayılır). "En fazla" boş bırakılırsa kontrol yapılmaz.</p>
+      </section>
+    </div>
+
+    <div>
+      <section class="box">
+        <h2><span data-k="result">Sonuç</span></h2>
+        <div class="stats">
+          <div class="stat hl"><span data-k="sGrid">Bölme</span><b id="sGrid">–</b></div>
+          <div class="stat"><span data-k="sAx">Aks (Y × D)</span><b id="sAx">–</b></div>
+          <div class="stat"><span data-k="sNet">Net cam</span><b id="sNet">–</b></div>
+          <div class="stat"><span data-k="sArea">Cam alanı</span><b id="sArea">–</b></div>
+        </div>
+        <div class="elev"><svg id="elev" role="img" aria-label="Cephe görünüşü"></svg></div>
+      </section>
+
+      <section class="box">
+        <h2 data-k="altsT">Alternatif bölmeler (satıra tıkla)</h2>
+        <div class="tables">
+          <div><h3 data-k="horiz">Yatay · genişlik</h3><table class="alts"><thead><tr><th data-k="cnt">Adet</th><th data-k="axis">Aks</th><th data-k="net">Net</th><th data-k="diff">Fark</th></tr></thead><tbody id="altX"></tbody></table></div>
+          <div><h3 data-k="vert">Düşey · yükseklik</h3><table class="alts"><thead><tr><th data-k="cnt">Adet</th><th data-k="axis">Aks</th><th data-k="net">Net</th><th data-k="diff">Fark</th></tr></thead><tbody id="altY"></tbody></table></div>
+        </div>
+      </section>
+
+      <section class="box">
+        <h2><span data-k="axesT">Aks listesi</span>
+          <span class="btns"><button class="btn" type="button" id="cpCsv" data-k="cpCsv">CSV kopyala</button><button class="btn primary" type="button" id="cpScr" data-k="cpScr">AutoCAD script kopyala</button><button class="btn" type="button" id="dlScr" data-k="dlScr">.scr indir</button></span></h2>
+        <pre class="out" id="out"></pre>
+        <p class="note" data-k="scrNote">Script, AutoCAD'de SCRIPT komutuyla ya da komut satırına yapıştırılarak çalışır; 0,0 noktasından başlayarak aks çizgilerini çizer.</p>
+      </section>
+    </div>
+  </div>
+</main>
+
+<footer><div class="wrap"><span>© 2026 Erdal Üstünol</span><a href="Tools.html" data-k="back">← tüm araçlar</a></div></footer>
+
+<script>
+(() => {
+  const $ = id => document.getElementById(id);
+  const T = {
+    tr: { title: 'Cephe bölme', lead: 'Cephe genişliğini ve yüksekliğini hedef modüle göre eşit böl. Dikme ve kayıt genişliği düşülerek net cam ölçüsü, aks listesi ve alternatif bölmeler çıkar; aksları AutoCAD scripti olarak kopyalayabilirsin.',
+      input: 'Giriş', horiz: 'Yatay · genişlik', vert: 'Düşey · yükseklik', len: 'Toplam (mm)', mull: 'Dikme (mm)', tran: 'Kayıt (mm)', byMod: 'Hedef modül', byCnt: 'Panel adedi', target: 'Hedef modül (mm)', count: 'Panel adedi', maxw: 'En fazla (mm)',
+      note: 'Aks ölçüsü = toplam ÷ adet. Net cam = aks − profil genişliği (dikme/kayıt aksa ortalandığı varsayılır). "En fazla" boş bırakılırsa kontrol yapılmaz.',
+      result: 'Sonuç', sGrid: 'Bölme', sAx: 'Aks (Y × D)', sNet: 'Net cam', sArea: 'Cam alanı', altsT: 'Alternatif bölmeler (satıra tıkla)', cnt: 'Adet', axis: 'Aks', net: 'Net', diff: 'Fark',
+      axesT: 'Aks listesi', cpCsv: 'CSV kopyala', cpScr: 'AutoCAD script kopyala', dlScr: '.scr indir', copied: 'Kopyalandı',
+      scrNote: "Script, AutoCAD'de SCRIPT komutuyla ya da komut satırına yapıştırılarak çalışır; 0,0 noktasından başlayarak aks çizgilerini çizer.", back: '← tüm araçlar', btn: 'EN',
+      panels: 'panel', xAxes: 'Düşey akslar (X)', yAxes: 'Yatay akslar (Y)', over: 'sınır üstü' },
+    en: { title: 'Facade division', lead: 'Divide a facade’s width and height evenly to a target module. Subtract mullion and transom widths for the clear glass size, get the axis list and alternative divisions, and copy the axes as an AutoCAD script.',
+      input: 'Input', horiz: 'Horizontal · width', vert: 'Vertical · height', len: 'Total (mm)', mull: 'Mullion (mm)', tran: 'Transom (mm)', byMod: 'Target module', byCnt: 'Panel count', target: 'Target module (mm)', count: 'Panel count', maxw: 'Maximum (mm)',
+      note: 'Axis = total ÷ count. Clear glass = axis − profile width (profiles assumed centred on the axis). Leave “Maximum” empty to skip the check.',
+      result: 'Result', sGrid: 'Grid', sAx: 'Axis (W × H)', sNet: 'Clear glass', sArea: 'Glass area', altsT: 'Alternative divisions (click a row)', cnt: 'Qty', axis: 'Axis', net: 'Clear', diff: 'Diff',
+      axesT: 'Axis list', cpCsv: 'Copy CSV', cpScr: 'Copy AutoCAD script', dlScr: 'Download .scr', copied: 'Copied',
+      scrNote: 'Run the script in AutoCAD with the SCRIPT command or paste it into the command line; it draws the axis lines starting at 0,0.', back: '← all tools', btn: 'TR',
+      panels: 'panels', xAxes: 'Vertical axes (X)', yAxes: 'Horizontal axes (Y)', over: 'over limit' }
+  };
+  let lang = 'tr';
+  const S = { x: 'mod', y: 'mod', forceX: 0, forceY: 0 };
+  const store = { get(k) { try { return localStorage.getItem(k); } catch (e) { return null; } }, set(k, v) { try { localStorage.setItem(k, v); } catch (e) {} } };
+  let mode = store.get('erdevelop-mode') || 'dark';
+  const num = (v, d = 1) => (+v).toLocaleString(lang === 'tr' ? 'tr-TR' : 'en-GB', { minimumFractionDigits: 0, maximumFractionDigits: d });
+  const r1 = v => Math.round(v * 10) / 10;
+
+  function axisCount(total, modeKey, val, force) {
+    if (force) return force;
+    if (modeKey === 'cnt') return Math.max(1, Math.round(val));
+    return Math.max(1, Math.round(total / Math.max(val, 1)));
+  }
+  function alts(total, n, prof, target, max, cur) {
+    const rows = [];
+    for (let k = Math.max(1, n - 3); k <= n + 3; k++) {
+      const ax = total / k, net = ax - prof, over = max > 0 && ax > max;
+      rows.push(`<tr data-n="${k}" class="${k === cur ? 'cur' : ''}"><td>${k}</td><td class="${over ? 'bad' : ''}">${num(r1(ax))}</td><td>${num(r1(net))}</td><td>${target ? (ax - target >= 0 ? '+' : '') + num(r1(ax - target)) : '–'}</td></tr>`);
+    }
+    return rows.join('');
+  }
+
+  let lastX = [], lastY = [];
+  function calc() {
+    const t = T[lang];
+    const L = Math.max(1, +$('L').value || 1), H = Math.max(1, +$('H').value || 1);
+    const mw = Math.max(0, +$('mw').value || 0), tw = Math.max(0, +$('tw').value || 0);
+    const Mx = +$('Mx').value || 1, My = +$('My').value || 1, maxX = +$('maxX').value || 0, maxY = +$('maxY').value || 0;
+    const nx = Math.min(axisCount(L, S.x, Mx, S.forceX), 400), ny = Math.min(axisCount(H, S.y, My, S.forceY), 200);
+    const ax = L / nx, ay = H / ny, netX = ax - mw, netY = ay - tw;
+    $('sGrid').innerHTML = `${nx} × ${ny}<small>= ${nx * ny} ${t.panels}</small>`;
+    $('sAx').innerHTML = `${num(r1(ax))} × ${num(r1(ay))}`;
+    $('sNet').innerHTML = `${num(r1(netX))} × ${num(r1(netY))}`;
+    $('sArea').innerHTML = `${num(Math.max(netX, 0) * Math.max(netY, 0) * nx * ny / 1e6, 2)}<small>m²</small>`;
+    $('sAx').classList.toggle('bad', (maxX > 0 && ax > maxX) || (maxY > 0 && ay > maxY));
+    $('altX').innerHTML = alts(L, nx, mw, S.x === 'mod' ? Mx : 0, maxX, nx);
+    $('altY').innerHTML = alts(H, ny, tw, S.y === 'mod' ? My : 0, maxY, ny);
+    lastX = Array.from({ length: nx + 1 }, (_, i) => r1(ax * i));
+    lastY = Array.from({ length: ny + 1 }, (_, i) => r1(ay * i));
+    $('out').textContent = `${t.xAxes}\n${lastX.join('; ')}\n\n${t.yAxes}\n${lastY.join('; ')}`;
+    draw(L, H, nx, ny, mw, tw, ax, ay, maxX > 0 && ax > maxX, maxY > 0 && ay > maxY);
+  }
+
+  function draw(L, H, nx, ny, mw, tw, ax, ay, overX, overY) {
+    const cs = getComputedStyle(document.documentElement), c = n => cs.getPropertyValue(n).trim();
+    const VW = 1000, padL = 70, padB = 60, padT = 20, padR = 20;
+    const s = Math.min((VW - padL - padR) / L, 460 / H), w = L * s, h = H * s, VH = h + padT + padB;
+    const X = v => padL + v * s, Y = v => padT + h - v * s;
+    let g = `<rect x="${X(0)}" y="${Y(H)}" width="${w}" height="${h}" fill="${c('--glass')}"/>`;
+    for (let i = 0; i <= nx; i++) { const x = X(ax * i); g += `<rect x="${(x - Math.max(mw * s, 1) / 2).toFixed(2)}" y="${Y(H)}" width="${Math.max(mw * s, 1).toFixed(2)}" height="${h}" fill="${c('--frame')}"/>`; }
+    for (let j = 0; j <= ny; j++) { const y = Y(ay * j); g += `<rect x="${X(0)}" y="${(y - Math.max(tw * s, 1) / 2).toFixed(2)}" width="${w}" height="${Math.max(tw * s, 1).toFixed(2)}" fill="${c('--frame')}"/>`; }
+    // dimension chains
+    const dc = c('--hot'), fz = 11;
+    let d = `<g stroke="${dc}" fill="none" stroke-width="1">`;
+    const yb = Y(0) + 22;
+    d += `<path d="M${X(0)} ${yb}H${X(L)}"/>`;
+    const stepX = Math.max(1, Math.ceil(70 / (ax * s)));
+    for (let i = 0; i <= nx; i++) d += `<path d="M${X(ax * i)} ${yb - 4}v8"/>`;
+    d += `<path d="M${X(0)} ${yb + 18}H${X(L)}M${X(0)} ${yb + 14}v8M${X(L)} ${yb + 14}v8"/>`;
+    const xl = padL - 22;
+    d += `<path d="M${xl} ${Y(0)}V${Y(H)}"/>`;
+    for (let j = 0; j <= ny; j++) d += `<path d="M${xl - 4} ${Y(ay * j)}h8"/>`;
+    d += `</g><g fill="${dc}" font-family="IBM Plex Mono, monospace" font-size="${fz}" text-anchor="middle">`;
+    for (let i = 0; i < nx; i += stepX) d += `<text x="${(X(ax * i) + X(ax * (i + 1))) / 2}" y="${yb - 6}"${overX ? ` fill="${c('--bad')}"` : ''}>${num(r1(ax))}</text>`;
+    d += `<text x="${(X(0) + X(L)) / 2}" y="${yb + 34}">${num(L)} = ${nx} × ${num(r1(ax))}</text>`;
+    const stepY = Math.max(1, Math.ceil(50 / (ay * s)));
+    for (let j = 0; j < ny; j += stepY) { const yc = (Y(ay * j) + Y(ay * (j + 1))) / 2; d += `<text x="${xl - 8}" y="${yc}" transform="rotate(-90 ${xl - 8} ${yc})"${overY ? ` fill="${c('--bad')}"` : ''}>${num(r1(ay))}</text>`; }
+    d += `</g>`;
+    const svg = $('elev');
+    svg.setAttribute('viewBox', `0 0 ${VW} ${VH.toFixed(0)}`);
+    svg.innerHTML = g + d;
+  }
+
+  function scr() {
+    const L = lastX[lastX.length - 1], H = lastY[lastY.length - 1];
+    let s = '';
+    lastX.forEach(x => { s += `_LINE\n${x},0\n${x},${H}\n\n`; });
+    lastY.forEach(y => { s += `_LINE\n0,${y}\n${L},${y}\n\n`; });
+    return s;
+  }
+  function copy(text, btn) {
+    const done = () => { const o = btn.textContent; btn.textContent = T[lang].copied; setTimeout(() => { btn.textContent = o; }, 1300); };
+    try { navigator.clipboard.writeText(text).then(done).catch(() => sel()); } catch (e) { sel(); }
+    function sel() { const r = document.createRange(); r.selectNodeContents($('out')); const s = getSelection(); s.removeAllRanges(); s.addRange(r); }
+  }
+  $('cpCsv').addEventListener('click', e => copy(`X;${lastX.join(';')}\nY;${lastY.join(';')}`, e.currentTarget));
+  $('cpScr').addEventListener('click', e => copy(scr(), e.currentTarget));
+  $('dlScr').addEventListener('click', () => {
+    const a = document.createElement('a'); a.href = URL.createObjectURL(new Blob([scr()], { type: 'text/plain' })); a.download = 'cephe_akslari.scr';
+    document.body.appendChild(a); a.click(); setTimeout(() => { URL.revokeObjectURL(a.href); a.remove(); }, 500);
+  });
+
+  function setSeg(axis, v) {
+    S[axis] = v; S['force' + axis.toUpperCase()] = 0;
+    const seg = $(axis === 'x' ? 'segX' : 'segY');
+    seg.querySelectorAll('button').forEach(b => b.classList.toggle('on', b.dataset.v === v));
+    const inp = $(axis === 'x' ? 'Mx' : 'My'), lab = $(axis === 'x' ? 'MxL' : 'MyL');
+    const L = +$(axis === 'x' ? 'L' : 'H').value;
+    if (v === 'cnt') { inp.value = Math.max(1, Math.round(L / (+inp.value || 1))); inp.step = 1; lab.textContent = T[lang].count; lab.dataset.k = 'count'; }
+    else { inp.value = Math.round(L / Math.max(+inp.value, 1)); inp.step = 10; lab.textContent = T[lang].target; lab.dataset.k = 'target'; }
+    calc();
+  }
+  $('segX').addEventListener('click', e => { const b = e.target.closest('button'); if (b && b.dataset.v !== S.x) setSeg('x', b.dataset.v); });
+  $('segY').addEventListener('click', e => { const b = e.target.closest('button'); if (b && b.dataset.v !== S.y) setSeg('y', b.dataset.v); });
+  $('altX').addEventListener('click', e => { const r = e.target.closest('[data-n]'); if (r) { S.forceX = +r.dataset.n; if (S.x === 'cnt') $('Mx').value = S.forceX; calc(); } });
+  $('altY').addEventListener('click', e => { const r = e.target.closest('[data-n]'); if (r) { S.forceY = +r.dataset.n; if (S.y === 'cnt') $('My').value = S.forceY; calc(); } });
+  ['L', 'mw', 'maxX'].forEach(id => $(id).addEventListener('input', () => { calc(); }));
+  ['H', 'tw', 'maxY'].forEach(id => $(id).addEventListener('input', () => { calc(); }));
+  $('Mx').addEventListener('input', () => { S.forceX = 0; calc(); });
+  $('My').addEventListener('input', () => { S.forceY = 0; calc(); });
+
+  function render() {
+    const t = T[lang];
+    document.documentElement.lang = lang; document.title = t.title + ' | erdevelop';
+    document.querySelectorAll('[data-k]').forEach(el => { if (t[el.dataset.k]) el.textContent = t[el.dataset.k]; });
+    $('langBtn').textContent = t.btn; calc();
+  }
+  $('langBtn').addEventListener('click', () => { lang = lang === 'tr' ? 'en' : 'tr'; render(); });
+  const applyMode = () => { document.documentElement.dataset.mode = mode; $('modeBtn').textContent = mode === 'dark' ? 'LIGHT' : 'DARK'; };
+  $('modeBtn').addEventListener('click', () => { mode = mode === 'dark' ? 'light' : 'dark'; store.set('erdevelop-mode', mode); applyMode(); calc(); });
+  applyMode(); render();
+})();
+</script>
+</body>
+</html>
