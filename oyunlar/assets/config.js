@@ -1,29 +1,17 @@
 /* ============================================================
    FIREBASE AYARI  —  gerçek hesaplar (her cihazdan şifreli giriş)
-   ------------------------------------------------------------
-   Burayı DOLDURANA kadar site "yerel profil" modunda çalışır
-   (hesaplar sadece o tarayıcıda saklanır, cihazlar arası gitmez).
-
-   Gerçek hesapları açmak için (5 dk, ücretsiz):
-   1) https://console.firebase.google.com → "Proje ekle"
-   2) Soldaki menü → Build → Authentication → Başla →
-      "Sign-in method" → "E-posta/Şifre" → Etkinleştir
-   3) Build → Firestore Database → Veritabanı oluştur →
-      "Production mode" (kurallar OKUBENI.md içinde)
-   4) Proje ayarları (dişli) → "Uygulamalarım" → Web (</>) ekle →
-      sana verdiği firebaseConfig değerlerini aşağıya yapıştır
-   5) Authentication → Settings → "Authorized domains" →
-      erdevelop.github.io ekle
+   Doldurulu: bu anahtarlar herkese açık olacak şekilde tasarlanmıştır;
+   güvenliği Firestore güvenlik kuralların sağlar.
    ============================================================ */
 
 window.FIREBASE_CONFIG = {
-  apiKey: "",
-  authDomain: "",
-  projectId: "",
-  storageBucket: "",
-  messagingSenderId: "",
-  appId: ""
+  apiKey: "AIzaSyBtNow8j7AZQO2sWCiXb1WbOT261wJUGRU",
+  authDomain: "oyun-bahcesi-62633.firebaseapp.com",
+  projectId: "oyun-bahcesi-62633",
+  storageBucket: "oyun-bahcesi-62633.firebasestorage.app",
+  messagingSenderId: "591926138614",
+  appId: "1:591926138614:web:24101e1be195ebc04c3ed7"
 };
 
-/* Doldurulduğunda otomatik olarak bulut moduna geçer. */
+/* apiKey dolu olduğunda otomatik bulut moduna geçer. */
 window.CLOUD_READY = !!(window.FIREBASE_CONFIG && window.FIREBASE_CONFIG.apiKey);
