@@ -18,6 +18,10 @@ registerGame({
     const base=new THREE.Mesh(new THREE.BoxGeometry(N+0.4,0.4,N+0.4), new THREE.MeshStandardMaterial({color:0x222a44,roughness:0.9})); base.position.y=-0.3; base.receiveShadow=true; scene.add(base);
     for(let y=0;y<N;y++)for(let x=0;x<N;x++){ const slot=new THREE.Mesh(new THREE.BoxGeometry(0.92,0.1,0.92),new THREE.MeshStandardMaterial({color:0x2c365a})); slot.position.set(x-1.5,-0.02,y-1.5); scene.add(slot); }
     const COLORS={2:0xeef1fb,4:0xe3e9fb,8:0xb9c9ff,16:0x9db6ff,32:0x7f9bff,64:0x6c8cff,128:0xf6c85f,256:0xf3b23e,512:0xef9d2a,1024:0xeb8a1b,2048:0x3bb27a};
+    // Sayı etiketi (canvas doku → sprite)
+    function makeLabel(v){ const cv=document.createElement('canvas'); cv.width=cv.height=128; const g=cv.getContext('2d');
+      g.clearRect(0,0,128,128); g.fillStyle = v>4?'#ffffff':'#3b5bdb'; g.font='bold '+(v>=1000?52:v>=100?64:76)+'px sans-serif'; g.textAlign='center'; g.textBaseline='middle'; g.fillText(String(v),64,70);
+      const tex=new THREE.CanvasTexture(cv); const sp=new THREE.Sprite(new THREE.SpriteMaterial({map:tex,transparent:true})); sp.scale.set(0.85,0.85,0.85); return sp; }
     let grid, score, over, cubes={};
     function reset(){ Object.values(cubes).forEach(c=>scene.remove(c.mesh)); cubes={}; grid=Array.from({length:N},()=>Array(N).fill(0)); score=0; over=false; hud.set('skor',0); msg.textContent=''; add(); add(); render3d(); }
     function add(){ const e=[]; for(let y=0;y<N;y++)for(let x=0;x<N;x++) if(!grid[y][x]) e.push([x,y]); if(!e.length) return; const [x,y]=e[(Math.random()*e.length)|0]; grid[y][x]=Math.random()<0.9?2:4; }
@@ -25,10 +29,11 @@ registerGame({
       for(let y=0;y<N;y++)for(let x=0;x<N;x++){ const v=grid[y][x]; const key=x+','+y; if(!v) continue; seen[key]=1;
         const hgt=Math.min(1.4,0.3+Math.log2(v)*0.14);
         if(!cubes[key]){ const m=new THREE.Mesh(new THREE.BoxGeometry(0.88,hgt,0.88), new THREE.MeshStandardMaterial({color:COLORS[v]||0x3bb27a, metalness:0.2, roughness:0.4}));
-          m.castShadow=true; scene.add(m); cubes[key]={mesh:m,v:0}; }
-        const c=cubes[key]; if(c.v!==v){ c.mesh.material.color.setHex(COLORS[v]||0x3bb27a); c.mesh.scale.y=hgt; c.mesh.geometry.dispose(); c.mesh.geometry=new THREE.BoxGeometry(0.88,hgt,0.88); c.v=v; }
-        c.mesh.position.set(x-1.5,hgt/2,y-1.5); }
-      Object.keys(cubes).forEach(k=>{ if(!seen[k]){ scene.remove(cubes[k].mesh); cubes[k].mesh.geometry.dispose(); cubes[k].mesh.material.dispose(); delete cubes[k]; } });
+          m.castShadow=true; scene.add(m); const lbl=makeLabel(v); scene.add(lbl); cubes[key]={mesh:m,v:0,lbl}; }
+        const c=cubes[key]; if(c.v!==v){ c.mesh.material.color.setHex(COLORS[v]||0x3bb27a); c.mesh.geometry.dispose(); c.mesh.geometry=new THREE.BoxGeometry(0.88,hgt,0.88);
+          scene.remove(c.lbl); c.lbl.material.map.dispose(); c.lbl.material.dispose(); c.lbl=makeLabel(v); scene.add(c.lbl); c.v=v; }
+        c.mesh.position.set(x-1.5,hgt/2,y-1.5); c.lbl.position.set(x-1.5,hgt+0.35,y-1.5); }
+      Object.keys(cubes).forEach(k=>{ if(!seen[k]){ scene.remove(cubes[k].mesh); cubes[k].mesh.geometry.dispose(); cubes[k].mesh.material.dispose(); if(cubes[k].lbl){ scene.remove(cubes[k].lbl); cubes[k].lbl.material.map.dispose(); cubes[k].lbl.material.dispose(); } delete cubes[k]; } });
     }
     function slide(row){ let a=row.filter(v=>v); for(let i=0;i<a.length-1;i++){ if(a[i]===a[i+1]){ a[i]*=2; score+=a[i]; a.splice(i+1,1); } } while(a.length<N)a.push(0); return a; }
     function move(d){ if(over) return; const before=JSON.stringify(grid); let g=grid.map(r=>r.slice());
