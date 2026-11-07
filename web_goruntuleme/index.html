@@ -1,0 +1,1667 @@
+<!doctype html>
+<html lang="tr">
+<head>
+<meta charset="utf-8">
+<script src="../kilit.js" data-gate="../Tools.html"></script>
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Dosya Görüntüleyici</title>
+<script type="importmap">
+{ "imports": {
+  "three": "https://cdn.jsdelivr.net/npm/three@0.187.0/build/three.module.js",
+  "three/addons/": "https://cdn.jsdelivr.net/npm/three@0.187.0/examples/jsm/"
+} }
+</script>
+<style>
+  :root {
+    --bg: #f6f5f1;
+    --surface: #ffffff;
+    --surface-2: #eeece6;
+    --text: #1f2421;
+    --muted: #646b66;
+    --line: #d9d6cd;
+    --accent: #0f6b5c;
+    --accent-text: #ffffff;
+    --danger: #a33a2a;
+    color-scheme: light;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root {
+      --bg: #151816;
+      --surface: #1e2220;
+      --surface-2: #292e2b;
+      --text: #ecebe6;
+      --muted: #a2a9a4;
+      --line: #383e3a;
+      --accent: #4cc2ab;
+      --accent-text: #08201b;
+      --danger: #f0917f;
+      color-scheme: dark;
+    }
+  }
+  * { box-sizing: border-box; }
+  [hidden] { display: none !important; }
+  html, body { margin: 0; }
+  body {
+    min-height: 100dvh;
+    background: var(--bg);
+    color: var(--text);
+    font: 16px/1.5 system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+  }
+  .sr-input { position: absolute; width: 1px; height: 1px; opacity: 0; overflow: hidden; }
+  .sr-input:focus-visible ~ * .upload,
+  .sr-input:focus-visible ~ .upload { outline: 3px solid var(--accent); outline-offset: 2px; }
+
+  .btn, .upload {
+    display: inline-flex; align-items: center; justify-content: center; gap: 8px;
+    min-height: 44px; padding: 0 16px;
+    border: 1px solid var(--line); border-radius: 8px;
+    background: var(--surface); color: var(--text);
+    font: inherit; font-weight: 600; text-decoration: none; white-space: nowrap;
+    cursor: pointer;
+  }
+  .btn:hover { background: var(--surface-2); }
+  .upload { background: var(--accent); border-color: var(--accent); color: var(--accent-text); }
+  .upload:hover { filter: brightness(1.08); }
+  .upload.big { min-height: 56px; padding: 0 32px; font-size: 18px; }
+
+  /* Karşılama ekranı */
+  #home { min-height: 100dvh; display: grid; place-items: center; padding: 16px; }
+  .drop {
+    width: min(620px, 100%); padding: 48px 24px; text-align: center;
+    border: 2px dashed var(--line); border-radius: 16px; background: var(--surface);
+  }
+  .drop h1 { margin: 0 0 8px; font-size: clamp(26px, 6vw, 34px); line-height: 1.2; }
+  .drop p { margin: 0 auto 24px; max-width: 44ch; color: var(--muted); }
+  .drop small { display: block; margin-top: 24px; color: var(--muted); font-size: 14px; }
+  .hint-desktop { display: none; }
+  @media (hover: hover) and (pointer: fine) { .hint-desktop { display: inline; } }
+
+  body.dragging::after {
+    content: "Dosyayı buraya bırak";
+    position: fixed; inset: 12px; z-index: 10;
+    display: grid; place-items: center;
+    border: 3px dashed var(--accent); border-radius: 16px;
+    background: color-mix(in srgb, var(--bg) 90%, transparent);
+    font-size: 24px; font-weight: 700; color: var(--text);
+    pointer-events: none;
+  }
+
+  /* Görüntüleme ekranı */
+  #bar {
+    position: sticky; top: 0; z-index: 5;
+    display: flex; align-items: center; gap: 8px; flex-wrap: wrap;
+    padding: 8px 16px;
+    background: var(--surface); border-bottom: 1px solid var(--line);
+  }
+  #info { flex: 1 1 160px; min-width: 0; }
+  #name { font-weight: 600; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  #meta { color: var(--muted); font-size: 14px; }
+  #stage { padding: 16px; }
+  .center { max-width: 1100px; margin: 0 auto; }
+  .status { padding: 48px 16px; text-align: center; color: var(--muted); }
+
+  .media { display: block; margin: 0 auto; max-width: 100%; max-height: calc(100dvh - 110px); }
+  img.media { cursor: zoom-in; background: repeating-conic-gradient(var(--surface-2) 0 25%, transparent 0 50%) 0 0 / 20px 20px; }
+  img.media.full { max-width: none; max-height: none; cursor: zoom-out; }
+  .scroll-x { overflow: auto; }
+  audio.media { width: min(620px, 100%); margin-top: 48px; }
+
+  .paper {
+    max-width: 860px; margin: 0 auto; padding: clamp(16px, 4vw, 48px);
+    background: var(--surface); border: 1px solid var(--line); border-radius: 8px;
+    overflow-wrap: anywhere;
+  }
+  .paper img { max-width: 100%; height: auto; }
+  .paper table { border-collapse: collapse; display: block; overflow-x: auto; }
+  .paper td, .paper th { border: 1px solid var(--line); padding: 4px 8px; }
+  .paper a { color: var(--accent); }
+  pre.code {
+    margin: 0 auto; max-width: 1100px; padding: 16px;
+    background: var(--surface); border: 1px solid var(--line); border-radius: 8px;
+    font: 14px/1.55 ui-monospace, Consolas, Menlo, monospace;
+    white-space: pre-wrap; overflow-wrap: anywhere; tab-size: 4;
+  }
+  .note {
+    max-width: 1100px; margin: 0 auto 12px; padding: 8px 12px;
+    background: var(--surface-2); border-radius: 8px; color: var(--muted); font-size: 14px;
+  }
+
+  .pdf-page {
+    display: block; width: 100%; max-width: 900px; margin: 0 auto 12px;
+    background: #fff; border: 1px solid var(--line); border-radius: 4px; overflow: hidden;
+  }
+  .pdf-page canvas { display: block; width: 100%; height: auto; }
+
+  .tabs { display: flex; gap: 4px; overflow-x: auto; margin-bottom: 8px; padding-bottom: 4px; }
+  .tabs .btn[aria-pressed="true"] { background: var(--accent); border-color: var(--accent); color: var(--accent-text); }
+  .table-wrap {
+    overflow: auto; max-height: calc(100dvh - 190px);
+    background: var(--surface); border: 1px solid var(--line); border-radius: 8px;
+  }
+  table.grid { border-collapse: collapse; font-size: 14px; }
+  table.grid td { border: 1px solid var(--line); padding: 4px 8px; white-space: nowrap; max-width: 420px; overflow: hidden; text-overflow: ellipsis; }
+  table.grid tr:first-child td { position: sticky; top: 0; background: var(--surface-2); font-weight: 600; }
+
+  .slide { margin: 0 auto 12px; }
+  .slide h2 { margin: 0 0 8px; font-size: 14px; color: var(--muted); font-weight: 600; }
+  .slide p { margin: 0 0 8px; }
+  .slide .pics { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 8px; }
+  .slide .pics img { max-height: 280px; max-width: 100%; border-radius: 4px; }
+
+  .files { list-style: none; margin: 0 auto; padding: 0; max-width: 860px; background: var(--surface); border: 1px solid var(--line); border-radius: 8px; overflow: hidden; }
+  .files li + li { border-top: 1px solid var(--line); }
+  .files button {
+    display: flex; justify-content: space-between; gap: 16px; width: 100%; min-height: 44px; padding: 8px 16px;
+    background: none; border: 0; color: inherit; font: inherit; text-align: left; cursor: pointer; overflow-wrap: anywhere;
+  }
+  .files button:hover { background: var(--surface-2); }
+  .files .size { flex: none; color: var(--muted); font-size: 14px; }
+
+  .unknown { max-width: 720px; margin: 24px auto; }
+  .unknown h2 { margin: 0 0 8px; font-size: 20px; }
+  .unknown p { margin: 0 0 16px; color: var(--muted); }
+  .unknown pre { margin: 0; overflow-x: auto; font: 12px/1.5 ui-monospace, Consolas, Menlo, monospace; color: var(--muted); }
+
+  /* RTF ve ODT kendi renklerini taşıyabilir; koyu temada da okunsun diye hep açık zemin. */
+  .paper.light { background: #fff; color: #1f2421; color-scheme: light; }
+  .paper.light a { color: #0f6b5c; }
+
+  .epub { height: calc(100dvh - 170px); min-height: 320px; background: #fff; border: 1px solid var(--line); border-radius: 8px; overflow: hidden; }
+  .epub-nav { display: flex; gap: 8px; margin-top: 8px; }
+  .epub-nav select {
+    flex: 1 1 0; min-width: 0; min-height: 44px; padding: 0 8px;
+    background: var(--surface); color: var(--text); border: 1px solid var(--line); border-radius: 8px; font: inherit;
+  }
+
+  .media + .media { margin-top: 12px; }
+
+  /* Sürükleyip yakınlaştırılan ve döndürülen görünümler */
+  .stagebox {
+    position: relative; height: calc(100dvh - 110px); min-height: 320px; overflow: hidden;
+    border: 1px solid var(--line); border-radius: 8px; touch-action: none; cursor: grab;
+  }
+  .stagebox.white { background: #fff; }
+  .stagebox.plain { background: var(--surface); }
+  .stagebox img { display: block; width: 100%; height: 100%; object-fit: contain; transform-origin: 0 0; user-select: none; pointer-events: none; }
+  .stagebox canvas { display: block; outline: none; }
+  .stage-tools { position: absolute; top: 8px; right: 8px; display: flex; gap: 4px; }
+  .stage-tools .btn { min-width: 44px; padding: 0 8px; }
+  .stage-hint {
+    position: absolute; left: 8px; bottom: 8px; padding: 2px 8px; border-radius: 4px; pointer-events: none;
+    background: var(--surface-2); color: var(--muted); font-size: 13px;
+  }
+
+  .map { height: calc(100dvh - 170px); min-height: 320px; border: 1px solid var(--line); border-radius: 8px; isolation: isolate; }
+  .map .leaflet-popup-content { overflow-wrap: anywhere; }
+
+  .mail { margin-bottom: 12px; }
+  .mail h2 { margin: 0 0 8px; font-size: 20px; line-height: 1.3; }
+  .mail dl { display: grid; grid-template-columns: auto minmax(0, 1fr); gap: 2px 12px; margin: 0; font-size: 14px; }
+  .mail dt { color: var(--muted); }
+  .mail dd { margin: 0; overflow-wrap: anywhere; }
+  .paper.mail { max-width: none; padding: 16px; }
+  .section-title { margin: 12px 0 4px; font-size: 14px; color: var(--muted); font-weight: 600; }
+  .mail-body { background: var(--surface); }
+  iframe.mail-frame { height: max(420px, calc(100dvh - 300px)); }
+
+  .font-sample { margin: 0 0 16px; line-height: 1.25; overflow-wrap: anywhere; }
+  .font-input { width: 100%; min-height: 44px; margin-bottom: 16px; padding: 8px 12px; font: inherit; color: var(--text); background: var(--surface); border: 1px solid var(--line); border-radius: 8px; }
+
+  .cards { max-width: 860px; margin: 0 auto; }
+  .cards h2 { margin: 16px 0 8px; font-size: 16px; color: var(--muted); font-weight: 600; }
+  .card { margin-bottom: 8px; padding: 12px 16px; background: var(--surface); border: 1px solid var(--line); border-radius: 8px; overflow-wrap: anywhere; }
+  .card h3 { margin: 0 0 2px; font-size: 16px; }
+  .card p { margin: 0; color: var(--muted); font-size: 14px; white-space: pre-wrap; }
+  .card a { color: var(--accent); }
+  .card .contact-line { color: var(--text); }
+  .card img { float: right; width: 56px; height: 56px; margin-left: 12px; object-fit: cover; border-radius: 50%; }
+  .card::after { content: ""; display: block; clear: both; }
+
+  pre.code code.hljs { display: block; padding: 0; background: transparent; white-space: inherit; font: inherit; }
+
+  iframe.page { display: block; width: 100%; height: calc(100dvh - 110px); border: 1px solid var(--line); border-radius: 8px; background: #fff; }
+</style>
+</head>
+<body>
+  <input id="picker" class="sr-input" type="file" aria-label="Dosya yükle">
+
+  <main id="home">
+    <div class="drop">
+      <h1>Dosya Görüntüleyici</h1>
+      <p>Bilgisayarından veya telefonundan bir dosya seç, burada açılsın.</p>
+      <label class="upload big" for="picker">Dosya Yükle</label>
+      <small>
+        <span class="hint-desktop">Dosyayı bu pencereye sürükleyebilirsin de.<br></span>
+        Dosyan internete gönderilmez, yalnızca bu cihazda açılır.
+      </small>
+    </div>
+  </main>
+
+  <div id="viewer" hidden>
+    <header id="bar">
+      <button id="back" class="btn" type="button" hidden>← Geri</button>
+      <div id="info">
+        <div id="name"></div>
+        <div id="meta"></div>
+      </div>
+      <a id="save" class="btn">İndir</a>
+      <label class="upload" for="picker">Dosya Yükle</label>
+    </header>
+    <main id="stage"></main>
+  </div>
+
+<script>
+'use strict';
+
+const PDF_BASE = 'https://cdn.jsdelivr.net/npm/pdfjs-dist@4.10.38/';
+const LIBS = {
+  mammoth: 'https://cdnjs.cloudflare.com/ajax/libs/mammoth/1.8.0/mammoth.browser.min.js',
+  xlsx: 'https://cdn.sheetjs.com/xlsx-0.20.3/package/dist/xlsx.full.min.js',
+  jszip: 'https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js',
+  marked: 'https://cdn.jsdelivr.net/npm/marked@12.0.2/marked.min.js',
+  purify: 'https://cdnjs.cloudflare.com/ajax/libs/dompurify/3.1.6/purify.min.js',
+  heic: 'https://cdn.jsdelivr.net/npm/heic-to@1.6.7/dist/iife/heic-to.js',
+  epub: 'https://cdn.jsdelivr.net/npm/epubjs@0.3.93/dist/epub.min.js',
+  emf: 'https://cdn.jsdelivr.net/npm/rtf.js@3.0.9/dist/EMFJS.bundle.min.js',
+  wmf: 'https://cdn.jsdelivr.net/npm/rtf.js@3.0.9/dist/WMFJS.bundle.min.js',
+  rtf: 'https://cdn.jsdelivr.net/npm/rtf.js@3.0.9/dist/RTFJS.bundle.min.js',
+  pako: 'https://cdnjs.cloudflare.com/ajax/libs/pako/1.0.11/pako.min.js',
+  utif: 'https://cdn.jsdelivr.net/npm/utif2@4.1.0/UTIF.js',
+  psd: 'https://cdn.jsdelivr.net/npm/ag-psd@34.1.0/dist/bundle.js',
+  dxf: 'https://cdn.jsdelivr.net/npm/dxf@5.3.1/dist/dxf.js',
+  sqljs: 'https://cdn.jsdelivr.net/npm/sql.js@1.15.2/dist/sql-wasm-browser.js',
+  leaflet: 'https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.js',
+  togeojson: 'https://cdn.jsdelivr.net/npm/@tmcw/togeojson@7.1.3/dist/togeojson.umd.js',
+  hljs: 'https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.11.1/highlight.min.js',
+};
+const SQLJS_BASE = 'https://cdn.jsdelivr.net/npm/sql.js@1.15.2/dist/';
+const THREE_BASE = 'https://cdn.jsdelivr.net/npm/three@0.187.0/';
+const HLJS_BASE = 'https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.11.1/';
+const POSTAL_URL = 'https://cdn.jsdelivr.net/npm/postal-mime@4.2.0/dist/esm/postal-mime.js';
+const MSG_URL = 'https://cdn.jsdelivr.net/npm/@kenjiuno/msgreader@1.29.0/+esm';
+const LEAFLET_CSS = 'https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.css';
+const MAX_HIGHLIGHT_CHARS = 1024 * 1024;
+const MAX_TIFF_PAGES = 20;
+const MAX_CARDS = 5000;
+const MAX_TEXT_BYTES = 5 * 1024 * 1024;
+const MAX_GUNZIP_BYTES = 512 * 1024 * 1024;
+const MAX_ROWS = 5000;
+
+const IMAGE = 'png jpg jpeg jfif gif webp bmp ico avif svg heic heif tif tiff'.split(' ');
+const VIDEO = 'mp4 m4v webm mov ogv mkv avi 3gp'.split(' ');
+const AUDIO = 'mp3 wav ogg oga m4a aac flac opus wma amr'.split(' ');
+const SHEET = 'xlsx xlsm xlsb xls ods'.split(' ');
+const ARCHIVE = 'rar 7z tar tgz tbz tbz2 txz'.split(' ');
+const HEIF_BRANDS = 'heic heix hevc hevx heim heis mif1 msf1'.split(' ');
+const MODEL = 'stl glb gltf'.split(' ');
+const FONT = 'ttf otf woff woff2 ttc'.split(' ');
+const MAP = 'geojson gpx kml'.split(' ');
+// Dosya uzantısı (veya adı) -> kod renklendirme dili
+const CODE = {
+  js: 'javascript', mjs: 'javascript', cjs: 'javascript', jsx: 'javascript',
+  ts: 'typescript', tsx: 'typescript', mts: 'typescript', cts: 'typescript',
+  py: 'python', rb: 'ruby', php: 'php', java: 'java', kt: 'kotlin', kts: 'kotlin', go: 'go', rs: 'rust',
+  c: 'c', h: 'c', cpp: 'cpp', cc: 'cpp', cxx: 'cpp', hpp: 'cpp', cs: 'csharp', swift: 'swift',
+  sh: 'bash', bash: 'bash', zsh: 'bash', sql: 'sql', css: 'css', scss: 'scss', less: 'less',
+  xml: 'xml', vue: 'xml', svelte: 'xml', xsl: 'xml', yaml: 'yaml', yml: 'yaml', toml: 'ini', ini: 'ini', cfg: 'ini',
+  json: 'json', lua: 'lua', pl: 'perl', r: 'r', vb: 'vbnet', diff: 'diff', patch: 'diff', graphql: 'graphql', gql: 'graphql',
+  mk: 'makefile', makefile: 'makefile', gemfile: 'ruby',
+  ps1: 'powershell', psm1: 'powershell', bat: 'dos', cmd: 'dos', dart: 'dart', scala: 'scala',
+  dockerfile: 'dockerfile', nginx: 'nginx',
+};
+const EXTRA_LANGUAGES = 'powershell dos dart scala dockerfile nginx'.split(' ');
+const HINTS = {
+  doc: 'Eski .doc biçimi burada açılamıyor. Word ile .docx olarak kaydedip yeniden dene.',
+  ppt: 'Eski .ppt biçimi burada açılamıyor. PowerPoint ile .pptx olarak kaydedip yeniden dene.',
+  bz2: 'Tek dosyalık .bz2 arşivleri burada açılamıyor. .tar.bz2, ZIP, RAR ve 7z arşivleri açılabiliyor.',
+  xz: 'Tek dosyalık .xz arşivleri burada açılamıyor. .tar.xz, ZIP, RAR ve 7z arşivleri açılabiliyor.',
+};
+
+const $ = (id) => document.getElementById(id);
+const picker = $('picker');
+const stage = $('stage');
+let history_ = [];   // açılan dosyalar; ZIP içinden açılınca Geri ile dönülür
+let cleanups = [];
+let openId = 0;
+
+/* ---------- yardımcılar ---------- */
+function el(tag, props, ...kids) {
+  const node = document.createElement(tag);
+  Object.assign(node, props || {});
+  node.append(...kids.filter((k) => k != null));
+  return node;
+}
+function formatSize(n) {
+  if (n == null) return '';
+  const units = ['B', 'KB', 'MB', 'GB', 'TB'];
+  let i = 0;
+  while (n >= 1024 && i < units.length - 1) { n /= 1024; i++; }
+  return (i === 0 ? n : n.toLocaleString('tr-TR', { maximumFractionDigits: 1 })) + ' ' + units[i];
+}
+function extOf(name) {
+  const m = /\.([^.\/\\]+)$/.exec(name || '');
+  return m ? m[1].toLowerCase() : '';
+}
+const scriptCache = {};
+function loadLib(key) {
+  scriptCache[key] = scriptCache[key] || new Promise((resolve, reject) => {
+    const s = document.createElement('script');
+    s.src = LIBS[key];
+    s.onload = resolve;
+    s.onerror = () => { delete scriptCache[key]; reject(new LibError()); };
+    document.head.append(s);
+  });
+  return scriptCache[key];
+}
+class LibError extends Error {}
+let pdfModule;
+async function loadPdf() {
+  if (!pdfModule) {
+    try {
+      pdfModule = await import(PDF_BASE + 'legacy/build/pdf.min.mjs');
+    } catch (e) { throw new LibError(); }
+    pdfModule.GlobalWorkerOptions.workerSrc = PDF_BASE + 'legacy/build/pdf.worker.min.mjs';
+  }
+  return pdfModule;
+}
+async function sanitize(html) {
+  await loadLib('purify');
+  if (!sanitize.hooked) {
+    DOMPurify.addHook('afterSanitizeAttributes', (node) => {
+      if (node.tagName === 'A') { node.target = '_blank'; node.rel = 'noopener noreferrer'; }
+    });
+    sanitize.hooked = true;
+  }
+  return DOMPurify.sanitize(html);
+}
+function decodeText(buf) {
+  const head = new Uint8Array(buf, 0, Math.min(2, buf.byteLength));
+  if (head[0] === 0xFF && head[1] === 0xFE) return new TextDecoder('utf-16le').decode(buf);
+  if (head[0] === 0xFE && head[1] === 0xFF) return new TextDecoder('utf-16be').decode(buf);
+  try {
+    return new TextDecoder('utf-8', { fatal: true }).decode(buf, { stream: true });
+  } catch (e) {
+    return new TextDecoder('windows-1254').decode(buf);   // eski Türkçe metin dosyaları
+  }
+}
+function looksBinary(bytes) {
+  if ((bytes[0] === 0xFF && bytes[1] === 0xFE) || (bytes[0] === 0xFE && bytes[1] === 0xFF)) return false;
+  let control = 0;
+  for (const b of bytes) {
+    if (b === 0) return true;
+    if (b < 9 || (b > 13 && b < 32)) control++;
+  }
+  return bytes.length > 0 && control / bytes.length > 0.1;
+}
+function setMeta(extra) {
+  const f = history_[history_.length - 1];
+  $('meta').textContent = [formatSize(f.size), extra].filter(Boolean).join(' · ');
+}
+
+/* ---------- açma ---------- */
+function runCleanups() {
+  cleanups.forEach((fn) => { try { fn(); } catch (e) {} });
+  cleanups = [];
+}
+function objectUrl(blob) {
+  const url = URL.createObjectURL(blob);
+  cleanups.push(() => URL.revokeObjectURL(url));
+  return url;
+}
+
+async function show(file) {
+  const id = ++openId;
+  runCleanups();
+  $('home').hidden = true;
+  $('viewer').hidden = false;
+  $('back').hidden = history_.length < 2;
+  $('name').textContent = file.name;
+  $('name').title = file.name;
+  document.title = file.name + ' – Dosya Görüntüleyici';
+  setMeta();
+  window.scrollTo(0, 0);
+
+  const save = $('save');
+  save.href = objectUrl(file);
+  save.download = file.name;
+
+  // Her açılışta yeni bir kutu: geç biten eski işlem ekrana yazamaz.
+  const box = el('div', { className: 'center' });
+  const status = el('div', { className: 'status', textContent: 'Açılıyor…' });
+  box.append(status);
+  stage.replaceChildren(box);
+
+  try {
+    await render(file, box, status);
+    status.remove();
+  } catch (err) {
+    if (id !== openId) return;
+    console.error(err);
+    box.replaceChildren();
+    showUnknown(file, box, errorText(err));
+  }
+}
+function errorText(err) {
+  if (err instanceof LibError) return err.message || 'Bu dosya türünü açmak için internet bağlantısı gerekiyor. Bağlantını kontrol edip yeniden dene.';
+  if (err && err.name === 'PasswordException') return 'Bu PDF şifreli olduğu için açılamadı.';
+  if (err && err.message === 'encrypted') return 'Bu arşiv şifreli olduğu için açılamadı.';
+  if (err && err.message === 'media') return 'Bu tarayıcı dosyanın biçimini desteklemiyor. Başka bir tarayıcıda veya uygun bir uygulamada açmayı dene.';
+  return 'Dosya okunamadı. Bozuk veya şifreli olabilir.';
+}
+
+async function render(file, box, status) {
+  const ext = extOf(file.name);
+  const type = file.type || '';
+
+  if (file.size === 0) { status.textContent = 'Bu dosya boş.'; return keepStatus(box, status); }
+
+  // Uzantıya güvenmeden dosyanın ilk baytlarına da bak.
+  const bytes = new Uint8Array(await file.slice(0, 8192).arrayBuffer());
+  const magic = String.fromCharCode(...bytes.subarray(0, 5));
+  const sig4 = magic.slice(0, 4);
+
+  // Bu türlerin MIME değeri image/ veya video/ olabildiği için önce bunlara bakılır.
+  if (ext === 'psd' || ext === 'psb' || sig4 === '8BPS') return renderPsd(file, box);
+  if (ext === 'dxf') return renderDxf(file, box);
+  if (MODEL.includes(ext) || sig4 === 'glTF' || (ext === 'obj' && !looksBinary(bytes))) return renderModel(file, box);
+  if (ext === 'eml') return renderEml(file, box);
+  if (ext === 'msg') return renderMsg(file, box);
+  if (MAP.includes(ext)) return renderMap(file, box);
+  if (FONT.includes(ext) || sig4 === 'wOFF' || sig4 === 'wOF2' || sig4 === 'OTTO') return renderFont(file, box);
+  if (ext === 'ics' || ext === 'ical') return renderCalendar(file, box);
+  if (ext === 'vcf' || ext === 'vcard') return renderContacts(file, box);
+
+  if (IMAGE.includes(ext) || type.startsWith('image/')) return renderImage(file, box, status);
+  // .ts hem kod hem video olabiliyor; işletim sistemi çoğu zaman video diyor.
+  if (ext === 'ts' && !looksBinary(bytes)) return renderText(file, box);
+  if (VIDEO.includes(ext) || type.startsWith('video/')) return renderMedia(file, box, 'video');
+  if (AUDIO.includes(ext) || type.startsWith('audio/')) return renderMedia(file, box, 'audio');
+  if (ext === 'docx') return renderDocx(file, box);
+  if (SHEET.includes(ext)) return renderWorkbook(file, box);
+  if (ext === 'pptx') return renderPptx(file, box);
+  if (ext === 'epub') return renderEpub(file, box);
+  if (ext === 'odt') return renderOdt(file, box);
+  if (ext === 'csv' || ext === 'tsv') return renderCsv(file, box);
+  if (ext === 'md' || ext === 'markdown') return renderMarkdown(file, box);
+  if (ext === 'html' || ext === 'htm') return renderHtml(file, box);
+
+  if (ext === 'pdf' || magic === '%PDF-') return renderPdf(file, box);
+  if (String.fromCharCode(...bytes.subarray(0, 16)) === 'SQLite format 3\0') return renderSqlite(file, box);
+  if (ext === 'zip' || magic.startsWith('PK\x03\x04')) return renderZip(file, box);
+  if (ext === 'rtf' || magic === '{\\rtf') return renderRtf(file, box);
+  if (isHeifBytes(bytes) || isTiffBytes(bytes)) return renderImage(file, box, status);
+  // Adı .tar.gz / .tgz olanlar da gz'dir, ama onları libarchive tek seferde açar.
+  const isTarName = /\.tar\.[^.]+$/i.test(file.name) || ARCHIVE.includes(ext);
+  if (!isTarName && (ext === 'gz' || (bytes[0] === 0x1F && bytes[1] === 0x8B))) return renderGzip(file, box, status);
+  if (isTarName || hasArchiveMagic(bytes)) return renderArchive(file, box);
+  if (ext === 'json' && !looksBinary(bytes)) return renderJson(file, box);
+  if (!looksBinary(bytes)) return renderText(file, box);
+  return showUnknown(file, box, HINTS[ext]);
+}
+function keepStatus(box, status) {
+  // show() durum yazısını kaldırır; boş dosya mesajı ekranda kalsın diye kopyasını ekle.
+  box.append(el('div', { className: 'status', textContent: status.textContent }));
+}
+
+/* ---------- görüntüleyiciler ---------- */
+function isHeifBytes(bytes) {
+  if (bytes.length < 12) return false;
+  const text = String.fromCharCode(...bytes.subarray(4, 12));
+  return text.startsWith('ftyp') && HEIF_BRANDS.includes(text.slice(4));
+}
+function hasArchiveMagic(b) {
+  const at = (sig, offset = 0) => sig.every((v, i) => b[offset + i] === v);
+  return at([0x52, 0x61, 0x72, 0x21])                 // RAR
+    || at([0x37, 0x7A, 0xBC, 0xAF, 0x27, 0x1C])       // 7z
+    || at([0x75, 0x73, 0x74, 0x61, 0x72], 257);       // tar
+}
+async function renderImage(file, box, status) {
+  try {
+    await showImage(file, box);
+  } catch (err) {
+    // Safari HEIC ve TIFF'i kendisi açar; açamayan tarayıcılarda dönüştürüp gösteriyoruz.
+    const head = new Uint8Array(await file.slice(0, 12).arrayBuffer());
+    const ext = extOf(file.name);
+    if (err.message !== 'media') throw err;
+    if (isTiffBytes(head) || ext === 'tif' || ext === 'tiff') {
+      status.textContent = 'Görüntü hazırlanıyor…';
+      return showTiff(file, box);
+    }
+    if (!(isHeifBytes(head) || ext === 'heic' || ext === 'heif')) throw err;
+    status.textContent = 'Fotoğraf hazırlanıyor…';
+    await loadLib('heic');
+    const jpeg = await HeicTo({ blob: file, type: 'image/jpeg', quality: 0.92 });
+    await showImage(jpeg, box, file.name);
+  }
+}
+function isTiffBytes(b) {
+  return (b[0] === 0x49 && b[1] === 0x49 && b[2] === 0x2A && b[3] === 0)
+    || (b[0] === 0x4D && b[1] === 0x4D && b[2] === 0 && b[3] === 0x2A);
+}
+function canvasToBlob(canvas) {
+  return new Promise((resolve, reject) => {
+    canvas.toBlob((blob) => (blob ? resolve(blob) : reject(new Error('canvas'))), 'image/png');
+  });
+}
+async function showTiff(file, box) {
+  await loadLib('pako');
+  await loadLib('utif');
+  const buf = await file.arrayBuffer();
+  const pages = UTIF.decode(buf);
+  if (!pages.length) throw new Error('tiff');
+  const shown = pages.slice(0, MAX_TIFF_PAGES);
+  let first = null;
+  for (const page of shown) {
+    UTIF.decodeImage(buf, page, pages);
+    if (!page.width || !page.height) throw new Error('tiff');
+    const canvas = el('canvas', { width: page.width, height: page.height });
+    const data = new ImageData(new Uint8ClampedArray(UTIF.toRGBA8(page)), page.width, page.height);
+    canvas.getContext('2d').putImageData(data, 0, 0);
+    await showImage(await canvasToBlob(canvas), box, file.name);
+    first = first || page.width + '×' + page.height;
+  }
+  setMeta(first + (pages.length > 1 ? ' · ' + pages.length + ' sayfa' : ''));
+  if (pages.length > MAX_TIFF_PAGES) {
+    box.append(el('div', { className: 'note', textContent: 'İlk ' + MAX_TIFF_PAGES + ' sayfa gösteriliyor.' }));
+  }
+}
+async function renderPsd(file, box) {
+  await loadLib('psd');
+  const psd = agPsd.readPsd(await file.arrayBuffer(), { skipLayerImageData: true, skipThumbnail: true });
+  if (!psd.canvas) throw new Error('psd');
+  box.append(el('div', { className: 'note', textContent: 'Dosyanın birleştirilmiş görüntüsü gösteriliyor; katmanlar ayrı açılmıyor.' }));
+  await showImage(await canvasToBlob(psd.canvas), box, file.name);
+  const layers = (psd.children || []).length;
+  setMeta(psd.width + '×' + psd.height + (layers ? ' · ' + layers + ' katman' : ''));
+}
+// Sürükleyerek kaydırma, tekerlek veya iki parmakla yakınlaştırma.
+function panZoom(view, target) {
+  let scale = 1, x = 0, y = 0;
+  const pointers = new Map();
+  let pinch = 0;
+  const apply = () => { target.style.transform = 'translate(' + x + 'px,' + y + 'px) scale(' + scale + ')'; };
+  const zoomAt = (px, py, factor) => {
+    const next = Math.min(Math.max(scale * factor, 0.2), 200);
+    x = px - (px - x) * (next / scale);
+    y = py - (py - y) * (next / scale);
+    scale = next;
+    apply();
+  };
+  const local = (e) => { const r = view.getBoundingClientRect(); return [e.clientX - r.left, e.clientY - r.top]; };
+  view.addEventListener('wheel', (e) => {
+    e.preventDefault();
+    zoomAt(...local(e), e.deltaY < 0 ? 1.2 : 1 / 1.2);
+  }, { passive: false });
+  view.addEventListener('pointerdown', (e) => {
+    if (e.target.closest('button')) return;
+    view.setPointerCapture(e.pointerId);
+    pointers.set(e.pointerId, local(e));
+    pinch = 0;
+  });
+  view.addEventListener('pointermove', (e) => {
+    const prev = pointers.get(e.pointerId);
+    if (!prev) return;
+    const now = local(e);
+    pointers.set(e.pointerId, now);
+    if (pointers.size === 1) {
+      x += now[0] - prev[0];
+      y += now[1] - prev[1];
+      apply();
+    } else if (pointers.size === 2) {
+      const [a, b] = [...pointers.values()];
+      const dist = Math.hypot(a[0] - b[0], a[1] - b[1]);
+      if (pinch) zoomAt((a[0] + b[0]) / 2, (a[1] + b[1]) / 2, dist / pinch);
+      pinch = dist;
+    }
+  });
+  const end = (e) => { pointers.delete(e.pointerId); pinch = 0; };
+  view.addEventListener('pointerup', end);
+  view.addEventListener('pointercancel', end);
+  const center = () => { const r = view.getBoundingClientRect(); return [r.width / 2, r.height / 2]; };
+  const tool = (text, label, fn) => {
+    const b = el('button', { className: 'btn', type: 'button', textContent: text, ariaLabel: label });
+    b.onclick = fn;
+    return b;
+  };
+  view.append(el('div', { className: 'stage-tools' },
+    tool('+', 'Yakınlaştır', () => zoomAt(...center(), 1.5)),
+    tool('−', 'Uzaklaştır', () => zoomAt(...center(), 1 / 1.5)),
+    tool('⟲', 'Görünümü sıfırla', () => { scale = 1; x = 0; y = 0; apply(); })));
+}
+async function renderDxf(file, box) {
+  await loadLib('dxf');
+  const helper = new dxf.Helper(decodeText(await file.arrayBuffer()));
+  const count = helper.denormalised.length;
+  if (!count) throw new Error('dxf');
+  setMeta(count + ' çizim öğesi');
+  // AutoCAD'in beyaz çizgileri siyah zemin içindir; beyaz zeminde görünsünler diye koyulaştırılıyor.
+  const svg = helper.toSVG().replace(/stroke="rgb\(255,\s*255,\s*255\)"/g, 'stroke="rgb(20, 20, 20)"');
+  const img = el('img', { alt: file.name, draggable: false, src: objectUrl(new Blob([svg], { type: 'image/svg+xml' })) });
+  await new Promise((resolve, reject) => { img.onload = resolve; img.onerror = () => reject(new Error('dxf')); });
+  const view = el('div', { className: 'stagebox white' }, img);
+  box.append(view);
+  panZoom(view, img);
+}
+let three;
+async function loadThree() {
+  if (!three) {
+    try {
+      const [THREE, orbit, stl, obj, gltf, draco, meshopt, room] = await Promise.all([
+        import('three'),
+        import('three/addons/controls/OrbitControls.js'),
+        import('three/addons/loaders/STLLoader.js'),
+        import('three/addons/loaders/OBJLoader.js'),
+        import('three/addons/loaders/GLTFLoader.js'),
+        import('three/addons/loaders/DRACOLoader.js'),
+        import('three/addons/libs/meshopt_decoder.module.js'),
+        import('three/addons/environments/RoomEnvironment.js'),
+      ]);
+      three = { THREE, ...orbit, ...stl, ...obj, ...gltf, ...draco, ...meshopt, ...room };
+    } catch (e) { throw new LibError(); }
+  }
+  return three;
+}
+async function parseModel(t, file) {
+  const { THREE } = t;
+  const ext = extOf(file.name);
+  const material = () => new THREE.MeshStandardMaterial({ color: 0xb8c4bf, metalness: 0.1, roughness: 0.65 });
+  if (ext === 'stl') {
+    const geometry = new t.STLLoader().parse(await file.arrayBuffer());
+    return new THREE.Mesh(geometry, material());
+  }
+  if (ext === 'obj') {
+    const object = new t.OBJLoader().parse(decodeText(await file.arrayBuffer()));
+    object.traverse((node) => {
+      if (!node.isMesh) return;
+      if (!node.geometry.attributes.normal) node.geometry.computeVertexNormals();
+      node.material = material();
+    });
+    return object;
+  }
+  // Modelin içine yazılmış adreslerden dış bağlantı kurulmasın.
+  const manager = new THREE.LoadingManager();
+  manager.setURLModifier((url) => (/^(data|blob):/.test(url) ? url : 'data:,'));
+  const draco = new t.DRACOLoader().setDecoderPath(THREE_BASE + 'examples/jsm/libs/draco/gltf/');
+  cleanups.push(() => draco.dispose());
+  const loader = new t.GLTFLoader(manager).setDRACOLoader(draco).setMeshoptDecoder(t.MeshoptDecoder);
+  const source = ext === 'gltf' ? decodeText(await file.arrayBuffer()) : await file.arrayBuffer();
+  return (await loader.parseAsync(source, '')).scene;
+}
+async function renderModel(file, box) {
+  const t = await loadThree();
+  const { THREE } = t;
+  const object = await parseModel(t, file);
+  let triangles = 0;
+  object.traverse((node) => {
+    if (!node.isMesh) return;
+    const g = node.geometry;
+    triangles += (g.index ? g.index.count : g.attributes.position.count) / 3;
+  });
+  if (!triangles) throw new Error('model');
+  setMeta(Math.round(triangles).toLocaleString('tr-TR') + ' üçgen');
+
+  const view = el('div', { className: 'stagebox plain' });
+  box.append(view);
+  let renderer;
+  try {
+    renderer = new THREE.WebGLRenderer({ antialias: true, alpha: true });
+  } catch (e) {
+    throw new LibError('Bu cihaz veya tarayıcı 3D görüntülemeyi (WebGL) desteklemiyor.');
+  }
+  renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, 2));
+  view.append(renderer.domElement);
+
+  const scene = new THREE.Scene();
+  const pmrem = new THREE.PMREMGenerator(renderer);
+  scene.environment = pmrem.fromScene(new t.RoomEnvironment(), 0.04).texture;
+  scene.add(object);
+  scene.add(new THREE.AmbientLight(0xffffff, 0.3));
+
+  const bounds = new THREE.Box3().setFromObject(object);
+  const size = bounds.getSize(new THREE.Vector3()).length() || 1;
+  const middle = bounds.getCenter(new THREE.Vector3());
+  const camera = new THREE.PerspectiveCamera(45, 1, size / 1000, size * 100);
+  const controls = new t.OrbitControls(camera, renderer.domElement);
+  const reset = () => {
+    camera.position.copy(middle).add(new THREE.Vector3(0.7, 0.5, 1).normalize().multiplyScalar(size * 1.4));
+    controls.target.copy(middle);
+    controls.update();
+  };
+  const draw = () => renderer.render(scene, camera);
+  const resize = () => {
+    const { clientWidth: w, clientHeight: h } = view;
+    if (!w || !h) return;
+    renderer.setSize(w, h);
+    camera.aspect = w / h;
+    camera.updateProjectionMatrix();
+    draw();
+  };
+  controls.addEventListener('change', draw);
+  const observer = new ResizeObserver(resize);
+  observer.observe(view);
+  reset();
+  resize();
+
+  const again = el('button', { className: 'btn', type: 'button', textContent: '⟲', ariaLabel: 'Görünümü sıfırla' });
+  again.onclick = reset;
+  view.append(el('div', { className: 'stage-tools' }, again),
+    el('div', { className: 'stage-hint', textContent: 'Sürükle: döndür · Tekerlek veya iki parmak: yakınlaştır' }));
+
+  cleanups.push(() => {
+    observer.disconnect();
+    controls.dispose();
+    object.traverse((node) => {
+      if (!node.isMesh) return;
+      node.geometry.dispose();
+      [].concat(node.material).forEach((m) => m.dispose());
+    });
+    pmrem.dispose();
+    renderer.dispose();
+    renderer.forceContextLoss();
+  });
+}
+function formatDate(value) {
+  const date = value instanceof Date ? value : new Date(value);
+  if (isNaN(date)) return value ? String(value) : '';
+  return date.toLocaleString('tr-TR', { dateStyle: 'long', timeStyle: 'short' });
+}
+function bytesToBase64(bytes) {
+  let out = '';
+  for (let i = 0; i < bytes.length; i += 0x8000) out += String.fromCharCode(...bytes.subarray(i, i + 0x8000));
+  return btoa(out);
+}
+// Tek biçimde e-posta gösterimi: EML ve MSG buraya gelir.
+function showMail(mail, box) {
+  const rows = [];
+  const row = (label, value) => { if (value) rows.push(el('dt', { textContent: label }), el('dd', { textContent: value })); };
+  row('Kimden', mail.from);
+  row('Kime', mail.to);
+  row('Bilgi', mail.cc);
+  row('Tarih', formatDate(mail.date));
+  box.append(el('section', { className: 'paper mail' },
+    el('h2', { textContent: mail.subject || '(Konu yok)' }),
+    el('dl', null, ...rows)));
+
+  const listed = mail.attachments.filter((a) => !a.inline);
+  if (listed.length) {
+    setMeta(listed.length + ' ek');
+    box.append(el('div', { className: 'section-title', textContent: 'Ekler' }), fileButtons(listed));
+    box.append(el('div', { className: 'section-title', textContent: 'İleti' }));
+  }
+  if (mail.html) {
+    let html = mail.html;
+    for (const a of mail.attachments) {
+      if (!a.cid || !/^image\/(png|jpeg|gif|webp)$/i.test(a.type || '')) continue;
+      const url = 'data:' + a.type + ';base64,' + bytesToBase64(a.bytes());
+      html = html.split('cid:' + a.cid).join(url);
+    }
+    // Uzak içerik yüklenmez: açıldığını gönderene bildiren izleme resimleri de engellenmiş olur.
+    const head = '<meta http-equiv="Content-Security-Policy" content="default-src \'none\'; img-src data:; style-src \'unsafe-inline\'; font-src data:">'
+      + '<base target="_blank"><style>body{background:#fff;color:#1f2421;font-family:system-ui,sans-serif;overflow-wrap:anywhere}</style>';
+    const frame = el('iframe', { className: 'page mail-frame', title: 'İleti içeriği', srcdoc: head + html });
+    frame.setAttribute('sandbox', 'allow-popups allow-popups-to-escape-sandbox');
+    box.append(el('div', { className: 'note', textContent: 'Gizliliğin için ileti içindeki uzak resimler yüklenmiyor.' }), frame);
+  } else {
+    box.append(el('pre', { className: 'code', textContent: mail.text || '(İleti boş)' }));
+  }
+}
+const addressText = (a) => {
+  if (!a) return '';
+  if (Array.isArray(a)) return a.map(addressText).filter(Boolean).join(', ');
+  if (a.group) return addressText(a.group);
+  return a.name && a.address ? a.name + ' <' + a.address + '>' : (a.address || a.name || '');
+};
+async function renderEml(file, box) {
+  let PostalMime;
+  try {
+    PostalMime = (await import(POSTAL_URL)).default;
+  } catch (e) { throw new LibError(); }
+  const parsed = await PostalMime.parse(await file.arrayBuffer());
+  if (!parsed.from && !parsed.subject && !parsed.html && !parsed.text) throw new Error('eml');
+  showMail({
+    subject: parsed.subject,
+    from: addressText(parsed.from),
+    to: addressText(parsed.to),
+    cc: addressText(parsed.cc),
+    date: parsed.date,
+    html: parsed.html,
+    text: parsed.text,
+    attachments: (parsed.attachments || []).map((a) => {
+      const bytes = () => new Uint8Array(a.content);
+      return {
+        name: a.filename || 'ek',
+        size: a.content.byteLength,
+        type: a.mimeType,
+        cid: a.contentId && a.contentId.replace(/^<|>$/g, ''),
+        inline: a.disposition === 'inline' && !!a.contentId,
+        bytes,
+        read: async () => new Blob([bytes()], { type: a.mimeType }),
+      };
+    }),
+  }, box);
+}
+async function renderMsg(file, box) {
+  let Reader;
+  try {
+    const mod = await import(MSG_URL);
+    Reader = (mod.default && mod.default.default) || mod.default;
+  } catch (e) { throw new LibError(); }
+  const reader = new Reader(await file.arrayBuffer());
+  const data = reader.getFileData();
+  if (data.error) throw new Error('msg');
+  const recipients = (type) => (data.recipients || [])
+    .filter((r) => r.recipType === type)
+    .map((r) => (r.name && r.email && r.name !== r.email ? r.name + ' <' + r.email + '>' : r.email || r.name))
+    .join(', ');
+  const sender = data.senderName && data.senderEmail && data.senderName !== data.senderEmail
+    ? data.senderName + ' <' + data.senderEmail + '>' : data.senderEmail || data.senderName;
+  const html = data.bodyHtml || (data.html && decodeText(data.html.buffer.slice(data.html.byteOffset, data.html.byteOffset + data.html.byteLength)));
+  showMail({
+    subject: data.subject,
+    from: sender,
+    to: recipients('to'),
+    cc: recipients('cc'),
+    date: data.messageDeliveryTime || data.clientSubmitTime,
+    html,
+    text: data.body,
+    attachments: (data.attachments || []).map((a) => {
+      const bytes = () => reader.getAttachment(a).content;
+      return {
+        name: a.fileName || a.fileNameShort || a.name || 'ek',
+        size: a.contentLength,
+        type: a.attachMimeTag,
+        cid: a.pidContentId,
+        inline: !!a.pidContentId && !!html,
+        bytes,
+        read: async () => new Blob([bytes()]),
+      };
+    }),
+  }, box);
+}
+async function renderSqlite(file, box) {
+  await loadLib('sqljs');
+  const SQL = await initSqlJs({ locateFile: (name) => SQLJS_BASE + name });
+  const bytes = new Uint8Array(await file.arrayBuffer());
+  // WAL kipindeki dosyalar işaretli olduğu için açılmıyor; salt okuma için işareti sıfırla.
+  if (bytes[18] === 2) bytes[18] = 1;
+  if (bytes[19] === 2) bytes[19] = 1;
+  const db = new SQL.Database(bytes);
+  cleanups.push(() => db.close());
+  const result = db.exec("SELECT name FROM sqlite_master WHERE type IN ('table','view') AND name NOT LIKE 'sqlite_%' ORDER BY type, name");
+  const names = result.length ? result[0].values.map((v) => v[0]) : [];
+  const cell = (v) => {
+    if (v === null) return '';
+    if (v instanceof Uint8Array) return '[ikili veri, ' + formatSize(v.length) + ']';
+    return String(v);
+  };
+  const rowsOf = (name) => {
+    const stmt = db.prepare('SELECT * FROM "' + name.replace(/"/g, '""') + '" LIMIT ' + (MAX_ROWS + 1));
+    try {
+      const rows = [stmt.getColumnNames()];
+      while (stmt.step()) rows.push(stmt.get().map(cell));
+      return rows;
+    } finally { stmt.free(); }
+  };
+  showTables(names, rowsOf, box, 'Bu veritabanında tablo yok.');
+  setMeta(names.length + ' tablo');
+}
+let cssLoaded = {};
+function loadCss(url, media) {
+  cssLoaded[url] = cssLoaded[url] || new Promise((resolve, reject) => {
+    const link = el('link', { rel: 'stylesheet', href: url, media: media || 'all' });
+    link.onload = resolve;
+    link.onerror = () => { delete cssLoaded[url]; reject(new LibError()); };
+    document.head.append(link);
+  });
+  return cssLoaded[url];
+}
+async function renderMap(file, box) {
+  const ext = extOf(file.name);
+  await Promise.all([loadCss(LEAFLET_CSS), loadLib('leaflet')]);
+  const text = decodeText(await file.arrayBuffer());
+  let geo;
+  if (ext === 'geojson') {
+    geo = JSON.parse(text);
+  } else {
+    await loadLib('togeojson');
+    const doc = new DOMParser().parseFromString(text, 'application/xml');
+    if (doc.getElementsByTagName('parsererror').length) throw new Error('map');
+    geo = ext === 'gpx' ? toGeoJSON.gpx(doc) : toGeoJSON.kml(doc);
+  }
+  const plain = (v) => {
+    if (v == null) return '';
+    const raw = typeof v === 'object' ? v.value || '' : String(v);
+    return new DOMParser().parseFromString(raw, 'text/html').body.textContent.trim();
+  };
+  let count = 0;
+  const layer = L.geoJSON(geo, {
+    pointToLayer: (feature, at) => L.circleMarker(at, { radius: 7, weight: 2, fillOpacity: 0.6 }),
+    style: { color: '#c2410c', weight: 3 },
+    onEachFeature: (feature, item) => {
+      count++;
+      const p = feature.properties || {};
+      const title = plain(p.name || p.title);
+      const description = plain(p.desc || p.description);
+      if (title || description) {
+        item.bindPopup(el('div', null, title ? el('strong', { textContent: title }) : null, description ? el('div', { textContent: description }) : null));
+      }
+    },
+  });
+  const bounds = layer.getBounds();
+  if (!count || !bounds.isValid()) throw new Error('map');
+
+  const view = el('div', { className: 'map' });
+  box.append(el('div', { className: 'note', textContent: 'Dosyan gönderilmez; yalnızca harita görselleri OpenStreetMap\'ten indirilir.' }), view);
+  const map = L.map(view);
+  cleanups.push(() => map.remove());
+  L.tileLayer('https://tile.openstreetmap.org/{z}/{x}/{y}.png', {
+    maxZoom: 19,
+    attribution: '&copy; <a href="https://www.openstreetmap.org/copyright" target="_blank" rel="noopener">OpenStreetMap</a>',
+  }).addTo(map);
+  layer.addTo(map);
+  map.fitBounds(bounds, { padding: [24, 24], maxZoom: 16 });
+  setMeta(count + ' öğe');
+}
+async function renderFont(file, box) {
+  const family = 'onizleme-' + (++openId);
+  const face = new FontFace(family, await file.arrayBuffer());
+  await face.load();
+  document.fonts.add(face);
+  cleanups.push(() => document.fonts.delete(face));
+  const fontStack = '"' + family + '", sans-serif';
+  const sample = (text, size) => {
+    const node = el('p', { className: 'font-sample', textContent: text });
+    node.style.fontFamily = fontStack;
+    node.style.fontSize = size + 'px';
+    return node;
+  };
+  const defaultText = 'Pijamalı hasta yağız şoföre çabucak güvendi.';
+  const samples = [sample(defaultText, 56), sample(defaultText, 32), sample(defaultText, 20)];
+  const input = el('input', { className: 'font-input', type: 'text', value: defaultText, ariaLabel: 'Örnek yazı' });
+  input.oninput = () => samples.forEach((s) => { s.textContent = input.value || defaultText; });
+  box.append(el('article', { className: 'paper' }, input, ...samples,
+    sample('ABCÇDEFGĞHIİJKLMNOÖPRSŞTUÜVYZ', 28),
+    sample('abcçdefgğhıijklmnoöprsştuüvyz', 28),
+    sample('0123456789 .,:;!?()&%+-=/@₺€$', 28)));
+}
+// Takvim ve kişi dosyalarında ortak satır biçimi.
+function contentLines(text) {
+  const raw = text.split(/\r\n|\n|\r/);
+  const joined = [];
+  for (const line of raw) {
+    const last = joined[joined.length - 1];
+    if (/^[ \t]/.test(line) && last !== undefined) {
+      joined[joined.length - 1] = last + line.slice(1);
+    } else if (last !== undefined && /QUOTED-PRINTABLE/i.test(last.split(':')[0]) && /=$/.test(last)) {
+      joined[joined.length - 1] = last.slice(0, -1) + line;   // eski vCard'larda satır devamı
+    } else {
+      joined.push(line);
+    }
+  }
+  return joined.flatMap((line) => {
+    const m = /^([^:;]+)((?:;(?:[^:"]|"[^"]*")*)?):(.*)$/.exec(line);
+    if (!m) return [];
+    const params = {};
+    m[2].split(';').slice(1).forEach((part) => {
+      const eq = part.indexOf('=');
+      const key = (eq < 0 ? 'TYPE' : part.slice(0, eq)).toUpperCase();
+      const value = (eq < 0 ? part : part.slice(eq + 1)).replace(/^"|"$/g, '');
+      params[key] = params[key] ? params[key] + ',' + value : value;
+    });
+    return [{ name: m[1].toUpperCase().replace(/^[^.]+\./, ''), params, value: m[3] }];
+  });
+}
+function unescapeValue(value) {
+  return value.replace(/\\([nN,;\\])/g, (_, c) => (c === 'n' || c === 'N' ? '\n' : c));
+}
+function decodeLine(line) {
+  let value = line.value;
+  if (/QUOTED-PRINTABLE/i.test(line.params.ENCODING || line.params.TYPE || '')) {
+    const bytes = [];
+    for (let i = 0; i < value.length; i++) {
+      const hex = value[i] === '=' && /^[0-9a-fA-F]{2}$/.test(value.slice(i + 1, i + 3)) ? value.slice(i + 1, i + 3) : null;
+      if (hex) { bytes.push(parseInt(hex, 16)); i += 2; } else bytes.push(value.charCodeAt(i) & 0xFF);
+    }
+    try {
+      value = new TextDecoder(line.params.CHARSET || 'utf-8').decode(new Uint8Array(bytes));
+    } catch (e) {
+      value = new TextDecoder('utf-8').decode(new Uint8Array(bytes));
+    }
+  }
+  return value;
+}
+function parseIcsDate(line) {
+  if (!line) return null;
+  const m = /^(\d{4})(\d\d)(\d\d)(?:T(\d\d)(\d\d)(\d\d)(Z)?)?/.exec(line.value);
+  if (!m) return null;
+  const [, y, mo, d, h, mi, s, z] = m;
+  if (h === undefined) return { date: new Date(+y, mo - 1, +d), allDay: true };
+  const date = z ? new Date(Date.UTC(+y, mo - 1, +d, +h, +mi, +s)) : new Date(+y, mo - 1, +d, +h, +mi, +s);
+  return { date, allDay: false };
+}
+function card(title, ...kids) {
+  return el('article', { className: 'card' }, el('h3', { textContent: title }), ...kids);
+}
+async function renderCalendar(file, box) {
+  const text = decodeText(await file.arrayBuffer());
+  const events = [];
+  let current = null;
+  for (const line of contentLines(text)) {
+    if (line.name === 'BEGIN' && line.value.toUpperCase() === 'VEVENT') current = {};
+    else if (line.name === 'END' && line.value.toUpperCase() === 'VEVENT') { if (current) events.push(current); current = null; }
+    else if (current && !current[line.name]) current[line.name] = line;
+  }
+  if (!events.length) return showCode(text, null, box);
+
+  const items = events.map((e) => ({ raw: e, start: parseIcsDate(e.DTSTART), end: parseIcsDate(e.DTEND) }));
+  items.sort((a, b) => (a.start ? a.start.date : Infinity) - (b.start ? b.start.date : Infinity));
+  setMeta(items.length + ' etkinlik');
+  const list = el('div', { className: 'cards' });
+  let month = null;
+  const dayOnly = { dateStyle: 'long' };
+  for (const item of items.slice(0, MAX_CARDS)) {
+    const label = item.start ? item.start.date.toLocaleString('tr-TR', { month: 'long', year: 'numeric' }) : 'Tarihsiz';
+    if (label !== month) { list.append(el('h2', { textContent: label })); month = label; }
+    let when = '';
+    if (item.start) {
+      when = item.start.allDay ? item.start.date.toLocaleDateString('tr-TR', dayOnly) + ' (tüm gün)' : formatDate(item.start.date);
+      if (item.end && !item.start.allDay && item.end.date > item.start.date) {
+        const sameDay = item.end.date.toDateString() === item.start.date.toDateString();
+        when += ' – ' + (sameDay ? item.end.date.toLocaleTimeString('tr-TR', { timeStyle: 'short' }) : formatDate(item.end.date));
+      }
+    }
+    const e = item.raw;
+    const parts = [when, e.RRULE ? 'Tekrarlanan etkinlik' : '', e.LOCATION ? unescapeValue(e.LOCATION.value) : '', e.DESCRIPTION ? unescapeValue(e.DESCRIPTION.value) : ''];
+    list.append(card(e.SUMMARY ? unescapeValue(e.SUMMARY.value) : '(Başlıksız)',
+      ...parts.filter(Boolean).map((t) => el('p', { textContent: t }))));
+  }
+  if (items.length > MAX_CARDS) box.append(el('div', { className: 'note', textContent: 'İlk ' + MAX_CARDS + ' etkinlik gösteriliyor.' }));
+  box.append(list);
+}
+async function renderContacts(file, box) {
+  const text = decodeText(await file.arrayBuffer());
+  const people = [];
+  let current = null;
+  for (const line of contentLines(text)) {
+    if (line.name === 'BEGIN' && line.value.toUpperCase() === 'VCARD') current = [];
+    else if (line.name === 'END' && line.value.toUpperCase() === 'VCARD') { if (current) people.push(current); current = null; }
+    else if (current) current.push(line);
+  }
+  if (!people.length) return showCode(text, null, box);
+
+  const value = (line) => unescapeValue(decodeLine(line));
+  const typeLabel = (line) => {
+    const type = (line.params.TYPE || '').toUpperCase();
+    if (/CELL|MOBILE/.test(type)) return 'Cep';
+    if (/WORK/.test(type)) return 'İş';
+    if (/HOME/.test(type)) return 'Ev';
+    return '';
+  };
+  const row = (label, node) => el('p', { className: 'contact-line' }, label ? label + ': ' : '', node);
+  const link = (href, text2) => el('a', { href, textContent: text2 });
+  const list = el('div', { className: 'cards' });
+  const cards = people.slice(0, MAX_CARDS).map((lines) => {
+    const first = (name) => lines.find((l) => l.name === name);
+    const all = (name) => lines.filter((l) => l.name === name);
+    const n = first('N');
+    let title = first('FN') ? value(first('FN')) : '';
+    if (!title.trim() && n) title = value(n).split(';').slice(0, 2).reverse().join(' ');
+    const kids = [];
+    const photo = first('PHOTO');
+    if (photo) {
+      const type = (photo.params.TYPE || 'jpeg').split(',').find((p) => /png|jpe?g|gif|webp/i.test(p)) || 'jpeg';
+      const isB64 = /^b(ase64)?$/i.test(photo.params.ENCODING || '') || /BASE64/i.test(photo.params.TYPE || '');
+      if (/^data:image\/(png|jpeg|gif|webp);base64,/i.test(photo.value)) kids.push(el('img', { src: photo.value, alt: '' }));
+      else if (isB64) kids.push(el('img', { src: 'data:image/' + type.toLowerCase() + ';base64,' + photo.value.replace(/\s/g, ''), alt: '' }));
+    }
+    const org = [first('ORG') && value(first('ORG')).replace(/;+$/, '').replace(/;/g, ' · '), first('TITLE') && value(first('TITLE'))].filter(Boolean).join(' – ');
+    if (org) kids.push(el('p', { textContent: org }));
+    for (const tel of all('TEL')) {
+      const number = value(tel).replace(/^tel:/i, '');
+      kids.push(row(typeLabel(tel), link('tel:' + number.replace(/[^+\d]/g, ''), number)));
+    }
+    for (const mail of all('EMAIL')) kids.push(row(typeLabel(mail), link('mailto:' + value(mail), value(mail))));
+    for (const adr of all('ADR')) kids.push(row(typeLabel(adr), value(adr).split(';').filter((p) => p.trim()).join(', ')));
+    if (first('BDAY')) kids.push(row('Doğum günü', value(first('BDAY'))));
+    for (const url of all('URL')) {
+      const u = value(url);
+      if (/^https?:\/\//i.test(u)) {
+        const a = link(u, u);
+        a.target = '_blank';
+        a.rel = 'noopener noreferrer';
+        kids.push(row('', a));
+      }
+    }
+    if (first('NOTE')) kids.push(el('p', { textContent: value(first('NOTE')) }));
+    return card(title.trim() || '(Adsız)', ...kids);
+  });
+  setMeta(people.length + ' kişi');
+  if (people.length > MAX_CARDS) box.append(el('div', { className: 'note', textContent: 'İlk ' + MAX_CARDS + ' kişi gösteriliyor.' }));
+  if (cards.length > 5) {
+    const search = el('input', { className: 'font-input', type: 'search', placeholder: 'Kişilerde ara', ariaLabel: 'Kişilerde ara' });
+    search.oninput = () => {
+      const q = search.value.toLocaleLowerCase('tr');
+      cards.forEach((c) => { c.hidden = !c.textContent.toLocaleLowerCase('tr').includes(q); });
+    };
+    list.append(search);
+  }
+  list.append(...cards);
+  box.append(list);
+}
+async function loadHighlight(language) {
+  await Promise.all([
+    loadCss(HLJS_BASE + 'styles/github.min.css', '(prefers-color-scheme: light)'),
+    loadCss(HLJS_BASE + 'styles/github-dark.min.css', '(prefers-color-scheme: dark)'),
+    loadLib('hljs'),
+  ]);
+  if (EXTRA_LANGUAGES.includes(language)) {
+    const key = 'hl-' + language;
+    LIBS[key] = HLJS_BASE + 'languages/' + language + '.min.js';
+    await loadLib(key);
+  }
+}
+async function showCode(text, language, box) {
+  const pre = el('pre', { className: 'code', textContent: text });
+  if (language && text.length <= MAX_HIGHLIGHT_CHARS) {
+    try {
+      await loadHighlight(language);
+      const code = el('code', { className: 'hljs' });
+      code.innerHTML = hljs.highlight(text, { language, ignoreIllegals: true }).value;   // kitaplık metni kaçışlıyor
+      pre.replaceChildren(code);
+    } catch (e) {
+      console.warn('Renklendirme yapılamadı', e);   // düz metin olarak gösterilmeye devam eder
+    }
+  }
+  box.append(pre);
+}
+function showImage(file, box, alt) {
+  return new Promise((resolve, reject) => {
+    const img = el('img', { className: 'media', alt: alt || file.name });
+    const wrap = el('div', { className: 'scroll-x' }, img);
+    img.onload = () => {
+      if (img.naturalWidth) setMeta(img.naturalWidth + '×' + img.naturalHeight);
+      box.append(wrap);
+      resolve();
+    };
+    img.onerror = () => reject(new Error('media'));
+    img.onclick = () => img.classList.toggle('full');
+    img.src = objectUrl(file);
+  });
+}
+function renderMedia(file, box, tag) {
+  return new Promise((resolve, reject) => {
+    const media = el(tag, { className: 'media', controls: true, preload: 'metadata', playsInline: true });
+    media.onloadedmetadata = () => { box.append(media); resolve(); };
+    media.onerror = () => reject(new Error('media'));
+    media.src = objectUrl(file);
+  });
+}
+async function renderPdf(file, box) {
+  const pdfjs = await loadPdf();
+  const doc = await pdfjs.getDocument({
+    data: await file.arrayBuffer(),
+    isEvalSupported: false,
+    standardFontDataUrl: PDF_BASE + 'standard_fonts/',
+    cMapUrl: PDF_BASE + 'cmaps/',
+    cMapPacked: true,
+  }).promise;
+  cleanups.push(() => doc.destroy());
+  setMeta(doc.numPages + ' sayfa');
+
+  const first = await doc.getPage(1);
+  const base = first.getViewport({ scale: 1 });
+  const observer = new IntersectionObserver((entries) => {
+    entries.forEach((entry) => {
+      if (entry.isIntersecting) { observer.unobserve(entry.target); drawPage(doc, entry.target); }
+    });
+  }, { rootMargin: '800px 0px' });
+  cleanups.push(() => observer.disconnect());
+
+  for (let n = 1; n <= doc.numPages; n++) {
+    const holder = el('div', { className: 'pdf-page' });
+    holder.dataset.page = n;
+    holder.style.aspectRatio = base.width + ' / ' + base.height;
+    box.append(holder);
+    observer.observe(holder);
+  }
+}
+async function drawPage(doc, holder) {
+  try {
+    const page = await doc.getPage(Number(holder.dataset.page));
+    const unit = page.getViewport({ scale: 1 });
+    const dpr = Math.min(window.devicePixelRatio || 1, 2.5);
+    const viewport = page.getViewport({ scale: (holder.clientWidth || unit.width) / unit.width * dpr });
+    const canvas = el('canvas', { width: Math.floor(viewport.width), height: Math.floor(viewport.height) });
+    holder.style.aspectRatio = unit.width + ' / ' + unit.height;
+    holder.append(canvas);
+    await page.render({ canvasContext: canvas.getContext('2d'), viewport }).promise;
+    page.cleanup();
+  } catch (e) {
+    if (holder.isConnected) {
+      console.error(e);
+      holder.append(el('div', { className: 'status', textContent: 'Bu sayfa gösterilemedi.' }));
+    }
+  }
+}
+async function renderDocx(file, box) {
+  await loadLib('mammoth');
+  const result = await mammoth.convertToHtml({ arrayBuffer: await file.arrayBuffer() });
+  const paper = el('div', { className: 'paper' });
+  paper.innerHTML = await sanitize(result.value);
+  box.append(el('div', { className: 'note', textContent: 'Word belgesinin içeriği gösteriliyor; sayfa düzeni orijinalinden farklı olabilir.' }), paper);
+}
+async function renderWorkbook(file, box) {
+  await loadLib('xlsx');
+  const buf = await file.arrayBuffer();
+  // Kütüphane bozuk dosyayı da metin sanıp boş tablo veriyor; .xls dışındakiler ZIP olmak zorunda.
+  const sig = new Uint8Array(buf, 0, Math.min(2, buf.byteLength));
+  if (extOf(file.name) !== 'xls' && !(sig[0] === 0x50 && sig[1] === 0x4B)) throw new Error('sheet');
+  const wb = XLSX.read(buf, { type: 'array', sheetRows: MAX_ROWS + 1 });
+  showWorkbook(wb, box);
+}
+async function renderCsv(file, box) {
+  await loadLib('xlsx');
+  const text = decodeText(await file.arrayBuffer());
+  const wb = XLSX.read(text, { type: 'string', raw: true, sheetRows: MAX_ROWS + 1, FS: extOf(file.name) === 'tsv' ? '\t' : undefined });
+  showWorkbook(wb, box);
+}
+function showWorkbook(wb, box) {
+  const rowsOf = (name) => XLSX.utils.sheet_to_json(wb.Sheets[name], { header: 1, raw: false, defval: '' });
+  showTables(wb.SheetNames, rowsOf, box, 'Bu dosyada sayfa yok.');
+  setMeta(wb.SheetNames.length > 1 ? wb.SheetNames.length + ' sayfa' : '');
+}
+// rowsOf(ad): ilk satırı başlık olan satırlar dizisi
+function showTables(names, rowsOf, box, emptyText) {
+  const area = el('div');
+  const buttons = names.map((name) => {
+    const b = el('button', { className: 'btn', type: 'button', textContent: name });
+    b.onclick = () => select(name);
+    return b;
+  });
+  function select(name) {
+    buttons.forEach((b) => b.setAttribute('aria-pressed', String(b.textContent === name)));
+    let rows;
+    try {
+      rows = rowsOf(name);
+    } catch (e) {
+      console.error(e);
+      area.replaceChildren(el('div', { className: 'status', textContent: 'Bu tablo okunamadı.' }));
+      return;
+    }
+    const shown = rows.slice(0, MAX_ROWS);
+    const cols = shown.reduce((max, r) => Math.max(max, r.length), 0);
+    const table = el('table', { className: 'grid' });
+    for (const row of shown) {
+      const tr = el('tr');
+      for (let c = 0; c < cols; c++) {
+        const value = row[c] == null ? '' : String(row[c]);
+        tr.append(el('td', { textContent: value, title: value }));
+      }
+      table.append(tr);
+    }
+    area.replaceChildren();
+    if (rows.length > MAX_ROWS) area.append(el('div', { className: 'note', textContent: 'İlk ' + MAX_ROWS.toLocaleString('tr-TR') + ' satır gösteriliyor.' }));
+    area.append(shown.length ? el('div', { className: 'table-wrap' }, table) : el('div', { className: 'status', textContent: 'Bu sayfa boş.' }));
+  }
+  if (buttons.length > 1) box.append(el('div', { className: 'tabs' }, ...buttons));
+  box.append(area);
+  if (names.length) select(names[0]);
+  else area.append(el('div', { className: 'status', textContent: emptyText }));
+}
+async function renderPptx(file, box) {
+  await loadLib('jszip');
+  const zip = await JSZip.loadAsync(await file.arrayBuffer());
+  const names = Object.keys(zip.files)
+    .filter((n) => /^ppt\/slides\/slide\d+\.xml$/.test(n))
+    .sort((a, b) => parseInt(a.match(/\d+/)[0], 10) - parseInt(b.match(/\d+/)[0], 10));
+  if (!names.length) throw new Error('pptx');
+  setMeta(names.length + ' slayt');
+  box.append(el('div', { className: 'note', textContent: 'Sunumun yazıları ve resimleri gösteriliyor; slayt tasarımı orijinalinden farklıdır.' }));
+
+  const parser = new DOMParser();
+  for (let i = 0; i < names.length; i++) {
+    const xml = parser.parseFromString(await zip.files[names[i]].async('string'), 'application/xml');
+    const card = el('section', { className: 'paper slide' }, el('h2', { textContent: 'Slayt ' + (i + 1) }));
+    for (const para of xml.getElementsByTagName('a:p')) {
+      const text = [...para.getElementsByTagName('a:t')].map((t) => t.textContent).join('');
+      if (text.trim()) card.append(el('p', { textContent: text }));
+    }
+    const pics = await slideImages(zip, names[i], xml);
+    if (pics.length) card.append(el('div', { className: 'pics' }, ...pics));
+    box.append(card);
+  }
+}
+async function slideImages(zip, slideName, xml) {
+  const relsFile = zip.files[slideName.replace('slides/', 'slides/_rels/') + '.rels'];
+  if (!relsFile) return [];
+  const rels = new DOMParser().parseFromString(await relsFile.async('string'), 'application/xml');
+  const targets = {};
+  for (const r of rels.getElementsByTagName('Relationship')) targets[r.getAttribute('Id')] = r.getAttribute('Target');
+  const pics = [];
+  for (const blip of xml.getElementsByTagName('a:blip')) {
+    const target = targets[blip.getAttribute('r:embed')];
+    if (!target || !/\.(png|jpe?g|gif|webp|bmp|svg)$/i.test(target)) continue;
+    const entry = zip.files['ppt/' + target.replace(/^(\.\.\/|\/ppt\/)/, '')];
+    if (entry) {
+      const type = /\.svg$/i.test(target) ? { type: 'image/svg+xml' } : undefined;
+      pics.push(el('img', { src: objectUrl(new Blob([await entry.async('blob')], type)), alt: '' }));
+    }
+  }
+  return pics;
+}
+async function renderZip(file, box) {
+  await loadLib('jszip');
+  const zip = await JSZip.loadAsync(await file.arrayBuffer());
+  const entries = Object.values(zip.files).filter((e) => !e.dir).map((e) => ({
+    name: e.name,
+    size: e._data && e._data.uncompressedSize,
+    read: () => e.async('blob'),
+  }));
+  showFileList(entries, box);
+}
+let archiveModule;
+async function loadArchive() {
+  if (!archiveModule) {
+    try {
+      archiveModule = await import('./vendor/libarchive/libarchive.js');
+    } catch (e) {
+      throw new LibError(location.protocol === 'file:'
+        ? 'Bu arşivler bilgisayardaki dosyadan açılamıyor. Sayfayı internet adresinden açıp yeniden dene.'
+        : undefined);
+    }
+    archiveModule.Archive.init({ workerUrl: new URL('vendor/libarchive/worker-bundle.js', location.href) });
+  }
+  return archiveModule.Archive;
+}
+async function renderArchive(file, box) {
+  const Archive = await loadArchive();
+  const archive = await Archive.open(file);
+  cleanups.push(() => archive.close());
+  if (await archive.hasEncryptedData()) throw new Error('encrypted');
+  const items = await archive.getFilesArray();
+  if (!items.length) throw new Error('archive');
+  showFileList(items.map(({ file: f, path }) => ({
+    name: (path || '') + f.name,
+    size: f.size,
+    read: () => f.extract(),
+  })), box);
+}
+async function renderGzip(file, box, status) {
+  if (typeof DecompressionStream === 'undefined') throw new Error('gzip');
+  const reader = file.stream().pipeThrough(new DecompressionStream('gzip')).getReader();
+  const chunks = [];
+  let total = 0;
+  for (;;) {
+    const { done, value } = await reader.read();
+    if (done) break;
+    total += value.length;
+    if (total > MAX_GUNZIP_BYTES) { await reader.cancel(); throw new Error('gzip'); }
+    chunks.push(value);
+  }
+  const inner = new File(chunks, file.name.replace(/\.gz$/i, '') || 'dosya');
+  box.append(el('div', { className: 'note', textContent: 'Sıkıştırılmış dosyanın içeriği gösteriliyor (' + formatSize(total) + ').' }));
+  await render(inner, box, status);
+}
+function showFileList(entries, box) {
+  setMeta(entries.length + ' dosya');
+  box.append(el('div', { className: 'note', textContent: 'Açmak istediğin dosyaya dokun.' }), fileButtons(entries));
+}
+function fileButtons(entries) {
+  const list = el('ul', { className: 'files' });
+  entries.sort((a, b) => a.name.localeCompare(b.name, 'tr')).forEach((entry) => {
+    const button = el('button', { type: 'button' },
+      el('span', { textContent: entry.name }),
+      el('span', { className: 'size', textContent: formatSize(entry.size) }));
+    button.onclick = async () => {
+      button.disabled = true;
+      try {
+        const blob = await entry.read();
+        openFile(new File([blob], entry.name.split('/').pop()), true);
+      } catch (e) {
+        console.error(e);
+        button.disabled = false;
+        button.lastChild.textContent = 'Açılamadı';
+      }
+    };
+    list.append(el('li', null, button));
+  });
+  return list;
+}
+async function renderEpub(file, box) {
+  await loadLib('jszip');
+  await loadLib('epub');
+  const book = ePub(await file.arrayBuffer());
+  cleanups.push(() => book.destroy());
+  // Bozuk dosyada epub.js bazen hiç sonuçlanmıyor, sonsuza dek beklemeyelim.
+  await Promise.race([
+    book.ready,
+    new Promise((_, reject) => setTimeout(() => reject(new Error('epub')), 30000)),
+  ]);
+  const title = book.packaging && book.packaging.metadata && book.packaging.metadata.title;
+  setMeta(title || '');
+
+  const frame = el('div', { className: 'epub' });
+  const prev = el('button', { className: 'btn', type: 'button', textContent: '←', ariaLabel: 'Önceki sayfa' });
+  const next = el('button', { className: 'btn', type: 'button', textContent: '→', ariaLabel: 'Sonraki sayfa' });
+  const toc = el('select', { ariaLabel: 'Bölümler' });
+  const addToc = (items, depth) => items.forEach((item) => {
+    toc.append(el('option', { value: item.href, textContent: '  '.repeat(depth) + item.label.trim() }));
+    if (item.subitems) addToc(item.subitems, depth + 1);
+  });
+  addToc(book.navigation ? book.navigation.toc : [], 0);
+  box.append(frame, el('div', { className: 'epub-nav' }, prev, toc, next));
+  if (!toc.options.length) toc.hidden = true;
+
+  // allowScriptedContent kapalı: kitabın içindeki kodlar çalışmaz.
+  const rendition = book.renderTo(frame, { width: '100%', height: '100%', spread: 'none', flow: 'paginated', allowScriptedContent: false });
+  await rendition.display();
+  prev.onclick = () => rendition.prev();
+  next.onclick = () => rendition.next();
+  toc.onchange = () => rendition.display(toc.value);
+  rendition.on('relocated', (where) => {
+    const href = where.start.href;
+    const match = [...toc.options].find((o) => o.value.split('#')[0] === href);
+    if (match) toc.value = match.value;
+  });
+  const onKey = (e) => {
+    if (e.key === 'ArrowLeft') rendition.prev();
+    if (e.key === 'ArrowRight') rendition.next();
+  };
+  rendition.on('keydown', onKey);
+  window.addEventListener('keydown', onKey);
+  cleanups.push(() => window.removeEventListener('keydown', onKey));
+  let startX = null;
+  rendition.on('touchstart', (e) => { startX = e.changedTouches[0].screenX; });
+  rendition.on('touchend', (e) => {
+    if (startX === null) return;
+    const dx = e.changedTouches[0].screenX - startX;
+    if (dx < -50) rendition.next();
+    if (dx > 50) rendition.prev();
+    startX = null;
+  });
+}
+async function renderRtf(file, box) {
+  await loadLib('emf');
+  await loadLib('wmf');
+  await loadLib('rtf');
+  RTFJS.loggingEnabled(false);
+  WMFJS.loggingEnabled(false);
+  EMFJS.loggingEnabled(false);
+  const nodes = await new RTFJS.Document(await file.arrayBuffer()).render();
+  const paper = el('div', { className: 'paper light' });
+  paper.innerHTML = await sanitize(nodes.map((n) => n.outerHTML).join(''));
+  // Kütüphane bozuk dosyada hata vermeden boş sonuç dönebiliyor.
+  if (!paper.textContent.trim() && !paper.querySelector('img, svg')) throw new Error('rtf');
+  box.append(paper);
+}
+async function renderOdt(file, box) {
+  await loadLib('jszip');
+  const zip = await JSZip.loadAsync(await file.arrayBuffer());
+  const parser = new DOMParser();
+  const content = zip.files['content.xml'];
+  if (!content) throw new Error('odt');
+  const xml = parser.parseFromString(await content.async('string'), 'application/xml');
+  const body = xml.getElementsByTagName('office:text')[0];
+  if (!body) throw new Error('odt');
+
+  const styles = {};
+  const readStyles = (doc) => {
+    for (const style of doc.getElementsByTagName('style:style')) {
+      const props = style.getElementsByTagName('style:text-properties')[0];
+      if (props) styles[style.getAttribute('style:name')] = props;
+    }
+  };
+  if (zip.files['styles.xml']) readStyles(parser.parseFromString(await zip.files['styles.xml'].async('string'), 'application/xml'));
+  readStyles(xml);
+
+  const applyStyle = (node, source) => {
+    const props = styles[source.getAttribute('text:style-name')];
+    if (!props) return;
+    if (props.getAttribute('fo:font-weight') === 'bold') node.style.fontWeight = '700';
+    if (props.getAttribute('fo:font-style') === 'italic') node.style.fontStyle = 'italic';
+    const under = props.getAttribute('style:text-underline-style');
+    if (under && under !== 'none') node.style.textDecoration = 'underline';
+  };
+  const kids = (node) => [...node.childNodes].flatMap(convert);
+  function convert(node) {
+    if (node.nodeType === Node.TEXT_NODE) return [node.nodeValue];
+    if (node.nodeType !== Node.ELEMENT_NODE) return [];
+    const wrap = (tag, props) => { const out = el(tag, props, ...kids(node)); return [out]; };
+    switch (node.nodeName) {
+      case 'text:p': {
+        const p = wrap('p')[0];
+        applyStyle(p, node);
+        if (!p.childNodes.length) p.append(el('br'));
+        return [p];
+      }
+      case 'text:h': {
+        const level = Math.min(Math.max(Number(node.getAttribute('text:outline-level')) || 1, 1), 6);
+        return wrap('h' + level);
+      }
+      case 'text:span': {
+        const span = wrap('span')[0];
+        applyStyle(span, node);
+        return [span];
+      }
+      case 'text:a': {
+        const href = node.getAttribute('xlink:href') || '';
+        if (!/^(https?:|mailto:)/i.test(href)) return kids(node);
+        return wrap('a', { href, target: '_blank', rel: 'noopener noreferrer' });
+      }
+      case 'text:s': return [' '.repeat(Number(node.getAttribute('text:c')) || 1)];
+      case 'text:tab': return ['    '];
+      case 'text:line-break': return [el('br')];
+      case 'text:list': return wrap('ul');
+      case 'text:list-item': return wrap('li');
+      case 'table:table': return wrap('table');
+      case 'table:table-row': return wrap('tr');
+      case 'table:table-cell': {
+        const td = wrap('td')[0];
+        td.colSpan = Number(node.getAttribute('table:number-columns-spanned')) || 1;
+        td.rowSpan = Number(node.getAttribute('table:number-rows-spanned')) || 1;
+        return [td];
+      }
+      case 'draw:image': {
+        const entry = zip.files[(node.getAttribute('xlink:href') || '').replace(/^\.\//, '')];
+        if (!entry || !/\.(png|jpe?g|gif|webp|bmp|svg)$/i.test(entry.name)) return [];
+        const img = el('img', { alt: '' });
+        const type = /\.svg$/i.test(entry.name) ? { type: 'image/svg+xml' } : undefined;
+        entry.async('blob').then((blob) => { img.src = objectUrl(new Blob([blob], type)); }).catch(() => img.remove());
+        return [img];
+      }
+      case 'text:note-citation':
+      case 'table:covered-table-cell':
+      case 'table:table-column':
+      case 'text:table-of-content-source':
+      case 'text:tracked-changes':
+      case 'text:sequence-decls':
+      case 'office:forms':
+      case 'office:annotation':
+      case 'draw:object':
+      case 'svg:title':
+      case 'svg:desc':
+        return [];
+      default:
+        return kids(node);
+    }
+  }
+  box.append(el('div', { className: 'note', textContent: 'Belgenin içeriği gösteriliyor; sayfa düzeni orijinalinden farklı olabilir.' }),
+    el('article', { className: 'paper light' }, ...kids(body)));
+}
+async function readTextPart(file) {
+  const cut = file.size > MAX_TEXT_BYTES;
+  const buf = await (cut ? file.slice(0, MAX_TEXT_BYTES) : file).arrayBuffer();
+  return { text: decodeText(buf), cut };
+}
+function cutNote(box) {
+  box.append(el('div', { className: 'note', textContent: 'Dosya çok büyük, yalnızca ilk 5 MB gösteriliyor.' }));
+}
+async function renderText(file, box) {
+  const { text, cut } = await readTextPart(file);
+  if (cut) cutNote(box);
+  await showCode(text, CODE[extOf(file.name)] || CODE[file.name.toLowerCase()], box);
+}
+async function renderJson(file, box) {
+  const { text, cut } = await readTextPart(file);
+  let pretty = text;
+  if (!cut) { try { pretty = JSON.stringify(JSON.parse(text), null, 2); } catch (e) {} }
+  if (cut) cutNote(box);
+  await showCode(pretty, 'json', box);
+}
+async function renderMarkdown(file, box) {
+  const { text, cut } = await readTextPart(file);
+  await loadLib('marked');
+  const paper = el('article', { className: 'paper' });
+  paper.innerHTML = await sanitize(marked.parse(text));
+  if (cut) cutNote(box);
+  box.append(paper);
+}
+async function renderHtml(file, box) {
+  const { text, cut } = await readTextPart(file);
+  // sandbox boş: sayfanın içindeki kodlar çalışmaz, bu uygulamaya erişemez.
+  const frame = el('iframe', { className: 'page', title: file.name, srcdoc: text });
+  frame.setAttribute('sandbox', '');
+  box.append(el('div', { className: 'note', textContent: 'Güvenlik için sayfanın içindeki kodlar çalıştırılmıyor.' + (cut ? ' Yalnızca ilk 5 MB gösteriliyor.' : '') }), frame);
+}
+async function showUnknown(file, box, reason) {
+  const bytes = new Uint8Array(await file.slice(0, 256).arrayBuffer());
+  let dump = '';
+  for (let i = 0; i < bytes.length; i += 16) {
+    const row = [...bytes.subarray(i, i + 16)];
+    const hex = row.map((b) => b.toString(16).padStart(2, '0')).join(' ').padEnd(47);
+    const ascii = row.map((b) => (b >= 32 && b < 127 ? String.fromCharCode(b) : '.')).join('');
+    dump += i.toString(16).padStart(4, '0') + '  ' + hex + '  ' + ascii + '\n';
+  }
+  box.append(el('section', { className: 'paper unknown' },
+    el('h2', { textContent: 'Bu dosya burada açılamadı' }),
+    el('p', { textContent: reason || 'Bu dosya türü tarayıcıda gösterilemiyor. "İndir" ile kaydedip uygun bir uygulamada açabilirsin.' }),
+    el('pre', { textContent: dump })));
+}
+
+/* ---------- olaylar ---------- */
+function openFile(file, nested) {
+  if (nested) history_.push(file); else history_ = [file];
+  show(file);
+}
+picker.addEventListener('change', () => {
+  if (picker.files[0]) openFile(picker.files[0]);
+  picker.value = '';   // aynı dosya yeniden seçilebilsin
+});
+$('back').addEventListener('click', () => {
+  history_.pop();
+  show(history_[history_.length - 1]);
+});
+let dragDepth = 0;
+window.addEventListener('dragenter', (e) => { e.preventDefault(); dragDepth++; document.body.classList.add('dragging'); });
+window.addEventListener('dragleave', () => { if (--dragDepth <= 0) { dragDepth = 0; document.body.classList.remove('dragging'); } });
+window.addEventListener('dragover', (e) => e.preventDefault());
+window.addEventListener('drop', (e) => {
+  e.preventDefault();
+  dragDepth = 0;
+  document.body.classList.remove('dragging');
+  const file = e.dataTransfer.files[0];
+  if (file) openFile(file);
+});
+</script>
+</body>
+</html>
