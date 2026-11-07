@@ -1,0 +1,695 @@
+<!doctype html>
+<html lang="tr">
+<head>
+<meta charset="utf-8">
+<script src="kilit.js" data-gate></script>
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Mini Grasshopper 3D</title>
+<meta name="description" content="Tarayıcıda Grasshopper usulü parametrik tasarım: düğümleri bağla, 3D görünümde anında gör. erdevelop">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500&display=swap">
+<style>
+  :root {
+    --canvas: #d4d4d4; --canvas-grid: rgba(0,0,0,.07);
+    --node: #e8e8e8; --node-line: #4a4a4a; --core: #505a64; --sel: #6fbf4a;
+    --warn: #f3a42b; --err: #d8463c; --wire: #353535;
+    --ui: #2b3137; --ui-2: #353c43; --ui-line: #444c55; --ui-fg: #e6eaee; --ui-muted: #98a3ad; --accent: #5aa9ff;
+    --f: 'IBM Plex Sans', 'Segoe UI', system-ui, sans-serif; --m: 'IBM Plex Mono', Consolas, monospace;
+    color-scheme: light;
+  }
+  * { box-sizing: border-box; }
+  html, body { margin: 0; height: 100%; overflow: hidden; font-family: var(--f); background: var(--ui); color: var(--ui-fg); }
+  #app { height: 100%; display: flex; flex-direction: column; }
+
+  /* top bar */
+  .bar { display: flex; align-items: center; gap: 8px; padding: calc(6px + env(safe-area-inset-top, 0px)) 10px 6px; background: var(--ui); border-bottom: 1px solid var(--ui-line); flex-wrap: wrap; }
+  .brand { font-weight: 700; font-size: 14px; letter-spacing: .3px; margin-right: 6px; white-space: nowrap; }
+  .brand b { color: var(--sel); }
+  .bar select, .bar button, .bar a { font: 500 12px var(--f); color: var(--ui-fg); background: var(--ui-2); border: 1px solid var(--ui-line); border-radius: 4px; padding: 5px 9px; cursor: pointer; text-decoration: none; }
+  .bar button:hover, .bar a:hover { border-color: var(--accent); }
+  .bar .sp { flex: 1; }
+  .bar .stat { font: 400 11px var(--m); color: var(--ui-muted); white-space: nowrap; }
+
+  /* ribbon */
+  .ribbon { background: var(--ui-2); border-bottom: 1px solid var(--ui-line); }
+  .tabs { display: flex; gap: 2px; padding: 4px 8px 0; overflow-x: auto; }
+  .tabs button { font: 600 11px var(--f); color: var(--ui-muted); background: none; border: 0; border-bottom: 2px solid transparent; padding: 4px 10px; cursor: pointer; white-space: nowrap; }
+  .tabs button.on { color: var(--ui-fg); border-bottom-color: var(--sel); }
+  .tools { display: flex; gap: 4px; padding: 6px 8px; overflow-x: auto; scrollbar-width: thin; }
+  .tools button { flex: none; display: flex; flex-direction: column; align-items: center; gap: 2px; min-width: 62px; padding: 4px 6px; background: #3d454e; border: 1px solid var(--ui-line); border-radius: 4px; color: var(--ui-fg); cursor: pointer; font: 500 10.5px var(--f); }
+  .tools button:hover { border-color: var(--sel); }
+  .tools button i { font: 600 13px var(--m); font-style: normal; color: #cfe9bf; }
+
+  /* split */
+  .main { flex: 1; display: flex; min-height: 0; }
+  #editor { position: relative; flex: 1 1 55%; overflow: hidden; background-color: var(--canvas); touch-action: none; cursor: default;
+    background-image: linear-gradient(var(--canvas-grid) 1px, transparent 1px), linear-gradient(90deg, var(--canvas-grid) 1px, transparent 1px); }
+  #editor.panning { cursor: grabbing; }
+  #world { position: absolute; left: 0; top: 0; transform-origin: 0 0; }
+  #wires { position: absolute; left: 0; top: 0; width: 1px; height: 1px; overflow: visible; pointer-events: none; }
+  .split { width: 6px; background: var(--ui); cursor: col-resize; flex: none; border-left: 1px solid var(--ui-line); border-right: 1px solid var(--ui-line); touch-action: none; }
+  #view { position: relative; flex: 1 1 45%; min-width: 0; background: linear-gradient(180deg, #c9cdd1 0%, #a5abb1 100%); }
+  #view canvas { display: block; width: 100%; height: 100%; }
+  .vlabel { position: absolute; left: 8px; top: 6px; font: 500 11px var(--m); color: #2b3137; pointer-events: none; }
+  .vbtns { position: absolute; right: 8px; top: 6px; display: flex; gap: 4px; }
+  .vbtns button { font: 500 11px var(--f); border: 1px solid rgba(0,0,0,.25); background: rgba(255,255,255,.6); color: #222; border-radius: 3px; padding: 3px 7px; cursor: pointer; }
+
+  /* nodes */
+  .node { position: absolute; display: flex; align-items: stretch; background: var(--node); border: 1.5px solid var(--node-line); border-radius: 5px; font-size: 11px; color: #1d1d1d; box-shadow: 0 2px 4px rgba(0,0,0,.18); user-select: none; touch-action: none; }
+  .node.sel { border-color: var(--sel); box-shadow: 0 0 0 2px rgba(111,191,74,.55), 0 2px 4px rgba(0,0,0,.18); }
+  .node.warn { background: #f7d9a3; } .node.err { background: #f0a39d; }
+  .node .col { display: flex; flex-direction: column; justify-content: space-around; padding: 4px 0; gap: 2px; }
+  .node .p { position: relative; height: 16px; display: flex; align-items: center; padding: 0 7px; white-space: nowrap; cursor: crosshair; }
+  .node .ins .p { justify-content: flex-start; }
+  .node .outs .p { justify-content: flex-end; }
+  .node .p::after { content: ''; position: absolute; top: 50%; width: 8px; height: 8px; margin-top: -4px; border-radius: 50%; background: #fff; border: 1.5px solid #3a3a3a; }
+  .node .ins .p::after { left: -5px; } .node .outs .p::after { right: -5px; }
+  .node .p.def { color: #7a7a7a; }
+  .node .core { background: var(--core); color: #fff; display: flex; align-items: center; justify-content: center; padding: 0 3px; cursor: grab; min-height: 28px; }
+  .node .core span { writing-mode: vertical-rl; transform: rotate(180deg); font-weight: 700; font-size: 11px; letter-spacing: .3px; white-space: nowrap; }
+  .node.noins .core, .node.noouts .core { border-radius: 3px; }
+  .node .eye { position: absolute; right: -2px; top: -16px; font-size: 10px; color: #444; cursor: pointer; padding: 0 3px; }
+  .node .eye.off { color: #999; text-decoration: line-through; }
+  .node .msg { position: absolute; left: 0; top: 100%; margin-top: 3px; font: 400 10px var(--m); color: #7a1d16; white-space: nowrap; }
+  /* slider */
+  .node.slider { border-radius: 14px; padding: 3px 4px 3px 10px; gap: 6px; align-items: center; }
+  .node.slider .lbl { font-weight: 600; cursor: grab; min-width: 46px; white-space: nowrap; }
+  .node.slider input[type=range] { width: 120px; accent-color: #3a3a3a; touch-action: none; }
+  .node.slider .val { font: 500 11px var(--m); min-width: 34px; text-align: right; background: #fff; border: 1px solid #aaa; border-radius: 3px; padding: 0 3px; cursor: text; }
+  .node.slider .outs .p { padding-right: 9px; }
+  /* panel */
+  .node.panel { background: #fff9c9; border-color: #b9ad5a; flex-direction: column; min-width: 140px; }
+  .node.panel .ptitle { font-weight: 600; padding: 3px 8px; border-bottom: 1px solid #e3d98f; cursor: grab; display: flex; justify-content: space-between; }
+  .node.panel pre { margin: 0; padding: 4px 8px; font: 400 10.5px var(--m); max-height: 160px; overflow: auto; color: #333; }
+  .node.panel .ins { position: absolute; left: 0; top: 0; }
+
+  /* search */
+  .search { position: absolute; z-index: 20; width: 240px; background: #fff; border: 1px solid #555; border-radius: 4px; box-shadow: 0 8px 24px rgba(0,0,0,.25); color: #222; }
+  .search input { width: 100%; border: 0; border-bottom: 1px solid #ccc; padding: 7px 9px; font: 500 13px var(--f); outline: none; }
+  .search div { padding: 5px 9px; font-size: 12px; cursor: pointer; display: flex; justify-content: space-between; }
+  .search div small { color: #888; }
+  .search div.on, .search div:hover { background: #e7f3df; }
+
+  .hint { position: absolute; left: 10px; bottom: 8px; font: 400 11px var(--m); color: rgba(0,0,0,.55); pointer-events: none; }
+  .toast { position: absolute; left: 50%; top: 10px; transform: translateX(-50%); background: rgba(30,30,30,.85); color: #fff; font-size: 12px; padding: 5px 10px; border-radius: 4px; pointer-events: none; opacity: 0; transition: opacity .2s; }
+  .toast.on { opacity: 1; }
+
+  @media (max-width: 820px) {
+    .bar { flex-wrap: nowrap; overflow-x: auto; }
+    .brand { font-size: 13px; }
+    .main { flex-direction: column-reverse; }
+    #view { flex: 0 0 42%; }
+    .split { display: none; }
+    .bar .stat { display: none; }
+    .hint { display: none; }
+  }
+</style>
+</head>
+<body>
+<div id="app">
+  <div class="bar">
+    <span class="brand">Mini <b>Grasshopper</b> 3D</span>
+    <select id="preset" aria-label="Örnek tanım">
+      <option value="">Örnek aç…</option>
+      <option value="tower">Burgulu kule</option>
+      <option value="attractor">Attractor skylight</option>
+      <option value="wave">Dalgalı duvar</option>
+      <option value="facade">Polar cephe</option>
+    </select>
+    <button id="newBtn" type="button">Yeni</button>
+    <button id="delBtn" type="button">Sil</button>
+    <button id="fitBtn" type="button" title="Tüm bileşenleri sığdır">Sığdır</button>
+    <span class="sp"></span>
+    <span class="stat" id="stat"></span>
+    <a href="./" aria-label="erdevelop ana sayfa">⌂</a>
+  </div>
+  <div class="ribbon">
+    <div class="tabs" id="tabs"></div>
+    <div class="tools" id="tools"></div>
+  </div>
+  <div class="main">
+    <div id="editor">
+      <div id="world"><svg id="wires"></svg></div>
+      <div class="hint">Boşluğa çift tıkla: bileşen ara · Sürükle: kaydır · Tekerlek / iki parmak: yakınlaş</div>
+      <div class="toast" id="toast"></div>
+    </div>
+    <div class="split" id="split"></div>
+    <div id="view">
+      <div class="vlabel">Perspective</div>
+      <div class="vbtns"><button id="zoomBtn" type="button">Zoom</button><button id="topBtn" type="button">Top</button><button id="perspBtn" type="button">Persp</button></div>
+    </div>
+  </div>
+</div>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/controls/OrbitControls.js"></script>
+<script>
+(() => {
+'use strict';
+const $ = id => document.getElementById(id);
+const D2R = Math.PI / 180;
+
+/* ================= geometry helpers ================= */
+const P = (x, y, z) => ({ t: 'pt', x, y, z });
+const isPt = g => g && g.t === 'pt';
+const isGeo = g => g && typeof g === 'object' && g.t;
+function num(v, name) { if (typeof v === 'number' && isFinite(v)) return v; if (isPt(v)) throw new Error(`${name}: sayı bekleniyor`); const n = +v; if (isFinite(n)) return n; throw new Error(`${name}: sayı bekleniyor`); }
+function asPt(v, name) { if (isPt(v)) return v; if (typeof v === 'number') return P(0, 0, v); throw new Error(`${name}: nokta/vektör bekleniyor`); }
+function asCrv(v, name) { if (v && v.t === 'crv') return v; throw new Error(`${name}: eğri bekleniyor`); }
+function asSrf(v, name) { if (v && v.t === 'srf') return v; throw new Error(`${name}: yüzey bekleniyor`); }
+function mapG(g, f) {
+  if (!isGeo(g)) return g;
+  if (g.t === 'pt') { const r = f([g.x, g.y, g.z]); return P(r[0], r[1], r[2]); }
+  if (g.t === 'crv') return { ...g, p: g.p.map(f) };
+  if (g.t === 'srf') return { ...g, g: g.g.map(r => r.map(f)) };
+  if (g.t === 'mesh') return { ...g, v: g.v.map(f) };
+  return g;
+}
+function pts(g) { if (g.t === 'pt') return [[g.x, g.y, g.z]]; if (g.t === 'crv') return g.p; if (g.t === 'srf') return g.g.flat(); if (g.t === 'mesh') return g.v; return []; }
+function centroid(g) { const a = pts(g); if (!a.length) return [0, 0, 0]; const s = [0, 0, 0]; a.forEach(p => { s[0] += p[0]; s[1] += p[1]; s[2] += p[2]; }); return s.map(x => x / a.length); }
+const rotZ = (p, a, c = [0, 0, 0]) => { const s = Math.sin(a), co = Math.cos(a), x = p[0] - c[0], y = p[1] - c[1]; return [c[0] + x * co - y * s, c[1] + x * s + y * co, p[2]]; };
+function resample(p, n, closed) {
+  const q = closed ? [...p, p[0]] : p, L = [0];
+  for (let i = 1; i < q.length; i++) L.push(L[i - 1] + Math.hypot(q[i][0] - q[i - 1][0], q[i][1] - q[i - 1][1], q[i][2] - q[i - 1][2]));
+  const T = L[L.length - 1] || 1, out = [], cnt = closed ? n : n;
+  for (let k = 0; k < cnt; k++) {
+    const d = T * k / (closed ? n : n - 1); let j = 1; while (j < L.length - 1 && L[j] < d) j++;
+    const t = (d - L[j - 1]) / ((L[j] - L[j - 1]) || 1);
+    out.push([0, 1, 2].map(a => q[j - 1][a] + (q[j][a] - q[j - 1][a]) * t));
+  }
+  return out;
+}
+function catmull(points, seg = 8) {
+  if (points.length < 3) return points.slice();
+  const out = [];
+  for (let i = 0; i < points.length - 1; i++) {
+    const p0 = points[Math.max(i - 1, 0)], p1 = points[i], p2 = points[i + 1], p3 = points[Math.min(i + 2, points.length - 1)];
+    for (let s = 0; s < seg; s++) { const t = s / seg, t2 = t * t, t3 = t2 * t;
+      out.push([0, 1, 2].map(a => 0.5 * ((2 * p1[a]) + (-p0[a] + p2[a]) * t + (2 * p0[a] - 5 * p1[a] + 4 * p2[a] - p3[a]) * t2 + (-p0[a] + 3 * p1[a] - 3 * p2[a] + p3[a]) * t3))); }
+  }
+  out.push(points[points.length - 1]); return out;
+}
+function srfAt(s, u, v) {
+  const R = s.g.length - 1, C = s.g[0].length - 1;
+  const fu = Math.min(Math.max(u, 0), 1) * C, fv = Math.min(Math.max(v, 0), 1) * R;
+  const i = Math.min(Math.floor(fu), C - 1 < 0 ? 0 : C - 1), j = Math.min(Math.floor(fv), R - 1 < 0 ? 0 : R - 1);
+  const du = fu - i, dv = fv - j, g = s.g;
+  const a = g[j][i], b = g[j][Math.min(i + 1, C)], c = g[Math.min(j + 1, R)][i], d = g[Math.min(j + 1, R)][Math.min(i + 1, C)];
+  return [0, 1, 2].map(k => (a[k] * (1 - du) + b[k] * du) * (1 - dv) + (c[k] * (1 - du) + d[k] * du) * dv);
+}
+const quad = (a, b, c, d) => ({ t: 'mesh', v: [a, b, c, d], f: [[0, 1, 2, 3]] });
+
+/* ================= components ================= */
+// ins: { n: name, d: default, list: true → receives the whole list }
+const C = {
+  slider: { cat: 'Params', name: 'Number Slider', nick: 'Slider', ins: [], outs: ['N'], ui: 'slider', st: { label: 'Slider', min: 0, max: 10, val: 5, int: false }, run: (I, st) => [[st.val]] },
+  panel: { cat: 'Params', name: 'Panel', nick: 'Panel', ins: [{ n: 'In', list: true }], outs: [], ui: 'panel', run: () => [] },
+  pt: { cat: 'Vector', name: 'Construct Point', nick: 'Pt', ins: [{ n: 'X', d: 0 }, { n: 'Y', d: 0 }, { n: 'Z', d: 0 }], outs: ['Pt'], item: (x, y, z) => [P(num(x, 'X'), num(y, 'Y'), num(z, 'Z'))] },
+  vec: { cat: 'Vector', name: 'Vector XYZ', nick: 'Vec', ins: [{ n: 'X', d: 0 }, { n: 'Y', d: 0 }, { n: 'Z', d: 1 }], outs: ['V'], item: (x, y, z) => [P(num(x, 'X'), num(y, 'Y'), num(z, 'Z'))] },
+  unitz: { cat: 'Vector', name: 'Unit Z', nick: 'Z', ins: [{ n: 'F', d: 1 }], outs: ['V'], item: f => [P(0, 0, num(f, 'F'))] },
+  dist: { cat: 'Vector', name: 'Distance', nick: 'Dist', ins: [{ n: 'A' }, { n: 'B' }], outs: ['D'], item: (a, b) => { const p = centroid(asGeo(a)), q = centroid(asGeo(b)); return [Math.hypot(p[0] - q[0], p[1] - q[1], p[2] - q[2])]; } },
+  cen: { cat: 'Vector', name: 'Centroid', nick: 'Cen', ins: [{ n: 'G' }], outs: ['C'], item: g => { const c = centroid(asGeo(g)); return [P(c[0], c[1], c[2])]; } },
+
+  add: { cat: 'Maths', name: 'Addition', nick: 'A+B', ins: [{ n: 'A', d: 0 }, { n: 'B', d: 0 }], outs: ['R'], item: (a, b) => [num(a, 'A') + num(b, 'B')] },
+  sub: { cat: 'Maths', name: 'Subtraction', nick: 'A−B', ins: [{ n: 'A', d: 0 }, { n: 'B', d: 0 }], outs: ['R'], item: (a, b) => [num(a, 'A') - num(b, 'B')] },
+  mul: { cat: 'Maths', name: 'Multiplication', nick: 'A×B', ins: [{ n: 'A', d: 1 }, { n: 'B', d: 1 }], outs: ['R'], item: (a, b) => [num(a, 'A') * num(b, 'B')] },
+  div: { cat: 'Maths', name: 'Division', nick: 'A÷B', ins: [{ n: 'A', d: 1 }, { n: 'B', d: 1 }], outs: ['R'], item: (a, b) => { const d = num(b, 'B'); if (!d) throw new Error('B sıfır olamaz'); return [num(a, 'A') / d]; } },
+  sin: { cat: 'Maths', name: 'Sine (°)', nick: 'Sin', ins: [{ n: 'x', d: 0 }], outs: ['y'], item: x => [Math.sin(num(x, 'x') * D2R)] },
+  cos: { cat: 'Maths', name: 'Cosine (°)', nick: 'Cos', ins: [{ n: 'x', d: 0 }], outs: ['y'], item: x => [Math.cos(num(x, 'x') * D2R)] },
+  series: { cat: 'Maths', name: 'Series', nick: 'Series', ins: [{ n: 'S', d: 0 }, { n: 'N', d: 1 }, { n: 'C', d: 10 }], outs: ['S'],
+    item: (s, n, c) => { c = Math.round(num(c, 'C')); if (c < 0 || c > 2000) throw new Error('C 0–2000 arası olmalı'); return [Array.from({ length: c }, (_, i) => num(s, 'S') + i * num(n, 'N'))]; } },
+  range: { cat: 'Maths', name: 'Range', nick: 'Range', ins: [{ n: 'A', d: 0 }, { n: 'B', d: 1 }, { n: 'N', d: 10 }], outs: ['R'],
+    item: (a, b, n) => { n = Math.round(num(n, 'N')); if (n < 1 || n > 2000) throw new Error('N 1–2000 arası olmalı'); a = num(a, 'A'); b = num(b, 'B'); return [Array.from({ length: n }, (_, i) => n === 1 ? a : a + (b - a) * i / (n - 1))]; } },
+  remap: { cat: 'Maths', name: 'Remap', nick: 'Remap', ins: [{ n: 'V', list: true }, { n: 'T0', d: 0 }, { n: 'T1', d: 1 }], outs: ['R'],
+    run: (I) => { const v = I[0].map(x => num(x, 'V')); if (!v.length) return [[]]; const lo = Math.min(...v), hi = Math.max(...v), t0 = num(I[1][0] ?? 0, 'T0'), t1 = num(I[2][0] ?? 1, 'T1'); return [v.map(x => t0 + (t1 - t0) * (hi > lo ? (x - lo) / (hi - lo) : 0))]; } },
+
+  line: { cat: 'Curve', name: 'Line', nick: 'Ln', ins: [{ n: 'A', d: P(0, 0, 0) }, { n: 'B', d: P(0, 0, 10) }], outs: ['L'], item: (a, b) => { a = asPt(a, 'A'); b = asPt(b, 'B'); return [{ t: 'crv', p: [[a.x, a.y, a.z], [b.x, b.y, b.z]], c: false }]; } },
+  circle: { cat: 'Curve', name: 'Circle', nick: 'Cir', ins: [{ n: 'P', d: P(0, 0, 0) }, { n: 'R', d: 5 }], outs: ['C'],
+    item: (p, r) => { p = asPt(p, 'P'); r = num(r, 'R'); return [{ t: 'crv', c: true, p: Array.from({ length: 48 }, (_, i) => [p.x + Math.cos(i / 48 * 2 * Math.PI) * r, p.y + Math.sin(i / 48 * 2 * Math.PI) * r, p.z]) }]; } },
+  polygon: { cat: 'Curve', name: 'Polygon', nick: 'Pol', ins: [{ n: 'P', d: P(0, 0, 0) }, { n: 'R', d: 5 }, { n: 'S', d: 6 }], outs: ['P'],
+    item: (p, r, s) => { p = asPt(p, 'P'); r = num(r, 'R'); s = Math.max(3, Math.round(num(s, 'S'))); return [{ t: 'crv', c: true, p: Array.from({ length: s }, (_, i) => [p.x + Math.cos(i / s * 2 * Math.PI) * r, p.y + Math.sin(i / s * 2 * Math.PI) * r, p.z]) }]; } },
+  interp: { cat: 'Curve', name: 'Interpolate', nick: 'IntCrv', ins: [{ n: 'V', list: true }], outs: ['C'],
+    run: I => { const p = I[0].map(x => { x = asPt(x, 'V'); return [x.x, x.y, x.z]; }); if (p.length < 2) throw new Error('En az 2 nokta gerekli'); return [[{ t: 'crv', c: false, p: catmull(p) }]]; } },
+  divc: { cat: 'Curve', name: 'Divide Curve', nick: 'Div', ins: [{ n: 'C' }, { n: 'N', d: 10 }], outs: ['P'],
+    item: (c, n) => { c = asCrv(c, 'C'); n = Math.max(1, Math.round(num(n, 'N'))); return [resample(c.p, c.c ? n : n + 1, c.c).map(q => P(q[0], q[1], q[2]))]; } },
+
+  planesrf: { cat: 'Surface', name: 'Plane Surface', nick: 'PlnSrf', ins: [{ n: 'X', d: 20 }, { n: 'Y', d: 10 }, { n: 'Z', d: 0 }], outs: ['S'],
+    item: (x, y, z) => { x = num(x, 'X'); y = num(y, 'Y'); z = num(z, 'Z'); return [{ t: 'srf', g: [[[0, 0, z], [x, 0, z]], [[0, y, z], [x, y, z]]] }]; } },
+  loft: { cat: 'Surface', name: 'Loft', nick: 'Loft', ins: [{ n: 'C', list: true }], outs: ['L'],
+    run: I => { const cs = I[0].map(c => asCrv(c, 'C')); if (cs.length < 2) throw new Error('En az 2 eğri gerekli'); const n = Math.max(...cs.map(c => c.p.length + (c.c ? 1 : 0)));
+      return [[{ t: 'srf', closedU: cs[0].c, g: cs.map(c => { const r = resample(c.p, c.c ? n - 1 : n, c.c); if (c.c) r.push(r[0]); return r; }) }]]; } },
+  divs: { cat: 'Surface', name: 'Divide Surface', nick: 'SDivide', ins: [{ n: 'S' }, { n: 'U', d: 10 }, { n: 'V', d: 10 }], outs: ['P'],
+    item: (s, u, v) => { s = asSrf(s, 'S'); u = Math.round(num(u, 'U')); v = Math.round(num(v, 'V')); const out = []; for (let j = 0; j <= v; j++) for (let i = 0; i <= u; i++) { const q = srfAt(s, i / u, j / v); out.push(P(q[0], q[1], q[2])); } return [out]; } },
+  panels: { cat: 'Surface', name: 'Surface Panels', nick: 'Panels', ins: [{ n: 'S' }, { n: 'U', d: 10 }, { n: 'V', d: 10 }], outs: ['P'],
+    item: (s, u, v) => { s = asSrf(s, 'S'); u = Math.max(1, Math.round(num(u, 'U'))); v = Math.max(1, Math.round(num(v, 'V'))); if (u * v > 6000) throw new Error('Çok fazla panel (U×V ≤ 6000)');
+      const out = []; for (let j = 0; j < v; j++) for (let i = 0; i < u; i++) out.push(quad(srfAt(s, i / u, j / v), srfAt(s, (i + 1) / u, j / v), srfAt(s, (i + 1) / u, (j + 1) / v), srfAt(s, i / u, (j + 1) / v))); return [out]; } },
+  extrude: { cat: 'Surface', name: 'Extrude Z', nick: 'Extr', ins: [{ n: 'C' }, { n: 'H', d: 5 }], outs: ['E'],
+    item: (c, h) => { c = asCrv(c, 'C'); h = num(h, 'H'); const p = c.c ? [...c.p, c.p[0]] : c.p; return [{ t: 'srf', g: [p, p.map(q => [q[0], q[1], q[2] + h])] }]; } },
+  box: { cat: 'Surface', name: 'Box', nick: 'Box', ins: [{ n: 'P', d: P(0, 0, 0) }, { n: 'X', d: 5 }, { n: 'Y', d: 5 }, { n: 'Z', d: 5 }], outs: ['B'],
+    item: (p, x, y, z) => { p = asPt(p, 'P'); x = num(x, 'X'); y = num(y, 'Y'); z = num(z, 'Z'); const o = [p.x, p.y, p.z], v = [];
+      for (const dz of [0, z]) for (const [dx, dy] of [[0, 0], [x, 0], [x, y], [0, y]]) v.push([o[0] + dx, o[1] + dy, o[2] + dz]);
+      return [{ t: 'mesh', v, f: [[0, 3, 2, 1], [4, 5, 6, 7], [0, 1, 5, 4], [1, 2, 6, 5], [2, 3, 7, 6], [3, 0, 4, 7]] }]; } },
+  sphere: { cat: 'Surface', name: 'Sphere', nick: 'Sph', ins: [{ n: 'P', d: P(0, 0, 0) }, { n: 'R', d: 3 }], outs: ['S'],
+    item: (p, r) => { p = asPt(p, 'P'); r = num(r, 'R'); const g = []; for (let j = 0; j <= 12; j++) { const ph = -Math.PI / 2 + Math.PI * j / 12, row = []; for (let i = 0; i <= 24; i++) { const th = 2 * Math.PI * i / 24; row.push([p.x + r * Math.cos(ph) * Math.cos(th), p.y + r * Math.cos(ph) * Math.sin(th), p.z + r * Math.sin(ph)]); } g.push(row); } return [{ t: 'srf', g }]; } },
+
+  move: { cat: 'Transform', name: 'Move', nick: 'Move', ins: [{ n: 'G' }, { n: 'T', d: P(0, 0, 10) }], outs: ['G'], item: (g, t) => { t = asPt(t, 'T'); return [mapG(asGeo(g), p => [p[0] + t.x, p[1] + t.y, p[2] + t.z])]; } },
+  rotate: { cat: 'Transform', name: 'Rotate Z', nick: 'Rot', ins: [{ n: 'G' }, { n: 'A', d: 90 }], outs: ['G'], item: (g, a) => { a = num(a, 'A') * D2R; return [mapG(asGeo(g), p => rotZ(p, a))]; } },
+  scale: { cat: 'Transform', name: 'Scale', nick: 'Scale', ins: [{ n: 'G' }, { n: 'F', d: 0.5 }], outs: ['G'], item: (g, f) => { g = asGeo(g); f = num(f, 'F'); const c = centroid(g); return [mapG(g, p => [c[0] + (p[0] - c[0]) * f, c[1] + (p[1] - c[1]) * f, c[2] + (p[2] - c[2]) * f])]; } },
+  linarr: { cat: 'Transform', name: 'Linear Array', nick: 'ArrLin', ins: [{ n: 'G' }, { n: 'D', d: P(0, 0, 3) }, { n: 'N', d: 5 }], outs: ['G'],
+    item: (g, d, n) => { g = asGeo(g); d = asPt(d, 'D'); n = Math.round(num(n, 'N')); if (n < 1 || n > 500) throw new Error('N 1–500 arası'); return [Array.from({ length: n }, (_, i) => mapG(g, p => [p[0] + d.x * i, p[1] + d.y * i, p[2] + d.z * i]))]; } },
+  polarr: { cat: 'Transform', name: 'Polar Array', nick: 'ArrPol', ins: [{ n: 'G' }, { n: 'N', d: 6 }], outs: ['G'],
+    item: (g, n) => { g = asGeo(g); n = Math.round(num(n, 'N')); if (n < 1 || n > 500) throw new Error('N 1–500 arası'); return [Array.from({ length: n }, (_, i) => mapG(g, p => rotZ(p, 2 * Math.PI * i / n)))]; } }
+};
+function asGeo(v) { if (isGeo(v)) return v; throw new Error('geometri bekleniyor'); }
+const CATS = ['Params', 'Maths', 'Vector', 'Curve', 'Surface', 'Transform'];
+
+/* ================= document ================= */
+let doc = { nodes: [], wires: [] }, uid = 1, sel = new Set();
+const byId = id => doc.nodes.find(n => n.id === id);
+function addNode(type, x, y, st, pv = true) {
+  const c = C[type]; const n = { id: uid++, type, x, y, st: { ...(c.st || {}), ...(st || {}) }, pv };
+  doc.nodes.push(n); return n;
+}
+function connect(a, ao, b, bi) {
+  if (a === b || reaches(b, a)) { toast('Döngü oluşturulamaz'); return false; }
+  doc.wires = doc.wires.filter(w => !(w.b === b && w.bi === bi));
+  doc.wires.push({ a, ao, b, bi }); return true;
+}
+function reaches(from, to) { // is `to` downstream of `from`?
+  const seen = new Set(), st = [from];
+  while (st.length) { const x = st.pop(); if (x === to) return true; if (seen.has(x)) continue; seen.add(x); doc.wires.filter(w => w.a === x).forEach(w => st.push(w.b)); }
+  return false;
+}
+
+/* ================= evaluation ================= */
+let cache = {}, info = {};
+function solve() {
+  const t0 = performance.now();
+  cache = {}; info = {};
+  const order = [], mark = {};
+  const visit = n => { if (mark[n.id]) return; mark[n.id] = 1; doc.wires.filter(w => w.b === n.id).forEach(w => { const s = byId(w.a); if (s) visit(s); }); order.push(n); };
+  doc.nodes.forEach(visit);
+  for (const n of order) {
+    const c = C[n.type];
+    try {
+      const I = c.ins.map((inp, i) => {
+        const w = doc.wires.find(w => w.b === n.id && w.bi === i);
+        if (w) { const src = cache[w.a]; return src ? (src[w.ao] || []) : []; }
+        return inp.d !== undefined ? [inp.d] : [];
+      });
+      let out;
+      if (c.run) out = c.run(I, n.st);
+      else {
+        const miss = c.ins.findIndex((inp, i) => !inp.list && !I[i].length);
+        if (miss >= 0) { info[n.id] = { warn: `${c.ins[miss].n} girdisi boş` }; cache[n.id] = c.outs.map(() => []); continue; }
+        const len = Math.max(1, ...c.ins.map((inp, i) => inp.list ? 1 : I[i].length));
+        out = c.outs.map(() => []);
+        for (let k = 0; k < len; k++) {
+          const args = c.ins.map((inp, i) => inp.list ? I[i] : I[i][Math.min(k, I[i].length - 1)]);
+          const r = c.item(...args, n.st);
+          r.forEach((v, o) => { if (Array.isArray(v)) out[o].push(...v); else out[o].push(v); });
+        }
+      }
+      cache[n.id] = out;
+      if (c.ui === 'panel') info[n.id] = { data: I[0] };
+    } catch (e) { info[n.id] = { err: e.message }; cache[n.id] = c.outs.map(() => []); }
+  }
+  lastSolveMs = performance.now() - t0;
+}
+let lastSolveMs = 0;
+
+/* ================= editor view ================= */
+const editor = $('editor'), world = $('world'), wiresSvg = $('wires');
+let view = { x: 40, y: 30, s: 1 };
+function applyView() { world.style.transform = `translate(${view.x}px,${view.y}px) scale(${view.s})`; editor.style.backgroundSize = `${24 * view.s}px ${24 * view.s}px`; editor.style.backgroundPosition = `${view.x}px ${view.y}px`; }
+const els = {};
+function fmt(v) { if (typeof v === 'number') return Number.isInteger(v) ? String(v) : v.toFixed(3); if (isPt(v)) return `{${fmt(v.x)}, ${fmt(v.y)}, ${fmt(v.z)}}`; if (v && v.t) return { crv: 'Curve', srf: 'Surface', mesh: 'Mesh' }[v.t] || v.t; return String(v); }
+function buildNode(n) {
+  const c = C[n.type], el = document.createElement('div');
+  el.className = 'node' + (c.ui === 'slider' ? ' slider' : c.ui === 'panel' ? ' panel' : '');
+  el.dataset.id = n.id;
+  if (c.ui === 'slider') {
+    el.innerHTML = `<span class="lbl" data-drag>${n.st.label}</span><input type="range" min="${n.st.min}" max="${n.st.max}" step="${n.st.int ? 1 : (n.st.max - n.st.min) / 200}" value="${n.st.val}" aria-label="${n.st.label}"><span class="val" title="Değeri düzenle">${fmt(n.st.val)}</span><div class="col outs"><div class="p" data-o="0">${''}</div></div>`;
+    const r = el.querySelector('input'), v = el.querySelector('.val');
+    r.addEventListener('input', () => { n.st.val = n.st.int ? Math.round(+r.value) : +(+r.value).toFixed(3); v.textContent = fmt(n.st.val); schedule(); });
+    r.addEventListener('pointerdown', e => e.stopPropagation());
+    v.addEventListener('pointerdown', e => e.stopPropagation());
+    v.addEventListener('click', () => {
+      v.contentEditable = 'true'; v.focus(); document.getSelection().selectAllChildren(v);
+      const done = () => { v.contentEditable = 'false'; const x = parseFloat(v.textContent.replace(',', '.')); if (isFinite(x)) { n.st.min = Math.min(n.st.min, x); n.st.max = Math.max(n.st.max, x); n.st.val = n.st.int ? Math.round(x) : x; r.min = n.st.min; r.max = n.st.max; r.value = n.st.val; } v.textContent = fmt(n.st.val); schedule(); };
+      v.addEventListener('blur', done, { once: true });
+      v.addEventListener('keydown', e => { if (e.key === 'Enter') { e.preventDefault(); v.blur(); } });
+    });
+  } else if (c.ui === 'panel') {
+    el.innerHTML = `<div class="col ins"><div class="p" data-i="0"></div></div><div class="ptitle" data-drag><span>Panel</span><span class="cnt"></span></div><pre></pre>`;
+  } else {
+    const ins = c.ins.map((inp, i) => `<div class="p" data-i="${i}" title="${inp.n}${inp.list ? ' (liste)' : ''}">${inp.n}</div>`).join('');
+    const outs = c.outs.map((o, i) => `<div class="p" data-o="${i}" title="${o}">${o}</div>`).join('');
+    el.innerHTML = `${c.ins.length ? `<div class="col ins">${ins}</div>` : ''}<div class="core" data-drag><span>${c.nick}</span></div>${c.outs.length ? `<div class="col outs">${outs}</div>` : ''}<span class="eye" title="Önizleme aç/kapat">◉</span><span class="msg"></span>`;
+    if (!c.ins.length) el.classList.add('noins');
+    el.querySelector('.eye').addEventListener('pointerdown', e => { e.stopPropagation(); n.pv = !n.pv; refreshNode(n); schedule(); });
+  }
+  world.appendChild(el); els[n.id] = el;
+  el.addEventListener('pointerdown', e => onNodeDown(e, n));
+  refreshNode(n);
+}
+function refreshNode(n) {
+  const el = els[n.id]; if (!el) return;
+  el.style.left = n.x + 'px'; el.style.top = n.y + 'px';
+  el.classList.toggle('sel', sel.has(n.id));
+  const inf = info[n.id] || {};
+  el.classList.toggle('warn', !!inf.warn); el.classList.toggle('err', !!inf.err);
+  const m = el.querySelector('.msg'); if (m) m.textContent = inf.err || inf.warn || '';
+  const eye = el.querySelector('.eye'); if (eye) { eye.classList.toggle('off', !n.pv); eye.style.display = C[n.type].outs.length && hasGeo(n) ? '' : 'none'; }
+  const c = C[n.type];
+  if (c.ui === 'panel') {
+    const d = inf.data || []; el.querySelector('pre').textContent = d.length ? d.slice(0, 200).map((v, i) => `${i}  ${fmt(v)}`).join('\n') + (d.length > 200 ? `\n… (${d.length})` : '') : '(boş)';
+    el.querySelector('.cnt').textContent = d.length ? `${d.length}` : '';
+  }
+  // grey out inputs that use defaults
+  if (!c.ui) c.ins.forEach((inp, i) => { const p = el.querySelector(`.ins [data-i="${i}"]`); if (p) p.classList.toggle('def', !doc.wires.some(w => w.b === n.id && w.bi === i)); });
+}
+const hasGeo = n => (cache[n.id] || []).some(arr => arr.some(isGeo));
+function rebuildAll() { world.querySelectorAll('.node').forEach(e => e.remove()); for (const k in els) delete els[k]; doc.nodes.forEach(buildNode); drawWires(); }
+
+function portXY(nid, kind, idx) {
+  const el = els[nid]; if (!el) return null;
+  const p = el.querySelector(kind === 'o' ? `[data-o="${idx}"]` : `[data-i="${idx}"]`); if (!p) return null;
+  const r = p.getBoundingClientRect(), w = world.getBoundingClientRect();
+  return [((kind === 'o' ? r.right + 1 : r.left - 1) - w.left) / view.s, (r.top + r.height / 2 - w.top) / view.s];
+}
+const bez = (a, b) => { const dx = Math.max(40, Math.abs(b[0] - a[0]) * 0.5); return `M${a[0]} ${a[1]}C${a[0] + dx} ${a[1]} ${b[0] - dx} ${b[1]} ${b[0]} ${b[1]}`; };
+let tempWire = null;
+function drawWires() {
+  let h = '';
+  for (const w of doc.wires) {
+    const a = portXY(w.a, 'o', w.ao), b = portXY(w.b, 'i', w.bi); if (!a || !b) continue;
+    const d = bez(a, b), list = ((cache[w.a] || [])[w.ao] || []).length > 1;
+    const selw = sel.has(w.a) || sel.has(w.b);
+    const col = selw ? '#3f8f22' : '#353535';
+    h += list ? `<path d="${d}" fill="none" stroke="${col}" stroke-width="4.5"/><path d="${d}" fill="none" stroke="#d4d4d4" stroke-width="1.6"/>` : `<path d="${d}" fill="none" stroke="${col}" stroke-width="2"/>`;
+  }
+  if (tempWire) h += `<path d="${bez(tempWire.a, tempWire.b)}" fill="none" stroke="#3f8f22" stroke-width="2" stroke-dasharray="6 4"/>`;
+  wiresSvg.innerHTML = h;
+}
+
+/* ---- pointer interaction ---- */
+const ptrs = new Map(); let gesture = null;
+const toWorld = (cx, cy) => { const r = editor.getBoundingClientRect(); return [(cx - r.left - view.x) / view.s, (cy - r.top - view.y) / view.s]; };
+function onNodeDown(e, n) {
+  if (e.button === 2) return;
+  const port = e.target.closest('.p');
+  const el = els[n.id];
+  if (port && port.dataset.o !== undefined) { // start wire from output
+    e.stopPropagation(); editor.setPointerCapture(e.pointerId);
+    gesture = { kind: 'wire', from: [n.id, +port.dataset.o], id: e.pointerId };
+    tempWire = { a: portXY(n.id, 'o', +port.dataset.o), b: toWorld(e.clientX, e.clientY) }; drawWires(); return;
+  }
+  if (port && port.dataset.i !== undefined) { // pull an existing wire off an input
+    e.stopPropagation();
+    const w = doc.wires.find(w => w.b === n.id && w.bi === +port.dataset.i);
+    if (w) { doc.wires = doc.wires.filter(x => x !== w); editor.setPointerCapture(e.pointerId); gesture = { kind: 'wire', from: [w.a, w.ao], id: e.pointerId }; tempWire = { a: portXY(w.a, 'o', w.ao), b: toWorld(e.clientX, e.clientY) }; schedule(); }
+    return;
+  }
+  if (e.target.closest('input, .val, pre, .eye')) return;
+  e.stopPropagation();
+  if (!e.shiftKey && !sel.has(n.id)) sel.clear();
+  sel.add(n.id);
+  editor.setPointerCapture(e.pointerId);
+  const start = toWorld(e.clientX, e.clientY);
+  gesture = { kind: 'move', id: e.pointerId, start, orig: [...sel].map(id => { const m = byId(id); return [m, m.x, m.y]; }) };
+  doc.nodes.forEach(refreshNode); drawWires(); updatePreviewColors();
+}
+editor.addEventListener('pointerdown', e => {
+  if (e.target.closest('.search')) return;
+  closeSearch();
+  ptrs.set(e.pointerId, [e.clientX, e.clientY]);
+  if (ptrs.size === 2) { const [a, b] = [...ptrs.values()]; gesture = { kind: 'pinch', d: Math.hypot(a[0] - b[0], a[1] - b[1]), s: view.s, mid: [(a[0] + b[0]) / 2, (a[1] + b[1]) / 2], vx: view.x, vy: view.y }; return; }
+  if (e.target === editor || e.target === world || e.target === wiresSvg) {
+    if (sel.size) { sel.clear(); doc.nodes.forEach(refreshNode); drawWires(); updatePreviewColors(); }
+    editor.setPointerCapture(e.pointerId); editor.classList.add('panning');
+    gesture = { kind: 'pan', id: e.pointerId, sx: e.clientX, sy: e.clientY, vx: view.x, vy: view.y };
+  }
+});
+editor.addEventListener('pointermove', e => {
+  if (ptrs.has(e.pointerId)) ptrs.set(e.pointerId, [e.clientX, e.clientY]);
+  if (!gesture) return;
+  if (gesture.kind === 'pinch' && ptrs.size >= 2) {
+    const [a, b] = [...ptrs.values()], d = Math.hypot(a[0] - b[0], a[1] - b[1]);
+    const ns = Math.min(2.5, Math.max(0.25, gesture.s * d / gesture.d)), r = editor.getBoundingClientRect();
+    const mx = gesture.mid[0] - r.left, my = gesture.mid[1] - r.top;
+    view.x = mx - (mx - gesture.vx) * ns / gesture.s; view.y = my - (my - gesture.vy) * ns / gesture.s; view.s = ns; applyView(); return;
+  }
+  if (e.pointerId !== gesture.id) return;
+  if (gesture.kind === 'pan') { view.x = gesture.vx + e.clientX - gesture.sx; view.y = gesture.vy + e.clientY - gesture.sy; applyView(); }
+  else if (gesture.kind === 'move') { const p = toWorld(e.clientX, e.clientY), dx = p[0] - gesture.start[0], dy = p[1] - gesture.start[1]; gesture.orig.forEach(([m, x, y]) => { m.x = Math.round(x + dx); m.y = Math.round(y + dy); refreshNode(m); }); drawWires(); }
+  else if (gesture.kind === 'wire') { tempWire.b = toWorld(e.clientX, e.clientY); drawWires(); }
+});
+function endPointer(e) {
+  ptrs.delete(e.pointerId);
+  if (!gesture) return;
+  if (gesture.kind === 'pinch') { if (ptrs.size < 2) gesture = null; return; }
+  if (e.pointerId !== gesture.id) return;
+  if (gesture.kind === 'wire') {
+    const t = document.elementFromPoint(e.clientX, e.clientY), port = t && t.closest('.p[data-i]'), nodeEl = t && t.closest('.node');
+    if (port && nodeEl) connect(gesture.from[0], gesture.from[1], +nodeEl.dataset.id, +port.dataset.i);
+    else if (nodeEl && +nodeEl.dataset.id !== gesture.from[0]) { // dropped on a node body: first free input
+      const tn = byId(+nodeEl.dataset.id), c = C[tn.type];
+      const free = c.ins.findIndex((_, i) => !doc.wires.some(w => w.b === tn.id && w.bi === i));
+      if (free >= 0) connect(gesture.from[0], gesture.from[1], tn.id, free);
+    }
+    tempWire = null; schedule();
+  }
+  if (gesture.kind === 'move') save();
+  editor.classList.remove('panning'); gesture = null; drawWires();
+}
+editor.addEventListener('pointerup', endPointer);
+editor.addEventListener('pointercancel', endPointer);
+editor.addEventListener('wheel', e => {
+  e.preventDefault();
+  const r = editor.getBoundingClientRect(), mx = e.clientX - r.left, my = e.clientY - r.top;
+  const ns = Math.min(2.5, Math.max(0.25, view.s * Math.exp(-e.deltaY * 0.0015)));
+  view.x = mx - (mx - view.x) * ns / view.s; view.y = my - (my - view.y) * ns / view.s; view.s = ns; applyView();
+}, { passive: false });
+
+/* ---- search (double click) ---- */
+let searchEl = null;
+editor.addEventListener('dblclick', e => {
+  if (e.target !== editor && e.target !== world && e.target !== wiresSvg) return;
+  openSearch(e.clientX, e.clientY);
+});
+function openSearch(cx, cy) {
+  closeSearch();
+  const r = editor.getBoundingClientRect(), at = toWorld(cx, cy);
+  searchEl = document.createElement('div'); searchEl.className = 'search';
+  searchEl.style.left = Math.min(cx - r.left, r.width - 250) + 'px'; searchEl.style.top = Math.min(cy - r.top, r.height - 220) + 'px';
+  searchEl.innerHTML = '<input placeholder="bileşen ara: loft, slider, move…" aria-label="Bileşen ara"><section></section>';
+  editor.appendChild(searchEl);
+  const inp = searchEl.querySelector('input'), list = searchEl.querySelector('section');
+  let hits = [], k = 0;
+  const paint = () => {
+    const q = inp.value.trim().toLowerCase();
+    hits = Object.entries(C).filter(([key, c]) => !q || c.name.toLowerCase().includes(q) || c.nick.toLowerCase().includes(q) || key.includes(q)).slice(0, 8);
+    k = 0; list.innerHTML = hits.map(([key, c], i) => `<div data-k="${key}" class="${i === 0 ? 'on' : ''}">${c.name}<small>${c.cat}</small></div>`).join('');
+  };
+  const pickIt = key => { const n = addNode(key, at[0], at[1], key === 'slider' ? { label: 'Slider' } : null); buildNode(n); closeSearch(); schedule(); };
+  inp.addEventListener('input', paint);
+  inp.addEventListener('keydown', e => {
+    if (e.key === 'Enter' && hits[k]) pickIt(hits[k][0]);
+    if (e.key === 'Escape') closeSearch();
+    if (e.key === 'ArrowDown' || e.key === 'ArrowUp') { k = (k + (e.key === 'ArrowDown' ? 1 : -1) + hits.length) % hits.length; [...list.children].forEach((d, i) => d.classList.toggle('on', i === k)); e.preventDefault(); }
+  });
+  list.addEventListener('pointerdown', e => { const d = e.target.closest('[data-k]'); if (d) { e.preventDefault(); pickIt(d.dataset.k); } });
+  paint(); setTimeout(() => inp.focus(), 0);
+}
+function closeSearch() { if (searchEl) { searchEl.remove(); searchEl = null; } }
+
+/* ---- ribbon ---- */
+let curCat = 'Params';
+function paintRibbon() {
+  $('tabs').innerHTML = CATS.map(c => `<button type="button" class="${c === curCat ? 'on' : ''}" data-c="${c}">${c}</button>`).join('');
+  $('tools').innerHTML = Object.entries(C).filter(([, c]) => c.cat === curCat).map(([k, c]) => `<button type="button" data-k="${k}" title="${c.name}"><i>${c.nick}</i>${c.name}</button>`).join('');
+}
+$('tabs').addEventListener('click', e => { const b = e.target.closest('[data-c]'); if (b) { curCat = b.dataset.c; paintRibbon(); } });
+$('tools').addEventListener('click', e => {
+  const b = e.target.closest('[data-k]'); if (!b) return;
+  const r = editor.getBoundingClientRect(), at = toWorld(r.left + r.width * 0.4 + Math.random() * 40, r.top + r.height * 0.4 + Math.random() * 40);
+  const n = addNode(b.dataset.k, at[0], at[1]); buildNode(n); sel.clear(); sel.add(n.id); schedule();
+});
+
+/* ---- delete / new ---- */
+function deleteSel() {
+  if (!sel.size) { toast('Silmek için bir bileşen seç'); return; }
+  doc.nodes = doc.nodes.filter(n => !sel.has(n.id)); doc.wires = doc.wires.filter(w => !sel.has(w.a) && !sel.has(w.b));
+  sel.forEach(id => { els[id] && els[id].remove(); delete els[id]; }); sel.clear(); schedule();
+}
+$('delBtn').addEventListener('click', deleteSel);
+addEventListener('keydown', e => {
+  if (e.target.closest && e.target.closest('input, [contenteditable="true"]')) return;
+  if (e.key === 'Delete' || e.key === 'Backspace') { deleteSel(); e.preventDefault(); }
+  if (e.key === 'z' || e.key === 'Z') zoomExtents();
+});
+$('newBtn').addEventListener('click', () => { doc = { nodes: [], wires: [] }; sel.clear(); view = { x: 40, y: 30, s: 1 }; applyView(); rebuildAll(); schedule(); toast('Boş tuval · çift tıklayıp bileşen ekle'); });
+function fitEditor() {
+  if (!doc.nodes.length) return;
+  let x0 = 1e9, y0 = 1e9, x1 = -1e9, y1 = -1e9;
+  doc.nodes.forEach(n => { const el = els[n.id]; const w = el ? el.offsetWidth : 120, h = el ? el.offsetHeight : 40; x0 = Math.min(x0, n.x); y0 = Math.min(y0, n.y - 16); x1 = Math.max(x1, n.x + w); y1 = Math.max(y1, n.y + h); });
+  const W = editor.clientWidth, H = editor.clientHeight, pad = 24;
+  const s = Math.max(0.3, Math.min(1, (W - pad * 2) / (x1 - x0), (H - pad * 2) / (y1 - y0)));
+  view = { s, x: pad - x0 * s + Math.max(0, (W - pad * 2 - (x1 - x0) * s) / 2), y: pad - y0 * s }; applyView(); drawWires();
+}
+$('fitBtn').addEventListener('click', fitEditor);
+function toast(t) { const el = $('toast'); el.textContent = t; el.classList.add('on'); clearTimeout(el._t); el._t = setTimeout(() => el.classList.remove('on'), 1800); }
+
+/* ================= 3D preview ================= */
+const viewEl = $('view');
+const renderer = new THREE.WebGLRenderer({ antialias: true, alpha: true });
+renderer.setPixelRatio(Math.min(devicePixelRatio || 1, 2));
+viewEl.appendChild(renderer.domElement);
+const scene = new THREE.Scene();
+const cam = new THREE.PerspectiveCamera(40, 1, 0.1, 5000); cam.up.set(0, 0, 1); cam.position.set(40, -50, 35);
+const controls = new THREE.OrbitControls(cam, renderer.domElement); controls.enableDamping = true; controls.dampingFactor = 0.12;
+scene.add(new THREE.HemisphereLight(0xffffff, 0x7d8690, 0.8));
+const dl = new THREE.DirectionalLight(0xffffff, 0.55); dl.position.set(30, -40, 60); scene.add(dl);
+const grid = new THREE.GridHelper(200, 40, 0x7a7f85, 0x9aa0a6); grid.rotation.x = Math.PI / 2; grid.material.transparent = true; grid.material.opacity = 0.55; scene.add(grid);
+const axes = new THREE.Group();
+[[0xc0392b, [30, 0, 0]], [0x27ae60, [0, 30, 0]]].forEach(([c, e]) => { const g = new THREE.BufferGeometry().setFromPoints([new THREE.Vector3(0, 0, 0.01), new THREE.Vector3(e[0], e[1], 0.01)]); axes.add(new THREE.Line(g, new THREE.LineBasicMaterial({ color: c }))); });
+scene.add(axes);
+const prev = new THREE.Group(); scene.add(prev);
+const COL = { base: 0x9e2a2a, sel: 0x2e9b2e };
+const mat = {};
+function mats(selected) {
+  const k = selected ? 'sel' : 'base';
+  if (!mat[k]) mat[k] = {
+    srf: new THREE.MeshStandardMaterial({ color: COL[k], transparent: true, opacity: 0.55, side: THREE.DoubleSide, roughness: 0.6, metalness: 0.05, depthWrite: false }),
+    line: new THREE.LineBasicMaterial({ color: selected ? 0x1d6e1d : 0x6e1414 }),
+    pt: new THREE.PointsMaterial({ color: selected ? 0x1d6e1d : 0x8a1c1c, size: 6, sizeAttenuation: false })
+  };
+  return mat[k];
+}
+function nodeObject(n) {
+  const out = (cache[n.id] || []).flat().filter(isGeo); if (!out.length) return null;
+  const M = mats(sel.has(n.id)), grp = new THREE.Group(); grp.userData.nid = n.id;
+  const ptsArr = [], linePos = [], triPos = [], edgePos = [];
+  const tri = (a, b, c) => triPos.push(...a, ...b, ...c);
+  for (const g of out) {
+    if (g.t === 'pt') ptsArr.push(g.x, g.y, g.z);
+    else if (g.t === 'crv') { const p = g.c ? [...g.p, g.p[0]] : g.p; for (let i = 0; i < p.length - 1; i++) linePos.push(...p[i], ...p[i + 1]); }
+    else if (g.t === 'srf') {
+      const G = g.g, R = G.length, Cc = G[0].length;
+      for (let j = 0; j < R - 1; j++) for (let i = 0; i < Cc - 1; i++) { tri(G[j][i], G[j][i + 1], G[j + 1][i + 1]); tri(G[j][i], G[j + 1][i + 1], G[j + 1][i]); }
+      const step = Math.max(1, Math.round(Cc / 24));
+      for (let j = 0; j < R; j += (j === R - 2 ? 1 : Math.max(1, Math.round(R / 16)))) for (let i = 0; i < Cc - 1; i++) edgePos.push(...G[j][i], ...G[j][i + 1]);
+      for (let i = 0; i < Cc; i += (i >= Cc - step ? 1 : step)) for (let j = 0; j < R - 1; j++) edgePos.push(...G[j][i], ...G[j + 1][i]);
+    } else if (g.t === 'mesh') {
+      for (const f of g.f) { const v = f.map(i => g.v[i]); tri(v[0], v[1], v[2]); if (v[3]) tri(v[0], v[2], v[3]); for (let i = 0; i < v.length; i++) edgePos.push(...v[i], ...v[(i + 1) % v.length]); }
+    }
+  }
+  const buf = (arr) => { const b = new THREE.BufferGeometry(); b.setAttribute('position', new THREE.Float32BufferAttribute(arr, 3)); return b; };
+  if (triPos.length) { const b = buf(triPos); b.computeVertexNormals(); grp.add(new THREE.Mesh(b, M.srf)); }
+  if (edgePos.length) grp.add(new THREE.LineSegments(buf(edgePos), M.line));
+  if (linePos.length) grp.add(new THREE.LineSegments(buf(linePos), M.line));
+  if (ptsArr.length) grp.add(new THREE.Points(buf(ptsArr), M.pt));
+  return grp;
+}
+function rebuildPreview() {
+  prev.children.slice().forEach(g => { prev.remove(g); g.traverse(o => o.geometry && o.geometry.dispose()); });
+  doc.nodes.forEach(n => { if (n.pv) { const o = nodeObject(n); if (o) prev.add(o); } });
+}
+function updatePreviewColors() {
+  prev.children.forEach(g => { const M = mats(sel.has(g.userData.nid)); g.children.forEach(o => { o.material = o.isMesh ? M.srf : o.isPoints ? M.pt : M.line; }); });
+}
+function zoomExtents() {
+  const box = new THREE.Box3().setFromObject(prev);
+  if (box.isEmpty()) return;
+  const c = box.getCenter(new THREE.Vector3()), r = box.getSize(new THREE.Vector3()).length() / 2 || 10;
+  const dir = cam.position.clone().sub(controls.target).normalize();
+  controls.target.copy(c); cam.position.copy(c).add(dir.multiplyScalar(r / Math.sin(cam.fov * Math.PI / 360) * 1.05));
+  cam.near = r / 100; cam.far = r * 100; cam.updateProjectionMatrix();
+}
+$('zoomBtn').addEventListener('click', zoomExtents);
+$('topBtn').addEventListener('click', () => { const d = cam.position.distanceTo(controls.target); cam.position.set(controls.target.x, controls.target.y - 0.001, controls.target.z + d); });
+$('perspBtn').addEventListener('click', () => { const d = cam.position.distanceTo(controls.target); const v = new THREE.Vector3(0.55, -0.7, 0.45).normalize().multiplyScalar(d); cam.position.copy(controls.target).add(v); });
+function sizeView() { const w = viewEl.clientWidth, h = viewEl.clientHeight; renderer.setSize(w, h, false); cam.aspect = w / Math.max(h, 1); cam.updateProjectionMatrix(); }
+new ResizeObserver(sizeView).observe(viewEl);
+(function loop() { controls.update(); renderer.render(scene, cam); requestAnimationFrame(loop); })();
+
+/* splitter */
+$('split').addEventListener('pointerdown', e => {
+  const sp = $('split'); sp.setPointerCapture(e.pointerId);
+  const mv = ev => { const r = document.querySelector('.main').getBoundingClientRect(); const f = Math.min(0.8, Math.max(0.2, (ev.clientX - r.left) / r.width)); editor.style.flex = `0 0 ${f * 100}%`; viewEl.style.flex = '1 1 0'; };
+  sp.addEventListener('pointermove', mv); sp.addEventListener('pointerup', () => sp.removeEventListener('pointermove', mv), { once: true });
+});
+
+/* ================= schedule / save ================= */
+let pending = false;
+function schedule() {
+  if (pending) return; pending = true;
+  requestAnimationFrame(() => {
+    pending = false; solve();
+    doc.nodes.forEach(refreshNode); drawWires(); rebuildPreview();
+    $('stat').textContent = `${doc.nodes.length} bileşen · ${doc.wires.length} bağlantı · ${lastSolveMs.toFixed(1)} ms`;
+    save();
+  });
+}
+const KEY = 'mini-gh-3d-v1';
+function save() { try { localStorage.setItem(KEY, JSON.stringify({ doc, uid, view })); } catch (e) {} }
+function load() { try { const s = JSON.parse(localStorage.getItem(KEY)); if (s && s.doc && s.doc.nodes.length) { doc = s.doc; uid = s.uid; view = s.view || view; return true; } } catch (e) {} return false; }
+
+/* ================= presets ================= */
+function preset(name) {
+  doc = { nodes: [], wires: [] }; uid = 1; sel.clear();
+  const S = (label, min, max, val, int, x, y) => addNode('slider', x, y, { label, min, max, val, int });
+  const N = (t, x, y, pv = false) => addNode(t, x, y, null, pv);
+  const W = (a, ao, b, bi) => connect(a.id, ao, b.id, bi);
+  if (name === 'tower') {
+    const kat = S('Kat', 4, 40, 18, true, 0, 0), h = S('Kat yük.', 1, 6, 3.2, false, 0, 40), tw = S('Burulma°', 0, 20, 7, false, 0, 80), side = S('Kenar', 3, 8, 4, true, 0, 120), rad = S('Yarıçap', 2, 20, 9, false, 0, 160), bulge = S('Şişkinlik', 0, 1, 0.35, false, 0, 250);
+    const pol = N('polygon', 290, 120), sh = N('series', 290, 10), uz = N('unitz', 420, 20), mv = N('move', 540, 60);
+    const sa = N('series', 290, 200), rot = N('rotate', 660, 110);
+    const rg = N('range', 290, 290), sn = N('sin', 420, 300), ml = N('mul', 520, 300), ad = N('add', 620, 290), sc = N('scale', 780, 160), lf = N('loft', 900, 170, true);
+    W(rad, 0, pol, 1); W(side, 0, pol, 2);
+    W(h, 0, sh, 1); W(kat, 0, sh, 2); W(sh, 0, uz, 0); W(pol, 0, mv, 0); W(uz, 0, mv, 1);
+    W(tw, 0, sa, 1); W(kat, 0, sa, 2); W(mv, 0, rot, 0); W(sa, 0, rot, 1);
+    W(kat, 0, rg, 2);
+    const r180 = S('Açı', 0, 360, 180, true, 0, 300); W(r180, 0, rg, 1);
+    W(rg, 0, sn, 0); W(sn, 0, ml, 0); W(bulge, 0, ml, 1); const one = S('Taban', 0.2, 2, 0.8, false, 0, 350); W(ml, 0, ad, 0); W(one, 0, ad, 1);
+    W(rot, 0, sc, 0); W(ad, 0, sc, 1); W(sc, 0, lf, 0);
+    const pn = N('panel', 900, 270); W(sa, 0, pn, 0);
+  } else if (name === 'attractor') {
+    const w = S('Genişlik', 5, 60, 32, false, 0, 0), d = S('Derinlik', 5, 40, 20, false, 0, 40), u = S('U', 2, 40, 18, true, 0, 110), v = S('V', 2, 30, 11, true, 0, 150);
+    const ax = S('Çekim X', 0, 60, 10, false, 0, 230), ay = S('Çekim Y', 0, 40, 6, false, 0, 270), z = S('Kot', 0, 20, 8, false, 0, 70);
+    const srf = N('planesrf', 300, 20), pan = N('panels', 430, 90), cen = N('cen', 560, 150), at = N('pt', 300, 230, true), di = N('dist', 690, 180);
+    const t0 = S('Min ölçek', 0, 1, 0.12, false, 560, 270), t1 = S('Max ölçek', 0, 1, 0.92, false, 560, 310);
+    const rm = N('remap', 830, 190), sc = N('scale', 960, 110, true);
+    W(w, 0, srf, 0); W(d, 0, srf, 1); W(z, 0, srf, 2); W(srf, 0, pan, 0); W(u, 0, pan, 1); W(v, 0, pan, 2);
+    W(pan, 0, cen, 0); W(ax, 0, at, 0); W(ay, 0, at, 1); W(z, 0, at, 2); W(cen, 0, di, 0); W(at, 0, di, 1);
+    W(di, 0, rm, 0); W(t0, 0, rm, 1); W(t1, 0, rm, 2); W(pan, 0, sc, 0); W(rm, 0, sc, 1);
+  } else if (name === 'wave') {
+    const n = S('Nokta', 5, 120, 60, true, 0, 0), step = S('Aralık', 0.2, 2, 0.6, false, 0, 40), per = S('Periyot°', 90, 1440, 720, true, 0, 80), amp = S('Genlik', 0, 10, 3, false, 0, 120), hgt = S('Yükseklik', 1, 20, 8, false, 0, 200);
+    const pu = S('Panel U', 2, 80, 36, true, 0, 260), pv = S('Panel V', 1, 12, 5, true, 0, 300), gap = S('Doluluk', 0.2, 1, 0.86, false, 0, 340);
+    const sx = N('series', 300, 0), rg = N('range', 300, 90), sn = N('sin', 430, 100), ml = N('mul', 540, 110), p = N('pt', 680, 40), ic = N('interp', 800, 60), ex = N('extrude', 920, 90), pan = N('panels', 1060, 160), sc = N('scale', 1200, 200, true);
+    W(step, 0, sx, 1); W(n, 0, sx, 2); W(per, 0, rg, 1); W(n, 0, rg, 2); W(rg, 0, sn, 0); W(sn, 0, ml, 0); W(amp, 0, ml, 1);
+    W(sx, 0, p, 0); W(ml, 0, p, 1); W(p, 0, ic, 0); W(ic, 0, ex, 0); W(hgt, 0, ex, 1);
+    W(ex, 0, pan, 0); W(pu, 0, pan, 1); W(pv, 0, pan, 2); W(pan, 0, sc, 0); W(gap, 0, sc, 1);
+  } else if (name === 'facade') {
+    const r = S('Yarıçap', 4, 30, 14, false, 0, 0), h = S('Yükseklik', 5, 60, 32, false, 0, 40), seg = S('Bölüm', 3, 64, 28, true, 0, 80), fl = S('Kat', 2, 30, 10, true, 0, 120);
+    const ax = S('Çekim X', -40, 40, 16, false, 0, 200), ay = S('Çekim Y', -40, 40, -8, false, 0, 240), az = S('Çekim Z', 0, 60, 14, false, 0, 280);
+    const c = N('circle', 300, 10), cyl = N('extrude', 430, 40), pan = N('panels', 560, 60), cen = N('cen', 690, 120), at = N('pt', 300, 220, true), di = N('dist', 820, 160);
+    const t0 = S('Min', 0, 1, 0.1, false, 690, 230), t1 = S('Max', 0, 1, 0.94, false, 690, 270), rm = N('remap', 950, 180), sc = N('scale', 1080, 90, true);
+    const dv = N('divc', 430, -80), vz = N('unitz', 430, -20), mv = N('move', 560, -60), ln = N('line', 690, -80, true);
+    W(r, 0, c, 1); W(c, 0, cyl, 0); W(h, 0, cyl, 1); W(cyl, 0, pan, 0); W(seg, 0, pan, 1); W(fl, 0, pan, 2);
+    W(pan, 0, cen, 0); W(ax, 0, at, 0); W(ay, 0, at, 1); W(az, 0, at, 2); W(cen, 0, di, 0); W(at, 0, di, 1);
+    W(di, 0, rm, 0); W(t0, 0, rm, 1); W(t1, 0, rm, 2); W(pan, 0, sc, 0); W(rm, 0, sc, 1);
+    W(c, 0, dv, 0); W(seg, 0, dv, 1); W(h, 0, vz, 0); W(dv, 0, mv, 0); W(vz, 0, mv, 1); W(dv, 0, ln, 0); W(mv, 0, ln, 1);
+  }
+  rebuildAll(); solve(); doc.nodes.forEach(refreshNode); fitEditor(); rebuildPreview(); zoomExtents(); schedule();
+}
+$('preset').addEventListener('change', e => { if (e.target.value) { preset(e.target.value); e.target.value = ''; } });
+
+/* ================= boot ================= */
+paintRibbon(); sizeView(); applyView();
+if (load()) { applyView(); rebuildAll(); solve(); doc.nodes.forEach(refreshNode); drawWires(); rebuildPreview(); zoomExtents(); schedule(); }
+else preset('tower');
+})();
+</script>
+</body>
+</html>
