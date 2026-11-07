@@ -4425,16 +4425,16 @@ def _cam_geo(d, tur):
             if a and b_:
                 t0, t1 = min(b[1] for b in H), max(b[3] for b in H)
                 yon = -1 if (t0 + t1) / 2 < ry else 1
-                return (rx - max(b[2] for b in a), min(b[0] for b in b_) - rx,
-                        t1 if yon < 0 else t0, yon, t1 - t0)
+                e_ = float(_CAM_UI.get("aks_d") or CAM_AKS_VARSAYILAN)      # cam ucu–aks mesafesi girdisi (DXF'teki cam çizimi değil)
+                return (e_, e_, t1 if yon < 0 else t0, yon, t1 - t0)
         else:                  # kesit: boyuna eksen y, kalınlık ekseni x
             a = [b for b in H if (b[1] + b[3]) / 2 < ry]
             b_ = [b for b in H if (b[1] + b[3]) / 2 > ry]
             if a and b_:
                 t0, t1 = min(b[0] for b in H), max(b[2] for b in H)
                 yon = -1 if (t0 + t1) / 2 < rx else 1
-                return (ry - max(b[3] for b in a), min(b[1] for b in b_) - ry,
-                        t1 if yon < 0 else t0, yon, t1 - t0)
+                e_ = float(_CAM_UI.get("aks_y") or CAM_AKS_VARSAYILAN)
+                return (e_, e_, t1 if yon < 0 else t0, yon, t1 - t0)
     g = _cam_ofsetleri(d, tur)
     if not g:
         return None
@@ -5990,6 +5990,30 @@ class Gorunum:
         self.cift_cb = None            # çift tık: aks odağı geri çağrısı (olay) -> bool (True: sıfırlama yapma)
         cv.bind("<Double-Button-1>", self._cift)
 
+    def boyut(self):
+        """Tuval boyutu değişince (yan panel genişletildi/daraltıldı) yeniden çizer; yakınlaştırılmış / kaydırılmış
+        görünümde tuvalin ortasındaki nokta ve ekrandaki ölçek korunur (görünüm kaymaz, bozulmaz)."""
+        try:
+            W, H = self.cv.winfo_width(), self.cv.winfo_height()
+        except tk.TclError:
+            return
+        eski = getattr(self, "_wh", None)
+        koru = None
+        if eski and self.fit and eski != (W, H) and (abs(self.z - 1.0) > 1e-6 or abs(self.px) > 0.5 or abs(self.py) > 0.5):
+            ox, oy, sc = self.donustur()
+            if sc > 0:
+                koru = ((eski[0] / 2 - ox) / sc, (oy - eski[1] / 2) / sc, sc)
+        self.ciz()
+        if W >= 250 and H >= 200:
+            self._wh = (W, H)
+        if koru and self.fit and self.fit[2] > 0:
+            vx, vy, sc_mut = koru
+            self.z = min(400.0, max(0.3, sc_mut / self.fit[2]))
+            sc2 = self.fit[2] * self.z
+            self.px = W / 2 - vx * sc2 - self.fit[0]
+            self.py = H / 2 + vy * sc2 - self.fit[1]
+            self.ciz()
+
     def _cift(self, e):
         if self.cift_cb and self.cift_cb(e):
             return
@@ -7123,6 +7147,251 @@ class _SekmeSeridi(ttk.Frame):
         else:
             self._kay(-1 if e.delta > 0 else 1)
         return "break"
+
+
+# ---------------------------------------------------------------- girdi alanı şemaları
+# Bir girdi alanına tıklanınca sağ panelde o değerin ne anlama geldiğini gösteren şematik çizim.
+_SM = {"pr": ("#aab4bb", "#55606a"), "cam": ("#cfe6f2", "#5b97b5"), "pn": ("#e4d9c2", "#8a7a55"),
+       "v": "#d0453b", "t": "#3d4851", "ax": "#7a858e"}
+
+
+def _sm_r(cv, x1, y1, x2, y2, tur="pr", **kw):
+    d, c = _SM[tur]
+    cv.create_rectangle(x1, y1, x2, y2, fill=d, outline=c, **kw)
+
+
+def _sm_ok(cv, x1, y1, x2, y2, txt="", yer="u"):
+    cv.create_line(x1, y1, x2, y2, fill=_SM["v"], width=2, arrow="both", arrowshape=(6, 7, 3))
+    if txt:
+        mx, my = (x1 + x2) / 2, (y1 + y2) / 2
+        dx, dy, an = {"u": (0, -6, "s"), "a": (0, 6, "n"), "s": (7, 0, "w"), "l": (-7, 0, "e")}[yer]
+        cv.create_text(mx + dx, my + dy, text=txt, fill=_SM["v"], font=("Arial", 9, "bold"), anchor=an)
+
+
+def _sm_t(cv, x, y, txt, an="center", renk=None, boy=8, kalin=False):
+    cv.create_text(x, y, text=txt, fill=renk or _SM["t"], anchor=an, font=("Arial", boy, "bold" if kalin else "normal"))
+
+
+def _sm_ax(cv, x1, y1, x2, y2):
+    cv.create_line(x1, y1, x2, y2, fill=_SM["ax"], dash=(6, 3, 1, 3))
+
+
+def _sm_mm(v):
+    t = str(v or "").strip()
+    return f"{t} mm" if t else "?"
+
+
+def _sm_cam_payi(cv, v, **_):
+    _sm_r(cv, 14, 14, 42, 108); _sm_r(cv, 194, 14, 222, 108); _sm_r(cv, 58, 20, 178, 102, "cam")
+    _sm_ok(cv, 42, 61, 58, 61, _sm_mm(v), "u")
+    _sm_t(cv, 118, 61, "cam", kalin=True)
+
+
+def _sm_cam_payi_y(cv, v, **_):
+    _sm_r(cv, 14, 14, 222, 38); _sm_r(cv, 14, 90, 222, 114); _sm_r(cv, 30, 54, 206, 74, "cam")
+    _sm_ok(cv, 118, 38, 118, 54, _sm_mm(v), "s")
+    _sm_t(cv, 70, 64, "cam", kalin=True)
+
+
+def _sm_aks(cv, v, yatay=False, oturma=False, **_):
+    """Profil kesiti: eksen, cam uçları (eksenin iki yanında), cam oturma payı."""
+    e, pay = 14, 9
+    if not yatay:                     # dikey profil kesiti: cam üstte, eksen düşey
+        _sm_r(cv, 86, 70, 150, 116)
+        _sm_ax(cv, 118, 8, 118, 122)
+        _sm_r(cv, 20, 34, 118 - e, 70 + pay, "cam"); _sm_r(cv, 118 + e, 34, 216, 70 + pay, "cam")
+        cv.create_line(60, 70, 176, 70, fill="#55606a", dash=(2, 2))
+        if oturma:
+            _sm_ok(cv, 60, 70, 60, 70 + pay, _sm_mm(v), "s")
+        else:
+            _sm_ok(cv, 118 - e, 50, 118, 50, "", "u"); _sm_ok(cv, 118, 50, 118 + e, 50, "", "u")
+            _sm_t(cv, 118, 30, _sm_mm(v), "s", _SM["v"], 9, True)
+    else:                             # yatay profil kesiti: cam sağda, eksen yatay
+        _sm_r(cv, 20, 40, 84, 90)
+        _sm_ax(cv, 8, 65, 226, 65)
+        _sm_r(cv, 84 - pay, 10, 190, 65 - e, "cam"); _sm_r(cv, 84 - pay, 65 + e, 190, 120, "cam")
+        cv.create_line(84, 8, 84, 122, fill="#55606a", dash=(2, 2))
+        if oturma:
+            _sm_ok(cv, 84 - pay, 126 - 8, 84, 126 - 8, _sm_mm(v), "u")
+        else:
+            _sm_ok(cv, 200, 65 - e, 200, 65, "", "s"); _sm_ok(cv, 200, 65, 200, 65 + e, "", "s")
+            _sm_t(cv, 206, 65, _sm_mm(v), "w", _SM["v"], 9, True)
+
+
+def _sm_cam_yapi(cv, v, pvb=None, **_):
+    parts = [p.strip() for p in str(v or "").replace(",", ".").split("+") if p.strip()]
+    nums = []
+    for p in parts:
+        try:
+            nums.append(float(p))
+        except ValueError:
+            return
+    if not nums or sum(nums) <= 0:
+        return
+    tot, W0, x = sum(nums), 190.0, 23.0
+    for i, n in enumerate(nums):
+        w = max(10.0, n / tot * W0)
+        tur = "cam" if i % 2 == 0 else None
+        if tur:
+            _sm_r(cv, x, 34, x + w, 94, "cam")
+        else:
+            cv.create_rectangle(x, 34, x + w, 94, fill="white", outline="#7a858e", dash=(3, 2))
+        _sm_t(cv, x + w / 2, 64, f"{n:g}", boy=9, kalin=True)
+        _sm_t(cv, x + w / 2, 104, "cam" if tur else "hava", boy=8)
+        x += w
+    _sm_ok(cv, 23, 22, 213, 22, f"{tot:g} mm", "u")
+    _sm_t(cv, 118, 120, "dıştan içe; hava aralığı kesikli", boy=8)
+
+
+def _sm_pvb(cv, v, **_):
+    _sm_r(cv, 60, 30, 106, 100, "cam"); _sm_r(cv, 132, 30, 178, 100, "cam")
+    cv.create_rectangle(106, 30, 132, 100, fill="#f1d27a", outline="#b8962e")
+    _sm_ok(cv, 106, 18, 132, 18, _sm_mm(v), "u")
+    _sm_t(cv, 119, 65, "PVB", kalin=True)
+    _sm_t(cv, 83, 65, "cam"); _sm_t(cv, 155, 65, "cam")
+    _sm_t(cv, 118, 116, "lamine camda ara film", boy=8)
+
+
+def _sm_cols(cv, v, **_):
+    for i, x in enumerate((30, 90, 150, 206)):
+        cv.create_line(x, 16, x, 108, fill="#55606a", width=3)
+        cv.create_oval(x - 8, 2, x + 8, 18, outline="#d0453b")
+        _sm_t(cv, x, 10, str(i + 1), boy=8)
+    _sm_ok(cv, 30, 80, 90, 80, str(v or "?").split(";")[0].split("x")[-1] + " mm", "u")
+    _sm_t(cv, 118, 120, "aks aralıkları, soldan sağa", boy=8)
+
+
+def _sm_rows(cv, v, **_):
+    for i, y in enumerate((14, 52, 90)):
+        cv.create_line(20, y, 216, y, fill="#55606a", width=3)
+    _sm_ok(cv, 60, 14, 60, 52, str(v or "?").split(";")[0].split("x")[-1] + " mm", "s")
+    _sm_t(cv, 118, 120, "kat yükseklikleri, üstten alta", boy=8)
+
+
+def _sm_cubuk(cv, v, **_):
+    _sm_r(cv, 20, 40, 216, 64)
+    _sm_ok(cv, 20, 80, 216, 80, _sm_mm(v), "a")
+    _sm_t(cv, 118, 52, "stok çubuk", kalin=True)
+
+
+def _sm_testere(cv, v, **_):
+    _sm_r(cv, 20, 40, 106, 64); _sm_r(cv, 124, 40, 216, 64)
+    _sm_ok(cv, 106, 52, 124, 52, "", "u")
+    _sm_t(cv, 115, 36, _sm_mm(v), "s", _SM["v"], 9, True)
+    _sm_t(cv, 118, 100, "her kesimde bu kadar malzeme kaybolur", boy=8)
+
+
+def _sm_siparis(cv, v, **_):
+    for i in range(3):
+        _sm_r(cv, 20, 20 + i * 24, 150, 38 + i * 24)
+    for i in range(3, 4):
+        cv.create_rectangle(20, 20 + i * 24, 150, 38 + i * 24, fill="white", outline=_SM["v"], dash=(4, 2))
+    _sm_t(cv, 160, 20 + 3 * 24 + 9, "+ %" + (str(v).strip() or "?") + " ek çubuk", "w", _SM["v"], 9, True)
+    _sm_t(cv, 118, 120, "net adedin üstüne eklenen pay", boy=8)
+
+
+def _sm_dik_alt(cv, v, ust=False, **_):
+    cv.create_line(14, 40, 222, 40, fill="#7a858e", dash=(4, 3)); cv.create_line(14, 90, 222, 90, fill="#7a858e", dash=(4, 3))
+    _sm_t(cv, 18, 36, "kat (aks) hattı", "sw", boy=7); _sm_t(cv, 18, 94, "kat (aks) hattı", "nw", boy=7)
+    _sm_r(cv, 100, 22, 136, 108)
+    if ust:
+        _sm_ok(cv, 150, 22, 150, 40, _sm_mm(v), "s")
+    else:
+        _sm_ok(cv, 150, 90, 150, 108, _sm_mm(v), "s")
+    _sm_t(cv, 118, 66, "dikey", kalin=True)
+
+
+def _sm_dilat(cv, v, **_):
+    _sm_r(cv, 100, 8, 136, 54); _sm_r(cv, 100, 68, 136, 114)
+    _sm_ok(cv, 150, 54, 150, 68, _sm_mm(v), "s")
+    _sm_t(cv, 118, 31, "dikey", kalin=True); _sm_t(cv, 118, 91, "dikey", kalin=True)
+    _sm_t(cv, 118, 124, "kat birleşiminde boşluk", boy=8)
+
+
+def _sm_ankraj(cv, v, **_):
+    _sm_r(cv, 100, 8, 136, 116)
+    for y in (24, 72, 108):
+        cv.create_polygon(136, y, 160, y - 8, 160, y + 8, fill="#7a858e", outline="#55606a")
+    _sm_ok(cv, 176, 24, 176, 72, _sm_mm(v), "s")
+    _sm_t(cv, 118, 52, "dikme", kalin=True)
+
+
+def _sm_ruzgar(cv, v, **_):
+    _sm_r(cv, 120, 12, 136, 108); _sm_r(cv, 136, 12, 154, 108, "cam")
+    for y in (26, 50, 74, 98):
+        cv.create_line(30, y, 116, y, fill=_SM["v"], width=2, arrow="last", arrowshape=(8, 9, 4))
+    _sm_t(cv, 30, 8, "rüzgar W = " + ((str(v).strip() or "?") + " kN/m²"), "w", _SM["v"], 9, True)
+
+
+def _sm_cam_boy(cv, v, **_):
+    _sm_r(cv, 60, 20, 176, 96, "cam")
+    _sm_ok(cv, 190, 20, 190, 96, _sm_mm(v), "s")
+
+
+def _sm_cam_en(cv, v, **_):
+    _sm_r(cv, 60, 20, 176, 96, "cam")
+    _sm_ok(cv, 60, 108, 176, 108, _sm_mm(v), "a")
+
+
+def _sm_cam_kg(cv, v, **_):
+    _sm_r(cv, 70, 24, 166, 100, "cam")
+    _sm_t(cv, 118, 62, "1 m²", kalin=True)
+    _sm_t(cv, 118, 112, "kg/m² → " + ((str(v).strip() or "otomatik") + ("" if not str(v).strip() else " kg/m²")), boy=9, kalin=True,
+          renk=_SM["v"])
+
+
+def _sm_panel_kal(cv, v, **_):
+    _sm_r(cv, 100, 14, 134, 106, "pn")
+    _sm_ok(cv, 100, 114, 134, 114, _sm_mm(v), "u")
+    _sm_t(cv, 148, 60, "panel", "w", boy=9)
+
+
+def _sm_dT(cv, v, **_):
+    _sm_r(cv, 24, 50, 160, 74)
+    cv.create_rectangle(160, 50, 190, 74, fill="white", outline=_SM["v"], dash=(4, 2))
+    _sm_ok(cv, 160, 90, 190, 90, "ΔL", "a")
+    _sm_t(cv, 118, 30, "ΔT = " + ((str(v).strip() or "?") + " K"), boy=9, kalin=True, renk=_SM["v"])
+    _sm_t(cv, 118, 120, "profil boyunun değişimi", boy=8)
+
+
+def _sm_drift(cv, v, **_):
+    _sm_r(cv, 40, 70, 196, 82); _sm_r(cv, 60, 14, 216, 26)
+    cv.create_line(40, 70, 40, 82, fill="#55606a")
+    _sm_ok(cv, 40, 98, 60, 98, "", "a")
+    _sm_t(cv, 70, 98, _sm_mm(v), "w", _SM["v"], 9, True)
+    _sm_t(cv, 118, 50, "iki kat arası yatay öteleme", boy=8)
+
+
+# anahtar -> (başlık, açıklama, çizici, ek parametre)
+SEMA = {
+    "cam_yapi": ("Cam yapısı", "Katman kalınlıkları dıştan içe, + ile ayrılır: 6+20+6 = cam + hava + cam.", _sm_cam_yapi, {}),
+    "pvb": ("PVB kalınlığı", "Lamine camlarda iki cam arasındaki film kalınlığı; toplam kalınlığa eklenir.", _sm_pvb, {}),
+    "cam_payi": ("Cam payı — dikey yan", "Camın dikey profile bakan kenarındaki pay (cephe görünüşü).", _sm_cam_payi, {}),
+    "cam_payi_y": ("Cam payı — yatay", "Camın yatay profile bakan kenarındaki pay; boşsa dikey değer kullanılır.", _sm_cam_payi_y, {}),
+    "cam_aks_d": ("Cam–aks mesafesi — dikey", "Camın ucu ile dikey profil ekseni arası. Cam eni = aks aralığı − 2 × bu değer.",
+                  _sm_aks, {}),
+    "cam_aks_y": ("Cam–aks mesafesi — yatay", "Camın ucu ile yatay profil ekseni arası. Cam boyu = bölge yüksekliği − 2 × bu değer.",
+                  _sm_aks, {"yatay": True}),
+    "cam_oturma": ("Cam oturma payı", "Camın profil yüzünden içeriye oturan kısmı. Boşsa sistem ayarı (varsayılan 6,4 mm) kullanılır.",
+                   _sm_aks, {"oturma": True}),
+    "cols": ("Aks aralıkları", "Dikey aksların birbirine uzaklığı. Örnek: 5x1200; 1500 → 5 adet 1200 mm, sonra 1500 mm.", _sm_cols, {}),
+    "rows": ("Kat yükseklikleri", "Yatay hatlar arası kat yüksekliği. Örnek: 3x3000 → 3 kat, her biri 3000 mm.", _sm_rows, {}),
+    "cubuk": ("Stok çubuk boyu", "Profil çubuklarının tedarik boyu; kesim planı bu boydan yapılır.", _sm_cubuk, {}),
+    "testere": ("Testere payı", "Her kesimde testere kalınlığı kadar malzeme kaybolur; çubuk planında hesaba katılır.", _sm_testere, {}),
+    "siparis_ek": ("Sipariş eki", "Net çubuk adedinin üstüne yüzde olarak eklenen sipariş payı.", _sm_siparis, {}),
+    "dikey_alt": ("Dikey alt uzantı", "Dikey profilin kat (aks) hattının altına taşan boyu.", _sm_dik_alt, {}),
+    "dikey_ust": ("Dikey üst uzantı", "Dikey profilin kat (aks) hattının üstüne taşan boyu.", _sm_dik_alt, {"ust": True}),
+    "dilatasyon": ("Dilatasyon", "Dikey profillerin kat birleşiminde bırakılan boşluk; kesim boyları buna göre kısalır.", _sm_dilat, {}),
+    "ankraj_mm": ("Ankraj aralığı", "Dikmenin ankrajlandığı noktalar arası mesafe (boşsa kat yüksekliği).", _sm_ankraj, {}),
+    "ruzgar_kn": ("Rüzgar yükü", "Cepheye dik etkiyen tasarım rüzgar basıncı; statik ön hesabın girdisidir.", _sm_ruzgar, {}),
+    "cam_max_boy": ("Azami cam boyu", "Üreticinin üretebildiği en büyük cam boyu; aşan camlar uyarılır.", _sm_cam_boy, {}),
+    "cam_max_en": ("Azami cam eni", "Üreticinin üretebildiği en büyük cam eni; aşan camlar uyarılır.", _sm_cam_en, {}),
+    "cam_kg": ("Cam ağırlığı", "1 m² camın ağırlığı; boşsa cam yapısından otomatik hesaplanır.", _sm_cam_kg, {}),
+    "pn_sandvic_kal": ("Sandviç panel kalınlığı", "Opak sandviç panelin toplam kalınlığı.", _sm_panel_kal, {}),
+    "pn_levha_kal": ("Levha kalınlığı", "Opak levha panelin kalınlığı.", _sm_panel_kal, {}),
+    "dT": ("Sıcaklık farkı ΔT", "Isıl genleşme hesabında kullanılan sıcaklık değişimi (ΔL = α·L·ΔT).", _sm_dT, {}),
+    "drift": ("Kat arası ötelenme", "Depremde/yükte iki kat arası yatay öteleme; boşsa kat yüksekliği/500.", _sm_drift, {}),
+}
 
 
 class Uygulama(tk.Tk):
@@ -8687,6 +8956,7 @@ class Uygulama(tk.Tk):
         self.lbl_stok_ozet = ttk.Label(g3, text="", foreground="#7a858e", wraplength=330, justify="left")
         self.lbl_stok_ozet.grid(row=2, column=0, columnspan=2, sticky="w", pady=(4, 0))
 
+        self._sema_kur(sol2)
         gcp = ttk.LabelFrame(sol2, text=" Cam bilgisi ", padding=8)
         gcp.pack(fill="x", pady=(0, 8))
         self._cp_yapi = ttk.Label(gcp, text="", font=("Segoe UI", 10, "bold"), wraplength=240, justify="left")
@@ -8959,7 +9229,7 @@ class Uygulama(tk.Tk):
                   foreground="#7a858e").pack(side="left")
         self.cv = tk.Canvas(t1, bg="white", highlightthickness=0)
         self.cv.pack(fill="both", expand=True)
-        self.cv.bind("<Configure>", lambda _e: self.ciz())
+        self.cv.bind("<Configure>", lambda _e: self.gor.boyut())
         self.gor = Gorunum(self.cv, self.ciz)
         self.gor.bant_ac = True
         self._fare_bagla(self.cv, "cephe")
@@ -8978,7 +9248,7 @@ class Uygulama(tk.Tk):
                   foreground="#7a858e").pack(side="left")
         self.cv_kesit = tk.Canvas(tk_, bg="white", highlightthickness=0)
         self.cv_kesit.pack(fill="both", expand=True)
-        self.cv_kesit.bind("<Configure>", lambda _e: self.ciz_kesit())
+        self.cv_kesit.bind("<Configure>", lambda _e: self.gor_k.boyut())
         self.gor_k = Gorunum(self.cv_kesit, self.ciz_kesit)
         self.gor.tasi_cb = lambda faz, e: self._tasi_cb("cephe", faz, e)
         self.gor.cift_cb = self._cift_odak
@@ -14581,6 +14851,50 @@ class Uygulama(tk.Tk):
         _ilerle_g(self, 0.97)
         self.ciz_kesit()
         self._adim("Kesit çizildi — hesap tamamlandı")
+
+    def _sema_kur(self, ana):
+        """Sağ panelde 'Değer şeması': tıklanan girdi alanının ne anlama geldiğini gösteren şematik çizim."""
+        self._sema_fr = ttk.LabelFrame(ana, text=" Değer şeması ", padding=6)
+        self._sema_fr.pack(fill="x", pady=(0, 8))
+        self._sema_cv = tk.Canvas(self._sema_fr, width=236, height=132, bg="white", highlightthickness=1,
+                                  highlightbackground="#c5ccd1")
+        self._sema_cv.pack()
+        self._sema_bsl = ttk.Label(self._sema_fr, text="Bir girdi alanına tıklayın: ne anlama geldiği burada çizilir.",
+                                   font=("Segoe UI", 9, "bold"), wraplength=236, justify="left")
+        self._sema_bsl.pack(anchor="w", pady=(4, 0))
+        self._sema_ack = ttk.Label(self._sema_fr, text="", foreground="#7a858e", wraplength=236, justify="left")
+        self._sema_ack.pack(anchor="w")
+        self._sema_son = None
+        for ev in ("<FocusIn>", "<KeyRelease>", "<<ComboboxSelected>>"):
+            self.bind_all(ev, self._sema_olay, add="+")
+
+    def _sema_olay(self, e):
+        w = e.widget
+        try:
+            ad = str(w.cget("textvariable"))
+        except (tk.TclError, AttributeError):
+            return
+        if not ad:
+            return
+        for k_, v_ in self.v.items():
+            if str(v_) == ad and k_ in SEMA:
+                self._sema_son = k_
+                self._sema_ciz()
+                return
+
+    def _sema_ciz(self):
+        k = getattr(self, "_sema_son", None)
+        cv = getattr(self, "_sema_cv", None)
+        if not k or cv is None or k not in SEMA:
+            return
+        bsl, ack, fn, ek = SEMA[k]
+        cv.delete("all")
+        try:
+            fn(cv, self.v[k].get(), **ek)
+        except Exception as ex:
+            cv.create_text(118, 66, text=f"çizilemedi: {ex}", fill="#c0392b", width=220)
+        self._sema_bsl.config(text=bsl)
+        self._sema_ack.config(text=ack)
 
     def _cam_panel_girdi_kur(self):
         """Sağ paneldeki 'Cam bilgisi' kutusuna girdi alanları: Cam sekmesindeki değişkenlerle ortaktır (biri değişince
