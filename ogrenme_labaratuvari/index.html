@@ -1,0 +1,1574 @@
+<!doctype html>
+<html lang="tr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Öğrenme Laboratuvarı</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,500;12..96,700&family=Manrope:wght@400;500;600;700&family=JetBrains+Mono:wght@400;600&display=swap">
+<style>
+/* Yerleşim: üstte ad + sekme şeridi; her sekmede solda sahne (tuvaller), sağda kontrol paneli, altta açıklama */
+:root{
+  --bg:#f2f5f7; --surface:#ffffff; --sunk:#eaeef2; --ink:#1b2530; --muted:#5b6876; --line:#d9e0e7;
+  --accent:#0d7a78; --accent-ink:#ffffff; --accent-soft:#d8eeec;
+  --orange:#e07b32; --blue:#3672c9; --good:#2e8b57; --bad:#c4453c;
+  --f-display:"Bricolage Grotesque","Segoe UI",system-ui,sans-serif;
+  --f-body:"Manrope","Segoe UI",system-ui,sans-serif;
+  --f-mono:"JetBrains Mono",Consolas,ui-monospace,monospace;
+}
+@media (prefers-color-scheme: dark){:root:not([data-theme="light"]){
+  --bg:#11171c; --surface:#192128; --sunk:#141b21; --ink:#e4eaef; --muted:#93a1ae; --line:#2b3540;
+  --accent:#3bb3ad; --accent-ink:#0b1416; --accent-soft:#1d3b3b;
+  --orange:#ec9150; --blue:#5b93e3; --good:#4cb37a; --bad:#e2675e; color-scheme:dark}}
+:root[data-theme="dark"]{
+  --bg:#11171c; --surface:#192128; --sunk:#141b21; --ink:#e4eaef; --muted:#93a1ae; --line:#2b3540;
+  --accent:#3bb3ad; --accent-ink:#0b1416; --accent-soft:#1d3b3b;
+  --orange:#ec9150; --blue:#5b93e3; --good:#4cb37a; --bad:#e2675e; color-scheme:dark}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--ink);font-family:var(--f-body);font-size:14px;line-height:1.5;
+  padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px));padding-block:18px 40px}
+.wrap{max-width:1320px;margin:0 auto}
+header.top{display:flex;flex-wrap:wrap;align-items:flex-end;justify-content:space-between;gap:12px 24px;margin-bottom:14px}
+header.top h1{font-family:var(--f-display);font-weight:700;font-size:clamp(24px,3vw,32px);letter-spacing:-.01em;margin:0;line-height:1.1}
+header.top p{margin:4px 0 0;color:var(--muted);max-width:60ch}
+nav.tabs{display:flex;flex-wrap:wrap;gap:6px;margin-bottom:16px;border-bottom:1px solid var(--line);padding-bottom:10px}
+nav.tabs button{font:inherit;border:1px solid var(--line);background:var(--surface);color:var(--ink);border-radius:8px;
+  padding:8px 14px;cursor:pointer;display:flex;flex-direction:column;align-items:flex-start;gap:0;text-align:left;min-width:0}
+nav.tabs button b{font-family:var(--f-display);font-weight:600;font-size:15px}
+nav.tabs button small{color:var(--muted);font-size:12px}
+nav.tabs button[aria-selected="true"]{background:var(--accent);border-color:var(--accent);color:var(--accent-ink)}
+nav.tabs button[aria-selected="true"] small{color:var(--accent-ink);opacity:.85}
+nav.tabs button:focus-visible,.btn:focus-visible,select:focus-visible,input:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+.lab{display:grid;grid-template-columns:minmax(0,1fr) 290px;gap:16px;align-items:start}
+@media (max-width:900px){.lab{grid-template-columns:minmax(0,1fr)}}
+.stage{display:flex;flex-direction:column;gap:14px;min-width:0}
+.row{display:flex;flex-wrap:wrap;gap:14px;align-items:flex-start}
+.row>*{min-width:0}
+.card{background:var(--surface);border:1px solid var(--line);border-radius:10px;padding:12px;min-width:0}
+.card h2{font-family:var(--f-display);font-weight:600;font-size:15px;margin:0 0 2px}
+.card .sub{color:var(--muted);font-size:12px;margin:0 0 8px}
+canvas{display:block;width:100%;height:auto;max-width:100%;border-radius:6px;background:var(--surface);touch-action:none}
+canvas.framed{border:1px solid var(--line)}
+.panel{background:var(--surface);border:1px solid var(--line);border-radius:10px;padding:14px;display:flex;flex-direction:column;gap:14px;min-width:0}
+.group{display:flex;flex-direction:column;gap:8px}
+.group h3{font-size:11px;letter-spacing:.08em;text-transform:uppercase;color:var(--muted);margin:0;font-weight:700}
+.field{display:grid;grid-template-columns:1fr auto;gap:2px 8px;align-items:center;font-size:13px}
+.field output{font-family:var(--f-mono);font-size:12px;color:var(--muted);font-variant-numeric:tabular-nums}
+.field input[type=range],.field select{grid-column:1/-1;width:100%}
+select{font:inherit;font-size:13px;padding:5px 8px;border-radius:6px;border:1px solid var(--line);background:var(--sunk);color:var(--ink)}
+input[type=range]{accent-color:var(--accent)}
+.check{display:flex;gap:8px;align-items:center;font-size:13px;cursor:pointer}
+.check input{accent-color:var(--accent)}
+.checks{display:flex;flex-wrap:wrap;gap:4px 14px}
+.btns{display:grid;grid-template-columns:1fr 1fr;gap:6px}
+.btn{font:inherit;font-size:13px;font-weight:600;border-radius:7px;padding:8px 10px;cursor:pointer;border:1px solid var(--line);background:var(--sunk);color:var(--ink)}
+.btn:hover{border-color:var(--muted)}
+.btn.primary{background:var(--accent);border-color:var(--accent);color:var(--accent-ink);grid-column:1/-1}
+.btn.wide{grid-column:1/-1}
+.btn.on{background:var(--accent-soft);border-color:var(--accent)}
+.stats{display:grid;grid-template-columns:repeat(auto-fit,minmax(110px,1fr));gap:8px}
+.stat{background:var(--sunk);border-radius:8px;padding:8px 10px;min-width:0}
+.stat span{display:block;font-size:11px;color:var(--muted);text-transform:uppercase;letter-spacing:.06em}
+.stat b{font-family:var(--f-mono);font-size:16px;font-weight:600;font-variant-numeric:tabular-nums}
+.explain{background:var(--accent-soft);border-radius:10px;padding:12px 14px;font-size:14px;max-width:none;min-height:3.2em}
+.explain b{font-weight:700}
+.legend{display:flex;flex-wrap:wrap;gap:4px 14px;font-size:12px;color:var(--muted)}
+.legend i{display:inline-block;width:14px;height:3px;border-radius:2px;vertical-align:middle;margin-right:5px}
+.dots i{width:10px;height:10px;border-radius:50%}
+.note{font-size:12px;color:var(--muted);margin:0}
+.digits{display:grid;grid-template-columns:repeat(5,1fr);gap:4px}
+.digits .btn{padding:6px 0;font-family:var(--f-mono)}
+table.race{width:100%;border-collapse:collapse;font-size:12px;font-variant-numeric:tabular-nums}
+table.race td{padding:3px 4px;border-bottom:1px solid var(--line)}
+table.race td:last-child{text-align:right;font-family:var(--f-mono)}
+.seg{display:flex;flex-wrap:wrap;gap:4px}
+.seg .btn{padding:5px 9px;font-weight:500}
+.w-main{flex:1 1 440px;max-width:560px}
+.w-side{flex:1 1 300px}
+.w-full{flex:1 1 100%}
+@media (prefers-reduced-motion: reduce){*{scroll-behavior:auto}}
+</style>
+</head>
+<body>
+<div class="wrap" lang="tr">
+<header class="top">
+  <div>
+    <h1>Öğrenme Laboratuvarı</h1>
+    <p>Makine öğrenmesinin beş farklı yüzü. Her sekmede bir model sıfırdan öğreniyor; sen ayarlarla oynayıp öğrenmenin nasıl ilerlediğini izliyorsun.</p>
+  </div>
+</header>
+<nav class="tabs" role="tablist" id="tabs">
+  <button role="tab" data-tab="siniflandirma"><b>Sınıflandırma</b><small>Sinir ağı sınır çiziyor</small></button>
+  <button role="tab" data-tab="gradyan"><b>Gradyan İnişi</b><small>Optimizasyon yarışı</small></button>
+  <button role="tab" data-tab="rakam"><b>Rakam Tanıma</b><small>Çiz, ağ tanısın</small></button>
+  <button role="tab" data-tab="araba"><b>Araba Sürme</b><small>Evrimle öğrenme</small></button>
+  <button role="tab" data-tab="ajan"><b>Oyun Ajanı</b><small>Ödül ve ceza ile öğrenme</small></button>
+</nav>
+<main>
+  <section class="tab" id="tab-siniflandirma" hidden></section>
+  <section class="tab" id="tab-gradyan" hidden></section>
+  <section class="tab" id="tab-rakam" hidden></section>
+  <section class="tab" id="tab-araba" hidden></section>
+  <section class="tab" id="tab-ajan" hidden></section>
+</main>
+</div>
+<script>
+// ===================================================================== ortak araçlar
+const $ = (s, r = document) => r.querySelector(s);
+const $$ = (s, r = document) => [...r.querySelectorAll(s)];
+const clamp = (v, a, b) => (v < a ? a : v > b ? b : v);
+const rand = (a = 0, b = 1) => a + Math.random() * (b - a);
+const randInt = (a, b) => Math.floor(rand(a, b + 1));
+function gauss() {
+  let u = 0, v = 0;
+  while (!u) u = Math.random();
+  while (!v) v = Math.random();
+  return Math.sqrt(-2 * Math.log(u)) * Math.cos(2 * Math.PI * v);
+}
+function shuffle(a) {
+  for (let i = a.length - 1; i > 0; i--) { const j = Math.floor(Math.random() * (i + 1)); [a[i], a[j]] = [a[j], a[i]]; }
+  return a;
+}
+const fmt = (v, d = 3) => (v == null || !isFinite(v) ? "–" : v.toFixed(d));
+const pct = (v) => (v == null || !isFinite(v) ? "–" : "%" + Math.round(v * 100));
+
+// ---------------------------------------------------------------- tema renkleri
+function hexRGB(h) {
+  h = h.trim().replace("#", "");
+  if (h.length === 3) h = h.split("").map((c) => c + c).join("");
+  const n = parseInt(h, 16);
+  return [(n >> 16) & 255, (n >> 8) & 255, n & 255];
+}
+const mix = (a, b, k) => [0, 1, 2].map((i) => Math.round(a[i] + (b[i] - a[i]) * k));
+const rgbStr = (c, a = 1) => (a === 1 ? `rgb(${c[0]},${c[1]},${c[2]})` : `rgba(${c[0]},${c[1]},${c[2]},${a})`);
+
+const Theme = {
+  c: {}, rgb: {}, div: [], divStr: [],
+  refresh() {
+    const cs = getComputedStyle(document.documentElement);
+    for (const k of ["bg", "surface", "sunk", "ink", "muted", "line", "accent", "orange", "blue", "good", "bad"]) {
+      this.c[k] = cs.getPropertyValue("--" + k).trim() || "#888888";
+      this.rgb[k] = hexRGB(this.c[k]);
+    }
+    // ıraksak palet: 0 = mavi, 0.5 = zemin, 1 = turuncu (yumuşatılmış)
+    const dark = (this.rgb.surface[0] + this.rgb.surface[1] + this.rgb.surface[2]) / 3 < 100, k = dark ? 0.4 : 0.58;
+    const s = this.rgb.surface, o = mix(s, this.rgb.orange, k), b = mix(s, this.rgb.blue, k);
+    this.div = []; this.divStr = [];
+    for (let i = 0; i <= 255; i++) {
+      const p = i / 255;
+      const c = p < 0.5 ? mix(b, s, p / 0.5) : mix(s, o, (p - 0.5) / 0.5);
+      this.div.push(c); this.divStr.push(rgbStr(c));
+    }
+    // güçlü ıraksak palet (ağırlık resimleri için)
+    const o2 = this.rgb.orange, b2 = this.rgb.blue;
+    this.divS = [];
+    for (let i = 0; i <= 255; i++) {
+      const p = i / 255;
+      this.divS.push(p < 0.5 ? mix(b2, s, p / 0.5) : mix(s, o2, (p - 0.5) / 0.5));
+    }
+  },
+  d(p) { return this.div[p !== p ? 128 : Math.round(clamp(p, 0, 1) * 255)]; },
+  ds(p) { return this.divStr[p !== p ? 128 : Math.round(clamp(p, 0, 1) * 255)]; },
+  dS(p) { return this.divS[p !== p ? 128 : Math.round(clamp(p, 0, 1) * 255)]; },
+};
+
+// ---------------------------------------------------------------- tuval yardımcıları
+function setupCanvas(cv, w, h) {
+  const d = Math.min(2, window.devicePixelRatio || 1);
+  cv.width = Math.round(w * d); cv.height = Math.round(h * d);
+  cv.style.aspectRatio = w + " / " + h;
+  cv._w = w; cv._h = h;
+  const ctx = cv.getContext("2d");
+  ctx.setTransform(d, 0, 0, d, 0, 0);
+  return ctx;
+}
+function canvasPos(cv, e) {
+  const r = cv.getBoundingClientRect();
+  return [((e.clientX - r.left) * cv._w) / r.width, ((e.clientY - r.top) * cv._h) / r.height];
+}
+function offscreen(w, h, read) {
+  const c = document.createElement("canvas"); c.width = w; c.height = h;
+  return [c, c.getContext("2d", read ? { willReadFrequently: true } : undefined)];
+}
+
+// Basit çizgi grafiği
+function drawChart(cv, ctx, series, o = {}) {
+  const W = cv._w, H = cv._h, L = o.left ?? 42, R = 10, T = 10, B = 22;
+  ctx.clearRect(0, 0, W, H);
+  ctx.fillStyle = Theme.c.surface; ctx.fillRect(0, 0, W, H);
+  let n = 0, mx = -Infinity, mn = Infinity;
+  for (const s of series) {
+    n = Math.max(n, s.data.length);
+    for (const v of s.data) if (v != null && isFinite(v)) { mx = Math.max(mx, v); mn = Math.min(mn, v); }
+  }
+  let ymin = o.ymin ?? Math.min(0, mn), ymax = o.ymax ?? mx;
+  if (o.ycap != null) ymax = Math.min(ymax, o.ycap);
+  if (!isFinite(ymax) || ymax <= ymin) ymax = ymin + 1;
+  ctx.font = "10px " + getComputedStyle(document.body).getPropertyValue("--f-mono");
+  ctx.textBaseline = "middle";
+  for (let k = 0; k <= 4; k++) {
+    const y = T + ((H - T - B) * k) / 4, v = ymax - ((ymax - ymin) * k) / 4;
+    ctx.strokeStyle = Theme.c.line; ctx.lineWidth = 1;
+    ctx.beginPath(); ctx.moveTo(L, y); ctx.lineTo(W - R, y); ctx.stroke();
+    ctx.fillStyle = Theme.c.muted; ctx.textAlign = "right";
+    ctx.fillText(o.yfmt ? o.yfmt(v) : (Math.abs(v) >= 10 ? v.toFixed(0) : v.toFixed(2)), L - 5, y);
+  }
+  ctx.textAlign = "left"; ctx.fillText("0", L, H - 9);
+  ctx.textAlign = "right"; ctx.fillText(o.xlabel ? `${o.xlabel} ${Math.max(0, n - 1)}` : String(Math.max(0, n - 1)), W - R, H - 9);
+  if (n === 0) {
+    ctx.textAlign = "center"; ctx.fillText(o.empty || "Henüz veri yok", W / 2, H / 2);
+    return;
+  }
+  for (const s of series) {
+    const d = s.data; if (!d.length) continue;
+    const step = Math.max(1, Math.floor(d.length / (W - L)));
+    ctx.beginPath(); let started = false;
+    for (let i = 0; i < d.length; i += step) {
+      const v = d[i]; if (v == null || !isFinite(v)) { started = false; continue; }
+      const x = L + (i / Math.max(n - 1, 1)) * (W - L - R);
+      const y = T + (1 - (clamp(v, ymin, ymax) - ymin) / (ymax - ymin)) * (H - T - B);
+      if (!started) { ctx.moveTo(x, y); started = true; } else ctx.lineTo(x, y);
+    }
+    ctx.strokeStyle = s.color; ctx.lineWidth = s.width || 2; ctx.setLineDash(s.dash || []);
+    ctx.globalAlpha = s.alpha ?? 1; ctx.stroke(); ctx.globalAlpha = 1; ctx.setLineDash([]);
+  }
+}
+
+// Ağ şeması: düğümler (küçük resim veya aktivasyon dairesi) ve ağırlık çizgileri
+function drawNet(ctx, box, sizes, W, opt = {}) {
+  const { x, y, w, h } = box, ns = sizes.length;
+  const node = opt.node || 26, gap = opt.gap || 6;
+  const pos = [];
+  for (let l = 0; l < ns; l++) {
+    const n = sizes[l];
+    const cx = x + (ns === 1 ? w / 2 : (l * (w - node)) / (ns - 1));
+    const tot = n * node + (n - 1) * gap, y0 = y + (h - tot) / 2;
+    const col = [];
+    for (let k = 0; k < n; k++) col.push([cx, y0 + k * (node + gap)]);
+    pos.push(col);
+  }
+  for (let l = 0; l < ns - 1; l++) {
+    const ni = sizes[l], Wl = W[l];
+    for (let j = 0; j < sizes[l + 1]; j++) for (let i = 0; i < ni; i++) {
+      const wv = Wl[j * ni + i];
+      const [xa, ya] = pos[l][i], [xb, yb] = pos[l + 1][j];
+      ctx.strokeStyle = wv > 0 ? Theme.c.orange : Theme.c.blue;
+      ctx.globalAlpha = clamp(0.15 + Math.abs(wv) * 0.35, 0.15, 0.9);
+      ctx.lineWidth = clamp(Math.abs(wv) * 1.4, 0.4, 5);
+      ctx.beginPath(); ctx.moveTo(xa + node, ya + node / 2); ctx.lineTo(xb, yb + node / 2); ctx.stroke();
+    }
+  }
+  ctx.globalAlpha = 1;
+  for (let l = 0; l < ns; l++) for (let k = 0; k < sizes[l]; k++) {
+    const [nx, ny] = pos[l][k];
+    if (opt.thumb) opt.thumb(l, k, nx, ny, node);
+    else {
+      const a = opt.act ? opt.act[l][k] : 0;
+      ctx.fillStyle = Theme.ds((a + 1) / 2);
+      ctx.beginPath(); ctx.arc(nx + node / 2, ny + node / 2, node / 2, 0, Math.PI * 2); ctx.fill();
+    }
+    ctx.strokeStyle = opt.hover && opt.hover[0] === l && opt.hover[1] === k ? Theme.c.ink : Theme.c.muted;
+    ctx.lineWidth = opt.hover && opt.hover[0] === l && opt.hover[1] === k ? 2 : 1;
+    if (opt.thumb) ctx.strokeRect(nx + 0.5, ny + 0.5, node - 1, node - 1);
+    else { ctx.beginPath(); ctx.arc(nx + node / 2, ny + node / 2, node / 2, 0, Math.PI * 2); ctx.stroke(); }
+  }
+  if (opt.labels) {
+    ctx.fillStyle = Theme.c.muted; ctx.font = "11px " + getComputedStyle(document.body).getPropertyValue("--f-body");
+    ctx.textAlign = "center"; ctx.textBaseline = "alphabetic";
+    for (let l = 0; l < ns; l++) if (opt.labels[l]) ctx.fillText(opt.labels[l], pos[l][0][0] + node / 2, y + h + 14);
+  }
+  if (opt.side) {
+    ctx.font = "11px " + getComputedStyle(document.body).getPropertyValue("--f-mono");
+    ctx.fillStyle = Theme.c.muted; ctx.textBaseline = "middle";
+    opt.side.forEach((lab, l) => lab && lab.forEach((t, k) => {
+      if (!t) return;
+      const [nx, ny] = pos[l][k];
+      ctx.textAlign = l === 0 ? "right" : "left";
+      ctx.fillText(t, l === 0 ? nx - 5 : nx + node + 5, ny + node / 2);
+    }));
+  }
+  return pos;
+}
+
+// ---------------------------------------------------------------- sinir ağı (çok katmanlı algılayıcı)
+const sig = (z) => 1 / (1 + Math.exp(-clamp(z, -40, 40)));
+class MLP {
+  constructor(sizes, act = "tanh", out = "sigmoid") {
+    this.sizes = sizes.slice(); this.act = act; this.out = out; this.L = sizes.length - 1; this.t = 0;
+    this.W = []; this.b = []; this.gW = []; this.gb = []; this.mW = []; this.vW = []; this.mb = []; this.vb = [];
+    for (let l = 0; l < this.L; l++) {
+      const ni = sizes[l], no = sizes[l + 1], hidden = l < this.L - 1;
+      const s = act === "relu" && hidden ? Math.sqrt(2 / ni) : Math.sqrt(2 / (ni + no));
+      const W = new Float64Array(ni * no);
+      for (let k = 0; k < W.length; k++) W[k] = gauss() * s;
+      const b = new Float64Array(no);
+      if (act === "relu" && hidden) b.fill(0.05);
+      this.W.push(W); this.b.push(b);
+      for (const arr of [this.gW, this.mW, this.vW]) arr.push(new Float64Array(ni * no));
+      for (const arr of [this.gb, this.mb, this.vb]) arr.push(new Float64Array(no));
+    }
+  }
+  f(z) { return this.act === "tanh" ? Math.tanh(z) : this.act === "relu" ? (z > 0 ? z : 0) : sig(z); }
+  df(a, z) { return this.act === "tanh" ? 1 - a * a : this.act === "relu" ? (z > 0 ? 1 : 0) : a * (1 - a); }
+  forward(x) {
+    const A = [x], Z = []; let a = x;
+    for (let l = 0; l < this.L; l++) {
+      const ni = this.sizes[l], no = this.sizes[l + 1], W = this.W[l], b = this.b[l];
+      const z = new Float64Array(no), na = new Float64Array(no);
+      if (ni > 100) { // seyrek girdi (rakam resmi): sadece sıfır olmayan pikselleri dolaş
+        const nz = []; for (let i = 0; i < ni; i++) if (a[i] !== 0) nz.push(i);
+        for (let j = 0; j < no; j++) { let s = b[j]; const o = j * ni; for (const i of nz) s += W[o + i] * a[i]; z[j] = s; }
+      } else {
+        for (let j = 0; j < no; j++) { let s = b[j]; const o = j * ni; for (let i = 0; i < ni; i++) s += W[o + i] * a[i]; z[j] = s; }
+      }
+      if (l === this.L - 1) {
+        if (this.out === "softmax") {
+          let m = -Infinity; for (let j = 0; j < no; j++) m = Math.max(m, z[j]);
+          let t = 0; for (let j = 0; j < no; j++) { na[j] = Math.exp(z[j] - m); t += na[j]; }
+          for (let j = 0; j < no; j++) na[j] /= t;
+        } else if (this.out === "sigmoid") for (let j = 0; j < no; j++) na[j] = sig(z[j]);
+        else for (let j = 0; j < no; j++) na[j] = z[j];
+      } else for (let j = 0; j < no; j++) na[j] = this.f(z[j]);
+      Z.push(z); A.push(na); a = na;
+    }
+    return { A, Z };
+  }
+  predict(x) { return this.forward(x).A[this.L]; }
+  // Bir örnek için hatayı geriye yayar ve gradyanları biriktirir
+  backward(x, target) {
+    const { A, Z } = this.forward(x), L = this.L, out = A[L];
+    let delta = new Float64Array(out.length), loss;
+    if (this.out === "softmax") {
+      for (let j = 0; j < out.length; j++) delta[j] = out[j] - (j === target ? 1 : 0);
+      loss = -Math.log(Math.max(out[target], 1e-9));
+    } else if (this.out === "sigmoid") {
+      const p = clamp(out[0], 1e-7, 1 - 1e-7);
+      delta[0] = out[0] - target; loss = -(target * Math.log(p) + (1 - target) * Math.log(1 - p));
+    } else { delta[0] = out[0] - target; loss = 0.5 * delta[0] * delta[0]; }
+    for (let l = L - 1; l >= 0; l--) {
+      const ni = this.sizes[l], no = this.sizes[l + 1], a = A[l], W = this.W[l], gW = this.gW[l], gb = this.gb[l];
+      const sparse = ni > 100; let nz = null;
+      if (sparse) { nz = []; for (let i = 0; i < ni; i++) if (a[i] !== 0) nz.push(i); }
+      for (let j = 0; j < no; j++) {
+        const d = delta[j]; if (d === 0) continue;
+        gb[j] += d; const o = j * ni;
+        if (sparse) for (const i of nz) gW[o + i] += d * a[i];
+        else for (let i = 0; i < ni; i++) gW[o + i] += d * a[i];
+      }
+      if (l > 0) {
+        const nd = new Float64Array(ni);
+        for (let j = 0; j < no; j++) { const d = delta[j]; if (d === 0) continue; const o = j * ni; for (let i = 0; i < ni; i++) nd[i] += W[o + i] * d; }
+        const z = Z[l - 1];
+        for (let i = 0; i < ni; i++) nd[i] *= this.df(a[i], z[i]);
+        delta = nd;
+      }
+    }
+    return { loss, out };
+  }
+  // Biriken gradyanlarla ağırlıkları günceller
+  step(n, lr, opt = "sgd", l2 = 0) {
+    this.t++;
+    const b1 = 0.9, b2 = 0.999, eps = 1e-8, c1 = 1 - Math.pow(b1, this.t), c2 = 1 - Math.pow(b2, this.t);
+    for (let l = 0; l < this.L; l++) {
+      for (const [P, G, M, V, reg] of [[this.W[l], this.gW[l], this.mW[l], this.vW[l], l2], [this.b[l], this.gb[l], this.mb[l], this.vb[l], 0]]) {
+        for (let k = 0; k < P.length; k++) {
+          const g = G[k] / n + reg * P[k];
+          if (opt === "sgd") P[k] -= lr * g;
+          else if (opt === "momentum") { M[k] = 0.9 * M[k] + g; P[k] -= lr * M[k]; }
+          else { M[k] = b1 * M[k] + (1 - b1) * g; V[k] = b2 * V[k] + (1 - b2) * g * g; P[k] -= (lr * (M[k] / c1)) / (Math.sqrt(V[k] / c2) + eps); }
+          G[k] = 0;
+        }
+      }
+    }
+  }
+  healthy() { for (const W of this.W) for (let k = 0; k < W.length; k += 7) if (!isFinite(W[k])) return false; return true; }
+}
+
+// ---------------------------------------------------------------- arayüz yardımcıları
+const UI = {
+  fmt: {},
+  range(id, label, min, max, step, val, f) {
+    if (f) this.fmt[id] = f;
+    const shown = f ? f(+val) : val;
+    return `<label class="field" for="${id}"><span>${label}</span><output id="${id}-o">${shown}</output>
+      <input type="range" id="${id}" min="${min}" max="${max}" step="${step}" value="${val}"></label>`;
+  },
+  select(id, label, opts, val) {
+    return `<label class="field" for="${id}"><span>${label}</span><select id="${id}">${opts
+      .map((o) => { const [v, t] = Array.isArray(o) ? o : [o, o]; return `<option value="${v}"${String(v) === String(val) ? " selected" : ""}>${t}</option>`; })
+      .join("")}</select></label>`;
+  },
+  check(id, label, on) { return `<label class="check"><input type="checkbox" id="${id}"${on ? " checked" : ""}><span>${label}</span></label>`; },
+  group(title, inner) { return `<div class="group"><h3>${title}</h3>${inner}</div>`; },
+  stat(id, label) { return `<div class="stat"><span>${label}</span><b id="${id}">–</b></div>`; },
+};
+document.addEventListener("input", (e) => {
+  const t = e.target;
+  if (t.type === "range") { const o = document.getElementById(t.id + "-o"); if (o) o.textContent = UI.fmt[t.id] ? UI.fmt[t.id](+t.value) : t.value; }
+});
+const val = (id) => document.getElementById(id).value;
+const num = (id) => +document.getElementById(id).value;
+const on = (id) => document.getElementById(id).checked;
+function setRange(id, v) { const el = document.getElementById(id); el.value = v; el.dispatchEvent(new Event("input", { bubbles: true })); }
+
+// ---------------------------------------------------------------- sekmeler ve ana döngü
+const Modules = {};
+let activeMod = null;
+function showTab(id) {
+  if (!Modules[id]) id = "siniflandirma";
+  $$("#tabs button").forEach((b) => b.setAttribute("aria-selected", b.dataset.tab === id ? "true" : "false"));
+  $$("section.tab").forEach((s) => (s.hidden = s.id !== "tab-" + id));
+  if (activeMod && activeMod.deactivate) activeMod.deactivate();
+  activeMod = Modules[id];
+  if (!activeMod._ready) { activeMod.init($("#tab-" + id)); activeMod._ready = true; }
+  if (activeMod.activate) activeMod.activate();
+}
+function boot() {
+  Theme.refresh();
+  $$("#tabs button").forEach((b) => b.addEventListener("click", () => {
+    try { history.replaceState(null, "", "#" + b.dataset.tab); } catch (e) { location.hash = b.dataset.tab; }
+    showTab(b.dataset.tab);
+  }));
+  window.addEventListener("hashchange", () => showTab(location.hash.slice(1)));
+  const retheme = () => { Theme.refresh(); for (const m of Object.values(Modules)) if (m._ready && m.onTheme) m.onTheme(); };
+  try { matchMedia("(prefers-color-scheme: dark)").addEventListener("change", retheme); } catch (e) {}
+  new MutationObserver(retheme).observe(document.documentElement, { attributes: true, attributeFilter: ["data-theme"] });
+  showTab(location.hash.slice(1) || "siniflandirma");
+  const loop = () => { try { if (activeMod && activeMod.frame) activeMod.frame(); } catch (e) { console.error(e); } requestAnimationFrame(loop); };
+  requestAnimationFrame(loop);
+}
+// ===================================================================== 1) SINIFLANDIRMA
+Modules.siniflandirma = (() => {
+  const S = 440, GRID = 70, TH = 14; // ana alan, karar ızgarası, nöron küçük resmi
+  const FEATS = [
+    ["x", "x", (x, y) => x], ["y", "y", (x, y) => y],
+    ["x2", "x²", (x, y) => x * x], ["y2", "y²", (x, y) => y * y], ["xy", "x·y", (x, y) => x * y],
+    ["sx", "sin x", (x, y) => Math.sin(Math.PI * x)], ["sy", "sin y", (x, y) => Math.sin(Math.PI * y)],
+  ];
+  const st = { run: false, epoch: 0, hist: [], histT: [], train: [], test: [], net: null, feats: [], hover: null, blown: false, add: 1 };
+  let cv, ctx, ncv, nctx, gcv, gctx, gridC, gridX, thumbC, thumbX;
+
+  function data(type, n, noise) {
+    const P = [], G = () => gauss() * noise;
+    if (type === "daire") for (let i = 0; i < n; i++) {
+      const inn = i < n / 2, r = inn ? rand(0, 0.38) : rand(0.62, 0.92), a = rand(0, 2 * Math.PI);
+      P.push([r * Math.cos(a) + G() * 0.25, r * Math.sin(a) + G() * 0.25, inn ? 1 : 0]);
+    } else if (type === "xor") for (let i = 0; i < n; i++) {
+      let x = rand(-0.85, 0.85), y = rand(-0.85, 0.85); x += x > 0 ? 0.07 : -0.07; y += y > 0 ? 0.07 : -0.07;
+      P.push([x + G() * 0.3, y + G() * 0.3, x * y > 0 ? 1 : 0]);
+    } else if (type === "kume") for (let i = 0; i < n; i++) {
+      const t = i % 2, c = t ? 0.42 : -0.42, s = 0.16 + noise * 0.4;
+      P.push([c + gauss() * s, c + gauss() * s, t]);
+    } else if (type === "spiral") for (let t = 0; t < 2; t++) for (let i = 0; i < n / 2; i++) {
+      const k = i / (n / 2), r = 0.06 + k * 0.84, a = k * 3 * Math.PI + t * Math.PI;
+      P.push([r * Math.sin(a) + G() * 0.15, r * Math.cos(a) + G() * 0.15, t]);
+    } else if (type === "ay") for (let i = 0; i < n; i++) {
+      const t = i % 2, a = rand(0, Math.PI);
+      const x = t ? Math.cos(a) : 1 - Math.cos(a), y = t ? Math.sin(a) : 0.5 - Math.sin(a);
+      P.push([(x - 0.5) * 0.62 + G() * 0.3, (y - 0.25) * 0.85 + G() * 0.3, t]);
+    }
+    return P.map(([x, y, t]) => [clamp(x, -1, 1), clamp(y, -1, 1), t]);
+  }
+  const inp = (x, y) => st.feats.map((f) => f[2](x, y));
+
+  function newData() {
+    const P = shuffle(data(val("c-data"), 300, num("c-noise") / 100));
+    const k = Math.round((P.length * num("c-ratio")) / 100);
+    st.train = P.slice(0, k); st.test = P.slice(k);
+    reset();
+  }
+  function reset() {
+    st.feats = FEATS.filter((f) => on("c-f-" + f[0]));
+    if (!st.feats.length) { $("#c-f-x").checked = true; st.feats = [FEATS[0]]; }
+    const hidden = Array(num("c-layers")).fill(num("c-neurons"));
+    st.net = new MLP([st.feats.length, ...hidden, 1], val("c-act"), "sigmoid");
+    st.epoch = 0; st.hist = []; st.histT = []; st.blown = false; st.hover = null;
+    measure(); draw();
+  }
+  function loss(set) {
+    if (!set.length) return [null, null];
+    let L = 0, ok = 0;
+    for (const [x, y, t] of set) {
+      const p = st.net.predict(inp(x, y))[0];
+      if (p !== p) return [NaN, 0];
+      const q = clamp(p, 1e-7, 1 - 1e-7); L += -(t * Math.log(q) + (1 - t) * Math.log(1 - q));
+      if ((p > 0.5) === (t === 1)) ok++;
+    }
+    return [L / set.length, ok / set.length];
+  }
+  function measure() {
+    const [a, b] = loss(st.train), [c, d] = loss(st.test);
+    st.hist.push(a); st.histT.push(c); st.acc = b; st.accT = d;
+    if (st.hist.length > 4000) { st.hist.splice(0, 2000); st.histT.splice(0, 2000); }
+  }
+  function epoch() {
+    if (!st.train.length || st.blown) return;
+    const set = shuffle(st.train.slice()), bs = val("c-batch") === "all" ? set.length : +val("c-batch");
+    const lr = +val("c-lr"), opt = val("c-opt"), l2 = +val("c-l2");
+    for (let i = 0; i < set.length; i += bs) {
+      const part = set.slice(i, i + bs);
+      for (const [x, y, t] of part) st.net.backward(inp(x, y), t);
+      st.net.step(part.length, lr, opt, l2);
+    }
+    st.epoch++;
+    if (!st.net.healthy()) st.blown = true;
+    measure();
+    if (st.blown || !isFinite(st.hist[st.hist.length - 1])) { st.blown = true; setRun(false); }
+  }
+  function setRun(v) {
+    st.run = v; const b = $("#c-run"); if (b) b.textContent = v ? "⏸ Duraklat" : "▶ Başlat";
+  }
+
+  // --------------------------------------------- çizim
+  function neuronVals(l, k, pts) { // ızgara noktalarında bir nöronun çıkışı (0..1 aralığına ölçekli)
+    const out = new Float64Array(pts.length);
+    for (let i = 0; i < pts.length; i++) {
+      const A = st.net.forward(inp(pts[i][0], pts[i][1])).A;
+      out[i] = A[l][k];
+    }
+    return scaleVals(out, l);
+  }
+  function scaleVals(v, l) {
+    const last = l === st.net.L;
+    if (l === 0) { let m = 1e-9; for (const a of v) m = Math.max(m, Math.abs(a)); return v.map((a) => (a / m + 1) / 2); }
+    if (last || st.net.act === "sigmoid") return v;
+    if (st.net.act === "tanh") return v.map((a) => (a + 1) / 2);
+    let m = 1e-9; for (const a of v) m = Math.max(m, a); return v.map((a) => 0.5 + (a / m) * 0.5);
+  }
+  const gridPts = []; for (let i = 0; i < GRID; i++) for (let j = 0; j < GRID; j++) gridPts.push([((j + 0.5) / GRID) * 2 - 1, 1 - ((i + 0.5) / GRID) * 2]);
+  const thPts = []; for (let i = 0; i < TH; i++) for (let j = 0; j < TH; j++) thPts.push([((j + 0.5) / TH) * 2 - 1, 1 - ((i + 0.5) / TH) * 2]);
+
+  function drawMain() {
+    let vals;
+    if (st.hover) vals = neuronVals(st.hover[0], st.hover[1], gridPts);
+    else { vals = new Float64Array(gridPts.length); for (let i = 0; i < gridPts.length; i++) vals[i] = st.net.predict(inp(gridPts[i][0], gridPts[i][1]))[0]; }
+    const img = gridX.createImageData(GRID, GRID);
+    for (let i = 0; i < vals.length; i++) { const c = Theme.d(vals[i]); img.data.set([c[0], c[1], c[2], 255], i * 4); }
+    gridX.putImageData(img, 0, 0);
+    ctx.imageSmoothingEnabled = true; ctx.drawImage(gridC, 0, 0, S, S);
+    ctx.strokeStyle = Theme.c.line; ctx.setLineDash([3, 5]); ctx.lineWidth = 1;
+    ctx.beginPath(); ctx.moveTo(S / 2, 0); ctx.lineTo(S / 2, S); ctx.moveTo(0, S / 2); ctx.lineTo(S, S / 2); ctx.stroke(); ctx.setLineDash([]);
+    const P = (x, y) => [((x + 1) / 2) * S, ((1 - y) / 2) * S];
+    for (const [x, y, t] of st.train) {
+      const [px, py] = P(x, y); ctx.beginPath(); ctx.arc(px, py, 4.2, 0, 7);
+      ctx.fillStyle = t ? Theme.c.orange : Theme.c.blue; ctx.fill(); ctx.strokeStyle = Theme.c.surface; ctx.lineWidth = 1; ctx.stroke();
+    }
+    if (on("c-showtest")) for (const [x, y, t] of st.test) {
+      const [px, py] = P(x, y); ctx.beginPath(); ctx.arc(px, py, 4, 0, 7);
+      ctx.strokeStyle = t ? Theme.c.orange : Theme.c.blue; ctx.lineWidth = 2; ctx.stroke();
+    }
+    if (st.hover) {
+      ctx.fillStyle = Theme.c.surface; ctx.globalAlpha = 0.85; ctx.fillRect(8, 8, 250, 24); ctx.globalAlpha = 1;
+      ctx.fillStyle = Theme.c.ink; ctx.font = "12px " + getComputedStyle(document.body).getPropertyValue("--f-body");
+      ctx.textBaseline = "middle"; ctx.textAlign = "left";
+      ctx.fillText(st.hover[0] === 0 ? "Girdi: " + st.feats[st.hover[1]][1] : `Gizli katman ${st.hover[0]}, nöron ${st.hover[1] + 1}`, 16, 20);
+    }
+  }
+  function drawNetwork() {
+    const W = ncv._w, H = ncv._h;
+    nctx.fillStyle = Theme.c.surface; nctx.fillRect(0, 0, W, H);
+    const sizes = st.net.sizes, maxN = Math.max(...sizes);
+    const node = clamp(Math.floor((H - 40) / maxN) - 6, 18, 30);
+    // her nöron için küçük resim
+    const acts = thPts.map(([x, y]) => st.net.forward(inp(x, y)).A);
+    st.netPos = drawNet(nctx, { x: 48, y: 10, w: W - 96, h: H - 34 }, sizes, st.net.W, {
+      node, gap: 6, hover: st.hover,
+      labels: sizes.map((_, l) => (l === 0 ? "Girdi" : l === sizes.length - 1 ? "Çıkış" : "Gizli " + l)),
+      side: [st.feats.map((f) => f[1])],
+      thumb(l, k, x, y, s) {
+        const v = scaleVals(acts.map((A) => A[l][k]), l);
+        const img = thumbX.createImageData(TH, TH);
+        for (let i = 0; i < v.length; i++) { const c = Theme.d(v[i]); img.data.set([c[0], c[1], c[2], 255], i * 4); }
+        thumbX.putImageData(img, 0, 0); nctx.imageSmoothingEnabled = false; nctx.drawImage(thumbC, x, y, s, s);
+      },
+    });
+    st.netNode = node;
+  }
+  function drawChartC() {
+    drawChart(gcv, gctx, [
+      { data: st.hist, color: Theme.c.ink, width: 2 },
+      { data: st.histT, color: Theme.c.muted, width: 2, dash: [5, 4] },
+    ], { ymin: 0, ycap: 1.2, xlabel: "epok" });
+  }
+  function texts() {
+    const l = st.hist[st.hist.length - 1], lt = st.histT[st.histT.length - 1];
+    $("#c-s-ep").textContent = st.epoch; $("#c-s-l").textContent = fmt(l); $("#c-s-lt").textContent = fmt(lt);
+    $("#c-s-a").textContent = pct(st.acc); $("#c-s-at").textContent = pct(st.accT);
+    $("#c-explain").innerHTML = explain(l, lt);
+  }
+  function explain(l, lt) {
+    if (st.blown) return "<b>Ağ dağıldı.</b> Öğrenme oranı o kadar yüksek ki ağırlıklar her adımda büyüyüp sonsuza kaçtı. Oranı düşür ve Sıfırla'ya bas.";
+    if (!st.train.length) return "Eğitim verisi yok. Alana tıklayarak nokta ekle (sağ tık diğer renk), sonra Başlat'a bas.";
+    if (st.hover) return st.hover[0] === 0
+      ? "Bu bir <b>girdi</b>: ağa verilen ham bilgi. Turuncu yerlerde değeri büyük, mavi yerlerde küçük. Ağ yalnızca bu girdileri ağırlıklarla toplayıp bükerek bir sınır üretebilir."
+      : "Bu nöronun <b>düzlemde neye tepki verdiğini</b> görüyorsun. İlk gizli katmandaki nöronlar genelde düzlemi tek bir çizgiyle ikiye ayırır; sonraki katmanlar bu basit parçaları birleştirip eğri, halka, spiral gibi karmaşık şekiller kurar.";
+    if (st.epoch === 0) return "Ağ <b>rastgele ağırlıklarla</b> başladı, henüz hiçbir şey bilmiyor. Arka plan rengi ağın şu anki tahmini. ▶ Başlat'a bas ve rengin noktalara nasıl oturduğunu izle. Ağ şemasındaki bir nöronun üstüne gelirsen onun ne öğrendiğini büyük görürsün.";
+    const fs = st.feats.map((f) => f[0]), linearOnly = fs.every((f) => f === "x" || f === "y");
+    if (num("c-layers") === 0 && linearOnly && ["daire", "xor", "spiral", "ay"].includes(val("c-data")) && l > 0.35)
+      return "<b>Gizli katman yok</b> ve girdiler sadece x ile y. Böyle bir ağ düzlemi yalnızca <b>düz bir çizgiyle</b> bölebilir; bu veri düz çizgiyle ayrılamaz. Ya bir gizli katman ekle ya da girdilere x², y² veya x·y koy (özellik mühendisliği).";
+    if (num("c-layers") === 0 && !linearOnly && l < 0.3)
+      return "Gizli katman olmadan da çözdü! Çünkü sen ona <b>hazır özellikler</b> (x², y², x·y gibi) verdin. Gerçek hayatta da veriyi doğru biçimde sunmak, ağı büyütmek kadar etkili olabilir.";
+    const r = st.hist.slice(-12).filter((v) => v != null);
+    if (r.length > 10 && Math.max(...r) - Math.min(...r) > 0.12 && +val("c-lr") >= 0.3)
+      return "<b>Kayıp zıplıyor.</b> Öğrenme oranı yüksek olduğu için ağ her adımda vadinin dibini aşıp karşı yamaca çıkıyor. Oranı düşür ya da Adam optimizasyonunu dene.";
+    if (lt != null && l < 0.25 && lt > l * 1.6 && lt - l > 0.08)
+      return "<b>Aşırı öğrenme (ezberleme):</b> eğitim noktalarında hata çok düşük ama test noktalarında yüksek. Ağ genel kuralı değil tek tek noktaları ezberliyor. L2 düzenlemeyi aç, nöron sayısını azalt ya da gürültüyü düşür.";
+    if (l > 0.6) return "Ağ hâlâ arıyor. Her adımda hatayı ölçüyor ve <b>geri yayılım</b> ile her ağırlığın hataya ne kadar katkı verdiğini hesaplayıp onu biraz düzeltiyor. Optimizasyon seçimi (SGD / Momentum / Adam) bu düzeltmenin nasıl yapıldığını belirler.";
+    if (l > 0.2) return "Sınır şekilleniyor. Ağ şemasındaki gizli nöron resimlerine bak: her biri basit bir parça öğreniyor, çıkış nöronu bunları birleştiriyor. Çizgilerin kalınlığı ağırlığın gücünü gösteriyor.";
+    return "Ağ veriyi büyük ölçüde ayırdı. Kayıp grafiği düzleştiyse öğrenme doygunluğa ulaştı. Farklı bir veri, daha az nöron, başka bir aktivasyon ya da yalnızca x² ve y² girdileriyle dene.";
+  }
+  function draw() { drawMain(); drawNetwork(); drawChartC(); texts(); }
+
+  function init(root) {
+    root.innerHTML = `
+    <div class="lab">
+      <div class="stage">
+        <div class="row">
+          <div class="card w-main">
+            <h2>Veri ve ağın tahmini</h2>
+            <p class="sub">Arka plan rengi = ağın her noktaya verdiği cevap. Dolu nokta eğitim, halka test verisi.</p>
+            <canvas id="c-main" class="framed"></canvas>
+            <div class="seg" style="margin-top:8px"><span class="note" style="align-self:center">Tıklayınca ekle:</span>
+              <button class="btn on" id="c-add1">Turuncu</button><button class="btn" id="c-add0">Mavi</button></div>
+          </div>
+          <div class="card w-side">
+            <h2>Ağın içi</h2>
+            <p class="sub">Her kutu bir nöron ve düzlemde nerede “yandığı”. Üstüne gel, büyük hâlini gör.</p>
+            <canvas id="c-net"></canvas>
+            <h2 style="margin-top:12px">Kayıp (hata)</h2>
+            <div class="legend"><span><i style="background:var(--ink)"></i>eğitim</span><span><i style="background:var(--muted)"></i>test (kesikli)</span></div>
+            <canvas id="c-chart"></canvas>
+          </div>
+        </div>
+        <div class="stats">${UI.stat("c-s-ep", "Epok")}${UI.stat("c-s-l", "Eğitim kaybı")}${UI.stat("c-s-lt", "Test kaybı")}${UI.stat("c-s-a", "Eğitim doğruluğu")}${UI.stat("c-s-at", "Test doğruluğu")}</div>
+        <div class="explain" id="c-explain"></div>
+      </div>
+      <aside class="panel">
+        ${UI.group("Veri", UI.select("c-data", "Veri seti", [["daire", "Daireler"], ["xor", "XOR"], ["kume", "İki küme"], ["ay", "İki hilal"], ["spiral", "Spiral"], ["elle", "Elle çiz (boş)"]], "daire")
+          + UI.range("c-noise", "Gürültü", 0, 50, 5, 10, (v) => "%" + v)
+          + UI.range("c-ratio", "Eğitim payı", 30, 90, 10, 70, (v) => "%" + v)
+          + UI.check("c-showtest", "Test verisini göster", true)
+          + `<button class="btn" id="c-new">Yeni veri üret</button>`)}
+        ${UI.group("Girdiler (özellikler)", `<div class="checks">${FEATS.map((f, i) => UI.check("c-f-" + f[0], f[1], i < 2)).join("")}</div>`)}
+        ${UI.group("Ağ yapısı", UI.range("c-layers", "Gizli katman", 0, 4, 1, 2) + UI.range("c-neurons", "Katman başına nöron", 1, 8, 1, 4)
+          + UI.select("c-act", "Aktivasyon", [["tanh", "tanh"], ["relu", "ReLU"], ["sigmoid", "sigmoid"]], "tanh"))}
+        ${UI.group("Eğitim", UI.select("c-opt", "Optimizasyon", [["sgd", "SGD (düz gradyan inişi)"], ["momentum", "Momentum"], ["adam", "Adam"]], "sgd")
+          + UI.select("c-lr", "Öğrenme oranı", ["0.0003", "0.001", "0.003", "0.01", "0.03", "0.1", "0.3", "1", "3"], "0.03")
+          + UI.select("c-batch", "Yığın boyutu (batch)", [["1", "1"], ["10", "10"], ["30", "30"], ["all", "Hepsi"]], "10")
+          + UI.select("c-l2", "L2 düzenleme", [["0", "Yok"], ["0.001", "0.001"], ["0.01", "0.01"], ["0.1", "0.1"]], "0")
+          + UI.range("c-speed", "Hız (epok/kare)", 1, 10, 1, 2))}
+        <div class="btns"><button class="btn primary" id="c-run">▶ Başlat</button>
+          <button class="btn" id="c-step">Tek epok</button><button class="btn" id="c-reset">Sıfırla</button></div>
+      </aside>
+    </div>`;
+    cv = $("#c-main"); ctx = setupCanvas(cv, S, S);
+    ncv = $("#c-net"); nctx = setupCanvas(ncv, 340, 300);
+    gcv = $("#c-chart"); gctx = setupCanvas(gcv, 340, 150);
+    [gridC, gridX] = offscreen(GRID, GRID); [thumbC, thumbX] = offscreen(TH, TH);
+
+    $("#c-run").onclick = () => { if (st.blown) reset(); setRun(!st.run); };
+    $("#c-step").onclick = () => { setRun(false); epoch(); draw(); };
+    $("#c-reset").onclick = () => { reset(); };
+    $("#c-new").onclick = newData;
+    $("#c-data").onchange = newData;
+    for (const id of ["c-noise", "c-ratio"]) $("#" + id).onchange = newData;
+    for (const id of ["c-layers", "c-neurons", "c-act", ...FEATS.map((f) => "c-f-" + f[0])]) $("#" + id).onchange = reset;
+    $("#c-showtest").onchange = draw;
+    $("#c-add1").onclick = () => { st.add = 1; $("#c-add1").classList.add("on"); $("#c-add0").classList.remove("on"); };
+    $("#c-add0").onclick = () => { st.add = 0; $("#c-add0").classList.add("on"); $("#c-add1").classList.remove("on"); };
+    cv.addEventListener("contextmenu", (e) => e.preventDefault());
+    cv.addEventListener("pointerdown", (e) => {
+      const [px, py] = canvasPos(cv, e);
+      const t = e.button === 2 ? 1 - st.add : st.add;
+      st.train.push([clamp((px / S) * 2 - 1, -1, 1), clamp(1 - (py / S) * 2, -1, 1), t]);
+      st.hist.pop(); st.histT.pop(); measure(); draw();
+    });
+    ncv.addEventListener("pointermove", (e) => {
+      const [px, py] = canvasPos(ncv, e); let h = null;
+      if (st.netPos) st.netPos.forEach((col, l) => col.forEach(([x, y], k) => { if (px >= x && px <= x + st.netNode && py >= y && py <= y + st.netNode) h = [l, k]; }));
+      if (String(h) !== String(st.hover)) { st.hover = h; draw(); }
+    });
+    ncv.addEventListener("pointerleave", () => { if (st.hover) { st.hover = null; draw(); } });
+    newData();
+  }
+  function frame() {
+    if (!st.run) return;
+    for (let i = 0; i < num("c-speed"); i++) epoch();
+    draw();
+  }
+  return { init, frame, onTheme: () => draw(), deactivate: () => {} };
+})();
+// ===================================================================== 2) GRADYAN İNİŞİ YARIŞI
+Modules.gradyan = (() => {
+  const S = 460, RES = 230, MESH = 38; // momentum burada üstel ortalama biçiminde: m = 0.9·m + 0.1·g
+  const SURF = {
+    kase: { ad: "Uzun vadi", f: (x, y) => 0.5 * x * x + 6 * y * y, xr: [-3, 3], yr: [-3, 3], lr: 0.15, alr: 0.12, start: [-2.6, 1.6], min: [[0, 0]],
+      not: "Bir yönde dik, öbür yönde yayvan bir vadi. Düz gradyan inişi dik duvarlar arasında zikzak çizer; momentum bu salınımları sönümler." },
+    rosen: { ad: "Muz vadisi (Rosenbrock)", f: (x, y) => (1 - x) ** 2 + 100 * (y - x * x) ** 2, xr: [-2, 2], yr: [-1, 3], lr: 0.0015, alr: 0.04, start: [-1.6, 2.4], min: [[1, 1]],
+      not: "Dibi bulmak kolay, dipteki kavisli kanal boyunca ilerlemek zor. Klasik bir optimizasyon sınavı: en düşük nokta (1, 1)." },
+    tepeli: { ad: "Çok çukurlu arazi", f: (x, y) => 0.06 * (x * x + y * y) - 1.6 * Math.exp(-((x - 1.6) ** 2 + (y - 1.2) ** 2) / 0.5) - 0.9 * Math.exp(-((x + 1.4) ** 2 + (y + 0.6) ** 2) / 0.6) - 0.7 * Math.exp(-((x - 0.2) ** 2 + (y + 1.9) ** 2) / 0.4) - 0.5 * Math.exp(-((x + 1) ** 2 + (y - 1.8) ** 2) / 0.3) + 2,
+      xr: [-3, 3], yr: [-3, 3], lr: 0.4, alr: 0.05, start: [-2.6, 2.6], min: [[1.6, 1.2]],
+      not: "Birden çok çukur var; en derini sağ üstte. Başladığı yere göre bir optimizer yakındaki sığ çukura takılabilir (yerel minimum). Farklı başlangıç noktalarına tıkla." },
+    eyer: { ad: "Eyer noktası", f: (x, y) => 0.5 * x * x - y * y + 0.25 * y ** 4 + 1, xr: [-2.5, 2.5], yr: [-2.5, 2.5], lr: 0.1, alr: 0.05, start: [-2.3, 0.02], min: [[0, Math.SQRT2], [0, -Math.SQRT2]],
+      not: "Ortadaki nokta bir yönden çukur, öbür yönden tepe (at eyeri gibi). Orada gradyan neredeyse sıfır olduğu için düz SGD uzun süre oyalanır." },
+    himmel: { ad: "Dört çukur (Himmelblau)", f: (x, y) => (x * x + y - 11) ** 2 + (x + y * y - 7) ** 2, xr: [-5, 5], yr: [-5, 5], lr: 0.005, alr: 0.1, start: [-0.3, -0.9],
+      min: [[3, 2], [-2.805, 3.131], [-3.779, -3.283], [3.584, -1.848]],
+      not: "Eşit derinlikte dört çukur var. Hangi optimizer'ın hangisine düşeceği başlangıç noktasına ve hızına bağlı." },
+  };
+  const OPTS = [
+    { id: "sgd", ad: "SGD", renk: "#d1493f" },
+    { id: "mom", ad: "Momentum", renk: "#8a55d3" },
+    { id: "rms", ad: "RMSProp", renk: "#2f9a62" },
+    { id: "adam", ad: "Adam", renk: "#d99a00" },
+  ];
+  const st = { run: false, surf: null, start: null, racers: [], yaw: -0.7, pitch: 0.95, step: 0, fmin: 0, fmax: 1 };
+  let cv, ctx, cv3, ctx3, mapC, mapX, mesh;
+
+  const grad = (f, x, y, h) => [(f(x + h, y) - f(x - h, y)) / (2 * h), (f(x, y + h) - f(x, y - h)) / (2 * h)];
+  const norm = (v) => Math.log1p(Math.max(0, v - st.fmin)) / Math.log1p(st.fmax - st.fmin);
+
+  // sıralı (düşük = koyu deniz mavisi, yüksek = açık kum) palet
+  const STOPS = [[22, 60, 94], [33, 110, 128], [86, 160, 140], [178, 201, 150], [236, 226, 190], [250, 244, 230]];
+  function seq(p) {
+    p = clamp(p, 0, 1) * (STOPS.length - 1); const i = Math.min(STOPS.length - 2, Math.floor(p));
+    return mix(STOPS[i], STOPS[i + 1], p - i);
+  }
+
+  function setSurface() {
+    const s = SURF[val("g-surf")]; st.surf = s;
+    let mn = Infinity, mx = -Infinity;
+    const vals = new Float64Array(RES * RES);
+    for (let i = 0; i < RES; i++) for (let j = 0; j < RES; j++) {
+      const [x, y] = toW(((j + 0.5) / RES) * S, ((i + 0.5) / RES) * S); const v = s.f(x, y);
+      vals[i * RES + j] = v; mn = Math.min(mn, v); mx = Math.max(mx, v);
+    }
+    st.fmin = mn; st.fmax = mx;
+    const img = mapX.createImageData(RES, RES), LEV = 16;
+    const lev = (v) => Math.floor(norm(v) * LEV);
+    for (let i = 0; i < RES; i++) for (let j = 0; j < RES; j++) {
+      const k = i * RES + j, v = vals[k]; let c = seq(norm(v));
+      const L = lev(v);
+      if ((j < RES - 1 && lev(vals[k + 1]) !== L) || (i < RES - 1 && lev(vals[k + RES]) !== L)) c = mix(c, [10, 30, 45], 0.35);
+      img.data.set([c[0], c[1], c[2], 255], k * 4);
+    }
+    mapX.putImageData(img, 0, 0);
+    mesh = [];
+    for (let i = 0; i <= MESH; i++) { const row = []; for (let j = 0; j <= MESH; j++) {
+      const x = s.xr[0] + ((s.xr[1] - s.xr[0]) * j) / MESH, y = s.yr[0] + ((s.yr[1] - s.yr[0]) * i) / MESH;
+      row.push([(j / MESH) * 2 - 1, (i / MESH) * 2 - 1, norm(s.f(x, y))]); } mesh.push(row); }
+    st.start = s.start.slice();
+    $("#g-note").textContent = s.not;
+    resetRacers();
+  }
+  const toW = (px, py) => { const s = st.surf || SURF.kase; return [s.xr[0] + (px / S) * (s.xr[1] - s.xr[0]), s.yr[1] - (py / S) * (s.yr[1] - s.yr[0])]; };
+  const toP = (x, y) => { const s = st.surf; return [((x - s.xr[0]) / (s.xr[1] - s.xr[0])) * S, ((s.yr[1] - y) / (s.yr[1] - s.yr[0])) * S]; };
+
+  function resetRacers() {
+    st.step = 0;
+    st.racers = OPTS.filter((o) => on("g-o-" + o.id)).map((o) => ({ ...o, x: st.start[0], y: st.start[1], m: [0, 0], v: [0, 0], t: 0, trail: [[st.start[0], st.start[1]]], status: "", f: st.surf.f(...st.start) }));
+    draw();
+  }
+  function stepAll() {
+    const s = st.surf, k = Math.pow(10, num("g-lr")), noise = num("g-noise") / 100, h = 1e-5 * (s.xr[1] - s.xr[0]);
+    st.step++;
+    for (const r of st.racers) {
+      if (r.status) continue;
+      let [gx, gy] = grad(s.f, r.x, r.y, h);
+      if (noise > 0) { const gm = Math.hypot(gx, gy) + 0.5; gx += gauss() * noise * gm; gy += gauss() * noise * gm; }
+      let dx, dy; r.t++;
+      if (r.id === "sgd") { dx = -s.lr * k * gx; dy = -s.lr * k * gy; }
+      else if (r.id === "mom") { r.m[0] = 0.9 * r.m[0] + 0.1 * gx; r.m[1] = 0.9 * r.m[1] + 0.1 * gy; dx = -s.lr * k * r.m[0]; dy = -s.lr * k * r.m[1]; }
+      else if (r.id === "rms") { for (const [i, g] of [[0, gx], [1, gy]]) r.v[i] = 0.9 * r.v[i] + 0.1 * g * g;
+        dx = (-s.alr * k * gx) / (Math.sqrt(r.v[0]) + 1e-8); dy = (-s.alr * k * gy) / (Math.sqrt(r.v[1]) + 1e-8); }
+      else { const b1 = 0.9, b2 = 0.999;
+        r.m[0] = b1 * r.m[0] + (1 - b1) * gx; r.m[1] = b1 * r.m[1] + (1 - b1) * gy;
+        r.v[0] = b2 * r.v[0] + (1 - b2) * gx * gx; r.v[1] = b2 * r.v[1] + (1 - b2) * gy * gy;
+        const c1 = 1 - b1 ** r.t, c2 = 1 - b2 ** r.t;
+        dx = (-s.alr * k * (r.m[0] / c1)) / (Math.sqrt(r.v[0] / c2) + 1e-8); dy = (-s.alr * k * (r.m[1] / c1)) / (Math.sqrt(r.v[1] / c2) + 1e-8); }
+      r.x += dx; r.y += dy; r.f = s.f(r.x, r.y);
+      const W = s.xr[1] - s.xr[0];
+      if (!isFinite(r.f) || Math.abs(r.x) > 4 * W || Math.abs(r.y) > 4 * W) { r.status = "dağıldı"; continue; }
+      r.trail.push([r.x, r.y]); if (r.trail.length > 3000) r.trail.splice(0, 1000);
+      if (Math.hypot(dx, dy) < 1e-6 * W && noise === 0) r.status = "durdu";
+    }
+    if (st.racers.every((r) => r.status) || st.step > 20000) setRun(false);
+  }
+  function setRun(v) { st.run = v; $("#g-run").textContent = v ? "⏸ Duraklat" : "▶ Başlat"; }
+
+  function drawMap() {
+    ctx.imageSmoothingEnabled = true; ctx.drawImage(mapC, 0, 0, S, S);
+    for (const m of st.surf.min) { const [px, py] = toP(...m); ctx.fillStyle = "#ffffff"; ctx.strokeStyle = "#0b2030"; ctx.lineWidth = 1.5;
+      ctx.beginPath(); for (let i = 0; i < 10; i++) { const a = (i * Math.PI) / 5 - Math.PI / 2, r = i % 2 ? 3 : 7; ctx.lineTo(px + r * Math.cos(a), py + r * Math.sin(a)); } ctx.closePath(); ctx.fill(); ctx.stroke(); }
+    for (const r of st.racers) {
+      ctx.strokeStyle = r.renk; ctx.lineWidth = 2; ctx.beginPath();
+      r.trail.forEach(([x, y], i) => { const [px, py] = toP(x, y); i ? ctx.lineTo(px, py) : ctx.moveTo(px, py); }); ctx.stroke();
+      const [px, py] = toP(r.x, r.y);
+      ctx.fillStyle = r.renk; ctx.strokeStyle = "#ffffff"; ctx.lineWidth = 2; ctx.beginPath(); ctx.arc(clamp(px, -5, S + 5), clamp(py, -5, S + 5), 6, 0, 7); ctx.fill(); ctx.stroke();
+    }
+    const [sx, sy] = toP(...st.start); ctx.strokeStyle = "#ffffff"; ctx.lineWidth = 2; ctx.beginPath(); ctx.arc(sx, sy, 9, 0, 7); ctx.stroke();
+  }
+  function P3(u, v, z) { // dünyadan ekrana (dik izdüşüm); d büyükse nokta uzakta
+    const cy = Math.cos(st.yaw), sy = Math.sin(st.yaw), cp = Math.cos(st.pitch), sp = Math.sin(st.pitch);
+    const x1 = u * cy - v * sy, y1 = u * sy + v * cy, zz = (z - 0.45) * 0.95;
+    const up = y1 * sp + zz * cp, d = y1 * cp - zz * sp;
+    return [S / 2 + x1 * 150, S / 2 + 20 - up * 150, d];
+  }
+  function draw3D() {
+    const W = S, H = S; ctx3.fillStyle = Theme.c.surface; ctx3.fillRect(0, 0, W, H);
+    const quads = [];
+    for (let i = 0; i < MESH; i++) for (let j = 0; j < MESH; j++) {
+      const a = mesh[i][j], b = mesh[i][j + 1], c = mesh[i + 1][j + 1], d = mesh[i + 1][j];
+      const pa = P3(a[0], a[1], a[2]), pb = P3(b[0], b[1], b[2]), pc = P3(c[0], c[1], c[2]), pd = P3(d[0], d[1], d[2]);
+      quads.push([pa[2] + pb[2] + pc[2] + pd[2], pa, pb, pc, pd, (a[2] + b[2] + c[2] + d[2]) / 4]);
+    }
+    quads.sort((p, q) => q[0] - p[0]);
+    ctx3.lineWidth = 0.5;
+    for (const [, a, b, c, d, z] of quads) {
+      const col = seq(z); ctx3.fillStyle = rgbStr(col); ctx3.strokeStyle = rgbStr(mix(col, [10, 30, 45], 0.25));
+      ctx3.beginPath(); ctx3.moveTo(a[0], a[1]); ctx3.lineTo(b[0], b[1]); ctx3.lineTo(c[0], c[1]); ctx3.lineTo(d[0], d[1]); ctx3.closePath(); ctx3.fill(); ctx3.stroke();
+    }
+    const s = st.surf;
+    const toUV = (x, y) => [((x - s.xr[0]) / (s.xr[1] - s.xr[0])) * 2 - 1, ((y - s.yr[0]) / (s.yr[1] - s.yr[0])) * 2 - 1];
+    for (const r of st.racers) {
+      ctx3.strokeStyle = r.renk; ctx3.lineWidth = 2.2; ctx3.beginPath();
+      const stp = Math.max(1, Math.floor(r.trail.length / 600));
+      for (let i = 0; i < r.trail.length; i += stp) { const [x, y] = r.trail[i]; const [u, v] = toUV(x, y); if (Math.abs(u) > 1.05 || Math.abs(v) > 1.05) continue;
+        const p = P3(u, v, norm(s.f(x, y)) + 0.01); i ? ctx3.lineTo(p[0], p[1]) : ctx3.moveTo(p[0], p[1]); }
+      ctx3.stroke();
+      const [u, v] = toUV(r.x, r.y);
+      if (Math.abs(u) <= 1.05 && Math.abs(v) <= 1.05) { const p = P3(u, v, norm(r.f) + 0.015);
+        ctx3.fillStyle = r.renk; ctx3.strokeStyle = "#ffffff"; ctx3.lineWidth = 2; ctx3.beginPath(); ctx3.arc(p[0], p[1], 6, 0, 7); ctx3.fill(); ctx3.stroke(); }
+    }
+    ctx3.fillStyle = Theme.c.muted; ctx3.font = "12px " + getComputedStyle(document.body).getPropertyValue("--f-body");
+    ctx3.textAlign = "left"; ctx3.textBaseline = "alphabetic"; ctx3.fillText("Sürükleyerek döndür", 10, H - 10);
+  }
+  function table() {
+    $("#g-table").innerHTML = st.racers.map((r) => `<tr><td><span style="display:inline-block;width:10px;height:10px;border-radius:50%;background:${r.renk};margin-right:6px"></span>${r.ad}${r.status ? ` <span class="note">(${r.status})</span>` : ""}</td><td>${isFinite(r.f) ? r.f.toPrecision(4) : "∞"}</td></tr>`).join("")
+      || `<tr><td class="note">Optimizer seçilmedi</td><td></td></tr>`;
+    $("#g-step").textContent = st.step;
+    $("#g-explain").innerHTML = explain();
+  }
+  function explain() {
+    const id = val("g-surf"), n = st.step;
+    if (n === 0) return "Haritada açık renk yüksek, koyu renk alçak yerler. Bir sinir ağının eğitimi tam olarak budur: <b>hata yüzeyinde en alçak noktayı aramak</b>. Her top bir optimizasyon yöntemi; hepsi aynı noktadan başlıyor ve yalnızca bulundukları yerin eğimini (gradyanı) görebiliyor. Haritaya tıklayarak başlangıç noktasını değiştir.";
+    const dead = st.racers.filter((r) => r.status === "dağıldı");
+    if (dead.length) return `<b>${dead.map((r) => r.ad).join(", ")} dağıldı:</b> öğrenme oranı bu yüzey için fazla büyük, her adım bir öncekinden daha uzağa fırlatıyor. Öğrenme oranı çarpanını düşür.`;
+    if (num("g-noise") > 0) return "Gürültü açıkken gradyan her adımda biraz yanlış ölçülüyor; gerçek eğitimde veriyi küçük parçalar (mini-batch) hâlinde göstermenin etkisi budur. Titreşim kötü değil: bazen sığ çukurlardan ve eyer noktalarından kaçmaya yardım eder.";
+    if (id === "kase") return "SGD'nin dik yönde <b>zikzak</b> çizdiğine dikkat et: her adımda gradyan ona “aşağı” diyor ama dik duvar yüzünden hep karşı tarafa geçiyor. <b>Momentum</b> geçmiş adımların ortalamasını tuttuğu için zikzaklar birbirini götürür ve vadide hızlanır. RMSProp ve Adam ise her yön için adımı ayrı ölçekler.";
+    if (id === "rosen") return "Kanalın içinde eğim çok az, duvarlarda çok fazla. SGD duvardan kanala hızlı iner ama kanal boyunca sürünür. Adam ve RMSProp eğimi küçük olan yönde adımlarını büyüttükleri için kanal boyunca daha hızlı ilerler.";
+    if (id === "tepeli") return "Hangisi en derin çukuru (yıldız) buldu? Sinir ağlarının hata yüzeyleri de böyle girintili çıkıntılıdır; momentum sahibi yöntemler sığ çukurları aşıp geçebilir. Başka bir noktaya tıklayıp tekrar dene.";
+    if (id === "eyer") return "Eyer noktasının yakınında gradyan neredeyse sıfır; düz SGD burada çok yavaş ilerler. Momentum biriken hızıyla, Adam ise küçük eğimi büyüterek eyerden daha çabuk kaçar. Büyük sinir ağlarında asıl engel çoğu zaman yerel minimum değil, böyle düzlüklerdir.";
+    return "Her optimizer başka bir çukura yerleşebilir. Hepsi geçerli bir çözüm: sinir ağı eğitiminde de aynı başarıyı veren pek çok farklı ağırlık kombinasyonu vardır.";
+  }
+  function draw() { if (!st.surf) return; drawMap(); draw3D(); table(); }
+
+  function init(root) {
+    root.innerHTML = `
+    <div class="lab">
+      <div class="stage">
+        <div class="row">
+          <div class="card w-main"><h2>Hata yüzeyi haritası</h2><p class="sub">Yükseklik eğrileri ve optimizer yolları. Yıldız = en alçak nokta. Tıkla: başlangıç noktası.</p><canvas id="g-map" class="framed"></canvas></div>
+          <div class="card w-main"><h2>Üç boyutlu görünüm</h2><p class="sub">Aynı yüzey arazi gibi. Toplar yokuş aşağı yuvarlanıyor.</p><canvas id="g-3d" class="framed"></canvas></div>
+        </div>
+        <div class="explain" id="g-explain"></div>
+      </div>
+      <aside class="panel">
+        ${UI.group("Yüzey", UI.select("g-surf", "Hata yüzeyi", Object.entries(SURF).map(([k, s]) => [k, s.ad]), "kase") + `<p class="note" id="g-note"></p>`)}
+        ${UI.group("Yarışanlar", `<div class="checks">${OPTS.map((o) => UI.check("g-o-" + o.id, `<span style="color:${o.renk};font-weight:700">●</span> ${o.ad}`, true)).join("")}</div>
+          <table class="race"><tbody id="g-table"></tbody></table><p class="note">Sağdaki sayı: o anki yükseklik (hata). Adım: <b id="g-step">0</b></p>`)}
+        ${UI.group("Ayarlar", UI.range("g-lr", "Öğrenme oranı çarpanı", -1.5, 1, 0.1, 0, (v) => "×" + Math.pow(10, v).toPrecision(2))
+          + UI.range("g-noise", "Gradyan gürültüsü", 0, 100, 10, 0, (v) => "%" + v)
+          + UI.range("g-speed", "Hız (adım/kare)", 1, 20, 1, 2))}
+        <div class="btns"><button class="btn primary" id="g-run">▶ Başlat</button><button class="btn" id="g-one">Tek adım</button><button class="btn" id="g-reset">Baştan</button></div>
+        <p class="note"><b>SGD:</b> eğim yönünde düz adım. <b>Momentum:</b> hız biriktirir. <b>RMSProp:</b> her yönde adımı eğimin büyüklüğüne böler. <b>Adam:</b> ikisini birleştirir; günümüzde en yaygın olanı.</p>
+      </aside>
+    </div>`;
+    cv = $("#g-map"); ctx = setupCanvas(cv, S, S); cv3 = $("#g-3d"); ctx3 = setupCanvas(cv3, S, S);
+    [mapC, mapX] = offscreen(RES, RES);
+    $("#g-surf").onchange = () => { setRun(false); setSurface(); };
+    OPTS.forEach((o) => ($("#g-o-" + o.id).onchange = resetRacers));
+    $("#g-run").onclick = () => { if (st.racers.every((r) => r.status)) resetRacers(); setRun(!st.run); };
+    $("#g-one").onclick = () => { setRun(false); stepAll(); draw(); };
+    $("#g-reset").onclick = () => { setRun(false); resetRacers(); };
+    $("#g-lr").onchange = () => {};
+    cv.addEventListener("pointerdown", (e) => { const [px, py] = canvasPos(cv, e); st.start = toW(px, py); resetRacers(); });
+    let drag = null;
+    cv3.addEventListener("pointerdown", (e) => { drag = [e.clientX, e.clientY, st.yaw, st.pitch]; cv3.setPointerCapture(e.pointerId); });
+    cv3.addEventListener("pointermove", (e) => { if (!drag) return; st.yaw = drag[2] + (e.clientX - drag[0]) * 0.01; st.pitch = clamp(drag[3] + (e.clientY - drag[1]) * 0.01, 0.15, 1.45); if (!st.run) draw(); });
+    cv3.addEventListener("pointerup", () => (drag = null));
+    setSurface();
+  }
+  function frame() { if (!st.run) return; for (let i = 0; i < num("g-speed"); i++) stepAll(); draw(); }
+  return { init, frame, onTheme: () => draw() };
+})();
+// ===================================================================== 3) RAKAM TANIMA
+Modules.rakam = (() => {
+  const D = 280, NTRAIN = 4000, NTEST = 600;
+  const st = { run: false, train: [], test: [], ready: false, gen: 0, net: null, batches: 0, lossAvg: null, accHist: [], lossHist: [],
+    acc: null, conf: null, input: null, probs: null, hasInk: false, drawing: false, samples: [], userAdded: 0, frame: 0 };
+  let dcv, dctx, pcv, pctx, wcv, wctx, ocv, octx, ccv, cctx, mcv, mctx, scv, sctx, gcv, gctx;
+  let srcC, srcX, tmpC, tmpX, outC, outX, tileC, tileX;
+
+  // --- sentetik el yazısı: her rakam bir veya birkaç çizgi yolu (0..1 kutusunda)
+  const circ = (cx, cy, rx, ry, a0 = 0, a1 = Math.PI * 2, n = 18) => Array.from({ length: n + 1 }, (_, i) => { const a = a0 + ((a1 - a0) * i) / n; return [cx + rx * Math.cos(a), cy + ry * Math.sin(a)]; });
+  const STROKES = {
+    0: [() => [circ(0.5, 0.5, 0.3, 0.45)]],
+    1: [() => [[[0.32, 0.22], [0.55, 0.05], [0.55, 0.95]]], () => [[[0.5, 0.05], [0.5, 0.95]]], () => [[[0.3, 0.2], [0.52, 0.05], [0.52, 0.95]], [[0.3, 0.95], [0.75, 0.95]]]],
+    2: [() => [[[0.15, 0.25], [0.3, 0.07], [0.6, 0.04], [0.82, 0.2], [0.8, 0.4], [0.5, 0.65], [0.15, 0.95], [0.88, 0.95]]]],
+    3: [() => [[[0.15, 0.13], [0.45, 0.03], [0.78, 0.15], [0.75, 0.36], [0.45, 0.48], [0.8, 0.6], [0.83, 0.82], [0.5, 0.97], [0.15, 0.86]]]],
+    4: [() => [[[0.65, 0.95], [0.65, 0.05], [0.1, 0.66], [0.9, 0.66]]], () => [[[0.25, 0.05], [0.15, 0.6], [0.88, 0.6]], [[0.68, 0.3], [0.68, 0.97]]]],
+    5: [() => [[[0.82, 0.05], [0.28, 0.05], [0.22, 0.45], [0.55, 0.38], [0.82, 0.56], [0.8, 0.82], [0.5, 0.97], [0.15, 0.87]]]],
+    6: [() => [[[0.75, 0.06], [0.45, 0.06], [0.22, 0.35], [0.18, 0.7], [0.35, 0.95], [0.65, 0.95], [0.8, 0.75], [0.7, 0.55], [0.45, 0.5], [0.2, 0.66]]]],
+    7: [() => [[[0.12, 0.05], [0.88, 0.05], [0.38, 0.95]]], () => [[[0.12, 0.05], [0.88, 0.05], [0.42, 0.95]], [[0.35, 0.5], [0.75, 0.5]]]],
+    8: [() => [circ(0.5, 0.27, 0.22, 0.22, Math.PI / 2, Math.PI * 2.5), circ(0.5, 0.71, 0.28, 0.25, -Math.PI / 2, Math.PI * 1.5)]],
+    9: [() => [circ(0.5, 0.3, 0.25, 0.25, 0, Math.PI * 2), [[0.75, 0.3], [0.72, 0.95]]], () => [circ(0.48, 0.3, 0.26, 0.24, 0, Math.PI * 2), [[0.74, 0.32], [0.55, 0.95]]]],
+  };
+  const FONTS = ["Arial", "Georgia", "Verdana", "Courier New", "Times New Roman", "Trebuchet MS", "Tahoma", "sans-serif", "serif", "monospace"];
+
+  function synth(label) {
+    srcX.setTransform(1, 0, 0, 1, 0, 0); srcX.clearRect(0, 0, 84, 84);
+    const rot = rand(-0.22, 0.22), sh = rand(-0.3, 0.3), sx = rand(0.75, 1.15), sy = rand(0.9, 1.1);
+    srcX.setTransform(1, 0, 0, 1, 42, 42); srcX.rotate(rot); srcX.transform(1, 0, sh, 1, 0, 0); srcX.scale(sx, sy);
+    srcX.strokeStyle = srcX.fillStyle = "#000"; srcX.lineCap = srcX.lineJoin = "round";
+    if (Math.random() < 0.3) {
+      srcX.font = `${Math.random() < 0.5 ? 700 : 400} 64px ${FONTS[randInt(0, FONTS.length - 1)]}`;
+      srcX.textAlign = "center"; srcX.textBaseline = "middle"; srcX.fillText(String(label), 0, 3);
+    } else {
+      const v = STROKES[label], paths = v[randInt(0, v.length - 1)]();
+      srcX.lineWidth = rand(4.5, 9);
+      for (const p of paths) {
+        const q = p.map(([x, y]) => [(x - 0.5 + gauss() * 0.025) * 44, (y - 0.5 + gauss() * 0.025) * 64]);
+        srcX.beginPath(); srcX.moveTo(q[0][0], q[0][1]);
+        for (let i = 1; i < q.length - 1; i++) { const mx = (q[i][0] + q[i + 1][0]) / 2, my = (q[i][1] + q[i + 1][1]) / 2; srcX.quadraticCurveTo(q[i][0], q[i][1], mx, my); }
+        srcX.lineTo(q[q.length - 1][0], q[q.length - 1][1]); srcX.stroke();
+      }
+    }
+    srcX.setTransform(1, 0, 0, 1, 0, 0);
+    return prep(srcC, 84);
+  }
+  // MNIST tarzı ön işleme: mürekkebi kırp, 20x20'ye sığdır, ağırlık merkezini 28x28'in ortasına al
+  function prep(c, size) {
+    const g = c.getContext("2d").getImageData(0, 0, size, size).data;
+    let x0 = size, y0 = size, x1 = -1, y1 = -1;
+    for (let y = 0; y < size; y++) for (let x = 0; x < size; x++) if (g[(y * size + x) * 4 + 3] > 30) { if (x < x0) x0 = x; if (x > x1) x1 = x; if (y < y0) y0 = y; if (y > y1) y1 = y; }
+    if (x1 < 0) return null;
+    const w = x1 - x0 + 1, h = y1 - y0 + 1, s = 20 / Math.max(w, h);
+    // önce orta boy ara tuvale (daha düzgün küçültme için)
+    tmpX.clearRect(0, 0, 112, 112); tmpX.imageSmoothingEnabled = true; tmpX.imageSmoothingQuality = "high";
+    tmpX.drawImage(c, x0, y0, w, h, 56 - (w * s * 2) / 2, 56 - (h * s * 2) / 2, w * s * 2, h * s * 2);
+    outX.clearRect(0, 0, 28, 28); outX.imageSmoothingEnabled = true; outX.imageSmoothingQuality = "high";
+    outX.drawImage(tmpC, 0, 0, 112, 112, 0, 0, 28, 28);
+    let d = outX.getImageData(0, 0, 28, 28).data, mx = 0, my = 0, m = 0;
+    for (let i = 0; i < 784; i++) { const a = d[i * 4 + 3]; mx += (i % 28) * a; my += Math.floor(i / 28) * a; m += a; }
+    const dx = Math.round(13.5 - mx / m), dy = Math.round(13.5 - my / m);
+    const v = new Float64Array(784);
+    for (let y = 0; y < 28; y++) for (let x = 0; x < 28; x++) {
+      const sx = x - dx, sy = y - dy;
+      if (sx >= 0 && sx < 28 && sy >= 0 && sy < 28) { const a = d[(sy * 28 + sx) * 4 + 3] / 255; v[y * 28 + x] = a > 0.04 ? Math.min(1, a * 1.15) : 0; }
+    }
+    return v;
+  }
+  function shifted(v, dx, dy) {
+    const o = new Float64Array(784);
+    for (let y = 0; y < 28; y++) for (let x = 0; x < 28; x++) { const sx = x - dx, sy = y - dy; if (sx >= 0 && sx < 28 && sy >= 0 && sy < 28) o[y * 28 + x] = v[sy * 28 + sx]; }
+    return o;
+  }
+
+  function newNet() {
+    st.net = new MLP([784, num("d-hidden"), 10], val("d-act"), "softmax");
+    st.batches = 0; st.lossAvg = null; st.accHist = []; st.lossHist = []; st.acc = null; st.conf = null;
+    evaluate(); predictInput(); drawAll(true);
+  }
+  function evaluate() {
+    if (!st.test.length) return;
+    const conf = Array.from({ length: 10 }, () => new Array(10).fill(0)); let ok = 0;
+    for (const [x, t] of st.test) { const p = st.net.predict(x); let b = 0; for (let j = 1; j < 10; j++) if (p[j] > p[b]) b = j; conf[t][b]++; if (b === t) ok++; }
+    st.conf = conf; st.acc = ok / st.test.length; st.accHist.push(st.acc * 100);
+    st.samples = Array.from({ length: 14 }, () => { const [x, t] = st.test[randInt(0, st.test.length - 1)]; const p = st.net.predict(x); let b = 0; for (let j = 1; j < 10; j++) if (p[j] > p[b]) b = j; return [x, t, b]; });
+  }
+  function trainBatch() {
+    const bs = 32, lr = +val("d-lr"), opt = val("d-opt"); let L = 0;
+    for (let i = 0; i < bs; i++) { const [x, t] = st.train[randInt(0, st.train.length - 1)]; L += st.net.backward(x, t).loss; }
+    st.net.step(bs, lr, opt, 0);
+    L /= bs; st.lossAvg = st.lossAvg == null ? L : st.lossAvg * 0.95 + L * 0.05;
+    st.batches++;
+    if (st.batches % 10 === 0) st.lossHist.push(st.lossAvg);
+    if (st.batches % 50 === 0) evaluate();
+    if (!st.net.healthy()) { setRun(false); st.blown = true; }
+  }
+  function setRun(v) { st.run = v; $("#d-run").textContent = v ? "⏸ Duraklat" : "▶ Eğitimi başlat"; }
+  function predictInput() {
+    if (!st.hasInk) { st.input = null; st.probs = null; st.hid = null; return; }
+    st.input = prep(dcv, dcv.width);
+    if (!st.input) { st.probs = null; return; }
+    const { A } = st.net.forward(st.input); st.probs = A[2]; st.hid = A[1];
+  }
+
+  // --------------------------------------------- çizim
+  function tile(ctx, v, x, y, s, signed, maxAbs) {
+    const img = tileX.createImageData(28, 28);
+    for (let i = 0; i < 784; i++) {
+      const c = signed ? Theme.dS(0.5 + (v[i] / maxAbs) * 0.5) : mix(Theme.rgb.surface, Theme.rgb.ink, v[i]);
+      img.data.set([c[0], c[1], c[2], 255], i * 4);
+    }
+    tileX.putImageData(img, 0, 0); ctx.imageSmoothingEnabled = false; ctx.drawImage(tileC, x, y, s, s);
+  }
+  function drawProbs() {
+    const W = pcv._w, H = pcv._h; pctx.fillStyle = Theme.c.surface; pctx.fillRect(0, 0, W, H);
+    const bh = (H - 8) / 10, best = st.probs ? st.probs.indexOf(Math.max(...st.probs)) : -1;
+    pctx.font = "600 13px " + getComputedStyle(document.body).getPropertyValue("--f-mono"); pctx.textBaseline = "middle";
+    for (let k = 0; k < 10; k++) {
+      const y = 4 + k * bh, p = st.probs ? st.probs[k] : 0;
+      pctx.fillStyle = Theme.c.ink; pctx.textAlign = "left"; pctx.fillText(k, 6, y + bh / 2);
+      pctx.fillStyle = Theme.c.sunk; pctx.fillRect(26, y + 3, W - 76, bh - 6);
+      pctx.fillStyle = k === best ? Theme.c.accent : Theme.c.muted; pctx.fillRect(26, y + 3, (W - 76) * p, bh - 6);
+      pctx.fillStyle = Theme.c.muted; pctx.textAlign = "right"; pctx.fillText(st.probs ? Math.round(p * 100) + "%" : "", W - 4, y + bh / 2);
+    }
+    $("#d-guess").textContent = best >= 0 ? best : "?";
+    $("#d-guess-p").textContent = best >= 0 ? `%${Math.round(st.probs[best] * 100)} emin` : "bir rakam çiz";
+    // ağın gördüğü 28x28
+    mctx.fillStyle = Theme.c.surface; mctx.fillRect(0, 0, 84, 84);
+    if (st.input) tile(mctx, st.input, 0, 0, 84, false);
+  }
+  function drawWeights() {
+    const H = st.net.sizes[1], W1 = st.net.W[0], cols = H <= 16 ? 8 : 16, rows = Math.ceil(H / cols);
+    const cw = 760, s = Math.floor((cw - (cols - 1) * 4) / cols), hh = rows * (s + 4) - 4;
+    if (wcv._h !== hh) wctx = setupCanvas(wcv, cw, hh);
+    wctx.fillStyle = Theme.c.surface; wctx.fillRect(0, 0, wcv._w, wcv._h);
+    let hm = 1e-9; if (st.hid) for (const a of st.hid) hm = Math.max(hm, Math.abs(a));
+    for (let j = 0; j < H; j++) {
+      const r = W1.subarray(j * 784, (j + 1) * 784); let m = 1e-9; for (const w of r) m = Math.max(m, Math.abs(w));
+      const x = (j % cols) * (s + 4), y = Math.floor(j / cols) * (s + 4);
+      tile(wctx, r, x, y, s, true, m);
+      if (st.hid) { const a = Math.abs(st.hid[j]) / hm; wctx.strokeStyle = Theme.c.accent; wctx.globalAlpha = a; wctx.lineWidth = 3; wctx.strokeRect(x + 1.5, y + 1.5, s - 3, s - 3); wctx.globalAlpha = 1; }
+    }
+    // çıkış nöronlarının yaklaşık "şablonu": W2 · W1
+    const W2 = st.net.W[1], ow = Math.floor((ocv._w - 9 * 4) / 10);
+    octx.fillStyle = Theme.c.surface; octx.fillRect(0, 0, ocv._w, ocv._h);
+    octx.font = "600 12px " + getComputedStyle(document.body).getPropertyValue("--f-mono"); octx.textAlign = "center"; octx.textBaseline = "alphabetic";
+    for (let c = 0; c < 10; c++) {
+      const t = new Float64Array(784);
+      for (let j = 0; j < H; j++) { const w = W2[c * H + j]; const o = j * 784; for (let i = 0; i < 784; i++) t[i] += w * W1[o + i]; }
+      let m = 1e-9; for (const v of t) m = Math.max(m, Math.abs(v));
+      tile(octx, t, c * (ow + 4), 0, ow, true, m);
+      octx.fillStyle = Theme.c.ink; octx.fillText(c, c * (ow + 4) + ow / 2, ow + 15);
+    }
+  }
+  function drawConf() {
+    const W = ccv._w, cs = (W - 30) / 10; cctx.fillStyle = Theme.c.surface; cctx.fillRect(0, 0, W, ccv._h);
+    cctx.font = "10px " + getComputedStyle(document.body).getPropertyValue("--f-mono"); cctx.textAlign = "center"; cctx.textBaseline = "middle";
+    for (let k = 0; k < 10; k++) { cctx.fillStyle = Theme.c.muted; cctx.fillText(k, 30 + k * cs + cs / 2, 10); cctx.fillText(k, 12, 22 + k * cs + cs / 2); }
+    if (!st.conf) return;
+    for (let t = 0; t < 10; t++) { const tot = st.conf[t].reduce((a, b) => a + b, 0) || 1;
+      for (let p = 0; p < 10; p++) { const v = st.conf[t][p] / tot, x = 30 + p * cs, y = 22 + t * cs;
+        const base = t === p ? Theme.rgb.good : Theme.rgb.bad;
+        cctx.fillStyle = rgbStr(mix(Theme.rgb.sunk, base, t === p ? v : Math.min(1, v * 3))); cctx.fillRect(x + 1, y + 1, cs - 2, cs - 2);
+        if (st.conf[t][p]) { cctx.fillStyle = v > 0.5 ? Theme.c.surface : Theme.c.ink; cctx.fillText(st.conf[t][p], x + cs / 2, y + cs / 2); } } }
+  }
+  function drawSamples() {
+    const W = scv._w, n = st.samples.length, s = Math.min(46, (W - (n - 1) * 6) / n);
+    sctx.fillStyle = Theme.c.surface; sctx.fillRect(0, 0, W, scv._h);
+    sctx.font = "600 12px " + getComputedStyle(document.body).getPropertyValue("--f-mono"); sctx.textAlign = "center"; sctx.textBaseline = "alphabetic";
+    st.samples.forEach(([x, t, b], i) => { const px = i * (s + 6); tile(sctx, x, px, 0, s, false);
+      sctx.fillStyle = b === t ? Theme.c.good : Theme.c.bad; sctx.fillText(b === t ? `${b} ✓` : `${b} ✗`, px + s / 2, s + 15); });
+  }
+  function drawAll(full) {
+    if (!st.net) return;
+    drawProbs(); drawWeights();
+    if (full) { drawConf(); drawSamples(); drawChart(gcv, gctx, [{ data: st.accHist, color: Theme.c.accent, width: 2 }], { ymin: 0, ymax: 100, xlabel: "ölçüm", yfmt: (v) => "%" + v.toFixed(0) }); }
+    $("#d-s-b").textContent = st.batches; $("#d-s-seen").textContent = (st.batches * 32).toLocaleString("tr-TR");
+    $("#d-s-l").textContent = fmt(st.lossAvg); $("#d-s-a").textContent = pct(st.acc);
+    $("#d-explain").innerHTML = explain();
+  }
+  function explain() {
+    if (!st.ready) return `Eğitim verisi hazırlanıyor: binlerce rakam rastgele eğim, kalınlık ve yazı tipleriyle üretiliyor… <b>%${Math.round((st.gen / (NTRAIN + NTEST)) * 100)}</b>`;
+    if (st.blown) return "<b>Ağ dağıldı</b>: öğrenme oranı çok yüksek. Oranı düşürüp Ağı sıfırla'ya bas.";
+    if (st.batches === 0) return "Ağ rastgele ağırlıklarla başladı; sol üstteki kutuya bir rakam çizersen şu an <b>tamamen tahmin ettiğini</b> görürsün. “Gizli nöronların gördüğü” bölümündeki kareler şimdilik rastgele gürültü. ▶ Eğitimi başlat ve bu karelerin nasıl <b>desenlere</b> dönüştüğünü izle.";
+    if (st.acc < 0.5) return "İlk öğrenme anları: gizli nöronlar gürültüden kurtulup kaba lekeler oluşturmaya başladı. Her nöron resmin belli bir bölgesine bakmayı öğreniyor. Turuncu = bu piksel boyalıysa nöron güçlenir, mavi = zayıflar.";
+    if (st.acc < 0.85) return "Ağ hızla gelişiyor. Alttaki <b>çıkış şablonlarına</b> bak: her rakamın nöronu, gizli nöronların karışımıyla o rakamın kaba bir silüetini aramaya başladı. Karışıklık tablosunda kırmızı hücreler hangi rakamların birbirine karıştırıldığını gösterir (sık görülen: 4–9, 3–5, 7–1).";
+    if (st.hasInk && st.probs && Math.max(...st.probs) < 0.6) return "Ağ çizdiğin rakamdan emin değil. Eğitim verisi sentetik olduğu için senin el yazın ona yabancı gelebilir. Aşağıdaki doğru rakam düğmesine basarak <b>bu örneği ona öğret</b>: çizimin kaydırılmış kopyalarıyla birlikte eğitim setine eklenir.";
+    return "Ağ artık rakamları büyük ölçüde tanıyor. Sen bir şey çizdiğinde kutuların çevresindeki vurgulu çerçeveler o anda en çok hangi gizli nöronların ateşlendiğini gösteriyor. Bir rakamı yarım bırak, çok eğik ya da kalın çiz ve ağın kararının nasıl değiştiğini izle.";
+  }
+  function clearDraw() { dctx.clearRect(0, 0, dcv.width, dcv.height); st.hasInk = false; predictInput(); drawAll(false); }
+  function teach(label) {
+    if (!st.input) return;
+    st.train.push([st.input, label]);
+    for (let k = 0; k < 15; k++) st.train.push([shifted(st.input, randInt(-2, 2), randInt(-2, 2)), label]);
+    st.userAdded++;
+    $("#d-teach-msg").textContent = `“${label}” olarak öğretildi (${st.userAdded} örnek eklendi). Eğitimi sürdür.`;
+    for (let k = 0; k < 20; k++) trainBatch();
+    predictInput(); drawAll(true);
+  }
+
+  function init(root) {
+    root.innerHTML = `
+    <div class="lab">
+      <div class="stage">
+        <div class="row">
+          <div class="card" style="flex:0 1 300px">
+            <h2>Buraya bir rakam çiz</h2><p class="sub">Fare ya da parmakla, kutuyu dolduracak büyüklükte.</p>
+            <canvas id="d-draw" class="framed" style="max-width:280px;background:var(--sunk)"></canvas>
+            <div class="btns" style="margin-top:8px"><button class="btn wide" id="d-clear">Temizle</button></div>
+          </div>
+          <div class="card" style="flex:1 1 260px">
+            <h2>Ağın tahmini</h2>
+            <div style="display:flex;gap:14px;align-items:center;margin:4px 0 8px">
+              <div style="font-family:var(--f-display);font-size:54px;font-weight:700;line-height:1;min-width:40px" id="d-guess">?</div>
+              <div><div class="note" id="d-guess-p"></div>
+                <div style="display:flex;gap:8px;align-items:center;margin-top:6px"><canvas id="d-mini" class="framed" style="width:56px"></canvas><span class="note">Ağın gördüğü<br>28×28 piksel</span></div></div>
+            </div>
+            <canvas id="d-probs"></canvas>
+            <p class="note" style="margin-top:8px">Yanlış mı bildi? Doğrusunu öğret:</p>
+            <div class="digits" id="d-teach">${[...Array(10)].map((_, i) => `<button class="btn" data-d="${i}">${i}</button>`).join("")}</div>
+            <p class="note" id="d-teach-msg"></p>
+          </div>
+        </div>
+        <div class="card"><h2>Gizli nöronların gördüğü</h2><p class="sub">Her kare bir gizli nöronun 784 piksele verdiği ağırlık. Turuncu: “burası boyalıysa iyi”, mavi: “burası boş olmalı”. Çerçeve = çizimine verdiği tepki.</p><canvas id="d-w"></canvas></div>
+        <div class="card"><h2>Çıkış şablonları</h2><p class="sub">Her rakam nöronunun, gizli nöronlar üzerinden aradığı yaklaşık desen.</p><canvas id="d-out"></canvas></div>
+        <div class="row">
+          <div class="card" style="flex:1 1 300px"><h2>Test doğruluğu</h2><p class="sub">Ağın hiç görmediği 600 rakamda başarı.</p><canvas id="d-chart"></canvas></div>
+          <div class="card" style="flex:1 1 260px"><h2>Karışıklık tablosu</h2><p class="sub">Satır: gerçek rakam, sütun: ağın tahmini.</p><canvas id="d-conf"></canvas></div>
+        </div>
+        <div class="card"><h2>Test örneklerinden bir kesit</h2><canvas id="d-samples"></canvas></div>
+        <div class="stats">${UI.stat("d-s-b", "Adım (batch)")}${UI.stat("d-s-seen", "Görülen örnek")}${UI.stat("d-s-l", "Kayıp")}${UI.stat("d-s-a", "Test doğruluğu")}</div>
+        <div class="explain" id="d-explain"></div>
+      </div>
+      <aside class="panel">
+        ${UI.group("Ağ yapısı", UI.select("d-hidden", "Gizli nöron sayısı", [["16", "16"], ["32", "32"], ["64", "64"]], "32")
+          + UI.select("d-act", "Aktivasyon", [["relu", "ReLU"], ["tanh", "tanh"], ["sigmoid", "sigmoid"]], "relu")
+          + `<p class="note">784 girdi (28×28 piksel) → gizli katman → 10 çıkış (0–9).</p>`)}
+        ${UI.group("Eğitim", UI.select("d-opt", "Optimizasyon", [["adam", "Adam"], ["momentum", "Momentum"], ["sgd", "SGD"]], "adam")
+          + UI.select("d-lr", "Öğrenme oranı", ["0.0003", "0.001", "0.003", "0.01", "0.03", "0.1", "0.3"], "0.001")
+          + UI.range("d-speed", "Hız (batch/kare)", 1, 20, 1, 5))}
+        <div class="btns"><button class="btn primary" id="d-run" disabled>▶ Eğitimi başlat</button><button class="btn wide" id="d-reset">Ağı sıfırla</button></div>
+        <p class="note">Eğitim verisi tamamen bu sayfada üretiliyor: farklı yazı tipleri ve elle çizime benzeyen eğri çizgiler, rastgele eğim, kalınlık ve kaydırma ile. Gerçek el yazısı veri setleri (MNIST gibi) 60.000 örnek içerir; burada 4.000 yeterli oluyor.</p>
+      </aside>
+    </div>`;
+    dcv = $("#d-draw"); dcv.width = dcv.height = D; dcv._w = dcv._h = D; dcv.style.aspectRatio = "1"; dctx = dcv.getContext("2d", { willReadFrequently: true });
+    pcv = $("#d-probs"); pcv.style.maxWidth = "440px"; pctx = setupCanvas(pcv, 300, 230);
+    mcv = $("#d-mini"); mctx = setupCanvas(mcv, 84, 84);
+    wcv = $("#d-w"); wctx = setupCanvas(wcv, 760, 100);
+    ocv = $("#d-out"); octx = setupCanvas(ocv, 760, 92);
+    gcv = $("#d-chart"); gctx = setupCanvas(gcv, 420, 200);
+    ccv = $("#d-conf"); cctx = setupCanvas(ccv, 300, 292);
+    scv = $("#d-samples"); sctx = setupCanvas(scv, 760, 66);
+    [srcC, srcX] = offscreen(84, 84, true); [tmpC, tmpX] = offscreen(112, 112, true); [outC, outX] = offscreen(28, 28, true); [tileC, tileX] = offscreen(28, 28);
+
+    let last = null;
+    const pt = (e) => canvasPos(dcv, e);
+    dcv.addEventListener("pointerdown", (e) => { st.drawing = true; dcv.setPointerCapture(e.pointerId); last = pt(e);
+      dctx.fillStyle = Theme.c.ink; dctx.beginPath(); dctx.arc(last[0], last[1], 11, 0, 7); dctx.fill(); st.hasInk = true; });
+    dcv.addEventListener("pointermove", (e) => { if (!st.drawing) return; const p = pt(e);
+      dctx.strokeStyle = Theme.c.ink; dctx.lineWidth = 22; dctx.lineCap = "round"; dctx.beginPath(); dctx.moveTo(last[0], last[1]); dctx.lineTo(p[0], p[1]); dctx.stroke(); last = p; st.dirty = true; });
+    const end = () => { if (st.drawing) { st.drawing = false; predictInput(); drawAll(false); } };
+    dcv.addEventListener("pointerup", end); dcv.addEventListener("pointercancel", end);
+    $("#d-clear").onclick = clearDraw;
+    $("#d-teach").addEventListener("click", (e) => { const b = e.target.closest("[data-d]"); if (b) teach(+b.dataset.d); });
+    $("#d-run").onclick = () => setRun(!st.run);
+    $("#d-reset").onclick = () => { setRun(false); st.blown = false; newNet(); };
+    for (const id of ["d-hidden", "d-act"]) $("#" + id).onchange = () => { setRun(false); st.blown = false; newNet(); };
+    st.net = new MLP([784, num("d-hidden"), 10], val("d-act"), "softmax");
+    drawAll(false);
+  }
+  function frame() {
+    st.frame++;
+    if (!st.ready) { // veriyi parça parça üret (sayfa donmasın)
+      const t0 = performance.now();
+      while (performance.now() - t0 < 25 && st.gen < NTRAIN + NTEST) {
+        const label = st.gen % 10, v = synth(label);
+        if (v) (st.gen < NTRAIN ? st.train : st.test).push([v, label]);
+        st.gen++;
+      }
+      if (st.gen >= NTRAIN + NTEST) { st.ready = true; shuffle(st.train); $("#d-run").disabled = false; newNet(); }
+      else $("#d-explain").innerHTML = explain();
+      return;
+    }
+    if (st.dirty && st.frame % 3 === 0) { st.dirty = false; predictInput(); drawProbs(); }
+    if (!st.run) return;
+    for (let i = 0; i < num("d-speed"); i++) trainBatch();
+    if (st.hasInk) predictInput();
+    drawAll(st.frame % 6 === 0);
+  }
+  return { init, frame, onTheme: () => drawAll(true) };
+})();
+// ===================================================================== 4) EVRİMLE ARABA SÜRME
+Modules.araba = (() => {
+  const W = 900, H = 560, N = 520, HW = 25, RAYS = [-1.05, -0.5, 0, 0.5, 1.05], RL = 150, SIZES = [6, 8, 2], MAXSTEP = 2600;
+  const st = { run: false, gen: 1, step: 0, pop: [], track: null, best: [], avg: [], bestEver: 0, laps: 0, bestCar: null };
+  let cv, ctx, ncv, nctx, gcv, gctx, trackC, trackX;
+
+  const TRACKS = {
+    oval: [[2, 0.1, 0.3], [4, 0.03, 0.5]],
+    kivrimli: [[2, 0.12, 0.4], [3, 0.15, 1.3], [5, 0.07, 2.1]],
+    zorlu: [[2, 0.12, 0.2], [3, 0.16, 2.0], [4, 0.1, 0.7], [6, 0.05, 1.1], [7, 0.03, 0.4]],
+  };
+  function makeTrack(kind) {
+    const terms = kind === "rastgele" ? [[2, rand(0.04, 0.14), rand(0, 6)], [3, rand(0.04, 0.14), rand(0, 6)], [4, rand(0, 0.08), rand(0, 6)], [5, rand(0, 0.05), rand(0, 6)]] : TRACKS[kind];
+    const c = [];
+    for (let i = 0; i < N; i++) {
+      const a = (i / N) * Math.PI * 2; let r = 1;
+      for (const [k, amp, ph] of terms) r += amp * Math.sin(k * a + ph);
+      c.push([Math.cos(a) * r, Math.sin(a) * r]);
+    }
+    // tuvale sığdır
+    const xs = c.map((p) => p[0]), ys = c.map((p) => p[1]), m = HW + 14;
+    const x0 = Math.min(...xs), x1 = Math.max(...xs), y0 = Math.min(...ys), y1 = Math.max(...ys);
+    for (const p of c) { p[0] = m + ((p[0] - x0) / (x1 - x0)) * (W - 2 * m); p[1] = m + ((p[1] - y0) / (y1 - y0)) * (H - 2 * m); }
+    const L = [], R = [], T = [];
+    for (let i = 0; i < N; i++) {
+      const p = c[(i - 1 + N) % N], q = c[(i + 1) % N]; let tx = q[0] - p[0], ty = q[1] - p[1]; const l = Math.hypot(tx, ty); tx /= l; ty /= l;
+      T.push([tx, ty]); L.push([c[i][0] - ty * HW, c[i][1] + tx * HW]); R.push([c[i][0] + ty * HW, c[i][1] - tx * HW]);
+    }
+    st.track = { c, L, R, T };
+    paintTrack();
+  }
+  function paintTrack() { // pisti bir kez arka plana çiz
+    const { c, L, R } = st.track;
+    trackX.setTransform(2, 0, 0, 2, 0, 0); trackX.clearRect(0, 0, W, H);
+    trackX.fillStyle = Theme.c.sunk; trackX.fillRect(0, 0, W, H);
+    trackX.beginPath(); L.forEach(([x, y], i) => (i ? trackX.lineTo(x, y) : trackX.moveTo(x, y))); trackX.closePath();
+    R.slice().reverse().forEach(([x, y], i) => (i ? trackX.lineTo(x, y) : trackX.moveTo(x, y))); trackX.closePath();
+    trackX.fillStyle = Theme.c.surface; trackX.fill("evenodd");
+    trackX.strokeStyle = Theme.c.muted; trackX.lineWidth = 2;
+    for (const side of [L, R]) { trackX.beginPath(); side.forEach(([x, y], i) => (i ? trackX.lineTo(x, y) : trackX.moveTo(x, y))); trackX.closePath(); trackX.stroke(); }
+    trackX.setLineDash([8, 10]); trackX.strokeStyle = Theme.c.line; trackX.lineWidth = 1.5;
+    trackX.beginPath(); c.forEach(([x, y], i) => (i ? trackX.lineTo(x, y) : trackX.moveTo(x, y))); trackX.closePath(); trackX.stroke(); trackX.setLineDash([]);
+    trackX.strokeStyle = Theme.c.ink; trackX.lineWidth = 3; trackX.beginPath(); trackX.moveTo(...L[0]); trackX.lineTo(...R[0]); trackX.stroke();
+  }
+
+  const GENES = SIZES.slice(1).reduce((s, n, i) => s + n * SIZES[i] + n, 0);
+  const randGenome = () => Float64Array.from({ length: GENES }, () => gauss() * 0.8);
+  function think(g, x) { // 6 → 8 → 2, tanh
+    const acts = [x]; let a = x, o = 0;
+    for (let l = 0; l < SIZES.length - 1; l++) {
+      const ni = SIZES[l], no = SIZES[l + 1], na = new Array(no);
+      for (let j = 0; j < no; j++) { let s = 0; for (let i = 0; i < ni; i++) s += g[o + j * ni + i] * a[i]; s += g[o + ni * no + j]; na[j] = Math.tanh(s); }
+      o += ni * no + no; acts.push(na); a = na;
+    }
+    return acts;
+  }
+  function weights(g) { const Ws = []; let o = 0; for (let l = 0; l < SIZES.length - 1; l++) { const n = SIZES[l] * SIZES[l + 1]; Ws.push(g.subarray(o, o + n)); o += n + SIZES[l + 1]; } return Ws; }
+
+  function spawn(genome, elite) {
+    const t = st.track;
+    return { g: genome, x: t.c[0][0], y: t.c[0][1], a: Math.atan2(t.T[0][1], t.T[0][0]), v: 0, alive: true, idx: 0, prog: 0, best: 0, lastImp: 0, sens: new Array(5).fill(1), elite, acts: null };
+  }
+  function newPopulation() {
+    st.gen = 1; st.best = []; st.avg = []; st.bestEver = 0; st.laps = 0;
+    st.pop = Array.from({ length: num("a-pop") }, () => spawn(randGenome(), false)); st.step = 0;
+  }
+  function restartGen(genomes, elites) { st.pop = genomes.map((g, i) => spawn(g, i < elites)); st.step = 0; }
+
+  function raySeg(px, py, dx, dy, ax, ay, bx, by) {
+    const ex = bx - ax, ey = by - ay, den = dx * ey - dy * ex; if (Math.abs(den) < 1e-9) return Infinity;
+    const t = ((ax - px) * ey - (ay - py) * ex) / den, u = ((ax - px) * dy - (ay - py) * dx) / den;
+    return t >= 0 && u >= 0 && u <= 1 ? t : Infinity;
+  }
+  function sense(car) {
+    const t = st.track, near = [], lim = (RL + 12) ** 2;
+    for (const S of [t.L, t.R]) for (let i = 0; i < N; i++) if ((S[i][0] - car.x) ** 2 + (S[i][1] - car.y) ** 2 < lim) near.push([S, i]);
+    for (let r = 0; r < RAYS.length; r++) {
+      const dx = Math.cos(car.a + RAYS[r]), dy = Math.sin(car.a + RAYS[r]); let best = RL;
+      for (const [S, i] of near) { const j = (i + 1) % N; const d = raySeg(car.x, car.y, dx, dy, S[i][0], S[i][1], S[j][0], S[j][1]); if (d < best) best = d; }
+      car.sens[r] = best / RL;
+    }
+  }
+  function stepCar(car) {
+    sense(car);
+    const acts = think(car.g, [...car.sens, car.v / 7]); car.acts = acts;
+    const [steer, thr] = acts[acts.length - 1];
+    car.a += steer * 0.055; // dönüş hızı sabit: hızlı giden araba geniş döner, virajda yavaşlamayı öğrenmeli
+    car.v = clamp(car.v + thr * 0.2, 0.2, 7) * 0.995;
+    car.x += Math.cos(car.a) * car.v; car.y += Math.sin(car.a) * car.v;
+    // pist üzerindeki en yakın noktayı bul
+    const t = st.track; let bi = car.idx, bd = Infinity;
+    for (let k = -8; k <= 14; k++) { const i = (car.idx + k + N) % N, d = (t.c[i][0] - car.x) ** 2 + (t.c[i][1] - car.y) ** 2; if (d < bd) { bd = d; bi = i; } }
+    let dI = bi - car.idx; if (dI > N / 2) dI -= N; if (dI < -N / 2) dI += N;
+    car.idx = bi; car.prog += dI;
+    if (car.prog > car.best) { car.best = car.prog; car.lastImp = st.step; }
+    if (Math.sqrt(bd) > HW - 4 || st.step - car.lastImp > 160 || car.prog < -20) car.alive = false;
+  }
+  function evolve() {
+    const pop = st.pop.slice().sort((a, b) => b.best - a.best), n = num("a-pop");
+    const fit = pop.map((c) => c.best / N * 100);
+    st.best.push(fit[0]); st.avg.push(fit.reduce((a, b) => a + b, 0) / fit.length);
+    st.bestEver = Math.max(st.bestEver, fit[0]);
+    if (pop[0].best >= N) st.laps++;
+    const rate = num("a-mut") / 100, str = num("a-str") / 100, elites = Math.min(2, n), pick = () => {
+      let b = pop[randInt(0, pop.length - 1)]; for (let k = 0; k < 2; k++) { const c = pop[randInt(0, Math.max(1, Math.floor(pop.length * 0.3)) - 1)]; if (c.best > b.best) b = c; } return b; };
+    const next = pop.slice(0, elites).map((c) => c.g.slice());
+    while (next.length < n) {
+      const a = pick().g, b = pick().g, ch = new Float64Array(GENES);
+      for (let k = 0; k < GENES; k++) { ch[k] = Math.random() < 0.5 ? a[k] : b[k]; if (Math.random() < rate) ch[k] += gauss() * str; }
+      next.push(ch);
+    }
+    st.gen++; restartGen(next, elites);
+  }
+  function tick() {
+    let alive = 0;
+    for (const c of st.pop) if (c.alive) { stepCar(c); alive++; }
+    st.step++;
+    if (!alive || st.step >= MAXSTEP) evolve();
+  }
+  function setRun(v) { st.run = v; $("#a-run").textContent = v ? "⏸ Duraklat" : "▶ Başlat"; }
+
+  function draw() {
+    ctx.drawImage(trackC, 0, 0, W, H);
+    let lead = null; for (const c of st.pop) if (c.alive && (!lead || c.prog > lead.prog)) lead = c;
+    if (!lead) lead = st.pop[0];
+    st.bestCar = lead;
+    for (const c of st.pop) {
+      if (c === lead) continue;
+      ctx.save(); ctx.translate(c.x, c.y); ctx.rotate(c.a);
+      ctx.globalAlpha = c.alive ? 0.55 : 0.12; ctx.fillStyle = c.elite ? Theme.c.orange : Theme.c.blue; ctx.fillRect(-8, -4, 16, 8); ctx.restore();
+    }
+    ctx.globalAlpha = 1;
+    if (lead && on("a-rays")) {
+      ctx.strokeStyle = Theme.c.accent; ctx.lineWidth = 1;
+      RAYS.forEach((r, i) => { const d = lead.sens[i] * RL; ctx.beginPath(); ctx.moveTo(lead.x, lead.y); ctx.lineTo(lead.x + Math.cos(lead.a + r) * d, lead.y + Math.sin(lead.a + r) * d); ctx.stroke();
+        ctx.fillStyle = Theme.c.accent; ctx.beginPath(); ctx.arc(lead.x + Math.cos(lead.a + r) * d, lead.y + Math.sin(lead.a + r) * d, 3, 0, 7); ctx.fill(); });
+    }
+    if (lead) { ctx.save(); ctx.translate(lead.x, lead.y); ctx.rotate(lead.a); ctx.fillStyle = Theme.c.accent; ctx.strokeStyle = Theme.c.ink; ctx.lineWidth = 1.5;
+      ctx.fillRect(-10, -5, 20, 10); ctx.strokeRect(-10, -5, 20, 10); ctx.restore(); }
+    // ağ
+    const NW = ncv._w, NH = ncv._h; nctx.fillStyle = Theme.c.surface; nctx.fillRect(0, 0, NW, NH);
+    if (lead) {
+      const acts = lead.acts || think(lead.g, [...lead.sens, 0]);
+      drawNet(nctx, { x: 70, y: 8, w: NW - 150, h: NH - 30 }, SIZES, weights(lead.g), { node: 22, gap: 8, act: acts.map((a, l) => (l === 0 ? a.map((v) => v * 2 - 1) : a)),
+        labels: ["Algılayıcı", "Gizli", "Komut"], side: [["sol ++", "sol +", "ön", "sağ +", "sağ ++", "hız"], null, ["direksiyon", "gaz"]] });
+    }
+    drawChart(gcv, gctx, [{ data: st.best, color: Theme.c.accent, width: 2 }, { data: st.avg, color: Theme.c.muted, width: 2, dash: [5, 4] }], { ymin: 0, xlabel: "nesil", yfmt: (v) => (v / 100).toFixed(1) });
+    const alive = st.pop.filter((c) => c.alive).length;
+    $("#a-s-g").textContent = st.gen; $("#a-s-alive").textContent = `${alive} / ${st.pop.length}`;
+    $("#a-s-now").textContent = lead ? (Math.max(0, lead.best) / N).toFixed(2) + " tur" : "–";
+    $("#a-s-best").textContent = (st.bestEver / 100).toFixed(2) + " tur";
+    $("#a-explain").innerHTML = explain();
+  }
+  function explain() {
+    const g = st.gen, b = st.bestEver;
+    if (g === 1 && st.step < 60) return `${st.pop.length} araba <b>rastgele beyinlerle</b> doğdu. Hiçbiri sürmeyi bilmiyor: kimisi hemen duvara gidiyor, kimisi olduğu yerde dönüyor. Her arabanın 5 mesafe algılayıcısı ve hız bilgisi var; küçük sinir ağı bunlardan direksiyon ve gaz komutu üretiyor. Kimse ona kural öğretmeyecek.`;
+    if (g <= 3) return "Bu yöntemde <b>geri yayılım yok</b>, doğal seçilim var. Nesil bitince en uzağa giden arabaların beyinleri seçiliyor, birbirleriyle karıştırılıyor (çaprazlama) ve biraz rastgele bozuluyor (mutasyon). Turuncu arabalar önceki neslin en iyi ikisinin birebir kopyası.";
+    if (b < 60) return "Nesiller ilerledikçe grafikteki en iyi çizgi basamak basamak yükseliyor. Bazı nesillerde ilerleme durabilir: iyi bir mutasyonun ortaya çıkması şansa bağlı. Mutasyon oranını artırmak keşfi hızlandırır ama iyi beyinleri bozma riskini de artırır.";
+    if (st.laps === 0) return "Arabalar virajları öğrenmeye başladı. Sağdaki ağ şemasında öndeki arabanın beynini canlı izle: duvar sola yaklaştıkça sol algılayıcılar kararıyor ve direksiyon nöronu sağa dönüyor.";
+    return "<b>Tam tur atıldı!</b> Şimdi ilginç bir deney: Pist seçiminden başka bir pist seç. Beyinler korunur; aynı sürücülerin hiç görmedikleri pistte de sürüp süremediğini (genelleme) görürsün.";
+  }
+
+  function init(root) {
+    root.innerHTML = `
+    <div class="lab">
+      <div class="stage">
+        <div class="card"><h2>Pist</h2><p class="sub">Yeşil-mavi araba şu an önde olan; çizgiler onun mesafe algılayıcıları. Turuncu arabalar önceki neslin şampiyonları.</p><canvas id="a-main" class="framed"></canvas></div>
+        <div class="stats">${UI.stat("a-s-g", "Nesil")}${UI.stat("a-s-alive", "Hayatta")}${UI.stat("a-s-now", "Öndeki ilerleme")}${UI.stat("a-s-best", "Rekor")}</div>
+        <div class="row">
+          <div class="card w-side"><h2>Öndeki arabanın beyni</h2><p class="sub">Daireler: nöronun o anki değeri. Çizgiler: ağırlıklar (genler).</p><canvas id="a-net"></canvas></div>
+          <div class="card w-side"><h2>Nesil başarısı (tur)</h2><div class="legend"><span><i style="background:var(--accent)"></i>en iyi</span><span><i style="background:var(--muted)"></i>ortalama (kesikli)</span></div><canvas id="a-chart"></canvas></div>
+        </div>
+        <div class="explain" id="a-explain"></div>
+      </div>
+      <aside class="panel">
+        ${UI.group("Pist", UI.select("a-track", "Pist", [["oval", "Oval"], ["kivrimli", "Kıvrımlı"], ["zorlu", "Zorlu"], ["rastgele", "Rastgele"]], "kivrimli") + `<p class="note">Pisti değiştirince beyinler korunur.</p>`)}
+        ${UI.group("Evrim", UI.range("a-pop", "Nüfus", 10, 200, 10, 60) + UI.range("a-mut", "Mutasyon oranı", 1, 50, 1, 10, (v) => "%" + v) + UI.range("a-str", "Mutasyon gücü", 5, 150, 5, 50, (v) => (v / 100).toFixed(2)))}
+        ${UI.group("Görünüm", UI.range("a-speed", "Hız (adım/kare)", 1, 30, 1, 3) + UI.check("a-rays", "Algılayıcıları göster", true))}
+        <div class="btns"><button class="btn primary" id="a-run">▶ Başlat</button><button class="btn" id="a-next">Nesli bitir</button><button class="btn" id="a-reset">Baştan</button></div>
+        <p class="note">Bu yönteme <b>nöroevrim</b> denir. Doğru cevabı bilen bir öğretmen yoktur; sadece “ne kadar uzağa gittin?” puanı vardır.</p>
+      </aside>
+    </div>`;
+    cv = $("#a-main"); ctx = setupCanvas(cv, W, H);
+    ncv = $("#a-net"); nctx = setupCanvas(ncv, 360, 250);
+    gcv = $("#a-chart"); gctx = setupCanvas(gcv, 360, 200);
+    [trackC, trackX] = offscreen(W * 2, H * 2);
+    makeTrack(val("a-track")); newPopulation();
+    $("#a-run").onclick = () => setRun(!st.run);
+    $("#a-next").onclick = () => { evolve(); draw(); };
+    $("#a-reset").onclick = () => { newPopulation(); draw(); };
+    $("#a-pop").onchange = () => { newPopulation(); draw(); };
+    $("#a-track").onchange = () => { makeTrack(val("a-track")); restartGen(st.pop.map((c) => c.g), 0); st.laps = 0; draw(); };
+    draw();
+  }
+  function frame() { if (!st.run) return; for (let i = 0; i < num("a-speed"); i++) tick(); draw(); }
+  return { init, frame, onTheme: () => { paintTrack(); draw(); } };
+})();
+// ===================================================================== 5) PEKİŞTİRMELİ ÖĞRENME AJANI
+Modules.ajan = (() => {
+  const C = 10, R = 8, CS = 56, A = [[0, -1], [1, 0], [0, 1], [-1, 0]]; // yukarı, sağ, aşağı, sol
+  const MAPS = {
+    basit: ["..........", "..........", "...#......", "S..#...T..", "...#....G.", "...#...T..", "..........", ".........."],
+    ucurum: ["..........", "..........", "..........", "..........", "..........", "..........", "..........", "STTTTTTTTG"],
+    labirent: ["S.#.......", ".##.####..", "....#..#..", ".####..#.#", ".#.....#..", ".#.###.##.", "...#T#....", ".#...#.##G"],
+    bos: ["..........", "..........", "..........", "S.........", "..........", "..........", "..........", ".........G"],
+  };
+  const SPEEDS = [0.1, 0.25, 0.5, 1, 3, 10, 40, 200];
+  const st = { run: false, grid: [], start: [0, 0], Q: null, visits: null, pos: null, ep: 0, epR: 0, epS: 0, rewards: [], steps: [], trail: [], acc: 0, demo: false, eps: 0.2, tool: "#", nextA: null, lastEvent: "" };
+  let cv, ctx, gcv, gctx;
+
+  function loadMap(k) {
+    st.grid = MAPS[k].map((r) => r.split(""));
+    for (let y = 0; y < R; y++) for (let x = 0; x < C; x++) if (st.grid[y][x] === "S") { st.start = [x, y]; st.grid[y][x] = "."; }
+    resetQ();
+  }
+  function resetQ() {
+    st.Q = Array.from({ length: C * R }, () => new Float64Array(4)); st.visits = new Float64Array(C * R);
+    st.ep = 0; st.rewards = []; st.steps = []; st.demo = false;
+    st.eps = num("q-eps") / 100; newEpisode();
+  }
+  function newEpisode() { st.pos = st.start.slice(); st.epR = 0; st.epS = 0; st.trail = [st.pos.slice()]; st.nextA = null; }
+  const sIdx = ([x, y]) => y * C + x;
+  function greedy(s) { const q = st.Q[s]; let b = 0; for (let a = 1; a < 4; a++) if (q[a] > q[b] + 1e-12 || (Math.abs(q[a] - q[b]) < 1e-12 && Math.random() < 0.5)) b = a; return b; }
+  function choose(s, eps) { return Math.random() < eps ? randInt(0, 3) : greedy(s); }
+  function move(pos, a) {
+    if (on("q-slip") && Math.random() < 0.2) a = (a + (Math.random() < 0.5 ? 1 : 3)) % 4; // kaygan zemin
+    const nx = pos[0] + A[a][0], ny = pos[1] + A[a][1];
+    if (nx < 0 || ny < 0 || nx >= C || ny >= R || st.grid[ny][nx] === "#") return { p: pos.slice(), r: -0.5, done: false, ev: "duvar" };
+    const c = st.grid[ny][nx];
+    if (c === "G") return { p: [nx, ny], r: 10, done: true, ev: "hedef" };
+    if (c === "T") return { p: [nx, ny], r: -10, done: true, ev: "tuzak" };
+    return { p: [nx, ny], r: -0.1, done: false, ev: "" };
+  }
+  function stepAgent(learn = true) {
+    const alpha = num("q-alpha") / 100, gamma = num("q-gamma") / 100, eps = st.demo ? 0 : st.eps, sarsa = val("q-algo") === "sarsa";
+    const s = sIdx(st.pos), a = st.nextA ?? choose(s, eps);
+    const { p, r, done, ev } = move(st.pos, a), s2 = sIdx(p);
+    let a2 = null;
+    if (learn && !st.demo) {
+      let target = r;
+      if (!done) { if (sarsa) { a2 = choose(s2, eps); target += gamma * st.Q[s2][a2]; } else target += gamma * Math.max(...st.Q[s2]); }
+      st.Q[s][a] += alpha * (target - st.Q[s][a]);
+    }
+    st.nextA = sarsa && !done ? a2 : null;
+    st.pos = p; st.epR += r; st.epS++; st.visits[s2]++;
+    st.trail.push(p.slice()); if (st.trail.length > 40) st.trail.shift();
+    if (ev) st.lastEvent = ev;
+    if (done || st.epS >= 200) endEpisode(done ? ev : "süre");
+  }
+  function endEpisode(how) {
+    if (!st.demo) {
+      st.ep++; st.rewards.push(st.epR); st.steps.push(st.epS);
+      if (st.rewards.length > 3000) { st.rewards.splice(0, 1000); st.steps.splice(0, 1000); }
+      if (on("q-decay")) { st.eps = Math.max(0.01, st.eps * 0.99); const el = $("#q-eps"); el.value = Math.round(st.eps * 100); $("#q-eps-o").textContent = st.eps.toFixed(2); }
+    } else { st.demo = false; setRun(false); st.lastEvent = "demo-" + how; }
+    newEpisode();
+  }
+  function fastTrain(n) { const d = st.demo; st.demo = false; const target = st.ep + n; let guard = 0; while (st.ep < target && guard++ < 300000) stepAgent(true); st.demo = d; }
+  function setRun(v) { st.run = v; $("#q-run").textContent = v ? "⏸ Duraklat" : "▶ Başlat"; }
+
+  function draw() {
+    ctx.fillStyle = Theme.c.surface; ctx.fillRect(0, 0, C * CS, R * CS);
+    let mq = 1e-6; for (const q of st.Q) for (const v of q) mq = Math.max(mq, Math.abs(v));
+    let mv = 1; for (const v of st.visits) mv = Math.max(mv, v);
+    const view = val("q-view");
+    for (let y = 0; y < R; y++) for (let x = 0; x < C; x++) {
+      const px = x * CS, py = y * CS, c = st.grid[y][x], q = st.Q[y * C + x];
+      if (c === "#") { ctx.fillStyle = Theme.c.ink; ctx.globalAlpha = 0.78; ctx.fillRect(px, py, CS, CS); ctx.globalAlpha = 1; continue; }
+      if (c === "G") { ctx.fillStyle = Theme.c.good; ctx.fillRect(px, py, CS, CS); label(px, py, "★", "#fff"); continue; }
+      if (c === "T") { ctx.fillStyle = Theme.c.bad; ctx.fillRect(px, py, CS, CS); label(px, py, "✕", "#fff"); continue; }
+      if (view === "q") {
+        const cx = px + CS / 2, cy = py + CS / 2, tri = [[[px, py], [px + CS, py]], [[px + CS, py], [px + CS, py + CS]], [[px + CS, py + CS], [px, py + CS]], [[px, py + CS], [px, py]]];
+        for (let a = 0; a < 4; a++) { ctx.fillStyle = Theme.ds(0.5 + (q[a] / mq) * 0.5); ctx.beginPath(); ctx.moveTo(cx, cy); ctx.lineTo(...tri[a][0]); ctx.lineTo(...tri[a][1]); ctx.closePath(); ctx.fill(); }
+        if (Math.max(...q.map(Math.abs)) > 1e-4) { let b = 0; for (let a = 1; a < 4; a++) if (q[a] > q[b]) b = a; arrow(cx, cy, b); }
+      } else if (view === "v") {
+        const m = Math.max(...q); ctx.fillStyle = Theme.ds(0.5 + (m / mq) * 0.5); ctx.fillRect(px, py, CS, CS);
+        ctx.fillStyle = Theme.c.ink; ctx.font = "11px " + getComputedStyle(document.body).getPropertyValue("--f-mono"); ctx.textAlign = "center"; ctx.textBaseline = "middle";
+        if (Math.abs(m) > 1e-4) ctx.fillText(m.toFixed(1), px + CS / 2, py + CS / 2);
+      } else {
+        ctx.fillStyle = rgbStr(mix(Theme.rgb.surface, Theme.rgb.accent, Math.sqrt(st.visits[y * C + x] / mv))); ctx.fillRect(px, py, CS, CS);
+      }
+      if (x === st.start[0] && y === st.start[1]) { ctx.strokeStyle = Theme.c.ink; ctx.lineWidth = 2; ctx.setLineDash([4, 3]); ctx.strokeRect(px + 4, py + 4, CS - 8, CS - 8); ctx.setLineDash([]); }
+    }
+    ctx.strokeStyle = Theme.c.line; ctx.lineWidth = 1;
+    for (let x = 0; x <= C; x++) { ctx.beginPath(); ctx.moveTo(x * CS, 0); ctx.lineTo(x * CS, R * CS); ctx.stroke(); }
+    for (let y = 0; y <= R; y++) { ctx.beginPath(); ctx.moveTo(0, y * CS); ctx.lineTo(C * CS, y * CS); ctx.stroke(); }
+    if (st.trail.length > 1) { ctx.strokeStyle = Theme.c.ink; ctx.globalAlpha = 0.35; ctx.lineWidth = 3; ctx.beginPath();
+      st.trail.forEach(([x, y], i) => (i ? ctx.lineTo(x * CS + CS / 2, y * CS + CS / 2) : ctx.moveTo(x * CS + CS / 2, y * CS + CS / 2))); ctx.stroke(); ctx.globalAlpha = 1; }
+    const [ax, ay] = st.pos; ctx.fillStyle = Theme.c.accent; ctx.strokeStyle = Theme.c.surface; ctx.lineWidth = 3;
+    ctx.beginPath(); ctx.arc(ax * CS + CS / 2, ay * CS + CS / 2, CS * 0.28, 0, 7); ctx.fill(); ctx.stroke();
+    const ma = []; let s = 0; st.rewards.forEach((v, i) => { s += v; if (i >= 20) s -= st.rewards[i - 20]; ma.push(s / Math.min(i + 1, 20)); });
+    drawChart(gcv, gctx, [{ data: st.rewards, color: Theme.c.muted, width: 1, alpha: 0.6 }, { data: ma, color: Theme.c.accent, width: 2.5 }], { xlabel: "bölüm", ymax: 11 });
+    $("#q-s-ep").textContent = st.ep; $("#q-s-eps").textContent = st.demo ? "0 (gösteri)" : st.eps.toFixed(2);
+    $("#q-s-r").textContent = st.rewards.length ? fmt(ma[ma.length - 1], 2) : "–";
+    $("#q-s-st").textContent = st.steps.length ? Math.round(st.steps.slice(-20).reduce((a, b) => a + b, 0) / Math.min(20, st.steps.length)) : "–";
+    $("#q-explain").innerHTML = explain(ma[ma.length - 1]);
+  }
+  function label(px, py, t, col) { ctx.fillStyle = col; ctx.font = "22px " + getComputedStyle(document.body).getPropertyValue("--f-body"); ctx.textAlign = "center"; ctx.textBaseline = "middle"; ctx.fillText(t, px + CS / 2, py + CS / 2 + 1); }
+  function arrow(cx, cy, a) {
+    const [dx, dy] = A[a], L = CS * 0.22; ctx.strokeStyle = Theme.c.ink; ctx.fillStyle = Theme.c.ink; ctx.lineWidth = 2;
+    ctx.beginPath(); ctx.moveTo(cx - dx * L, cy - dy * L); ctx.lineTo(cx + dx * L, cy + dy * L); ctx.stroke();
+    ctx.beginPath(); ctx.moveTo(cx + dx * (L + 5), cy + dy * (L + 5)); ctx.lineTo(cx + dx * L - dy * 5, cy + dy * L + dx * 5); ctx.lineTo(cx + dx * L + dy * 5, cy + dy * L - dx * 5); ctx.closePath(); ctx.fill();
+  }
+  function explain(avg) {
+    const map = val("q-map"), sarsa = val("q-algo") === "sarsa";
+    if (st.lastEvent.startsWith("demo-")) return st.lastEvent === "demo-hedef" ? "Gösteri bitti: ajan <b>keşif yapmadan</b>, yalnızca öğrendiği en iyi oklara uyarak hedefe ulaştı." : "Gösteri bitti ama ajan hedefe ulaşamadı. Henüz yeterince öğrenmemiş; biraz daha eğit.";
+    if (st.ep === 0) return "Ajan (yeşil-mavi daire) dünyayı <b>hiç bilmiyor</b>. Her adımda bir yön seçiyor ve bir puan alıyor: hedef +10, tuzak −10, her adım −0,1. Kimse ona yolu söylemiyor; yalnızca deneme-yanılmayla her kare ve her yön için “buradan bu yöne gitmek ne kadar iyi?” sorusunun cevabını (Q değeri) öğreniyor. Karelerdeki üçgenlerin rengi bu değerler.";
+    if (st.ep < 15) return "İlk bölümler rastgele dolaşmakla geçiyor. Ajan hedefe tesadüfen ulaştığında, hedefin hemen yanındaki kare turuncuya döner. Sonraki bölümlerde bu iyi haber <b>geriye doğru yayılır</b>: hedefe giden yolun kareleri birer birer renklenir.";
+    if (map === "ucurum" && st.ep > 60) return sarsa
+      ? "<b>SARSA</b> kendi keşif hatalarını da hesaba kattığı için uçurumdan uzak, daha <b>güvenli</b> bir yol seçer. Q-öğrenmeye geçip Q değerlerini sıfırla ve farkı gör."
+      : "<b>Q-öğrenme</b> “en iyi durumda ne olur”a göre öğrenir ve uçurumun hemen kenarındaki <b>en kısa yolu</b> seçer; ama keşif (ε) sırasında ara sıra düşer. Algoritmayı SARSA yapıp Q değerlerini sıfırla ve ajanın daha güvenli bir yol öğrendiğini izle.";
+    if (avg > 7) return "Ajan hedefe istikrarlı biçimde ulaşıyor ve oklar artık bir <b>politika</b> (her karede ne yapılacağı) oluşturdu. “Öğrendiğini göster” ile keşif kapalı bir tur izle. Haritayı değiştir: bir duvar ekle ya da hedefi taşı ve ajanın yeniden uyum sağlamasını izle.";
+    return "Ajan keşif ile sömürü arasında denge kuruyor: ε olasılıkla rastgele bir yön dener (yeni şeyler öğrenmek için), geri kalan zamanda bildiği en iyi yönü seçer. Ödül grafiği yükseliyorsa öğreniyor. Hızı artırarak süreci hızlandırabilirsin.";
+  }
+
+  function init(root) {
+    root.innerHTML = `
+    <div class="lab">
+      <div class="stage">
+        <div class="card w-full"><h2>Dünya</h2><p class="sub">Her karedeki dört üçgen o yöne gitmenin değeri (turuncu iyi, mavi kötü); ok o karede öğrenilen en iyi hamle. Haritaya tıklayıp seçili aracı uygula.</p><canvas id="q-main" class="framed" style="max-width:640px"></canvas>
+          <div class="legend dots" style="margin-top:8px"><span><i style="background:var(--good)"></i>hedef +10</span><span><i style="background:var(--bad)"></i>tuzak −10</span><span><i style="background:var(--ink)"></i>duvar</span><span>her adım −0,1</span></div></div>
+        <div class="stats">${UI.stat("q-s-ep", "Bölüm")}${UI.stat("q-s-r", "Ort. ödül (son 20)")}${UI.stat("q-s-st", "Ort. adım (son 20)")}${UI.stat("q-s-eps", "Keşif oranı")}</div>
+        <div class="card"><h2>Bölüm başına toplam ödül</h2><div class="legend"><span><i style="background:var(--muted)"></i>her bölüm</span><span><i style="background:var(--accent)"></i>son 20 ortalaması</span></div><canvas id="q-chart"></canvas></div>
+        <div class="explain" id="q-explain"></div>
+      </div>
+      <aside class="panel">
+        ${UI.group("Dünya", UI.select("q-map", "Harita", [["basit", "Basit"], ["ucurum", "Uçurum kenarı"], ["labirent", "Labirent"], ["bos", "Boş alan"]], "basit")
+          + `<span class="note">Düzenleme aracı:</span><div class="seg" id="q-tools"><button class="btn on" data-t="#">Duvar</button><button class="btn" data-t="T">Tuzak</button><button class="btn" data-t="G">Hedef</button><button class="btn" data-t="S">Başlangıç</button><button class="btn" data-t=".">Sil</button></div>`
+          + UI.check("q-slip", "Kaygan zemin (%20 kayma)", false))}
+        ${UI.group("Öğrenme", UI.select("q-algo", "Algoritma", [["q", "Q-öğrenme"], ["sarsa", "SARSA"]], "q")
+          + UI.range("q-alpha", "Öğrenme oranı α", 1, 100, 1, 50, (v) => (v / 100).toFixed(2))
+          + UI.range("q-gamma", "Gelecek indirimi γ", 50, 99, 1, 95, (v) => (v / 100).toFixed(2))
+          + UI.range("q-eps", "Keşif ε", 0, 100, 1, 20, (v) => (v / 100).toFixed(2))
+          + UI.check("q-decay", "ε zamanla azalsın", true))}
+        ${UI.group("Görünüm", UI.select("q-view", "Gösterilen", [["q", "Q değerleri (yön başına)"], ["v", "Kare değeri (en iyi Q)"], ["n", "Ziyaret sıklığı"]], "q")
+          + UI.range("q-speed", "Hız", 0, SPEEDS.length - 1, 1, 3, (v) => SPEEDS[v] + " adım/kare"))}
+        <div class="btns"><button class="btn primary" id="q-run">▶ Başlat</button>
+          <button class="btn" id="q-fast">100 bölüm hızlı</button><button class="btn" id="q-demo">Öğrendiğini göster</button>
+          <button class="btn wide" id="q-reset">Q değerlerini sıfırla</button></div>
+        <p class="note"><b>α</b>: yeni deneyime ne kadar güvenilsin. <b>γ</b>: uzak ödüller ne kadar önemsensin. <b>ε</b>: ne sıklıkla rastgele denensin.</p>
+      </aside>
+    </div>`;
+    cv = $("#q-main"); ctx = setupCanvas(cv, C * CS, R * CS);
+    gcv = $("#q-chart"); gctx = setupCanvas(gcv, 640, 170);
+    $("#q-map").onchange = () => { loadMap(val("q-map")); draw(); };
+    $("#q-algo").onchange = () => { resetQ(); draw(); };
+    $("#q-view").onchange = draw;
+    $("#q-eps").addEventListener("input", () => { st.eps = num("q-eps") / 100; });
+    $("#q-run").onclick = () => { st.demo = false; setRun(!st.run); };
+    $("#q-fast").onclick = () => { fastTrain(100); draw(); };
+    $("#q-demo").onclick = () => { newEpisode(); st.demo = true; st.lastEvent = ""; setRange("q-speed", Math.min(num("q-speed"), 2)); setRun(true); };
+    $("#q-reset").onclick = () => { resetQ(); draw(); };
+    $("#q-tools").addEventListener("click", (e) => { const b = e.target.closest("[data-t]"); if (!b) return; st.tool = b.dataset.t; $$("#q-tools .btn").forEach((x) => x.classList.toggle("on", x === b)); });
+    let painting = false;
+    const paint = (e) => {
+      const [px, py] = canvasPos(cv, e), x = Math.floor(px / CS), y = Math.floor(py / CS);
+      if (x < 0 || y < 0 || x >= C || y >= R) return;
+      if (st.tool === "S") { if (st.grid[y][x] !== "#") { st.start = [x, y]; newEpisode(); } }
+      else { if (x === st.start[0] && y === st.start[1] && st.tool !== ".") return; st.grid[y][x] = st.tool; }
+      if (st.pos && st.grid[st.pos[1]][st.pos[0]] !== ".") newEpisode();
+      draw();
+    };
+    cv.addEventListener("pointerdown", (e) => { painting = true; cv.setPointerCapture(e.pointerId); paint(e); });
+    cv.addEventListener("pointermove", (e) => { if (painting && st.tool !== "S") paint(e); });
+    cv.addEventListener("pointerup", () => (painting = false));
+    loadMap("basit"); draw();
+  }
+  function frame() {
+    if (!st.run) return;
+    st.acc += SPEEDS[num("q-speed")];
+    let n = 0; while (st.acc >= 1 && n < 2000) { st.acc -= 1; n++; stepAgent(true); if (!st.run) break; }
+    draw();
+  }
+  return { init, frame, onTheme: () => draw() };
+})();
+boot();
+</script>
+</body>
+</html>
