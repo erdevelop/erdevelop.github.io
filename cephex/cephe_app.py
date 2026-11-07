@@ -12,6 +12,7 @@ Kesit: katalogdaki 'dosya' sütunu ya da 'Kesit...' düğmesiyle DXF'ten (HATCH 
 import colorsys
 import copy
 import csv
+import itertools
 import datetime
 import json
 import math
@@ -1161,9 +1162,13 @@ def cam_uyarilari(detay, yapi):
     if not fark:
         return []
     kal0 = "/".join(f"{v:.0f}" for v in fark.values())
-    return [f"Detay DXF'i {kal0} mm cam için çizilmiş (girilen {yapi['kalinlik']:.2f} mm): kapak mesafesi "
-            f"ve izolatör boyu buna göre ölçeklendi, ancak izolatör/conta kesit şekilleri aynı. "
-            f"Kesin çizim için bu kalınlığa ait detayı kural tablosuna ekleyin."]
+    if DETAY_OLCEK:
+        return [f"Detay DXF'i {kal0} mm cam için çizilmiş (girilen {yapi['kalinlik']:.2f} mm): kapak mesafesi "
+                f"ve izolatör boyu buna göre ölçeklendi, ancak izolatör/conta kesit şekilleri aynı. "
+                f"Kesin çizim için bu kalınlığa ait detayı kural tablosuna ekleyin."]
+    return [f"Detay DXF'i {kal0} mm cam için çizilmiş (girilen {yapi['kalinlik']:.2f} mm). Hiçbir parça ölçeklenmedi: "
+            f"kapak, baskı ve fitiller şekli bozulmadan cam farkı kadar ötelendi; kalan boşluk ya da binmeleri kesitte "
+            f"görürsünüz. Gerekirse parçayı elle oturtun (Shift+sürükle) ya da bu kalınlığa ait detayı kural tablosuna ekleyin."]
 
 
 def kesit_atalet(k):
@@ -4526,6 +4531,11 @@ def detay_uyarla(detay, yapi, secim=None, tablo=None, bariyerler=None):
     return _detay_uyarla_ic(detay, yapi, secim, tablo, bariyerler)
 
 
+DETAY_OLCEK = False   # True: izolatör çizimi cam farkı kadar UZATILIR (ölçekleme). Varsayılan KAPALI: hiçbir parça
+                      # ölçeklenmez; yalnızca dış parçalar (kapak, baskı, dış/orta fitil, 01.05) ve seçilen bariyer
+                      # zinciri şekli bozulmadan ÖTELENİR. Kalan boşluk/binmeler çizimde ve uyarılarda görünür.
+
+
 def _detay_uyarla_ic(detay, yapi, secim=None, tablo=None, bariyerler=None):
     """Cam toplam kalınlığına göre detayı uyarlar: baskı plakası, kapak, dış/orta fitil iç yüzden
     uzağa (cam kalınlığı farkı kadar) kayar; izolatör aynı farkla uzar/kısalır.
@@ -4564,7 +4574,7 @@ def _detay_uyarla_ic(detay, yapi, secim=None, tablo=None, bariyerler=None):
         # "izu" grubu (izolatör ucuna oturan parça): izolatör zincirinin yeni ucu kadar kayar
         izu_delta = shift
         if kombo and ub is not None:
-            izu_delta = (ua + sum(b_["ara"] for b_ in kombo) + kombo[-1].get("bindirme", BARIYER_UC)) - ub
+            izu_delta = (ua + zincir_toplam_gercek(d, tur, kombo, bariyerler, secim, tablo)) - ub
 
         def yeni(c, delta):
             return c + yon * delta
@@ -4574,7 +4584,7 @@ def _detay_uyarla_ic(detay, yapi, secim=None, tablo=None, bariyerler=None):
             return yon * ((min(cs) + max(cs)) / 2 - ti)
 
         def hareket(pts, gr):
-            if gr == "izo" and ub is not None and ub > ua:
+            if gr == "izo" and ub is not None and ub > ua and DETAY_OLCEK:
                 out_ = []
                 for q in pts:
                     u_ = yon * (q[ax] - ti)
@@ -4645,6 +4655,171 @@ def _detay_uyarla_ic(detay, yapi, secim=None, tablo=None, bariyerler=None):
         nd["bbox"] = _prim_bbox(yeni_p) or d["bbox"]
         out[tur] = nd
     return out
+
+
+_ZINCIR_SON = {}          # son _bariyer_yerlestir çağrısının zincir boyu (profil gagasından, mm)
+_ZT_ONB = {}
+_OTURMA_ONB = {}
+_YON_ONB = {}
+
+
+def _yerel_nokta(pt, b, yu, yc, rot_):
+    """Parçanın bir noktasını zincir yerel eksenlerine (u: zincir boyunca, v: enine, zincir merkezine göre) çevirir."""
+    l = b["uzun"]
+    bb_ = b["bbox"]
+    kcb = (bb_[1 - l] + bb_[3 - l]) / 2
+    lam, kap = pt[l], pt[1 - l]
+    if rot_:
+        a_, b_ = lam - (bb_[l] + bb_[l + 2]) / 2, kap - kcb
+        a_, b_ = (-b_, a_) if rot_ == 1 else (b_, -a_)
+        return (bb_[l + 2] - bb_[l]) / 2 + yu * a_, yc * b_
+    return ((lam - bb_[l]) if yu > 0 else (bb_[l + 2] - lam)), yc * (kap - kcb)
+
+
+def _oturma_derinligi(bA, fA, bB, fB, azami=8.0, adim=0.25, hucre=0.5, tol=2):
+    """Adaptör ile komşu parça birbirine, malzemeleri çarpışmadan en derin ne kadar girer (mm)?
+    A'nın ucuna B'yi yaklaştırıp kayarak girdirir; ilk çarpışmada durur. Katalog parçaları şekil olarak değişmez."""
+    anah = (bA["kod"], fA, bB["kod"], fB)
+    if anah in _OTURMA_ONB:
+        return _OTURMA_ONB[anah]
+
+    def yerel(b, f):
+        out = []
+        for q in b["prims"]:
+            if q[0] == "fill":
+                out.append(([[_yerel_nokta(pt, b, *f) for pt in lp] for lp in q[1]], q[2]))
+        return out
+    PA, PB = yerel(bA, fA), yerel(bB, fB)
+    if not PA or not PB:
+        _OTURMA_ONB[anah] = 0.0
+        return 0.0
+
+    def kutu(P):
+        xs = [p[0] for lps, _d in P for lp in lps for p in lp]
+        ys = [p[1] for lps, _d in P for lp in lps for p in lp]
+        return min(xs), min(ys), max(xs), max(ys)
+    ka, kb = kutu(PA), kutu(PB)
+    lenA = ka[2]
+
+    def malzeme(P, pt):
+        return any(_nokta_malzeme(pt, lps, dr) for lps, dr in P)
+    derin, s = 0.0, adim
+    while s <= azami + 1e-9:
+        o = lenA - s                                   # B'nin başlangıcı
+        x0, x1 = max(ka[0], kb[0] + o), min(ka[2], kb[2] + o)
+        y0, y1 = max(ka[1], kb[1]), min(ka[3], kb[3])
+        cak = 0
+        if x1 > x0 and y1 > y0:
+            nx, ny = max(1, int((x1 - x0) / hucre)), max(1, int((y1 - y0) / hucre))
+            for ix in range(nx):
+                for iy in range(ny):
+                    pt = (x0 + (ix + 0.5) * (x1 - x0) / nx, y0 + (iy + 0.5) * (y1 - y0) / ny)
+                    if malzeme(PA, pt) and malzeme(PB, (pt[0] - o, pt[1])):
+                        cak += 1
+                        if cak > tol:
+                            break
+                if cak > tol:
+                    break
+        if cak > tol:
+            break
+        derin = s
+        s += adim
+    _OTURMA_ONB[anah] = round(derin, 2)
+    return _OTURMA_ONB[anah]
+
+
+def zincir_toplam_gercek(d, tur, kombo, bariyerler, secim=None, tablo=None):
+    """Zincirin profil gagasından dış ucuna gerçek boyu (mm): Σara + son bindirme − adaptör oturma payları.
+    Parçaların yönü ve oturması _bariyer_yerlestir'deki ile aynı kurallarla (kuru çalıştırma) bulunur."""
+    kodlar = tuple(b["kod"] for b in kombo)
+    anah = (id(d), kodlar, tur, tuple(sorted(_YON.items())))
+    e = _ZT_ONB.get(anah)
+    if e and e[0] is d:
+        return e[1]
+    g = _cam_geo(d, tur)
+    sade = sum(b["ara"] for b in kombo) + kombo[-1].get("bindirme", BARIYER_UC)
+    if not g:
+        return sade
+    ti, yon, ax = g[2], g[3], (1 if tur == "dikey" else 0)
+    izo = [p for p, gr in zip(d["prims"], d["grup"]) if gr == "izo" and p[0] != "text"]
+    if not izo:
+        return sade
+    bb = _prim_bbox(izo)
+    ua, ub = sorted((yon * (bb[ax] - ti), yon * (bb[ax + 2] - ti)))
+    referans = None
+    if secim and tablo:
+        tb = [r for r in tablo if not r.get("alternatif") and abs(r["mm"] - g[4]) < 0.5]
+        if tb and tb[0].get("pvc") and "+" not in tb[0]["pvc"]:
+            referans = tb[0]["pvc"].strip()
+    gercek = {str(gr_.blok) for p_, gr_ in zip(d["prims"], d["grup"]) if gr_ == "izo" and getattr(gr_, "blok", "")}
+    kat_ = {_norm(b_["kod"]) for b_ in (bariyerler or []) if b_.get("prims")}
+    gercek = [x for x in gercek if _norm(x) in kat_]
+    if len(gercek) == 1:
+        referans = next(b_["kod"] for b_ in bariyerler if _norm(b_["kod"]) == _norm(gercek[0]))
+    byon = next((v_ for k_, v_ in _YON.items() if re.match(r"^02\.\d\d", k_) and v_), "")
+    try:
+        _ZINCIR_SON.clear()
+        _bariyer_yerlestir(list(d["prims"]), list(d["grup"]), kombo, referans, bariyerler, ti, yon, ax, ua, ub, 0.0,
+                           [p_ for p_, gr_ in zip(d["prims"], d["grup"]) if gr_ == "izo"], None, byon)
+        toplam = _ZINCIR_SON.get("toplam", sade)
+    except Exception:
+        toplam = sade
+    if len(_ZT_ONB) > 400:
+        _ZT_ONB.clear()
+    _ZT_ONB[anah] = (d, toplam)
+    return toplam
+
+
+def zincir_uyum_hatasi(d, tur, yapi, kodlar, bariyerler, secim=None, tablo=None):
+    """Seçilen zincirin (kodlar: bariyer/adaptör/fitil) bu cam kalınlığında dış parçalarla (baskı, kapak) uyumsuzluğu, mm.
+    + : zincir uzun -> 01.05 / baskı BİNER   - : zincir kısa -> BOŞLUK.  Hesaplanamıyorsa None.
+    (Dış parçalar cam farkı kadar, zincirin ucundaki parçalar zincir boyu kadar ötelenir; fark uyumsuzluktur.)"""
+    if not d or not yapi or not d.get("ref") or not d.get("grup"):
+        return None
+    g = _cam_geo(d, tur)
+    if not g:
+        return None
+    ti, yon, ax = g[2], g[3], (1 if tur == "dikey" else 0)
+    izo = [p for p, gr in zip(d["prims"], d["grup"]) if gr == "izo" and p[0] != "text"]
+    if not izo:
+        return None
+    bb = _prim_bbox(izo)
+    ua, ub = sorted((yon * (bb[ax] - ti), yon * (bb[ax + 2] - ti)))
+    kat = dict(_FITIL_EK)
+    kat.update({_norm(b["kod"]): b for b in bariyerler or []})
+    zin = [kat.get(_norm(k)) for k in kodlar]
+    if not zin or any(z is None for z in zin):
+        return None
+    toplam = zincir_toplam_gercek(d, tur, zin, bariyerler, secim, tablo)
+    return toplam - (ub - ua) - (yapi["kalinlik"] - g[4])
+
+
+def bariyer_oner(detay, yapi, bariyerler, azami=3, tol=0.6, en_cok=12, secim=None, tablo=None, ilerleme=None):
+    """Cam kalınlığına uyan zincir önerileri: [{"zincir","parca","hata": {tur: mm}, "mutlak"}] (en uygun önce).
+    Adaylar: (isteğe bağlı adaptör) + 1..azami ısı bariyeri. Dikey ve yatay detayın ikisinde de en küçük hata öne çıkar."""
+    bar = sorted([b for b in bariyerler or [] if b.get("prims")], key=lambda b: (b["ara"], b["kod"]))
+    ada = [v for v in _FITIL_EK.values() if v.get("klasor") == "ADAPTOR"]
+    turler = [t for t in ("dikey", "yatay") if (detay or {}).get(t)]
+    out = []
+    adim_, adim_top = 0, max(1, (len(ada) + 1) * azami)
+    for ad in [None] + ada:
+        for n in range(1, azami + 1):
+            adim_ += 1
+            if ilerleme:
+                ilerleme(adim_ / adim_top)
+            for kom in itertools.combinations_with_replacement(bar, n):
+                kodlar = ([ad["kod"]] if ad else []) + [b["kod"] for b in kom]
+                hata = {}
+                for t in turler:
+                    h = zincir_uyum_hatasi(detay[t], t, yapi, kodlar, bariyerler, secim, tablo)
+                    if h is not None:
+                        hata[t] = h
+                if not hata:
+                    continue
+                out.append({"zincir": "+".join(kodlar), "parca": len(kodlar), "hata": hata,
+                            "mutlak": max(abs(h) for h in hata.values())})
+    out.sort(key=lambda r: (r["mutlak"] > tol, r["parca"] if r["mutlak"] <= tol else 0, r["mutlak"]))
+    return out[:en_cok]
 
 
 def _bariyer_kombo(secim, bariyerler):
@@ -4721,6 +4896,7 @@ def _bariyer_yerlestir(prims, grup, kombo, referans, bariyerler, ti, yon, ax, ua
     izu_bb = _prim_bbox(izu_p) if izu_p else None
     ofs = 0.0
     eklenen = []
+    onceki_, ofs_liste = None, []
     for bi_, b in enumerate(kombo):
         l = b["uzun"]
         bb_ = b["bbox"]
@@ -4737,9 +4913,11 @@ def _bariyer_yerlestir(prims, grup, kombo, referans, bariyerler, ti, yon, ax, ua
             yu = (1 if su_ * ml_ > 0 else -1) if (abs(su_) > 0.05 and abs(ml_) > 0.05) else 1
             yc = (1 if sk_ * mk_ > 0 else -1) if (abs(sk_) > 0.02 and abs(mk_) > 0.02) else 1
         rot_ = 0
+        oto_yon_ = False
         if b.get("klasor") and not b.get("bariyer_gibi"):       # fitil/adaptör: parça yönü ayarı (x: sağ-sol, y: iç-dış, rakam: 90° dönüş)
             ys_ = next((v_ for k_, v_ in _YON.items() if _sade(k_) == _sade(b["kod"])), "") or ""
             rot_ = int("".join(ch for ch in ys_ if ch.isdigit()) or 0) % 4
+            oto_yon_ = not ys_.strip()                   # elle yön verilmemişse otomatik yönlendirilir
             fl_ = [ch for ch in ys_ if ch in "xy"]
             if rot_ == 2:                                # 180°: iki yönde çevirme
                 fl_ += ["x", "y"]
@@ -4750,27 +4928,66 @@ def _bariyer_yerlestir(prims, grup, kombo, referans, bariyerler, ti, yon, ax, ua
                 else:
                     yc = -yc
 
-        def esle(pt, yu=yu, yc=yc, l=l, bb_=bb_, kcb=kcb, ofs=ofs, rot_=rot_):
-            lam, kap = pt[l], pt[1 - l]
-            if rot_:                                     # 90°/270°: parça kendi yuvasının merkezinde döner
-                a_, b_ = lam - (bb_[l] + bb_[l + 2]) / 2, kap - kcb
-                a_, b_ = (-b_, a_) if rot_ == 1 else (b_, -a_)
-                nu = (bb_[l + 2] - bb_[l]) / 2 + yu * a_
-                kap_ = kcb + b_
-            else:
-                nu = (lam - bb_[l]) if yu > 0 else (bb_[l + 2] - lam)
-                kap_ = kap
-            u = baslangic + ofs + nu
+        def esle(pt, yu_=None, yc_=None):
+            nu, v = _yerel_nokta(pt, b, yu if yu_ is None else yu_, yc if yc_ is None else yc_, rot_)
             w = [0.0, 0.0]
-            w[ax] = ti + yon * u
-            w[1 - ax] = kc + yc * (kap_ - kcb)
+            w[ax] = ti + yon * (baslangic + ofs + nu)
+            w[1 - ax] = kc + v
             return tuple(w)
+        if oto_yon_:
+            # elle yön verilmedi: dört çevirme (düz, sağ-sol, iç-dış, ikisi) denenir; profil/fitil malzemesiyle EN AZ
+            # çakışan yön seçilir (adaptör profil gagasına oturur). Beraberlikte varsayılan yön korunur.
+            diger = [(q_, _prim_bbox([q_])) for q_, g_ in yeni
+                     if q_[0] == "fill" and g_ != "izo" and getattr(g_, "blok", "") and not str(getattr(g_, "blok", "")).startswith("02.")]
+            yk_ = (b["kod"], round(ti, 2), round(baslangic + ofs, 2), len(diger),
+                   round(sum(sum(bb2) for _o, bb2 in diger if bb2), 2), yu, yc)
+            if yk_ in _YON_ONB:
+                en_iyi = _YON_ONB[yk_]
+            else:
+                en_iyi, en_az = (yu, yc), None
+                for ay_, ac_ in ((yu, yc), (-yu, yc), (yu, -yc), (-yu, -yc)):
+                    cak = 0
+                    for q in b["prims"]:
+                        if q[0] != "fill":
+                            continue
+                        lps = [[esle(pt, ay_, ac_) for pt in lp] for lp in q[1]]
+                        xs_ = [p_[0] for lp in lps for p_ in lp]
+                        ys2_ = [p_[1] for lp in lps for p_ in lp]
+                        x0_, x1_, y0_, y1_ = min(xs_), max(xs_), min(ys2_), max(ys2_)
+                        adim_ = max(0.6, max(x1_ - x0_, y1_ - y0_) / 24)
+                        comp = [(o_, bb2) for o_, bb2 in diger if bb2 and bb2[0] < x1_ and bb2[2] > x0_ and bb2[1] < y1_ and bb2[3] > y0_]
+                        if not comp:
+                            continue
+                        nx_ = int((x1_ - x0_) / adim_) + 1
+                        ny_ = int((y1_ - y0_) / adim_) + 1
+                        for ix_ in range(nx_):
+                            for iy_ in range(ny_):
+                                pt_ = (x0_ + (ix_ + 0.5) * adim_, y0_ + (iy_ + 0.5) * adim_)
+                                if not _nokta_malzeme(pt_, lps, q[2]):
+                                    continue
+                                if any(bb2[0] <= pt_[0] <= bb2[2] and bb2[1] <= pt_[1] <= bb2[3]
+                                       and _nokta_malzeme(pt_, o_[1], o_[2]) for o_, bb2 in comp):
+                                    cak += 1
+                    if en_az is None or cak < en_az - 1:       # belirgin biçimde daha az çakışıyorsa değiştir
+                        en_az, en_iyi = cak, (ay_, ac_)
+                if len(_YON_ONB) > 300:
+                    _YON_ONB.clear()
+                _YON_ONB[yk_] = en_iyi
+            yu, yc = en_iyi
+        # adaptör oturması: adaptörün komşusuyla çakışmadan en derin girdiği kadar zincir kısalır (bindirme elle
+        # verilmişse — ayar 'katman_bindirme' — dokunulmaz)
+        if onceki_ is not None and (b.get("klasor") == "ADAPTOR" or onceki_[0].get("klasor") == "ADAPTOR") \
+                and katman_bindirme("ADAPTOR") == 0.0:
+            ofs -= _oturma_derinligi(onceki_[0], onceki_[1], b, (yu, yc, rot_))
+        ofs_liste.append(ofs)
+        onceki_ = (b, (yu, yc, rot_))
         for q in b["prims"]:
             if q[0] == "fill":
                 eklenen.append((("fill", [[esle(pt) for pt in lp] for lp in q[1]], q[2], q[3], q[4]), grb))
             elif q[0] == "poly":
                 eklenen.append((("poly", [esle(pt) for pt in q[1]], q[2], q[3]), grb))
         ofs += b["ara"]
+    _ZINCIR_SON["toplam"] = ofs + kombo[-1].get("bindirme", BARIYER_UC)
     if etiket is not None:
         # her bariyerin kendi etiketi: parçanın orta noktasında; çakışırsa enine yönde dışarı kaydırılır
         _, ex, ey, eh, ea, _m, ehz = etiket
@@ -4784,9 +5001,8 @@ def _bariyer_yerlestir(prims, grup, kombo, referans, bariyerler, ti, yon, ax, ua
                 return (x, y, x + n, y + h)
             return (x - h, y, x, y + n)
         yer = [kutu(q[1], q[2], q[3], q[4], q[5]) for q, _g in yeni if q[0] == "text"]
-        ofs2 = 0.0
-        for b in kombo:
-            uc = baslangic + ofs2 + (b["ara"] + b.get("bindirme", BARIYER_UC)) / 2
+        for bi2_, b in enumerate(kombo):
+            uc = baslangic + ofs_liste[bi2_] + (b["ara"] + b.get("bindirme", BARIYER_UC)) / 2
             n = len(str(b["kod"])) * nch * eh
             pos = [ex, ey]
             pos[ax] = ti + yon * uc - n / 2
@@ -4797,7 +5013,6 @@ def _bariyer_yerlestir(prims, grup, kombo, referans, bariyerler, ti, yon, ax, ua
                 pos[1 - ax] += itis * 1.5 * eh
             yer.append(kutu(pos[0], pos[1], eh, ea, b["kod"]))
             eklenen.append((("text", pos[0], pos[1], eh, ea, b["kod"], ehz), ""))
-            ofs2 += b["ara"]
     yeni = [x for x in eklenen if x[0][0] != "text"] + yeni + [x for x in eklenen if x[0][0] == "text"]   # bariyerler en altta, etiketler üstte
     if fitil_var and izu_pts:
         # köprü fitil (01.05) şablonda izolatör ucundaki fitile (ES ...) göre durur: zincirdeki fitil şablondakinden
@@ -6726,6 +6941,110 @@ class _Acilis:
         self.ana._acilis_bitti()
 
 
+def _ilerle_g(app, oran):
+    """Bilgi çubuğu ilerlemesi (güvenli): oran 0..1; None = bitir. Çubuk yoksa sessizce geçer."""
+    try:
+        (app._ilerle_bitir() if oran is None else app._ilerle(oran))
+    except AttributeError:
+        pass
+
+
+class _CubukEtiket:
+    """Bilgi çubuğundaki yazı: Label benzeri (configure/config/cget/bind) arayüzü; yazıyı canvas üzerine çizer."""
+
+    def __init__(self, cubuk, anchor):
+        self.cubuk, self.anchor, self.metin = cubuk, anchor, ""
+        self.id = cubuk.create_text(0, 0, text="", anchor="w", font=("Segoe UI", 9))
+
+    def configure(self, **kw):
+        if "text" in kw:
+            m = str(kw["text"])
+            if m != self.metin:
+                self.metin = m
+                self.cubuk.yerlestir()
+
+    config = configure
+
+    def cget(self, k):
+        return self.metin if k == "text" else ""
+
+    def bind(self, seq, fn, add=None):
+        self.cubuk.tag_bind(self.id, seq, fn)
+
+
+class _BilgiCubugu(tk.Canvas):
+    """Cephe görünüşünün üstündeki bilgi çubuğu. Hesap sürerken çubuğun TAMAMI %100 sayılıp gri dolguyla ilerler."""
+    YUKSEK = 24
+
+    def __init__(self, master):
+        super().__init__(master, height=self.YUKSEK, highlightthickness=0, bd=0)
+        self.oran = 0.0
+        self._dolgu = self.create_rectangle(0, 0, 0, self.YUKSEK, outline="", width=0)
+        self.sol = _CubukEtiket(self, "w")
+        self.koor = _CubukEtiket(self, "e")
+        self.ozet = _CubukEtiket(self, "e")
+        self.bg, self.fg, self.dolgu = "#e9ecef", "#7a858e", "#c9d0d6"
+        self.bind("<Configure>", lambda _e: self.yerlestir())
+        self._tema_uygula()
+
+    def _tema_uygula(self):
+        self.configure(background=self.bg)
+        self.itemconfigure(self._dolgu, fill=self.dolgu)
+        for e in (self.sol, self.koor, self.ozet):
+            self.itemconfigure(e.id, fill=self.fg)
+
+    def tema(self, bg, fg, dolgu):
+        self.bg, self.fg, self.dolgu = bg, fg, dolgu
+        self._tema_uygula()
+
+    def _genislik(self, metin):
+        try:
+            if getattr(self, "_font", None) is None:
+                import tkinter.font as tkf
+                self._font = tkf.Font(family="Segoe UI", size=9)
+            return self._font.measure(metin)
+        except Exception:
+            return int(len(metin) * 6.3)
+
+    def yerlestir(self):
+        try:
+            W = max(int(self.winfo_width()), 50)
+        except tk.TclError:
+            return
+        h = self.YUKSEK // 2
+        x = W - 8
+        for e in (self.ozet, self.koor):
+            w = self._genislik(e.metin) if e.metin else 0
+            self.coords(e.id, x, h)
+            self.itemconfigure(e.id, text=e.metin, anchor="e")
+            x -= w + (14 if e.metin else 0)
+        m = self.sol.metin
+        bos = x - 8
+        if m and self._genislik(m) > bos:
+            lo, hi = 0, len(m)
+            while lo < hi:
+                mid = (lo + hi + 1) // 2
+                if self._genislik(m[:mid] + "…") <= bos:
+                    lo = mid
+                else:
+                    hi = mid - 1
+            m = m[:lo] + "…"
+        self.coords(self.sol.id, 8, h)
+        self.itemconfigure(self.sol.id, text=m, anchor="w")
+        self.ilerleme(self.oran, guncelle=False)
+
+    def ilerleme(self, oran, guncelle=True):
+        """oran 0..1: çubuğun tamamına göre dolgu (gri); 0 = dolgu yok."""
+        self.oran = max(0.0, min(1.0, float(oran)))
+        try:
+            W = max(int(self.winfo_width()), 50)
+            self.coords(self._dolgu, 0, 0, W * self.oran, self.YUKSEK)
+            if guncelle:
+                self.update_idletasks()
+        except tk.TclError:
+            pass
+
+
 class _SekmeSeridi(ttk.Frame):
     """Notebook sekme başlıkları için yatay kaydırmalı şerit: sığmazsa ◀ ▶ düğmeleri ve fare tekerleği ile kaydırılır."""
 
@@ -6735,6 +7054,7 @@ class _SekmeSeridi(ttk.Frame):
         self.sol = ttk.Button(self, text="◀", width=2, command=lambda: self._kay(-1))
         self.sag = ttk.Button(self, text="▶", width=2, command=lambda: self._kay(1))
         self.cv = tk.Canvas(self, height=34, highlightthickness=0)
+        self.adim_btn = None
         self.ic = ttk.Frame(self.cv)
         self.cv.create_window((0, 0), window=self.ic, anchor="nw")
         self.ek = ttk.Frame(self)                                    # sağ uçta sabit düğmeler (parça paneli vb.)
@@ -6823,6 +7143,7 @@ class Uygulama(tk.Tk):
         self._secili = None
         self._hv_son = None
         self._bas_xy = None
+        self._aks_d = self._aks_h = None
         self.title("Cephe Metraj")
         self.protocol("WM_DELETE_WINDOW", self._kapat)
         self.after(1500, self._kayit_isaretle)
@@ -6890,6 +7211,8 @@ class Uygulama(tk.Tk):
         st.configure("TFrame", background=t["arka"])
         st.configure("Bilgi.TFrame", background=t["baslik"])
         st.configure("Bilgi.TLabel", background=t["baslik"], foreground=t["soluk"], font=("Segoe UI", 9))
+        if getattr(self, "_bilgi_cv", None) is not None:
+            self._bilgi_cv.tema(t["baslik"], t["soluk"], "#555d65" if self.tema == "koyu" else "#c4cbd1")
         st.configure("TLabel", background=t["arka"], foreground=t["yazi"])
         st.configure("TLabelframe", background=t["arka"], bordercolor=t["cizgi"])
         st.configure("TLabelframe.Label", background=t["arka"], foreground=t["yazi"])
@@ -7099,6 +7422,143 @@ class Uygulama(tk.Tk):
                 m2 += w * h / 1e6
                 n += 1
         return m2, n
+
+    def _adim(self, baslik, ayrinti=""):
+        """Hesap adımı kaydı: başlık + ayrıntı satırları; geçen süre ile birlikte 'Hesap adımları' penceresinde gösterilir."""
+        try:
+            t0 = getattr(self, "_adim_t0", None) or time.time()
+            self._adimlar.append((time.time() - t0, str(baslik), str(ayrinti or "")))
+        except AttributeError:
+            pass
+
+    def _adim_metni(self):
+        """Son hesabın adımlarını düz metin (not defteri) olarak üretir."""
+        s = getattr(self, "sonuc", None)
+        k = getattr(self, "_adimlar", None) or []
+        if not k and not s:
+            return "Henüz hesap yapılmadı. Önce 'Hesapla' düğmesine basın."
+        ln = ["CEPHE METRAJ — HESAP ADIMLARI", "=" * 60,
+              "Zaman: " + datetime.datetime.now().strftime("%d.%m.%Y %H:%M:%S"), ""]
+        for no, (dt, b, a) in enumerate(k, 1):
+            ln.append(f"{no:>2}. {b}   [{dt:5.2f} sn]")
+            for x in a.splitlines():
+                ln.append("      " + x)
+            ln.append("")
+        an = (s or {}).get("analiz")
+        if an:
+            ln += ["-" * 60, "STATİK ÖN HESAP — adım adım", "-" * 60]
+            ln += [f"Rüzgar W = {an['kn']:.2f} kN/m²  →  {an['kgm2']:.1f} kg/m²   (W[kg/m²] = kN/m² × 1000 / 9.80665)",
+                   f"Cam ağırlığı G = {an['G']:.1f} kg/m²",
+                   f"Kombinasyon: {KOMB_G:g}·G + {KOMB_W:g}·W (Eurocode)",
+                   f"İzinli gerilme σ_RD = f0 / γm = {an['f0']:g} / {GAMA_M:g} = {an['sig_rd']:.1f} kg/cm²", ""]
+            d = an.get("dikey")
+            if d:
+                ln += [f"DİKEY PROFİL  ({d['sema_ad']}; kesit değerleri: {d['kaynak']})",
+                       f"  Yük genişliği (tw) = {d['tw']:.1f} cm;  mesnet aralığı L = {d['L']:.1f} cm",
+                       f"  Çizgisel rüzgar yükü w = q·tw = {d['w']:.4f} kg/cm",
+                       f"  M = {KOMB_W:g}·{d['mc']:.4f}·w·L² = {d['M3']:.0f} kgcm",
+                       f"  N = {KOMB_G:g}·G·tw·L (cam ağırlığı) = {d['N']:.1f} kg",
+                       f"  Wx = {d['Wx']:.2f} cm³;  A = {d['A']:.2f} cm²;  Jxx = {d['I']:.1f} cm⁴",
+                       f"  σ = M/Wx + N/A = {d['sig']:.0f} kg/cm²   (sınır {d['sig_rd']:.0f})  →  "
+                       + ("OK" if d["ok_g"] else "YETERSİZ"),
+                       f"  Sehim = {d['dc']:.4f}·w·L⁴ / (E·J) = {d['d']:.2f} cm   (sınır {d['dl']:.2f})  →  "
+                       + ("OK" if d["ok_d"] else "YETERSİZ")]
+                if not d["ok_d"]:
+                    ln.append(f"  Gereken Jxx ≥ {d['Ireq']:.0f} cm⁴ (mevcut {d['I']:.0f})")
+                ln.append(f"  Mesnet tepkisi: rüzgar {d['Rw']:.0f} kg, cam ağırlığı {d['Rg']:.0f} kg")
+                ln.append("")
+            y = an.get("yatay")
+            if y:
+                ln += [f"YATAY PROFİL  (kesit değerleri: {y['kaynak']})",
+                       f"  Yük yüksekliği (tr) = {y['tr']:.1f} cm;  açıklık L = {y['L']:.1f} cm",
+                       f"  w = q·tr = {y['w']:.4f} kg/cm;  M₃ = {KOMB_W:g}·w·L²/8 = {y['M3']:.0f} kgcm",
+                       f"  Cam takozu P = {an['takoz']['P']:.1f} kg;  M₂ = {KOMB_G:g}·P·L/4 = {y['M2']:.0f} kgcm",
+                       f"  σ = M₃/Wx + M₂/Wy = {y['sig']:.0f} kg/cm²   (sınır {y['sig_rd']:.0f})  →  "
+                       + ("OK" if y["ok_g"] else "YETERSİZ"),
+                       f"  Sehim (kuvvetli) = 5wL⁴/(384EJ) = {y['d_k']:.2f} cm   (sınır L/200 = {y['dl_k']:.2f})",
+                       f"  Sehim (zayıf, cam ağırlığı) = {y['d_z']:.2f} cm   (sınır {y['dl_z']:.2f})  →  "
+                       + ("OK" if y["ok_d"] else "YETERSİZ"), ""]
+        return "\n".join(ln)
+
+    def _adimlar_goster(self):
+        """Hesap adımlarını not defteri benzeri bir pencerede gösterir (kaydet / kopyala / yenile)."""
+        pen = getattr(self, "_adim_pen", None)
+        try:
+            if pen is not None and pen.winfo_exists():
+                pen.deiconify()
+                pen.lift()
+                self._adim_yaz()
+                return
+        except tk.TclError:
+            pass
+        pen = tk.Toplevel(self)
+        self._adim_pen = pen
+        pen.title("Hesap adımları — Not defteri")
+        pen.geometry("780x620")
+        bar = ttk.Frame(pen)
+        bar.pack(fill="x", padx=6, pady=6)
+        ttk.Button(bar, text="Yeniden hesapla", command=lambda: (self.hesapla(), self._adim_yaz())).pack(side="left")
+        ttk.Button(bar, text="Kopyala", command=self._adim_kopyala).pack(side="left", padx=4)
+        ttk.Button(bar, text="Kaydet (.txt)...", command=self._adim_kaydet).pack(side="left")
+        gv = ttk.Frame(pen)
+        gv.pack(fill="both", expand=True, padx=6, pady=(0, 6))
+        sc = ttk.Scrollbar(gv, orient="vertical")
+        self._adim_txt = tk.Text(gv, font=("Consolas", 10), wrap="word", padx=10, pady=8, relief="solid", bd=1,
+                                 yscrollcommand=sc.set, bg="#fffef7", fg="#222222")
+        sc.config(command=self._adim_txt.yview)
+        sc.pack(side="right", fill="y")
+        self._adim_txt.pack(side="left", fill="both", expand=True)
+        self._adim_yaz()
+
+    def _adim_yaz(self):
+        t = getattr(self, "_adim_txt", None)
+        if t is None:
+            return
+        try:
+            t.configure(state="normal")
+            t.delete("1.0", "end")
+            t.insert("1.0", self._adim_metni())
+            t.configure(state="normal")
+        except tk.TclError:
+            pass
+
+    def _adim_kopyala(self):
+        try:
+            self.clipboard_clear()
+            self.clipboard_append(self._adim_txt.get("1.0", "end-1c"))
+            self._log("Hesap adımları panoya kopyalandı")
+        except Exception:
+            pass
+
+    def _adim_kaydet(self):
+        yol = filedialog.asksaveasfilename(defaultextension=".txt", initialfile="hesap_adimlari.txt",
+                                           filetypes=[("Metin", "*.txt")])
+        if not yol:
+            return
+        try:
+            with open(yol, "w", encoding="utf-8") as f:
+                f.write(self._adim_txt.get("1.0", "end-1c"))
+            self._log(f"Hesap adımları kaydedildi: {os.path.basename(yol)}")
+        except OSError as e:
+            messagebox.showerror("Kaydedilemedi", str(e))
+
+    def _ilerle(self, oran):
+        """Bilgi çubuğunun tamamını %100 sayıp hesap ilerlemesini gri dolguyla gösterir (0..1)."""
+        cv = getattr(self, "_bilgi_cv", None)
+        if cv is not None:
+            a_, b_ = getattr(self, "_il_ab", (0.0, 1.0))
+            cv.ilerleme(a_ + (b_ - a_) * max(0.0, min(1.0, oran)))
+
+    def _ilerle_bitir(self):
+        cv = getattr(self, "_bilgi_cv", None)
+        if cv is None:
+            return
+        self._il_ab = (0.0, 1.0)
+        cv.ilerleme(1.0)
+        try:
+            self.after(350, lambda: cv.ilerleme(0.0))
+        except tk.TclError:
+            cv.ilerleme(0.0)
 
     def _bilgi_ozet_yaz(self):
         """Çubuğun sağı: proje özeti, seçili aks/hat/parça, yakınlaştırma, uyarı sayısı."""
@@ -8227,6 +8687,17 @@ class Uygulama(tk.Tk):
         self.lbl_stok_ozet = ttk.Label(g3, text="", foreground="#7a858e", wraplength=330, justify="left")
         self.lbl_stok_ozet.grid(row=2, column=0, columnspan=2, sticky="w", pady=(4, 0))
 
+        gcp = ttk.LabelFrame(sol2, text=" Cam bilgisi ", padding=8)
+        gcp.pack(fill="x", pady=(0, 8))
+        self._cp_yapi = ttk.Label(gcp, text="", font=("Segoe UI", 10, "bold"), wraplength=240, justify="left")
+        self._cp_yapi.pack(anchor="w")
+        self._cp_giris = ttk.Frame(gcp)                      # düzenlenebilir alanlar: Cam sekmesiyle aynı değişkenler
+        self._cp_giris.pack(fill="x", pady=(4, 2))
+        self._cp_bilgi = ttk.Label(gcp, text="", wraplength=240, justify="left")
+        self._cp_bilgi.pack(anchor="w", pady=(2, 0))
+        self._cp_uyari = ttk.Label(gcp, text="", foreground="#c0392b", wraplength=240, justify="left")
+        self._cp_uyari.pack(anchor="w", pady=(4, 0))
+
         gp = ttk.LabelFrame(sol2, text=" Seçili parça ", padding=8)
         gp.pack(fill="x", pady=(0, 8))
         self._pp_baslik = ttk.Label(gp, text="Kesitte ya da cephede bir parçaya tıklayın",
@@ -8364,6 +8835,8 @@ class Uygulama(tk.Tk):
                            "takoz seçimi / ağırlık kuralı; '(yok)' = bu hatta takoz yok.",
                   foreground="#7a858e", wraplength=340, justify="left").grid(row=32, column=0, columnspan=2, sticky="w")
 
+        self._adim_btn = ttk.Button(ss_, text="📝 Hesap adımları (not defteri)", command=self._adimlar_goster)
+        self._adim_btn.pack(fill="x")
         gr = ttk.LabelFrame(ss_, text=" Statik — rüzgar yükü (ön analiz) ", padding=8)
         gr.pack(fill="x", pady=(8, 0))
         self._alan(gr, "Rüzgar yükü (kN/m²)", "ruzgar_kn", 1.0, 0, w=10)
@@ -8413,8 +8886,10 @@ class Uygulama(tk.Tk):
             side="left", fill="x", expand=True)
         self._son_btn = ttk.Button(pf, text="▲", width=3, command=self._son_projeler_menu)
         self._son_btn.pack(side="left", padx=(2, 0))
-        ttk.Button(pf, text="Proje kaydet... (Ctrl+S)", command=self.proje_kaydet).pack(
+        ttk.Button(pf, text="Proje kaydet (Ctrl+S)", command=self.proje_kaydet).pack(
             side="left", fill="x", expand=True, padx=(6, 0))
+        ttk.Button(pf, text="Farklı kaydet...", command=lambda: self.proje_kaydet(farkli=True)).pack(
+            side="left", padx=(4, 0))
         def _kisa(geri):
             def f_(e):
                 if e.widget.winfo_class() in ("Text",):
@@ -8447,15 +8922,18 @@ class Uygulama(tk.Tk):
         t1 = ttk.Frame(nb)
         nb.add(t1, text="Cephe görünüşü")
         # sabit bilgilendirme çubuğu: kısayol ipuçları; işlem günlüğündeki son mesaj birkaç saniye burada görünür
-        bc_ = ttk.Frame(t1, style="Bilgi.TFrame", padding=(8, 3))
-        bc_.pack(fill="x")
-        self._bilgi_ozet = ttk.Label(bc_, text="", style="Bilgi.TLabel", anchor="e", cursor="hand2")
-        self._bilgi_ozet.pack(side="right", padx=(12, 0))
+        self._bilgi_cv = _BilgiCubugu(t1)
+        self._bilgi_cv.pack(fill="x")
+        self._bilgi_ozet = self._bilgi_cv.ozet
         self._bilgi_ozet.bind("<Button-1>", lambda _e: self._uyari_goster())
-        self._bilgi_koor = ttk.Label(bc_, text="", style="Bilgi.TLabel", anchor="e")
-        self._bilgi_koor.pack(side="right", padx=(12, 0))
-        self._bilgi_lbl = ttk.Label(bc_, text=self.BILGI_VARSAYILAN, style="Bilgi.TLabel", anchor="w")
-        self._bilgi_lbl.pack(side="left", fill="x", expand=True)
+        self._bilgi_koor = self._bilgi_cv.koor
+        self._bilgi_lbl = self._bilgi_cv.sol
+        self._bilgi_lbl.configure(text=self.BILGI_VARSAYILAN)
+        try:
+            self._bilgi_cv.tema(TEMALAR[self.tema]["baslik"], TEMALAR[self.tema]["soluk"],
+                                "#555d65" if self.tema == "koyu" else "#c4cbd1")
+        except (KeyError, AttributeError):
+            pass
         cb_ = ttk.Frame(t1)
         cb_.pack(fill="x")
         ttk.Button(cb_, text="⇄ Aynala", command=self._cephe_aynala).pack(side="left", padx=6, pady=4)
@@ -8529,6 +9007,7 @@ class Uygulama(tk.Tk):
         nb.insert(2, sf_c, text="Cam")
         nb.insert(3, sf_s, text="Statik")
         self._mh_kur(nb)
+        self._cam_panel_girdi_kur()
         self._sekme_seridi.yenile()
         self._uc_kur(sol)
 
@@ -9570,6 +10049,7 @@ class Uygulama(tk.Tk):
         ttk.Button(bt, text="Ekle...", command=self._kural_ekle).pack(side="left")
         ttk.Button(bt, text="Düzenle...", command=self._kural_duzenle).pack(side="left", padx=6)
         ttk.Button(bt, text="Sil", command=self._kural_sil).pack(side="left")
+        ttk.Button(bt, text="Uyuşmazlık tara / kod öner...", command=self._uyum_tara).pack(side="left", padx=(18, 0))
         sf = ttk.LabelFrame(fr, text=" Sonuç tablosu: her cam kalınlığında hangi bariyer seçilir (kural, yoksa otomatik) ",
                             padding=6)
         sf.pack(fill="both", expand=True, pady=(10, 0))
@@ -9636,6 +10116,176 @@ class Uygulama(tk.Tk):
         yeni = self._kural_diyalog()
         if yeni:
             self._kural_degisti(cam_kurallari(self._aktif_sistem()) + [yeni])
+
+    def _uyum_tara(self):
+        """Geçerli cam kalınlığında kesitteki uyuşmazlıkları (binme / boşluk) tarar ve uygun zincir kodlarını önerir."""
+        s = self.sonuc or {}
+        yapi = s.get("cam_yapi")
+        if not yapi or not self.detay:
+            messagebox.showinfo("Uyuşmazlık tara", "Önce hesaplayın (cam yapısı ve detay gerekli).")
+            return
+        kal = yapi["kalinlik"]
+        mevcut = str((s.get("cam_secim") or {}).get("pvc") or "").strip()
+        pen = tk.Toplevel(self)
+        pen.title("Uyuşmazlık tara / kod öner")
+        pen.transient(self)
+        try:
+            pen.geometry("1280x680")
+        except tk.TclError:
+            pass
+        fr = ttk.Frame(pen, padding=12)
+        fr.pack(fill="both", expand=True)
+        ttk.Label(fr, text=f"Cam: {yapi['ad']}  =  {kal:.2f} mm (PVB dahil)", font=("Segoe UI", 10, "bold")).pack(anchor="w")
+        satir = []
+        if mevcut:
+            hs = []
+            for t in ("dikey", "yatay"):
+                h = zincir_uyum_hatasi(self.detay.get(t), t, yapi, [x for x in mevcut.split("+") if x], self.bariyerler,
+                                       s.get("cam_secim"), self.cam_tablo)
+                if h is not None:
+                    hs.append(f"{t} {h:+.1f} mm " + ("(BİNME)" if h > 0.6 else "(BOŞLUK)" if h < -0.6 else "(uygun)"))
+            satir.append(f"Şu an seçili zincir: {mevcut}" + ("   →   " + ", ".join(hs) if hs else ""))
+        else:
+            satir.append("Şu an seçili ısı bariyeri zinciri yok / bulunamadı.")
+        for t in ("dikey", "yatay"):
+            d_ = (s.get("detay") or {}).get(t)
+            for u in (detay_kontrol(d_, t) if d_ else []):
+                satir.append(f"{t.capitalize()} detay: {u}")
+        ttk.Label(fr, text="\n".join(satir), wraplength=640, justify="left").pack(anchor="w", pady=(4, 8))
+        kol = ("Zincir (içten dışa)", "Parça", "Hata dikey (mm)", "Hata yatay (mm)")
+        govde = ttk.Frame(fr)
+        govde.pack(fill="both", expand=True)
+        sol_ = ttk.Frame(govde)
+        sol_.pack(side="left", fill="y")
+        tr = ttk.Treeview(sol_, columns=kol, show="headings", height=14, selectmode="browse")
+        for k_, w_ in zip(kol, (230, 50, 95, 95)):
+            tr.heading(k_, text=k_)
+            tr.column(k_, width=w_, anchor="w")
+        tr.pack(fill="y", expand=True)
+        onz = tk.Canvas(govde, width=560, height=380, highlightthickness=1, highlightbackground="#9aa5ad", bg="white")
+        onz.pack(side="left", fill="both", expand=True, padx=(10, 0))
+        onz_durum = {"zincir": None}
+        self._il_ab = (0.0, 1.0)
+        try:
+            oner = bariyer_oner(self.detay, yapi, self.bariyerler, secim=s.get("cam_secim"), tablo=self.cam_tablo,
+                                ilerleme=self._ilerle)
+        finally:
+            _ilerle_g(self, None)
+        if mevcut:
+            hm_ = {}
+            for t in ("dikey", "yatay"):
+                hh_ = zincir_uyum_hatasi(self.detay.get(t), t, yapi, [x for x in mevcut.split("+") if x],
+                                         self.bariyerler, s.get("cam_secim"), self.cam_tablo)
+                hm_[t] = "-" if hh_ is None else f"{hh_:+.2f}"
+            tr.insert("", "end", iid="m", values=("● şu anki: " + mevcut, len([x for x in mevcut.split("+") if x]),
+                                                  hm_["dikey"], hm_["yatay"]))
+        for i, r in enumerate(oner):
+            f = lambda t: (f"{r['hata'][t]:+.2f}" if t in r["hata"] else "-")
+            tr.insert("", "end", iid=str(i), values=(r["zincir"], r["parca"], f("dikey"), f("yatay")))
+
+        def onizle(_e=None):
+            """Seçili zincirin kesitte nasıl görüneceğini (dikey + yatay) sağdaki tuvale çizer."""
+            sec = tr.selection()
+            zinc = None
+            if sec:
+                zinc = mevcut if sec[0] == "m" else oner[int(sec[0])]["zincir"]
+            onz_durum["zincir"] = zinc
+            cv = self._cv_tema(onz)
+            cv.delete("all")
+            W, H = onz.winfo_width(), onz.winfo_height()
+            if not zinc or W < 120 or H < 120:
+                return
+            ogeler = []
+            for t in ("dikey", "yatay"):
+                kay = self.detay.get(t)
+                if not kay:
+                    continue
+                try:
+                    r_ = detay_uyarla({t: kay}, yapi, dict(s.get("cam_secim") or {}, pvc=zinc), self.cam_tablo,
+                                      self.bariyerler)
+                    if r_.get(t):
+                        ogeler.append((t, r_[t]))
+                except Exception as ex:
+                    cv.create_text(W / 2, H / 2, text=f"Önizleme çizilemedi: {ex}", fill="#c0392b", width=W - 40)
+                    return
+            if not ogeler:
+                return
+            gap = 0.3 * max(d["bbox"][2] - d["bbox"][0] for _t, d in ogeler)
+            tw = sum(d["bbox"][2] - d["bbox"][0] for _t, d in ogeler) + gap * (len(ogeler) - 1)
+            hm = max(d["bbox"][3] - d["bbox"][1] for _t, d in ogeler)
+            mL, mT, mB = 20, 60, 90
+            sc = min((W - 2 * mL) / tw, (H - mT - mB) / hm)
+            if sc <= 0:
+                return
+            ox = mL + ((W - 2 * mL) - tw * sc) / 2
+            oy = mT + ((H - mT - mB) + hm * sc) / 2
+            X, Y = (lambda v: ox + v * sc), (lambda v: oy - v * sc)
+            cv.create_text(W / 2, 14, text="Önizleme: " + zinc, font=("Arial", 10, "bold"), fill="#3d4851")
+            x = 0.0
+            for t, d in ogeler:
+                w_, h_ = d["bbox"][2] - d["bbox"][0], d["bbox"][3] - d["bbox"][1]
+                dx, dy = x - d["bbox"][0], (hm - h_) / 2 - d["bbox"][1]
+                for x1, y1, x2, y2, tp in detay_cam_dikdortgenleri(d, t, yapi):
+                    dolgu, cizgi = cam_renk(tp)
+                    cv.create_rectangle(X(x1 + dx), Y(y2 + dy), X(x2 + dx), Y(y1 + dy), fill=dolgu, outline=cizgi)
+                ciz_detay(cv, d, X, Y, sc, dx, dy, yazi=True)
+                mx = X(x + w_ / 2)
+                cv.create_text(mx, 38, text=t.capitalize(), font=("Arial", 9, "bold"), fill="#3d4851")
+                yy = Y(d["bbox"][1] + dy) + 14
+                try:
+                    h_t = zincir_uyum_hatasi(self.detay.get(t), t, yapi, [q for q in zinc.split("+") if q],
+                                             self.bariyerler, s.get("cam_secim"), self.cam_tablo)
+                except Exception:
+                    h_t = None
+                if h_t is not None:
+                    cv.create_text(mx, yy, anchor="n", font=("Arial", 9, "bold"),
+                                   fill="#c0392b" if abs(h_t) > 0.6 else "#2e7d32",
+                                   text=f"zincir farkı {h_t:+.2f} mm " + ("(binme)" if h_t > 0.6 else "(boşluk)" if h_t < -0.6 else "(uygun)"))
+                    yy += 14
+                try:
+                    uy = detay_kontrol(d, t)
+                except Exception:
+                    uy = []
+                for ln in uy[:4]:
+                    cv.create_text(mx, yy, anchor="n", width=max(140, (w_ + gap * 0.6) * sc), justify="center",
+                                   text="! " + ln, fill="#c0392b", font=("Arial", 8))
+                    yy += 12 * (1 + int(len(ln) * 5.2 // max(140, (w_ + gap * 0.6) * sc)))
+                x += w_ + gap
+        tr.bind("<<TreeviewSelect>>", onizle)
+        onz.bind("<Configure>", lambda _e: onizle())
+        if mevcut:
+            tr.selection_set("m")
+        elif oner:
+            tr.selection_set("0")
+        ttk.Label(fr, wraplength=640, foreground="#7a858e", justify="left",
+                  text="Hata = zincir boyu ile baskı/kapak konumu arasındaki fark: + binme, − boşluk. 0'a yakın olanlar uyumludur. "
+                       "Aday: (isteğe bağlı adaptör) + en çok 3 ısı bariyeri; en az parçalı ve en uyumlu olan önce gelir.").pack(
+            anchor="w", pady=(6, 0))
+
+        def kural_ekle():
+            sec = tr.selection()
+            if not sec or sec[0] == "m":
+                return
+            r = oner[int(sec[0])]
+            kurallar = cam_kurallari(self._aktif_sistem())
+            lo, hi = round(kal - 0.05, 2), round(kal + 0.05, 2)
+            yeni_k = []
+            for k in kurallar:                       # bu kalınlığı kapsayan kural bölünür: yalnız bu kalınlık yeni zinciri alır
+                if k["max"] < lo or k["min"] > hi:
+                    yeni_k.append(k)
+                    continue
+                if k["min"] < lo:
+                    yeni_k.append(dict(k, max=round(lo - 0.01, 2)))
+                if k["max"] > hi:
+                    yeni_k.append(dict(k, min=round(hi + 0.01, 2)))
+            yeni_k.append({"min": lo, "max": hi, "bariyer": r["zincir"], "not": "uyum taramasından"})
+            kurallar = yeni_k
+            self._kural_degisti(kurallar)
+            pen.destroy()
+        bt_ = ttk.Frame(fr)
+        bt_.pack(fill="x", pady=(8, 0))
+        ttk.Button(bt_, text="Bu cam kalınlığı için kural ekle", command=kural_ekle).pack(side="left")
+        ttk.Button(bt_, text="Kapat", command=pen.destroy).pack(side="right")
 
     def _kural_duzenle(self):
         i = self._kural_secili()
@@ -10005,7 +10655,7 @@ class Uygulama(tk.Tk):
                 self._aks_d = d
             if h is not None:
                 self._aks_h = h
-        yeni = (self._aks_d, self._aks_h)
+        yeni = (getattr(self, "_aks_d", None), getattr(self, "_aks_h", None))
         if yeni != eski:
             self._odak = None                     # başka aks seçildi: aks odağı kalkar
         self._aks_ui_yenile()
@@ -12749,15 +13399,30 @@ class Uygulama(tk.Tk):
         self.hesapla()
         return uyari
 
-    def proje_kaydet(self):
+    def proje_kaydet(self, farkli=False):
+        """Proje yolu biliniyorsa doğrudan üzerine yazar; yoksa ya da farkli=True ise dosya sorar."""
+        yol = ""
+        if not farkli and self.proje_yolu and os.path.isdir(os.path.dirname(os.path.abspath(self.proje_yolu))):
+            yol = self.proje_yolu
+        else:
+            yol = self._proje_yolu_sor()
+        if not yol:
+            return
+        self._proje_yaz(yol, sessiz=(yol == self.proje_yolu))
+
+    def _proje_yolu_sor(self):
+        return self._proje_yolu_sor_()
+
+    def _proje_yolu_sor_(self):
         yol = filedialog.asksaveasfilename(
             title="Projeyi kaydet", defaultextension=".cephe",
             initialfile=os.path.basename(self.proje_yolu) if self.proje_yolu else
             ((self.v["proje_adi"].get().strip() or "cephe_projesi") + ".cephe"),
             initialdir=os.path.dirname(self.proje_yolu) if self.proje_yolu else None,
             filetypes=[("Cephe projesi", "*.cephe"), ("JSON", "*.json")])
-        if not yol:
-            return
+        return yol
+
+    def _proje_yaz(self, yol, sessiz=False):
         try:
             veri = self.proje_verisi(os.path.dirname(os.path.abspath(yol)))
             with open(yol, "w", encoding="utf-8") as f:
@@ -12769,7 +13434,11 @@ class Uygulama(tk.Tk):
         self._son_proje_ekle(yol)
         self.title(f"Cephe Metraj - {os.path.basename(yol)}")
         self._kayit_isaretle()
-        messagebox.showinfo("Kaydedildi", f"Proje kaydedildi:\n{yol}")
+        if sessiz:
+            self.title(f"Cephe Metraj - {os.path.basename(yol)}  ✓ kaydedildi")
+            self.after(2500, lambda: self.title(f"Cephe Metraj - {os.path.basename(yol)}"))
+        else:
+            messagebox.showinfo("Kaydedildi", f"Proje kaydedildi:\n{yol}")
 
     def _kayit_isaretle(self):
         """Şu anki durumu 'kayıtlı' say (kapatırken değişiklik sorusu bununla karşılaştırır)."""
@@ -13183,8 +13852,14 @@ class Uygulama(tk.Tk):
         for o in oge:
             o["w"] = o["d"]["bbox"][2] - o["d"]["bbox"][0]
             o["h"] = o["d"]["bbox"][3] - o["d"]["bbox"][1]
-        bosluk = 0.35 * max(o["w"] for o in oge)
-        gapy = (0.45 if hepsi else 0.0) * max(o["h"] for o in oge)
+        if hepsi:                                  # kalabalık satırı böl: en çok 2 detay yan yana (okunaklı ölçek)
+            _say = {}
+            for o in oge:
+                _n = _say.get(o["r"], 0)
+                _say[o["r"]] = _n + 1
+                o["r"] = (o["r"], _n // 2)
+        bosluk = (1.0 if hepsi else 0.35) * max(o["w"] for o in oge)
+        gapy = (0.9 if hepsi else 0.0) * max(o["h"] for o in oge)
         satirlar = {}
         for o in oge:
             satirlar.setdefault(o["r"], []).append(o)
@@ -13203,7 +13878,7 @@ class Uygulama(tk.Tk):
                 o["dx"] = x - o["d"]["bbox"][0]
                 o["dy"] = taban[r] + (hm_r[r] - o["h"]) / 2 - o["d"]["bbox"][1]
                 x += o["w"] + bosluk
-        mL, mR, mT, mB = 40, 40, (60 if hepsi else 90), 50
+        mL, mR, mT, mB = 40, 40, (100 if hepsi else 90), (90 if hepsi else 50)
         sc0 = min((W - mL - mR) / tw, (H - mT - mB) / hmax)
         if sc0 <= 0:
             return
@@ -13234,12 +13909,15 @@ class Uygulama(tk.Tk):
             except Exception:
                 uy_ = []
             if uy_:
-                yy_ = Y(d["bbox"][1] + dy) + 14
+                yy_ = Y(d["bbox"][1] + dy) + 52      # alt etiketlerin (kod/ölçü) altına
+                gw_ = max(160, (w + bosluk * 0.6) * sc)
                 for ln_ in uy_[:4]:
-                    cv.create_text(X(d["bbox"][0] + dx + w / 2), yy_, text="! " + ln_, fill="#c0392b", font=("Arial", 8))
-                    yy_ += 12
+                    cv.create_text(X(d["bbox"][0] + dx + w / 2), yy_, anchor="n", width=gw_, justify="center",
+                                   text="! " + (o["etk"].split(" (")[0] + ": " if hepsi else "") + ln_,
+                                   fill="#c0392b", font=("Arial", 8))
+                    yy_ += 12 * (1 + int(len(ln_) * 5.2 // gw_))
                 if len(uy_) > 4:
-                    cv.create_text(X(d["bbox"][0] + dx + w / 2), yy_, text=f"+{len(uy_) - 4} uyarı daha", fill="#c0392b", font=("Arial", 8))
+                    cv.create_text(X(d["bbox"][0] + dx + w / 2), yy_, anchor="n", text=f"+{len(uy_) - 4} uyarı daha", fill="#c0392b", font=("Arial", 8))
                 kontrol_say += len(uy_)
             try:
                 if genel_ayar("parca_kod"):
@@ -13248,7 +13926,9 @@ class Uygulama(tk.Tk):
                 pass                       # etiket yerleşimi çizimi asla engellemesin
             mx = X(d["bbox"][0] + dx + w / 2)
             if hepsi:
-                cv.create_text(mx, Y(d["bbox"][3] + dy) - 12, anchor="s", font=("Arial", 9, "bold"), fill="#3d4851",
+                ust_ = min(Y(q["d"]["bbox"][3] + q["dy"]) for q in oge if q["r"] == o["r"])   # satırın en üstü
+                cv.create_text(mx, ust_ - 46, anchor="s", font=("Arial", 9, "bold"), fill="#3d4851",
+                               width=max(120, (w + bosluk * 0.6) * sc), justify="center",
                                text=f"{tur.capitalize()}: {k['ad']}  —  {o['etk']}")
             else:
                 cv.create_text(mx, 22, text=f"{tur.capitalize()}: {k['ad']}" + (f"  —  {o['etk']}" if o["etk"] else ""),
@@ -13654,16 +14334,25 @@ class Uygulama(tk.Tk):
         """Önbellekleri temizleyip profil detaylarını yeniden üretir; cephe/kesit görüntüsünü verilerle eşleştirir."""
         try:
             _PC_ONB.clear()
+            _OTURMA_ONB.clear()
+            _ZT_ONB.clear()
+            _YON_ONB.clear()
             self._tip_onb = {}
             self._sp_onb = (None,)
+            self._il_ab = (0.0, 0.5)
+            _ilerle_g(self, 0.05)
             self._sec_yenile() if self._secili else None
             self._ayar_sonrasi("hafif")          # profil detayları + hesap + çizim
+            self._il_ab = (0.5, 1.0)
             self.hesapla()
+            self._il_ab = (0.9, 1.0)
             self.ciz()
             self.ciz_kesit()
             self._log("Görünüm verilerle eşleştirildi (yenilendi).")
         except Exception as e:
             self._log(f"Yenileme hatası: {e}", "hata")
+        finally:
+            _ilerle_g(self, None)
 
     def _gecmis_sifirla(self):
         if not hasattr(self, "_v_ilk"):
@@ -13706,7 +14395,13 @@ class Uygulama(tk.Tk):
             self._geri_yigin.append(self._son_durum)
             del self._geri_yigin[:-self.GECMIS_SINIR]
             self._ileri_yigin.clear()
-        self._hesapla_ic()
+        self._adimlar, self._adim_t0 = [], time.time()
+        _ilerle_g(self, 0.02)
+        try:
+            self._hesapla_ic()
+        finally:
+            if getattr(self, "_il_ab", (0.0, 1.0)) == (0.0, 1.0):
+                _ilerle_g(self, None)
         try:
             self._son_durum = self._durum_al()
         except (AttributeError, KeyError, tk.TclError):
@@ -13717,8 +14412,17 @@ class Uygulama(tk.Tk):
             self._kural_uygula()
             cols, rows, p, ek, tip = self._oku()
             parca = {t: self.parca[t] for t in ("dikey", "yatay") if self.parca.get(t)}
+            self._adim("Girdiler okundu ve kurallar uygulandı",
+                       f"Aks aralıkları: {len(cols)} adet, toplam {sum(cols):g} mm\n"
+                       f"Kat yükseklikleri: {len(rows)} adet, toplam {sum(rows):g} mm\n"
+                       f"Dikey profil: {p.get('dikey_ad', '-')}   Yatay profil: {p.get('yatay_ad', '-')}\n"
+                       f"Rüzgar yükü: {(p.get('ruzgar_kn') or 0):g} kN/m²")
+            _ilerle_g(self, 0.06)
             self._panel_uygula()
             self._bariyer_uygula()
+            self._adim("Parça ve ısı bariyeri ayarları uygulandı",
+                       f"Bariyer kombinasyon sayısı: {len(self.bariyerler or [])}")
+            _ilerle_g(self, 0.12)
             # Sistem tipi (kapaklı / silikonlu ...) ayrımı yok: her aks/hat aynı şablondan kurulur; kapak çıkarma,
             # fitil ekleme vb. aks/hat başına elle yapılır.
             self.yatay_tipleri = list(YATAY_TIP_VARSAYILAN)
@@ -13726,6 +14430,7 @@ class Uygulama(tk.Tk):
             self.model.update({"ytip": [], "dtip": "", "dik_tip": {}, "yat_tip": {}})
             ytipler, vdet = self._tip_varyantlari("yatay")
             dtipler, vdd = self._tip_varyantlari("dikey")
+            _ilerle_g(self, 0.22)
             self.sonuc = hesapla(cols, rows, p, ek, tip, parca, self.parca_kat, self.cam_tablo, self.bariyerler,
                                  self.model.get("ytip"), ytipler, hucre=self.model.get("hucre"),
                                  dik_yok=self.model.get("dik_yok"), yat_yok=self.model.get("yat_yok"),
@@ -13733,9 +14438,27 @@ class Uygulama(tk.Tk):
                                  dtip=self.model.get("dtip"), dtipler=dtipler, dik_tip=self.model.get("dik_tip"),
                                  yat_tip=self.model.get("yat_tip"), parca_cikar=self.model.get("parca_cikar"),
                                  parca_grup=self.model.get("parca_grup"), takoz_hat=self.model.get("takoz_hat"))
+            _s0 = self.sonuc
+            _o0, _pg0 = _s0.get("ozet", {}), _s0.get("agirlik", {})
+            self._adim("Modül, profil kesimi, çubuk ve cam hesabı",
+                       f"{_o0.get('aks', '-')} aks · {_o0.get('kat', '-')} kat · {_o0.get('modul', '-')} modül\n"
+                       f"Kesim kalemi: {len(_s0.get('kesim') or [])}   Çubuk kalemi: {len(_s0.get('cubuk') or [])}   "
+                       f"Cam kalemi: {len(_s0.get('cam') or [])}\n"
+                       f"Alüminyum toplamı: {_pg0.get('alu_toplam_kg', 0):.1f} kg")
+            for _c in (_s0.get("cubuk_uyari") or [])[:5]:
+                self._adim("   Uyarı", _c)
+            _ilerle_g(self, 0.45)
             self.sonuc["kesit"] = dict(self.kesit)
             self.sonuc["detay"] = detay_uyarla(self.detay, self.sonuc["cam_yapi"],
                                                self.sonuc.get("cam_secim"), self.cam_tablo, self.bariyerler)
+            _cy = self.sonuc.get("cam_yapi") or {}
+            _sc = self.sonuc.get("cam_secim") or {}
+            _d0 = (self.sonuc.get("detay") or {})
+            self._adim("Cam yapısı ve detay (kesit) uyarlaması",
+                       f"Cam yapısı: {_cy.get('ad', _cy.get('yapi', '-'))}   kalınlık: {_cy.get('kalinlik', '-')} mm\n"
+                       f"Seçilen kural/bariyer: {_sc.get('pvc', '-')}\n"
+                       f"Detay: " + ", ".join(f"{k}: {len((v or {}).get('prims', []) or [])} çizim" for k, v in _d0.items() if isinstance(v, dict)))
+            _ilerle_g(self, 0.58)
             self.sonuc["detay_tip"] = {}
             for ad_t, det_v in vdet.items():
                 r_ = detay_uyarla({"yatay": det_v}, self.sonuc["cam_yapi"], self.sonuc.get("cam_secim"),
@@ -13747,6 +14470,9 @@ class Uygulama(tk.Tk):
                                   self.cam_tablo, self.bariyerler)
                 if r_.get("dikey"):
                     self.sonuc["detay_tip_d"][ad_t] = r_["dikey"]
+            self._adim("Tip varyantları için detaylar hesaplandı",
+                       f"Yatay varyant: {len(self.sonuc['detay_tip'])}   Dikey varyant: {len(self.sonuc['detay_tip_d'])}")
+            _ilerle_g(self, 0.68)
             # aks / hat başına elle seçilen katman zinciri ve elle oturtulan parça konumları
             self.sonuc["kayma"] = dict(self.model.get("kayma") or {})
             self.sonuc["zincir_hat"] = dict(self.model.get("zincir_hat") or {})
@@ -13770,7 +14496,13 @@ class Uygulama(tk.Tk):
                                            self.cam_tablo, self.bariyerler)
                         if r_z.get(tur_z):
                             self.sonuc["detay_zincir"][(tur_z, ad_z, zv_)] = r_z[tur_z]
+            self._adim("Elle seçilen katman zincirleri uygulandı",
+                       f"Zincir seçilen hat sayısı: {len(self.sonuc['zincir_hat'])}   Uyarlanan detay: {len(self.sonuc['detay_zincir'])}")
+            _ilerle_g(self, 0.78)
             self.sonuc["analiz"] = on_analiz(self.sonuc)
+            _an0 = self.sonuc["analiz"]
+            self._adim("Statik ön analiz",
+                       "Rüzgar yükü girilmedi, statik kontrol yapılmadı" if not _an0 else "\n".join(analiz_satirlari(_an0)))
             try:
                 self._zincir_bilgi()
             except Exception:
@@ -13804,6 +14536,7 @@ class Uygulama(tk.Tk):
         self.model["yat_tip"] = dict(self.sonuc["yat_tip"])
         self.model["parca_cikar"] = {k: set(v) for k, v in self.sonuc["parca_cikar"].items()}
         s = self.sonuc
+        _ilerle_g(self, 0.84)
         for tr, satirlar in ((self.tr_kesim, s["kesim"]), (self.tr_cubuk, s["cubuk"]),
                              (self.tr_cam, s["cam"]), (self.tr_parca, s["parca"])):
             tr.delete(*tr.get_children())
@@ -13833,15 +14566,92 @@ class Uygulama(tk.Tk):
             self._mh_yenile()
         except Exception as ex:
             self._log(f"Hesaplar sekmesi yenilenemedi: {ex}")
+        self._adim("Tablolar, malzeme listesi ve hesaplar sekmesi dolduruldu",
+                   f"Malzeme grubu: {len(malzeme_listesi(s))}")
+        _ilerle_g(self, 0.9)
         self._bilgi_ozet_yaz()
         self._editor_kur()
         self._cam_etiket_yaz()
         self._ozet_yaz()
         self._kural_yenile()
+        self._adim("Kontrol uyarıları değerlendirildi")
+        _ilerle_g(self, 0.94)
         self.ciz()
+        self._adim("Cephe görünüşü çizildi")
+        _ilerle_g(self, 0.97)
         self.ciz_kesit()
+        self._adim("Kesit çizildi — hesap tamamlandı")
+
+    def _cam_panel_girdi_kur(self):
+        """Sağ paneldeki 'Cam bilgisi' kutusuna girdi alanları: Cam sekmesindeki değişkenlerle ortaktır (biri değişince
+        diğeri de değişir); Enter ya da başka alana geçince hesap yenilenir."""
+        fr = getattr(self, "_cp_giris", None)
+        if fr is None:
+            return
+        fr.columnconfigure(1, weight=1)
+        v = self.v
+
+        def alan(satir, et, an, aks=False):
+            ttk.Label(fr, text=et).grid(row=satir, column=0, sticky="w", pady=1)
+            e = ttk.Entry(fr, textvariable=v[an], width=11)
+            e.grid(row=satir, column=1, sticky="we", padx=(6, 0), pady=1)
+            son = {"v": v[an].get()}
+
+            def uygula(_e=None):
+                if v[an].get() == son["v"]:
+                    return
+                son["v"] = v[an].get()
+                self._cam_ui_degisti() if aks else self.hesapla()
+            e.bind("<Return>", uygula)
+            e.bind("<FocusOut>", uygula)
+            return e
+        alan(0, "Cam yapısı (mm)", "cam_yapi")
+        ttk.Label(fr, text="PVB (mm)").grid(row=1, column=0, sticky="w", pady=1)
+        cb = ttk.Combobox(fr, textvariable=v["pvb"], values=("0,76", "1,52"), width=8)
+        cb.grid(row=1, column=1, sticky="w", padx=(6, 0), pady=1)
+        cb.bind("<<ComboboxSelected>>", lambda _e: self.hesapla())
+        cb.bind("<Return>", lambda _e: self.hesapla())
+        ttk.Checkbutton(fr, text="İlk katman iç yüzde", variable=v["ilk_ic"], command=self.hesapla).grid(
+            row=2, column=0, columnspan=2, sticky="w")
+        alan(3, "Cam payı dikey", "cam_payi")
+        alan(4, "Cam payı yatay", "cam_payi_y")
+        alan(5, "Cam–aks dikey", "cam_aks_d", True)
+        alan(6, "Cam–aks yatay", "cam_aks_y", True)
+        alan(7, "Oturma payı", "cam_oturma", True)
+
+    def _cam_panel_yaz(self):
+        """Sağ paneldeki 'Cam bilgisi': yapı, toplam kalınlık, katmanlar, ağırlık, cam alanı, bariyer, paylar."""
+        s = self.sonuc or {}
+        y = s.get("cam_yapi")
+        if not y:
+            self._cp_yapi.config(text="Cam yapısı tanımsız")
+            self._cp_bilgi.config(text="")
+            self._cp_uyari.config(text="")
+            return
+        ad_ = {"cam": "Cam", "hava": "Hava", "pvb": "PVB"}
+        kat = " | ".join(f"{ad_.get(t, t)} {v:g}" for t, v in y["katman"])
+        v = self.v
+        satir = [f"Toplam kalınlık: {y['kalinlik']:.2f} mm (PVB dahil)",
+                 f"Katmanlar (dıştan içe): {kat}" if not v["ilk_ic"].get() else f"Katmanlar (içten dışa): {kat}",
+                 f"Ağırlık: {y['kg_m2']:.1f} kg/m²"]
+        o = s.get("ozet") or {}
+        if o.get("cam_adet"):
+            satir.append(f"Cam: {o['cam_adet']} adet, {o['cam_m2']:.2f} m², {o.get('cam_kg', 0):.0f} kg")
+        if str(v["spandrel_yapi"].get()).strip():
+            satir.append(f"Spandrel: {v['spandrel_yapi'].get().strip()}")
+        satir += cam_secim_metni(s)
+        if getattr(self, "_kural_not", None):
+            satir.append(self._kural_not)
+        self._cp_yapi.config(text=f"{y['ad']}  (PVB {self._pvb():g})")
+        self._cp_bilgi.config(text="\n".join(satir))
+        uy = [u for u in cam_uyarilari(s.get("detay"), y)]
+        self._cp_uyari.config(text="\n".join("UYARI: " + u for u in uy))
 
     def _cam_etiket_yaz(self):
+        try:
+            self._cam_panel_yaz()
+        except Exception as ex:
+            self._log(f"Cam bilgisi paneli yazılamadı: {ex}")
         y = self.sonuc.get("cam_yapi")
         if not y:
             self.lbl_cam.config(text="")
