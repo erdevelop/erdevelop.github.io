@@ -90,6 +90,21 @@
   .ddm .row .del:hover { color: var(--bad); background: color-mix(in srgb, var(--bad) 14%, transparent); }
   .ddm .tag { font: 600 9.5px var(--f-mono); padding: 1px 5px; border-radius: 3px; color: #fff; margin-right: 6px; vertical-align: 1px; }
   .ddm .empty { padding: 6px 10px 8px; color: var(--muted); font: 400 12px var(--f-body); }
+  .seg { display: flex; gap: 3px; padding: 2px 8px 6px; }
+  .ddm .seg button { flex: 1; text-align: center; border: 1px solid var(--line); padding: 5px 6px; font: 500 11.5px var(--f-mono); }
+  .ddm .seg button.on { background: var(--accent); color: #fff; border-color: var(--accent); }
+  .chk.opt { padding: 6px 10px; font-size: 12.5px; color: var(--fg); }
+  .keys { display: flex; flex-direction: column; padding: 2px 10px 8px; font: 400 11.5px/1.7 var(--f-body); color: var(--text); }
+  .keys b { font: 500 10.5px var(--f-mono); color: var(--fg); background: var(--grid); padding: 0 4px; border-radius: 3px; }
+  .CodeMirror-hints { font: 400 12.5px var(--f-mono); background: var(--panel); border: 1px solid var(--line); box-shadow: 0 8px 24px rgba(0,0,0,.25); border-radius: 6px; z-index: 40; max-height: 16em; }
+  .CodeMirror-hint { color: var(--fg); padding: 2px 8px; }
+  li.CodeMirror-hint-active { background: var(--accent); color: #fff; }
+  .CodeMirror-dialog { background: var(--panel-2); color: var(--fg); font: 400 12.5px var(--f-mono); }
+  .CodeMirror-dialog input { color: var(--fg); font: inherit; }
+  .CodeMirror-dialog-top { border-bottom: 1px solid var(--line); }
+  .CodeMirror-foldmarker { color: var(--accent); text-shadow: none; font-family: var(--f-mono); }
+  .CodeMirror-foldgutter-open, .CodeMirror-foldgutter-folded { color: var(--muted); }
+  .cm-searching { background: color-mix(in srgb, var(--hot) 35%, transparent); }
   .drop { position: fixed; inset: 0; z-index: 60; background: color-mix(in srgb, var(--accent) 16%, transparent); border: 3px dashed var(--accent); display: grid; place-items: center; font: 600 18px var(--f-body); color: var(--accent); pointer-events: none; }
   .gutter { cursor: col-resize; position: relative; }
   .gutter::after { content: ""; position: absolute; left: 2px; right: 2px; top: 45%; height: 40px; border-radius: 2px; background: var(--line); }
@@ -224,7 +239,23 @@
         </div></div>
       <span class="meta" id="edMeta"></span><span class="sp"></span>
       <span class="kbd hide-s">Ctrl+Enter çalıştır</span>
+      <button class="mini" type="button" id="beautyBtn" title="Kodu düzenle / biçimlendir (Shift+Alt+F)">{ } Düzenle</button>
       <button class="mini" type="button" id="fmtBtn" title="Yazı boyutu">A±</button>
+      <div class="dd"><button class="mini" type="button" id="setBtn" title="Editör ayarları">⚙</button>
+        <div class="ddm" id="setMenu" hidden>
+          <div class="lbl">Tuş düzeni</div>
+          <div class="seg" id="keymapSeg"><button type="button" data-k="sublime">Sublime</button><button type="button" data-k="default">Sade</button><button type="button" data-k="vim">Vim</button><button type="button" data-k="emacs">Emacs</button></div>
+          <hr>
+          <label class="chk opt"><input type="checkbox" id="optHint"> Yazarken otomatik öneri</label>
+          <label class="chk opt"><input type="checkbox" id="optWrap"> Uzun satırları kaydır</label>
+          <hr><div class="lbl">Kısayollar</div>
+          <div class="keys">
+            <span><b>Ctrl+Enter</b> çalıştır</span><span><b>Ctrl+S</b> projeyi kaydet</span><span><b>Ctrl+Space</b> öneri</span>
+            <span><b>Ctrl+F</b> bul · <b>Shift+Ctrl+F</b> değiştir</span><span><b>Ctrl+G</b> satıra git</span><span><b>Ctrl+D</b> sonraki eşleşmeyi seç</span>
+            <span><b>Ctrl+tık</b> çoklu imleç</span><span><b>Alt+↑/↓</b> satırı taşı</span><span><b>Ctrl+Shift+K</b> satırı sil</span>
+            <span><b>Ctrl+/</b> yorum satırı</span><span><b>Ctrl+Q</b> katla/aç</span><span><b>Shift+Alt+F</b> biçimlendir</span>
+          </div>
+        </div></div>
     </div>
     <div class="edwrap" id="edwrap"></div>
   </section>
@@ -1063,8 +1094,115 @@ const cm = CodeMirror($('edwrap'), {
     'Shift-Tab': c => c.indentSelection('subtract')
   }
 });
+/* ---------- otomatik tamamlama ---------- */
+const KW = {
+  python: 'False None True and as assert async await break class continue def del elif else except finally for from global if import in is lambda nonlocal not or pass raise return try while with yield print input len range enumerate zip map filter sorted reversed sum min max abs round int float str list dict set tuple bool type isinstance open format super property staticmethod classmethod dataclass self numpy pandas matplotlib.pyplot',
+  javascript: 'async await break case catch class const continue debugger default delete do else export extends false finally for function if import in instanceof let new null return super switch this throw true try typeof undefined var void while yield console.log console.table console.error document window Math JSON Array Object String Number Promise Map Set fetch setTimeout setInterval structuredClone input DOSYALAR plotly',
+  lua: 'and break do else elseif end false for function goto if in local nil not or repeat return then true until while print pairs ipairs tostring tonumber type table.insert table.remove table.concat table.sort string.format string.rep string.sub string.upper string.lower math.floor math.ceil math.max math.min math.sqrt math.pi math.random io.write io.read require select setmetatable',
+  r: 'function if else for while repeat break next return TRUE FALSE NULL NA Inf library print cat paste paste0 sprintf c list data.frame matrix vector seq rep length sum mean median sd var min max round summary str head tail nrow ncol names apply sapply lapply tapply aggregate merge subset order sort table read.csv write.csv plot hist barplot boxplot lines points abline legend lm predict',
+  php: 'abstract and array as break case catch class clone const continue declare default do echo else elseif empty endfor endforeach endif endwhile extends final finally fn for foreach function global if implements include instanceof interface isset list match namespace new null or print private protected public require return static switch throw trait try unset use var while yield count strlen strtoupper strtolower str_repeat str_pad implode explode array_map array_filter array_sum array_keys array_values in_array sort usort printf sprintf number_format json_encode json_decode var_dump print_r round floor ceil max min',
+  ruby: 'alias and begin break case class def defined? do else elsif end ensure false for if in module next nil not or redo rescue retry return self super then true undef unless until when while yield puts print p gets require attr_accessor attr_reader each map select reject reduce inject sum sort_by group_by each_with_index times upto downto to_s to_i to_f length size include? empty?',
+  prolog: 'is mod rem not true fail false halt member append length nth0 nth1 reverse msort sort findall bagof setof between succ write writeln nl format atom_length atom_concat sub_atom number_codes atom_codes forall assertz retract',
+  scheme: 'define lambda let let* letrec if cond else case and or not begin set! quote list cons car cdr cadr null? pair? length append reverse map for-each filter fold-left fold-right apply display newline write number? string? symbol? eq? eqv? equal? + - * / quotient remainder modulo expt sqrt abs min max string-append number->string string->number vector vector-ref'
+};
+KW.typescript = KW.javascript + ' interface type enum implements readonly private public protected namespace declare abstract as keyof number string boolean any unknown never';
+let autoHint = store.get(KEY + '-hint') !== '0';
+const allWords = () => { const s = new Set(); for (const f of getWs(lang).files) if (!isData(f.n)) (fdoc.get(f) ? fdoc.get(f).getValue() : f.c).replace(/[A-Za-z_$][\w$]{2,}/g, w => s.add(w)); return s; };
+function sqlTables() {
+  const db = L.sql.db, t = {}; if (!db) return t;
+  try { for (const [n] of (db.exec("SELECT name FROM sqlite_master WHERE type IN ('table','view')")[0] || { values: [] }).values) t[n] = (db.exec(`PRAGMA table_info("${n}")`)[0] || { values: [] }).values.map(r => r[1]); } catch (e) {}
+  return t;
+}
+async function smartHint(c, cb) {
+  const cur = c.getCursor(), line = c.getLine(cur.line).slice(0, cur.ch);
+  const m = line.match(/([A-Za-z_$][\w$]*(?:\.[A-Za-z_$][\w$]*)*)(?:\.|\$)([\w$]*)$/);
+  const expr = m ? m[1] : '', prefix = m ? m[2] : (line.match(/[\w$.]*$/)[0].split('.').pop());
+  const R = L[lang], fileExt = extOf(getWs(lang).files[getWs(lang).act].n);
+  let list = [];
+  if (R.complete && ready[lang] && !isData('x.' + fileExt)) { try { list = await Promise.race([R.complete(expr, prefix), sleep(900).then(() => [])]); } catch (e) {} }
+  if (!expr) {
+    const extra = [...(KW[lang] || '').split(' '), ...allWords()].filter(w => w.startsWith(prefix) && w !== prefix);
+    list = [...new Set([...list, ...extra])].sort((a, b) => (a.length - b.length) || a.localeCompare(b)).slice(0, 80);
+  }
+  list = list.filter(w => w !== prefix);
+  if (!list.length) return cb(null);
+  cb({ list, from: CodeMirror.Pos(cur.line, cur.ch - prefix.length), to: cur });
+}
+smartHint.async = true;
+function hint(c, manual) {
+  if (!manual && !autoHint) return;
+  const ext = extOf(getWs(lang).files[getWs(lang).act].n);
+  const opt = { completeSingle: false, closeCharacters: /[\s()\[\]{};:>,=]/ };
+  if (ext === 'html' || ext === 'htm') return c.showHint({ ...opt, hint: CodeMirror.hint.html });
+  if (ext === 'css') return c.showHint({ ...opt, hint: CodeMirror.hint.css });
+  if (ext === 'sql') return c.showHint({ ...opt, hint: CodeMirror.hint.sql, tables: sqlTables() });
+  if (isData('x.' + ext)) return;
+  c.showHint({ ...opt, hint: smartHint });
+}
+
+/* ---------- biçimlendirme ---------- */
+const PRETTIER = 'https://cdn.jsdelivr.net/npm/prettier@3.3.3/';
+const PRETTIER_PLUG = { js: ['babel', 'estree'], mjs: ['babel', 'estree'], json: ['babel', 'estree'], ts: ['typescript', 'estree'], css: ['postcss'], html: ['html', 'postcss', 'babel', 'estree'], htm: ['html', 'postcss', 'babel', 'estree'], md: ['markdown'] };
+const PRETTIER_PARSER = { js: 'babel', mjs: 'babel', json: 'json', ts: 'typescript', css: 'css', html: 'html', htm: 'html', md: 'markdown' };
+async function formatCode() {
+  const w = getWs(lang), f = w.files[w.act], ext = extOf(f.n), src = cm.getValue();
+  let out = null;
+  try {
+    if (PRETTIER_PARSER[ext]) {
+      toast('biçimlendiriliyor…');
+      if (!window.prettier) await loadScript(PRETTIER + 'standalone.js');
+      window.prettierPlugins = window.prettierPlugins || {};
+      for (const p of PRETTIER_PLUG[ext]) if (!window.prettierPlugins[p]) await loadScript(PRETTIER + 'plugins/' + p + '.js');
+      out = await window.prettier.format(src, { parser: PRETTIER_PARSER[ext], plugins: Object.values(window.prettierPlugins), tabWidth: L[lang].indent || 2, printWidth: 100, singleQuote: false });
+    } else if (ext === 'sql') {
+      if (!window.sqlFormatter) await loadScript('https://cdn.jsdelivr.net/npm/sql-formatter@15.4.0/dist/sql-formatter.min.js');
+      out = window.sqlFormatter.format(src, { language: 'sqlite', keywordCase: 'upper', tabWidth: 2 }) + '\n';
+    } else if (ext === 'py') {
+      toast('Python biçimlendiriliyor (black)…');
+      out = await L.python.format(src);
+    } else {
+      cm.operation(() => { for (let i = 0; i < cm.lineCount(); i++) cm.indentLine(i, 'smart'); });
+      return toast('girinti düzeltildi (bu dil için tam biçimlendirici yok)');
+    }
+  } catch (e) {
+    if (e && e.cancel) return;
+    const msg = String(e && e.message || e).split('\n')[0];
+    const lm = msg.match(/\((\d+):(\d+)\)|line (\d+)/); if (lm) cm.setCursor((+(lm[1] || lm[3])) - 1, 0);
+    return toast('biçimlendirilemedi: ' + msg.slice(0, 120));
+  }
+  if (out != null && out !== src) {
+    const cur = cm.getCursor(), top = cm.getScrollInfo().top;
+    cm.replaceRange(out, CodeMirror.Pos(0, 0), CodeMirror.Pos(cm.lastLine()));
+    cm.setCursor(Math.min(cur.line, cm.lastLine()), cur.ch); cm.scrollTo(null, top);
+    toast('kod biçimlendirildi');
+  } else if (out != null) toast('zaten düzgün');
+}
+
 function applyFont() { cm.getWrapperElement().style.fontSize = fontSize + 'px'; cm.refresh(); }
 applyFont();
+$('beautyBtn').onclick = () => formatCode();
+cm.on('inputRead', (c, ch) => {
+  if (!autoHint || ch.origin !== '+input' || c.state.completionActive) return;
+  const t = ch.text.join(''), cur = c.getCursor(), tok = c.getTokenAt(cur);
+  if (/comment|string/.test(tok.type || '')) return;
+  const before = c.getLine(cur.line).slice(0, cur.ch);
+  if (t === '.' || (t === '$' && lang === 'r') || (/^\w$/.test(t) && /(^|[^\w$.])[A-Za-z_][\w]{2}$/.test(before)) || (t === '<' && /html?$/.test(extOf(getWs(lang).files[getWs(lang).act].n)))) hint(c, false);
+});
+/* editör ayarları */
+const KEYMAP_URL = { vim: 'keymap/vim.min.js', emacs: 'keymap/emacs.min.js' };
+async function setKeymap(k) {
+  if (KEYMAP_URL[k] && !CodeMirror.keyMap[k]) { toast(k + ' tuş düzeni yükleniyor…'); await loadScript('https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.16/' + KEYMAP_URL[k]); }
+  cm.setOption('keyMap', k); store.set(KEY + '-keymap', k);
+  document.querySelectorAll('#keymapSeg button').forEach(b => b.classList.toggle('on', b.dataset.k === k));
+}
+$('setBtn').onclick = e => { e.stopPropagation(); toggleMenu($('setMenu')); };
+$('setMenu').onclick = e => e.stopPropagation();
+$('keymapSeg').onclick = e => { const b = e.target.closest('button[data-k]'); if (b) setKeymap(b.dataset.k).then(() => toast('tuş düzeni: ' + b.textContent)); };
+$('optHint').checked = autoHint;
+$('optHint').onchange = () => { autoHint = $('optHint').checked; store.set(KEY + '-hint', autoHint ? '1' : '0'); };
+$('optWrap').checked = cm.getOption('lineWrapping');
+$('optWrap').onchange = () => { cm.setOption('lineWrapping', $('optWrap').checked); store.set(KEY + '-wrap', $('optWrap').checked ? '1' : '0'); };
+setKeymap(store.get(KEY + '-keymap') || 'sublime').catch(() => setKeymap('sublime'));
 $('fmtBtn').onclick = () => { fontSize = fontSize >= 18 ? 12 : fontSize + 1.5; store.set(KEY + '-fs', fontSize); applyFont(); toast(fontSize + ' px'); };
 
 let saveT, liveT;
@@ -1375,7 +1513,7 @@ $('exMenu').onclick = e => {
   if (unsaved(lang) && !confirm('Kaydedilmemiş kodun örnekle değiştirilsin mi? (Saklamak için önce Projeler › Kaydet)')) return;
   setFiles(lang, exFiles(lang, ex)); getWs(lang).dirty = false; cm.clearHistory(); run();
 };
-const MENUS = ['exMenu', 'fileMenu', 'projMenu', 'addMenu'];
+const MENUS = ['exMenu', 'fileMenu', 'projMenu', 'addMenu', 'setMenu'];
 function toggleMenu(menu) { const open = menu.hidden; closeMenus(); menu.hidden = !open; }
 function closeMenus() { MENUS.forEach(m => $(m) && ($(m).hidden = true)); }
 $('exBtn').onclick = e => { e.stopPropagation(); toggleMenu($('exMenu')); };
