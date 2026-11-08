@@ -1,0 +1,204 @@
+<!doctype html>
+<html lang="tr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="theme-color" content="#f5f6f4" media="(prefers-color-scheme: light)">
+<meta name="theme-color" content="#151a18" media="(prefers-color-scheme: dark)">
+<title>Kayıt Stüdyosu</title>
+<meta name="description" content="Ekran kaydı, kamera kaydı, ses kaydı ve konuşmayı yazıya dökme — tarayıcıda, kurulum gerektirmeden.">
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Crect width='64' height='64' rx='14' fill='%233f8f7a'/%3E%3Ccircle cx='32' cy='32' r='12' fill='white'/%3E%3Ccircle cx='32' cy='32' r='20' fill='none' stroke='white' stroke-width='4'/%3E%3C/svg%3E">
+<link rel="stylesheet" href="ortak.css">
+<style>
+.stage{position:relative;background:#000;border-radius:12px;overflow:hidden;aspect-ratio:16/9;margin-top:12px;display:flex;align-items:center;justify-content:center}
+.stage video{width:100%;height:100%;object-fit:contain;display:block}
+.stage video.mir{transform:scaleX(-1)}
+.stage .off{position:absolute;color:#bbb;font-size:.9rem;padding:20px;text-align:center}
+.rec{position:absolute;top:10px;left:10px;background:#d33;color:#fff;font-weight:700;font-size:.85rem;border-radius:8px;padding:3px 9px;display:flex;align-items:center;gap:6px;font-variant-numeric:tabular-nums}
+.rec::before{content:'';width:9px;height:9px;border-radius:50%;background:#fff;animation:bl 1s infinite}
+@keyframes bl{50%{opacity:.2}}
+.meter{height:14px;border-radius:99px;background:var(--line);overflow:hidden;margin-top:12px}
+.meter i{display:block;height:100%;width:0;background:linear-gradient(90deg,var(--acc) 60%,#e0a030 85%,#d33);transition:width .06s}
+.timer{font-size:2.4rem;font-weight:700;text-align:center;font-variant-numeric:tabular-nums;margin-top:10px}
+.clip{display:flex;flex-direction:column;gap:6px;padding:10px 0;border-bottom:1px dashed var(--line)}
+.clip:last-child{border-bottom:0}
+.clip audio,.clip video{width:100%;border-radius:8px}
+.clip .h{display:flex;gap:8px;align-items:center;font-size:.85rem}
+.clip .h span{flex:1;color:var(--muted)}
+.live{color:var(--muted);font-style:italic}
+#stt{min-height:220px}
+.dot{display:inline-block;width:10px;height:10px;border-radius:50%;background:var(--line);margin-right:6px;vertical-align:middle}
+.dot.on{background:#d33;animation:bl 1s infinite}
+</style>
+</head>
+<body>
+<header><div class="wrap"><div class="hrow"><a class="back" href="../arac_kutusu.html" aria-label="Araç Kutusu">‹</a><h1>⏺️ Kayıt Stüdyosu</h1></div>
+  <div class="tabs"><button data-tab="ekran">Ekran</button><button data-tab="kamera">Kamera</button><button data-tab="ses">Ses</button><button data-tab="yazi">Sesi yazıya dök</button></div></div></header>
+<main class="wrap">
+<section class="pane" data-pane="ekran">
+  <div class="box"><h3>Ekran kaydı</h3>
+    <div class="stage"><video id="ev" muted playsinline></video><div class="off" id="eoff">Kaydı başlatınca hangi ekranı, pencereyi ya da sekmeyi paylaşacağını tarayıcı sorar.</div><div class="rec" id="erec" hidden>00:00</div></div>
+    <label class="chk"><input type="checkbox" id="e-sys" checked data-keep> Bilgisayar / sekme sesini kaydet</label>
+    <label class="chk"><input type="checkbox" id="e-mic" data-keep> Mikrofonu da kaydet (anlatım)</label>
+    <div class="row"><div><label for="e-fps">Kare hızı</label><select id="e-fps" data-keep><option>15</option><option selected>30</option><option>60</option></select></div><div><label for="e-q">Kalite</label><select id="e-q" data-keep><option value="2500000">Normal</option><option value="6000000" selected>Yüksek</option><option value="12000000">Çok yüksek</option></select></div></div>
+    <div class="btns"><button class="btn" id="e-go">Kaydı başlat</button><button class="btn ghost" id="e-pz" disabled>Duraklat</button></div>
+    <p class="hint" id="e-h">Telefonlarda ekran kaydı tarayıcıdan yapılamaz; telefonun kendi ekran kaydını kullan.</p>
+  </div>
+  <div class="box" id="e-clips" hidden><h3>Kayıtlar</h3><div id="e-list"></div></div>
+</section>
+
+<section class="pane" data-pane="kamera">
+  <div class="box"><h3>Kamera kaydı</h3>
+    <div class="stage"><video id="cv" muted playsinline></video><div class="off" id="coff">Önizlemeyi aç, sonra kaydı başlat.</div><div class="rec" id="crec" hidden>00:00</div></div>
+    <div class="row"><div><label for="c-face">Kamera</label><select id="c-face" data-keep><option value="user">Ön</option><option value="environment">Arka</option></select></div><div><label for="c-res">Çözünürlük</label><select id="c-res" data-keep><option value="720">720p</option><option value="1080" selected>1080p</option><option value="480">480p</option></select></div></div>
+    <label class="chk"><input type="checkbox" id="c-mic" checked data-keep> Sesi de kaydet</label>
+    <label class="chk"><input type="checkbox" id="c-mir" checked data-keep> Ön kamerada ayna görüntü (yalnızca önizleme)</label>
+    <div class="btns"><button class="btn ghost" id="c-on">Önizlemeyi aç</button><button class="btn" id="c-go" disabled>Kaydı başlat</button><button class="btn ghost" id="c-snap" disabled>📷 Fotoğraf</button></div>
+  </div>
+  <div class="box" id="c-clips" hidden><h3>Kayıtlar</h3><div id="c-list"></div></div>
+</section>
+
+<section class="pane" data-pane="ses">
+  <div class="box"><h3>Ses kaydı</h3>
+    <div class="timer" id="atim">00:00</div>
+    <div class="meter"><i id="alv"></i></div>
+    <label class="chk"><input type="checkbox" id="a-clean" checked data-keep> Gürültü ve yankı azaltma</label>
+    <div class="btns"><button class="btn" id="a-go">Kaydı başlat</button><button class="btn ghost" id="a-pz" disabled>Duraklat</button></div>
+    <p class="hint">Ekran kilitlenirse bazı telefonlar kaydı durdurur; kayıt boyunca ekranı açık tut.</p>
+  </div>
+  <div class="box" id="a-clips" hidden><h3>Kayıtlar</h3><div id="a-list"></div></div>
+</section>
+
+<section class="pane" data-pane="yazi">
+  <div class="box"><h3><span class="dot" id="sdot"></span>Konuşmayı yazıya dök</h3>
+    <div class="row"><div><label for="s-lang">Dil</label><select id="s-lang" data-keep><option value="tr-TR">Türkçe</option><option value="en-US">English (US)</option><option value="en-GB">English (UK)</option><option value="de-DE">Deutsch</option><option value="fr-FR">Français</option><option value="es-ES">Español</option><option value="ar-SA">العربية</option><option value="ru-RU">Русский</option></select></div>
+    <div><label class="chk" style="margin-top:34px"><input type="checkbox" id="s-cmd" checked data-keep> Sesli noktalama</label></div></div>
+    <div class="btns"><button class="btn" id="s-go">Dinlemeye başla</button></div>
+    <label for="stt">Metin</label><textarea id="stt" placeholder="Konuştukça yazı burada belirir. Elle de düzeltebilirsin."></textarea>
+    <div class="live" id="slive"></div>
+    <div class="btns"><button class="btn ghost" id="s-cp">Kopyala</button><button class="btn ghost" id="s-dl">.txt indir</button><button class="btn ghost" id="s-mt">Metin Atölyesi'nde aç</button><button class="btn ghost" id="s-clr">Temizle</button></div>
+    <p class="hint">Sesli noktalama: "nokta", "virgül", "soru işareti", "ünlem", "iki nokta", "yeni satır", "yeni paragraf".<br>Konuşma tanımayı tarayıcının kendi hizmeti yapar; Chrome ve Edge'de ses, yazıya dökülmek üzere Google / Microsoft sunucularına gönderilir. Safari'de cihazda işlenebilir. Firefox desteklemez.</p>
+  </div>
+</section>
+</main>
+<footer>Kayıtlar cihazında kalır; indirmediğin sürece sayfa kapanınca silinir.</footer>
+<script src="ortak.js"></script>
+<script>
+keepInputs('kayit');
+const md = navigator.mediaDevices;
+function pickMime(kind) {
+  const L = kind === 'audio' ? ['audio/mp4;codecs=mp4a.40.2', 'audio/webm;codecs=opus', 'audio/mp4', 'audio/webm', 'audio/ogg;codecs=opus'] : ['video/mp4;codecs=avc1.42E01E,mp4a.40.2', 'video/webm;codecs=vp9,opus', 'video/webm;codecs=vp8,opus', 'video/mp4', 'video/webm'];
+  return window.MediaRecorder ? L.find(m => MediaRecorder.isTypeSupported(m)) || '' : '';
+}
+const ext = m => /mp4/.test(m) ? (/audio/.test(m) ? 'm4a' : 'mp4') : /ogg/.test(m) ? 'ogg' : 'webm';
+const mmss = s => { s = Math.floor(s); const h = Math.floor(s / 3600); return (h ? h + ':' : '') + p2(Math.floor(s / 60) % 60) + ':' + p2(s % 60); };
+let wake = null; const keepAwake = async on => { try { if (on && 'wakeLock' in navigator) wake = await navigator.wakeLock.request('screen'); else if (wake) { await wake.release(); wake = null; } } catch (e) { } };
+
+/* ortak kaydedici */
+function Recorder(stream, kind, opt, onTick, onDone) {
+  const mime = pickMime(kind), rec = new MediaRecorder(stream, { ...(mime ? { mimeType: mime } : {}), ...opt }), chunks = []; let t0 = 0, acc = 0, iv = 0, paused = false;
+  const el = () => acc + (paused ? 0 : (performance.now() - t0) / 1000);
+  rec.ondataavailable = e => { if (e.data && e.data.size) chunks.push(e.data); };
+  rec.onstop = () => { clearInterval(iv); keepAwake(false); const type = rec.mimeType || mime || (kind === 'audio' ? 'audio/webm' : 'video/webm'); onDone(new Blob(chunks, { type: type.split(';')[0] }), type, el()); };
+  rec.start(1000); t0 = performance.now(); iv = setInterval(() => onTick(el()), 250); keepAwake(true);
+  return { rec, stop() { if (rec.state !== 'inactive') rec.stop(); }, toggle() { if (rec.state === 'recording') { rec.pause(); acc += (performance.now() - t0) / 1000; paused = true; } else if (rec.state === 'paused') { rec.resume(); t0 = performance.now(); paused = false; } return paused; } };
+}
+function addClip(listId, blob, type, dur, prefix) {
+  const url = URL.createObjectURL(blob), name = `${prefix}-${stamp()}.${ext(type)}`, d = document.createElement('div'), media = /^audio/.test(type) ? 'audio' : 'video';
+  d.className = 'clip'; d.innerHTML = `<${media} controls src="${url}" playsinline></${media}><div class="h"><span>${esc(name)} · ${mmss(dur)} · ${size(blob.size)}</span><button class="btn sm">⬇ İndir</button><button class="ib" title="Sil">✕</button></div>`;
+  d.querySelector('.btn').onclick = () => download(name, blob); d.querySelector('.ib').onclick = () => { URL.revokeObjectURL(url); d.remove(); byId(listId).parentElement.hidden = !byId(listId).children.length; };
+  byId(listId).prepend(d); byId(listId).parentElement.hidden = false;
+}
+if (!window.MediaRecorder) toast('Bu tarayıcı kayıt yapmayı desteklemiyor', 5000);
+
+/* ---------- ekran ---------- */
+let E = null;
+if (!md || !md.getDisplayMedia) { byId('e-go').disabled = true; byId('e-h').textContent = 'Bu cihaz ya da tarayıcı ekran kaydını desteklemiyor. Bilgisayarda Chrome, Edge, Firefox ya da Safari kullan; telefonda telefonun kendi ekran kaydını kullan.'; }
+else byId('e-h').textContent = 'Paylaşımı tarayıcının "Paylaşımı durdur" çubuğundan bitirdiğinde kayıt da otomatik biter.';
+byId('e-go').onclick = async () => {
+  if (E) return E.r.stop();
+  let disp, mic = null; const fps = +byId('e-fps').value;
+  try { disp = await md.getDisplayMedia({ video: { frameRate: { ideal: fps } }, audio: byId('e-sys').checked ? { echoCancellation: false, noiseSuppression: false } : false, preferCurrentTab: false, selfBrowserSurface: 'exclude', systemAudio: 'include' }); }
+  catch (e) { return toast(e.name === 'NotAllowedError' ? 'Paylaşım iptal edildi' : 'Ekran paylaşılamadı'); }
+  if (byId('e-mic').checked) { try { mic = await md.getUserMedia({ audio: { echoCancellation: true, noiseSuppression: true } }); } catch (e) { toast('Mikrofon açılamadı; yalnızca ekran kaydedilecek'); } }
+  let tracks = [...disp.getVideoTracks()], ac = null; const aud = [...disp.getAudioTracks(), ...(mic ? mic.getAudioTracks() : [])];
+  if (aud.length > 1) { ac = new AudioContext(); const dst = ac.createMediaStreamDestination(); if (disp.getAudioTracks().length) ac.createMediaStreamSource(new MediaStream(disp.getAudioTracks())).connect(dst); ac.createMediaStreamSource(mic).connect(dst); tracks.push(...dst.stream.getAudioTracks()); }
+  else tracks.push(...aud);
+  const st = new MediaStream(tracks), v = byId('ev'); v.srcObject = disp; v.play().catch(() => { }); byId('eoff').hidden = true; byId('erec').hidden = false;
+  const r = Recorder(st, 'video', { videoBitsPerSecond: +byId('e-q').value }, t => byId('erec').textContent = mmss(t), (blob, type, dur) => {
+    [disp, mic].forEach(s => s && s.getTracks().forEach(t => t.stop())); if (ac) ac.close(); v.srcObject = null; byId('eoff').hidden = false; byId('erec').hidden = true;
+    byId('e-go').textContent = 'Kaydı başlat'; byId('e-pz').disabled = true; byId('e-pz').textContent = 'Duraklat'; E = null; addClip('e-list', blob, type, dur, 'ekran-kaydi'); toast('Kayıt hazır');
+  });
+  disp.getVideoTracks()[0].addEventListener('ended', () => r.stop());
+  E = { r }; byId('e-go').textContent = 'Kaydı bitir'; byId('e-pz').disabled = false;
+};
+byId('e-pz').onclick = () => { if (E) byId('e-pz').textContent = E.r.toggle() ? 'Devam et' : 'Duraklat'; };
+
+/* ---------- kamera ---------- */
+let C = { s: null, r: null };
+async function camOn() {
+  camOff(); const h = +byId('c-res').value, face = byId('c-face').value;
+  try { C.s = await md.getUserMedia({ video: { facingMode: { ideal: face }, height: { ideal: h }, width: { ideal: Math.round(h * 16 / 9) } }, audio: byId('c-mic').checked }); }
+  catch (e) { return toast(e.name === 'NotAllowedError' ? 'Kamera izni verilmedi' : 'Kamera açılamadı'); }
+  const v = byId('cv'); v.srcObject = C.s; v.muted = true; v.play().catch(() => { }); v.classList.toggle('mir', face === 'user' && byId('c-mir').checked);
+  byId('coff').hidden = true; byId('c-go').disabled = false; byId('c-snap').disabled = false; byId('c-on').textContent = 'Önizlemeyi kapat';
+}
+function camOff() { if (C.r) C.r.stop(); if (C.s) C.s.getTracks().forEach(t => t.stop()); C.s = null; byId('cv').srcObject = null; byId('coff').hidden = false; byId('c-go').disabled = true; byId('c-snap').disabled = true; byId('c-on').textContent = 'Önizlemeyi aç'; }
+byId('c-on').onclick = () => C.s ? camOff() : camOn();
+['c-face', 'c-res', 'c-mic'].forEach(id => byId(id).addEventListener('change', () => { if (C.s && !C.r) camOn(); }));
+byId('c-mir').addEventListener('change', () => byId('cv').classList.toggle('mir', byId('c-face').value === 'user' && byId('c-mir').checked));
+byId('c-go').onclick = () => {
+  if (C.r) return C.r.stop(); if (!C.s) return;
+  byId('crec').hidden = false; byId('c-go').textContent = 'Kaydı bitir';
+  C.r = Recorder(C.s, 'video', {}, t => byId('crec').textContent = mmss(t), (blob, type, dur) => { C.r = null; byId('crec').hidden = true; byId('c-go').textContent = 'Kaydı başlat'; addClip('c-list', blob, type, dur, 'kamera'); });
+};
+byId('c-snap').onclick = () => { const v = byId('cv'); if (!v.videoWidth) return; const c = document.createElement('canvas'); c.width = v.videoWidth; c.height = v.videoHeight; c.getContext('2d').drawImage(v, 0, 0); c.toBlob(b => download('foto-' + stamp() + '.jpg', b), 'image/jpeg', .92); };
+
+/* ---------- ses ---------- */
+let A = null;
+byId('a-go').onclick = async () => {
+  if (A) return A.r.stop();
+  const cl = byId('a-clean').checked; let s;
+  try { s = await md.getUserMedia({ audio: { echoCancellation: cl, noiseSuppression: cl, autoGainControl: cl } }); } catch (e) { return toast(e.name === 'NotAllowedError' ? 'Mikrofon izni verilmedi' : 'Mikrofon açılamadı'); }
+  const ac = new AudioContext(), an = ac.createAnalyser(); an.fftSize = 1024; ac.createMediaStreamSource(s).connect(an); const buf = new Float32Array(an.fftSize); let raf = 0;
+  const lv = () => { an.getFloatTimeDomainData(buf); let m = 0; for (const x of buf) m = Math.max(m, Math.abs(x)); byId('alv').style.width = Math.min(100, Math.max(0, (20 * Math.log10(m || 1e-6) + 50) * 2)) + '%'; raf = requestAnimationFrame(lv); }; lv();
+  const r = Recorder(s, 'audio', { audioBitsPerSecond: 128000 }, t => byId('atim').textContent = mmss(t), (blob, type, dur) => {
+    cancelAnimationFrame(raf); ac.close(); s.getTracks().forEach(t => t.stop()); byId('alv').style.width = '0'; A = null; byId('a-go').textContent = 'Kaydı başlat'; byId('a-pz').disabled = true; byId('a-pz').textContent = 'Duraklat'; addClip('a-list', blob, type, dur, 'ses-kaydi');
+  });
+  A = { r }; byId('a-go').textContent = 'Kaydı bitir'; byId('a-pz').disabled = false;
+};
+byId('a-pz').onclick = () => { if (A) byId('a-pz').textContent = A.r.toggle() ? 'Devam et' : 'Duraklat'; };
+
+/* ---------- konuşmayı yazıya dök ---------- */
+const SR = window.SpeechRecognition || window.webkitSpeechRecognition, stt = byId('stt');
+stt.value = LS.get('kayit:stt') || ''; stt.addEventListener('input', () => LS.set('kayit:stt', stt.value));
+let R = null, want = false;
+if (!SR) { byId('s-go').disabled = true; byId('slive').textContent = 'Bu tarayıcı konuşma tanımayı desteklemiyor. Chrome, Edge ya da Safari dene.'; }
+const pw = (w, tail) => new RegExp('\\s*(?<!\\p{L})(?:' + w + ')(?!\\p{L})' + (tail ? '\\s*' : ''), 'giu');
+const PUN = [[pw('yeni paragraf', 1), '\n\n'], [pw('yeni satır|alt satır', 1), '\n'], [pw('soru işareti'), '?'], [pw('ünlem işareti|ünlem'), '!'], [pw('iki nokta'), ':'], [pw('noktalı virgül'), ';'], [pw('virgül'), ','], [pw('nokta'), '.']];
+function tidy(t) { if (byId('s-cmd').checked && byId('s-lang').value === 'tr-TR') PUN.forEach(([re, r]) => t = t.replace(re, r)); return t.trim(); }
+function append(t) {
+  t = tidy(t); if (!t) return; let cur = stt.value; const endS = !cur.trim() || /[.!?…]\s*$|\n\s*$/.test(cur);
+  if (endS) t = t.charAt(0).toLocaleUpperCase('tr') + t.slice(1);
+  stt.value = cur + (cur && !/[\s\n]$/.test(cur) && !/^[.,!?;:\n]/.test(t) ? ' ' : '') + t; stt.scrollTop = stt.scrollHeight; LS.set('kayit:stt', stt.value);
+}
+function startSR() {
+  R = new SR(); R.lang = byId('s-lang').value; R.continuous = true; R.interimResults = true;
+  R.onresult = e => { let live = ''; for (let i = e.resultIndex; i < e.results.length; i++) { const r = e.results[i]; if (r.isFinal) append(r[0].transcript); else live += r[0].transcript; } byId('slive').textContent = live; };
+  R.onerror = e => { if (e.error === 'not-allowed' || e.error === 'service-not-allowed') { want = false; toast('Mikrofon izni verilmedi'); } else if (e.error === 'network') { want = false; toast('Konuşma tanıma hizmetine ulaşılamadı'); } };
+  R.onend = () => { byId('slive').textContent = ''; if (want) { try { R.start(); } catch (e) { setTimeout(() => want && startSR(), 300); } } else ui(false); };
+  R.start(); ui(true);
+}
+function ui(on) { byId('sdot').classList.toggle('on', on); byId('s-go').textContent = on ? 'Durdur' : 'Dinlemeye başla'; }
+byId('s-go').onclick = () => { if (want) { want = false; R && R.stop(); ui(false); } else { want = true; try { startSR(); } catch (e) { want = false; toast('Başlatılamadı'); } } };
+byId('s-lang').addEventListener('change', () => { if (want) { R.onend = null; R.stop(); startSR(); } });
+byId('s-cp').onclick = e => copy(stt.value, e.currentTarget);
+byId('s-dl').onclick = () => download('konusma-' + stamp() + '.txt', new Blob([stt.value], { type: 'text/plain;charset=utf-8' }));
+byId('s-mt').onclick = () => { LS.set('metin:tx', stt.value); location.href = 'metin.html#say'; };
+byId('s-clr').onclick = () => { if (stt.value && !confirm('Metin silinsin mi?')) return; stt.value = ''; LS.set('kayit:stt', ''); };
+
+tabs('kayit', t => { if (t !== 'kamera' && C.s && !C.r) camOff(); });
+addEventListener('beforeunload', e => { if (E || C.r || A) { e.preventDefault(); e.returnValue = ''; } });
+</script>
+</body>
+</html>

@@ -1,0 +1,188 @@
+<!doctype html>
+<html lang="tr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="theme-color" content="#f5f6f4" media="(prefers-color-scheme: light)">
+<meta name="theme-color" content="#151a18" media="(prefers-color-scheme: dark)">
+<title>Metin Atölyesi</title>
+<meta name="description" content="Kelime ve karakter sayacı, Türkçe karakter düzeltici, büyük/küçük harf ve satır işlemleri, iki metni karşılaştırma.">
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Crect width='64' height='64' rx='14' fill='%233f8f7a'/%3E%3Cpath d='M16 18h32M32 18v30M24 48h16' stroke='white' stroke-width='5' fill='none'/%3E%3C/svg%3E">
+<link rel="stylesheet" href="ortak.css">
+<style>
+textarea.big{min-height:200px}
+.stat{grid-template-columns:repeat(4,1fr)}
+@media (max-width:480px){.stat{grid-template-columns:repeat(2,1fr)}}
+.lim{display:grid;grid-template-columns:1fr auto;gap:2px 10px;font-size:.88rem;margin-top:8px}
+.lim span:nth-child(2n){font-variant-numeric:tabular-nums;font-weight:600}
+.lim .over{color:var(--warn)}
+.words{display:flex;flex-wrap:wrap;gap:6px;margin-top:8px}
+.words span{background:var(--bg);border:1px solid var(--line);border-radius:999px;padding:3px 10px;font-size:.82rem}
+.words b{color:var(--acc);margin-left:4px}
+.diff{white-space:pre-wrap;word-break:break-word;font-family:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;font-size:.85rem;line-height:1.55;background:var(--bg);border:1px solid var(--line);border-radius:10px;padding:10px;margin-top:10px;max-height:520px;overflow:auto}
+.diff ins{background:#cdeedd;color:#14532d;text-decoration:none;border-radius:3px}
+.diff del{background:#f8d4cc;color:#7f1d1d;border-radius:3px}
+@media (prefers-color-scheme:dark){.diff ins{background:#1f4a35;color:#bdf0d2}.diff del{background:#55271f;color:#ffc9bd}}
+.diff .ln{display:block}
+.diff .ln.a{background:#e3f6eb}.diff .ln.d{background:#fbe5e0}
+@media (prefers-color-scheme:dark){.diff .ln.a{background:#183a2a}.diff .ln.d{background:#41201a}}
+.diff .ln::before{content:attr(data-s);display:inline-block;width:1.4em;color:var(--muted)}
+mark{background:#ffe58a;color:inherit;border-radius:2px}
+@media (prefers-color-scheme:dark){mark{background:#6b5a12}}
+.out{white-space:pre-wrap;word-break:break-word;background:var(--bg);border:1px solid var(--line);border-radius:10px;padding:11px 12px;min-height:120px;margin-top:10px;font-size:16px}
+</style>
+</head>
+<body>
+<header><div class="wrap"><div class="hrow"><a class="back" href="../arac_kutusu.html" aria-label="Araç Kutusu">‹</a><h1>🔤 Metin Atölyesi</h1></div>
+  <div class="tabs"><button data-tab="say">Sayaç</button><button data-tab="tr">Türkçe karakter</button><button data-tab="don">Dönüştür</button><button data-tab="fark">Karşılaştır</button></div></div></header>
+<main class="wrap">
+  <div class="box" id="mainbox">
+    <label for="tx">Metin</label>
+    <textarea id="tx" class="big" placeholder="Metni buraya yaz ya da yapıştır…"></textarea>
+    <div class="btns"><button class="btn sm ghost" id="paste">Yapıştır</button><button class="btn sm ghost" id="cpy">Kopyala</button><button class="btn sm ghost" id="undo" disabled>Geri al</button><button class="btn sm ghost" id="clr">Temizle</button><button class="btn sm ghost" id="dl">.txt indir</button></div>
+  </div>
+
+  <section class="pane" data-pane="say">
+    <div class="box"><div class="stat" id="st"></div>
+      <h3 style="margin-top:14px">Sınırlar</h3><div class="lim" id="lim"></div>
+      <h3 style="margin-top:14px">En sık kelimeler</h3><label class="chk" style="margin-top:4px"><input type="checkbox" id="sw" checked data-keep> Bağlaçları ve kısa kelimeleri sayma</label><div class="words" id="wd"></div>
+    </div>
+  </section>
+
+  <section class="pane" data-pane="tr">
+    <div class="box"><h3>Türkçe karakter düzeltici</h3>
+      <p class="hint" style="margin-top:0">"Turkce karakterler olmadan yazilmis" metni "Türkçe karakterlerle yazılmış" hale getirir. Bağlama bakarak karar verir; özel isimleri kontrol et.</p>
+      <div class="btns"><button class="btn" id="deas">Türkçe karakterleri ekle</button><button class="btn ghost" id="asc">Türkçe karakterleri kaldır</button></div>
+      <div class="out" id="trout"><span class="ph">Sonuç burada görünür; değişen harfler işaretlenir.</span></div>
+      <div class="btns"><button class="btn ghost" id="trcp" disabled>Sonucu kopyala</button><button class="btn ghost" id="trap" disabled>Metne uygula</button></div>
+    </div>
+  </section>
+
+  <section class="pane" data-pane="don">
+    <div class="box"><h3>Harf düzeni</h3><div class="chips" data-ops>
+      <button data-op="up">BÜYÜK HARF</button><button data-op="low">küçük harf</button><button data-op="title">Baş Harfler Büyük</button><button data-op="sent">Cümle düzeni</button><button data-op="swap">bÜYÜK↔kÜÇÜK</button></div></div>
+    <div class="box"><h3>Boşluk ve satırlar</h3><div class="chips" data-ops>
+      <button data-op="trim">Fazla boşlukları sil</button><button data-op="noempty">Boş satırları sil</button><button data-op="join">Satırları birleştir</button><button data-op="sort">Satırları sırala A→Z</button><button data-op="sortr">Z→A</button><button data-op="uniq">Tekrarlayan satırları sil</button><button data-op="rev">Satırları ters çevir</button><button data-op="num">Satırları numarala</button><button data-op="shuf">Karıştır</button></div></div>
+    <div class="box"><h3>Diğer</h3><div class="chips" data-ops>
+      <button data-op="slug">URL adı (slug)</button><button data-op="nodig">Rakamları sil</button><button data-op="nopunc">Noktalamayı sil</button><button data-op="emails">E-postaları çıkar</button><button data-op="links">Bağlantıları çıkar</button><button data-op="nums">Sayıları çıkar</button></div>
+      <div class="row" style="margin-top:6px"><div><label for="fnd">Bul</label><input id="fnd" placeholder="aranan"></div><div><label for="rpl">Değiştir</label><input id="rpl" placeholder="yeni"></div></div>
+      <label class="chk"><input type="checkbox" id="rx"> Düzenli ifade (regex)</label><label class="chk"><input type="checkbox" id="cs"> Büyük/küçük harf duyarlı</label>
+      <div class="btns"><button class="btn" id="rep">Tümünü değiştir</button></div><p class="hint" id="repi"></p>
+    </div>
+  </section>
+
+  <section class="pane" data-pane="fark">
+    <div class="box"><h3>İki metni karşılaştır</h3>
+      <p class="hint" style="margin-top:0">Üstteki metin "eski", alttaki "yeni" kabul edilir.</p>
+      <label for="tx2">Yeni metin</label><textarea id="tx2" class="big" placeholder="Karşılaştırılacak ikinci metin…"></textarea>
+      <div class="row"><div><label for="dm">Karşılaştırma</label><select id="dm" data-keep><option value="line">Satır satır</option><option value="word" selected>Kelime kelime</option><option value="char">Harf harf</option></select></div>
+      <div><label class="chk" style="margin-top:34px"><input type="checkbox" id="dws" data-keep> Boşluk farklarını yok say</label></div></div>
+      <div class="res" id="dsum"><span class="ph">İki metni girince farklar burada görünür.</span></div>
+      <div class="diff" id="dout" hidden></div>
+    </div>
+  </section>
+</main>
+<footer>Metinler cihazında işlenir, hiçbir yere gönderilmez.</footer>
+<script src="ortak.js"></script>
+<script src="lib/deasciifier.js"></script>
+<script>
+keepInputs('metin');
+const tx = byId('tx'), tx2 = byId('tx2'), hist = [];
+tx.value = LS.get('metin:tx') || ''; tx2.value = LS.get('metin:tx2') || '';
+let svT = 0; const persist = () => { clearTimeout(svT); svT = setTimeout(() => { LS.set('metin:tx', tx.value.slice(0, 200000)); LS.set('metin:tx2', tx2.value.slice(0, 200000)); }, 400); };
+function setText(v) { if (v === tx.value) return toast('Değişiklik yok'); hist.push(tx.value); if (hist.length > 50) hist.shift(); byId('undo').disabled = false; tx.value = v; update(); }
+byId('undo').onclick = () => { if (!hist.length) return; tx.value = hist.pop(); byId('undo').disabled = !hist.length; update(); };
+byId('clr').onclick = () => setText('');
+byId('cpy').onclick = e => copy(tx.value, e.currentTarget);
+byId('paste').onclick = async () => { try { const t = await navigator.clipboard.readText(); setText(t); } catch (e) { toast('Pano okunamadı; uzun basıp yapıştır'); } };
+byId('dl').onclick = () => download('metin-' + stamp() + '.txt', new Blob([tx.value], { type: 'text/plain;charset=utf-8' }));
+
+/* ---------- sayaç ---------- */
+const STOP = new Set('ve ile de da ki bu bir şu o için gibi çok daha en mi mu mı mü ne ya veya ama fakat ancak her hem ise olan olarak diye kadar sonra önce göre ben sen biz siz onlar the and of to in a is for on that'.split(' '));
+const GSM = /^[@£$¥èéùìòÇ\nØø\rÅåΔ_ΦΓΛΩΠΨΣΘΞÆæßÉ !"#¤%&'()*+,\-./0-9:;<=>?¡A-ZÄÖÑÜ§¿a-zäöñüà^{}\\\[~\]|€]*$/;
+function words(s) { return s.toLocaleLowerCase('tr').match(/[\p{L}\p{N}][\p{L}\p{N}'’\-]*/gu) || []; }
+function count() {
+  const s = tx.value, ch = [...s].length, ns = [...s.replace(/\s/g, '')].length, w = words(s), sen = (s.match(/[^.!?…]+[.!?…]+|[^.!?…]+$/g) || []).filter(x => x.trim()).length;
+  const par = s.split(/\n\s*\n/).filter(x => x.trim()).length, lines = s ? s.split('\n').length : 0, by = new TextEncoder().encode(s).length;
+  const mins = n => n < 1 ? Math.max(0, Math.round(n * 60)) + ' sn' : fmt(Math.floor(n), 0) + ' dk ' + Math.round((n % 1) * 60) + ' sn';
+  const cell = (v, l) => `<div><b>${v}</b><span>${l}</span></div>`;
+  byId('st').innerHTML = cell(fmt(ch, 0), 'karakter') + cell(fmt(ns, 0), 'boşluksuz') + cell(fmt(w.length, 0), 'kelime') + cell(fmt(new Set(w).size, 0), 'farklı kelime') + cell(fmt(sen, 0), 'cümle') + cell(fmt(par, 0), 'paragraf') + cell(fmt(lines, 0), 'satır') + cell(fmt(by, 0), 'bayt (UTF-8)') + cell(mins(w.length / 180), 'okuma') + cell(mins(w.length / 130), 'sesli okuma') + cell(w.length ? fmt(ns / w.length, 1) : '—', 'harf/kelime') + cell(sen ? fmt(w.length / sen, 1) : '—', 'kelime/cümle');
+  const gsm = GSM.test(s), seg = !ch ? 0 : gsm ? (ch <= 160 ? 1 : Math.ceil(ch / 153)) : (ch <= 70 ? 1 : Math.ceil(ch / 67));
+  const L = [['X (Twitter) gönderisi', 280], ['SMS (' + (gsm ? 'standart' : 'Türkçe/özel karakterli') + ')', gsm ? 160 : 70], ['Arama motoru başlığı', 60], ['Meta açıklama', 160], ['Instagram açıklaması', 2200], ['LinkedIn gönderisi', 3000], ['YouTube başlığı', 100]];
+  byId('lim').innerHTML = L.map(([n, m]) => `<span>${n}</span><span class="${ch > m ? 'over' : ''}">${fmt(ch, 0)} / ${fmt(m, 0)}</span>`).join('') + `<span>SMS sayısı</span><span>${seg}</span>`;
+  const f = new Map(), sw = byId('sw').checked; w.forEach(x => { if (sw && (x.length < 3 || STOP.has(x))) return; f.set(x, (f.get(x) || 0) + 1); });
+  byId('wd').innerHTML = [...f].sort((a, b) => b[1] - a[1] || a[0].localeCompare(b[0], 'tr')).slice(0, 20).map(([k, v]) => `<span>${esc(k)}<b>${v}</b></span>`).join('') || '<span class="ph" style="border:0;background:none">—</span>';
+}
+byId('sw').addEventListener('change', count);
+
+/* ---------- Türkçe karakter ---------- */
+let D = null, trRes = '';
+const deas = () => D || (D = new Deasciifier());
+function showTr(a, b) {
+  trRes = b; let h = '', n = 0; const A = [...a], B = [...b];
+  if (A.length === B.length) B.forEach((c, i) => { if (c !== A[i]) { n++; h += '<mark>' + esc(c) + '</mark>'; } else h += esc(c); }); else h = esc(b);
+  byId('trout').innerHTML = h || '<span class="ph">Metin boş.</span>'; byId('trcp').disabled = byId('trap').disabled = !b; toast(n + ' harf değişti');
+}
+byId('deas').onclick = () => showTr(tx.value, deas().deasciify(tx.value));
+const ASC = { 'ç': 'c', 'Ç': 'C', 'ğ': 'g', 'Ğ': 'G', 'ı': 'i', 'İ': 'I', 'ö': 'o', 'Ö': 'O', 'ş': 's', 'Ş': 'S', 'ü': 'u', 'Ü': 'U', 'â': 'a', 'Â': 'A', 'î': 'i', 'Î': 'I', 'û': 'u', 'Û': 'U' };
+byId('asc').onclick = () => showTr(tx.value, tx.value.replace(/[çÇğĞıİöÖşŞüÜâÂîÎûÛ]/g, c => ASC[c]));
+byId('trcp').onclick = e => copy(trRes, e.currentTarget);
+byId('trap').onclick = () => { setText(trRes); byId('trout').innerHTML = '<span class="ph">Metne uygulandı.</span>'; byId('trcp').disabled = byId('trap').disabled = true; };
+
+/* ---------- dönüştür ---------- */
+const tc = w => w.charAt(0).toLocaleUpperCase('tr') + w.slice(1).toLocaleLowerCase('tr');
+const LINES = f => s => f(s.split('\n')).join('\n');
+const OPS = {
+  up: s => s.toLocaleUpperCase('tr'), low: s => s.toLocaleLowerCase('tr'),
+  title: s => s.replace(/[\p{L}\p{N}]+[\p{L}\p{N}'’]*/gu, tc),
+  sent: s => s.toLocaleLowerCase('tr').replace(/(^\s*|[.!?…]\s+|\n\s*)(\p{L})/gu, (m, a, b) => a + b.toLocaleUpperCase('tr')),
+  swap: s => [...s].map(c => { const u = c.toLocaleUpperCase('tr'); return c === u ? c.toLocaleLowerCase('tr') : u; }).join(''),
+  trim: s => s.split('\n').map(l => l.replace(/[ \t]+/g, ' ').trim()).join('\n').replace(/\n{3,}/g, '\n\n').trim(),
+  noempty: LINES(a => a.filter(l => l.trim())), join: s => s.split(/\n+/).map(x => x.trim()).filter(Boolean).join(' '),
+  sort: LINES(a => a.sort((x, y) => x.localeCompare(y, 'tr', { numeric: true }))), sortr: LINES(a => a.sort((x, y) => y.localeCompare(x, 'tr', { numeric: true }))),
+  uniq: LINES(a => [...new Set(a)]), rev: LINES(a => a.reverse()), num: LINES(a => a.map((l, i) => (i + 1) + '. ' + l)),
+  shuf: LINES(a => { for (let i = a.length - 1; i > 0; i--) { const j = crypto.getRandomValues(new Uint32Array(1))[0] % (i + 1); [a[i], a[j]] = [a[j], a[i]]; } return a; }),
+  slug: s => s.toLocaleLowerCase('tr').replace(/[çğıöşüâîû]/g, c => ASC[c] || c).normalize('NFKD').replace(/[̀-ͯ]/g, '').replace(/[^a-z0-9]+/g, '-').replace(/^-+|-+$/g, ''),
+  nodig: s => s.replace(/\d/g, ''), nopunc: s => s.replace(/[\p{P}\p{S}]/gu, ''),
+  emails: s => [...new Set(s.match(/[\w.+-]+@[\w-]+(\.[\w-]+)+/g) || [])].join('\n'),
+  links: s => [...new Set(s.match(/\bhttps?:\/\/[^\s<>"')]+/gi) || [])].join('\n'),
+  nums: s => (s.match(/-?\d+(?:[.,]\d+)*/g) || []).join('\n')
+};
+document.querySelectorAll('[data-ops]').forEach(g => g.onclick = e => { const b = e.target.closest('[data-op]'); if (b) setText(OPS[b.dataset.op](tx.value)); });
+byId('rep').onclick = () => {
+  const f = byId('fnd').value; if (!f) return toast('Aranacak metni yaz'); let re;
+  try { re = new RegExp(byId('rx').checked ? f : f.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'), 'g' + (byId('cs').checked ? '' : 'i') + 'u'); } catch (e) { return toast('Geçersiz düzenli ifade'); }
+  const n = (tx.value.match(re) || []).length; byId('repi').textContent = n + ' eşleşme değiştirildi'; if (n) setText(tx.value.replace(re, byId('rpl').value));
+};
+
+/* ---------- karşılaştır (LCS) ---------- */
+function tok(s, m) { if (m === 'line') return s.split('\n'); if (m === 'char') return [...s]; return s.match(/\s+|[\p{L}\p{N}_]+|[^\s\p{L}\p{N}_]/gu) || []; }
+function lcsDiff(a, b, eq) {
+  let s = 0; while (s < a.length && s < b.length && eq(a[s], b[s])) s++; let ea = a.length, eb = b.length; while (ea > s && eb > s && eq(a[ea - 1], b[eb - 1])) { ea--; eb--; }
+  const A = a.slice(s, ea), B = b.slice(s, eb), n = A.length, m = B.length, out = a.slice(0, s).map(x => [0, x]);
+  if (n * m > 25e6) { A.forEach(x => out.push([-1, x])); B.forEach(x => out.push([1, x])); }
+  else { const W = m + 1, T = new Uint32Array((n + 1) * W); for (let i = n - 1; i >= 0; i--) for (let j = m - 1; j >= 0; j--) T[i * W + j] = eq(A[i], B[j]) ? T[(i + 1) * W + j + 1] + 1 : Math.max(T[(i + 1) * W + j], T[i * W + j + 1]);
+    let i = 0, j = 0; while (i < n && j < m) { if (eq(A[i], B[j])) { out.push([0, A[i]]); i++; j++; } else if (T[(i + 1) * W + j] >= T[i * W + j + 1]) out.push([-1, A[i++]]); else out.push([1, B[j++]]); }
+    while (i < n) out.push([-1, A[i++]]); while (j < m) out.push([1, B[j++]]); }
+  a.slice(ea).forEach(x => out.push([0, x])); return out;
+}
+function diff() {
+  const a = tx.value, b = tx2.value, o = byId('dout'), sm = byId('dsum');
+  if (!a && !b) { o.hidden = true; sm.innerHTML = '<span class="ph">İki metni girince farklar burada görünür.</span>'; return; }
+  const m = byId('dm').value, ws = byId('dws').checked, norm = x => ws ? x.replace(/\s+/g, ' ').trim() : x, eq = (x, y) => norm(x) === norm(y);
+  let A = tok(a, m), B = tok(b, m); if (ws && m !== 'line') { A = A.filter(x => x.trim()); B = B.filter(x => x.trim()); }
+  const d = lcsDiff(A, B, eq); let add = 0, del = 0; d.forEach(([t]) => { if (t > 0) add++; else if (t < 0) del++; });
+  const unit = { line: 'satır', word: 'kelime', char: 'harf' }[m];
+  sm.innerHTML = add + del === 0 ? '<div class="big">Aynı</div><div class="nt">İki metin arasında fark yok.</div>' : `<div class="big">${fmt(add + del, 0)} fark</div><div class="kv"><span>Eklenen ${unit}</span><b style="color:var(--acc)">+${fmt(add, 0)}</b></div><div class="kv"><span>Silinen ${unit}</span><b style="color:var(--warn)">−${fmt(del, 0)}</b></div><div class="kv"><span>Benzerlik</span><b>%${fmt(100 * (d.length - add - del) / Math.max(1, d.length), 1)}</b></div>`;
+  const sep = ws && m === 'word' ? ' ' : '';
+  o.innerHTML = m === 'line' ? d.map(([t, x]) => `<span class="ln${t > 0 ? ' a' : t < 0 ? ' d' : ''}" data-s="${t > 0 ? '+' : t < 0 ? '−' : ' '}">${esc(x) || ' '}</span>`).join('') : d.map(([t, x]) => t > 0 ? `<ins>${esc(x)}</ins>` : t < 0 ? `<del>${esc(x)}</del>` : esc(x)).join(sep);
+  o.hidden = false;
+}
+['dm', 'dws'].forEach(id => byId(id).addEventListener('change', diff));
+let cur = 'say', dT = 0;
+function update() { persist(); if (cur === 'say') count(); if (cur === 'fark') { clearTimeout(dT); dT = setTimeout(diff, 250); } }
+tx.addEventListener('input', update); tx2.addEventListener('input', update);
+tabs('metin', t => { cur = t; byId('mainbox').querySelector('label').textContent = t === 'fark' ? 'Eski metin' : 'Metin'; update(); });
+</script>
+</body>
+</html>

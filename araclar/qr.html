@@ -1,0 +1,205 @@
+<!doctype html>
+<html lang="tr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="theme-color" content="#f5f6f4" media="(prefers-color-scheme: light)">
+<meta name="theme-color" content="#151a18" media="(prefers-color-scheme: dark)">
+<title>QR ve Barkod</title>
+<meta name="description" content="QR kod oluştur (bağlantı, Wi-Fi, kartvizit, e-posta, SMS, konum) ve kamerayla QR ya da barkod okut.">
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Crect width='64' height='64' rx='14' fill='%233f8f7a'/%3E%3Cpath d='M14 14h14v14H14zM36 14h14v14H36zM14 36h14v14H14z' fill='none' stroke='white' stroke-width='4'/%3E%3Cpath d='M38 38h4v4h-4zM46 46h4v4h-4zM46 36h4v4h-4zM36 46h4v4h-4z' fill='white'/%3E%3C/svg%3E">
+<link rel="stylesheet" href="ortak.css">
+<style>
+.qv{display:flex;justify-content:center;margin-top:12px}
+.qv canvas{width:min(280px,100%);height:auto;image-rendering:pixelated;border-radius:8px;box-shadow:0 1px 6px #0002}
+.cam{position:relative;background:#000;border-radius:12px;overflow:hidden;aspect-ratio:4/3;margin-top:12px}
+.cam video{width:100%;height:100%;object-fit:cover;display:block}
+.cam .fr{position:absolute;inset:18%;border:3px solid #fff9;border-radius:16px;box-shadow:0 0 0 9999px #0005;pointer-events:none}
+.cam .ln{position:absolute;left:20%;right:20%;height:2px;background:var(--acc);top:50%;animation:sc 2s ease-in-out infinite;pointer-events:none}
+@keyframes sc{50%{top:30%}}
+.cam .off{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;color:#ccc;font-size:.9rem;padding:20px;text-align:center}
+.hit{background:var(--acc-soft);border-radius:12px;padding:10px 12px;margin-top:10px}
+.hit .t{font-size:.75rem;color:var(--muted);text-transform:uppercase;letter-spacing:.05em;font-weight:700}
+.hit .v{word-break:break-all;font-size:.95rem;margin:4px 0}
+.fields .row,.fields .row3{margin:0}
+</style>
+</head>
+<body>
+<header><div class="wrap"><div class="hrow"><a class="back" href="../arac_kutusu.html" aria-label="Araç Kutusu">‹</a><h1>🔳 QR ve Barkod</h1></div>
+  <div class="tabs"><button data-tab="olustur">QR oluştur</button><button data-tab="oku">Okut</button></div></div></header>
+<main class="wrap">
+<section class="pane" data-pane="olustur">
+  <div class="box">
+    <label for="ty">İçerik türü</label>
+    <select id="ty" data-keep><option value="url">Bağlantı (URL)</option><option value="text">Düz metin</option><option value="wifi">Wi-Fi ağı</option><option value="vcard">Kartvizit (vCard)</option><option value="mail">E-posta</option><option value="tel">Telefon</option><option value="sms">SMS</option><option value="wa">WhatsApp mesajı</option><option value="geo">Konum</option></select>
+    <div class="fields" id="fields"></div>
+  </div>
+  <div class="box">
+    <div class="qv"><canvas id="qc"></canvas></div>
+    <div class="hint" id="qi" style="text-align:center"></div>
+    <div class="btns"><button class="btn" id="png">PNG indir</button><button class="btn ghost" id="svg">SVG indir</button><button class="btn ghost" id="cpy">Resmi kopyala</button></div>
+    <details><summary>Görünüm</summary>
+      <div class="row"><div><label for="ec">Hata düzeltme</label><select id="ec" data-keep><option value="L">Düşük (%7)</option><option value="M" selected>Orta (%15)</option><option value="Q">Yüksek (%25)</option><option value="H">En yüksek (%30)</option></select></div>
+      <div><label for="px">PNG boyutu (px)</label><select id="px" data-keep><option>512</option><option selected>1024</option><option>2048</option></select></div></div>
+      <div class="row3"><div><label for="fg">Kod rengi</label><input type="color" id="fg" value="#000000" data-keep></div><div><label for="bg">Zemin</label><input type="color" id="bg" value="#ffffff" data-keep></div><div><label for="mg">Kenar (modül)</label><input id="mg" inputmode="numeric" value="4" data-keep></div></div>
+      <label class="chk"><input type="checkbox" id="rd" data-keep> Yuvarlak noktalar</label>
+      <label for="lg">Ortaya logo (isteğe bağlı)</label><input type="file" id="lg" accept="image/*">
+      <div class="btns"><button class="btn sm ghost" id="lgx" hidden>Logoyu kaldır</button></div>
+      <p class="hint">Logo eklenince hata düzeltme otomatik "En yüksek" olur. Koyu kod / açık zemin dışında renkler bazı okuyucularda sorun çıkarabilir.</p>
+    </details>
+  </div>
+</section>
+
+<section class="pane" data-pane="oku">
+  <div class="box">
+    <div class="cam"><video id="vd" playsinline muted></video><div class="fr"></div><div class="ln" id="ln" hidden></div><div class="off" id="off">Kamerayı başlatınca QR kodu ya da barkodu çerçevenin içine getir.</div></div>
+    <div class="btns"><button class="btn" id="cam">Kamerayı başlat</button><button class="btn ghost" id="torch" hidden>🔦 Fener</button><label class="btn ghost" style="margin:0;color:var(--ink)">Resimden oku<input type="file" id="imf" accept="image/*" hidden></label></div>
+    <label class="chk"><input type="checkbox" id="cont" data-keep> Okuduktan sonra taramaya devam et</label>
+    <p class="hint" id="eng"></p>
+  </div>
+  <div class="box"><div class="hrow"><h3 style="flex:1">Okunanlar</h3><button class="btn sm ghost" id="hx">Temizle</button></div><div id="hits"><p class="ph">Henüz bir şey okunmadı.</p></div></div>
+</section>
+</main>
+<footer>Kamera görüntüsü cihazında işlenir, hiçbir yere gönderilmez.</footer>
+<script src="ortak.js"></script>
+<script src="lib/qrcode.js"></script>
+<script>
+qrcode.stringToBytes = qrcode.stringToBytesFuncs['UTF-8'];
+keepInputs('qr');
+let logo = null;
+const F = {
+  url: [['u', 'Bağlantı', 'https://erdevelop.github.io', 'url']],
+  text: [['t', 'Metin', 'Merhaba!', 'area']],
+  wifi: [['s', 'Ağ adı (SSID)', 'EvWifi'], ['p', 'Şifre', ''], ['e', 'Güvenlik', 'WPA', 'sel:WPA=WPA/WPA2/WPA3|WEP=WEP|nopass=Şifresiz'], ['h', 'Gizli ağ', '', 'chk']],
+  vcard: [['fn', 'Ad', ''], ['ln', 'Soyad', ''], ['org', 'Şirket', ''], ['ti', 'Unvan', ''], ['tel', 'Telefon', '+90 5', 'tel'], ['em', 'E-posta', '', 'email'], ['web', 'Web sitesi', '', 'url'], ['adr', 'Adres', '']],
+  mail: [['to', 'Alıcı', '', 'email'], ['su', 'Konu', ''], ['bo', 'Mesaj', '', 'area']],
+  tel: [['n', 'Telefon numarası', '+90 5', 'tel']],
+  sms: [['n', 'Numara', '+90 5', 'tel'], ['m', 'Mesaj', '', 'area']],
+  wa: [['n', 'Numara (ülke koduyla, ör. 905…)', '90', 'tel'], ['m', 'Mesaj', '', 'area']],
+  geo: [['la', 'Enlem', '41.0082'], ['lo', 'Boylam', '28.9784'], ['gps', '', '', 'gps']]
+};
+function buildFields() {
+  const t = byId('ty').value;
+  byId('fields').innerHTML = F[t].map(([k, l, ph, kind]) => { const id = 'f-' + t + '-' + k;
+    if (kind === 'area') return `<label for="${id}">${l}</label><textarea id="${id}" data-keep placeholder="${esc(ph)}" style="min-height:90px"></textarea>`;
+    if (kind === 'chk') return `<label class="chk"><input type="checkbox" id="${id}" data-keep> ${l}</label>`;
+    if (kind === 'gps') return `<div class="btns"><button class="btn sm ghost" type="button" id="gps">📍 Konumumu kullan</button></div>`;
+    if (kind && kind.startsWith('sel:')) return `<label for="${id}">${l}</label><select id="${id}" data-keep>${kind.slice(4).split('|').map(o => { const [v, x] = o.split('='); return `<option value="${v}">${x}</option>`; }).join('')}</select>`;
+    return `<label for="${id}">${l}</label><input id="${id}" data-keep ${kind === 'tel' ? 'inputmode="tel"' : kind === 'email' ? 'inputmode="email"' : kind === 'url' ? 'inputmode="url"' : ''} placeholder="${esc(ph)}" autocomplete="off">`; }).join('');
+  keepInputs('qr');
+  if (byId('gps')) byId('gps').onclick = () => navigator.geolocation ? navigator.geolocation.getCurrentPosition(p => { byId('f-geo-la').value = p.coords.latitude.toFixed(6); byId('f-geo-lo').value = p.coords.longitude.toFixed(6); draw(); }, () => toast('Konum alınamadı'), { enableHighAccuracy: true, timeout: 10000 }) : toast('Konum desteklenmiyor');
+  if (t === 'url' && !byId('f-url-u').value) byId('f-url-u').value = '';
+}
+const v = k => { const el = byId('f-' + byId('ty').value + '-' + k); return el ? (el.type === 'checkbox' ? el.checked : el.value.trim()) : ''; };
+const wesc = s => s.replace(/([\\;,:"])/g, '\\$1');
+const vesc = s => s.replace(/([\\;,])/g, '\\$1').replace(/\n/g, '\\n');
+const digits = s => s.replace(/[^\d+]/g, '');
+function content() {
+  switch (byId('ty').value) {
+    case 'url': { let u = v('u'); if (u && !/^[a-z][a-z0-9+.-]*:/i.test(u)) u = 'https://' + u; return u; }
+    case 'text': return v('t');
+    case 'wifi': return v('s') ? `WIFI:T:${v('e')};S:${wesc(v('s'))};${v('e') !== 'nopass' ? 'P:' + wesc(v('p')) + ';' : ''}${v('h') ? 'H:true;' : ''};` : '';
+    case 'vcard': { if (!v('fn') && !v('ln') && !v('org')) return ''; const L = ['BEGIN:VCARD', 'VERSION:3.0', `N:${vesc(v('ln'))};${vesc(v('fn'))};;;`, `FN:${vesc((v('fn') + ' ' + v('ln')).trim() || v('org'))}`];
+      if (v('org')) L.push('ORG:' + vesc(v('org'))); if (v('ti')) L.push('TITLE:' + vesc(v('ti'))); if (digits(v('tel')).length > 4) L.push('TEL;TYPE=CELL:' + digits(v('tel'))); if (v('em')) L.push('EMAIL:' + v('em')); if (v('web')) L.push('URL:' + v('web')); if (v('adr')) L.push('ADR:;;' + vesc(v('adr')) + ';;;;'); L.push('END:VCARD'); return L.join('\n'); }
+    case 'mail': { if (!v('to')) return ''; const q = []; if (v('su')) q.push('subject=' + encodeURIComponent(v('su'))); if (v('bo')) q.push('body=' + encodeURIComponent(v('bo'))); return 'mailto:' + v('to') + (q.length ? '?' + q.join('&') : ''); }
+    case 'tel': return digits(v('n')).length > 4 ? 'tel:' + digits(v('n')) : '';
+    case 'sms': return digits(v('n')).length > 4 ? `SMSTO:${digits(v('n'))}:${v('m')}` : '';
+    case 'wa': { const n = v('n').replace(/\D/g, ''); return n.length > 6 ? `https://wa.me/${n}${v('m') ? '?text=' + encodeURIComponent(v('m')) : ''}` : ''; }
+    case 'geo': { const a = pnum(v('la')), b = pnum(v('lo')); return isFinite(a) && isFinite(b) && Math.abs(a) <= 90 && Math.abs(b) <= 180 ? `geo:${a},${b}` : ''; }
+  }
+}
+let Q = null;
+function make(txt) { const ec = logo ? 'H' : byId('ec').value; const q = qrcode(0, ec); q.addData(txt, 'Byte'); q.make(); return q; }
+function paintQR(cv, q, px) {
+  const n = q.getModuleCount(), mg = Math.max(0, Math.min(20, Math.round(num('mg')) || 0)), tot = n + mg * 2, s = px / tot, g = cv.getContext('2d'), rd = byId('rd').checked;
+  cv.width = cv.height = px; g.fillStyle = byId('bg').value; g.fillRect(0, 0, px, px); g.fillStyle = byId('fg').value;
+  const finder = (r, c) => (r < 7 && c < 7) || (r < 7 && c >= n - 7) || (r >= n - 7 && c < 7);
+  for (let r = 0; r < n; r++) for (let c = 0; c < n; c++) if (q.isDark(r, c)) { const x = (c + mg) * s, y = (r + mg) * s;
+    if (rd && !finder(r, c)) { g.beginPath(); g.arc(x + s / 2, y + s / 2, s * .46, 0, 7); g.fill(); } else g.fillRect(Math.floor(x), Math.floor(y), Math.ceil(s), Math.ceil(s)); }
+  if (logo) { const L = px * .22, x = (px - L) / 2; g.fillStyle = byId('bg').value; g.fillRect(x - s, x - s, L + 2 * s, L + 2 * s); const k = Math.min(L / logo.naturalWidth, L / logo.naturalHeight), w = logo.naturalWidth * k, h = logo.naturalHeight * k; g.drawImage(logo, (px - w) / 2, (px - h) / 2, w, h); }
+}
+function draw() {
+  const txt = content(), cv = byId('qc'), info = byId('qi');
+  ['png', 'svg', 'cpy'].forEach(id => byId(id).disabled = !txt);
+  if (!txt) { Q = null; cv.width = cv.height = 280; const g = cv.getContext('2d'); g.fillStyle = getComputedStyle(document.body).getPropertyValue('--line'); g.fillRect(0, 0, 280, 280); info.textContent = 'Bilgileri girince kod burada oluşur.'; return; }
+  try { Q = make(txt); paintQR(cv, Q, 560); const n = Q.getModuleCount(); info.textContent = `${n}×${n} modül · ${new TextEncoder().encode(txt).length} bayt · sürüm ${(n - 17) / 4}`; }
+  catch (e) { Q = null; info.textContent = 'İçerik bir QR koda sığmayacak kadar uzun.'; }
+}
+byId('ty').addEventListener('change', () => { buildFields(); draw(); });
+byId('fields').addEventListener('input', draw); byId('fields').addEventListener('change', draw);
+['ec', 'fg', 'bg', 'mg', 'rd', 'px'].forEach(id => byId(id).addEventListener('input', draw));
+byId('lg').onchange = async e => { const f = e.target.files[0]; if (!f) return; const i = new Image(); i.src = URL.createObjectURL(f); try { await i.decode(); logo = i; byId('lgx').hidden = false; draw(); } catch (_) { toast('Logo açılamadı'); } };
+byId('lgx').onclick = () => { logo = null; byId('lg').value = ''; byId('lgx').hidden = true; draw(); };
+const fname = () => 'qr-' + byId('ty').value + '-' + stamp();
+byId('png').onclick = () => { if (!Q) return; const c = document.createElement('canvas'); paintQR(c, Q, +byId('px').value); c.toBlob(b => download(fname() + '.png', b), 'image/png'); };
+byId('cpy').onclick = async e => { if (!Q) return; const c = document.createElement('canvas'); paintQR(c, Q, 1024); try { const b = await new Promise(r => c.toBlob(r, 'image/png')); await navigator.clipboard.write([new ClipboardItem({ 'image/png': b })]); toast('Resim panoya kopyalandı'); } catch (_) { toast('Bu tarayıcı resim kopyalamayı desteklemiyor; PNG indir.'); } };
+byId('svg').onclick = () => {
+  if (!Q) return; const n = Q.getModuleCount(), mg = Math.max(0, Math.round(num('mg')) || 0), t = n + 2 * mg, rd = byId('rd').checked; let d = '';
+  const finder = (r, c) => (r < 7 && c < 7) || (r < 7 && c >= n - 7) || (r >= n - 7 && c < 7);
+  for (let r = 0; r < n; r++) for (let c = 0; c < n; c++) if (Q.isDark(r, c)) d += rd && !finder(r, c) ? `M${c + mg + .04},${r + mg + .5}a.46,.46 0 1,0 .92,0a.46,.46 0 1,0 -.92,0z` : `M${c + mg},${r + mg}h1v1h-1z`;
+  let lg = ''; if (logo) { const c = document.createElement('canvas'); c.width = logo.naturalWidth; c.height = logo.naturalHeight; c.getContext('2d').drawImage(logo, 0, 0); const L = t * .22, x = (t - L) / 2; lg = `<rect x="${x - 1}" y="${x - 1}" width="${L + 2}" height="${L + 2}" fill="${byId('bg').value}"/><image href="${c.toDataURL()}" x="${x}" y="${x}" width="${L}" height="${L}" preserveAspectRatio="xMidYMid meet"/>`; }
+  download(fname() + '.svg', new Blob([`<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 ${t} ${t}" shape-rendering="crispEdges"><rect width="${t}" height="${t}" fill="${byId('bg').value}"/><path d="${d}" fill="${byId('fg').value}"/>${lg}</svg>`], { type: 'image/svg+xml' }));
+};
+buildFields(); draw();
+
+/* ---------- okuma ---------- */
+let BD = null, stream = null, raf = 0, last = { t: '', at: 0 }, jsqrReady = null;
+const FORMATS = ['qr_code', 'ean_13', 'ean_8', 'code_128', 'code_39', 'code_93', 'upc_a', 'upc_e', 'itf', 'codabar', 'data_matrix', 'pdf417', 'aztec'];
+async function engine() {
+  if (BD !== null) return BD;
+  if ('BarcodeDetector' in window) { try { const sup = await BarcodeDetector.getSupportedFormats(); const f = FORMATS.filter(x => sup.includes(x)); if (f.length) { BD = new BarcodeDetector({ formats: f }); byId('eng').textContent = 'QR ve barkodlar okunur (' + f.length + ' biçim).'; return BD; } } catch (e) { } }
+  BD = false; byId('eng').textContent = 'Bu tarayıcıda yalnızca QR kod okunur (barkod için Chrome / Android önerilir).'; jsqrReady = jsqrReady || loadScript('lib/jsQR.js'); await jsqrReady; return BD;
+}
+const work = document.createElement('canvas'), wg = work.getContext('2d', { willReadFrequently: true });
+async function detect(src, w, h) {
+  const bd = await engine();
+  if (bd) { const r = await bd.detect(src); return r.map(x => ({ text: x.rawValue, fmt: x.format })); }
+  const s = Math.min(1, 960 / Math.max(w, h)); work.width = Math.round(w * s); work.height = Math.round(h * s); wg.drawImage(src, 0, 0, work.width, work.height);
+  const d = wg.getImageData(0, 0, work.width, work.height), r = jsQR(d.data, d.width, d.height, { inversionAttempts: 'attemptBoth' }); return r ? [{ text: r.data, fmt: 'qr_code' }] : [];
+}
+const FN = { qr_code: 'QR kod', ean_13: 'EAN-13 barkod', ean_8: 'EAN-8 barkod', code_128: 'Code 128', code_39: 'Code 39', code_93: 'Code 93', upc_a: 'UPC-A', upc_e: 'UPC-E', itf: 'ITF', codabar: 'Codabar', data_matrix: 'Data Matrix', pdf417: 'PDF417', aztec: 'Aztec' };
+function describe(t) {
+  if (/^https?:\/\//i.test(t)) return { k: 'Bağlantı', act: `<a class="btn sm" href="${esc(t)}" target="_blank" rel="noopener noreferrer">Aç</a>` };
+  if (/^WIFI:/i.test(t)) { const g = k => { const m = t.match(new RegExp('[:;]' + k + ':((?:\\\\.|[^;])*)')); return m ? m[1].replace(/\\(.)/g, '$1') : ''; }; return { k: 'Wi-Fi', extra: `<div class="kv"><span>Ağ</span><b>${esc(g('S'))}</b></div><div class="kv"><span>Şifre</span><b class="mono">${esc(g('P')) || '—'}</b></div>`, copy: g('P') }; }
+  if (/^BEGIN:VCARD/i.test(t)) { const fn = (t.match(/^FN[^:]*:(.*)$/mi) || [])[1] || ''; return { k: 'Kartvizit', extra: fn ? `<div class="kv"><span>Ad</span><b>${esc(fn)}</b></div>` : '', act: `<button class="btn sm" data-vcf="1">Rehbere ekle (.vcf)</button>` }; }
+  if (/^mailto:/i.test(t)) return { k: 'E-posta', act: `<a class="btn sm" href="${esc(t)}">Yaz</a>` };
+  if (/^tel:/i.test(t)) return { k: 'Telefon', act: `<a class="btn sm" href="${esc(t)}">Ara</a>` };
+  if (/^smsto:/i.test(t)) return { k: 'SMS' };
+  if (/^geo:/i.test(t)) { const [a, b] = t.slice(4).split(/[,;?]/); return { k: 'Konum', act: `<a class="btn sm" href="https://www.openstreetmap.org/?mlat=${encodeURIComponent(a)}&mlon=${encodeURIComponent(b)}#map=17/${encodeURIComponent(a)}/${encodeURIComponent(b)}" target="_blank" rel="noopener noreferrer">Haritada aç</a>` }; }
+  if (/^\d{8,14}$/.test(t)) return { k: 'Ürün kodu', act: `<a class="btn sm" href="https://www.google.com/search?q=${t}" target="_blank" rel="noopener noreferrer">Ara</a>` };
+  return { k: 'Metin' };
+}
+const HITS = [];
+function addHit(h) {
+  const now = Date.now(); if (h.text === last.t && now - last.at < 3000) return false; last = { t: h.text, at: now };
+  HITS.unshift({ ...h, at: new Date() }); if (HITS.length > 30) HITS.pop(); paintHits(); try { navigator.vibrate && navigator.vibrate(80); } catch (e) { } return true;
+}
+function paintHits() {
+  byId('hits').innerHTML = HITS.length ? HITS.map((h, i) => { const d = describe(h.text); return `<div class="hit" data-i="${i}"><div class="t">${FN[h.fmt] || h.fmt} · ${d.k} · ${h.at.toLocaleTimeString('tr-TR')}</div><div class="v">${esc(h.text.length > 400 ? h.text.slice(0, 400) + '…' : h.text)}</div>${d.extra || ''}<div class="btns">${d.act || ''}<button class="btn sm ghost" data-cp="${d.copy != null ? 'p' : 't'}">${d.copy != null ? 'Şifreyi kopyala' : 'Kopyala'}</button></div></div>`; }).join('') : '<p class="ph">Henüz bir şey okunmadı.</p>';
+}
+byId('hits').onclick = e => { const h = HITS[+(e.target.closest('.hit') || {}).dataset?.i]; if (!h) return; const cp = e.target.closest('[data-cp]');
+  if (cp) copy(cp.dataset.cp === 'p' ? describe(h.text).copy : h.text, cp); if (e.target.closest('[data-vcf]')) download('kisi.vcf', new Blob([h.text], { type: 'text/vcard' })); };
+byId('hx').onclick = () => { HITS.length = 0; paintHits(); };
+async function loop() {
+  const vd = byId('vd'); if (!stream) return;
+  if (vd.readyState >= 2) { try { const r = await detect(vd, vd.videoWidth, vd.videoHeight); if (r.length) { const got = r.map(addHit).some(Boolean); if (got && !byId('cont').checked) { stopCam(); return; } } } catch (e) { console.error(e); } }
+  raf = setTimeout(loop, BD ? 120 : 250);
+}
+async function startCam() {
+  if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) return toast('Kamera bu tarayıcıda kullanılamıyor (https gerekli)');
+  try { stream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: { ideal: 'environment' }, width: { ideal: 1920 }, height: { ideal: 1080 } }, audio: false }); }
+  catch (e) { return toast(e.name === 'NotAllowedError' ? 'Kamera izni verilmedi' : 'Kamera açılamadı'); }
+  const vd = byId('vd'); vd.srcObject = stream; await vd.play().catch(() => { }); byId('off').hidden = true; byId('ln').hidden = false; byId('cam').textContent = 'Durdur';
+  const tr = stream.getVideoTracks()[0], cap = tr.getCapabilities ? tr.getCapabilities() : {}; byId('torch').hidden = !cap.torch;
+  await engine(); loop();
+}
+function stopCam() { clearTimeout(raf); if (stream) stream.getTracks().forEach(t => t.stop()); stream = null; byId('vd').srcObject = null; byId('off').hidden = false; byId('ln').hidden = true; byId('torch').hidden = true; byId('cam').textContent = 'Kamerayı başlat'; }
+byId('cam').onclick = () => stream ? stopCam() : startCam();
+let torchOn = false; byId('torch').onclick = async () => { try { torchOn = !torchOn; await stream.getVideoTracks()[0].applyConstraints({ advanced: [{ torch: torchOn }] }); } catch (e) { toast('Fener açılamadı'); } };
+byId('imf').onchange = async e => { const f = e.target.files[0]; if (!f) return; e.target.value = '';
+  try { const img = new Image(); img.src = URL.createObjectURL(f); await img.decode(); const r = await detect(img, img.naturalWidth, img.naturalHeight); if (!r.length) return toast('Resimde kod bulunamadı'); last = { t: '', at: 0 }; r.forEach(addHit); } catch (er) { console.error(er); toast('Resim okunamadı'); } };
+tabs('qr', t => { if (t !== 'oku') stopCam(); });
+document.addEventListener('visibilitychange', () => { if (document.hidden) stopCam(); });
+</script>
+</body>
+</html>

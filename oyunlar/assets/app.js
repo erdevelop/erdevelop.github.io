@@ -303,4 +303,15 @@
     const h=location.hash.replace(/^#o\//,'');
     if(h){ const g=games.find(x=>x.id===h); if(g) openGame(g); }
   });
+
+  // ---------- PWA: service worker + ana ekrana ekle ----------
+  if('serviceWorker' in navigator){
+    window.addEventListener('load', ()=>{ navigator.serviceWorker.register('sw.js',{scope:'./'}).catch(()=>{}); });
+  }
+  let deferredPrompt=null;
+  const installBtn=$('#installBtn');
+  window.addEventListener('beforeinstallprompt', e=>{ e.preventDefault(); deferredPrompt=e; if(installBtn) installBtn.hidden=false; });
+  if(installBtn) installBtn.onclick=async ()=>{ if(!deferredPrompt) return; deferredPrompt.prompt();
+    try{ await deferredPrompt.userChoice; }catch(e){} deferredPrompt=null; installBtn.hidden=true; };
+  window.addEventListener('appinstalled', ()=>{ if(installBtn) installBtn.hidden=true; toast('Ana ekrana eklendi 🎉'); });
 })();

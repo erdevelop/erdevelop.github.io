@@ -1,0 +1,203 @@
+<!doctype html>
+<html lang="tr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="theme-color" content="#f5f6f4" media="(prefers-color-scheme: light)">
+<meta name="theme-color" content="#151a18" media="(prefers-color-scheme: dark)">
+<title>Resim Araçları</title>
+<meta name="description" content="Toplu boyutlandır, sıkıştır, biçim değiştir (HEIC, JPG, WebP, PNG), kırp, döndür, konum ve EXIF bilgisini sil.">
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Crect width='64' height='64' rx='14' fill='%233f8f7a'/%3E%3Crect x='12' y='16' width='40' height='32' rx='3' fill='none' stroke='white' stroke-width='4'/%3E%3Cpath d='M14 44l12-12 8 8 6-6 10 10' fill='none' stroke='white' stroke-width='4'/%3E%3C/svg%3E">
+<link rel="stylesheet" href="ortak.css">
+<style>
+.it{display:flex;gap:10px;align-items:center;padding:8px 0;border-bottom:1px dashed var(--line)}
+.it:last-child{border-bottom:0}
+.it .tb{width:56px;height:56px;border-radius:8px;object-fit:cover;background:var(--bg);flex:none}
+.it .in{flex:1;min-width:0;font-size:.85rem}
+.it .in b{display:block;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-size:.9rem}
+.it .in small{color:var(--muted)}
+.tag{display:inline-block;font-size:.7rem;padding:1px 6px;border-radius:6px;background:var(--acc-soft);color:var(--acc);margin-right:4px;font-weight:600}
+.tag.w{background:#f6e3dc;color:#a4462f}
+@media (prefers-color-scheme:dark){.tag.w{background:#3b2620;color:#f0a58d}}
+.ok{color:var(--acc);font-weight:700}
+.modal{position:fixed;inset:0;background:#000c;z-index:20;display:flex;flex-direction:column;padding:max(10px,env(safe-area-inset-top)) 10px max(10px,env(safe-area-inset-bottom))}
+.modal .cv{flex:1;position:relative;display:flex;align-items:center;justify-content:center;min-height:0;touch-action:none}
+.modal canvas{max-width:100%;max-height:100%}
+.crop{position:absolute;border:2px solid #fff;box-shadow:0 0 0 9999px #0008;cursor:move;touch-action:none}
+.crop::before,.crop::after{content:'';position:absolute;border:1px solid #fff6}
+.crop::before{left:33.3%;right:33.3%;top:0;bottom:0;border-top:0;border-bottom:0}
+.crop::after{top:33.3%;bottom:33.3%;left:0;right:0;border-left:0;border-right:0}
+.crop i{position:absolute;width:22px;height:22px;background:#fff;border-radius:50%;margin:-11px;z-index:1}
+.crop i[data-h=nw]{left:0;top:0;cursor:nwse-resize}.crop i[data-h=ne]{left:100%;top:0;cursor:nesw-resize}.crop i[data-h=sw]{left:0;top:100%;cursor:nesw-resize}.crop i[data-h=se]{left:100%;top:100%;cursor:nwse-resize}
+.modal .mb{background:var(--card);border-radius:14px;padding:10px;margin-top:10px}
+.modal .chips{margin-top:0}
+</style>
+</head>
+<body>
+<header><div class="wrap"><div class="hrow"><a class="back" href="../arac_kutusu.html" aria-label="Araç Kutusu">‹</a><h1>🖼️ Resim Araçları</h1></div></div></header>
+<main class="wrap">
+  <label class="drop" id="drop"><input type="file" accept="image/*,.heic,.heif" multiple><b>Resim seç veya buraya bırak</b>JPG, PNG, WebP, GIF, HEIC (iPhone). Çok sayıda dosya aynı anda işlenir.</label>
+
+  <div class="box" id="lbox" hidden>
+    <div class="hrow"><h3 style="flex:1">Resimler <small class="ph" id="cnt"></small></h3><button class="btn sm ghost" id="clr">Temizle</button></div>
+    <div id="list"></div>
+  </div>
+
+  <div class="box"><h3>Ayarlar</h3>
+    <div class="row"><div><label for="o-fmt">Çıktı biçimi</label><select id="o-fmt" data-keep><option value="auto">Aynı biçim (HEIC → JPG)</option><option value="image/jpeg">JPG</option><option value="image/webp">WebP</option><option value="image/png">PNG</option></select></div>
+      <div><label for="o-q">Kalite: <b id="o-qv"></b></label><input type="range" id="o-q" min="30" max="100" value="82" data-keep></div></div>
+    <label for="o-mode">Boyut</label>
+    <select id="o-mode" data-keep><option value="none">Değiştirme</option><option value="max">En uzun kenar en fazla…</option><option value="w">Genişlik…</option><option value="h">Yükseklik…</option><option value="pct">Yüzde…</option><option value="kb">Hedef dosya boyutu (KB)…</option></select>
+    <div id="o-vw"><label for="o-v" id="o-vl">Değer</label><input id="o-v" inputmode="numeric" value="1920" data-keep>
+      <div class="chips" id="o-ch"></div></div>
+    <label class="chk"><input type="checkbox" id="o-up" checked data-keep> Küçük resimleri büyütme (önerilir)</label>
+    <label for="o-bg">Saydam alan rengi (JPG için)</label><input type="color" id="o-bg" value="#ffffff" data-keep>
+    <label for="o-nm">Dosya adı</label><select id="o-nm" data-keep><option value="same">Aynı ad</option><option value="suffix">Ad + boyut (foto-1920.jpg)</option><option value="seq">Sıralı (ön ek + numara)</option></select>
+    <div id="o-pw" hidden><label for="o-pre">Ön ek</label><input id="o-pre" value="foto" data-keep></div>
+    <p class="hint">Çıktıda EXIF bilgileri (konum, kamera, tarih) her zaman silinir; telefon fotoğraflarının yönü düzeltilir.</p>
+    <div class="btns"><button class="btn" id="go" disabled>Dönüştür</button><button class="btn ghost" id="zip" disabled>Hepsini ZIP indir</button></div>
+    <div class="bar"><i id="bar"></i></div>
+    <div class="res" id="sum"><span class="ph">Resim ekleyince sonuç burada görünür.</span></div>
+  </div>
+</main>
+<footer>Resimler cihazında işlenir, hiçbir yere yüklenmez.</footer>
+
+<div class="modal" id="md" hidden>
+  <div class="cv" id="mcv"><canvas id="mc"></canvas><div class="crop" id="cr"><i data-h="nw"></i><i data-h="ne"></i><i data-h="sw"></i><i data-h="se"></i></div></div>
+  <div class="mb">
+    <div class="chips" id="asp"><button data-a="0" class="on">Serbest</button><button data-a="1">1:1</button><button data-a="1.3333">4:3</button><button data-a="1.5">3:2</button><button data-a="1.7778">16:9</button><button data-a="0.75">3:4</button><button data-a="0.5625">9:16</button><button data-a="orig">Orijinal</button></div>
+    <div class="btns"><button class="btn sm ghost" id="m-rl">⟲</button><button class="btn sm ghost" id="m-rr">⟳</button><button class="btn sm ghost" id="m-fh">⇋ Ayna</button><button class="btn sm ghost" id="m-rs">Sıfırla</button><span id="m-sz" class="ph" style="align-self:center;flex:1;text-align:right"></span></div>
+    <div class="btns"><button class="btn ghost" id="m-x">Vazgeç</button><button class="btn" id="m-ok">Uygula</button></div>
+  </div>
+</div>
+
+<script src="ortak.js"></script>
+<script>
+const items = []; let uid = 0;
+keepInputs('resim');
+const SUP = {}; ['image/webp', 'image/jpeg', 'image/png'].forEach(t => { const c = document.createElement('canvas'); c.width = c.height = 1; SUP[t] = c.toDataURL(t).startsWith('data:' + t); });
+if (!SUP['image/webp']) byId('o-fmt').querySelector('[value="image/webp"]').textContent = 'WebP (bu tarayıcıda yok → JPG)';
+
+/* EXIF içinde konum var mı? (yalnızca JPEG) */
+function exifInfo(buf) {
+  const v = new DataView(buf); if (v.byteLength < 4 || v.getUint16(0) !== 0xFFD8) return null; let o = 2;
+  while (o + 4 < v.byteLength) { const m = v.getUint16(o), l = v.getUint16(o + 2); if (m === 0xFFE1 && v.getUint32(o + 4) === 0x45786966) {
+      const t = o + 10, le = v.getUint16(t) === 0x4949, g16 = p => v.getUint16(p, le), g32 = p => v.getUint32(p, le), ifd = t + g32(t + 4), n = g16(ifd); let gps = false, cam = false, date = false;
+      for (let i = 0; i < n; i++) { const tag = g16(ifd + 2 + i * 12); if (tag === 0x8825) gps = true; if (tag === 0x010F || tag === 0x0110) cam = true; if (tag === 0x0132) date = true; }
+      return { gps, cam, date }; }
+    if ((m & 0xFF00) !== 0xFF00) break; o += 2 + l; }
+  return null;
+}
+const isHeic = f => /hei[cf]/i.test(f.type) || /\.hei[cf]$/i.test(f.name);
+async function decode(it) {
+  if (it.img) return it.img; let blob = it.file;
+  if (isHeic(it.file)) { await loadScript('lib/heic2any.min.js'); blob = await heic2any({ blob: it.file, toType: 'image/jpeg', quality: .95 }); if (Array.isArray(blob)) blob = blob[0]; }
+  const url = URL.createObjectURL(blob), img = new Image(); img.src = url; await img.decode(); it.url = url; it.img = img; return img;
+}
+dropZone(byId('drop'), async files => {
+  for (const f of files) { if (!/^image\//.test(f.type) && !isHeic(f)) { toast(f.name + ': resim değil'); continue; }
+    const it = { id: ++uid, file: f, rot: 0, flip: false, crop: null, out: null }; items.push(it);
+    try { it.exif = exifInfo(await f.slice(0, 131072).arrayBuffer()); await decode(it); } catch (e) { it.err = 'açılamadı'; console.error(e); } }
+  paint();
+});
+function geom(it) { const r = it.rot % 180 !== 0, W = r ? it.img.naturalHeight : it.img.naturalWidth, H = r ? it.img.naturalWidth : it.img.naturalHeight, c = it.crop || { x: 0, y: 0, w: W, h: H }; return { W, H, c }; }
+function outType(it) { const f = byId('o-fmt').value; let t = f === 'auto' ? (isHeic(it.file) ? 'image/jpeg' : (['image/png', 'image/webp', 'image/jpeg'].includes(it.file.type) ? it.file.type : 'image/jpeg')) : f; if (!SUP[t]) t = 'image/jpeg'; return t; }
+function targetSize(w, h) {
+  const m = byId('o-mode').value, v = num('o-v'), noUp = byId('o-up').checked; let s = 1;
+  if (m === 'max' && v > 0) s = v / Math.max(w, h); else if (m === 'w' && v > 0) s = v / w; else if (m === 'h' && v > 0) s = v / h; else if (m === 'pct' && v > 0) s = v / 100;
+  if (noUp) s = Math.min(1, s); return [Math.max(1, Math.round(w * s)), Math.max(1, Math.round(h * s))];
+}
+function drawTo(it, w, h) {
+  const { c } = geom(it), img = it.img, cv = document.createElement('canvas'); cv.width = w; cv.height = h; const g = cv.getContext('2d'), t = outType(it);
+  if (t === 'image/jpeg') { g.fillStyle = byId('o-bg').value; g.fillRect(0, 0, w, h); }
+  g.imageSmoothingQuality = 'high'; g.scale(w / c.w, h / c.h); g.translate(-c.x, -c.y);
+  const r = it.rot % 180 !== 0, W = r ? img.naturalHeight : img.naturalWidth, H = r ? img.naturalWidth : img.naturalHeight;
+  g.translate(W / 2, H / 2); g.rotate(it.rot * Math.PI / 180); if (it.flip) g.scale(-1, 1); g.drawImage(img, -img.naturalWidth / 2, -img.naturalHeight / 2);
+  return cv;
+}
+/* büyük küçültmelerde adım adım yarıya indir: daha keskin sonuç */
+function render(it, w, h) {
+  const { c } = geom(it); let cw = c.w, ch = c.h;
+  if (cw / w < 2.5) return drawTo(it, w, h);
+  let cv = drawTo(it, Math.round(cw), Math.round(ch));
+  while (cw / 2 > w * 1.2) { cw /= 2; ch /= 2; const n = document.createElement('canvas'); n.width = Math.round(cw); n.height = Math.round(ch); const g = n.getContext('2d'); g.imageSmoothingQuality = 'high'; g.drawImage(cv, 0, 0, n.width, n.height); cv = n; }
+  const n = document.createElement('canvas'); n.width = w; n.height = h; const g = n.getContext('2d'); g.imageSmoothingQuality = 'high'; g.drawImage(cv, 0, 0, w, h); return n;
+}
+const toBlob = (cv, t, q) => new Promise(r => cv.toBlob(r, t, q));
+async function process(it) {
+  await decode(it); const { c } = geom(it), t = outType(it), q = +byId('o-q').value / 100, m = byId('o-mode').value;
+  if (m === 'kb') { /* hedef boyut: önce kalite, yetmezse boyut küçült */
+    const goal = (num('o-v') || 300) * 1024; let [w, h] = [Math.round(c.w), Math.round(c.h)], best = null;
+    for (let pass = 0; pass < 8; pass++) { const cv = render(it, w, h);
+      if (t === 'image/png') { const b = await toBlob(cv, t); best = b; if (b.size <= goal) break; }
+      else { let lo = .3, hi = .95, ok = null; for (let i = 0; i < 6; i++) { const mid = (lo + hi) / 2, b = await toBlob(cv, t, mid); if (b.size <= goal) { ok = b; lo = mid; } else hi = mid; } if (ok) { best = ok; break; } best = await toBlob(cv, t, .3); }
+      w = Math.max(1, Math.round(w * .8)); h = Math.max(1, Math.round(h * .8)); }
+    const bm = await createImageBitmap(best); it.out = { blob: best, w: bm.width, h: bm.height, t }; bm.close && bm.close(); return;
+  }
+  const [w, h] = targetSize(c.w, c.h), cv = render(it, w, h), blob = await toBlob(cv, t, t === 'image/png' ? undefined : q);
+  it.out = { blob, w, h, t };
+}
+const EXT = { 'image/jpeg': 'jpg', 'image/png': 'png', 'image/webp': 'webp' };
+function outName(it, k) { const m = byId('o-nm').value, e = EXT[it.out.t]; if (m === 'seq') return `${(byId('o-pre').value.trim() || 'foto')}-${p2(k + 1)}.${e}`; if (m === 'suffix') return `${baseName(it.file.name)}-${it.out.w}x${it.out.h}.${e}`; return `${baseName(it.file.name)}.${e}`; }
+function paint() {
+  byId('lbox').hidden = !items.length; byId('go').disabled = !items.length; byId('zip').disabled = !items.some(i => i.out);
+  byId('cnt').textContent = items.length ? '· ' + items.length : '';
+  byId('list').innerHTML = items.map((it, k) => { const g = it.img ? geom(it) : null, ex = it.exif;
+    return `<div class="it" data-id="${it.id}"><img class="tb" src="${it.url || ''}" alt=""><div class="in"><b>${esc(it.file.name)}</b><small>${g ? Math.round(g.c.w) + '×' + Math.round(g.c.h) + ' · ' : ''}${size(it.file.size)}${it.err ? ' · ' + it.err : ''}</small><div>${ex && ex.gps ? '<span class="tag w">📍 konum var</span>' : ''}${ex && (ex.cam || ex.date) ? '<span class="tag">EXIF</span>' : ''}${it.crop || it.rot || it.flip ? '<span class="tag">kırpıldı/döndü</span>' : ''}${it.out ? `<span class="ok">→ ${it.out.w}×${it.out.h} · ${size(it.out.blob.size)}</span>` : ''}</div></div>
+      <button class="ib" data-a="crop" title="Kırp / döndür" ${it.img ? '' : 'disabled'}>✂</button>${it.out ? '<button class="ib" data-a="dl" title="İndir">⬇</button>' : ''}<button class="ib" data-a="x" title="Kaldır">✕</button></div>`; }).join('');
+}
+byId('list').onclick = e => { const b = e.target.closest('[data-a]'); if (!b) return; const id = +b.closest('.it').dataset.id, k = items.findIndex(i => i.id === id), it = items[k];
+  if (b.dataset.a === 'x') { items.splice(k, 1); paint(); } else if (b.dataset.a === 'dl') download(outName(it, k), it.out.blob); else openCrop(it); };
+byId('clr').onclick = () => { items.length = 0; paint(); byId('sum').innerHTML = '<span class="ph">Resim ekleyince sonuç burada görünür.</span>'; };
+function optsUI() {
+  const m = byId('o-mode').value; byId('o-vw').hidden = m === 'none'; byId('o-qv').textContent = byId('o-q').value; byId('o-pw').hidden = byId('o-nm').value !== 'seq';
+  const L = { max: ['En uzun kenar (px)', [800, 1280, 1600, 1920, 2560, 3840]], w: ['Genişlik (px)', [640, 1080, 1200, 1920]], h: ['Yükseklik (px)', [480, 720, 1080, 1440]], pct: ['Yüzde (%)', [25, 50, 75]], kb: ['Hedef boyut (KB)', [100, 200, 500, 1000]] }[m];
+  if (L) { byId('o-vl').textContent = L[0]; byId('o-ch').innerHTML = L[1].map(v => `<button data-v="${v}">${v}</button>`).join(''); }
+  items.forEach(i => i.out = null); byId('zip').disabled = true;
+}
+['o-mode', 'o-q', 'o-nm', 'o-fmt', 'o-v', 'o-up', 'o-bg'].forEach(id => byId(id).addEventListener('input', optsUI)); optsUI();
+byId('o-ch').onclick = e => { const b = e.target.closest('button'); if (!b) return; byId('o-v').value = b.dataset.v; byId('o-v').dispatchEvent(new Event('input')); };
+byId('go').onclick = async () => {
+  const b = byId('go'), bar = byId('bar'); b.disabled = true; let before = 0, after = 0, n = 0;
+  for (let k = 0; k < items.length; k++) { const it = items[k]; try { await process(it); before += it.file.size; after += it.out.blob.size; n++; } catch (e) { it.err = 'işlenemedi'; console.error(e); } bar.style.width = ((k + 1) / items.length * 100) + '%'; }
+  paint(); b.disabled = false; setTimeout(() => bar.style.width = '0', 1200);
+  const pct = before ? (1 - after / before) * 100 : 0;
+  byId('sum').innerHTML = `<div class="big">${size(after)}</div><div class="nt">${n} resim · ${pct >= 0 ? '%' + fmt(pct, 0) + ' küçüldü' : '%' + fmt(-pct, 0) + ' büyüdü'}</div><div class="kv"><span>Önce</span><b>${size(before)}</b></div><div class="kv"><span>Sonra</span><b>${size(after)}</b></div>`;
+  if (n === 1) { const k = items.findIndex(i => i.out); download(outName(items[k], k), items[k].out.blob); }
+};
+byId('zip').onclick = async () => { const f = items.map((it, k) => it.out && { name: outName(it, k), data: it.out.blob }).filter(Boolean); if (!f.length) return; download('resimler-' + stamp() + '.zip', await makeZip(f)); };
+
+/* ---------- kırpma penceresi ---------- */
+const md = byId('md'), mc = byId('mc'), cr = byId('cr'); let E = null;
+function openCrop(it) { E = { it, rot: it.rot, flip: it.flip, crop: it.crop ? { ...it.crop } : null, asp: 0 }; md.hidden = false; document.body.style.overflow = 'hidden'; $$('#asp button').forEach(b => b.classList.toggle('on', b.dataset.a === '0')); mDraw(); }
+function closeCrop() { md.hidden = true; document.body.style.overflow = ''; E = null; }
+function mDraw() {
+  const img = E.it.img, r = E.rot % 180 !== 0, W = r ? img.naturalHeight : img.naturalWidth, H = r ? img.naturalWidth : img.naturalHeight, box = byId('mcv').getBoundingClientRect();
+  const s = Math.min(box.width / W, box.height / H, 1), dw = Math.round(W * s), dh = Math.round(H * s); mc.width = dw; mc.height = dh; const g = mc.getContext('2d');
+  g.save(); g.translate(dw / 2, dh / 2); g.rotate(E.rot * Math.PI / 180); if (E.flip) g.scale(-1, 1); const k = s; g.drawImage(img, -img.naturalWidth * k / 2, -img.naturalHeight * k / 2, img.naturalWidth * k, img.naturalHeight * k); g.restore();
+  E.W = W; E.H = H; E.s = s; if (!E.crop) E.crop = { x: 0, y: 0, w: W, h: H }; mRect();
+}
+function mRect() { const c = E.crop, cb = mc.getBoundingClientRect(), pb = byId('mcv').getBoundingClientRect(); Object.assign(cr.style, { left: (cb.left - pb.left + c.x * E.s) + 'px', top: (cb.top - pb.top + c.y * E.s) + 'px', width: c.w * E.s + 'px', height: c.h * E.s + 'px' }); byId('m-sz').textContent = Math.round(c.w) + ' × ' + Math.round(c.h) + ' px'; }
+function fitAspect(a) { const c = E.crop; if (!a) return; let w = c.w, h = w / a; if (h > E.H) { h = E.H; w = h * a; } if (w > E.W) { w = E.W; h = w / a; } const cx = c.x + c.w / 2, cy = c.y + c.h / 2; E.crop = { w, h, x: Math.min(Math.max(0, cx - w / 2), E.W - w), y: Math.min(Math.max(0, cy - h / 2), E.H - h) }; }
+byId('asp').onclick = e => { const b = e.target.closest('button'); if (!b) return; $$('#asp button').forEach(x => x.classList.toggle('on', x === b)); E.asp = b.dataset.a === 'orig' ? E.W / E.H : +b.dataset.a; fitAspect(E.asp); mRect(); };
+const rotE = d => { E.rot = (E.rot + d + 360) % 360; E.crop = null; mDraw(); if (E.asp) { fitAspect(E.asp); mRect(); } };
+byId('m-rl').onclick = () => rotE(-90); byId('m-rr').onclick = () => rotE(90); byId('m-fh').onclick = () => { E.flip = !E.flip; E.crop = null; mDraw(); };
+byId('m-rs').onclick = () => { E.rot = 0; E.flip = false; E.crop = null; E.asp = 0; $$('#asp button').forEach(b => b.classList.toggle('on', b.dataset.a === '0')); mDraw(); };
+byId('m-x').onclick = closeCrop;
+byId('m-ok').onclick = () => { const it = E.it, c = E.crop, full = c.x < .5 && c.y < .5 && Math.abs(c.w - E.W) < 1 && Math.abs(c.h - E.H) < 1; it.rot = E.rot; it.flip = E.flip; it.crop = full ? null : { x: Math.round(c.x), y: Math.round(c.y), w: Math.round(c.w), h: Math.round(c.h) }; it.out = null; closeCrop(); paint(); };
+addEventListener('resize', () => { if (E) mDraw(); });
+let dg = null;
+cr.addEventListener('pointerdown', e => { e.preventDefault(); cr.setPointerCapture(e.pointerId); dg = { h: e.target.dataset.h || 'move', x: e.clientX, y: e.clientY, c: { ...E.crop } }; });
+cr.addEventListener('pointermove', e => {
+  if (!dg) return; const dx = (e.clientX - dg.x) / E.s, dy = (e.clientY - dg.y) / E.s, o = dg.c, W = E.W, H = E.H, MIN = 16 / E.s; let { x, y, w, h } = o;
+  if (dg.h === 'move') { x = Math.min(Math.max(0, o.x + dx), W - o.w); y = Math.min(Math.max(0, o.y + dy), H - o.h); }
+  else { const L = dg.h.includes('w'), T = dg.h.includes('n'); let x1 = L ? o.x + dx : o.x, x2 = L ? o.x + o.w : o.x + o.w + dx, y1 = T ? o.y + dy : o.y, y2 = T ? o.y + o.h : o.y + o.h + dy;
+    x1 = Math.max(0, Math.min(x1, x2 - MIN)); x2 = Math.min(W, Math.max(x2, x1 + MIN)); y1 = Math.max(0, Math.min(y1, y2 - MIN)); y2 = Math.min(H, Math.max(y2, y1 + MIN)); w = x2 - x1; h = y2 - y1;
+    if (E.asp) { h = w / E.asp; if (T) y1 = y2 - h; if (y1 < 0 || y1 + h > H) { h = T ? y2 : H - y1; w = h * E.asp; if (L) x1 = x2 - w; if (T) y1 = y2 - h; } }
+    x = x1; y = y1; }
+  E.crop = { x, y, w, h }; mRect();
+});
+['pointerup', 'pointercancel'].forEach(t => cr.addEventListener(t, () => dg = null));
+</script>
+</body>
+</html>

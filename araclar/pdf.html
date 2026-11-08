@@ -1,0 +1,351 @@
+<!doctype html>
+<html lang="tr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="theme-color" content="#f5f6f4" media="(prefers-color-scheme: light)">
+<meta name="theme-color" content="#151a18" media="(prefers-color-scheme: dark)">
+<title>PDF Araçları</title>
+<meta name="description" content="PDF birleştir, böl, sayfa sırala ve döndür, sıkıştır, yazı ve imza ekle. Dosyalar cihazından çıkmaz.">
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Crect width='64' height='64' rx='14' fill='%233f8f7a'/%3E%3Cpath d='M20 12h18l8 8v32H20z' fill='none' stroke='white' stroke-width='4'/%3E%3Cpath d='M26 34h14M26 42h10' stroke='white' stroke-width='4'/%3E%3C/svg%3E">
+<link rel="stylesheet" href="ortak.css">
+<style>
+.pg{display:grid;grid-template-columns:repeat(auto-fill,minmax(128px,1fr));gap:10px;margin-top:12px}
+.pc{background:var(--bg);border:2px solid var(--line);border-radius:12px;padding:6px;display:flex;flex-direction:column;gap:6px;user-select:none;position:relative}
+.pc.sel{border-color:var(--acc)}
+.pc.drag{opacity:.4}
+.pc.tgt{box-shadow:-4px 0 0 var(--acc)}
+.pc .th{aspect-ratio:1/1.3;display:flex;align-items:center;justify-content:center;background:var(--card);border-radius:8px;overflow:hidden;cursor:grab}
+.pc canvas{max-width:100%;max-height:100%;box-shadow:0 1px 4px #0003;background:#fff}
+.pc .lb{font-size:.75rem;color:var(--muted);display:flex;justify-content:space-between;gap:4px}
+.pc .lb b{color:var(--ink)}
+.pc .ac{display:flex;gap:4px;justify-content:space-between}
+.pc .ac .ib{min-width:0;flex:1;height:30px;padding:0}
+.pc .no{position:absolute;top:10px;left:10px;background:var(--acc);color:var(--acc-ink);font-size:.72rem;font-weight:700;border-radius:6px;padding:1px 6px}
+.pc .st{position:absolute;top:10px;right:10px;font-size:.8rem}
+.tools{display:flex;gap:6px;flex-wrap:wrap;margin-top:10px}
+.prev{position:relative;margin-top:12px;display:flex;justify-content:center;background:var(--bg);border-radius:12px;padding:10px;overflow:auto}
+.prev .pw{position:relative;line-height:0;touch-action:none}
+.prev canvas{background:#fff;box-shadow:0 2px 10px #0003;max-width:100%}
+.stamp{position:absolute;transform:translate(-50%,-50%);outline:1.5px dashed var(--acc);cursor:move;touch-action:none}
+.stamp.on{outline:2px solid var(--acc)}
+.stamp img{display:block;width:100%;height:100%;pointer-events:none}
+.sig{width:100%;height:170px;background:#fff;border:1px solid var(--line);border-radius:10px;touch-action:none;display:block}
+.cmp{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+</style>
+</head>
+<body>
+<header><div class="wrap wide"><div class="hrow"><a class="back" href="../arac_kutusu.html" aria-label="Araç Kutusu">‹</a><h1>📄 PDF Araçları</h1></div>
+  <div class="tabs"><button data-tab="duzen">Düzenle &amp; birleştir</button><button data-tab="bol">Böl / çıkar</button><button data-tab="sik">Sıkıştır</button><button data-tab="yazi">Yazı &amp; imza</button></div>
+</div></header>
+<main class="wrap wide">
+  <label class="drop" id="drop"><input type="file" accept="application/pdf,.pdf,image/*,.heic,.heif" multiple><b>PDF ya da resim seç veya buraya bırak</b>Birden çok dosya eklenebilir; resimler PDF sayfasına dönüşür.</label>
+  <div class="box" id="files" hidden><h3>Dosyalar</h3><ul class="list" id="flist"></ul>
+    <details><summary>Resim eklerken sayfa ayarı</summary>
+      <div class="row"><div><label for="im-sz">Sayfa boyutu</label><select id="im-sz" data-keep><option value="a4">A4 (yön otomatik)</option><option value="a4p">A4 dikey</option><option value="a4l">A4 yatay</option><option value="img">Resim boyutunda</option></select></div>
+      <div><label for="im-m">Kenar boşluğu (mm)</label><input id="im-m" inputmode="decimal" value="10" data-keep></div></div>
+    </details>
+  </div>
+
+  <!-- DÜZENLE -->
+  <section class="pane" data-pane="duzen">
+    <div class="box" id="pgbox" hidden>
+      <div class="hrow"><h3 style="flex:1">Sayfalar <small id="pgc" class="ph"></small></h3></div>
+      <div class="tools">
+        <button class="btn sm ghost" id="selAll">Tümünü seç</button><button class="btn sm ghost" id="selNone">Seçimi kaldır</button>
+        <button class="btn sm ghost" id="rotL">⟲ Seçili</button><button class="btn sm ghost" id="rotR">⟳ Seçili</button>
+        <button class="btn sm ghost" id="delSel">Seçilileri sil</button><button class="btn sm ghost" id="rev">Sırayı ters çevir</button><button class="btn sm ghost" id="undo" disabled>Geri al</button>
+      </div>
+      <div class="pg" id="pg"></div>
+      <p class="hint">Sürükleyerek sırala (telefonda ◀ ▶ ile). Sayfaya dokunmak seçer. Farklı dosyaların sayfaları karışık sıralanabilir.</p>
+      <label for="oname">Çıktı dosya adı</label><input id="oname" value="birlesik">
+      <div class="btns"><button class="btn" id="save">PDF olarak indir</button><button class="btn ghost" id="saveSel">Yalnızca seçilileri indir</button></div>
+    </div>
+  </section>
+
+  <!-- BÖL -->
+  <section class="pane" data-pane="bol">
+    <div class="box"><h3>Böl ya da sayfa çıkar</h3>
+      <label for="sp-m">Yöntem</label>
+      <select id="sp-m" data-keep><option value="each">Her sayfa ayrı PDF</option><option value="n">Her N sayfada bir böl</option><option value="ranges">Aralıklara göre (her aralık ayrı PDF)</option><option value="extract">Aralıkları tek PDF olarak çıkar</option></select>
+      <div id="sp-nw"><label for="sp-n">N (sayfa)</label><input id="sp-n" inputmode="numeric" value="2" data-keep></div>
+      <div id="sp-rw"><label for="sp-r">Sayfa aralıkları</label><input id="sp-r" placeholder="1-3, 5, 8-10" data-keep></div>
+      <div class="res" id="sp-out"><span class="ph">Önce dosya ekle.</span></div>
+      <div class="btns"><button class="btn" id="sp-go">Böl ve indir</button></div>
+      <p class="hint">Sayfa numaraları "Düzenle" sekmesindeki güncel sıraya göredir. Birden çok dosya çıkarsa ZIP olarak iner.</p>
+    </div>
+  </section>
+
+  <!-- SIKIŞTIR -->
+  <section class="pane" data-pane="sik">
+    <div class="box"><h3>Sıkıştır</h3>
+      <p class="hint" style="margin-top:0">Sayfalar resme çevrilip JPEG olarak yeniden paketlenir. Taranmış belgelerde ve fotoğraflı PDF'lerde çok etkilidir; metin seçilemez hale gelir.</p>
+      <div class="chips" id="cz-pre"><button data-d="72" data-q="50">En küçük</button><button data-d="110" data-q="65">Dengeli</button><button data-d="150" data-q="78">İyi kalite</button><button data-d="200" data-q="85">Baskı</button></div>
+      <div class="row"><div><label for="cz-d">Çözünürlük: <b id="cz-dv"></b> dpi</label><input type="range" id="cz-d" min="50" max="300" step="10" value="110" data-keep></div>
+      <div><label for="cz-q">JPEG kalitesi: <b id="cz-qv"></b></label><input type="range" id="cz-q" min="20" max="95" step="1" value="65" data-keep></div></div>
+      <label class="chk"><input type="checkbox" id="cz-g" data-keep> Siyah-beyaz (gri ton)</label>
+      <div class="bar"><i id="cz-bar"></i></div>
+      <div class="res" id="cz-out"><span class="ph">Önce dosya ekle.</span></div>
+      <div class="btns"><button class="btn" id="cz-go">Sıkıştır ve indir</button></div>
+    </div>
+  </section>
+
+  <!-- YAZI & İMZA -->
+  <section class="pane" data-pane="yazi">
+    <div class="box"><h3>Sayfaya yazı, tarih ya da imza ekle</h3>
+      <div class="row"><div><label for="st-p">Sayfa</label><select id="st-p"></select></div><div><label for="st-k">Eklenecek</label><select id="st-k"><option value="text">Yazı</option><option value="date">Bugünün tarihi</option><option value="sig">İmza</option><option value="x">✓ işareti</option></select></div></div>
+      <div id="st-tw"><label for="st-t">Yazı</label><input id="st-t" placeholder="Ad Soyad"></div>
+      <div id="st-sw" hidden><label>İmzanı çiz</label><canvas class="sig" id="sig"></canvas><div class="btns"><button class="btn sm ghost" id="sig-c">Temizle</button><label class="btn sm ghost" style="margin:0;color:var(--ink)">Resimden yükle<input type="file" accept="image/*" id="sig-f" hidden></label></div></div>
+      <div class="row3"><div><label for="st-s">Boyut</label><input type="range" id="st-s" min="8" max="72" value="16"></div><div><label for="st-c">Renk</label><input type="color" id="st-c" value="#1a3a8f"></div><div><label for="st-f">Yazı tipi</label><select id="st-f"><option value="system-ui,sans-serif">Sade</option><option value="Georgia,serif">Tırnaklı</option><option value="'Segoe Script','Brush Script MT','Snell Roundhand',cursive">El yazısı</option><option value="ui-monospace,monospace">Daktilo</option></select></div></div>
+      <p class="hint">Önizlemede ekleyeceğin yere dokun. Eklenenleri sürükleyerek taşıyabilirsin; seçiliyi silmek için düğmeyi kullan.</p>
+      <div class="prev"><div class="pw" id="pw"><canvas id="pv"></canvas></div></div>
+      <div class="btns"><button class="btn ghost" id="st-del" disabled>Seçili ögeyi sil</button><button class="btn" id="st-save">PDF olarak indir</button></div>
+    </div>
+  </section>
+</main>
+<footer>Dosyaların cihazında işlenir, hiçbir yere yüklenmez.</footer>
+<script src="ortak.js"></script>
+<script src="lib/pdf.min.js"></script>
+<script src="lib/pdf-lib.min.js"></script>
+<script>
+pdfjsLib.GlobalWorkerOptions.workerSrc = 'lib/pdf.worker.min.js';
+const { PDFDocument, degrees } = PDFLib;
+const S = { docs: [], pages: [], hist: [], uid: 0, cur: -1, stampSel: null };
+keepInputs('pdf');
+const goTab = tabs('pdf', t => { if (t === 'yazi') stPage(); if (t === 'bol') spInfo(); if (t === 'sik') czInfo(); });
+
+/* ---------- dosya ekleme ---------- */
+dropZone(byId('drop'), addFiles);
+async function addFiles(files) {
+  for (const f of files) {
+    try {
+      let bytes, name = f.name;
+      if (/pdf$/i.test(f.type) || /\.pdf$/i.test(name)) bytes = new Uint8Array(await f.arrayBuffer());
+      else bytes = await imageToPdf(f);
+      const pj = await pdfjsLib.getDocument({ data: bytes.slice() }).promise;
+      const d = { id: ++S.uid, name, bytes, pj, n: pj.numPages, size: f.size, lib: null };
+      S.docs.push(d); snapshot();
+      for (let i = 0; i < d.n; i++) S.pages.push({ key: d.id + ':' + i, d, i, rot: 0, sel: false, stamps: [] });
+      if (S.docs.length === 1) byId('oname').value = baseName(name);
+    } catch (e) { toast(/password/i.test(e.message || e.name) ? f.name + ': şifreli PDF açılamadı' : f.name + ': okunamadı'); console.error(e); }
+  }
+  render();
+}
+async function decodeImage(f) {
+  let blob = f;
+  if (/hei[cf]/i.test(f.type) || /\.hei[cf]$/i.test(f.name)) { await loadScript('lib/heic2any.min.js'); blob = await heic2any({ blob: f, toType: 'image/jpeg', quality: .92 }); if (Array.isArray(blob)) blob = blob[0]; }
+  const url = URL.createObjectURL(blob); const img = new Image(); img.src = url; await img.decode(); URL.revokeObjectURL(url); return img;
+}
+async function imageToPdf(f) {
+  const img = await decodeImage(f), c = document.createElement('canvas'); c.width = img.naturalWidth; c.height = img.naturalHeight;
+  const g = c.getContext('2d'), png = /png|gif|webp/i.test(f.type); if (!png) { g.fillStyle = '#fff'; g.fillRect(0, 0, c.width, c.height); } g.drawImage(img, 0, 0);
+  const blob = await new Promise(r => c.toBlob(r, png ? 'image/png' : 'image/jpeg', .9)), data = new Uint8Array(await blob.arrayBuffer());
+  const doc = await PDFDocument.create(), im = png ? await doc.embedPng(data) : await doc.embedJpg(data);
+  const mode = byId('im-sz').value, m = Math.max(0, num('im-m') || 0) * 72 / 25.4; let W, H;
+  if (mode === 'img') { W = img.naturalWidth * .75 + 2 * m; H = img.naturalHeight * .75 + 2 * m; }
+  else { const land = mode === 'a4l' || (mode === 'a4' && img.naturalWidth > img.naturalHeight); W = land ? 841.89 : 595.28; H = land ? 595.28 : 841.89; }
+  const s = Math.min((W - 2 * m) / im.width, (H - 2 * m) / im.height, mode === 'img' ? .75 : Infinity), w = im.width * s, h = im.height * s;
+  const p = doc.addPage([W, H]); p.drawImage(im, { x: (W - w) / 2, y: (H - h) / 2, width: w, height: h });
+  return await doc.save();
+}
+
+/* ---------- liste & sayfa ızgarası ---------- */
+function snapshot() { S.hist.push(S.pages.map(p => ({ ...p, stamps: p.stamps.slice() }))); if (S.hist.length > 30) S.hist.shift(); byId('undo').disabled = false; }
+byId('undo').onclick = () => { const h = S.hist.pop(); if (h) { S.pages = h; h.forEach(p => { if (!S.docs.includes(p.d)) S.docs.push(p.d); }); render(); } byId('undo').disabled = !S.hist.length; };
+function render() {
+  const has = S.pages.length > 0;
+  byId('files').hidden = !S.docs.length; byId('pgbox').hidden = !has;
+  byId('flist').innerHTML = S.docs.map(d => `<li><span class="nm">${esc(d.name)}</span><small>${d.n} sf · ${size(d.size)}</small><button class="ib" data-rm="${d.id}" title="Kaldır">✕</button></li>`).join('');
+  byId('pgc').textContent = has ? `· ${S.pages.length} sayfa${S.pages.some(p => p.sel) ? ', ' + S.pages.filter(p => p.sel).length + ' seçili' : ''}` : '';
+  const multi = S.docs.length > 1, pg = byId('pg');
+  pg.innerHTML = S.pages.map((p, k) => `<div class="pc${p.sel ? ' sel' : ''}" draggable="true" data-k="${k}"><span class="no">${k + 1}</span>${p.stamps.length ? '<span class="st">✍️</span>' : ''}<div class="th"><canvas width="17" height="24" data-key="${p.key}" data-r="${p.rot}"></canvas></div><div class="lb"><span>${multi ? esc(p.d.name.slice(0, 14)) : 'sayfa'}</span><b>${p.i + 1}</b></div><div class="ac"><button class="ib" data-a="l" title="Sola taşı">◀</button><button class="ib" data-a="rl" title="Sola döndür">⟲</button><button class="ib" data-a="rr" title="Sağa döndür">⟳</button><button class="ib" data-a="x" title="Sil">✕</button><button class="ib" data-a="r" title="Sağa taşı">▶</button></div></div>`).join('');
+  pg.querySelectorAll('canvas').forEach(c => thumbCache.has(c.dataset.key + '@' + c.dataset.r) ? drawThumb(c) : io.observe(c));
+  spInfo(); czInfo(); stFill();
+}
+byId('flist').onclick = e => { const b = e.target.closest('[data-rm]'); if (!b) return; const id = +b.dataset.rm; snapshot(); S.docs = S.docs.filter(d => d.id !== id); S.pages = S.pages.filter(p => p.d.id !== id); render(); };
+
+/* küçük resimler — görünür olunca sırayla çiz */
+const thumbCache = new Map(); let tq = Promise.resolve();
+const io = new IntersectionObserver(es => es.forEach(e => { if (e.isIntersecting) { io.unobserve(e.target); drawThumb(e.target); } }), { rootMargin: '200px' });
+function drawThumb(c) {
+  const p = S.pages.find(x => x.key === c.dataset.key); if (!p) return; const r = +c.dataset.r, ck = p.key + '@' + r;
+  if (thumbCache.has(ck)) { const s = thumbCache.get(ck); c.width = s.width; c.height = s.height; c.getContext('2d').drawImage(s, 0, 0); return; }
+  tq = tq.then(async () => { const pg = await p.d.pj.getPage(p.i + 1), v0 = pg.getViewport({ scale: 1, rotation: (pg.rotate + r) % 360 }), v = pg.getViewport({ scale: 240 / Math.max(v0.width, v0.height), rotation: (pg.rotate + r) % 360 });
+    const o = document.createElement('canvas'); o.width = Math.ceil(v.width); o.height = Math.ceil(v.height); await pg.render({ canvasContext: o.getContext('2d'), viewport: v }).promise; thumbCache.set(ck, o);
+    c.width = o.width; c.height = o.height; c.getContext('2d').drawImage(o, 0, 0); }).catch(console.error);
+}
+const pgEl = byId('pg');
+pgEl.addEventListener('click', e => {
+  const card = e.target.closest('.pc'); if (!card) return; const k = +card.dataset.k, a = e.target.closest('[data-a]');
+  if (!a) { S.pages[k].sel = !S.pages[k].sel; card.classList.toggle('sel', S.pages[k].sel); byId('pgc').textContent = `· ${S.pages.length} sayfa${S.pages.some(p => p.sel) ? ', ' + S.pages.filter(p => p.sel).length + ' seçili' : ''}`; return; }
+  snapshot(); const t = a.dataset.a, P = S.pages;
+  if (t === 'l' && k > 0) [P[k - 1], P[k]] = [P[k], P[k - 1]];
+  else if (t === 'r' && k < P.length - 1) [P[k + 1], P[k]] = [P[k], P[k + 1]];
+  else if (t === 'rl' || t === 'rr') { P[k] = { ...P[k], rot: (P[k].rot + (t === 'rr' ? 90 : 270)) % 360, stamps: [] }; }
+  else if (t === 'x') P.splice(k, 1);
+  render();
+});
+let dragK = -1;
+pgEl.addEventListener('dragstart', e => { const c = e.target.closest('.pc'); if (!c) return; dragK = +c.dataset.k; c.classList.add('drag'); e.dataTransfer.effectAllowed = 'move'; e.dataTransfer.setData('text/plain', dragK); });
+pgEl.addEventListener('dragover', e => { const c = e.target.closest('.pc'); if (dragK < 0 || !c) return; e.preventDefault(); pgEl.querySelectorAll('.tgt').forEach(x => x.classList.remove('tgt')); c.classList.add('tgt'); });
+pgEl.addEventListener('dragend', () => { dragK = -1; pgEl.querySelectorAll('.drag,.tgt').forEach(x => x.classList.remove('drag', 'tgt')); });
+pgEl.addEventListener('drop', e => { const c = e.target.closest('.pc'); if (dragK < 0 || !c) return; e.preventDefault(); e.stopPropagation(); const to = +c.dataset.k; if (to !== dragK) { snapshot(); const [m] = S.pages.splice(dragK, 1); S.pages.splice(to > dragK ? to - 1 : to, 0, m); } dragK = -1; render(); });
+byId('selAll').onclick = () => { S.pages.forEach(p => p.sel = true); render(); };
+byId('selNone').onclick = () => { S.pages.forEach(p => p.sel = false); render(); };
+const rotSel = d => { if (!S.pages.some(p => p.sel)) return toast('Önce sayfa seç'); snapshot(); S.pages = S.pages.map(p => p.sel ? { ...p, rot: (p.rot + d) % 360, stamps: [] } : p); render(); };
+byId('rotL').onclick = () => rotSel(270); byId('rotR').onclick = () => rotSel(90);
+byId('delSel').onclick = () => { if (!S.pages.some(p => p.sel)) return toast('Önce sayfa seç'); snapshot(); S.pages = S.pages.filter(p => !p.sel); render(); };
+byId('rev').onclick = () => { snapshot(); S.pages.reverse(); render(); };
+
+/* ---------- PDF oluşturma ---------- */
+async function libDoc(d) { return d.lib || (d.lib = await PDFDocument.load(d.bytes, { ignoreEncryption: true })); }
+async function build(list) {
+  const out = await PDFDocument.create();
+  for (const p of list) {
+    const src = await libDoc(p.d), [pg] = await out.copyPages(src, [p.i]), base = pg.getRotation().angle || 0, R = ((base + p.rot) % 360 + 360) % 360;
+    pg.setRotation(degrees(R)); out.addPage(pg);
+    for (const s of p.stamps) await applyStamp(out, pg, s, R);
+  }
+  out.setProducer('erdevelop PDF Araçları'); out.setCreator('erdevelop PDF Araçları');
+  return await out.save();
+}
+async function applyStamp(doc, pg, s, R) {
+  const im = await doc.embedPng(s.png), box = pg.getCropBox ? pg.getCropBox() : { x: 0, y: 0, ...pg.getSize() }, w = box.width, h = box.height;
+  const vx = s.x, vy = s.y; let X, Y;
+  if (R === 0) { X = vx; Y = h - vy; } else if (R === 90) { X = vy; Y = vx; } else if (R === 180) { X = w - vx; Y = vy; } else { X = w - vy; Y = h - vx; }
+  const t = R * Math.PI / 180, cw = s.w / 2, ch = s.h / 2, ax = X + box.x - (cw * Math.cos(t) - ch * Math.sin(t)), ay = Y + box.y - (cw * Math.sin(t) + ch * Math.cos(t));
+  pg.drawImage(im, { x: ax, y: ay, width: s.w, height: s.h, rotate: degrees(R) });
+}
+async function saveList(list, name) {
+  if (!list.length) return toast('Sayfa yok');
+  const b = byId('save'); b.disabled = true; toast('PDF hazırlanıyor…');
+  try { const bytes = await build(list); download(name + '.pdf', new Blob([bytes], { type: 'application/pdf' })); toast(`${list.length} sayfa · ${size(bytes.length)}`); }
+  catch (e) { console.error(e); toast('PDF oluşturulamadı: ' + e.message); } finally { b.disabled = false; }
+}
+const oname = () => (byId('oname').value.trim() || 'belge').replace(/[\\/:*?"<>|]+/g, '-');
+byId('save').onclick = () => saveList(S.pages, oname());
+byId('saveSel').onclick = () => { const l = S.pages.filter(p => p.sel); if (!l.length) return toast('Önce sayfa seç'); saveList(l, oname() + '-secili'); };
+byId('st-save').onclick = () => saveList(S.pages, oname() + '-imzali');
+
+/* ---------- böl ---------- */
+function parseRanges(s, n) {
+  const out = [];
+  for (const part of s.split(/[,;]+/)) { const t = part.trim(); if (!t) continue; const m = t.match(/^(\d+)\s*(?:-|–|\.\.)\s*(\d+|son)?$/i) || t.match(/^(\d+)$/); if (!m) throw new Error('"' + t + '" anlaşılamadı');
+    const a = +m[1], b = m[2] === undefined ? (t.includes('-') || t.includes('–') ? n : a) : /son/i.test(m[2]) ? n : +m[2]; if (a < 1 || b < 1 || a > n || b > n) throw new Error('"' + t + '" sayfa sayısını (' + n + ') aşıyor');
+    const r = []; for (let i = a; a <= b ? i <= b : i >= b; i += a <= b ? 1 : -1) r.push(i - 1); out.push({ label: t.replace(/\s/g, ''), idx: r }); }
+  return out;
+}
+function spGroups() {
+  const n = S.pages.length, m = byId('sp-m').value; if (!n) return [];
+  if (m === 'each') return S.pages.map((_, i) => ({ label: String(i + 1), idx: [i] }));
+  if (m === 'n') { const k = Math.max(1, Math.round(num('sp-n') || 1)), g = []; for (let i = 0; i < n; i += k) { const idx = []; for (let j = i; j < Math.min(n, i + k); j++) idx.push(j); g.push({ label: (i + 1) + '-' + (i + idx.length), idx }); } return g; }
+  const r = parseRanges(byId('sp-r').value, n); if (!r.length) throw new Error('Aralık yaz (ör. 1-3, 5)');
+  return m === 'extract' ? [{ label: 'secilen', idx: r.flatMap(x => x.idx) }] : r;
+}
+function spInfo() {
+  const m = byId('sp-m').value; byId('sp-nw').hidden = m !== 'n'; byId('sp-rw').hidden = !(m === 'ranges' || m === 'extract');
+  const o = byId('sp-out'); if (!S.pages.length) { o.innerHTML = '<span class="ph">Önce dosya ekle.</span>'; return; }
+  try { const g = spGroups(); o.innerHTML = `<div class="big">${g.length} dosya</div><div class="nt">${S.pages.length} sayfadan</div>` + g.slice(0, 8).map((x, i) => `<div class="kv"><span>${i + 1}. dosya</span><b>${x.idx.length} sayfa (${esc(x.label)})</b></div>`).join('') + (g.length > 8 ? `<div class="kv"><span>…</span><b>+${g.length - 8}</b></div>` : ''); }
+  catch (e) { o.innerHTML = `<span class="ph">${esc(e.message)}</span>`; }
+}
+['sp-m', 'sp-n', 'sp-r'].forEach(id => byId(id).addEventListener('input', spInfo));
+byId('sp-go').onclick = async () => {
+  let g; try { g = spGroups(); } catch (e) { return toast(e.message); } if (!g.length) return toast('Önce dosya ekle');
+  const b = byId('sp-go'); b.disabled = true; toast('Hazırlanıyor…');
+  try {
+    const nm = oname();
+    if (g.length === 1) { const bytes = await build(g[0].idx.map(i => S.pages[i])); download(`${nm}-${g[0].label}.pdf`, new Blob([bytes], { type: 'application/pdf' })); }
+    else { const files = []; for (const x of g) files.push({ name: `${nm}-${x.label}.pdf`, data: await build(x.idx.map(i => S.pages[i])) }); download(`${nm}-bolunmus.zip`, await makeZip(files)); }
+    toast(g.length + ' dosya indirildi');
+  } catch (e) { console.error(e); toast('Bölünemedi: ' + e.message); } finally { b.disabled = false; }
+};
+
+/* ---------- sıkıştır ---------- */
+const czPaint = () => { byId('cz-dv').textContent = byId('cz-d').value; byId('cz-qv').textContent = byId('cz-q').value; };
+['cz-d', 'cz-q'].forEach(id => byId(id).addEventListener('input', czPaint)); czPaint();
+byId('cz-pre').onclick = e => { const b = e.target.closest('button'); if (!b) return; byId('cz-d').value = b.dataset.d; byId('cz-q').value = b.dataset.q; ['cz-d', 'cz-q'].forEach(id => byId(id).dispatchEvent(new Event('input'))); };
+function czInfo() { const o = byId('cz-out'); if (!S.pages.length) { o.innerHTML = '<span class="ph">Önce dosya ekle.</span>'; return; } const t = S.docs.reduce((a, d) => a + d.size, 0); o.innerHTML = `<div class="kv"><span>Sayfa</span><b>${S.pages.length}</b></div><div class="kv"><span>Kaynak dosyalar</span><b>${size(t)}</b></div>`; }
+async function renderPage(p, scale, gray) {
+  const pg = await p.d.pj.getPage(p.i + 1), rot = (pg.rotate + p.rot) % 360, v = pg.getViewport({ scale, rotation: rot }), v1 = pg.getViewport({ scale: 1, rotation: rot });
+  const c = document.createElement('canvas'); c.width = Math.max(1, Math.round(v.width)); c.height = Math.max(1, Math.round(v.height)); const g = c.getContext('2d');
+  g.fillStyle = '#fff'; g.fillRect(0, 0, c.width, c.height); await pg.render({ canvasContext: g, viewport: v }).promise;
+  for (const s of p.stamps) { const im = await pngImage(s.png); g.drawImage(im, (s.x - s.w / 2) * scale, (s.y - s.h / 2) * scale, s.w * scale, s.h * scale); }
+  if (gray) { const d = g.getImageData(0, 0, c.width, c.height), a = d.data; for (let i = 0; i < a.length; i += 4) { const y = a[i] * .299 + a[i + 1] * .587 + a[i + 2] * .114; a[i] = a[i + 1] = a[i + 2] = y; } g.putImageData(d, 0, 0); }
+  return { c, w: v1.width, h: v1.height };
+}
+function pngImage(u8) { return new Promise((ok, no) => { const i = new Image(); i.onload = () => ok(i); i.onerror = no; i.src = URL.createObjectURL(new Blob([u8], { type: 'image/png' })); }); }
+byId('cz-go').onclick = async () => {
+  if (!S.pages.length) return toast('Önce dosya ekle');
+  const b = byId('cz-go'), bar = byId('cz-bar'), dpi = +byId('cz-d').value, q = +byId('cz-q').value / 100, gray = byId('cz-g').checked; b.disabled = true;
+  try {
+    const out = await PDFDocument.create();
+    for (let k = 0; k < S.pages.length; k++) {
+      const { c, w, h } = await renderPage(S.pages[k], dpi / 72, gray), blob = await new Promise(r => c.toBlob(r, 'image/jpeg', q)), im = await out.embedJpg(new Uint8Array(await blob.arrayBuffer()));
+      out.addPage([w, h]).drawImage(im, { x: 0, y: 0, width: w, height: h }); bar.style.width = ((k + 1) / S.pages.length * 100) + '%'; c.width = c.height = 0;
+    }
+    const bytes = await out.save(), src = S.docs.reduce((a, d) => a + d.size, 0), pct = (1 - bytes.length / src) * 100;
+    byId('cz-out').innerHTML = `<div class="big">${size(bytes.length)}</div><div class="nt">${pct > 0 ? '%' + fmt(pct, 0) + ' küçüldü' : 'Bu ayarla küçülmedi; daha düşük çözünürlük ya da kalite dene.'}</div><div class="kv"><span>Önce</span><b>${size(src)}</b></div><div class="kv"><span>Sonra</span><b>${size(bytes.length)}</b></div>`;
+    download(oname() + '-kucuk.pdf', new Blob([bytes], { type: 'application/pdf' }));
+  } catch (e) { console.error(e); toast('Sıkıştırılamadı: ' + e.message); } finally { b.disabled = false; setTimeout(() => bar.style.width = '0', 1500); }
+};
+
+/* ---------- yazı & imza ---------- */
+const pv = byId('pv'), pw = byId('pw'); let pvScale = 1, pvTok = 0;
+function stFill() { const s = byId('st-p'), v = s.value; s.innerHTML = S.pages.map((p, k) => `<option value="${k}">${k + 1}. sayfa${S.docs.length > 1 ? ' (' + esc(p.d.name.slice(0, 18)) + ')' : ''}</option>`).join(''); if (v && +v < S.pages.length) s.value = v; if (byId('st-p').closest('.pane').classList.contains('on')) stPage(); }
+async function stPage() {
+  const k = +byId('st-p').value, p = S.pages[k]; pw.querySelectorAll('.stamp').forEach(x => x.remove()); if (!p) { pv.width = pv.height = 0; return; }
+  const tok = ++pvTok, pg = await p.d.pj.getPage(p.i + 1), rot = (pg.rotate + p.rot) % 360, v1 = pg.getViewport({ scale: 1, rotation: rot });
+  const W = Math.min(byId('pw').parentElement.clientWidth - 20, 900); pvScale = W / v1.width; const dpr = Math.min(2, devicePixelRatio || 1), v = pg.getViewport({ scale: pvScale * dpr, rotation: rot });
+  const o = document.createElement('canvas'); o.width = Math.round(v.width); o.height = Math.round(v.height); await pg.render({ canvasContext: o.getContext('2d'), viewport: v }).promise; if (tok !== pvTok) return;
+  pv.width = o.width; pv.height = o.height; pv.style.width = W + 'px'; pv.getContext('2d').drawImage(o, 0, 0); S.cur = k; drawStamps();
+}
+byId('st-p').addEventListener('change', stPage);
+addEventListener('resize', () => { if (byId('st-p').closest('.pane').classList.contains('on')) stPage(); });
+function drawStamps() {
+  pw.querySelectorAll('.stamp').forEach(x => x.remove()); const p = S.pages[S.cur]; if (!p) return;
+  p.stamps.forEach((s, j) => { const d = document.createElement('div'); d.className = 'stamp' + (S.stampSel === s ? ' on' : ''); d.dataset.j = j; Object.assign(d.style, { left: s.x * pvScale + 'px', top: s.y * pvScale + 'px', width: s.w * pvScale + 'px', height: s.h * pvScale + 'px' }); const im = document.createElement('img'); im.src = URL.createObjectURL(new Blob([s.png], { type: 'image/png' })); d.appendChild(im); pw.appendChild(d); });
+  byId('st-del').disabled = !S.stampSel;
+}
+const stKind = () => byId('st-k').value;
+byId('st-k').addEventListener('change', () => { const k = stKind(); byId('st-tw').hidden = k !== 'text'; byId('st-sw').hidden = k !== 'sig'; if (k === 'sig') sigSize(); });
+/* imza alanı */
+const sig = byId('sig'), sg = sig.getContext('2d'); let sigDirty = false, sigImg = null;
+function sigSize() { const r = sig.getBoundingClientRect(); if (!r.width) return; const d = devicePixelRatio || 1, old = sigDirty ? sig.toDataURL() : null; sig.width = r.width * d; sig.height = r.height * d; sg.setTransform(d, 0, 0, d, 0, 0); sg.lineCap = sg.lineJoin = 'round'; if (old) { const i = new Image(); i.onload = () => sg.drawImage(i, 0, 0, r.width, r.height); i.src = old; } }
+let sp = null;
+sig.addEventListener('pointerdown', e => { sig.setPointerCapture(e.pointerId); const r = sig.getBoundingClientRect(); sp = [e.clientX - r.left, e.clientY - r.top]; sigDirty = true; sigImg = null; });
+sig.addEventListener('pointermove', e => { if (!sp) return; const r = sig.getBoundingClientRect(), q = [e.clientX - r.left, e.clientY - r.top]; sg.strokeStyle = '#000'; sg.lineWidth = 2.6 * (e.pressure && e.pointerType === 'pen' ? .5 + e.pressure : 1); sg.beginPath(); sg.moveTo(...sp); sg.lineTo(...q); sg.stroke(); sp = q; });
+['pointerup', 'pointercancel'].forEach(t => sig.addEventListener(t, () => sp = null));
+byId('sig-c').onclick = () => { sg.clearRect(0, 0, sig.width, sig.height); sigDirty = false; sigImg = null; };
+byId('sig-f').onchange = async e => { const f = e.target.files[0]; if (!f) return; sigImg = await decodeImage(f); sigDirty = true; sg.clearRect(0, 0, sig.width, sig.height); const r = sig.getBoundingClientRect(), s = Math.min(r.width / sigImg.naturalWidth, r.height / sigImg.naturalHeight); sg.drawImage(sigImg, (r.width - sigImg.naturalWidth * s) / 2, (r.height - sigImg.naturalHeight * s) / 2, sigImg.naturalWidth * s, sigImg.naturalHeight * s); e.target.value = ''; };
+/* ögeyi PNG'ye çevir (Türkçe karakter sorunu olmasın diye yazı da resim olarak gömülür) */
+async function makeStamp() {
+  const k = stKind(), col = byId('st-c').value, pt = +byId('st-s').value, font = byId('st-f').value, S4 = 4; let c = document.createElement('canvas'), g = c.getContext('2d'), w, h;
+  if (k === 'sig') {
+    if (!sigDirty) { toast('Önce imzanı çiz'); return null; }
+    const d = sg.getImageData(0, 0, sig.width, sig.height), a = d.data; let x0 = sig.width, y0 = sig.height, x1 = 0, y1 = 0;
+    for (let y = 0; y < sig.height; y++) for (let x = 0; x < sig.width; x++) if (a[(y * sig.width + x) * 4 + 3] > 20) { if (x < x0) x0 = x; if (x > x1) x1 = x; if (y < y0) y0 = y; if (y > y1) y1 = y; }
+    if (x1 <= x0) { toast('İmza boş'); return null; }
+    const cw = x1 - x0 + 8, ch = y1 - y0 + 8; c.width = cw; c.height = ch; g.drawImage(sig, x0 - 4, y0 - 4, cw, ch, 0, 0, cw, ch);
+    if (!sigImg) { g.globalCompositeOperation = 'source-in'; g.fillStyle = col; g.fillRect(0, 0, cw, ch); }
+    h = pt * 3.2; w = h * cw / ch;
+  } else {
+    const txt = k === 'date' ? new Date().toLocaleDateString('tr-TR') : k === 'x' ? '✓' : byId('st-t').value.trim(); if (!txt) { toast('Önce yazıyı gir'); return null; }
+    const px = pt * S4; g.font = `${px}px ${font}`; const lines = txt.split('\n'), mw = Math.max(...lines.map(l => g.measureText(l).width));
+    c.width = Math.ceil(mw + px * .3); c.height = Math.ceil(px * 1.3 * lines.length); g.font = `${px}px ${font}`; g.fillStyle = col; g.textBaseline = 'middle'; lines.forEach((l, i) => g.fillText(l, px * .15, px * .65 + i * px * 1.3));
+    w = c.width / S4; h = c.height / S4;
+  }
+  const blob = await new Promise(r => c.toBlob(r, 'image/png')); return { png: new Uint8Array(await blob.arrayBuffer()), w, h };
+}
+let drag = null;
+pw.addEventListener('pointerdown', async e => {
+  const st = e.target.closest('.stamp'), p = S.pages[S.cur]; if (!p) return; const r = pv.getBoundingClientRect();
+  if (st) { const s = p.stamps[+st.dataset.j]; S.stampSel = s; pw.querySelectorAll('.stamp').forEach(x => x.classList.toggle('on', x === st)); byId('st-del').disabled = false; drag = { s, el: st, ox: e.clientX, oy: e.clientY, x: s.x, y: s.y }; st.setPointerCapture(e.pointerId); return; }
+  if (e.target !== pv) return; const x = (e.clientX - r.left) / pvScale, y = (e.clientY - r.top) / pvScale, s = await makeStamp(); if (!s) return;
+  snapshot(); s.x = x; s.y = y; p.stamps.push(s); S.stampSel = s; drawStamps();
+});
+pw.addEventListener('pointermove', e => { if (!drag) return; drag.s.x = drag.x + (e.clientX - drag.ox) / pvScale; drag.s.y = drag.y + (e.clientY - drag.oy) / pvScale; drag.el.style.left = drag.s.x * pvScale + 'px'; drag.el.style.top = drag.s.y * pvScale + 'px'; });
+pw.addEventListener('pointerup', () => { drag = null; });
+byId('st-del').onclick = () => { const p = S.pages[S.cur]; if (!p || !S.stampSel) return; snapshot(); p.stamps = p.stamps.filter(s => s !== S.stampSel); S.stampSel = null; drawStamps(); };
+</script>
+</body>
+</html>

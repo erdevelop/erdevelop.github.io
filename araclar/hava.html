@@ -1,0 +1,171 @@
+<!doctype html>
+<html lang="tr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="theme-color" content="#f5f6f4" media="(prefers-color-scheme: light)">
+<meta name="theme-color" content="#151a18" media="(prefers-color-scheme: dark)">
+<title>Hava Durumu</title>
+<meta name="description" content="Saatlik ve 7 günlük hava tahmini, yağış olasılığı, rüzgâr, UV ve hava kalitesi.">
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Crect width='64' height='64' rx='14' fill='%233f8f7a'/%3E%3Ccircle cx='26' cy='26' r='9' fill='white'/%3E%3Cpath d='M22 48h22a8 8 0 0 0 0-16 11 11 0 0 0-21 3 7 7 0 0 0-1 13z' fill='white' stroke='%233f8f7a' stroke-width='3'/%3E%3C/svg%3E">
+<link rel="stylesheet" href="ortak.css">
+<style>
+:root{--rain:#3b7fd1}
+@media (prefers-color-scheme:dark){:root{--rain:#6fa8ef}}
+.srch{position:relative}
+.sug{position:absolute;left:0;right:0;top:100%;background:var(--card);border:1px solid var(--line);border-radius:10px;margin-top:4px;z-index:6;overflow:hidden;box-shadow:0 6px 20px #0002}
+.sug button{display:block;width:100%;text-align:left;border:0;background:none;color:var(--ink);font:inherit;padding:10px 12px;cursor:pointer;border-bottom:1px solid var(--line)}
+.sug button:last-child{border-bottom:0}
+.sug button:hover,.sug button:focus{background:var(--acc-soft)}
+.sug small{color:var(--muted)}
+.now{display:grid;grid-template-columns:auto 1fr;gap:4px 16px;align-items:center}
+.now .ic{font-size:4rem;line-height:1;grid-row:span 2}
+.now .t{font-size:3rem;font-weight:700;line-height:1;font-variant-numeric:tabular-nums}
+.now .d{color:var(--muted)}
+.place{font-size:1.1rem;font-weight:700;margin:0 0 8px;display:flex;gap:8px;align-items:center}
+.place span{flex:1;min-width:0}
+.grid4{display:grid;grid-template-columns:repeat(4,1fr);gap:8px;margin-top:12px}
+@media (max-width:480px){.grid4{grid-template-columns:repeat(2,1fr)}}
+.grid4 div{background:var(--bg);border-radius:10px;padding:8px 10px}
+.grid4 span{display:block;font-size:.75rem;color:var(--muted)}
+.grid4 b{font-variant-numeric:tabular-nums}
+.chart{overflow-x:auto;margin-top:8px;-webkit-overflow-scrolling:touch;position:relative}
+.chart svg{display:block}
+.chart text{font:11px system-ui,sans-serif;fill:var(--muted)}
+.chart .tv{fill:var(--ink);font-weight:600}
+.chart .grid{stroke:var(--line);stroke-width:1}
+.chart .tl{fill:none;stroke:var(--acc);stroke-width:2;stroke-linejoin:round}
+.chart .ta{fill:var(--acc);opacity:.10}
+.chart .rb{fill:var(--rain)}
+.chart .ch{stroke:var(--muted);stroke-width:1;stroke-dasharray:3 3}
+.chart .em{font-size:16px}
+.tip{position:absolute;pointer-events:none;background:var(--card);border:1px solid var(--line);border-radius:8px;padding:6px 9px;font-size:.8rem;box-shadow:0 4px 14px #0002;white-space:nowrap;z-index:2}
+.tip b{display:block}
+.day{display:grid;grid-template-columns:5.2em 2em 1fr 3.4em;gap:8px;align-items:center;padding:9px 0;border-bottom:1px dashed var(--line);font-size:.92rem}
+.day:last-child{border-bottom:0}
+.day .em{font-size:1.4rem;text-align:center}
+.day small{display:block;color:var(--muted);font-size:.75rem}
+.rng{display:flex;align-items:center;gap:6px;font-variant-numeric:tabular-nums}
+.rng .tr{flex:1;height:6px;border-radius:99px;background:var(--line);position:relative}
+.rng .tr i{position:absolute;top:0;bottom:0;border-radius:99px;background:var(--acc)}
+.rain{color:var(--rain);font-size:.82rem;text-align:right;font-variant-numeric:tabular-nums}
+.aqi{display:inline-block;padding:1px 8px;border-radius:6px;font-weight:700;font-size:.85rem}
+.lbl{font-size:.75rem;color:var(--muted);text-transform:uppercase;letter-spacing:.06em;font-weight:700;margin:4px 0 0}
+.star{border:0;background:none;font-size:1.3rem;cursor:pointer;color:var(--muted);padding:0 4px}
+.star.on{color:#e0a030}
+</style>
+</head>
+<body>
+<header><div class="wrap"><div class="hrow"><a class="back" href="../arac_kutusu.html" aria-label="Araç Kutusu">‹</a><h1>🌤️ Hava Durumu</h1></div></div></header>
+<main class="wrap">
+  <div class="box">
+    <div class="srch"><input id="q" type="search" placeholder="Şehir ya da ilçe ara… (ör. Kadıköy)" autocomplete="off"><div class="sug" id="sug" hidden></div></div>
+    <div class="btns"><button class="btn ghost" id="gps">📍 Konumumu kullan</button></div>
+    <div class="chips" id="favs"></div>
+  </div>
+  <div id="out"><div class="box"><p class="ph">Bir yer ara ya da konumunu kullan.</p></div></div>
+</main>
+<footer>Veriler: <a href="https://open-meteo.com/" target="_blank" rel="noopener">Open-Meteo</a> (CC BY 4.0). Konumun yalnızca tahmin için bu servise gönderilir.</footer>
+<script src="ortak.js"></script>
+<script>
+const WC = { 0: ['Açık', '☀️', '🌙'], 1: ['Az bulutlu', '🌤️', '🌙'], 2: ['Parçalı bulutlu', '⛅', '☁️'], 3: ['Kapalı', '☁️', '☁️'], 45: ['Sisli', '🌫️'], 48: ['Kırağılı sis', '🌫️'], 51: ['Hafif çisenti', '🌦️', '🌧️'], 53: ['Çisenti', '🌦️', '🌧️'], 55: ['Yoğun çisenti', '🌧️'], 56: ['Donan çisenti', '🌧️'], 57: ['Yoğun donan çisenti', '🌧️'], 61: ['Hafif yağmur', '🌦️', '🌧️'], 63: ['Yağmur', '🌧️'], 65: ['Kuvvetli yağmur', '🌧️'], 66: ['Donan yağmur', '🌧️'], 67: ['Kuvvetli donan yağmur', '🌧️'], 71: ['Hafif kar', '🌨️'], 73: ['Kar', '🌨️'], 75: ['Yoğun kar', '❄️'], 77: ['Kar taneleri', '🌨️'], 80: ['Hafif sağanak', '🌦️', '🌧️'], 81: ['Sağanak', '🌧️'], 82: ['Şiddetli sağanak', '⛈️'], 85: ['Kar sağanağı', '🌨️'], 86: ['Yoğun kar sağanağı', '❄️'], 95: ['Gök gürültülü fırtına', '⛈️'], 96: ['Dolu ile fırtına', '⛈️'], 99: ['Şiddetli dolu ile fırtına', '⛈️'] };
+const wc = (c, day = 1) => { const w = WC[c] || ['—', '❔']; return { t: w[0], e: day ? w[1] : (w[2] || w[1]) }; };
+const DIR = ['K', 'KKD', 'KD', 'DKD', 'D', 'DGD', 'GD', 'GGD', 'G', 'GGB', 'GB', 'BGB', 'B', 'BKB', 'KB', 'KKB'];
+const dir = d => DIR[Math.round(d / 22.5) % 16];
+const GUN = ['Paz', 'Pzt', 'Sal', 'Çar', 'Per', 'Cum', 'Cmt'];
+const r0 = v => Math.round(v);
+let FAV = []; try { FAV = JSON.parse(LS.get('hava:fav') || '[]'); } catch (e) { }
+let CUR = null; try { CUR = JSON.parse(LS.get('hava:last') || 'null'); } catch (e) { }
+
+/* ---------- arama ---------- */
+const q = byId('q'), sug = byId('sug'); let st = 0, ctl = null;
+q.addEventListener('input', () => { clearTimeout(st); const v = q.value.trim(); if (v.length < 2) { sug.hidden = true; return; } st = setTimeout(() => search(v), 300); });
+q.addEventListener('keydown', e => { if (e.key === 'Enter') { const b = sug.querySelector('button'); if (b) b.click(); } if (e.key === 'Escape') sug.hidden = true; });
+document.addEventListener('click', e => { if (!e.target.closest('.srch')) sug.hidden = true; });
+async function search(v) {
+  try { if (ctl) ctl.abort(); ctl = new AbortController();
+    const r = await fetch(`https://geocoding-api.open-meteo.com/v1/search?name=${encodeURIComponent(v)}&count=8&language=tr&format=json`, { signal: ctl.signal }), j = await r.json(), L = j.results || [];
+    sug.innerHTML = L.length ? L.map((p, i) => `<button data-i="${i}">${esc(p.name)} <small>${esc([p.admin2, p.admin1, p.country].filter(Boolean).join(', '))}</small></button>`).join('') : '<button disabled>Sonuç yok</button>';
+    sug.hidden = false; sug.onclick = e => { const b = e.target.closest('[data-i]'); if (!b) return; const p = L[+b.dataset.i]; sug.hidden = true; q.value = ''; go({ name: p.name, sub: [p.admin1, p.country_code].filter(Boolean).join(', '), lat: p.latitude, lon: p.longitude }); };
+  } catch (e) { if (e.name !== 'AbortError') toast('Arama yapılamadı (internet bağlantısını kontrol et)'); }
+}
+byId('gps').onclick = () => {
+  if (!navigator.geolocation) return toast('Konum desteklenmiyor');
+  toast('Konum alınıyor…');
+  navigator.geolocation.getCurrentPosition(async p => {
+    const lat = +p.coords.latitude.toFixed(4), lon = +p.coords.longitude.toFixed(4); let name = 'Konumum', sub = lat + ', ' + lon;
+    try { const r = await fetch(`https://api.bigdatacloud.net/data/reverse-geocode-client?latitude=${lat}&longitude=${lon}&localityLanguage=tr`), j = await r.json(); name = j.locality || j.city || name; sub = [j.principalSubdivision, j.countryCode].filter(Boolean).join(', ') || sub; } catch (e) { }
+    go({ name, sub, lat, lon, gps: 1 });
+  }, e => toast(e.code === 1 ? 'Konum izni verilmedi' : 'Konum alınamadı'), { enableHighAccuracy: false, timeout: 12000, maximumAge: 600000 });
+};
+function paintFavs() {
+  byId('favs').innerHTML = FAV.map((f, i) => `<button data-i="${i}" class="${CUR && Math.abs(CUR.lat - f.lat) < 1e-3 && Math.abs(CUR.lon - f.lon) < 1e-3 ? 'on' : ''}">${esc(f.name)}</button>`).join('');
+}
+byId('favs').onclick = e => { const b = e.target.closest('[data-i]'); if (b) go(FAV[+b.dataset.i]); };
+const isFav = p => FAV.findIndex(f => Math.abs(f.lat - p.lat) < 1e-3 && Math.abs(f.lon - p.lon) < 1e-3);
+
+/* ---------- tahmin ---------- */
+async function go(p) {
+  CUR = p; LS.set('hava:last', JSON.stringify(p)); paintFavs();
+  byId('out').innerHTML = '<div class="box"><p class="ph">Yükleniyor…</p></div>';
+  const u = `https://api.open-meteo.com/v1/forecast?latitude=${p.lat}&longitude=${p.lon}&current=temperature_2m,relative_humidity_2m,apparent_temperature,is_day,precipitation,weather_code,cloud_cover,pressure_msl,wind_speed_10m,wind_direction_10m,wind_gusts_10m,uv_index&hourly=temperature_2m,apparent_temperature,precipitation_probability,precipitation,weather_code,wind_speed_10m,is_day&daily=weather_code,temperature_2m_max,temperature_2m_min,precipitation_sum,precipitation_probability_max,sunrise,sunset,uv_index_max,wind_speed_10m_max,wind_direction_10m_dominant&timezone=auto&forecast_days=7`;
+  const ua = `https://air-quality-api.open-meteo.com/v1/air-quality?latitude=${p.lat}&longitude=${p.lon}&current=european_aqi,pm2_5,pm10&timezone=auto`;
+  try {
+    const [r, ra] = await Promise.all([fetch(u), fetch(ua).catch(() => null)]); if (!r.ok) throw new Error(r.status); const j = await r.json(); let aq = null; try { aq = ra && ra.ok ? (await ra.json()).current : null; } catch (e) { }
+    if (CUR !== p) return; render(p, j, aq);
+  } catch (e) { byId('out').innerHTML = `<div class="box"><p class="ph">Tahmin alınamadı. İnternet bağlantını kontrol edip yeniden dene.</p><div class="btns"><button class="btn" onclick="go(CUR)">Yeniden dene</button></div></div>`; }
+}
+function aqiInfo(v) { const L = [[20, 'İyi', '#4caf7d'], [40, 'Makul', '#9ccc65'], [60, 'Orta', '#e0b030'], [80, 'Kötü', '#e07b30'], [100, 'Çok kötü', '#d84a3a'], [1e9, 'Son derece kötü', '#8e3a8a']]; return L.find(x => v <= x[0]); }
+function uvInfo(v) { return v < 3 ? 'düşük' : v < 6 ? 'orta' : v < 8 ? 'yüksek' : v < 11 ? 'çok yüksek' : 'aşırı'; }
+const hm = s => s.slice(11, 16);
+function render(p, j, aq) {
+  const c = j.current, w = wc(c.weather_code, c.is_day), D = j.daily, H = j.hourly, fi = isFav(p);
+  const nowIdx = Math.max(0, H.time.findIndex(t => t >= c.time.slice(0, 13) + ':00'));
+  const a = aq && aq.european_aqi != null ? aqiInfo(aq.european_aqi) : null;
+  let h = `<div class="box"><div class="place"><span>${esc(p.name)} <small class="ph">${esc(p.sub || '')}</small></span><button class="star${fi > -1 ? ' on' : ''}" id="fav" title="Kayıtlı yerlere ekle">★</button></div>
+    <div class="now"><div class="ic">${w.e}</div><div class="t">${r0(c.temperature_2m)}°</div><div class="d">${w.t} · hissedilen ${r0(c.apparent_temperature)}° · en yüksek ${r0(D.temperature_2m_max[0])}°, en düşük ${r0(D.temperature_2m_min[0])}°</div></div>
+    <div class="grid4"><div><span>Rüzgâr</span><b>${r0(c.wind_speed_10m)} km/sa ${dir(c.wind_direction_10m)}</b></div><div><span>Esinti</span><b>${r0(c.wind_gusts_10m)} km/sa</b></div><div><span>Nem</span><b>%${r0(c.relative_humidity_2m)}</b></div><div><span>Basınç</span><b>${r0(c.pressure_msl)} hPa</b></div>
+    <div><span>Bulut</span><b>%${r0(c.cloud_cover)}</b></div><div><span>UV</span><b>${fmt(c.uv_index, 1)} (${uvInfo(c.uv_index)})</b></div><div><span>Gün doğumu</span><b>${hm(D.sunrise[0])}</b></div><div><span>Gün batımı</span><b>${hm(D.sunset[0])}</b></div>
+    ${a ? `<div style="grid-column:span 2"><span>Hava kalitesi (AQI)</span><b><span class="aqi" style="background:${a[2]};color:#fff">${r0(aq.european_aqi)}</span> ${a[1]} · PM2,5 ${fmt(aq.pm2_5, 0)}</b></div>` : ''}</div>
+    <p class="hint">Güncelleme ${hm(c.time)} (yerel saat)</p></div>`;
+  h += `<div class="box"><h3>Sonraki 48 saat</h3><p class="lbl">Sıcaklık (°C)</p><div class="chart" id="ch"></div></div>`;
+  h += `<div class="box"><h3>7 günlük tahmin</h3>${days(D)}</div>`;
+  byId('out').innerHTML = h;
+  byId('fav').onclick = () => { const i = isFav(p); if (i > -1) FAV.splice(i, 1); else FAV.push({ name: p.name, sub: p.sub, lat: p.lat, lon: p.lon }); FAV = FAV.slice(-10); LS.set('hava:fav', JSON.stringify(FAV)); byId('fav').classList.toggle('on', i < 0); paintFavs(); };
+  chart(H, nowIdx);
+}
+function days(D) {
+  const lo = Math.min(...D.temperature_2m_min), hi = Math.max(...D.temperature_2m_max), sp = Math.max(1, hi - lo);
+  return D.time.map((t, i) => { const d = new Date(t + 'T12:00'), w = wc(D.weather_code[i]), a = (D.temperature_2m_min[i] - lo) / sp * 100, b = (D.temperature_2m_max[i] - lo) / sp * 100, pp = D.precipitation_probability_max[i];
+    return `<div class="day"><div><b>${i === 0 ? 'Bugün' : i === 1 ? 'Yarın' : GUN[d.getDay()]}</b><small>${d.getDate()}.${p2(d.getMonth() + 1)}</small></div><div class="em" title="${w.t}">${w.e}</div>
+      <div><div class="rng"><span>${r0(D.temperature_2m_min[i])}°</span><span class="tr"><i style="left:${a}%;right:${100 - b}%"></i></span><b>${r0(D.temperature_2m_max[i])}°</b></div><small>${w.t} · rüzgâr ${r0(D.wind_speed_10m_max[i])} km/sa ${dir(D.wind_direction_10m_dominant[i])} · UV ${fmt(D.uv_index_max[i], 0)}</small></div>
+      <div class="rain">${pp != null ? '💧%' + pp : ''}${D.precipitation_sum[i] >= .1 ? '<br>' + fmt(D.precipitation_sum[i], 1) + ' mm' : ''}</div></div>`; }).join('');
+}
+/* iki ayrı grafik, ortak saat ekseni: üstte sıcaklık çizgisi, altta yağış olasılığı çubukları (iki ölçek, iki eksen değil) */
+function chart(H, s) {
+  const N = 48, idx = [...Array(N)].map((_, k) => s + k).filter(i => i < H.time.length), step = 30, W = idx.length * step + 20, th = 120, gap = 34, rh = 46, Ht = 22 + th + gap + rh + 26;
+  const T = idx.map(i => H.temperature_2m[i]), mn = Math.floor(Math.min(...T)) - 1, mx = Math.ceil(Math.max(...T)) + 1, y = v => 22 + th - (v - mn) / (mx - mn) * th, x = k => 10 + k * step + step / 2;
+  const pts = T.map((v, k) => [x(k), y(v)]), line = pts.map((p, k) => (k ? 'L' : 'M') + p[0].toFixed(1) + ',' + p[1].toFixed(1)).join(''), area = line + `L${x(T.length - 1)},${22 + th}L${x(0)},${22 + th}Z`;
+  const ry0 = 22 + th + gap; let g = '';
+  [0, .5, 1].forEach(f => { const v = mn + (mx - mn) * f; g += `<line class="grid" x1="0" x2="${W}" y1="${y(v)}" y2="${y(v)}"/>`; });
+  g += `<line class="grid" x1="0" x2="${W}" y1="${ry0 + rh}" y2="${ry0 + rh}"/>`;
+  idx.forEach((i, k) => { const t = H.time[i], hr = +t.slice(11, 13), cx = x(k);
+    if (hr === 0 && k) g += `<line class="grid" x1="${cx - step / 2}" x2="${cx - step / 2}" y1="8" y2="${Ht - 8}"/><text x="${cx - step / 2 + 4}" y="14">${GUN[new Date(t).getDay()]}</text>`;
+    if (k % 3 === 0) { g += `<text class="em" x="${cx}" y="${y(T[k]) - 10}" text-anchor="middle">${wc(H.weather_code[i], H.is_day[i]).e}</text>`; g += `<text class="tv" x="${cx}" y="${22 + th + 14}" text-anchor="middle">${r0(T[k])}°</text>`; g += `<text x="${cx}" y="${Ht - 6}" text-anchor="middle">${k ? p2(hr) : 'Şimdi'}</text>`; }
+    const pp = H.precipitation_probability[i] || 0, bh = pp / 100 * rh; if (bh > 0) g += `<path class="rb" d="M${cx - 8},${ry0 + rh}V${ry0 + rh - bh + Math.min(4, bh)}q0,-${Math.min(4, bh)} ${Math.min(4, bh)},-${Math.min(4, bh)}h${16 - 2 * Math.min(4, bh)}q${Math.min(4, bh)},0 ${Math.min(4, bh)},${Math.min(4, bh)}V${ry0 + rh}Z"/>`; });
+  g += `<text x="2" y="${ry0 - 6}" style="text-transform:uppercase;letter-spacing:.06em;font-weight:700;font-size:10px">Yağış olasılığı (%)</text>`;
+  const el = byId('ch'); el.innerHTML = `<svg width="${W}" height="${Ht}" role="img" aria-label="48 saatlik sıcaklık ve yağış olasılığı"><path class="ta" d="${area}"/><path class="tl" d="${line}"/>${g}<line class="ch" id="chl" y1="8" y2="${Ht - 20}" visibility="hidden"/><circle id="chd" r="4.5" fill="var(--acc)" stroke="var(--card)" stroke-width="2" visibility="hidden"/></svg><div class="tip" id="tip" hidden></div>`;
+  const sv = el.querySelector('svg'), tip = byId('tip'), cl = byId('chl'), cd = byId('chd');
+  const show = ev => { const r = sv.getBoundingClientRect(), k = Math.max(0, Math.min(idx.length - 1, Math.floor((ev.clientX - r.left - 10) / step))), i = idx[k], cx = x(k);
+    cl.setAttribute('x1', cx); cl.setAttribute('x2', cx); cl.setAttribute('visibility', 'visible'); cd.setAttribute('cx', cx); cd.setAttribute('cy', y(T[k])); cd.setAttribute('visibility', 'visible');
+    const w = wc(H.weather_code[i], H.is_day[i]), d = new Date(H.time[i]);
+    tip.innerHTML = `<b>${GUN[d.getDay()]} ${hm(H.time[i])}</b>${w.e} ${w.t}<br>${fmt(H.temperature_2m[i], 1)}° (hissedilen ${r0(H.apparent_temperature[i])}°)<br>Yağış %${H.precipitation_probability[i] ?? 0}${H.precipitation[i] ? ' · ' + fmt(H.precipitation[i], 1) + ' mm' : ''}<br>Rüzgâr ${r0(H.wind_speed_10m[i])} km/sa`;
+    tip.hidden = false; const left = cx - el.scrollLeft + 12, tw = tip.offsetWidth; tip.style.left = (left + tw > el.clientWidth ? left - tw - 24 : left) + el.scrollLeft + 'px'; tip.style.top = '8px'; };
+  const hide = () => { tip.hidden = true; cl.setAttribute('visibility', 'hidden'); cd.setAttribute('visibility', 'hidden'); };
+  sv.addEventListener('pointermove', show); sv.addEventListener('pointerdown', show); sv.addEventListener('pointerleave', hide);
+}
+paintFavs();
+if (CUR) go(CUR); else if (FAV.length) go(FAV[0]);
+</script>
+</body>
+</html>
