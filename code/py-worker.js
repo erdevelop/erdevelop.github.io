@@ -117,10 +117,13 @@ builtins.input = __er_inp`);
     return 'Python ' + py.runPython('import sys; sys.version.split()[0]') + ' · Pyodide ' + py.version;
   },
   imports({ src }) {
-    const fi = py.pyodide_py.code.find_imports(src), mods = fi.toJs(); fi.destroy();
+    let mods = [];
+    try { const fi = py.pyodide_py.code.find_imports(magics(src)); mods = fi.toJs(); fi.destroy(); }
+    catch (e) { mods = [...magics(src).matchAll(/^\s*(?:import|from)\s+([\w.]+)/gm)].map(m => m[1]); } // sözdizimi hatalıysa basit tarama
     return { mods, loaded: Object.keys(py.loadedPackages) };
   },
   async load({ src }) {
+    src = magics(src);
     await py.loadPackagesFromImports(src, { messageCallback: m => /Loading|Loaded/.test(m) && post('status', { s: m.slice(0, 60) }), errorCallback: m => post('out', { s: m + '\n', cls: 'warn' }) });
     if (/\bmatplotlib\b/.test(src)) py.runPython("import os; os.environ['MPLBACKEND']='AGG'\nimport matplotlib; matplotlib.use('AGG')\nimport matplotlib.pyplot\n__er_patch()");
     if (/\bplotly\b/.test(src)) {
