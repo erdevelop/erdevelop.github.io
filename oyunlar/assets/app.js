@@ -45,6 +45,25 @@
     return g.icon || '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><rect x="3" y="6" width="18" height="12" rx="3"/><path d="M8 12h2M9 11v2M15 11h.01M17 13h.01"/></svg>';
   }
 
+  // ---------- Günün Oyunu ----------
+  function renderDaily(){
+    if(!window.Daily) return;
+    let el=$('#dailyBanner');
+    if(!el){ el=document.createElement('button'); el.id='dailyBanner'; el.className='daily';
+      const chips=$('#categoryChips'); chips.parentNode.insertBefore(el, chips); }
+    const d=Daily.today(); const g=games.find(x=>x.id===d.gameId);
+    if(!g){ el.hidden=true; return; } el.hidden=false;
+    const flame = d.streak>0 ? '<span class="daily-streak">🔥 '+d.streak+'</span>' : '';
+    if(d.done){
+      el.innerHTML='<div class="daily-main"><span class="daily-eyebrow">GÜNÜN MEYDAN OKUMASI</span>'+
+        '<span class="daily-title">✓ Bugünlük tamam — '+g.title+'</span></div>'+flame;
+    } else {
+      el.innerHTML='<div class="daily-main"><span class="daily-eyebrow">GÜNÜN OYUNU · hedef '+d.target+'</span>'+
+        '<span class="daily-title">'+g.title+' — oynamak için dokun</span></div>'+flame;
+    }
+    el.onclick=()=>{ if(g) openGame(g); };
+  }
+
   function renderGrid(){
     const grid = $('#gameGrid'); grid.innerHTML='';
     const bests = (window.Store && window.Store.allBests && window.Store.allBests()) || {};
@@ -76,14 +95,31 @@
   let cleanupFns = [];
   function runCleanup(){ cleanupFns.forEach(fn=>{ try{fn();}catch(e){} }); cleanupFns=[]; }
 
+  // three.js'i yalnızca bir 3D oyun açılınca yükle (açılış hızlansın)
+  let threeLoading=null;
+  function ensureThree(){
+    if(window.THREE) return Promise.resolve();
+    if(threeLoading) return threeLoading;
+    threeLoading=new Promise((res,rej)=>{ const s=document.createElement('script');
+      s.src='https://cdnjs.cloudflare.com/ajax/libs/three.js/0.160.0/three.min.js';
+      s.onload=()=>res(); s.onerror=()=>rej(new Error('three yüklenemedi')); document.head.appendChild(s); });
+    return threeLoading;
+  }
+
   let currentGame=null;
-  function openGame(g){
+  async function openGame(g){
     runCleanup();
     currentGame=g;
     $('#home').hidden=true; $('#player').hidden=false; window.scrollTo(0,0);
     $('#playerTitle').textContent=g.title;
     const best = (window.Store && window.Store.getBest(g.id)) || 0;
     const bb=$('#bestBadge'); if(best>0){ bb.hidden=false; bb.textContent='En iyi: '+best; } else bb.hidden=true;
+    const mount=$('#gameMount');
+    if(g.category==='3D' && !window.THREE){
+      mount.innerHTML='<div class="g-msg">3D yükleniyor…</div>';
+      try{ await ensureThree(); }catch(e){ mount.innerHTML='<div class="g-msg">3D motoru yüklenemedi. Bağlantını kontrol et.</div>'; return; }
+      if(currentGame!==g) return; // kullanıcı bu arada başka yere gittiyse iptal
+    }
     mountGame(g);
     try{ location.hash = 'o/'+g.id; }catch(e){}
   }
@@ -105,6 +141,14 @@
           const bb=$('#bestBadge'); bb.hidden=false; bb.textContent='En iyi: '+r.best;
           if(window.FX) FX.record();
         }
+        // İlerleme: XP, seviye, rozetler
+        if(window.Progress){ const p=Progress.onGamePlayed(g.id, n, r.isNew);
+          if(p.levelUp) setTimeout(()=>{ toast('⭐ Seviye '+p.levelUp+'!'); if(window.FX) FX.record(); }, 900);
+          (p.badges||[]).forEach((b,i)=> setTimeout(()=> toast(b.emoji+' Rozet: '+b.name), 1200+i*1400)); }
+        // Günün meydan okuması
+        if(window.Daily){ const d=Daily.record(g.id, n);
+          if(d && d.completed){ setTimeout(()=>{ toast('🔥 Günün meydan okuması tamam! Seri: '+d.streak); if(window.FX) FX.record(); },700);
+            if(window.Progress){ const pd=Progress.onDailyDone(); if(pd.levelUp) setTimeout(()=>toast('⭐ Seviye '+pd.levelUp+'!'),1100); (pd.badges||[]).forEach((b,i)=>setTimeout(()=>toast(b.emoji+' Rozet: '+b.name),1500+i*1400)); } } }
         return r;
       },
       saveState(obj){ return window.Store && window.Store.saveState(g.id, obj); },
@@ -122,7 +166,7 @@
   function goHome(){
     runCleanup(); currentGame=null;
     $('#player').hidden=true; $('#home').hidden=false;
-    renderGrid();
+    renderGrid(); renderDaily();
     try{ if(location.hash) location.hash=''; }catch(e){}
   }
   $('#backBtn').onclick=goHome;
@@ -196,25 +240,38 @@
     renderGrid();
   }
 
-  // ---------- Skor tablosu ----------
-  function scoreboardHTML(){
+  // ---------- Profil / İlerleme ----------
+  function profileHTML(){
     const bests = (window.Store && window.Store.allBests && window.Store.allBests()) || {};
     const played = games.filter(g=>bests[g.id]>0).sort((a,b)=>bests[b.id]-bests[a.id]);
-    let rows='';
     const medal=['🥇','🥈','🥉'];
-    played.forEach((g,i)=>{ rows+='<button class="score-row" data-id="'+g.id+'">'+
-      '<span class="score-rank">'+(medal[i]||(i+1))+'</span>'+
-      '<span class="score-name">'+g.title+'</span>'+
+    let rows=''; played.forEach((g,i)=>{ rows+='<button class="score-row" data-id="'+g.id+'">'+
+      '<span class="score-rank">'+(medal[i]||(i+1))+'</span><span class="score-name">'+g.title+'</span>'+
       '<span class="score-val">'+bests[g.id]+'</span></button>'; });
-    const unplayed = games.length - played.length;
-    return '<h3 class="auth-h">🏆 Skorların</h3>'+
-      '<p class="auth-sub">'+(played.length?('En iyi '+played.length+' oyun · '+unplayed+' oyun henüz oynanmadı'):'Henüz skor yok — bir oyun oyna!')+'</p>'+
-      (window.Auth && window.Auth.current ? '' : '<div class="auth-mode-note">İpucu: giriş yaparsan skorların '+(cloud?'her cihazda':'bu cihazda')+' saklanır.</div>')+
-      '<div class="score-list">'+rows+'</div>';
+
+    // Seviye + XP
+    let xpBlock='';
+    if(window.Progress){ const s=Progress.state(); const pct=Math.min(100, Math.round(s.into/s.need*100));
+      const streak=(window.Daily?Daily.today().streak:0)||0;
+      xpBlock='<div class="xp-card"><div class="xp-top"><span class="xp-lvl">Seviye '+s.level+'</span>'+
+        (streak>0?'<span class="xp-streak">🔥 '+streak+' gün</span>':'')+'</div>'+
+        '<div class="xp-bar"><i style="width:'+pct+'%"></i></div>'+
+        '<div class="xp-sub">'+s.into+' / '+s.need+' XP · '+s.distinct+'/'+games.length+' oyun denendi</div></div>';
+    }
+    // Rozetler
+    let badges='';
+    if(window.Progress){ const s=Progress.state(); const got=s.badges.filter(b=>b.got).length;
+      badges='<div class="sect-h">Rozetler <small>'+got+'/'+s.badges.length+'</small></div><div class="badge-grid">'+
+        s.badges.map(b=>'<div class="badge'+(b.got?' got':'')+'" title="'+b.desc+'"><span class="badge-emoji">'+b.emoji+'</span><span class="badge-name">'+b.name+'</span></div>').join('')+'</div>';
+    }
+    const scores = '<div class="sect-h">En iyi skorların</div>'+
+      (played.length? '<div class="score-list">'+rows+'</div>' : '<p class="auth-sub" style="margin:4px 0 0">Henüz skor yok — bir oyun oyna!</p>');
+    const loginHint = (window.Auth && window.Auth.current) ? '' : '<div class="auth-mode-note">İpucu: giriş yaparsan ilerlemen '+(cloud?'her cihazda':'bu cihazda')+' saklanır.</div>';
+    return '<h3 class="auth-h">İlerlemen</h3>'+ xpBlock + badges + scores + loginHint;
   }
-  function openScores(){ openModal(scoreboardHTML());
+  function openProfile(){ openModal(profileHTML());
     body.querySelectorAll('.score-row').forEach(r=> r.onclick=()=>{ const g=games.find(x=>x.id===r.dataset.id); closeModal(); if(g) openGame(g); }); }
-  const scoreBtn=$('#scoreBtn'); if(scoreBtn) scoreBtn.onclick=openScores;
+  const scoreBtn=$('#scoreBtn'); if(scoreBtn) scoreBtn.onclick=openProfile;
 
   // ---------- Ses ----------
   function soundIcon(){ const b=$('#soundBtn'); if(!b||!window.FX) return;
@@ -236,7 +293,7 @@
     if(brandTaps>=5){ brandTaps=0; if(window.FX){ FX.record(); } toast('vauvvv! ✨'); } });
 
   // ---------- Başlat ----------
-  renderChips(); renderGrid();
+  renderChips(); renderGrid(); renderDaily();
   if(window.Auth){
     window.Auth.onChange(refreshAccountLabel);
     window.Auth.init().then(()=>{ renderGrid(); });
