@@ -1,0 +1,687 @@
+<!doctype html>
+<html lang="tr">
+<head>
+<meta charset="utf-8">
+<script src="kilit.js" data-gate></script>
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Code | erdevelop</title>
+<meta name="description" content="Tarayıcıda kod yaz ve çalıştır: HTML/CSS/JS canlı önizleme ve Python (Pyodide) konsolu, input(), numpy, matplotlib grafikleri.">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Chakra+Petch:wght@600;700&family=IBM+Plex+Sans:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500&display=swap">
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.16/codemirror.min.css">
+<style>
+  :root {
+    --bg: #eef2f6; --panel: #ffffff; --panel-2: #f5f7f9; --grid: #e3e8ed; --line: #cfd8e1;
+    --fg: #1c2833; --text: #45535f; --muted: #74838f; --accent: #2f6fb5; --accent-dim: rgba(47,111,181,.12); --hot: #c8731f;
+    --ok: #1f9d4c; --bad: #d93a2f; --warn: #b7791f;
+    --c-kw: #8a3fb8; --c-str: #2e7d32; --c-num: #b5560d; --c-com: #8a96a1; --c-def: #2f6fb5; --c-tag: #c0392b; --c-attr: #b5560d; --c-var2: #0f7c86; --c-op: #45535f;
+    --f-display: 'Chakra Petch', 'Segoe UI', sans-serif; --f-body: 'IBM Plex Sans', 'Segoe UI', system-ui, sans-serif; --f-mono: 'IBM Plex Mono', Consolas, monospace;
+    color-scheme: light;
+  }
+  :root[data-mode="dark"] {
+    --bg: #0c1015; --panel: #131921; --panel-2: #10151c; --grid: #1a212a; --line: #26303b;
+    --fg: #dfe6ed; --text: #a9b5c1; --muted: #75838f; --accent: #5aa9ff; --accent-dim: rgba(90,169,255,.14); --hot: #f0a04b;
+    --ok: #3fd37a; --bad: #ff5f52; --warn: #f0c04b;
+    --c-kw: #c792ea; --c-str: #a5d6a7; --c-num: #f0a04b; --c-com: #5f6d7a; --c-def: #82b8ff; --c-tag: #ff7b72; --c-attr: #f0a04b; --c-var2: #7fdbca; --c-op: #a9b5c1;
+    color-scheme: dark;
+  }
+  * { box-sizing: border-box; }
+  [hidden] { display: none !important; }
+  html, body { height: 100%; }
+  html { background: var(--bg); }
+  body { margin: 0; color: var(--fg); font: 400 14px/1.5 var(--f-body); background: var(--bg); display: flex; flex-direction: column; }
+  button, input, select { font: inherit; color: inherit; }
+  :focus-visible { outline: 2px solid var(--accent); outline-offset: 1px; }
+
+  .topbar { flex: none; background: color-mix(in srgb, var(--bg) 90%, transparent); border-bottom: 1px solid var(--line); }
+  .topbar .in { padding: calc(9px + env(safe-area-inset-top, 0px)) 16px 9px; display: flex; gap: 8px; align-items: center; flex-wrap: wrap; }
+  .brand { font: 700 15px var(--f-display); letter-spacing: 1px; text-transform: uppercase; text-decoration: none; color: inherit; }
+  .brand span { color: var(--accent); }
+  .crumb { font: 400 12px var(--f-mono); color: var(--muted); } .crumb a { color: inherit; text-decoration: none; }
+  .sp { flex: 1; }
+  .tb { font: 500 12px var(--f-mono); color: var(--accent); padding: 7px 11px; border: 1px solid var(--line); border-radius: 4px; background: var(--panel); cursor: pointer; white-space: nowrap; text-transform: uppercase; text-decoration: none; }
+  .tb:hover { border-color: var(--accent); }
+  .tb.primary { background: var(--accent); color: #fff; border-color: var(--accent); }
+  .tb.primary:hover { filter: brightness(1.08); }
+  .tb:disabled { opacity: .45; cursor: default; }
+  .dd { position: relative; }
+  .ddm { position: absolute; top: calc(100% + 6px); right: 0; min-width: 240px; background: var(--panel); border: 1px solid var(--line); border-radius: 6px; padding: 5px; box-shadow: 0 12px 30px rgba(0,0,0,.25); z-index: 30; display: flex; flex-direction: column; max-height: 70vh; overflow: auto; }
+  .ddm button { text-align: left; background: none; border: 0; padding: 8px 10px; border-radius: 4px; cursor: pointer; font: 500 13px var(--f-body); }
+  .ddm button:hover { background: var(--accent-dim); color: var(--accent); }
+  .ddm small { display: block; color: var(--muted); font: 400 11px var(--f-mono); }
+  .ddm hr { border: 0; border-top: 1px solid var(--line); margin: 4px 0; }
+  .ddm .lbl { font: 500 10.5px var(--f-mono); color: var(--muted); text-transform: uppercase; padding: 6px 10px 2px; letter-spacing: .5px; }
+
+  .langs { display: inline-flex; border: 1px solid var(--line); border-radius: 6px; overflow: hidden; }
+  .langs button { border: 0; background: var(--panel-2); padding: 6px 14px; cursor: pointer; font: 600 12.5px var(--f-mono); color: var(--muted); display: flex; align-items: center; gap: 7px; }
+  .langs button + button { border-left: 1px solid var(--line); }
+  .langs button.on { background: var(--accent); color: #fff; }
+  .langs i { width: 8px; height: 8px; border-radius: 2px; display: inline-block; }
+
+  main { flex: 1; min-height: 0; display: grid; grid-template-columns: var(--split, 55%) 6px 1fr; padding: 10px 16px calc(12px + env(safe-area-inset-bottom, 0px)); gap: 0; }
+  .pane { min-width: 0; min-height: 0; display: flex; flex-direction: column; background: var(--panel); border: 1px solid var(--line); border-radius: 10px; overflow: hidden; }
+  .ph { flex: none; display: flex; align-items: center; gap: 8px; padding: 7px 10px 7px 12px; border-bottom: 1px solid var(--line); background: var(--panel-2); min-height: 40px; flex-wrap: wrap; }
+  .ph h2 { margin: 0; font: 700 13px var(--f-display); text-transform: uppercase; letter-spacing: .8px; }
+  .ph .sw { width: 8px; height: 8px; background: var(--accent); flex: none; }
+  .ph .meta { font: 400 11.5px var(--f-mono); color: var(--muted); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; min-width: 0; }
+  .mini { font: 500 11px var(--f-mono); color: var(--accent); background: none; border: 1px solid var(--line); border-radius: 4px; padding: 4px 8px; cursor: pointer; text-transform: uppercase; white-space: nowrap; }
+  .mini:hover { border-color: var(--accent); }
+  .mini.on { background: var(--accent-dim); border-color: var(--accent); }
+  .chk { font: 400 11.5px var(--f-mono); color: var(--muted); display: inline-flex; align-items: center; gap: 5px; cursor: pointer; white-space: nowrap; }
+  .chk input { accent-color: var(--accent); margin: 0; }
+
+  .gutter { cursor: col-resize; position: relative; }
+  .gutter::after { content: ""; position: absolute; left: 2px; right: 2px; top: 45%; height: 40px; border-radius: 2px; background: var(--line); }
+  .gutter:hover::after, .gutter.drag::after { background: var(--accent); }
+
+  .edwrap { flex: 1; min-height: 0; position: relative; }
+  .CodeMirror { position: absolute; inset: 0; height: auto; font: 400 13.5px/1.55 var(--f-mono); background: var(--panel); color: var(--fg); }
+  .CodeMirror-gutters { background: var(--panel-2); border-right: 1px solid var(--line); }
+  .CodeMirror-linenumber { color: var(--muted); font-size: 11.5px; }
+  .CodeMirror-cursor { border-left: 2px solid var(--accent); }
+  .CodeMirror-selected, .CodeMirror-focused .CodeMirror-selected { background: var(--accent-dim) !important; }
+  .CodeMirror-line::selection, .CodeMirror-line > span::selection, .CodeMirror-line > span > span::selection { background: var(--accent-dim); }
+  .CodeMirror-activeline-background { background: color-mix(in srgb, var(--accent) 5%, transparent); }
+  .CodeMirror-matchingbracket { color: var(--ok) !important; outline: 1px solid color-mix(in srgb, var(--ok) 50%, transparent); }
+  .CodeMirror-matchingtag { background: var(--accent-dim); }
+  .cm-s-default .cm-keyword { color: var(--c-kw); } .cm-s-default .cm-string, .cm-s-default .cm-string-2 { color: var(--c-str); } .cm-s-default .cm-number { color: var(--c-num); }
+  .cm-s-default .cm-comment { color: var(--c-com); font-style: italic; } .cm-s-default .cm-def { color: var(--c-def); } .cm-s-default .cm-builtin { color: var(--c-var2); }
+  .cm-s-default .cm-variable-2, .cm-s-default .cm-variable-3, .cm-s-default .cm-type { color: var(--c-var2); } .cm-s-default .cm-property { color: var(--c-def); } .cm-s-default .cm-operator { color: var(--c-op); }
+  .cm-s-default .cm-tag { color: var(--c-tag); } .cm-s-default .cm-attribute { color: var(--c-attr); } .cm-s-default .cm-meta { color: var(--c-kw); } .cm-s-default .cm-atom { color: var(--c-num); } .cm-s-default .cm-qualifier { color: var(--c-attr); }
+  .cm-s-default .cm-bracket { color: var(--muted); } .cm-s-default .cm-error { color: var(--bad); } .cm-s-default .cm-variable { color: var(--fg); }
+
+  .out { display: flex; flex-direction: column; min-height: 0; flex: 1; }
+  .frame { flex: 1; min-height: 0; background: #fff; position: relative; }
+  .frame iframe { position: absolute; inset: 0; width: 100%; height: 100%; border: 0; background: #fff; }
+  .con { flex: 1; min-height: 0; overflow: auto; padding: 10px 12px 16px; font: 400 13px/1.5 var(--f-mono); white-space: pre-wrap; word-break: break-word; background: var(--panel); }
+  .htmlcon { flex: none; height: 30%; min-height: 70px; border-top: 1px solid var(--line); }
+  .htmlcon.mini-h { height: auto; min-height: 0; }
+  .htmlcon .conh { display: flex; align-items: center; gap: 8px; padding: 5px 10px 5px 12px; background: var(--panel-2); border-bottom: 1px solid var(--line); font: 500 11px var(--f-mono); color: var(--muted); text-transform: uppercase; cursor: pointer; user-select: none; }
+  .htmlcon .conh b { color: var(--fg); font-weight: 500; }
+  .htmlcon.mini-h .con { display: none; }
+  .htmlcon.mini-h .conh { border-bottom: 0; }
+  .htmlcon { display: flex; flex-direction: column; }
+  .ln { display: block; }
+  .ln.err { color: var(--bad); } .ln.warn { color: var(--warn); } .ln.sys { color: var(--muted); font-style: italic; } .ln.in { color: var(--accent); }
+  .ln.info { color: var(--c-var2); }
+  .con img { display: block; max-width: 100%; margin: 8px 0; border-radius: 6px; background: #fff; border: 1px solid var(--line); }
+  .badge { font: 500 10.5px var(--f-mono); padding: 1px 6px; border-radius: 3px; background: var(--grid); color: var(--muted); }
+  .badge.e { background: color-mix(in srgb, var(--bad) 18%, transparent); color: var(--bad); }
+  .status { font: 400 11.5px var(--f-mono); color: var(--muted); display: flex; align-items: center; gap: 6px; white-space: nowrap; }
+  .dot { width: 8px; height: 8px; border-radius: 50%; background: var(--muted); flex: none; }
+  .dot.ok { background: var(--ok); } .dot.busy { background: var(--hot); animation: pulse 1s infinite; } .dot.bad { background: var(--bad); }
+  @keyframes pulse { 50% { opacity: .35; } }
+  .kbd { font: 400 10.5px var(--f-mono); color: var(--muted); border: 1px solid var(--line); border-radius: 3px; padding: 0 4px; }
+
+  .toast { position: fixed; left: 50%; bottom: calc(18px + env(safe-area-inset-bottom, 0px)); transform: translateX(-50%); background: var(--fg); color: var(--bg); padding: 8px 14px; border-radius: 6px; font: 500 12.5px var(--f-mono); z-index: 50; opacity: 0; transition: opacity .2s; pointer-events: none; }
+  .toast.show { opacity: 1; }
+
+  @media (max-width: 860px) {
+    body { height: auto; min-height: 100%; }
+    main { grid-template-columns: 1fr; grid-template-rows: 55vh 10px 60vh; }
+    .gutter { pointer-events: none; } .gutter::after { display: none; }
+    .crumb { display: none; }
+    .hide-s { display: none; }
+  }
+</style>
+</head>
+<body>
+<header class="topbar"><div class="in">
+  <a class="brand" href="./">erdevelop<span>_</span></a>
+  <span class="crumb">/ <a href="Tools.html">tools</a> / code</span>
+  <div class="langs" role="tablist" aria-label="Dil">
+    <button type="button" data-lang="html" role="tab"><i style="background:#e8623a"></i>HTML</button>
+    <button type="button" data-lang="python" role="tab"><i style="background:#3b78b0"></i>PYTHON</button>
+  </div>
+  <span class="sp"></span>
+  <button class="tb primary" type="button" id="runBtn" title="Ctrl+Enter">▶ Çalıştır</button>
+  <div class="dd"><button class="tb" type="button" id="exBtn">Örnekler ▾</button>
+    <div class="ddm" id="exMenu" hidden></div></div>
+  <div class="dd"><button class="tb" type="button" id="fileBtn">Dosya ▾</button>
+    <div class="ddm" id="fileMenu" hidden>
+      <button type="button" data-f="open">Dosya aç<small>.html / .py yükle</small></button>
+      <button type="button" data-f="save">İndir<small>kodu dosya olarak kaydet</small></button>
+      <button type="button" data-f="copy">Kodu kopyala</button>
+      <hr>
+      <button type="button" data-f="newtab">Önizlemeyi yeni sekmede aç<small>sadece HTML</small></button>
+      <hr>
+      <button type="button" data-f="blank">Boş sayfa<small>editörü temizler</small></button>
+    </div></div>
+  <button class="tb" type="button" id="modeBtn">DARK</button>
+  <input type="file" id="fileIn" accept=".html,.htm,.py,.txt,.css,.js" hidden>
+</div></header>
+
+<main id="main">
+  <section class="pane">
+    <div class="ph"><span class="sw"></span><h2 id="edTitle" lang="en">index.html</h2><span class="meta" id="edMeta"></span><span class="sp"></span>
+      <span class="kbd hide-s">Ctrl+Enter çalıştır</span>
+      <button class="mini" type="button" id="fmtBtn" title="Yazı boyutu">A±</button>
+    </div>
+    <div class="edwrap" id="edwrap"></div>
+  </section>
+  <div class="gutter" id="gutter" aria-hidden="true"></div>
+  <section class="pane">
+    <div class="ph"><span class="sw" style="background:var(--hot)"></span><h2 id="outTitle">Önizleme</h2>
+      <span class="status" id="status"><span class="dot" id="dot"></span><span id="statusT"></span></span>
+      <span class="sp"></span>
+      <label class="chk" id="autoWrap"><input type="checkbox" id="autoRun"> canlı</label>
+      <button class="mini" type="button" id="clearBtn">Temizle</button>
+    </div>
+    <div class="out" id="outHtml">
+      <div class="frame"><iframe id="frame" title="HTML önizleme" sandbox="allow-scripts allow-modals allow-forms allow-popups"></iframe></div>
+      <div class="htmlcon" id="htmlCon">
+        <div class="conh" id="htmlConH"><span>Konsol</span><b id="conCount"></b><span class="sp"></span><span id="conToggle">▾</span></div>
+        <div class="con" id="conHtml"></div>
+      </div>
+    </div>
+    <div class="out" id="outPy" hidden>
+      <div class="con" id="conPy"></div>
+    </div>
+  </section>
+</main>
+<div class="toast" id="toast"></div>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.16/codemirror.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.16/mode/xml/xml.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.16/mode/javascript/javascript.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.16/mode/css/css.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.16/mode/htmlmixed/htmlmixed.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.16/mode/python/python.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.16/addon/edit/closebrackets.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.16/addon/edit/matchbrackets.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.16/addon/fold/xml-fold.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.16/addon/edit/closetag.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.16/addon/edit/matchtags.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.16/addon/comment/comment.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.16/addon/selection/active-line.min.js"></script>
+<script>
+(() => {
+'use strict';
+const $ = id => document.getElementById(id);
+const store = { get(k) { try { return localStorage.getItem(k); } catch (e) { return null; } }, set(k, v) { try { localStorage.setItem(k, v); } catch (e) {} } };
+const esc = s => String(s).replace(/[&<>"]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
+const KEY = 'erdevelop-code';
+const PYODIDE = 'https://cdn.jsdelivr.net/pyodide/v0.26.4/full/';
+
+/* ---------- örnekler ---------- */
+const EX = {
+  html: [
+    { n: 'Merhaba dünya', d: 'HTML + CSS + JS iskeleti', c: `<!doctype html>
+<html lang="tr">
+<head>
+  <meta charset="utf-8">
+  <title>Merhaba</title>
+  <style>
+    body { font-family: system-ui, sans-serif; display: grid; place-items: center; min-height: 90vh; margin: 0; background: #0c1015; color: #dfe6ed; }
+    h1 { font-size: 42px; margin: 0 0 12px; }
+    button { font-size: 16px; padding: 10px 18px; border: 0; border-radius: 8px; background: #5aa9ff; color: #fff; cursor: pointer; }
+  </style>
+</head>
+<body>
+  <div style="text-align:center">
+    <h1>Merhaba dünya_</h1>
+    <button id="btn">Tıkla</button>
+    <p id="say">0 tık</p>
+  </div>
+
+  <script>
+    let n = 0;
+    document.getElementById('btn').onclick = () => {
+      n++;
+      document.getElementById('say').textContent = n + ' tık';
+      console.log('tıklandı:', n);
+    };
+  <\/script>
+</body>
+</html>
+` },
+    { n: 'Canvas animasyon', d: 'requestAnimationFrame ile toplar', c: `<!doctype html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <style>
+    html, body { margin: 0; height: 100%; background: #0c1015; overflow: hidden; }
+    canvas { display: block; }
+  </style>
+</head>
+<body>
+  <canvas id="c"></canvas>
+  <script>
+    const c = document.getElementById('c'), g = c.getContext('2d');
+    const fit = () => { c.width = innerWidth; c.height = innerHeight; };
+    fit(); addEventListener('resize', fit);
+
+    const balls = Array.from({ length: 40 }, () => ({
+      x: Math.random() * c.width, y: Math.random() * c.height,
+      vx: (Math.random() - .5) * 4, vy: (Math.random() - .5) * 4,
+      r: 6 + Math.random() * 14, h: Math.random() * 360
+    }));
+
+    (function loop() {
+      g.fillStyle = 'rgba(12,16,21,.25)';
+      g.fillRect(0, 0, c.width, c.height);
+      for (const b of balls) {
+        b.x += b.vx; b.y += b.vy;
+        if (b.x < b.r || b.x > c.width - b.r) b.vx *= -1;
+        if (b.y < b.r || b.y > c.height - b.r) b.vy *= -1;
+        g.beginPath(); g.arc(b.x, b.y, b.r, 0, Math.PI * 2);
+        g.fillStyle = 'hsl(' + b.h + ',80%,60%)'; g.fill();
+      }
+      requestAnimationFrame(loop);
+    })();
+  <\/script>
+</body>
+</html>
+` },
+    { n: 'Form + hesap', d: 'cam ağırlığı hesaplayan küçük form', c: `<!doctype html>
+<html lang="tr">
+<head>
+  <meta charset="utf-8">
+  <style>
+    body { font-family: system-ui, sans-serif; padding: 24px; max-width: 420px; }
+    label { display: block; margin: 10px 0 4px; font-size: 14px; color: #555; }
+    input { width: 100%; padding: 8px; font-size: 16px; box-sizing: border-box; }
+    .sonuc { margin-top: 18px; font-size: 22px; font-weight: 700; }
+  </style>
+</head>
+<body>
+  <h2>Cam ağırlığı</h2>
+  <label>Genişlik (mm)</label><input id="w" type="number" value="1200">
+  <label>Yükseklik (mm)</label><input id="h" type="number" value="2400">
+  <label>Toplam cam kalınlığı (mm)</label><input id="t" type="number" value="16">
+  <div class="sonuc" id="out"></div>
+
+  <script>
+    const $ = id => document.getElementById(id);
+    function hesap() {
+      const m2 = $('w').value * $('h').value / 1e6;
+      const kg = m2 * $('t').value * 2.5;
+      $('out').textContent = m2.toFixed(2) + ' m² · ' + kg.toFixed(1) + ' kg';
+      console.log({ m2, kg });
+    }
+    document.querySelectorAll('input').forEach(i => i.oninput = hesap);
+    hesap();
+  <\/script>
+</body>
+</html>
+` },
+    { n: 'SVG çizim', d: 'JS ile SVG modül ızgarası', c: `<!doctype html>
+<html>
+<head><meta charset="utf-8"><style>body{margin:0;font-family:system-ui;padding:16px}</style></head>
+<body>
+  <svg id="s" width="600" height="360" viewBox="0 0 600 360" style="max-width:100%;border:1px solid #ccc"></svg>
+  <script>
+    const s = document.getElementById('s'), NS = 'http://www.w3.org/2000/svg';
+    const cols = 6, rows = 3, W = 600, H = 360;
+    for (let i = 0; i < cols; i++) for (let j = 0; j < rows; j++) {
+      const r = document.createElementNS(NS, 'rect');
+      r.setAttribute('x', i * W / cols + 4); r.setAttribute('y', j * H / rows + 4);
+      r.setAttribute('width', W / cols - 8); r.setAttribute('height', H / rows - 8);
+      r.setAttribute('fill', 'hsl(' + (200 + i * 8) + ',60%,' + (55 + j * 10) + '%)');
+      r.onclick = () => console.log('modül', i + 1, j + 1);
+      s.appendChild(r);
+    }
+  <\/script>
+</body>
+</html>
+` }
+  ],
+  python: [
+    { n: 'Merhaba dünya', d: 'print, döngü, f-string', c: `# Python tarayıcıda çalışıyor (Pyodide)
+isim = "erdevelop"
+print(f"Merhaba {isim}!")
+
+for i in range(1, 6):
+    print(i, "x", i, "=", i * i)
+
+kareler = [n ** 2 for n in range(10)]
+print("kareler:", kareler)
+print("toplam:", sum(kareler))
+` },
+    { n: 'input() ile soru', d: 'kullanıcıdan değer al', c: `ad = input("Adın ne? ")
+yas = int(input("Kaç yaşındasın? "))
+print(f"Merhaba {ad}, 10 yıl sonra {yas + 10} yaşında olacaksın.")
+` },
+    { n: 'Cam ağırlığı', d: 'fonksiyon + tablo çıktısı', c: `def cam_agirlik(gen_mm, yuk_mm, dizilim):
+    """dizilim: '8+16+44.2' gibi. Boşluklar (12, 14, 16...) ağırlığa katılmaz."""
+    katmanlar = [float(x) for x in dizilim.split("+")]
+    cam = 0.0
+    for k in katmanlar:
+        if k in (6, 8, 9, 10, 12, 14, 15, 16, 18, 20, 24) and len(katmanlar) > 1 and katmanlar.index(k) % 2 == 1:
+            continue  # ara boşluk
+        if k > 10 and k % 1:          # 44.2 gibi lamine
+            k = int(k) // 10 + int(k) % 10 + 0.38 * int(round(k % 1 * 10))
+        cam += k
+    m2 = gen_mm * yuk_mm / 1e6
+    return m2, m2 * cam * 2.5
+
+paneller = [("P1", 1200, 2400, "8+16+8"), ("P2", 1500, 3000, "10+16+44.2"), ("P3", 900, 2100, "6+12+6")]
+print(f"{'Kod':<4} {'m²':>6} {'kg':>8}")
+print("-" * 20)
+toplam = 0
+for kod, g, y, d in paneller:
+    m2, kg = cam_agirlik(g, y, d)
+    toplam += kg
+    print(f"{kod:<4} {m2:>6.2f} {kg:>8.1f}")
+print("-" * 20)
+print(f"{'':<4} {'':>6} {toplam:>8.1f}")
+` },
+    { n: 'NumPy', d: 'dizi işlemleri (ilk sefer paket indirir)', c: `import numpy as np
+
+a = np.arange(12).reshape(3, 4)
+print(a)
+print("satır toplamları:", a.sum(axis=1))
+print("ortalama:", a.mean())
+
+A = np.array([[2, 1], [1, 3]])
+b = np.array([3, 5])
+print("Ax = b çözümü:", np.linalg.solve(A, b))
+` },
+    { n: 'Matplotlib grafik', d: 'grafik konsolda görüntülenir', c: `import numpy as np
+import matplotlib.pyplot as plt
+
+x = np.linspace(0, 2 * np.pi, 200)
+plt.figure(figsize=(7, 3.5))
+plt.plot(x, np.sin(x), label="sin")
+plt.plot(x, np.cos(x), label="cos")
+plt.title("Trigonometri")
+plt.legend()
+plt.grid(alpha=.3)
+plt.show()
+
+plt.figure(figsize=(5, 3))
+plt.bar(["P1", "P2", "P3", "P4"], [72, 135, 41, 98], color="#5aa9ff")
+plt.title("Panel ağırlıkları (kg)")
+plt.show()
+` },
+    { n: 'Sınıflar ve hata', d: 'class, try/except, traceback', c: `class Profil:
+    def __init__(self, kod, boy):
+        self.kod = kod
+        self.boy = boy
+
+    def __repr__(self):
+        return f"Profil({self.kod!r}, {self.boy} mm)"
+
+stok = [Profil("AL-120", 6000), Profil("AL-80", 6500)]
+print(stok)
+
+try:
+    print(10 / 0)
+except ZeroDivisionError as e:
+    print("yakalandı:", e)
+
+# Yakalanmayan hata: konsolda kırmızı görünür
+stok[5]
+` }
+  ]
+};
+
+/* ---------- durum ---------- */
+const LANG = {
+  html: { file: 'index.html', mode: 'htmlmixed', ext: 'html', mime: 'text/html', indent: 2 },
+  python: { file: 'main.py', mode: 'python', ext: 'py', mime: 'text/x-python', indent: 4 }
+};
+let lang = store.get(KEY + '-lang') || 'html';
+if (!LANG[lang]) lang = 'html';
+const code = {}; for (const k in LANG) code[k] = store.get(KEY + '-' + k) ?? EX[k][0].c;
+let fontSize = +(store.get(KEY + '-fs') || 13.5);
+
+/* ---------- editör ---------- */
+const docs = {};
+for (const k in LANG) docs[k] = CodeMirror.Doc(code[k], LANG[k].mode);
+const cm = CodeMirror($('edwrap'), {
+  value: docs[lang], lineNumbers: true, indentUnit: LANG[lang].indent, tabSize: 4, indentWithTabs: false,
+  autoCloseBrackets: true, matchBrackets: true, autoCloseTags: true, matchTags: { bothTags: true },
+  styleActiveLine: true, lineWrapping: false, viewportMargin: 50,
+  extraKeys: {
+    'Ctrl-Enter': () => run(), 'Cmd-Enter': () => run(), 'Shift-Enter': () => run(),
+    'Ctrl-/': 'toggleComment', 'Cmd-/': 'toggleComment', 'Ctrl-S': () => (save(), false), 'Cmd-S': () => (save(), false),
+    Tab: c => c.somethingSelected() ? c.indentSelection('add') : c.replaceSelection(' '.repeat(c.getOption('indentUnit')), 'end'),
+    'Shift-Tab': c => c.indentSelection('subtract')
+  }
+});
+cm.swapDoc(docs[lang]);
+function applyFont() { cm.getWrapperElement().style.fontSize = fontSize + 'px'; cm.refresh(); }
+applyFont();
+$('fmtBtn').onclick = () => { fontSize = fontSize >= 18 ? 12 : fontSize + 1.5; store.set(KEY + '-fs', fontSize); applyFont(); toast(fontSize + ' px'); };
+
+let saveT, liveT;
+cm.on('change', () => {
+  clearTimeout(saveT); saveT = setTimeout(() => store.set(KEY + '-' + lang, cm.getValue()), 300);
+  updMeta();
+  if (lang === 'html' && $('autoRun').checked) { clearTimeout(liveT); liveT = setTimeout(runHtml, 600); }
+});
+function updMeta() { $('edMeta').textContent = cm.lineCount() + ' satır'; }
+
+/* ---------- dil değiştir ---------- */
+function setLang(l, first) {
+  if (!first) store.set(KEY + '-' + lang, cm.getValue());
+  lang = l; store.set(KEY + '-lang', l);
+  cm.swapDoc(docs[l]); cm.setOption('indentUnit', LANG[l].indent);
+  document.querySelectorAll('.langs button').forEach(b => { b.classList.toggle('on', b.dataset.lang === l); b.setAttribute('aria-selected', b.dataset.lang === l); });
+  $('edTitle').textContent = LANG[l].file;
+  $('outHtml').hidden = l !== 'html'; $('outPy').hidden = l !== 'python';
+  $('autoWrap').hidden = l !== 'html';
+  $('outTitle').textContent = l === 'html' ? 'Önizleme' : 'Konsol';
+  buildExamples(); updMeta(); refreshStatus();
+  if (l === 'python') loadPy();
+  else if (!htmlRanOnce) runHtml();
+  cm.focus();
+}
+document.querySelectorAll('.langs button').forEach(b => b.onclick = () => b.dataset.lang !== lang && setLang(b.dataset.lang));
+
+/* ---------- HTML ---------- */
+let htmlRanOnce = false, runId = 0, conCount = { log: 0, err: 0 };
+const BRIDGE = id => `<script>(function(){var P=function(t,a){try{parent.postMessage({__er:${id},t:t,a:a},'*')}catch(e){}};
+var f=function(v){try{if(v instanceof Error)return v.name+': '+v.message;if(typeof v==='object'&&v!==null){if(v instanceof Node)return '<'+(v.nodeName||'').toLowerCase()+'>';return JSON.stringify(v,null,1).replace(/\\n\\s*/g,' ')}return String(v)}catch(e){return String(v)}};
+['log','info','warn','error','debug'].forEach(function(k){var o=console[k];console[k]=function(){P(k,[].map.call(arguments,f).join(' '));o&&o.apply(console,arguments)}});
+console.clear=function(){P('clear','')};
+addEventListener('error',function(e){P('error',(e.message||'Hata')+(e.lineno?' (satır '+e.lineno+')':''))});
+addEventListener('unhandledrejection',function(e){P('error','Promise: '+f(e.reason))});})();<\/script>`;
+function injectBridge(src, id) {
+  const b = BRIDGE(id);
+  if (/<head[^>]*>/i.test(src)) return src.replace(/<head[^>]*>/i, m => m + b);
+  if (/<html[^>]*>/i.test(src)) return src.replace(/<html[^>]*>/i, m => m + b);
+  if (/^\s*<!doctype[^>]*>/i.test(src)) return src.replace(/^\s*<!doctype[^>]*>/i, m => m + b);
+  return b + src;
+}
+function runHtml() {
+  htmlRanOnce = true;
+  const src = lang === 'html' ? cm.getValue() : docs.html.getValue();
+  runId++;
+  clearHtmlCon();
+  $('frame').srcdoc = injectBridge(src, runId);
+  setStatus('ok', 'çalıştı · ' + new Date().toLocaleTimeString('tr-TR'));
+}
+function clearHtmlCon() { $('conHtml').innerHTML = ''; conCount = { log: 0, err: 0 }; updConCount(); }
+function updConCount() { $('conCount').innerHTML = (conCount.log ? `<span class="badge">${conCount.log}</span> ` : '') + (conCount.err ? `<span class="badge e">${conCount.err} hata</span>` : ''); }
+addEventListener('message', e => {
+  const d = e.data; if (!d || d.__er !== runId || e.source !== $('frame').contentWindow) return;
+  if (d.t === 'clear') return clearHtmlCon();
+  const cls = d.t === 'error' ? 'err' : d.t === 'warn' ? 'warn' : d.t === 'info' ? 'info' : '';
+  addLine($('conHtml'), d.a, cls);
+  if (cls === 'err') { conCount.err++; $('htmlCon').classList.remove('mini-h'); } else conCount.log++;
+  updConCount();
+});
+$('htmlConH').onclick = () => { $('htmlCon').classList.toggle('mini-h'); $('conToggle').textContent = $('htmlCon').classList.contains('mini-h') ? '▸' : '▾'; store.set(KEY + '-conmin', $('htmlCon').classList.contains('mini-h') ? '1' : ''); };
+if (store.get(KEY + '-conmin')) { $('htmlCon').classList.add('mini-h'); $('conToggle').textContent = '▸'; }
+$('autoRun').checked = store.get(KEY + '-live') !== '0';
+$('autoRun').onchange = () => { store.set(KEY + '-live', $('autoRun').checked ? '1' : '0'); if ($('autoRun').checked) runHtml(); };
+
+function addLine(box, text, cls) {
+  const atBottom = box.scrollHeight - box.scrollTop - box.clientHeight < 40;
+  const s = document.createElement('span'); s.className = 'ln ' + (cls || ''); s.textContent = text; box.appendChild(s);
+  if (atBottom) box.scrollTop = box.scrollHeight;
+  return s;
+}
+
+/* ---------- Python (Pyodide) ---------- */
+let py = null, pyLoading = null, pyBusy = false, pyLine = null;
+const dec = new TextDecoder();
+function pyOut(text, cls) {
+  const box = $('conPy');
+  // Aynı türde açık satır varsa ona ekle (print(..., end='') ve input istemi için)
+  const parts = text.split('\n');
+  parts.forEach((p, i) => {
+    if (i > 0) pyLine = null;
+    if (!p && i < parts.length - 1) { if (!pyLine) addLine(box, '', cls); return; }
+    if (!p) return;
+    if (pyLine && pyLine.dataset.c === (cls || '')) { pyLine.appendChild(document.createTextNode(p)); }
+    else if (pyLine) { const s = document.createElement('span'); s.className = 'ln ' + (cls || ''); s.style.display = 'inline'; s.textContent = p; pyLine.appendChild(s); }
+    else { pyLine = addLine(box, p, cls); pyLine.dataset.c = cls || ''; }
+  });
+  if (text.endsWith('\n')) pyLine = null;
+  box.scrollTop = box.scrollHeight;
+}
+function loadPy() {
+  if (py || pyLoading) return pyLoading;
+  setStatus('busy', 'Python yükleniyor…');
+  if (!$('conPy').childNodes.length) pyOut('Python ortamı indiriliyor (ilk sefer ~10 MB, sonra tarayıcı önbelleğinden gelir)…\n', 'sys');
+  pyLoading = new Promise((res, rej) => {
+    const s = document.createElement('script'); s.src = PYODIDE + 'pyodide.js';
+    s.onload = res; s.onerror = () => rej(new Error('pyodide.js yüklenemedi (internet bağlantısını kontrol et)'));
+    document.head.appendChild(s);
+  }).then(() => loadPyodide({ indexURL: PYODIDE })).then(p => {
+    py = p;
+    py.setStdout({ write: buf => { pyOut(dec.decode(buf, { stream: true })); return buf.length; } });
+    py.setStderr({ write: buf => { pyOut(dec.decode(buf, { stream: true }), 'err'); return buf.length; } });
+    py.setStdin({ stdin: () => {
+      const q = pyLine ? pyLine.textContent : '';
+      const v = prompt(q || 'input()', '');
+      if (v === null) { pyLine = null; throw new Error('input iptal edildi'); }
+      pyOut(v + '\n', 'in'); return v + '\n';
+    }, isatty: true });
+    py.globals.set('__er_img', src => { const box = $('conPy'); const img = new Image(); img.src = 'data:image/png;base64,' + src; img.alt = 'grafik'; box.appendChild(img); pyLine = null; img.onload = () => box.scrollTop = box.scrollHeight; });
+    py.runPython(`
+import sys, io, base64
+def __er_figs():
+    plt = sys.modules.get('matplotlib.pyplot')
+    if not plt: return
+    for n in plt.get_fignums():
+        b = io.BytesIO(); plt.figure(n).savefig(b, format='png', dpi=110, bbox_inches='tight'); __er_img(base64.b64encode(b.getvalue()).decode())
+    plt.close('all')
+def __er_patch():
+    plt = sys.modules.get('matplotlib.pyplot')
+    if plt and getattr(plt.show, '__name__', '') != '__er_show':
+        def __er_show(*a, **k): __er_figs()
+        plt.show = __er_show
+`);
+    pyOut(`Python ${py.runPython('import sys; sys.version.split()[0]')} hazır · Pyodide ${py.version}\n`, 'sys');
+    refreshStatus();
+    return py;
+  }).catch(e => { pyLoading = null; pyOut('Hata: ' + e.message + '\n', 'err'); setStatus('bad', 'yüklenemedi'); throw e; });
+  return pyLoading;
+}
+function cleanTb(msg) {
+  const lines = msg.split('\n');
+  const i = lines.findIndex(l => l.includes('File "<exec>"'));
+  if (i < 0) return msg;
+  return ['Traceback (most recent call last):', ...lines.slice(i)].join('\n').trimEnd();
+}
+async function runPy() {
+  if (pyBusy) return;
+  const src = cm.getValue();
+  pyBusy = true; $('runBtn').disabled = true;
+  try {
+    await loadPy();
+    if ($('conPy').childNodes.length) pyOut('\n', 'sys');
+    pyLine = null;
+    const t0 = performance.now();
+    setStatus('busy', 'paketler kontrol ediliyor…');
+    await py.loadPackagesFromImports(src, { messageCallback: m => /Loading|Loaded/.test(m) && setStatus('busy', m.slice(0, 60)), errorCallback: m => pyOut(m + '\n', 'warn') });
+    if (/\bmatplotlib\b/.test(src)) { py.runPython("import os; os.environ['MPLBACKEND']='AGG'\nimport matplotlib; matplotlib.use('AGG')\nimport matplotlib.pyplot\n__er_patch()"); }
+    setStatus('busy', 'çalışıyor…');
+    await new Promise(r => setTimeout(r, 20));
+    const ns = py.globals.get('dict')();
+    ns.set('__name__', '__main__');
+    try {
+      await py.runPythonAsync(src, { globals: ns, filename: '<exec>' });
+      py.runPython('__er_figs()');
+      pyLine = null;
+      pyOut(`— bitti · ${((performance.now() - t0) / 1000).toFixed(2)} sn\n`, 'sys');
+      setStatus('ok', 'tamam · ' + new Date().toLocaleTimeString('tr-TR'));
+    } catch (e) {
+      py.runPython('__er_figs()');
+      pyLine = null;
+      pyOut(cleanTb(String(e.message || e)) + '\n', 'err');
+      setStatus('bad', 'hata');
+    } finally { ns.destroy(); }
+  } catch (e) { /* yükleme hatası zaten yazıldı */ }
+  finally { pyBusy = false; $('runBtn').disabled = false; }
+}
+
+/* ---------- ortak ---------- */
+function run() { store.set(KEY + '-' + lang, cm.getValue()); lang === 'html' ? runHtml() : runPy(); }
+$('runBtn').onclick = run;
+$('clearBtn').onclick = () => { if (lang === 'html') clearHtmlCon(); else { $('conPy').innerHTML = ''; pyLine = null; } };
+function setStatus(k, t) { $('dot').className = 'dot ' + k; $('statusT').textContent = t; }
+function refreshStatus() {
+  if (lang === 'python') { if (py) setStatus('ok', 'Python hazır'); else if (pyLoading) setStatus('busy', 'Python yükleniyor…'); else setStatus('', ''); }
+  else setStatus(htmlRanOnce ? 'ok' : '', htmlRanOnce ? 'önizleme' : '');
+}
+
+function buildExamples() {
+  $('exMenu').innerHTML = `<div class="lbl">${lang === 'html' ? 'HTML' : 'Python'} örnekleri</div>` + EX[lang].map((e, i) => `<button type="button" data-i="${i}">${esc(e.n)}<small>${esc(e.d)}</small></button>`).join('');
+}
+$('exMenu').onclick = e => {
+  const b = e.target.closest('button[data-i]'); if (!b) return;
+  const ex = EX[lang][+b.dataset.i];
+  if (cm.getValue().trim() && cm.getValue() !== ex.c && !EX[lang].some(x => x.c === cm.getValue()) && !confirm('Editördeki kod örnekle değiştirilsin mi?')) return closeMenus();
+  cm.setValue(ex.c); cm.clearHistory(); closeMenus(); run();
+};
+
+function toggleMenu(btn, menu) { const open = menu.hidden; closeMenus(); menu.hidden = !open; }
+function closeMenus() { $('exMenu').hidden = true; $('fileMenu').hidden = true; }
+$('exBtn').onclick = e => { e.stopPropagation(); toggleMenu($('exBtn'), $('exMenu')); };
+$('fileBtn').onclick = e => { e.stopPropagation(); toggleMenu($('fileBtn'), $('fileMenu')); };
+document.addEventListener('click', e => { if (!e.target.closest('.dd')) closeMenus(); });
+addEventListener('keydown', e => { if (e.key === 'Escape') closeMenus(); });
+
+function download(name, text, mime) {
+  const a = document.createElement('a'); a.href = URL.createObjectURL(new Blob([text], { type: mime + ';charset=utf-8' })); a.download = name;
+  document.body.appendChild(a); a.click(); a.remove(); setTimeout(() => URL.revokeObjectURL(a.href), 2000);
+}
+function save() { download(LANG[lang].file, cm.getValue(), LANG[lang].mime); toast(LANG[lang].file + ' indirildi'); }
+$('fileMenu').onclick = async e => {
+  const b = e.target.closest('button[data-f]'); if (!b) return; closeMenus();
+  const f = b.dataset.f;
+  if (f === 'save') save();
+  else if (f === 'open') $('fileIn').click();
+  else if (f === 'copy') { try { await navigator.clipboard.writeText(cm.getValue()); toast('kopyalandı'); } catch (err) { cm.execCommand('selectAll'); toast('Ctrl+C ile kopyala'); } }
+  else if (f === 'newtab') { const w = window.open(URL.createObjectURL(new Blob([docs.html.getValue()], { type: 'text/html' })), '_blank'); if (!w) toast('açılır pencere engellendi'); }
+  else if (f === 'blank') { if (confirm('Editör temizlensin mi?')) { cm.setValue(lang === 'html' ? '<!doctype html>\n<html lang="tr">\n<head>\n  <meta charset="utf-8">\n  <title></title>\n</head>\n<body>\n  \n</body>\n</html>\n' : ''); if (lang === 'html') cm.setCursor(7, 2); cm.focus(); } }
+};
+$('fileIn').onchange = async () => {
+  const f = $('fileIn').files[0]; $('fileIn').value = ''; if (!f) return;
+  const text = await f.text();
+  const l = /\.py$/i.test(f.name) ? 'python' : 'html';
+  if (l !== lang) setLang(l);
+  cm.setValue(text); cm.clearHistory(); toast(f.name + ' açıldı'); run();
+};
+
+let toastT;
+function toast(t) { const el = $('toast'); el.textContent = t; el.classList.add('show'); clearTimeout(toastT); toastT = setTimeout(() => el.classList.remove('show'), 1600); }
+
+/* ---------- bölme çubuğu ---------- */
+(() => {
+  const g = $('gutter'), m = $('main');
+  const sv = store.get(KEY + '-split'); if (sv) m.style.setProperty('--split', sv);
+  g.addEventListener('pointerdown', e => {
+    g.setPointerCapture(e.pointerId); g.classList.add('drag'); $('frame').style.pointerEvents = 'none';
+    const r = m.getBoundingClientRect();
+    const mv = ev => { const p = Math.min(80, Math.max(20, (ev.clientX - r.left - 16) / (r.width - 32) * 100)); m.style.setProperty('--split', p.toFixed(1) + '%'); };
+    const up = () => { g.classList.remove('drag'); $('frame').style.pointerEvents = ''; g.removeEventListener('pointermove', mv); g.removeEventListener('pointerup', up); store.set(KEY + '-split', m.style.getPropertyValue('--split')); cm.refresh(); };
+    g.addEventListener('pointermove', mv); g.addEventListener('pointerup', up);
+  });
+})();
+
+/* ---------- tema / başlat ---------- */
+let mode = store.get('erdevelop-mode') || 'dark';
+function applyMode() { document.documentElement.dataset.mode = mode; $('modeBtn').textContent = mode === 'dark' ? 'LIGHT' : 'DARK'; }
+$('modeBtn').onclick = () => { mode = mode === 'dark' ? 'light' : 'dark'; store.set('erdevelop-mode', mode); applyMode(); };
+applyMode();
+setLang(lang, true);
+})();
+</script>
+</body>
+</html>
