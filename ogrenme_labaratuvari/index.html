@@ -2,7 +2,6 @@
 <html lang="tr">
 <head>
 <meta charset="utf-8">
-<script src="../kilit.js" data-gate="../Tools.html"></script>
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <title>Öğrenme Laboratuvarı</title>
 <meta name="claude:viewport-fit-sides" content="cover">
@@ -97,22 +96,28 @@ table.race td:last-child{text-align:right;font-family:var(--f-mono)}
 <header class="top">
   <div>
     <h1>Öğrenme Laboratuvarı</h1>
-    <p>Makine öğrenmesinin beş farklı yüzü. Her sekmede bir model sıfırdan öğreniyor; sen ayarlarla oynayıp öğrenmenin nasıl ilerlediğini izliyorsun.</p>
+    <p>Makine öğrenmesinin sekiz farklı yüzü. Her sekmede bir model sıfırdan öğreniyor; sen ayarlarla oynayıp öğrenmenin nasıl ilerlediğini izliyorsun.</p>
   </div>
 </header>
 <nav class="tabs" role="tablist" id="tabs">
   <button role="tab" data-tab="siniflandirma"><b>Sınıflandırma</b><small>Sinir ağı sınır çiziyor</small></button>
   <button role="tab" data-tab="gradyan"><b>Gradyan İnişi</b><small>Optimizasyon yarışı</small></button>
+  <button role="tab" data-tab="kume"><b>Kümeleme</b><small>Etiketsiz gruplama</small></button>
   <button role="tab" data-tab="rakam"><b>Rakam Tanıma</b><small>Çiz, ağ tanısın</small></button>
+  <button role="tab" data-tab="dil"><b>Mini Dil Modeli</b><small>Harf harf yazmayı öğrenir</small></button>
   <button role="tab" data-tab="araba"><b>Araba Sürme</b><small>Evrimle öğrenme</small></button>
   <button role="tab" data-tab="ajan"><b>Oyun Ajanı</b><small>Ödül ve ceza ile öğrenme</small></button>
+  <button role="tab" data-tab="yilan"><b>Yılan</b><small>Derin Q-ağı</small></button>
 </nav>
 <main>
   <section class="tab" id="tab-siniflandirma" hidden></section>
   <section class="tab" id="tab-gradyan" hidden></section>
+  <section class="tab" id="tab-kume" hidden></section>
   <section class="tab" id="tab-rakam" hidden></section>
+  <section class="tab" id="tab-dil" hidden></section>
   <section class="tab" id="tab-araba" hidden></section>
   <section class="tab" id="tab-ajan" hidden></section>
+  <section class="tab" id="tab-yilan" hidden></section>
 </main>
 </div>
 <script>
@@ -348,6 +353,18 @@ class MLP {
       const p = clamp(out[0], 1e-7, 1 - 1e-7);
       delta[0] = out[0] - target; loss = -(target * Math.log(p) + (1 - target) * Math.log(1 - p));
     } else { delta[0] = out[0] - target; loss = 0.5 * delta[0] * delta[0]; }
+    this._bp(A, Z, delta);
+    return { loss, out };
+  }
+  // Q-öğrenme için: yalnızca seçilen çıkışın hatası geriye yayılır (doğrusal çıkış)
+  backwardIdx(x, idx, target) {
+    const { A, Z } = this.forward(x), out = A[this.L], delta = new Float64Array(out.length);
+    let d = out[idx] - target; d = clamp(d, -5, 5); delta[idx] = d;
+    this._bp(A, Z, delta);
+    return 0.5 * d * d;
+  }
+  _bp(A, Z, delta) {
+    const L = this.L;
     for (let l = L - 1; l >= 0; l--) {
       const ni = this.sizes[l], no = this.sizes[l + 1], a = A[l], W = this.W[l], gW = this.gW[l], gb = this.gb[l];
       const sparse = ni > 100; let nz = null;
@@ -366,7 +383,6 @@ class MLP {
         delta = nd;
       }
     }
-    return { loss, out };
   }
   // Biriken gradyanlarla ağırlıkları günceller
   step(n, lr, opt = "sgd", l2 = 0) {
@@ -470,9 +486,13 @@ Modules.siniflandirma = (() => {
       const x = t ? Math.cos(a) : 1 - Math.cos(a), y = t ? Math.sin(a) : 0.5 - Math.sin(a);
       P.push([(x - 0.5) * 0.62 + G() * 0.3, (y - 0.25) * 0.85 + G() * 0.3, t]);
     }
-    return P.map(([x, y, t]) => [clamp(x, -1, 1), clamp(y, -1, 1), t]);
+    const RF = { "r-sin": (x) => 0.7 * Math.sin(2.6 * x), "r-adim": (x) => (x < -0.3 ? -0.6 : x < 0.35 ? 0.3 : -0.2), "r-dalga": (x) => 0.45 * Math.sin(7 * x) + 0.3 * x, "r-kup": (x) => 1.6 * x * x * x - 0.9 * x };
+    if (RF[type]) for (let i = 0; i < n; i++) { const x = rand(-1, 1), y = RF[type](x) + gauss() * noise * 0.5; P.push([x, y, y]); }
+    return P.map(([x, y, t]) => [clamp(x, -1, 1), clamp(y, -1, 1), RF[type] ? clamp(t, -1, 1) : t]);
   }
   const inp = (x, y) => st.feats.map((f) => f[2](x, y));
+  const isReg = () => val("c-data").startsWith("r-");
+  const inpP = (x, y) => (st.reg ? inp(x, 0) : inp(x, y)); // regresyonda girdi yalnızca x
 
   function newData() {
     const P = shuffle(data(val("c-data"), 300, num("c-noise") / 100));
@@ -481,16 +501,25 @@ Modules.siniflandirma = (() => {
     reset();
   }
   function reset() {
-    st.feats = FEATS.filter((f) => on("c-f-" + f[0]));
+    st.reg = isReg();
+    for (const f of FEATS) { const yf = /y/.test(f[0]); $("#c-f-" + f[0]).disabled = st.reg && yf; $("#c-f-" + f[0]).parentElement.style.opacity = st.reg && yf ? 0.4 : 1; }
+    st.feats = FEATS.filter((f) => on("c-f-" + f[0]) && !(st.reg && /y/.test(f[0])));
     if (!st.feats.length) { $("#c-f-x").checked = true; st.feats = [FEATS[0]]; }
     const hidden = Array(num("c-layers")).fill(num("c-neurons"));
-    st.net = new MLP([st.feats.length, ...hidden, 1], val("c-act"), "sigmoid");
+    st.net = new MLP([st.feats.length, ...hidden, 1], val("c-act"), st.reg ? "linear" : "sigmoid");
+    $("#c-s-a").previousElementSibling.textContent = st.reg ? "Eğitim R²" : "Eğitim doğruluğu";
+    $("#c-s-at").previousElementSibling.textContent = st.reg ? "Test R²" : "Test doğruluğu";
     st.epoch = 0; st.hist = []; st.histT = []; st.blown = false; st.hover = null;
     measure(); draw();
   }
   function loss(set) {
     if (!set.length) return [null, null];
     let L = 0, ok = 0;
+    if (st.reg) { // ortalama kare hata ve R²
+      const m = set.reduce((s, p) => s + p[2], 0) / set.length; let sst = 0;
+      for (const [x, , t] of set) { const p = st.net.predict(inp(x, 0))[0]; if (!isFinite(p)) return [NaN, 0]; L += (p - t) ** 2; sst += (t - m) ** 2; }
+      return [L / set.length, Math.max(0, 1 - L / Math.max(sst, 1e-9))];
+    }
     for (const [x, y, t] of set) {
       const p = st.net.predict(inp(x, y))[0];
       if (p !== p) return [NaN, 0];
@@ -510,7 +539,7 @@ Modules.siniflandirma = (() => {
     const lr = +val("c-lr"), opt = val("c-opt"), l2 = +val("c-l2");
     for (let i = 0; i < set.length; i += bs) {
       const part = set.slice(i, i + bs);
-      for (const [x, y, t] of part) st.net.backward(inp(x, y), t);
+      for (const [x, y, t] of part) st.net.backward(inpP(x, y), t);
       st.net.step(part.length, lr, opt, l2);
     }
     st.epoch++;
@@ -541,7 +570,26 @@ Modules.siniflandirma = (() => {
   const gridPts = []; for (let i = 0; i < GRID; i++) for (let j = 0; j < GRID; j++) gridPts.push([((j + 0.5) / GRID) * 2 - 1, 1 - ((i + 0.5) / GRID) * 2]);
   const thPts = []; for (let i = 0; i < TH; i++) for (let j = 0; j < TH; j++) thPts.push([((j + 0.5) / TH) * 2 - 1, 1 - ((i + 0.5) / TH) * 2]);
 
+  function drawReg() {
+    ctx.fillStyle = Theme.c.surface; ctx.fillRect(0, 0, S, S);
+    ctx.strokeStyle = Theme.c.line; ctx.lineWidth = 1;
+    for (let k = 1; k < 8; k++) { ctx.beginPath(); ctx.moveTo((k * S) / 8, 0); ctx.lineTo((k * S) / 8, S); ctx.moveTo(0, (k * S) / 8); ctx.lineTo(S, (k * S) / 8); ctx.stroke(); }
+    const P = (x, y) => [((x + 1) / 2) * S, ((1 - y) / 2) * S];
+    for (const [x, y] of st.train) { const [px, py] = P(x, y); ctx.beginPath(); ctx.arc(px, py, 3.8, 0, 7); ctx.fillStyle = Theme.c.blue; ctx.fill(); }
+    if (on("c-showtest")) for (const [x, y] of st.test) { const [px, py] = P(x, y); ctx.beginPath(); ctx.arc(px, py, 3.8, 0, 7); ctx.strokeStyle = Theme.c.blue; ctx.lineWidth = 1.5; ctx.stroke(); }
+    ctx.beginPath();
+    for (let i = 0; i <= 220; i++) {
+      const x = (i / 220) * 2 - 1, A = st.net.forward(inp(x, 0)).A;
+      let v = st.hover ? A[st.hover[0]][st.hover[1]] : A[st.net.L][0];
+      if (st.hover && st.hover[0] > 0 && st.net.act === "sigmoid") v = v * 2 - 1;
+      const [px, py] = P(x, clamp(v, -1.5, 1.5)); i ? ctx.lineTo(px, py) : ctx.moveTo(px, py);
+    }
+    ctx.strokeStyle = st.hover ? Theme.c.orange : Theme.c.accent; ctx.lineWidth = 3; ctx.stroke();
+    if (st.hover) { ctx.fillStyle = Theme.c.ink; ctx.font = "12px " + getComputedStyle(document.body).getPropertyValue("--f-body"); ctx.textAlign = "left"; ctx.textBaseline = "middle";
+      ctx.fillText(st.hover[0] === 0 ? "Girdi: " + st.feats[st.hover[1]][1] : `Gizli katman ${st.hover[0]}, nöron ${st.hover[1] + 1} çıktısı`, 12, 18); }
+  }
   function drawMain() {
+    if (st.reg) return drawReg();
     let vals;
     if (st.hover) vals = neuronVals(st.hover[0], st.hover[1], gridPts);
     else { vals = new Float64Array(gridPts.length); for (let i = 0; i < gridPts.length; i++) vals[i] = st.net.predict(inp(gridPts[i][0], gridPts[i][1]))[0]; }
@@ -579,6 +627,14 @@ Modules.siniflandirma = (() => {
       labels: sizes.map((_, l) => (l === 0 ? "Girdi" : l === sizes.length - 1 ? "Çıkış" : "Gizli " + l)),
       side: [st.feats.map((f) => f[1])],
       thumb(l, k, x, y, s) {
+        if (st.reg) { // nöronun x'e göre çıktısı, küçük bir eğri olarak
+          nctx.fillStyle = Theme.c.sunk; nctx.fillRect(x, y, s, s);
+          const vs = []; for (let i = 0; i <= 20; i++) vs.push(st.net.forward(inp((i / 20) * 2 - 1, 0)).A[l][k]);
+          let mn = Math.min(...vs), mx = Math.max(...vs); if (mx - mn < 1e-6) { mn -= 1; mx += 1; }
+          nctx.strokeStyle = l === st.net.L ? Theme.c.accent : Theme.c.ink; nctx.lineWidth = 1.5; nctx.beginPath();
+          vs.forEach((v, i) => { const px = x + 2 + (i / 20) * (s - 4), py = y + s - 2 - ((v - mn) / (mx - mn)) * (s - 4); i ? nctx.lineTo(px, py) : nctx.moveTo(px, py); }); nctx.stroke();
+          return;
+        }
         const v = scaleVals(acts.map((A) => A[l][k]), l);
         const img = thumbX.createImageData(TH, TH);
         for (let i = 0; i < v.length; i++) { const c = Theme.d(v[i]); img.data.set([c[0], c[1], c[2], 255], i * 4); }
@@ -591,7 +647,7 @@ Modules.siniflandirma = (() => {
     drawChart(gcv, gctx, [
       { data: st.hist, color: Theme.c.ink, width: 2 },
       { data: st.histT, color: Theme.c.muted, width: 2, dash: [5, 4] },
-    ], { ymin: 0, ycap: 1.2, xlabel: "epok" });
+    ], { ymin: 0, ycap: st.reg ? 0.4 : 1.2, xlabel: "epok" });
   }
   function texts() {
     const l = st.hist[st.hist.length - 1], lt = st.histT[st.histT.length - 1];
@@ -602,6 +658,14 @@ Modules.siniflandirma = (() => {
   function explain(l, lt) {
     if (st.blown) return "<b>Ağ dağıldı.</b> Öğrenme oranı o kadar yüksek ki ağırlıklar her adımda büyüyüp sonsuza kaçtı. Oranı düşür ve Sıfırla'ya bas.";
     if (!st.train.length) return "Eğitim verisi yok. Alana tıklayarak nokta ekle (sağ tık diğer renk), sonra Başlat'a bas.";
+    if (st.reg) {
+      if (st.hover) return "Bu nöronun girdi x'e göre çıktısı. Gizli nöronların her biri basit bir “bükülme” (tanh'ta yumuşak bir basamak, ReLU'da bir dirsek) üretir; çıkış nöronu bunları ağırlıklarla toplayarak istediği eğriyi elde eder.";
+      if (st.epoch === 0) return "<b>Eğri uydurma (regresyon)</b>: bu kez ağ bir sınıf değil bir <b>sayı</b> tahmin ediyor. Mavi noktalar ölçümler, yeşil-mavi çizgi ağın x'e göre tahmini. Kayıp, tahmin ile gerçek değer arasındaki farkların karelerinin ortalaması. ▶ Başlat'a bas.";
+      if (num("c-layers") === 0) return "Gizli katman yokken ağ sadece girdilerin ağırlıklı toplamını verebilir; yalnızca x girdisiyle bu <b>düz bir çizgidir</b>. Girdilere x² ya da sin x ekle veya gizli katman ekle.";
+      if (lt != null && l < 0.01 && lt > l * 2.5 && lt - l > 0.004) return "<b>Aşırı öğrenme:</b> eğri tek tek noktaların peşinden kıvrılıyor, gürültüyü bile ezberliyor. Test hatası eğitim hatasından belirgin yüksek. L2 düzenleme veya daha küçük bir ağ dene.";
+      if (st.acc != null && st.acc > 0.9) return "Ağ eğriyi yakaladı. Ağ şemasındaki küçük eğrilere bak: her gizli nöron basit bir parça, çıkış bu parçaların toplamı. Nöron sayısını 1–2'ye indirip hangi şekilleri artık çizemediğini gör.";
+      return "Eğri yavaş yavaş noktalara oturuyor. Basamak verisinde keskin köşeler ağ için zordur: yumuşak tanh nöronlarıyla köşeyi ancak yaklaşık çizebilir.";
+    }
     if (st.hover) return st.hover[0] === 0
       ? "Bu bir <b>girdi</b>: ağa verilen ham bilgi. Turuncu yerlerde değeri büyük, mavi yerlerde küçük. Ağ yalnızca bu girdileri ağırlıklarla toplayıp bükerek bir sınır üretebilir."
       : "Bu nöronun <b>düzlemde neye tepki verdiğini</b> görüyorsun. İlk gizli katmandaki nöronlar genelde düzlemi tek bir çizgiyle ikiye ayırır; sonraki katmanlar bu basit parçaları birleştirip eğri, halka, spiral gibi karmaşık şekiller kurar.";
@@ -647,7 +711,7 @@ Modules.siniflandirma = (() => {
         <div class="explain" id="c-explain"></div>
       </div>
       <aside class="panel">
-        ${UI.group("Veri", UI.select("c-data", "Veri seti", [["daire", "Daireler"], ["xor", "XOR"], ["kume", "İki küme"], ["ay", "İki hilal"], ["spiral", "Spiral"], ["elle", "Elle çiz (boş)"]], "daire")
+        ${UI.group("Veri", UI.select("c-data", "Veri seti", [["daire", "Daireler"], ["xor", "XOR"], ["kume", "İki küme"], ["ay", "İki hilal"], ["spiral", "Spiral"], ["elle", "Elle çiz (boş)"], ["r-sin", "Eğri uydurma: sinüs"], ["r-dalga", "Eğri uydurma: dalgalı"], ["r-kup", "Eğri uydurma: kübik"], ["r-adim", "Eğri uydurma: basamak"]], "daire")
           + UI.range("c-noise", "Gürültü", 0, 50, 5, 10, (v) => "%" + v)
           + UI.range("c-ratio", "Eğitim payı", 30, 90, 10, 70, (v) => "%" + v)
           + UI.check("c-showtest", "Test verisini göster", true)
@@ -682,8 +746,8 @@ Modules.siniflandirma = (() => {
     cv.addEventListener("contextmenu", (e) => e.preventDefault());
     cv.addEventListener("pointerdown", (e) => {
       const [px, py] = canvasPos(cv, e);
-      const t = e.button === 2 ? 1 - st.add : st.add;
-      st.train.push([clamp((px / S) * 2 - 1, -1, 1), clamp(1 - (py / S) * 2, -1, 1), t]);
+      const t = e.button === 2 ? 1 - st.add : st.add, x = clamp((px / S) * 2 - 1, -1, 1), y = clamp(1 - (py / S) * 2, -1, 1);
+      st.train.push([x, y, st.reg ? y : t]);
       st.hist.pop(); st.histT.pop(); measure(); draw();
     });
     ncv.addEventListener("pointermove", (e) => {
@@ -718,6 +782,31 @@ Modules.gradyan = (() => {
       min: [[3, 2], [-2.805, 3.131], [-3.779, -3.283], [3.584, -1.848]],
       not: "Eşit derinlikte dört çukur var. Hangi optimizer'ın hangisine düşeceği başlangıç noktasına ve hızına bağlı." },
   };
+  SURF.ozel = { ad: "Kendi fonksiyonum", f: (x, y) => x * x + y * y, xr: [-3, 3], yr: [-3, 3], lr: 0.1, alr: 0.06, start: [-2.5, 2], min: [[0, 0]],
+    not: "Kendi f(x, y) fonksiyonunu yaz. Kullanabileceklerin: + − * / ^, sin, cos, exp, log, sqrt, abs, PI. Örnek: sin(x)*cos(y) + 0.1*(x^2+y^2)" };
+  function compile(expr) {
+    const js = expr.replace(/\^/g, "**").replace(/(\d)\s*([a-z(])/gi, "$1*$2");
+    if (/[^0-9a-z_+\-*/().,\s]/i.test(js)) throw new Error("izin verilmeyen karakter");
+    const names = js.match(/[a-z_]+/gi) || [], ok = new Set(["x", "y", "sin", "cos", "tan", "exp", "log", "sqrt", "abs", "PI", "E", "min", "max", "tanh", "atan", "pow", "floor", "round", "sign"]);
+    for (const n of names) if (!ok.has(n)) throw new Error("tanınmayan ad: " + n);
+    const f = new Function("x", "y", "const {sin,cos,tan,exp,log,sqrt,abs,PI,E,min,max,tanh,atan,pow,floor,round,sign}=Math; return (" + js + ");");
+    const t = f(0.3, -0.7); if (typeof t !== "number" || !isFinite(t)) throw new Error("sayı üretmiyor");
+    return f;
+  }
+  function setCustom() {
+    const s = SURF.ozel;
+    try { s.f = compile($("#g-expr").value.trim()); $("#g-err").textContent = ""; }
+    catch (e) { $("#g-err").textContent = "Fonksiyon okunamadı: " + e.message; return false; }
+    // en düşük noktayı ve uygun adım büyüklüğünü ızgarada tahmin et
+    let best = Infinity, bp = [0, 0], gs = 0, n = 0;
+    for (let i = 0; i <= 60; i++) for (let j = 0; j <= 60; j++) {
+      const x = -3 + (6 * j) / 60, y = -3 + (6 * i) / 60, v = s.f(x, y);
+      if (isFinite(v) && v < best) { best = v; bp = [x, y]; }
+      const g = Math.hypot(s.f(x + 1e-4, y) - s.f(x - 1e-4, y), s.f(x, y + 1e-4) - s.f(x, y - 1e-4)) / 2e-4; if (isFinite(g)) { gs += g; n++; }
+    }
+    s.min = [bp]; s.lr = clamp(0.25 / Math.max(gs / Math.max(n, 1), 1e-3), 1e-4, 1); s.alr = 0.05;
+    return true;
+  }
   const OPTS = [
     { id: "sgd", ad: "SGD", renk: "#d1493f" },
     { id: "mom", ad: "Momentum", renk: "#8a55d3" },
@@ -738,6 +827,8 @@ Modules.gradyan = (() => {
   }
 
   function setSurface() {
+    const custom = val("g-surf") === "ozel"; $("#g-custom").hidden = !custom;
+    if (custom && !setCustom()) return;
     const s = SURF[val("g-surf")]; st.surf = s;
     let mn = Infinity, mx = -Infinity;
     const vals = new Float64Array(RES * RES);
@@ -876,7 +967,9 @@ Modules.gradyan = (() => {
         <div class="explain" id="g-explain"></div>
       </div>
       <aside class="panel">
-        ${UI.group("Yüzey", UI.select("g-surf", "Hata yüzeyi", Object.entries(SURF).map(([k, s]) => [k, s.ad]), "kase") + `<p class="note" id="g-note"></p>`)}
+        ${UI.group("Yüzey", UI.select("g-surf", "Hata yüzeyi", Object.entries(SURF).map(([k, s]) => [k, s.ad]), "kase") + `<p class="note" id="g-note"></p><div id="g-custom" class="group" hidden>
+            <input id="g-expr" type="text" value="sin(2*x)*cos(y) + 0.15*(x^2 + y^2)" autocomplete="off" spellcheck="false" style="font:13px var(--f-mono);padding:6px 8px;border-radius:6px;border:1px solid var(--line);background:var(--sunk);color:var(--ink);width:100%">
+            <button class="btn" id="g-apply">Uygula</button><p class="note" id="g-err" style="color:var(--bad)"></p></div>`)}
         ${UI.group("Yarışanlar", `<div class="checks">${OPTS.map((o) => UI.check("g-o-" + o.id, `<span style="color:${o.renk};font-weight:700">●</span> ${o.ad}`, true)).join("")}</div>
           <table class="race"><tbody id="g-table"></tbody></table><p class="note">Sağdaki sayı: o anki yükseklik (hata). Adım: <b id="g-step">0</b></p>`)}
         ${UI.group("Ayarlar", UI.range("g-lr", "Öğrenme oranı çarpanı", -1.5, 1, 0.1, 0, (v) => "×" + Math.pow(10, v).toPrecision(2))
@@ -889,6 +982,8 @@ Modules.gradyan = (() => {
     cv = $("#g-map"); ctx = setupCanvas(cv, S, S); cv3 = $("#g-3d"); ctx3 = setupCanvas(cv3, S, S);
     [mapC, mapX] = offscreen(RES, RES);
     $("#g-surf").onchange = () => { setRun(false); setSurface(); };
+    $("#g-apply").onclick = () => { setRun(false); setSurface(); };
+    $("#g-expr").addEventListener("keydown", (e) => { if (e.key === "Enter") { setRun(false); setSurface(); } });
     OPTS.forEach((o) => ($("#g-o-" + o.id).onchange = resetRacers));
     $("#g-run").onclick = () => { if (st.racers.every((r) => r.status)) resetRacers(); setRun(!st.run); };
     $("#g-one").onclick = () => { setRun(false); stepAll(); draw(); };
@@ -903,6 +998,154 @@ Modules.gradyan = (() => {
   }
   function frame() { if (!st.run) return; for (let i = 0; i < num("g-speed"); i++) stepAll(); draw(); }
   return { init, frame, onTheme: () => draw() };
+})();
+// ===================================================================== 6) KÜMELEME (k-ortalamalar)
+Modules.kume = (() => {
+  const W = 600, H = 460, GX = 75, GY = 58;
+  const COLS = ["#e07b32", "#3672c9", "#2e9e6a", "#b4489b", "#c9a227", "#1f9bb4", "#c4453c", "#6b5bd6"];
+  const st = { pts: [], cent: [], target: [], assign: [], phase: "ata", iter: 0, run: false, inertia: [], elbow: null, done: false, timer: 0, moved: 0 };
+  let cv, ctx, gcv, gctx, ecv, ectx, bgC, bgX;
+  const RGB = COLS.map(hexRGB);
+
+  function genData() {
+    const type = val("k-data"), n = 300, P = [];
+    if (type === "kume") {
+      const m = randInt(3, 6), cs = Array.from({ length: m }, () => [rand(-0.7, 0.7), rand(-0.7, 0.7), rand(0.07, 0.16)]);
+      for (let i = 0; i < n; i++) { const c = cs[i % m]; P.push([c[0] + gauss() * c[2], c[1] + gauss() * c[2]]); }
+    } else if (type === "halka") {
+      for (let i = 0; i < n; i++) { const r = i % 2 ? 0.25 : 0.75, a = rand(0, 7); P.push([r * Math.cos(a) + gauss() * 0.04, r * Math.sin(a) + gauss() * 0.04]); }
+    } else if (type === "uzun") {
+      for (let i = 0; i < n; i++) { const k = i % 3, t = gauss() * 0.45; P.push([t, -0.55 + k * 0.55 + gauss() * 0.06 + t * 0.15]); }
+    } else if (type === "farkli") {
+      for (let i = 0; i < n; i++) { if (i < 240) P.push([-0.35 + gauss() * 0.28, gauss() * 0.28]); else P.push([0.6 + gauss() * 0.06, 0.5 + gauss() * 0.06]); }
+    } else for (let i = 0; i < n; i++) P.push([rand(-0.95, 0.95), rand(-0.95, 0.95)]);
+    st.pts = P.map(([x, y]) => [clamp(x, -0.98, 0.98), clamp(y, -0.98, 0.98)]);
+    st.elbow = null; initCent();
+  }
+  const d2 = (a, b) => (a[0] - b[0]) ** 2 + (a[1] - b[1]) ** 2;
+  function seed(k, pts, pp) {
+    if (!pts.length) return Array.from({ length: k }, () => [rand(-0.8, 0.8), rand(-0.8, 0.8)]);
+    if (!pp) return Array.from({ length: k }, () => [rand(-0.9, 0.9), rand(-0.9, 0.9)]);
+    const c = [pts[randInt(0, pts.length - 1)].slice()];
+    while (c.length < k) { // k-means++: uzak noktaları seçme olasılığı daha yüksek
+      const ds = pts.map((p) => Math.min(...c.map((q) => d2(p, q)))), tot = ds.reduce((a, b) => a + b, 0);
+      let r = Math.random() * tot, i = 0; while (r > ds[i] && i < ds.length - 1) { r -= ds[i]; i++; }
+      c.push(pts[i].slice());
+    }
+    return c;
+  }
+  function initCent() {
+    st.cent = seed(num("k-k"), st.pts, val("k-init") === "pp"); st.target = st.cent.map((c) => c.slice());
+    st.assign = st.pts.map(() => -1); st.phase = "ata"; st.iter = 0; st.inertia = []; st.done = false; st.moved = 0; drawBg(); draw();
+  }
+  function assign(pts, cent) { return pts.map((p) => { let b = 0, bd = Infinity; cent.forEach((c, j) => { const d = d2(p, c); if (d < bd) { bd = d; b = j; } }); return b; }); }
+  function means(pts, asg, cent) { return cent.map((c, j) => { let sx = 0, sy = 0, n = 0; pts.forEach((p, i) => { if (asg[i] === j) { sx += p[0]; sy += p[1]; n++; } }); return n ? [sx / n, sy / n] : c.slice(); }); }
+  const inertiaOf = (pts, asg, cent) => pts.reduce((s, p, i) => s + d2(p, cent[asg[i]]), 0);
+  function step() {
+    if (st.done) return;
+    if (st.phase === "ata") {
+      const a = assign(st.pts, st.cent); st.moved = a.reduce((s, v, i) => s + (v !== st.assign[i]), 0); st.assign = a;
+      st.inertia.push(inertiaOf(st.pts, a, st.cent)); st.phase = "tasi";
+      if (st.moved === 0 && st.iter > 0) { st.done = true; setRun(false); }
+    } else { st.target = means(st.pts, st.assign, st.cent); st.phase = "ata"; st.iter++; }
+    drawBg();
+  }
+  function elbow() {
+    const res = [];
+    for (let k = 1; k <= 8; k++) { let best = Infinity;
+      for (let t = 0; t < 4; t++) { let c = seed(k, st.pts, true), a;
+        for (let it = 0; it < 40; it++) { a = assign(st.pts, c); const nc = means(st.pts, a, c); if (nc.every((q, j) => d2(q, c[j]) < 1e-10)) break; c = nc; }
+        best = Math.min(best, inertiaOf(st.pts, assign(st.pts, c), c)); }
+      res.push(best); }
+    st.elbow = res; draw();
+  }
+  function setRun(v) { st.run = v; $("#k-run").textContent = v ? "⏸ Duraklat" : "▶ Başlat"; }
+
+  const P = (x, y) => [((x + 1) / 2) * W, ((1 - y) / 2) * H];
+  function drawBg() { // her bölgenin hangi merkeze yakın olduğu (Voronoi)
+    const img = bgX.createImageData(GX, GY), s = Theme.rgb.surface;
+    for (let i = 0; i < GY; i++) for (let j = 0; j < GX; j++) {
+      const x = ((j + 0.5) / GX) * 2 - 1, y = 1 - ((i + 0.5) / GY) * 2; let b = 0, bd = Infinity;
+      st.target.forEach((c, k) => { const d = d2([x, y], c); if (d < bd) { bd = d; b = k; } });
+      const c = st.iter === 0 && st.phase === "ata" && st.assign[0] === -1 ? s : mix(s, RGB[b % 8], 0.16);
+      img.data.set([c[0], c[1], c[2], 255], (i * GX + j) * 4);
+    }
+    bgX.putImageData(img, 0, 0);
+  }
+  function draw() {
+    ctx.imageSmoothingEnabled = false; ctx.drawImage(bgC, 0, 0, W, H);
+    if (on("k-lines") && st.assign[0] !== -1) { ctx.lineWidth = 1; ctx.globalAlpha = 0.25;
+      st.pts.forEach((p, i) => { const a = st.assign[i]; if (a < 0) return; const [x1, y1] = P(...p), [x2, y2] = P(...st.cent[a]); ctx.strokeStyle = COLS[a % 8]; ctx.beginPath(); ctx.moveTo(x1, y1); ctx.lineTo(x2, y2); ctx.stroke(); });
+      ctx.globalAlpha = 1; }
+    st.pts.forEach((p, i) => { const a = st.assign[i], [x, y] = P(...p); ctx.beginPath(); ctx.arc(x, y, 4, 0, 7); ctx.fillStyle = a < 0 ? Theme.c.muted : COLS[a % 8]; ctx.fill(); ctx.strokeStyle = Theme.c.surface; ctx.lineWidth = 1; ctx.stroke(); });
+    st.cent.forEach((c, j) => { const [x, y] = P(...c); ctx.fillStyle = COLS[j % 8]; ctx.strokeStyle = Theme.c.ink; ctx.lineWidth = 2.5;
+      ctx.beginPath(); ctx.moveTo(x, y - 11); ctx.lineTo(x + 11, y); ctx.lineTo(x, y + 11); ctx.lineTo(x - 11, y); ctx.closePath(); ctx.fill(); ctx.stroke(); });
+    drawChart(gcv, gctx, [{ data: st.inertia, color: Theme.c.accent, width: 2 }], { ymin: 0, xlabel: "tur", empty: "Başlat'a bas" });
+    // dirsek grafiği
+    ectx.fillStyle = Theme.c.surface; ectx.fillRect(0, 0, ecv._w, ecv._h);
+    if (st.elbow) {
+      drawChart(ecv, ectx, [{ data: [null, ...st.elbow], color: Theme.c.ink, width: 2 }], { ymin: 0, xlabel: "k =" });
+      const mx = Math.max(...st.elbow), L = 42, Wd = ecv._w - 52, Hd = ecv._h - 32;
+      st.elbow.forEach((v, i) => { const x = L + ((i + 1) / 8) * Wd, y = 10 + (1 - v / mx) * Hd; ectx.fillStyle = i + 1 === num("k-k") ? Theme.c.accent : Theme.c.ink; ectx.beginPath(); ectx.arc(x, y, i + 1 === num("k-k") ? 6 : 3.5, 0, 7); ectx.fill(); });
+    } else drawChart(ecv, ectx, [], { empty: "“Dirsek yöntemi” düğmesine bas" });
+    $("#k-s-it").textContent = st.iter; $("#k-s-in").textContent = st.inertia.length ? fmt(st.inertia[st.inertia.length - 1], 2) : "–";
+    $("#k-s-mv").textContent = st.assign[0] === -1 ? "–" : st.moved; $("#k-s-ph").textContent = st.done ? "Bitti" : st.phase === "ata" ? "Ata" : "Taşı";
+    $("#k-explain").innerHTML = explain();
+  }
+  function explain() {
+    const t = val("k-data");
+    if (st.assign[0] === -1) return "Bu sefer noktaların <b>etiketi yok</b>: kimse hangisinin hangi gruba ait olduğunu söylemiyor (denetimsiz öğrenme). Elmaslar k tane küme merkezi; şimdilik rastgele yerlerde. Algoritma iki adımı tekrarlar: <b>Ata</b> (her nokta en yakın merkeze katılır) ve <b>Taşı</b> (her merkez kendi noktalarının ortasına gider).";
+    if (st.done && t === "halka") return "Bitti ama sonuç tuhaf: halkalar ikiye bölünmedi, alan dilimlere ayrıldı. Çünkü k-ortalamalar kümeleri hep <b>yuvarlak ve dışbükey</b> varsayar; noktaların birbirine zincir gibi bağlı olduğunu anlayamaz. Her algoritmanın bir varsayımı vardır ve veri buna uymazsa yanılır.";
+    if (st.done && t === "uzun") return "Uzun, yatık bulutlarda k-ortalamalar çoğu zaman bulutları enine keser; çünkü her noktayı merkeze olan <b>düz mesafeye</b> göre atar. Daha esnek yöntemler (Gauss karışım modeli gibi) kümelerin şeklini de öğrenir.";
+    if (st.done) return `Hiçbir nokta küme değiştirmedi; algoritma <b>${st.iter} turda</b> durdu. Sonuç başlangıç noktalarına bağlıdır: Yeniden başlat ile birkaç kez dene, bazen bir merkez iki gerçek kümenin arasında sıkışır (yerel minimum). k-ortalamalar++ başlangıcı bunu azaltır. Doğru k'yı bilmiyorsan dirsek yöntemine bak.`;
+    if (st.phase === "tasi") return `<b>Ata adımı:</b> her nokta en yakın elmasın rengini aldı (${st.moved} nokta küme değiştirdi). Şimdi her merkez kendi noktalarının ortalamasına taşınacak.`;
+    return "<b>Taşı adımı:</b> merkezler kendi noktalarının ağırlık merkezine kaydı. Merkezler değiştiği için bazı noktalar artık başka bir merkeze daha yakın olabilir. Toplam uzaklık (grafik) her turda azalır ya da aynı kalır, asla artmaz.";
+  }
+
+  function init(root) {
+    root.innerHTML = `
+    <div class="lab">
+      <div class="stage">
+        <div class="card"><h2>Noktalar ve küme merkezleri</h2><p class="sub">Elmaslar küme merkezleri, zemin rengi her bölgenin hangi merkeze yakın olduğunu gösterir. Tıklayarak nokta ekle.</p><canvas id="k-main" class="framed"></canvas></div>
+        <div class="stats">${UI.stat("k-s-it", "Tur")}${UI.stat("k-s-ph", "Sıradaki adım")}${UI.stat("k-s-mv", "Küme değiştiren")}${UI.stat("k-s-in", "Toplam uzaklık²")}</div>
+        <div class="row">
+          <div class="card w-side"><h2>Toplam uzaklık</h2><p class="sub">Noktaların merkezlerine olan uzaklıklarının kareleri toplamı. Düşük = sıkı kümeler.</p><canvas id="k-chart"></canvas></div>
+          <div class="card w-side"><h2>Dirsek yöntemi</h2><p class="sub">Her k için en iyi sonuç. Eğrinin kırıldığı “dirsek” iyi bir k tahminidir.</p><canvas id="k-elbow"></canvas></div>
+        </div>
+        <div class="explain" id="k-explain"></div>
+      </div>
+      <aside class="panel">
+        ${UI.group("Veri", UI.select("k-data", "Veri", [["kume", "Ayrık kümeler"], ["uzun", "Uzun bulutlar"], ["farkli", "Farklı büyüklükler"], ["halka", "İç içe halkalar"], ["duz", "Düzgün dağılım"], ["bos", "Boş (kendin ekle)"]], "kume")
+          + `<button class="btn" id="k-new">Yeni veri üret</button>`)}
+        ${UI.group("Algoritma", UI.range("k-k", "Küme sayısı k", 1, 8, 1, 4) + UI.select("k-init", "Başlangıç", [["pp", "k-ortalamalar++ (akıllı)"], ["rand", "Tamamen rastgele"]], "rand")
+          + UI.range("k-speed", "Hız", 1, 10, 1, 4) + UI.check("k-lines", "Atama çizgilerini göster", true))}
+        <div class="btns"><button class="btn primary" id="k-run">▶ Başlat</button><button class="btn" id="k-step">Tek adım</button><button class="btn" id="k-restart">Yeniden başlat</button>
+          <button class="btn wide" id="k-elbow-b">Dirsek yöntemi (k = 1…8)</button></div>
+        <p class="note">Gerçek hayatta kümeleme; müşterileri gruplamak, benzer ürünleri bulmak ya da bir fotoğraftaki renkleri azaltmak için kullanılır.</p>
+      </aside>
+    </div>`;
+    cv = $("#k-main"); ctx = setupCanvas(cv, W, H); gcv = $("#k-chart"); gctx = setupCanvas(gcv, 360, 170); ecv = $("#k-elbow"); ectx = setupCanvas(ecv, 360, 170);
+    [bgC, bgX] = offscreen(GX, GY);
+    $("#k-data").onchange = () => { setRun(false); if (val("k-data") === "bos") { st.pts = []; st.elbow = null; initCent(); } else genData(); };
+    $("#k-new").onclick = $("#k-data").onchange;
+    $("#k-k").onchange = () => { setRun(false); initCent(); };
+    $("#k-init").onchange = () => { setRun(false); initCent(); };
+    $("#k-restart").onclick = () => { setRun(false); initCent(); };
+    $("#k-run").onclick = () => { if (st.done) initCent(); setRun(!st.run); };
+    $("#k-step").onclick = () => { setRun(false); if (st.done) return; st.cent = st.target.map((c) => c.slice()); step(); draw(); };
+    $("#k-elbow-b").onclick = elbow;
+    $("#k-lines").onchange = draw;
+    cv.addEventListener("pointerdown", (e) => { const [px, py] = canvasPos(cv, e); st.pts.push([(px / W) * 2 - 1, 1 - (py / H) * 2]); st.assign.push(-1); st.done = false; st.elbow = null; draw(); });
+    genData();
+  }
+  function frame() {
+    // merkezleri hedefe doğru yumuşak kaydır
+    let anim = false;
+    st.cent.forEach((c, j) => { const t = st.target[j]; if (d2(c, t) > 1e-7) { c[0] += (t[0] - c[0]) * 0.18; c[1] += (t[1] - c[1]) * 0.18; anim = true; } else { c[0] = t[0]; c[1] = t[1]; } });
+    if (st.run && !anim) { st.timer++; if (st.timer >= 44 - num("k-speed") * 4) { st.timer = 0; step(); } }
+    if (anim || st.run) draw();
+  }
+  return { init, frame, onTheme: () => { drawBg(); draw(); } };
 })();
 // ===================================================================== 3) RAKAM TANIMA
 Modules.rakam = (() => {
@@ -1194,6 +1437,137 @@ Modules.rakam = (() => {
   }
   return { init, frame, onTheme: () => drawAll(true) };
 })();
+// ===================================================================== 8) MİNİ DİL MODELİ
+Modules.dil = (() => {
+  const CORPUS = {
+    isim: `ahmet mehmet mustafa ali hüseyin hasan ibrahim ismail osman yusuf murat ömer ramazan halil süleyman abdullah mahmut recep salih fatih kadir emre hakan adem kemal yaşar bayram metin serkan orhan burak cem can deniz emir efe eren arda berk kaan kerem mert onur oğuz ozan selim sinan tolga tuncay umut volkan yiğit yunus zafer barış batuhan baran çağan doruk egemen erdal erkan ercan erhan ferhat gökhan güven ilker kaya koray levent mesut necati nihat okan özgür rıza sabri sedat serdar tamer taner turgut uğur vedat yavuz yılmaz zeki alper aydın bülent cengiz cihan çetin derya engin ersin fikret gürkan hilmi irfan kenan kubilay mazlum nail orçun polat rüştü sami şahin şükrü tahsin tarık tayfun timur tuğrul ufuk ünal vural yasin yalçın zekeriya ayşe fatma emine hatice zeynep elif meryem şerife zehra sultan hanife merve özlem yasemin esra büşra hülya leyla derya ebru gamze gizem gül gülay gülşen hande ilknur ipek jale kübra lale melek melike nazlı nergis nur nurten öykü pınar rabia seda selin serap sevgi sevim sibel songül şule tuba tuğba tülay ümran yeliz yıldız zerrin aslı ayla aylin aysel aysun bahar banu belgin berna betül burcu cansu ceren damla defne dilek duygu ece eda ekin elçin esin eylül feride figen filiz gonca güler gülten hacer hilal irem kader kevser mine nalan neslihan oya özge reyhan saadet sema semra sevda simge şebnem tülin yağmur zübeyde`,
+    il: `adana adıyaman afyonkarahisar ağrı amasya ankara antalya artvin aydın balıkesir bilecik bingöl bitlis bolu burdur bursa çanakkale çankırı çorum denizli diyarbakır edirne elazığ erzincan erzurum eskişehir gaziantep giresun gümüşhane hakkari hatay ısparta mersin istanbul izmir kars kastamonu kayseri kırklareli kırşehir kocaeli konya kütahya malatya manisa kahramanmaraş mardin muğla muş nevşehir niğde ordu rize sakarya samsun siirt sinop sivas tekirdağ tokat trabzon tunceli şanlıurfa uşak van yozgat zonguldak aksaray bayburt karaman kırıkkale batman şırnak bartın ardahan ığdır yalova karabük kilis osmaniye düzce kadıköy üsküdar beşiktaş şişli bakırköy pendik kartal maltepe ataşehir ümraniye sarıyer beykoz eyüp fatih beyoğlu zeytinburnu esenler bağcılar küçükçekmece büyükçekmece silivri çatalca tuzla sultanbeyli sancaktepe çekmeköy şile adalar kurtköy bodrum marmaris fethiye kaş kalkan alanya side kemer çeşme ayvalık foça datça göcek didim kuşadası safranbolu amasra akçakoca kapadokya ürgüp göreme avanos pamukkale`,
+  };
+  const st = { run: false, n: 3, words: [], set: null, chars: [], idx: {}, V: 0, pairs: [], net: null, steps: 0, loss: null, hist: [], gen: [], frame: 0 };
+  let pcv, pctx, gcv, gctx;
+
+  function build() {
+    const src = val("t-corpus") === "kendi" ? $("#t-own").value : CORPUS[val("t-corpus")];
+    st.words = [...new Set(src.toLocaleLowerCase("tr").split(/[^a-zçğıöşüâîû]+/u).filter((w) => w.length >= 2 && w.length <= 20))];
+    if (st.words.length < 5) st.words = CORPUS.isim.split(" ");
+    st.set = new Set(st.words);
+    st.chars = [".", ...[...new Set(st.words.join(""))].sort((a, b) => a.localeCompare(b, "tr"))];
+    st.idx = Object.fromEntries(st.chars.map((c, i) => [c, i])); st.V = st.chars.length;
+    st.n = num("t-ctx");
+    st.pairs = [];
+    for (const w of st.words) { const s = ".".repeat(st.n) + w + "."; for (let i = st.n; i < s.length; i++) st.pairs.push([s.slice(i - st.n, i), st.idx[s[i]]]); }
+    st.net = new MLP([st.n * st.V, num("t-hidden"), st.V], "tanh", "softmax");
+    st.steps = 0; st.loss = null; st.hist = []; st.gen = []; generate(); draw();
+  }
+  function enc(ctx) { const x = new Float64Array(st.n * st.V); for (let i = 0; i < st.n; i++) { const k = st.idx[ctx[i]]; if (k != null) x[i * st.V + k] = 1; } return x; }
+  function ctxOf(text) { const t = (".".repeat(st.n) + text.split("■").pop().toLocaleLowerCase("tr").replace(/[^a-zçğıöşüâîû]/gu, "")); return t.slice(-st.n); }
+  function probs(ctx) {
+    const p = st.net.predict(enc(ctx)), T = num("t-temp") / 100;
+    const q = Array.from(p, (v) => Math.pow(Math.max(v, 1e-12), 1 / T)), s = q.reduce((a, b) => a + b, 0);
+    return q.map((v) => v / s);
+  }
+  function sample(p) { let r = Math.random(); for (let i = 0; i < p.length; i++) { r -= p[i]; if (r <= 0) return i; } return p.length - 1; }
+  function makeWord() { let w = ""; for (let k = 0; k < 20; k++) { const c = st.chars[sample(probs(ctxOf(w)))]; if (c === ".") break; w += c; } return w; }
+  function generate() { st.gen = Array.from({ length: 16 }, makeWord); renderGen(); }
+  function renderGen() {
+    $("#t-gen").innerHTML = st.gen.map((w) => { const old = st.set.has(w);
+      return `<span class="tw ${old ? "old" : ""}" title="${old ? "Eğitim listesinde var (ezber)" : "Listede yok: model yeni bir kelime uydurdu"}">${w ? w[0].toLocaleUpperCase("tr") + w.slice(1) : "(boş)"}</span>`; }).join("");
+  }
+  function trainSteps(k) {
+    const lr = +val("t-lr");
+    for (let b = 0; b < k; b++) {
+      let L = 0;
+      for (let i = 0; i < 32; i++) { const [c, t] = st.pairs[randInt(0, st.pairs.length - 1)]; L += st.net.backward(enc(c), t).loss; }
+      st.net.step(32, lr, "adam", 0); L /= 32;
+      st.loss = st.loss == null ? L : st.loss * 0.97 + L * 0.03; st.steps++;
+      if (st.steps % 5 === 0) st.hist.push(st.loss);
+    }
+  }
+  function setRun(v) { st.run = v; $("#t-run").textContent = v ? "⏸ Duraklat" : "▶ Eğitimi başlat"; }
+
+  function drawProbs() {
+    const text = $("#t-prefix").value, ctx = ctxOf(text), p = probs(ctx);
+    const order = p.map((v, i) => [v, i]).sort((a, b) => b[0] - a[0]).slice(0, 14);
+    const W = pcv._w, H = pcv._h, bw = (W - 20) / 14; pctx.fillStyle = Theme.c.surface; pctx.fillRect(0, 0, W, H);
+    const mx = Math.max(order[0][0], 0.05), f = getComputedStyle(document.body).getPropertyValue("--f-mono");
+    pctx.textAlign = "center";
+    order.forEach(([v, i], k) => {
+      const x = 10 + k * bw, h = (v / mx) * (H - 52);
+      pctx.fillStyle = k === 0 ? Theme.c.accent : Theme.c.muted; pctx.globalAlpha = k === 0 ? 1 : 0.55; pctx.fillRect(x + 4, H - 30 - h, bw - 8, h); pctx.globalAlpha = 1;
+      pctx.fillStyle = Theme.c.ink; pctx.font = "600 15px " + f; pctx.textBaseline = "alphabetic";
+      pctx.fillText(st.chars[i] === "." ? "■" : st.chars[i], x + bw / 2, H - 10);
+      pctx.font = "10px " + f; pctx.fillStyle = Theme.c.muted; pctx.fillText(Math.round(v * 100) + "%", x + bw / 2, H - 34 - h);
+    });
+    $("#t-ctxshow").innerHTML = `Modelin gördüğü son ${st.n} harf: <b style="font-family:var(--f-mono)">${[...ctx].map((c) => (c === "." ? "·" : c)).join(" ")}</b> &nbsp; (■ = kelime biter)`;
+  }
+  function draw() {
+    const base = Math.log(st.V);
+    drawChart(gcv, gctx, [{ data: st.hist.map(() => base), color: Theme.c.line, width: 1.5, dash: [4, 4] }, { data: st.hist, color: Theme.c.accent, width: 2 }], { ymin: 0, xlabel: "adım ×5", empty: "Eğitimi başlat" });
+    drawProbs();
+    $("#t-s-st").textContent = st.steps; $("#t-s-l").textContent = fmt(st.loss);
+    $("#t-s-pp").textContent = st.loss == null ? st.V : Math.exp(st.loss).toFixed(1);
+    $("#t-s-w").textContent = st.words.length;
+    const newc = st.gen.filter((w) => w && !st.set.has(w)).length;
+    $("#t-explain").innerHTML = explain(newc);
+  }
+  function explain(newc) {
+    const pp = st.loss == null ? st.V : Math.exp(st.loss);
+    if (st.steps === 0) return `İlk konuşmamızda sorduğun “Claude nasıl çalışır” sorusunun minyatürü bu. Model, bir kelimede <b>son ${st.n} harfe bakıp sıradaki harfi tahmin etmeyi</b> öğreniyor. Şu an rastgele: ${st.V} karakterin hepsine aşağı yukarı eşit şans veriyor, ürettikleri de anlamsız harf yığını. ▶ Eğitimi başlat ve kelimelerin nasıl “isme benzemeye” başladığını izle.`;
+    if (pp > 10) return "Model önce en kaba kuralları öğreniyor: hangi harfler sık geçer, kelimeler genelde nasıl biter. <b>Şaşkınlık</b> değeri, modelin her adımda ortalama kaç harf arasında kararsız kaldığını gösterir; düştükçe model daha emin olur.";
+    if (pp > 5) return "Hece yapısı oturuyor: sesli ve sessiz harfler sırayla geliyor, Türkçeye özgü ekler (-han, -can, -li gibi) belirmeye başlıyor. Aşağıdaki kutuya bir başlangıç yaz (örneğin “meh” ya da “gül”) ve modelin sıradaki harf için ne düşündüğüne bak.";
+    return `Model artık ikna edici kelimeler üretiyor; son listede ${newc} tanesi <b>eğitim listesinde hiç yok</b>, model onları kendi uydurdu. Sıcaklık ayarı yaratıcılığı belirler: düşük sıcaklıkta hep en olası harfi seçer ve ezberler, yüksek sıcaklıkta cesur ama tuhaf kelimeler kurar. Claude da aynı prensiple çalışır; sadece harf yerine kelime parçalarıyla, ${st.n} harf yerine yüz binlerce kelimelik bağlamla ve milyarlarca parametreyle.`;
+  }
+
+  function init(root) {
+    root.innerHTML = `
+    <style>.tw{display:inline-block;padding:4px 10px;margin:3px;border-radius:999px;background:var(--accent-soft);font-weight:600}.tw.old{background:var(--sunk);color:var(--muted);font-weight:500}</style>
+    <div class="lab">
+      <div class="stage">
+        <div class="card"><h2>Modelin ürettiği kelimeler</h2><p class="sub">Renkli olanlar eğitim listesinde yok (model uydurdu), gri olanlar listede var (ezber).</p><div id="t-gen" style="min-height:90px"></div>
+          <div class="btns" style="margin-top:8px;max-width:360px"><button class="btn" id="t-regen">Yeniden üret</button><button class="btn" id="t-clearp">Kutuyu temizle</button></div></div>
+        <div class="card"><h2>Sıradaki harf ne olsun?</h2><p class="sub">Bir başlangıç yaz; çubuklar modelin her harfe verdiği olasılık. “Bir harf yaz” modelin seçimini ekler.</p>
+          <div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center;margin-bottom:8px">
+            <input id="t-prefix" type="text" value="er" autocomplete="off" style="font:600 18px var(--f-mono);padding:6px 10px;border-radius:7px;border:1px solid var(--line);background:var(--sunk);color:var(--ink);width:220px;max-width:100%">
+            <button class="btn" id="t-next">Bir harf yaz</button><button class="btn" id="t-finish">Kelimeyi bitir</button></div>
+          <p class="note" id="t-ctxshow"></p><canvas id="t-probs"></canvas></div>
+        <div class="stats">${UI.stat("t-s-st", "Adım")}${UI.stat("t-s-l", "Kayıp")}${UI.stat("t-s-pp", "Şaşkınlık")}${UI.stat("t-s-w", "Eğitim kelimesi")}</div>
+        <div class="card"><h2>Kayıp</h2><div class="legend"><span><i style="background:var(--accent)"></i>model</span><span><i style="background:var(--line)"></i>rastgele tahmin seviyesi</span></div><canvas id="t-chart"></canvas></div>
+        <div class="explain" id="t-explain"></div>
+      </div>
+      <aside class="panel">
+        ${UI.group("Eğitim metni", UI.select("t-corpus", "Kelime listesi", [["isim", "Türkçe isimler"], ["il", "Türkiye yer adları"], ["kendi", "Kendi listem"]], "isim")
+          + `<textarea id="t-own" rows="5" placeholder="Kendi kelimelerini yaz (boşluk ya da satırla ayır), sonra Uygula'ya bas" style="width:100%;font:13px var(--f-body);padding:6px;border-radius:6px;border:1px solid var(--line);background:var(--sunk);color:var(--ink)" hidden></textarea>
+            <button class="btn" id="t-apply" hidden>Uygula</button>`)}
+        ${UI.group("Model", UI.range("t-ctx", "Bağlam (kaç harfe baksın)", 1, 5, 1, 3) + UI.select("t-hidden", "Gizli nöron", [["32", "32"], ["64", "64"], ["128", "128"]], "64")
+          + UI.select("t-lr", "Öğrenme oranı", ["0.001", "0.003", "0.01", "0.03"], "0.01"))}
+        ${UI.group("Üretim", UI.range("t-temp", "Sıcaklık", 20, 200, 5, 100, (v) => (v / 100).toFixed(2)))}
+        <div class="btns"><button class="btn primary" id="t-run">▶ Eğitimi başlat</button><button class="btn wide" id="t-reset">Modeli sıfırla</button></div>
+        <p class="note">Model: son harflerin tek-sıcak (one-hot) kodu → gizli katman (tanh) → her harf için olasılık (softmax). Bağlamı 1 yaparsan model yalnızca bir önceki harfe bakar; farkı dene.</p>
+      </aside>
+    </div>`;
+    pcv = $("#t-probs"); pctx = setupCanvas(pcv, 640, 190); gcv = $("#t-chart"); gctx = setupCanvas(gcv, 640, 160);
+    $("#t-run").onclick = () => setRun(!st.run);
+    $("#t-reset").onclick = () => { setRun(false); build(); };
+    $("#t-regen").onclick = () => { generate(); draw(); };
+    $("#t-clearp").onclick = () => { $("#t-prefix").value = ""; draw(); };
+    $("#t-prefix").addEventListener("input", drawProbs);
+    $("#t-next").onclick = () => { const c = st.chars[sample(probs(ctxOf($("#t-prefix").value)))]; $("#t-prefix").value += c === "." ? "■" : c; drawProbs(); };
+    $("#t-finish").onclick = () => { let w = $("#t-prefix").value.replace(/■.*$/, ""); for (let k = 0; k < 20; k++) { const c = st.chars[sample(probs(ctxOf(w)))]; if (c === ".") break; w += c; } $("#t-prefix").value = w; drawProbs(); };
+    $("#t-corpus").onchange = () => { const own = val("t-corpus") === "kendi"; $("#t-own").hidden = !own; $("#t-apply").hidden = !own; setRun(false); if (!own) build(); };
+    $("#t-apply").onclick = () => { setRun(false); build(); };
+    for (const id of ["t-ctx", "t-hidden"]) $("#" + id).onchange = () => { setRun(false); build(); };
+    $("#t-temp").addEventListener("change", () => { generate(); draw(); });
+    $("#t-temp").addEventListener("input", drawProbs);
+    build();
+  }
+  function frame() {
+    if (!st.run) return;
+    st.frame++; trainSteps(6);
+    if (st.frame % 40 === 0) generate();
+    if (st.frame % 3 === 0) draw();
+  }
+  return { init, frame, onTheme: () => draw() };
+})();
 // ===================================================================== 4) EVRİMLE ARABA SÜRME
 Modules.araba = (() => {
   const W = 900, H = 560, N = 520, HW = 25, RAYS = [-1.05, -0.5, 0, 0.5, 1.05], RL = 150, SIZES = [6, 8, 2], MAXSTEP = 2600;
@@ -1206,6 +1580,7 @@ Modules.araba = (() => {
     zorlu: [[2, 0.12, 0.2], [3, 0.16, 2.0], [4, 0.1, 0.7], [6, 0.05, 1.1], [7, 0.03, 0.4]],
   };
   function makeTrack(kind) {
+    if (kind === "cizim" && st.drawn) return buildTrack(st.drawn.map((p) => p.slice()));
     const terms = kind === "rastgele" ? [[2, rand(0.04, 0.14), rand(0, 6)], [3, rand(0.04, 0.14), rand(0, 6)], [4, rand(0, 0.08), rand(0, 6)], [5, rand(0, 0.05), rand(0, 6)]] : TRACKS[kind];
     const c = [];
     for (let i = 0; i < N; i++) {
@@ -1217,6 +1592,9 @@ Modules.araba = (() => {
     const xs = c.map((p) => p[0]), ys = c.map((p) => p[1]), m = HW + 14;
     const x0 = Math.min(...xs), x1 = Math.max(...xs), y0 = Math.min(...ys), y1 = Math.max(...ys);
     for (const p of c) { p[0] = m + ((p[0] - x0) / (x1 - x0)) * (W - 2 * m); p[1] = m + ((p[1] - y0) / (y1 - y0)) * (H - 2 * m); }
+    buildTrack(c);
+  }
+  function buildTrack(c) {
     const L = [], R = [], T = [];
     for (let i = 0; i < N; i++) {
       const p = c[(i - 1 + N) % N], q = c[(i + 1) % N]; let tx = q[0] - p[0], ty = q[1] - p[1]; const l = Math.hypot(tx, ty); tx /= l; ty /= l;
@@ -1224,6 +1602,22 @@ Modules.araba = (() => {
     }
     st.track = { c, L, R, T };
     paintTrack();
+  }
+  // elle çizilen kapalı eğriyi N eşit aralıklı noktaya çevir ve yumuşat
+  function fromDrawing(raw) {
+    if (raw.length < 10) return "Çizgi çok kısa.";
+    const pts = [...raw, raw[0]], cum = [0];
+    for (let i = 1; i < pts.length; i++) cum.push(cum[i - 1] + Math.hypot(pts[i][0] - pts[i - 1][0], pts[i][1] - pts[i - 1][1]));
+    const tot = cum[cum.length - 1]; if (tot < 900) return "Pist çok kısa; tuvalin büyük bölümünü dolaşan bir döngü çiz.";
+    if (Math.hypot(raw[0][0] - raw[raw.length - 1][0], raw[0][1] - raw[raw.length - 1][1]) > 120) return "Döngü kapanmadı; çizgiyi başladığın yere yakın bitir.";
+    let c = [], j = 0;
+    for (let i = 0; i < N; i++) { const d = (i / N) * tot; while (cum[j + 1] < d) j++; const k = (d - cum[j]) / Math.max(cum[j + 1] - cum[j], 1e-9); c.push([pts[j][0] + (pts[j + 1][0] - pts[j][0]) * k, pts[j][1] + (pts[j + 1][1] - pts[j][1]) * k]); }
+    for (let pass = 0; pass < 6; pass++) c = c.map((_, i) => { let sx = 0, sy = 0; for (let k = -3; k <= 3; k++) { const q = c[(i + k + N) % N]; sx += q[0]; sy += q[1]; } return [sx / 7, sy / 7]; });
+    for (const p of c) { p[0] = clamp(p[0], HW + 6, W - HW - 6); p[1] = clamp(p[1], HW + 6, H - HW - 6); }
+    const gap = Math.ceil(((2 * HW + 20) / tot) * N * 2) + 4;
+    for (let a = 0; a < N; a += 3) for (let b = a + gap; b < N; b += 3) { if (N - (b - a) < gap) continue;
+      if (Math.hypot(c[a][0] - c[b][0], c[a][1] - c[b][1]) < 2 * HW + 8) return "Pistin iki kısmı birbirine çok yakın ya da kesişiyor; daha ferah bir döngü çiz."; }
+    st.drawn = c; return null;
   }
   function paintTrack() { // pisti bir kez arka plana çiz
     const { c, L, R } = st.track;
@@ -1254,7 +1648,8 @@ Modules.araba = (() => {
 
   function spawn(genome, elite) {
     const t = st.track;
-    return { g: genome, x: t.c[0][0], y: t.c[0][1], a: Math.atan2(t.T[0][1], t.T[0][0]), v: 0, alive: true, idx: 0, prog: 0, best: 0, lastImp: 0, sens: new Array(5).fill(1), elite, acts: null };
+    const car = { g: genome, x: t.c[0][0], y: t.c[0][1], a: Math.atan2(t.T[0][1], t.T[0][0]), v: 0, alive: true, idx: 0, prog: 0, best: 0, lastImp: 0, sens: new Array(5).fill(1), elite, acts: null };
+    sense(car); return car;
   }
   function newPopulation() {
     st.gen = 1; st.best = []; st.avg = []; st.bestEver = 0; st.laps = 0;
@@ -1316,6 +1711,15 @@ Modules.araba = (() => {
   function setRun(v) { st.run = v; $("#a-run").textContent = v ? "⏸ Duraklat" : "▶ Başlat"; }
 
   function draw() {
+    if (st.drawMode) {
+      ctx.fillStyle = Theme.c.sunk; ctx.fillRect(0, 0, W, H);
+      ctx.fillStyle = Theme.c.muted; ctx.font = "16px " + getComputedStyle(document.body).getPropertyValue("--f-body"); ctx.textAlign = "center"; ctx.textBaseline = "middle";
+      ctx.fillText(st.drawMsg || "Fareyi basılı tutarak kapalı bir döngü çiz. Başladığın yere yakın bitir.", W / 2, 30);
+      if (st.raw && st.raw.length > 1) { ctx.strokeStyle = Theme.c.accent; ctx.lineWidth = HW * 2; ctx.globalAlpha = 0.35; ctx.lineCap = ctx.lineJoin = "round";
+        ctx.beginPath(); st.raw.forEach(([x, y], i) => (i ? ctx.lineTo(x, y) : ctx.moveTo(x, y))); ctx.stroke(); ctx.globalAlpha = 1;
+        ctx.fillStyle = Theme.c.ink; ctx.beginPath(); ctx.arc(st.raw[0][0], st.raw[0][1], 6, 0, 7); ctx.fill(); }
+      return;
+    }
     ctx.drawImage(trackC, 0, 0, W, H);
     let lead = null; for (const c of st.pop) if (c.alive && (!lead || c.prog > lead.prog)) lead = c;
     if (!lead) lead = st.pop[0];
@@ -1369,7 +1773,7 @@ Modules.araba = (() => {
         <div class="explain" id="a-explain"></div>
       </div>
       <aside class="panel">
-        ${UI.group("Pist", UI.select("a-track", "Pist", [["oval", "Oval"], ["kivrimli", "Kıvrımlı"], ["zorlu", "Zorlu"], ["rastgele", "Rastgele"]], "kivrimli") + `<p class="note">Pisti değiştirince beyinler korunur.</p>`)}
+        ${UI.group("Pist", UI.select("a-track", "Pist", [["oval", "Oval"], ["kivrimli", "Kıvrımlı"], ["zorlu", "Zorlu"], ["rastgele", "Rastgele"]], "kivrimli") + `<button class="btn" id="a-draw">✎ Kendi pistini çiz</button><p class="note">Pisti değiştirince beyinler korunur.</p>`)}
         ${UI.group("Evrim", UI.range("a-pop", "Nüfus", 10, 200, 10, 60) + UI.range("a-mut", "Mutasyon oranı", 1, 50, 1, 10, (v) => "%" + v) + UI.range("a-str", "Mutasyon gücü", 5, 150, 5, 50, (v) => (v / 100).toFixed(2)))}
         ${UI.group("Görünüm", UI.range("a-speed", "Hız (adım/kare)", 1, 30, 1, 3) + UI.check("a-rays", "Algılayıcıları göster", true))}
         <div class="btns"><button class="btn primary" id="a-run">▶ Başlat</button><button class="btn" id="a-next">Nesli bitir</button><button class="btn" id="a-reset">Baştan</button></div>
@@ -1381,14 +1785,26 @@ Modules.araba = (() => {
     gcv = $("#a-chart"); gctx = setupCanvas(gcv, 360, 200);
     [trackC, trackX] = offscreen(W * 2, H * 2);
     makeTrack(val("a-track")); newPopulation();
-    $("#a-run").onclick = () => setRun(!st.run);
+    $("#a-run").onclick = () => { if (st.drawMode) return; setRun(!st.run); };
     $("#a-next").onclick = () => { evolve(); draw(); };
     $("#a-reset").onclick = () => { newPopulation(); draw(); };
     $("#a-pop").onchange = () => { newPopulation(); draw(); };
-    $("#a-track").onchange = () => { makeTrack(val("a-track")); restartGen(st.pop.map((c) => c.g), 0); st.laps = 0; draw(); };
+    $("#a-draw").onclick = () => { setRun(false); st.drawMode = true; st.raw = null; st.drawMsg = ""; $("#a-draw").classList.add("on"); draw(); };
+    let drawing = false;
+    cv.addEventListener("pointerdown", (e) => { if (!st.drawMode) return; drawing = true; cv.setPointerCapture(e.pointerId); st.raw = [canvasPos(cv, e)]; st.drawMsg = ""; draw(); });
+    cv.addEventListener("pointermove", (e) => { if (!drawing) return; const p = canvasPos(cv, e), l = st.raw[st.raw.length - 1]; if (Math.hypot(p[0] - l[0], p[1] - l[1]) > 4) { st.raw.push(p); draw(); } });
+    cv.addEventListener("pointerup", () => {
+      if (!drawing) return; drawing = false;
+      const err = fromDrawing(st.raw);
+      if (err) { st.drawMsg = err + " Tekrar dene."; draw(); return; }
+      st.drawMode = false; $("#a-draw").classList.remove("on");
+      if (!$("#a-track option[value=cizim]")) $("#a-track").insertAdjacentHTML("beforeend", '<option value="cizim">Çizdiğim pist</option>');
+      $("#a-track").value = "cizim"; $("#a-track").onchange();
+    });
+    $("#a-track").onchange = () => { st.drawMode = false; $("#a-draw").classList.remove("on"); makeTrack(val("a-track")); restartGen(st.pop.map((c) => c.g), 0); st.laps = 0; draw(); };
     draw();
   }
-  function frame() { if (!st.run) return; for (let i = 0; i < num("a-speed"); i++) tick(); draw(); }
+  function frame() { if (!st.run || st.drawMode) return; for (let i = 0; i < num("a-speed"); i++) tick(); draw(); }
   return { init, frame, onTheme: () => { paintTrack(); draw(); } };
 })();
 // ===================================================================== 5) PEKİŞTİRMELİ ÖĞRENME AJANI
@@ -1566,6 +1982,142 @@ Modules.ajan = (() => {
     st.acc += SPEEDS[num("q-speed")];
     let n = 0; while (st.acc >= 1 && n < 2000) { st.acc -= 1; n++; stepAgent(true); if (!st.run) break; }
     draw();
+  }
+  return { init, frame, onTheme: () => draw() };
+})();
+// ===================================================================== 7) YILAN (Derin Q-ağı)
+Modules.yilan = (() => {
+  const G = 20, CS = 22, DIRS = [[1, 0], [0, 1], [-1, 0], [0, -1]]; // sağ, aşağı, sol, yukarı (saat yönü)
+  const IN = ["Önde tehlike", "Sağda tehlike", "Solda tehlike", "Gidiş →", "Gidiş ↓", "Gidiş ←", "Gidiş ↑", "Yem solda", "Yem sağda", "Yem yukarıda", "Yem aşağıda"];
+  const ACT = ["Düz", "Sağa dön", "Sola dön"];
+  const SPEEDS = [0.15, 0.35, 1, 4, 20, 80];
+  const st = { run: false, net: null, mem: [], games: 0, scores: [], record: 0, steps: 0, acc: 0, eps: 1, snake: null, dir: 0, food: null, hunger: 0, score: 0, lastQ: [0, 0, 0], lastS: null, lastA: 0, frame: 0, demo: false };
+  let cv, ctx, ncv, nctx, gcv, gctx;
+
+  function newNet() {
+    st.net = new MLP([11, 32, 3], "relu", "linear");
+    st.mem = []; st.games = 0; st.scores = []; st.record = 0; st.steps = 0; st.eps = 1; newGame();
+  }
+  function newGame() {
+    st.snake = [[5, 10], [4, 10], [3, 10]]; st.dir = 0; st.score = 0; st.hunger = 0; placeFood();
+  }
+  function placeFood() {
+    do st.food = [randInt(0, G - 1), randInt(0, G - 1)]; while (st.snake.some(([x, y]) => x === st.food[0] && y === st.food[1]));
+  }
+  const hit = ([x, y], body) => x < 0 || y < 0 || x >= G || y >= G || body.some(([a, b]) => a === x && b === y);
+  function state() {
+    const [hx, hy] = st.snake[0], d = st.dir, body = st.snake.slice(0, -1);
+    const ahead = (k) => { const v = DIRS[(d + k + 4) % 4]; return [hx + v[0], hy + v[1]]; };
+    return Float64Array.from([
+      hit(ahead(0), body), hit(ahead(1), body), hit(ahead(-1), body),
+      d === 0, d === 1, d === 2, d === 3,
+      st.food[0] < hx, st.food[0] > hx, st.food[1] < hy, st.food[1] > hy,
+    ].map(Number));
+  }
+  function act(s, eps) {
+    st.lastQ = Array.from(st.net.predict(s));
+    if (Math.random() < eps) return randInt(0, 2);
+    let b = 0; for (let a = 1; a < 3; a++) if (st.lastQ[a] > st.lastQ[b]) b = a; return b;
+  }
+  function trainBatch(n) {
+    if (st.mem.length < 64) return;
+    const gamma = num("y-gamma") / 100;
+    for (let i = 0; i < n; i++) {
+      const [s, a, r, s2, done] = st.mem[randInt(0, st.mem.length - 1)];
+      const t = done ? r : r + gamma * Math.max(...st.net.predict(s2));
+      st.net.backwardIdx(s, a, t);
+    }
+    st.net.step(n, +val("y-lr"), "adam", 0);
+  }
+  function tick() {
+    const s = state(), eps = st.demo ? 0 : st.eps, a = act(s, eps);
+    st.lastS = s; st.lastA = a;
+    st.dir = a === 0 ? st.dir : a === 1 ? (st.dir + 1) % 4 : (st.dir + 3) % 4;
+    const [hx, hy] = st.snake[0], v = DIRS[st.dir], nh = [hx + v[0], hy + v[1]];
+    let r = 0, done = false;
+    const eats = nh[0] === st.food[0] && nh[1] === st.food[1];
+    if (hit(nh, eats ? st.snake : st.snake.slice(0, -1))) { r = -10; done = true; }
+    else {
+      st.snake.unshift(nh);
+      if (eats) { r = 10; st.score++; st.hunger = 0; if (st.snake.length < G * G) placeFood(); } else st.snake.pop();
+      st.hunger++; if (st.hunger > 100 + st.snake.length * 4) { r = -10; done = true; }
+    }
+    if (!st.demo) {
+      st.mem.push([s, a, r, done ? s : state(), done]); if (st.mem.length > 30000) st.mem.splice(0, 5000);
+      trainBatch(16); st.steps++;
+    }
+    if (done) {
+      if (!st.demo) { st.games++; st.scores.push(st.score); if (st.scores.length > 3000) st.scores.splice(0, 1000); st.eps = Math.max(0.01, num("y-eps0") / 100 * Math.pow(0.96, st.games)); }
+      st.record = Math.max(st.record, st.score);
+      if (st.demo) { st.demo = false; setRun(false); $("#y-demo").classList.remove("on"); }
+      newGame();
+    }
+  }
+  function setRun(v) { st.run = v; $("#y-run").textContent = v ? "⏸ Duraklat" : "▶ Başlat"; }
+
+  function draw() {
+    ctx.fillStyle = Theme.c.sunk; ctx.fillRect(0, 0, G * CS, G * CS);
+    ctx.strokeStyle = Theme.c.line; ctx.lineWidth = 0.5;
+    for (let i = 0; i <= G; i++) { ctx.beginPath(); ctx.moveTo(i * CS, 0); ctx.lineTo(i * CS, G * CS); ctx.moveTo(0, i * CS); ctx.lineTo(G * CS, i * CS); ctx.stroke(); }
+    ctx.fillStyle = Theme.c.bad; ctx.beginPath(); ctx.arc(st.food[0] * CS + CS / 2, st.food[1] * CS + CS / 2, CS * 0.36, 0, 7); ctx.fill();
+    st.snake.forEach(([x, y], i) => { ctx.fillStyle = i === 0 ? Theme.c.ink : rgbStr(mix(Theme.rgb.accent, Theme.rgb.good, i / st.snake.length));
+      ctx.fillRect(x * CS + 2, y * CS + 2, CS - 4, CS - 4); });
+    const [hx, hy] = st.snake[0]; ctx.fillStyle = Theme.c.surface; const v = DIRS[st.dir];
+    ctx.beginPath(); ctx.arc(hx * CS + CS / 2 + v[0] * 4 - v[1] * 4, hy * CS + CS / 2 + v[1] * 4 + v[0] * 4, 2.5, 0, 7); ctx.arc(hx * CS + CS / 2 + v[0] * 4 + v[1] * 4, hy * CS + CS / 2 + v[1] * 4 - v[0] * 4, 2.5, 0, 7); ctx.fill();
+    // ağ ve Q değerleri
+    const NW = ncv._w, NH = ncv._h; nctx.fillStyle = Theme.c.surface; nctx.fillRect(0, 0, NW, NH);
+    const s = st.lastS || state(), { A } = st.net.forward(s);
+    const outs = A[2], mo = Math.max(1e-6, ...Array.from(outs).map(Math.abs));
+    let hm = 1e-6; for (const a of A[1]) hm = Math.max(hm, a);
+    drawNet(nctx, { x: 130, y: 6, w: NW - 230, h: NH - 26 }, [11, 32, 3], st.net.W, { node: 9, gap: 2,
+      act: [Array.from(s).map((v) => v * 2 - 1), Array.from(A[1]).map((v) => v / hm), Array.from(outs).map((v) => v / mo)],
+      labels: ["Durum", "Gizli (32)", "Q"], side: [IN, null, ACT.map((t, i) => `${t} ${outs[i].toFixed(1)}`)] });
+    const ma = []; let sum = 0; st.scores.forEach((v, i) => { sum += v; if (i >= 30) sum -= st.scores[i - 30]; ma.push(sum / Math.min(i + 1, 30)); });
+    drawChart(gcv, gctx, [{ data: st.scores, color: Theme.c.muted, width: 1, alpha: 0.6 }, { data: ma, color: Theme.c.accent, width: 2.5 }], { ymin: 0, xlabel: "oyun", yfmt: (v) => v.toFixed(0) });
+    $("#y-s-g").textContent = st.games; $("#y-s-sc").textContent = st.score; $("#y-s-rec").textContent = st.record;
+    $("#y-s-avg").textContent = ma.length ? ma[ma.length - 1].toFixed(1) : "–"; $("#y-s-eps").textContent = st.demo ? "0" : st.eps.toFixed(2);
+    $("#y-explain").innerHTML = explain(ma[ma.length - 1] || 0);
+  }
+  function explain(avg) {
+    if (st.games === 0 && st.steps < 30) return "Önceki sekmedeki ajan her kare için ayrı bir tablo tutuyordu. Yılan oyununda olası durum sayısı çok fazla, tablo imkânsız. Bu yüzden tablo yerine bir <b>sinir ağı</b> kullanıyoruz (Derin Q-Ağı, DQN): ağ, yılanın gördüğü 11 basit bilgiden (tehlike nerede, yem nerede) üç hamlenin değerini <b>tahmin etmeyi</b> öğreniyor.";
+    if (st.games < 15) return "Başta keşif oranı yüksek: yılan çoğunlukla rastgele hareket ediyor ve duvara çarpıyor. Her hamle bir <b>deneyim</b> olarak hafızaya yazılıyor (yem +10, ölüm −10). Ağ bu hafızadan rastgele örnekler çekerek eğitiliyor; buna <b>deneyim tekrarı</b> denir.";
+    if (avg < 5) return "Keşif azaldıkça ağın kendi kararları öne çıkıyor. Sağdaki şemada <b>Q değerlerine</b> bak: önde tehlike varken “Düz” hamlesinin değeri düşüyor, yeme doğru dönüş yükseliyor. Hız düğmesiyle eğitimi hızlandırabilirsin.";
+    if (avg < 20) return "Yılan artık yeme yöneliyor ve duvarlardan kaçıyor. Ama uzadıkça kendi kuyruğuna takılıyor: ağ sadece bir kare ötesini görüyor, kendini bir köşeye <b>hapsetmeyi</b> önceden fark edemiyor. Ajanın başarısı, ona verdiğimiz bilgiyle sınırlı.";
+    return "Ağ gayet iyi oynuyor. “Öğrendiğini göster” ile keşif kapalı bir oyun izle. Rekorun bir yerde tıkandığını göreceksin: daha uzun oyunlar için ağın tüm tahtayı (örneğin piksel olarak) görmesi ve daha büyük bir ağ gerekir; Atari oyunlarını oynayan DQN tam olarak böyle çalışıyordu.";
+  }
+
+  function init(root) {
+    root.innerHTML = `
+    <div class="lab">
+      <div class="stage">
+        <div class="row">
+          <div class="card" style="flex:0 1 460px"><h2>Oyun</h2><p class="sub">Yılan kırmızı yemi yemeye çalışıyor; duvara ya da kendine çarparsa oyun biter.</p><canvas id="y-main" class="framed" style="max-width:440px"></canvas></div>
+          <div class="card" style="flex:1 1 360px"><h2>Ajanın beyni</h2><p class="sub">Solda yılanın gördükleri (turuncu = evet), sağda her hamlenin tahmini değeri. En büyüğü seçilir.</p><canvas id="y-net"></canvas></div>
+        </div>
+        <div class="stats">${UI.stat("y-s-g", "Oyun")}${UI.stat("y-s-sc", "Bu oyundaki skor")}${UI.stat("y-s-avg", "Ort. skor (son 30)")}${UI.stat("y-s-rec", "Rekor")}${UI.stat("y-s-eps", "Keşif oranı")}</div>
+        <div class="card"><h2>Oyun başına skor</h2><div class="legend"><span><i style="background:var(--muted)"></i>her oyun</span><span><i style="background:var(--accent)"></i>son 30 ortalaması</span></div><canvas id="y-chart"></canvas></div>
+        <div class="explain" id="y-explain"></div>
+      </div>
+      <aside class="panel">
+        ${UI.group("Öğrenme", UI.select("y-lr", "Öğrenme oranı", ["0.0003", "0.001", "0.003", "0.01"], "0.001")
+          + UI.range("y-gamma", "Gelecek indirimi γ", 50, 99, 1, 90, (v) => (v / 100).toFixed(2))
+          + UI.range("y-eps0", "Başlangıç keşfi", 0, 100, 5, 100, (v) => (v / 100).toFixed(2)))}
+        ${UI.group("Hız", UI.range("y-speed", "Hız", 0, SPEEDS.length - 1, 1, 2, (v) => SPEEDS[v] + " adım/kare"))}
+        <div class="btns"><button class="btn primary" id="y-run">▶ Başlat</button><button class="btn" id="y-demo">Öğrendiğini göster</button><button class="btn" id="y-reset">Sıfırla</button></div>
+        <p class="note">Yemek +10, ölmek −10. Ağ: 11 girdi → 32 gizli nöron (ReLU) → 3 hamle değeri. Eğitim Adam ile, deneyim hafızasından rastgele örneklerle yapılıyor.</p>
+      </aside>
+    </div>`;
+    cv = $("#y-main"); ctx = setupCanvas(cv, G * CS, G * CS); ncv = $("#y-net"); nctx = setupCanvas(ncv, 440, 380); gcv = $("#y-chart"); gctx = setupCanvas(gcv, 700, 170);
+    $("#y-run").onclick = () => { st.demo = false; $("#y-demo").classList.remove("on"); setRun(!st.run); };
+    $("#y-demo").onclick = () => { newGame(); st.demo = true; $("#y-demo").classList.add("on"); setRange("y-speed", Math.min(num("y-speed"), 1)); setRun(true); };
+    $("#y-reset").onclick = () => { setRun(false); newNet(); draw(); };
+    newNet(); draw();
+  }
+  function frame() {
+    if (!st.run) return;
+    st.acc += SPEEDS[num("y-speed")]; let n = 0;
+    while (st.acc >= 1 && st.run) { st.acc -= 1; tick(); n++; }
+    if (n) draw();
   }
   return { init, frame, onTheme: () => draw() };
 })();
