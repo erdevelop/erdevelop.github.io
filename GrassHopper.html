@@ -169,6 +169,7 @@
         <button type="button" data-p="facade">Polar cephe<small>silindir · çekim noktası</small></button>
         <button type="button" data-p="planar">Panel analizi<small>düzlemsellik · panel listesi</small></button>
         <button type="button" data-p="voronoi">Voronoi skylight<small>populate · voronoi · attractor</small></button>
+        <button type="button" data-p="frames">Düzlemlerle tünel<small>perp frames · rotate plane · loft</small></button>
         <button type="button" data-p="fins">Twist kanat cephe<small>graph mapper · ifade · surface box</small></button>
       </div></div>
     <button id="newBtn" type="button" title="Yeni boş tanım">Yeni</button>
@@ -235,10 +236,18 @@ const D2R = Math.PI / 180;
 
 /* ================= geometry helpers ================= */
 const P = (x, y, z) => ({ t: 'pt', x, y, z });
-const GEO = new Set(['pt', 'crv', 'srf', 'mesh']);
+const GEO = new Set(['pt', 'crv', 'srf', 'mesh', 'pln']);
 const isPt = g => g && g.t === 'pt';
 const isGeo = g => !!(g && typeof g === 'object' && GEO.has(g.t));
 const isCol = v => v && v.t === 'col';
+const isPln = g => g && g.t === 'pln';
+function mkPln(o, x, y) { const X = vnorm(x); let Z = vcross(X, y); if (vlen(Z) < 1e-12) throw new Error('Düzlem: X ve Y eksenleri paralel'); Z = vnorm(Z); return { t: 'pln', o: o.slice(), x: X, y: vcross(Z, X), z: Z }; }
+function plnFromZ(o, z) { const Z = vnorm(z); if (vlen(z) < 1e-12) throw new Error('Düzlem: normal sıfır'); const X = Math.abs(Z[2]) > 0.9999 ? [1, 0, 0] : vnorm(vcross([0, 0, 1], Z)); return mkPln(o, X, vcross(Z, X)); }
+function asPln(v, name) { if (isPln(v)) return v; if (isPt(v)) return { t: 'pln', o: [v.x, v.y, v.z], x: [1, 0, 0], y: [0, 1, 0], z: [0, 0, 1] }; if (typeof v === 'number') return { t: 'pln', o: [0, 0, v], x: [1, 0, 0], y: [0, 1, 0], z: [0, 0, 1] }; throw new Error(`${name}: düzlem bekleniyor`); }
+const vecA = (v, name) => { v = asPt(v, name); return [v.x, v.y, v.z]; };
+const onPln = (F, u, v, w = 0) => [0, 1, 2].map(k => F.o[k] + F.x[k] * u + F.y[k] * v + F.z[k] * w);
+const inPln = (F, p) => { const d = [p[0] - F.o[0], p[1] - F.o[1], p[2] - F.o[2]]; return [vdot(d, F.x), vdot(d, F.y), vdot(d, F.z)]; };
+function rotAxis(p, c, k, a) { const v = [p[0] - c[0], p[1] - c[1], p[2] - c[2]], co = Math.cos(a), si = Math.sin(a), kx = vcross(k, v), kd = vdot(k, v); return [0, 1, 2].map(i => c[i] + v[i] * co + kx[i] * si + k[i] * kd * (1 - co)); }
 function num(v, name) { if (typeof v === 'boolean') return v ? 1 : 0; if (typeof v === 'number' && isFinite(v)) return v; if (v && typeof v === 'object') throw new Error(`${name}: sayı bekleniyor`); const n = +String(v).replace(',', '.'); if (isFinite(n)) return n; throw new Error(`${name}: sayı bekleniyor`); }
 function bool(v) { if (typeof v === 'boolean') return v; if (typeof v === 'number') return v !== 0; if (typeof v === 'string') return /^(true|1|yes|evet|doğru)$/i.test(v.trim()); return !!v; }
 function asPt(v, name) { if (isPt(v)) return v; if (typeof v === 'number') return P(0, 0, v); throw new Error(`${name}: nokta/vektör bekleniyor`); }
@@ -251,9 +260,10 @@ function mapG(g, f) {
   if (g.t === 'crv') return { ...g, p: g.p.map(f) };
   if (g.t === 'srf') return { ...g, g: g.g.map(r => r.map(f)) };
   if (g.t === 'mesh') return { ...g, v: g.v.map(f) };
+  if (g.t === 'pln') { const o = f(g.o), ax = a => vnorm(vsub(f(vadd(g.o, a)), o)); return { t: 'pln', o, x: ax(g.x), y: ax(g.y), z: ax(g.z) }; }
   return g;
 }
-function pts(g) { if (g.t === 'pt') return [[g.x, g.y, g.z]]; if (g.t === 'crv') return g.p; if (g.t === 'srf') return g.g.flat(); if (g.t === 'mesh') return g.v; return []; }
+function pts(g) { if (g.t === 'pt') return [[g.x, g.y, g.z]]; if (g.t === 'crv') return g.p; if (g.t === 'srf') return g.g.flat(); if (g.t === 'mesh') return g.v; if (g.t === 'pln') return [g.o]; return []; }
 function centroid(g) { const a = pts(g); if (!a.length) return [0, 0, 0]; const s = [0, 0, 0]; a.forEach(p => { s[0] += p[0]; s[1] += p[1]; s[2] += p[2]; }); return s.map(x => x / a.length); }
 const rotZ = (p, a, c = [0, 0, 0]) => { const s = Math.sin(a), co = Math.cos(a), x = p[0] - c[0], y = p[1] - c[1]; return [c[0] + x * co - y * s, c[1] + x * s + y * co, p[2]]; };
 const vsub = (a, b) => [a[0] - b[0], a[1] - b[1], a[2] - b[2]], vadd = (a, b) => [a[0] + b[0], a[1] + b[1], a[2] + b[2]], vmul = (a, s) => [a[0] * s, a[1] * s, a[2] * s];
@@ -480,6 +490,17 @@ const C = {
   decon: { cat: 'Vector', name: 'Deconstruct Point', nick: 'pDecon', ins: [{ n: 'P' }], outs: ['X', 'Y', 'Z'], item: p => { p = asPt(p, 'P'); return [p.x, p.y, p.z]; } },
   vec: { cat: 'Vector', name: 'Vector XYZ', nick: 'Vec', ins: [{ n: 'X', d: 0 }, { n: 'Y', d: 0 }, { n: 'Z', d: 1 }], outs: ['V'], item: (x, y, z) => [P(num(x, 'X'), num(y, 'Y'), num(z, 'Z'))] },
   unitz: { cat: 'Vector', name: 'Unit Z', nick: 'Z', ins: [{ n: 'F', d: 1 }], outs: ['V'], item: f => [P(0, 0, num(f, 'F'))] },
+  xyplane: { cat: 'Vector', name: 'XY Plane', nick: 'XY', ins: [{ n: 'O', d: P(0, 0, 0) }], outs: ['P'], item: o => [mkPln(vecA(o, 'O'), [1, 0, 0], [0, 1, 0])] },
+  xzplane: { cat: 'Vector', name: 'XZ Plane', nick: 'XZ', ins: [{ n: 'O', d: P(0, 0, 0) }], outs: ['P'], item: o => [mkPln(vecA(o, 'O'), [1, 0, 0], [0, 0, 1])] },
+  yzplane: { cat: 'Vector', name: 'YZ Plane', nick: 'YZ', ins: [{ n: 'O', d: P(0, 0, 0) }], outs: ['P'], item: o => [mkPln(vecA(o, 'O'), [0, 1, 0], [0, 0, 1])] },
+  cplane: { cat: 'Vector', name: 'Construct Plane', nick: 'Pl', ins: [{ n: 'O', d: P(0, 0, 0) }, { n: 'X', d: P(1, 0, 0) }, { n: 'Y', d: P(0, 1, 0) }], outs: ['P'], item: (o, x, y) => [mkPln(vecA(o, 'O'), vecA(x, 'X'), vecA(y, 'Y'))] },
+  plnnormal: { cat: 'Vector', name: 'Plane Normal', nick: 'PlN', ins: [{ n: 'O', d: P(0, 0, 0) }, { n: 'Z', d: P(0, 0, 1) }], outs: ['P'], item: (o, z) => [plnFromZ(vecA(o, 'O'), vecA(z, 'Z'))] },
+  pln3pt: { cat: 'Vector', name: 'Plane 3Pt', nick: 'Pl3Pt', ins: [{ n: 'A', d: P(0, 0, 0) }, { n: 'B', d: P(1, 0, 0) }, { n: 'C', d: P(0, 1, 0) }], outs: ['P'], item: (a, b, c) => { a = vecA(a, 'A'); return [mkPln(a, vsub(vecA(b, 'B'), a), vsub(vecA(c, 'C'), a))]; } },
+  deplane: { cat: 'Vector', name: 'Deconstruct Plane', nick: 'DePl', ins: [{ n: 'P' }], outs: ['O', 'X', 'Y', 'Z'], item: p => { const F = asPln(p, 'P'); return [P(...F.o), P(...F.x), P(...F.y), P(...F.z)]; } },
+  plnoffset: { cat: 'Vector', name: 'Offset Plane', nick: 'PlOff', ins: [{ n: 'P' }, { n: 'D', d: 1 }], outs: ['P'], item: (p, d) => { const F = asPln(p, 'P'); return [{ ...F, o: onPln(F, 0, 0, num(d, 'D')) }]; } },
+  plnrot: { cat: 'Vector', name: 'Rotate Plane', nick: 'PRot', ins: [{ n: 'P' }, { n: 'A', d: 45 }], outs: ['P'], item: (p, a) => { const F = asPln(p, 'P'); a = num(a, 'A') * D2R; const c = Math.cos(a), s = Math.sin(a); return [{ ...F, x: vadd(vmul(F.x, c), vmul(F.y, s)), y: vadd(vmul(F.y, c), vmul(F.x, -s)) }]; } },
+  plnpt: { cat: 'Vector', name: 'Plane Point (u,v,w)', nick: 'PlPt', ins: [{ n: 'P' }, { n: 'U', d: 0 }, { n: 'V', d: 0 }, { n: 'W', d: 0 }], outs: ['Pt'], item: (p, u, v, w) => [P(...onPln(asPln(p, 'P'), num(u, 'U'), num(v, 'V'), num(w, 'W')))] },
+  plncoord: { cat: 'Vector', name: 'Plane Coordinates', nick: 'PlCoord', ins: [{ n: 'Pt' }, { n: 'P' }], outs: ['U', 'V', 'W'], item: (pt, p) => inPln(asPln(p, 'P'), vecA(pt, 'Pt')) },
   dist: { cat: 'Vector', name: 'Distance', nick: 'Dist', ins: [{ n: 'A' }, { n: 'B' }], outs: ['D'], item: (a, b) => [vdist(centroid(asGeo(a)), centroid(asGeo(b)))] },
   cen: { cat: 'Vector', name: 'Centroid', nick: 'Cen', ins: [{ n: 'G' }], outs: ['C'], item: g => { const c = centroid(asGeo(g)); return [P(c[0], c[1], c[2])]; } },
   attractor: { cat: 'Vector', name: 'Attractor', nick: 'Attr', ins: [{ n: 'G', list: true }, { n: 'A', list: true }, { n: 'T0', d: 0.1 }, { n: 'T1', d: 1 }, { n: 'I', d: false }], outs: ['F', 'D'],
@@ -494,19 +515,24 @@ const C = {
   polyline: { cat: 'Curve', name: 'Polyline', nick: 'PLine', ins: [{ n: 'V', list: true }, { n: 'C', d: false }], outs: ['Pl'],
     run: I => { const p = I[0].map(x => { x = asPt(x, 'V'); return [x.x, x.y, x.z]; }); if (p.length < 2) throw new Error('En az 2 nokta'); return [[{ t: 'crv', c: bool(I[1][0] ?? false) && p.length > 2, p }]]; } },
   rect: { cat: 'Curve', name: 'Rectangle', nick: 'Rec', ins: [{ n: 'P', d: P(0, 0, 0) }, { n: 'X', d: 10 }, { n: 'Y', d: 5 }], outs: ['R'],
-    item: (p, x, y) => { p = asPt(p, 'P'); x = num(x, 'X'); y = num(y, 'Y'); return [{ t: 'crv', c: true, p: [[p.x, p.y, p.z], [p.x + x, p.y, p.z], [p.x + x, p.y + y, p.z], [p.x, p.y + y, p.z]] }]; } },
+    item: (p, x, y) => { const F = asPln(p, 'P'); x = num(x, 'X'); y = num(y, 'Y'); return [{ t: 'crv', c: true, p: [onPln(F, 0, 0), onPln(F, x, 0), onPln(F, x, y), onPln(F, 0, y)] }]; } },
   circle: { cat: 'Curve', name: 'Circle', nick: 'Cir', ins: [{ n: 'P', d: P(0, 0, 0) }, { n: 'R', d: 5 }], outs: ['C'],
-    item: (p, r) => { p = asPt(p, 'P'); r = num(r, 'R'); return [{ t: 'crv', c: true, p: Array.from({ length: 48 }, (_, i) => [p.x + Math.cos(i / 48 * 2 * Math.PI) * r, p.y + Math.sin(i / 48 * 2 * Math.PI) * r, p.z]) }]; } },
+    item: (p, r) => { const F = asPln(p, 'P'); r = num(r, 'R'); return [{ t: 'crv', c: true, p: Array.from({ length: 48 }, (_, i) => onPln(F, Math.cos(i / 48 * 2 * Math.PI) * r, Math.sin(i / 48 * 2 * Math.PI) * r)) }]; } },
   arc: { cat: 'Curve', name: 'Arc', nick: 'Arc', ins: [{ n: 'P', d: P(0, 0, 0) }, { n: 'R', d: 5 }, { n: 'A0', d: 0 }, { n: 'A1', d: 180 }], outs: ['A'],
-    item: (p, r, a0, a1) => { p = asPt(p, 'P'); r = num(r, 'R'); a0 = num(a0, 'A0') * D2R; a1 = num(a1, 'A1') * D2R; const n = Math.max(4, Math.ceil(Math.abs(a1 - a0) / (Math.PI / 24))); return [{ t: 'crv', c: false, p: Array.from({ length: n + 1 }, (_, i) => { const a = a0 + (a1 - a0) * i / n; return [p.x + Math.cos(a) * r, p.y + Math.sin(a) * r, p.z]; }) }]; } },
+    item: (p, r, a0, a1) => { const F = asPln(p, 'P'); r = num(r, 'R'); a0 = num(a0, 'A0') * D2R; a1 = num(a1, 'A1') * D2R; const n = Math.max(4, Math.ceil(Math.abs(a1 - a0) / (Math.PI / 24))); return [{ t: 'crv', c: false, p: Array.from({ length: n + 1 }, (_, i) => { const a = a0 + (a1 - a0) * i / n; return onPln(F, Math.cos(a) * r, Math.sin(a) * r); }) }]; } },
   polygon: { cat: 'Curve', name: 'Polygon', nick: 'Pol', ins: [{ n: 'P', d: P(0, 0, 0) }, { n: 'R', d: 5 }, { n: 'S', d: 6 }], outs: ['P'],
-    item: (p, r, s) => { p = asPt(p, 'P'); r = num(r, 'R'); s = Math.max(3, Math.round(num(s, 'S'))); return [{ t: 'crv', c: true, p: Array.from({ length: s }, (_, i) => [p.x + Math.cos(i / s * 2 * Math.PI) * r, p.y + Math.sin(i / s * 2 * Math.PI) * r, p.z]) }]; } },
+    item: (p, r, s) => { const F = asPln(p, 'P'); r = num(r, 'R'); s = Math.max(3, Math.round(num(s, 'S'))); return [{ t: 'crv', c: true, p: Array.from({ length: s }, (_, i) => onPln(F, Math.cos(i / s * 2 * Math.PI) * r, Math.sin(i / s * 2 * Math.PI) * r)) }]; } },
   interp: { cat: 'Curve', name: 'Interpolate', nick: 'IntCrv', ins: [{ n: 'V', list: true }, { n: 'C', d: false }], outs: ['C'],
     run: I => { const p = I[0].map(x => { x = asPt(x, 'V'); return [x.x, x.y, x.z]; }); if (p.length < 2) throw new Error('En az 2 nokta gerekli'); const cl = bool(I[1][0] ?? false) && p.length > 2; return [[{ t: 'crv', c: cl, p: catmull(p, 8, cl) }]]; } },
   divc: { cat: 'Curve', name: 'Divide Curve', nick: 'Div', ins: [{ n: 'C' }, { n: 'N', d: 10 }], outs: ['P'],
     item: (c, n) => { c = asCrv(c, 'C'); n = Math.max(1, Math.round(num(n, 'N'))); return [resample(c.p, c.c ? n : n + 1, c.c).map(q => P(q[0], q[1], q[2]))]; } },
   evalc: { cat: 'Curve', name: 'Evaluate Curve', nick: 'Eval', ins: [{ n: 'C' }, { n: 't', d: 0.5 }], outs: ['P', 'T'],
     item: (c, t) => { const r = crvAt(asCrv(c, 'C'), num(t, 't')); return [P(...r.p), P(...r.t)]; } },
+  pframe: { cat: 'Curve', name: 'Perp Frame', nick: 'PFrame', ins: [{ n: 'C' }, { n: 't', d: 0.5 }], outs: ['F'],
+    item: (c, t) => { c = asCrv(c, 'C'); const r = crvAt(c, num(t, 't')); return [plnFromZ(r.p, r.t)]; } },
+  pframes: { cat: 'Curve', name: 'Perp Frames', nick: 'PFrames', ins: [{ n: 'C' }, { n: 'N', d: 10 }], outs: ['F'],
+    item: (c, n) => { c = asCrv(c, 'C'); n = Math.max(1, Math.round(num(n, 'N'))); if (n > 2000) throw new Error('N en fazla 2000'); const q = resample(c.p, c.c ? n : n + 1, c.c), Fr = frames(c.c ? [...q, q[0]] : q);
+      return [q.map((p, i) => mkPln(p, Fr.N[i], Fr.B[i]))]; } },
   clen: { cat: 'Curve', name: 'Length', nick: 'Len', ins: [{ n: 'C' }], outs: ['L'], item: c => [crvLength(asCrv(c, 'C'))] },
   offset: { cat: 'Curve', name: 'Offset (XY)', nick: 'Offset', ins: [{ n: 'C' }, { n: 'D', d: 1 }], outs: ['C'],
     item: (c, d) => { c = asCrv(c, 'C'); d = num(d, 'D'); const p = c.p, n = p.length, out = []; if (c.c) { let ar = 0; for (let i = 0; i < n; i++) { const q = p[i], r = p[(i + 1) % n]; ar += q[0] * r[1] - r[0] * q[1]; } if (ar > 0) d = -d; }
@@ -540,6 +566,10 @@ const C = {
   pipe: { cat: 'Surface', name: 'Pipe', nick: 'Pipe', ins: [{ n: 'C' }, { n: 'R', d: 0.3 }], outs: ['P'],
     item: (c, r) => { c = asCrv(c, 'C'); r = num(r, 'R'); const rail = c.p.length > 160 ? resample(c.p, 160, c.c) : c.p.slice(); if (c.c) rail.push(rail[0]); const F = frames(rail);
       return [{ t: 'srf', g: rail.map((p, i) => Array.from({ length: 17 }, (_, k) => { const a = k / 16 * 2 * Math.PI; return vadd(p, vadd(vmul(F.N[i], Math.cos(a) * r), vmul(F.B[i], Math.sin(a) * r))); })) }]; } },
+  sframes: { cat: 'Surface', name: 'Surface Frames', nick: 'SFrames', ins: [{ n: 'S' }, { n: 'U', d: 6 }, { n: 'V', d: 4 }], outs: ['F'],
+    item: (s, u, v) => { s = asSrf(s, 'S'); u = Math.max(1, Math.round(num(u, 'U'))); v = Math.max(1, Math.round(num(v, 'V'))); if ((u + 1) * (v + 1) > 5000) throw new Error('Çok fazla çerçeve'); const e = 1e-3, out = [];
+      for (let j = 0; j <= v; j++) for (let i = 0; i <= u; i++) { const a = i / u, b = j / v, du = vsub(srfAt(s, Math.min(1, a + e), b), srfAt(s, Math.max(0, a - e), b)), dv = vsub(srfAt(s, a, Math.min(1, b + e)), srfAt(s, a, Math.max(0, b - e))); out.push(mkPln(srfAt(s, a, b), du, dv)); }
+      return [out]; } },
   divs: { cat: 'Surface', name: 'Divide Surface', nick: 'SDivide', ins: [{ n: 'S' }, { n: 'U', d: 10 }, { n: 'V', d: 10 }], outs: ['P'],
     item: (s, u, v) => { s = asSrf(s, 'S'); u = Math.max(1, Math.round(num(u, 'U'))); v = Math.max(1, Math.round(num(v, 'V'))); const out = []; for (let j = 0; j <= v; j++) for (let i = 0; i <= u; i++) { const q = srfAt(s, i / u, j / v); out.push(P(q[0], q[1], q[2])); } return [out]; } },
   panels: { cat: 'Surface', name: 'Surface Panels', nick: 'Panels', ins: [{ n: 'S' }, { n: 'U', d: 10 }, { n: 'V', d: 10 }], outs: ['P'],
@@ -573,6 +603,12 @@ const C = {
   scale: { cat: 'Transform', name: 'Scale', nick: 'Scale', ins: [{ n: 'G' }, { n: 'F', d: 0.5 }], outs: ['G'], item: (g, f) => { g = asGeo(g); f = num(f, 'F'); const c = centroid(g); return [mapG(g, p => [c[0] + (p[0] - c[0]) * f, c[1] + (p[1] - c[1]) * f, c[2] + (p[2] - c[2]) * f])]; } },
   mirror: { cat: 'Transform', name: 'Mirror (YZ)', nick: 'Mirror', ins: [{ n: 'G' }, { n: 'X', d: 0 }], outs: ['G'], item: (g, x) => { x = num(x, 'X'); return [mapG(asGeo(g), p => [2 * x - p[0], p[1], p[2]])]; } },
   orient: { cat: 'Transform', name: 'XY → XZ', nick: 'ToXZ', ins: [{ n: 'G' }], outs: ['G'], item: g => [mapG(asGeo(g), p => [p[0], -p[2], p[1]])] },
+  orientp: { cat: 'Transform', name: 'Orient (plane → plane)', nick: 'Orient', ins: [{ n: 'G' }, { n: 'A', d: P(0, 0, 0) }, { n: 'B' }], outs: ['G'],
+    item: (g, a, b) => { const A = asPln(a, 'A'), B = asPln(b, 'B'); return [mapG(asGeo(g), p => { const l = inPln(A, p); return onPln(B, l[0], l[1], l[2]); })]; } },
+  rot3d: { cat: 'Transform', name: 'Rotate (plane axis)', nick: 'Rot3D', ins: [{ n: 'G' }, { n: 'A', d: 90 }, { n: 'P', d: P(0, 0, 0) }], outs: ['G'],
+    item: (g, a, p) => { const F = asPln(p, 'P'); a = num(a, 'A') * D2R; return [mapG(asGeo(g), q => rotAxis(q, F.o, F.z, a))]; } },
+  mirrorp: { cat: 'Transform', name: 'Mirror (plane)', nick: 'MirP', ins: [{ n: 'G' }, { n: 'P' }], outs: ['G'],
+    item: (g, p) => { const F = asPln(p, 'P'); return [mapG(asGeo(g), q => { const d = vdot(vsub(q, F.o), F.z); return vsub(q, vmul(F.z, 2 * d)); })]; } },
   linarr: { cat: 'Transform', name: 'Linear Array', nick: 'ArrLin', ins: [{ n: 'G' }, { n: 'D', d: P(0, 0, 3) }, { n: 'N', d: 5 }], outs: ['G'],
     item: (g, d, n) => { g = asGeo(g); d = asPt(d, 'D'); n = Math.round(num(n, 'N')); if (n < 1 || n > 1000) throw new Error('N 1–1000 arası'); return [Array.from({ length: n }, (_, i) => mapG(g, p => [p[0] + d.x * i, p[1] + d.y * i, p[2] + d.z * i]))]; } },
   polarr: { cat: 'Transform', name: 'Polar Array', nick: 'ArrPol', ins: [{ n: 'G' }, { n: 'N', d: 6 }], outs: ['G'],
@@ -687,6 +723,7 @@ function fmt(v) {
   if (typeof v === 'boolean') return v ? 'True' : 'False';
   if (isPt(v)) return `{${fmt(v.x)}, ${fmt(v.y)}, ${fmt(v.z)}}`;
   if (isCol(v)) return v.hex;
+  if (isPln(v)) return `Plane O{${fmt(v.o[0])}, ${fmt(v.o[1])}, ${fmt(v.o[2])}} Z{${fmt(v.z[0])}, ${fmt(v.z[1])}, ${fmt(v.z[2])}}`;
   if (v && v.t) return { crv: v.c ? 'Closed Curve' : 'Curve', srf: 'Surface', mesh: 'Mesh' }[v.t] || v.t;
   return String(v);
 }
@@ -1110,8 +1147,8 @@ function collectGeo() {
   for (const n of doc.nodes) {
     if (!n.pv || n.off) continue;
     const layer = (nickOf(n) + '_' + n.id).replace(/[^A-Za-z0-9_-]/g, '_');
-    if (n.type === 'cprev') { const cp = info[n.id] && info[n.id].cp; if (cp) cp.G.forEach(g => out.push({ g, layer })); continue; }
-    for (const t of cache[n.id] || []) for (const b of t) for (const g of b.v) if (isGeo(g)) out.push({ g, layer });
+    if (n.type === 'cprev') { const cp = info[n.id] && info[n.id].cp; if (cp) cp.G.forEach(g => { if (g.t !== 'pln') out.push({ g, layer }); }); continue; }
+    for (const t of cache[n.id] || []) for (const b of t) for (const g of b.v) if (isGeo(g) && g.t !== 'pln') out.push({ g, layer });
   }
   return out;
 }
@@ -1186,10 +1223,11 @@ function mats(selected) {
 const cmat = {};
 function colMats(hex) { if (!cmat[hex]) { const c = new THREE.Color(hex); cmat[hex] = { srf: new THREE.MeshStandardMaterial({ color: c, transparent: true, opacity: 0.9, side: THREE.DoubleSide, roughness: 0.55, metalness: 0.05 }), line: new THREE.LineBasicMaterial({ color: c.clone().multiplyScalar(0.55) }), pt: new THREE.PointsMaterial({ color: c, size: 7, sizeAttenuation: false }) }; } return cmat[hex]; }
 function buildGeoGroup(list, M, grp) {
-  const ptsArr = [], linePos = [], triPos = [], edgePos = [];
+  const ptsArr = [], linePos = [], triPos = [], edgePos = [], plns = [];
   const tri = (a, b, c) => triPos.push(...a, ...b, ...c);
   for (const g of list) {
     if (g.t === 'pt') ptsArr.push(g.x, g.y, g.z);
+    else if (g.t === 'pln') plns.push(g);
     else if (g.t === 'crv') { const p = crvPoly(g); for (let i = 0; i < p.length - 1; i++) linePos.push(...p[i], ...p[i + 1]); }
     else if (g.t === 'srf') {
       const G = g.g, R = G.length, Cc = G[0].length;
@@ -1206,6 +1244,25 @@ function buildGeoGroup(list, M, grp) {
   if (edgePos.length) { const l = new THREE.LineSegments(buf(edgePos), M.line); l.userData.k = 'line'; grp.add(l); }
   if (linePos.length) { const l = new THREE.LineSegments(buf(linePos), M.line); l.userData.k = 'line'; grp.add(l); }
   if (ptsArr.length) { const p = new THREE.Points(buf(ptsArr), M.pt); p.userData.k = 'pt'; grp.add(p); }
+  if (plns.length) addPlanes(plns, M, grp, buf);
+}
+const PLN_MAT = [0xd23b2f, 0x2c9c4a, 0x2f6fd2].map(c => new THREE.LineBasicMaterial({ color: c }));
+function plnSize(plns) {
+  if (plns.length < 2) return 3;
+  let x0 = Infinity, y0 = Infinity, z0 = Infinity, x1 = -Infinity, y1 = -Infinity, z1 = -Infinity;
+  for (const F of plns) { x0 = Math.min(x0, F.o[0]); x1 = Math.max(x1, F.o[0]); y0 = Math.min(y0, F.o[1]); y1 = Math.max(y1, F.o[1]); z0 = Math.min(z0, F.o[2]); z1 = Math.max(z1, F.o[2]); }
+  const d = Math.hypot(x1 - x0, y1 - y0, z1 - z0); return Math.max(0.2, Math.min(3, d / Math.sqrt(plns.length) * 0.35)) || 1;
+}
+function addPlanes(plns, M, grp, buf) {
+  const S = plnSize(plns), h = S / 2, sq = [], ax = [[], [], []];
+  for (const F of plns) {
+    const c = [onPln(F, -h, -h), onPln(F, h, -h), onPln(F, h, h), onPln(F, -h, h)];
+    for (let i = 0; i < 4; i++) sq.push(...c[i], ...c[(i + 1) % 4]);
+    for (const t of [-0.5, 0, 0.5]) { sq.push(...onPln(F, t * h, -h), ...onPln(F, t * h, h), ...onPln(F, -h, t * h), ...onPln(F, h, t * h)); }
+    ax[0].push(...F.o, ...onPln(F, S * 0.8, 0)); ax[1].push(...F.o, ...onPln(F, 0, S * 0.8)); ax[2].push(...F.o, ...onPln(F, 0, 0, S * 0.5));
+  }
+  const l = new THREE.LineSegments(buf(sq), M.line); l.userData.k = 'line'; grp.add(l);
+  ax.forEach((a, i) => { const o = new THREE.LineSegments(buf(a), PLN_MAT[i]); o.userData.k = 'axis'; grp.add(o); });
 }
 function nodeObject(n) {
   const grp = new THREE.Group(); grp.userData.nid = n.id;
@@ -1226,7 +1283,7 @@ function rebuildPreview() {
   paintLegend();
 }
 function updatePreviewColors() {
-  prev.children.forEach(g => { if (g.userData.custom) return; const M = mats(sel.has(g.userData.nid)); g.children.forEach(o => { o.material = M[o.userData.k]; }); });
+  prev.children.forEach(g => { if (g.userData.custom) return; const M = mats(sel.has(g.userData.nid)); g.children.forEach(o => { if (M[o.userData.k]) o.material = M[o.userData.k]; }); });
   if (prev.children.some(g => g.userData.custom)) rebuildPreview();
 }
 function paintLegend() {
@@ -1352,6 +1409,13 @@ function preset(name) {
     W(x, 0, pop, 0); W(y, 0, pop, 1); W(n, 0, pop, 2); W(sd, 0, pop, 3); W(z, 0, pop, 4); W(pop, 0, vor, 0); W(bx, 0, vor, 1);
     W(ax, 0, at, 0); W(ay, 0, at, 1); W(z, 0, at, 2); W(vor, 0, atr, 0); W(at, 0, atr, 1); W(t0, 0, atr, 2); W(t1, 0, atr, 3);
     W(vor, 0, sc, 0); W(atr, 0, sc, 1); W(vor, 0, fr, 0); W(fh, 0, fr, 1);
+  } else if (name === 'frames') {
+    const r = S('Yarıçap', 5, 40, 18, false, 0, 0), n = S('Kesit', 2, 60, 16, true, 0, 50), sz = S('Kesit boyu', 0.5, 8, 3, false, 0, 100), tw = S('Burgu°', 0, 360, 90, false, 0, 150), sd = S('Kenar', 3, 8, 4, true, 0, 200);
+    const arc = N('arc', 300, 0), fr = N('pframes', 430, 30, true), rg = N('range', 300, 150), rot = N('plnrot', 580, 60), pol = N('polygon', 720, 80), lf = N('loft', 860, 90, true);
+    W(r, 0, arc, 1); W(arc, 0, fr, 0); W(n, 0, fr, 1); W(tw, 0, rg, 1); W(n, 0, rg, 2);
+    W(fr, 0, rot, 0); W(rg, 0, rot, 1); W(rot, 0, pol, 0); W(sz, 0, pol, 1); W(sd, 0, pol, 2); W(pol, 0, lf, 0);
+    const pn = N('panel', 580, 200); W(rot, 0, pn, 0);
+    G('Düzlemler', [fr, rg, rot], GCOLS[1]);
   } else if (name === 'fins') {
     const w = S('Genişlik', 6, 60, 30, false, 0, 0), hh = S('Yükseklik', 3, 30, 12, false, 0, 40), u = S('Kanat', 4, 80, 36, true, 0, 100), dep = S('Derinlik', 0.05, 2, 0.6, false, 0, 140);
     const srf = N('planesrf', 300, 10), orient = N('orient', 430, 20), gm = N('graph', 440, 150, false, { type: 'bezier', h1: [0.2, 0.9], h2: [0.75, 0.05] }), rg = N('range', 300, 170), ex = N('expr', 640, 170, false, { expr: 'x*y + 0.05' }), sb = N('sbox', 860, 60, true);
