@@ -1,90 +1,63 @@
-<!DOCTYPE html>
-<html lang="en">
+<!doctype html>
+<html lang="tr">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Renkli Daireler</title>
-    <style>
-        body {
-            background-color: black;
-            overflow: hidden;
-            margin: 0;
-            padding: 0;
-        }
-        .canvas {
-            position: absolute;
-            top: 0;
-            left: 0;
-            width: 100%;
-            height: 100%;
-        }
-    </style>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Renkli Daireler · Çarpışma | erdevelop</title>
+<meta name="description" content="Birbirine çarpıp seken renkli daireler; fareyle it ya da çek, tıklayınca yenileri saçılır.">
+<meta name="theme-color" content="#000000">
+<link rel="stylesheet" href="deneyler/kit.css">
+
 </head>
 <body>
-    <canvas id="circleCanvas" class="canvas"></canvas>
-    <script>
-        const canvas = document.getElementById('circleCanvas');
-        const ctx = canvas.getContext('2d');
+<script src="deneyler/kit.js"></script>
+<script>
+let S, B = [];
+const K = Kit({ id: 'cember1', title: 'Renkli Daireler', sub: 'çarpışma', help: 'Fareyle daireleri it ya da çek. Tıkla ya da dokun: o noktaya yeni daireler saçılır.',
+  controls: [
+    { t: 'h', l: 'Daireler' },
+    { k: 'n', t: 'range', l: 'Sayı', min: 10, max: 300, v: 60 },
+    { k: 'size', t: 'range', l: 'En büyük boyut', min: 8, max: 90, v: 40 },
+    { k: 'speed', t: 'range', l: 'Hız', min: 0, max: 6, step: .1, v: 1.5 },
+    { k: 'pal', t: 'select', l: 'Renk paleti', o: PAL_OPTS, v: 'klasik' },
+    { t: 'h', l: 'Fizik' },
+    { k: 'col', t: 'check', l: 'Birbirine çarpsın', v: true },
+    { k: 'grav', t: 'range', l: 'Yerçekimi', min: 0, max: 1, step: .05, v: 0 },
+    { k: 'mouse', t: 'select', l: 'Fare', o: [['push', 'İter'], ['pull', 'Çeker'], ['none', 'Etkisiz']], v: 'push' },
+    { t: 'h', l: 'Görünüm' },
+    { k: 'glow', t: 'check', l: 'Işık gibi üst üste binsin', v: true },
+    { k: 'ring', t: 'check', l: 'Kenar çizgisi', v: false },
+    { t: 'buttons', b: [['Yeniden dağıt', () => init(), 1]] }
+  ],
+  onChange: k => { if (['n', 'size', 'pal', '*'].includes(k)) init(); },
+  onDown: P => burst(P.x, P.y)
+});
+const mkBall = (x, y, sp) => { const r = rnd(K.v.size * .25, K.v.size), a = rnd(0, Math.PI * 2), s = rnd(.3, 1) * (sp || 1); return { x, y, r, m: r * r, vx: Math.cos(a) * s, vy: Math.sin(a) * s, c: pick(PALETTES[K.v.pal]), o: rnd(.35, .85) }; };
+function init() { B = []; for (let i = 0; i < K.v.n; i++) { const b = mkBall(0, 0); b.x = rnd(b.r, S.W - b.r); b.y = rnd(b.r, S.H - b.r); B.push(b); } }
+function burst(x, y) { for (let i = 0; i < 6; i++) { if (B.length > K.v.n + 150) B.shift(); B.push(mkBall(x, y, 4)); } }
+S = K.canvas(); init(); S.onResize(() => B.forEach(b => { b.x = Math.min(b.x, S.W - b.r); b.y = Math.min(b.y, S.H - b.r); }));
+K.loop(dt => {
+  const v = K.v, f = dt * 60, sp = v.speed, P = K.ptr, g = S.ctx;
+  for (const b of B) {
+    b.vy += v.grav * .25 * f;
+    if (P.active && v.mouse !== 'none') { const dx = b.x - P.x, dy = b.y - P.y, d = Math.hypot(dx, dy), R = 160 + b.r; if (d < R && d > 1) { const k = (1 - d / R) * .9 * f * (v.mouse === 'push' ? 1 : -1); b.vx += dx / d * k; b.vy += dy / d * k; } }
+    const s = Math.hypot(b.vx, b.vy), mx = 2.5 + sp * 2.5; if (s > mx) { b.vx *= mx / s; b.vy *= mx / s; }
+    if (v.grav === 0 && s < sp * .4) { b.vx *= 1.02; b.vy *= 1.02; }
+    b.x += b.vx * sp * f; b.y += b.vy * sp * f;
+    if (b.x < b.r) { b.x = b.r; b.vx = Math.abs(b.vx); } else if (b.x > S.W - b.r) { b.x = S.W - b.r; b.vx = -Math.abs(b.vx); }
+    if (b.y < b.r) { b.y = b.r; b.vy = Math.abs(b.vy); } else if (b.y > S.H - b.r) { b.y = S.H - b.r; b.vy = -Math.abs(b.vy) * (v.grav ? .85 : 1); }
+  }
+  if (v.col) for (let i = 0; i < B.length; i++) { const a = B[i]; for (let j = i + 1; j < B.length; j++) { const b = B[j], dx = b.x - a.x, dy = b.y - a.y, rr = a.r + b.r; if (Math.abs(dx) > rr || Math.abs(dy) > rr) continue; const d = Math.hypot(dx, dy); if (d >= rr || d === 0) continue;
+    const nx = dx / d, ny = dy / d, ov = (rr - d) / 2; a.x -= nx * ov; a.y -= ny * ov; b.x += nx * ov; b.y += ny * ov;
+    const rv = (b.vx - a.vx) * nx + (b.vy - a.vy) * ny; if (rv > 0) continue; const imp = -2 * rv / (a.m + b.m); a.vx -= imp * b.m * nx; a.vy -= imp * b.m * ny; b.vx += imp * a.m * nx; b.vy += imp * a.m * ny; } }
+  g.globalCompositeOperation = 'source-over'; g.fillStyle = '#05070a'; g.fillRect(0, 0, S.W, S.H);
+  g.globalCompositeOperation = v.glow ? 'lighter' : 'source-over';
+  for (const b of B) { const [r, gg, bb] = hexRgb(b.c), gr = g.createRadialGradient(b.x - b.r * .3, b.y - b.r * .3, b.r * .1, b.x, b.y, b.r);
+    gr.addColorStop(0, `rgba(${r},${gg},${bb},${b.o})`); gr.addColorStop(1, `rgba(${r},${gg},${bb},${b.o * .55})`); g.fillStyle = gr; g.beginPath(); g.arc(b.x, b.y, b.r, 0, 6.2832); g.fill();
+    if (v.ring) { g.strokeStyle = `rgba(${r},${gg},${bb},.9)`; g.lineWidth = 1.5; g.stroke(); } }
+  if (P.active && v.mouse !== 'none') { g.globalCompositeOperation = 'source-over'; g.strokeStyle = 'rgba(255,255,255,.18)'; g.setLineDash([4, 6]); g.beginPath(); g.arc(P.x, P.y, 160, 0, 6.2832); g.stroke(); g.setLineDash([]); }
+});
 
-        canvas.width = window.innerWidth;
-        canvas.height = window.innerHeight;
-
-        const circles = [];
-        const colors = ['#FF5733', '#33FF57', '#3357FF', '#F3FF33', '#FF33F3'];
-
-        for (let i = 0; i < 50; i++) {
-            circles.push({
-                x: Math.random() * canvas.width,
-                y: Math.random() * canvas.height,
-                radius: Math.random() * 50 + 10,
-                color: colors[Math.floor(Math.random() * colors.length)],
-                dx: (Math.random() - 0.5) * 2,
-                dy: (Math.random() - 0.5) * 2,
-                opacity: Math.random()
-            });
-        }
-
-        function draw() {
-            ctx.clearRect(0, 0, canvas.width, canvas.height);
-
-            circles.forEach(circle => {
-                ctx.beginPath();
-                ctx.arc(circle.x, circle.y, circle.radius, 0, Math.PI * 2, false);
-                ctx.fillStyle = `rgba(${hexToRgb(circle.color)},${circle.opacity})`;
-                ctx.fill();
-
-                circle.x += circle.dx;
-                circle.y += circle.dy;
-
-                if (circle.x + circle.radius > canvas.width || circle.x - circle.radius < 0) {
-                    circle.dx = -circle.dx;
-                }
-
-                if (circle.y + circle.radius > canvas.height || circle.y - circle.radius < 0) {
-                    circle.dy = -circle.dy;
-                }
-
-                circle.opacity += (Math.random() - 0.5) * 0.1;
-                if (circle.opacity < 0) circle.opacity = 0;
-                if (circle.opacity > 1) circle.opacity = 1;
-
-                circle.radius += (Math.random() - 0.5) * 2;
-                if (circle.radius < 10) circle.radius = 10;
-                if (circle.radius > 60) circle.radius = 60;
-            });
-
-            requestAnimationFrame(draw);
-        }
-
-        function hexToRgb(hex) {
-            const bigint = parseInt(hex.slice(1), 16);
-            const r = (bigint >> 16) & 255;
-            const g = (bigint >> 8) & 255;
-            const b = bigint & 255;
-            return `${r},${g},${b}`;
-        }
-
-        draw();
-    </script>
+</script>
 </body>
 </html>

@@ -1,116 +1,96 @@
-<!DOCTYPE html>
-<html lang="en">
+<!doctype html>
+<html lang="tr">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Three.js Interactive Shapes</title>
-    <style>
-        body { margin: 0; }
-        canvas { display: block; }
-        #shapeName {
-            position: absolute;
-            top: 50%;
-            left: 50%;
-            transform: translate(-50%, -50%);
-            font-size: 32px;
-            font-family: Arial, sans-serif;
-            color: #000;
-            background-color: rgba(255, 255, 255, 0.8);
-            padding: 10px;
-            border-radius: 5px;
-            display: none;
-            z-index: 1000; /* Yazı div'inin ön planda olmasını sağlar */
-        }
-    </style>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>3B Cisimler · Geometri Galerisi | erdevelop</title>
+<meta name="description" content="16 geometrik cisim: döndür, seç; köşe, kenar, yüz sayıları, Euler formülü, hacim ve alan formülleri.">
+<meta name="theme-color" content="#000000">
+<link rel="stylesheet" href="deneyler/kit.css">
+<style>.sh-info{background:rgba(14,19,26,.88);color:#e6edf3;border:1px solid rgba(255,255,255,.14);border-radius:12px;padding:14px 16px;backdrop-filter:blur(10px);-webkit-backdrop-filter:blur(10px);font:400 13.5px/1.5 system-ui,sans-serif;width:min(340px,calc(100vw - 20px));box-sizing:border-box}
+.sh-info h3{margin:0 0 4px;font:700 18px system-ui,sans-serif}.sh-info p{margin:0 0 8px;color:#b8c4cf}
+.sh-x{position:absolute;right:10px;top:10px;background:none;border:1px solid rgba(255,255,255,.2);color:#e6edf3;border-radius:6px;width:28px;height:28px;font-size:16px;cursor:pointer}
+.sh-g{display:grid;grid-template-columns:repeat(3,1fr);gap:6px;margin:8px 0 10px}.sh-g div{background:rgba(255,255,255,.06);border-radius:8px;padding:6px;text-align:center}.sh-g b{display:block;font:700 20px ui-monospace,monospace;color:#5aa9ff}.sh-g span{font-size:11px;color:#8b98a5}
+.sh-f{font:500 13px ui-monospace,monospace;color:#e6edf3!important}.sh-e{font-size:12px}.sh-e b{color:#4ade80}
+.sh-tip{position:fixed;z-index:12;pointer-events:none;background:rgba(14,19,26,.88);color:#e6edf3;border:1px solid rgba(255,255,255,.14);border-radius:6px;padding:4px 8px;font:500 12px ui-monospace,monospace}</style>
 </head>
 <body>
-    <div id="shapeName"></div>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
-    <script>
-        // Sahne oluşturun
-        const scene = new THREE.Scene();
+<script src="three.min.js"></script>
+<script src="deneyler/kit.js"></script>
+<script>
+const SH = [
+  { n: 'Küp', g: () => new THREE.BoxGeometry(1.5, 1.5, 1.5), c: 0x4ade80, V: 8, E: 12, F: 6, vol: 'V = a³', area: 'A = 6a²', d: 'Altı eş kareden oluşur; bütün açıları dik.' },
+  { n: 'Kare prizma', g: () => new THREE.BoxGeometry(1.1, 2, 1.1), c: 0xe879f9, V: 8, E: 12, F: 6, vol: 'V = a²·h', area: 'A = 2a² + 4a·h', d: 'Tabanları kare, yan yüzleri dikdörtgen.' },
+  { n: 'Üçgen prizma', g: () => new THREE.CylinderGeometry(1, 1, 2, 3), c: 0xfacc15, V: 6, E: 9, F: 5, vol: 'V = (√3/4)·a²·h', area: 'A = (√3/2)·a² + 3a·h', d: 'İki eş üçgen taban, üç dikdörtgen yan yüz.' },
+  { n: 'Beşgen prizma', g: () => new THREE.CylinderGeometry(1, 1, 2, 5), c: 0x5eead4, V: 10, E: 15, F: 7, vol: 'V = Taban alanı · h', area: 'A = 2·Taban + 5a·h', d: 'Tabanları düzgün beşgen.' },
+  { n: 'Altıgen prizma', g: () => new THREE.CylinderGeometry(1, 1, 2, 6), c: 0xfb923c, V: 12, E: 18, F: 8, vol: 'V = (3√3/2)·a²·h', area: 'A = 3√3·a² + 6a·h', d: 'Bal peteğinin hücre biçimi.' },
+  { n: 'Düzgün dörtyüzlü', g: () => new THREE.TetrahedronGeometry(1.3), c: 0x22d3ee, V: 4, E: 6, F: 4, vol: 'V = a³ / (6√2)', area: 'A = √3·a²', d: 'Dört eşkenar üçgenden oluşan en basit çokyüzlü (üçgen piramit).' },
+  { n: 'Kare piramit', g: () => new THREE.CylinderGeometry(0, 1.2, 1.8, 4), c: 0xf59e0b, V: 5, E: 8, F: 5, vol: 'V = a²·h / 3', area: 'A = a² + 2a·l (l: yan yüz yüksekliği)', d: 'Mısır piramitlerinin biçimi.' },
+  { n: 'Beşgen piramit', g: () => new THREE.CylinderGeometry(0, 1.1, 1.8, 5), c: 0xa78bfa, V: 6, E: 10, F: 6, vol: 'V = Taban alanı · h / 3', area: 'A = Taban + 5 üçgen', d: 'Tabanı beşgen, tepesi tek nokta.' },
+  { n: 'Altıgen piramit', g: () => new THREE.CylinderGeometry(0, 1.1, 1.8, 6), c: 0xd6b88a, V: 7, E: 12, F: 7, vol: 'V = (√3/2)·a²·h', area: 'A = Taban + 6 üçgen', d: 'Tabanı düzgün altıgen.' },
+  { n: 'Sekizyüzlü', g: () => new THREE.OctahedronGeometry(1.2), c: 0xf472b6, V: 6, E: 12, F: 8, vol: 'V = (√2/3)·a³', area: 'A = 2√3·a²', d: 'Tabanları birleştirilmiş iki kare piramit.' },
+  { n: 'Onikiyüzlü', g: () => new THREE.DodecahedronGeometry(1.15), c: 0x60a5fa, V: 20, E: 30, F: 12, vol: 'V = (15 + 7√5)/4 · a³', area: 'A = 3√(25 + 10√5) · a²', d: 'On iki düzgün beşgen yüzü var; Platon cisimlerinden biri.' },
+  { n: 'Yirmiyüzlü', g: () => new THREE.IcosahedronGeometry(1.15), c: 0x34d399, V: 12, E: 30, F: 20, vol: 'V = 5(3 + √5)/12 · a³', area: 'A = 5√3 · a²', d: 'Yirmi eşkenar üçgen; en çok yüzlü Platon cismi.' },
+  { n: 'Silindir', g: () => new THREE.CylinderGeometry(.9, .9, 2, 48), c: 0xef4444, curved: 1, V: 0, E: 2, F: 3, vol: 'V = π·r²·h', area: 'A = 2π·r·(r + h)', d: 'Eğri yüzeyli olduğu için Euler formülü geçerli değil.' },
+  { n: 'Koni', g: () => new THREE.ConeGeometry(1, 2, 48), c: 0x3b82f6, curved: 1, V: 1, E: 1, F: 2, vol: 'V = π·r²·h / 3', area: 'A = π·r·(r + l)', d: 'Tepe noktası tek bir köşe sayılır.' },
+  { n: 'Küre', g: () => new THREE.SphereGeometry(1.1, 48, 32), c: 0xc084fc, curved: 1, V: 0, E: 0, F: 1, vol: 'V = (4/3)·π·r³', area: 'A = 4π·r²', d: 'Aynı yüzey alanıyla en büyük hacmi saran cisim.' },
+  { n: 'Simit (torus)', g: () => new THREE.TorusGeometry(.85, .35, 24, 64), c: 0xfde047, curved: 1, V: 0, E: 0, F: 1, vol: 'V = 2π²·R·r²', area: 'A = 4π²·R·r', d: 'Ortasında delik olan halka; delik sayısı 1.' }
+];
+const K = Kit({ id: '3d', title: '3B Cisimler', sub: 'geometri galerisi', help: 'Sürükle: döndür · tekerlek ya da iki parmak: yakınlaştır · bir cisme tıkla: köşe, kenar, yüz sayıları ve formülleri.',
+  controls: [
+    { k: 'spin', t: 'check', l: 'Cisimler kendi etrafında dönsün', v: true },
+    { k: 'edges', t: 'check', l: 'Kenarları çiz', v: true },
+    { k: 'wire', t: 'check', l: 'Yalnızca tel kafes', v: false },
+    { k: 'mono', t: 'check', l: 'Tek renk (beyaz)', v: false },
+    { k: 'bg', t: 'select', l: 'Zemin', o: [['#0b1015', 'Koyu'], ['#eef2f6', 'Açık'], ['#10233d', 'Lacivert']], v: '#0b1015' },
+    { t: 'buttons', b: [['Görünümü sıfırla', () => { cam.th = 0; cam.ph = Math.PI / 2; cam.r = fitR(); sel(null); }, 1]] }
+  ],
+  onChange: () => style(), snapshot: () => { R.render(scene, camera); return R.domElement; }
+});
+const R = new THREE.WebGLRenderer({ antialias: true, preserveDrawingBuffer: true }); R.setPixelRatio(Math.min(devicePixelRatio, 2)); R.domElement.className = 'k-cv'; document.body.prepend(R.domElement);
+const scene = new THREE.Scene(), camera = new THREE.PerspectiveCamera(45, 1, .1, 200);
+scene.add(new THREE.HemisphereLight(0xffffff, 0x334455, .9)); const sun = new THREE.DirectionalLight(0xffffff, .9); sun.position.set(5, 8, 6); scene.add(sun);
+const group = new THREE.Group(); scene.add(group); const COLS = 4, GAP = 3.4;
+const items = SH.map((s, i) => { const geo = s.g(), mat = new THREE.MeshStandardMaterial({ color: s.c, roughness: .45, metalness: .05, flatShading: !s.curved, transparent: true, polygonOffset: true, polygonOffsetFactor: 1, polygonOffsetUnits: 1 }), m = new THREE.Mesh(geo, mat);
+  const e = new THREE.LineSegments(new THREE.EdgesGeometry(geo, 25), new THREE.LineBasicMaterial({ color: 0x0b1015 })); m.add(e);
+  const r = Math.floor(i / COLS), c = i % COLS; m.position.set((c - (COLS - 1) / 2) * GAP, ((Math.ceil(SH.length / COLS) - 1) / 2 - r) * GAP, 0);
+  m.userData = { s, i, e, home: m.position.clone(), sp: [rnd(-.4, .4), rnd(.3, .7)], k: 1 }; m.rotation.set(rnd(0, 1), rnd(0, 6), 0); group.add(m); return m; });
+function style() { const v = K.v; scene.background = new THREE.Color(v.bg); const light = v.bg === '#eef2f6';
+  items.forEach(m => { m.material.wireframe = v.wire; m.material.color.set(v.mono ? 0xf1f5f9 : m.userData.s.c); m.userData.e.visible = v.edges && !v.wire; m.userData.e.material.color.set(light || v.mono ? 0x1f2937 : 0x0b1015); }); }
+style();
+const cam = { th: .5, ph: 1.2, r: 20 }, fitR = () => { const w = COLS * GAP + 1, h = Math.ceil(SH.length / COLS) * GAP + 1, f = Math.tan(camera.fov * Math.PI / 360); return Math.max(h / 2 / f, w / 2 / f / camera.aspect) * 1.05; };
+function size() { R.setSize(innerWidth, innerHeight); camera.aspect = innerWidth / innerHeight; camera.updateProjectionMatrix(); cam.r = fitR(); }
+addEventListener('resize', size); size(); cam.th = 0; cam.ph = Math.PI / 2;
+/* sürükle / yakınlaştır / seç */
+const ray = new THREE.Raycaster(), mv = new THREE.Vector2(); let drag = null, hover = null, chosen = null; const pts = new Map();
+const cv = R.domElement;
+cv.addEventListener('pointerdown', e => { cv.setPointerCapture(e.pointerId); pts.set(e.pointerId, [e.clientX, e.clientY]); drag = { x: e.clientX, y: e.clientY, th: cam.th, ph: cam.ph, moved: 0, d: pts.size === 2 ? dist() : 0, r: cam.r }; });
+const dist = () => { const [a, b] = [...pts.values()]; return Math.hypot(a[0] - b[0], a[1] - b[1]); };
+cv.addEventListener('pointermove', e => { mv.set(e.clientX / innerWidth * 2 - 1, -e.clientY / innerHeight * 2 + 1); if (pts.has(e.pointerId)) pts.set(e.pointerId, [e.clientX, e.clientY]);
+  if (drag) { if (pts.size === 2 && drag.d) { cam.r = Math.min(60, Math.max(4, drag.r * drag.d / dist())); drag.moved = 99; return; } const dx = e.clientX - drag.x, dy = e.clientY - drag.y; drag.moved = Math.max(drag.moved, Math.hypot(dx, dy)); cam.th = drag.th - dx * .006; cam.ph = Math.min(3, Math.max(.15, drag.ph - dy * .006)); } });
+['pointerup', 'pointercancel'].forEach(t => cv.addEventListener(t, e => { pts.delete(e.pointerId); if (drag && drag.moved < 6 && t === 'pointerup') { choose(e); } if (!pts.size) drag = null; }));
+cv.addEventListener('wheel', e => { e.preventDefault(); cam.r = Math.min(60, Math.max(4, cam.r * (1 + Math.sign(e.deltaY) * .1))); }, { passive: false });
+function hit(e) { mv.set(e.clientX / innerWidth * 2 - 1, -e.clientY / innerHeight * 2 + 1); ray.setFromCamera(mv, camera); const h = ray.intersectObjects(items, false)[0]; return h ? h.object : null; }
+function choose(e) { sel(hit(e)); }
+const info = document.createElement('div'); info.className = 'k-info sh-info'; info.hidden = true; document.body.appendChild(info);
+const tip = document.createElement('div'); tip.className = 'sh-tip'; tip.hidden = true; document.body.appendChild(tip);
+function sel(m) {
+  chosen = m; items.forEach(x => { x.userData.k = !m || x === m ? 1 : .35; });
+  if (!m) { info.hidden = true; return; } const s = m.userData.s, eu = s.V - s.E + s.F;
+  info.innerHTML = `<button type="button" class="sh-x" aria-label="Kapat">×</button><h3>${s.n}</h3><p>${s.d}</p><div class="sh-g"><div><b>${s.curved && !s.V ? '–' : s.V}</b><span>köşe</span></div><div><b>${s.E}</b><span>kenar</span></div><div><b>${s.F}</b><span>yüz</span></div></div>
+    <p class="sh-f">${s.vol}<br>${s.area}</p><p class="sh-e">${s.curved ? 'Eğri yüzeyli cisim: Euler formülü (K − Kn + Y = 2) yalnızca çokyüzlüler için geçerlidir.' : `Euler: ${s.V} − ${s.E} + ${s.F} = <b>${eu}</b> ✓`}</p>`;
+  info.hidden = false; info.querySelector('.sh-x').onclick = () => sel(null);
+}
+cv.addEventListener('pointermove', e => { if (drag) { tip.hidden = true; return; } const m = hit(e); if (m !== hover) { hover = m; cv.style.cursor = m ? 'pointer' : 'grab'; } if (m) { tip.textContent = m.userData.s.n; tip.hidden = false; tip.style.left = e.clientX + 14 + 'px'; tip.style.top = e.clientY + 12 + 'px'; } else tip.hidden = true; });
+K.onKey = null;
+K.loop((dt, t) => {
+  const v = K.v; camera.position.set(cam.r * Math.sin(cam.ph) * Math.sin(cam.th), cam.r * Math.cos(cam.ph), cam.r * Math.sin(cam.ph) * Math.cos(cam.th)); camera.lookAt(0, 0, 0);
+  items.forEach(m => { const u = m.userData, on = m === chosen, hv = m === hover; if (v.spin || on) { m.rotation.x += u.sp[0] * dt * (on ? 1.5 : 1); m.rotation.y += u.sp[1] * dt * (on ? 1.5 : 1); }
+    const sc = on ? 1.35 : hv ? 1.12 : 1; m.scale.lerp(new THREE.Vector3(sc, sc, sc), .15);
+    m.material.opacity += ((u.k) - m.material.opacity) * .15; m.material.emissive.setHex(hv && !on ? 0x222222 : 0); });
+  R.render(scene, camera);
+});
 
-        // Kamera oluşturun
-        const camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 1000);
-        camera.position.z = 10;
-
-        // Renderer oluşturun
-        const renderer = new THREE.WebGLRenderer();
-        renderer.setSize(window.innerWidth, window.innerHeight);
-        document.body.appendChild(renderer.domElement);
-
-        // Kenar çizgisi materyali
-        const wireframeMaterial = new THREE.MeshBasicMaterial({ color: 0x000000, wireframe: true });
-
-        // Şekil oluşturma fonksiyonu
-        function createShape(geometry, color, position, name) {
-            const material = new THREE.MeshBasicMaterial({ color: color });
-            const shape = new THREE.Mesh(geometry, material);
-            const wireframe = new THREE.Mesh(geometry, wireframeMaterial);
-            shape.add(wireframe);
-            shape.position.set(position.x, position.y, position.z);
-            shape.rotationSpeed = {
-                x: Math.random() * 0.02 - 0.01,
-                y: Math.random() * 0.02 - 0.01
-            };
-            shape.name = name;
-            scene.add(shape);
-            return shape;
-        }
-
-        // Şekilleri oluşturun
-        const shapes = [
-            createShape(new THREE.BoxGeometry(), 0x00ff00, { x: -6, y: 0, z: 0 }, 'Küp'),
-            createShape(new THREE.CylinderGeometry(1, 1, 2, 32), 0xff0000, { x: -3, y: 0, z: 0 }, 'Silindir'),
-            createShape(new THREE.ConeGeometry(1, 2, 32), 0x0000ff, { x: 0, y: 0, z: 0 }, 'Koni'),
-            createShape(new THREE.CylinderGeometry(1, 1, 2, 3), 0xffff00, { x: 3, y: 0, z: 0 }, 'Üçgen Prizma'),
-            createShape(new THREE.BoxGeometry(1, 2, 1), 0xff00ff, { x: 6, y: 0, z: 0 }, 'Kare Prizma'),
-            createShape(new THREE.ConeGeometry(1, 2, 3), 0x00ffff, { x: -6, y: -3, z: 0 }, 'Üçgen Piramit'),
-            createShape(new THREE.CylinderGeometry(0, 1, 2, 4), 0xffa500, { x: -3, y: -3, z: 0 }, 'Dikdörtgen Piramit'),
-            createShape(new THREE.CylinderGeometry(0, 1, 2, 5), 0x8a2be2, { x: 0, y: -3, z: 0 }, 'Beşgen Piramit'),
-            createShape(new THREE.CylinderGeometry(0, 1, 2, 6), 0xdeb887, { x: 3, y: -3, z: 0 }, 'Altıgen Piramit'),
-            createShape(new THREE.CylinderGeometry(1, 1, 2, 5), 0x5f9ea0, { x: 6, y: -3, z: 0 }, 'Beşgen Prizma'),
-            createShape(new THREE.CylinderGeometry(1, 1, 2, 6), 0xd2691e, { x: -6, y: -6, z: 0 }, 'Altıgen Prizma')
-        ];
-
-        // Raycaster ve mouse oluşturun
-        const raycaster = new THREE.Raycaster();
-        const mouse = new THREE.Vector2();
-
-        // Mouse hareketi ve tıklama olaylarını dinleyin
-        window.addEventListener('mousemove', onMouseMove, false);
-        window.addEventListener('click', onClick, false);
-
-        function onMouseMove(event) {
-            mouse.x = (event.clientX / window.innerWidth) * 2 - 1;
-            mouse.y = -(event.clientY / window.innerHeight) * 2 + 1;
-        }
-
-        function onClick() {
-            raycaster.setFromCamera(mouse, camera);
-            const intersects = raycaster.intersectObjects(scene.children, true);
-            if (intersects.length > 0) {
-                const intersectedObject = intersects[0].object;
-                const shapeNameDiv = document.getElementById('shapeName');
-                shapeNameDiv.innerText = intersectedObject.parent.name;
-                shapeNameDiv.style.display = 'block';
-                setTimeout(() => {
-                    shapeNameDiv.style.display = 'none';
-                }, 3000);
-            }
-        }
-
-        // Animasyon fonksiyonu
-        function animate() {
-            requestAnimationFrame(animate);
-            shapes.forEach(shape => {
-                shape.rotation.x += shape.rotationSpeed.x;
-                shape.rotation.y += shape.rotationSpeed.y;
-            });
-            raycaster.setFromCamera(mouse, camera);
-            renderer.render(scene, camera);
-        }
-        animate();
-    </script>
+</script>
 </body>
 </html>

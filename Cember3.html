@@ -1,102 +1,64 @@
-<!DOCTYPE html>
-<html lang="en">
+<!doctype html>
+<html lang="tr">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Renkli Daireler</title>
-    <style>
-        body {
-            background-color: black;
-            overflow: hidden;
-            margin: 0;
-            padding: 0;
-        }
-        .canvas {
-            position: absolute;
-            top: 0;
-            left: 0;
-            width: 100%;
-            height: 100%;
-        }
-    </style>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Renkli Daireler · Takımyıldız Ağı | erdevelop</title>
+<meta name="description" content="Yaklaşan noktaların çizgiyle bağlandığı canlı bir ağ; üçgenleri doldurma ve renk geçişleri.">
+<meta name="theme-color" content="#000000">
+<link rel="stylesheet" href="deneyler/kit.css">
+
 </head>
 <body>
-    <canvas id="circleCanvas" class="canvas"></canvas>
-    <script>
-        const canvas = document.getElementById('circleCanvas');
-        const ctx = canvas.getContext('2d');
+<script src="deneyler/kit.js"></script>
+<script>
+let S, N = [];
+const K = Kit({ id: 'cember3', title: 'Renkli Daireler', sub: 'takımyıldız ağı', help: 'Birbirine yaklaşan noktalar çizgiyle bağlanır. Fare de bir düğüm gibi davranır; tıkla: yeni noktalar ekle.',
+  controls: [
+    { t: 'h', l: 'Noktalar' },
+    { k: 'n', t: 'range', l: 'Sayı', min: 20, max: 300, v: 110 },
+    { k: 'size', t: 'range', l: 'Boyut', min: 1, max: 10, step: .5, v: 3 },
+    { k: 'speed', t: 'range', l: 'Hız', min: 0, max: 3, step: .05, v: .6 },
+    { k: 'pal', t: 'select', l: 'Renk paleti', o: PAL_OPTS, v: 'okyanus' },
+    { t: 'h', l: 'Bağlantılar' },
+    { k: 'dist', t: 'range', l: 'Bağlantı mesafesi', min: 40, max: 240, v: 130 },
+    { k: 'lw', t: 'range', l: 'Çizgi kalınlığı', min: .3, max: 3, step: .1, v: 1 },
+    { k: 'grad', t: 'check', l: 'Çizgi rengi uçlara göre geçişli', v: true },
+    { k: 'tri', t: 'check', l: 'Üçgenleri doldur', v: false },
+    { k: 'mouse', t: 'select', l: 'Fare', o: [['link', 'Bağlanır ve çeker'], ['push', 'İter'], ['none', 'Etkisiz']], v: 'link' },
+    { t: 'buttons', b: [['Yeniden dağıt', () => init(), 1]] }
+  ],
+  onChange: k => { if (['n', 'pal', '*'].includes(k)) init(); },
+  onDown: P => { for (let i = 0; i < 4; i++) { if (N.length > K.v.n + 80) N.shift(); N.push(mk(P.x + rnd(-20, 20), P.y + rnd(-20, 20))); } }
+});
+const mk = (x, y) => { const a = rnd(0, 6.28), s = rnd(.2, 1); return { x, y, vx: Math.cos(a) * s, vy: Math.sin(a) * s, c: pick(PALETTES[K.v.pal]), rgb: null }; };
+function init() { N = []; for (let i = 0; i < K.v.n; i++) N.push(mk(rnd(0, S.W), rnd(0, S.H))); N.forEach(n => n.rgb = hexRgb(n.c)); }
+S = K.canvas(); init();
+K.loop(dt => {
+  const v = K.v, g = S.ctx, f = dt * 60, P = K.ptr, D = v.dist, D2 = D * D;
+  g.fillStyle = '#04070c'; g.fillRect(0, 0, S.W, S.H);
+  for (const n of N) {
+    if (!n.rgb) n.rgb = hexRgb(n.c);
+    if (P.active && v.mouse !== 'none') { const dx = P.x - n.x, dy = P.y - n.y, d = Math.hypot(dx, dy); if (d < D * 1.4 && d > 1) { const k = (v.mouse === 'push' ? -1 : .25) * (1 - d / (D * 1.4)) * .08 * f; n.vx += dx / d * k; n.vy += dy / d * k; } }
+    const s = Math.hypot(n.vx, n.vy); if (s > 1.6) { n.vx *= 1.6 / s; n.vy *= 1.6 / s; } if (s < .15) { n.vx *= 1.1; n.vy *= 1.1; }
+    n.x += n.vx * v.speed * f; n.y += n.vy * v.speed * f;
+    if (n.x < 0) { n.x = 0; n.vx *= -1; } if (n.x > S.W) { n.x = S.W; n.vx *= -1; } if (n.y < 0) { n.y = 0; n.vy *= -1; } if (n.y > S.H) { n.y = S.H; n.vy *= -1; }
+  }
+  const pts = P.active && v.mouse === 'link' ? N.concat([{ x: P.x, y: P.y, rgb: [255, 255, 255], me: 1 }]) : N;
+  // ızgara ile komşu arama
+  const cell = D, grid = new Map(), key = (i, j) => i * 100003 + j;
+  pts.forEach((p, i) => { const k = key(Math.floor(p.x / cell), Math.floor(p.y / cell)); (grid.get(k) || grid.set(k, []).get(k)).push(i); });
+  g.lineWidth = v.lw; const links = [];
+  pts.forEach((a, i) => { const ci = Math.floor(a.x / cell), cj = Math.floor(a.y / cell);
+    for (let di = -1; di <= 1; di++) for (let dj = -1; dj <= 1; dj++) { const L = grid.get(key(ci + di, cj + dj)); if (!L) continue;
+      for (const j of L) { if (j <= i) continue; const b = pts[j], dx = a.x - b.x, dy = a.y - b.y, d2 = dx * dx + dy * dy; if (d2 > D2) continue; const al = 1 - Math.sqrt(d2) / D; links.push([i, j, al]);
+        if (v.grad) { const gr = g.createLinearGradient(a.x, a.y, b.x, b.y); gr.addColorStop(0, `rgba(${a.rgb},${al})`); gr.addColorStop(1, `rgba(${b.rgb},${al})`); g.strokeStyle = gr; } else g.strokeStyle = `rgba(200,220,255,${al * .8})`;
+        g.beginPath(); g.moveTo(a.x, a.y); g.lineTo(b.x, b.y); g.stroke(); } } });
+  if (v.tri && links.length < 4000) { const adj = new Map(); links.forEach(([i, j, al]) => { (adj.get(i) || adj.set(i, new Map()).get(i)).set(j, al); });
+    adj.forEach((m, i) => { const js = [...m.keys()]; for (let x = 0; x < js.length; x++) for (let y = x + 1; y < js.length; y++) { const a = Math.min(js[x], js[y]), b = Math.max(js[x], js[y]), mb = adj.get(a); if (mb && mb.has(b)) { const al = Math.min(m.get(js[x]), m.get(js[y]), mb.get(b)); const p = pts[i]; g.fillStyle = `rgba(${p.rgb},${al * .12})`; g.beginPath(); g.moveTo(p.x, p.y); g.lineTo(pts[a].x, pts[a].y); g.lineTo(pts[b].x, pts[b].y); g.fill(); } } }); }
+  for (const p of pts) { g.fillStyle = `rgb(${p.rgb})`; g.beginPath(); g.arc(p.x, p.y, p.me ? v.size + 2 : v.size, 0, 6.2832); g.fill(); }
+});
 
-        canvas.width = window.innerWidth;
-        canvas.height = window.innerHeight;
-
-        const circles = [];
-        const colors = ['#FF5733', '#33FF57', '#3357FF', '#F3FF33', '#FF33F3'];
-
-        for (let i = 0; i < 50; i++) {
-            circles.push({
-                x: Math.random() * canvas.width,
-                y: Math.random() * canvas.height,
-                radius: Math.random() * 50 + 10,
-                color: colors[Math.floor(Math.random() * colors.length)],
-                dx: (Math.random() - 0.5) * 2,
-                dy: (Math.random() - 0.5) * 2,
-                opacity: Math.random(),
-                opacityChange: (Math.random() - 0.5) * 0.01
-            });
-        }
-
-        function draw() {
-            ctx.clearRect(0, 0, canvas.width, canvas.height);
-
-            circles.forEach((circle, index) => {
-                ctx.beginPath();
-                ctx.arc(circle.x, circle.y, circle.radius, 0, Math.PI * 2, false);
-                ctx.fillStyle = `rgba(${hexToRgb(circle.color)},${circle.opacity})`;
-                ctx.fill();
-
-                circle.x += circle.dx;
-                circle.y += circle.dy;
-
-                if (circle.x + circle.radius > canvas.width || circle.x - circle.radius < 0) {
-                    circle.dx = -circle.dx;
-                }
-
-                if (circle.y + circle.radius > canvas.height || circle.y - circle.radius < 0) {
-                    circle.dy = -circle.dy;
-                }
-
-                circle.opacity += circle.opacityChange;
-                if (circle.opacity <= 0) {
-                    circles.splice(index, 1);
-                    circles.push({
-                        x: Math.random() * canvas.width,
-                        y: Math.random() * canvas.height,
-                        radius: Math.random() * 50 + 10,
-                        color: colors[Math.floor(Math.random() * colors.length)],
-                        dx: (Math.random() - 0.5) * 2,
-                        dy: (Math.random() - 0.5) * 2,
-                        opacity: 1,
-                        opacityChange: (Math.random() - 0.5) * 0.01
-                    });
-                }
-                if (circle.opacity > 1) {
-                    circle.opacity = 1;
-                    circle.opacityChange = -circle.opacityChange;
-                }
-            });
-
-            requestAnimationFrame(draw);
-        }
-
-        function hexToRgb(hex) {
-            const bigint = parseInt(hex.slice(1), 16);
-            const r = (bigint >> 16) & 255;
-            const g = (bigint >> 8) & 255;
-            const b = bigint & 255;
-            return `${r},${g},${b}`;
-        }
-
-        draw();
-    </script>
+</script>
 </body>
 </html>

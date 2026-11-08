@@ -1,65 +1,67 @@
-<!DOCTYPE html>
-<html lang="en">
+<!doctype html>
+<html lang="tr">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Matrix Kayan Yazı</title>
-    <style>
-        body {
-            background-color: black;
-            color: green;
-            overflow: hidden;
-            margin: 0;
-            padding: 0;
-            font-family: monospace;
-        }
-        .matrix {
-            position: absolute;
-            top: 0;
-            left: 0;
-            width: 100%;
-            height: 100%;
-        }
-    </style>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Matrix Yağmuru · Klasik | erdevelop</title>
+<meta name="description" content="Karakter seti, renk ve hız ayarlı Matrix yağmuru; yağmurun içinde gizli mesaj belirir.">
+<meta name="theme-color" content="#000000">
+<link rel="stylesheet" href="deneyler/kit.css">
+
 </head>
 <body>
-    <canvas id="matrixCanvas" class="matrix"></canvas>
-    <script>
-        const canvas = document.getElementById('matrixCanvas');
-        const ctx = canvas.getContext('2d');
+<script src="deneyler/kit.js"></script>
+<script>
+const SETS = {
+  kata: 'アイウエオカキクケコサシスセソタチツテトナニヌネノハヒフヘホマミムメモヤユヨラリルレロワヲンガギグゲゴザジズゼゾダヂヅデドバビブベボ',
+  latin: 'ABCDEFGHIJKLMNOPQRSTUVWXYZ', num: '0123456789', bin: '01', tr: 'ABCÇDEFGĞHIİJKLMNOÖPRSŞTUÜVYZ',
+  mix: 'アイウエオカキクケコサシスセソタチツテトナニヌネノハヒフヘホマミムメモラリルレロワヲンABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789αβγδεζηθλμπσφψωЖЗИЛПФЦЧШЭЮЯ'
+};
+let S, cols = 0, drops = [], msg = [], shown = [], acc = 0, hue = 0;
+const K = Kit({ id: 'matrix1', title: 'Matrix Yağmuru', sub: 'klasik', help: '“Gizli mesaj” kutusuna yaz: yağmur o satırdan geçtikçe harfler tek tek ortaya çıkar. Tıkla: o sütuna yeni damla.',
+  controls: [
+    { t: 'h', l: 'Karakterler' },
+    { k: 'cs', t: 'select', l: 'Karakter seti', o: [['mix', 'Karışık'], ['kata', 'Katakana'], ['latin', 'Latin harfleri'], ['tr', 'Türkçe alfabe'], ['num', 'Rakamlar'], ['bin', 'İkili (0 1)']], v: 'mix' },
+    { k: 'fs', t: 'range', l: 'Yazı boyutu', min: 10, max: 34, v: 16 },
+    { k: 'msg', t: 'text', l: 'Gizli mesaj', v: 'ERDEVELOP', ph: 'boş bırakabilirsin', max: 40 },
+    { t: 'h', l: 'Renk ve hareket' },
+    { k: 'col', t: 'select', l: 'Renk', o: [['#00ff66', 'Yeşil'], ['#3db4ff', 'Mavi'], ['#ff3355', 'Kırmızı'], ['#ffb000', 'Kehribar'], ['#e8e8e8', 'Beyaz'], ['rainbow', 'Gökkuşağı']], v: '#00ff66' },
+    { k: 'fps', t: 'range', l: 'Hız (kare/sn)', min: 5, max: 60, v: 22 },
+    { k: 'trail', t: 'range', l: 'İz uzunluğu', min: 1, max: 20, v: 9 },
+    { k: 'dens', t: 'range', l: 'Yoğunluk', min: 1, max: 10, v: 5 },
+    { k: 'head', t: 'check', l: 'Damla ucu beyaz parlasın', v: true },
+    { t: 'buttons', b: [['Mesajı yeniden göster', () => setup(), 1]] }
+  ],
+  onChange: k => { if (['fs', 'msg', '*', 'cs'].includes(k)) setup(); },
+  onDown: P => { const c = Math.floor(P.x / K.v.fs); if (drops[c] != null) drops[c] = Math.floor(P.y / K.v.fs); }
+});
+function setup() {
+  const fs = K.v.fs; cols = Math.ceil(S.W / fs); drops = Array.from({ length: cols }, () => Math.floor(rnd(-S.H / fs, 0)));
+  const m = [...(K.v.msg || '').toLocaleUpperCase('tr')].slice(0, cols - 2), c0 = Math.floor((cols - m.length) / 2);
+  msg = new Array(cols).fill(null); m.forEach((ch, i) => { if (ch !== ' ') msg[c0 + i] = ch; }); shown = new Array(cols).fill(false);
+  S.ctx.fillStyle = '#000'; S.ctx.fillRect(0, 0, S.W, S.H);
+}
+S = K.canvas(); S.onResize(setup);
+const colorFor = i => K.v.col === 'rainbow' ? `hsl(${(hue + i * 4) % 360},100%,60%)` : K.v.col;
+K.loop(dt => {
+  acc += dt; const step = 1 / K.v.fps; if (acc < step) return; acc = Math.min(acc - step, step);
+  const v = K.v, g = S.ctx, fs = v.fs, set = SETS[v.cs] || SETS.mix, row = Math.floor(S.H / fs / 2); hue += 2;
+  g.fillStyle = `rgba(0,0,0,${1 / (v.trail + 1)})`; g.fillRect(0, 0, S.W, S.H);
+  g.font = `600 ${fs}px ui-monospace, Menlo, Consolas, monospace`; g.textBaseline = 'top';
+  for (let i = 0; i < cols; i++) {
+    const y = drops[i], ch = set[Math.floor(Math.random() * set.length)];
+    if (y >= 0) {
+      if (v.head) { g.fillStyle = '#fff'; g.shadowColor = colorFor(i); g.shadowBlur = 8; g.fillText(ch, i * fs, y * fs); g.shadowBlur = 0; g.fillStyle = colorFor(i); g.fillText(set[Math.floor(Math.random() * set.length)], i * fs, (y - 1) * fs); }
+      else { g.fillStyle = colorFor(i); g.fillText(ch, i * fs, y * fs); }
+      if (msg[i] && y === row) shown[i] = true;
+    }
+    if (y * fs > S.H && Math.random() > 1 - v.dens * .006) drops[i] = 0; else drops[i]++;
+  }
+  g.shadowBlur = 14;
+  for (let i = 0; i < cols; i++) if (shown[i]) { g.shadowColor = colorFor(i); g.fillStyle = '#fff'; g.fillText(msg[i], i * fs, row * fs); }
+  g.shadowBlur = 0;
+});
 
-        canvas.width = window.innerWidth;
-        canvas.height = window.innerHeight;
-
-        const letters = 'ءآأؤإئابةتثجحخدذرزسشصضطظعغفقكلمنهويกขฃคฅฆงจฉชซฌญฎฏฐฑฒณดตถทธนบปผฝพฟภมยรลวศษสหฬอฮअआइईउऊऋएऐओऔकखगघङचछजझञटठडढणतथदधनपफबभमयरलवशषसहאבגדהוזחטיכלמנסעפצקרשת가나다라마바사아자차카타파하あいうえおかきくけこさしすせそたちつてとなにぬねのはひふへほまみむめもやゆよらりるれろわをんαβγδεζηθικλμνξοπρστυφχψωАБВГДЕЁЖЗИЙКЛМНОПРСТУФХЦЧШЩЪЫЬЭЮЯアイウエオカキクケコサシスセソタチツテトナニヌネノハヒフヘホマミムメモヤユヨラリルレロワヲンABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789的一是不了在人有我他这中大来上个国到说们为子和你地出道也时年得就那要下以生会自着去之过家学对可里后小么心多天而能好都然没日于起还发成事只作当想看文无开手十用主行方又如前所本见经头面公同三已老从动两长知民样现分将外身些与高意进把法此实回二理美点月其力合王';
-        const fontSize = 14;
-        const columns = canvas.width / fontSize;
-
-        const drops = [];
-        for (let x = 0; x < columns; x++) {
-            drops[x] = 1;
-        }
-
-        function draw() {
-            ctx.fillStyle = 'rgba(0, 0, 0, 0.05)';
-            ctx.fillRect(0, 0, canvas.width, canvas.height);
-
-            ctx.fillStyle = '#0F0';
-            ctx.font = `${fontSize}px monospace`;
-
-            for (let i = 0; i < drops.length; i++) {
-                const text = letters[Math.floor(Math.random() * letters.length)];
-                ctx.fillText(text, i * fontSize, drops[i] * fontSize);
-
-                if (drops[i] * fontSize > canvas.height && Math.random() > 0.975) {
-                    drops[i] = 0;
-                }
-
-                drops[i]++;
-            }
-        }
-
-        setInterval(draw, 66);
-    </script>
+</script>
 </body>
 </html>

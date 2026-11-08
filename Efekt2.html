@@ -1,97 +1,80 @@
-<!DOCTYPE html>
+<!doctype html>
 <html lang="tr">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Particles.js Arka Plan</title>
-    <style>
-        /* Sayfa sıfırlama ve temel stil */
-        body, html {
-            margin: 0;
-            padding: 0;
-            width: 100%;
-            height: 100%;
-            overflow: hidden; /* Kaydırma çubuğunu gizler */
-            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-        }
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Parçacık Atölyesi | erdevelop</title>
+<meta name="description" content="Beş mod: bağlantılı ağ, kar, kabarcık, yıldız yolculuğu ve ateş böcekleri.">
+<meta name="theme-color" content="#000000">
+<link rel="stylesheet" href="deneyler/kit.css">
 
-        /* Arka planın rengi ve konumu */
-        #particles-js {
-            position: absolute;
-            width: 100%;
-            height: 100%;
-            background-color: #0d1117; /* Koyu modern bir arka plan */
-            z-index: -1; /* İçeriğin arkasında kalması için */
-        }
-
-        /* Merkeze yazı eklemek için */
-        .content {
-            position: relative;
-            display: flex;
-            flex-direction: column;
-            justify-content: center;
-            align-items: center;
-            height: 100vh;
-            color: white;
-            text-align: center;
-            pointer-events: none; /* Yazının arkasındaki parçacıklara tıklanabilsin diye */
-        }
-
-        h1 { font-size: 3rem; margin-bottom: 10px; }
-        p { font-size: 1.2rem; opacity: 0.8; }
-    </style>
 </head>
 <body>
+<script src="deneyler/kit.js"></script>
+<script>
+let S, P = [];
+const K = Kit({ id: 'efekt2', title: 'Parçacık Atölyesi', sub: '5 mod', help: 'Ağ: fareye yakın noktalar ona bağlanır. Kar: fare rüzgâr gibi iter. Kabarcık: tıklayınca patlar. Yıldız yolculuğu: fare yönü belirler. Ateş böceği: fareye yaklaşır.',
+  controls: [
+    { k: 'mode', t: 'select', l: 'Mod', o: [['ag', 'Ağ (bağlantılı noktalar)'], ['kar', 'Kar yağışı'], ['kabarcik', 'Kabarcıklar'], ['yildiz', 'Yıldız yolculuğu'], ['bocek', 'Ateş böcekleri']], v: 'ag' },
+    { k: 'n', t: 'range', l: 'Parçacık sayısı', min: 20, max: 500, v: 120 },
+    { k: 'speed', t: 'range', l: 'Hız', min: .1, max: 4, step: .1, v: 1 },
+    { k: 'size', t: 'range', l: 'Boyut', min: .5, max: 8, step: .5, v: 3 },
+    { k: 'col', t: 'color', l: 'Parçacık rengi', v: '#ffffff' },
+    { k: 'bg', t: 'color', l: 'Arka plan', v: '#0d1117' },
+    { k: 'inter', t: 'check', l: 'Fare ile etkileşim', v: true }
+  ],
+  onChange: k => { if (['mode', 'n', '*'].includes(k)) init(); },
+  onDown: p => { if (K.v.mode === 'kabarcik') P.forEach(b => { if (Math.hypot(b.x - p.x, b.y - p.y) < b.r * 4 + 30) b.pop = 1; }); else if (K.v.mode === 'ag') for (let i = 0; i < 4; i++) P.push(make(p.x, p.y)); }
+});
+function make(x, y) {
+  const m = K.v.mode, W = S.W, H = S.H, a = rnd(0, 6.28);
+  if (m === 'yildiz') return { x: rnd(-W, W), y: rnd(-H, H), z: rnd(1, W), pz: 0 };
+  if (m === 'kar') return { x: x ?? rnd(0, W), y: y ?? rnd(-H, H), r: rnd(.4, 1) * K.v.size, s: rnd(.5, 1.5), ph: rnd(0, 6.28) };
+  if (m === 'kabarcik') return { x: x ?? rnd(0, W), y: y ?? rnd(0, H + 100), r: rnd(.5, 1.6) * K.v.size * 3, s: rnd(.4, 1.2), ph: rnd(0, 6.28), pop: 0 };
+  if (m === 'bocek') return { x: x ?? rnd(0, W), y: y ?? rnd(0, H), a, s: rnd(.2, .8), ph: rnd(0, 6.28), f: rnd(.6, 1.6) };
+  return { x: x ?? rnd(0, W), y: y ?? rnd(0, H), vx: Math.cos(a) * rnd(.3, 1), vy: Math.sin(a) * rnd(.3, 1), r: rnd(.5, 1) * K.v.size };
+}
+function init() { P = []; for (let i = 0; i < K.v.n; i++) P.push(make()); }
+S = K.canvas(); init();
+K.loop((dt, t) => {
+  const v = K.v, g = S.ctx, f = dt * 60 * v.speed, W = S.W, H = S.H, M = K.ptr, mi = v.inter && M.active, [r, gg, b] = hexRgb(v.col), C = `${r},${gg},${b}`;
+  g.globalCompositeOperation = 'source-over'; g.fillStyle = v.bg; g.fillRect(0, 0, W, H);
+  if (v.mode === 'ag') {
+    for (const p of P) { p.x += p.vx * f; p.y += p.vy * f; if (p.x < -10) p.x = W + 10; if (p.x > W + 10) p.x = -10; if (p.y < -10) p.y = H + 10; if (p.y > H + 10) p.y = -10;
+      if (mi) { const dx = M.x - p.x, dy = M.y - p.y, d = Math.hypot(dx, dy); if (d < 180 && d > 40) { p.x += dx / d * .4 * f; p.y += dy / d * .4 * f; } } }
+    if (P.length > v.n + 100) P.splice(0, P.length - v.n - 100);
+    g.lineWidth = 1;
+    for (let i = 0; i < P.length; i++) { const a = P[i]; for (let j = i + 1; j < P.length; j++) { const c = P[j], dx = a.x - c.x, dy = a.y - c.y; if (dx > 150 || dx < -150 || dy > 150 || dy < -150) continue; const d = Math.hypot(dx, dy); if (d < 150) { g.strokeStyle = `rgba(${C},${(1 - d / 150) * .4})`; g.beginPath(); g.moveTo(a.x, a.y); g.lineTo(c.x, c.y); g.stroke(); } }
+      if (mi) { const d = Math.hypot(a.x - M.x, a.y - M.y); if (d < 180) { g.strokeStyle = `rgba(${C},${(1 - d / 180) * .8})`; g.beginPath(); g.moveTo(a.x, a.y); g.lineTo(M.x, M.y); g.stroke(); } }
+      g.fillStyle = `rgba(${C},.6)`; g.beginPath(); g.arc(a.x, a.y, a.r, 0, 6.2832); g.fill(); }
+  } else if (v.mode === 'kar') {
+    const wind = mi ? (M.x / W - .5) * 3 : Math.sin(t * .3) * .6;
+    for (const p of P) { p.y += p.s * f * .8; p.x += (Math.sin(t + p.ph) * .5 + wind * p.s) * f * .5;
+      if (mi) { const dx = p.x - M.x, dy = p.y - M.y, d = Math.hypot(dx, dy); if (d < 100) { p.x += dx / d * (100 - d) * .05; p.y += dy / d * (100 - d) * .02; } }
+      if (p.y > H + 10) { p.y = -10; p.x = rnd(0, W); } if (p.x < -20) p.x = W + 20; if (p.x > W + 20) p.x = -20;
+      g.fillStyle = `rgba(${C},${.4 + p.r / v.size * .5})`; g.beginPath(); g.arc(p.x, p.y, p.r, 0, 6.2832); g.fill(); }
+  } else if (v.mode === 'kabarcik') {
+    for (const p of P) {
+      if (p.pop) { p.pop += f * .06; g.strokeStyle = `rgba(${C},${Math.max(0, 1 - p.pop) * .8})`; g.lineWidth = 1.5; for (let k = 0; k < 8; k++) { const a = k * .785, d = p.r * (1 + p.pop * 1.5); g.beginPath(); g.moveTo(p.x + Math.cos(a) * p.r, p.y + Math.sin(a) * p.r); g.lineTo(p.x + Math.cos(a) * d, p.y + Math.sin(a) * d); g.stroke(); } if (p.pop > 1) Object.assign(p, make(rnd(0, W), H + rnd(20, 120))); continue; }
+      p.y -= p.s * f * .7; p.x += Math.sin(t * 1.5 + p.ph) * .4 * f; if (p.y < -p.r * 2) { p.y = H + p.r * 2; p.x = rnd(0, W); }
+      const gr = g.createRadialGradient(p.x - p.r * .35, p.y - p.r * .35, p.r * .1, p.x, p.y, p.r); gr.addColorStop(0, `rgba(${C},.35)`); gr.addColorStop(.85, `rgba(${C},.05)`); gr.addColorStop(1, `rgba(${C},.4)`);
+      g.fillStyle = gr; g.beginPath(); g.arc(p.x, p.y, p.r, 0, 6.2832); g.fill(); g.strokeStyle = `rgba(${C},.45)`; g.lineWidth = 1; g.stroke(); }
+  } else if (v.mode === 'yildiz') {
+    const cx = W / 2 + (mi ? (M.x - W / 2) * .6 : 0), cy = H / 2 + (mi ? (M.y - H / 2) * .6 : 0);
+    for (const p of P) { p.pz = p.z; p.z -= 8 * f; if (p.z < 1) { p.x = rnd(-W, W); p.y = rnd(-H, H); p.z = W; p.pz = p.z; }
+      const sx = p.x / p.z * W * .5 + cx, sy = p.y / p.z * W * .5 + cy, px = p.x / p.pz * W * .5 + cx, py = p.y / p.pz * W * .5 + cy, k = 1 - p.z / W;
+      g.strokeStyle = `rgba(${C},${k})`; g.lineWidth = Math.max(.5, k * v.size); g.beginPath(); g.moveTo(px, py); g.lineTo(sx, sy); g.stroke(); }
+  } else {
+    g.globalCompositeOperation = 'lighter';
+    for (const p of P) { p.a += rnd(-.15, .15); let vx = Math.cos(p.a) * p.s, vy = Math.sin(p.a) * p.s;
+      if (mi) { const dx = M.x - p.x, dy = M.y - p.y, d = Math.hypot(dx, dy); if (d < 250) { vx += dx / d * .5; vy += dy / d * .5; } }
+      p.x += vx * f; p.y += vy * f; if (p.x < 0) p.x = W; if (p.x > W) p.x = 0; if (p.y < 0) p.y = H; if (p.y > H) p.y = 0;
+      const o = Math.max(0, Math.sin(t * p.f + p.ph)), R = v.size * 5; if (o < .02) continue;
+      const gr = g.createRadialGradient(p.x, p.y, 0, p.x, p.y, R); gr.addColorStop(0, `rgba(${C},${o})`); gr.addColorStop(.2, `rgba(${C},${o * .5})`); gr.addColorStop(1, `rgba(${C},0)`);
+      g.fillStyle = gr; g.beginPath(); g.arc(p.x, p.y, R, 0, 6.2832); g.fill(); }
+  }
+});
 
-    <div id="particles-js"></div>
-
-    <div class="content">
-        <h1></h1>
-        <p></p>
-    </div>
-
-    <script src="https://cdn.jsdelivr.net/particles.js/2.0.0/particles.min.js"></script>
-
-    <script>
-        /* Parçacık Ayarları */
-        particlesJS("particles-js", {
-            "particles": {
-                "number": { "value": 80, "density": { "enable": true, "value_area": 800 } },
-                "color": { "value": "#ffffff" }, // Nokta rengi
-                "shape": { "type": "circle" },
-                "opacity": { "value": 0.5, "random": false },
-                "size": { "value": 3, "random": true },
-                "line_linked": {
-                    "enable": true,
-                    "distance": 150,
-                    "color": "#ffffff", // Çizgi rengi
-                    "opacity": 0.4,
-                    "width": 1
-                },
-                "move": {
-                    "enable": true,
-                    "speed": 3, // Hareket hızı
-                    "direction": "none",
-                    "random": false,
-                    "straight": false,
-                    "out_mode": "out",
-                    "bounce": false
-                }
-            },
-            "interactivity": {
-                "detect_on": "canvas",
-                "events": {
-                    "onhover": { "enable": true, "mode": "grab" }, // Fare üzerine gelince çizgiler yakalar
-                    "onclick": { "enable": true, "mode": "push" }, // Tıklayınca yeni nokta atar
-                    "resize": true
-                },
-                "modes": {
-                    "grab": { "distance": 140, "line_linked": { "opacity": 1 } },
-                    "push": { "particles_nb": 4 }
-                }
-            },
-            "retina_detect": true
-        });
-    </script>
+</script>
 </body>
 </html>

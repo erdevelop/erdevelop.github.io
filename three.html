@@ -1,16 +1,77 @@
-<!DOCTYPE html>
-<html lang="en">
+<!doctype html>
+<html lang="tr">
 <head>
-    <meta charset="UTF-8">
-    <meta http-equiv="X-UA-Compatible" content="IE=edge">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Three</title>
-    <style>
-        body { margin: 0; }
-    </style>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Three.js Oyun Alanı | erdevelop</title>
+<meta name="description" content="Bir cismin malzemesini (metal, cam, plastik…), ışığını ve gölgesini değiştir; sürükleyip döndür.">
+<meta name="theme-color" content="#000000">
+<link rel="stylesheet" href="deneyler/kit.css">
+
 </head>
 <body>
-    <script src="three.min.js"></script>
-    <script src="js/three.js"></script>
+<script src="three.min.js"></script>
+<script src="deneyler/kit.js"></script>
+<script>
+const K = Kit({ id: 'three', title: 'Three.js Oyun Alanı', sub: 'malzeme ve ışık', help: 'Sürükle: cismi çevir · tekerlek ya da iki parmak: yakınlaştır. Malzemeyi, ışığı ve gölgeyi değiştirip farkı gör.',
+  controls: [
+    { t: 'h', l: 'Cisim' },
+    { k: 'shape', t: 'select', l: 'Biçim', o: [['box', 'Küp'], ['knot', 'Düğüm (torus knot)'], ['sphere', 'Küre'], ['torus', 'Simit'], ['ico', 'Yirmiyüzlü'], ['cyl', 'Silindir']], v: 'box' },
+    { k: 'mat', t: 'select', l: 'Malzeme', o: [['std', 'Mat boya'], ['metal', 'Metal'], ['glass', 'Cam'], ['plastic', 'Parlak plastik'], ['normal', 'Yüzey yönleri (normal)'], ['wire', 'Tel kafes']], v: 'std' },
+    { k: 'col', t: 'color', l: 'Renk', v: '#00ff66' },
+    { k: 'spin', t: 'range', l: 'Dönme hızı', min: 0, max: 3, step: .1, v: 1 },
+    { t: 'h', l: 'Sahne' },
+    { k: 'light', t: 'range', l: 'Işık açısı', min: 0, max: 360, step: 5, v: 40, fmt: x => x + '°' },
+    { k: 'lint', t: 'range', l: 'Işık şiddeti', min: .2, max: 3, step: .1, v: 1.4 },
+    { k: 'shadow', t: 'check', l: 'Gölge ve zemin', v: true },
+    { k: 'bg', t: 'select', l: 'Arka plan', o: [['#0b1015', 'Koyu'], ['#e9eef3', 'Açık'], ['grad', 'Stüdyo (geçişli)']], v: 'grad' }
+  ],
+  onChange: () => build(), snapshot: () => { R.render(scene, camera); return R.domElement; }
+});
+const R = new THREE.WebGLRenderer({ antialias: true, preserveDrawingBuffer: true }); R.setPixelRatio(Math.min(devicePixelRatio, 2)); R.shadowMap.enabled = true; R.shadowMap.type = THREE.PCFSoftShadowMap; R.domElement.className = 'k-cv'; document.body.prepend(R.domElement);
+R.outputEncoding = THREE.sRGBEncoding; R.toneMapping = THREE.ACESFilmicToneMapping;
+const scene = new THREE.Scene(), camera = new THREE.PerspectiveCamera(40, 1, .1, 100);
+const hemi = new THREE.HemisphereLight(0xffffff, 0x223344, .5), key = new THREE.DirectionalLight(0xffffff, 1.4), rim = new THREE.DirectionalLight(0x88aaff, .5);
+key.castShadow = true; key.shadow.mapSize.set(1024, 1024); key.shadow.camera.left = key.shadow.camera.bottom = -4; key.shadow.camera.right = key.shadow.camera.top = 4; key.shadow.radius = 4;
+rim.position.set(-4, 2, -5); scene.add(hemi, key, rim);
+const floor = new THREE.Mesh(new THREE.PlaneGeometry(30, 30), new THREE.ShadowMaterial({ opacity: .3 })); floor.rotation.x = -Math.PI / 2; floor.position.y = -1.6; floor.receiveShadow = true; scene.add(floor);
+const grid = new THREE.GridHelper(30, 30, 0x5aa9ff, 0x334455); grid.position.y = -1.599; grid.material.transparent = true; grid.material.opacity = .25; scene.add(grid);
+/* stüdyo arka planı: dikey geçiş dokusu */
+const gradTex = (() => { const c = document.createElement('canvas'); c.width = 2; c.height = 256; const g = c.getContext('2d'), gr = g.createLinearGradient(0, 0, 0, 256); gr.addColorStop(0, '#2b3b52'); gr.addColorStop(1, '#06090d'); g.fillStyle = gr; g.fillRect(0, 0, 2, 256); const t = new THREE.CanvasTexture(c); t.encoding = THREE.sRGBEncoding; return t; })();
+const GEO = { box: () => new THREE.BoxGeometry(1.8, 1.8, 1.8), knot: () => new THREE.TorusKnotGeometry(.9, .3, 220, 32), sphere: () => new THREE.SphereGeometry(1.25, 64, 48), torus: () => new THREE.TorusGeometry(1, .42, 48, 120), ico: () => new THREE.IcosahedronGeometry(1.3), cyl: () => new THREE.CylinderGeometry(1, 1, 2, 64) };
+let mesh = null, lastShape = '';
+function material(v) { const c = new THREE.Color(v.col);
+  if (v.mat === 'metal') return new THREE.MeshStandardMaterial({ color: c, metalness: 1, roughness: .25 });
+  if (v.mat === 'glass') return new THREE.MeshPhysicalMaterial({ color: c, metalness: 0, roughness: .05, transmission: .95, thickness: 1.2, ior: 1.5, transparent: true });
+  if (v.mat === 'plastic') return new THREE.MeshPhysicalMaterial({ color: c, roughness: .2, clearcoat: 1, clearcoatRoughness: .05 });
+  if (v.mat === 'normal') return new THREE.MeshNormalMaterial();
+  if (v.mat === 'wire') return new THREE.MeshBasicMaterial({ color: c, wireframe: true });
+  return new THREE.MeshStandardMaterial({ color: c, roughness: .8, metalness: 0, flatShading: v.shape === 'ico' });
+}
+function build() {
+  const v = K.v; let rot = mesh ? mesh.rotation.clone() : null;
+  if (!mesh || lastShape !== v.shape) { if (mesh) { scene.remove(mesh); mesh.geometry.dispose(); } mesh = new THREE.Mesh(GEO[v.shape](), material(v)); mesh.castShadow = true; scene.add(mesh); lastShape = v.shape; if (rot) mesh.rotation.copy(rot); }
+  else { mesh.material.dispose(); mesh.material = material(v); }
+  const a = v.light * Math.PI / 180; key.position.set(Math.cos(a) * 5, 6, Math.sin(a) * 5); key.intensity = v.lint; hemi.intensity = .25 + v.lint * .2;
+  floor.visible = grid.visible = v.shadow; R.shadowMap.enabled = v.shadow; mesh.castShadow = v.shadow; mesh.material.needsUpdate = true;
+  scene.background = v.bg === 'grad' ? gradTex : new THREE.Color(v.bg);
+  floor.material.opacity = v.bg === '#e9eef3' ? .18 : .35;
+}
+build();
+const view = { r: 7.5 }; let vel = { x: 0, y: 0 }, drag = null; const pts = new Map(), cv = R.domElement; cv.style.cursor = 'grab';
+function size() { R.setSize(innerWidth, innerHeight); camera.aspect = innerWidth / innerHeight; camera.updateProjectionMatrix(); view.r = innerWidth < innerHeight ? 10 : 7.5; }
+addEventListener('resize', size); size();
+const pd = () => { const [a, b] = [...pts.values()]; return Math.hypot(a[0] - b[0], a[1] - b[1]); };
+cv.addEventListener('pointerdown', e => { cv.setPointerCapture(e.pointerId); pts.set(e.pointerId, [e.clientX, e.clientY]); drag = { x: e.clientX, y: e.clientY, d: pts.size === 2 ? pd() : 0, r: view.r }; cv.style.cursor = 'grabbing'; });
+cv.addEventListener('pointermove', e => { if (!drag) return; pts.set(e.pointerId, [e.clientX, e.clientY]); if (pts.size === 2 && drag.d) { view.r = Math.min(20, Math.max(3.5, drag.r * drag.d / pd())); return; } vel.y = (e.clientX - drag.x) * .01; vel.x = (e.clientY - drag.y) * .01; mesh.rotation.y += vel.y; mesh.rotation.x += vel.x; drag.x = e.clientX; drag.y = e.clientY; });
+['pointerup', 'pointercancel'].forEach(t => cv.addEventListener(t, e => { pts.delete(e.pointerId); if (!pts.size) { drag = null; cv.style.cursor = 'grab'; } }));
+cv.addEventListener('wheel', e => { e.preventDefault(); view.r = Math.min(20, Math.max(3.5, view.r * (1 + Math.sign(e.deltaY) * .08))); }, { passive: false });
+K.loop((dt, t) => {
+  if (!drag) { vel.x *= .94; vel.y *= .94; mesh.rotation.x += vel.x + K.v.spin * dt * .35; mesh.rotation.y += vel.y + K.v.spin * dt * .5; }
+  mesh.position.y = Math.sin(t * 1.2) * .08;
+  camera.position.set(0, view.r * .28, view.r); camera.lookAt(0, -.1, 0); R.render(scene, camera);
+});
+
+</script>
 </body>
 </html>

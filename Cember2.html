@@ -1,97 +1,52 @@
-<!DOCTYPE html>
-<html lang="en">
+<!doctype html>
+<html lang="tr">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Renkli Daireler</title>
-    <style>
-        body {
-            background-color: black;
-            overflow: hidden;
-            margin: 0;
-            padding: 0;
-        }
-        .canvas {
-            position: absolute;
-            top: 0;
-            left: 0;
-            width: 100%;
-            height: 100%;
-        }
-    </style>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Renkli Daireler · İz ve Nefes | erdevelop</title>
+<meta name="description" content="Nefes alır gibi parlayan, iz bırakan ve fareni çevreleyen renkli daireler.">
+<meta name="theme-color" content="#000000">
+<link rel="stylesheet" href="deneyler/kit.css">
+
 </head>
 <body>
-    <canvas id="circleCanvas" class="canvas"></canvas>
-    <script>
-        const canvas = document.getElementById('circleCanvas');
-        const ctx = canvas.getContext('2d');
+<script src="deneyler/kit.js"></script>
+<script>
+let S, C = [];
+const K = Kit({ id: 'cember2', title: 'Renkli Daireler', sub: 'iz ve nefes', help: 'Daireler nefes alır gibi parlayıp söner ve arkalarında iz bırakır. Fareyi ya da parmağını gezdir: daireler etrafında döner.',
+  controls: [
+    { t: 'h', l: 'Daireler' },
+    { k: 'n', t: 'range', l: 'Sayı', min: 10, max: 200, v: 50 },
+    { k: 'size', t: 'range', l: 'En büyük boyut', min: 6, max: 80, v: 45 },
+    { k: 'speed', t: 'range', l: 'Hız', min: .1, max: 5, step: .1, v: 1.2 },
+    { k: 'pal', t: 'select', l: 'Renk paleti', o: PAL_OPTS, v: 'klasik' },
+    { t: 'h', l: 'Efekt' },
+    { k: 'trail', t: 'range', l: 'İz uzunluğu', min: 0, max: .97, step: .01, v: .88, fmt: x => '%' + Math.round(x * 100) },
+    { k: 'breath', t: 'range', l: 'Nefes hızı', min: 0, max: 3, step: .1, v: 1 },
+    { k: 'pull', t: 'range', l: 'Fareye çekim', min: 0, max: 1, step: .05, v: .5 },
+    { k: 'glow', t: 'check', l: 'Işıltı', v: true },
+    { t: 'buttons', b: [['Yeniden dağıt', () => init(), 1], ['Temizle', () => { S.ctx.fillStyle = '#000'; S.ctx.fillRect(0, 0, S.W, S.H); }]] }
+  ],
+  onChange: k => { if (['n', 'size', 'pal', '*'].includes(k)) init(); }
+});
+function init() { C = []; for (let i = 0; i < K.v.n; i++) C.push({ x: rnd(0, S.W), y: rnd(0, S.H), r: rnd(K.v.size * .2, K.v.size), a: rnd(0, 6.28), w: rnd(-.02, .02), s: rnd(.4, 1.2), ph: rnd(0, 6.28), f: rnd(.5, 1.5), rgb: hexRgb(pick(PALETTES[K.v.pal])) }); }
+S = K.canvas(); S.onResize(() => { S.ctx.fillStyle = '#000'; S.ctx.fillRect(0, 0, S.W, S.H); }); init();
+K.loop((dt, t) => {
+  const v = K.v, g = S.ctx, f = dt * 60, P = K.ptr;
+  g.globalCompositeOperation = 'source-over'; g.fillStyle = `rgba(0,0,0,${1 - v.trail})`; g.fillRect(0, 0, S.W, S.H);
+  g.globalCompositeOperation = v.glow ? 'lighter' : 'source-over';
+  for (const c of C) {
+    c.w += rnd(-.004, .004); c.w *= .98; c.a += c.w * f;
+    let vx = Math.cos(c.a) * c.s * v.speed, vy = Math.sin(c.a) * c.s * v.speed;
+    if (P.active && v.pull > 0) { const dx = P.x - c.x, dy = P.y - c.y, d = Math.hypot(dx, dy) || 1; const k = v.pull * Math.min(1, 220 / d) * 2; vx += (dx / d * .6 - dy / d) * k; vy += (dy / d * .6 + dx / d) * k; }
+    c.x += vx * f; c.y += vy * f;
+    const m = c.r; if (c.x < -m) c.x = S.W + m; if (c.x > S.W + m) c.x = -m; if (c.y < -m) c.y = S.H + m; if (c.y > S.H + m) c.y = -m;
+    const o = .15 + .55 * (.5 + .5 * Math.sin(t * v.breath * c.f + c.ph)), rr = c.r * (.85 + .15 * Math.sin(t * v.breath * c.f + c.ph)), [r, gg, b] = c.rgb;
+    const gr = g.createRadialGradient(c.x, c.y, 0, c.x, c.y, rr); gr.addColorStop(0, `rgba(${r},${gg},${b},${o})`); gr.addColorStop(.7, `rgba(${r},${gg},${b},${o * .6})`); gr.addColorStop(1, `rgba(${r},${gg},${b},0)`);
+    g.fillStyle = gr; g.beginPath(); g.arc(c.x, c.y, rr, 0, 6.2832); g.fill();
+  }
+});
 
-        canvas.width = window.innerWidth;
-        canvas.height = window.innerHeight;
-
-        const circles = [];
-        const colors = ['#FF5733', '#33FF57', '#3357FF', '#F3FF33', '#FF33F3'];
-
-        for (let i = 0; i < 50; i++) {
-            circles.push({
-                x: Math.random() * canvas.width,
-                y: Math.random() * canvas.height,
-                radius: Math.random() * 50 + 10,
-                color: colors[Math.floor(Math.random() * colors.length)],
-                dx: (Math.random() - 0.5) * 2,
-                dy: (Math.random() - 0.5) * 2,
-                opacity: Math.random(),
-                opacityChange: (Math.random() - 0.5) * 0.01
-            });
-        }
-
-        function draw() {
-            ctx.clearRect(0, 0, canvas.width, canvas.height);
-
-            circles.forEach(circle => {
-                ctx.beginPath();
-                ctx.arc(circle.x, circle.y, circle.radius, 0, Math.PI * 2, false);
-                ctx.fillStyle = `rgba(${hexToRgb(circle.color)},${circle.opacity})`;
-                ctx.fill();
-
-                circle.x += circle.dx;
-                circle.y += circle.dy;
-
-                if (circle.x + circle.radius > canvas.width || circle.x - circle.radius < 0) {
-                    circle.dx = -circle.dx;
-                }
-
-                if (circle.y + circle.radius > canvas.height || circle.y - circle.radius < 0) {
-                    circle.dy = -circle.dy;
-                }
-
-                circle.opacity += circle.opacityChange;
-                if (circle.opacity < 0) {
-                    circle.opacity = 0;
-                    circle.opacityChange = -circle.opacityChange;
-                }
-                if (circle.opacity > 1) {
-                    circle.opacity = 1;
-                    circle.opacityChange = -circle.opacityChange;
-                }
-
-                circle.radius += (Math.random() - 0.5) * 2;
-                if (circle.radius < 10) circle.radius = 10;
-                if (circle.radius > 60) circle.radius = 60;
-            });
-
-            requestAnimationFrame(draw);
-        }
-
-        function hexToRgb(hex) {
-            const bigint = parseInt(hex.slice(1), 16);
-            const r = (bigint >> 16) & 255;
-            const g = (bigint >> 8) & 255;
-            const b = bigint & 255;
-            return `${r},${g},${b}`;
-        }
-
-        draw();
-    </script>
+</script>
 </body>
 </html>

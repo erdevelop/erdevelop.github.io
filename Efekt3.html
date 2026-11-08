@@ -1,43 +1,59 @@
-<!DOCTYPE html>
+<!doctype html>
 <html lang="tr">
 <head>
-<style>
-  body {
-    margin: 0;
-    height: 100vh;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    font-family: sans-serif;
-    /* Kontrastlı Gri Tonları */
-    background: linear-gradient(132deg, #000000, #444444, #999999, #ffffff);
-    background-size: 600% 600%; /* Boyutu büyüttük ki hareket alanı artsın */
-    animation: randomGradient 10s ease-in-out infinite;
-    overflow: hidden;
-  }
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Akış Alanı · Üretken Sanat | erdevelop</title>
+<meta name="description" content="Görünmez bir rüzgâr alanını izleyen binlerce parçacıkla her tohumda yeni bir resim.">
+<meta name="theme-color" content="#000000">
+<link rel="stylesheet" href="deneyler/kit.css">
 
-  /* Daha düzensiz ve rastgele hissettiren animasyon */
-  @keyframes randomGradient {
-    0% { background-position: 0% 50%; }
-    25% { background-position: 100% 0%; }
-    50% { background-position: 50% 100%; }
-    75% { background-position: 0% 100%; }
-    100% { background-position: 0% 50%; }
-  }
-
-  h1 {
-    color: #666; /* Sade gri metin */
-    font-size: 4rem;
-    font-weight: 900;
-    letter-spacing: -2px;
-    margin: 0;
-    padding: 0;
-    user-select: none; /* Metnin seçilmesini engeller, daha temiz durur */
-    text-transform: uppercase;
-  }
-</style>
 </head>
 <body>
-  <h1></h1>
+<script src="deneyler/kit.js"></script>
+<script>
+/* değer gürültüsü (tohumlu) */
+let PERM = [];
+function seedNoise(seed) { let s = seed >>> 0 || 1; const r = () => (s = (s * 1664525 + 1013904223) >>> 0) / 4294967296; PERM = new Uint8Array(512); const p = [...Array(256).keys()]; for (let i = 255; i > 0; i--) { const j = Math.floor(r() * (i + 1)); [p[i], p[j]] = [p[j], p[i]]; } for (let i = 0; i < 512; i++) PERM[i] = p[i & 255]; }
+const fade = t => t * t * t * (t * (t * 6 - 15) + 10), lerp = (a, b, t) => a + (b - a) * t;
+function grad(h, x, y, z) { const u = (h & 15) < 8 ? x : y, v = (h & 15) < 4 ? y : ((h & 15) === 12 || (h & 15) === 14) ? x : z; return ((h & 1) ? -u : u) + ((h & 2) ? -v : v); }
+function noise(x, y, z) { const X = Math.floor(x) & 255, Y = Math.floor(y) & 255, Z = Math.floor(z) & 255; x -= Math.floor(x); y -= Math.floor(y); z -= Math.floor(z); const u = fade(x), v = fade(y), w = fade(z), P = PERM;
+  const A = P[X] + Y, AA = P[A] + Z, AB = P[A + 1] + Z, B = P[X + 1] + Y, BA = P[B] + Z, BB = P[B + 1] + Z;
+  return lerp(lerp(lerp(grad(P[AA], x, y, z), grad(P[BA], x - 1, y, z), u), lerp(grad(P[AB], x, y - 1, z), grad(P[BB], x - 1, y - 1, z), u), v), lerp(lerp(grad(P[AA + 1], x, y, z - 1), grad(P[BA + 1], x - 1, y, z - 1), u), lerp(grad(P[AB + 1], x, y - 1, z - 1), grad(P[BB + 1], x - 1, y - 1, z - 1), u), v), w); }
+let S, Q = [], z = 0;
+const K = Kit({ id: 'efekt3', title: 'Akış Alanı', sub: 'üretken sanat', help: 'Binlerce parçacık görünmez bir rüzgâr alanını izler ve iz bırakır. Her tohum farklı bir resim üretir; beğendiğini PNG olarak kaydet. Tıkla: o noktaya parçacık bırak.',
+  controls: [
+    { k: 'pal', t: 'select', l: 'Renkler', o: [['gri', 'Gri tonlar'], ...PAL_OPTS.filter(o => o[0] !== 'mono')], v: 'gri' },
+    { k: 'bg', t: 'select', l: 'Zemin', o: [['#000000', 'Siyah'], ['#f4f1ea', 'Kâğıt'], ['#0b1a2a', 'Gece mavisi']], v: '#000000' },
+    { k: 'n', t: 'range', l: 'Parçacık', min: 300, max: 6000, step: 100, v: 2500 },
+    { k: 'scale', t: 'range', l: 'Desen ölçeği', min: 1, max: 20, v: 6 },
+    { k: 'curl', t: 'range', l: 'Kıvrım', min: 1, max: 8, step: .5, v: 3 },
+    { k: 'speed', t: 'range', l: 'Hız', min: .3, max: 4, step: .1, v: 1.4 },
+    { k: 'alpha', t: 'range', l: 'Çizgi yoğunluğu', min: .01, max: .3, step: .01, v: .06, fmt: x => x.toFixed(2) },
+    { k: 'evolve', t: 'check', l: 'Alan zamanla değişsin', v: true },
+    { k: 'seed', t: 'range', l: 'Tohum', min: 1, max: 9999, v: 2026 },
+    { t: 'buttons', b: [['Yeni tohum', () => { K.set('seed', 1 + Math.floor(Math.random() * 9999)); }, 1], ['Temizle', () => clear()]] }
+  ],
+  onChange: k => { if (k === 'seed' || k === '*') seedNoise(K.v.seed); if (['n', 'seed', 'pal', 'bg', 'scale', 'curl', '*'].includes(k)) { clear(); init(); } }
+});
+const PG = () => K.v.pal === 'gri' ? null : PALETTES[K.v.pal];
+function part(x, y) { return { x: x ?? rnd(0, S.W), y: y ?? rnd(0, S.H), life: rnd(80, 400), c: PG() ? pick(PG()) : null }; }
+function init() { Q = []; for (let i = 0; i < K.v.n; i++) Q.push(part()); }
+function clear() { S.ctx.globalCompositeOperation = 'source-over'; S.ctx.fillStyle = K.v.bg; S.ctx.fillRect(0, 0, S.W, S.H); z = 0; }
+S = K.canvas({ maxDpr: 2 }); seedNoise(K.v.seed); S.onResize(() => { clear(); init(); });
+K.onDown = null;
+S.cv.addEventListener('pointerdown', e => { for (let i = 0; i < 200; i++) Q.push(part(e.clientX + rnd(-30, 30), e.clientY + rnd(-30, 30))); });
+K.loop(dt => {
+  const v = K.v, g = S.ctx, sc = v.scale * .0007, light = v.bg === '#f4f1ea'; if (v.evolve) z += dt * .08;
+  g.globalCompositeOperation = 'source-over'; g.lineWidth = 1; g.lineCap = 'round';
+  for (let i = 0; i < Q.length; i++) { const p = Q[i], n = noise(p.x * sc, p.y * sc, z), a = n * Math.PI * v.curl, ox = p.x, oy = p.y;
+    p.x += Math.cos(a) * v.speed; p.y += Math.sin(a) * v.speed; p.life--;
+    let col; if (p.c) col = p.c; else { const k = Math.round((n * .5 + .5) * 255); col = light ? `rgb(${255 - k * .9},${255 - k * .9},${255 - k * .9})` : `rgb(${k},${k},${k})`; }
+    g.strokeStyle = col; g.globalAlpha = v.alpha; g.beginPath(); g.moveTo(ox, oy); g.lineTo(p.x, p.y); g.stroke();
+    if (p.life < 0 || p.x < -5 || p.x > S.W + 5 || p.y < -5 || p.y > S.H + 5) { if (Q.length > v.n) { Q.splice(i, 1); i--; } else Q[i] = part(); } }
+  g.globalAlpha = 1;
+});
+
+</script>
 </body>
 </html>
