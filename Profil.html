@@ -159,6 +159,8 @@
       <hr>
       <button type="button" data-a="save">Projeyi kaydet<small>.profil dosyası indirir</small></button>
       <button type="button" data-a="open">Proje aç<small>.profil dosyası seç</small></button>
+      <hr>
+      <button type="button" data-a="ghin">Mini Grasshopper'dan al<small>son gönderilen dikme/kayıt listesi</small></button>
     </div></div>
   <div class="dd"><button class="tb" type="button" id="expBtn" disabled>Çıktı ▾</button>
     <div class="ddm" id="expMenu" hidden>
@@ -425,6 +427,7 @@ $('projMenu').addEventListener('click', e => {
   else if (b.dataset.a === 'clear') { P = { st: P.st, stocks: [blankStock([])], parts: [blankPart([])] }; resetPlan(); }
   else if (b.dataset.a === 'save') { download(`profil-proje-${stamp()}.profil`, new Blob([JSON.stringify({ format: 'erdevelop-profil', version: 1, ...P }, null, 1)], { type: 'application/json' })); toast('Proje kaydedildi'); return; }
   else if (b.dataset.a === 'open') { $('fileIn').click(); return; }
+  else if (b.dataset.a === 'ghin') { if (!importGh()) toast("Mini Grasshopper'dan gönderilmiş liste yok"); return; }
   paintAll(); save();
 });
 $('fileIn').addEventListener('change', async e => {
@@ -432,6 +435,13 @@ $('fileIn').addEventListener('change', async e => {
   try { const o = JSON.parse(await readText(f)); if (!o.stocks || !o.parts) throw 0; P = { st: { ...SAMPLE().st, ...(o.st || {}) }, stocks: o.stocks, parts: o.parts }; resetPlan(); paintAll(); save(); toast(`${f.name} açıldı`); }
   catch (x) { toast('Proje dosyası okunamadı'); }
 });
+
+function importGh() {
+  let o; try { o = JSON.parse(store.get('erdevelop-profil-import')); } catch (e) { o = null; } if (!o || !o.rows || !o.rows.length) return false;
+  const add = o.rows.map(r => ({ prof: r.prof || '', code: r.code, len: String(r.len), qty: r.qty, a1: 90, a2: 90 }));
+  P.parts = P.parts.filter(p => pnum(p.len) > 0 && pnum(p.qty) > 0).concat(add); store.del('erdevelop-profil-import');
+  paintTables(); save(); toast(`${add.length} profil satırı eklendi${o.src ? ' · ' + o.src : ''}`); return true;
+}
 
 /* optimisation */
 let worker = null, runT0 = 0, runBudget = 0, progTimer = 0;
@@ -611,6 +621,7 @@ $('modeBtn').addEventListener('click', () => { mode = mode === 'dark' ? 'light' 
 function paintAll() { paintSettings(); paintTables(); }
 paintAll(); applyMode();
 try { const s = JSON.parse(store.get(KEY + '-plan')); if (s && s.plan && s.planInput) { plan = s.plan; planInput = s.planInput; renderResults(false); $('expBtn').disabled = false; $('progT').textContent = 'Son sonuç gösteriliyor · girdileri değiştirdiysen yeniden optimize et'; } } catch (e) {}
+if (/[?&]import=gh/.test(location.search)) { importGh(); history.replaceState(null, '', location.pathname); }
 window.__profil = { get plan() { return plan; }, get P() { return P; } };
 })();
 </script>

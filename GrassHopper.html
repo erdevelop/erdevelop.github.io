@@ -121,6 +121,16 @@
   .node .sb table { border-collapse: collapse; font: 400 10.5px var(--m); margin: 3px 6px 5px; }
   .node .sb td, .node .sb th { padding: 1px 5px; text-align: right; white-space: nowrap; } .node .sb th { color: #666; font-weight: 500; border-bottom: 1px solid #ddd; }
   .node .sb td:first-child, .node .sb th:first-child { text-align: left; }
+  .node .sb .st select, .node .orow input, .node .vl { font: 500 10.5px var(--m); border: 1px solid #bbb; border-radius: 3px; padding: 0 3px; background: #fff; color: #111; }
+  .node .orow { display: flex; gap: 5px; align-items: center; padding: 4px 6px 0; font: 500 10.5px var(--m); color: #444; flex-wrap: wrap; }
+  .node .orow button, .node .vle { font: 600 10px var(--m); border: 1px solid #999; background: #f3f3f3; color: #222; border-radius: 3px; padding: 1px 7px; cursor: pointer; }
+  .node .orow button:hover, .node .vle:hover { background: #e3f0dc; border-color: #6fbf4a; }
+  .node .orow input.mix { width: 110px; } .node .orow input[type=number] { width: 46px; }
+  .node .optl { display: flex; flex-direction: column; gap: 1px; padding: 4px 8px 0; font: 500 11px var(--m); max-height: 130px; overflow: auto; }
+  .node .optl small, .node .rinfo { color: #777; font: 400 10px var(--m); } .node .rinfo { padding: 3px 8px 5px; }
+  .node .osp { display: block; margin: 4px 8px 0; background: #f6f6f6; border: 1px solid #e3e3e3; }
+  .node .ost { font: 500 10.5px var(--m); color: #333; padding: 3px 8px 0; min-height: 14px; }
+  .node .sb.opt { padding-bottom: 6px; min-width: 228px; }
   .node .sb td i { display: inline-block; width: 8px; height: 8px; border-radius: 2px; margin-right: 4px; vertical-align: 0; }
 
   /* search, context menu, help */
@@ -169,6 +179,8 @@
         <button type="button" data-p="facade">Polar cephe<small>silindir · çekim noktası</small></button>
         <button type="button" data-p="planar">Panel analizi<small>düzlemsellik · panel listesi</small></button>
         <button type="button" data-p="voronoi">Voronoi skylight<small>populate · voronoi · attractor</small></button>
+        <button type="button" data-p="chain">Cephe imalat zinciri<small>panel no · açınım · dikme · cam kg</small></button>
+        <button type="button" data-p="hexsky">Altıgen skylight<small>hex grid · attractor · extrude</small></button>
         <button type="button" data-p="frames">Düzlemlerle tünel<small>perp frames · rotate plane · loft</small></button>
         <button type="button" data-p="fins">Twist kanat cephe<small>graph mapper · ifade · surface box</small></button>
       </div></div>
@@ -236,7 +248,7 @@ const D2R = Math.PI / 180;
 
 /* ================= geometry helpers ================= */
 const P = (x, y, z) => ({ t: 'pt', x, y, z });
-const GEO = new Set(['pt', 'crv', 'srf', 'mesh', 'pln']);
+const GEO = new Set(['pt', 'crv', 'srf', 'mesh', 'pln', 'tag']);
 const isPt = g => g && g.t === 'pt';
 const isGeo = g => !!(g && typeof g === 'object' && GEO.has(g.t));
 const isCol = v => v && v.t === 'col';
@@ -248,6 +260,92 @@ const vecA = (v, name) => { v = asPt(v, name); return [v.x, v.y, v.z]; };
 const onPln = (F, u, v, w = 0) => [0, 1, 2].map(k => F.o[k] + F.x[k] * u + F.y[k] * v + F.z[k] * w);
 const inPln = (F, p) => { const d = [p[0] - F.o[0], p[1] - F.o[1], p[2] - F.o[2]]; return [vdot(d, F.x), vdot(d, F.y), vdot(d, F.z)]; };
 function rotAxis(p, c, k, a) { const v = [p[0] - c[0], p[1] - c[1], p[2] - c[2]], co = Math.cos(a), si = Math.sin(a), kx = vcross(k, v), kd = vdot(k, v); return [0, 1, 2].map(i => c[i] + v[i] * co + kx[i] * si + k[i] * kd * (1 - co)); }
+
+/* ---- v4 helpers: domain, tag, polygon & closest-point utilities ---- */
+const isDom = v => v && v.t === 'dom';
+const DOM = (a, b) => ({ t: 'dom', a, b });
+function asDom(v, name) { if (isDom(v)) return v; if (typeof v === 'number') return DOM(0, v); throw new Error(`${name}: aralık (domain) bekleniyor`); }
+const isTag = g => g && g.t === 'tag';
+const TAG = (p, s, h) => ({ t: 'tag', p: p.slice(), s: String(s), h });
+const asStr = v => typeof v === 'string' ? v : typeof v === 'number' ? fmt(v) : isPt(v) || isDom(v) ? fmt(v) : String(v ?? '');
+const ptArr = v => { if (isPt(v)) return [v.x, v.y, v.z]; if (isPln(v)) return v.o.slice(); if (isGeo(v)) return centroid(v); throw new Error('nokta bekleniyor'); };
+function newell(p) { const n = [0, 0, 0]; for (let i = 0; i < p.length; i++) { const a = p[i], b = p[(i + 1) % p.length]; n[0] += (a[1] - b[1]) * (a[2] + b[2]); n[1] += (a[2] - b[2]) * (a[0] + b[0]); n[2] += (a[0] - b[0]) * (a[1] + b[1]); } return n; }
+const polyArea = p => vlen(newell(p)) / 2;
+function polyCentroid(p) { const n = vnorm(newell(p)); let A = 0; const c = [0, 0, 0]; for (let i = 1; i < p.length - 1; i++) { const a = p[0], b = p[i], d = p[i + 1], w = vdot(vcross(vsub(b, a), vsub(d, a)), n) / 2; A += w; for (let k = 0; k < 3; k++) c[k] += (a[k] + b[k] + d[k]) / 3 * w; } return Math.abs(A) > 1e-12 ? c.map(x => x / A) : centroid({ t: 'crv', p }); }
+function closestSeg(p, a, b) { const d = vsub(b, a), L = vdot(d, d); let t = L ? vdot(vsub(p, a), d) / L : 0; t = Math.max(0, Math.min(1, t)); return { q: vadd(a, vmul(d, t)), t }; }
+function closestTri(p, a, b, c) { // Ericson, returns {q, w:[wa,wb,wc]}
+  const ab = vsub(b, a), ac = vsub(c, a), ap = vsub(p, a), d1 = vdot(ab, ap), d2 = vdot(ac, ap);
+  if (d1 <= 0 && d2 <= 0) return { q: a, w: [1, 0, 0] };
+  const bp = vsub(p, b), d3 = vdot(ab, bp), d4 = vdot(ac, bp); if (d3 >= 0 && d4 <= d3) return { q: b, w: [0, 1, 0] };
+  const vc = d1 * d4 - d3 * d2; if (vc <= 0 && d1 >= 0 && d3 <= 0) { const v = d1 / (d1 - d3); return { q: vadd(a, vmul(ab, v)), w: [1 - v, v, 0] }; }
+  const cp = vsub(p, c), d5 = vdot(ab, cp), d6 = vdot(ac, cp); if (d6 >= 0 && d5 <= d6) return { q: c, w: [0, 0, 1] };
+  const vb = d5 * d2 - d1 * d6; if (vb <= 0 && d2 >= 0 && d6 <= 0) { const w = d2 / (d2 - d6); return { q: vadd(a, vmul(ac, w)), w: [1 - w, 0, w] }; }
+  const va = d3 * d6 - d5 * d4; if (va <= 0 && d4 - d3 >= 0 && d5 - d6 >= 0) { const w = (d4 - d3) / ((d4 - d3) + (d5 - d6)); return { q: vadd(b, vmul(vsub(c, b), w)), w: [0, 1 - w, w] }; }
+  const den = 1 / (va + vb + vc), v = vb * den, w = vc * den; return { q: vadd(a, vadd(vmul(ab, v), vmul(ac, w))), w: [1 - v - w, v, w] };
+}
+function segSeg(p1, q1, p2, q2) { // closest points between two segments
+  const d1 = vsub(q1, p1), d2 = vsub(q2, p2), r = vsub(p1, p2), a = vdot(d1, d1), e = vdot(d2, d2), f = vdot(d2, r); let s, t;
+  if (a <= 1e-15 && e <= 1e-15) return [p1, p2];
+  if (a <= 1e-15) { s = 0; t = Math.max(0, Math.min(1, f / e)); }
+  else { const c = vdot(d1, r); if (e <= 1e-15) { t = 0; s = Math.max(0, Math.min(1, -c / a)); } else { const b = vdot(d1, d2), den = a * e - b * b; s = den ? Math.max(0, Math.min(1, (b * f - c * e) / den)) : 0; t = (b * s + f) / e; if (t < 0) { t = 0; s = Math.max(0, Math.min(1, -c / a)); } else if (t > 1) { t = 1; s = Math.max(0, Math.min(1, (b - c) / a)); } } }
+  return [vadd(p1, vmul(d1, s)), vadd(p2, vmul(d2, t))];
+}
+function crvCum(c) { const q = crvPoly(c), L = [0]; for (let i = 1; i < q.length; i++) L.push(L[i - 1] + vdist(q[i], q[i - 1])); return { q, L, T: L[L.length - 1] }; }
+function subCrv(c, t0, t1) { const { q, L, T } = crvCum(c), d0 = t0 * T, d1 = t1 * T, out = [crvAt(c, t0).p]; for (let i = 1; i < q.length - 1; i++) if (L[i] > d0 + 1e-9 && L[i] < d1 - 1e-9) out.push(q[i]); out.push(crvAt(c, t1).p); return { t: 'crv', c: false, p: out }; }
+function joinCurves(cs, tol) {
+  const open = [], out = [];
+  for (const c of cs) (c.c ? out : open).push(c.c ? c : c.p.slice());
+  while (open.length) {
+    let cur = open.shift(), grew = true;
+    while (grew) { grew = false;
+      for (let i = 0; i < open.length; i++) { const o = open[i], s = cur[0], e = cur[cur.length - 1];
+        if (vdist(e, o[0]) <= tol) cur = cur.concat(o.slice(1)); else if (vdist(e, o[o.length - 1]) <= tol) cur = cur.concat(o.slice(0, -1).reverse()); else if (vdist(s, o[o.length - 1]) <= tol) cur = o.slice(0, -1).concat(cur); else if (vdist(s, o[0]) <= tol) cur = o.slice(1).reverse().concat(cur); else continue;
+        open.splice(i, 1); grew = true; break; } }
+    const closed = cur.length > 3 && vdist(cur[0], cur[cur.length - 1]) <= tol; out.push({ t: 'crv', c: closed, p: closed ? cur.slice(0, -1) : cur });
+  }
+  return out;
+}
+function earClip(poly) { // planar polygon -> triangles (index triples)
+  const n = poly.length; if (n < 3) return []; const F = plnFromZ(poly[0], newell(poly)), P2 = poly.map(p => inPln(F, p));
+  let idx = [...Array(n).keys()]; const area = idx.reduce((s, i) => { const a = P2[i], b = P2[(i + 1) % n]; return s + a[0] * b[1] - b[0] * a[1]; }, 0); if (area < 0) idx.reverse();
+  const cr = (a, b, c) => (b[0] - a[0]) * (c[1] - a[1]) - (b[1] - a[1]) * (c[0] - a[0]), inT = (p, a, b, c) => cr(a, b, p) >= -1e-12 && cr(b, c, p) >= -1e-12 && cr(c, a, p) >= -1e-12;
+  const T = []; let guard = 0;
+  while (idx.length > 3 && guard++ < 10000) { let cut = false;
+    for (let k = 0; k < idx.length; k++) { const i0 = idx[(k + idx.length - 1) % idx.length], i1 = idx[k], i2 = idx[(k + 1) % idx.length], a = P2[i0], b = P2[i1], c = P2[i2];
+      if (cr(a, b, c) <= 1e-14) continue; if (idx.some(j => j !== i0 && j !== i1 && j !== i2 && inT(P2[j], a, b, c))) continue; T.push([i0, i1, i2]); idx.splice(k, 1); cut = true; break; }
+    if (!cut) break; }
+  if (idx.length === 3) T.push(idx.slice());
+  return T;
+}
+function srfNormal(s, u, v) { const e = 1e-3, du = vsub(srfAt(s, Math.min(1, u + e), v), srfAt(s, Math.max(0, u - e), v)), dv = vsub(srfAt(s, u, Math.min(1, v + e)), srfAt(s, u, Math.max(0, v - e))); return vnorm(vcross(du, dv)); }
+function srfFrame(s, u, v) { const e = 1e-3, du = vsub(srfAt(s, Math.min(1, u + e), v), srfAt(s, Math.max(0, u - e), v)), dv = vsub(srfAt(s, u, Math.min(1, v + e)), srfAt(s, u, Math.max(0, v - e))); return mkPln(srfAt(s, u, v), du, dv); }
+function panelOutline(g) {
+  if (g.t === 'mesh') { if (g.f.length === 1) return g.f[0].map(i => g.v[i]); const e = new Map(); for (const f of g.f) for (let i = 0; i < f.length; i++) { const a = f[i], b = f[(i + 1) % f.length], k = a < b ? a + ',' + b : b + ',' + a; e.set(k, e.has(k) ? null : [a, b]); } const segs = [...e.values()].filter(Boolean).map(([a, b]) => [g.v[a], g.v[b]]); const ch = chain(segs, 1e-9)[0]; return ch ? ch.p : g.v; }
+  if (g.t === 'crv') return g.c ? g.p.slice() : g.p.slice();
+  if (g.t === 'srf') { const G = g.g, R = G.length, Cn = G[0].length, o = []; for (let i = 0; i < Cn; i++) o.push(G[0][i]); for (let j = 1; j < R; j++) o.push(G[j][Cn - 1]); for (let i = Cn - 2; i >= 0; i--) o.push(G[R - 1][i]); for (let j = R - 2; j > 0; j--) o.push(G[j][0]); return o; }
+  throw new Error('panel (mesh, yüzey ya da kapalı eğri) bekleniyor');
+}
+function unroll2D(poly) { // flatten panel outline: x along first edge
+  const n = vnorm(newell(poly)); let x = vsub(poly[1], poly[0]); x = vsub(x, vmul(n, vdot(x, n))); const F = mkPln(poly[0], x, vcross(n, vnorm(x)));
+  return poly.map(p => { const l = inPln(F, p); return [l[0], l[1]]; });
+}
+function panelDims(g) {
+  const o = panelOutline(g); if (o.length < 3) throw new Error('panel en az 3 köşe');
+  let w, h; if (o.length === 4) { const e = [0, 1, 2, 3].map(i => vdist(o[i], o[(i + 1) % 4])); w = (e[0] + e[2]) / 2; h = (e[1] + e[3]) / 2; }
+  else { const f = unroll2D(o), xs = f.map(p => p[0]), ys = f.map(p => p[1]); w = Math.max(...xs) - Math.min(...xs); h = Math.max(...ys) - Math.min(...ys); }
+  let per = 0; for (let i = 0; i < o.length; i++) per += vdist(o[i], o[(i + 1) % o.length]);
+  return { o, w, h, a: polyArea(o), per, c: polyCentroid(o) };
+}
+const UNITS = { m: 1000, cm: 10, mm: 1 };
+function glassKgm2(mix) {
+  const toks = String(mix).replace(/\s/g, '').replace(/,/g, '.').split('+'); let kg = 0;
+  toks.forEach((t, i) => { if (i % 2) return; if (/^\d+$/.test(t)) { kg += +t * 2.5; return; } const m = t.match(/^(\d+)\.(\d)$/); if (!m) throw new Error(`Dizilim: "${t}" anlaşılmadı`); const p = m[1]; let pn;
+    if (p.length === 2) pn = [+p[0], +p[1]]; else if (p.length === 4) pn = [+p.slice(0, 2), +p.slice(2)]; else if (p.length === 3) pn = /^1[0-9]/.test(p) && +p[2] > 0 ? [+p.slice(0, 2), +p[2]] : [+p[0], +p.slice(1)]; else throw new Error(`Dizilim: "${t}" anlaşılmadı`);
+    kg += (pn[0] + pn[1]) * 2.5 + +m[2] * 0.38 * 1.07; });
+  if (!toks.length || toks.length % 2 === 0) throw new Error('Dizilim cam ile bitmeli (ör. 6+16+6)');
+  return kg;
+}
+function gridBranches(cols) { return { __br: cols }; }
 function num(v, name) { if (typeof v === 'boolean') return v ? 1 : 0; if (typeof v === 'number' && isFinite(v)) return v; if (v && typeof v === 'object') throw new Error(`${name}: sayı bekleniyor`); const n = +String(v).replace(',', '.'); if (isFinite(n)) return n; throw new Error(`${name}: sayı bekleniyor`); }
 function bool(v) { if (typeof v === 'boolean') return v; if (typeof v === 'number') return v !== 0; if (typeof v === 'string') return /^(true|1|yes|evet|doğru)$/i.test(v.trim()); return !!v; }
 function asPt(v, name) { if (isPt(v)) return v; if (typeof v === 'number') return P(0, 0, v); throw new Error(`${name}: nokta/vektör bekleniyor`); }
@@ -260,10 +358,11 @@ function mapG(g, f) {
   if (g.t === 'crv') return { ...g, p: g.p.map(f) };
   if (g.t === 'srf') return { ...g, g: g.g.map(r => r.map(f)) };
   if (g.t === 'mesh') return { ...g, v: g.v.map(f) };
+  if (g.t === 'tag') return { ...g, p: f(g.p) };
   if (g.t === 'pln') { const o = f(g.o), ax = a => vnorm(vsub(f(vadd(g.o, a)), o)); return { t: 'pln', o, x: ax(g.x), y: ax(g.y), z: ax(g.z) }; }
   return g;
 }
-function pts(g) { if (g.t === 'pt') return [[g.x, g.y, g.z]]; if (g.t === 'crv') return g.p; if (g.t === 'srf') return g.g.flat(); if (g.t === 'mesh') return g.v; if (g.t === 'pln') return [g.o]; return []; }
+function pts(g) { if (g.t === 'pt') return [[g.x, g.y, g.z]]; if (g.t === 'crv') return g.p; if (g.t === 'srf') return g.g.flat(); if (g.t === 'mesh') return g.v; if (g.t === 'pln') return [g.o]; if (g.t === 'tag') return [g.p]; return []; }
 function centroid(g) { const a = pts(g); if (!a.length) return [0, 0, 0]; const s = [0, 0, 0]; a.forEach(p => { s[0] += p[0]; s[1] += p[1]; s[2] += p[2]; }); return s.map(x => x / a.length); }
 const rotZ = (p, a, c = [0, 0, 0]) => { const s = Math.sin(a), co = Math.cos(a), x = p[0] - c[0], y = p[1] - c[1]; return [c[0] + x * co - y * s, c[1] + x * s + y * co, p[2]]; };
 const vsub = (a, b) => [a[0] - b[0], a[1] - b[1], a[2] - b[2]], vadd = (a, b) => [a[0] + b[0], a[1] + b[1], a[2] + b[2]], vmul = (a, s) => [a[0] * s, a[1] * s, a[2] * s];
@@ -641,10 +740,203 @@ const C = {
       const name = i => { let s = ''; i++; while (i > 0) { const m = (i - 1) % 26; s = String.fromCharCode(65 + m) + s; i = Math.floor((i - 1) / 26); } return s; };
       const T = idx.map(k => k === -1 ? -1 : order.get(k));
       info[n.id] = { ...(info[n.id] || {}), sched: { rows: list.map(([, t], i) => ({ name: name(i), ...t })), total: all.length, R } };
-      return [T1(T), T1([list.length]), T1(T.map(i => ({ t: 'col', hex: i < 0 ? '#999999' : TYPE_COL[i % TYPE_COL.length] })))]; } }
+      return [T1(T), T1([list.length]), T1(T.map(i => ({ t: 'col', hex: i < 0 ? '#999999' : TYPE_COL[i % TYPE_COL.length] })))]; } },
+
+  /* ======== v4 ======== */
+  /* ---- Params ---- */
+  vlist: { cat: 'Params', name: 'Value List', nick: 'List', ins: [], outs: ['V'], ui: 'vlist', st: { label: 'Liste', items: 'Bir=1; İki=2; Üç=3', sel: 0 },
+    run: (I, st) => { const it = vlistItems(st); if (!it.length) throw new Error('Liste boş'); return [[it[Math.min(st.sel, it.length - 1)].v]]; } },
+  textp: { cat: 'Params', name: 'Text', nick: 'Text', ins: [], outs: ['T'], ui: 'textin', st: { label: 'Yazı', val: 'P-' }, run: (I, st) => [[String(st.val)]] },
+  recorder: { cat: 'Params', name: 'Data Recorder', nick: 'Rec', ins: [{ n: 'D', tree: true }], outs: ['R'], ui: 'rec', st: { on: true, max: 200, data: [] },
+    tree: (I, st) => { const vals = flat(I[0]).filter(v => typeof v === 'number' || typeof v === 'string' || typeof v === 'boolean' || isPt(v)); const key = JSON.stringify(vals);
+      if (st.on && vals.length && key !== st.last) { st.data.push(vals); st.last = key; if (st.data.length > st.max) st.data.splice(0, st.data.length - st.max); }
+      return [st.data.map((v, i) => ({ p: [i], v: v.slice() }))]; } },
+  optim: { cat: 'Params', name: 'Optimizer (Galapagos)', nick: 'Optim', ins: [{ n: 'F', tree: true, opt: true }], outs: [], ui: 'optim', st: { ids: [], goal: 'min', gens: 25, pop: 16, best: null, hist: [] }, tree: () => [] },
+
+  /* ---- Maths ---- */
+  cdomain: { cat: 'Maths', name: 'Construct Domain', nick: 'Dom', ins: [{ n: 'A', d: 0 }, { n: 'B', d: 1 }], outs: ['I'], item: (a, b) => [DOM(num(a, 'A'), num(b, 'B'))] },
+  ddomain: { cat: 'Maths', name: 'Deconstruct Domain', nick: 'DeDom', ins: [{ n: 'I' }], outs: ['S', 'E'], item: d => { d = asDom(d, 'I'); return [d.a, d.b]; } },
+  bounds: { cat: 'Maths', name: 'Bounds', nick: 'Bnd', ins: [{ n: 'N', list: true }], outs: ['I'], run: I => { const v = I[0].map(x => num(x, 'N')); if (!v.length) return [[]]; return [[DOM(Math.min(...v), Math.max(...v))]]; } },
+  round: { cat: 'Maths', name: 'Round', nick: 'Round', ins: [{ n: 'x' }], outs: ['N', 'F', 'C'], item: x => { x = num(x, 'x'); return [Math.round(x), Math.floor(x), Math.ceil(x)]; } },
+  absv: { cat: 'Maths', name: 'Absolute', nick: 'Abs', ins: [{ n: 'x' }], outs: ['y'], item: x => [Math.abs(num(x, 'x'))] },
+  modulus: { cat: 'Maths', name: 'Modulus', nick: 'Mod', ins: [{ n: 'A' }, { n: 'B', d: 2 }], outs: ['R'], item: (a, b) => { a = num(a, 'A'); b = num(b, 'B'); if (!b) throw new Error('B sıfır olamaz'); return [((a % b) + b) % b]; } },
+  massadd: { cat: 'Maths', name: 'Mass Addition', nick: 'MA', ins: [{ n: 'I', list: true }], outs: ['R', 'Pr'], run: I => { let s = 0; const pr = I[0].map(x => (s += num(x, 'I'))); return [[s], pr]; } },
+  average: { cat: 'Maths', name: 'Average', nick: 'Avr', ins: [{ n: 'I', list: true }], outs: ['AM'], run: I => { const v = I[0].map(x => num(x, 'I')); return [v.length ? [v.reduce((a, b) => a + b, 0) / v.length] : []]; } },
+  equality: { cat: 'Maths', name: 'Equality', nick: 'Eq', ins: [{ n: 'A' }, { n: 'B' }], outs: ['=', '≠'], item: (a, b) => { const e = typeof a === 'number' && typeof b === 'number' ? Math.abs(a - b) < 1e-9 : fmt(a) === fmt(b); return [e, !e]; } },
+  gand: { cat: 'Maths', name: 'Gate And', nick: 'And', ins: [{ n: 'A' }, { n: 'B' }], outs: ['R'], item: (a, b) => [bool(a) && bool(b)] },
+  gor: { cat: 'Maths', name: 'Gate Or', nick: 'Or', ins: [{ n: 'A' }, { n: 'B' }], outs: ['R'], item: (a, b) => [bool(a) || bool(b)] },
+  gnot: { cat: 'Maths', name: 'Gate Not', nick: 'Not', ins: [{ n: 'A' }], outs: ['R'], item: a => [!bool(a)] },
+
+  /* ---- Sets ---- */
+  crossref: { cat: 'Sets', name: 'Cross Reference', nick: 'CrossRef', ins: [{ n: 'A', list: true }, { n: 'B', list: true }], outs: ['A', 'B'],
+    run: I => { const A = [], B = []; if (I[0].length * I[1].length > 200000) throw new Error('Çok fazla kombinasyon'); for (const a of I[0]) for (const b of I[1]) { A.push(a); B.push(b); } return [A, B]; } },
+  dupdata: { cat: 'Sets', name: 'Duplicate Data', nick: 'Dup', ins: [{ n: 'D', list: true }, { n: 'N', d: 2 }, { n: 'O', d: true }], outs: ['D'],
+    run: I => { const n = Math.max(0, Math.round(num(I[1][0] ?? 2, 'N'))), L = I[0]; if (n * L.length > 200000) throw new Error('Çok fazla öğe'); const out = []; if (bool(I[2][0] ?? true)) for (let k = 0; k < n; k++) out.push(...L); else for (const x of L) for (let k = 0; k < n; k++) out.push(x); return [out]; } },
+  weave: { cat: 'Sets', name: 'Weave', nick: 'Weave', ins: [{ n: 'P', list: true, d: 0 }, { n: 'D0', list: true, opt: true }, { n: 'D1', list: true, opt: true }, { n: 'D2', list: true, opt: true }], outs: ['W'],
+    run: I => { const pat = (I[0].length ? I[0] : [0, 1]).map(x => Math.round(num(x, 'P'))), S = [I[1], I[2], I[3]], ix = [0, 0, 0], out = []; let k = 0, guard = 0;
+      while (S.some((s, j) => ix[j] < s.length) && guard++ < 400000) { const j = pat[k++ % pat.length]; if (j < 0 || j > 2) throw new Error('P: 0, 1 ya da 2'); if (ix[j] < S[j].length) out.push(S[j][ix[j]++]); else if (!S.some((s, q) => pat.includes(q) && ix[q] < s.length)) break; }
+      return [out]; } },
+  splitlist: { cat: 'Sets', name: 'Split List', nick: 'Split', ins: [{ n: 'L', list: true }, { n: 'i', d: 1 }], outs: ['A', 'B'], run: I => { const i = Math.round(num(I[1][0] ?? 1, 'i')); return [I[0].slice(0, i), I[0].slice(i)]; } },
+  sublist: { cat: 'Sets', name: 'Sub List', nick: 'SubSet', ins: [{ n: 'L', list: true }, { n: 'D', d: DOM(0, 2) }], outs: ['L', 'I'],
+    run: I => { const d = asDom(I[1][0] ?? DOM(0, 2), 'D'), a = Math.max(0, Math.round(Math.min(d.a, d.b))), b = Math.min(I[0].length - 1, Math.round(Math.max(d.a, d.b))), idx = []; for (let i = a; i <= b; i++) idx.push(i); return [idx.map(i => I[0][i]), idx]; } },
+  createset: { cat: 'Sets', name: 'Create Set', nick: 'CSet', ins: [{ n: 'L', list: true }], outs: ['S', 'M'],
+    run: I => { const m = new Map(), S = [], M = []; for (const x of I[0]) { const k = typeof x === 'number' ? fmt(x) : fmt(x) + (isGeo(x) && !isPt(x) ? JSON.stringify(pts(x).slice(0, 4)) : ''); if (!m.has(k)) { m.set(k, S.length); S.push(x); } M.push(m.get(k)); } return [S, M]; } },
+  explodetree: { cat: 'Sets', name: 'Explode Tree', nick: 'BANG!', ins: [{ n: 'D', tree: true }], outs: ['B0', 'B1', 'B2', 'B3', 'B4'],
+    tree: (I, st, n) => { const T = I[0] || []; if (T.length > 5) info[n.id] = { ...(info[n.id] || {}), warn: `${T.length} dal var, ilk 5'i çıkarıldı` }; return [0, 1, 2, 3, 4].map(i => T[i] ? T1(T[i].v.slice()) : []); } },
+  shiftpaths: { cat: 'Sets', name: 'Shift Paths', nick: 'PShift', ins: [{ n: 'D', tree: true }, { n: 'O', d: -1 }], outs: ['D'],
+    tree: I => { const o = Math.round(num(flat(I[1])[0] ?? -1, 'O')); return [mergeTrees([(I[0] || []).map(b => { let p = o >= 0 ? b.p.slice(o) : b.p.slice(0, Math.max(0, b.p.length + o)); if (!p.length) p = [0]; return { p, v: b.v.slice() }; })])]; } },
+  pathmap: { cat: 'Sets', name: 'Path Mapper', nick: 'PMap', ins: [{ n: 'D', tree: true }], outs: ['D'], ui: 'expr', st: { expr: '{A;B} -> {A}' },
+    tree: (I, st) => { const m = String(st.expr).match(/^\s*\{([^}]*)\}\s*(?:\(\s*([A-Za-z_]\w*)\s*\))?\s*->\s*\{([^}]*)\}\s*$/); if (!m) throw new Error('Biçim: {A;B} -> {B;A}  ·  (i) ile öğe: {A}(i) -> {i}');
+      const names = m[1].split(';').map(s => s.trim()).filter(Boolean), iv = m[2] || 'i', tg = m[3].split(';').map(s => compileExpr(s.trim() || '0')), out = new Map();
+      const T = I[0] || []; T.forEach((b, bi) => b.v.forEach((v, i) => { const vars = { N: T.length, b: bi }; vars[iv] = i; names.forEach((nm, k) => vars[nm] = b.p[k] ?? 0); const p = tg.map(f => Math.round(f(vars))), key = pkey(p); if (!out.has(key)) out.set(key, { p, v: [] }); out.get(key).v.push(v); }));
+      return [[...out.values()].sort((a, b) => { for (let k = 0; k < Math.min(a.p.length, b.p.length); k++) if (a.p[k] !== b.p[k]) return a.p[k] - b.p[k]; return a.p.length - b.p.length; })]; } },
+
+  /* ---- Vector ---- */
+  vec2pt: { cat: 'Vector', name: 'Vector 2Pt', nick: 'Vec2Pt', ins: [{ n: 'A', d: P(0, 0, 0) }, { n: 'B', d: P(1, 0, 0) }, { n: 'U', d: false }], outs: ['V', 'L'], item: (a, b, u) => { const v = vsub(vecA(b, 'B'), vecA(a, 'A')), l = vlen(v), r = bool(u) ? vnorm(v) : v; return [P(...r), l]; } },
+  amplitude: { cat: 'Vector', name: 'Amplitude', nick: 'Amp', ins: [{ n: 'V' }, { n: 'A', d: 1 }], outs: ['V'], item: (v, a) => [P(...vmul(vnorm(vecA(v, 'V')), num(a, 'A')))] },
+  unitx: { cat: 'Vector', name: 'Unit X', nick: 'X', ins: [{ n: 'F', d: 1 }], outs: ['V'], item: f => [P(num(f, 'F'), 0, 0)] },
+  unity: { cat: 'Vector', name: 'Unit Y', nick: 'Y', ins: [{ n: 'F', d: 1 }], outs: ['V'], item: f => [P(0, num(f, 'F'), 0)] },
+  vrev: { cat: 'Vector', name: 'Reverse Vector', nick: 'Rev', ins: [{ n: 'V' }], outs: ['V'], item: v => [P(...vmul(vecA(v, 'V'), -1))] },
+  vangle: { cat: 'Vector', name: 'Angle', nick: 'Angle', ins: [{ n: 'A' }, { n: 'B' }, { n: 'P', opt: true }], outs: ['A', 'R'],
+    item: (a, b, p) => { let A = vecA(a, 'A'), B = vecA(b, 'B'); if (p !== undefined) { const F = asPln(p, 'P'); A = vsub(A, vmul(F.z, vdot(A, F.z))); B = vsub(B, vmul(F.z, vdot(B, F.z))); let ang = Math.atan2(vdot(vcross(A, B), F.z), vdot(A, B)) / D2R; if (ang < 0) ang += 360; return [ang, 360 - ang]; }
+      const ang = Math.acos(Math.max(-1, Math.min(1, vdot(vnorm(A), vnorm(B))))) / D2R; return [ang, 360 - ang]; } },
+  crossp: { cat: 'Vector', name: 'Cross Product', nick: 'XProd', ins: [{ n: 'A' }, { n: 'B' }, { n: 'U', d: false }], outs: ['V', 'L'], item: (a, b, u) => { const v = vcross(vecA(a, 'A'), vecA(b, 'B')); return [P(...(bool(u) ? vnorm(v) : v)), vlen(v)]; } },
+  dotp: { cat: 'Vector', name: 'Dot Product', nick: 'DProd', ins: [{ n: 'A' }, { n: 'B' }, { n: 'U', d: false }], outs: ['D'], item: (a, b, u) => { let A = vecA(a, 'A'), B = vecA(b, 'B'); if (bool(u)) { A = vnorm(A); B = vnorm(B); } return [vdot(A, B)]; } },
+  closestpt: { cat: 'Vector', name: 'Closest Point', nick: 'CP', ins: [{ n: 'P' }, { n: 'C', list: true }], outs: ['P', 'i', 'D'],
+    item: (p, C) => { const q = ptArr(p); let bi = -1, bd = Infinity; C.forEach((c, i) => { const d = vdist(q, ptArr(c)); if (d < bd) { bd = d; bi = i; } }); if (bi < 0) throw new Error('C boş'); return [C[bi], bi, bd]; } },
+  sqgrid: { cat: 'Vector', name: 'Square Grid', nick: 'SqGrid', ins: [{ n: 'P', d: P(0, 0, 0) }, { n: 'S', d: 1 }, { n: 'Ex', d: 10 }, { n: 'Ey', d: 10 }], outs: ['C', 'P'],
+    run: I => recGrid(I[0][0] ?? P(0, 0, 0), num(I[1][0] ?? 1, 'S'), num(I[1][0] ?? 1, 'S'), I[2][0] ?? 10, I[3][0] ?? 10) },
+  recgrid: { cat: 'Vector', name: 'Rectangular Grid', nick: 'RecGrid', ins: [{ n: 'P', d: P(0, 0, 0) }, { n: 'Sx', d: 2 }, { n: 'Sy', d: 1 }, { n: 'Ex', d: 10 }, { n: 'Ey', d: 10 }], outs: ['C', 'P'],
+    run: I => recGrid(I[0][0] ?? P(0, 0, 0), num(I[1][0] ?? 2, 'Sx'), num(I[2][0] ?? 1, 'Sy'), I[3][0] ?? 10, I[4][0] ?? 10) },
+  hexgrid: { cat: 'Vector', name: 'Hexagonal Grid', nick: 'HexGrid', ins: [{ n: 'P', d: P(0, 0, 0) }, { n: 'S', d: 1 }, { n: 'Ex', d: 8 }, { n: 'Ey', d: 8 }], outs: ['C', 'P'],
+    run: I => { const F = asPln(I[0][0] ?? P(0, 0, 0), 'P'), s = num(I[1][0] ?? 1, 'S'), ex = Math.round(num(I[2][0] ?? 8, 'Ex')), ey = Math.round(num(I[3][0] ?? 8, 'Ey')); if (ex * ey > 20000 || ex < 1 || ey < 1) throw new Error('Ex×Ey 1–20000'); const w = Math.sqrt(3) * s, Cc = [], Pc = [];
+      for (let i = 0; i < ex; i++) { const cc = [], pc = []; for (let j = 0; j < ey; j++) { const cx = i * w + (j % 2 ? w / 2 : 0), cy = j * 1.5 * s; pc.push(P(...onPln(F, cx, cy))); cc.push({ t: 'crv', c: true, p: Array.from({ length: 6 }, (_, k) => { const a = (30 + 60 * k) * D2R; return onPln(F, cx + Math.cos(a) * s, cy + Math.sin(a) * s); }) }); } Cc.push(cc); Pc.push(pc); }
+      return [gridBranches(Cc), gridBranches(Pc)]; } },
+  radgrid: { cat: 'Vector', name: 'Radial Grid', nick: 'RadGrid', ins: [{ n: 'P', d: P(0, 0, 0) }, { n: 'S', d: 1 }, { n: 'Er', d: 5 }, { n: 'Ep', d: 12 }], outs: ['C', 'P'],
+    run: I => { const F = asPln(I[0][0] ?? P(0, 0, 0), 'P'), s = num(I[1][0] ?? 1, 'S'), er = Math.round(num(I[2][0] ?? 5, 'Er')), ep = Math.round(num(I[3][0] ?? 12, 'Ep')); if (er < 1 || ep < 3 || er * ep > 20000) throw new Error('Er ≥ 1, Ep ≥ 3'); const Cc = [], Pc = [], seg = 6;
+      const at = (r, a) => onPln(F, Math.cos(a) * r, Math.sin(a) * r);
+      for (let k = 0; k < ep; k++) { const a0 = k / ep * 2 * Math.PI, a1 = (k + 1) / ep * 2 * Math.PI, cc = [], pc = []; for (let r = 0; r <= er; r++) pc.push(P(...at(r * s, a0)));
+        for (let r = 0; r < er; r++) { const pts2 = []; for (let q = 0; q <= seg; q++) pts2.push(at((r + 1) * s, a0 + (a1 - a0) * q / seg)); if (r === 0) pts2.push(F.o.slice()); else for (let q = seg; q >= 0; q--) pts2.push(at(r * s, a0 + (a1 - a0) * q / seg)); cc.push({ t: 'crv', c: true, p: pts2 }); }
+        Cc.push(cc); Pc.push(pc); }
+      return [gridBranches(Cc), gridBranches(Pc)]; } },
+
+  /* ---- Curve ---- */
+  explode: { cat: 'Curve', name: 'Explode', nick: 'Explode', ins: [{ n: 'C' }], outs: ['S', 'V'], item: c => { c = asCrv(c, 'C'); const q = crvPoly(c), S = []; for (let i = 0; i < q.length - 1; i++) S.push({ t: 'crv', c: false, p: [q[i], q[i + 1]] }); return [S, c.p.map(p => P(...p))]; } },
+  joincrv: { cat: 'Curve', name: 'Join Curves', nick: 'Join', ins: [{ n: 'C', list: true }, { n: 'T', d: 0.001 }], outs: ['C'], run: I => [joinCurves(I[0].map(c => asCrv(c, 'C')), Math.max(1e-9, num(I[1][0] ?? 0.001, 'T')))] },
+  endpts: { cat: 'Curve', name: 'End Points', nick: 'End', ins: [{ n: 'C' }], outs: ['S', 'E'], item: c => { c = asCrv(c, 'C'); const q = crvPoly(c); return [P(...q[0]), P(...q[q.length - 1])]; } },
+  divlen: { cat: 'Curve', name: 'Divide Length', nick: 'DivLength', ins: [{ n: 'C' }, { n: 'L', d: 1 }], outs: ['P', 't'],
+    item: (c, l) => { c = asCrv(c, 'C'); l = num(l, 'L'); const T = crvLength(c); if (l <= 0) throw new Error('L > 0'); if (T / l > 5000) throw new Error('Çok fazla nokta'); const ts = []; for (let d = 0; d <= T + 1e-9; d += l) ts.push(Math.min(1, d / T)); return [ts.map(t => P(...crvAt(c, t).p)), ts]; } },
+  shatter: { cat: 'Curve', name: 'Shatter', nick: 'Shatter', ins: [{ n: 'C' }, { n: 't', list: true, d: 0.5 }], outs: ['S'],
+    item: (c, t) => { c = asCrv(c, 'C'); const ts = [0, ...t.map(x => Math.max(0, Math.min(1, num(x, 't')))).sort((a, b) => a - b), 1].filter((x, i, a) => i === 0 || x > a[i - 1] + 1e-9); const out = []; for (let i = 0; i < ts.length - 1; i++) out.push(subCrv(c, ts[i], ts[i + 1])); return [out]; } },
+  flipc: { cat: 'Curve', name: 'Flip Curve', nick: 'Flip', ins: [{ n: 'C' }], outs: ['C'], item: c => { c = asCrv(c, 'C'); return [{ ...c, p: c.c ? [c.p[0], ...c.p.slice(1).reverse()] : c.p.slice().reverse() }]; } },
+  extend: { cat: 'Curve', name: 'Extend Curve', nick: 'Ext', ins: [{ n: 'C' }, { n: 'L0', d: 1 }, { n: 'L1', d: 1 }], outs: ['C'],
+    item: (c, l0, l1) => { c = asCrv(c, 'C'); if (c.c) throw new Error('Kapalı eğri uzatılamaz'); const p = c.p, n = p.length; if (n < 2) throw new Error('En az 2 nokta'); const d0 = vnorm(vsub(p[0], p[1])), d1 = vnorm(vsub(p[n - 1], p[n - 2])); return [{ t: 'crv', c: false, p: [vadd(p[0], vmul(d0, num(l0, 'L0'))), ...p, vadd(p[n - 1], vmul(d1, num(l1, 'L1')))] }]; } },
+  fillet: { cat: 'Curve', name: 'Fillet (köşe)', nick: 'Fillet', ins: [{ n: 'C' }, { n: 'R', d: 1 }], outs: ['C'],
+    item: (c, r) => { c = asCrv(c, 'C'); r = num(r, 'R'); const p = c.p, n = p.length, out = [];
+      for (let i = 0; i < n; i++) { const has = c.c || (i > 0 && i < n - 1); if (!has || r <= 0) { out.push(p[i]); continue; } const pv = p[(i - 1 + n) % n], nx = p[(i + 1) % n], a = vsub(pv, p[i]), b = vsub(nx, p[i]), la = vlen(a), lb = vlen(b); if (!la || !lb) { out.push(p[i]); continue; }
+        const ua = vmul(a, 1 / la), ub = vmul(b, 1 / lb), th = Math.acos(Math.max(-1, Math.min(1, vdot(ua, ub)))); if (th < 1e-6 || th > Math.PI - 1e-4) { out.push(p[i]); continue; }
+        let d = r / Math.tan(th / 2); d = Math.min(d, la / 2, lb / 2); const rr = d * Math.tan(th / 2), t1 = vadd(p[i], vmul(ua, d)), t2 = vadd(p[i], vmul(ub, d)), cen = vadd(p[i], vmul(vnorm(vadd(ua, ub)), rr / Math.sin(th / 2))), v1 = vsub(t1, cen), v2 = vsub(t2, cen), ph = Math.PI - th, seg = Math.max(2, Math.ceil(ph / (Math.PI / 16)));
+        for (let k = 0; k <= seg; k++) { const s = k / seg, w1 = Math.sin((1 - s) * ph) / Math.sin(ph), w2 = Math.sin(s * ph) / Math.sin(ph); out.push(vadd(cen, vadd(vmul(v1, w1), vmul(v2, w2)))); } }
+      return [{ t: 'crv', c: c.c, p: out }]; } },
+  cclosest: { cat: 'Curve', name: 'Curve Closest Point', nick: 'Crv CP', ins: [{ n: 'P' }, { n: 'C' }], outs: ['P', 't', 'D'],
+    item: (p, c) => { c = asCrv(c, 'C'); const q = ptArr(p), { q: Q, L, T } = crvCum(c); let best = null; for (let i = 0; i < Q.length - 1; i++) { const r = closestSeg(q, Q[i], Q[i + 1]), d = vdist(q, r.q); if (!best || d < best.d) best = { d, p: r.q, t: (L[i] + r.t * (L[i + 1] - L[i])) / (T || 1) }; } return [P(...best.p), best.t, best.d]; } },
+
+  /* ---- Surface ---- */
+  bsrf: { cat: 'Surface', name: 'Boundary Surface', nick: 'BSrf', ins: [{ n: 'C' }], outs: ['S'], item: c => { c = asCrv(c, 'C'); if (!c.c) throw new Error('Kapalı eğri gerekli'); const tr = earClip(c.p); if (!tr.length) throw new Error('Yüzey oluşturulamadı'); return [{ t: 'mesh', v: c.p.slice(), f: tr }]; } },
+  extrudev: { cat: 'Surface', name: 'Extrude (vektör)', nick: 'Extr', ins: [{ n: 'B' }, { n: 'D', d: P(0, 0, 5) }], outs: ['E'], item: (b, d) => { b = asCrv(b, 'B'); const v = vecA(d, 'D'), p = crvPoly(b); return [{ t: 'srf', closedU: b.c, g: [p, p.map(q => vadd(q, v))] }]; } },
+  ruled: { cat: 'Surface', name: 'Ruled Surface', nick: 'RuleSrf', ins: [{ n: 'A' }, { n: 'B' }], outs: ['S'],
+    item: (a, b) => { a = asCrv(a, 'A'); b = asCrv(b, 'B'); const n = Math.min(400, Math.max(crvPoly(a).length, crvPoly(b).length, 2)), ra = resample(a.p, a.c ? n - 1 : n, a.c), rb = resample(b.p, b.c ? n - 1 : n, b.c); if (a.c) ra.push(ra[0]); if (b.c) rb.push(rb[0]); return [{ t: 'srf', g: [ra, rb] }]; } },
+  edgesrf: { cat: 'Surface', name: 'Edge Surface', nick: 'EdgeSrf', ins: [{ n: 'A' }, { n: 'B' }, { n: 'C' }, { n: 'D' }], outs: ['S'],
+    item: (a, b, c, d) => { const n = 24, R = x => { x = asCrv(x, 'eğri'); return resample(x.p, n + 1, false); }; let A = R(a), B = R(b), Cc = R(c), D = R(d);
+      const near = (p, q) => vdist(p, q[0]) <= vdist(p, q[n]); if (!near(A[0], D)) D.reverse(); if (!near(A[n], B)) B.reverse(); if (!near(D[n], Cc)) Cc.reverse();
+      const p00 = A[0], p10 = A[n], p01 = Cc[0], p11 = Cc[n], g = [];
+      for (let j = 0; j <= n; j++) { const v = j / n, row = []; for (let i = 0; i <= n; i++) { const u = i / n; row.push([0, 1, 2].map(k => (1 - v) * A[i][k] + v * Cc[i][k] + (1 - u) * D[j][k] + u * B[j][k] - ((1 - u) * (1 - v) * p00[k] + u * (1 - v) * p10[k] + (1 - u) * v * p01[k] + u * v * p11[k]))); } g.push(row); }
+      return [{ t: 'srf', g }]; } },
+  offsrf: { cat: 'Surface', name: 'Offset Surface', nick: 'Offset', ins: [{ n: 'S' }, { n: 'D', d: 0.5 }], outs: ['S'],
+    item: (s, d) => { s = asSrf(s, 'S'); d = num(d, 'D'); const R = s.g.length - 1, Cn = s.g[0].length - 1; return [{ ...s, g: s.g.map((row, j) => row.map((p, i) => vadd(p, vmul(srfNormal(s, Cn ? i / Cn : 0, R ? j / R : 0), d)))) }]; } },
+  cap: { cat: 'Surface', name: 'Cap Holes', nick: 'Cap', ins: [{ n: 'S' }], outs: ['B'],
+    item: s => { s = asSrf(s, 'S'); const G = s.g, R = G.length, Cn = G[0].length, v = [], f = []; G.forEach(r => r.forEach(p => v.push(p))); for (let j = 0; j < R - 1; j++) for (let i = 0; i < Cn - 1; i++) f.push([j * Cn + i, j * Cn + i + 1, (j + 1) * Cn + i + 1, (j + 1) * Cn + i]);
+      for (const j of [0, R - 1]) { let ring = G[j].map((_, i) => j * Cn + i); if (vdist(G[j][0], G[j][Cn - 1]) < 1e-9) ring = ring.slice(0, -1); else continue; const tr = earClip(ring.map(k => v[k])); tr.forEach(t => f.push(j ? t.map(k => ring[k]) : t.map(k => ring[k]).reverse())); }
+      return [{ t: 'mesh', v, f }]; } },
+  evalsrf: { cat: 'Surface', name: 'Evaluate Surface', nick: 'EvalSrf', ins: [{ n: 'S' }, { n: 'u', d: 0.5 }, { n: 'v', d: 0.5 }], outs: ['P', 'N', 'F'],
+    item: (s, u, v) => { s = asSrf(s, 'S'); u = num(u, 'u'); v = num(v, 'v'); const F = srfFrame(s, u, v); return [P(...F.o), P(...F.z), F]; } },
+  sclosest: { cat: 'Surface', name: 'Surface Closest Point', nick: 'Srf CP', ins: [{ n: 'P' }, { n: 'S' }], outs: ['P', 'u', 'v', 'D'],
+    item: (p, s) => { s = asSrf(s, 'S'); const q = ptArr(p), G = s.g, R = G.length - 1, Cn = G[0].length - 1; let best = null;
+      for (let j = 0; j < R; j++) for (let i = 0; i < Cn; i++) for (const [a, b, c, uv] of [[G[j][i], G[j][i + 1], G[j + 1][i + 1], [[i, j], [i + 1, j], [i + 1, j + 1]]], [G[j][i], G[j + 1][i + 1], G[j + 1][i], [[i, j], [i + 1, j + 1], [i, j + 1]]]]) {
+        const r = closestTri(q, a, b, c), d = vdist(q, r.q); if (!best || d < best.d) best = { d, p: r.q, u: (r.w[0] * uv[0][0] + r.w[1] * uv[1][0] + r.w[2] * uv[2][0]) / (Cn || 1), v: (r.w[0] * uv[0][1] + r.w[1] * uv[1][1] + r.w[2] * uv[2][1]) / (R || 1) }; }
+      return [P(...best.p), best.u, best.v, best.d]; } },
+  area: { cat: 'Surface', name: 'Area', nick: 'Area', ins: [{ n: 'G' }], outs: ['A', 'C'],
+    item: g => { g = asGeo(g); if (g.t === 'crv') { if (!g.c) throw new Error('Kapalı eğri gerekli'); return [polyArea(g.p), P(...polyCentroid(g.p))]; } const T = triangles(g); if (!T.length) throw new Error('eğri, yüzey ya da mesh bekleniyor'); let A = 0; const c = [0, 0, 0]; for (const [a, b, d] of T) { const w = vlen(vcross(vsub(b, a), vsub(d, a))) / 2; A += w; for (let k = 0; k < 3; k++) c[k] += (a[k] + b[k] + d[k]) / 3 * w; } return [A, P(...c.map(x => x / (A || 1)))]; } },
+  volume: { cat: 'Surface', name: 'Volume', nick: 'Vol', ins: [{ n: 'G' }], outs: ['V', 'C'],
+    item: g => { g = asGeo(g); const T = triangles(g); if (!T.length) throw new Error('kapalı yüzey/mesh bekleniyor'); let V = 0; const c = [0, 0, 0]; for (const [a, b, d] of T) { const v = vdot(a, vcross(b, d)) / 6; V += v; for (let k = 0; k < 3; k++) c[k] += (a[k] + b[k] + d[k]) / 4 * v; } return [Math.abs(V), P(...c.map(x => x / (V || 1)))]; } },
+
+  /* ---- Intersect ---- */
+  ccx: { cat: 'Intersect', name: 'Curve | Curve', nick: 'CCX', ins: [{ n: 'A' }, { n: 'B' }, { n: 'T', d: 0.001 }], outs: ['P', 'N'],
+    item: (a, b, t) => { a = crvPoly(asCrv(a, 'A')); b = crvPoly(asCrv(b, 'B')); t = Math.max(1e-9, num(t, 'T')); if ((a.length - 1) * (b.length - 1) > 4e6) throw new Error('Eğriler çok yoğun'); const out = [];
+      for (let i = 0; i < a.length - 1; i++) for (let j = 0; j < b.length - 1; j++) { const [p, q] = segSeg(a[i], a[i + 1], b[j], b[j + 1]); if (vdist(p, q) <= t) { const m = vmul(vadd(p, q), 0.5); if (!out.some(o => vdist(o, m) <= t * 2)) out.push(m); } }
+      return [out.map(p => P(...p)), out.length]; } },
+  cplx: { cat: 'Intersect', name: 'Curve | Plane', nick: 'PCX', ins: [{ n: 'C' }, { n: 'P', d: P(0, 0, 0) }], outs: ['P', 'N'],
+    item: (c, pl) => { const q = crvPoly(asCrv(c, 'C')), F = asPln(pl, 'P'), d = q.map(p => vdot(vsub(p, F.o), F.z)), out = [];
+      for (let i = 0; i < q.length - 1; i++) { if (Math.abs(d[i]) < 1e-12) { if (!out.some(o => vdist(o, q[i]) < 1e-9)) out.push(q[i]); continue; } if ((d[i] < 0 && d[i + 1] > 0) || (d[i] > 0 && d[i + 1] < 0)) { const t = d[i] / (d[i] - d[i + 1]); out.push(vadd(q[i], vmul(vsub(q[i + 1], q[i]), t))); } }
+      const L = q.length - 1; if (Math.abs(d[L]) < 1e-12 && !out.some(o => vdist(o, q[L]) < 1e-9)) out.push(q[L]);
+      return [out.map(p => P(...p)), out.length]; } },
+  bplx: { cat: 'Intersect', name: 'Brep | Plane (kesit)', nick: 'Sec', ins: [{ n: 'G' }, { n: 'P', d: P(0, 0, 0) }], outs: ['C'],
+    item: (g, pl) => { const T = triangles(asGeo(g)), F = asPln(pl, 'P'); if (!T.length) throw new Error('yüzey ya da mesh bekleniyor'); const segs = []; let sc = 0;
+      for (const t of T) { const d = t.map(p => vdot(vsub(p, F.o), F.z)); sc = Math.max(sc, ...t.map(p => Math.abs(p[0]) + Math.abs(p[1]) + Math.abs(p[2]))); const pts2 = []; for (let k = 0; k < 3; k++) { const a = t[k], b = t[(k + 1) % 3], da = d[k], db = d[(k + 1) % 3]; if ((da < 0 && db >= 0) || (da >= 0 && db < 0)) pts2.push(vadd(a, vmul(vsub(b, a), da / (da - db)))); } if (pts2.length === 2) segs.push(pts2); }
+      return [chain(segs, Math.max(1e-9, sc * 1e-7))]; } },
+
+  /* ---- Transform ---- */
+  boxmorph: { cat: 'Transform', name: 'Box Morph', nick: 'BoxMorph', ins: [{ n: 'G', list: true }, { n: 'R', opt: true }, { n: 'T' }], outs: ['G'],
+    item: (G, r, t) => { const gs = G.map(asGeo); if (!gs.length) throw new Error('G boş'); t = asGeo(t); if (t.t !== 'mesh' || t.v.length !== 8) throw new Error('T: 8 köşeli kutu (Box / Surface Box)');
+      const src = r ? pts(asGeo(r)) : gs.flatMap(pts); let lo = [Infinity, Infinity, Infinity], hi = [-Infinity, -Infinity, -Infinity]; for (const p of src) for (let k = 0; k < 3; k++) { lo[k] = Math.min(lo[k], p[k]); hi[k] = Math.max(hi[k], p[k]); }
+      const sz = hi.map((h, k) => (h - lo[k]) || 1), V = t.v, bil = (q, u, v) => [0, 1, 2].map(k => q[0][k] * (1 - u) * (1 - v) + q[1][k] * u * (1 - v) + q[2][k] * u * v + q[3][k] * (1 - u) * v);
+      const f = p => { const u = (p[0] - lo[0]) / sz[0], v = (p[1] - lo[1]) / sz[1], w = (p[2] - lo[2]) / sz[2], b = bil(V.slice(0, 4), u, v), tp = bil(V.slice(4, 8), u, v); return [0, 1, 2].map(k => b[k] * (1 - w) + tp[k] * w); };
+      return [gs.map(g => mapG(g, f))]; } },
+  srfmorph: { cat: 'Transform', name: 'Surface Morph', nick: 'SrfMorph', ins: [{ n: 'G', list: true }, { n: 'S' }, { n: 'U', d: DOM(0, 1) }, { n: 'V', d: DOM(0, 1) }, { n: 'W', d: 1 }], outs: ['G'],
+    item: (G, s, U, V, W) => { const gs = G.map(asGeo); s = asSrf(s, 'S'); U = asDom(U, 'U'); V = asDom(V, 'V'); W = num(W, 'W'); let lo = [Infinity, Infinity, Infinity], hi = [-Infinity, -Infinity, -Infinity]; for (const p of gs.flatMap(pts)) for (let k = 0; k < 3; k++) { lo[k] = Math.min(lo[k], p[k]); hi[k] = Math.max(hi[k], p[k]); }
+      const sz = hi.map((h, k) => (h - lo[k]) || 1); return [gs.map(g => mapG(g, p => { const u = U.a + (U.b - U.a) * (p[0] - lo[0]) / sz[0], v = V.a + (V.b - V.a) * (p[1] - lo[1]) / sz[1], w = (hi[2] > lo[2] ? (p[2] - lo[2]) / sz[2] : 0) * W; return vadd(srfAt(s, u, v), vmul(srfNormal(s, u, v), w)); }))]; } },
+  project: { cat: 'Transform', name: 'Project (plane)', nick: 'Proj', ins: [{ n: 'G' }, { n: 'P', d: P(0, 0, 0) }], outs: ['G'], item: (g, p) => { const F = asPln(p, 'P'); return [mapG(asGeo(g), q => vsub(q, vmul(F.z, vdot(vsub(q, F.o), F.z))))]; } },
+  scalenu: { cat: 'Transform', name: 'Scale NU', nick: 'ScaleNU', ins: [{ n: 'G' }, { n: 'P', d: P(0, 0, 0) }, { n: 'X', d: 1 }, { n: 'Y', d: 1 }, { n: 'Z', d: 2 }], outs: ['G'],
+    item: (g, p, x, y, z) => { const F = asPln(p, 'P'), s = [num(x, 'X'), num(y, 'Y'), num(z, 'Z')]; return [mapG(asGeo(g), q => { const l = inPln(F, q); return onPln(F, l[0] * s[0], l[1] * s[1], l[2] * s[2]); })]; } },
+
+  /* ---- Display ---- */
+  texttag: { cat: 'Display', name: 'Text Tag 3D', nick: 'Tag', ins: [{ n: 'L', d: P(0, 0, 0) }, { n: 'T', d: 'Yazı' }, { n: 'S', d: 1 }], outs: ['T'], item: (l, t, s) => [TAG(ptArr(l), asStr(t), Math.max(1e-6, num(s, 'S')))] },
+  pointlist: { cat: 'Display', name: 'Point List', nick: 'Points', ins: [{ n: 'P', list: true }, { n: 'S', d: 0.6 }], outs: ['T'], run: I => { const s = Math.max(1e-6, num(I[1][0] ?? 0.6, 'S')); if (I[0].length > 3000) throw new Error('En fazla 3000 etiket'); return [I[0].map((p, i) => TAG(ptArr(p), i, s))]; } },
+
+  /* ---- Facade (v4) ---- */
+  panelnum: { cat: 'Facade', name: 'Panel Numbering', nick: 'PanelNo', ins: [{ n: 'P', list: true }, { n: 'X', d: 'P-' }, { n: 'S', d: 0.4 }, { n: 'O', d: true }], outs: ['T', 'N', 'i'],
+    run: I => { const gs = I[0].map(asGeo), pre = asStr(I[1][0] ?? 'P-'), s = Math.max(1e-6, num(I[2][0] ?? 0.4, 'S')), C2 = gs.map(g => g.t === 'mesh' || g.t === 'srf' || g.t === 'crv' ? polyCentroid(panelOutline(g)) : centroid(g)); if (!gs.length) return [[], [], []];
+      let ord = gs.map((_, i) => i); if (bool(I[3][0] ?? true)) { const zs = C2.map(c => c[2]), span = (Math.max(...zs) - Math.min(...zs)) || 1, tol = span * 1e-3 + 1e-9; ord.sort((a, b) => Math.round((C2[b][2] - C2[a][2]) / tol) || (C2[a][0] - C2[b][0]) || (C2[a][1] - C2[b][1])); }
+      const w = String(gs.length).length < 3 ? 3 : String(gs.length).length, names = new Array(gs.length); ord.forEach((gi, k) => names[gi] = pre + String(k + 1).padStart(w, '0'));
+      return [gs.map((g, i) => TAG(C2[i], names[i], s)), names, ord]; } },
+  paneldata: { cat: 'Facade', name: 'Panel Data', nick: 'PData', ins: [{ n: 'P', list: true }, { n: 'N', list: true, opt: true }], outs: ['W', 'H', 'A', 'L'], ui: 'act', st: { unit: 'm' },
+    run: (I, st, n) => { const rows = I[0].map((g, i) => ({ name: I[1].length ? asStr(I[1][Math.min(i, I[1].length - 1)]) : String(i + 1), ...panelDims(asGeo(g)) })); info[n.id] = { ...(info[n.id] || {}), pdata: rows }; return [rows.map(r => r.w), rows.map(r => r.h), rows.map(r => r.a), rows.map(r => r.per)]; } },
+  unroll: { cat: 'Facade', name: 'Panel Unroll', nick: 'Unroll', ins: [{ n: 'P', list: true }, { n: 'N', list: true, opt: true }, { n: 'G', d: 0.2 }, { n: 'W', d: 30 }, { n: 'S', d: 0.3 }, { n: 'O', d: P(0, 0, 0) }], outs: ['C', 'T', 'W', 'H'], ui: 'act', st: { unit: 'm' },
+    run: (I, st, n) => { const OF = asPln(I[5][0] ?? P(0, 0, 0), 'O'), gap = num(I[2][0] ?? 0.2, 'G'), maxW = num(I[3][0] ?? 30, 'W'), s = Math.max(1e-6, num(I[4][0] ?? 0.3, 'S')), C2 = [], T = [], Ws = [], Hs = [], rows = []; let x = 0, y = 0, rowH = 0;
+      I[0].forEach((g, i) => { const o = panelOutline(asGeo(g)); let f = unroll2D(o); let x0 = Math.min(...f.map(p => p[0])), y0 = Math.min(...f.map(p => p[1])); f = f.map(p => [p[0] - x0, p[1] - y0]); const w = Math.max(...f.map(p => p[0])), h = Math.max(...f.map(p => p[1])); if (x > 0 && x + w > maxW) { x = 0; y += rowH + gap; rowH = 0; }
+        const name = I[1].length ? asStr(I[1][Math.min(i, I[1].length - 1)]) : String(i + 1); C2.push({ t: 'crv', c: true, p: f.map(p => onPln(OF, p[0] + x, p[1] + y)) }); T.push(TAG(onPln(OF, x + w / 2, y + h / 2), name, s)); Ws.push(w); Hs.push(h); rows.push({ name, w, h, a: polyArea(o) }); x += w + gap; rowH = Math.max(rowH, h); });
+      info[n.id] = { ...(info[n.id] || {}), pdata: rows }; return [C2, T, Ws, Hs]; } },
+  mullion: { cat: 'Facade', name: 'Mullions & Transoms', nick: 'Profil', ins: [{ n: 'P', list: true }, { n: 'W', d: 0.05 }, { n: 'D', d: 0.15 }, { n: 'T', d: 0.001 }], outs: ['B', 'E', 'L', 'K'], ui: 'act', st: { unit: 'm' },
+    run: (I, st, n) => { const w = num(I[1][0] ?? 0.05, 'W'), dep = num(I[2][0] ?? 0.15, 'D'), tol = Math.max(1e-9, num(I[3][0] ?? 0.001, 'T')), E = new Map(), key = p => p.map(v => Math.round(v / tol)).join(',');
+      for (const g0 of I[0]) { const o = panelOutline(asGeo(g0)), nr = vnorm(newell(o)); for (let i = 0; i < o.length; i++) { const a = o[i], b = o[(i + 1) % o.length], ka = key(a), kb = key(b), k = ka < kb ? ka + '|' + kb : kb + '|' + ka; const e = E.get(k); if (e) e.n = vadd(e.n, nr); else E.set(k, { a, b, n: nr }); } }
+      const B = [], Ed = [], L = [], K = [], rows = new Map(), mm = UNITS[st.unit] || 1000;
+      for (const e of E.values()) { const dir = vsub(e.b, e.a), len = vlen(dir); if (len < tol) continue; const ud = vmul(dir, 1 / len); let nr = vsub(e.n, vmul(ud, vdot(e.n, ud))); nr = vlen(nr) > 1e-9 ? vnorm(nr) : plnFromZ(e.a, ud).x; const sd = vnorm(vcross(ud, nr)), h = w / 2;
+        const base = [vsub(e.a, vmul(sd, h)), vsub(e.b, vmul(sd, h)), vadd(e.b, vmul(sd, h)), vadd(e.a, vmul(sd, h))], back = base.map(p => vsub(p, vmul(nr, dep)));
+        B.push({ t: 'mesh', v: [...back, ...base], f: [[0, 3, 2, 1], [4, 5, 6, 7], [0, 1, 5, 4], [1, 2, 6, 5], [2, 3, 7, 6], [3, 0, 4, 7]] }); Ed.push({ t: 'crv', c: false, p: [e.a, e.b] }); L.push(len);
+        const kind = Math.abs(ud[2]) > 0.7 ? 'Dikme' : 'Kayıt'; K.push(kind); const lmm = Math.round(len * mm), rk = kind + '|' + lmm; rows.set(rk, { kind, len: lmm, n: (rows.get(rk)?.n || 0) + 1 }); }
+      info[n.id] = { ...(info[n.id] || {}), mrows: [...rows.values()].sort((a, b) => a.kind.localeCompare(b.kind) || b.len - a.len) }; return [B, Ed, L, K]; } },
+  glassw: { cat: 'Facade', name: 'Glass Weight', nick: 'CamKg', ins: [{ n: 'P', list: true }], outs: ['kg/m²', 'W', 'T'], ui: 'act', st: { unit: 'm', mix: '8+16+44.2' },
+    run: (I, st, n) => { const kgm = glassKgm2(st.mix), f = (UNITS[st.unit] || 1000) / 1000, rows = I[0].map(g => panelDims(asGeo(g))), W = rows.map(r => r.a * f * f * kgm); info[n.id] = { ...(info[n.id] || {}), gdata: { rows, kgm, W } }; return [[kgm], W, [W.reduce((a, b) => a + b, 0)]]; } },
+  curvana: { cat: 'Facade', name: 'Curvature Analysis', nick: 'Curv', ins: [{ n: 'S' }, { n: 'U', d: 12 }, { n: 'V', d: 8 }], outs: ['M', 'K', 'R', 'C'],
+    item: (s, U, V) => { s = asSrf(s, 'S'); U = Math.max(1, Math.round(num(U, 'U'))); V = Math.max(1, Math.round(num(V, 'V'))); if (U * V > 8000) throw new Error('U×V ≤ 8000'); const eu = Math.max(1 / Math.max(1, s.g[0].length - 1), 1 / U) / 2, ev = Math.max(1 / Math.max(1, s.g.length - 1), 1 / V) / 2, M = [], K = [];
+      for (let j = 0; j < V; j++) for (let i = 0; i < U; i++) { const u = Math.min(1 - eu, Math.max(eu, (i + .5) / U)), v = Math.min(1 - ev, Math.max(ev, (j + .5) / V)), S0 = srfAt(s, u, v), Su = vmul(vsub(srfAt(s, u + eu, v), srfAt(s, u - eu, v)), 1 / (2 * eu)), Sv = vmul(vsub(srfAt(s, u, v + ev), srfAt(s, u, v - ev)), 1 / (2 * ev));
+        const Suu = vmul(vadd(vsub(srfAt(s, u + eu, v), vmul(S0, 2)), srfAt(s, u - eu, v)), 1 / (eu * eu)), Svv = vmul(vadd(vsub(srfAt(s, u, v + ev), vmul(S0, 2)), srfAt(s, u, v - ev)), 1 / (ev * ev)), Suv = vmul(vadd(vsub(srfAt(s, u + eu, v + ev), srfAt(s, u + eu, v - ev)), vsub(srfAt(s, u - eu, v - ev), srfAt(s, u - eu, v + ev))), 1 / (4 * eu * ev));
+        const nn = vnorm(vcross(Su, Sv)), E1 = vdot(Su, Su), F1 = vdot(Su, Sv), G1 = vdot(Sv, Sv), L1 = vdot(Suu, nn), M1 = vdot(Suv, nn), N1 = vdot(Svv, nn), den = E1 * G1 - F1 * F1 || 1e-12, Kg = (L1 * N1 - M1 * M1) / den, H = (E1 * N1 - 2 * F1 * M1 + G1 * L1) / (2 * den), dk = Math.sqrt(Math.max(0, H * H - Kg));
+        K.push(Math.max(Math.abs(H + dk), Math.abs(H - dk))); M.push(quad(srfAt(s, i / U, j / V), srfAt(s, (i + 1) / U, j / V), srfAt(s, (i + 1) / U, (j + 1) / V), srfAt(s, i / U, (j + 1) / V))); }
+      const hi = Math.max(...K, 1e-12); return [M, K, K.map(k => k > 1e-9 ? 1 / k : 1e9), K.map(k => ({ t: 'col', hex: ramp(k / hi) }))]; } }
 };
-const CATS = ['Params', 'Maths', 'Sets', 'Vector', 'Curve', 'Surface', 'Transform', 'Display', 'Facade'];
-const CAT_TR = { Params: 'Params', Maths: 'Maths', Sets: 'Sets', Vector: 'Vector', Curve: 'Curve', Surface: 'Surface', Transform: 'Transform', Display: 'Display', Facade: 'Cephe' };
+const CATS = ['Params', 'Maths', 'Sets', 'Vector', 'Curve', 'Surface', 'Intersect', 'Transform', 'Display', 'Facade'];
+const CAT_TR = { Params: 'Params', Maths: 'Maths', Sets: 'Sets', Vector: 'Vector', Curve: 'Curve', Surface: 'Surface', Intersect: 'Intersect', Transform: 'Transform', Display: 'Display', Facade: 'Cephe' };
 
 /* ================= document ================= */
 let doc = { nodes: [], wires: [], groups: [] }, uid = 1, sel = new Set();
@@ -723,6 +1015,8 @@ function fmt(v) {
   if (typeof v === 'boolean') return v ? 'True' : 'False';
   if (isPt(v)) return `{${fmt(v.x)}, ${fmt(v.y)}, ${fmt(v.z)}}`;
   if (isCol(v)) return v.hex;
+  if (isDom(v)) return `${fmt(v.a)} To ${fmt(v.b)}`;
+  if (isTag(v)) return `Tag "${v.s}"`;
   if (isPln(v)) return `Plane O{${fmt(v.o[0])}, ${fmt(v.o[1])}, ${fmt(v.o[2])}} Z{${fmt(v.z[0])}, ${fmt(v.z[1])}, ${fmt(v.z[2])}}`;
   if (v && v.t) return { crv: v.c ? 'Closed Curve' : 'Curve', srf: 'Surface', mesh: 'Mesh' }[v.t] || v.t;
   return String(v);
@@ -730,11 +1024,12 @@ function fmt(v) {
 const nickOf = n => n.nick || C[n.type].nick;
 function portCls(inp) { return inp.tree ? ' tre' : inp.list ? ' lst' : ''; }
 function stopIn(el) { el.querySelectorAll('input, select, button, canvas, .val').forEach(x => x.addEventListener('pointerdown', e => e.stopPropagation())); }
+const PILLS = ['slider', 'numin', 'toggle', 'colour', 'vlist', 'textin'];
 function buildNode(n) {
   const c = C[n.type], el = document.createElement('div');
-  el.className = 'node' + (['slider', 'numin', 'toggle', 'colour'].includes(c.ui) ? ' pill' : '') + (c.ui === 'slider' ? ' slider' : '') + (c.ui === 'panel' ? ' panel' : '');
+  el.className = 'node' + (PILLS.includes(c.ui) ? ' pill' : '') + (c.ui === 'slider' ? ' slider' : '') + (c.ui === 'panel' ? ' panel' : '');
   el.dataset.id = n.id;
-  const outs = `<div class="col outs">${c.outs.map((o, i) => `<div class="p" data-o="${i}" title="${o}">${c.ui && ['slider', 'numin', 'toggle', 'colour'].includes(c.ui) ? '' : o}</div>`).join('')}</div>`;
+  const outs = `<div class="col outs">${c.outs.map((o, i) => `<div class="p" data-o="${i}" title="${o}">${c.ui && PILLS.includes(c.ui) ? '' : o}</div>`).join('')}</div>`;
   const ins = () => `<div class="col ins">${c.ins.map((inp, i) => `<div class="p${portCls(inp)}" data-i="${i}" title="${inp.n}${inp.tree ? ' (ağaç)' : inp.list ? ' (liste)' : ''}${inp.opt ? ' · isteğe bağlı' : ''}">${inp.n}</div>`).join('')}</div>`;
   const ch = () => { schedule(); };
   if (c.ui === 'slider') {
@@ -775,6 +1070,34 @@ function buildNode(n) {
   } else if (c.ui === 'sched') {
     el.innerHTML = `${ins()}<div class="sb"><div class="st" data-drag><span>${esc(nickOf(n))} · panel listesi</span><button type="button" class="csv">CSV</button></div><table></table></div>${outs}<span class="eye" hidden></span><span class="msg"></span>`;
     el.querySelector('.csv').addEventListener('click', () => scheduleCSV(n));
+  } else if (c.ui === 'vlist') {
+    el.innerHTML = `<span class="lbl" data-drag>${esc(n.st.label)}</span><select class="vl" aria-label="değer"></select><button type="button" class="vle" title="Listeyi düzenle">✎</button>${outs}`;
+    const sl = el.querySelector('select'), paint = () => { sl.innerHTML = vlistItems(n.st).map((it, i) => `<option value="${i}" ${i === n.st.sel ? 'selected' : ''}>${esc(it.name)}</option>`).join(''); }; paint();
+    sl.addEventListener('change', () => { n.st.sel = +sl.value; ch(); });
+    el.querySelector('.vle').addEventListener('click', () => { const v = prompt('Liste öğeleri (ad = değer; ad = değer):', n.st.items); if (v == null) return; n.st.items = v; n.st.sel = 0; paint(); ch(); });
+  } else if (c.ui === 'textin') {
+    el.innerHTML = `<span class="lbl" data-drag>${esc(n.st.label)}</span><input class="ni" type="text" spellcheck="false" value="${esc(n.st.val)}" aria-label="${esc(n.st.label)}">${outs}`;
+    const ip = el.querySelector('input'); ip.addEventListener('input', () => { n.st.val = ip.value; ch(); }); ip.addEventListener('keydown', e => e.stopPropagation());
+  } else if (c.ui === 'rec') {
+    el.innerHTML = `${ins()}<div class="sb"><div class="st" data-drag><span>Kayıt · <b class="rc">0</b></span><span><button type="button" class="rtg"></button> <button type="button" class="rcl">temizle</button></span></div><small class="rinfo">girdi her değiştiğinde kaydeder (en fazla ${n.st.max})</small></div>${outs}<span class="msg"></span>`;
+    const tg = el.querySelector('.rtg'); const p2 = () => { tg.textContent = n.st.on ? '❚❚ durdur' : '● kaydet'; }; p2();
+    tg.addEventListener('click', () => { n.st.on = !n.st.on; p2(); ch(); });
+    el.querySelector('.rcl').addEventListener('click', () => { n.st.data = []; n.st.last = null; ch(); });
+  } else if (c.ui === 'optim') {
+    el.innerHTML = `${ins()}<div class="sb opt"><div class="st" data-drag><span>Optimizer</span><select class="og"><option value="min" ${n.st.goal === 'min' ? 'selected' : ''}>en küçük</option><option value="max" ${n.st.goal === 'max' ? 'selected' : ''}>en büyük</option></select></div>
+      <div class="optl"></div><div class="orow">nesil <input type="number" class="oge" min="1" max="500" value="${n.st.gens}"> nüfus <input type="number" class="opo" min="4" max="100" value="${n.st.pop}"></div>
+      <canvas class="osp" width="210" height="38"></canvas><div class="ost"></div><div class="orow"><button type="button" class="ogo">Başlat</button><button type="button" class="oap">en iyiyi uygula</button></div></div><span class="msg"></span>`;
+    el.querySelector('.og').addEventListener('change', e => { n.st.goal = e.target.value; });
+    el.querySelector('.oge').addEventListener('input', e => { n.st.gens = +e.target.value || 25; }); el.querySelector('.opo').addEventListener('input', e => { n.st.pop = +e.target.value || 16; });
+    el.querySelectorAll('.orow input').forEach(x => x.addEventListener('keydown', e => e.stopPropagation()));
+    el.querySelector('.optl').addEventListener('change', e => { const id = +e.target.dataset.sid; if (!id) return; n.st.ids = e.target.checked ? [...new Set([...n.st.ids, id])] : n.st.ids.filter(x => x !== id); });
+    el.querySelector('.ogo').addEventListener('click', () => runOptim(n)); el.querySelector('.oap').addEventListener('click', () => applyOptBest(n));
+  } else if (c.ui === 'act') {
+    const A = ACT[n.type];
+    el.innerHTML = `${ins()}<div class="sb"><div class="st" data-drag><span>${esc(nickOf(n))} · ${A.title}</span><select class="un" title="model birimi">${Object.keys(UNITS).map(u => `<option ${u === n.st.unit ? 'selected' : ''}>${u}</option>`).join('')}</select></div>${A.mix ? `<div class="orow">dizilim <input type="text" class="mix" value="${esc(n.st.mix)}" spellcheck="false"></div>` : ''}<div class="orow">${A.btns.map((b, i) => `<button type="button" data-b="${i}">${b[0]}</button>`).join('')}</div><table></table></div>${outs}<span class="eye" hidden></span><span class="msg"></span>`;
+    el.querySelector('.un').addEventListener('change', e => { n.st.unit = e.target.value; ch(); });
+    const mx = el.querySelector('.mix'); if (mx) { mx.addEventListener('input', () => { n.st.mix = mx.value; ch(); }); mx.addEventListener('keydown', e => e.stopPropagation()); }
+    el.querySelectorAll('[data-b]').forEach(b => b.addEventListener('click', () => A.btns[+b.dataset.b][1](n)));
   } else {
     el.innerHTML = `${c.ins.length ? ins() : ''}<div class="core" data-drag><span>${esc(nickOf(n))}</span></div>${c.outs.length ? outs : ''}<span class="eye" title="Önizleme aç/kapat">◉</span><span class="msg"></span>`;
     if (!c.ins.length) el.classList.add('noins');
@@ -816,7 +1139,10 @@ function refreshNode(n) {
     tb.innerHTML = s ? `<tr><th>Tip</th><th>Adet</th><th>G</th><th>Y</th><th>m²</th></tr>${s.rows.slice(0, 14).map((r, i) => `<tr><td><i style="background:${TYPE_COL[i % TYPE_COL.length]}"></i>${r.name}</td><td>${r.n}</td><td>${r.w.toFixed(3)}</td><td>${r.h.toFixed(3)}</td><td>${r.area.toFixed(3)}</td></tr>`).join('')}${s.rows.length > 14 ? `<tr><td colspan="5">… +${s.rows.length - 14} tip</td></tr>` : ''}<tr><th>Toplam</th><th>${s.total}</th><th colspan="3">${s.rows.length} tip</th></tr>` : '<tr><td>(panel yok)</td></tr>';
   }
   if (c.ui === 'graph') drawGraph(n);
-  if (!['slider', 'numin', 'toggle', 'colour', 'panel'].includes(c.ui)) c.ins.forEach((inp, i) => { const p = el.querySelector(`.ins [data-i="${i}"]`); if (p) p.classList.toggle('def', !doc.wires.some(w => w.b === n.id && w.bi === i)); });
+  if (c.ui === 'act') el.querySelector('.sb table').innerHTML = actTable(n);
+  if (c.ui === 'rec') el.querySelector('.rc').textContent = (n.st.data || []).length;
+  if (c.ui === 'optim') paintOpt(n);
+  if (![...PILLS, 'panel'].includes(c.ui)) c.ins.forEach((inp, i) => { const p = el.querySelector(`.ins [data-i="${i}"]`); if (p) p.classList.toggle('def', !doc.wires.some(w => w.b === n.id && w.bi === i)); });
 }
 const hasGeo = n => n.type === 'cprev' ? !!(info[n.id] && info[n.id].cp && info[n.id].cp.G.length) : (cache[n.id] || []).some(t => t.some(b => b.v.some(isGeo)));
 function rebuildAll() { world.querySelectorAll('.node').forEach(e => e.remove()); for (const k in els) delete els[k]; doc.nodes.forEach(buildNode); drawWires(); }
@@ -1001,7 +1327,7 @@ function placeCtx(cx, cy, html) {
   ctxEl.addEventListener('pointerdown', e => e.stopPropagation());
 }
 function openCtx(cx, cy, n) {
-  const c = C[n.type], ui = ['slider', 'numin', 'toggle', 'colour'].includes(c.ui);
+  const c = C[n.type], ui = PILLS.includes(c.ui);
   placeCtx(cx, cy, `<button data-a="pv">Önizleme<small>${n.pv ? 'açık' : 'kapalı'} · Ctrl+Q</small></button><button data-a="off">${n.off ? 'Etkinleştir' : 'Devre dışı bırak'}<small>Ctrl+E</small></button><button data-a="ren">Yeniden adlandır</button>${c.ui === 'slider' ? '<button data-a="rng">Slider aralığı…</button>' : ''}<hr><button data-a="copy">Kopyala<small>Ctrl+C</small></button><button data-a="dup">Çoğalt<small>Ctrl+D</small></button><button data-a="grp">Grupla<small>Ctrl+G</small></button><hr><button data-a="del">Sil<small>Delete</small></button>`);
   void ui;
   ctxEl.addEventListener('click', e => {
@@ -1178,12 +1504,122 @@ function exportGeo(kind) {
     for (const { g, layer } of items) {
       if (g.t === 'pt') L.push('0', 'POINT', '8', layer, '10', f(g.x), '20', f(g.y), '30', f(g.z));
       else if (g.t === 'crv') { L.push('0', 'POLYLINE', '8', layer, '66', '1', '70', String(8 | (g.c ? 1 : 0)), '10', '0', '20', '0', '30', '0'); g.p.forEach(p => L.push('0', 'VERTEX', '8', layer, '10', f(p[0]), '20', f(p[1]), '30', f(p[2]), '70', '32')); L.push('0', 'SEQEND', '8', layer); nC++; }
+      else if (g.t === 'tag') L.push('0', 'TEXT', '8', layer, '10', f(g.p[0]), '20', f(g.p[1]), '30', f(g.p[2]), '40', f(g.h), '1', g.s.replace(/[ğĞıİşŞçÇöÖüÜ]/g, ch => ({ ğ: 'g', Ğ: 'G', ı: 'i', İ: 'I', ş: 's', Ş: 'S', ç: 'c', Ç: 'C', ö: 'o', Ö: 'O', ü: 'u', Ü: 'U' })[ch]).replace(/[^\x20-\x7e]/g, '?'));
       else for (const fc of faces(g)) { const q = fc.length === 3 ? [...fc, fc[2]] : fc.slice(0, 4); L.push('0', '3DFACE', '8', layer); q.forEach((p, i) => L.push(String(10 + i), f(p[0]), String(20 + i), f(p[1]), String(30 + i), f(p[2]))); nF++; }
     }
     L.push('0', 'ENDSEC', '0', 'EOF'); txt = L.join('\r\n');
   }
   download(name, new Blob([txt], { type: 'text/plain' }));
   toast(`${name} · ${nF} yüz${nC ? ', ' + nC + ' eğri' : ''}`);
+}
+
+
+/* ---- v4: action panels (panel data, unroll, profiles, glass), optimizer ---- */
+function recGrid(p, sx, sy, ex, ey) {
+  const F = asPln(p, 'P'); ex = Math.round(num(ex, 'Ex')); ey = Math.round(num(ey, 'Ey')); if (ex < 1 || ey < 1 || ex * ey > 20000) throw new Error('Ex×Ey 1–20000');
+  const Cc = [], Pc = [];
+  for (let i = 0; i <= ex; i++) { const pc = []; for (let j = 0; j <= ey; j++) pc.push(P(...onPln(F, i * sx, j * sy))); Pc.push(pc); }
+  for (let i = 0; i < ex; i++) { const cc = []; for (let j = 0; j < ey; j++) cc.push({ t: 'crv', c: true, p: [onPln(F, i * sx, j * sy), onPln(F, (i + 1) * sx, j * sy), onPln(F, (i + 1) * sx, (j + 1) * sy), onPln(F, i * sx, (j + 1) * sy)] }); Cc.push(cc); }
+  return [gridBranches(Cc), gridBranches(Pc)];
+}
+function vlistItems(st) {
+  return String(st.items).split(/;|\n/).map(s => s.trim()).filter(Boolean).map(s => { const m = s.match(/^(.*?)=(.*)$/), name = (m ? m[1] : s).trim(), raw = (m ? m[2] : s).trim();
+    const v = /^-?\d+([.,]\d+)?$/.test(raw) ? parseFloat(raw.replace(',', '.')) : /^(true|false)$/i.test(raw) ? /^true$/i.test(raw) : raw; return { name: name || raw, v }; });
+}
+const ACT = {
+  paneldata: { title: 'panel verisi', btns: [['CSV', n => pdataCSV(n)], ['Levha →', n => sendOpti(n)], ['Cam →', n => sendCam(n)]] },
+  unroll: { title: 'açınım', btns: [['CSV', n => pdataCSV(n)], ['Levha →', n => sendOpti(n)]] },
+  mullion: { title: 'dikme · kayıt', btns: [['CSV', n => mullCSV(n)], ['Profil →', n => sendProfil(n)]] },
+  glassw: { title: 'cam ağırlığı', mix: true, btns: [['Cam Ağırlığı →', n => sendCam(n)]] }
+};
+const mmOf = n => UNITS[n.st.unit] || 1000;
+function rectGroups(n) {
+  const rows = (info[n.id] && info[n.id].pdata) || (info[n.id] && info[n.id].gdata && info[n.id].gdata.rows) || [], k = mmOf(n), m = new Map();
+  for (const r of rows) { let w = Math.round(r.w * k), h = Math.round(r.h * k); if (w < h) [w, h] = [h, w]; const key = w + 'x' + h; m.set(key, { w, h, n: (m.get(key)?.n || 0) + 1 }); }
+  return [...m.values()].sort((a, b) => b.w * b.h - a.w * a.h);
+}
+function pdataCSV(n) {
+  const rows = info[n.id] && info[n.id].pdata; if (!rows || !rows.length) { toast('Panel yok'); return; }
+  const u = n.st.unit, dec = v => (+v).toFixed(4).replace('.', ',');
+  const out = [['Panel', `Genişlik (${u})`, `Yükseklik (${u})`, `Alan (${u}²)`, `Çevre (${u})`]].concat(rows.map(r => [r.name, dec(r.w), dec(r.h), dec(r.a), dec(r.per ?? 0)]));
+  download(`panel-verisi-${stamp()}.csv`, new Blob(['﻿' + out.map(r => r.join(';')).join('\r\n')], { type: 'text/csv;charset=utf-8' }));
+}
+function mullCSV(n) {
+  const rows = info[n.id] && info[n.id].mrows; if (!rows || !rows.length) { toast('Profil yok'); return; }
+  download(`profil-listesi-${stamp()}.csv`, new Blob(['﻿' + [['Tür', 'Boy (mm)', 'Adet']].concat(rows.map(r => [r.kind, r.len, r.n])).map(r => r.join(';')).join('\r\n')], { type: 'text/csv;charset=utf-8' }));
+}
+function sendOpti(n) {
+  const g = rectGroups(n); if (!g.length) { toast('Panel yok'); return; }
+  try { localStorage.setItem('erdevelop-opti-import', JSON.stringify({ src: 'Mini Grasshopper · ' + nickOf(n), rows: g.map((r, i) => ({ code: 'G' + String(i + 1).padStart(2, '0'), w: r.w, h: r.h, n: r.n })) })); } catch (e) {}
+  window.open('Opti.html?import=dxf', '_blank');
+}
+function sendCam(n) {
+  const g = rectGroups(n).slice(0, 200); if (!g.length) { toast('Panel yok'); return; }
+  window.open(`cam-agirlik.html?list=${encodeURIComponent(g.map(r => `${r.w}x${r.h}x${r.n}`).join(','))}&src=${encodeURIComponent('Mini Grasshopper')}${n.st.mix ? '&mix=' + encodeURIComponent(n.st.mix) : ''}`, '_blank');
+}
+function sendProfil(n) {
+  const rows = info[n.id] && info[n.id].mrows; if (!rows || !rows.length) { toast('Profil yok'); return; }
+  const cnt = {}; const out = rows.map(r => { cnt[r.kind] = (cnt[r.kind] || 0) + 1; return { prof: r.kind, code: (r.kind === 'Dikme' ? 'D' : 'K') + cnt[r.kind], len: r.len, qty: r.n }; });
+  try { localStorage.setItem('erdevelop-profil-import', JSON.stringify({ src: 'Mini Grasshopper', rows: out })); } catch (e) {}
+  window.open('Profil.html?import=gh', '_blank');
+}
+function actTable(n) {
+  const inf = info[n.id] || {}, u = n.st.unit, f3 = v => (+v).toFixed(3);
+  if (n.type === 'mullion') { const r = inf.mrows || []; if (!r.length) return '<tr><td>(profil yok)</td></tr>'; const tot = r.reduce((s, x) => s + x.len * x.n, 0) / 1000;
+    return `<tr><th>Tür</th><th>Boy mm</th><th>Adet</th></tr>${r.slice(0, 14).map(x => `<tr><td>${x.kind}</td><td>${x.len}</td><td>${x.n}</td></tr>`).join('')}${r.length > 14 ? `<tr><td colspan="3">… +${r.length - 14}</td></tr>` : ''}<tr><th>Toplam</th><th>${tot.toFixed(1)} m</th><th>${r.reduce((s, x) => s + x.n, 0)}</th></tr>`; }
+  if (n.type === 'glassw') { const g = inf.gdata; if (!g) return '<tr><td>(panel yok)</td></tr>'; const k = mmOf(n) / 1000, A = g.rows.reduce((s, r) => s + r.a, 0) * k * k, T = g.W.reduce((a, b) => a + b, 0), mx = Math.max(...g.W, 0);
+    return `<tr><th>kg/m²</th><th>${g.kgm.toFixed(2)}</th></tr><tr><td>Panel</td><td>${g.rows.length}</td></tr><tr><td>Alan m²</td><td>${A.toFixed(2)}</td></tr><tr><td>En ağır kg</td><td>${mx.toFixed(1)}</td></tr><tr><th>Toplam kg</th><th>${T.toFixed(1)}</th></tr>`; }
+  const r = inf.pdata || []; if (!r.length) return '<tr><td>(panel yok)</td></tr>';
+  const A = r.reduce((s, x) => s + x.a, 0);
+  return `<tr><th>Panel</th><th>G ${u}</th><th>Y ${u}</th><th>${u}²</th></tr>${r.slice(0, 12).map(x => `<tr><td>${esc(x.name)}</td><td>${f3(x.w)}</td><td>${f3(x.h)}</td><td>${f3(x.a)}</td></tr>`).join('')}${r.length > 12 ? `<tr><td colspan="4">… +${r.length - 12} panel</td></tr>` : ''}<tr><th>Toplam</th><th colspan="2">${r.length} panel · ${rectGroups(n).length} tip</th><th>${f3(A)}</th></tr>`;
+}
+
+/* ---- optimizer ---- */
+let OPT = null;
+const gauss = () => { let u = 0, v = 0; while (!u) u = Math.random(); while (!v) v = Math.random(); return Math.sqrt(-2 * Math.log(u)) * Math.cos(2 * Math.PI * v); };
+function paintOpt(n) {
+  const el = els[n.id]; if (!el) return; const box = el.querySelector('.optl'), stEl = el.querySelector('.ost'), go = el.querySelector('.ogo'), cv = el.querySelector('.osp');
+  if (box) { const sl = doc.nodes.filter(x => x.type === 'slider'); box.innerHTML = sl.length ? sl.map(s => `<label><input type="checkbox" data-sid="${s.id}" ${n.st.ids.includes(s.id) ? 'checked' : ''}>${esc(s.st.label)} <small>${fmt(s.st.min)}–${fmt(s.st.max)}</small></label>`).join('') : '<small>tanımda slider yok</small>'; }
+  if (go) go.textContent = OPT && OPT.n === n ? 'Durdur' : 'Başlat';
+  if (stEl) stEl.textContent = OPT && OPT.n === n ? `nesil ${OPT.gen + 1}/${n.st.gens} · deneme ${OPT.evals} · en iyi ${OPT.best ? fmt(OPT.sign * OPT.best.f) : '…'}` : n.st.best ? `en iyi: ${fmt(n.st.best.f)}` : 'F girişine hedef değeri bağla, slider seç';
+  if (cv) { const x = cv.getContext('2d'), H = n.st.hist || [], W = cv.width, Hh = cv.height; x.clearRect(0, 0, W, Hh); if (H.length > 1) { const lo = Math.min(...H), hi = Math.max(...H); x.strokeStyle = '#3a7d2c'; x.lineWidth = 2; x.beginPath(); H.forEach((v, i) => { const px = i / (H.length - 1) * (W - 4) + 2, py = Hh - 3 - (hi > lo ? (v - lo) / (hi - lo) : 0.5) * (Hh - 6); i ? x.lineTo(px, py) : x.moveTo(px, py); }); x.stroke(); } }
+}
+function runOptim(n) {
+  if (OPT) { OPT.stop = true; return; }
+  const sl = n.st.ids.map(byId).filter(x => x && x.type === 'slider'), wire = doc.wires.find(w => w.b === n.id && w.bi === 0);
+  if (!sl.length) { toast('Değiştirilecek slider seç'); return; } if (!wire) { toast('F girişine hedef değeri bağla'); return; }
+  record();
+  const pop = Math.max(4, Math.min(100, Math.round(n.st.pop))), gens = Math.max(1, Math.min(500, Math.round(n.st.gens))), sign = n.st.goal === 'max' ? -1 : 1;
+  const setG = g => sl.forEach((s, i) => { let v = s.st.min + (s.st.max - s.st.min) * g[i]; s.st.val = s.st.int ? Math.round(v) : +v.toFixed(4); });
+  const fit = () => { const v = flat((cache[wire.a] || [])[wire.ao]).find(x => typeof x === 'number' && isFinite(x)); return v === undefined ? Infinity : sign * v; };
+  const cur = sl.map(s => (s.st.val - s.st.min) / ((s.st.max - s.st.min) || 1));
+  let Pp = [cur, ...Array.from({ length: pop - 1 }, () => sl.map(() => Math.random()))].map(g => ({ g, f: NaN })), idx = 0;
+  OPT = { n, stop: false, gen: 0, best: null, evals: 0, sign }; n.st.hist = [];
+  const finish = () => { const b = OPT.best; if (b) { setG(b.g); n.st.best = { f: sign * b.f, vals: sl.map(s => ({ id: s.id, v: s.st.val })) }; } OPT = null; rebuildAll(); schedule(); record(); toast(b ? `Optimizasyon bitti · en iyi ${fmt(sign * b.f)}` : 'Durduruldu'); };
+  const step = () => {
+    if (OPT.stop) return finish();
+    const t0 = performance.now();
+    while (performance.now() - t0 < 40) {
+      if (idx < Pp.length) { const ind = Pp[idx++]; setG(ind.g); solve(); ind.f = fit(); OPT.evals++; if (!OPT.best || ind.f < OPT.best.f) OPT.best = { g: ind.g.slice(), f: ind.f }; continue; }
+      Pp.sort((a, b) => a.f - b.f); n.st.hist.push(sign * Pp[0].f); OPT.gen++;
+      if (OPT.gen >= gens) return finish();
+      const elite = Pp.slice(0, Math.max(2, Math.round(pop * 0.25))), sig = 0.25 * Math.pow(0.88, OPT.gen), kids = elite.map(e => ({ g: e.g, f: e.f }));
+      while (kids.length < pop) { const a = elite[Math.floor(Math.random() * elite.length)], b = elite[Math.floor(Math.random() * elite.length)]; kids.push({ g: a.g.map((x, i) => { let y = Math.random() < 0.5 ? x : b.g[i]; if (Math.random() < 0.6) y += gauss() * sig; return Math.min(1, Math.max(0, y)); }), f: NaN }); }
+      Pp = kids; idx = elite.length;
+    }
+    paintOpt(n); setTimeout(step, 0);
+  };
+  paintOpt(n); setTimeout(step, 0);
+}
+function applyOptBest(n) { const b = n.st.best; if (!b || !b.vals) { toast('Henüz sonuç yok'); return; } record(); b.vals.forEach(({ id, v }) => { const s = byId(id); if (s) s.st.val = v; }); rebuildAll(); schedule(); }
+
+/* ---- text tags in the viewport ---- */
+const tagTex = new Map();
+function tagSprite(s, h, col) {
+  const key = s + '|' + col; let e = tagTex.get(key);
+  if (!e) { const c = document.createElement('canvas'), x = c.getContext('2d'), fs = 64; x.font = `600 ${fs}px Arial, sans-serif`; const w = Math.ceil(x.measureText(s).width) + 20; c.width = w; c.height = fs + 22; x.font = `600 ${fs}px Arial, sans-serif`; x.textBaseline = 'middle'; x.textAlign = 'center'; x.lineJoin = 'round'; x.lineWidth = 12; x.strokeStyle = 'rgba(255,255,255,.85)'; x.strokeText(s, w / 2, c.height / 2); x.fillStyle = col; x.fillText(s, w / 2, c.height / 2);
+    const t = new THREE.CanvasTexture(c); t.minFilter = THREE.LinearFilter; e = { mat: new THREE.SpriteMaterial({ map: t, depthTest: false, transparent: true }), asp: w / c.height }; if (tagTex.size > 4000) tagTex.clear(); tagTex.set(key, e); }
+  const sp = new THREE.Sprite(e.mat); sp.scale.set(h * e.asp, h, 1); sp.renderOrder = 10; return sp;
 }
 
 /* ---- schedule CSV ---- */
@@ -1223,11 +1659,12 @@ function mats(selected) {
 const cmat = {};
 function colMats(hex) { if (!cmat[hex]) { const c = new THREE.Color(hex); cmat[hex] = { srf: new THREE.MeshStandardMaterial({ color: c, transparent: true, opacity: 0.9, side: THREE.DoubleSide, roughness: 0.55, metalness: 0.05 }), line: new THREE.LineBasicMaterial({ color: c.clone().multiplyScalar(0.55) }), pt: new THREE.PointsMaterial({ color: c, size: 7, sizeAttenuation: false }) }; } return cmat[hex]; }
 function buildGeoGroup(list, M, grp) {
-  const ptsArr = [], linePos = [], triPos = [], edgePos = [], plns = [];
+  const ptsArr = [], linePos = [], triPos = [], edgePos = [], plns = [], tags = [];
   const tri = (a, b, c) => triPos.push(...a, ...b, ...c);
   for (const g of list) {
     if (g.t === 'pt') ptsArr.push(g.x, g.y, g.z);
     else if (g.t === 'pln') plns.push(g);
+    else if (g.t === 'tag') tags.push(g);
     else if (g.t === 'crv') { const p = crvPoly(g); for (let i = 0; i < p.length - 1; i++) linePos.push(...p[i], ...p[i + 1]); }
     else if (g.t === 'srf') {
       const G = g.g, R = G.length, Cc = G[0].length;
@@ -1245,6 +1682,7 @@ function buildGeoGroup(list, M, grp) {
   if (linePos.length) { const l = new THREE.LineSegments(buf(linePos), M.line); l.userData.k = 'line'; grp.add(l); }
   if (ptsArr.length) { const p = new THREE.Points(buf(ptsArr), M.pt); p.userData.k = 'pt'; grp.add(p); }
   if (plns.length) addPlanes(plns, M, grp, buf);
+  if (tags.length) { const col = '#' + M.line.color.getHexString(); for (const t of tags.slice(0, 4000)) { const sp = tagSprite(t.s, t.h, col); sp.position.set(t.p[0], t.p[1], t.p[2]); sp.userData.k = 'tag'; grp.add(sp); } }
 }
 const PLN_MAT = [0xd23b2f, 0x2c9c4a, 0x2f6fd2].map(c => new THREE.LineBasicMaterial({ color: c }));
 function plnSize(plns) {
@@ -1278,7 +1716,7 @@ function nodeObject(n) {
   return grp;
 }
 function rebuildPreview() {
-  prev.children.slice().forEach(g => { prev.remove(g); g.traverse(o => o.geometry && o.geometry.dispose()); });
+  prev.children.slice().forEach(g => { prev.remove(g); g.traverse(o => o.geometry && !o.isSprite && o.geometry.dispose()); });
   doc.nodes.forEach(n => { if (n.pv && !n.off) { const o = nodeObject(n); if (o) prev.add(o); } });
   paintLegend();
 }
@@ -1409,6 +1847,21 @@ function preset(name) {
     W(x, 0, pop, 0); W(y, 0, pop, 1); W(n, 0, pop, 2); W(sd, 0, pop, 3); W(z, 0, pop, 4); W(pop, 0, vor, 0); W(bx, 0, vor, 1);
     W(ax, 0, at, 0); W(ay, 0, at, 1); W(z, 0, at, 2); W(vor, 0, atr, 0); W(at, 0, atr, 1); W(t0, 0, atr, 2); W(t1, 0, atr, 3);
     W(vor, 0, sc, 0); W(atr, 0, sc, 1); W(vor, 0, fr, 0); W(fh, 0, fr, 1);
+  } else if (name === 'chain') {
+    const r = S('Yarıçap', 10, 60, 24, false, 0, 0), a1 = S('Açı', 20, 180, 80, false, 0, 40), h = S('Yükseklik', 3, 30, 12, false, 0, 80), u = S('Yatay bölüm', 1, 30, 8, true, 0, 130), v = S('Düşey bölüm', 1, 20, 4, true, 0, 170);
+    const arc = N('arc', 290, 0), mz = N('unitz', 290, 110), mv = N('move', 410, 60), rs = N('ruled', 530, 20), pan = N('panels', 650, 50, true);
+    const no = N('panelnum', 800, -90, true), pd = N('paneldata', 820, 30), mu = N('mullion', 1090, 20, true), gw = N('glassw', 1090, 250), un = N('unroll', 820, 430, true);
+    const oy = N('numbox', 560, 500, false, { label: 'Açınım Y', val: -40 }), op = N('pt', 690, 490);
+    W(r, 0, arc, 1); W(a1, 0, arc, 3); W(h, 0, mz, 0); W(arc, 0, mv, 0); W(mz, 0, mv, 1); W(arc, 0, rs, 0); W(mv, 0, rs, 1); W(rs, 0, pan, 0); W(u, 0, pan, 1); W(v, 0, pan, 2);
+    W(pan, 0, no, 0); W(pan, 0, pd, 0); W(no, 1, pd, 1); W(pan, 0, mu, 0); W(pan, 0, gw, 0); W(pan, 0, un, 0); W(no, 1, un, 1); W(oy, 0, op, 1); W(op, 0, un, 5);
+    G('İmalat çıktıları', [no, pd, mu, gw, un], GCOLS[2]);
+  } else if (name === 'hexsky') {
+    const sz = S('Hücre', 0.5, 4, 1.5, false, 0, 0), ex = S('X adet', 2, 30, 14, true, 0, 40), ey = S('Y adet', 2, 30, 10, true, 0, 80), ax = S('Çekim X', 0, 40, 9, false, 0, 150), ay = S('Çekim Y', 0, 30, 6, false, 0, 190);
+    const hg = N('hexgrid', 290, 10), at = N('pt', 290, 160, true), fl = N('flatten', 420, 10), atr = N('attractor', 590, 40), sc = N('scale', 760, 0), bs = N('bsrf', 900, 0), ux = N('unitz', 760, 150), ml = N('mul', 640, 170), ext = N('extrudev', 900, 110, true);
+    const t0 = S('Min', 0, 1, 0.2, false, 450, 200), t1 = S('Max', 0, 1, 0.9, false, 450, 240), hz = N('numbox', 520, 300, false, { label: 'Yükseklik', val: 1.2 });
+    W(sz, 0, hg, 1); W(ex, 0, hg, 2); W(ey, 0, hg, 3); W(ax, 0, at, 0); W(ay, 0, at, 1); W(hg, 0, fl, 0); W(fl, 0, atr, 0); W(at, 0, atr, 1); W(t0, 0, atr, 2); W(t1, 0, atr, 3);
+    W(fl, 0, sc, 0); W(atr, 0, sc, 1); W(sc, 0, bs, 0); W(atr, 0, ml, 0); W(hz, 0, ml, 1); W(ml, 0, ux, 0); W(sc, 0, ext, 0); W(ux, 0, ext, 1);
+    G('Çekim', [at, atr, t0, t1], GCOLS[1]);
   } else if (name === 'frames') {
     const r = S('Yarıçap', 5, 40, 18, false, 0, 0), n = S('Kesit', 2, 60, 16, true, 0, 50), sz = S('Kesit boyu', 0.5, 8, 3, false, 0, 100), tw = S('Burgu°', 0, 360, 90, false, 0, 150), sd = S('Kenar', 3, 8, 4, true, 0, 200);
     const arc = N('arc', 300, 0), fr = N('pframes', 430, 30, true), rg = N('range', 300, 150), rot = N('plnrot', 580, 60), pol = N('polygon', 720, 80), lf = N('loft', 860, 90, true);
