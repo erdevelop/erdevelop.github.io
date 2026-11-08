@@ -1,0 +1,618 @@
+<!doctype html>
+<html lang="tr">
+<head>
+<meta charset="utf-8">
+<script src="kilit.js" data-gate></script>
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Profil Optimizasyon | erdevelop</title>
+<meta name="description" content="Profil (boy) kesim optimizasyonu: profil tipine göre gruplama, birden çok stok boyu, testere payı, baş/son kırpma, artık boylar, kesim şablonları, PDF / CSV çıktı ve etiketler.">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Chakra+Petch:wght@600;700&family=IBM+Plex+Sans:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500&display=swap">
+<style>
+
+  :root {
+    --bg: #eef2f6; --panel: #ffffff; --panel-2: #f5f7f9; --grid: #e3e8ed; --line: #cfd8e1;
+    --fg: #1c2833; --text: #45535f; --muted: #74838f; --accent: #2f6fb5; --accent-dim: rgba(47,111,181,.12); --hot: #c8731f;
+    --ok: #1f9d4c; --bad: #d93a2f; --sheet: #f3f5f7; --sheet-line: #5b6670; --cut: #d93a2f; --off: #c8731f;
+    --f-display: 'Chakra Petch', 'Segoe UI', sans-serif; --f-body: 'IBM Plex Sans', 'Segoe UI', system-ui, sans-serif; --f-mono: 'IBM Plex Mono', Consolas, monospace;
+    color-scheme: light;
+  }
+  :root[data-mode="dark"] {
+    --bg: #0c1015; --panel: #131921; --panel-2: #10151c; --grid: #1a212a; --line: #26303b;
+    --fg: #dfe6ed; --text: #a9b5c1; --muted: #75838f; --accent: #5aa9ff; --accent-dim: rgba(90,169,255,.14); --hot: #f0a04b;
+    --ok: #3fd37a; --bad: #ff5f52; --sheet: #1b222b; --sheet-line: #8f9aa5; --cut: #ff6b5e; --off: #f0a04b;
+    color-scheme: dark;
+  }
+  * { box-sizing: border-box; }
+  [hidden] { display: none !important; }
+  html { background: var(--bg); }
+  body { margin: 0; color: var(--fg); font: 400 14px/1.5 var(--f-body); background: transparent; }
+  button, input, select { font: inherit; color: inherit; }
+  :focus-visible { outline: 2px solid var(--accent); outline-offset: 1px; }
+  .topbar { position: sticky; top: 0; z-index: 20; background: color-mix(in srgb, var(--bg) 90%, transparent); backdrop-filter: blur(8px); -webkit-backdrop-filter: blur(8px); border-bottom: 1px solid var(--line); }
+  .topbar .in { max-width: 1500px; margin: 0 auto; padding: calc(9px + env(safe-area-inset-top, 0px)) 16px 9px; display: flex; gap: 8px; align-items: center; flex-wrap: wrap; }
+  .brand { font: 700 15px var(--f-display); letter-spacing: 1px; text-transform: uppercase; text-decoration: none; color: inherit; }
+  .brand span { color: var(--accent); }
+  .crumb { font: 400 12px var(--f-mono); color: var(--muted); } .crumb a { color: inherit; text-decoration: none; }
+  .sp { flex: 1; }
+  .tb { font: 500 12px var(--f-mono); color: var(--accent); padding: 7px 11px; border: 1px solid var(--line); border-radius: 4px; background: var(--panel); cursor: pointer; white-space: nowrap; text-transform: uppercase; }
+  .tb:hover { border-color: var(--accent); }
+  .tb.primary { background: var(--accent); color: #fff; border-color: var(--accent); }
+  .tb:disabled { opacity: .45; cursor: default; }
+  .dd { position: relative; }
+  .ddm { position: absolute; top: calc(100% + 6px); right: 0; min-width: 230px; background: var(--panel); border: 1px solid var(--line); border-radius: 6px; padding: 5px; box-shadow: 0 12px 30px rgba(0,0,0,.25); z-index: 30; display: flex; flex-direction: column; }
+  .ddm button { text-align: left; background: none; border: 0; padding: 8px 10px; border-radius: 4px; cursor: pointer; font: 500 13px var(--f-body); }
+  .ddm button:hover { background: var(--accent-dim); color: var(--accent); }
+  .ddm small { display: block; color: var(--muted); font: 400 11px var(--f-mono); }
+  .ddm hr { border: 0; border-top: 1px solid var(--line); margin: 4px 0; }
+
+  main { max-width: 1500px; margin: 0 auto; padding: 18px 16px 60px; display: grid; grid-template-columns: minmax(380px, 520px) 1fr; gap: 16px; align-items: start; }
+  .col { display: grid; gap: 14px; min-width: 0; }
+  .card { background: var(--panel); border: 1px solid var(--line); border-radius: 10px; padding: 14px 16px; min-width: 0; }
+  .ch { display: flex; align-items: center; gap: 10px; margin-bottom: 10px; flex-wrap: wrap; }
+  .ch h2 { margin: 0; font: 700 15px var(--f-display); text-transform: uppercase; letter-spacing: .8px; }
+  .ch .sw { width: 9px; height: 9px; background: var(--accent); flex: none; }
+  .ch .meta { font: 400 11.5px var(--f-mono); color: var(--muted); }
+  .ch .sp { flex: 1; }
+  .mini { font: 500 11px var(--f-mono); color: var(--accent); background: none; border: 1px solid var(--line); border-radius: 4px; padding: 4px 8px; cursor: pointer; text-transform: uppercase; white-space: nowrap; }
+  .mini:hover { border-color: var(--accent); }
+  h1 { margin: 0; font: 700 26px/1.1 var(--f-display); text-transform: uppercase; letter-spacing: .5px; }
+  h1::after { content: "_"; color: var(--accent); margin-left: 3px; }
+  .lead { margin: 6px 0 0; color: var(--text); font-size: 13.5px; }
+
+  .seg { display: inline-flex; border: 1px solid var(--line); border-radius: 6px; overflow: hidden; }
+  .seg button { border: 0; background: var(--panel-2); padding: 7px 12px; cursor: pointer; font: 500 12.5px var(--f-body); color: var(--muted); }
+  .seg button + button { border-left: 1px solid var(--line); }
+  .seg button.on { background: var(--accent); color: #fff; }
+  .fields { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px 14px; margin-top: 12px; }
+  .fld { display: grid; gap: 4px; font-size: 12.5px; color: var(--muted); }
+  .fld input, .fld select { width: 100%; background: var(--panel-2); border: 1px solid var(--line); border-radius: 5px; padding: 7px 9px; font: 500 13px var(--f-mono); color: var(--fg); }
+  .fld .two { display: flex; gap: 6px; align-items: center; } .fld .two input { min-width: 0; }
+  .hint { font-size: 12px; color: var(--muted); margin: 8px 0 0; line-height: 1.45; }
+
+  .tw { overflow-x: auto; border: 1px solid var(--line); border-radius: 6px; }
+  table.ed { width: 100%; border-collapse: collapse; font: 400 12.5px var(--f-mono); }
+  table.ed th { text-align: left; font-weight: 500; color: var(--muted); background: var(--panel-2); padding: 6px 6px; border-bottom: 1px solid var(--line); white-space: nowrap; font-size: 11.5px; }
+  table.ed td { border-bottom: 1px solid var(--grid); padding: 0; }
+  table.ed tr:last-child td { border-bottom: 0; }
+  table.ed input[type=text], table.ed input[type=number] { width: 100%; min-width: 54px; border: 0; background: transparent; padding: 7px 6px; font: 500 12.5px var(--f-mono); color: var(--fg); }
+  table.ed input:focus { outline: 2px solid var(--accent); outline-offset: -2px; background: var(--accent-dim); }
+  table.ed td.c { text-align: center; } table.ed input[type=checkbox] { accent-color: var(--accent); width: 16px; height: 16px; margin: 0 8px; }
+  table.ed td.dot { width: 18px; padding-left: 8px; } table.ed td.dot i { display: block; width: 10px; height: 10px; border-radius: 2px; }
+  table.ed td.act { white-space: nowrap; width: 1%; padding-right: 4px; }
+  table.ed td.act button { background: none; border: 0; color: var(--muted); cursor: pointer; padding: 4px 5px; font-size: 13px; }
+  table.ed td.act button:hover { color: var(--accent); }
+  table.ed tr.warn input { color: var(--bad); }
+  table.ed tr.rem td:first-child { box-shadow: inset 3px 0 var(--off); }
+  .tfoot { display: flex; gap: 8px; align-items: center; margin-top: 8px; flex-wrap: wrap; font: 400 12px var(--f-mono); color: var(--muted); }
+  .tfoot .sp { flex: 1; }
+  .go { width: 100%; padding: 13px; font: 700 15px var(--f-display); letter-spacing: 1px; text-transform: uppercase; background: var(--accent); color: #fff; border: 0; border-radius: 8px; cursor: pointer; }
+  .go:hover { filter: brightness(1.08); }
+  .go.stop { background: var(--bad); }
+  .prog { height: 6px; border-radius: 3px; background: var(--grid); overflow: hidden; margin-top: 10px; } .prog i { display: block; height: 100%; width: 0; background: linear-gradient(90deg, var(--accent), var(--hot)); transition: width .2s linear; }
+  .progt { font: 400 12px var(--f-mono); color: var(--muted); margin-top: 6px; min-height: 18px; }
+
+  .kpis { display: grid; grid-template-columns: repeat(auto-fill, minmax(140px, 1fr)); gap: 10px; }
+  .kpi { background: var(--panel-2); border: 1px solid var(--line); border-radius: 8px; padding: 10px 12px; }
+  .kpi span { display: block; font: 500 11px var(--f-mono); color: var(--muted); text-transform: uppercase; letter-spacing: .4px; }
+  .kpi b { display: block; font: 600 22px var(--f-display); font-variant-numeric: tabular-nums; }
+  .kpi small { font: 400 11.5px var(--f-mono); color: var(--muted); }
+  .kpi.bad b { color: var(--bad); } .kpi.ok b { color: var(--ok); }
+  .rt { width: 100%; border-collapse: collapse; font: 400 12.5px var(--f-mono); font-variant-numeric: tabular-nums; }
+  .rt th { text-align: left; font-weight: 500; color: var(--muted); padding: 6px 8px; border-bottom: 1px solid var(--line); white-space: nowrap; }
+  .rt td { padding: 6px 8px; border-bottom: 1px solid var(--grid); white-space: nowrap; }
+  .rt .r { text-align: right; }
+  .alert { margin-top: 10px; padding: 9px 12px; border-radius: 6px; border-left: 3px solid var(--bad); background: color-mix(in srgb, var(--bad) 10%, transparent); font-size: 13px; }
+  .empty { padding: 40px 20px; text-align: center; color: var(--muted); }
+  .empty b { display: block; font: 700 18px var(--f-display); color: var(--fg); text-transform: uppercase; margin-bottom: 6px; }
+
+  .pats { display: grid; grid-template-columns: repeat(auto-fill, minmax(330px, 1fr)); gap: 12px; }
+  .pat { background: var(--panel); border: 1px solid var(--line); border-radius: 10px; overflow: hidden; display: flex; flex-direction: column; }
+  .pat header { display: flex; align-items: center; gap: 10px; padding: 9px 12px; border-bottom: 1px solid var(--line); }
+  .pat header .n { font: 700 14px var(--f-display); text-transform: uppercase; }
+  .pat header .s { font: 400 12px var(--f-mono); color: var(--muted); flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .pat header .x { font: 700 18px var(--f-display); color: var(--hot); white-space: nowrap; }
+  .pat canvas { width: 100%; display: block; cursor: zoom-in; background: var(--panel-2); }
+  .pat footer { display: flex; gap: 6px; flex-wrap: wrap; padding: 8px 12px; font: 400 11.5px var(--f-mono); color: var(--muted); border-top: 1px solid var(--line); }
+  .pat footer span { white-space: nowrap; } .pat footer i { display: inline-block; width: 8px; height: 8px; border-radius: 2px; margin-right: 4px; }
+  .legend { display: flex; gap: 14px; flex-wrap: wrap; font: 400 12px var(--f-mono); color: var(--muted); }
+  .legend i { display: inline-block; width: 14px; height: 3px; margin-right: 6px; vertical-align: middle; }
+
+  .viewer { position: fixed; inset: 0; z-index: 50; background: rgba(8,11,15,.82); display: flex; flex-direction: column; }
+  .viewer .vb { display: flex; gap: 8px; align-items: center; padding: 10px 14px; background: var(--panel); border-bottom: 1px solid var(--line); flex-wrap: wrap; }
+  .viewer .vb b { font: 700 15px var(--f-display); text-transform: uppercase; }
+  .viewer .vb .s { font: 400 12px var(--f-mono); color: var(--muted); }
+  .viewer label { font: 400 12px var(--f-mono); color: var(--text); display: flex; gap: 5px; align-items: center; cursor: pointer; }
+  .viewer label input { accent-color: var(--accent); }
+  .viewer canvas { flex: 1; width: 100%; min-height: 0; display: block; cursor: grab; touch-action: none; background: var(--panel-2); }
+  .tip { position: fixed; z-index: 60; pointer-events: none; background: var(--panel); border: 1px solid var(--accent); border-radius: 5px; padding: 6px 9px; font: 400 12px var(--f-mono); box-shadow: 0 6px 18px rgba(0,0,0,.25); }
+  .toast { position: fixed; left: 50%; bottom: calc(18px + env(safe-area-inset-bottom, 0px)); transform: translateX(-50%); z-index: 70; background: var(--panel); border: 1px solid var(--accent); border-radius: 6px; padding: 8px 14px; font: 400 13px var(--f-mono); box-shadow: 0 8px 22px rgba(0,0,0,.2); max-width: calc(100% - 30px); }
+
+  @media (max-width: 1060px) { main { grid-template-columns: 1fr; } }
+  @media (max-width: 560px) { .fields { grid-template-columns: 1fr 1fr; } .crumb { display: none; } .pats { grid-template-columns: 1fr; } .kpi b { font-size: 19px; } }
+
+  .grp { border: 1px solid var(--line); border-radius: 10px; overflow: hidden; background: var(--panel); }
+  .grp + .grp { margin-top: 12px; }
+  .grp > header { display: flex; gap: 10px; align-items: baseline; flex-wrap: wrap; padding: 10px 14px; border-bottom: 1px solid var(--line); background: var(--panel-2); }
+  .grp > header b { font: 700 15px var(--f-display); text-transform: uppercase; letter-spacing: .5px; }
+  .grp > header span { font: 400 12px var(--f-mono); color: var(--muted); }
+  .bar { display: grid; grid-template-columns: 74px 1fr; gap: 10px; align-items: center; padding: 9px 14px; border-bottom: 1px solid var(--grid); }
+  .bar:last-child { border-bottom: 0; }
+  .bar .x { font: 700 20px var(--f-display); color: var(--hot); line-height: 1; }
+  .bar .x small { display: block; font: 400 11px var(--f-mono); color: var(--muted); margin-top: 3px; }
+  .bar canvas { width: 100%; height: 46px; display: block; }
+  .bar .ln { font: 400 11.5px var(--f-mono); color: var(--muted); margin-top: 4px; overflow-wrap: anywhere; }
+  .bar .ln i { display: inline-block; width: 8px; height: 8px; border-radius: 2px; margin-right: 4px; }
+  table.ed td input.ang { min-width: 40px; }
+  @media (max-width: 560px) { .bar { grid-template-columns: 1fr; gap: 4px; } .bar .x { display: flex; gap: 8px; align-items: baseline; } .bar .x small { margin: 0; } }
+</style>
+</head>
+<body>
+<header class="topbar"><div class="in">
+  <a class="brand" href="./">erdevelop<span>_</span></a>
+  <span class="crumb">/ <a href="Tools.html">tools</a> / profil</span>
+  <span class="sp"></span>
+  <div class="dd"><button class="tb" type="button" id="projBtn">Proje ▾</button>
+    <div class="ddm" id="projMenu" hidden>
+      <button type="button" data-a="new">Yeni proje<small>örnek verilerle başlar</small></button>
+      <button type="button" data-a="clear">Boş proje<small>tüm satırları temizler</small></button>
+      <hr>
+      <button type="button" data-a="save">Projeyi kaydet<small>.profil dosyası indirir</small></button>
+      <button type="button" data-a="open">Proje aç<small>.profil dosyası seç</small></button>
+    </div></div>
+  <div class="dd"><button class="tb" type="button" id="expBtn" disabled>Çıktı ▾</button>
+    <div class="ddm" id="expMenu" hidden>
+      <button type="button" data-x="pdf">PDF rapor<small>özet + kesim şablonları</small></button>
+      <button type="button" data-x="csv">Kesim listesi (CSV)<small>Excel'de açılır</small></button>
+      <button type="button" data-x="remcsv">Artık boylar (CSV)</button>
+      <button type="button" data-x="labels">Parça etiketleri<small>A4 · 3×8 yazdırılabilir</small></button>
+    </div></div>
+  <a class="tb" href="Opti.html" style="text-decoration:none">Levha ↗</a>
+  <button class="tb" type="button" id="modeBtn">DARK</button>
+  <input type="file" id="fileIn" accept=".profil,.json,application/json" hidden>
+  <input type="file" id="csvIn" accept=".csv,.txt,text/csv" hidden>
+</div></header>
+
+<main>
+  <div class="col">
+    <section class="card">
+      <h1>Profil optimizasyon</h1>
+      <p class="lead">Profil boylarından parçaları en az fireyle keser. Her profil tipi kendi içinde hesaplanır, aynı kesimler gruplanır ("bu boydan ×14 kes") ve artık boylar listelenir.</p>
+      <div class="fields">
+        <label class="fld"><span>Testere payı mm</span><input type="number" id="kerf" min="0" step="0.5"></label>
+        <label class="fld"><span>Kullanılabilir artık en az mm</span><input type="number" id="minRem" min="0" step="50"></label>
+        <label class="fld"><span>Baş kırpma mm</span><input type="number" id="head" min="0" step="1"></label>
+        <label class="fld"><span>Son kırpma mm</span><input type="number" id="tail" min="0" step="1"></label>
+        <label class="fld"><span>Hedef</span><select id="obj"><option value="waste">En az fire</option><option value="cost">En düşük maliyet</option></select></label>
+        <label class="fld"><span>Arama süresi</span><select id="time"><option value="1">1 sn · hızlı</option><option value="2">2 sn</option><option value="5">5 sn</option><option value="15">15 sn · en iyi</option></select></label>
+      </div>
+      <p class="hint">Baş kırpma: boyun ilk temizleme kesimi. Son kırpma: makinenin tutamadığı kuyruk. İkisi de fireye sayılır.</p>
+    </section>
+
+    <section class="card">
+      <div class="ch"><span class="sw"></span><h2>Stok boylar</h2><span class="meta">profil boş = tüm profiller · stok boş = sınırsız</span><span class="sp"></span><button class="mini" type="button" data-csv="stocks">CSV</button></div>
+      <div class="tw"><table class="ed" id="stockT"></table></div>
+      <div class="tfoot"><button class="mini" type="button" id="addStock">+ boy</button><span class="sp"></span><span id="stockSum"></span></div>
+    </section>
+
+    <section class="card">
+      <div class="ch"><span class="sw"></span><h2>Parçalar</h2><span class="meta">Excel'den kopyala, tabloya yapıştır</span><span class="sp"></span><button class="mini" type="button" data-csv="parts">CSV</button></div>
+      <div class="tw"><table class="ed" id="partT"></table></div>
+      <div class="tfoot"><button class="mini" type="button" id="addPart">+ parça</button><span class="sp"></span><span id="partSum"></span></div>
+      <p class="hint">Sütun sırası: profil, kod, boy, adet, açı 1, açı 2. Açılar (ör. 45 / 90) kesim listesine ve etiketlere yazılır; boy, parçanın en uzun ölçüsü olarak girilmeli.</p>
+    </section>
+
+    <section class="card">
+      <button class="go" type="button" id="goBtn">Optimize et</button>
+      <div class="prog"><i id="progBar"></i></div>
+      <div class="progt" id="progT"></div>
+    </section>
+  </div>
+
+  <div class="col" id="results">
+    <section class="card empty" id="emptyCard"><b>Sonuç yok</b>Stok boyları ve parçaları gir, "Optimize et"e bas.</section>
+    <section class="card" id="sumCard" hidden>
+      <div class="ch"><span class="sw"></span><h2>Özet</h2><span class="meta" id="sumMeta"></span></div>
+      <div class="kpis" id="kpis"></div>
+      <div id="alerts"></div>
+    </section>
+    <section class="card" id="needCard" hidden>
+      <div class="ch"><span class="sw"></span><h2>Boy ihtiyacı</h2><span class="meta">sipariş listesi</span></div>
+      <div class="tw" style="border:0"><table class="rt" id="needT"></table></div>
+    </section>
+    <section class="card" id="remCard" hidden>
+      <div class="ch"><span class="sw" style="background:var(--off)"></span><h2>Kullanılabilir artıklar</h2><span class="meta" id="remMeta"></span><span class="sp"></span><button class="mini" type="button" id="remToStock">stoğa ekle</button></div>
+      <div class="tw" style="border:0;max-height:260px;overflow:auto"><table class="rt" id="remT"></table></div>
+    </section>
+    <section class="card" id="patCard" hidden>
+      <div class="ch"><span class="sw"></span><h2>Kesim şablonları</h2><span class="meta" id="patMeta"></span></div>
+      <div id="pats"></div>
+    </section>
+  </div>
+</main>
+<div class="toast" id="toast" hidden></div>
+
+<script type="text/plain" id="engineSrc">/* erdevelop Profil optimizasyon motoru (1B kesim) */
+function rng(seed) { let s = (seed * 2654435761) >>> 0 || 1; return () => { s ^= s << 13; s >>>= 0; s ^= s >>> 17; s ^= s << 5; s >>>= 0; return s / 4294967296; }; }
+
+/* sınırlı sırt çantası: kapasite C (tam sayı mm), tipler [{k,w,v,max}] -> {k:adet} */
+function knap(C, types) {
+  const items = [];
+  for (const t of types) { let m = Math.min(t.max, Math.floor(C / t.w)), b = 1; while (m > 0) { const q = Math.min(b, m); items.push({ k: t.k, w: t.w * q, v: t.v * q, q }); m -= q; b *= 2; } }
+  if (!items.length) return null;
+  const n = items.length, dp = new Float64Array(C + 1), take = new Uint8Array(n * (C + 1));
+  for (let i = 0; i < n; i++) { const { w, v } = items[i], row = i * (C + 1); for (let c = C; c >= w; c--) { const nv = dp[c - w] + v; if (nv > dp[c] + 1e-9) { dp[c] = nv; take[row + c] = 1; } } }
+  let best = 0; for (let c = 1; c <= C; c++) if (dp[c] > dp[best] + 1e-9) best = c;
+  if (dp[best] <= 0) return null;
+  const out = {}; let c = best;
+  for (let i = n - 1; i >= 0; i--) if (take[i * (C + 1) + c]) { out[items[i].k] = (out[items[i].k] || 0) + items[i].q; c -= items[i].w; }
+  return out;
+}
+
+/* D = {stocks:[{code,prof,len,qty(0=∞),price,rem}], parts:[{code,prof,len,qty,a1,a2}], st:{kerf,head,tail,minRem,obj,time}} */
+function makePlan(D, seed) {
+  const R = rng(seed + 1), st = D.st, K = st.kerf, left = D.stocks.map(s => s.qty > 0 ? s.qty : Infinity);
+  const groups = [...new Set(D.parts.map(p => p.prof))];
+  const plan = { groups: [], seed, stockLen: 0, partLen: 0, cost: 0, bars: 0, remLen: 0, nUnplaced: 0, nPats: 0 };
+  const order = seed % 3 === 2 ? groups.slice().sort(() => R() - .5) : groups;
+  for (const g of order) {
+    const need = new Map(); D.parts.forEach((p, k) => { if (p.prof === g) need.set(k, (need.get(k) || 0) + p.qty); });
+    const noise = new Map(); for (const k of need.keys()) noise.set(k, seed ? 1 + (R() - .5) * 0.06 : 1);
+    const sIdx = D.stocks.map((s, i) => i).filter(i => D.stocks[i].prof === g || D.stocks[i].prof === '');
+    const G = { prof: g, pats: [], unplaced: {} };
+    let guard = 0;
+    while ([...need.values()].some(v => v > 0) && guard++ < 5000) {
+      let best = null;
+      for (const si of sIdx) {
+        if (left[si] <= 0) continue;
+        const s = D.stocks[si], cap = s.len - st.head - st.tail; if (cap <= 0) continue;
+        const C = Math.floor(cap + K + 1e-6);
+        const types = []; for (const [k, n] of need) if (n > 0) { const L = D.parts[k].len, w = Math.ceil(L + K - 1e-6); if (w <= C) types.push({ k, w, v: L * noise.get(k) + L * L * 1e-9, max: n }); }
+        const pat = knap(C, types); if (!pat) continue;
+        let used = 0, cons = 0, cnt = 0; for (const k in pat) { used += D.parts[k].len * pat[k]; cons += (D.parts[k].len + K) * pat[k]; cnt += pat[k]; }
+        const waste = s.len - used;
+        let score = st.obj === 'cost' ? (s.price > 0 ? s.price : s.len / 1000) / used : waste / s.len;
+        if (s.rem) score *= 0.35;
+        if (seed) score *= 1 + (R() - .5) * 0.08;
+        if (!best || score < best.score) best = { si, pat, used, cons, score, cnt };
+      }
+      if (!best) { for (const [k, n] of need) if (n > 0) { G.unplaced[k] = n; plan.nUnplaced += n; need.set(k, 0); } break; }
+      let mult = left[best.si]; for (const k in best.pat) mult = Math.min(mult, Math.floor(need.get(+k) / best.pat[k]));
+      mult = Math.max(1, mult === Infinity ? 1 : mult);
+      if (seed && mult > 1 && R() < 0.15) mult = Math.max(1, Math.ceil(mult * (0.5 + R() * 0.5)));
+      for (const k in best.pat) need.set(+k, need.get(+k) - best.pat[k] * mult);
+      left[best.si] -= mult;
+      const s = D.stocks[best.si];
+      const cuts = []; Object.keys(best.pat).map(Number).sort((a, b) => D.parts[b].len - D.parts[a].len).forEach(k => { for (let i = 0; i < best.pat[k]; i++) cuts.push(k); });
+      const off = Math.max(0, s.len - st.head - st.tail - best.cons);
+      const pat = { si: best.si, mult, cuts, used: best.used, off, rem: off >= st.minRem && st.minRem > 0, eff: best.used / s.len };
+      const same = G.pats.find(p => p.si === pat.si && p.cuts.join() === pat.cuts.join()); if (same) same.mult += mult; else G.pats.push(pat);
+    }
+    G.pats.sort((a, b) => b.mult - a.mult || b.eff - a.eff);
+    for (const p of G.pats) { const s = D.stocks[p.si]; plan.bars += p.mult; plan.stockLen += s.len * p.mult; plan.partLen += p.used * p.mult; plan.cost += (s.price || 0) * p.mult; if (p.rem) plan.remLen += p.off * p.mult; }
+    plan.nPats += G.pats.length; plan.groups.push(G);
+  }
+  plan.groups.sort((a, b) => groups.indexOf(a.prof) - groups.indexOf(b.prof));
+  return plan;
+}
+function better(a, b, st) {
+  if (!b) return true;
+  if (a.nUnplaced !== b.nUnplaced) return a.nUnplaced < b.nUnplaced;
+  const ka = st.obj === 'cost' && a.cost > 0 ? a.cost : a.stockLen - a.remLen * 0.15, kb = st.obj === 'cost' && b.cost > 0 ? b.cost : b.stockLen - b.remLen * 0.15;
+  if (Math.abs(ka - kb) > 1e-6) return ka < kb;
+  if (a.nPats !== b.nPats) return a.nPats < b.nPats;
+  return a.remLen > b.remLen;
+}
+function optimize(D, post) {
+  const t0 = Date.now(), T = Math.max(200, (D.st.time || 2) * 1000); let best = null, runs = 0, lastTick = 0;
+  for (let seed = 0; ; seed++) {
+    const p = makePlan(D, seed); runs++;
+    if (better(p, best, D.st)) { best = p; post({ type: 'best', plan: best, runs, t: Date.now() - t0 }); }
+    const now = Date.now(); if (now - t0 > T) break;
+    if (now - lastTick > 250) { lastTick = now; post({ type: 'tick', runs, t: now - t0 }); }
+  }
+  post({ type: 'done', plan: best, runs, t: Date.now() - t0 });
+}
+if (typeof self !== 'undefined' && typeof window === 'undefined' && typeof onmessage !== 'undefined') self.onmessage = e => optimize(e.data, m => self.postMessage(m));
+if (typeof module !== 'undefined') module.exports = { optimize, makePlan, knap };
+</script>
+<script>
+(() => {
+'use strict';
+const $ = id => document.getElementById(id);
+const store = { get(k) { try { return localStorage.getItem(k); } catch (e) { return null; } }, set(k, v) { try { localStorage.setItem(k, v); } catch (e) {} }, del(k) { try { localStorage.removeItem(k); } catch (e) {} } };
+const esc = s => String(s).replace(/[&<>"]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' })[c]);
+const nf = (v, d = 0) => v == null || !isFinite(v) ? '–' : (+v).toLocaleString('tr-TR', { maximumFractionDigits: d, minimumFractionDigits: d });
+const nfl = v => nf(v, Math.abs(v - Math.round(v)) > 1e-6 ? 1 : 0);
+const pnum = v => { const n = parseFloat(String(v).replace(/\s/g, '').replace(',', '.')); return isFinite(n) ? n : 0; };
+const css = n => getComputedStyle(document.documentElement).getPropertyValue(n).trim();
+function toast(t) { const el = $('toast'); el.textContent = t; el.hidden = false; clearTimeout(el._t); el._t = setTimeout(() => el.hidden = true, 3200); }
+function download(name, blob) { const a = document.createElement('a'); a.href = URL.createObjectURL(blob); a.download = name; document.body.appendChild(a); a.click(); setTimeout(() => { URL.revokeObjectURL(a.href); a.remove(); }, 1500); }
+const stamp = () => { const d = new Date(), p = v => String(v).padStart(2, '0'); return `${d.getFullYear()}${p(d.getMonth() + 1)}${p(d.getDate())}-${p(d.getHours())}${p(d.getMinutes())}`; };
+
+const KEY = 'erdevelop-profil-v1';
+const SAMPLE = () => ({
+  st: { kerf: 4, head: 10, tail: 30, minRem: 600, obj: 'waste', time: 2 },
+  stocks: [{ prof: '', code: '6000', len: 6000, qty: '', price: '', on: true }, { prof: '', code: '6500', len: 6500, qty: '', price: '', on: true }, { prof: 'KL-50', code: '7000', len: 7000, qty: '', price: '', on: true }],
+  parts: [
+    { prof: 'KL-50', code: 'D1', len: 3250, qty: 40, a1: 90, a2: 90 }, { prof: 'KL-50', code: 'D2', len: 2870, qty: 36, a1: 90, a2: 90 }, { prof: 'KL-50', code: 'D3', len: 1415.5, qty: 60, a1: 45, a2: 45 },
+    { prof: 'KL-60', code: 'T1', len: 1235, qty: 120, a1: 90, a2: 90 }, { prof: 'KL-60', code: 'T2', len: 980, qty: 80, a1: 90, a2: 90 }, { prof: 'KL-60', code: 'T3', len: 2450, qty: 30, a1: 45, a2: 90 }]
+});
+let P = (() => { try { const s = JSON.parse(store.get(KEY)); if (s && s.stocks && s.parts && s.st) return s; } catch (e) {} return SAMPLE(); })();
+let plan = null, planInput = null, saveT = 0;
+const save = () => { clearTimeout(saveT); saveT = setTimeout(() => store.set(KEY, JSON.stringify(P)), 250); };
+const PAL = ['#4e79a7', '#f28e2b', '#59a14f', '#e15759', '#76b7b2', '#edc948', '#b07aa1', '#ff9da7', '#9c755f', '#6b9bd1', '#8cd17d', '#d4a6c8', '#86bcb6', '#f1ce63', '#a0cbe8'];
+const colOf = i => PAL[i % PAL.length];
+const profOf = p => String(p.prof || '').trim();
+
+/* settings */
+function paintSettings() { for (const k of ['kerf', 'head', 'tail', 'minRem', 'obj', 'time']) $(k).value = P.st[k]; }
+for (const k of ['kerf', 'head', 'tail', 'minRem']) $(k).addEventListener('input', () => { P.st[k] = pnum($(k).value); save(); markWarn(); });
+for (const k of ['obj', 'time']) $(k).addEventListener('change', () => { P.st[k] = k === 'time' ? +$(k).value : $(k).value; save(); });
+
+/* tables */
+const SCOL = [{ k: 'prof', t: 'text', l: 'Profil' }, { k: 'code', t: 'text', l: 'Kod' }, { k: 'len', t: 'num', l: 'Boy' }, { k: 'qty', t: 'num', l: 'Stok' }, { k: 'price', t: 'num', l: 'Fiyat/boy' }, { k: 'on', t: 'bool', l: 'Aktif' }];
+const PCOL = [{ k: 'prof', t: 'text', l: 'Profil' }, { k: 'code', t: 'text', l: 'Kod' }, { k: 'len', t: 'num', l: 'Boy' }, { k: 'qty', t: 'num', l: 'Adet' }, { k: 'a1', t: 'num', l: 'Açı 1', cls: 'ang' }, { k: 'a2', t: 'num', l: 'Açı 2', cls: 'ang' }];
+function fits(p) { const L = pnum(p.len), pr = profOf(p); return P.stocks.some(s => s.on && (profOf(s) === '' || profOf(s) === pr) && pnum(s.len) - P.st.head - P.st.tail >= L - 1e-6); }
+function renderTable(id, rows, cols, isParts) {
+  $(id).innerHTML = `<thead><tr>${isParts ? '<th></th>' : ''}${cols.map(c => `<th>${c.l}</th>`).join('')}<th></th></tr></thead><tbody>${rows.map((r, i) => `<tr data-i="${i}" class="${isParts && pnum(r.len) > 0 && !fits(r) ? 'warn' : ''}${!isParts && r.rem ? ' rem' : ''}">${isParts ? `<td class="dot"><i style="background:${colOf(i)}"></i></td>` : ''}${cols.map((c, j) => c.t === 'bool' ? `<td class="c"><input type="checkbox" data-k="${c.k}" data-c="${j}" ${r[c.k] ? 'checked' : ''} aria-label="${c.l}"></td>` : `<td><input type="text" class="${c.cls || ''}" inputmode="${c.t === 'num' ? 'decimal' : 'text'}" data-k="${c.k}" data-c="${j}" value="${esc(r[c.k] ?? '')}" aria-label="${c.l}" ${c.k === 'qty' && !isParts ? 'placeholder="∞"' : c.k === 'price' ? 'placeholder="—"' : c.k === 'prof' && !isParts ? 'placeholder="tümü"' : ''}></td>`).join('')}<td class="act"><button type="button" data-a="dup" title="Çoğalt">⧉</button><button type="button" data-a="del" title="Sil">✕</button></td></tr>`).join('')}</tbody>`;
+}
+function paintTables() { renderTable('stockT', P.stocks, SCOL, false); renderTable('partT', P.parts, PCOL, true); paintSums(); }
+function paintSums() {
+  $('stockSum').textContent = `${P.stocks.filter(s => s.on && pnum(s.len) > 0).length} aktif boy`;
+  const n = P.parts.reduce((s, p) => s + Math.max(0, Math.round(pnum(p.qty))), 0), L = P.parts.reduce((s, p) => s + pnum(p.len) * Math.max(0, Math.round(pnum(p.qty))), 0) / 1000;
+  const profs = new Set(P.parts.filter(p => pnum(p.len) > 0).map(profOf)).size, bad = P.parts.filter(p => pnum(p.len) > 0 && pnum(p.qty) > 0 && !fits(p)).length;
+  $('partSum').innerHTML = `${profs} profil · ${nf(n)} adet · ${nf(L, 1)} m${bad ? ` · <span style="color:var(--bad)">${bad} satır hiçbir boya sığmıyor</span>` : ''}`;
+}
+function markWarn() { document.querySelectorAll('#partT tr[data-i]').forEach(tr => { const p = P.parts[+tr.dataset.i]; tr.classList.toggle('warn', pnum(p.len) > 0 && !fits(p)); }); paintSums(); }
+function nextCode(rows, code) { const m = String(code).match(/^(.*?)(\d+)$/); let base = m ? m[1] : code + '-', n = m ? +m[2] : 1, w = m ? m[2].length : 1, c; do { n++; c = base + String(n).padStart(w, '0'); } while (rows.some(r => r.code === c)); return c; }
+const blankStock = rows => ({ prof: '', code: String(rows.length ? pnum(rows[rows.length - 1].len) + 500 || 6000 : 6000), len: rows.length ? pnum(rows[rows.length - 1].len) + 500 || 6000 : 6000, qty: '', price: '', on: true });
+const blankPart = rows => { const l = rows[rows.length - 1]; return { prof: l ? l.prof : '', code: nextCode(rows, l ? l.code : 'P0'), len: '', qty: 1, a1: 90, a2: 90 }; };
+function bindTable(id, getRows, cols, blank) {
+  const t = $(id);
+  t.addEventListener('input', e => { const el = e.target, tr = el.closest('tr[data-i]'); if (!tr || el.type === 'checkbox') return; const r = getRows()[+tr.dataset.i], c = cols[+el.dataset.c]; r[c.k] = c.t === 'num' ? el.value.replace(/[^\d.,-]/g, '') : el.value; if (c.t === 'num' && el.value !== r[c.k]) el.value = r[c.k]; save(); markWarn(); });
+  t.addEventListener('change', e => { if (e.target.type === 'checkbox') { getRows()[+e.target.closest('tr').dataset.i][e.target.dataset.k] = e.target.checked; save(); markWarn(); } });
+  t.addEventListener('click', e => { const b = e.target.closest('[data-a]'); if (!b) return; const i = +b.closest('tr').dataset.i, rows = getRows(); if (b.dataset.a === 'del') rows.splice(i, 1); else rows.splice(i + 1, 0, { ...rows[i], code: nextCode(rows, rows[i].code) }); paintTables(); save(); });
+  t.addEventListener('keydown', e => {
+    const el = e.target; if (el.tagName !== 'INPUT') return; const i = +el.closest('tr').dataset.i, c = +el.dataset.c, rows = getRows();
+    const focus = (ri, ci) => { const x = t.querySelector(`tr[data-i="${ri}"] [data-c="${ci}"]`); if (x) { x.focus(); x.select && x.select(); } };
+    if (e.key === 'Enter' || (e.key === 'ArrowDown' && el.type !== 'checkbox')) { e.preventDefault(); if (i === rows.length - 1 && e.key === 'Enter') { rows.push(blank(rows)); paintTables(); save(); } focus(i + 1, c); }
+    else if (e.key === 'ArrowUp') { e.preventDefault(); focus(i - 1, c); }
+  });
+  t.addEventListener('paste', e => {
+    const el = e.target; if (el.tagName !== 'INPUT') return; const txt = (e.clipboardData || window.clipboardData).getData('text');
+    if (!/[\t\n;]/.test(txt.trim())) return; e.preventDefault();
+    const lines = txt.replace(/\r/g, '').split('\n').filter(l => l.trim()), rows = getRows(); let ri = +el.closest('tr').dataset.i, n = 0; const c0 = +el.dataset.c;
+    for (const line of lines) {
+      const cells = line.split(/\t|;/); if (/^\s*(profil|kod|code)\s*$/i.test(cells[0])) continue;
+      if (ri >= rows.length) rows.push(blank(rows));
+      cells.forEach((v, j) => { const col = cols[c0 + j]; if (!col) return; v = v.trim(); rows[ri][col.k] = col.t === 'bool' ? !/^(0|false|hayır|h|no|yok)$/i.test(v) : col.t === 'num' ? v.replace(/[^\d.,-]/g, '') : v; });
+      ri++; n++;
+    }
+    paintTables(); save(); toast(`${n} satır yapıştırıldı`);
+  });
+}
+bindTable('stockT', () => P.stocks, SCOL, blankStock); bindTable('partT', () => P.parts, PCOL, blankPart);
+$('addStock').addEventListener('click', () => { P.stocks.push(blankStock(P.stocks)); paintTables(); save(); });
+$('addPart').addEventListener('click', () => { P.parts.push(blankPart(P.parts)); paintTables(); save(); const x = document.querySelector('#partT tr:last-child [data-c="2"]'); x && x.focus(); });
+
+/* CSV import */
+let csvTarget = 'parts';
+document.querySelectorAll('[data-csv]').forEach(b => b.addEventListener('click', () => { csvTarget = b.dataset.csv; $('csvIn').click(); }));
+async function readText(f) { const buf = await f.arrayBuffer(); try { return new TextDecoder('utf-8', { fatal: true }).decode(buf); } catch (e) { return new TextDecoder('windows-1254').decode(buf); } }
+$('csvIn').addEventListener('change', async e => {
+  const f = e.target.files[0]; e.target.value = ''; if (!f) return;
+  const lines = (await readText(f)).replace(/^﻿/, '').split(/\r?\n/).filter(l => l.trim()); if (!lines.length) return;
+  const sep = lines[0].includes(';') ? ';' : lines[0].includes('\t') ? '\t' : ',', start = /profil|kod|code/i.test(lines[0]) ? 1 : 0, out = [];
+  for (const l of lines.slice(start)) {
+    const c = l.split(sep).map(x => x.trim().replace(/^"|"$/g, '')); if (c.length < 3) continue;
+    if (csvTarget === 'parts') out.push({ prof: c[0], code: c[1], len: c[2], qty: c[3] || 1, a1: c[4] || 90, a2: c[5] || 90 });
+    else out.push({ prof: c[0], code: c[1], len: c[2], qty: c[3] || '', price: c[4] || '', on: c[5] === undefined || !/^(0|false|hayır|h|no|yok)$/i.test(c[5]) });
+  }
+  if (!out.length) { toast('CSV okunamadı'); return; }
+  if (csvTarget === 'parts') P.parts = out; else P.stocks = out;
+  paintTables(); save(); toast(`${out.length} satır içe aktarıldı`);
+});
+
+/* menus / project */
+function closeMenus() { $('projMenu').hidden = true; $('expMenu').hidden = true; }
+$('projBtn').addEventListener('click', e => { e.stopPropagation(); const h = !$('projMenu').hidden; closeMenus(); $('projMenu').hidden = h; });
+$('expBtn').addEventListener('click', e => { e.stopPropagation(); const h = !$('expMenu').hidden; closeMenus(); $('expMenu').hidden = h; });
+document.addEventListener('click', e => { if (!e.target.closest('.dd')) closeMenus(); });
+$('projMenu').addEventListener('click', e => {
+  const b = e.target.closest('[data-a]'); if (!b) return; closeMenus();
+  if (b.dataset.a === 'new') { P = SAMPLE(); resetPlan(); }
+  else if (b.dataset.a === 'clear') { P = { st: P.st, stocks: [blankStock([])], parts: [blankPart([])] }; resetPlan(); }
+  else if (b.dataset.a === 'save') { download(`profil-proje-${stamp()}.profil`, new Blob([JSON.stringify({ format: 'erdevelop-profil', version: 1, ...P }, null, 1)], { type: 'application/json' })); toast('Proje kaydedildi'); return; }
+  else if (b.dataset.a === 'open') { $('fileIn').click(); return; }
+  paintAll(); save();
+});
+$('fileIn').addEventListener('change', async e => {
+  const f = e.target.files[0]; e.target.value = ''; if (!f) return;
+  try { const o = JSON.parse(await readText(f)); if (!o.stocks || !o.parts) throw 0; P = { st: { ...SAMPLE().st, ...(o.st || {}) }, stocks: o.stocks, parts: o.parts }; resetPlan(); paintAll(); save(); toast(`${f.name} açıldı`); }
+  catch (x) { toast('Proje dosyası okunamadı'); }
+});
+
+/* optimisation */
+let worker = null, runT0 = 0, runBudget = 0, progTimer = 0;
+function inputData() {
+  const stocks = P.stocks.map((s, i) => ({ i, prof: profOf(s), code: String(s.code || '').trim() || String(pnum(s.len)), len: pnum(s.len), qty: Math.max(0, Math.round(pnum(s.qty))), price: pnum(s.price), rem: !!s.rem, on: s.on })).filter(s => s.on && s.len > 0);
+  const parts = P.parts.map((p, i) => ({ i, prof: profOf(p), code: String(p.code || '').trim() || `P${i + 1}`, len: pnum(p.len), qty: Math.max(0, Math.round(pnum(p.qty))), a1: pnum(p.a1) || 90, a2: pnum(p.a2) || 90 })).filter(p => p.len > 0 && p.qty > 0);
+  return { stocks, parts, st: { kerf: Math.max(0, pnum(P.st.kerf)), head: Math.max(0, pnum(P.st.head)), tail: Math.max(0, pnum(P.st.tail)), minRem: Math.max(0, pnum(P.st.minRem)), obj: P.st.obj, time: +P.st.time || 2 } };
+}
+const waste = p => p && p.stockLen ? (1 - p.partLen / p.stockLen) * 100 : 0;
+function stopRun(msg) { if (worker) { worker.terminate(); worker = null; } clearInterval(progTimer); $('goBtn').textContent = 'Optimize et'; $('goBtn').classList.remove('stop'); if (msg) $('progT').textContent = msg; }
+$('goBtn').addEventListener('click', () => {
+  if (worker) { stopRun(plan ? 'Durduruldu · bulunan en iyi sonuç gösteriliyor' : 'Durduruldu'); if (plan) finish(); return; }
+  const D = inputData();
+  if (!D.stocks.length) { toast('Aktif stok boyu yok'); return; } if (!D.parts.length) { toast('Parça yok'); return; }
+  if (D.parts.reduce((s, p) => s + p.qty, 0) > 50000) { toast('En fazla 50.000 parça'); return; }
+  planInput = D; plan = null; runT0 = performance.now(); runBudget = D.st.time * 1000;
+  $('goBtn').textContent = 'Durdur'; $('goBtn').classList.add('stop'); $('progBar').style.width = '0%'; $('progT').textContent = 'Hazırlanıyor…';
+  clearInterval(progTimer); progTimer = setInterval(() => { $('progBar').style.width = Math.min(100, (performance.now() - runT0) / runBudget * 100) + '%'; }, 100);
+  try { worker = new Worker(URL.createObjectURL(new Blob([$('engineSrc').textContent], { type: 'text/javascript' }))); } catch (e) { worker = null; }
+  const onMsg = m => {
+    if (m.type === 'best') { plan = m.plan; $('progT').textContent = `${nf(m.runs)} deneme · en iyi: ${plan.bars} boy, fire %${nf(waste(plan), 2)}`; renderResults(true); }
+    else if (m.type === 'tick') $('progT').textContent = `${nf(m.runs)} deneme · en iyi: ${plan ? plan.bars + ' boy, fire %' + nf(waste(plan), 2) : '…'}`;
+    else if (m.type === 'done') { plan = m.plan; stopRun(`${nf(m.runs)} farklı plan denendi (${nf(m.t / 1000, 1)} sn) · en iyisi seçildi`); $('progBar').style.width = '100%'; finish(); }
+  };
+  if (worker) { worker.onmessage = e => onMsg(e.data); worker.onerror = () => stopRun('Hesaplama hatası'); worker.postMessage(D); }
+  else setTimeout(() => { new Function($('engineSrc').textContent + '; return optimize;')()(D, onMsg); }, 30);
+});
+function finish() { renderResults(false); $('expBtn').disabled = !plan; store.set(KEY + '-plan', JSON.stringify({ plan, planInput })); }
+function resetPlan() { plan = null; planInput = null; store.del(KEY + '-plan'); renderResults(false); $('expBtn').disabled = true; $('progT').textContent = ''; $('progBar').style.width = '0%'; }
+
+/* results */
+const stockOf = pt => planInput.stocks[pt.si], partOf = k => planInput.parts[k];
+const gName = g => g || 'Genel';
+const angTxt = p => (p.a1 !== 90 || p.a2 !== 90) ? ` ${nf(p.a1)}°/${nf(p.a2)}°` : '';
+function needRows() {
+  const m = new Map();
+  for (const g of plan.groups) for (const pt of g.pats) { const s = stockOf(pt), key = g.prof + '|' + pt.si, r = m.get(key) || { prof: g.prof, s, n: 0, used: 0 }; r.n += pt.mult; r.used += pt.used * pt.mult; m.set(key, r); }
+  return [...m.values()];
+}
+function collectRems() {
+  const m = new Map();
+  for (const g of plan.groups) g.pats.forEach((pt, i) => { if (!pt.rem) return; const L = Math.floor(pt.off), key = g.prof + '|' + L, r = m.get(key) || { prof: g.prof, len: L, n: 0, src: [] }; r.n += pt.mult; r.src.push(`Ş${i + 1}`); m.set(key, r); });
+  return [...m.values()].map(r => ({ ...r, src: [...new Set(r.src)].join(', ') })).sort((a, b) => a.prof.localeCompare(b.prof) || b.len - a.len);
+}
+function renderResults(live) {
+  const has = !!plan; $('emptyCard').hidden = has; ['sumCard', 'needCard', 'patCard'].forEach(id => $(id).hidden = !has);
+  if (!has) { $('remCard').hidden = true; return; }
+  const p = plan, D = planInput, total = D.parts.reduce((s, x) => s + x.qty, 0), hasPrice = D.stocks.some(s => s.price > 0);
+  $('sumMeta').textContent = `testere ${nf(D.st.kerf, 1)} · kırpma ${nf(D.st.head)} + ${nf(D.st.tail)} mm${live ? ' · hesaplanıyor…' : ''}`;
+  $('kpis').innerHTML = [
+    ['Boy', nf(p.bars), `${p.nPats} farklı şablon`],
+    ['Fire', '%' + nf(waste(p), 2), `artıklar hariç %${nf(p.stockLen ? (1 - (p.partLen + p.remLen) / p.stockLen) * 100 : 0, 2)}`, waste(p) < 6 ? 'ok' : ''],
+    ['Parça', nf(total - p.nUnplaced), `/ ${nf(total)} kesildi`, p.nUnplaced ? 'bad' : 'ok'],
+    ['Stok uzunluğu', nf(p.stockLen / 1000, 1), 'm'],
+    ['Parça uzunluğu', nf(p.partLen / 1000, 1), 'm'],
+    ...(hasPrice ? [['Maliyet', nf(p.cost), 'boy fiyatlarıyla']] : []),
+    ['Artık', nf(p.remLen / 1000, 1), 'm kullanılabilir']
+  ].map(([k, v, s, c]) => `<div class="kpi ${c || ''}"><span>${k}</span><b>${v}</b><small>${s}</small></div>`).join('');
+  const un = []; for (const g of p.groups) for (const k in g.unplaced) un.push(`${esc(partOf(k).code)} ×${g.unplaced[k]}`);
+  $('alerts').innerHTML = un.length ? `<div class="alert"><b>${p.nUnplaced} parça kesilemedi:</b> ${un.join(', ')}. Parça boyuna yeten stok yok ya da stok adedi bitti.</div>` : '';
+  $('needT').innerHTML = `<tr><th>Profil</th><th>Boy</th><th class="r">Adet</th><th class="r">Toplam m</th><th class="r">Fire</th>${hasPrice ? '<th class="r">Tutar</th>' : ''}<th class="r">Stok</th></tr>` + needRows().map(r => `<tr><td><b>${esc(gName(r.prof))}</b></td><td>${r.s.code !== String(r.s.len) ? esc(r.s.code) + ' · ' : ''}${nf(r.s.len)} mm${r.s.rem ? ' <small style="color:var(--off)">artık</small>' : ''}</td><td class="r"><b>${r.n}</b></td><td class="r">${nf(r.s.len * r.n / 1000, 1)}</td><td class="r">%${nf((1 - r.used / (r.s.len * r.n)) * 100, 1)}</td>${hasPrice ? `<td class="r">${nf(r.s.price * r.n)}</td>` : ''}<td class="r">${r.s.qty ? r.s.qty : '∞'}</td></tr>`).join('');
+  const rems = collectRems(); $('remCard').hidden = !rems.length;
+  if (rems.length) { $('remMeta').textContent = `${rems.reduce((s, r) => s + r.n, 0)} adet · en az ${nf(D.st.minRem)} mm`; $('remT').innerHTML = `<tr><th>Profil</th><th>Boy (mm)</th><th class="r">Adet</th><th class="r">m</th><th>Kaynak</th></tr>` + rems.map(r => `<tr><td>${esc(gName(r.prof))}</td><td>${nf(r.len)}</td><td class="r">${r.n}</td><td class="r">${nf(r.len * r.n / 1000, 2)}</td><td>${esc(r.src)}</td></tr>`).join(''); }
+  $('patMeta').textContent = `${p.nPats} şablon · ${p.bars} boy`;
+  $('pats').innerHTML = p.groups.map((g, gi) => { const bars = g.pats.reduce((s, x) => s + x.mult, 0), sl = g.pats.reduce((s, x) => s + stockOf(x).len * x.mult, 0), ul = g.pats.reduce((s, x) => s + x.used * x.mult, 0);
+    return `<div class="grp"><header><b>${esc(gName(g.prof))}</b><span>${bars} boy · ${g.pats.length} şablon · fire %${nf(sl ? (1 - ul / sl) * 100 : 0, 2)}</span></header>${g.pats.map((pt, i) => { const s = stockOf(pt), tally = {}; pt.cuts.forEach(k => tally[k] = (tally[k] || 0) + 1);
+      return `<div class="bar"><div class="x">×${pt.mult}<small>Ş${i + 1} · ${nf(s.len)}</small></div><div><canvas data-g="${gi}" data-p="${i}"></canvas><div class="ln">${Object.entries(tally).map(([k, n]) => `<span><i style="background:${colOf(partOf(k).i)}"></i>${esc(partOf(k).code)} ${nfl(partOf(k).len)}${angTxt(partOf(k))} ×${n}</span>`).join(' · ')} · ${pt.rem ? `<span style="color:var(--off)">artık ${nf(Math.floor(pt.off))}</span>` : `fire ${nf(Math.floor(pt.off))}`} · %${nf(pt.eff * 100, 1)}</div></div></div>`; }).join('')}</div>`; }).join('');
+  requestAnimationFrame(() => document.querySelectorAll('#pats canvas').forEach(c => { const d = Math.min(devicePixelRatio || 1, 2), W = c.clientWidth, H = c.clientHeight; c.width = W * d; c.height = H * d; const x = c.getContext('2d'); x.scale(d, d); drawBar(x, plan.groups[+c.dataset.g].pats[+c.dataset.p], 0, 4, W, H - 8, {}); }));
+}
+$('remToStock').addEventListener('click', () => {
+  const rems = collectRems(); if (!rems.length) return;
+  rems.forEach(r => P.stocks.push({ prof: r.prof, code: 'A' + r.len, len: r.len, qty: r.n, price: '', on: true, rem: true }));
+  paintTables(); save(); toast(`${rems.length} artık boy stoğa eklendi (turuncu çizgili satırlar). Sonraki hesapta önce bunlar kullanılır.`);
+});
+
+/* bar drawing (pt at x0,y0 width W height H) */
+function drawBar(x, pt, x0, y0, W, H, o) {
+  const s = stockOf(pt), D = planInput, k = W / s.len, K = D.st.kerf;
+  x.save();
+  x.fillStyle = o.bg || css('--sheet'); x.strokeStyle = o.line || css('--sheet-line'); x.lineWidth = 1; x.fillRect(x0, y0, W, H);
+  // kırpmalar
+  x.fillStyle = o.trim || 'rgba(128,128,128,.35)'; x.fillRect(x0, y0, D.st.head * k, H); x.fillRect(x0 + W - D.st.tail * k, y0, D.st.tail * k, H);
+  let pos = D.st.head, flip = false; const font = o.font || 'IBM Plex Sans';
+  for (const kk of pt.cuts) {
+    const part = partOf(kk), w = part.len * k, px = x0 + pos * k, sl1 = part.a1 !== 90 ? Math.min(H * 0.6, w * 0.25) : 0, sl2 = part.a2 !== 90 ? Math.min(H * 0.6, w * 0.25) : 0;
+    x.beginPath(); if (!flip) { x.moveTo(px, y0 + H); x.lineTo(px + sl1, y0); x.lineTo(px + w - sl2, y0); x.lineTo(px + w, y0 + H); } else { x.moveTo(px + sl1, y0 + H); x.lineTo(px, y0); x.lineTo(px + w, y0); x.lineTo(px + w - sl2, y0 + H); } x.closePath(); if (sl1 || sl2) flip = !flip;
+    x.fillStyle = colOf(part.i); x.fill(); x.strokeStyle = 'rgba(0,0,0,.55)'; x.stroke();
+    if (w > 30) { const fs = Math.max(8, Math.min(o.maxFont || 13, H / 2.6, w / ((part.code.length + 6) * 0.6))); x.fillStyle = '#fff'; x.textAlign = 'center'; x.textBaseline = 'middle'; x.font = `600 ${fs}px "${font}", Arial, sans-serif`;
+      const two = H > fs * 2.6; x.fillText(two ? part.code : `${part.code} ${nfl(part.len)}`, px + w / 2, y0 + H / 2 - (two ? fs * .55 : 0));
+      if (two) { x.font = `400 ${fs * .85}px "IBM Plex Mono", monospace`; x.fillText(nfl(part.len), px + w / 2, y0 + H / 2 + fs * .6); } }
+    pos += part.len + K;
+  }
+  const remX = x0 + Math.min(pos - K, s.len - D.st.tail) * k, remW = pt.off * k;
+  if (remW > 1) { x.fillStyle = pt.rem ? (o.off || css('--off')) + '40' : 'rgba(128,128,128,.12)'; x.fillRect(remX, y0, remW, H);
+    if (pt.rem) { x.strokeStyle = o.off || css('--off'); x.setLineDash([5, 3]); x.strokeRect(remX + .5, y0 + .5, remW - 1, H - 1); x.setLineDash([]); }
+    if (remW > 44) { x.fillStyle = pt.rem ? (o.off || css('--off')) : (o.muted || css('--muted')); x.textAlign = 'center'; x.textBaseline = 'middle'; x.font = `500 ${Math.min(o.maxFont || 12, H / 3)}px "IBM Plex Mono", monospace`; x.fillText(nf(Math.floor(pt.off)), remX + remW / 2, y0 + H / 2); } }
+  x.strokeStyle = o.line || css('--sheet-line'); x.lineWidth = 1.2; x.strokeRect(x0 + .5, y0 + .5, W - 1, H - 1);
+  x.restore();
+}
+addEventListener('resize', () => { if (plan) renderResults(false); });
+
+/* exports */
+$('expMenu').addEventListener('click', e => { const b = e.target.closest('[data-x]'); if (!b || !plan) return; closeMenus(); ({ pdf: exportPDF, csv: exportCSV, remcsv: exportRemCSV, labels: exportLabels })[b.dataset.x](); });
+const dec = v => String(Math.round(v * 100) / 100).replace('.', ',');
+const csvBlob = rows => new Blob(['﻿' + rows.map(r => r.map(v => /[;"\n]/.test(String(v)) ? `"${String(v).replace(/"/g, '""')}"` : v).join(';')).join('\r\n')], { type: 'text/csv;charset=utf-8' });
+function exportCSV() {
+  const rows = [['Profil', 'Şablon', 'Stok boy', 'Tekrar', 'Sıra', 'Parça', 'Boy', 'Açı 1', 'Açı 2', 'Kalan']];
+  plan.groups.forEach(g => g.pats.forEach((pt, i) => { const s = stockOf(pt); pt.cuts.forEach((k, j) => { const q = partOf(k); rows.push([gName(g.prof), i + 1, s.len, pt.mult, j + 1, q.code, dec(q.len), q.a1, q.a2, '']); }); rows.push([gName(g.prof), i + 1, s.len, pt.mult, '', pt.rem ? 'ARTIK' : 'FİRE', '', '', '', dec(pt.off)]); }));
+  rows.push([]); rows.push(['Profil', 'Stok boy', 'Adet (sipariş)']); needRows().forEach(r => rows.push([gName(r.prof), r.s.len, r.n]));
+  download(`profil-kesim-listesi-${stamp()}.csv`, csvBlob(rows));
+}
+function exportRemCSV() { const r = collectRems(); if (!r.length) { toast('Kullanılabilir artık yok'); return; } download(`profil-artiklar-${stamp()}.csv`, csvBlob([['Profil', 'Boy', 'Adet', 'm', 'Kaynak']].concat(r.map(x => [gName(x.prof), x.len, x.n, dec(x.len * x.n / 1000), x.src])))); }
+function exportLabels() {
+  const items = []; plan.groups.forEach(g => g.pats.forEach((pt, i) => { for (let m = 0; m < pt.mult; m++) pt.cuts.forEach(k => items.push({ g: gName(g.prof), q: partOf(k), pat: i + 1, rep: m + 1, of: pt.mult })); }));
+  if (items.length > 6000) { toast('Etiket sayısı çok fazla (6000 üstü)'); return; }
+  const w = window.open('', '_blank'); if (!w) { toast('Açılır pencereye izin ver'); return; }
+  w.document.write(`<!doctype html><html lang="tr"><head><meta charset="utf-8"><title>Profil etiketleri</title><style>@page{size:A4;margin:8mm 6mm}body{margin:0;font-family:Arial,sans-serif}.g{display:grid;grid-template-columns:repeat(3,1fr)}.l{height:35.4mm;border:1px dashed #bbb;padding:3mm 4mm;box-sizing:border-box;display:flex;flex-direction:column;justify-content:space-between;break-inside:avoid;overflow:hidden}.c{font-size:17pt;font-weight:700;display:flex;align-items:center;gap:6px}.c i{width:12px;height:12px;border-radius:2px;display:inline-block}.d{font-size:12pt;font-family:Consolas,monospace}.m{font-size:8.5pt;color:#555;display:flex;justify-content:space-between}.np{padding:10px;font:14px Arial;background:#fffbe6;border-bottom:1px solid #ddd}@media print{.np{display:none}}</style></head><body><div class="np">${items.length} etiket · A4, 3×8 <button onclick="print()">Yazdır</button></div><div class="g">${items.map(it => `<div class="l"><div class="c"><i style="background:${colOf(it.q.i)}"></i>${esc(it.q.code)}</div><div class="d">${nfl(it.q.len)} mm${(it.q.a1 !== 90 || it.q.a2 !== 90) ? ` · ${nf(it.q.a1)}°/${nf(it.q.a2)}°` : ''}</div><div class="m"><span>${esc(it.g)} · Ş${it.pat}</span><span>boy ${it.rep}/${it.of}</span></div></div>`).join('')}</div></body></html>`);
+  w.document.close(); setTimeout(() => { try { w.focus(); w.print(); } catch (e) {} }, 500);
+}
+function pdfFromPages(pages, pw, ph, title) {
+  const enc = new TextEncoder(), parts = [], offs = []; let len = 0;
+  const add = x => { const u = typeof x === 'string' ? enc.encode(x) : x; parts.push(u); len += u.length; };
+  const n = pages.length, Wp = (pw * 72 / 25.4).toFixed(2), Hp = (ph * 72 / 25.4).toFixed(2);
+  const obj = (id, body) => { offs[id] = len; add(`${id} 0 obj\n`); body(); add('\nendobj\n'); };
+  add('%PDF-1.4\n%âãÏÓ\n');
+  obj(1, () => add('<< /Type /Catalog /Pages 2 0 R >>'));
+  obj(2, () => add(`<< /Type /Pages /Kids [${pages.map((_, i) => `${3 + i * 3} 0 R`).join(' ')}] /Count ${n} >>`));
+  pages.forEach((pg, i) => {
+    const pid = 3 + i * 3, iid = pid + 1, cid = pid + 2, bin = atob(pg.data.split(',')[1]), img = new Uint8Array(bin.length); for (let j = 0; j < bin.length; j++) img[j] = bin.charCodeAt(j);
+    obj(pid, () => add(`<< /Type /Page /Parent 2 0 R /MediaBox [0 0 ${Wp} ${Hp}] /Resources << /XObject << /Im0 ${iid} 0 R >> >> /Contents ${cid} 0 R >>`));
+    obj(iid, () => { add(`<< /Type /XObject /Subtype /Image /Width ${pg.w} /Height ${pg.h} /ColorSpace /DeviceRGB /BitsPerComponent 8 /Filter /DCTDecode /Length ${img.length} >>\nstream\n`); add(img); add('\nendstream'); });
+    const cs = `q ${Wp} 0 0 ${Hp} 0 0 cm /Im0 Do Q`; obj(cid, () => add(`<< /Length ${cs.length} >>\nstream\n${cs}\nendstream`));
+  });
+  const infoId = 3 + n * 3; obj(infoId, () => add(`<< /Title (${title.replace(/[^\x20-\x7e]/g, '?').replace(/([\\()])/g, '\\$1')}) /Producer (erdevelop Profil) >>`));
+  const xref = len; add(`xref\n0 ${infoId + 1}\n0000000000 65535 f \n`); for (let i = 1; i <= infoId; i++) add(String(offs[i]).padStart(10, '0') + ' 00000 n \n');
+  add(`trailer\n<< /Size ${infoId + 1} /Root 1 0 R /Info ${infoId} 0 R >>\nstartxref\n${xref}\n%%EOF\n`);
+  return new Blob(parts, { type: 'application/pdf' });
+}
+
+async function exportPDF() {
+  toast('PDF hazırlanıyor…'); await new Promise(r => setTimeout(r, 30));
+  const PW = 210, PH = 297, px = 5.5, W = Math.round(PW * px), H = Math.round(PH * px), pages = [], D = planInput, date = new Date().toLocaleString('tr-TR'), hasPrice = D.stocks.some(s => s.price > 0);
+  const mm = v => v * px, font = (w, s, f = 'IBM Plex Sans') => `${w} ${s * px * 0.3528}px "${f}", Arial, sans-serif`;
+  let c, x, y, no = 0;
+  const newPage = (t, sub) => { if (c) pages.push({ data: c.toDataURL('image/jpeg', 0.92), w: W, h: H }); c = document.createElement('canvas'); c.width = W; c.height = H; x = c.getContext('2d'); x.fillStyle = '#fff'; x.fillRect(0, 0, W, H); no++;
+    x.fillStyle = '#1c2833'; x.font = font(700, 16, 'Chakra Petch'); x.textAlign = 'left'; x.textBaseline = 'alphabetic'; x.fillText(t, mm(12), mm(16)); x.font = font(400, 8.5, 'IBM Plex Mono'); x.fillStyle = '#74838f'; x.fillText(sub, mm(12), mm(22)); x.textAlign = 'right'; x.fillText(`${date} · sayfa ${no}`, mm(PW - 12), mm(16)); x.textAlign = 'left'; x.strokeStyle = '#cfd8e1'; x.lineWidth = 2; x.beginPath(); x.moveTo(mm(12), mm(25)); x.lineTo(mm(PW - 12), mm(25)); x.stroke(); y = 33; };
+  const row = (cols, vals, bold, col) => { x.font = font(bold ? 600 : 400, 8.5, 'IBM Plex Mono'); x.fillStyle = col || '#1c2833'; let cx = 12; cols.forEach((cw, j) => { const r = typeof cw === 'object'; const w = r ? cw.w : cw; x.textAlign = r ? 'right' : 'left'; x.fillText(String(vals[j] ?? ''), mm(r ? cx + w - 2 : cx), mm(y)); cx += w; }); x.textAlign = 'left'; y += 5.6; };
+  const sect = t => { y += 3; x.fillStyle = '#1c2833'; x.font = font(700, 11, 'Chakra Petch'); x.fillText(t, mm(12), mm(y)); y += 7; };
+  const p = plan, total = D.parts.reduce((s, q) => s + q.qty, 0);
+  newPage('PROFİL KESİM RAPORU', `testere payı ${nf(D.st.kerf, 1)} mm · baş/son kırpma ${nf(D.st.head)} / ${nf(D.st.tail)} mm · ${p.nPats} şablon`);
+  [['Boy', nf(p.bars)], ['Fire', '%' + nf(waste(p), 2)], ['Parça', `${nf(total - p.nUnplaced)}/${nf(total)}`], ['Stok', nf(p.stockLen / 1000, 1) + ' m'], [hasPrice ? 'Maliyet' : 'Artık', hasPrice ? nf(p.cost) : nf(p.remLen / 1000, 1) + ' m']].forEach(([k, v], i) => { const bx = 12 + i * 37.6; x.strokeStyle = '#cfd8e1'; x.lineWidth = 2; x.strokeRect(mm(bx), mm(y), mm(34.5), mm(18)); x.fillStyle = '#74838f'; x.font = font(500, 7.5, 'IBM Plex Mono'); x.fillText(k.toUpperCase(), mm(bx + 3), mm(y + 5.5)); x.fillStyle = '#1c2833'; x.font = font(700, 14, 'Chakra Petch'); x.fillText(v, mm(bx + 3), mm(y + 14)); }); y += 26;
+  sect('SİPARİŞ LİSTESİ (BOY İHTİYACI)'); const nc = [40, 44, { w: 20 }, { w: 26 }, { w: 22 }, ...(hasPrice ? [{ w: 30 }] : [])];
+  row(nc, ['Profil', 'Stok boy', 'Adet', 'Toplam m', 'Fire', ...(hasPrice ? ['Tutar'] : [])], true, '#74838f');
+  for (const r of needRows()) row(nc, [gName(r.prof), `${r.s.code !== String(r.s.len) ? r.s.code + ' · ' : ''}${nf(r.s.len)} mm`, r.n, nf(r.s.len * r.n / 1000, 1), '%' + nf((1 - r.used / (r.s.len * r.n)) * 100, 1), ...(hasPrice ? [nf(r.s.price * r.n)] : [])]);
+  sect('PARÇALAR'); const pc = [40, 34, { w: 26 }, { w: 22 }, { w: 24 }, { w: 26 }]; row(pc, ['Profil', 'Kod', 'Boy', 'Açılar', 'İstenen', 'Kesilen'], true, '#74838f');
+  D.parts.forEach((q, k) => { if (y > PH - 20) newPage('PROFİL KESİM RAPORU', 'devam'); let un = 0; for (const g of p.groups) un += g.unplaced[k] || 0; row(pc, [gName(q.prof), q.code, nfl(q.len), `${nf(q.a1)}/${nf(q.a2)}`, q.qty, q.qty - un], false, un ? '#d93a2f' : null); });
+  const rems = collectRems(); if (rems.length) { if (y > PH - 40) newPage('PROFİL KESİM RAPORU', 'devam'); sect('KULLANILABİLİR ARTIKLAR'); const rc = [40, { w: 30 }, { w: 20 }, { w: 24 }]; row(rc, ['Profil', 'Boy', 'Adet', 'm'], true, '#74838f'); rems.forEach(r => { if (y > PH - 14) newPage('PROFİL KESİM RAPORU', 'devam'); row(rc, [gName(r.prof), nf(r.len), r.n, nf(r.len * r.n / 1000, 2)]); }); }
+  for (const g of p.groups) {
+    newPage(`KESİM ŞABLONLARI · ${gName(g.prof).toUpperCase()}`, `${g.pats.reduce((s, q) => s + q.mult, 0)} boy · ${g.pats.length} şablon · soldan sağa kesim sırası`);
+    g.pats.forEach((pt, i) => {
+      if (y > PH - 30) newPage(`KESİM ŞABLONLARI · ${gName(g.prof).toUpperCase()}`, 'devam');
+      const s = stockOf(pt); x.fillStyle = '#c8731f'; x.font = font(700, 13, 'Chakra Petch'); x.fillText(`×${pt.mult}`, mm(12), mm(y + 4)); x.fillStyle = '#1c2833'; x.font = font(600, 9); x.fillText(`Şablon ${i + 1} · ${s.code !== String(s.len) ? s.code + ' · ' : ''}${nf(s.len)} mm · %${nf(pt.eff * 100, 1)}`, mm(30), mm(y + 1));
+      x.fillStyle = '#74838f'; x.font = font(400, 8, 'IBM Plex Mono'); const tally = {}; pt.cuts.forEach(k => tally[k] = (tally[k] || 0) + 1); x.fillText(Object.entries(tally).map(([k, n]) => `${partOf(k).code} ${nfl(partOf(k).len)}${angTxt(partOf(k))} ×${n}`).join('  ·  ') + `   |   ${pt.rem ? 'artık' : 'fire'} ${nf(Math.floor(pt.off))}`, mm(30), mm(y + 5.5));
+      drawBar(x, pt, mm(12), mm(y + 8), mm(PW - 24), mm(9), { bg: '#f3f5f7', line: '#5b6670', off: '#c8731f', muted: '#74838f', maxFont: mm(3.2) });
+      y += 23;
+    });
+  }
+  pages.push({ data: c.toDataURL('image/jpeg', 0.92), w: W, h: H });
+  download(`profil-kesim-raporu-${stamp()}.pdf`, pdfFromPages(pages, PW, PH, 'Profil kesim raporu'));
+  toast(`PDF hazır · ${pages.length} sayfa`);
+}
+
+/* theme / boot */
+let mode = store.get('erdevelop-mode') || 'dark';
+function applyMode() { document.documentElement.dataset.mode = mode; $('modeBtn').textContent = mode === 'dark' ? 'LIGHT' : 'DARK'; if (plan) renderResults(false); }
+$('modeBtn').addEventListener('click', () => { mode = mode === 'dark' ? 'light' : 'dark'; store.set('erdevelop-mode', mode); applyMode(); });
+function paintAll() { paintSettings(); paintTables(); }
+paintAll(); applyMode();
+try { const s = JSON.parse(store.get(KEY + '-plan')); if (s && s.plan && s.planInput) { plan = s.plan; planInput = s.planInput; renderResults(false); $('expBtn').disabled = false; $('progT').textContent = 'Son sonuç gösteriliyor · girdileri değiştirdiysen yeniden optimize et'; } } catch (e) {}
+window.__profil = { get plan() { return plan; }, get P() { return P; } };
+})();
+</script>
+</body>
+</html>
