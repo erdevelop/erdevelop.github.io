@@ -74,9 +74,10 @@
       return okCat && okQ;
     });
     $('#emptyState').hidden = list.length>0;
-    list.forEach(g=>{
+    list.forEach((g,i)=>{
       const card = document.createElement('button');
-      card.className='card';
+      card.className='card card-in';
+      card.style.animationDelay=(Math.min(i,10)*0.035)+'s';
       const best = bests[g.id];
       card.innerHTML =
         '<div class="card-icon">'+iconMarkup(g)+'</div>'+
@@ -126,6 +127,7 @@
 
   function mountGame(g){
     const mount = $('#gameMount'); mount.innerHTML='';
+    mount.classList.remove('mount-in'); void mount.offsetWidth; mount.classList.add('mount-in');
     const api = {
       user: window.Auth && window.Auth.current,
       best: (window.Store && window.Store.getBest(g.id)) || 0,
