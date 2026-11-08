@@ -67,7 +67,7 @@
       card.onclick = ()=> openGame(g);
       grid.append(card);
     });
-    $('#gameCount').textContent = games.length+' oyun · daha fazlası geliyor';
+    $('#gameCount').textContent = games.length+' seçme oyun';
   }
 
   $('#search').addEventListener('input', e=>{ query=e.target.value; renderGrid(); });
