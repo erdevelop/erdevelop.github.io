@@ -480,6 +480,18 @@ if (!S.activeId || !S.projects.some(p => p.id === S.activeId)) S.activeId = S.pr
 S.projects.forEach(etiketTamamla);
 if (!Array.isArray(S.sablonlar)) S.sablonlar = [];
 save();
+/* Mini Grasshopper'dan proje (?import=gh): gruplar parsiyel olur, panel bilgisi cam siparişi notuna yazılır */
+(() => {
+  if (!/[?&]import=gh/.test(location.search)) return;
+  history.replaceState(null, '', location.pathname);
+  let o = null; try { o = JSON.parse(localStorage.getItem('erdevelop-ph-import')); } catch (e) {}
+  if (!o || !Array.isArray(o.parsiyels) || !o.parsiyels.length) { setTimeout(() => toast("Mini Grasshopper'dan gönderilmiş liste yok"), 400); return; }
+  try { localStorage.removeItem('erdevelop-ph-import'); } catch (e) {}
+  const p = yeniProje(o.name || 'Mini Grasshopper projesi', o.parsiyels.slice(0, 60), 'cephe'), t = Date.now();
+  (o.notes || []).forEach(x => { const n = p.nodes.find(k => k.tkey === 'camSip' && k.parsiyel === x.grup); if (n) p.notes.push({ id: uid(), nodeId: n.id, text: x.text, at: t }); });
+  S.projects.push(p); S.activeId = p.id; try { localStorage.setItem(KEY, JSON.stringify(S)); } catch (e) {}
+  setTimeout(() => toast(`Mini Grasshopper'dan proje oluşturuldu: ${p.name} · ${p.parsiyels.length} grup`), 400);
+})();
 
 const ui = { view: 'hat', zoom: 2, sel: null, parsiyel: '*', bag: 'sorunlu', etiket: '*', kureDon: true,
   dikey: (() => { try { return localStorage.getItem('projeHatti.yon') === 'dikey'; } catch (e) { return false; } })(),

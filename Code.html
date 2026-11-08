@@ -112,6 +112,15 @@
   .con td { padding: 4px 10px; border-bottom: 1px solid var(--grid); white-space: nowrap; }
   .con td.n { text-align: right; } .con td.null { color: var(--muted); font-style: italic; }
   .con .sep { display: block; border-top: 1px dashed var(--line); margin: 10px 0 8px; }
+  .con .ask { display: block; white-space: normal; margin: 6px 0 10px; padding: 11px 13px; border: 1px solid var(--line); border-left: 3px solid var(--hot); border-radius: 6px; background: var(--panel-2); font: 400 13px/1.5 var(--f-body); color: var(--text); max-width: 560px; }
+  .con .ask > b { display: block; font: 600 13.5px var(--f-body); color: var(--fg); margin-bottom: 3px; }
+  .con .ask ul { margin: 6px 0 2px; padding: 0; list-style: none; font: 400 12px/1.6 var(--f-mono); }
+  .con .ask li { display: flex; gap: 12px; border-bottom: 1px dotted var(--line); } .con .ask li span:first-child { flex: 1; } .con .ask li.dep { color: var(--muted); }
+  .con .ask .btns { display: flex; gap: 8px; flex-wrap: wrap; align-items: center; margin-top: 10px; }
+  .con .ask.done { border-left-color: var(--line); opacity: .8; }
+  .con .html { white-space: normal; overflow: auto; margin: 6px 0 10px; max-height: 420px; }
+  .con .html table { border: 1px solid var(--line); min-width: 0; }
+  .con .html th, .con .html td { border-bottom: 1px solid var(--grid); text-align: right; }
   .badge { font: 500 10.5px var(--f-mono); padding: 1px 6px; border-radius: 3px; background: var(--grid); color: var(--muted); }
   .badge.e { background: color-mix(in srgb, var(--bad) 18%, transparent); color: var(--bad); }
   .status { font: 400 11.5px var(--f-mono); color: var(--muted); display: flex; align-items: center; gap: 6px; white-space: nowrap; min-width: 0; overflow: hidden; }
@@ -209,6 +218,7 @@
 <script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.16/addon/comment/comment.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.16/addon/selection/active-line.min.js"></script>
 <script src="code/ornekler.js"></script>
+<script src="code/py-paketler.js"></script>
 <script>
 (() => {
 'use strict';
@@ -269,6 +279,24 @@ function table(cols, rows, max = 500) {
   return w;
 }
 const askInput = q => { const v = prompt(q || 'girdi', ''); if (v === null) throw new Error('girdi iptal edildi'); return v; };
+const fmtKB = kb => kb >= 1024 ? (kb / 1024).toFixed(kb >= 10240 ? 0 : 1).replace('.', ',') + ' MB' : Math.max(1, Math.round(kb)) + ' KB';
+/* İndirme onayı: konsola kart koyar, kullanıcı "İndir" derse true döner */
+function askDownload(c, title, bodyHtml, size) {
+  return new Promise(res => {
+    const w = document.createElement('div'); w.className = 'ask';
+    w.innerHTML = `<b>${esc(title)}</b><div>${bodyHtml}</div><div class="btns"><button type="button" class="tb primary" data-a="1">İndir · ${esc(size)}</button><button type="button" class="tb" data-a="0">Vazgeç</button></div>`;
+    w.onclick = e => {
+      const b = e.target.closest('button[data-a]'); if (!b) return;
+      const ok = b.dataset.a === '1';
+      w.classList.add('done');
+      w.querySelector('.btns').innerHTML = ok ? '<span class="ln sys">✓ onaylandı</span>' : '<span class="ln warn">vazgeçildi · tekrar sormak için ▶ Çalıştır</span>';
+      res(ok);
+    };
+    c.end(); c.node(w);
+    w.querySelector('button').focus({ preventScroll: true });
+  });
+}
+const cancelled = msg => { const e = new Error(msg); e.cancel = true; e.shown = true; return e; };
 
 /* ---------- sandbox köprüsü (HTML önizleme + JavaScript) ---------- */
 const BRIDGE = id => `<script>(function(){var P=function(t,a){try{parent.postMessage({__er:${id},t:t,a:a},'*')}catch(e){}};var f=function(v){try{if(v instanceof Error)return v.name+': '+v.message;if(typeof v==='object'&&v!==null){if(typeof Node!=='undefined'&&v instanceof Node)return '<'+(v.nodeName||'').toLowerCase()+'>';if(v instanceof Map)v=Object.fromEntries(v);if(v instanceof Set)v=Array.from(v);return JSON.stringify(v,null,1).replace(/\\n\\s*/g,' ')}if(typeof v==='function')return 'ƒ '+(v.name||'anonim')+'()';return String(v)}catch(e){return String(v)}};['log','info','warn','error','debug'].forEach(function(k){var o=console[k];console[k]=function(){P(k,[].map.call(arguments,f).join(' '));o&&o.apply(console,arguments)}});console.table=function(d){P('table',JSON.parse(JSON.stringify(d)))};console.clear=function(){P('clear','')};addEventListener('error',function(e){P('uncaught',(e.error&&e.error.name?e.error.name+': ':'')+(e.message||'Hata').replace(/^Uncaught \\w*:? ?/,'')+(e.lineno?' (satır '+e.lineno+')':''))});addEventListener('unhandledrejection',function(e){P('uncaught','Promise: '+f(e.reason))});})();<\/script>`;
@@ -345,6 +373,22 @@ $('stopBtn').onclick = stopJs;
 
 /* ---------- diller ---------- */
 const PYODIDE = 'https://cdn.jsdelivr.net/pyodide/v0.26.4/full/';
+const PYKB = window.PY_PKG_KB || {};
+let pyOk = []; try { pyOk = JSON.parse(store.get(KEY + '-pyok') || '[]'); } catch (e) {}
+let pyLock = null;
+/* Koddaki import'lardan indirilecek Pyodide paketlerini (bağımlılıklarıyla) bulur */
+async function pyPlan(py, src) {
+  pyLock = pyLock || fetch(PYODIDE + 'pyodide-lock.json').then(r => r.json()).then(j => {
+    const imp = {}; for (const [k, p] of Object.entries(j.packages)) for (const i of p.imports || []) imp[i] = k;
+    return { pk: j.packages, imp };
+  }).catch(e => { pyLock = null; throw e; });
+  const { pk, imp } = await pyLock;
+  const fi = py.pyodide_py.code.find_imports(src), mods = fi.toJs(); fi.destroy();
+  const loaded = py.loadedPackages, need = [], top = new Set();
+  const visit = n => { if (!pk[n] || loaded[n] || need.includes(n)) return; need.push(n); (pk[n].depends || []).forEach(visit); };
+  for (const m of mods) { const n = imp[m.split('.')[0]]; if (n && !loaded[n]) { top.add(n); visit(n); } }
+  return { ask: need.filter(n => !pyOk.includes(n)), top };
+}
 const L = {
   html: { name: 'HTML', color: '#e8623a', file: 'index.html', mode: 'htmlmixed', mime: 'text/html', indent: 2, out: 'frame', live: true, ext: ['html', 'htm'],
     run(src) { showFrame(src, true); } },
@@ -373,8 +417,28 @@ const L = {
       py.setStderr({ write: b => { pc.write(dec2.decode(b, { stream: true }), 'err'); return b.length; } });
       py.setStdin({ stdin: () => { const q = pc.line ? pc.line.textContent : ''; const v = askInput(q || 'input()'); pc.write(v + '\n', 'in'); return v + '\n'; }, isatty: true });
       py.globals.set('__er_img', b64 => { const img = new Image(); img.src = 'data:image/png;base64,' + b64; img.alt = 'grafik'; pc.node(img); img.onload = () => pc.scroll(); });
+      py.globals.set('__er_html', h => { const d = document.createElement('div'); d.className = 'html'; d.innerHTML = h; d.querySelectorAll('script').forEach(s => s.remove()); pc.node(d); });
       py.runPython(`
-import sys, io, base64
+import sys, io, base64, builtins, warnings
+warnings.filterwarnings('ignore', message=r'(?s).*Pyarrow will become a required dependency')
+def display(*objs):
+    """Jupyter benzeri: DataFrame vb. tablo olarak, diğerleri repr ile gösterilir."""
+    for o in objs:
+        h = getattr(o, '_repr_html_', None)
+        if callable(h):
+            try:
+                s = h()
+                if s:
+                    __er_html(s); continue
+            except Exception:
+                pass
+        print(repr(o))
+builtins.display = display
+def __er_last(o):
+    # son satırdaki ifadenin değerini göster (matplotlib nesneleri hariç)
+    items = o if isinstance(o, (list, tuple)) and o else [o]
+    if all(type(x).__module__.split('.')[0] == 'matplotlib' for x in items): return
+    display(o)
 def __er_figs():
     plt = sys.modules.get('matplotlib.pyplot')
     if not plt: return
@@ -393,11 +457,24 @@ def __er_patch():
     async run(src, c, st) {
       const py = this.rt;
       st('paketler kontrol ediliyor…');
+      const plan = await pyPlan(py, src).catch(() => null);
+      if (plan && plan.ask.length) {
+        st('paket indirme onayı bekleniyor');
+        const tot = plan.ask.reduce((s, n) => s + (PYKB[n] || 0), 0);
+        const li = n => `<li class="${plan.top.has(n) ? '' : 'dep'}"><span>${esc(n)}${plan.top.has(n) ? '' : ' <small>(bağımlılık)</small>'}</span><span>${PYKB[n] ? fmtKB(PYKB[n]) : '?'}</span></li>`;
+        const ok = await askDownload(c, 'Bu kod için Python paketleri indirilecek',
+          `İlk kullanımda indirilir, sonra önbellekten gelir:<ul>${plan.ask.map(li).join('')}</ul>`, fmtKB(tot));
+        if (!ok) throw cancelled('paket indirme iptal edildi');
+        pyOk.push(...plan.ask); store.set(KEY + '-pyok', JSON.stringify([...new Set(pyOk)]));
+      }
       await py.loadPackagesFromImports(src, { messageCallback: m => /Loading|Loaded/.test(m) && st(m.slice(0, 60)), errorCallback: m => c.write(m + '\n', 'warn') });
       if (/\bmatplotlib\b/.test(src)) py.runPython("import os; os.environ['MPLBACKEND']='AGG'\nimport matplotlib; matplotlib.use('AGG')\nimport matplotlib.pyplot\n__er_patch()");
       st('çalışıyor…'); await sleep(20);
       const ns = py.globals.get('dict')(); ns.set('__name__', '__main__');
-      try { await py.runPythonAsync(src, { globals: ns, filename: '<exec>' }); }
+      try {
+        const r = await py.runPythonAsync(src, { globals: ns, filename: '<exec>' });
+        if (r !== undefined) { const f = py.globals.get('__er_last'); f(r); f.destroy(); if (r && typeof r.destroy === 'function') r.destroy(); }
+      }
       catch (e) {
         const lines = String(e.message || e).split('\n'), i = lines.findIndex(l => l.includes('File "<exec>"'));
         throw new Error(i < 0 ? String(e.message || e).trimEnd() : ['Traceback (most recent call last):', ...lines.slice(i)].join('\n').trimEnd());
@@ -647,14 +724,27 @@ function ensure(l) {
   if (ready[l]) return Promise.resolve();
   if (loading[l]) return loading[l];
   const c = R.out === 'frame' ? null : con(l);
-  setStat(l, 'busy', R.name + ' yükleniyor…');
-  if (c) c.write(`${R.name} ortamı indiriliyor${R.size ? ' (ilk sefer ~' + R.size + ', sonra tarayıcı önbelleğinden gelir)' : ''}…\n`, 'sys');
-  loading[l] = Promise.resolve().then(() => R.load(c)).then(info => {
+  const okKey = KEY + '-ok-' + l;
+  loading[l] = (async () => {
+    if (c && R.size && !store.get(okKey)) {
+      setStat(l, '', 'indirme onayı bekleniyor');
+      const sz = R.size.replace('.', ',');
+      const ok = await askDownload(c, `${R.name} ilk kullanımda indirilecek`,
+        `${R.name} tarayıcında çalışmak için yaklaşık <b>${esc(sz)}</b> veri indirir. Sonraki açılışlarda tarayıcı önbelleğinden gelir.` +
+        (parseFloat(R.size) >= 10 && /MB/.test(R.size) ? ' Mobil veride çekiyorsan Wi-Fi beklemek isteyebilirsin.' : ''), sz);
+      if (!ok) throw cancelled('indirme iptal edildi');
+      store.set(okKey, '1');
+    }
+    setStat(l, 'busy', R.name + ' yükleniyor…');
+    if (c) c.write(`${R.name} ortamı yükleniyor${R.size ? ' (~' + R.size + ', ilk seferden sonra önbellekten)' : ''}…\n`, 'sys');
+    return R.load(c);
+  })().then(info => {
     ready[l] = true; loading[l] = null;
     if (c) { c.end(); c.write((info || R.name) + ' hazır\n', 'sys'); }
     setStat(l, 'ok', R.name + ' hazır');
   }).catch(e => {
     loading[l] = null;
+    if (e && e.cancel) { setStat(l, '', 'indirilmedi'); throw e; }
     if (c) { c.end(); c.write('Yüklenemedi: ' + (e && e.message || e) + '\n', 'err'); }
     setStat(l, 'bad', 'yüklenemedi');
     throw e;
@@ -683,7 +773,8 @@ async function run(auto) {
     if (ready[l]) {
       c.end();
       if (!e.shown) c.write((e && e.message || String(e)) + '\n', e.message === 'durduruldu' || e.soft ? 'warn' : 'err');
-      setStat(l, e.message === 'durduruldu' ? '' : 'bad', e.message === 'durduruldu' ? 'durduruldu' : 'hata');
+      const soft = e.message === 'durduruldu' || e.cancel;
+      setStat(l, soft ? '' : 'bad', soft ? e.message : 'hata');
     }
   } finally {
     busy[l] = false;

@@ -340,6 +340,96 @@ plt.bar(["P1", "P2", "P3", "P4"], [72, 135, 41, 98], color="#5aa9ff")
 plt.title("Panel ağırlıkları (kg)")
 plt.show()
 ` },
+{ n: 'pandas tablo', d: 'DataFrame, groupby, tablo çıktısı', c: `import pandas as pd
+
+df = pd.DataFrame({
+    "panel": ["P1", "P2", "P3", "P4", "P5", "P6"],
+    "cephe": ["Kuzey", "Kuzey", "Güney", "Güney", "Doğu", "Doğu"],
+    "gen":   [1200, 1500, 1200, 900, 1500, 1200],
+    "yuk":   [2400, 3000, 2400, 2100, 3000, 2700],
+    "cam":   ["8+16+8", "10+16+10", "8+16+8", "6+12+6", "10+16+10", "8+16+8"],
+})
+df["m2"] = df.gen * df.yuk / 1e6
+display(df)
+
+ozet = df.groupby("cephe").agg(adet=("panel", "count"), toplam_m2=("m2", "sum")).round(2)
+print("Cepheye göre:")
+ozet  # son satırdaki ifade otomatik gösterilir (Jupyter gibi)
+` },
+{ n: 'SciPy optimizasyon', d: 'minimize + kısıt', c: `import numpy as np
+from scipy.optimize import minimize
+
+# Hacmi 1 m³ olan kapalı kutunun yüzey alanını en aza indir
+# Yükseklik hacim kısıtından gelir: z = 1 / (x·y)
+def alan(v):
+    x, y = v
+    z = 1 / (x * y)
+    return 2 * (x * y + y * z + x * z)
+
+r = minimize(alan, x0=[2, 0.5], method="Nelder-Mead")
+x, y = r.x
+print("boyutlar:", np.round([x, y, 1 / (x * y)], 4))
+print("alan    :", round(r.fun, 4), "m²  (beklenen: küp, 6 m²)")
+` },
+{ n: 'SymPy sembolik', d: 'türev, integral, denklem', c: `from sympy import symbols, integrate, diff, solve, simplify, pprint
+
+x, L, q, EI = symbols("x L q EI", positive=True)
+
+# Basit mesnetli kiriş, düzgün yayılı yük: sehim eğrisi
+w = q * x * (L**3 - 2 * L * x**2 + x**3) / (24 * EI)
+print("en büyük sehim (x = L/2):")
+pprint(simplify(w.subs(x, L / 2)))
+
+print("\\neğim (dw/dx):")
+pprint(simplify(diff(w, x)))
+
+print("\\n∫ x² dx  (0..L):", integrate(x**2, (x, 0, L)))
+print("x² - 5x + 6 = 0 →", solve(x**2 - 5 * x + 6, x))
+` },
+{ n: 'scikit-learn kümeleme', d: 'KMeans + grafik', c: `import numpy as np
+import matplotlib.pyplot as plt
+from sklearn.cluster import KMeans
+
+rng = np.random.default_rng(1)
+merkez = np.array([[1200, 2400], [1500, 3000], [900, 2100]])
+X = np.vstack([m + rng.normal(0, 90, (40, 2)) for m in merkez])  # panel ölçüleri (mm)
+
+km = KMeans(n_clusters=3, n_init=10, random_state=0).fit(X)
+print("küme merkezleri (gen, yük):")
+print(km.cluster_centers_.round())
+
+plt.figure(figsize=(5.5, 4))
+plt.scatter(X[:, 0], X[:, 1], c=km.labels_, cmap="tab10", s=18)
+plt.scatter(*km.cluster_centers_.T, marker="x", s=120, c="k")
+plt.xlabel("genişlik (mm)"); plt.ylabel("yükseklik (mm)")
+plt.title("Panel tipleri")
+plt.show()
+` },
+{ n: 'Shapely geometri', d: 'cephe boşluğu, alan, kesişim', c: `from shapely.geometry import box, Polygon
+
+cephe = box(0, 0, 12000, 9000)                    # mm
+pencereler = [box(x, y, x + 1500, y + 1800) for x in (1500, 5250, 9000) for y in (3000, 6300)]
+kapi = Polygon([(5000, 0), (7000, 0), (7000, 2400), (5000, 2400)])
+
+dolu = cephe
+for p in pencereler + [kapi]:
+    dolu = dolu.difference(p)
+
+print(f"cephe alanı : {cephe.area / 1e6:.2f} m²")
+print(f"boşluklar   : {(cephe.area - dolu.area) / 1e6:.2f} m²")
+print(f"dolu yüzey  : {dolu.area / 1e6:.2f} m²")
+print(f"boşluk oranı: %{100 * (1 - dolu.area / cephe.area):.1f}")
+print("kapı bir pencereyle çakışıyor mu?", any(kapi.intersects(p) for p in pencereler))
+` },
+{ n: 'PyPI paketi (micropip)', d: "saf Python paketlerini PyPI'dan kur", c: `# Pyodide'da hazır olmayan saf-Python paketleri PyPI'dan kurulabilir.
+# Not: bu indirmenin boyutunu önceden bilemiyoruz.
+import micropip
+await micropip.install("tabulate")
+
+from tabulate import tabulate
+satirlar = [["AL-120", 3200, 14], ["AL-80", 1180, 40], ["AL-50", 1180, 80]]
+print(tabulate(satirlar, headers=["profil", "boy", "adet"], tablefmt="github"))
+` },
 { n: 'Sınıflar ve hata', d: 'class, try/except, traceback', c: `class Profil:
     def __init__(self, kod, boy):
         self.kod = kod

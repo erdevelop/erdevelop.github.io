@@ -1058,12 +1058,28 @@ function test(){ // konsoldan: test()  — masaüstü programdaki örnekle aynı
   if(para(1234567.891)!=="1.234.567,89")hata.push("para: "+para(1234567.891));
   console.log(hata.length?"TEST HATALI\n"+hata.join("\n"):"TEST BAŞARILI");return !hata.length;
 }
+/* Mini Grasshopper'dan gelen metraj (?import=gh) */
+function ghAktar(){
+  if(!/[?&]import=gh/.test(location.search))return;
+  let o=null;try{o=JSON.parse(localStorage.getItem("erdevelop-teklif-import"))}catch(e){}
+  history.replaceState(null,"",location.pathname);
+  if(!o||!o.q){bildir("Mini Grasshopper'dan gönderilmiş metraj yok");return}
+  const q=o.q,f=v=>sayiGoster(v,2),satirlar=[["maliyet","Cam üniteleri",q.camM2,"m²"],["maliyet","Spandrel / panel",q.spandrelM2,"m²"],["maliyet","Alüminyum profiller",q.profilKg,"kg"],["maliyet","Conta ve fitiller",q.contaM,"m"],["maliyet","Ankraj ve bağlantı plakaları",q.ankraj,"adet"],["musteri","Alüminyum doğrama / cephe sistemi",q.cepheM2,"m²"],["musteri","Cam işleri",q.camM2,"m²"]].filter(r=>r[2]>0);
+  if(!satirlar.length){bildir("Aktarılacak miktar yok");return}
+  onay("Mini Grasshopper metrajı",`<p>Aktif projeye (<b>${kac(pr.bilgi.proje||"adsız")}</b>) şu miktarlar yazılsın mı? Mevcut miktarların üzerine yazılır.</p><table style="width:100%;border-collapse:collapse">${satirlar.map(r=>`<tr><td>${kac(r[1])}</td><td style="text-align:right"><b>${f(r[2])}</b> ${r[3]}</td></tr>`).join("")}</table><p class="ipucu">${q.panel} panel · kaynak: ${kac(o.src||"Mini Grasshopper")}</p>`).then(ok=>{
+    if(!ok)return;let n=0;
+    for(const [liste,ad,v] of satirlar){const r=pr[liste].find(x=>x.kalem===ad);if(r){r.miktar=Math.round(v*100)/100;n++}}
+    try{localStorage.removeItem("erdevelop-teklif-import")}catch(e){}
+    h=hesapla(pr);tumunuCiz();degisti();bildir(`Mini Grasshopper'dan ${n} miktar aktarıldı`);
+  });
+}
 (function basla(){
   temaUygula();datalistler();
   if(!aktifId||!projeler[aktifId]){const k=Object.keys(projeler);if(k.length)aktifId=k[0];else{aktifId=yeniId();projeler[aktifId]={pr:yeniProje(),guncel:new Date().toISOString()};yaz(AN.projeler,projeler)}}
   yaz(AN.aktif,aktifId);
   pr=projeDuzelt(projeler[aktifId].pr);h=hesapla(pr);
   tumunuCiz();
+  ghAktar();
   let s="maliyet";try{s=localStorage.getItem("cepheTeklif.sekme")||s}catch(e){}
   sekme(document.getElementById("s-"+s)?s:"maliyet");
   window.addEventListener("afterprint",()=>{$("#baski").innerHTML=""});

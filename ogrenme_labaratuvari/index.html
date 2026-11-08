@@ -2,7 +2,6 @@
 <html lang="tr">
 <head>
 <meta charset="utf-8">
-<script src="../kilit.js" data-gate="../Tools.html"></script>
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <title>Öğrenme Laboratuvarı</title>
 <meta name="claude:viewport-fit-sides" content="cover">
@@ -86,6 +85,9 @@ table.race td{padding:3px 4px;border-bottom:1px solid var(--line)}
 table.race td:last-child{text-align:right;font-family:var(--f-mono)}
 .seg{display:flex;flex-wrap:wrap;gap:4px}
 .seg .btn{padding:5px 9px;font-weight:500}
+.savebar{display:flex;flex-wrap:wrap;gap:6px 8px;align-items:center;margin:-6px 0 14px}
+.savebar .btn{padding:5px 10px;font-weight:500;font-size:12px}
+.btn:disabled{opacity:.45;cursor:default}
 .w-main{flex:1 1 440px;max-width:560px}
 .w-side{flex:1 1 300px}
 .w-full{flex:1 1 100%}
@@ -97,7 +99,7 @@ table.race td:last-child{text-align:right;font-family:var(--f-mono)}
 <header class="top">
   <div>
     <h1>Öğrenme Laboratuvarı</h1>
-    <p>Makine öğrenmesinin sekiz farklı yüzü. Her sekmede bir model sıfırdan öğreniyor; sen ayarlarla oynayıp öğrenmenin nasıl ilerlediğini izliyorsun.</p>
+    <p>Makine öğrenmesinin on farklı yüzü ve cephe tasarımından beş uygulama. Her sekmede bir model sıfırdan öğreniyor; sen ayarlarla oynayıp öğrenmenin nasıl ilerlediğini izliyorsun.</p>
   </div>
 </header>
 <nav class="tabs" role="tablist" id="tabs">
@@ -105,20 +107,33 @@ table.race td:last-child{text-align:right;font-family:var(--f-mono)}
   <button role="tab" data-tab="gradyan"><b>Gradyan İnişi</b><small>Optimizasyon yarışı</small></button>
   <button role="tab" data-tab="kume"><b>Kümeleme</b><small>Etiketsiz gruplama</small></button>
   <button role="tab" data-tab="rakam"><b>Rakam Tanıma</b><small>Çiz, ağ tanısın</small></button>
+  <button role="tab" data-tab="cnn"><b>Görüntü Tanıma</b><small>Evrişimli ağ (CNN)</small></button>
+  <button role="tab" data-tab="agac"><b>Karar Ağacı</b><small>Soru sora sora bölmek</small></button>
   <button role="tab" data-tab="dil"><b>Mini Dil Modeli</b><small>Harf harf yazmayı öğrenir</small></button>
   <button role="tab" data-tab="araba"><b>Araba Sürme</b><small>Evrimle öğrenme</small></button>
   <button role="tab" data-tab="ajan"><b>Oyun Ajanı</b><small>Ödül ve ceza ile öğrenme</small></button>
   <button role="tab" data-tab="yilan"><b>Yılan</b><small>Derin Q-ağı</small></button>
+  <button role="tab" data-tab="cephe"><b>Cephe Atölyesi</b><small>İşe yakın 5 örnek</small></button>
 </nav>
+<div class="savebar" id="savebar">
+  <span class="note" style="font-weight:700;color:var(--ink)">Bu sekmenin modeli ve ayarları:</span>
+  <button class="btn" id="sv-save">Tarayıcıya kaydet</button><button class="btn" id="sv-load">Kayıttan yükle</button>
+  <button class="btn" id="sv-down">Dosyaya indir</button><button class="btn" id="sv-open">Dosyadan aç</button>
+  <input type="file" id="sv-file" accept=".json,application/json" hidden>
+  <span class="note" id="sv-msg"></span>
+</div>
 <main>
   <section class="tab" id="tab-siniflandirma" hidden></section>
   <section class="tab" id="tab-gradyan" hidden></section>
   <section class="tab" id="tab-kume" hidden></section>
   <section class="tab" id="tab-rakam" hidden></section>
+  <section class="tab" id="tab-cnn" hidden></section>
+  <section class="tab" id="tab-agac" hidden></section>
   <section class="tab" id="tab-dil" hidden></section>
   <section class="tab" id="tab-araba" hidden></section>
   <section class="tab" id="tab-ajan" hidden></section>
   <section class="tab" id="tab-yilan" hidden></section>
+  <section class="tab" id="tab-cephe" hidden></section>
 </main>
 </div>
 <script>
@@ -404,6 +419,66 @@ class MLP {
   healthy() { for (const W of this.W) for (let k = 0; k < W.length; k += 7) if (!isFinite(W[k])) return false; return true; }
 }
 
+// ---------------------------------------------------------------- kaydetme yardımcıları
+const arr7 = (a) => Array.from(a, (v) => +(+v).toPrecision(7));
+const mlpToJSON = (n) => ({ sizes: n.sizes, act: n.act, out: n.out, W: n.W.map(arr7), b: n.b.map(arr7) });
+function mlpFromJSON(o) { const n = new MLP(o.sizes, o.act, o.out); o.W.forEach((w, l) => n.W[l].set(w)); o.b.forEach((b, l) => n.b[l].set(b)); return n; }
+
+const Saver = {
+  key: (id) => "ogrlab:" + id,
+  snapshot(id) {
+    const controls = {};
+    $$("input,select,textarea", $("#tab-" + id)).forEach((el) => { if (el.id && el.type !== "file") controls[el.id] = el.type === "checkbox" ? el.checked : el.value; });
+    return { app: "ogrenme-laboratuvari", v: 1, tab: id, time: new Date().toISOString(), controls, model: Modules[id].save ? Modules[id].save() : null };
+  },
+  restore(snap) {
+    if (!snap || snap.app !== "ogrenme-laboratuvari" || !Modules[snap.tab]) throw new Error("Bu dosya Öğrenme Laboratuvarı kaydı değil.");
+    if (activeMod !== Modules[snap.tab]) { try { history.replaceState(null, "", "#" + snap.tab); } catch (e) {} showTab(snap.tab); }
+    if (Modules[snap.tab].prepare) Modules[snap.tab].prepare(snap.model || {});
+    for (const [id, v] of Object.entries(snap.controls || {})) {
+      const el = document.getElementById(id); if (!el) continue;
+      if (el.type === "checkbox") el.checked = !!v;
+      else {
+        if (el.tagName === "SELECT" && ![...el.options].some((o) => o.value === String(v))) continue;
+        el.value = v;
+      }
+      if (el.type === "range") { const o = document.getElementById(id + "-o"); if (o) o.textContent = UI.fmt[id] ? UI.fmt[id](+el.value) : el.value; }
+    }
+    if (Modules[snap.tab].load) Modules[snap.tab].load(snap.model || {});
+  },
+  stamp(t) { try { return new Date(t).toLocaleString("tr-TR", { day: "numeric", month: "short", hour: "2-digit", minute: "2-digit" }); } catch (e) { return ""; } },
+  say(msg, bad) { const s = $("#sv-msg"); if (s) { s.textContent = msg; s.style.color = bad ? "var(--bad)" : ""; } },
+  status(id) {
+    let t = null; try { const r = localStorage.getItem(this.key(id)); if (r) t = JSON.parse(r).time; } catch (e) {}
+    this.say(t ? "Bu sekmenin kaydı var: " + this.stamp(t) : "Bu sekme için kayıt yok");
+    const b = $("#sv-load"); if (b) b.disabled = !t;
+  },
+  save() {
+    const id = activeId; let txt;
+    try { txt = JSON.stringify(this.snapshot(id)); } catch (e) { return this.say("Kaydedilemedi: " + e.message, true); }
+    try { localStorage.setItem(this.key(id), txt); this.say("Tarayıcıya kaydedildi: " + this.stamp(Date.now()) + ` (${Math.round(txt.length / 1024)} KB)`); $("#sv-load").disabled = false; }
+    catch (e) { this.say("Tarayıcı belleği kullanılamıyor ya da dolu. “Dosyaya indir” ile kaydet.", true); }
+  },
+  load() {
+    try { const r = localStorage.getItem(this.key(activeId)); if (!r) return this.say("Bu sekme için kayıt yok.", true); this.restore(JSON.parse(r)); this.say("Kayıt yüklendi."); }
+    catch (e) { this.say("Yüklenemedi: " + e.message, true); }
+  },
+  download() {
+    try {
+      const txt = JSON.stringify(this.snapshot(activeId)), blob = new Blob([txt], { type: "application/json" });
+      const a = document.createElement("a"), d = new Date();
+      a.href = URL.createObjectURL(blob); a.download = `ogrenme-lab-${activeId}-${d.getFullYear()}${String(d.getMonth() + 1).padStart(2, "0")}${String(d.getDate()).padStart(2, "0")}.json`;
+      document.body.appendChild(a); a.click(); a.remove(); setTimeout(() => URL.revokeObjectURL(a.href), 4000);
+      this.say(`Dosya hazırlandı (${Math.round(txt.length / 1024)} KB). İndirilmediyse bu ortam indirmeyi engelliyor olabilir.`);
+    } catch (e) { this.say("İndirilemedi: " + e.message, true); }
+  },
+  openFile(file) {
+    const r = new FileReader();
+    r.onload = () => { try { this.restore(JSON.parse(r.result)); this.say("Dosyadan yüklendi: " + file.name); } catch (e) { this.say("Açılamadı: " + e.message, true); } };
+    r.readAsText(file);
+  },
+};
+
 // ---------------------------------------------------------------- arayüz yardımcıları
 const UI = {
   fmt: {},
@@ -433,15 +508,16 @@ function setRange(id, v) { const el = document.getElementById(id); el.value = v;
 
 // ---------------------------------------------------------------- sekmeler ve ana döngü
 const Modules = {};
-let activeMod = null;
+let activeMod = null, activeId = null;
 function showTab(id) {
   if (!Modules[id]) id = "siniflandirma";
   $$("#tabs button").forEach((b) => b.setAttribute("aria-selected", b.dataset.tab === id ? "true" : "false"));
   $$("section.tab").forEach((s) => (s.hidden = s.id !== "tab-" + id));
   if (activeMod && activeMod.deactivate) activeMod.deactivate();
-  activeMod = Modules[id];
+  activeMod = Modules[id]; activeId = id;
   if (!activeMod._ready) { activeMod.init($("#tab-" + id)); activeMod._ready = true; }
   if (activeMod.activate) activeMod.activate();
+  Saver.status(id);
 }
 function boot() {
   Theme.refresh();
@@ -453,6 +529,9 @@ function boot() {
   const retheme = () => { Theme.refresh(); for (const m of Object.values(Modules)) if (m._ready && m.onTheme) m.onTheme(); };
   try { matchMedia("(prefers-color-scheme: dark)").addEventListener("change", retheme); } catch (e) {}
   new MutationObserver(retheme).observe(document.documentElement, { attributes: true, attributeFilter: ["data-theme"] });
+  $("#sv-save").onclick = () => Saver.save(); $("#sv-load").onclick = () => Saver.load();
+  $("#sv-down").onclick = () => Saver.download(); $("#sv-open").onclick = () => $("#sv-file").click();
+  $("#sv-file").onchange = (e) => { const f = e.target.files[0]; if (f) Saver.openFile(f); e.target.value = ""; };
   showTab(location.hash.slice(1) || "siniflandirma");
   const loop = () => { try { if (activeMod && activeMod.frame) activeMod.frame(); } catch (e) { console.error(e); } requestAnimationFrame(loop); };
   requestAnimationFrame(loop);
@@ -492,6 +571,7 @@ Modules.siniflandirma = (() => {
     return P.map(([x, y, t]) => [clamp(x, -1, 1), clamp(y, -1, 1), RF[type] ? clamp(t, -1, 1) : t]);
   }
   const inp = (x, y) => st.feats.map((f) => f[2](x, y));
+  window.Data2D = data; // Karar Ağacı sekmesi de aynı veri setlerini kullanır
   const isReg = () => val("c-data").startsWith("r-");
   const inpP = (x, y) => (st.reg ? inp(x, 0) : inp(x, y)); // regresyonda girdi yalnızca x
 
@@ -764,7 +844,13 @@ Modules.siniflandirma = (() => {
     for (let i = 0; i < num("c-speed"); i++) epoch();
     draw();
   }
-  return { init, frame, onTheme: () => draw(), deactivate: () => {} };
+  function save() { return { train: st.train, test: st.test, net: mlpToJSON(st.net), epoch: st.epoch, hist: st.hist, histT: st.histT }; }
+  function load(m) {
+    setRun(false); if (!m.net) return newData();
+    st.train = m.train || []; st.test = m.test || []; reset();
+    st.net = mlpFromJSON(m.net); st.epoch = m.epoch || 0; st.hist = m.hist || []; st.histT = m.histT || []; measure(); draw();
+  }
+  return { init, frame, save, load, onTheme: () => draw(), deactivate: () => {} };
 })();
 // ===================================================================== 2) GRADYAN İNİŞİ YARIŞI
 Modules.gradyan = (() => {
@@ -998,7 +1084,9 @@ Modules.gradyan = (() => {
     setSurface();
   }
   function frame() { if (!st.run) return; for (let i = 0; i < num("g-speed"); i++) stepAll(); draw(); }
-  return { init, frame, onTheme: () => draw() };
+  function save() { return { start: st.start }; }
+  function load(m) { setRun(false); setSurface(); if (m.start) { st.start = m.start; resetRacers(); } }
+  return { init, frame, save, load, onTheme: () => draw() };
 })();
 // ===================================================================== 6) KÜMELEME (k-ortalamalar)
 Modules.kume = (() => {
@@ -1146,7 +1234,15 @@ Modules.kume = (() => {
     if (st.run && !anim) { st.timer++; if (st.timer >= 44 - num("k-speed") * 4) { st.timer = 0; step(); } }
     if (anim || st.run) draw();
   }
-  return { init, frame, onTheme: () => { drawBg(); draw(); } };
+  function save() { return { pts: st.pts, cent: st.target, assign: st.assign, iter: st.iter, inertia: st.inertia, phase: st.phase, done: st.done, moved: st.moved, elbow: st.elbow }; }
+  function load(m) {
+    setRun(false); if (!m.pts) return genData();
+    st.pts = m.pts; initCent();
+    if (m.cent && m.cent.length) { st.cent = m.cent.map((c) => c.slice()); st.target = m.cent.map((c) => c.slice()); }
+    Object.assign(st, { assign: m.assign || st.assign, iter: m.iter || 0, inertia: m.inertia || [], phase: m.phase || "ata", done: !!m.done, moved: m.moved || 0, elbow: m.elbow || null });
+    drawBg(); draw();
+  }
+  return { init, frame, save, load, onTheme: () => { drawBg(); draw(); } };
 })();
 // ===================================================================== 3) RAKAM TANIMA
 Modules.rakam = (() => {
@@ -1154,7 +1250,7 @@ Modules.rakam = (() => {
   const st = { run: false, train: [], test: [], ready: false, gen: 0, net: null, batches: 0, lossAvg: null, accHist: [], lossHist: [],
     acc: null, conf: null, input: null, probs: null, hasInk: false, drawing: false, samples: [], userAdded: 0, frame: 0 };
   let dcv, dctx, pcv, pctx, wcv, wctx, ocv, octx, ccv, cctx, mcv, mctx, scv, sctx, gcv, gctx;
-  let srcC, srcX, tmpC, tmpX, outC, outX, tileC, tileX;
+  let [srcC, srcX] = offscreen(84, 84, true), [tmpC, tmpX] = offscreen(112, 112, true), [outC, outX] = offscreen(28, 28, true), [tileC, tileX] = offscreen(28, 28);
 
   // --- sentetik el yazısı: her rakam bir veya birkaç çizgi yolu (0..1 kutusunda)
   const circ = (cx, cy, rx, ry, a0 = 0, a1 = Math.PI * 2, n = 18) => Array.from({ length: n + 1 }, (_, i) => { const a = a0 + ((a1 - a0) * i) / n; return [cx + rx * Math.cos(a), cy + ry * Math.sin(a)]; });
@@ -1347,6 +1443,19 @@ Modules.rakam = (() => {
     predictInput(); drawAll(true);
   }
 
+  // veriyi parça parça üret (sayfa donmasın); CNN sekmesi de aynı veriyi kullanır
+  function fill(ms) {
+    if (st.ready) return true;
+    const t0 = performance.now();
+    while (performance.now() - t0 < ms && st.gen < NTRAIN + NTEST) {
+      const label = st.gen % 10, v = synth(label);
+      if (v) (st.gen < NTRAIN ? st.train : st.test).push([v, label]);
+      st.gen++;
+    }
+    if (st.gen >= NTRAIN + NTEST) { st.ready = true; shuffle(st.train); }
+    return st.ready;
+  }
+  window.DigitKit = { fill, prep, shifted, st, progress: () => st.gen / (NTRAIN + NTEST) };
   function init(root) {
     root.innerHTML = `
     <div class="lab">
@@ -1399,7 +1508,7 @@ Modules.rakam = (() => {
     gcv = $("#d-chart"); gctx = setupCanvas(gcv, 420, 200);
     ccv = $("#d-conf"); cctx = setupCanvas(ccv, 300, 292);
     scv = $("#d-samples"); sctx = setupCanvas(scv, 760, 66);
-    [srcC, srcX] = offscreen(84, 84, true); [tmpC, tmpX] = offscreen(112, 112, true); [outC, outX] = offscreen(28, 28, true); [tileC, tileX] = offscreen(28, 28);
+
 
     let last = null;
     const pt = (e) => canvasPos(dcv, e);
@@ -1419,16 +1528,10 @@ Modules.rakam = (() => {
   }
   function frame() {
     st.frame++;
-    if (!st.ready) { // veriyi parça parça üret (sayfa donmasın)
-      const t0 = performance.now();
-      while (performance.now() - t0 < 25 && st.gen < NTRAIN + NTEST) {
-        const label = st.gen % 10, v = synth(label);
-        if (v) (st.gen < NTRAIN ? st.train : st.test).push([v, label]);
-        st.gen++;
-      }
-      if (st.gen >= NTRAIN + NTEST) { st.ready = true; shuffle(st.train); $("#d-run").disabled = false; newNet(); }
-      else $("#d-explain").innerHTML = explain();
-      return;
+    if (!st.started) {
+      if (!fill(25)) { $("#d-explain").innerHTML = explain(); return; }
+      st.started = true; $("#d-run").disabled = false;
+      if (st.pending) { const p = st.pending; st.pending = null; applyLoad(p); } else newNet();
     }
     if (st.dirty && st.frame % 3 === 0) { st.dirty = false; predictInput(); drawProbs(); }
     if (!st.run) return;
@@ -1436,7 +1539,453 @@ Modules.rakam = (() => {
     if (st.hasInk) predictInput();
     drawAll(st.frame % 6 === 0);
   }
-  return { init, frame, onTheme: () => drawAll(true) };
+  function save() { return { net: mlpToJSON(st.net), batches: st.batches, accHist: st.accHist, lossHist: st.lossHist, lossAvg: st.lossAvg }; }
+  function applyLoad(m) {
+    setRun(false); st.blown = false; newNet(); if (!m.net) return;
+    st.net = mlpFromJSON(m.net); st.batches = m.batches || 0; st.accHist = m.accHist || []; st.lossHist = m.lossHist || []; st.lossAvg = m.lossAvg ?? null;
+    evaluate(); predictInput(); drawAll(true);
+  }
+  function load(m) { if (!st.started) { st.pending = m; $("#d-explain").innerHTML = "Kayıt, eğitim verisi hazırlanınca yüklenecek…"; } else applyLoad(m); }
+  return { init, frame, save, load, onTheme: () => drawAll(true) };
+})();
+// ===================================================================== 9) GÖRÜNTÜ TANIMA (Evrişimli sinir ağı)
+Modules.cnn = (() => {
+  // ---- katmanlar
+  class Conv {
+    constructor(ci, co, k, H, W) {
+      Object.assign(this, { ci, co, k, H, W, Ho: H - k + 1, Wo: W - k + 1 });
+      const n = co * ci * k * k, s = Math.sqrt(2 / (ci * k * k));
+      this.w = Float64Array.from({ length: n }, () => gauss() * s); this.b = new Float64Array(co).fill(0.01);
+      this.gw = new Float64Array(n); this.gb = new Float64Array(co);
+    }
+    forward(x) {
+      this.x = x; const { ci, co, k, H, W, Ho, Wo } = this, w = this.w, out = new Float64Array(co * Ho * Wo);
+      for (let o = 0; o < co; o++) for (let y = 0; y < Ho; y++) for (let xx = 0; xx < Wo; xx++) {
+        let s = this.b[o];
+        for (let c = 0; c < ci; c++) { const wb = (o * ci + c) * k * k, xb = c * H * W;
+          for (let i = 0; i < k; i++) { const xr = xb + (y + i) * W + xx, wr = wb + i * k; for (let j = 0; j < k; j++) s += w[wr + j] * x[xr + j]; } }
+        out[(o * Ho + y) * Wo + xx] = s;
+      }
+      return out;
+    }
+    backward(d, needDx) {
+      const { ci, co, k, H, W, Ho, Wo, x, w, gw } = this, dx = needDx ? new Float64Array(ci * H * W) : null;
+      for (let o = 0; o < co; o++) for (let y = 0; y < Ho; y++) for (let xx = 0; xx < Wo; xx++) {
+        const g = d[(o * Ho + y) * Wo + xx]; if (g === 0) continue; this.gb[o] += g;
+        for (let c = 0; c < ci; c++) { const wb = (o * ci + c) * k * k, xb = c * H * W;
+          for (let i = 0; i < k; i++) { const xr = xb + (y + i) * W + xx, wr = wb + i * k;
+            for (let j = 0; j < k; j++) { gw[wr + j] += g * x[xr + j]; if (dx) dx[xr + j] += g * w[wr + j]; } } }
+      }
+      return dx;
+    }
+  }
+  const relu = (a) => a.map((v) => (v > 0 ? v : 0));
+  function pool(x, C, H, W) {
+    const Ho = H >> 1, Wo = W >> 1, out = new Float64Array(C * Ho * Wo), idx = new Int32Array(C * Ho * Wo);
+    for (let c = 0; c < C; c++) for (let y = 0; y < Ho; y++) for (let xx = 0; xx < Wo; xx++) {
+      let best = -Infinity, bi = 0;
+      for (let i = 0; i < 2; i++) for (let j = 0; j < 2; j++) { const k = c * H * W + (2 * y + i) * W + 2 * xx + j; if (x[k] > best) { best = x[k]; bi = k; } }
+      const o = (c * Ho + y) * Wo + xx; out[o] = best; idx[o] = bi;
+    }
+    return { out, idx, Ho, Wo };
+  }
+  class Net {
+    constructor(layers, k1) {
+      this.cfg = { layers, k1 };
+      this.c1 = new Conv(1, 8, k1, 28, 28);
+      let C = 8, H = this.c1.Ho >> 1;
+      if (layers === 2) { this.c2 = new Conv(8, 12, 3, H, H); C = 12; H = this.c2.Ho >> 1; }
+      this.flat = C * H * H; this.fc = { w: Float64Array.from({ length: 10 * this.flat }, () => gauss() * Math.sqrt(1 / this.flat)), b: new Float64Array(10), gw: new Float64Array(10 * this.flat), gb: new Float64Array(10) };
+      this.params = [this.c1, ...(this.c2 ? [this.c2] : []), this.fc].flatMap((L) => [[L.w, L.gw], [L.b, L.gb]]).map(([p, g]) => ({ p, g, m: new Float64Array(p.length), v: new Float64Array(p.length) }));
+      this.t = 0;
+    }
+    forward(x) {
+      const r = { x };
+      r.z1 = this.c1.forward(x); r.a1 = relu(r.z1); r.p1 = pool(r.a1, 8, this.c1.Ho, this.c1.Wo);
+      let f = r.p1.out;
+      if (this.c2) { r.z2 = this.c2.forward(f); r.a2 = relu(r.z2); r.p2 = pool(r.a2, 12, this.c2.Ho, this.c2.Wo); f = r.p2.out; }
+      const z = new Float64Array(10), W = this.fc.w;
+      for (let o = 0; o < 10; o++) { let s = this.fc.b[o]; const b = o * this.flat; for (let i = 0; i < this.flat; i++) s += W[b + i] * f[i]; z[o] = s; }
+      const m = Math.max(...z); let t = 0; const p = z.map((v) => { const e = Math.exp(v - m); t += e; return e; });
+      r.f = f; r.p = p.map((v) => v / t); return r;
+    }
+    learn(x, label) {
+      const r = this.forward(x), d = r.p.slice(); d[label] -= 1;
+      const df = new Float64Array(this.flat), W = this.fc.w;
+      for (let o = 0; o < 10; o++) { const g = d[o], b = o * this.flat; this.fc.gb[o] += g; for (let i = 0; i < this.flat; i++) { this.fc.gw[b + i] += g * r.f[i]; df[i] += g * W[b + i]; } }
+      const unpool = (dp, P, size) => { const dx = new Float64Array(size); for (let k = 0; k < dp.length; k++) dx[P.idx[k]] += dp[k]; return dx; };
+      let dz;
+      if (this.c2) {
+        const da2 = unpool(df, r.p2, r.a2.length); dz = da2.map((g, i) => (r.z2[i] > 0 ? g : 0));
+        const dp1 = this.c2.backward(dz, true); const da1 = unpool(dp1, r.p1, r.a1.length); dz = da1.map((g, i) => (r.z1[i] > 0 ? g : 0));
+      } else { const da1 = unpool(df, r.p1, r.a1.length); dz = da1.map((g, i) => (r.z1[i] > 0 ? g : 0)); }
+      this.c1.backward(dz, false);
+      return -Math.log(Math.max(r.p[label], 1e-9));
+    }
+    step(n, lr) {
+      this.t++; const b1 = 0.9, b2 = 0.999, c1 = 1 - b1 ** this.t, c2 = 1 - b2 ** this.t;
+      for (const P of this.params) for (let k = 0; k < P.p.length; k++) {
+        const g = P.g[k] / n; P.m[k] = b1 * P.m[k] + (1 - b1) * g; P.v[k] = b2 * P.v[k] + (1 - b2) * g * g;
+        P.p[k] -= (lr * (P.m[k] / c1)) / (Math.sqrt(P.v[k] / c2) + 1e-8); P.g[k] = 0;
+      }
+    }
+    pred(x) { const p = this.forward(x).p; let b = 0; for (let j = 1; j < 10; j++) if (p[j] > p[b]) b = j; return b; }
+  }
+
+  const D = 280;
+  const st = { run: false, net: null, batches: 0, lossAvg: null, accHist: [], acc: null, accShift: null, mlpShift: null, input: null, hasInk: false, sample: null, frame: 0, started: false };
+  let dcv, dctx, pcv, pctx, fcv, fctx, f2cv, f2ctx, gcv, gctx, mcv, mctx;
+  const tiles = {};
+  function tileCanvas(w, h) { const k = w + "x" + h; if (!tiles[k]) tiles[k] = offscreen(w, h); return tiles[k]; }
+  function grid(ctx, vals, off, w, h, x, y, size, mode, scale) {
+    const [c, cx] = tileCanvas(w, h), img = cx.createImageData(w, h);
+    for (let i = 0; i < w * h; i++) {
+      const v = vals[off + i];
+      const col = mode === "div" ? Theme.dS(0.5 + (v / scale) * 0.5) : mode === "ink" ? mix(Theme.rgb.surface, Theme.rgb.ink, clamp(v, 0, 1)) : mix(Theme.rgb.surface, Theme.rgb.accent, clamp(v / scale, 0, 1));
+      img.data.set([col[0], col[1], col[2], 255], i * 4);
+    }
+    cx.putImageData(img, 0, 0); ctx.imageSmoothingEnabled = false; ctx.drawImage(c, x, y, size * (w / Math.max(w, h)), size * (h / Math.max(w, h)));
+  }
+  function newNet() {
+    st.net = new Net(+val("n-layers"), +val("n-k")); st.batches = 0; st.lossAvg = null; st.accHist = []; st.acc = null; st.accShift = null; st.mlpShift = null;
+    evaluate(); drawAll();
+  }
+  function shiftSet() { // test rakamlarının 3–4 piksel kaydırılmış kopyaları (her seferinde aynı)
+    if (st.shifted) return st.shifted;
+    const T = DigitKit.st.test, out = []; let seed = 7; const rnd = () => ((seed = (seed * 16807) % 2147483647) / 2147483647);
+    for (let i = 0; i < 200; i++) { const [x, t] = T[(i * 3) % T.length], dx = (rnd() < 0.5 ? -1 : 1) * (2 + Math.floor(rnd() * 2)), dy = Math.floor(rnd() * 3) - 1; out.push([DigitKit.shifted(x, dx, dy), t]); }
+    return (st.shifted = out);
+  }
+  function evaluate() {
+    const T = DigitKit.st.test; if (!T.length) return;
+    let ok = 0; for (let i = 0; i < 200; i++) { const [x, t] = T[(i * 3) % T.length]; if (st.net.pred(x) === t) ok++; }
+    st.acc = ok / 200; st.accHist.push(st.acc * 100);
+    const S = shiftSet(); ok = 0; for (const [x, t] of S) if (st.net.pred(x) === t) ok++; st.accShift = ok / S.length;
+    const mlp = DigitKit.st.net; // Rakam Tanıma sekmesindeki düz ağ eğitildiyse karşılaştır
+    if (mlp && DigitKit.st.batches > 200) { ok = 0; for (const [x, t] of S) { const p = mlp.predict(x); let b = 0; for (let j = 1; j < 10; j++) if (p[j] > p[b]) b = j; if (b === t) ok++; } st.mlpShift = ok / S.length; }
+    else st.mlpShift = null;
+  }
+  function trainBatch() {
+    const T = DigitKit.st.train, lr = +val("n-lr"); let L = 0;
+    const aug = on("n-aug");
+    for (let i = 0; i < 16; i++) { let [x, t] = T[randInt(0, T.length - 1)]; if (aug) x = DigitKit.shifted(x, randInt(-3, 3), randInt(-3, 3)); L += st.net.learn(x, t); }
+    st.net.step(16, lr); L /= 16; st.lossAvg = st.lossAvg == null ? L : st.lossAvg * 0.95 + L * 0.05; st.batches++;
+    if (st.batches % 40 === 0) evaluate();
+  }
+  function setRun(v) { st.run = v; $("#n-run").textContent = v ? "⏸ Duraklat" : "▶ Eğitimi başlat"; }
+  function currentInput() {
+    if (st.hasInk) { const v = DigitKit.prep(dcv, D); if (v) return v; }
+    if (!st.sample) { const T = DigitKit.st.test; st.sample = T[randInt(0, T.length - 1)][0]; }
+    return st.sample;
+  }
+
+  function drawAll() {
+    if (!st.net) return;
+    const x = currentInput(), r = st.net.forward(x), f = getComputedStyle(document.body).getPropertyValue("--f-mono");
+    // girdi
+    mctx.fillStyle = Theme.c.surface; mctx.fillRect(0, 0, 84, 84); grid(mctx, x, 0, 28, 28, 0, 0, 84, "ink");
+    // olasılıklar
+    const W = pcv._w, H = pcv._h, bh = (H - 8) / 10, best = r.p.indexOf(Math.max(...r.p));
+    pctx.fillStyle = Theme.c.surface; pctx.fillRect(0, 0, W, H); pctx.font = "600 13px " + f; pctx.textBaseline = "middle";
+    for (let k = 0; k < 10; k++) { const y = 4 + k * bh; pctx.fillStyle = Theme.c.ink; pctx.textAlign = "left"; pctx.fillText(k, 6, y + bh / 2);
+      pctx.fillStyle = Theme.c.sunk; pctx.fillRect(26, y + 3, W - 76, bh - 6); pctx.fillStyle = k === best ? Theme.c.accent : Theme.c.muted; pctx.fillRect(26, y + 3, (W - 76) * r.p[k], bh - 6);
+      pctx.fillStyle = Theme.c.muted; pctx.textAlign = "right"; pctx.fillText(Math.round(r.p[k] * 100) + "%", W - 4, y + bh / 2); }
+    $("#n-guess").textContent = best; $("#n-src").textContent = st.hasInk ? "senin çizimin" : "test verisinden bir örnek";
+    // 1. katman: filtre, aktivasyon haritası, havuzlanmış harita
+    const c1 = st.net.c1, k = c1.k, cw = fcv._w / 8;
+    fctx.fillStyle = Theme.c.surface; fctx.fillRect(0, 0, fcv._w, fcv._h);
+    let am = 1e-6; for (const v of r.a1) am = Math.max(am, v);
+    fctx.font = "11px " + f; fctx.fillStyle = Theme.c.muted; fctx.textAlign = "left"; fctx.textBaseline = "alphabetic";
+    for (let o = 0; o < 8; o++) {
+      const x0 = o * cw + 4; let wm = 1e-6; for (let i = 0; i < k * k; i++) wm = Math.max(wm, Math.abs(c1.w[o * k * k + i]));
+      grid(fctx, c1.w, o * k * k, k, k, x0 + (cw - 8 - 40) / 2, 4, 40, "div", wm);
+      grid(fctx, r.a1, o * c1.Ho * c1.Wo, c1.Ho, c1.Wo, x0, 52, cw - 8, "act", am);
+      grid(fctx, r.p1.out, o * r.p1.Ho * r.p1.Wo, r.p1.Ho, r.p1.Wo, x0 + (cw - 8) / 4, 52 + cw, (cw - 8) / 2, "act", am);
+    }
+    // 2. katman
+    f2ctx.fillStyle = Theme.c.surface; f2ctx.fillRect(0, 0, f2cv._w, f2cv._h);
+    if (st.net.c2) { const c2 = st.net.c2, w2 = f2cv._w / 12; let m2 = 1e-6; for (const v of r.a2) m2 = Math.max(m2, v);
+      for (let o = 0; o < 12; o++) grid(f2ctx, r.a2, o * c2.Ho * c2.Wo, c2.Ho, c2.Wo, o * w2 + 3, 3, w2 - 6, "act", m2); }
+    $("#n-l2card").hidden = !st.net.c2;
+    drawChart(gcv, gctx, [{ data: st.accHist, color: Theme.c.accent, width: 2 }], { ymin: 0, ymax: 100, xlabel: "ölçüm", yfmt: (v) => "%" + v.toFixed(0) });
+    $("#n-s-b").textContent = st.batches; $("#n-s-l").textContent = fmt(st.lossAvg); $("#n-s-a").textContent = pct(st.acc);
+    $("#n-s-sh").textContent = pct(st.accShift); $("#n-s-mlp").textContent = st.mlpShift == null ? "eğitilmedi" : pct(st.mlpShift);
+    $("#n-s-p").textContent = st.net.params.reduce((s, P) => s + P.p.length, 0).toLocaleString("tr-TR");
+    $("#n-explain").innerHTML = explain();
+  }
+  function explain() {
+    if (!st.started) return `Eğitim verisi hazırlanıyor… <b>%${Math.round(DigitKit.progress() * 100)}</b> (Rakam Tanıma sekmesiyle aynı veri kullanılıyor).`;
+    if (st.batches === 0) return "Rakam Tanıma sekmesindeki ağ her pikseli ayrı ayrı tartıyordu. <b>Evrişimli ağ</b> ise küçük bir pencereyi (filtre) resmin üzerinde kaydırarak her yerde <b>aynı deseni</b> arar. Üstteki küçük kareler 8 filtre; şu an rastgele. Altlarındaki büyük kareler, filtrenin resmin neresinde “yandığını” gösteren <b>özellik haritaları</b>.";
+    if (st.acc < 0.7) return "Filtreler şekillenmeye başladı. Turuncu-mavi geçişler olan filtreler <b>kenar dedektörü</b> gibi çalışır: biri yatay çizgilerde, biri dikey ya da eğik kenarlarda yanar. Bunları kimse tasarlamadı; ağ hatayı azaltmak için kendisi buldu.";
+    const sh = st.accShift, mlp = st.mlpShift, aug = on("n-aug");
+    const cmp = mlp != null ? ` (Rakam Tanıma sekmesindeki düz ağ: <b>${pct(mlp)}</b>)` : "";
+    if (aug && sh > 0.8) return `Veri çoğaltma açık: ağ eğitimde rastgele kaydırılmış rakamlar da gördü ve kaydırma testinde <b>${pct(sh)}</b> başarıya çıktı${cmp}. Gerçek görüntü sistemleri de böyle eğitilir: fotoğraflar döndürülür, kırpılır, parlaklığı değiştirilir. Ağın neyi öğreneceğini mimari kadar <b>gösterilen veri</b> belirler.`;
+    if (aug) return "Veri çoğaltma açık: görev zorlaştığı için kayıp biraz daha yavaş düşüyor. Eğitimi sürdür ve kaydırma testindeki başarının yükselişini izle.";
+    return `Ağ normal test rakamlarında ${pct(st.acc)} başarılı, ama rakamlar 2–3 piksel kaydırılınca başarı <b>${pct(sh)}</b>'e düşüyor${cmp}. Neden? Eğitim rakamlarının hepsi tam ortalanmış. Evrişim katmanları deseni her yerde arar, ama sondaki tam bağlı katman hâlâ “desen nerede çıktı”ya bakar. 2 katmanlı mimari kaymaya daha dayanıklıdır; asıl çözüm ise <b>veri çoğaltma</b>: kutucuğu işaretle, ağı sıfırla ve yeniden eğit.`;
+  }
+
+  function init(root) {
+    root.innerHTML = `
+    <div class="lab">
+      <div class="stage">
+        <div class="row">
+          <div class="card" style="flex:0 1 300px"><h2>Bir rakam çiz</h2><p class="sub">Çizmezsen test verisinden bir örnek gösterilir.</p>
+            <canvas id="n-draw" class="framed" style="max-width:280px;background:var(--sunk)"></canvas>
+            <div class="btns" style="margin-top:8px"><button class="btn" id="n-clear">Temizle</button><button class="btn" id="n-other">Başka örnek</button></div></div>
+          <div class="card" style="flex:1 1 260px"><h2>Ağın tahmini</h2>
+            <div style="display:flex;gap:14px;align-items:center;margin:4px 0 8px"><div style="font-family:var(--f-display);font-size:54px;font-weight:700;line-height:1;min-width:40px" id="n-guess">?</div>
+              <div style="display:flex;gap:8px;align-items:center"><canvas id="n-mini" class="framed" style="width:56px"></canvas><span class="note">Girdi:<br><span id="n-src"></span></span></div></div>
+            <canvas id="n-probs" style="max-width:440px"></canvas></div>
+        </div>
+        <div class="card"><h2>1. evrişim katmanı</h2><p class="sub">Üstte 8 filtre (turuncu +, mavi −); ortada her filtrenin resimde yandığı yerler; altta havuzlanmış (2×2'den en büyüğü alınmış) küçük hâli.</p><canvas id="n-f1"></canvas></div>
+        <div class="card" id="n-l2card"><h2>2. evrişim katmanı</h2><p class="sub">12 filtre, birinci katmanın haritalarını birleştirip daha karmaşık parçalar (köşe, kavis, kesişme) arıyor.</p><canvas id="n-f2"></canvas></div>
+        <div class="row">
+          <div class="card w-side"><h2>Test doğruluğu</h2><canvas id="n-chart"></canvas></div>
+          <div class="card w-side"><h2>Kaydırma testi</h2><p class="sub">Aynı test rakamları 2–3 piksel sağa ya da sola kaydırılınca:</p>
+            <div class="stats">${UI.stat("n-s-sh", "Evrişimli ağ")}${UI.stat("n-s-mlp", "Düz ağ (Rakam sekmesi)")}</div></div>
+        </div>
+        <div class="stats">${UI.stat("n-s-b", "Adım")}${UI.stat("n-s-l", "Kayıp")}${UI.stat("n-s-a", "Test doğruluğu")}${UI.stat("n-s-p", "Parametre sayısı")}</div>
+        <div class="explain" id="n-explain"></div>
+      </div>
+      <aside class="panel">
+        ${UI.group("Mimari", UI.select("n-layers", "Evrişim katmanı", [["1", "1 katman (8 filtre)"], ["2", "2 katman (8 + 12 filtre)"]], "1")
+          + UI.select("n-k", "1. katman filtre boyutu", [["3", "3×3"], ["5", "5×5"]], "5")
+          + `<p class="note">Evrişim → ReLU → 2×2 havuzlama${""} → … → 10 çıkış (softmax).</p>`)}
+        ${UI.group("Eğitim", UI.select("n-lr", "Öğrenme oranı (Adam)", ["0.0003", "0.001", "0.003", "0.01"], "0.003") + UI.range("n-speed", "Hız (batch/kare)", 1, 8, 1, 2)
+          + UI.check("n-aug", "Veri çoğaltma: eğitim rakamlarını rastgele kaydır", false))}
+        <div class="btns"><button class="btn primary" id="n-run" disabled>▶ Eğitimi başlat</button><button class="btn wide" id="n-reset">Ağı sıfırla</button></div>
+        <p class="note">Telefonundaki yüz tanıma, otonom araçların kameraları ve tıbbi görüntü analizi bu fikrin çok daha derin (onlarca katmanlı) hâllerini kullanır.</p>
+      </aside>
+    </div>`;
+    dcv = $("#n-draw"); dcv.width = dcv.height = D; dcv._w = dcv._h = D; dcv.style.aspectRatio = "1"; dctx = dcv.getContext("2d", { willReadFrequently: true });
+    pcv = $("#n-probs"); pctx = setupCanvas(pcv, 300, 200); mcv = $("#n-mini"); mctx = setupCanvas(mcv, 84, 84);
+    fcv = $("#n-f1"); fctx = setupCanvas(fcv, 760, 52 + 95 + 50); f2cv = $("#n-f2"); f2ctx = setupCanvas(f2cv, 760, 66);
+    gcv = $("#n-chart"); gctx = setupCanvas(gcv, 360, 170);
+    let last = null, drawing = false;
+    dcv.addEventListener("pointerdown", (e) => { drawing = true; dcv.setPointerCapture(e.pointerId); last = canvasPos(dcv, e); dctx.fillStyle = Theme.c.ink; dctx.beginPath(); dctx.arc(last[0], last[1], 11, 0, 7); dctx.fill(); st.hasInk = true; st.dirty = true; });
+    dcv.addEventListener("pointermove", (e) => { if (!drawing) return; const p = canvasPos(dcv, e); dctx.strokeStyle = Theme.c.ink; dctx.lineWidth = 22; dctx.lineCap = "round"; dctx.beginPath(); dctx.moveTo(last[0], last[1]); dctx.lineTo(p[0], p[1]); dctx.stroke(); last = p; st.dirty = true; });
+    const end = () => { if (drawing) { drawing = false; if (st.net) drawAll(); } };
+    dcv.addEventListener("pointerup", end); dcv.addEventListener("pointercancel", end);
+    $("#n-clear").onclick = () => { dctx.clearRect(0, 0, D, D); st.hasInk = false; if (st.net) drawAll(); };
+    $("#n-other").onclick = () => { dctx.clearRect(0, 0, D, D); st.hasInk = false; st.sample = null; if (st.net) drawAll(); };
+    $("#n-run").onclick = () => setRun(!st.run);
+    $("#n-reset").onclick = () => { setRun(false); if (st.started) newNet(); };
+    for (const id of ["n-layers", "n-k"]) $("#" + id).onchange = () => { setRun(false); if (st.started) newNet(); };
+    $("#n-explain").innerHTML = explain();
+  }
+  function frame() {
+    st.frame++;
+    if (!st.started) {
+      if (!DigitKit.fill(25)) { if (st.frame % 10 === 0) $("#n-explain").innerHTML = explain(); return; }
+      st.started = true; $("#n-run").disabled = false;
+      if (st.pending) { const p = st.pending; st.pending = null; applyLoad(p); } else newNet();
+    }
+    if (st.dirty && st.frame % 3 === 0) { st.dirty = false; drawAll(); }
+    if (!st.run) return;
+    for (let i = 0; i < num("n-speed"); i++) trainBatch();
+    if (st.frame % 2 === 0) drawAll();
+  }
+  function save() { if (!st.net) return {}; return { cfg: st.net.cfg, params: st.net.params.map((P) => arr7(P.p)), batches: st.batches, accHist: st.accHist, lossAvg: st.lossAvg }; }
+  function applyLoad(m) {
+    setRun(false); newNet(); if (!m.params) return;
+    if (m.params.length !== st.net.params.length || m.params.some((p, i) => p.length !== st.net.params[i].p.length)) return;
+    m.params.forEach((p, i) => st.net.params[i].p.set(p));
+    st.batches = m.batches || 0; st.accHist = m.accHist || []; st.lossAvg = m.lossAvg ?? null; evaluate(); drawAll();
+  }
+  function load(m) { if (!st.started) st.pending = m; else applyLoad(m); }
+  return { init, frame, save, load, onTheme: () => drawAll() };
+})();
+// ===================================================================== 10) KARAR AĞACI ve RASTGELE ORMAN
+Modules.agac = (() => {
+  const S = 440, G = 70;
+  const st = { train: [], test: [], root: null, queue: [], forest: null, run: false, timer: 0, hover: null, depthCurve: null, layout: [] };
+  let cv, ctx, tcv, tctx, fcv, fctx, gcv, gctx, hC, hX;
+
+  // ---- ağaç kurma (CART, Gini safsızlığı)
+  const gini = (c0, c1) => { const n = c0 + c1; if (!n) return 0; const p = c1 / n; return 2 * p * (1 - p); };
+  function makeNode(pts, depth, box) { let c1 = 0; for (const p of pts) c1 += p[2]; return { pts, depth, box, n: pts.length, c1, c0: pts.length - c1, g: gini(pts.length - c1, c1), split: null, L: null, R: null }; }
+  function bestSplit(node, minLeaf, feats) {
+    let best = null; const n = node.n;
+    for (const f of feats) {
+      const s = node.pts.slice().sort((a, b) => a[f] - b[f]); let l1 = 0;
+      for (let i = 0; i < n - 1; i++) {
+        l1 += s[i][2]; if (s[i][f] === s[i + 1][f]) continue;
+        const nl = i + 1, nr = n - nl; if (nl < minLeaf || nr < minLeaf) continue;
+        const r1 = node.c1 - l1, sc = (nl * gini(nl - l1, l1) + nr * gini(nr - r1, r1)) / n;
+        if (!best || sc < best.sc) best = { f, thr: (s[i][f] + s[i + 1][f]) / 2, sc };
+      }
+    }
+    return best && best.sc < node.g - 1e-9 ? best : null;
+  }
+  function grow(node, maxD, minLeaf, randomFeat) {
+    if (node.depth >= maxD || node.g === 0 || node.n < 2 * minLeaf) return false;
+    const feats = randomFeat ? [randInt(0, 1)] : [0, 1], sp = bestSplit(node, minLeaf, feats); if (!sp) return false;
+    node.split = sp; const [x0, x1, y0, y1] = node.box;
+    const lb = sp.f === 0 ? [x0, sp.thr, y0, y1] : [x0, x1, y0, sp.thr], rb = sp.f === 0 ? [sp.thr, x1, y0, y1] : [x0, x1, sp.thr, y1];
+    node.L = makeNode(node.pts.filter((p) => p[sp.f] < sp.thr), node.depth + 1, lb);
+    node.R = makeNode(node.pts.filter((p) => p[sp.f] >= sp.thr), node.depth + 1, rb);
+    return true;
+  }
+  function buildFull(pts, maxD, minLeaf, randomFeat) {
+    const root = makeNode(pts, 0, [-1, 1, -1, 1]), q = [root];
+    while (q.length) { const n = q.shift(); if (grow(n, maxD, minLeaf, randomFeat)) q.push(n.L, n.R); }
+    return root;
+  }
+  const leafOf = (node, x, y) => { while (node.split) node = (node.split.f === 0 ? x : y) < node.split.thr ? node.L : node.R; return node; };
+  const leafP = (leaf) => (leaf.n ? leaf.c1 / leaf.n : 0.5);
+  function predict(x, y) {
+    if (st.forest) { let s = 0; for (const t of st.forest) s += leafP(leafOf(t, x, y)); return s / st.forest.length; }
+    return leafP(leafOf(st.root, x, y));
+  }
+  const accOf = (set, f) => (set.length ? set.filter(([x, y, t]) => (f(x, y) > 0.5) === (t === 1)).length / set.length : null);
+  function stats(node, d = 0) { if (!node.split) return { leaves: 1, depth: node.depth }; const a = stats(node.L), b = stats(node.R); return { leaves: a.leaves + b.leaves, depth: Math.max(a.depth, b.depth) }; }
+
+  function newData() {
+    const P = shuffle(Data2D(val("r-data"), 300, num("r-noise") / 100)), k = Math.round(P.length * 0.7);
+    st.train = P.slice(0, k); st.test = P.slice(k); st.depthCurve = null; rebuild();
+  }
+  function rebuild() {
+    setRun(false); st.hover = null;
+    if (val("r-mode") === "orman") {
+      const T = num("r-trees"); st.forest = [];
+      for (let t = 0; t < T; t++) { const boot = st.train.map(() => st.train[randInt(0, st.train.length - 1)]); st.forest.push(buildFull(boot, num("r-depth"), num("r-leaf"), true)); }
+      st.root = st.forest[0]; st.queue = [];
+    } else { st.forest = null; st.root = makeNode(st.train, 0, [-1, 1, -1, 1]); st.queue = [st.root]; }
+    draw();
+  }
+  function growStep() { // en kalabalık yaprağı böl (sırayla, görerek)
+    while (st.queue.length) { const n = st.queue.shift(); if (grow(n, num("r-depth"), num("r-leaf"), false)) { st.queue.push(n.L, n.R); return true; } }
+    return false;
+  }
+  function growAll() { while (growStep()); draw(); }
+  function depthCurve() {
+    const tr = [], te = [];
+    for (let d = 1; d <= 12; d++) { const r = buildFull(st.train, d, num("r-leaf"), false), f = (x, y) => leafP(leafOf(r, x, y)); tr.push(accOf(st.train, f) * 100); te.push(accOf(st.test, f) * 100); }
+    st.depthCurve = { tr, te }; draw();
+  }
+  function setRun(v) { st.run = v; const b = $("#r-run"); if (b) b.textContent = v ? "⏸ Duraklat" : "▶ Adım adım büyüt"; }
+
+  // ---- çizim
+  const P = (x, y) => [((x + 1) / 2) * S, ((1 - y) / 2) * S];
+  function drawMap() {
+    const img = hX.createImageData(G, G);
+    for (let i = 0; i < G; i++) for (let j = 0; j < G; j++) { const c = Theme.d(predict(((j + 0.5) / G) * 2 - 1, 1 - ((i + 0.5) / G) * 2)); img.data.set([c[0], c[1], c[2], 255], (i * G + j) * 4); }
+    hX.putImageData(img, 0, 0); ctx.imageSmoothingEnabled = !!st.forest; ctx.drawImage(hC, 0, 0, S, S);
+    if (!st.forest) { // bölme çizgileri
+      const walk = (n) => { if (!n.split) return; const [x0, x1, y0, y1] = n.box; ctx.strokeStyle = Theme.c.ink; ctx.globalAlpha = 0.55; ctx.lineWidth = Math.max(1, 3 - n.depth * 0.4); ctx.beginPath();
+        if (n.split.f === 0) { const [a, b] = P(n.split.thr, y1), [, c] = P(n.split.thr, y0); ctx.moveTo(a, b); ctx.lineTo(a, c); } else { const [a, b] = P(x0, n.split.thr), [c] = P(x1, n.split.thr); ctx.moveTo(a, b); ctx.lineTo(c, b); }
+        ctx.stroke(); ctx.globalAlpha = 1; walk(n.L); walk(n.R); };
+      walk(st.root);
+    }
+    for (const [x, y, t] of st.train) { const [px, py] = P(x, y); ctx.beginPath(); ctx.arc(px, py, 4, 0, 7); ctx.fillStyle = t ? Theme.c.orange : Theme.c.blue; ctx.fill(); ctx.strokeStyle = Theme.c.surface; ctx.lineWidth = 1; ctx.stroke(); }
+    if (on("r-showtest")) for (const [x, y, t] of st.test) { const [px, py] = P(x, y); ctx.beginPath(); ctx.arc(px, py, 4, 0, 7); ctx.strokeStyle = t ? Theme.c.orange : Theme.c.blue; ctx.lineWidth = 2; ctx.stroke(); }
+    if (st.hover) { const [x0, x1, y0, y1] = st.hover.box, [a, b] = P(x0, y1), [c, d] = P(x1, y0);
+      ctx.strokeStyle = Theme.c.ink; ctx.lineWidth = 3; ctx.setLineDash([6, 4]); ctx.strokeRect(a + 1.5, b + 1.5, c - a - 3, d - b - 3); ctx.setLineDash([]); }
+  }
+  function drawTree() {
+    const W = tcv._w, H = tcv._h; tctx.fillStyle = Theme.c.surface; tctx.fillRect(0, 0, W, H); st.layout = [];
+    if (st.forest) { tctx.fillStyle = Theme.c.muted; tctx.font = "13px " + getComputedStyle(document.body).getPropertyValue("--f-body"); tctx.textAlign = "center"; tctx.fillText("Ormanda " + st.forest.length + " ağaç var; aşağıda ilk altısı görünüyor.", W / 2, H / 2); return; }
+    const { leaves, depth } = stats(st.root), dmax = Math.max(1, depth), rowH = Math.min(70, (H - 40) / dmax), slot = (W - 20) / leaves;
+    let k = 0; const f = getComputedStyle(document.body).getPropertyValue("--f-mono");
+    const place = (n) => { if (!n.split) { n._x = 10 + slot * (k++ + 0.5); } else { place(n.L); place(n.R); n._x = (n.L._x + n.R._x) / 2; } n._y = 18 + n.depth * rowH; };
+    place(st.root);
+    const lines = (n) => { if (!n.split) return; for (const c of [n.L, n.R]) { tctx.strokeStyle = Theme.c.line; tctx.lineWidth = 1.5; tctx.beginPath(); tctx.moveTo(n._x, n._y); tctx.lineTo(c._x, c._y); tctx.stroke(); lines(c); } };
+    lines(st.root);
+    const boxW = Math.min(92, Math.max(8, slot * 0.94));
+    const nodes = (n) => {
+      const p = leafP(n), big = boxW >= 40, h = big ? 30 : 10;
+      tctx.fillStyle = n.split ? Theme.c.sunk : Theme.ds(p); tctx.strokeStyle = st.hover === n ? Theme.c.ink : Theme.c.muted; tctx.lineWidth = st.hover === n ? 2.5 : 1;
+      const w = n.split ? Math.max(boxW, big ? 54 : 10) : boxW; tctx.fillRect(n._x - w / 2, n._y - h / 2, w, h); tctx.strokeRect(n._x - w / 2, n._y - h / 2, w, h);
+      if (big) { tctx.fillStyle = Theme.c.ink; tctx.textAlign = "center"; tctx.textBaseline = "middle"; tctx.font = "600 10px " + f;
+        tctx.fillText(n.split ? `${n.split.f ? "y" : "x"}<${n.split.thr.toFixed(2)}` : `${n.c1}:${n.c0}`, n._x, n._y - 6);
+        tctx.font = "9px " + f; tctx.fillStyle = Theme.c.muted; tctx.fillText(n.split ? `G ${n.g.toFixed(2)}` : `${n.n}`, n._x, n._y + 7); }
+      st.layout.push([n, n._x - w / 2, n._y - h / 2, w, h]);
+      if (n.split) { nodes(n.L); nodes(n.R); }
+    };
+    nodes(st.root);
+    if (st.root.split && boxW >= 40) { tctx.fillStyle = Theme.c.muted; tctx.font = "10px " + getComputedStyle(document.body).getPropertyValue("--f-body"); tctx.textAlign = "center";
+      tctx.fillText("evet ←", st.root._x - 50, st.root._y + 26); tctx.fillText("→ hayır", st.root._x + 50, st.root._y + 26); }
+  }
+  function drawForest() {
+    const W = fcv._w; fctx.fillStyle = Theme.c.surface; fctx.fillRect(0, 0, W, fcv._h);
+    if (!st.forest) return;
+    const s = (W - 50) / 6;
+    st.forest.slice(0, 6).forEach((t, i) => {
+      const img = hX.createImageData(G, G);
+      for (let a = 0; a < G; a++) for (let b = 0; b < G; b++) { const c = Theme.d(leafP(leafOf(t, ((b + 0.5) / G) * 2 - 1, 1 - ((a + 0.5) / G) * 2))); img.data.set([c[0], c[1], c[2], 255], (a * G + b) * 4); }
+      hX.putImageData(img, 0, 0); fctx.imageSmoothingEnabled = false; fctx.drawImage(hC, i * (s + 10), 0, s, s);
+      fctx.strokeStyle = Theme.c.line; fctx.strokeRect(i * (s + 10) + 0.5, 0.5, s - 1, s - 1);
+    });
+  }
+  function draw() {
+    drawMap(); drawTree(); drawForest(); $("#r-fcard").hidden = !st.forest;
+    if (st.depthCurve) drawChart(gcv, gctx, [{ data: [null, ...st.depthCurve.tr], color: Theme.c.ink, width: 2 }, { data: [null, ...st.depthCurve.te], color: Theme.c.accent, width: 2.5 }], { ymin: 40, ymax: 100, xlabel: "derinlik", yfmt: (v) => "%" + v.toFixed(0) });
+    else drawChart(gcv, gctx, [], { empty: "“Derinlik testi” düğmesine bas" });
+    const s = stats(st.root);
+    $("#r-s-d").textContent = st.forest ? "–" : s.depth; $("#r-s-l").textContent = st.forest ? st.forest.length + " ağaç" : s.leaves;
+    $("#r-s-a").textContent = pct(accOf(st.train, predict)); $("#r-s-t").textContent = pct(accOf(st.test, predict));
+    $("#r-explain").innerHTML = explain(s);
+  }
+  function explain(s) {
+    if (st.hover) return st.hover.split
+      ? `Bu düğüm şunu soruyor: <b>${st.hover.split.f ? "y" : "x"} < ${st.hover.split.thr.toFixed(2)} mi?</b> Haritada kesik çerçeveli bölgedeki ${st.hover.n} noktayı ikiye ayırıyor. Ağaç bu eşiği, iki taraftaki karışıklığı (Gini değeri) en çok azaltan yer olduğu için seçti.`
+      : `Bu bir <b>yaprak</b>: ${st.hover.c1} turuncu, ${st.hover.c0} mavi nokta içeriyor. Bu bölgeye düşen her yeni nokta için ağacın cevabı “${st.hover.c1 >= st.hover.c0 ? "turuncu" : "mavi"}”.`;
+    if (st.forest) return `<b>Rastgele orman:</b> ${st.forest.length} ağaç, her biri verinin rastgele bir kopyasıyla (bazı noktalar iki kez, bazıları hiç) ve her soruda rastgele seçilen bir eksenle kuruldu. Aşağıdaki küçük resimlerde tek tek ağaçların ne kadar köşeli ve hatalı olduğunu gör; ana haritada ise hepsinin <b>oylarının ortalaması</b> var. Ayrı ayrı zayıf olan tahmin ediciler birlikte daha yumuşak ve daha güvenilir bir sınır çiziyor.`;
+    if (!st.root.split) return "Karar ağacı sinir ağından bambaşka çalışır: hiç ağırlık yok, gradyan yok. Ağaç veriyi <b>evet/hayır sorularıyla</b> böler: “x 0,23'ten küçük mü?” Her adımda, iki tarafı en saf (en tek renkli) yapan soruyu seçer. ▶ Adım adım büyüt'e bas.";
+    if (st.depthCurve) { const te = st.depthCurve.te, bi = te.indexOf(Math.max(...te)) + 1;
+      return `Derinlik testi: eğitim başarısı derinlikle neredeyse hep artar, çünkü ağaç noktaları giderek daha küçük kutulara ayırabilir. Test başarısı ise en iyi değerine yaklaşık <b>${bi}. derinlikte</b> ulaşıyor; daha derin ağaçlar gürültüyü ezberler. Rastgele orman bu ezberlemeyi büyük ölçüde törpüler.`; }
+    if (s.depth >= 7) return "Ağaç çok derinleşti: haritadaki küçük kutulara bak, bazıları tek bir noktayı kapsıyor. Bu tam bir <b>ezber</b>; test doğruluğunu eğitim doğruluğuyla karşılaştır. “Derinlik testi” ile en iyi derinliği bul ya da Rastgele orman'a geç.";
+    return "Her bölme, ana haritaya yeni bir düz çizgi ekliyor ve ağaç şemasına bir dal. Karar ağaçları yalnızca <b>eksenlere paralel</b> çizgi çizebildiği için çapraz ya da yuvarlak sınırları merdiven basamaklarıyla taklit eder. Ağaçtaki bir kutunun üstüne gel, haritada hangi bölgeye karşılık geldiğini gör.";
+  }
+
+  function init(root) {
+    root.innerHTML = `
+    <div class="lab">
+      <div class="stage">
+        <div class="row">
+          <div class="card w-main"><h2>Veri ve kararlar</h2><p class="sub">Her kutu bir yaprak; rengi o bölgedeki turuncu nokta oranı.</p><canvas id="r-main" class="framed"></canvas></div>
+          <div class="card w-side"><h2>Ağaç</h2><p class="sub">Üstten başla: soru doğruysa sola, yanlışsa sağa in. Yapraklarda turuncu : mavi sayıları.</p><canvas id="r-tree"></canvas></div>
+        </div>
+        <div class="card" id="r-fcard" hidden><h2>Ormandaki ilk altı ağaç</h2><p class="sub">Her biri tek başına köşeli ve hatalı; ortalamaları ana haritada.</p><canvas id="r-forest"></canvas></div>
+        <div class="stats">${UI.stat("r-s-d", "Derinlik")}${UI.stat("r-s-l", "Yaprak")}${UI.stat("r-s-a", "Eğitim doğruluğu")}${UI.stat("r-s-t", "Test doğruluğu")}</div>
+        <div class="card"><h2>Derinlik testi</h2><div class="legend"><span><i style="background:var(--ink)"></i>eğitim</span><span><i style="background:var(--accent)"></i>test</span></div><canvas id="r-chart"></canvas></div>
+        <div class="explain" id="r-explain"></div>
+      </div>
+      <aside class="panel">
+        ${UI.group("Veri", UI.select("r-data", "Veri seti", [["daire", "Daireler"], ["xor", "XOR"], ["kume", "İki küme"], ["ay", "İki hilal"], ["spiral", "Spiral"]], "ay")
+          + UI.range("r-noise", "Gürültü", 0, 50, 5, 25, (v) => "%" + v) + UI.check("r-showtest", "Test verisini göster", true) + `<button class="btn" id="r-new">Yeni veri üret</button>`)}
+        ${UI.group("Yöntem", UI.select("r-mode", "Model", [["agac", "Tek karar ağacı"], ["orman", "Rastgele orman"]], "agac")
+          + UI.range("r-depth", "En fazla derinlik", 1, 14, 1, 6) + UI.range("r-leaf", "Yaprakta en az nokta", 1, 30, 1, 3)
+          + UI.range("r-trees", "Ormandaki ağaç sayısı", 2, 80, 1, 30))}
+        <div class="btns"><button class="btn primary" id="r-run">▶ Adım adım büyüt</button><button class="btn" id="r-all">Hepsini kur</button><button class="btn" id="r-reset">Baştan</button>
+          <button class="btn wide" id="r-curve">Derinlik testi (1…12)</button></div>
+        <p class="note">Karar ağaçları ve ormanları; kredi değerlendirme, tıbbi karar destek ve tablo verisi gibi alanlarda sinir ağlarından daha sık kullanılır, çünkü kararları okunabilir.</p>
+      </aside>
+    </div>`;
+    cv = $("#r-main"); ctx = setupCanvas(cv, S, S); tcv = $("#r-tree"); tctx = setupCanvas(tcv, 520, 400);
+    fcv = $("#r-forest"); fctx = setupCanvas(fcv, 760, 118); gcv = $("#r-chart"); gctx = setupCanvas(gcv, 700, 170);
+    [hC, hX] = offscreen(G, G);
+    $("#r-data").onchange = newData; $("#r-new").onclick = newData; $("#r-noise").onchange = newData;
+    for (const id of ["r-mode", "r-depth", "r-leaf", "r-trees"]) $("#" + id).onchange = () => { st.depthCurve = null; rebuild(); };
+    $("#r-showtest").onchange = draw;
+    $("#r-run").onclick = () => { if (st.forest) return; if (!st.queue.length) rebuild(); setRun(!st.run); };
+    $("#r-all").onclick = () => { if (!st.forest) growAll(); };
+    $("#r-reset").onclick = rebuild; $("#r-curve").onclick = depthCurve;
+    tcv.addEventListener("pointermove", (e) => { const [x, y] = canvasPos(tcv, e); let h = null;
+      for (const [n, a, b, w, hh] of st.layout) if (x >= a - 2 && x <= a + w + 2 && y >= b - 2 && y <= b + hh + 2) h = n;
+      if (h !== st.hover) { st.hover = h; draw(); } });
+    tcv.addEventListener("pointerleave", () => { if (st.hover) { st.hover = null; draw(); } });
+    newData();
+  }
+  function frame() {
+    if (!st.run) return;
+    if (++st.timer < 20) return; st.timer = 0;
+    if (!growStep()) setRun(false);
+    draw();
+  }
+  function save() { return { train: st.train, test: st.test }; }
+  function load(m) { if (m.train) { st.train = m.train; st.test = m.test || []; st.depthCurve = null; rebuild(); } else newData(); }
+  return { init, frame, save, load, onTheme: () => draw() };
 })();
 // ===================================================================== 8) MİNİ DİL MODELİ
 Modules.dil = (() => {
@@ -1567,7 +2116,14 @@ Modules.dil = (() => {
     if (st.frame % 40 === 0) generate();
     if (st.frame % 3 === 0) draw();
   }
-  return { init, frame, onTheme: () => draw() };
+  function save() { return { net: mlpToJSON(st.net), steps: st.steps, loss: st.loss, hist: st.hist }; }
+  function load(m) {
+    setRun(false); const own = val("t-corpus") === "kendi"; $("#t-own").hidden = !own; $("#t-apply").hidden = !own;
+    build(); if (!m.net) return;
+    try { const n = mlpFromJSON(m.net); if (n.sizes[0] !== st.net.sizes[0] || n.sizes[2] !== st.net.sizes[2]) throw 0; st.net = n; } catch (e) { return; }
+    st.steps = m.steps || 0; st.loss = m.loss ?? null; st.hist = m.hist || []; generate(); draw();
+  }
+  return { init, frame, save, load, onTheme: () => draw() };
 })();
 // ===================================================================== 4) EVRİMLE ARABA SÜRME
 Modules.araba = (() => {
@@ -1806,7 +2362,16 @@ Modules.araba = (() => {
     draw();
   }
   function frame() { if (!st.run || st.drawMode) return; for (let i = 0; i < num("a-speed"); i++) tick(); draw(); }
-  return { init, frame, onTheme: () => { paintTrack(); draw(); } };
+  function save() { return { drawn: st.drawn || null, genomes: st.pop.map((c) => arr7(c.g)), gen: st.gen, best: st.best, avg: st.avg, bestEver: st.bestEver, laps: st.laps }; }
+  function load(m) {
+    setRun(false); st.drawMode = false; $("#a-draw").classList.remove("on");
+    if (m.drawn) { st.drawn = m.drawn; if (!$("#a-track option[value=cizim]")) $("#a-track").insertAdjacentHTML("beforeend", '<option value="cizim">Çizdiğim pist</option>'); }
+    makeTrack(val("a-track"));
+    if (m.genomes && m.genomes.length) restartGen(m.genomes.map((g) => Float64Array.from(g)), 2); else newPopulation();
+    Object.assign(st, { gen: m.gen || 1, best: m.best || [], avg: m.avg || [], bestEver: m.bestEver || 0, laps: m.laps || 0 });
+    draw();
+  }
+  return { init, frame, save, load, onTheme: () => { paintTrack(); draw(); } };
 })();
 // ===================================================================== 5) PEKİŞTİRMELİ ÖĞRENME AJANI
 Modules.ajan = (() => {
@@ -1984,7 +2549,14 @@ Modules.ajan = (() => {
     let n = 0; while (st.acc >= 1 && n < 2000) { st.acc -= 1; n++; stepAgent(true); if (!st.run) break; }
     draw();
   }
-  return { init, frame, onTheme: () => draw() };
+  function save() { return { grid: st.grid.map((r) => r.join("")), start: st.start, Q: st.Q.map(arr7), visits: arr7(st.visits), ep: st.ep, rewards: st.rewards, steps: st.steps, eps: st.eps }; }
+  function load(m) {
+    setRun(false); if (!m.grid) { loadMap(val("q-map")); return draw(); }
+    st.grid = m.grid.map((r) => r.split("")); st.start = m.start; st.Q = m.Q.map((q) => Float64Array.from(q)); st.visits = Float64Array.from(m.visits);
+    Object.assign(st, { ep: m.ep || 0, rewards: m.rewards || [], steps: m.steps || [], eps: m.eps ?? 0.2, demo: false, lastEvent: "" });
+    newEpisode(); draw();
+  }
+  return { init, frame, save, load, onTheme: () => draw() };
 })();
 // ===================================================================== 7) YILAN (Derin Q-ağı)
 Modules.yilan = (() => {
@@ -2120,7 +2692,708 @@ Modules.yilan = (() => {
     while (st.acc >= 1 && st.run) { st.acc -= 1; tick(); n++; }
     if (n) draw();
   }
-  return { init, frame, onTheme: () => draw() };
+  function save() { return { net: mlpToJSON(st.net), games: st.games, scores: st.scores, record: st.record, eps: st.eps, steps: st.steps }; }
+  function load(m) {
+    setRun(false); newNet(); if (!m.net) return draw();
+    st.net = mlpFromJSON(m.net); Object.assign(st, { games: m.games || 0, scores: m.scores || [], record: m.record || 0, eps: m.eps ?? 0.01, steps: m.steps || 0 });
+    newGame(); draw();
+  }
+  return { init, frame, save, load, onTheme: () => draw() };
+})();
+// ===================================================================== 11) CEPHE ATÖLYESİ (işe yakın 5 örnek)
+const Cephe = {};
+const CAT = ["#e07b32", "#3672c9", "#2e9e6a", "#b4489b", "#c9a227", "#1f9bb4", "#c4453c", "#6b5bd6", "#7a8a3a", "#d2691e", "#4a7f9e", "#a0527a"];
+Modules.cephe = (() => {
+  const LIST = [
+    ["pb", "Panel bölümleme", "Eğri bir cepheyi düz panellere bölmek: sapma ile panel tipi sayısı arasındaki dengeyi genetik algoritma arıyor."],
+    ["dk", "Dikme kesiti", "Rüzgâr yükü, açıklık ve sehim sınırına göre en hafif kutu dikme kesitini evrimle bulmak."],
+    ["mt", "Maliyet tahmini", "Geçmiş projelerden birim fiyat tahmin eden üç modeli karşılaştırmak; kendi verini de yapıştırabilirsin."],
+    ["kp", "Profil kesim planı", "Kesim listesini stok boylara yerleştirip fireyi azaltmak: klasik yöntem ile genetik algoritma."],
+    ["kk", "Panel kalite kontrol", "Panel ölçümlerinden hatalıları anomali tespitiyle bulmak ve tolerans kuralıyla karşılaştırmak."],
+  ];
+  let cur = null, curId = null;
+  function show(id) {
+    if (!Cephe[id]) id = "pb";
+    $$("#ce-sel .btn").forEach((b) => b.classList.toggle("on", b.dataset.ex === id));
+    LIST.forEach(([k]) => ($("#ex-" + k).hidden = k !== id));
+    $("#ce-desc").textContent = LIST.find((l) => l[0] === id)[2];
+    const ex = Cephe[id]; if (!ex._ready) { ex.init($("#ex-" + id)); ex._ready = true; }
+    if (cur && cur !== ex && cur.pause) cur.pause();
+    cur = ex; curId = id;
+  }
+  function init(root) {
+    root.innerHTML = `<div class="seg" id="ce-sel" style="margin-bottom:6px">${LIST.map(([k, t], i) => `<button class="btn" data-ex="${k}"><b style="font-family:var(--f-mono);margin-right:6px;color:var(--muted)">${i + 1}</b>${t}</button>`).join("")}</div>
+      <p class="note" id="ce-desc" style="margin-bottom:12px"></p>
+      ${LIST.map(([k]) => `<div id="ex-${k}" hidden></div>`).join("")}
+      <p class="note" style="margin-top:14px">Bu sekmedeki hesaplar ve veriler eğitim amaçlı, basitleştirilmiş örneklerdir; proje kararları için yetkili statik hesap ve gerçek teklif verileri esas alınmalıdır.</p>`;
+    $("#ce-sel").addEventListener("click", (e) => { const b = e.target.closest("[data-ex]"); if (b) { show(b.dataset.ex); Saver.status("cephe"); } });
+    show("pb");
+  }
+  return {
+    init,
+    frame: () => cur && cur.frame && cur.frame(),
+    prepare: (m) => { if (m && m.ex) show(m.ex); },
+    save: () => ({ ex: curId, data: cur && cur.save ? cur.save() : null }),
+    load: (m) => { if (m.ex) show(m.ex); if (cur && cur.load) cur.load(m.data || {}); },
+    onTheme: () => Object.values(Cephe).forEach((e) => e._ready && e.onTheme && e.onTheme()),
+  };
+})();
+
+// ------------------------------------------------------------------ 1) PANEL BÖLÜMLEME
+Cephe.pb = (() => {
+  const W = 760, H = 360, M = 2400;
+  const st = { pts: [], S: 0, cum: [], pop: [], best: null, gen: 0, hist: [], run: false, eq: null };
+  let cv, ctx, bcv, bctx, gcv, gctx;
+  const SHAPES = {
+    dalga: (x) => 1.3 * Math.sin((2 * Math.PI * x) / 30) + 0.3 * Math.sin((2 * Math.PI * x) / 11 + 1),
+    yay: (x) => Math.sqrt(25 * 25 - (x - 18) ** 2) - 18,
+    s: (x) => 2.4 * Math.tanh((x - 18) / 6),
+    keskin: (x) => 2.2 * Math.exp(-(((x - 12) / 4) ** 2)) - 1.2 * Math.exp(-(((x - 26) / 3) ** 2)),
+  };
+  function curve() {
+    const f = SHAPES[val("pb-shape")], L = 36; st.pts = []; st.cum = [0];
+    for (let i = 0; i <= M; i++) { const x = (i / M) * L; st.pts.push([x, f(x)]); if (i) st.cum.push(st.cum[i - 1] + Math.hypot(x - st.pts[i - 1][0], st.pts[i][1] - st.pts[i - 1][1])); }
+    st.S = st.cum[M];
+  }
+  function idxAt(s) { let lo = 0, hi = M; while (lo < hi) { const m = (lo + hi) >> 1; if (st.cum[m] < s) lo = m + 1; else hi = m; } return lo; }
+  function ptAt(s) { const i = clamp(idxAt(s), 1, M), a = st.pts[i - 1], b = st.pts[i], k = (s - st.cum[i - 1]) / Math.max(st.cum[i] - st.cum[i - 1], 1e-12); return [a[0] + (b[0] - a[0]) * k, a[1] + (b[1] - a[1]) * k]; }
+  // bir çözümü (panel uç noktaları) değerlendir
+  function evaluate(g) {
+    const s = [0, ...g, st.S], n = s.length - 1, P = s.map(ptAt), tol = num("pb-tol") / 1000, minL = num("pb-min") / 100, maxL = num("pb-max") / 100;
+    const len = [], dev = [], types = new Map(); let viol = 0;
+    for (let i = 0; i < n; i++) {
+      const [ax, ay] = P[i], [bx, by] = P[i + 1], c = Math.hypot(bx - ax, by - ay); len.push(c);
+      let d = 0; const i0 = idxAt(s[i]), i1 = idxAt(s[i + 1]);
+      for (let k = i0; k <= i1; k += 2) { const [px, py] = st.pts[k]; d = Math.max(d, Math.abs((bx - ax) * (ay - py) - (ax - px) * (by - ay)) / c); }
+      dev.push(d * 1000);
+      if (c < minL) viol += minL - c; if (c > maxL) viol += c - maxL;
+      const key = Math.round(c / tol); types.set(key, (types.get(key) || 0) + 1);
+    }
+    const typeOf = len.map((c) => Math.round(c / tol)), keys = [...types.keys()].sort((a, b) => a - b);
+    const maxDev = Math.max(...dev), lam = num("pb-lam") / 10;
+    return { g, s, P, len, dev, maxDev, types: types.size, typeIdx: typeOf.map((k) => keys.indexOf(k)), viol, cost: maxDev / 10 + lam * types.size + 200 * viol };
+  }
+  const nPan = () => num("pb-n");
+  function equalGenome() { const n = nPan(); return Array.from({ length: n - 1 }, (_, i) => ((i + 1) / n) * st.S); }
+  function fix(g) { g.sort((a, b) => a - b); for (let i = 0; i < g.length; i++) g[i] = clamp(g[i], 0.05, st.S - 0.05); return g; }
+  function reset() {
+    curve(); st.gen = 0; st.hist = [];
+    const base = equalGenome(), avg = st.S / nPan();
+    st.eq = evaluate(base.slice());
+    st.pop = Array.from({ length: 60 }, (_, k) => evaluate(fix(k === 0 ? base.slice() : base.map((v) => v + gauss() * avg * 0.15))));
+    st.pop.sort((a, b) => a.cost - b.cost); st.best = st.pop[0]; st.hist.push(st.best.cost); draw();
+  }
+  function generation() {
+    const pop = st.pop, avg = st.S / nPan(), next = pop.slice(0, 3);
+    const pick = () => { let b = pop[randInt(0, pop.length - 1)]; for (let k = 0; k < 2; k++) { const c = pop[randInt(0, pop.length - 1)]; if (c.cost < b.cost) b = c; } return b; };
+    while (next.length < pop.length) {
+      const a = pick().g, b = pick().g, ch = a.map((v, i) => (Math.random() < 0.5 ? v : b[i]));
+      for (let i = 0; i < ch.length; i++) if (Math.random() < 0.12) ch[i] += gauss() * avg * 0.12;
+      if (Math.random() < 0.35) { // standartlaştırma hamlesi: bir paneli başka bir panelin boyuna eşitle
+        const s = [0, ...ch.slice().sort((x, y) => x - y), st.S], i = randInt(0, s.length - 3), j = randInt(0, s.length - 2);
+        ch.sort((x, y) => x - y); if (i < ch.length) ch[i] = s[i] + (s[j + 1] - s[j]);
+      }
+      if (Math.random() < 0.25) { // bölge eşitleme: ardışık birkaç paneli aynı boya getir (tek tip)
+        ch.sort((x, y) => x - y); const s = [0, ...ch, st.S], n = s.length - 1, i = randInt(0, n - 2), j = Math.min(n, i + randInt(2, 12));
+        for (let k = i + 1; k < j; k++) ch[k - 1] = s[i] + ((s[j] - s[i]) * (k - i)) / (j - i);
+      }
+      next.push(evaluate(fix(ch)));
+    }
+    next.sort((a, b) => a.cost - b.cost); st.pop = next; st.best = next[0]; st.gen++; st.hist.push(st.best.cost);
+  }
+  function setRun(v) { st.run = v; $("#pb-run").textContent = v ? "⏸ Duraklat" : "▶ Evrimi başlat"; }
+
+  function draw() {
+    const b = st.best; if (!b) return;
+    ctx.fillStyle = Theme.c.surface; ctx.fillRect(0, 0, W, H);
+    const xs = st.pts.map((p) => p[0]), ys = st.pts.map((p) => p[1]), x0 = Math.min(...xs), x1 = Math.max(...xs), y0 = Math.min(...ys), y1 = Math.max(...ys);
+    const sc = Math.min((W - 40) / (x1 - x0), (H - 160) / Math.max(y1 - y0, 1)), ox = (W - (x1 - x0) * sc) / 2, oy = 30 + (H - 160 - (y1 - y0) * sc) / 2;
+    const T = ([x, y]) => [ox + (x - x0) * sc, oy + (y1 - y) * sc];
+    ctx.strokeStyle = Theme.c.muted; ctx.lineWidth = 6; ctx.globalAlpha = 0.25; ctx.beginPath(); st.pts.forEach((p, i) => { const [a, c] = T(p); i ? ctx.lineTo(a, c) : ctx.moveTo(a, c); }); ctx.stroke(); ctx.globalAlpha = 1;
+    for (let i = 0; i < b.P.length - 1; i++) { const [a, c] = T(b.P[i]), [d, e] = T(b.P[i + 1]); ctx.strokeStyle = CAT[b.typeIdx[i] % CAT.length]; ctx.lineWidth = 4; ctx.beginPath(); ctx.moveTo(a, c); ctx.lineTo(d, e); ctx.stroke(); }
+    ctx.fillStyle = Theme.c.ink; for (const p of b.P) { const [a, c] = T(p); ctx.fillRect(a - 1.5, c - 4, 3, 8); }
+    // en kötü panelin büyütülmüş görünümü
+    const wi = b.dev.indexOf(b.maxDev), s0 = b.s[wi], s1 = b.s[wi + 1], A = b.P[wi], B = b.P[wi + 1], ang = Math.atan2(B[1] - A[1], B[0] - A[0]);
+    const bw = 420, bx = (W - bw) / 2, by = H - 22, ex = 60;
+    ctx.fillStyle = Theme.c.sunk; ctx.fillRect(bx - 14, by - 92, bw + 28, 104);
+    ctx.strokeStyle = Theme.c.ink; ctx.lineWidth = 2; ctx.beginPath(); ctx.moveTo(bx, by); ctx.lineTo(bx + bw, by); ctx.stroke();
+    ctx.strokeStyle = Theme.c.accent; ctx.beginPath(); const i0 = idxAt(s0), i1 = idxAt(s1), c = b.len[wi];
+    for (let k = i0; k <= i1; k++) { const [px, py] = st.pts[k], dx = px - A[0], dy = py - A[1], u = (dx * Math.cos(ang) + dy * Math.sin(ang)) / c, v = -dx * Math.sin(ang) + dy * Math.cos(ang);
+      const X = bx + u * bw, Y = by - v * sc * ex; k === i0 ? ctx.moveTo(X, Y) : ctx.lineTo(X, Y); } ctx.stroke();
+    ctx.fillStyle = Theme.c.muted; ctx.font = "11px " + getComputedStyle(document.body).getPropertyValue("--f-body"); ctx.textAlign = "left"; ctx.textBaseline = "alphabetic";
+    ctx.fillText(`En çok sapan panel: ${wi + 1}. panel, ${b.maxDev.toFixed(1)} mm (sapma ×${ex} büyütülmüş)`, bx - 6, by - 78);
+    ctx.textAlign = "left"; ctx.fillText(`Plan görünüşü · cephe boyu ${st.S.toFixed(1)} m (eğri uzunluğu)`, 10, 16);
+    // panel boyları
+    const BW = bcv._w, BH = bcv._h, n = b.len.length, w = (BW - 20) / n, mx = Math.max(...b.len, num("pb-max") / 100);
+    bctx.fillStyle = Theme.c.surface; bctx.fillRect(0, 0, BW, BH);
+    const yL = (v) => BH - 18 - (v / mx) * (BH - 30);
+    b.len.forEach((v, i) => { bctx.fillStyle = CAT[b.typeIdx[i] % CAT.length]; bctx.fillRect(10 + i * w + 1, yL(v), Math.max(1, w - 2), BH - 18 - yL(v)); });
+    for (const [v, lab] of [[num("pb-min") / 100, "en kısa"], [num("pb-max") / 100, "en uzun"]]) { bctx.strokeStyle = Theme.c.bad; bctx.setLineDash([4, 4]); bctx.beginPath(); bctx.moveTo(10, yL(v)); bctx.lineTo(BW - 10, yL(v)); bctx.stroke(); bctx.setLineDash([]);
+      bctx.font = "600 10px " + getComputedStyle(document.body).getPropertyValue("--f-mono"); bctx.textAlign = "right"; bctx.lineWidth = 3; bctx.strokeStyle = Theme.c.surface; bctx.strokeText(`${lab} ${v.toFixed(2)} m`, BW - 12, yL(v) - 4); bctx.fillStyle = Theme.c.bad; bctx.fillText(`${lab} ${v.toFixed(2)} m`, BW - 12, yL(v) - 4); bctx.lineWidth = 1; }
+    drawChart(gcv, gctx, [{ data: st.hist, color: Theme.c.accent, width: 2 }], { xlabel: "nesil" });
+    $("#pb-s-n").textContent = n; $("#pb-s-t").textContent = b.types; $("#pb-s-d").textContent = b.maxDev.toFixed(1) + " mm";
+    $("#pb-s-r").textContent = `${Math.min(...b.len).toFixed(2)}–${Math.max(...b.len).toFixed(2)} m`; $("#pb-s-v").textContent = b.viol > 0 ? "var" : "yok";
+    $("#pb-s-eq").textContent = `${st.eq.types} tip · ${st.eq.maxDev.toFixed(1)} mm`;
+    $("#pb-explain").innerHTML = explain();
+  }
+  function explain() {
+    const b = st.best, eq = st.eq;
+    if (st.gen === 0) return `Başlangıç: cephe eşit parçalara bölündü. Eşit bölme kulağa en düzgün çözüm gibi gelir ama eğrilik her yerde aynı olmadığı için sapma sıkı kıvrımlarda birikir ve kirişlerin boyları tolerans içinde bile birbirinden ayrışır (şu an <b>${eq.types} farklı panel tipi</b>). ▶ Evrimi başlat: algoritma panel uçlarını kaydırarak sapmayı ve tip sayısını birlikte düşürmeye çalışacak.`;
+    if (b.viol > 0) return "Bazı paneller üretim sınırlarının (en kısa / en uzun) dışında; algoritma bunları cezalandırıyor ve düzeltmeye çalışıyor. Sınırlar panel sayısıyla uyumsuzsa çözüm bulunamaz: panel sayısını ya da sınırları değiştir.";
+    return `${st.gen}. nesil: <b>${b.types} panel tipi</b>, en büyük sapma <b>${b.maxDev.toFixed(1)} mm</b> (eşit bölmede ${eq.types} tip, ${eq.maxDev.toFixed(1)} mm). Alttaki grafikte aynı renkli çubuklar aynı panel tipi: algoritma sıkı kıvrımlarda panelleri kısaltırken düz bölgelerde boyları birbirine eşitliyor. “Standartlaşma önemi” ayarı, bir tip azaltmanın kaç mm sapmaya değdiğine sen karar vermeni sağlar; değiştir ve sonucun nasıl kaydığını izle.`;
+  }
+  function init(root) {
+    root.innerHTML = `
+    <div class="lab"><div class="stage">
+      <div class="card"><h2>Cephe planı ve paneller</h2><p class="sub">Gri bant gerçek eğri; renkli çizgiler düz paneller (aynı renk = aynı tip). Altta en çok sapan panel büyütülmüş.</p><canvas id="pb-main" class="framed"></canvas></div>
+      <div class="card"><h2>Panel boyları</h2><canvas id="pb-bars"></canvas></div>
+      <div class="stats">${UI.stat("pb-s-n", "Panel sayısı")}${UI.stat("pb-s-t", "Farklı panel tipi")}${UI.stat("pb-s-d", "En büyük sapma")}${UI.stat("pb-s-r", "Boy aralığı")}${UI.stat("pb-s-v", "Sınır ihlali")}${UI.stat("pb-s-eq", "Eşit bölme")}</div>
+      <div class="card"><h2>Toplam ceza (düşük = iyi)</h2><canvas id="pb-chart"></canvas></div>
+      <div class="explain" id="pb-explain"></div>
+    </div><aside class="panel">
+      ${UI.group("Cephe", UI.select("pb-shape", "Eğri biçimi", [["keskin", "Değişken kıvrımlı"], ["dalga", "Dalgalı"], ["yay", "Yay (sabit yarıçap)"], ["s", "S kıvrım"]], "keskin") + UI.range("pb-n", "Panel sayısı", 16, 50, 1, 28))}
+      ${UI.group("Üretim kuralları", UI.range("pb-min", "En kısa panel", 50, 150, 5, 90, (v) => (v / 100).toFixed(2) + " m") + UI.range("pb-max", "En uzun panel", 100, 250, 5, 175, (v) => (v / 100).toFixed(2) + " m")
+        + UI.range("pb-tol", "Aynı tip sayılma toleransı", 2, 30, 1, 6, (v) => "±" + (v / 2).toFixed(0) + " mm"))}
+      ${UI.group("Amaç", UI.range("pb-lam", "Standartlaşma önemi", 0, 40, 1, 1, (v) => `1 tip = ${v} mm`) + `<p class="note">Bir panel tipini azaltmanın kaç mm ek sapmaya değdiği.</p>`)}
+      <div class="btns"><button class="btn primary" id="pb-run">▶ Evrimi başlat</button><button class="btn" id="pb-reset">Eşit bölmeden başla</button><button class="btn" id="pb-copy">Listeyi kopyala</button></div>
+      <textarea id="pb-out" rows="5" readonly hidden style="width:100%;font:12px var(--f-mono);border-radius:6px;border:1px solid var(--line);background:var(--sunk);color:var(--ink)"></textarea>
+    </aside></div>`;
+    cv = $("#pb-main"); ctx = setupCanvas(cv, W, H); bcv = $("#pb-bars"); bctx = setupCanvas(bcv, W, 150); gcv = $("#pb-chart"); gctx = setupCanvas(gcv, W, 140);
+    $("#pb-run").onclick = () => setRun(!st.run);
+    $("#pb-reset").onclick = () => { setRun(false); reset(); };
+    for (const id of ["pb-shape", "pb-n"]) $("#" + id).onchange = () => { setRun(false); reset(); };
+    for (const id of ["pb-min", "pb-max", "pb-tol", "pb-lam"]) $("#" + id).onchange = () => { st.pop = st.pop.map((p) => evaluate(p.g)); st.pop[st.pop.length - 1] = evaluate(equalGenome()); st.pop.sort((a, b) => a.cost - b.cost); st.best = st.pop[0]; st.eq = evaluate(equalGenome()); draw(); };
+    $("#pb-copy").onclick = () => {
+      const b = st.best, txt = "Panel\tBoy (mm)\tTip\tSapma (mm)\n" + b.len.map((v, i) => `${i + 1}\t${Math.round(v * 1000)}\tT${b.typeIdx[i] + 1}\t${b.dev[i].toFixed(1)}`).join("\n");
+      const ta = $("#pb-out"); ta.value = txt; ta.hidden = false; ta.select();
+      try { navigator.clipboard.writeText(txt).catch(() => {}); } catch (e) {}
+    };
+    reset();
+  }
+  function frame() { if (!st.run) return; for (let i = 0; i < 2; i++) generation(); draw(); }
+  return { init, frame, pause: () => setRun(false), onTheme: draw,
+    save: () => ({ g: st.best ? st.best.g : null, gen: st.gen, hist: st.hist }),
+    load: (m) => { setRun(false); reset(); if (m.g && m.g.length === nPan() - 1) { const e = evaluate(m.g); st.pop[0] = e; st.best = e; st.gen = m.gen || 0; st.hist = m.hist || st.hist; draw(); } } };
+})();
+
+// ------------------------------------------------------------------ 2) DİKME KESİTİ
+Cephe.dk = (() => {
+  const E = 70000, RHO = 0.0027; // MPa, kg/m per mm²
+  const st = { pop: [], best: null, gen: 0, hist: [], run: false };
+  let scv, sctx, pcv, pctx, gcv, gctx, bcv, bctx;
+  const lim = () => ({ h: [50, num("dk-hmax")], b: [40, 90], tw: [1.6, 6], tf: [1.6, 8] });
+  function calc(x) {
+    const { h, b, tw, tf } = x, L = num("dk-L") * 1000, q = (num("dk-w") / 100) * (num("dk-a") / 100); // N/mm
+    const A = b * h - (b - 2 * tw) * (h - 2 * tf), I = (b * h ** 3 - (b - 2 * tw) * (h - 2 * tf) ** 3) / 12;
+    const d = (5 * q * L ** 4) / (384 * E * I), dl = L / num("dk-lim"), M = (q * L * L) / 8, s = (M * (h / 2)) / I, sa = num("dk-sig");
+    const kg = A * RHO, ok = d <= dl && s <= sa;
+    return { x, A, I, d, dl, s, sa, kg, ok, u: Math.max(d / dl, s / sa), cost: kg + 40 * Math.max(0, d / dl - 1) + 40 * Math.max(0, s / sa - 1) };
+  }
+  function rnd() { const B = lim(); return Object.fromEntries(Object.entries(B).map(([k, [a, b]]) => [k, rand(a, b)])); }
+  function fix(x) { const B = lim(); for (const k in B) x[k] = clamp(x[k], B[k][0], B[k][1]); x.tw = Math.min(x.tw, x.b / 3); x.tf = Math.min(x.tf, x.h / 4); return x; }
+  function reset() { st.pop = Array.from({ length: 50 }, () => calc(fix(rnd()))); st.pop.sort((a, b) => a.cost - b.cost); st.best = st.pop[0]; st.gen = 0; st.hist = [st.best.kg]; draw(); }
+  function generation() {
+    const pop = st.pop, B = lim(), next = pop.slice(0, 2);
+    const pick = () => { let b = pop[randInt(0, pop.length - 1)]; for (let k = 0; k < 2; k++) { const c = pop[randInt(0, pop.length - 1)]; if (c.cost < b.cost) b = c; } return b; };
+    while (next.length < pop.length) {
+      const a = pick().x, b = pick().x, ch = {};
+      for (const k in B) { const t = Math.random(); ch[k] = a[k] * t + b[k] * (1 - t); if (Math.random() < 0.25) ch[k] += gauss() * (B[k][1] - B[k][0]) * 0.06; }
+      next.push(calc(fix(ch)));
+    }
+    next.sort((a, b) => a.cost - b.cost); st.pop = next; st.best = next[0]; st.gen++; st.hist.push(st.best.kg);
+  }
+  function setRun(v) { st.run = v; $("#dk-run").textContent = v ? "⏸ Duraklat" : "▶ Evrimi başlat"; }
+  const manual = () => calc(fix({ h: num("dk-mh"), b: num("dk-mb"), tw: num("dk-mtw") / 10, tf: num("dk-mtf") / 10 }));
+
+  function section(r, x0, y0, size, title) {
+    const { h, b, tw, tf } = r.x, sc = size / 260, f = getComputedStyle(document.body).getPropertyValue("--f-mono");
+    const W = b * sc, Hh = h * sc, ox = x0 + (size - W) / 2, oy = y0 + 26 + (size - Hh) / 2;
+    sctx.fillStyle = r.ok ? Theme.c.accent : Theme.c.bad; sctx.fillRect(ox, oy, W, Hh);
+    sctx.fillStyle = Theme.c.surface; sctx.fillRect(ox + tw * sc, oy + tf * sc, W - 2 * tw * sc, Hh - 2 * tf * sc);
+    sctx.fillStyle = Theme.c.ink; sctx.font = "600 12px " + getComputedStyle(document.body).getPropertyValue("--f-body"); sctx.textAlign = "center"; sctx.textBaseline = "alphabetic";
+    sctx.fillText(title, x0 + size / 2, y0 + 14);
+    sctx.font = "11px " + f; sctx.fillStyle = Theme.c.muted;
+    sctx.fillText(`${b.toFixed(0)} mm`, ox + W / 2, oy + Hh + 16);
+    sctx.save(); sctx.translate(ox - 10, oy + Hh / 2); sctx.rotate(-Math.PI / 2); sctx.fillText(`${h.toFixed(0)} mm`, 0, 0); sctx.restore();
+    sctx.textAlign = "left"; sctx.fillText(`et: ${tw.toFixed(1)} / ${tf.toFixed(1)} mm`, ox + W + 8, oy + 12);
+    sctx.fillText("rüzgâr ↓", ox + W + 8, oy - 4 > y0 + 20 ? oy - 4 : oy + 28);
+  }
+  function draw() {
+    const b = st.best; if (!b) return; const m = manual();
+    sctx.fillStyle = Theme.c.surface; sctx.fillRect(0, 0, scv._w, scv._h);
+    section(b, 10, 0, 300, "En iyi bulunan kesit"); section(m, 390, 0, 300, "Senin kesitin");
+    sctx.fillStyle = Theme.c.muted; sctx.font = "11px " + getComputedStyle(document.body).getPropertyValue("--f-body"); sctx.textAlign = "center";
+    sctx.fillText("Ölçek iki kesitte de aynı", scv._w / 2, scv._h - 6);
+    // popülasyon: ağırlık – kullanım oranı
+    const PW = pcv._w, PH = pcv._h, L = 46, R = 10, T = 10, B = 26; pctx.fillStyle = Theme.c.surface; pctx.fillRect(0, 0, PW, PH);
+    const mx = Math.max(...st.pop.map((p) => p.kg), m.kg) * 1.05, my = 2.5, X = (v) => L + (v / mx) * (PW - L - R), Y = (u) => T + (1 - Math.min(u, my) / my) * (PH - T - B);
+    pctx.fillStyle = rgbStr(mix(Theme.rgb.surface, Theme.rgb.good, 0.12)); pctx.fillRect(L, Y(1), PW - L - R, Y(0) - Y(1));
+    pctx.strokeStyle = Theme.c.line; pctx.beginPath(); pctx.moveTo(L, T); pctx.lineTo(L, PH - B); pctx.lineTo(PW - R, PH - B); pctx.stroke();
+    pctx.strokeStyle = Theme.c.good; pctx.setLineDash([5, 4]); pctx.beginPath(); pctx.moveTo(L, Y(1)); pctx.lineTo(PW - R, Y(1)); pctx.stroke(); pctx.setLineDash([]);
+    const f = getComputedStyle(document.body).getPropertyValue("--f-mono"); pctx.font = "10px " + f; pctx.fillStyle = Theme.c.muted; pctx.textAlign = "right"; pctx.textBaseline = "middle";
+    for (const u of [0, 1, 2]) pctx.fillText("%" + u * 100, L - 4, Y(u)); pctx.textAlign = "center";
+    for (let k = 0; k <= 4; k++) pctx.fillText(((mx * k) / 4).toFixed(1), X((mx * k) / 4), PH - 14); pctx.fillText("kg/m", PW - 24, PH - 4);
+    for (const p of st.pop) { pctx.fillStyle = p.ok ? Theme.c.good : Theme.c.bad; pctx.globalAlpha = 0.6; pctx.beginPath(); pctx.arc(X(p.kg), Y(p.u), 3.5, 0, 7); pctx.fill(); }
+    pctx.globalAlpha = 1; pctx.strokeStyle = Theme.c.ink; pctx.lineWidth = 2; pctx.beginPath(); pctx.arc(X(b.kg), Y(b.u), 7, 0, 7); pctx.stroke();
+    pctx.fillStyle = Theme.c.orange; pctx.beginPath(); pctx.rect(X(m.kg) - 5, Y(m.u) - 5, 10, 10); pctx.fill();
+    // kiriş şeması
+    const BWd = bcv._w, BHd = bcv._h; bctx.fillStyle = Theme.c.surface; bctx.fillRect(0, 0, BWd, BHd);
+    const x0 = 30, x1 = BWd - 30, yb = 50, amp = Math.min(40, (b.d / b.dl) * 28);
+    bctx.strokeStyle = Theme.c.muted; bctx.lineWidth = 1; for (let k = 0; k <= 12; k++) { const x = x0 + ((x1 - x0) * k) / 12; bctx.beginPath(); bctx.moveTo(x, 12); bctx.lineTo(x, 30); bctx.lineTo(x - 3, 25); bctx.moveTo(x, 30); bctx.lineTo(x + 3, 25); bctx.stroke(); }
+    bctx.strokeStyle = Theme.c.line; bctx.setLineDash([4, 4]); bctx.beginPath(); bctx.moveTo(x0, yb); bctx.lineTo(x1, yb); bctx.stroke(); bctx.setLineDash([]);
+    bctx.strokeStyle = b.ok ? Theme.c.accent : Theme.c.bad; bctx.lineWidth = 4; bctx.beginPath();
+    for (let k = 0; k <= 60; k++) { const t = k / 60, y = (16 / 5) * (t - 2 * t ** 3 + t ** 4); bctx.lineTo(x0 + (x1 - x0) * t, yb + y * amp); } bctx.stroke();
+    for (const x of [x0, x1]) { bctx.fillStyle = Theme.c.ink; bctx.beginPath(); bctx.moveTo(x, yb + 2); bctx.lineTo(x - 7, yb + 14); bctx.lineTo(x + 7, yb + 14); bctx.closePath(); bctx.fill(); }
+    bctx.fillStyle = Theme.c.ink; bctx.font = "11px " + f; bctx.textAlign = "center"; bctx.fillText(`sehim ${b.d.toFixed(1)} mm  (sınır ${b.dl.toFixed(1)} mm)`, (x0 + x1) / 2, BHd - 8);
+    drawChart(gcv, gctx, [{ data: st.hist, color: Theme.c.accent, width: 2 }], { xlabel: "nesil", yfmt: (v) => v.toFixed(2) });
+    const row = (r) => `<td>${r.kg.toFixed(2)}</td><td>${(r.A / 100).toFixed(2)}</td><td>${(r.I / 1e4).toFixed(1)}</td><td style="color:${r.d <= r.dl ? "var(--good)" : "var(--bad)"}">${r.d.toFixed(1)} / ${r.dl.toFixed(1)}</td><td style="color:${r.s <= r.sa ? "var(--good)" : "var(--bad)"}">${r.s.toFixed(0)} / ${r.sa}</td>`;
+    $("#dk-table").innerHTML = `<tr><th></th><th>kg/m</th><th>A (cm²)</th><th>I (cm⁴)</th><th>Sehim mm</th><th>Gerilme MPa</th></tr><tr><td><b>En iyi</b></td>${row(b)}</tr><tr><td><b>Senin</b></td>${row(m)}</tr>`;
+    $("#dk-explain").innerHTML = explain(b, m);
+  }
+  function explain(b, m) {
+    if (st.gen === 0) return "Rastgele 50 kutu kesit üretildi. Sağdaki grafikte her nokta bir kesit: yatayda ağırlık, dikeyde kullanım oranı (sehim veya gerilmeden hangisi daha kritikse). Yeşil bant sınırların içi. Amaç: <b>yeşil bandın içinde, en solda</b> olmak. ▶ Evrimi başlat.";
+    const crit = b.d / b.dl >= b.s / b.sa ? "sehim" : "gerilme";
+    let t = `${st.gen}. nesil: en iyi kesit <b>${b.kg.toFixed(2)} kg/m</b>, belirleyici kontrol <b>${crit}</b> (%${Math.round(b.u * 100)} kullanım). `;
+    t += b.x.h >= num("dk-hmax") - 2 ? "Algoritma derinliği sınıra dayadı: atalet momenti derinliğin küpüyle büyüdüğü için malzemeyi gövdeden uzağa koymak en verimlisi. Mimari en fazla derinliği düşürürsen kesitin nasıl ağırlaştığını gör. " : "";
+    if (m.ok && m.kg <= b.kg * 1.02) t += "Senin kesitin de en az onun kadar hafif ve sınırların içinde, tebrikler!";
+    else if (m.ok) t += `Senin kesitin sınırların içinde ama %${Math.round((m.kg / b.kg - 1) * 100)} daha ağır.`;
+    else t += "Senin kesitin (turuncu kare) sınırların dışında; ayarlarla oynayıp yeşil banda sokmayı dene.";
+    return t;
+  }
+  function init(root) {
+    root.innerHTML = `
+    <div class="lab"><div class="stage">
+      <div class="card"><h2>Kesitler</h2><p class="sub">Basit dikdörtgen kutu dikme. Yeşil: sınırları sağlıyor, kırmızı: sağlamıyor.</p><canvas id="dk-sec" class="framed"></canvas></div>
+      <div class="row">
+        <div class="card w-side"><h2>Popülasyon</h2><p class="sub">Her nokta bir kesit. Halka: en iyi, turuncu kare: senin kesitin.</p><canvas id="dk-pop"></canvas></div>
+        <div class="card w-side"><h2>Sehim (abartılı)</h2><p class="sub">İki ucu mesnetli, düzgün yayılı rüzgâr yükü.</p><canvas id="dk-beam"></canvas>
+          <h2 style="margin-top:10px">En iyi ağırlık</h2><canvas id="dk-chart"></canvas></div>
+      </div>
+      <div class="card" style="overflow-x:auto"><table class="race" id="dk-table" style="min-width:520px"></table></div>
+      <div class="explain" id="dk-explain"></div>
+    </div><aside class="panel">
+      ${UI.group("Yükler ve açıklık", UI.range("dk-L", "Dikme açıklığı (kat yüksekliği)", 2.5, 6, 0.1, 3.6, (v) => v.toFixed(1) + " m")
+        + UI.range("dk-a", "Dikme aralığı (aks)", 60, 250, 5, 150, (v) => (v / 100).toFixed(2) + " m")
+        + UI.range("dk-w", "Rüzgâr yükü", 40, 300, 5, 120, (v) => (v / 100).toFixed(2) + " kN/m²"))}
+      ${UI.group("Sınırlar", UI.select("dk-lim", "Sehim sınırı", [["150", "L/150"], ["175", "L/175"], ["200", "L/200"], ["300", "L/300"]], "200")
+        + UI.range("dk-sig", "İzin verilen gerilme", 60, 200, 5, 120, (v) => v + " MPa") + UI.range("dk-hmax", "Mimari en fazla derinlik", 80, 250, 5, 180, (v) => v + " mm"))}
+      ${UI.group("Kendi kesitin", UI.range("dk-mh", "Derinlik h", 50, 250, 1, 150, (v) => v + " mm") + UI.range("dk-mb", "Genişlik b", 40, 90, 1, 60, (v) => v + " mm")
+        + UI.range("dk-mtw", "Yan et kalınlığı", 16, 60, 1, 25, (v) => (v / 10).toFixed(1) + " mm") + UI.range("dk-mtf", "Ön/arka et kalınlığı", 16, 80, 1, 30, (v) => (v / 10).toFixed(1) + " mm"))}
+      <div class="btns"><button class="btn primary" id="dk-run">▶ Evrimi başlat</button><button class="btn wide" id="dk-reset">Yeniden başlat</button></div>
+      <p class="note">Basitleştirilmiş model: tek açıklıklı kiriş, kutu kesit, alüminyum E = 70 000 MPa, yoğunluk 2,7 t/m³. Gerçek dikmelerde cam yuvaları, takviyeler, kayıt yükleri ve yönetmelik kombinasyonları da hesaba girer.</p>
+    </aside></div>`;
+    scv = $("#dk-sec"); sctx = setupCanvas(scv, 700, 340); pcv = $("#dk-pop"); pctx = setupCanvas(pcv, 380, 260);
+    bcv = $("#dk-beam"); bctx = setupCanvas(bcv, 380, 110); gcv = $("#dk-chart"); gctx = setupCanvas(gcv, 380, 120);
+    $("#dk-run").onclick = () => setRun(!st.run); $("#dk-reset").onclick = () => { setRun(false); reset(); };
+    $$("input,select", root).forEach((el) => { if (el.id.startsWith("dk-m")) el.addEventListener("input", draw);
+      else if (el.id !== "dk-run") el.addEventListener("change", () => { st.pop = st.pop.map((p) => calc(fix({ ...p.x }))); st.pop.sort((a, b) => a.cost - b.cost); st.best = st.pop[0]; draw(); }); });
+    reset();
+  }
+  function frame() { if (!st.run) return; for (let i = 0; i < 3; i++) generation(); draw(); if (st.gen > 400) setRun(false); }
+  return { init, frame, pause: () => setRun(false), onTheme: draw,
+    save: () => ({ best: st.best ? st.best.x : null, gen: st.gen, hist: st.hist }),
+    load: (m) => { setRun(false); reset(); if (m.best) { const r = calc(fix({ ...m.best })); st.pop[0] = r; st.pop.sort((a, b) => a.cost - b.cost); st.best = st.pop[0]; st.gen = m.gen || 0; st.hist = m.hist || st.hist; draw(); } } };
+})();
+// ------------------------------------------------------------------ 3) MALİYET TAHMİNİ
+Cephe.mt = (() => {
+  const st = { cols: [], X: [], y: [], tr: [], te: [], lin: null, tree: null, net: null, mu: [], sd: [], ym: 0, ys: 1, epoch: 0, hist: [], run: false, own: false, sel: "net" };
+  let pcv, pctx, icv, ictx, gcv, gctx;
+  const FEAT = [
+    { k: "alan", ad: "Cephe alanı (m²)", min: 800, max: 25000, def: 6000 },
+    { k: "sistem", ad: "Sistem (0 dikme-kayıt, 1 unitize)", min: 0, max: 1, def: 1, sel: [["0", "Dikme-kayıt"], ["1", "Unitize"]] },
+    { k: "cam", ad: "Cam (0 çift, 1 üçlü)", min: 0, max: 1, def: 0, sel: [["0", "Çift cam"], ["1", "Üçlü cam"]] },
+    { k: "opak", ad: "Opak oran (%)", min: 10, max: 60, def: 30 },
+    { k: "kat", ad: "Kat sayısı", min: 3, max: 45, def: 15 },
+    { k: "kavis", ad: "Kavisli / özel oran (%)", min: 0, max: 40, def: 5 },
+  ];
+  function synth() {
+    const rows = [];
+    for (let i = 0; i < 160; i++) {
+      const alan = Math.round(Math.exp(rand(Math.log(800), Math.log(25000)))), sistem = Math.random() < 0.45 ? 1 : 0, cam = Math.random() < 0.3 ? 1 : 0;
+      const opak = Math.round(rand(10, 60)), kat = randInt(3, 45), kavis = Math.random() < 0.6 ? 0 : Math.round(rand(0, 40));
+      const p = 100 * (1 + 0.3 * sistem) * (1 + 0.15 * cam) * (1 - 0.006 * (opak - 35)) * (1 + 0.006 * (kat - 10)) * (1 - 0.07 * Math.log(alan / 5000)) * (1 + 0.012 * kavis) * Math.exp(gauss() * 0.06);
+      rows.push([alan, sistem, cam, opak, kat, kavis, Math.round(p * 10) / 10]);
+    }
+    return { cols: [...FEAT.map((f) => f.ad), "Birim fiyat endeksi"], rows };
+  }
+  function parse(txt) {
+    const lines = txt.trim().split(/\r?\n/).filter((l) => l.trim()); if (lines.length < 12) throw new Error("en az 10 satır veri gerekli");
+    const d = lines[0].includes("\t") ? "\t" : lines[0].includes(";") ? ";" : ",";
+    const cols = lines[0].split(d).map((s) => s.trim()); if (cols.length < 2) throw new Error("en az iki sütun gerekli");
+    const numTR = (t) => { t = t.trim().replace(/\s/g, ""); if (d !== ",") { if (/^-?\d{1,3}(\.\d{3})+(,\d+)?$/.test(t)) t = t.replace(/\./g, ""); t = t.replace(",", "."); } return parseFloat(t); };
+    const rows = lines.slice(1).map((l) => l.split(d).map(numTR)).filter((r) => r.length === cols.length && r.every(isFinite));
+    if (rows.length < 10) throw new Error("sayısal satır sayısı 10'dan az");
+    return { cols, rows };
+  }
+  function setData({ cols, rows }) {
+    st.cols = cols; st.X = rows.map((r) => r.slice(0, -1)); st.y = rows.map((r) => r[r.length - 1]);
+    const idx = shuffle([...rows.keys()]), k = Math.round(rows.length * 0.75); st.tr = idx.slice(0, k); st.te = idx.slice(k);
+    const d = cols.length - 1; st.mu = []; st.sd = [];
+    for (let j = 0; j < d; j++) { const v = st.tr.map((i) => st.X[i][j]), m = v.reduce((a, b) => a + b, 0) / v.length; st.mu.push(m); st.sd.push(Math.sqrt(v.reduce((a, b) => a + (b - m) ** 2, 0) / v.length) || 1); }
+    const yv = st.tr.map((i) => st.y[i]); st.ym = yv.reduce((a, b) => a + b, 0) / yv.length; st.ys = Math.sqrt(yv.reduce((a, b) => a + (b - st.ym) ** 2, 0) / yv.length) || 1;
+    fitLin(); fitTree(); newNet(); buildForm();
+  }
+  const z = (x) => x.map((v, j) => (v - st.mu[j]) / st.sd[j]);
+  // doğrusal regresyon (küçük ridge cezalı en küçük kareler)
+  function fitLin() {
+    const d = st.cols.length, A = Array.from({ length: d }, () => new Array(d).fill(0)), b = new Array(d).fill(0);
+    for (const i of st.tr) { const x = [1, ...z(st.X[i])], y = st.y[i]; for (let p = 0; p < d; p++) { b[p] += x[p] * y; for (let q = 0; q < d; q++) A[p][q] += x[p] * x[q]; } }
+    for (let p = 1; p < d; p++) A[p][p] += 0.5;
+    for (let c = 0; c < d; c++) { let m = c; for (let r = c + 1; r < d; r++) if (Math.abs(A[r][c]) > Math.abs(A[m][c])) m = r; [A[c], A[m]] = [A[m], A[c]]; [b[c], b[m]] = [b[m], b[c]];
+      for (let r = 0; r < d; r++) if (r !== c) { const f = A[r][c] / A[c][c]; for (let q = c; q < d; q++) A[r][q] -= f * A[c][q]; b[r] -= f * b[c]; } }
+    st.lin = b.map((v, i) => v / A[i][i]);
+  }
+  const predLin = (x) => { const v = z(x); return st.lin[0] + v.reduce((s, a, j) => s + a * st.lin[j + 1], 0); };
+  // regresyon ağacı (varyans azaltma)
+  function fitTree() {
+    const imp = new Array(st.cols.length - 1).fill(0), maxD = num("mt-depth");
+    const build = (ids, dep) => {
+      const ys = ids.map((i) => st.y[i]), m = ys.reduce((a, b) => a + b, 0) / ys.length, sse = ys.reduce((a, b) => a + (b - m) ** 2, 0);
+      if (dep >= maxD || ids.length < 8) return { v: m };
+      let best = null;
+      for (let j = 0; j < imp.length; j++) {
+        const s = ids.slice().sort((a, b) => st.X[a][j] - st.X[b][j]); let sl = 0, ql = 0; const tot = ys.reduce((a, b) => a + b, 0), totq = ys.reduce((a, b) => a + b * b, 0);
+        for (let k = 0; k < s.length - 1; k++) { const y = st.y[s[k]]; sl += y; ql += y * y; if (st.X[s[k]][j] === st.X[s[k + 1]][j] || k < 3 || k > s.length - 5) continue;
+          const nl = k + 1, nr = s.length - nl, e = ql - (sl * sl) / nl + (totq - ql) - ((tot - sl) ** 2) / nr;
+          if (!best || e < best.e) best = { e, j, t: (st.X[s[k]][j] + st.X[s[k + 1]][j]) / 2 }; }
+      }
+      if (!best || best.e >= sse - 1e-9) return { v: m };
+      imp[best.j] += sse - best.e;
+      return { j: best.j, t: best.t, L: build(ids.filter((i) => st.X[i][best.j] < best.t), dep + 1), R: build(ids.filter((i) => st.X[i][best.j] >= best.t), dep + 1) };
+    };
+    st.tree = build(st.tr, 0); const s = imp.reduce((a, b) => a + b, 0) || 1; st.treeImp = imp.map((v) => v / s);
+  }
+  const predTree = (x) => { let n = st.tree; while (n.L) n = x[n.j] < n.t ? n.L : n.R; return n.v; };
+  function newNet() { st.net = new MLP([st.cols.length - 1, 16, 16, 1], "tanh", "linear"); st.epoch = 0; st.hist = []; }
+  const predNet = (x) => st.net.predict(z(x))[0] * st.ys + st.ym;
+  function trainEpoch() {
+    const ids = shuffle(st.tr.slice());
+    for (let i = 0; i < ids.length; i += 16) { const part = ids.slice(i, i + 16); for (const k of part) st.net.backward(z(st.X[k]), (st.y[k] - st.ym) / st.ys); st.net.step(part.length, 0.005, "adam", 0.0005); }
+    st.epoch++; if (st.epoch % 2 === 0) st.hist.push(score(predNet, st.te).r2 * 100);
+  }
+  function score(f, ids) {
+    if (!ids.length) return { r2: 0, mape: 0 };
+    const m = ids.reduce((s, i) => s + st.y[i], 0) / ids.length; let sse = 0, sst = 0, ape = 0;
+    for (const i of ids) { const p = f(st.X[i]), y = st.y[i]; sse += (p - y) ** 2; sst += (y - m) ** 2; ape += Math.abs(p - y) / Math.max(Math.abs(y), 1e-9); }
+    return { r2: 1 - sse / Math.max(sst, 1e-9), mape: ape / ids.length };
+  }
+  const MODELS = { lin: ["Doğrusal model", () => predLin], tree: ["Karar ağacı", () => predTree], net: ["Sinir ağı", () => predNet] };
+  function setRun(v) { st.run = v; $("#mt-run").textContent = v ? "⏸ Duraklat" : "▶ Sinir ağını eğit"; }
+
+  function buildForm() {
+    const d = st.cols.length - 1;
+    $("#mt-form").innerHTML = st.cols.slice(0, -1).map((c, j) => {
+      const F = !st.own && FEAT[j];
+      if (F && F.sel) return `<label class="field"><span>${c}</span><select id="mt-in-${j}">${F.sel.map(([v, t]) => `<option value="${v}"${+v === F.def ? " selected" : ""}>${t}</option>`).join("")}</select></label>`;
+      const v = F ? F.def : +st.mu[j].toPrecision(4);
+      return `<label class="field"><span>${c}</span><input type="number" id="mt-in-${j}" value="${v}" step="any" style="grid-column:1/-1;font:13px var(--f-mono);padding:5px 8px;border-radius:6px;border:1px solid var(--line);background:var(--sunk);color:var(--ink)"></label>`;
+    }).join("");
+    $$("#mt-form input,#mt-form select").forEach((el) => el.addEventListener("input", estimate));
+    estimate();
+  }
+  function estimate() {
+    const x = st.cols.slice(0, -1).map((_, j) => parseFloat($("#mt-in-" + j).value) || 0);
+    $("#mt-est").innerHTML = Object.entries(MODELS).map(([k, [ad, f]]) => `<div class="stat"><span>${ad}</span><b>${f()(x).toFixed(1)}</b></div>`).join("");
+  }
+  function draw() {
+    const f = MODELS[st.sel][1](), W = pcv._w, H = pcv._h, L = 50, B = 30, T = 10, R = 10;
+    pctx.fillStyle = Theme.c.surface; pctx.fillRect(0, 0, W, H);
+    const all = [...st.tr, ...st.te].map((i) => st.y[i]), lo = Math.min(...all) * 0.95, hi = Math.max(...all) * 1.05;
+    const X = (v) => L + ((v - lo) / (hi - lo)) * (W - L - R), Y = (v) => T + (1 - (v - lo) / (hi - lo)) * (H - T - B);
+    pctx.strokeStyle = Theme.c.line; pctx.beginPath(); pctx.moveTo(L, T); pctx.lineTo(L, H - B); pctx.lineTo(W - R, H - B); pctx.stroke();
+    pctx.setLineDash([5, 4]); pctx.strokeStyle = Theme.c.muted; pctx.beginPath(); pctx.moveTo(X(lo), Y(lo)); pctx.lineTo(X(hi), Y(hi)); pctx.stroke(); pctx.setLineDash([]);
+    const fm = getComputedStyle(document.body).getPropertyValue("--f-mono"); pctx.font = "10px " + fm; pctx.fillStyle = Theme.c.muted;
+    for (let k = 0; k <= 4; k++) { const v = lo + ((hi - lo) * k) / 4; pctx.textAlign = "right"; pctx.textBaseline = "middle"; pctx.fillText(v.toFixed(0), L - 4, Y(v)); pctx.textAlign = "center"; pctx.fillText(v.toFixed(0), X(v), H - B + 12); }
+    pctx.fillText("gerçek değer →", W - 60, H - 4); pctx.save(); pctx.translate(12, T + 60); pctx.rotate(-Math.PI / 2); pctx.fillText("tahmin →", 0, 0); pctx.restore();
+    for (const i of st.tr) { pctx.fillStyle = Theme.c.muted; pctx.globalAlpha = 0.35; pctx.beginPath(); pctx.arc(X(st.y[i]), Y(f(st.X[i])), 3, 0, 7); pctx.fill(); }
+    pctx.globalAlpha = 1; for (const i of st.te) { pctx.fillStyle = Theme.c.accent; pctx.beginPath(); pctx.arc(X(st.y[i]), Y(f(st.X[i])), 4.5, 0, 7); pctx.fill(); }
+    // önem grafiği
+    const IW = icv._w, IH = icv._h, d = st.cols.length - 1, bh = Math.min(26, (IH - 10) / d);
+    ictx.fillStyle = Theme.c.surface; ictx.fillRect(0, 0, IW, IH);
+    let vals; if (st.sel === "tree") vals = st.treeImp; else { const c = st.lin.slice(1), m = Math.max(...c.map(Math.abs)) || 1; vals = c.map((v) => v / m); }
+    const fb = getComputedStyle(document.body).getPropertyValue("--f-body");
+    st.cols.slice(0, -1).forEach((c, j) => { const y = 6 + j * bh, v = vals[j], mid = st.sel === "tree" ? 170 : 170 + (IW - 180) / 2, span = st.sel === "tree" ? IW - 180 : (IW - 180) / 2;
+      ictx.fillStyle = Theme.c.ink; ictx.font = "11px " + fb; ictx.textAlign = "right"; ictx.textBaseline = "middle"; ictx.fillText(c.length > 26 ? c.slice(0, 25) + "…" : c, 162, y + bh / 2);
+      ictx.fillStyle = v >= 0 ? Theme.c.orange : Theme.c.blue; const w = span * Math.abs(v); ictx.fillRect(v >= 0 ? mid : mid - w, y + 4, w, bh - 8); });
+    $("#mt-imp-t").textContent = st.sel === "tree" ? "Ağacın en çok kullandığı değişkenler" : "Doğrusal modelin katsayıları (turuncu artırır, mavi azaltır)";
+    drawChart(gcv, gctx, [{ data: st.hist, color: Theme.c.accent, width: 2 }], { ymin: 0, ymax: 100, xlabel: "epok ×2", yfmt: (v) => "%" + v.toFixed(0), empty: "Sinir ağını eğit" });
+    $("#mt-table").innerHTML = `<tr><th>Model</th><th>Test R²</th><th>Ort. hata</th></tr>` + Object.entries(MODELS).map(([k, [ad, g]]) => { const s = score(g(), st.te); return `<tr${k === st.sel ? ' style="font-weight:700"' : ""}><td>${ad}</td><td>${(s.r2 * 100).toFixed(0)}%</td><td>±${(s.mape * 100).toFixed(1)}%</td></tr>`; }).join("");
+    $("#mt-explain").innerHTML = explain();
+  }
+  function explain() {
+    const s = Object.fromEntries(Object.entries(MODELS).map(([k, [, g]]) => [k, score(g(), st.te)]));
+    const intro = st.own ? "Kendi verin yüklendi. " : "Veriler <b>uydurmadır</b>: 160 hayali proje, fiyat endeksi 100 = ortalama proje. ";
+    if (st.sel === "lin") return intro + `Doğrusal model her değişkene bir katsayı verir ve hepsini toplar. Okuması en kolay model budur: sağdaki çubuklar hangi özelliğin fiyatı ne yönde etkilediğini gösterir. Test hatası ±${(s.lin.mape * 100).toFixed(1)}%. Ancak etkiler çarpımsal ya da eğri olduğunda (örneğin alan büyüdükçe birim fiyatın azalması) düz çizgi bunları tam yakalayamaz.`;
+    if (st.sel === "tree") return intro + `Karar ağacı projeleri “unitize mi?”, “alan 4000 m²'den büyük mü?” gibi sorularla gruplara ayırıp her grubun ortalamasını verir. Ayrık, merdiven gibi tahminler üretir (grafikte yatay sıralar). Derinliği artırınca eğitim verisine fazla uyar; test R²'sini izle.`;
+    if (st.epoch === 0) return intro + "Sinir ağı henüz eğitilmedi, tahminleri rastgele. ▶ Sinir ağını eğit ve test noktalarının çapraz çizgiye nasıl toplandığını izle.";
+    return intro + `Sinir ağı ${st.epoch} epok eğitildi; test hatası ±${(s.net.mape * 100).toFixed(1)}% (doğrusal model ±${(s.lin.mape * 100).toFixed(1)}%). Sinir ağı çarpımsal ve eğri ilişkileri de öğrenebilir, ama az veriyle kolayca ezberler ve neden o fiyatı verdiğini açıklayamaz. Gerçek kullanımda genelde basit ve açıklanabilir model tercih edilir; sinir ağı ancak çok veri olduğunda fark yaratır.`;
+  }
+  function init(root) {
+    root.innerHTML = `
+    <div class="lab"><div class="stage">
+      <div class="seg" id="mt-sel"><button class="btn" data-m="lin">Doğrusal model</button><button class="btn" data-m="tree">Karar ağacı</button><button class="btn on" data-m="net">Sinir ağı</button></div>
+      <div class="row">
+        <div class="card w-main"><h2>Tahmin – gerçek</h2><p class="sub">Çapraz çizgi üzerindeki noktalar doğru tahmin. Renkli: test projeleri (model hiç görmedi), gri: eğitim projeleri.</p><canvas id="mt-plot" class="framed"></canvas></div>
+        <div class="card w-side"><h2 id="mt-imp-t"></h2><canvas id="mt-imp"></canvas>
+          <h2 style="margin-top:10px">Karşılaştırma</h2><table class="race" id="mt-table"></table>
+          <h2 style="margin-top:10px">Sinir ağı test R²</h2><canvas id="mt-chart"></canvas></div>
+      </div>
+      <div class="card"><h2>Yeni proje için tahmin</h2><p class="sub">Değerleri değiştir; üç modelin tahmini anında güncellenir.</p>
+        <div id="mt-form" style="display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:8px 14px"></div>
+        <div class="stats" id="mt-est" style="margin-top:10px"></div></div>
+      <div class="explain" id="mt-explain"></div>
+    </div><aside class="panel">
+      ${UI.group("Veri", `<button class="btn" id="mt-synth">Örnek veriyi yeniden üret</button>
+        <p class="note">Kendi verin: Excel'den başlık satırıyla birlikte kopyalayıp yapıştır. Tüm sütunlar sayı olmalı (evet/hayır için 1/0); <b>son sütun tahmin edilecek değer</b>.</p>
+        <textarea id="mt-own" rows="6" placeholder="Alan;Kat;Unitize;Birim fiyat&#10;5200;12;1;410&#10;…" style="width:100%;font:12px var(--f-mono);padding:6px;border-radius:6px;border:1px solid var(--line);background:var(--sunk);color:var(--ink)"></textarea>
+        <button class="btn" id="mt-load">Verimi kullan</button><p class="note" id="mt-err" style="color:var(--bad)"></p>`)}
+      ${UI.group("Modeller", UI.range("mt-depth", "Karar ağacı derinliği", 1, 10, 1, 4) + UI.range("mt-speed", "Eğitim hızı (epok/kare)", 1, 10, 1, 3))}
+      <div class="btns"><button class="btn primary" id="mt-run">▶ Sinir ağını eğit</button><button class="btn wide" id="mt-reset">Sinir ağını sıfırla</button></div>
+      <p class="note">Veri yalnızca bu sayfada, senin tarayıcında işlenir; hiçbir yere gönderilmez.</p>
+    </aside></div>`;
+    pcv = $("#mt-plot"); pctx = setupCanvas(pcv, 460, 400); icv = $("#mt-imp"); ictx = setupCanvas(icv, 380, 170); gcv = $("#mt-chart"); gctx = setupCanvas(gcv, 380, 120);
+    $("#mt-sel").addEventListener("click", (e) => { const b = e.target.closest("[data-m]"); if (!b) return; st.sel = b.dataset.m; $$("#mt-sel .btn").forEach((x) => x.classList.toggle("on", x === b)); draw(); });
+    $("#mt-synth").onclick = () => { setRun(false); st.own = false; setData(synth()); draw(); };
+    $("#mt-load").onclick = () => { setRun(false); try { const d = parse($("#mt-own").value); st.own = true; setData(d); $("#mt-err").textContent = ""; draw(); } catch (e) { $("#mt-err").textContent = "Okunamadı: " + e.message; } };
+    $("#mt-depth").onchange = () => { fitTree(); estimate(); draw(); };
+    $("#mt-run").onclick = () => setRun(!st.run); $("#mt-reset").onclick = () => { setRun(false); newNet(); estimate(); draw(); };
+    setData(synth()); draw();
+  }
+  function frame() { if (!st.run) return; for (let i = 0; i < num("mt-speed"); i++) trainEpoch(); if (st.epoch >= 3000) setRun(false); estimate(); draw(); }
+  return { init, frame, pause: () => setRun(false), onTheme: draw,
+    save: () => ({ own: st.own, cols: st.cols, rows: st.X.map((x, i) => [...x, st.y[i]]), net: mlpToJSON(st.net), epoch: st.epoch, hist: st.hist }),
+    load: (m) => { setRun(false); if (!m.rows) return; st.own = !!m.own; setData({ cols: m.cols, rows: m.rows }); try { st.net = mlpFromJSON(m.net); st.epoch = m.epoch || 0; st.hist = m.hist || []; } catch (e) {} estimate(); draw(); } };
+})();
+// ------------------------------------------------------------------ 4) PROFİL KESİM PLANI
+Cephe.kp = (() => {
+  const DEF = "3250 24 Dikme\n1480 40 Kayıt\n2150 16 Kısa dikme\n870 36 Kısa kayıt\n1235 20 Pervaz\n640 30 Bağlantı";
+  const st = { types: [], pieces: [], pop: [], best: null, ffd: null, gen: 0, hist: [], run: false, err: "" };
+  let cv, ctx, gcv, gctx;
+  const cap = () => num("kp-stock") - num("kp-trim") + num("kp-kerf");
+  function parse() {
+    const types = []; st.err = "";
+    $("#kp-list").value.split(/\r?\n/).forEach((l, i) => { const m = l.trim().match(/^(\d+(?:[.,]\d+)?)\s*[x×*\s]\s*(\d+)\s*(.*)$/i); if (!l.trim()) return;
+      if (!m) { st.err = `${i + 1}. satır okunamadı: “${l.trim()}”`; return; }
+      const len = Math.round(parseFloat(m[1].replace(",", "."))); if (len + num("kp-kerf") > cap()) { st.err = `${len} mm parça stok boyuna sığmıyor`; return; }
+      types.push({ len, n: +m[2], ad: m[3].trim() || len + " mm", col: CAT[types.length % CAT.length] }); });
+    st.types = types; st.pieces = []; types.forEach((t, k) => { for (let i = 0; i < t.n; i++) st.pieces.push(k); });
+  }
+  function decode(order) { // sıradaki her parçayı sığdığı ilk boya koy
+    const C = cap(), kerf = num("kp-kerf"), bars = [];
+    for (const p of order) { const need = st.types[p].len + kerf; let b = null; for (const x of bars) if (x.used + need <= C) { b = x; break; } if (!b) { b = { used: 0, items: [] }; bars.push(b); } b.used += need; b.items.push(p); }
+    const fill = bars.reduce((s, b) => s + (b.used / C) ** 2, 0) / bars.length;
+    return { order, bars, cost: bars.length + (1 - fill) };
+  }
+  function reset() {
+    parse(); st.gen = 0; st.hist = [];
+    if (!st.pieces.length) { st.best = st.ffd = null; return draw(); }
+    const ffdOrder = st.pieces.map((p, i) => i).sort((a, b) => st.types[st.pieces[b]].len - st.types[st.pieces[a]].len).map((i) => st.pieces[i]);
+    st.ffd = decode(ffdOrder);
+    st.pop = [st.ffd, ...Array.from({ length: 39 }, (_, k) => { const o = ffdOrder.slice(); for (let s = 0; s < 3 + k; s++) { const i = randInt(0, o.length - 1), j = randInt(0, o.length - 1); [o[i], o[j]] = [o[j], o[i]]; } return decode(o); })];
+    st.pop.sort((a, b) => a.cost - b.cost); st.best = st.pop[0]; st.hist.push(st.best.cost); draw();
+  }
+  function ox(a, b) { // sıra korumalı çaprazlama (çoklu küme)
+    const n = a.length, i = randInt(0, n - 1), j = randInt(i, n - 1), child = new Array(n), cnt = new Map();
+    for (let k = i; k <= j; k++) { child[k] = a[k]; cnt.set(a[k], (cnt.get(a[k]) || 0) + 1); }
+    let pos = (j + 1) % n;
+    for (let k = 0; k < n; k++) { const v = b[(j + 1 + k) % n], c = cnt.get(v) || 0; if (c > 0) { cnt.set(v, c - 1); continue; } while (child[pos] !== undefined) pos = (pos + 1) % n; child[pos] = v; }
+    return child;
+  }
+  function generation() {
+    const pop = st.pop, next = pop.slice(0, 2);
+    const pick = () => { let b = pop[randInt(0, pop.length - 1)]; for (let k = 0; k < 2; k++) { const c = pop[randInt(0, pop.length - 1)]; if (c.cost < b.cost) b = c; } return b; };
+    while (next.length < pop.length) {
+      const c = Math.random() < 0.7 ? ox(pick().order, pick().order) : pick().order.slice();
+      const m = randInt(1, 4); for (let s = 0; s < m; s++) { const i = randInt(0, c.length - 1), j = randInt(0, c.length - 1); if (Math.random() < 0.5) [c[i], c[j]] = [c[j], c[i]]; else c.splice(j, 0, ...c.splice(i, 1)); }
+      next.push(decode(c));
+    }
+    next.sort((a, b) => a.cost - b.cost); st.pop = next; st.best = next[0]; st.gen++; st.hist.push(st.best.cost);
+  }
+  function setRun(v) { st.run = v; $("#kp-run").textContent = v ? "⏸ Duraklat" : "▶ Genetik algoritmayı çalıştır"; }
+  function info(r) {
+    const S = num("kp-stock"), tot = st.pieces.reduce((s, p) => s + st.types[p].len, 0), C = cap(), thr = num("kp-off");
+    const offs = r.bars.map((b) => C - b.used).filter((w) => w >= thr);
+    return { n: r.bars.length, fire: 1 - tot / (r.bars.length * S), offN: offs.length, offL: offs.reduce((a, b) => a + b, 0), lb: Math.ceil(st.pieces.reduce((s, p) => s + st.types[p].len + num("kp-kerf"), 0) / C) };
+  }
+  function draw() {
+    $("#kp-err").textContent = st.err;
+    $("#kp-legend").innerHTML = st.types.map((t) => `<span><i style="background:${t.col};height:10px;width:10px;border-radius:2px"></i>${t.ad} · ${t.len} × ${t.n}</span>`).join("");
+    if (!st.best) { ctx.clearRect(0, 0, cv._w, cv._h); return; }
+    const r = st.best, n = r.bars.length, rowH = 15, H = 30 + n * rowH;
+    if (cv._h !== H) ctx = setupCanvas(cv, 760, H);
+    ctx.fillStyle = Theme.c.surface; ctx.fillRect(0, 0, 760, H);
+    const L = 44, Wb = 760 - L - 10, S = num("kp-stock"), sc = Wb / S, kerf = num("kp-kerf"), C = cap(), thr = num("kp-off"), f = getComputedStyle(document.body).getPropertyValue("--f-mono");
+    ctx.font = "10px " + f; ctx.textBaseline = "middle";
+    ctx.fillStyle = Theme.c.muted; ctx.textAlign = "left"; ctx.fillText(`Her satır bir ${S} mm stok boy`, L, 10);
+    r.bars.forEach((b, i) => {
+      const y = 22 + i * rowH; ctx.fillStyle = Theme.c.muted; ctx.textAlign = "right"; ctx.fillText(i + 1, L - 6, y + rowH / 2 - 1);
+      ctx.fillStyle = Theme.c.sunk; ctx.fillRect(L, y, Wb, rowH - 3);
+      let x = L + (num("kp-trim") / 2) * sc;
+      for (const p of b.items) { const t = st.types[p], w = t.len * sc; ctx.fillStyle = t.col; ctx.fillRect(x, y, w, rowH - 3);
+        if (w > 34) { ctx.fillStyle = "#fff"; ctx.textAlign = "center"; ctx.fillText(t.len, x + w / 2, y + rowH / 2 - 1); } x += w + kerf * sc; }
+      const waste = C - b.used; if (waste >= thr) { ctx.fillStyle = Theme.c.good; ctx.globalAlpha = 0.25; ctx.fillRect(x, y, waste * sc - (num("kp-trim") / 2) * sc, rowH - 3); ctx.globalAlpha = 1;
+        ctx.fillStyle = Theme.c.good; ctx.textAlign = "left"; ctx.fillText(`artık ${waste}`, x + 4, y + rowH / 2 - 1); }
+    });
+    drawChart(gcv, gctx, [{ data: st.hist, color: Theme.c.accent, width: 2 }], { xlabel: "nesil", yfmt: (v) => v.toFixed(2) });
+    const a = info(r), b = info(st.ffd);
+    $("#kp-s-n").textContent = `${a.n} boy`; $("#kp-s-lb").textContent = `${a.lb} boy`; $("#kp-s-f").textContent = "%" + (a.fire * 100).toFixed(1);
+    $("#kp-s-o").textContent = `${a.offN} adet · ${(a.offL / 1000).toFixed(1)} m`; $("#kp-s-ffd").textContent = `${b.n} boy · ${b.offN} artık`;
+    $("#kp-explain").innerHTML = explain(a, b);
+  }
+  function explain(a, b) {
+    if (st.gen === 0) return `Başlangıçta klasik <b>büyükten küçüğe ilk sığan</b> yöntemi kullanıldı: en uzun parçalar önce, her parça sığdığı ilk boya. Bu basit yöntem şaşırtıcı derecede iyidir: ${b.n} boy, teorik alt sınır ${a.lb} boy. ▶ Genetik algoritmayı çalıştır: parçaların sırasını karıştırıp evrimleştirerek ya daha az boy ya da fireyi daha az sayıda ama daha <b>uzun, kullanılabilir artıklarda</b> toplayan bir plan arayacak.`;
+    if (a.n < b.n) return `Genetik algoritma klasik yöntemden <b>${b.n - a.n} boy daha az</b> kullanan bir plan buldu (${a.n} boy, alt sınır ${a.lb}). Büyük siparişlerde bu fark doğrudan malzeme maliyetine yansır.`;
+    if (a.n === a.lb) return `Boy sayısı teorik alt sınıra (${a.lb}) indi; daha azı fiziksel olarak mümkün değil. Algoritma şimdi fireyi az sayıda boyda toplamaya çalışıyor: ${a.offN} adet kullanılabilir artık (≥ ${num("kp-off")} mm, yeşil). Dağınık küçük fireler hurdaya gider, toplu uzun artıklar bir sonraki işte kullanılabilir.`;
+    return `Boy sayısı aynı (${a.n}), ama algoritma fireyi uzun artıklarda toplamaya çalışıyor: şu an ${a.offN} adet, toplam ${(a.offL / 1000).toFixed(1)} m kullanılabilir artık (klasik yöntem: ${b.offN} adet). Kesim listeni sol panele yapıştırıp kendi işinde dene.`;
+  }
+  function init(root) {
+    root.innerHTML = `
+    <div class="lab"><div class="stage">
+      <div class="card"><h2>Kesim planı</h2><div class="legend" id="kp-legend" style="margin-bottom:8px"></div><div style="max-height:560px;overflow-y:auto"><canvas id="kp-main"></canvas></div></div>
+      <div class="stats">${UI.stat("kp-s-n", "Kullanılan boy")}${UI.stat("kp-s-lb", "Teorik alt sınır")}${UI.stat("kp-s-f", "Toplam fire")}${UI.stat("kp-s-o", "Kullanılabilir artık")}${UI.stat("kp-s-ffd", "Klasik yöntem")}</div>
+      <div class="card"><h2>Ceza puanı (boy sayısı + fire dağınıklığı)</h2><canvas id="kp-chart"></canvas></div>
+      <div class="explain" id="kp-explain"></div>
+    </div><aside class="panel">
+      ${UI.group("Kesim listesi", `<p class="note">Her satır: <b>boy (mm) adet açıklama</b></p>
+        <textarea id="kp-list" rows="8" style="width:100%;font:12px var(--f-mono);padding:6px;border-radius:6px;border:1px solid var(--line);background:var(--sunk);color:var(--ink)">${DEF}</textarea>
+        <button class="btn" id="kp-apply">Listeyi uygula</button><p class="note" id="kp-err" style="color:var(--bad)"></p>`)}
+      ${UI.group("Stok ve kesim", UI.select("kp-stock", "Stok boy", [["6000", "6000 mm"], ["6500", "6500 mm"], ["7000", "7000 mm"], ["7200", "7200 mm"]], "6500")
+        + UI.range("kp-kerf", "Testere payı", 0, 8, 1, 4, (v) => v + " mm") + UI.range("kp-trim", "Uç kesim payı (toplam)", 0, 100, 5, 20, (v) => v + " mm")
+        + UI.range("kp-off", "Kullanılabilir artık sınırı", 300, 2000, 50, 800, (v) => "≥ " + v + " mm"))}
+      <div class="btns"><button class="btn primary" id="kp-run">▶ Genetik algoritmayı çalıştır</button><button class="btn" id="kp-reset">Klasik yönteme dön</button><button class="btn" id="kp-copy">Planı kopyala</button></div>
+      <textarea id="kp-out" rows="6" readonly hidden style="width:100%;font:12px var(--f-mono);border-radius:6px;border:1px solid var(--line);background:var(--sunk);color:var(--ink)"></textarea>
+    </aside></div>`;
+    cv = $("#kp-main"); ctx = setupCanvas(cv, 760, 100); gcv = $("#kp-chart"); gctx = setupCanvas(gcv, 760, 130);
+    $("#kp-run").onclick = () => { if (st.best) setRun(!st.run); };
+    $("#kp-reset").onclick = () => { setRun(false); reset(); }; $("#kp-apply").onclick = () => { setRun(false); reset(); };
+    for (const id of ["kp-stock", "kp-kerf", "kp-trim"]) $("#" + id).onchange = () => { setRun(false); reset(); };
+    $("#kp-off").onchange = draw;
+    $("#kp-copy").onclick = () => { if (!st.best) return; const C = cap();
+      const txt = st.best.bars.map((b, i) => `Boy ${i + 1}: ${b.items.map((p) => st.types[p].len).join(" + ")}  (artık ${C - b.used} mm)`).join("\n");
+      const ta = $("#kp-out"); ta.value = txt; ta.hidden = false; ta.select(); try { navigator.clipboard.writeText(txt).catch(() => {}); } catch (e) {} };
+    reset();
+  }
+  function frame() { if (!st.run) return; for (let i = 0; i < 3; i++) generation(); draw(); }
+  return { init, frame, pause: () => setRun(false), onTheme: draw,
+    save: () => ({ order: st.best ? st.best.order : null, gen: st.gen, hist: st.hist }),
+    load: (m) => { setRun(false); reset(); if (m.order && m.order.length === st.pieces.length) { const r = decode(m.order); st.pop[0] = r; st.pop.sort((a, b) => a.cost - b.cost); st.best = st.pop[0]; st.gen = m.gen || 0; st.hist = m.hist || st.hist; draw(); } } };
+})();
+
+// ------------------------------------------------------------------ 5) PANEL KALİTE KONTROL (anomali tespiti)
+Cephe.kk = (() => {
+  const S = 460;
+  const st = { cols: [], X: [], truth: null, mask: null, mu: null, cov: null, inv: null, d: [], iter: 0, auto: 0, timer: 0 };
+  let cv, ctx;
+  function synth() {
+    const X = [], T = [];
+    for (let i = 0; i < 400; i++) {
+      let w = gauss() * 0.7, h = gauss() * 0.8, dg = 0.75 * (w - h) + gauss() * 0.35, dz = 0.5 * w + gauss() * 0.45, bad = 0;
+      if (i % 17 === 5) { bad = 1; const k = (i / 17) % 3 | 0;
+        if (k === 0) dg = 0.75 * (w - h) + (Math.random() < 0.5 ? -1 : 1) * rand(1.6, 2.3);
+        else if (k === 1) { h = (Math.random() < 0.5 ? -1 : 1) * rand(2.8, 4); dg = 0.75 * (w - h) + gauss() * 0.35; }
+        else dz = 0.5 * w + (Math.random() < 0.5 ? -1 : 1) * rand(1.5, 2.1); }
+      X.push([w, h, dg, dz].map((v) => Math.round(v * 10) / 10)); T.push(bad);
+    }
+    return { cols: ["Genişlik sapması", "Yükseklik sapması", "Köşegen farkı", "Derz sapması"], X, truth: T };
+  }
+  function inv(A) {
+    const n = A.length, M = A.map((r, i) => [...r, ...r.map((_, j) => (i === j ? 1 : 0))]);
+    for (let c = 0; c < n; c++) { let p = c; for (let r = c + 1; r < n; r++) if (Math.abs(M[r][c]) > Math.abs(M[p][c])) p = r; [M[c], M[p]] = [M[p], M[c]];
+      const d = M[c][c] || 1e-12; for (let j = 0; j < 2 * n; j++) M[c][j] /= d;
+      for (let r = 0; r < n; r++) if (r !== c) { const f = M[r][c]; for (let j = 0; j < 2 * n; j++) M[r][j] -= f * M[c][j]; } }
+    return M.map((r) => r.slice(n));
+  }
+  function fit() { // ortalama ve kovaryans, yalnızca şu an “normal” sayılan panellerden
+    const ids = st.X.map((_, i) => i).filter((i) => st.mask[i]), d = st.cols.length;
+    st.mu = Array.from({ length: d }, (_, j) => ids.reduce((s, i) => s + st.X[i][j], 0) / ids.length);
+    st.cov = Array.from({ length: d }, (_, a) => Array.from({ length: d }, (_, b) => ids.reduce((s, i) => s + (st.X[i][a] - st.mu[a]) * (st.X[i][b] - st.mu[b]), 0) / ids.length + (a === b ? 1e-6 : 0)));
+    st.inv = inv(st.cov);
+    st.d = st.X.map((x) => { const v = x.map((a, j) => a - st.mu[j]); let s = 0; for (let a = 0; a < d; a++) for (let b = 0; b < d; b++) s += v[a] * st.inv[a][b] * v[b]; return Math.sqrt(Math.max(0, s)); });
+  }
+  function learnStep() { fit(); const t = num("kk-thr") / 10; st.mask = st.d.map((v) => v <= t); st.iter++; fit(); draw(); }
+  function setData(D) { st.cols = D.cols; st.X = D.X; st.truth = D.truth; st.mask = st.X.map(() => true); st.iter = 0; fit(); buildAxes(); draw(); }
+  function buildAxes() {
+    const opts = st.cols.map((c, j) => `<option value="${j}">${c}</option>`).join("");
+    $("#kk-x").innerHTML = opts; $("#kk-y").innerHTML = opts; $("#kk-x").value = 0; $("#kk-y").value = Math.min(2, st.cols.length - 1);
+  }
+  function verdict() {
+    const t = num("kk-thr") / 10, tol = num("kk-tol") / 10;
+    const model = st.d.map((v) => v > t), rule = st.X.map((x) => x.some((v) => Math.abs(v) > tol));
+    const cmp = (f) => { if (!st.truth) return null; let tp = 0, fn = 0, fp = 0; f.forEach((v, i) => { if (st.truth[i] && v) tp++; else if (st.truth[i]) fn++; else if (v) fp++; }); return { tp, fn, fp }; };
+    return { model, rule, m: cmp(model), r: cmp(rule) };
+  }
+  function draw() {
+    const jx = +$("#kk-x").value, jy = +$("#kk-y").value, V = verdict(), all = st.X.flat(), R = Math.max(4, ...all.map(Math.abs)) * 1.1;
+    const P = (x, y) => [S / 2 + (x / R) * (S / 2 - 20), S / 2 - (y / R) * (S / 2 - 20)];
+    ctx.fillStyle = Theme.c.surface; ctx.fillRect(0, 0, S, S);
+    ctx.strokeStyle = Theme.c.line; ctx.lineWidth = 1; ctx.beginPath(); ctx.moveTo(S / 2, 0); ctx.lineTo(S / 2, S); ctx.moveTo(0, S / 2); ctx.lineTo(S, S / 2); ctx.stroke();
+    const tol = num("kk-tol") / 10, [ax, ay] = P(-tol, tol), [bx, by] = P(tol, -tol);
+    ctx.strokeStyle = Theme.c.orange; ctx.setLineDash([6, 4]); ctx.lineWidth = 1.5; ctx.strokeRect(ax, ay, bx - ax, by - ay); ctx.setLineDash([]);
+    // modelin 2B izdüşüm elipsleri
+    const a = st.cov[jx][jx], b = st.cov[jx][jy], c = st.cov[jy][jy], tr = (a + c) / 2, df = Math.sqrt(((a - c) / 2) ** 2 + b * b), l1 = tr + df, l2 = Math.max(tr - df, 1e-9), ang = Math.atan2(l1 - a, b || 1e-12);
+    for (const k of [1, 2, num("kk-thr") / 10]) { ctx.strokeStyle = Theme.c.accent; ctx.lineWidth = k > 2 ? 2.2 : 1; ctx.globalAlpha = k > 2 ? 1 : 0.5; ctx.beginPath();
+      for (let t = 0; t <= 64; t++) { const u = (t / 64) * Math.PI * 2, ex = k * Math.sqrt(l1) * Math.cos(u), ey = k * Math.sqrt(l2) * Math.sin(u);
+        const [px, py] = P(st.mu[jx] + ex * Math.cos(ang) - ey * Math.sin(ang), st.mu[jy] + ex * Math.sin(ang) + ey * Math.cos(ang)); t ? ctx.lineTo(px, py) : ctx.moveTo(px, py); } ctx.stroke(); }
+    ctx.globalAlpha = 1;
+    const showT = on("kk-truth") && st.truth;
+    st.X.forEach((x, i) => { const [px, py] = P(x[jx], x[jy]); ctx.beginPath(); ctx.arc(px, py, 3.2, 0, 7); ctx.fillStyle = showT && st.truth[i] ? Theme.c.bad : Theme.c.muted; ctx.globalAlpha = showT && st.truth[i] ? 1 : 0.55; ctx.fill(); ctx.globalAlpha = 1;
+      if (V.model[i]) { ctx.strokeStyle = Theme.c.accent; ctx.lineWidth = 2; ctx.beginPath(); ctx.arc(px, py, 7, 0, 7); ctx.stroke(); } });
+    const f = getComputedStyle(document.body).getPropertyValue("--f-mono"); ctx.font = "10px " + f; ctx.fillStyle = Theme.c.muted; ctx.textAlign = "right"; ctx.textBaseline = "alphabetic";
+    ctx.fillText(st.cols[jx] + " (mm) →", S - 6, S / 2 - 6); ctx.textAlign = "left"; ctx.fillText("↑ " + st.cols[jy] + " (mm)", S / 2 + 6, 12);
+    const row = (ad, r, n) => r ? `<tr><td>${ad}</td><td>${r.tp} / ${r.tp + r.fn}</td><td>${r.fn}</td><td>${r.fp}</td></tr>` : `<tr><td>${ad}</td><td colspan="3">${n} panel işaretlendi</td></tr>`;
+    $("#kk-table").innerHTML = `<tr><th>Yöntem</th><th>Yakalanan</th><th>Kaçan</th><th>Yanlış alarm</th></tr>` + row("Öğrenen model", V.m, V.model.filter(Boolean).length) + row("Tolerans kuralı", V.r, V.rule.filter(Boolean).length);
+    const top = st.d.map((v, i) => [v, i]).sort((p, q) => q[0] - p[0]).slice(0, 8);
+    $("#kk-top").innerHTML = `<tr><th>Panel</th>${st.cols.map((c) => `<th>${c.split(" ")[0]}</th>`).join("")}<th>Uzaklık</th></tr>` + top.map(([v, i]) => `<tr${showT && st.truth[i] ? ' style="color:var(--bad)"' : ""}><td>#${i + 1}</td>${st.X[i].map((x) => `<td>${x.toFixed(1)}</td>`).join("")}<td>${v.toFixed(1)}</td></tr>`).join("");
+    $("#kk-s-it").textContent = st.iter; $("#kk-s-n").textContent = st.mask.filter(Boolean).length;
+    $("#kk-explain").innerHTML = explain(V);
+  }
+  function explain(V) {
+    if (!st.truth) return "Kendi ölçümlerin yüklendi. Model, panellerin çoğunun normal olduğunu varsayıp ölçümler arasındaki ilişkiyi öğreniyor ve bu ilişkiye uymayanları işaretliyor. En şüpheli paneller aşağıdaki tabloda.";
+    const m = V.m, r = V.r;
+    let t = st.iter === 0 ? "Her nokta bir panel; dört ölçümü var (veriler <b>uydurmadır</b>). Turuncu kesikli kare klasik <b>tolerans kuralı</b>: her ölçü ±" + (num("kk-tol") / 10).toFixed(1) + " mm içinde mi? Yeşil-mavi elipsler modelin öğrendiği “normal panel” şekli. Model ölçülerin <b>birbirleriyle ilişkisini</b> öğrenir: örneğin genişlik yükseklikten fazlaysa köşegen farkının da belli bir yönde olması beklenir. " : "";
+    t += `Şu an model ${m.tp}/${m.tp + m.fn} hatalı paneli yakaladı (${m.fp} yanlış alarm); tolerans kuralı ${r.tp}/${r.tp + r.fn} yakaladı (${r.fp} yanlış alarm). `;
+    if (m.tp > r.tp) t += "Fark nereden geliyor? Bazı hatalı panellerde her ölçü tek tek toleransın içinde, ama birlikte bakınca <b>tutarsız</b> (gönye bozukluğu, derz kayması). Kural bunları göremez, model görür. “Gerçek hatalıları göster” ile kırmızı noktaların nerede olduğuna bak.";
+    if (st.iter < 3) t += " “Bir tur öğren” düğmesi modeli, şüpheli bulduğu panelleri dışarıda bırakarak yeniden kurar; hatalı paneller öğrenmeyi kirletmediği için elipsler sıkılaşır.";
+    return t;
+  }
+  function init(root) {
+    root.innerHTML = `
+    <div class="lab"><div class="stage">
+      <div class="row">
+        <div class="card w-main"><h2>Panel ölçümleri</h2><p class="sub">Halkalı noktalar modelin şüpheli bulduğu paneller. Kalın elips: eşik.</p><canvas id="kk-main" class="framed"></canvas>
+          <div class="row" style="margin-top:8px;gap:8px">${UI.select("kk-x", "Yatay eksen", [["0", "-"]], "0")}${UI.select("kk-y", "Dikey eksen", [["0", "-"]], "0")}</div></div>
+        <div class="card w-side"><h2>Sonuç</h2><table class="race" id="kk-table"></table>
+          <h2 style="margin-top:12px">En şüpheli 8 panel</h2><div style="overflow-x:auto"><table class="race" id="kk-top"></table></div></div>
+      </div>
+      <div class="stats">${UI.stat("kk-s-it", "Öğrenme turu")}${UI.stat("kk-s-n", "Normal sayılan panel")}</div>
+      <div class="explain" id="kk-explain"></div>
+    </div><aside class="panel">
+      ${UI.group("Eşikler", UI.range("kk-thr", "Model eşiği (uzaklık)", 20, 60, 1, 38, (v) => (v / 10).toFixed(1)) + UI.range("kk-tol", "Tolerans kuralı", 10, 40, 1, 25, (v) => "±" + (v / 10).toFixed(1) + " mm")
+        + UI.check("kk-truth", "Gerçek hatalıları göster (kırmızı)", false))}
+      <div class="btns"><button class="btn primary" id="kk-learn">Bir tur öğren</button><button class="btn" id="kk-reset">Baştan öğren</button><button class="btn" id="kk-new">Yeni örnek veri</button></div>
+      ${UI.group("Kendi ölçümlerin", `<p class="note">Başlık satırıyla en az iki sayısal sütun yapıştır (mm). Son sütunun adı “hata” ise 0/1 doğru cevap olarak kullanılır.</p>
+        <textarea id="kk-own" rows="5" style="width:100%;font:12px var(--f-mono);padding:6px;border-radius:6px;border:1px solid var(--line);background:var(--sunk);color:var(--ink)"></textarea>
+        <button class="btn" id="kk-load">Verimi kullan</button><p class="note" id="kk-err" style="color:var(--bad)"></p>`)}
+    </aside></div>`;
+    cv = $("#kk-main"); ctx = setupCanvas(cv, S, S);
+    $("#kk-learn").onclick = learnStep; $("#kk-reset").onclick = () => { st.mask = st.X.map(() => true); st.iter = 0; fit(); draw(); };
+    $("#kk-new").onclick = () => setData(synth());
+    for (const id of ["kk-x", "kk-y", "kk-tol", "kk-truth"]) $("#" + id).addEventListener("input", draw);
+    $("#kk-thr").addEventListener("input", draw);
+    $("#kk-load").onclick = () => {
+      try {
+        const lines = $("#kk-own").value.trim().split(/\r?\n/).filter((l) => l.trim()), d = lines[0].includes("\t") ? "\t" : lines[0].includes(";") ? ";" : ",";
+        let cols = lines[0].split(d).map((s) => s.trim()); const rows = lines.slice(1).map((l) => l.split(d).map((s) => parseFloat(s.trim().replace(d === "," ? "" : ",", d === "," ? "" : ".")))).filter((r) => r.length === cols.length && r.every(isFinite));
+        if (rows.length < 15 || cols.length < 2) throw new Error("en az 15 satır ve 2 sayısal sütun gerekli");
+        let truth = null; if (/^hata/i.test(cols[cols.length - 1]) && cols.length > 2) { truth = rows.map((r) => (r[r.length - 1] ? 1 : 0)); rows.forEach((r) => r.pop()); cols = cols.slice(0, -1); }
+        setData({ cols, X: rows, truth }); $("#kk-err").textContent = "";
+      } catch (e) { $("#kk-err").textContent = "Okunamadı: " + e.message; }
+    };
+    setData(synth());
+  }
+  return { init, onTheme: draw,
+    save: () => ({ cols: st.cols, X: st.X, truth: st.truth, mask: st.mask, iter: st.iter }),
+    load: (m) => { if (!m.X) return; setData({ cols: m.cols, X: m.X, truth: m.truth }); if (m.mask) { st.mask = m.mask; st.iter = m.iter || 0; fit(); } draw(); } };
 })();
 boot();
 </script>
