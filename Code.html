@@ -94,6 +94,12 @@
   .cm-s-default .cm-strong { font-weight: 700; } .cm-s-default .cm-em { font-style: italic; } .cm-s-default .cm-hr { color: var(--muted); }
 
   .out { display: flex; flex-direction: column; min-height: 0; flex: 1; }
+  .repl { flex: none; display: flex; align-items: flex-start; gap: 8px; padding: 7px 12px 8px; border-top: 1px solid var(--line); background: var(--panel-2); cursor: text; }
+  .repl[hidden] { display: none; }
+  .repl .pr { font: 600 13px/1.5 var(--f-mono); color: var(--accent); white-space: nowrap; user-select: none; }
+  .repl textarea { flex: 1; min-width: 0; resize: none; border: 0; outline: 0; background: none; color: var(--fg); font: 400 13px/1.5 var(--f-mono); padding: 0; margin: 0; height: 1.5em; max-height: 10.5em; overflow-y: auto; white-space: pre; }
+  .repl textarea::placeholder { color: var(--muted); opacity: .8; }
+  .repl:focus-within { box-shadow: inset 0 2px 0 var(--accent); }
   .frame { flex: 1; min-height: 0; background: #fff; position: relative; }
   .frame iframe { position: absolute; inset: 0; width: 100%; height: 100%; border: 0; background: #fff; }
   .con { flex: 1; min-height: 0; overflow: auto; padding: 10px 12px 16px; font: 400 13px/1.5 var(--f-mono); white-space: pre-wrap; word-break: break-word; background: var(--panel); }
@@ -191,6 +197,7 @@
       </div>
     </div>
     <div class="out" id="outCon" hidden></div>
+    <div class="repl" id="repl"><label class="pr" id="replPr" for="replIn">&gt;</label><textarea id="replIn" rows="1" spellcheck="false" autocomplete="off" autocapitalize="off" aria-label="Komut satırı"></textarea></div>
   </section>
 </main>
 <div class="toast" id="toast"></div>
@@ -299,7 +306,7 @@ function askDownload(c, title, bodyHtml, size) {
 const cancelled = msg => { const e = new Error(msg); e.cancel = true; e.shown = true; return e; };
 
 /* ---------- sandbox köprüsü (HTML önizleme + JavaScript) ---------- */
-const BRIDGE = id => `<script>(function(){var P=function(t,a){try{parent.postMessage({__er:${id},t:t,a:a},'*')}catch(e){}};var f=function(v){try{if(v instanceof Error)return v.name+': '+v.message;if(typeof v==='object'&&v!==null){if(typeof Node!=='undefined'&&v instanceof Node)return '<'+(v.nodeName||'').toLowerCase()+'>';if(v instanceof Map)v=Object.fromEntries(v);if(v instanceof Set)v=Array.from(v);return JSON.stringify(v,null,1).replace(/\\n\\s*/g,' ')}if(typeof v==='function')return 'ƒ '+(v.name||'anonim')+'()';return String(v)}catch(e){return String(v)}};['log','info','warn','error','debug'].forEach(function(k){var o=console[k];console[k]=function(){P(k,[].map.call(arguments,f).join(' '));o&&o.apply(console,arguments)}});console.table=function(d){P('table',JSON.parse(JSON.stringify(d)))};console.clear=function(){P('clear','')};addEventListener('error',function(e){P('uncaught',(e.error&&e.error.name?e.error.name+': ':'')+(e.message||'Hata').replace(/^Uncaught \\w*:? ?/,'')+(e.lineno?' (satır '+e.lineno+')':''))});addEventListener('unhandledrejection',function(e){P('uncaught','Promise: '+f(e.reason))});})();<\/script>`;
+const BRIDGE = id => `<script>(function(){var P=function(t,a){try{parent.postMessage({__er:${id},t:t,a:a},'*')}catch(e){}};var f=function(v){try{if(v instanceof Error)return v.name+': '+v.message;if(typeof v==='object'&&v!==null){if(typeof Node!=='undefined'&&v instanceof Node)return '<'+(v.nodeName||'').toLowerCase()+'>';if(v instanceof Map)v=Object.fromEntries(v);if(v instanceof Set)v=Array.from(v);return JSON.stringify(v,null,1).replace(/\\n\\s*/g,' ')}if(typeof v==='function')return 'ƒ '+(v.name||'anonim')+'()';return String(v)}catch(e){return String(v)}};['log','info','warn','error','debug'].forEach(function(k){var o=console[k];console[k]=function(){P(k,[].map.call(arguments,f).join(' '));o&&o.apply(console,arguments)}});console.table=function(d){P('table',JSON.parse(JSON.stringify(d)))};console.clear=function(){P('clear','')};addEventListener('error',function(e){P('uncaught',(e.error&&e.error.name?e.error.name+': ':'')+(e.message||'Hata').replace(/^Uncaught \\w*:? ?/,'')+(e.lineno?' (satır '+e.lineno+')':''))});addEventListener('unhandledrejection',function(e){P('uncaught','Promise: '+f(e.reason))});addEventListener('message',function(e){var d=e.data;if(e.source!==parent||!d||d.__erEval!==${id})return;try{var r=(0,eval)(d.code);if(r!==undefined)P('ret',typeof r==='string'?JSON.stringify(r):f(r))}catch(x){P('error',(x&&x.name?x.name+': ':'')+(x&&x.message!==undefined?x.message:x))}});})();<\/script>`;
 let bridgeSeq = 0;
 const bridges = new Map(); // id -> handler
 addEventListener('message', e => {
@@ -314,6 +321,7 @@ function consoleMsg(c, d) {
     const cols = [...new Set(rows.flatMap(r => r && typeof r === 'object' ? Object.keys(r) : ['değer']))];
     return c.node(table(['(index)', ...cols], rows.map((r, i) => [keys[i], ...cols.map(k => r && typeof r === 'object' ? (typeof r[k] === 'object' && r[k] !== null ? JSON.stringify(r[k]) : r[k]) : k === 'değer' ? r : null)])));
   }
+  if (d.t === 'ret') { c.end(); return c.write('← ' + d.a + '\n', 'ret'); }
   const cls = d.t === 'error' || d.t === 'uncaught' ? 'err' : d.t === 'warn' ? 'warn' : d.t === 'info' ? 'info' : '';
   c.end(); c.write(d.a + '\n', cls);
 }
@@ -348,24 +356,48 @@ const mdDoc = src => `<!doctype html><html lang="tr"><head><meta charset="utf-8"
 
 /* ---------- JavaScript çalıştırıcı ---------- */
 /* Ayrı bir Web Worker'da çalışır: sayfayı dondurmaz, "Durdur" ile anında sonlandırılır. */
-const WORKER_PRELUDE = `const __P=(t,a)=>postMessage({t,a});const __f=v=>{try{if(v instanceof Error)return v.name+': '+v.message;if(typeof v==='object'&&v!==null){if(v instanceof Map)v=Object.fromEntries(v);if(v instanceof Set)v=Array.from(v);return JSON.stringify(v,null,1).replace(/\\n\\s*/g,' ')}if(typeof v==='function')return 'ƒ '+(v.name||'anonim')+'()';return String(v)}catch(e){return String(v)}};['log','info','warn','error','debug'].forEach(k=>{console[k]=(...a)=>__P(k,a.map(__f).join(' '))});console.table=d=>__P('table',JSON.parse(JSON.stringify(d)));console.clear=()=>__P('clear','');self.addEventListener('error',e=>{e.preventDefault();__P('uncaught',(e.error&&e.error.name?e.error.name+': ':'')+String(e.message||'Hata').replace(/^Uncaught \\w*:? ?/,'')+(e.lineno?' (satır '+e.lineno+')':''))});self.addEventListener('unhandledrejection',e=>{e.preventDefault();__P('uncaught','Promise: '+__f(e.reason))});`;
-let jsJob = null, lastWorker = null;
+const WORKER_PRELUDE = `const __P=(t,a)=>postMessage({t,a});const __f=v=>{try{if(v instanceof Error)return v.name+': '+v.message;if(typeof v==='object'&&v!==null){if(v instanceof Map)v=Object.fromEntries(v);if(v instanceof Set)v=Array.from(v);return JSON.stringify(v,null,1).replace(/\\n\\s*/g,' ')}if(typeof v==='function')return 'ƒ '+(v.name||'anonim')+'()';return String(v)}catch(e){return String(v)}};['log','info','warn','error','debug'].forEach(k=>{console[k]=(...a)=>__P(k,a.map(__f).join(' '))});console.table=d=>__P('table',JSON.parse(JSON.stringify(d)));console.clear=()=>__P('clear','');self.addEventListener('error',e=>{e.preventDefault();__P('uncaught',(e.error&&e.error.name?e.error.name+': ':'')+String(e.message||'Hata').replace(/^Uncaught \\w*:? ?/,'')+(e.lineno?' (satır '+e.lineno+')':''))});self.addEventListener('unhandledrejection',e=>{e.preventDefault();__P('uncaught','Promise: '+__f(e.reason))});self.onmessage=async e=>{const d=e.data;if(!d||d.t!=='__eval')return;const sh=v=>v===undefined?undefined:typeof v==='string'?JSON.stringify(v):__f(v);try{let r;try{r=(0,eval)(d.code)}catch(x){if(!(x instanceof SyntaxError)||!/\\bawait\\b/.test(d.code))throw x;r=(0,eval)('(async()=>('+d.code.replace(/;\\s*$/,'')+'))()')}if(r&&typeof r.then==='function')r=await r;__P('__ret',sh(r))}catch(x){__P('__rerr',(x&&x.name?x.name+': ':'')+(x&&x.message!==undefined?x.message:x))}};`;
+let jsJob = null, lastWorker = null, jsModule = false;
 const syntaxMsg = code => { try { new (async function () {}).constructor(code); return 'Sözdizimi hatası'; } catch (x) { return x.name + ': ' + x.message; } };
+/* import / üst seviye await yoksa klasik betik olarak çalışır: üst seviye değişkenler komut satırından erişilebilir kalır */
+const isClassic = code => { try { new Function(code); return true; } catch (e) { return false; } };
 function runJs(code, c) {
   return new Promise((resolve, reject) => {
     if (lastWorker) lastWorker.terminate(); // önceki çalıştırmadan kalan zamanlayıcıları durdur
     const url = URL.createObjectURL(new Blob([WORKER_PRELUDE + code + '\n;postMessage({t:"__done"});'], { type: 'text/javascript' }));
-    const w = lastWorker = new Worker(url, { type: 'module', name: 'kod' });
+    jsModule = !isClassic(code);
+    const w = lastWorker = new Worker(url, jsModule ? { type: 'module', name: 'kod' } : { name: 'kod' });
     let finished = false;
-    const finish = (err) => { if (finished) return; finished = true; jsJob = null; URL.revokeObjectURL(url); if (err) { setTimeout(() => w.terminate(), 50); reject(err); } else resolve(); };
-    jsJob = { stop: () => { w.terminate(); finish(new Error('durduruldu')); } };
+    const finish = (err, kill) => { if (finished) return; finished = true; jsJob = null; URL.revokeObjectURL(url); if (kill) { setTimeout(() => w.terminate(), 50); if (lastWorker === w) lastWorker = null; } if (err) reject(err); else resolve(); };
+    jsJob = { stop: () => { w.terminate(); if (lastWorker === w) lastWorker = null; finish(new Error('durduruldu')); } };
     w.onmessage = e => {
       const d = e.data;
       if (d.t === '__done') return finish();
       consoleMsg(c, d);
       if (d.t === 'uncaught') finish(Object.assign(new Error(''), { shown: true }));
     };
-    w.onerror = e => { e.preventDefault(); c.end(); c.write((e.message || syntaxMsg(code)).replace(/^Uncaught \w*:? ?/, m => m.replace('Uncaught ', '')) + (e.lineno ? ' (satır ' + e.lineno + ')' : '') + '\n', 'err'); finish(Object.assign(new Error(''), { shown: true })); };
+    w.onerror = e => { e.preventDefault(); c.end(); c.write((e.message || syntaxMsg(code)).replace(/^Uncaught \w*:? ?/, m => m.replace('Uncaught ', '')) + (e.lineno ? ' (satır ' + e.lineno + ')' : '') + '\n', 'err'); finish(Object.assign(new Error(''), { shown: true }), true); };
+  });
+}
+/* Komut satırı: son çalıştırmanın worker'ında (değişkenleriyle) ifade değerlendirir */
+async function evalJs(code, c) {
+  if (!lastWorker) await runJs('', c);
+  const w = lastWorker, prev = w.onmessage;
+  // let/const/class satır başındaysa var'a çevrilir ki sonraki komutlarda da görülsün
+  code = code.replace(/^(?:let|const)\s/gm, 'var ').replace(/^class\s+([\w$]+)/gm, 'var $1 = class $1');
+  return new Promise((resolve, reject) => {
+    const done = () => { w.onmessage = prev; jsJob = null; };
+    jsJob = { stop: () => { w.terminate(); if (lastWorker === w) lastWorker = null; done(); reject(new Error('durduruldu')); } };
+    w.onmessage = e => {
+      const d = e.data;
+      if (d.t === '__ret') { done(); if (d.a !== undefined) { c.end(); c.write('← ' + d.a + '\n', 'ret'); } resolve(); }
+      else if (d.t === '__rerr') {
+        done();
+        const hint = jsModule && /^ReferenceError/.test(d.a) ? '\n(kodda import veya üst seviye await olduğu için oradaki değişkenler buradan görünmez; globalThis.x = x ile paylaşabilirsin)' : '';
+        reject(new Error(d.a + hint));
+      } else consoleMsg(c, d);
+    };
+    w.postMessage({ t: '__eval', code });
   });
 }
 function stopJs() { if (jsJob) jsJob.stop(); }
@@ -396,7 +428,7 @@ const L = {
     load: () => loadScript('https://cdn.jsdelivr.net/npm/marked@14.1.3/marked.min.js').then(() => 'marked'),
     run(src) { showFrame(mdDoc(src), false); } },
   javascript: { name: 'JavaScript', color: '#e5c02b', file: 'main.js', mode: 'javascript', mime: 'text/javascript', indent: 2, ext: ['js', 'mjs'], stop: true,
-    run: (src, c) => runJs(src, c) },
+    run: (src, c) => runJs(src, c), repl: (src, c) => evalJs(src, c) },
   typescript: { name: 'TypeScript', color: '#3178c6', file: 'main.ts', mode: { name: 'javascript', typescript: true }, mime: 'text/plain', indent: 2, ext: ['ts'], stop: true, size: '3 MB',
     load: () => loadScript('https://cdnjs.cloudflare.com/ajax/libs/typescript/5.6.3/typescript.min.js').then(() => 'TypeScript ' + window.ts.version + ' (tip denetimi yapılmaz)'),
     async run(src, c) {
@@ -407,6 +439,11 @@ const L = {
         throw new Error('Sözdizimi hatası\n' + msg);
       }
       return runJs(r.outputText, c);
+    },
+    repl(src, c) {
+      const r = window.ts.transpileModule(src, { compilerOptions: { target: window.ts.ScriptTarget.ES2022, module: window.ts.ModuleKind.ESNext }, reportDiagnostics: true });
+      if (r.diagnostics && r.diagnostics.length) throw new Error('Sözdizimi hatası: ' + window.ts.flattenDiagnosticMessageText(r.diagnostics[0].messageText, '\n'));
+      return evalJs(r.outputText.replace(/\n?export \{\};\s*$/, '').replace(/;\s*$/, ''), c);
     } },
   python: { name: 'Python', color: '#3b78b0', file: 'main.py', mode: 'python', mime: 'text/x-python', indent: 4, ext: ['py'], size: '10 MB',
     async load(c) {
@@ -455,6 +492,30 @@ def __er_patch():
       return 'Python ' + py.runPython('import sys; sys.version.split()[0]') + ' · Pyodide ' + py.version;
     },
     async run(src, c, st) {
+      if (this.ns) { this.ns.destroy(); this.ns = null; }
+      await this.prep(src, c, st);
+      st('çalışıyor…'); await sleep(20);
+      const ns = this.ns = this.rt.globals.get('dict')(); ns.set('__name__', '__main__');
+      await this.exec(src, '<exec>');
+    },
+    /* komut satırı: son çalıştırmanın değişkenleriyle */
+    async repl(src, c, st) {
+      await this.prep(src, c, st);
+      if (!this.ns) { this.ns = this.rt.globals.get('dict')(); this.ns.set('__name__', '__main__'); }
+      await this.exec(src, '<stdin>');
+    },
+    async exec(src, file) {
+      const py = this.rt, ns = this.ns;
+      try {
+        const r = await py.runPythonAsync(src, { globals: ns, filename: file });
+        if (r !== undefined) { const f = py.globals.get('__er_last'); f(r); f.destroy(); if (r && typeof r.destroy === 'function') r.destroy(); }
+      }
+      catch (e) {
+        const lines = String(e.message || e).split('\n'), i = lines.findIndex(l => l.includes(`File "${file}"`));
+        throw new Error(i < 0 ? String(e.message || e).trimEnd() : ['Traceback (most recent call last):', ...lines.slice(i)].join('\n').trimEnd());
+      } finally { try { py.runPython('__er_figs()'); } catch (e) {} }
+    },
+    async prep(src, c, st) {
       const py = this.rt;
       st('paketler kontrol ediliyor…');
       const plan = await pyPlan(py, src).catch(() => null);
@@ -469,16 +530,6 @@ def __er_patch():
       }
       await py.loadPackagesFromImports(src, { messageCallback: m => /Loading|Loaded/.test(m) && st(m.slice(0, 60)), errorCallback: m => c.write(m + '\n', 'warn') });
       if (/\bmatplotlib\b/.test(src)) py.runPython("import os; os.environ['MPLBACKEND']='AGG'\nimport matplotlib; matplotlib.use('AGG')\nimport matplotlib.pyplot\n__er_patch()");
-      st('çalışıyor…'); await sleep(20);
-      const ns = py.globals.get('dict')(); ns.set('__name__', '__main__');
-      try {
-        const r = await py.runPythonAsync(src, { globals: ns, filename: '<exec>' });
-        if (r !== undefined) { const f = py.globals.get('__er_last'); f(r); f.destroy(); if (r && typeof r.destroy === 'function') r.destroy(); }
-      }
-      catch (e) {
-        const lines = String(e.message || e).split('\n'), i = lines.findIndex(l => l.includes('File "<exec>"'));
-        throw new Error(i < 0 ? String(e.message || e).trimEnd() : ['Traceback (most recent call last):', ...lines.slice(i)].join('\n').trimEnd());
-      } finally { try { py.runPython('__er_figs()'); } catch (e) {} ns.destroy(); }
     } },
   sql: { name: 'SQL', color: '#0f7c86', file: 'query.sql', mode: 'text/x-sqlite', mime: 'application/sql', indent: 2, ext: ['sql'], size: '0.7 MB',
     async load() {
@@ -489,7 +540,13 @@ def __er_patch():
       return 'SQLite ' + v;
     },
     async run(src, c) {
-      const db = new this.rt.Database();
+      if (this.db) this.db.close();
+      this.db = new this.rt.Database(); // her çalıştırma boş veritabanı; komut satırı bunu kullanmaya devam eder
+      return this.exec(src, c, true);
+    },
+    repl(src, c) { if (!this.db) this.db = new this.rt.Database(); return this.exec(src, c, false); },
+    exec(src, c, full) {
+      const db = this.db;
       let n = 0;
       try {
         for (const stmt of db.iterateStatements(src)) {
@@ -498,18 +555,18 @@ def __er_patch():
           const cols = stmt.getColumnNames(), rows = [];
           while (stmt.step()) rows.push(stmt.get());
           if (cols.length) {
-            c.write(`› ${sql.length > 90 ? sql.slice(0, 90) + '…' : sql}\n`, 'sys');
+            if (full) c.write(`› ${sql.length > 90 ? sql.slice(0, 90) + '…' : sql}\n`, 'sys');
             if (rows.length) c.node(table(cols, rows)); else c.write('(sonuç yok)\n', 'sys');
             if (rows.length > 500) c.write(`… ${rows.length} satırdan ilk 500 gösterildi\n`, 'sys');
             else c.write(`${rows.length} satır\n`, 'sys');
           } else {
             const ch = db.getRowsModified();
             if (/^(insert|update|delete|replace)/i.test(sql)) c.write(`✓ ${sql.split(' ').slice(0, 3).join(' ')}… · ${ch} satır\n`, 'ret');
+            else if (!full) c.write('✓ tamam\n', 'ret');
           }
         }
         if (!n) c.write('(çalıştırılacak ifade yok)\n', 'sys');
       } catch (e) { throw new Error('SQL hatası: ' + e.message); }
-      finally { db.close(); }
     } },
   lua: { name: 'Lua', color: '#2c2d72', file: 'main.lua', mode: 'lua', mime: 'text/x-lua', indent: 2, ext: ['lua'], size: '0.4 MB',
     async load() {
@@ -518,17 +575,31 @@ def __er_patch():
       const e = await this.rt.createEngine(); const v = e.global.get('_VERSION'); e.global.close();
       return v;
     },
-    async run(src, c) {
+    async engine(c) {
       const lua = await this.rt.createEngine();
-      try {
-        lua.global.set('__w', s => c.write(String(s)));
-        lua.global.set('__r', () => { const v = askInput(c.line ? c.line.textContent : 'io.read()'); c.write(v + '\n', 'in'); return v; });
-        await lua.doString(`print = function(...) local t = {} for i = 1, select('#', ...) do t[i] = tostring((select(i, ...))) end __w(table.concat(t, '\\t') .. '\\n') end
+      lua.global.set('__w', s => c.write(String(s)));
+      lua.global.set('__r', () => { const v = askInput(c.line ? c.line.textContent : 'io.read()'); c.write(v + '\n', 'in'); return v; });
+      await lua.doString(`print = function(...) local t = {} for i = 1, select('#', ...) do t[i] = tostring((select(i, ...))) end __w(table.concat(t, '\\t') .. '\\n') end
 io.write = function(...) for i = 1, select('#', ...) do __w(tostring((select(i, ...)))) end end
-io.read = function() return __r() end`);
+io.read = function() return __r() end
+function __show(...) if select('#', ...) > 0 then print(...) end end`);
+      return lua;
+    },
+    async run(src, c) {
+      if (this.eng) { this.eng.global.close(); this.eng = null; }
+      const lua = this.eng = await this.engine(c);
+      try { await lua.doString(src); }
+      catch (e) { throw new Error(String(e.message || e).replace(/\[string "[^"]*"\]:/g, 'satır ')); }
+    },
+    /* komut satırı: global değişkenler korunur (local olanlar değil); ifadeyse değeri yazılır */
+    async repl(src, c) {
+      const lua = this.eng || (this.eng = await this.engine(c));
+      try {
+        // önce ifade olarak dene (değeri yazdırılır); sözdizimi tutmazsa deyim olarak çalıştır
+        try { await lua.doString('__show(' + src + '\n)'); return; }
+        catch (e) { if (!/syntax error|expected|unexpected symbol|near/i.test(String(e.message || e)) || /attempt to/.test(String(e.message || e))) throw e; }
         await lua.doString(src);
       } catch (e) { throw new Error(String(e.message || e).replace(/\[string "[^"]*"\]:/g, 'satır ')); }
-      finally { lua.global.close(); }
     } },
   r: { name: 'R', color: '#276dc3', file: 'script.R', mode: 'r', mime: 'text/x-r', indent: 2, ext: ['r'], size: '25 MB',
     async load() {
@@ -537,6 +608,7 @@ io.read = function() return __r() end`);
       const v = await w.evalRString('R.version.string');
       return v + ' · webR 0.4.2';
     },
+    repl(src, c) { return this.run(src, c); }, // R oturumu (global ortam) çalıştırmalar arasında sürer
     async run(src, c) {
       const w = this.rt, sh = await new w.Shelter();
       try {
@@ -563,6 +635,17 @@ io.read = function() return __r() end`);
       const php = this.rt; this.cur = c;
       try { await php.refresh(); const code = await php.run(src); php.flush(); c.end(); if (code) throw Object.assign(new Error('çıkış kodu ' + code), { soft: true }); }
       finally { this.cur = null; }
+    },
+    /* komut satırı: her komut ayrı çalışır; tek ifadeyse değeri var_export ile yazılır */
+    async repl(src, c) {
+      const php = this.rt; this.cur = c;
+      let s = src.trim().replace(/^<\?php\s*/, '');
+      if (!/;\s*$|}\s*$/.test(s)) s += ';';
+      const body = s.replace(/;\s*$/, '');
+      const expr = !/^(echo|print|if|for|foreach|while|do|switch|function|class|return|var_dump|print_r|printf|unset|global|static|const|try|throw)\b/i.test(body)
+        && !/^\$[\w\[\]'"\->]*\s*[.+\-*\/%]?=(?!=)/.test(body) && !/[;{]/.test(body);
+      try { await php.refresh(); await php.run('<?php ' + (expr ? 'var_export(' + s.replace(/;\s*$/, '') + '); echo "\\n";' : s)); php.flush(); c.end(); }
+      finally { this.cur = null; }
     } },
   ruby: { name: 'Ruby', color: '#cc342d', file: 'main.rb', mode: 'ruby', mime: 'text/x-ruby', indent: 2, ext: ['rb'], size: '36 MB',
     async load() {
@@ -581,30 +664,33 @@ module Kernel
   end
 end
 module ErRun
-  def self.run(b64)
+  def self.run(b64, show = false)
     src = b64.unpack1('m').force_encoding('UTF-8')
-    out = StringIO.new; $stdout = out; $stderr = out; err = ''
+    out = StringIO.new; $stdout = out; $stderr = out; err = ''; ret = ''
     begin
-      TOPLEVEL_BINDING.eval(src, 'main.rb', 1)
+      r = TOPLEVEL_BINDING.eval(src, show ? '(irb)' : 'main.rb', 1)
+      ret = r.inspect if show
     rescue Exception => e
       bt = (e.backtrace || []).select { |l| l.start_with?('main.rb') }.first(4)
       err = "#{e.class}: #{e.message}" + (bt.empty? ? '' : "\\n  " + bt.join("\\n  "))
     ensure
       $stdout = STDOUT; $stderr = STDERR
     end
-    out.string + "\\u0000" + err
+    out.string + "\\u0000" + err + "\\u0000" + ret
   end
 end`);
       this.rt = vm;
       return 'Ruby ' + vm.eval('RUBY_VERSION').toString();
     },
-    async run(src, c) {
+    repl(src, c) { return this.run(src, c, true); }, // TOPLEVEL_BINDING çalıştırmalar arasında sürer
+    async run(src, c, show) {
       const bytes = new TextEncoder().encode(src); let bin = '';
       for (let i = 0; i < bytes.length; i += 0x8000) bin += String.fromCharCode.apply(null, bytes.subarray(i, i + 0x8000));
-      const r = this.rt.eval(`ErRun.run("${btoa(bin)}")`).toString();
-      const k = r.lastIndexOf('\u0000'), out = r.slice(0, k), err = r.slice(k + 1);
+      const r = this.rt.eval(`ErRun.run("${btoa(bin)}", ${show ? 'true' : 'false'})`).toString();
+      const k2 = r.lastIndexOf('\u0000'), k = r.lastIndexOf('\u0000', k2 - 1), out = r.slice(0, k), err = r.slice(k + 1, k2), ret = r.slice(k2 + 1);
       if (out) c.write(out.endsWith('\n') ? out : out + '\n');
       if (err) throw new Error(err);
+      if (ret) { c.end(); c.write('=> ' + ret + '\n', 'ret'); }
     } },
   prolog: { name: 'Prolog', color: '#a25d2a', file: 'main.pl', mode: 'prolog', mime: 'text/x-prolog', indent: 4, ext: ['pl', 'pro'], size: '0.4 MB',
     async load() {
@@ -612,18 +698,31 @@ end`);
       await loadScript('https://cdn.jsdelivr.net/npm/tau-prolog@0.3.4/modules/lists.js');
       return 'Tau Prolog ' + (window.pl.version ? Object.values(window.pl.version).join('.') : '0.3.4');
     },
-    async run(src, c) {
-      const pl = window.pl, s = pl.create(200000);
+    async session(prog, c) {
+      const s = window.pl.create(200000);
       s.standard_output.stream.put = t => { c.write(t); return true; };
       s.standard_error.stream.put = t => { c.write(t, 'err'); return true; };
+      await new Promise((res, rej) => s.consult(':- use_module(library(lists)).\n' + prog, { success: res, error: e => rej(new Error('Program hatası: ' + this.fmt(s, e))) }));
+      return s;
+    },
+    fmt(s, x) { try { return s.format_answer(x); } catch (e) { return String(x); } },
+    async run(src, c) {
+      this.s = null;
       const queries = [], prog = src.split('\n').map(l => { const m = l.match(/^\s*\?-\s*(.*)$/); if (m) { queries.push(m[1].trim()); return ''; } return l; }).join('\n');
-      const fmt = x => { try { return s.format_answer(x); } catch (e) { return String(x); } };
-      await new Promise((res, rej) => s.consult(':- use_module(library(lists)).\n' + prog, { success: res, error: e => rej(new Error('Program hatası: ' + fmt(e))) }));
-      if (!queries.length) return c.write('Program yüklendi. Sorgu çalıştırmak için "?- hedef." satırı ekle.\n', 'sys');
-      for (const q of queries) {
-        c.end(); c.write('?- ' + q + '\n', 'in');
+      const s = this.s = await this.session(prog, c);
+      if (!queries.length) return c.write('Program yüklendi. Sorgu için "?- hedef." satırı ekle ya da aşağıdaki komut satırına yaz.\n', 'sys');
+      for (const q of queries) { c.end(); c.write('?- ' + q + '\n', 'in'); await this.query(s, q, c); }
+    },
+    /* komut satırı: yazılan satır, yüklü programa sorgu olarak gider */
+    async repl(src, c) {
+      const s = this.s || (this.s = await this.session('', c));
+      await this.query(s, src.trim().replace(/^\?-\s*/, ''), c);
+    },
+    async query(s, q, c) {
+      const fmt = x => this.fmt(s, x);
+      {
         const ok = await new Promise(res => s.query(q.endsWith('.') ? q : q + '.', { success: () => res(true), error: e => { c.write(fmt(e) + '\n', 'err'); res(false); } }));
-        if (!ok) continue;
+        if (!ok) return;
         for (let i = 0; i < 25; i++) {
           const more = await new Promise(res => s.answer({
             success: a => { c.end(); c.write(fmt(a) + '\n', 'ret'); res(true); },
@@ -641,6 +740,7 @@ end`);
       await loadScript('https://cdn.jsdelivr.net/npm/biwascheme@0.8.0/release/biwascheme-min.js');
       return 'BiwaScheme ' + (window.BiwaScheme.Version || window.BiwaScheme.VERSION || '');
     },
+    repl(src, c) { return this.run(src, c); }, // tanımlar genel ortamda kalır
     run(src, c) {
       const B = window.BiwaScheme;
       B.Port.current_output = new B.Port.CustomOutput(t => c.write(t));
@@ -706,6 +806,7 @@ function setLang(l, first) {
   for (const k in cons) cons[k].el.hidden = k !== l;
   if (!frame) con(l).el.hidden = false;
   $('autoWrap').hidden = !R.live;
+  replLang();
   $('outTitle').textContent = frame ? 'Önizleme' : 'Konsol';
   $('stopBtn').hidden = !(R.stop && busy[l]);
   $('runBtn').disabled = !!busy[l];
@@ -758,16 +859,23 @@ async function run(auto) {
     try { await ensure(l); R.run(src); setStat(l, 'ok', (auto ? 'güncellendi · ' : 'çalıştı · ') + new Date().toLocaleTimeString('tr-TR')); } catch (e) {}
     return;
   }
+  return exec(l, async (c, st) => {
+    c.sep();
+    const t0 = performance.now();
+    st('çalışıyor…'); await sleep(15);
+    await R.run(src, c, st);
+    c.end(); c.write(`— bitti · ${((performance.now() - t0) / 1000).toFixed(2)} sn\n`, 'sys');
+  });
+}
+/* Ortak çalıştırma çerçevesi: meşgul durumu, ortam yükleme, hata gösterimi */
+async function exec(l, body) {
+  const R = L[l];
   if (busy[l]) return;
   busy[l] = true; if (l === lang) { $('runBtn').disabled = true; $('stopBtn').hidden = !R.stop; }
   const c = con(l);
   try {
     await ensure(l);
-    c.sep();
-    const t0 = performance.now();
-    setStat(l, 'busy', 'çalışıyor…'); await sleep(15);
-    await R.run(src, c, t => setStat(l, 'busy', t));
-    c.end(); c.write(`— bitti · ${((performance.now() - t0) / 1000).toFixed(2)} sn\n`, 'sys');
+    await body(c, t => setStat(l, 'busy', t));
     setStat(l, 'ok', 'tamam · ' + new Date().toLocaleTimeString('tr-TR'));
   } catch (e) {
     if (ready[l]) {
@@ -782,6 +890,85 @@ async function run(auto) {
   }
 }
 $('runBtn').onclick = () => run();
+
+/* ---------- komut satırı (REPL) ---------- */
+const PROMPT = { html: '>', javascript: '>', typescript: '>', python: '>>>', sql: 'sql>', lua: '>', r: '>', php: 'php>', ruby: 'irb>', prolog: '?-', scheme: '>' };
+const REPL_HINT = {
+  html: 'önizlemedeki sayfada JS çalıştır: document.title',
+  javascript: 'son çalıştırmanın değişkenleriyle ifade yaz',
+  typescript: 'son çalıştırmanın değişkenleriyle ifade yaz',
+  python: 'son çalıştırmanın değişkenleriyle komut yaz',
+  sql: 'son çalıştırmanın veritabanında sorgu: SELECT * FROM …',
+  lua: 'global değişkenler korunur · ifadenin değeri yazılır',
+  r: 'R oturumunda komut: summary(x)',
+  php: 'her komut ayrı çalışır · ifadenin değeri yazılır',
+  ruby: 'Ruby ifadesi: [1, 2, 3].sum',
+  prolog: 'yüklü programa sorgu: uzunluk(X, 3)',
+  scheme: 'Scheme ifadesi: (+ 1 2)'
+};
+const replIn = $('replIn');
+const hist = l => { try { return JSON.parse(store.get(KEY + '-hist-' + l) || '[]'); } catch (e) { return []; } };
+let hPos = -1, hDraft = '';
+function replLang() {
+  const l = lang, R = L[l], on = l === 'html' || !!R.repl;
+  $('repl').hidden = !on;
+  $('replPr').textContent = PROMPT[l] || '>';
+  replIn.placeholder = (REPL_HINT[l] || 'komut') + ' · ↑ geçmiş';
+  hPos = -1;
+}
+function replSize() { replIn.style.height = 'auto'; replIn.style.height = Math.min(replIn.scrollHeight, 168) + 'px'; }
+function echo(c, l, code) {
+  c.end();
+  if (l === 'prolog') code = code.replace(/^\s*\?-\s*/, '');
+  code.split('\n').forEach((ln, i) => c.write((i ? '.'.repeat(Math.max(3, PROMPT[l].length)) : PROMPT[l]) + ' ' + ln + '\n', 'in'));
+}
+async function replRun(code) {
+  const l = lang, R = L[l];
+  if (!code.trim()) return;
+  const h = hist(l).filter(x => x !== code); h.push(code); store.set(KEY + '-hist-' + l, JSON.stringify(h.slice(-100)));
+  hPos = -1;
+  if (l === 'html') {
+    $('htmlCon').classList.remove('mini-h'); $('conToggle').textContent = '▾';
+    echo(htmlCon, l, code);
+    const w = $('frame').contentWindow; if (w) w.postMessage({ __erEval: frameId, code }, '*');
+    return;
+  }
+  if (!R.repl) return;
+  if (busy[l]) return toast('önceki iş bitmeden komut çalışmaz');
+  return exec(l, async (c, st) => {
+    echo(c, l, code);
+    st('çalışıyor…');
+    await R.repl(code, c, st);
+    c.end();
+  });
+}
+replIn.addEventListener('input', replSize);
+replIn.addEventListener('keydown', e => {
+  const v = replIn.value, l = lang;
+  if (e.key === 'Enter' && !e.shiftKey && !e.isComposing) {
+    e.preventDefault();
+    const lines = v.split('\n'), last = lines[lines.length - 1];
+    // Python: ':' ile biten satır blok açar; blok boş satırla biter
+    if (l === 'python' && (/:\s*$/.test(last) || (lines.length > 1 && last.trim()))) {
+      const ind = (last.match(/^\s*/)[0]) + (/:\s*$/.test(last) ? '    ' : '');
+      replIn.setRangeText('\n' + ind, replIn.selectionStart, replIn.selectionEnd, 'end'); replSize(); return;
+    }
+    replIn.value = ''; replSize();
+    replRun(v.replace(/\s+$/, ''));
+  } else if ((e.key === 'ArrowUp' || e.key === 'ArrowDown') && !e.shiftKey) {
+    const before = v.slice(0, replIn.selectionStart), after = v.slice(replIn.selectionEnd);
+    if (e.key === 'ArrowUp' ? before.includes('\n') : after.includes('\n')) return;
+    const h = hist(l); if (!h.length) return;
+    e.preventDefault();
+    if (hPos < 0) hDraft = v;
+    hPos = e.key === 'ArrowUp' ? (hPos < 0 ? h.length - 1 : Math.max(0, hPos - 1)) : (hPos < 0 ? -1 : hPos + 1);
+    if (hPos >= h.length) hPos = -1;
+    replIn.value = hPos < 0 ? hDraft : h[hPos]; replSize();
+    replIn.setSelectionRange(replIn.value.length, replIn.value.length);
+  } else if (e.key === 'Escape') { replIn.value = ''; replSize(); hPos = -1; }
+  else if (e.key === 'l' && e.ctrlKey) { e.preventDefault(); $('clearBtn').click(); }
+});
+$('repl').addEventListener('click', e => { if (e.target !== replIn) replIn.focus(); });
 $('clearBtn').onclick = () => { if (L[lang].out === 'frame') { htmlCon.clear(); conCount = { log: 0, err: 0 }; updConCount(); } else con(lang).clear(); };
 $('autoRun').checked = store.get(KEY + '-live') !== '0';
 $('autoRun').onchange = () => { store.set(KEY + '-live', $('autoRun').checked ? '1' : '0'); if ($('autoRun').checked) run(true); };
@@ -857,7 +1044,7 @@ function applyMode() { document.documentElement.dataset.mode = mode; $('modeBtn'
 $('modeBtn').onclick = () => { mode = mode === 'dark' ? 'light' : 'dark'; store.set('erdevelop-mode', mode); applyMode(); };
 applyMode();
 setLang(lang, true);
-window.__code = { L, con, run, setLang, get lang() { return lang; }, cm, ready, busy };
+window.__code = { L, con, run, replRun, setLang, get lang() { return lang; }, cm, ready, busy };
 })();
 </script>
 </body>
