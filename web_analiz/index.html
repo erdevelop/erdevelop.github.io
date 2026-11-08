@@ -152,6 +152,27 @@
   .qrow input:focus { outline: none; border-color: var(--accent); }
   .out { margin-top: 10px; font: 400 12.5px var(--f-mono); }
   .muted { color: var(--muted); } .small { font-size: 12px; }
+  .mapw { position: relative; margin: 2px -4px 0; }
+  #mapC { width: 100%; display: block; cursor: crosshair; touch-action: pan-y; }
+  .tip { position: absolute; pointer-events: none; background: var(--panel); border: 1px solid var(--line); border-radius: 6px; padding: 6px 9px; font: 400 12px/1.5 var(--f-mono); box-shadow: 0 6px 18px rgba(0,0,0,.18); white-space: nowrap; z-index: 2; }
+  .mvt { display: inline-flex; gap: 4px; }
+  i.dot { display: inline-block; width: 8px; height: 8px; border-radius: 50%; margin-right: 7px; vertical-align: middle; }
+  .legend i.pt { width: 9px; height: 9px; border-radius: 50%; } .legend i.sq { width: 9px; height: 9px; border-radius: 1px; background: none !important; border: 1.5px solid var(--accent); }
+  .eff { display: inline-block; width: 64px; height: 6px; border-radius: 3px; background: var(--grid); vertical-align: middle; margin-right: 6px; overflow: hidden; }
+  .eff i { display: block; height: 100%; background: var(--accent); border-radius: 3px; }
+  .effc { white-space: nowrap; } .effc small { color: var(--muted); }
+  #mapRows tr.hi td { background: var(--accent-dim); }
+  .hl { display: grid; gap: 9px; }
+  .hlr { display: grid; grid-template-columns: 24px minmax(0, 1.4fr) minmax(40px, 1fr) auto; gap: 10px; align-items: center; font-size: 13.5px; }
+  .hlr .ic { font-size: 17px; text-align: center; } .hlr .nm small { display: block; color: var(--muted); font: 400 11px var(--f-mono); }
+  .hb { height: 6px; border-radius: 3px; background: var(--grid); overflow: hidden; } .hb i { display: block; height: 100%; background: var(--accent); border-radius: 3px; } .hb i.u { background: var(--hot); }
+  .hlr b { font: 600 14px var(--f-display); text-align: right; white-space: nowrap; font-variant-numeric: tabular-nums; }
+  .hlc { display: flex; gap: 6px; align-items: center; flex-wrap: wrap; margin-top: 12px; font-size: 13px; color: var(--muted); }
+  .inp { font: 400 13px var(--f-mono); color: var(--fg); background: var(--panel-2); border: 1px solid var(--line); border-radius: 4px; padding: 5px 8px; min-width: 0; }
+  .inp:focus { outline: none; border-color: var(--accent); }
+  .yer { display: flex; gap: 8px; align-items: center; margin: 0 0 10px; font-size: 12.5px; color: var(--muted); } .yer .inp { flex: 1; }
+  #trendC, #distC { width: 100%; display: block; }
+  #rooms h3 { font: 700 12px var(--f-display); text-transform: uppercase; letter-spacing: .6px; margin: 14px 0 8px; color: var(--text); }
   .badge { display: inline-flex; align-items: center; gap: 6px; padding: 4px 11px; border-radius: 999px; font: 600 13px var(--f-body); }
   .badge.ok { background: color-mix(in srgb, var(--ok) 16%, transparent); color: var(--ok); } .badge.bad { background: color-mix(in srgb, var(--bad) 16%, transparent); color: var(--bad); }
   .dbar { display: block; height: 6px; border-radius: 3px; background: var(--accent); opacity: .55; } .dbar.best { opacity: 1; background: var(--ok); }
@@ -241,6 +262,7 @@
       <div class="hbtns">
         <button class="tb primary" type="button" id="runBtn" data-k="run">Testi başlat</button>
         <button class="tb" type="button" id="pingBtn" data-k="pingLive">Sürekli ping</button>
+        <button class="tb" type="button" id="cardBtn" data-k="cardBtn">Sonuç kartı</button>
       </div>
     </div>
     <div class="hr">
@@ -293,6 +315,33 @@
       <p class="note" data-k="bloatNote">İndirme sürerken ping ne kadar artıyor? Artış büyükse (bufferbloat) biri video izlerken oyunlar ve görüntülü görüşmeler takılır. Modem ayarlarında SQM / QoS açmak genelde düzeltir.</p>
     </section>
 
+    <section class="p w12">
+      <div class="ph2"><span class="sw"></span><h2 data-k="mapH">Dünya gecikme haritası</h2><span class="meta" data-k="mapMeta">veri merkezlerine gidiş-dönüş</span><span class="sp"></span>
+        <span class="mvt"><button class="mini" type="button" data-mv="world" data-k="mapWorld">Dünya</button><button class="mini" type="button" data-mv="eu" data-k="mapEu">Avrupa</button></span>
+        <button class="mini" type="button" id="mapBtn" data-k="mapRun">ölç</button></div>
+      <div class="mapw"><canvas id="mapC" role="img" aria-label="dünya gecikme haritası"></canvas><div class="tip" id="mapTip" hidden></div></div>
+      <div class="legend"><span><i class="pt" style="background:var(--accent)"></i><span data-k="mapYou">Sen</span></span><span><i class="sq"></i><span data-k="mapSrv">hız testi sunucusu</span></span><span><i class="pt" style="background:var(--ok)"></i>&lt; 60 ms</span><span><i class="pt" style="background:var(--warn)"></i>60–150 ms</span><span><i class="pt" style="background:var(--bad)"></i>&gt; 150 ms</span></div>
+      <p class="verdict" id="mapV"></p>
+      <div class="tscroll" style="margin-top:10px"><table>
+        <thead><tr><th data-k="thRegion">Bölge</th><th class="r" data-k="thDist">Mesafe</th><th class="r" data-k="thMs">Gecikme</th><th class="r" data-k="thMin">Fiziksel sınır</th><th data-k="thEff">Verim</th></tr></thead>
+        <tbody id="mapRows"></tbody></table></div>
+      <div style="margin-top:8px"><button class="mini" type="button" id="mapMore" hidden></button></div>
+      <p class="note" data-kh="mapNote"></p>
+    </section>
+    <section class="p w6">
+      <div class="ph2"><span class="sw"></span><h2 data-k="distH">Gecikme dağılımı</h2><span class="meta" data-k="distMeta">her ölçüm tek tek</span></div>
+      <canvas id="distC" role="img" aria-label="gecikme dağılımı"></canvas>
+      <div class="sgrid" id="distS"></div>
+      <p class="note" data-kh="distNote"></p>
+    </section>
+    <section class="p w6">
+      <div class="ph2"><span class="sw"></span><h2 data-k="hlH">Bu hızla ne kadar sürer?</h2><span class="meta" data-k="hlMeta">ölçülen hızla tahmini süre</span></div>
+      <div class="muted small" id="hlEmpty" data-k="hlEmpty">Hız testinden sonra hesaplanır.</div>
+      <div class="hl" id="hl" hidden></div>
+      <div class="hlc"><span data-k="hlCustom">Kendi dosyan</span><input class="inp" id="hlSize" inputmode="decimal" placeholder="2,5" style="width:80px" aria-label="boyut"><select class="sel" id="hlUnit" aria-label="birim"><option value="1000000">MB</option><option value="1000000000" selected>GB</option></select><select class="sel" id="hlDir" aria-label="yön"><option value="d">↓</option><option value="u">↑</option></select></div>
+      <p class="note" data-k="hlNote"></p>
+    </section>
+
     <section class="p">
       <div class="ph2"><span class="sw"></span><h2 data-k="devH">Cihaz</h2></div>
       <div class="kv" id="dev"></div>
@@ -304,8 +353,11 @@
     </section>
     <section class="p">
       <div class="ph2"><span class="sw"></span><h2 data-k="histH">Önceki testler</h2><span class="sp"></span><button class="mini" type="button" id="histClr" data-k="clear">temizle</button></div>
-      <div class="hist" id="hist"></div>
-      <p class="note" data-k="histNote">Son 10 test yalnızca bu tarayıcıda saklanır.</p>
+      <label class="yer"><span data-k="yerL">Ölçüm yeri</span><input class="inp" id="yer" list="yerList" data-ph="yerPh" maxlength="30" autocomplete="off"></label><datalist id="yerList"></datalist>
+      <div id="trendW" hidden><canvas id="trendC" role="img" aria-label="hız geçmişi"></canvas><div class="legend"><span><i style="background:var(--accent)"></i><span data-k="sDown">İndirme</span></span><span><i style="background:var(--hot)"></i><span data-k="sUp">Yükleme</span></span><span data-k="trendL"></span></div></div>
+      <div class="hist" id="hist" style="margin-top:10px"></div>
+      <div id="rooms" hidden><h3 data-k="roomsH"></h3><div class="hist" id="roomsL"></div></div>
+      <p class="note" data-k="histNote">Testler yalnızca bu tarayıcıda saklanır.</p>
     </section>
 
     <section class="p w8">
@@ -405,7 +457,7 @@ const T = {
     wifiNote: 'Wi-Fi ağının adı ve sinyal gücü tarayıcıya hiçbir zaman verilmez; bu bilgiyi hiçbir web sitesi okuyamaz. Konum, IP adresine göre tahmindir.',
     pingNote: 'Tarayıcı gerçek ICMP ping gönderemez; burada her sunucuya küçük bir web isteği atılıp dönüş süresi ölçülür. Sonuçlar gerçek ping\'e çok yakındır.',
     bloatNote: 'İndirme sürerken ping ne kadar artıyor? Artış büyükse (bufferbloat) biri video izlerken oyunlar ve görüntülü görüşmeler takılır. Modem ayarlarında SQM / QoS açmak genelde düzeltir.',
-    perfNote: 'İşlemci puanı bu tarayıcıda kısa bir hesap testiyle bulunur; aynı cihazda bile tarayıcıya ve şarj durumuna göre değişir.', histNote: 'Son 10 test yalnızca bu tarayıcıda saklanır.',
+    perfNote: 'İşlemci puanı bu tarayıcıda kısa bir hesap testiyle bulunur; aynı cihazda bile tarayıcıya ve şarj durumuna göre değişir.', histNote: 'Son 30 test yalnızca bu tarayıcıda saklanır. Ölçüm yerini yazarsan evin farklı odalarındaki Wi-Fi hızını karşılaştırabilirsin.',
     foot: 'Hız testi Cloudflare\'in açık test sunucularıyla, IP bilgisi ipwho.is ile yapılır. Hiçbir ölçüm sunucuya kaydedilmez.',
     tTarget: 'Hedef', tLast: 'son', tAvg: 'ort.', tMin: 'en iyi', tLoss: 'kayıp',
     ip: 'IP adresi', isp: 'Sağlayıcı', loc: 'Konum (tahmini)', tz: 'Saat dilimi', ctype: 'Bağlantı türü', est: 'Tarayıcı tahmini', srv: 'Test sunucusu', online: 'Durum', on: 'çevrimiçi', off: 'çevrimdışı', unknown: 'bilinmiyor', saveData: 'veri tasarrufu açık', proto: 'Protokol',
@@ -422,7 +474,7 @@ const T = {
     wifiNote: 'Browsers are never given the Wi-Fi network name or signal strength; no website can read them. Location is an estimate based on your IP address.',
     pingNote: 'Browsers cannot send real ICMP pings; a tiny web request is sent to each server and the round trip is timed. Results are very close to a real ping.',
     bloatNote: 'How much does ping rise while a download runs? A big rise (bufferbloat) makes games and video calls stutter when someone streams. Turning on SQM / QoS in the router usually fixes it.',
-    perfNote: 'The CPU score comes from a short calculation in this browser; it varies with browser and power state even on the same device.', histNote: 'The last 10 tests are kept in this browser only.',
+    perfNote: 'The CPU score comes from a short calculation in this browser; it varies with browser and power state even on the same device.', histNote: 'The last 30 tests are kept in this browser only. Name the place you test from to compare Wi-Fi speed across rooms.',
     foot: 'Speed is measured against Cloudflare\'s public test servers and IP details come from ipwho.is. No measurement is stored on any server.',
     tTarget: 'Target', tLast: 'last', tAvg: 'avg', tMin: 'best', tLoss: 'loss',
     ip: 'IP address', isp: 'Provider', loc: 'Location (approx.)', tz: 'Time zone', ctype: 'Connection type', est: 'Browser estimate', srv: 'Test server', online: 'Status', on: 'online', off: 'offline', unknown: 'unknown', saveData: 'data saver on', proto: 'Protocol',
@@ -542,9 +594,9 @@ async function speed(kind, dur, cap, onLive) {
 /* ---------------- info ---------------- */
 async function ipInfo() {
   const tries = [
-    async () => { const r = await fetch('https://ipwho.is/?lang=' + lang, { cache: 'no-store' }); const j = await r.json(); if (!j.success) throw 0; return { ip: j.ip, isp: (j.connection && (j.connection.isp || j.connection.org)) || '', asn: j.connection && j.connection.asn, city: j.city, region: j.region, country: j.country, flag: j.flag && j.flag.emoji, tz: j.timezone && j.timezone.id }; },
-    async () => { const r = await fetch('https://ipapi.co/json/', { cache: 'no-store' }); const j = await r.json(); if (j.error) throw 0; return { ip: j.ip, isp: j.org, asn: j.asn, city: j.city, region: j.region, country: j.country_name, tz: j.timezone }; },
-    async () => { const r = await fetch(CF + '/meta', { cache: 'no-store' }); const j = await r.json(); return { ip: j.clientIp, isp: j.asOrganization, asn: j.asn, city: j.city, region: j.region, country: j.country }; }
+    async () => { const r = await fetch('https://ipwho.is/?lang=' + lang, { cache: 'no-store' }); const j = await r.json(); if (!j.success) throw 0; return { ip: j.ip, isp: (j.connection && (j.connection.isp || j.connection.org)) || '', asn: j.connection && j.connection.asn, city: j.city, region: j.region, country: j.country, flag: j.flag && j.flag.emoji, tz: j.timezone && j.timezone.id, lat: j.latitude, lon: j.longitude }; },
+    async () => { const r = await fetch('https://ipapi.co/json/', { cache: 'no-store' }); const j = await r.json(); if (j.error) throw 0; return { ip: j.ip, isp: j.org, asn: j.asn, city: j.city, region: j.region, country: j.country_name, tz: j.timezone, lat: j.latitude, lon: j.longitude }; },
+    async () => { const r = await fetch(CF + '/meta', { cache: 'no-store' }); const j = await r.json(); return { ip: j.clientIp, isp: j.asOrganization, asn: j.asn, city: j.city, region: j.region, country: j.country, lat: +j.latitude, lon: +j.longitude }; }
   ];
   for (const f of tries) { try { const v = await f(); if (v && v.ip) return v; } catch (e) {} }
   return null;
@@ -735,7 +787,7 @@ function paintHist() {
   const H = hist(), tt = t();
   if (!H.length) { $('hist').innerHTML = `<div class="hrow"><small>${tt.noHist}</small></div>`; return; }
   const mx = Math.max(...H.map(h => h.d || 0), 1);
-  $('hist').innerHTML = H.slice().reverse().map(h => { const dt = new Date(h.t); return `<div class="hrow"><small>${dt.toLocaleDateString(lang === 'tr' ? 'tr-TR' : 'en-GB', { day: '2-digit', month: '2-digit' })} ${dt.toLocaleTimeString(lang === 'tr' ? 'tr-TR' : 'en-GB', { hour: '2-digit', minute: '2-digit' })}</small><i style="width:${(h.d || 0) / mx * 100}%"></i><b>${fmtMbps(h.d)}</b></div><div class="hrow" style="margin-top:-4px"><small></small><small>↑ ${fmtMbps(h.u)} · ${nf(h.p)} ms</small><small></small></div>`; }).join('');
+  $('hist').innerHTML = H.slice(-10).reverse().map(h => { const dt = new Date(h.t); return `<div class="hrow"><small>${dt.toLocaleDateString(lang === 'tr' ? 'tr-TR' : 'en-GB', { day: '2-digit', month: '2-digit' })} ${dt.toLocaleTimeString(lang === 'tr' ? 'tr-TR' : 'en-GB', { hour: '2-digit', minute: '2-digit' })}</small><i style="width:${(h.d || 0) / mx * 100}%"></i><b>${fmtMbps(h.d)}</b></div><div class="hrow" style="margin-top:-4px"><small></small><small>↑ ${fmtMbps(h.u)} · ${nf(h.p)} ms${h.l ? ' · ' + esc(h.l) : ''}</small><small></small></div>`; }).join('');
 }
 
 /* ---------------- run ---------------- */
@@ -749,14 +801,14 @@ async function runAll(manual) {
   // ping
   setStatus('stPing'); markStat('sPing'); gSpinOn = true; gauge(0, 'phPing', 'ms');
   const pings = await idlePing(12);
-  R.ping = median(pings); R.jitter = jitterOf(pings); setStat('vPing', R.ping, 0); setStat('vJit', R.jitter, 1); gSpinOn = false;
+  R.ping = median(pings); R.jitter = jitterOf(pings); R.idleS = pings.slice(); R.loadS = []; drawDist(); setStat('vPing', R.ping, 0); setStat('vJit', R.jitter, 1); gSpinOn = false;
   if (!manual && (c.saveData || c.type === 'cellular')) { setStatus('stWait', ''); gauge(0, 'phIdle', 'Mbps'); running = false; $('runBtn').disabled = false; await afterSpeed(); return; }
   // download + loaded latency
   setStatus('stDown'); markStat('sDown'); gauge(0, 'phDown', 'Mbps');
   const loaded = []; let lp = true; const t0 = performance.now();
   (async () => { await sleep(1200); while (lp) { const p = pingURL(), v = await timedFetch(bust(p.u), p.o, 3000); if (v != null && lp) { loaded.push(v); series.lat.push([(performance.now() - t0) / 1000, v]); } await sleep(250); } })();
   R.down = await speed('down', 9000, capD, (rate, el) => { gauge(rate); setStat('vDown', fmtMbps(rate)); series.down.push([el / 1000, rate]); drawChart(); packetRate = rate; });
-  lp = false; R.loaded = median(loaded); R.fallback = cfOK === false;
+  lp = false; R.loaded = median(loaded); R.loadS = loaded.slice(); drawDist(); R.fallback = cfOK === false;
   setStat('vDown', R.down == null ? null : fmtMbps(R.down)); paintBloat();
   // upload
   if (cfOK !== false) {
@@ -767,8 +819,8 @@ async function runAll(manual) {
   }
   markStat(null); gauge(R.down || 0, 'phDone', 'Mbps'); packetRate = R.down || 20;
   R.when = Date.now();
-  if (R.down != null) { const H = hist(); H.push({ t: R.when, d: +(R.down || 0).toFixed(2), u: R.up == null ? null : +R.up.toFixed(2), p: R.ping == null ? null : Math.round(R.ping) }); store.set('erdevelop-analiz', JSON.stringify(H.slice(-10))); }
-  paintHist(); paintUses(); drawChart();
+  if (R.down != null) { const H = hist(); const yl = (store.get('erdevelop-analiz-yer') || '').trim(); H.push({ t: R.when, d: +(R.down || 0).toFixed(2), u: R.up == null ? null : +R.up.toFixed(2), p: R.ping == null ? null : Math.round(R.ping), j: R.jitter == null ? null : +R.jitter.toFixed(1), ...(yl ? { l: yl } : {}) }); store.set('erdevelop-analiz', JSON.stringify(H.slice(-30))); }
+  paintHist(); paintUses(); drawChart(); paintHL(); drawTrend(); paintRooms();
   setStatus(R.fallback ? 'stFail' : 'stDone', R.down == null ? 'err' : R.fallback ? '' : 'ok');
   $('runBtn').textContent = t().rerun; running = false; $('runBtn').disabled = false;
   await afterSpeed();
@@ -779,6 +831,7 @@ async function afterSpeed() {
   const keep = statusKey, kc = statusCls; setStatus('stTargets'); await pingRound(5); setStatus(keep, kc);
   await bench();
   await dnsCompare();
+  await worldPing();
 }
 
 /* ---------------- network animation (hero) ---------------- */
@@ -1278,6 +1331,234 @@ function initExtras() {
 }
 function renderExtras() { paintStab(); drawStab(); paintDNS(); paintProto(); paintMouse(); touchDraw(); KB.built = ''; if (dtab === 'key') buildKb(); paintKb(); if (CAM.st) paintCam(); $('padOut').dataset.state = ''; if (!CAM.st) $('camBtn').textContent = t().camStart; $('micBtn').textContent = AUD.mic ? t().audMicStop : t().audMic; $('sweepBtn').textContent = AUD.sweep ? t().audSweepStop : t().audSweep; }
 
+/* ================= v2: dünya gecikme haritası, gecikme dağılımı, süre tahmini, geçmiş trendi, sonuç kartı ================= */
+Object.assign(T.tr, {
+  mapH: 'Dünya gecikme haritası', mapMeta: 'veri merkezlerine gidiş-dönüş', mapRun: 'ölç', mapAgain: 'tekrar ölç', mapWorld: 'Dünya', mapEu: 'Avrupa',
+  mapNote: 'Amazon Web Services bölgelerine küçük istekler gönderilip dönüş süresi ölçülür. <b>Fiziksel sınır</b>, ışığın fiberde (≈200.000 km/sn) kuş uçuşu mesafeyi gidip gelme süresidir; kablolar dolambaçlı yoldan geçtiği için ölçülen süre hep daha yüksektir. <b>Verim</b> ne kadar yüksekse yol o kadar dolaysızdır.',
+  mapWait: 'Ölçüm için “ölç”e dokun.', mapRunning: 'ölçülüyor…', mapNoLoc: 'Konumun bulunamadığı için mesafe hesaplanamadı.',
+  thRegion: 'Bölge', thDist: 'Mesafe', thMs: 'Gecikme', thMin: 'Fiziksel sınır', thEff: 'Verim', mapYou: 'Sen', mapSrv: 'hız testi sunucusu', unreach: 'ulaşılamadı',
+  mapBest: 'En yakın veri merkezi', mapAvg: 'ortalama',
+  cEU: 'Avrupa', cME: 'Orta Doğu', cAS: 'Asya', cNA: 'K. Amerika', cSA: 'G. Amerika', cAF: 'Afrika', cOC: 'Okyanusya',
+  distH: 'Gecikme dağılımı', distMeta: 'her ölçüm tek tek', distEmpty: 'Hız testinden sonra burada görünür.',
+  distNote: 'Çubuklar her gecikme aralığında kaç ölçüm olduğunu gösterir. <b>p95</b>: ölçümlerin %95\'i bu değerin altında. Yük altında dağılım sağa kayıp yayılıyorsa hat yoğunlukta tıkanıyor demektir.',
+  hlH: 'Bu hızla ne kadar sürer?', hlMeta: 'ölçülen hızla tahmini süre', hlCustom: 'Kendi dosyan', hlEmpty: 'Hız testinden sonra hesaplanır.',
+  hlNote: 'Kuramsal en kısa süredir; gerçek süre karşı sunucunun hızına ve hattın o anki yoğunluğuna göre uzayabilir.',
+  hlSong: 'Şarkı (MP3)', hlApp: 'Telefon uygulaması', hlOs: 'Sistem güncellemesi', hlHd: 'HD film', hl4k: '4K film', hlGame: 'Büyük oyun', hlPhotos: '100 fotoğraf', hlVid: '10 dk 4K video', hlBackup: 'Telefon yedeği',
+  dn: 'indirme', upl: 'yükleme', sec: 'sn', min: 'dk', hr: 'sa', day: 'gün',
+  trendL: 'hız geçmişi (Mbps)', yerL: 'Ölçüm yeri', yerPh: 'ör. Salon, Yatak odası, Ofis', roomsH: 'Yerlere göre ortanca indirme', tests: 'test',
+  mapAll: 'tümünü göster', mapLess: 'daha az göster', cardBtn: 'Sonuç kartı', cardDone: 'Sonuç kartı hazır', cardNo: 'Önce hız testini tamamla'
+});
+Object.assign(T.en, {
+  mapH: 'World latency map', mapMeta: 'round trip to data centres', mapRun: 'measure', mapAgain: 'measure again', mapWorld: 'World', mapEu: 'Europe',
+  mapNote: 'Tiny requests are sent to Amazon Web Services regions and the round trip is timed. The <b>physical limit</b> is the time light in fibre (≈200,000 km/s) needs for the straight-line distance and back; cables take longer routes, so the measured time is always higher. The higher the <b>efficiency</b>, the more direct the route.',
+  mapWait: 'Tap “measure” to start.', mapRunning: 'measuring…', mapNoLoc: 'Your location is unknown, so distances cannot be computed.',
+  thRegion: 'Region', thDist: 'Distance', thMs: 'Latency', thMin: 'Physical limit', thEff: 'Efficiency', mapYou: 'You', mapSrv: 'speed test server', unreach: 'unreachable',
+  mapBest: 'Closest data centre', mapAvg: 'average',
+  cEU: 'Europe', cME: 'Middle East', cAS: 'Asia', cNA: 'N. America', cSA: 'S. America', cAF: 'Africa', cOC: 'Oceania',
+  distH: 'Latency distribution', distMeta: 'every single sample', distEmpty: 'Appears after the speed test.',
+  distNote: 'Bars show how many samples fell in each latency range. <b>p95</b>: 95% of samples were below this value. If the loaded distribution shifts right and spreads out, the line chokes when busy.',
+  hlH: 'How long would it take?', hlMeta: 'estimated time at the measured speed', hlCustom: 'Your own file', hlEmpty: 'Calculated after the speed test.',
+  hlNote: 'Theoretical best case; real transfers may take longer depending on the other server and how busy the line is.',
+  hlSong: 'Song (MP3)', hlApp: 'Phone app', hlOs: 'System update', hlHd: 'HD movie', hl4k: '4K movie', hlGame: 'Big game', hlPhotos: '100 photos', hlVid: '10 min of 4K video', hlBackup: 'Phone backup',
+  dn: 'download', upl: 'upload', sec: 's', min: 'min', hr: 'h', day: 'd',
+  trendL: 'speed history (Mbps)', yerL: 'Where are you testing?', yerPh: 'e.g. Living room, Bedroom, Office', roomsH: 'Median download by place', tests: 'tests',
+  mapAll: 'show all', mapLess: 'show less', cardBtn: 'Result card', cardDone: 'Result card ready', cardNo: 'Finish the speed test first'
+});
+
+/* ---------- dünya haritası verisi (Natural Earth 110m, 1° ızgara, 84°K–58°G) ---------- */
+const LAND = (() => { const b = atob('AAAAAAAAAAAAAAAAAAAAAAAH/8AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAH///8AEf///gAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAE////D//////v/AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAB/wP/z////////gAAAAB/gAABwAAAAAAf4AAAAAAAAAAAAAAAAAAAAAAAAAIAf9/8A///////+AAAAD/gAAAAAAAAAAAH8gAAAAAAAAAAAAAAAAAAAAAAAYH3Hv/x////////8AAAAA/mAAAAAAAAAAAAD4AAAAAAAAAAAAAAAAAAAAAA8AAAQP+AH///////+AAAAAOAAAAAAAAAAAAAA8AAAAAAAAAAAAAAAAAAAAAHyHB8+/8AP///////4AAAAAAAAAAAAAfwAAAAH/8AAAAAAAAAAAAAAAAAAAAAP/wd3/8AAAf/////8AAAAAAAAAAAAHwAAAB////AAAB/sAAAAAAAAAAAAAAcAwAAAMAAAAH/////+AAAAAAAAAAAAcAAAAP///wAAAAAAAAAAAAAAAAAAAAf8AY++d3gAAD/////4AAAAAAAAAAAB4AAAP/////+HwAOAAAAAAAAAAAAAAA/f+4+w/5wAAB////+wAAAAAAAAAAADgAHl3///////4Af4AAAAAwAAAAAAAAPP/4M4///AAA/////wAAAAAAAAAAAHwAfb////////4///gAAABAAA//gAACAAf+B8f//8AB////8AAAAAAAB/gAAAAAfv/////////////8AAAAAB///+P//H//PeDwf+AAn///+AAAAAAA//8AAAA8fv///////////////P+wAf////////B4GfzwD8AAf///wAAAAAAD///4YDf/3//////////////////8AD////////////34Z/wA///4AAAAAAAP///+c////v//////////////////4M////////////9gD/8A///gAwYAAAAf//8cv///+//////////////////zg/////////////7A/8YAf/wAAP8AAAA/8f+D///////////////////////AgA////////////3w7/gAP/gAAP4AAAD/5/+f//////////////////////8AOB///////////+CAA/gAP/gAAAAAAAP/j/////////////////////////+AAH///////////4AgwHAAD+AAAAAAAB//H///////////////////////v/wAAP///////////wAA/AAAB+AAAAAAAB/+H//////////////////////nP+AAAX//z////////wAA/wAAAOAAAAAAAB//Dz////////////////////+A/YAAAA/yAD///////gAA/4wAAAAAAAAAAB//A////////////////////+eDgAAAAADwAAf//////4AA/94AAAAAAAAA4Ax+A///////////////////4AAPAAAAAADYAAD//////4AAf/8AAAAAAAAA8AC8G///////////////////gAAfgAAAAAMAAAA///////wAf/8AAAAAAAAA4AO8H///////////////////AAB/gAAAABgAAAA///////+A///AAAAAAAAAcANQH//////////////////8AAB/AAAAAAAAAAAf///////z///4AAAAAAAHPAOn///////////////////+CAB8AAAAAAAAAABP///////x///8AAAAAAAPfB//////////////////////+AA8AAAAAAAAAAAj///////x///8AAAAAAAOPz//////////////////////+AAwAAAAAAAAAAAD///////////8AAAAAAAAPn//////////////////////6AAgAAAAAAAAAAAH///////////MAAAAAAAA8f//////////////////////7AAAAAAAAAAAAAABv////////8MPAAAAAAAAD///////////////////////zAAAAAAAAAAAAAAAH/////////gfgAAAAAAAf///////////////////////yAAAAAAAAAAAAAAAf/////////gCgAAAAAAAH///////////////////////iAAAAAAAAAAAAAAAP/////////tAAAAAAAAAD/////eP/h//////////////BAAAAAAAAAAAAAAAP/////////+AAAAAAAAAB//f//P/+B/////////////+AAAAAAAAAAAAAAAAP////////8wAAAAAAAAAD//H/+AP+P/////////////8GAAAAAAAAAAAAAAAf////////wAAAAAAAAAH//jz/8AD+H/////////////4PwAAAAAAAAAAAAAAf////////gAAAAAAAAAH/4N4/8AB/B////////////+ALAAAAAAAAAAAAAAAP////////gAAAAAAAAAH/wAcf+Ph/g////////////8AAAAAAAAAAAAAAAAAf///////8AAAAAAAAAAH/AMHfP///x///////////P4AMAAAAAAAAAAAAAAAP///////8AAAAAAAAAAP/AMCOP///h//////////+RwAMAAAAAAAAAAAAAAAH///////oAAAAAAAAAAP/AAEHP///g//////////8B4AYAAAAAAAAAAAAAAAH///////wAAAAAAAAAAH+AEYGH///w//////////+w4C4AAAAAAAAAAAAAAAD///////wAAAAAAAAAAAg/+ACBM//////////////g4D4AAAAAAAAAAAAAAAB///////wAAAAAAAAAAAz/+ABwE/////////////+A4/4AAAAAAAAAAAAAAAB///////AAAAAAAAAAAB//8AAAB//////////////AhmAAAAAAAAAAAAAAAAAP/////+AAAAAAAAAAAD//+AAAB//////////////gHgAAAAAAAAAAAAAAAAAH/////4AAAAAAAAAAAP///4OAB//////////////gDAAAAAAAAAAAAAAAAAAG/////4AAAAAAAAAAAP///8P4z//////////////wCAAAAAAAAAAAAAAAAAACf////4AAAAAAAAAAAP/////////////////////gAAAAAAAAAAAAAAAAAAABf//hgYAAAAAAAAAAAP/////////P///////////wAAAAAAAAAAAAAAAAAAAAv/+AAYAAAAAAAAAAA///////9//H///////////wAAAAAAAAAAAAAAAAAAAB3/+AAcAAAAAAAAAAD///////5//j///////////gAAAAAAAAAAAAAAAAAAAAT/+AAMgAAAAAAAAAH///////8//wn//////////AAAAAAAAAAAAAAAAAAAAAJ/+AAEAAAAAAAAAAH///////+f/8R/////////+AAAAAAAAAAAAAAAAAAAAAM/8AAAAAAAAAAAAAP///////+f/44Af///////8wAAAAAAAAAAAAAAAAAAAAGf8AAAAAAAAAAAAAP////////P//+AP///////4gAAAAAAAAAAAAAAAAAAAAAP8AAvAAAAAAAAAAf////////H///AH//////+AgAAAAAAAAAAAAAAAAAAAAAP+A4BgAAAAAAAAAf////////n//+AD//4P//IAAAAAAAAAAAAAAAAAAAAAAAP+B4AcAAAAAAAAAf////////j//8AAf/4P/8AAAAAAAAAAAAAAAAgAAAAAAAH/B4AB4AAAAAAAAf////////h//8AAf/gH/84AAAAAAAAAAAAAAAAAAAAAAAD/vwAn5AAAAAAAAP////////x//4AAf/AD/8QAwAAAAAAAAAAAAAAAAAAAAAAf/wAAAAAAAAAAAf////////4//gAAf+AD/+AAwAAAAAAAAAAAAAAAAAAAAAAH/gAAAAAAAAAAAf////////4f8AAAf8AD//AAwAAAAAAAAAAAAAAAAAAAAAAAH/gAAAAAAAAAAf////////8f8AAAPwAAP/gAwAAAAAAAAAAAAAAAAAAAAAAAD/gAAAAAAAAAAf////////+fgAAAPwAAP/gA4AAAAAAAAAAAAAAAAAAAAAAAA/AAAAAAAAAAAf/////////eAAAAPwAAP/gAsAAAAAAAAAAAAAAAAAAAAAAAAHgAgAAAAAAAAf/////////gAAAAHwAAM/gACAAAAAAAAAAAAAAAAAAAAAAAADABIAAAAAAAAP/////////g4AAAHwAAEfgBLAAAAAAAAAAAAAAAAAAAAAAAADgP/aAAAAAAAH//////////4AAADwAAIOAAEAAAAAAAAAAAAAAAAAAAAAAAAByP/+AAAAAAAD//////////4AAADoAAIEACJAAAAAAAAAAAAAAAAAAAAAAAAA9///AAAAAAAB//////////wAAABYAAMAAAHAAAAAAAAAAAAAAAAAAAAAAAAAE///wAAAAAAB//////////wAAAAMAAEAAALgAAAAAAAAAAAAAAAAAAAAAAAAA///wAAAAAAAf/////////gAAAAMAADAAMDAAAAAAAAAAAAAAAAAAAAAAAAAA////gAAAAAAP+B///////gAAAAAABDgAeAAAAAAAAAAAAAAAAAAAAAAAAAAA////wAAAAAAAAAv//////AAAAAAAAzgA+AAAAAAAAAAAAAAAAAAAAAAAAAAA////4AAAAAAAAAH/////+AAAAAAAAZgB4AAAAAAAAAAAAAAAAAAAAAAAAAAB////4AAAAAAAAAH/////8AAAAAAAAcwH8AAAAAAAAAAAAAAAAAAAAAAAAAAB////8AAAAAAAAAH/////wAAAAAAAAHQf8AYAAAAAAAAAAAAAAAAAAAAAAAAD////8AAAAAAAAAH/////gAAAAAAAAHgf88YAAAAAAAAAAAAAAAAAAAAAAAAH////+AAAAAAAAAH/////AAAAAAAAADgf9AAgAAAAAAAAAAAAAAAAAAAAAAAH/////4AAAAAAAAH/////AAAAAAAAAD4P5wAxAAAAAAAAAAAAAAAAAAAAAAAH//////AAAAAAAAD////8AAAAAAAAAB8P5wAz4AgAAAAAAAAAAAAAAAAAAAAH//////4AAAAAAAB////8AAAAAAAAAA8AxQif/AIAAAAAAAAAAAAAAAAAAAAP//////+AAAAAAAB////4AAAAAAAAAAcABYAD/wQAAAAAAAAAAAAAAAAAAAAH///////gAAAAAAA////4AAAAAAAAAAMAAIAI/ziAAAAAAAAAAAAAAAAAAAAH///////gAAAAAAA////4AAAAAAAAAAHEAAAA/8BgAAAAAAAAAAAAAAAAAAAD///////gAAAAAAAf///4AAAAAAAAAAB+AAAA/4AIAAAAAAAAAAAAAAAAAAAB///////gAAAAAAAf///4AAAAAAAAAAAAm5gAOMAAAAAAAAAAAAAAAAAAAAAB///////AAAAAAAAf///8AAAAAAAAAAAABCAAAHAHAAAAAAAAAAAAAAAAAAAA//////+AAAAAAAAf///8AAAAAAAAAAAAAAAACAgBAAAAAAAAAAAAAAAAAAAA//////+AAAAAAAAf///8AAAAAAAAAAAAAAAgCAAAAAAAAAAAAAAAAAAAAAAAf/////8AAAAAAAAf///+AQAAAAAAAAAAAAD+CAAAAAAAAAAAAAAAAAAAAAAAf/////4AAAAAAAA////+AwAAAAAAAAAAAAD8HAAAAAAAAAAAAAAAAAAAAAAAP/////4AAAAAAAA////+BwAAAAAAAAAAAB34HgAACAAAAAAAAAAAAAAAAAAAH/////4AAAAAAAA////8DwAAAAAAAAAAAD/8HgAAAAAAAAAAAAAAAAAAAAAAB/////4AAAAAAAB////4PwAAAAAAAAAAAH//HgAABADAAAAAAAAAAAAAAAAAA/////4AAAAAAAB////gPgAAAAAAAAAAAP///wAAAAGAAAAAAAAAAAAAAAAAAf////wAAAAAAAA////APgAAAAAAAAAAAf///wAAAAAAAAAAAAAAAAAAAAAAAP////wAAAAAAAAf//+APgAAAAAAAAAAAf///8AAAAAAAAAAAAAAAAAAAAAAAP////gAAAAAAAAf//+APgAAAAAAAAAAP////+AAIAAAAAAAAAAAAAAAAAAAAP////gAAAAAAAAP//+AfAAAAAAAAAAAf////+AAGAAAAAAAAAAAAAAAAAAAAf////AAAAAAAAAP///AfAAAAAAAAAAB//////gAAAAAAAAAAAAAAAAAAAAAAf///4AAAAAAAAAP///AfAAAAAAAAAAB//////gAAAAAAAAAAAAAAAAAAAAAAf///gAAAAAAAAAP//+AOAAAAAAAAAAB//////wAAAAAAAAAAAAAAAAAAAAAAf///AAAAAAAAAAP//4AAAAAAAAAAAAA//////4AAAAAAAAAAAAAAAAAAAAAAf//+AAAAAAAAAAH//4AAAAAAAAAAAAB//////4AAAAAAAAAAAAAAAAAAAAAAf//+AAAAAAAAAAH//4AAAAAAAAAAAAA//////4AAAAAAAAAAAAAAAAAAAAAA///+AAAAAAAAAAD//wAAAAAAAAAAAAA//////8AAAAAAAAAAAAAAAAAAAAAA///8AAAAAAAAAAB//gAAAAAAAAAAAAAf/////4AAAAAAAAAAAAAAAAAAAAAA///8AAAAAAAAAAB//AAAAAAAAAAAAAAf/////4AAAAAAAAAAAAAAAAAAAAAA///4AAAAAAAAAAA/+AAAAAAAAAAAAAAf/8///4AAAAAAAAAAAAAAAAAAAAAA///gAAAAAAAAAAA/8AAAAAAAAAAAAAAf+AP//wAAAAAAAAAAAAAAAAAAAAAA///gAAAAAAAAAAA/wAAAAAAAAAAAAAAf8AG//gAAAAAAAAAAAAAAAAAAAAAA//3AAAAAAAAAAAAQAAAAAAAAAAAAAAAOAAF//gAACAAAAAAAAAAAAAAAAAAB//4AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA//AAABAAAAAAAAAAAAAAAAAAB//4AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAP/AAAAgAAAAAAAAAAAAAAAAAD//4AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAP/AAAAyAAAAAAAAAAAAAAAAAD//gAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAADYAAAA8AAAAAAAAAAAAAAAAAD/8AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA4AAAAAAAAAAAAAAAAAD/8AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAgAAACYAAAAAAAAAAAAAAAAAD/gAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAcAAADAAAAAAAAAAAAAAAAAAH/4AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAcAAAGAAAAAAAAAAAAAAAAAAB/gAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAIAAAeAAAAAAAAAAAAAAAAAAH/gAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA4AAAAAAAAAAAAAAAAAAH+AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAB4AAAAAAAAAAAAAAAAAAP+AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAgAAAAAAAAAAAAAAAAAAH/AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAP+AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAP8AAAAAAAAAAAAAAAAAAAAAAMAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAH4AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAP4BwAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAD4AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAD8AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA/gAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA'), u = new Uint8Array(b.length); for (let i = 0; i < b.length; i++) u[i] = b.charCodeAt(i); return u; })();
+const LW = 360, LH = 142, LAT0 = 84;
+const isLand = (c, r) => (LAND[(r * LW + c) >> 3] >> (7 - ((r * LW + c) & 7))) & 1;
+const REG = [
+  ['eu-central-1', 'Frankfurt', 50.11, 8.68, 'cEU'], ['eu-central-2', 'Zürih|Zurich', 47.37, 8.54, 'cEU'], ['eu-south-1', 'Milano|Milan', 45.46, 9.19, 'cEU'], ['eu-west-3', 'Paris', 48.86, 2.35, 'cEU'],
+  ['eu-west-2', 'Londra|London', 51.51, -0.13, 'cEU'], ['eu-west-1', 'İrlanda|Ireland', 53.35, -6.26, 'cEU'], ['eu-north-1', 'Stockholm', 59.33, 18.07, 'cEU'], ['eu-south-2', 'İspanya|Spain', 41.65, -0.88, 'cEU'],
+  ['il-central-1', 'Tel Aviv', 32.08, 34.78, 'cME'], ['me-south-1', 'Bahreyn|Bahrain', 26.07, 50.56, 'cME'], ['me-central-1', 'BAE|UAE', 24.45, 54.38, 'cME'],
+  ['ap-south-1', 'Mumbai', 19.08, 72.88, 'cAS'], ['ap-southeast-1', 'Singapur|Singapore', 1.35, 103.82, 'cAS'], ['ap-east-1', 'Hong Kong', 22.32, 114.17, 'cAS'], ['ap-northeast-1', 'Tokyo', 35.68, 139.69, 'cAS'],
+  ['ap-southeast-2', 'Sidney|Sydney', -33.87, 151.21, 'cOC'], ['af-south-1', 'Cape Town', -33.92, 18.42, 'cAF'],
+  ['us-east-1', 'Virginia', 39.04, -77.49, 'cNA'], ['ca-central-1', 'Montreal', 45.5, -73.57, 'cNA'], ['us-west-2', 'Oregon', 45.6, -121.2, 'cNA'], ['sa-east-1', 'São Paulo', -23.55, -46.63, 'cSA']
+].map(([id, n, la, lo, c]) => ({ id, n, la, lo, c, ms: null, s: [], st: 'idle' }));
+const regName = r => { const p = r.n.split('|'); return lang === 'en' && p[1] ? p[1] : p[0]; };
+const COLO = { IST: [41.26, 28.74], SAW: [40.9, 29.31], ADB: [38.29, 27.16], ESB: [40.13, 32.99], AYT: [36.9, 30.8], FRA: [50.03, 8.57], AMS: [52.31, 4.76], LHR: [51.47, -0.45], LON: [51.5, -0.12], CDG: [49.01, 2.55], VIE: [48.11, 16.57], SOF: [42.7, 23.41], OTP: [44.57, 26.1], BUD: [47.44, 19.26], WAW: [52.17, 20.97], MXP: [45.63, 8.72], MAD: [40.47, -3.56], ARN: [59.65, 17.92], ATH: [37.94, 23.94], TLV: [32.01, 34.89], DXB: [25.25, 55.36], FCO: [41.8, 12.24], ZRH: [47.46, 8.55], MUC: [48.35, 11.79], BER: [52.36, 13.5], TXL: [52.56, 13.29], HAM: [53.63, 9.99], DUS: [51.29, 6.77], PRG: [50.1, 14.26], BEG: [44.82, 20.31], KBP: [50.34, 30.89], KIV: [46.93, 28.93], TBS: [41.67, 44.95], EVN: [40.15, 44.4], GYD: [40.47, 50.05], LCA: [34.88, 33.62], CPH: [55.62, 12.65], OSL: [60.19, 11.1], HEL: [60.32, 24.96], DUB: [53.42, -6.27], MAN: [53.35, -2.27], BRU: [50.9, 4.48], LIS: [38.77, -9.13], BCN: [41.3, 2.08], MRS: [43.44, 5.22], ZAG: [45.74, 16.07], SKP: [41.96, 21.62], TIA: [41.41, 19.72], RIX: [56.92, 23.97], VNO: [54.63, 25.29], TLL: [59.41, 24.83], CAI: [30.12, 31.41], AMM: [31.72, 35.99], BEY: [33.82, 35.49], RUH: [24.96, 46.7], JED: [21.68, 39.16], DOH: [25.27, 51.61], KWI: [29.24, 47.97], BAH: [26.27, 50.63], MCT: [23.59, 58.28], IAD: [38.95, -77.45], EWR: [40.69, -74.17], ORD: [41.98, -87.9], LAX: [33.94, -118.41], SJC: [37.36, -121.93], SEA: [47.45, -122.31], DFW: [32.9, -97.04], ATL: [33.64, -84.43], MIA: [25.79, -80.29], YYZ: [43.68, -79.62], GRU: [-23.43, -46.47], SIN: [1.36, 103.99], HKG: [22.31, 113.92], NRT: [35.77, 140.39], BOM: [19.09, 72.87], DEL: [28.56, 77.1], JNB: [-26.14, 28.24], SYD: [-33.95, 151.18] };
+const MAP = { view: (store.get('erdevelop-analiz-map') || (innerWidth < 640 ? 'eu' : 'world')) === 'eu' ? 'eu' : 'world', busy: false, done: false, hover: null, raf: 0, vis: false, W: 0, H: 0 };
+const VIEWS = { world: { lo0: -180, lo1: 180, la0: 84, la1: -58 }, eu: { lo0: -14, lo1: 62, la0: 66, la1: 18 } };
+const toRad = d => d * Math.PI / 180;
+function gcDist(a, b, c, d) { const p1 = toRad(a), p2 = toRad(c), dp = toRad(c - a), dl = toRad(d - b), h = Math.sin(dp / 2) ** 2 + Math.cos(p1) * Math.cos(p2) * Math.sin(dl / 2) ** 2; return 12742 * Math.asin(Math.min(1, Math.sqrt(h))); }
+function gcPath(a, b, c, d, n = 48) {
+  const [f1, l1, f2, l2] = [a, b, c, d].map(toRad), D = 2 * Math.asin(Math.sqrt(Math.sin((f2 - f1) / 2) ** 2 + Math.cos(f1) * Math.cos(f2) * Math.sin((l2 - l1) / 2) ** 2)); if (D < 1e-6) return [[a, b], [c, d]];
+  const out = []; for (let i = 0; i <= n; i++) { const f = i / n, A = Math.sin((1 - f) * D) / Math.sin(D), B = Math.sin(f * D) / Math.sin(D), x = A * Math.cos(f1) * Math.cos(l1) + B * Math.cos(f2) * Math.cos(l2), y = A * Math.cos(f1) * Math.sin(l1) + B * Math.cos(f2) * Math.sin(l2), z = A * Math.sin(f1) + B * Math.sin(f2); out.push([Math.atan2(z, Math.hypot(x, y)) * 180 / Math.PI, Math.atan2(y, x) * 180 / Math.PI]); }
+  return out;
+}
+const msCol = v => v == null ? css('--muted') : v < 60 ? css('--ok') : v < 150 ? css('--warn') : css('--bad');
+function userLoc() { const ip = R.ip || {}, m = R.cfMeta || {}; const la = +(ip.lat ?? m.latitude), lo = +(ip.lon ?? m.longitude); return isFinite(la) && isFinite(lo) && (la || lo) ? [la, lo] : null; }
+function mapProj() { const v = VIEWS[MAP.view], W = MAP.W, H = MAP.H; return { v, x: lo => (lo - v.lo0) / (v.lo1 - v.lo0) * W, y: la => (v.la0 - la) / (v.la0 - v.la1) * H }; }
+function mapSize() { const c = $('mapC'), w = c.clientWidth; if (!w) return false; const v = VIEWS[MAP.view], ratio = (v.la0 - v.la1) / (v.lo1 - v.lo0) * (MAP.view === 'eu' ? 1.25 : 1); MAP.W = w; MAP.H = Math.round(Math.min(560, Math.max(220, w * ratio))); c.style.height = MAP.H + 'px'; const d = Math.min(devicePixelRatio || 1, 2); c.width = w * d; c.height = MAP.H * d; return true; }
+let mapBase = null;
+function mapBaseDraw() {
+  if (!mapSize()) return; const P = mapProj(), v = P.v, cell = MAP.W / (v.lo1 - v.lo0), d = Math.min(devicePixelRatio || 1, 2);
+  mapBase = document.createElement('canvas'); mapBase.width = MAP.W * d; mapBase.height = MAP.H * d; const g = mapBase.getContext('2d'); g.scale(d, d);
+  g.fillStyle = css('--line'); const step = cell < 2.2 ? Math.ceil(2.2 / cell) : 1, rad = Math.max(.7, Math.min(cell * step * .3, 3.4));
+  for (let r = 0; r < LH; r += step) { const la = LAT0 - r - .5; if (la > v.la0 + 1 || la < v.la1 - 1) continue;
+    for (let c = 0; c < LW; c += step) { const lo = -180 + c + .5; if (lo < v.lo0 - 1 || lo > v.lo1 + 1 || !isLand(c, r)) continue; g.beginPath(); g.arc(P.x(lo), P.y(la), rad, 0, 6.3); g.fill(); } }
+}
+function mapDraw(ts = performance.now()) {
+  const c = $('mapC'); if (!mapBase || !MAP.W) return; const g = c.getContext('2d'), d = Math.min(devicePixelRatio || 1, 2), P = mapProj(), me = userLoc();
+  g.setTransform(1, 0, 0, 1, 0, 0); g.clearRect(0, 0, c.width, c.height); g.drawImage(mapBase, 0, 0); g.setTransform(d, 0, 0, d, 0, 0);
+  g.font = '500 10.5px "IBM Plex Mono", monospace'; g.textBaseline = 'middle';
+  const seg = (pts, fn) => { let prev = null; g.beginPath(); for (const [la, lo] of pts) { const x = P.x(lo), y = P.y(la); if (prev != null && Math.abs(lo - prev) > 180) g.moveTo(x, y); else if (prev == null) g.moveTo(x, y); else g.lineTo(x, y); prev = lo; } fn(); };
+  if (me) {
+    REG.forEach(r => { if (r.ms == null) return; if (!r.path) r.path = gcPath(me[0], me[1], r.la, r.lo);
+      const on = MAP.hover === r; g.strokeStyle = msCol(r.ms); g.globalAlpha = on ? .95 : .38; g.lineWidth = on ? 2.4 : 1.3; seg(r.path, () => g.stroke()); g.globalAlpha = 1;
+      if (!reduced) { const per = Math.max(700, r.ms * 28), f = (ts % per) / per, k = f < .5 ? f * 2 : 2 - f * 2, i = Math.min(r.path.length - 1, Math.floor(k * (r.path.length - 1))), [la, lo] = r.path[i]; g.fillStyle = msCol(r.ms); g.beginPath(); g.arc(P.x(lo), P.y(la), on ? 3.6 : 2.6, 0, 6.3); g.fill(); } });
+    const m = R.cfMeta && COLO[R.cfMeta.colo]; if (m) { const x = P.x(m[1]), y = P.y(m[0]); g.strokeStyle = css('--accent'); g.lineWidth = 1.5; g.beginPath(); g.rect(x - 4, y - 4, 8, 8); g.stroke(); }
+    const x = P.x(me[1]), y = P.y(me[0]), pul = reduced ? 0 : (ts % 1800) / 1800;
+    g.strokeStyle = css('--accent'); g.globalAlpha = 1 - pul; g.lineWidth = 1.5; g.beginPath(); g.arc(x, y, 5 + pul * 16, 0, 6.3); g.stroke(); g.globalAlpha = 1;
+    g.fillStyle = css('--accent'); g.strokeStyle = css('--panel'); g.lineWidth = 2; g.beginPath(); g.arc(x, y, 5.5, 0, 6.3); g.fill(); g.stroke();
+  }
+  const labs = [];
+  REG.forEach(r => { const x = P.x(r.lo), y = P.y(r.la); if (x < -10 || x > MAP.W + 10 || y < -10 || y > MAP.H + 10) return; const on = MAP.hover === r;
+    g.fillStyle = r.st === 'run' ? css('--accent') : msCol(r.ms); g.strokeStyle = css('--panel'); g.lineWidth = 2; g.beginPath(); g.arc(x, y, on ? 6 : 4.5, 0, 6.3); g.fill(); g.stroke();
+    if (r.ms != null || on) labs.push({ r, x, y, t: r.ms != null ? nf(r.ms) + (MAP.view === 'eu' || on ? ' ms' : '') : '' }); });
+  // etiket çakışmasını önle: ms küçük olan önce yerleşir
+  const placed = []; labs.sort((a, b) => (b.r === MAP.hover) - (a.r === MAP.hover) || (a.r.ms ?? 1e9) - (b.r.ms ?? 1e9));
+  for (const L of labs) { const name = MAP.view === 'eu' || MAP.hover === L.r ? regName(L.r) + ' ' : '', txt = name + L.t, w = g.measureText(txt).width + 8, cand = [[L.x + 8, L.y - 8], [L.x - w - 8, L.y - 8], [L.x + 8, L.y + 8], [L.x - w - 8, L.y + 8]];
+    const spot = cand.find(([bx, by]) => bx > 0 && bx + w < MAP.W && by > 6 && by < MAP.H - 6 && !placed.some(p => bx < p[0] + p[2] && bx + w > p[0] && Math.abs(by - p[1]) < 14)); if (!spot) continue;
+    placed.push([spot[0], spot[1], w]); g.fillStyle = css('--panel'); g.globalAlpha = .82; g.fillRect(spot[0], spot[1] - 8, w, 16); g.globalAlpha = 1; g.fillStyle = css('--fg'); g.fillText(txt, spot[0] + 4, spot[1]); }
+}
+function mapLoop(ts) { mapDraw(ts); MAP.raf = MAP.vis && !reduced ? requestAnimationFrame(mapLoop) : 0; }
+function mapKick() { if (!MAP.raf && MAP.vis) MAP.raf = requestAnimationFrame(mapLoop); else if (reduced) mapDraw(); }
+function mapRender() { mapBaseDraw(); mapDraw(); }
+async function regionPing(r) {
+  const u = `https://dynamodb.${r.id}.amazonaws.com/ping`; r.st = 'run'; r.s = [];
+  const w = await timedFetch(bust(u), { mode: 'no-cors' }, 5000);
+  if (w == null) { r.ms = null; r.st = 'fail'; return; }
+  for (let i = 0; i < 4; i++) { const v = await timedFetch(bust(u), { mode: 'no-cors' }, 3000); if (v != null) r.s.push(v); await sleep(40); }
+  r.ms = r.s.length ? Math.min(...r.s) : null; r.st = r.ms == null ? 'fail' : 'ok';
+}
+async function worldPing() {
+  if (MAP.busy) return; MAP.busy = true; $('mapBtn').disabled = true; $('mapBtn').textContent = t().mapRunning; REG.forEach(r => { r.ms = null; r.st = 'idle'; r.path = null; });
+  const me = userLoc(), order = me ? REG.slice().sort((a, b) => gcDist(me[0], me[1], a.la, a.lo) - gcDist(me[0], me[1], b.la, b.lo)) : REG.slice();
+  let k = 0; const worker = async () => { while (k < order.length) { const r = order[k++]; await regionPing(r); paintMapTable(); mapKick(); if (reduced) mapDraw(); } };
+  await Promise.all([worker(), worker(), worker()]);
+  MAP.busy = false; MAP.done = true; $('mapBtn').disabled = false; $('mapBtn').textContent = t().mapAgain; paintMapTable(); mapDraw();
+}
+function paintMapTable() {
+  const tt = t(), me = userLoc(), rows = REG.map(r => { const dist = me ? gcDist(me[0], me[1], r.la, r.lo) : null, lim = dist != null ? dist / 100 : null; return { r, dist, lim, eff: r.ms != null && lim != null ? Math.min(1, lim / r.ms) : null }; })
+    .sort((a, b) => (a.r.ms ?? 1e9) - (b.r.ms ?? 1e9) || (a.dist ?? 0) - (b.dist ?? 0));
+  $('mapMore').hidden = rows.length <= 8; $('mapMore').textContent = MAP.all ? tt.mapLess : tt.mapAll + ' (' + rows.length + ')';
+  $('mapRows').innerHTML = (MAP.all ? rows : rows.slice(0, 8)).map(({ r, dist, lim, eff }) => `<tr data-reg="${r.id}"><td><i class="dot" style="background:${msCol(r.ms)}"></i>${esc(regName(r))} <span class="muted small">${tt[r.c]}</span></td><td class="r">${dist == null ? '–' : nf(dist) + ' km'}</td><td class="r" style="color:${r.ms != null ? msCol(r.ms) : 'var(--muted)'}">${r.st === 'run' ? '…' : r.st === 'fail' ? tt.unreach : r.ms == null ? '–' : nf(r.ms) + ' ms'}</td><td class="r">${lim == null ? '–' : nf(lim) + ' ms'}</td><td class="effc">${eff == null ? '' : `<span class="eff"><i style="width:${eff * 100}%"></i></span><small>%${nf(eff * 100)}</small>`}</td></tr>`).join('');
+  const ok = REG.filter(r => r.ms != null);
+  if (!ok.length) { $('mapV').textContent = MAP.busy ? tt.mapRunning : me ? tt.mapWait : tt.mapNoLoc; $('mapV').className = 'verdict'; return; }
+  const best = ok.reduce((a, b) => a.ms < b.ms ? a : b), groups = {}; ok.forEach(r => (groups[r.c] = groups[r.c] || []).push(r.ms));
+  $('mapV').innerHTML = `<b>${tt.mapBest}:</b> ${esc(regName(best))} · ${nf(best.ms)} ms` + Object.keys(groups).map(c => ` &nbsp;·&nbsp; ${tt[c]} ${tt.mapAvg} ${nf(groups[c].reduce((a, b) => a + b, 0) / groups[c].length)} ms`).join('');
+  $('mapV').className = 'verdict ' + (best.ms < 40 ? 'ok' : best.ms < 100 ? 'mid' : 'bad');
+}
+function mapHover(e) {
+  const c = $('mapC'), b = c.getBoundingClientRect(), x = e.clientX - b.left, y = e.clientY - b.top, P = mapProj(); let best = null, bd = 18;
+  REG.forEach(r => { const d = Math.hypot(P.x(r.lo) - x, P.y(r.la) - y); if (d < bd) { bd = d; best = r; } });
+  if (best !== MAP.hover) { MAP.hover = best; mapDraw(); $$rowHi(); }
+  const tip = $('mapTip'); if (!best) { tip.hidden = true; return; }
+  const me = userLoc(), dist = me ? gcDist(me[0], me[1], best.la, best.lo) : null, tt = t();
+  tip.innerHTML = `<b>${esc(regName(best))}</b> <span class="muted">${best.id}</span><br>${tt.thMs}: <b>${best.ms != null ? nf(best.ms) + ' ms' : best.st === 'fail' ? tt.unreach : '–'}</b>${dist != null ? `<br>${tt.thDist}: ${nf(dist)} km · ${tt.thMin}: ${nf(dist / 100)} ms` : ''}`;
+  tip.hidden = false; const tw = tip.offsetWidth; tip.style.left = Math.min(Math.max(4, x + 14), b.width - tw - 4) + 'px'; tip.style.top = Math.max(4, y - tip.offsetHeight - 10) + 'px';
+}
+function $$rowHi() { document.querySelectorAll('#mapRows tr').forEach(tr => tr.classList.toggle('hi', !!MAP.hover && tr.dataset.reg === MAP.hover.id)); }
+function setMapView(v) { MAP.view = v; store.set('erdevelop-analiz-map', v); document.querySelectorAll('[data-mv]').forEach(b => b.classList.toggle('on', b.dataset.mv === v)); mapRender(); }
+
+/* ---------- gecikme dağılımı (iki küçük grafik, ortak eksen) ---------- */
+const pct = (a, p) => { if (!a.length) return null; const s = [...a].sort((x, y) => x - y), i = (s.length - 1) * p, lo = Math.floor(i), hi = Math.ceil(i); return s[lo] + (s[hi] - s[lo]) * (i - lo); };
+function drawDist() {
+  const c = $('distC'), w = c.clientWidth; if (!w) return; const h = 200, d = Math.min(devicePixelRatio || 1, 2); c.style.height = h + 'px'; c.width = w * d; c.height = h * d;
+  const g = c.getContext('2d'); g.scale(d, d); const tt = t(), A = R.idleS || [], B = R.loadS || [];
+  $('distS').innerHTML = [[tt.idle, A], [tt.loaded, B]].map(([n, s]) => `<div><span>${n} · p50</span><b>${s.length ? nf(pct(s, .5)) : '–'} <small>ms</small></b></div><div><span>${n} · p95</span><b>${s.length ? nf(pct(s, .95)) : '–'} <small>ms</small></b></div>`).join('');
+  if (!A.length && !B.length) { g.fillStyle = css('--muted'); g.font = '400 12px "IBM Plex Mono", monospace'; g.textAlign = 'center'; g.fillText(tt.distEmpty, w / 2, h / 2); return; }
+  const all = A.concat(B), top = Math.max(pct(all, .99) * 1.12, (pct(A, .5) || 0) + 10), step = [1, 2, 5, 10, 20, 25, 50, 100, 200, 500].find(s => top / s <= 24) || 1000, xmax = Math.ceil(top / step) * step, nb = Math.round(xmax / step);
+  const pad = { l: 78, r: 14, t: 8, b: 22 }, W2 = w - pad.l - pad.r, rowH = (h - pad.t - pad.b) / 2;
+  const rows = [[tt.idle, A, css('--accent')], [tt.loaded, B, css('--hot')]];
+  g.font = '400 10.5px "IBM Plex Mono", monospace';
+  rows.forEach(([name, s, col], ri) => {
+    const y0 = pad.t + ri * rowH, base = y0 + rowH - 6, hh = rowH - 22, bins = new Array(nb).fill(0); s.forEach(v => bins[Math.min(nb - 1, Math.floor(v / step))]++); const mx = Math.max(1, ...bins);
+    g.fillStyle = css('--fg'); g.textAlign = 'left'; g.textBaseline = 'middle'; g.fillText(name, 0, y0 + rowH / 2 - 6); g.fillStyle = css('--muted'); g.fillText('n=' + s.length, 0, y0 + rowH / 2 + 8);
+    g.strokeStyle = css('--grid'); g.lineWidth = 1; g.beginPath(); g.moveTo(pad.l, base + .5); g.lineTo(pad.l + W2, base + .5); g.stroke();
+    const bw = W2 / nb; g.fillStyle = col;
+    bins.forEach((n, i) => { if (!n) return; const bh = Math.max(2, n / mx * hh), x = pad.l + i * bw + 1, ww = Math.max(1, bw - 2), r = Math.min(3, ww / 2, bh); g.beginPath(); g.moveTo(x, base); g.lineTo(x, base - bh + r); g.quadraticCurveTo(x, base - bh, x + r, base - bh); g.lineTo(x + ww - r, base - bh); g.quadraticCurveTo(x + ww, base - bh, x + ww, base - bh + r); g.lineTo(x + ww, base); g.fill(); });
+    let lastX = -1e9; if (s.length) [[.5, 'p50', []], [.95, 'p95', [4, 3]]].forEach(([p, lab, dash]) => { const v = pct(s, p), x = pad.l + Math.min(1, v / xmax) * W2, ly = Math.abs(x - lastX) < 64 ? y0 + 22 : y0 + 9; lastX = x; g.strokeStyle = css('--fg'); g.setLineDash(dash); g.beginPath(); g.moveTo(x + .5, y0 + 4); g.lineTo(x + .5, base); g.stroke(); g.setLineDash([]); g.fillStyle = css('--text'); g.textAlign = x > pad.l + W2 - 60 ? 'right' : 'left'; g.fillText(`${lab} ${nf(v)}`, x + (g.textAlign === 'right' ? -4 : 4), ly); });
+  });
+  g.fillStyle = css('--muted'); g.textAlign = 'center'; g.textBaseline = 'alphabetic'; const ticks = 5;
+  for (let i = 0; i <= ticks; i++) { const v = xmax * i / ticks; g.fillText(nf(v) + (i === ticks ? ' ms' : ''), pad.l + W2 * i / ticks, h - 6); }
+}
+
+/* ---------- bu hızla ne kadar sürer ---------- */
+const HL = [['🎵', 'hlSong', 8e6, 'd'], ['📱', 'hlApp', 250e6, 'd'], ['💻', 'hlOs', 5e9, 'd'], ['🎬', 'hlHd', 4e9, 'd'], ['🎞️', 'hl4k', 20e9, 'd'], ['🎮', 'hlGame', 100e9, 'd'], ['📷', 'hlPhotos', 500e6, 'u'], ['🎥', 'hlVid', 4e9, 'u'], ['☁️', 'hlBackup', 64e9, 'u']];
+function dur(s) { const tt = t(); if (s < 1) return '< 1 ' + tt.sec; if (s < 60) return nf(s) + ' ' + tt.sec; if (s < 3600) { const m = Math.floor(s / 60), r = Math.round(s % 60); return m + ' ' + tt.min + (r && m < 10 ? ' ' + r + ' ' + tt.sec : ''); } if (s < 86400) { const h = Math.floor(s / 3600), m = Math.round(s % 3600 / 60); return h + ' ' + tt.hr + (m ? ' ' + m + ' ' + tt.min : ''); } return nf(s / 86400, 1) + ' ' + tt.day; }
+const human = b => { const g = b / 1e9; return b >= 1e9 ? (Number.isInteger(g) || g >= 10 ? nf(g) : nf(g, 1)) + ' GB' : nf(b / 1e6) + ' MB'; };
+function paintHL() {
+  const tt = t(), has = R.down != null; $('hlEmpty').hidden = has; $('hl').hidden = !has; if (!has) return;
+  const row = (ic, name, bytes, dir) => { const mb = dir === 'u' ? R.up : R.down; if (mb == null) return ''; const s = bytes * 8 / (mb * 1e6), f = Math.max(.02, Math.min(1, Math.log10(1 + s) / Math.log10(1 + 86400)));
+    return `<div class="hlr"><span class="ic">${ic}</span><span class="nm">${name}<small>${human(bytes)} · ${dir === 'u' ? '↑ ' + tt.upl : '↓ ' + tt.dn}</small></span><span class="hb"><i class="${dir === 'u' ? 'u' : ''}" style="width:${f * 100}%"></i></span><b>${dur(s)}</b></div>`; };
+  const cs = pnum($('hlSize').value), cu = +$('hlUnit').value, cd = $('hlDir').value;
+  $('hl').innerHTML = HL.map(([ic, k, b, d]) => row(ic, tt[k], b, d)).join('') + (cs > 0 ? row('📦', tt.hlCustom, cs * cu, cd) : '');
+}
+const pnum = s => { s = String(s || '').trim().replace(/\s/g, ''); if (s.includes(',') && s.includes('.')) s = s.replace(/\./g, '').replace(',', '.'); else s = s.replace(',', '.'); const v = parseFloat(s); return isFinite(v) ? v : NaN; };
+
+/* ---------- geçmiş: trend + yerlere göre ---------- */
+function drawTrend() {
+  const c = $('trendC'), H = hist().filter(h => h.d != null); $('trendW').hidden = H.length < 2; if (H.length < 2) return; const w = c.clientWidth; if (!w) return; const h = 120, d = Math.min(devicePixelRatio || 1, 2); c.style.height = h + 'px'; c.width = w * d; c.height = h * d;
+  const g = c.getContext('2d'); g.scale(d, d);
+  const pad = { l: 34, r: 8, t: 8, b: 16 }, W2 = w - pad.l - pad.r, H2 = h - pad.t - pad.b, mx = Math.max(1, ...H.map(x => Math.max(x.d || 0, x.u || 0))) * 1.12;
+  g.font = '400 10px "IBM Plex Mono", monospace'; g.strokeStyle = css('--grid'); g.fillStyle = css('--muted'); g.lineWidth = 1; g.textAlign = 'right';
+  for (let i = 0; i <= 2; i++) { const y = pad.t + H2 * i / 2; g.beginPath(); g.moveTo(pad.l, y + .5); g.lineTo(pad.l + W2, y + .5); g.stroke(); g.fillText(nf(mx * (1 - i / 2), mx < 10 ? 1 : 0), pad.l - 4, y + 3); }
+  const X = i => pad.l + (H.length === 1 ? W2 / 2 : W2 * i / (H.length - 1)), Y = v => pad.t + H2 * (1 - v / mx);
+  [['d', css('--accent')], ['u', css('--hot')]].forEach(([k, col]) => { const pts = H.map((x, i) => x[k] == null ? null : [X(i), Y(x[k])]); g.strokeStyle = col; g.lineWidth = 2; g.lineJoin = 'round'; g.beginPath(); let st = false; pts.forEach(p => { if (!p) { st = false; return; } st ? g.lineTo(...p) : g.moveTo(...p); st = true; }); g.stroke();
+    g.fillStyle = col; g.strokeStyle = css('--panel'); pts.forEach(p => { if (!p) return; g.beginPath(); g.arc(p[0], p[1], 3.2, 0, 6.3); g.fill(); g.lineWidth = 1.5; g.stroke(); }); });
+  g.fillStyle = css('--muted'); g.textAlign = 'left'; const f = x => new Date(x.t).toLocaleDateString(lang === 'tr' ? 'tr-TR' : 'en-GB', { day: '2-digit', month: '2-digit' });
+  g.fillText(f(H[0]), pad.l, h - 3); g.textAlign = 'right'; g.fillText(f(H[H.length - 1]), pad.l + W2, h - 3);
+}
+function paintRooms() {
+  const H = hist().filter(h => h.d != null && h.l), by = {}; H.forEach(h => (by[h.l] = by[h.l] || []).push(h.d)); const ks = Object.keys(by);
+  $('rooms').hidden = ks.length < 2; if (ks.length < 2) return; const rows = ks.map(k => [k, median(by[k]), by[k].length]).sort((a, b) => b[1] - a[1]), mx = rows[0][1] || 1;
+  $('roomsL').innerHTML = rows.map(([k, v, n]) => `<div class="hrow"><small title="${esc(k)}">${esc(k)}</small><i style="width:${v / mx * 100}%"></i><b>${fmtMbps(v)}</b></div><div class="hrow" style="margin-top:-6px"><small></small><small>${n} ${t().tests}</small><small></small></div>`).join('');
+  $('yerList').innerHTML = ks.map(k => `<option value="${esc(k)}">`).join('');
+}
+
+/* ---------- sonuç kartı (PNG) ---------- */
+async function resultCard() {
+  if (R.down == null) { toast(t().cardNo); return; }
+  const tt = t(), W = 1200, H = 630, c = document.createElement('canvas'); c.width = W; c.height = H; const g = c.getContext('2d'), ip = R.ip || {};
+  try { await document.fonts.ready; } catch (e) {}
+  const bg = css('--panel'), fg = css('--fg'), mu = css('--muted'), ac = css('--accent'), hot = css('--hot'), ln = css('--line');
+  g.fillStyle = css('--bg'); g.fillRect(0, 0, W, H); g.fillStyle = bg; g.strokeStyle = ln; g.lineWidth = 2; g.beginPath(); g.roundRect ? g.roundRect(24, 24, W - 48, H - 48, 18) : g.rect(24, 24, W - 48, H - 48); g.fill(); g.stroke();
+  g.fillStyle = ac; g.font = '500 20px "IBM Plex Mono", monospace'; g.fillText('ERDEVELOP · ' + tt.title.toLocaleUpperCase(lang === 'tr' ? 'tr' : 'en'), 64, 84);
+  g.fillStyle = mu; g.font = '400 18px "IBM Plex Mono", monospace'; g.fillText(new Date(R.when || Date.now()).toLocaleString(lang === 'tr' ? 'tr-TR' : 'en-GB', { dateStyle: 'medium', timeStyle: 'short' }) + (ip.isp ? '  ·  ' + ip.isp : '') + (ip.city ? '  ·  ' + ip.city : ''), 64, 116);
+  const box = (x, label, val, unit, col) => { g.fillStyle = mu; g.font = '500 18px "IBM Plex Mono", monospace'; g.fillText(label.toLocaleUpperCase(lang === 'tr' ? 'tr' : 'en'), x, 196); g.fillStyle = col; g.font = '700 84px "Chakra Petch", sans-serif'; g.fillText(val, x, 284); const vw = g.measureText(val).width; g.fillStyle = mu; g.font = '400 22px "IBM Plex Mono", monospace'; g.fillText(unit, x + vw + 10, 284); };
+  box(64, '↓ ' + tt.sDown, fmtMbps(R.down), 'Mbps', ac); box(430, '↑ ' + tt.sUp, fmtMbps(R.up), 'Mbps', hot);
+  const [gr] = grade(R.ping != null && R.loaded != null ? R.loaded - R.ping : null);
+  [[tt.sPing, nf(R.ping) + ' ms'], ['Jitter', nf(R.jitter, 1) + ' ms'], [tt.loaded, nf(R.loaded) + ' ms'], ['Bufferbloat', gr]].forEach(([k, v], i) => { const x = 800, y = 168 + i * 40; g.fillStyle = mu; g.font = '400 19px "IBM Plex Mono", monospace'; g.fillText(k, x, y + 22); g.fillStyle = fg; g.font = '600 24px "Chakra Petch", sans-serif'; g.textAlign = 'right'; g.fillText(v, W - 64, y + 22); g.textAlign = 'left'; });
+  // hız eğrisi
+  const all = series.down.concat(series.up), tMax = Math.max(1, ...all.map(p => p[0])), vMax = Math.max(1, ...all.map(p => p[1])) * 1.1, x0 = 64, y0 = 340, w2 = W - 128, h2 = 190;
+  g.strokeStyle = ln; g.lineWidth = 1; for (let i = 0; i <= 3; i++) { g.beginPath(); g.moveTo(x0, y0 + h2 * i / 3); g.lineTo(x0 + w2, y0 + h2 * i / 3); g.stroke(); }
+  [[series.down, ac], [series.up, hot]].forEach(([s, col]) => { if (s.length < 2) return; g.beginPath(); s.forEach((p, i) => { const x = x0 + w2 * p[0] / tMax, y = y0 + h2 * (1 - p[1] / vMax); i ? g.lineTo(x, y) : g.moveTo(x, y); }); g.strokeStyle = col; g.lineWidth = 3; g.stroke(); g.lineTo(x0 + w2 * s[s.length - 1][0] / tMax, y0 + h2); g.lineTo(x0 + w2 * s[0][0] / tMax, y0 + h2); g.closePath(); g.globalAlpha = .14; g.fillStyle = col; g.fill(); g.globalAlpha = 1; });
+  const best = REG.filter(r => r.ms != null).sort((a, b) => a.ms - b.ms)[0];
+  g.fillStyle = mu; g.font = '400 18px "IBM Plex Mono", monospace'; g.fillText((best ? tt.mapBest + ': ' + regName(best) + ' ' + nf(best.ms) + ' ms   ·   ' : '') + 'erdevelop.github.io/web_analiz', 64, H - 64);
+  const blob = await new Promise(r => c.toBlob(r, 'image/png')), name = 'ag-analizi-' + new Date().toISOString().slice(0, 10) + '.png', file = new File([blob], name, { type: 'image/png' });
+  try { if (navigator.canShare && navigator.canShare({ files: [file] }) && mobileish()) { await navigator.share({ files: [file], title: tt.title }); return; } } catch (e) { if (e.name === 'AbortError') return; }
+  const a = document.createElement('a'); a.href = URL.createObjectURL(blob); a.download = name; document.body.appendChild(a); a.click(); a.remove(); setTimeout(() => URL.revokeObjectURL(a.href), 3000); toast(tt.cardDone);
+}
+
+function initV2() {
+  $('mapBtn').addEventListener('click', worldPing); $('mapMore').addEventListener('click', () => { MAP.all = !MAP.all; paintMapTable(); });
+  document.querySelectorAll('[data-mv]').forEach(b => b.addEventListener('click', () => setMapView(b.dataset.mv)));
+  document.querySelectorAll('[data-mv]').forEach(b => b.classList.toggle('on', b.dataset.mv === MAP.view));
+  const mc = $('mapC'); mc.addEventListener('pointermove', mapHover); mc.addEventListener('pointerdown', mapHover); mc.addEventListener('pointerleave', () => { MAP.hover = null; $('mapTip').hidden = true; mapDraw(); $$rowHi(); });
+  $('mapRows').addEventListener('pointerover', e => { const tr = e.target.closest('tr'); const r = tr && REG.find(x => x.id === tr.dataset.reg); if (r !== MAP.hover) { MAP.hover = r || null; mapDraw(); $$rowHi(); } });
+  $('mapRows').addEventListener('pointerleave', () => { MAP.hover = null; mapDraw(); $$rowHi(); });
+  new IntersectionObserver(es => { MAP.vis = es[0].isIntersecting; if (MAP.vis) mapKick(); }).observe(mc);
+  new ResizeObserver(() => { mapRender(); drawDist(); drawTrend(); }).observe($('mapC').parentElement);
+  ['hlSize', 'hlUnit', 'hlDir'].forEach(id => $(id).addEventListener('input', paintHL));
+  const yer = $('yer'); yer.value = store.get('erdevelop-analiz-yer') || ''; yer.addEventListener('input', () => store.set('erdevelop-analiz-yer', yer.value.trim().slice(0, 30)));
+  $('cardBtn').addEventListener('click', resultCard);
+}
+function renderV2() { mapRender(); paintMapTable(); drawDist(); paintHL(); drawTrend(); paintRooms(); if (!MAP.busy) $('mapBtn').textContent = MAP.done ? t().mapAgain : t().mapRun; }
+
 /* ---------------- report ---------------- */
 function report() {
   const tt = t(), ip = R.ip || {}, L = [];
@@ -1289,6 +1570,7 @@ function report() {
   TARGETS.forEach(tg => { if (tg.s.length) L.push(`  ${tg.n}: ${nf(median(tg.s))} ms`); });
   const dm = DOH.map(r => [r.n, median(r.s)]).filter(x => x[1] != null).sort((a, b) => a[1] - b[1]); if (dm.length) L.push(`DNS: ${dm.map(x => x[0] + ' ' + nf(x[1]) + ' ms').join(' · ')}`);
   L.push(`IPv6: ${P.v6 ? P.v6 : tt.ipv6No}${P.http ? ' · ' + P.http : ''}${P.tls ? ' · ' + P.tls : ''}`);
+  { const ok = REG.filter(r => r.ms != null).sort((a, b) => a.ms - b.ms); if (ok.length) L.push(`${tt.mapH}: ${ok.slice(0, 5).map(r => regName(r) + ' ' + nf(r.ms) + ' ms').join(' · ')}`); }
   if (STAB.data.length) { const S = stabStats(); L.push(`${tt.stabH}: ${S.n} ${tt.sSamples}, ${tt.sLoss} ${nf(S.loss, 1)}%, ${tt.sOut} ${nf(S.outage, 1)} ${tt.sec}`); }
   return L.join('\n');
 }
@@ -1303,28 +1585,30 @@ function render() {
   $('statusT').textContent = tt[statusKey] || ''; paintLiveBtns();
   paintConn(); paintDev(); paintPerf(); paintPing(); paintBloat(); paintUses(); paintHist(); drawChart();
   document.querySelectorAll('[data-ph]').forEach(el => { el.placeholder = tt[el.dataset.ph] || el.placeholder; });
-  renderExtras();
+  document.querySelectorAll('[data-kh]').forEach(el => { if (typeof tt[el.dataset.kh] === 'string') el.innerHTML = tt[el.dataset.kh]; });
+  $('hlDir').options[0].textContent = '↓ ' + tt.dn; $('hlDir').options[1].textContent = '↑ ' + tt.upl;
+  renderExtras(); renderV2();
 }
-function applyMode() { document.documentElement.dataset.mode = mode; $('modeBtn').textContent = mode === 'dark' ? 'LIGHT' : 'DARK'; drawChart(); paintPing(); drawStab(); }
+function applyMode() { document.documentElement.dataset.mode = mode; $('modeBtn').textContent = mode === 'dark' ? 'LIGHT' : 'DARK'; drawChart(); paintPing(); drawStab(); if (typeof mapRender === 'function' && $('mapC').clientWidth) { mapRender(); drawDist(); drawTrend(); } }
 $('modeBtn').addEventListener('click', () => { mode = mode === 'dark' ? 'light' : 'dark'; store.set('erdevelop-mode', mode); applyMode(); });
 $('langBtn').addEventListener('click', () => { lang = lang === 'tr' ? 'en' : 'tr'; store.set('erdevelop-lang', lang); render(); });
 $('runBtn').addEventListener('click', () => runAll(true));
 $('pingBtn').addEventListener('click', toggleLive); $('pingBtn2').addEventListener('click', toggleLive);
 $('benchBtn').addEventListener('click', bench);
-$('histClr').addEventListener('click', () => { store.set('erdevelop-analiz', '[]'); paintHist(); });
+$('histClr').addEventListener('click', () => { store.set('erdevelop-analiz', '[]'); paintHist(); drawTrend(); paintRooms(); });
 addEventListener('online', paintConn); addEventListener('offline', paintConn);
 if (navigator.connection && navigator.connection.addEventListener) navigator.connection.addEventListener('change', paintConn);
 new ResizeObserver(() => { netResize(); drawChart(); }).observe($('net'));
 let rw = innerWidth; addEventListener('resize', () => { if (Math.abs(innerWidth - rw) > 80) { rw = innerWidth; if (!bwNow) newWrap(); } paintDev(); });
 
-initExtras(); applyMode(); render(); newWrap(); $('bwAll').textContent = nf(bwAll); $('soundBtn').textContent = soundOn ? '🔊' : '🔇';
+initExtras(); initV2(); applyMode(); render(); newWrap(); $('bwAll').textContent = nf(bwAll); $('soundBtn').textContent = soundOn ? '🔊' : '🔇';
 setStatus('stInfo'); requestAnimationFrame(frame);
 deviceInfo();
-ipInfo().then(v => { R.ip = v; paintConn(); paintProto(); });
+ipInfo().then(v => { R.ip = v; paintConn(); paintProto(); REG.forEach(r => r.path = null); paintMapTable(); mapDraw(); });
 protoChecks();
-cfMeta().then(v => { R.cfMeta = v; if (v && v.colo) $('srvMeta').textContent = 'Cloudflare · ' + v.colo + (v.city ? ' (' + v.city + ')' : ''); paintConn(); });
+cfMeta().then(v => { R.cfMeta = v; if (v && v.colo) $('srvMeta').textContent = 'Cloudflare · ' + v.colo + (v.city ? ' (' + v.city + ')' : ''); paintConn(); mapDraw(); });
 setTimeout(() => runAll(false), 400);
-window.__an = { R, series, TARGETS, PERF, runAll, P, DOH, STAB, KB, MS, TC };
+window.__an = { R, series, TARGETS, PERF, runAll, P, DOH, STAB, KB, MS, TC, REG, MAP, worldPing, mapRender };
 })();
 </script>
 </body>

@@ -9,6 +9,9 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Chakra+Petch:wght@600;700&family=IBM+Plex+Sans:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500&display=swap">
 <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.16/codemirror.min.css">
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.16/addon/hint/show-hint.min.css">
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.16/addon/fold/foldgutter.min.css">
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.16/addon/dialog/dialog.min.css">
 <style>
   :root {
     --bg: #eef2f6; --panel: #ffffff; --panel-2: #f5f7f9; --grid: #e3e8ed; --line: #cfd8e1;
@@ -71,6 +74,23 @@
   .chk { font: 400 11.5px var(--f-mono); color: var(--muted); display: inline-flex; align-items: center; gap: 5px; cursor: pointer; white-space: nowrap; }
   .chk input { accent-color: var(--accent); margin: 0; }
 
+  .ftabs { display: flex; gap: 2px; min-width: 0; overflow-x: auto; scrollbar-width: none; flex: 0 1 auto; }
+  .ftabs::-webkit-scrollbar { display: none; }
+  .ft { flex: none; display: inline-flex; align-items: center; gap: 6px; border: 1px solid transparent; background: none; padding: 3px 8px; border-radius: 5px; cursor: pointer; font: 500 12px var(--f-mono); color: var(--muted); white-space: nowrap; }
+  .ft:hover { color: var(--fg); background: var(--grid); }
+  .ft.on { color: var(--fg); background: var(--panel); border-color: var(--line); font-weight: 600; }
+  .ft.main::before { content: ""; width: 6px; height: 6px; border-radius: 50%; background: var(--accent); }
+  .ft.data { color: var(--c-var2); }
+  .ft .x { opacity: .5; padding: 0 2px; border-radius: 3px; font-size: 13px; line-height: 1; }
+  .ft .x:hover { opacity: 1; background: color-mix(in srgb, var(--bad) 20%, transparent); color: var(--bad); }
+  .ddm.left { left: 0; right: auto; }
+  .ddm .row { display: flex; align-items: center; gap: 4px; }
+  .ddm .row > button:first-child { flex: 1; min-width: 0; }
+  .ddm .row .del { flex: none; padding: 4px 8px; color: var(--muted); }
+  .ddm .row .del:hover { color: var(--bad); background: color-mix(in srgb, var(--bad) 14%, transparent); }
+  .ddm .tag { font: 600 9.5px var(--f-mono); padding: 1px 5px; border-radius: 3px; color: #fff; margin-right: 6px; vertical-align: 1px; }
+  .ddm .empty { padding: 6px 10px 8px; color: var(--muted); font: 400 12px var(--f-body); }
+  .drop { position: fixed; inset: 0; z-index: 60; background: color-mix(in srgb, var(--accent) 16%, transparent); border: 3px dashed var(--accent); display: grid; place-items: center; font: 600 18px var(--f-body); color: var(--accent); pointer-events: none; }
   .gutter { cursor: col-resize; position: relative; }
   .gutter::after { content: ""; position: absolute; left: 2px; right: 2px; top: 45%; height: 40px; border-radius: 2px; background: var(--line); }
   .gutter:hover::after, .gutter.drag::after { background: var(--accent); }
@@ -124,6 +144,19 @@
   .con .ask li { display: flex; gap: 12px; border-bottom: 1px dotted var(--line); } .con .ask li span:first-child { flex: 1; } .con .ask li.dep { color: var(--muted); }
   .con .ask .btns { display: flex; gap: 8px; flex-wrap: wrap; align-items: center; margin-top: 10px; }
   .con .ask.done { border-left-color: var(--line); opacity: .8; }
+  .con .ot { position: relative; display: block; white-space: normal; }
+  .con .ot .otb { position: absolute; top: 12px; right: 6px; display: flex; gap: 4px; opacity: 0; transition: opacity .15s; z-index: 2; }
+  .con .ot:hover .otb, .con .ot:focus-within .otb { opacity: 1; }
+  .con .otb button { font: 500 10.5px var(--f-mono); padding: 3px 7px; border-radius: 4px; border: 1px solid var(--line); background: var(--panel); color: var(--accent); cursor: pointer; }
+  .con .otb button:hover { border-color: var(--accent); }
+  @media (hover: none) { .con .ot .otb { opacity: 1; position: static; margin: -4px 0 8px; } }
+  .con .plot { margin: 8px 0; border: 1px solid var(--line); border-radius: 6px; overflow: hidden; min-height: 60px; }
+  .con .cin { font: inherit; color: var(--accent); background: var(--accent-dim); border: 0; border-bottom: 1px solid var(--accent); outline: 0; padding: 0 4px; min-width: 12ch; width: 40%; border-radius: 3px 3px 0 0; }
+  .con .goto { text-decoration: underline dotted; cursor: pointer; }
+  .con .goto:hover { color: var(--accent); }
+  .er-line { background: color-mix(in srgb, var(--bad) 13%, transparent); }
+  .er-gut { width: 14px; }
+  .er-mark { display: block; width: 8px; height: 8px; margin: 5px 3px; border-radius: 50%; background: var(--bad); cursor: help; }
   .con .html { white-space: normal; overflow: auto; margin: 6px 0 10px; max-height: 420px; }
   .con .html table { border: 1px solid var(--line); min-width: 0; }
   .con .html th, .con .html td { border-bottom: 1px solid var(--grid); text-align: right; }
@@ -157,10 +190,14 @@
   <button class="tb stop" type="button" id="stopBtn" hidden>■ Durdur</button>
   <div class="dd"><button class="tb" type="button" id="exBtn">Örnekler ▾</button>
     <div class="ddm" id="exMenu" hidden></div></div>
+  <div class="dd"><button class="tb" type="button" id="projBtn">Projeler ▾</button>
+    <div class="ddm" id="projMenu" hidden></div></div>
+  <button class="tb" type="button" id="shareBtn" title="Kodu link olarak paylaş">Paylaş</button>
   <div class="dd"><button class="tb" type="button" id="fileBtn">Dosya ▾</button>
     <div class="ddm" id="fileMenu" hidden>
       <button type="button" data-f="open">Dosya aç<small>uzantıya göre dil seçilir</small></button>
-      <button type="button" data-f="save">İndir<small>kodu dosya olarak kaydet</small></button>
+      <button type="button" data-f="save">Açık dosyayı indir</button>
+      <button type="button" data-f="zip">Projeyi ZIP indir<small>tüm dosyalar</small></button>
       <button type="button" data-f="copy">Kodu kopyala</button>
       <hr>
       <button type="button" data-f="newtab">Önizlemeyi yeni sekmede aç<small>HTML ve Markdown</small></button>
@@ -170,12 +207,22 @@
     </div></div>
   <button class="tb" type="button" id="modeBtn">DARK</button>
   <input type="file" id="fileIn" hidden>
+  <input type="file" id="addIn" multiple hidden>
+  <input type="file" id="impIn" accept=".json" hidden>
 </div></header>
 <nav class="langbar" id="langbar" role="tablist" aria-label="Dil"></nav>
 
 <main id="main">
   <section class="pane">
-    <div class="ph"><span class="sw"></span><h2 id="edTitle" lang="en">index.html</h2><span class="meta" id="edMeta"></span><span class="sp"></span>
+    <div class="ph"><span class="sw"></span><div class="ftabs" id="ftabs" lang="en" role="tablist" aria-label="Dosyalar"></div>
+      <div class="dd"><button class="mini" type="button" id="addBtn" title="Dosya ekle">+ Dosya</button>
+        <div class="ddm left" id="addMenu" hidden>
+          <button type="button" data-a="new">Yeni dosya<small>ör. yardimci.py, style.css, veri.csv</small></button>
+          <button type="button" data-a="upload">Bilgisayardan ekle<small>CSV, Excel, JSON, metin veya kod · sürükle-bırak da olur</small></button>
+          <hr><div class="lbl">Hazır veri setleri</div>
+          <div id="dataList"></div>
+        </div></div>
+      <span class="meta" id="edMeta"></span><span class="sp"></span>
       <span class="kbd hide-s">Ctrl+Enter çalıştır</span>
       <button class="mini" type="button" id="fmtBtn" title="Yazı boyutu">A±</button>
     </div>
@@ -224,13 +271,30 @@
 <script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.16/addon/edit/matchtags.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.16/addon/comment/comment.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.16/addon/selection/active-line.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.16/addon/dialog/dialog.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.16/addon/search/searchcursor.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.16/addon/search/search.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.16/addon/search/jump-to-line.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.16/addon/fold/foldcode.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.16/addon/fold/foldgutter.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.16/addon/fold/brace-fold.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.16/addon/fold/indent-fold.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.16/addon/fold/comment-fold.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.16/addon/fold/markdown-fold.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.16/addon/hint/show-hint.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.16/addon/hint/sql-hint.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.16/addon/hint/css-hint.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.16/addon/hint/xml-hint.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.16/addon/hint/html-hint.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.16/keymap/sublime.min.js"></script>
 <script src="code/ornekler.js"></script>
 <script src="code/py-paketler.js"></script>
+<script src="code/veri.js"></script>
 <script>
 (() => {
 'use strict';
 const $ = id => document.getElementById(id);
-const store = { get(k) { try { return localStorage.getItem(k); } catch (e) { return null; } }, set(k, v) { try { localStorage.setItem(k, v); } catch (e) {} } };
+const store = { get(k) { try { return localStorage.getItem(k); } catch (e) { return null; } }, set(k, v) { try { localStorage.setItem(k, v); return true; } catch (e) { return false; } }, del(k) { try { localStorage.removeItem(k); } catch (e) {} } };
 const esc = s => String(s).replace(/[&<>"]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
 const KEY = 'erdevelop-code';
 const EX = window.CODE_EXAMPLES;
@@ -285,6 +349,75 @@ function table(cols, rows, max = 500) {
   w.innerHTML = `<table><thead><tr>${cols.map(c => `<th>${esc(c)}</th>`).join('')}</tr></thead><tbody>${body}</tbody></table>`;
   return w;
 }
+/* ---------- çıktı araçları: resim/tablo indirme, Plotly, konsol içi girdi ---------- */
+function dlBlob(name, blob) { const a = document.createElement('a'); a.href = URL.createObjectURL(blob); a.download = name; document.body.appendChild(a); a.click(); a.remove(); setTimeout(() => URL.revokeObjectURL(a.href), 3000); }
+let figN = 0;
+function outTools(el, btns) {
+  const w = document.createElement('div'); w.className = 'ot'; w.appendChild(el);
+  const bar = document.createElement('div'); bar.className = 'otb';
+  for (const [t, fn] of btns) { const b = document.createElement('button'); b.type = 'button'; b.textContent = t; b.onclick = fn; bar.appendChild(b); }
+  w.appendChild(bar); return w;
+}
+/* resim (PNG) + isteğe bağlı SVG; indirme düğmeleriyle */
+function figure(src, svg, alt) {
+  const img = new Image(); img.src = src; img.alt = alt || 'grafik';
+  const n = ++figN, btns = [['PNG', () => fetch(src).then(r => r.blob()).then(b => dlBlob(`grafik-${n}.png`, b))]];
+  if (svg) btns.push(['SVG', () => dlBlob(`grafik-${n}.svg`, new Blob([svg], { type: 'image/svg+xml' }))]);
+  img.onload = () => { const s = img.closest('.con'); if (s) s.scrollTop = s.scrollHeight; };
+  return outTools(img, btns);
+}
+function canvasFig(cv) { const n = ++figN; return outTools(cv, [['PNG', () => cv.toBlob(b => dlBlob(`grafik-${n}.png`, b))]]); }
+/* HTML tablo → CSV */
+function tableCSV(t) {
+  return [...t.querySelectorAll('tr')].map(r => [...r.children].map(td => { const v = td.textContent.trim(); return /[",;\n]/.test(v) ? '"' + v.replace(/"/g, '""') + '"' : v; }).join(',')).join('\n') + '\n';
+}
+function tableTools(el) {
+  const t = el.querySelector('table') || (el.tagName === 'TABLE' ? el : null); if (!t) return el;
+  const n = ++figN;
+  return outTools(el, [['CSV', () => dlBlob(`tablo-${n}.csv`, new Blob(['﻿' + tableCSV(t)], { type: 'text/csv' }))], ['Kopyala', () => navigator.clipboard.writeText(tableCSV(t).replace(/,/g, '\t')).then(() => toast('tablo kopyalandı (Excel’e yapıştırılabilir)'))]]);
+}
+/* Plotly grafikleri (ilk kullanımda ~1,4 MB onaylı indirme) */
+const PLOTLY_URL = 'https://cdn.jsdelivr.net/npm/plotly.js-dist-min@2.35.2/plotly.min.js';
+let plotlyP = null;
+async function plotlyNode(c, fig) {
+  const box = document.createElement('div'); box.className = 'plot';
+  const holder = outTools(box, [['PNG', () => window.Plotly && window.Plotly.downloadImage(box, { format: 'png', filename: 'grafik', width: 1100, height: 650 })], ['SVG', () => window.Plotly && window.Plotly.downloadImage(box, { format: 'svg', filename: 'grafik' })]]);
+  c.node(holder);
+  if (!window.Plotly) {
+    if (!store.get(KEY + '-ok-plotly')) {
+      const ok = await askDownload(c, 'Etkileşimli grafik kütüphanesi (Plotly.js)', 'Yakınlaştırılabilir, üzerine gelince değer gösteren grafikler için <b>Plotly.js</b> bir kez indirilir.', '~1,4 MB');
+      if (!ok) { box.textContent = '(grafik gösterilmedi)'; return; }
+      store.set(KEY + '-ok-plotly', '1');
+    }
+    plotlyP = plotlyP || loadScript(PLOTLY_URL).catch(e => { plotlyP = null; throw e; });
+    try { await plotlyP; } catch (e) { box.textContent = 'Plotly yüklenemedi'; return; }
+  }
+  const dark = document.documentElement.dataset.mode === 'dark';
+  const layout = Object.assign({ margin: { t: 40, r: 20, b: 45, l: 55 }, height: 380, paper_bgcolor: dark ? '#131921' : '#fff', plot_bgcolor: dark ? '#131921' : '#fff', font: { color: dark ? '#dfe6ed' : '#1c2833', family: 'IBM Plex Sans, sans-serif' } }, fig.layout || {});
+  if (dark && !(fig.layout && fig.layout.template)) { layout.xaxis = Object.assign({ gridcolor: '#26303b', zerolinecolor: '#26303b' }, layout.xaxis); layout.yaxis = Object.assign({ gridcolor: '#26303b', zerolinecolor: '#26303b' }, layout.yaxis); }
+  if (fig.layout && fig.layout.template && dark) delete layout.template;
+  await window.Plotly.newPlot(box, fig.data || [], layout, { responsive: true, displaylogo: false });
+  c.scroll();
+}
+/* Konsolda satır içi girdi kutusu; Enter gönderir, Esc iptal (null) */
+function consoleInput(c, q) {
+  return new Promise(res => {
+    c.end();
+    if (q) c.write(q);
+    const line = c.line || c._new('', '');
+    const inp = document.createElement('input'); inp.className = 'cin'; inp.type = 'text'; inp.spellcheck = false; inp.autocomplete = 'off';
+    inp.setAttribute('aria-label', q || 'girdi');
+    line.appendChild(inp); c.line = null; c.scroll();
+    setTimeout(() => inp.focus({ preventScroll: false }), 0);
+    inp.addEventListener('keydown', e => {
+      if (e.key !== 'Enter' && e.key !== 'Escape') return;
+      e.preventDefault(); e.stopPropagation();
+      const v = e.key === 'Enter' ? inp.value : null;
+      const s = document.createElement('span'); s.className = 'ln in'; s.style.display = 'inline'; s.textContent = v === null ? '^D (iptal)' : v;
+      inp.replaceWith(s); c.line = null; res(v);
+    });
+  });
+}
 const askInput = q => { const v = prompt(q || 'girdi', ''); if (v === null) throw new Error('girdi iptal edildi'); return v; };
 const fmtKB = kb => kb >= 1024 ? (kb / 1024).toFixed(kb >= 10240 ? 0 : 1).replace('.', ',') + ' MB' : Math.max(1, Math.round(kb)) + ' KB';
 /* İndirme onayı: konsola kart koyar, kullanıcı "İndir" derse true döner */
@@ -313,30 +446,61 @@ addEventListener('message', e => {
   const d = e.data; if (!d || typeof d.__er !== 'number') return;
   const h = bridges.get(d.__er); if (h && e.source === h.win()) h.on(d);
 });
-function consoleMsg(c, d) {
+function consoleMsg(c, d, w) {
   if (d.t === 'clear') return c.clear();
+  if (d.t === '__input' && w) return consoleInput(c, d.a.q).then(v => w.postMessage({ t: '__inres', id: d.a.id, v }));
+  if (d.t === '__plotly') return plotlyNode(c, JSON.parse(d.a));
   if (d.t === 'table') {
     const data = d.a; if (!data || typeof data !== 'object') return c.write(String(data) + '\n');
     const rows = Array.isArray(data) ? data : Object.values(data), keys = Array.isArray(data) ? data.map((_, i) => i) : Object.keys(data);
     const cols = [...new Set(rows.flatMap(r => r && typeof r === 'object' ? Object.keys(r) : ['değer']))];
-    return c.node(table(['(index)', ...cols], rows.map((r, i) => [keys[i], ...cols.map(k => r && typeof r === 'object' ? (typeof r[k] === 'object' && r[k] !== null ? JSON.stringify(r[k]) : r[k]) : k === 'değer' ? r : null)])));
+    return c.node(tableTools(table(['(index)', ...cols], rows.map((r, i) => [keys[i], ...cols.map(k => r && typeof r === 'object' ? (typeof r[k] === 'object' && r[k] !== null ? JSON.stringify(r[k]) : r[k]) : k === 'değer' ? r : null)]))));
   }
   if (d.t === 'ret') { c.end(); return c.write('← ' + d.a + '\n', 'ret'); }
   const cls = d.t === 'error' || d.t === 'uncaught' ? 'err' : d.t === 'warn' ? 'warn' : d.t === 'info' ? 'info' : '';
+  if (d.t === 'uncaught') return errOut(c, d.a);
   c.end(); c.write(d.a + '\n', cls);
+}
+
+/* ---------- çoklu dosya yardımcıları ---------- */
+/* index.html içindeki <link href="style.css"> ve <script src="app.js"> başvurularını proje dosyalarıyla değiştirir */
+function htmlBundle(files) {
+  const map = {}; for (const f of files.slice(1)) map[f.n] = f.c;
+  const key = s => s.replace(/^\.\//, '').split(/[?#]/)[0];
+  let h = files[0].c;
+  h = h.replace(/<link\b[^>]*?\bhref\s*=\s*["']([^"']+)["'][^>]*>/gi, (m, href) => map[key(href)] != null && /stylesheet/i.test(m) ? `<style data-dosya="${key(href)}">\n${map[key(href)]}\n</style>` : m);
+  h = h.replace(/<script\b([^>]*?)\bsrc\s*=\s*["']([^"']+)["']([^>]*)>\s*<\/script>/gi, (m, a, src, b) => map[key(src)] != null ? `<script${a}${b} data-dosya="${key(src)}">\n${map[key(src)].replace(/<\/script/gi, '<\\/script')}\n<\/script>` : m);
+  return h;
+}
+/* veri dosyaları (CSV, JSON, metin) ad → içerik */
+function dataMap(files) { const o = {}; for (const f of (files || []).slice(1)) if (isData(f.n)) o[f.n] = f.c; return o; }
+/* basit CSV ayrıştırıcı (tırnaklı alanlar, ; veya , ayırıcı) */
+function parseCSV(text) {
+  const first = text.split('\n', 1)[0], sep = text.includes('\t') && !first.includes(',') ? '\t' : (first.split(';').length > first.split(',').length ? ';' : ',');
+  const rows = []; let row = [], cell = '', q = false;
+  for (let i = 0; i < text.length; i++) {
+    const ch = text[i];
+    if (q) { if (ch === '"') { if (text[i + 1] === '"') { cell += '"'; i++; } else q = false; } else cell += ch; }
+    else if (ch === '"') q = true;
+    else if (ch === sep) { row.push(cell); cell = ''; }
+    else if (ch === '\n' || ch === '\r') { if (ch === '\r' && text[i + 1] === '\n') i++; row.push(cell); cell = ''; if (row.length > 1 || row[0] !== '') rows.push(row); row = []; }
+    else cell += ch;
+  }
+  if (cell !== '' || row.length) { row.push(cell); rows.push(row); }
+  return rows;
 }
 
 /* ---------- HTML önizleme ---------- */
 const htmlCon = new Con($('conHtml'));
 let frameId = 0, conCount = { log: 0, err: 0 };
-function injectBridge(src, id) {
-  const b = BRIDGE(id);
+function injectBridge(src, id, data) {
+  const b = BRIDGE(id) + (data && Object.keys(data).length ? `<script>window.DOSYALAR=${JSON.stringify(data).replace(/</g, '\\u003c')};<\/script>` : '');
   if (/<head[^>]*>/i.test(src)) return src.replace(/<head[^>]*>/i, m => m + b);
   if (/<html[^>]*>/i.test(src)) return src.replace(/<html[^>]*>/i, m => m + b);
   if (/^\s*<!doctype[^>]*>/i.test(src)) return src.replace(/^\s*<!doctype[^>]*>/i, m => m + b);
   return b + src;
 }
-function showFrame(docHtml, withConsole) {
+function showFrame(docHtml, withConsole, data) {
   bridges.delete(frameId);
   frameId = ++bridgeSeq;
   htmlCon.clear(); conCount = { log: 0, err: 0 }; updConCount();
@@ -345,7 +509,7 @@ function showFrame(docHtml, withConsole) {
     if (d.t === 'error' || d.t === 'uncaught') { conCount.err++; $('htmlCon').classList.remove('mini-h'); } else if (d.t !== 'clear') conCount.log++;
     updConCount();
   } });
-  $('frame').srcdoc = withConsole ? injectBridge(docHtml, frameId) : docHtml;
+  $('frame').srcdoc = withConsole ? injectBridge(docHtml, frameId, data) : docHtml;
 }
 function updConCount() { $('conCount').innerHTML = (conCount.log ? `<span class="badge">${conCount.log}</span> ` : '') + (conCount.err ? `<span class="badge e">${conCount.err} hata</span>` : ''); }
 $('htmlConH').onclick = () => { const m = $('htmlCon').classList.toggle('mini-h'); $('conToggle').textContent = m ? '▸' : '▾'; store.set(KEY + '-conmin', m ? '1' : ''); };
@@ -356,16 +520,39 @@ const mdDoc = src => `<!doctype html><html lang="tr"><head><meta charset="utf-8"
 
 /* ---------- JavaScript çalıştırıcı ---------- */
 /* Ayrı bir Web Worker'da çalışır: sayfayı dondurmaz, "Durdur" ile anında sonlandırılır. */
-const WORKER_PRELUDE = `const __P=(t,a)=>postMessage({t,a});const __f=v=>{try{if(v instanceof Error)return v.name+': '+v.message;if(typeof v==='object'&&v!==null){if(v instanceof Map)v=Object.fromEntries(v);if(v instanceof Set)v=Array.from(v);return JSON.stringify(v,null,1).replace(/\\n\\s*/g,' ')}if(typeof v==='function')return 'ƒ '+(v.name||'anonim')+'()';return String(v)}catch(e){return String(v)}};['log','info','warn','error','debug'].forEach(k=>{console[k]=(...a)=>__P(k,a.map(__f).join(' '))});console.table=d=>__P('table',JSON.parse(JSON.stringify(d)));console.clear=()=>__P('clear','');self.addEventListener('error',e=>{e.preventDefault();__P('uncaught',(e.error&&e.error.name?e.error.name+': ':'')+String(e.message||'Hata').replace(/^Uncaught \\w*:? ?/,'')+(e.lineno?' (satır '+e.lineno+')':''))});self.addEventListener('unhandledrejection',e=>{e.preventDefault();__P('uncaught','Promise: '+__f(e.reason))});self.onmessage=async e=>{const d=e.data;if(!d||d.t!=='__eval')return;const sh=v=>v===undefined?undefined:typeof v==='string'?JSON.stringify(v):__f(v);try{let r;try{r=(0,eval)(d.code)}catch(x){if(!(x instanceof SyntaxError)||!/\\bawait\\b/.test(d.code))throw x;r=(0,eval)('(async()=>('+d.code.replace(/;\\s*$/,'')+'))()')}if(r&&typeof r.then==='function')r=await r;__P('__ret',sh(r))}catch(x){__P('__rerr',(x&&x.name?x.name+': ':'')+(x&&x.message!==undefined?x.message:x))}};`;
+const WORKER_PRELUDE = `const __P=(t,a)=>postMessage({t,a});const __f=v=>{try{if(v instanceof Error)return v.name+': '+v.message;if(typeof v==='object'&&v!==null){if(v instanceof Map)v=Object.fromEntries(v);if(v instanceof Set)v=Array.from(v);return JSON.stringify(v,null,1).replace(/\\n\\s*/g,' ')}if(typeof v==='function')return 'ƒ '+(v.name||'anonim')+'()';return String(v)}catch(e){return String(v)}};['log','info','warn','error','debug'].forEach(k=>{console[k]=(...a)=>__P(k,a.map(__f).join(' '))});console.table=d=>__P('table',JSON.parse(JSON.stringify(d)));console.clear=()=>__P('clear','');self.addEventListener('error',e=>{e.preventDefault();__P('uncaught',(e.error&&e.error.name?e.error.name+': ':'')+String(e.message||'Hata').replace(/^Uncaught \\w*:? ?/,'')+(e.lineno?' (satır '+e.lineno+')':''))});self.addEventListener('unhandledrejection',e=>{e.preventDefault();__P('uncaught','Promise: '+__f(e.reason))});self.__inp={};self.input=q=>new Promise(r=>{const id=Math.random().toString(36).slice(2);self.__inp[id]=r;__P('__input',{id,q:q==null?'':String(q)})});self.plotly=(data,layout)=>__P('__plotly',JSON.stringify({data:Array.isArray(data)?data:[data],layout:layout||{}}));self.onmessage=async e=>{const d=e.data;if(d&&d.t==='__inres'){const r=self.__inp[d.id];delete self.__inp[d.id];if(r)r(d.v);return}if(!d||d.t!=='__eval')return;const sh=v=>v===undefined?undefined:typeof v==='string'?JSON.stringify(v):__f(v);try{let r;try{r=(0,eval)(d.code)}catch(x){if(!(x instanceof SyntaxError)||!/\\bawait\\b/.test(d.code))throw x;r=(0,eval)('(async()=>('+d.code.replace(/;\\s*$/,'')+'))()')}if(r&&typeof r.then==='function')r=await r;__P('__ret',sh(r))}catch(x){__P('__rerr',(x&&x.name?x.name+': ':'')+(x&&x.message!==undefined?x.message:x))}};`;
 let jsJob = null, lastWorker = null, jsModule = false;
 const syntaxMsg = code => { try { new (async function () {}).constructor(code); return 'Sözdizimi hatası'; } catch (x) { return x.name + ': ' + x.message; } };
 /* import / üst seviye await yoksa klasik betik olarak çalışır: üst seviye değişkenler komut satırından erişilebilir kalır */
 const isClassic = code => { try { new Function(code); return true; } catch (e) { return false; } };
-function runJs(code, c) {
+/* Diğer .js/.ts dosyalarını blob modüllere çevirip './dosya.js' import'larını bunlara yönlendirir */
+let jsUrls = [];
+function jsModules(files, main) {
+  const others = files.slice(1).filter(f => /\.(m?js|ts)$/i.test(f.n)), urls = {};
+  const base = s => s.replace(/^\.\//, '').replace(/\.(m?js|ts)$/i, '');
+  const find = spec => others.find(f => base(f.n) === base(spec));
+  const urlOf = (f, seen) => {
+    if (urls[f.n]) return urls[f.n];
+    if (seen.has(f.n)) return 'data:text/javascript,';
+    seen.add(f.n);
+    let c = f.c;
+    if (/\.ts$/i.test(f.n) && window.ts) c = window.ts.transpileModule(c, { compilerOptions: { target: window.ts.ScriptTarget.ES2022, module: window.ts.ModuleKind.ESNext } }).outputText;
+    const u = URL.createObjectURL(new Blob([rewrite(c, seen)], { type: 'text/javascript' }));
+    jsUrls.push(u); return urls[f.n] = u;
+  };
+  const rewrite = (code, seen) => code.replace(/(\bfrom\s*|\bimport\s*\(?\s*)(["'])(\.\/[^"']+)\2/g, (m, a, q, spec) => { const f = find(spec); return f ? a + q + urlOf(f, seen) + q : m; });
+  return rewrite(main, new Set());
+}
+function runJs(code, c, files) {
   return new Promise((resolve, reject) => {
     if (lastWorker) lastWorker.terminate(); // önceki çalıştırmadan kalan zamanlayıcıları durdur
-    const url = URL.createObjectURL(new Blob([WORKER_PRELUDE + code + '\n;postMessage({t:"__done"});'], { type: 'text/javascript' }));
+    jsUrls.forEach(u => URL.revokeObjectURL(u)); jsUrls = [];
+    const pre = WORKER_PRELUDE + 'self.DOSYALAR=' + JSON.stringify(dataMap(files)) + ';';
+    if (files) code = jsModules(files, code);
     jsModule = !isClassic(code);
+    let body = pre + code;
+    if (jsModule) { const pu = URL.createObjectURL(new Blob([pre], { type: 'text/javascript' })); jsUrls.push(pu); body = `import "${pu}";` + code; }
+    const url = URL.createObjectURL(new Blob([body + '\n;postMessage({t:"__done"});'], { type: 'text/javascript' }));
     const w = lastWorker = new Worker(url, jsModule ? { type: 'module', name: 'kod' } : { name: 'kod' });
     let finished = false;
     const finish = (err, kill) => { if (finished) return; finished = true; jsJob = null; URL.revokeObjectURL(url); if (kill) { setTimeout(() => w.terminate(), 50); if (lastWorker === w) lastWorker = null; } if (err) reject(err); else resolve(); };
@@ -373,10 +560,10 @@ function runJs(code, c) {
     w.onmessage = e => {
       const d = e.data;
       if (d.t === '__done') return finish();
-      consoleMsg(c, d);
-      if (d.t === 'uncaught') finish(Object.assign(new Error(''), { shown: true }));
+      consoleMsg(c, d, w);
+      if (d.t === 'uncaught') finish(Object.assign(new Error(''), { shown: true, text: d.a }));
     };
-    w.onerror = e => { e.preventDefault(); c.end(); c.write((e.message || syntaxMsg(code)).replace(/^Uncaught \w*:? ?/, m => m.replace('Uncaught ', '')) + (e.lineno ? ' (satır ' + e.lineno + ')' : '') + '\n', 'err'); finish(Object.assign(new Error(''), { shown: true }), true); };
+    w.onerror = e => { e.preventDefault(); const t = (e.message || syntaxMsg(code)).replace(/^Uncaught \w*:? ?/, m => m.replace('Uncaught ', '')) + (e.lineno ? ' (satır ' + e.lineno + ')' : ''); errOut(c, t); finish(Object.assign(new Error(''), { shown: true, text: t }), true); };
   });
 }
 /* Komut satırı: son çalıştırmanın worker'ında (değişkenleriyle) ifade değerlendirir */
@@ -395,13 +582,13 @@ async function evalJs(code, c) {
         done();
         const hint = jsModule && /^ReferenceError/.test(d.a) ? '\n(kodda import veya üst seviye await olduğu için oradaki değişkenler buradan görünmez; globalThis.x = x ile paylaşabilirsin)' : '';
         reject(new Error(d.a + hint));
-      } else consoleMsg(c, d);
+      } else consoleMsg(c, d, w);
     };
     w.postMessage({ t: '__eval', code });
   });
 }
 function stopJs() { if (jsJob) jsJob.stop(); }
-$('stopBtn').onclick = stopJs;
+$('stopBtn').onclick = () => { const R = L[lang]; if (R.halt) R.halt(); else stopJs(); };
 
 /* ---------- diller ---------- */
 const PYODIDE = 'https://cdn.jsdelivr.net/pyodide/v0.26.4/full/';
@@ -409,127 +596,130 @@ const PYKB = window.PY_PKG_KB || {};
 let pyOk = []; try { pyOk = JSON.parse(store.get(KEY + '-pyok') || '[]'); } catch (e) {}
 let pyLock = null;
 /* Koddaki import'lardan indirilecek Pyodide paketlerini (bağımlılıklarıyla) bulur */
-async function pyPlan(py, src) {
+async function pyPlan(info) {
   pyLock = pyLock || fetch(PYODIDE + 'pyodide-lock.json').then(r => r.json()).then(j => {
     const imp = {}; for (const [k, p] of Object.entries(j.packages)) for (const i of p.imports || []) imp[i] = k;
     return { pk: j.packages, imp };
   }).catch(e => { pyLock = null; throw e; });
   const { pk, imp } = await pyLock;
-  const fi = py.pyodide_py.code.find_imports(src), mods = fi.toJs(); fi.destroy();
-  const loaded = py.loadedPackages, need = [], top = new Set();
+  const loaded = Object.fromEntries(info.loaded.map(n => [n, 1])), need = [], top = new Set();
   const visit = n => { if (!pk[n] || loaded[n] || need.includes(n)) return; need.push(n); (pk[n].depends || []).forEach(visit); };
-  for (const m of mods) { const n = imp[m.split('.')[0]]; if (n && !loaded[n]) { top.add(n); visit(n); } }
+  for (const m of info.mods) { const n = imp[m.split('.')[0]]; if (n && !loaded[n]) { top.add(n); visit(n); } }
+  // PyPI'dan gelen büyük paketler (Pyodide'da yok)
+  if (info.mods.some(m => m.split('.')[0] === 'plotly') && !loaded.plotly) { top.add('plotly'); for (const n of ['plotly', 'micropip', 'packaging', 'tenacity']) if (!need.includes(n) && !loaded[n]) need.push(n); }
   return { ask: need.filter(n => !pyOk.includes(n)), top };
 }
+const EXTRA_KB = { plotly: 18608, tenacity: 28 };
+/* Python worker yöneticisi: çıktıları o anki konsola (veya defter hücresine) yönlendirir */
+const PyW = {
+  w: null, seq: 0, cb: new Map(), out: null, st: () => {}, reg: null,
+  async swReady() { // input() için servis çalışanı (kapsam /code/)
+    if (this.reg !== null || !('serviceWorker' in navigator)) return;
+    try {
+      const reg = await navigator.serviceWorker.register('code/sw.js', { scope: 'code/' });
+      const sw = reg.installing || reg.waiting || reg.active;
+      if (sw && sw.state !== 'activated') await new Promise(r => { sw.addEventListener('statechange', () => sw.state === 'activated' && r()); setTimeout(r, 4000); });
+      this.reg = reg;
+    } catch (e) { this.reg = false; }
+  },
+  async start() {
+    await this.swReady();
+    this.w = new Worker('code/py-worker.js', { name: 'python' });
+    this.w.onmessage = e => this.msg(e.data);
+    this.w.onerror = e => { e.preventDefault(); const err = new Error('Python çalışanı hata verdi: ' + (e.message || '')); this.cb.forEach(p => p.rej(err)); this.cb.clear(); };
+    return this.call('init');
+  },
+  call(t, o = {}) { return new Promise((res, rej) => { const id = ++this.seq; this.cb.set(id, { res, rej }); this.w.postMessage({ t, id, ...o }); }); },
+  msg(d) {
+    const c = this.out || con('python');
+    if (d.t === 'done') { const p = this.cb.get(d.id); if (!p) return; this.cb.delete(d.id); d.err != null ? p.rej(new Error(d.err)) : p.res(d.r); }
+    else if (d.t === 'out') c.write(d.s, d.cls || '');
+    else if (d.t === 'status') this.st(d.s);
+    else if (d.t === 'img') c.node(figure('data:image/png;base64,' + d.a, d.b, 'grafik'));
+    else if (d.t === 'html') { const el = document.createElement('div'); el.className = 'html'; el.innerHTML = d.a; el.querySelectorAll('script').forEach(s => s.remove()); c.node(tableTools(el)); }
+    else if (d.t === 'plotly') plotlyNode(c, JSON.parse(d.a));
+    else if (d.t === 'input') consoleInput(c, d.q).then(v => {
+      const sw = this.reg && (this.reg.active || this.reg.waiting);
+      if (sw) sw.postMessage({ t: 'girdi', id: d.id, text: v === null ? '\u0004' : v });
+    });
+  },
+  kill() {
+    if (this.w) this.w.terminate(); this.w = null;
+    const err = new Error('durduruldu'); this.cb.forEach(p => p.rej(err)); this.cb.clear();
+    document.querySelectorAll('.cin').forEach(i => i.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape' })));
+  }
+};
 const L = {
   html: { name: 'HTML', color: '#e8623a', file: 'index.html', mode: 'htmlmixed', mime: 'text/html', indent: 2, out: 'frame', live: true, ext: ['html', 'htm'],
-    run(src) { showFrame(src, true); } },
+    run(src, c, st, files) { showFrame(htmlBundle(files || [{ n: 'index.html', c: src }]), true, dataMap(files)); } },
   markdown: { name: 'Markdown', color: '#8a96a1', file: 'README.md', mode: 'markdown', mime: 'text/markdown', indent: 2, out: 'frame', live: true, ext: ['md', 'markdown'], size: '40 KB', noConsole: true,
     load: () => loadScript('https://cdn.jsdelivr.net/npm/marked@14.1.3/marked.min.js').then(() => 'marked'),
     run(src) { showFrame(mdDoc(src), false); } },
   javascript: { name: 'JavaScript', color: '#e5c02b', file: 'main.js', mode: 'javascript', mime: 'text/javascript', indent: 2, ext: ['js', 'mjs'], stop: true,
-    run: (src, c) => runJs(src, c), repl: (src, c) => evalJs(src, c) },
+    run: (src, c, st, files) => runJs(src, c, files), repl: (src, c) => evalJs(src, c) },
   typescript: { name: 'TypeScript', color: '#3178c6', file: 'main.ts', mode: { name: 'javascript', typescript: true }, mime: 'text/plain', indent: 2, ext: ['ts'], stop: true, size: '3 MB',
     load: () => loadScript('https://cdnjs.cloudflare.com/ajax/libs/typescript/5.6.3/typescript.min.js').then(() => 'TypeScript ' + window.ts.version + ' (tip denetimi yapılmaz)'),
-    async run(src, c) {
+    async run(src, c, st, files) {
       const ts = window.ts;
       const r = ts.transpileModule(src, { compilerOptions: { target: ts.ScriptTarget.ES2022, module: ts.ModuleKind.ESNext }, reportDiagnostics: true, fileName: 'main.ts' });
       if (r.diagnostics && r.diagnostics.length) {
         const msg = r.diagnostics.map(d => { const lc = d.file && d.start != null ? d.file.getLineAndCharacterOfPosition(d.start) : null; return (lc ? `satır ${lc.line + 1}: ` : '') + ts.flattenDiagnosticMessageText(d.messageText, '\n'); }).join('\n');
         throw new Error('Sözdizimi hatası\n' + msg);
       }
-      return runJs(r.outputText, c);
+      return runJs(r.outputText.replace(/\n?export \{\};\s*$/, ''), c, files);
     },
     repl(src, c) {
       const r = window.ts.transpileModule(src, { compilerOptions: { target: window.ts.ScriptTarget.ES2022, module: window.ts.ModuleKind.ESNext }, reportDiagnostics: true });
       if (r.diagnostics && r.diagnostics.length) throw new Error('Sözdizimi hatası: ' + window.ts.flattenDiagnosticMessageText(r.diagnostics[0].messageText, '\n'));
       return evalJs(r.outputText.replace(/\n?export \{\};\s*$/, '').replace(/;\s*$/, ''), c);
     } },
-  python: { name: 'Python', color: '#3b78b0', file: 'main.py', mode: 'python', mime: 'text/x-python', indent: 4, ext: ['py'], size: '10 MB',
-    async load(c) {
-      await loadScript(PYODIDE + 'pyodide.js');
-      const py = await loadPyodide({ indexURL: PYODIDE });
-      const dec = new TextDecoder(), dec2 = new TextDecoder(), pc = con('python');
-      py.setStdout({ write: b => { pc.write(dec.decode(b, { stream: true })); return b.length; } });
-      py.setStderr({ write: b => { pc.write(dec2.decode(b, { stream: true }), 'err'); return b.length; } });
-      py.setStdin({ stdin: () => { const q = pc.line ? pc.line.textContent : ''; const v = askInput(q || 'input()'); pc.write(v + '\n', 'in'); return v + '\n'; }, isatty: true });
-      py.globals.set('__er_img', b64 => { const img = new Image(); img.src = 'data:image/png;base64,' + b64; img.alt = 'grafik'; pc.node(img); img.onload = () => pc.scroll(); });
-      py.globals.set('__er_html', h => { const d = document.createElement('div'); d.className = 'html'; d.innerHTML = h; d.querySelectorAll('script').forEach(s => s.remove()); pc.node(d); });
-      py.runPython(`
-import sys, io, base64, builtins, warnings
-warnings.filterwarnings('ignore', message=r'(?s).*Pyarrow will become a required dependency')
-def display(*objs):
-    """Jupyter benzeri: DataFrame vb. tablo olarak, diğerleri repr ile gösterilir."""
-    for o in objs:
-        h = getattr(o, '_repr_html_', None)
-        if callable(h):
-            try:
-                s = h()
-                if s:
-                    __er_html(s); continue
-            except Exception:
-                pass
-        print(repr(o))
-builtins.display = display
-def __er_last(o):
-    # son satırdaki ifadenin değerini göster (matplotlib nesneleri hariç)
-    items = o if isinstance(o, (list, tuple)) and o else [o]
-    if all(type(x).__module__.split('.')[0] == 'matplotlib' for x in items): return
-    display(o)
-def __er_figs():
-    plt = sys.modules.get('matplotlib.pyplot')
-    if not plt: return
-    for n in plt.get_fignums():
-        b = io.BytesIO(); plt.figure(n).savefig(b, format='png', dpi=110, bbox_inches='tight'); __er_img(base64.b64encode(b.getvalue()).decode())
-    plt.close('all')
-def __er_patch():
-    plt = sys.modules.get('matplotlib.pyplot')
-    if plt and getattr(plt.show, '__name__', '') != '__er_show':
-        def __er_show(*a, **k): __er_figs()
-        plt.show = __er_show
-`);
-      this.rt = py;
-      return 'Python ' + py.runPython('import sys; sys.version.split()[0]') + ' · Pyodide ' + py.version;
+  python: { name: 'Python', color: '#3b78b0', file: 'main.py', mode: 'python', mime: 'text/x-python', indent: 4, ext: ['py'], size: '10 MB', stop: true,
+    load() { return PyW.start(); },
+    async run(src, c, st, files) {
+      if (!PyW.w) { ready.python = false; await ensure('python'); }
+      PyW.out = c; PyW.st = st;
+      // ek dosyalar çalışma klasörüne yazılır: import yardimci, open('veri.csv'), pd.read_csv('veri.csv')
+      const extra = (files || []).slice(1);
+      if (extra.length) await PyW.call('files', { files: extra });
+      await this.prep(src + '\n' + extra.filter(f => /\.py$/.test(f.n)).map(f => f.c).join('\n'), c, st);
+      st('çalışıyor…');
+      const r = await PyW.call('run', { src, file: '<exec>', fresh: true });
+      this.mem = r && r.mem;
     },
-    async run(src, c, st) {
-      if (this.ns) { this.ns.destroy(); this.ns = null; }
-      await this.prep(src, c, st);
-      st('çalışıyor…'); await sleep(20);
-      const ns = this.ns = this.rt.globals.get('dict')(); ns.set('__name__', '__main__');
-      await this.exec(src, '<exec>');
-    },
-    /* komut satırı: son çalıştırmanın değişkenleriyle */
+    /* komut satırı / defter hücresi: son çalıştırmanın değişkenleriyle */
     async repl(src, c, st) {
+      if (!PyW.w) { ready.python = false; await ensure('python'); c.write('(Python yeniden başlatıldı; önceki değişkenler yok)\n', 'sys'); }
+      PyW.out = c; PyW.st = st;
       await this.prep(src, c, st);
-      if (!this.ns) { this.ns = this.rt.globals.get('dict')(); this.ns.set('__name__', '__main__'); }
-      await this.exec(src, '<stdin>');
+      const r = await PyW.call('run', { src, file: '<stdin>' });
+      this.mem = r && r.mem;
     },
-    async exec(src, file) {
-      const py = this.rt, ns = this.ns;
-      try {
-        const r = await py.runPythonAsync(src, { globals: ns, filename: file });
-        if (r !== undefined) { const f = py.globals.get('__er_last'); f(r); f.destroy(); if (r && typeof r.destroy === 'function') r.destroy(); }
+    halt() { PyW.kill(); ready.python = false; },
+    complete: (expr, prefix) => PyW.w && ready.python ? PyW.call('complete', { expr, prefix }) : Promise.resolve([]),
+    async format(src) {
+      const c = con('python');
+      if (!store.get(KEY + '-pyok-black')) {
+        const ok = await askDownload(c, 'Python biçimlendirici (black) indirilecek', 'Kodu PEP 8 düzenine sokan <b>black</b> PyPI’dan bir kez indirilir.', '~0,4 MB');
+        if (!ok) throw cancelled('biçimlendirme iptal edildi');
+        store.set(KEY + '-pyok-black', '1');
       }
-      catch (e) {
-        const lines = String(e.message || e).split('\n'), i = lines.findIndex(l => l.includes(`File "${file}"`));
-        throw new Error(i < 0 ? String(e.message || e).trimEnd() : ['Traceback (most recent call last):', ...lines.slice(i)].join('\n').trimEnd());
-      } finally { try { py.runPython('__er_figs()'); } catch (e) {} }
+      await ensure('python');
+      return PyW.call('format', { src });
     },
     async prep(src, c, st) {
-      const py = this.rt;
       st('paketler kontrol ediliyor…');
-      const plan = await pyPlan(py, src).catch(() => null);
+      const plan = await PyW.call('imports', { src }).then(pyPlan).catch(() => null);
       if (plan && plan.ask.length) {
         st('paket indirme onayı bekleniyor');
-        const tot = plan.ask.reduce((s, n) => s + (PYKB[n] || 0), 0);
-        const li = n => `<li class="${plan.top.has(n) ? '' : 'dep'}"><span>${esc(n)}${plan.top.has(n) ? '' : ' <small>(bağımlılık)</small>'}</span><span>${PYKB[n] ? fmtKB(PYKB[n]) : '?'}</span></li>`;
+        const kb = n => PYKB[n] || EXTRA_KB[n] || 0;
+        const tot = plan.ask.reduce((s, n) => s + kb(n), 0);
+        const li = n => `<li class="${plan.top.has(n) ? '' : 'dep'}"><span>${esc(n)}${plan.top.has(n) ? '' : ' <small>(bağımlılık)</small>'}${EXTRA_KB[n] ? ' <small>(PyPI)</small>' : ''}</span><span>${kb(n) ? fmtKB(kb(n)) : '?'}</span></li>`;
         const ok = await askDownload(c, 'Bu kod için Python paketleri indirilecek',
           `İlk kullanımda indirilir, sonra önbellekten gelir:<ul>${plan.ask.map(li).join('')}</ul>`, fmtKB(tot));
         if (!ok) throw cancelled('paket indirme iptal edildi');
         pyOk.push(...plan.ask); store.set(KEY + '-pyok', JSON.stringify([...new Set(pyOk)]));
       }
-      await py.loadPackagesFromImports(src, { messageCallback: m => /Loading|Loaded/.test(m) && st(m.slice(0, 60)), errorCallback: m => c.write(m + '\n', 'warn') });
-      if (/\bmatplotlib\b/.test(src)) py.runPython("import os; os.environ['MPLBACKEND']='AGG'\nimport matplotlib; matplotlib.use('AGG')\nimport matplotlib.pyplot\n__er_patch()");
+      await PyW.call('load', { src });
     } },
   sql: { name: 'SQL', color: '#0f7c86', file: 'query.sql', mode: 'text/x-sqlite', mime: 'application/sql', indent: 2, ext: ['sql'], size: '0.7 MB',
     async load() {
@@ -539,13 +729,31 @@ def __er_patch():
       const db = new this.rt.Database(); const v = db.exec('select sqlite_version()')[0].values[0][0]; db.close();
       return 'SQLite ' + v;
     },
-    async run(src, c) {
+    async run(src, c, st, files) {
       if (this.db) this.db.close();
       this.db = new this.rt.Database(); // her çalıştırma boş veritabanı; komut satırı bunu kullanmaya devam eder
+      for (const f of (files || []).slice(1)) {
+        if (/\.(csv|tsv)$/i.test(f.n)) this.csvTable(f, c);
+        else if (/\.sql$/i.test(f.n)) { c.write(`› ${f.n} çalıştırılıyor\n`, 'sys'); this.exec(f.c, c, false, true); }
+      }
       return this.exec(src, c, true);
     },
+    /* CSV dosyası → aynı adlı tablo (sayısal sütunlar REAL/INTEGER) */
+    csvTable(f, c) {
+      const rows = parseCSV(f.c); if (!rows.length) return;
+      const t = f.n.replace(/\.[^.]+$/, '').replace(/[^\wçğıöşüÇĞİÖŞÜ]+/g, '_');
+      const head = rows[0].map((h, i) => (h || 'c' + (i + 1)).trim().replace(/"/g, '')), body = rows.slice(1);
+      const num = head.map((_, i) => body.length && body.every(r => r[i] == null || r[i] === '' || /^-?\d+([.,]\d+)?([eE][-+]?\d+)?$/.test(r[i].trim())));
+      const int = head.map((_, i) => num[i] && body.every(r => !r[i] || /^-?\d+$/.test(r[i].trim())));
+      this.db.run(`CREATE TABLE "${t}" (${head.map((h, i) => `"${h}" ${int[i] ? 'INTEGER' : num[i] ? 'REAL' : 'TEXT'}`).join(', ')})`);
+      const st = this.db.prepare(`INSERT INTO "${t}" VALUES (${head.map(() => '?').join(',')})`);
+      this.db.run('BEGIN');
+      for (const r of body) st.run(head.map((_, i) => { const v = r[i]; if (v == null || v === '') return null; return num[i] ? +String(v).trim().replace(',', '.') : v; }));
+      this.db.run('COMMIT'); st.free();
+      c.write(`› ${f.n} → tablo "${t}" (${body.length} satır, ${head.length} sütun)\n`, 'sys');
+    },
     repl(src, c) { if (!this.db) this.db = new this.rt.Database(); return this.exec(src, c, false); },
-    exec(src, c, full) {
+    exec(src, c, full, quiet) {
       const db = this.db;
       let n = 0;
       try {
@@ -556,7 +764,7 @@ def __er_patch():
           while (stmt.step()) rows.push(stmt.get());
           if (cols.length) {
             if (full) c.write(`› ${sql.length > 90 ? sql.slice(0, 90) + '…' : sql}\n`, 'sys');
-            if (rows.length) c.node(table(cols, rows)); else c.write('(sonuç yok)\n', 'sys');
+            if (rows.length) c.node(tableTools(table(cols, rows))); else c.write('(sonuç yok)\n', 'sys');
             if (rows.length > 500) c.write(`… ${rows.length} satırdan ilk 500 gösterildi\n`, 'sys');
             else c.write(`${rows.length} satır\n`, 'sys');
           } else {
@@ -585,8 +793,10 @@ io.read = function() return __r() end
 function __show(...) if select('#', ...) > 0 then print(...) end end`);
       return lua;
     },
-    async run(src, c) {
+    async run(src, c, st, files) {
       if (this.eng) { this.eng.global.close(); this.eng = null; }
+      // ek dosyalar sanal diske: require("yardimci"), io.open("veri.csv")
+      for (const f of (files || []).slice(1)) await this.rt.mountFile(f.n, f.c);
       const lua = this.eng = await this.engine(c);
       try { await lua.doString(src); }
       catch (e) { throw new Error(String(e.message || e).replace(/\[string "[^"]*"\]:/g, 'satır ')); }
@@ -601,23 +811,35 @@ function __show(...) if select('#', ...) > 0 then print(...) end end`);
         await lua.doString(src);
       } catch (e) { throw new Error(String(e.message || e).replace(/\[string "[^"]*"\]:/g, 'satır ')); }
     } },
-  r: { name: 'R', color: '#276dc3', file: 'script.R', mode: 'r', mime: 'text/x-r', indent: 2, ext: ['r'], size: '25 MB',
+  r: { name: 'R', color: '#276dc3', file: 'script.R', mode: 'r', mime: 'text/x-r', indent: 2, ext: ['r'], size: '25 MB', stop: true,
     async load() {
       const { WebR } = await import('https://webr.r-wasm.org/v0.4.2/webr.mjs');
       const w = new WebR(); await w.init(); this.rt = w;
       const v = await w.evalRString('R.version.string');
       return v + ' · webR 0.4.2';
     },
+    /* Durdur: R oturumu kapatılır, sonraki çalıştırmada yeniden başlar */
+    halt() { try { this.rt && this.rt.close(); } catch (e) {} this.rt = null; ready.r = false; if (this.rej) this.rej(new Error('durduruldu')); },
     repl(src, c) { return this.run(src, c); }, // R oturumu (global ortam) çalıştırmalar arasında sürer
-    async run(src, c) {
-      const w = this.rt, sh = await new w.Shelter();
+    async complete(expr, prefix) {
+      if (!this.rt || !ready.r) return [];
+      const q = expr ? `tryCatch(names(${expr}), error = function(e) character(0))` : `apropos("^${prefix.replace(/[^\w.]/g, '')}")`;
+      try { const r = await this.rt.evalR(q); const v = await r.toArray(); return v.filter(x => x && x.startsWith(prefix)).slice(0, 200); } catch (e) { return []; }
+    },
+    async run(src, c, st, files) {
+      const w = this.rt;
+      // ek dosyalar çalışma klasörüne: read.csv("veri.csv"), source("yardimci.R")
+      for (const f of (files || []).slice(1)) await w.FS.writeFile('/home/web_user/' + f.n, new TextEncoder().encode(f.c));
+      const sh = await new w.Shelter();
       try {
         let res;
-        try { res = await sh.captureR(src, { withAutoprint: true, captureStreams: true, captureConditions: false, captureGraphics: { width: 720, height: 440 } }); }
-        catch (e) { throw new Error(String(e.message || e).replace(/^Error in .*?: ?/, 'Hata: ')); }
+        const halted = new Promise((_, rej) => { this.rej = rej; });
+        try { res = await Promise.race([halted, sh.captureR(src, { withAutoprint: true, captureStreams: true, captureConditions: false, captureGraphics: { width: 720, height: 440 } })]); }
+        catch (e) { if (e.message === 'durduruldu') throw e; throw new Error(String(e.message || e).replace(/^Error in .*?: ?/, 'Hata: ')); }
+        finally { this.rej = null; }
         for (const o of res.output) c.write(o.data + '\n', o.type === 'stderr' ? 'warn' : '');
-        for (const img of res.images || []) { const cv = document.createElement('canvas'); cv.width = img.width; cv.height = img.height; cv.getContext('2d').drawImage(img, 0, 0); c.node(cv); }
-      } finally { sh.purge(); }
+        for (const img of res.images || []) { const cv = document.createElement('canvas'); cv.width = img.width; cv.height = img.height; cv.getContext('2d').drawImage(img, 0, 0); c.node(canvasFig(cv)); }
+      } finally { if (this.rt) sh.purge(); }
     } },
   php: { name: 'PHP', color: '#777bb3', file: 'index.php', mode: 'application/x-httpd-php', mime: 'application/x-php', indent: 4, ext: ['php'], size: '5 MB',
     async load() {
@@ -631,8 +853,15 @@ function __show(...) if select('#', ...) > 0 then print(...) end end`);
       await php.run('<?php echo PHP_VERSION;'); php.flush(); this.cur = null;
       return 'PHP ' + v.trim();
     },
-    async run(src, c) {
+    async run(src, c, st, files) {
       const php = this.rt; this.cur = c;
+      // veri dosyaları $DOSYALAR dizisinde; diğer .php dosyaları sona eklenir (fonksiyon/sınıf tanımları için)
+      const extra = (files || []).slice(1), data = dataMap(files);
+      if (Object.keys(data).length) src = src.replace(/^\s*<\?php/, `<?php $DOSYALAR = json_decode(base64_decode('${btoa(unescape(encodeURIComponent(JSON.stringify(data))))}'), true);`);
+      for (const f of extra.filter(f => /\.php$/i.test(f.n))) {
+        const inPhp = src.lastIndexOf('<?php') > src.lastIndexOf('?>');
+        src += (inPhp ? '\n?>' : '\n') + (/^\s*<\?php/.test(f.c) ? f.c : '<?php\n' + f.c);
+      }
       try { await php.refresh(); const code = await php.run(src); php.flush(); c.end(); if (code) throw Object.assign(new Error('çıkış kodu ' + code), { soft: true }); }
       finally { this.cur = null; }
     },
@@ -664,14 +893,15 @@ module Kernel
   end
 end
 module ErRun
-  def self.run(b64, show = false)
+  def self.run(b64, show = false, file = nil)
     src = b64.unpack1('m').force_encoding('UTF-8')
+    file ||= show ? '(irb)' : 'main.rb'
     out = StringIO.new; $stdout = out; $stderr = out; err = ''; ret = ''
     begin
-      r = TOPLEVEL_BINDING.eval(src, show ? '(irb)' : 'main.rb', 1)
+      r = TOPLEVEL_BINDING.eval(src, file, 1)
       ret = r.inspect if show
     rescue Exception => e
-      bt = (e.backtrace || []).select { |l| l.start_with?('main.rb') }.first(4)
+      bt = (e.backtrace || []).select { |l| l.start_with?(file) }.first(4)
       err = "#{e.class}: #{e.message}" + (bt.empty? ? '' : "\\n  " + bt.join("\\n  "))
     ensure
       $stdout = STDOUT; $stderr = STDERR
@@ -682,11 +912,18 @@ end`);
       this.rt = vm;
       return 'Ruby ' + vm.eval('RUBY_VERSION').toString();
     },
-    repl(src, c) { return this.run(src, c, true); }, // TOPLEVEL_BINDING çalıştırmalar arasında sürer
-    async run(src, c, show) {
+    repl(src, c) { return this.exec(src, c, true); }, // TOPLEVEL_BINDING çalıştırmalar arasında sürer
+    async run(src, c, st, files) {
+      // veri dosyaları DOSYALAR hash'inde; diğer .rb dosyaları önce yüklenir
+      const extra = (files || []).slice(1);
+      await this.exec('require "json"; Object.send(:remove_const, :DOSYALAR) if Object.const_defined?(:DOSYALAR); DOSYALAR = JSON.parse(' + JSON.stringify(JSON.stringify(dataMap(files))) + ')', c, false, '(veri)');
+      for (const f of extra.filter(f => /\.rb$/i.test(f.n))) await this.exec(f.c, c, false, f.n);
+      return this.exec(src, c, false);
+    },
+    async exec(src, c, show, file) {
       const bytes = new TextEncoder().encode(src); let bin = '';
       for (let i = 0; i < bytes.length; i += 0x8000) bin += String.fromCharCode.apply(null, bytes.subarray(i, i + 0x8000));
-      const r = this.rt.eval(`ErRun.run("${btoa(bin)}", ${show ? 'true' : 'false'})`).toString();
+      const r = this.rt.eval(`ErRun.run("${btoa(bin)}", ${show ? 'true' : 'false'}${file ? ', ' + JSON.stringify(file) : ''})`).toString();
       const k2 = r.lastIndexOf('\u0000'), k = r.lastIndexOf('\u0000', k2 - 1), out = r.slice(0, k), err = r.slice(k + 1, k2), ret = r.slice(k2 + 1);
       if (out) c.write(out.endsWith('\n') ? out : out + '\n');
       if (err) throw new Error(err);
@@ -706,9 +943,11 @@ end`);
       return s;
     },
     fmt(s, x) { try { return s.format_answer(x); } catch (e) { return String(x); } },
-    async run(src, c) {
+    async run(src, c, st, files) {
       this.s = null;
-      const queries = [], prog = src.split('\n').map(l => { const m = l.match(/^\s*\?-\s*(.*)$/); if (m) { queries.push(m[1].trim()); return ''; } return l; }).join('\n');
+      // diğer .pl dosyalarındaki kurallar programla birlikte yüklenir
+      const lib = (files || []).slice(1).filter(f => /\.(pl|pro)$/i.test(f.n)).map(f => f.c).join('\n');
+      const queries = [], prog = src.split('\n').map(l => { const m = l.match(/^\s*\?-\s*(.*)$/); if (m) { queries.push(m[1].trim()); return ''; } return l; }).join('\n') + '\n' + lib;
       const s = this.s = await this.session(prog, c);
       if (!queries.length) return c.write('Program yüklendi. Sorgu için "?- hedef." satırı ekle ya da aşağıdaki komut satırına yaz.\n', 'sys');
       for (const q of queries) { c.end(); c.write('?- ' + q + '\n', 'in'); await this.query(s, q, c); }
@@ -740,8 +979,12 @@ end`);
       await loadScript('https://cdn.jsdelivr.net/npm/biwascheme@0.8.0/release/biwascheme-min.js');
       return 'BiwaScheme ' + (window.BiwaScheme.Version || window.BiwaScheme.VERSION || '');
     },
-    repl(src, c) { return this.run(src, c); }, // tanımlar genel ortamda kalır
-    run(src, c) {
+    repl(src, c) { return this.eval1(src, c); }, // tanımlar genel ortamda kalır
+    async run(src, c, st, files) {
+      for (const f of (files || []).slice(1).filter(f => /\.(scm|ss|rkt)$/i.test(f.n))) await this.eval1(f.c, { write() {}, end() {} });
+      return this.eval1(src, c);
+    },
+    eval1(src, c) {
       const B = window.BiwaScheme;
       B.Port.current_output = new B.Port.CustomOutput(t => c.write(t));
       return new Promise((resolve, reject) => {
@@ -762,9 +1005,46 @@ const ORDER = ['html', 'markdown', 'javascript', 'typescript', 'python', 'sql', 
 /* ---------- durum ---------- */
 let lang = store.get(KEY + '-lang'); if (!L[lang]) lang = 'html';
 let fontSize = +(store.get(KEY + '-fs') || 13.5);
-const docs = {};
-const getDoc = l => docs[l] || (docs[l] = CodeMirror.Doc(store.get(KEY + '-' + l) ?? EX[l][0].c, L[l].mode));
 const loading = {}, ready = {}, busy = {}, stat = {};
+
+/* ---------- çalışma alanı: dil başına dosyalar (ilk dosya ana dosyadır) ---------- */
+const extOf = n => (String(n).split('.').pop() || '').toLowerCase();
+const FMODE = { html: 'htmlmixed', htm: 'htmlmixed', css: 'css', js: 'javascript', mjs: 'javascript', json: { name: 'javascript', json: true }, ts: { name: 'javascript', typescript: true }, py: 'python', md: 'markdown', sql: 'text/x-sqlite', lua: 'lua', r: 'r', rb: 'ruby', php: 'application/x-httpd-php', pl: 'prolog', pro: 'prolog', scm: 'scheme', ss: 'scheme', rkt: 'scheme', xml: 'xml', svg: 'xml' };
+const DATA_EXT = ['csv', 'tsv', 'txt', 'json', 'xml', 'dat', 'geojson'];
+const modeFor = n => FMODE[extOf(n)] || null;
+const isData = n => DATA_EXT.includes(extOf(n));
+const WS = {}, fdoc = new WeakMap();
+const exFiles = (l, ex) => [{ n: L[l].file, c: ex.c }, ...Object.entries(ex.files || {}).map(([n, c]) => ({ n, c }))];
+function getWs(l) {
+  if (WS[l]) return WS[l];
+  let w = null;
+  try { w = JSON.parse(store.get(KEY + '-ws-' + l) || 'null'); } catch (e) {}
+  if (!w || !Array.isArray(w.files) || !w.files.length) {
+    const old = store.get(KEY + '-' + l); // eski tek dosyalı kayıt
+    w = { files: old != null ? [{ n: L[l].file, c: old }] : exFiles(l, EX[l][0]), act: 0 };
+  }
+  w.files[0].n = L[l].file;
+  if (!(w.act < w.files.length)) w.act = 0;
+  return WS[l] = w;
+}
+function docOf(f) { let d = fdoc.get(f); if (!d) { d = CodeMirror.Doc(f.c, modeFor(f.n)); fdoc.set(f, d); } return d; }
+function flush(l) { const w = WS[l]; if (w) for (const f of w.files) { const d = fdoc.get(f); if (d) f.c = d.getValue(); } }
+let storeWarned = false;
+function saveWs(l) {
+  const w = WS[l]; if (!w) return;
+  flush(l);
+  const ok = store.set(KEY + '-ws-' + l, JSON.stringify({ files: w.files.map(f => ({ n: f.n, c: f.c })), act: w.act, pid: w.pid || null, pname: w.pname || null }));
+  if (!ok && !storeWarned) { storeWarned = true; toast('tarayıcı deposu dolu: büyük dosyalar kalıcı kaydedilemedi'); }
+}
+const mainSrc = l => { const w = getWs(l), f = w.files[0], d = fdoc.get(f); return d ? d.getValue() : f.c; };
+function wsFiles(l) { flush(l); return getWs(l).files.map(f => ({ n: f.n, c: f.c })); }
+function setFiles(l, files, meta = {}) {
+  const w = getWs(l);
+  w.files = files.map(f => ({ n: f.n, c: f.c })); w.files[0].n = L[l].file; w.act = 0;
+  w.pid = meta.pid || null; w.pname = meta.pname || null;
+  saveWs(l);
+  if (l === lang) { showFile(0); renderTabs(); }
+}
 
 $('langbar').innerHTML = ORDER.map(l => `<button type="button" role="tab" data-lang="${l}" title="${L[l].size ? 'ilk açılışta ~' + L[l].size + ' indirir' : 'ek indirme yok'}"><i style="background:${L[l].color}"></i>${L[l].name}</button>`).join('');
 $('langbar').onclick = e => { const b = e.target.closest('button[data-lang]'); if (b && b.dataset.lang !== lang) setLang(b.dataset.lang); };
@@ -773,10 +1053,12 @@ $('langbar').onclick = e => { const b = e.target.closest('button[data-lang]'); i
 const cm = CodeMirror($('edwrap'), {
   value: '', lineNumbers: true, tabSize: 4, indentWithTabs: false,
   autoCloseBrackets: true, matchBrackets: true, autoCloseTags: true, matchTags: { bothTags: true },
-  styleActiveLine: true, lineWrapping: false, viewportMargin: 50,
+  styleActiveLine: true, lineWrapping: store.get(KEY + '-wrap') === '1', viewportMargin: 50,
+  keyMap: 'sublime', foldGutter: true, gutters: ['er-gut', 'CodeMirror-linenumbers', 'CodeMirror-foldgutter'],
   extraKeys: {
+    'Ctrl-Space': c => hint(c, true), 'Alt-F': 'findPersistent', 'Ctrl-G': 'jumpToLine', 'Shift-Alt-F': () => formatCode(), 'Ctrl-Q': c => c.foldCode(c.getCursor()),
     'Ctrl-Enter': () => run(), 'Cmd-Enter': () => run(), 'Shift-Enter': () => run(),
-    'Ctrl-/': 'toggleComment', 'Cmd-/': 'toggleComment', 'Ctrl-S': () => (save(), false), 'Cmd-S': () => (save(), false),
+    'Ctrl-/': 'toggleComment', 'Cmd-/': 'toggleComment', 'Ctrl-S': () => { saveProject(false); }, 'Cmd-S': () => { saveProject(false); },
     Tab: c => c.somethingSelected() ? c.indentSelection('add') : c.replaceSelection(' '.repeat(c.getOption('indentUnit')), 'end'),
     'Shift-Tab': c => c.indentSelection('subtract')
   }
@@ -786,20 +1068,67 @@ applyFont();
 $('fmtBtn').onclick = () => { fontSize = fontSize >= 18 ? 12 : fontSize + 1.5; store.set(KEY + '-fs', fontSize); applyFont(); toast(fontSize + ' px'); };
 
 let saveT, liveT;
-cm.on('change', () => {
-  clearTimeout(saveT); saveT = setTimeout(() => store.set(KEY + '-' + lang, cm.getValue()), 300);
+cm.on('change', (_, ch) => {
+  clearTimeout(saveT); saveT = setTimeout(() => saveWs(lang), 400);
   updMeta();
+  getWs(lang).dirty = true;
   if (L[lang].live && $('autoRun').checked) { clearTimeout(liveT); liveT = setTimeout(() => run(true), 600); }
 });
-function updMeta() { $('edMeta').textContent = cm.lineCount() + ' satır'; }
+function updMeta() {
+  const w = getWs(lang);
+  $('edMeta').textContent = cm.lineCount() + ' satır' + (w.pname ? ' · ' + w.pname : '');
+}
+function showFile(i) {
+  const w = getWs(lang); w.act = Math.max(0, Math.min(i, w.files.length - 1));
+  const f = w.files[w.act];
+  cm.swapDoc(docOf(f));
+  cm.setOption('indentUnit', extOf(f.n) === 'py' ? 4 : L[lang].indent);
+  renderTabs(); updMeta();
+}
+function renderTabs() {
+  const w = getWs(lang);
+  $('ftabs').innerHTML = w.files.map((f, i) => `<button type="button" role="tab" class="ft${i === w.act ? ' on' : ''}${i === 0 ? ' main' : ''}${isData(f.n) ? ' data' : ''}" data-i="${i}" title="${i === 0 ? 'ana dosya: ▶ Çalıştır bunu çalıştırır' : 'çift tık: yeniden adlandır'}">${esc(f.n)}${i ? '<span class="x" data-x="' + i + '" title="Dosyayı sil">×</span>' : ''}</button>`).join('');
+  const on = $('ftabs').querySelector('.on'); if (on) on.scrollIntoView({ block: 'nearest', inline: 'nearest' });
+}
+$('ftabs').onclick = e => {
+  const x = e.target.closest('[data-x]');
+  if (x) { e.stopPropagation(); return removeFile(+x.dataset.x); }
+  const b = e.target.closest('.ft'); if (b) { showFile(+b.dataset.i); cm.focus(); }
+};
+$('ftabs').ondblclick = e => {
+  const b = e.target.closest('.ft'); if (!b || b.dataset.i === '0') return;
+  const w = getWs(lang), f = w.files[+b.dataset.i];
+  const n = cleanName(prompt('Yeni dosya adı', f.n) || ''); if (!n || n === f.n) return;
+  if (w.files.some(g => g.n === n)) return toast('bu adda dosya var');
+  flush(lang); f.n = n; fdoc.delete(f); w.dirty = true; showFile(+b.dataset.i); saveWs(lang);
+};
+const cleanName = n => n.trim().replace(/[\\/:*?"<>|]+/g, '_').replace(/^\.+/, '').slice(0, 80);
+function addFile(n, c, quiet) {
+  const w = getWs(lang); n = cleanName(n); if (!n) return;
+  flush(lang);
+  const ex = w.files.findIndex(f => f.n === n);
+  if (ex === 0) { cm.swapDoc(docOf(w.files[0])); w.files[0].c = c; fdoc.delete(w.files[0]); }
+  else if (ex > 0) { w.files[ex].c = c; fdoc.delete(w.files[ex]); }
+  else w.files.push({ n, c });
+  w.dirty = true;
+  showFile(ex >= 0 ? ex : w.files.length - 1); saveWs(lang);
+  if (!quiet) toast(n + ' eklendi');
+  if (L[lang].live && $('autoRun').checked) run(true);
+}
+function removeFile(i) {
+  const w = getWs(lang), f = w.files[i]; if (!f || !i) return;
+  if ((f.c || '').trim() && !confirm(f.n + ' silinsin mi?')) return;
+  flush(lang); w.files.splice(i, 1); w.dirty = true;
+  showFile(Math.min(w.act >= i ? w.act - 1 : w.act, w.files.length - 1)); saveWs(lang);
+  if (L[lang].live && $('autoRun').checked) run(true);
+}
 
 function setLang(l, first) {
-  if (!first) store.set(KEY + '-' + lang, cm.getValue());
+  if (!first) saveWs(lang);
   lang = l; store.set(KEY + '-lang', l);
   const R = L[l];
-  cm.swapDoc(getDoc(l)); cm.setOption('indentUnit', R.indent);
+  showFile(getWs(l).act);
   document.querySelectorAll('#langbar button').forEach(b => { const on = b.dataset.lang === l; b.classList.toggle('on', on); b.setAttribute('aria-selected', on); if (on) b.scrollIntoView({ block: 'nearest', inline: 'nearest' }); });
-  $('edTitle').textContent = R.file;
   const frame = R.out === 'frame';
   $('outFrame').hidden = !frame; $('outCon').hidden = frame;
   $('htmlCon').hidden = !!R.noConsole;
@@ -853,42 +1182,93 @@ function ensure(l) {
   return loading[l];
 }
 async function run(auto) {
-  const l = lang, R = L[l], src = cm.getValue();
-  store.set(KEY + '-' + l, src);
+  const l = lang, R = L[l], files = wsFiles(l), src = files[0].c;
+  saveWs(l);
   if (R.out === 'frame') {
-    try { await ensure(l); R.run(src); setStat(l, 'ok', (auto ? 'güncellendi · ' : 'çalıştı · ') + new Date().toLocaleTimeString('tr-TR')); } catch (e) {}
+    try { await ensure(l); R.run(src, null, null, files); setStat(l, 'ok', (auto ? 'güncellendi · ' : 'çalıştı · ') + new Date().toLocaleTimeString('tr-TR')); } catch (e) {}
     return;
   }
+  clearMarks(l);
   return exec(l, async (c, st) => {
-    c.sep();
+    if (auto === 'clear') c.clear(); else c.sep();
     const t0 = performance.now();
     st('çalışıyor…'); await sleep(15);
-    await R.run(src, c, st);
-    c.end(); c.write(`— bitti · ${((performance.now() - t0) / 1000).toFixed(2)} sn\n`, 'sys');
-  });
+    R.mem = 0;
+    await R.run(src, c, st, files);
+    c.end(); c.write(`— bitti · ${((performance.now() - t0) / 1000).toFixed(2)} sn${R.mem ? ' · bellek ' + fmtKB(R.mem / 1024) : ''}\n`, 'sys');
+  }, { run: true });
 }
 /* Ortak çalıştırma çerçevesi: meşgul durumu, ortam yükleme, hata gösterimi */
-async function exec(l, body) {
+async function exec(l, body, o = {}) {
   const R = L[l];
   if (busy[l]) return;
   busy[l] = true; if (l === lang) { $('runBtn').disabled = true; $('stopBtn').hidden = !R.stop; }
-  const c = con(l);
+  const c = o.c || con(l);
   try {
     await ensure(l);
     await body(c, t => setStat(l, 'busy', t));
     setStat(l, 'ok', 'tamam · ' + new Date().toLocaleTimeString('tr-TR'));
   } catch (e) {
-    if (ready[l]) {
+    if (ready[l] || e.message === 'durduruldu') {
       c.end();
-      if (!e.shown) c.write((e && e.message || String(e)) + '\n', e.message === 'durduruldu' || e.soft ? 'warn' : 'err');
-      const soft = e.message === 'durduruldu' || e.cancel;
-      setStat(l, soft ? '' : 'bad', soft ? e.message : 'hata');
+      const msg = e && e.message || String(e), soft = msg === 'durduruldu' || e.cancel;
+      if (!e.shown) { if (soft || e.soft) c.write(msg + (msg === 'durduruldu' && R.halt ? ' · ortam yeniden başlatılacak, değişkenler silindi' : '') + '\n', 'warn'); else errOut(c, msg); }
+      if (o.run && !soft) markErrors(l, e.text || msg);
+      setStat(l, soft ? '' : 'bad', soft ? msg : 'hata');
     }
+    if (o.rethrow) throw e;
   } finally {
     busy[l] = false;
     if (l === lang) { $('runBtn').disabled = false; $('stopBtn').hidden = true; }
   }
 }
+
+/* ---------- hata satırı işaretleme ve konsoldaki "satır N" bağlantıları ---------- */
+const ERRPAT = /File "([^"]+)", line (\d+)|\(satır (\d+)\)|(?:^|\n)satır (\d+):|\b([\w.\-]+\.(?:rb|py|lua|R|php|js|ts)):(\d+)|on line (\d+)|main\.c:(\d+)/g;
+function errRefs(msg) {
+  const out = []; let m; ERRPAT.lastIndex = 0;
+  while ((m = ERRPAT.exec(msg))) {
+    let file = 0, line = 0;
+    if (m[1]) { file = m[1] === '<exec>' ? 0 : m[1]; line = +m[2]; if (m[1] === '<stdin>') continue; }
+    else if (m[3]) line = +m[3]; else if (m[4]) line = +m[4];
+    else if (m[5]) { file = m[5]; line = +m[6]; } else if (m[7]) line = +m[7]; else if (m[8]) line = +m[8];
+    if (line) out.push({ file, line, i: m.index, len: m[0].length });
+  }
+  return out;
+}
+function fileIdx(l, file) { const w = getWs(l); if (!file) return 0; const i = w.files.findIndex(f => f.n === file); return i < 0 ? (file === L[l].file ? 0 : -1) : i; }
+function errOut(c, msg) {
+  c.end();
+  const el = c._new('', 'err'); let last = 0;
+  for (const r of errRefs(msg)) {
+    el.appendChild(document.createTextNode(msg.slice(last, r.i)));
+    const a = document.createElement('span'); a.className = 'goto'; a.textContent = msg.substr(r.i, r.len); a.dataset.f = r.file || ''; a.dataset.n = r.line; a.title = 'satıra git';
+    el.appendChild(a); last = r.i + r.len;
+  }
+  el.appendChild(document.createTextNode(msg.slice(last)));
+  c.end(); c.scroll();
+}
+const marks = {};
+function clearMarks(l) {
+  for (const { d, h } of marks[l] || []) { d.removeLineClass(h, 'background', 'er-line'); d.setGutterMarker(h, 'er-gut', null); }
+  marks[l] = [];
+}
+function markErrors(l, msg) {
+  const refs = errRefs(msg); if (!refs.length) return;
+  const w = getWs(l), r = refs[refs.length - 1], i = fileIdx(l, r.file); if (i < 0) return;
+  const d = docOf(w.files[i]); if (r.line > d.lineCount()) return;
+  const h = d.getLineHandle(r.line - 1);
+  d.addLineClass(h, 'background', 'er-line');
+  const mk = document.createElement('span'); mk.className = 'er-mark'; mk.title = msg.split('\n').filter(Boolean).pop().slice(0, 300);
+  d.setGutterMarker(h, 'er-gut', mk);
+  (marks[l] = marks[l] || []).push({ d, h });
+}
+function gotoLine(file, line) {
+  const i = fileIdx(lang, file); if (i < 0) return toast(file + ' projede yok');
+  if (i !== getWs(lang).act) showFile(i);
+  cm.setCursor({ line: line - 1, ch: 0 }); cm.scrollIntoView({ line: line - 1, ch: 0 }, 120); cm.focus();
+}
+document.addEventListener('click', e => { const g = e.target.closest('.goto'); if (g) gotoLine(g.dataset.f, +g.dataset.n); });
 $('runBtn').onclick = () => run();
 
 /* ---------- komut satırı (REPL) ---------- */
@@ -975,20 +1355,33 @@ $('autoRun').onchange = () => { store.set(KEY + '-live', $('autoRun').checked ? 
 
 /* ---------- örnekler / dosya ---------- */
 function buildExamples() {
-  $('exMenu').innerHTML = `<div class="lbl">${esc(L[lang].name)} örnekleri</div>` + EX[lang].map((e, i) => `<button type="button" data-i="${i}">${esc(e.n)}<small>${esc(e.d)}</small></button>`).join('');
+  let grp = null;
+  $('exMenu').innerHTML = `<div class="lbl">${esc(L[lang].name)} örnekleri · ${EX[lang].length}</div>` + EX[lang].map((e, i) => {
+    const g = e.g && e.g !== grp ? `<div class="lbl">${esc(grp = e.g)}</div>` : '';
+    return g + `<button type="button" data-i="${i}">${esc(e.n)}${e.files ? ' <small style="display:inline">· ' + (Object.keys(e.files).length + 1) + ' dosya</small>' : ''}<small>${esc(e.d)}</small></button>`;
+  }).join('');
 }
-const isExample = v => EX[lang].some(x => x.c === v);
+/* editördeki iş kaybolacak mı? (kaydedilmemiş ve örnekten farklı) */
+function unsaved(l) {
+  const w = getWs(l); if (!w.dirty) return false;
+  const fs = wsFiles(l);
+  if (fs.length === 1 && !fs[0].c.trim()) return false;
+  return !EX[l].some(x => { const ef = exFiles(l, x); return ef.length === fs.length && ef.every((f, i) => f.n === fs[i].n && f.c === fs[i].c); });
+}
 $('exMenu').onclick = e => {
   const b = e.target.closest('button[data-i]'); if (!b) return;
-  const ex = EX[lang][+b.dataset.i], v = cm.getValue();
+  const ex = EX[lang][+b.dataset.i];
   closeMenus();
-  if (v.trim() && !isExample(v) && !confirm('Editördeki kod örnekle değiştirilsin mi?')) return;
-  cm.setValue(ex.c); cm.clearHistory(); run();
+  if (unsaved(lang) && !confirm('Kaydedilmemiş kodun örnekle değiştirilsin mi? (Saklamak için önce Projeler › Kaydet)')) return;
+  setFiles(lang, exFiles(lang, ex)); getWs(lang).dirty = false; cm.clearHistory(); run();
 };
+const MENUS = ['exMenu', 'fileMenu', 'projMenu', 'addMenu'];
 function toggleMenu(menu) { const open = menu.hidden; closeMenus(); menu.hidden = !open; }
-function closeMenus() { $('exMenu').hidden = true; $('fileMenu').hidden = true; }
+function closeMenus() { MENUS.forEach(m => $(m) && ($(m).hidden = true)); }
 $('exBtn').onclick = e => { e.stopPropagation(); toggleMenu($('exMenu')); };
 $('fileBtn').onclick = e => { e.stopPropagation(); toggleMenu($('fileMenu')); };
+$('projBtn').onclick = e => { e.stopPropagation(); buildProjects(); toggleMenu($('projMenu')); };
+$('addBtn').onclick = e => { e.stopPropagation(); buildDataList(); toggleMenu($('addMenu')); };
 document.addEventListener('click', e => { if (!e.target.closest('.dd')) closeMenus(); });
 addEventListener('keydown', e => { if (e.key === 'Escape') closeMenus(); });
 
@@ -996,31 +1389,204 @@ function download(name, text, mime) {
   const a = document.createElement('a'); a.href = URL.createObjectURL(new Blob([text], { type: mime + ';charset=utf-8' })); a.download = name;
   document.body.appendChild(a); a.click(); a.remove(); setTimeout(() => URL.revokeObjectURL(a.href), 2000);
 }
-function save() { download(L[lang].file, cm.getValue(), L[lang].mime); toast(L[lang].file + ' indirildi'); }
+function save() { const f = getWs(lang).files[getWs(lang).act]; download(f.n, cm.getValue(), isData(f.n) ? 'text/plain' : L[lang].mime); toast(f.n + ' indirildi'); }
+const BLANK = { html: '<!doctype html>\n<html lang="tr">\n<head>\n  <meta charset="utf-8">\n  <title></title>\n</head>\n<body>\n  \n</body>\n</html>\n', php: '<?php\n\n' };
 $('fileMenu').onclick = async e => {
   const b = e.target.closest('button[data-f]'); if (!b) return; closeMenus();
   const f = b.dataset.f;
   if (f === 'save') save();
+  else if (f === 'zip') zipProject();
   else if (f === 'open') $('fileIn').click();
   else if (f === 'copy') { try { await navigator.clipboard.writeText(cm.getValue()); toast('kopyalandı'); } catch (err) { cm.execCommand('selectAll'); toast('Ctrl+C ile kopyala'); } }
   else if (f === 'newtab') {
     let h = null;
-    if (lang === 'markdown') { await ensure('markdown').catch(() => {}); if (window.marked) h = mdDoc(cm.getValue()); }
-    else if (lang === 'html') h = cm.getValue();
+    if (lang === 'markdown') { await ensure('markdown').catch(() => {}); if (window.marked) h = mdDoc(mainSrc(lang)); }
+    else if (lang === 'html') h = htmlBundle(wsFiles(lang));
     if (!h) return toast('sadece HTML ve Markdown');
     const w = window.open(URL.createObjectURL(new Blob([h], { type: 'text/html' })), '_blank'); if (!w) toast('açılır pencere engellendi');
   }
-  else if (f === 'reset') { if (confirm(L[lang].name + ' örneği yüklensin mi? Editördeki kod silinir.')) { cm.setValue(EX[lang][0].c); cm.clearHistory(); run(); } }
-  else if (f === 'blank') { if (confirm('Editör temizlensin mi?')) { cm.setValue(lang === 'html' ? '<!doctype html>\n<html lang="tr">\n<head>\n  <meta charset="utf-8">\n  <title></title>\n</head>\n<body>\n  \n</body>\n</html>\n' : lang === 'php' ? '<?php\n\n' : ''); if (lang === 'html') cm.setCursor(7, 2); if (lang === 'php') cm.setCursor(1, 0); cm.focus(); } }
+  else if (f === 'reset') { if (confirm(L[lang].name + ' ilk örneği yüklensin mi? Editördeki dosyalar değişir.')) { setFiles(lang, exFiles(lang, EX[lang][0])); getWs(lang).dirty = false; run(); } }
+  else if (f === 'blank') { if (confirm('Editör temizlensin mi? (diğer dosyalar silinir)')) newBlank(); }
 };
+function newBlank() {
+  setFiles(lang, [{ n: L[lang].file, c: BLANK[lang] || '' }]);
+  if (lang === 'html') cm.setCursor(7, 2); if (lang === 'php') cm.setCursor(1, 0);
+  cm.focus(); if (L[lang].live) run(true);
+}
 $('fileIn').accept = ORDER.flatMap(l => L[l].ext.map(x => '.' + x)).join(',') + ',.txt';
 $('fileIn').onchange = async () => {
   const f = $('fileIn').files[0]; $('fileIn').value = ''; if (!f) return;
-  const text = await f.text(), ext = (f.name.split('.').pop() || '').toLowerCase();
+  const text = await f.text(), ext = extOf(f.name);
   const l = ORDER.find(k => L[k].ext.includes(ext)) || lang;
   if (l !== lang) setLang(l);
-  cm.setValue(text); cm.clearHistory(); toast(f.name + ' açıldı');
+  const w = getWs(l); flush(l); w.files[0].c = text; fdoc.delete(w.files[0]); w.dirty = true; showFile(0); saveWs(l);
+  cm.clearHistory(); toast(f.name + ' açıldı');
 };
+
+/* ---------- dosya ekleme: metin, veri, Excel ---------- */
+$('addMenu').onclick = e => {
+  const b = e.target.closest('button'); if (!b) return; closeMenus();
+  if (b.dataset.a === 'new') {
+    const sug = { python: 'yardimci.py', javascript: 'yardimci.js', typescript: 'yardimci.ts', html: 'style.css', r: 'yardimci.R', lua: 'yardimci.lua', sql: 'ek.sql', ruby: 'yardimci.rb', php: 'yardimci.php', prolog: 'kurallar.pl', scheme: 'yardimci.scm', markdown: 'notlar.md' }[lang] || 'veri.csv';
+    const n = cleanName(prompt('Dosya adı (uzantısıyla)', sug) || ''); if (!n) return;
+    if (getWs(lang).files.some(f => f.n === n)) return toast('bu adda dosya var');
+    addFile(n, '', true); cm.focus();
+  } else if (b.dataset.a === 'upload') $('addIn').click();
+  else if (b.dataset.d != null) { const d = (window.CODE_DATA || [])[+b.dataset.d]; if (d) addFile(d.n, d.c); }
+};
+function buildDataList() {
+  const D = window.CODE_DATA || [];
+  $('dataList').innerHTML = D.length ? D.map((d, i) => `<button type="button" data-d="${i}">${esc(d.n)}<small>${esc(d.d)}</small></button>`).join('') : '<div class="empty">yok</div>';
+}
+$('addIn').onchange = () => { const fs = [...$('addIn').files]; $('addIn').value = ''; addUploads(fs); };
+const XLSX_URL = 'https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js';
+async function addUploads(list) {
+  for (const f of list) {
+    const ext = extOf(f.name);
+    if (f.size > 8e6) { toast(f.name + ': 8 MB üstü dosyalar eklenmez'); continue; }
+    if (['xlsx', 'xls', 'xlsm', 'ods'].includes(ext)) {
+      try {
+        if (!window.XLSX) { toast('Excel okuyucu yükleniyor (~0,9 MB)…'); await loadScript(XLSX_URL); }
+        const wb = window.XLSX.read(await f.arrayBuffer(), { type: 'array' });
+        const base = f.name.replace(/\.[^.]+$/, '');
+        wb.SheetNames.forEach(sn => {
+          const csv = window.XLSX.utils.sheet_to_csv(wb.Sheets[sn], { blankrows: false });
+          if (csv.trim()) addFile(wb.SheetNames.length > 1 ? `${base}_${sn}.csv` : base + '.csv', csv, true);
+        });
+        toast(f.name + ' → CSV olarak eklendi');
+      } catch (err) { toast('Excel okunamadı: ' + (err.message || err)); }
+      continue;
+    }
+    const buf = new Uint8Array(await f.slice(0, 4096).arrayBuffer());
+    if (buf.includes(0)) { toast(f.name + ': ikili dosya eklenemez (yalnızca metin, CSV, JSON, Excel)'); continue; }
+    addFile(f.name, await f.text(), list.length > 1);
+  }
+  if (list.length > 1) toast(list.length + ' dosya eklendi');
+}
+/* sürükle-bırak */
+(() => {
+  let n = 0, ov = null;
+  const show = on => { if (on && !ov) { ov = document.createElement('div'); ov.className = 'drop'; ov.textContent = 'Dosyaları bırak: projeye eklenir (CSV, Excel, JSON, kod)'; document.body.appendChild(ov); } if (!on && ov) { ov.remove(); ov = null; } };
+  const hasFiles = e => e.dataTransfer && [...e.dataTransfer.types].includes('Files');
+  addEventListener('dragenter', e => { if (!hasFiles(e)) return; e.preventDefault(); n++; show(true); });
+  addEventListener('dragleave', e => { if (!hasFiles(e)) return; if (--n <= 0) { n = 0; show(false); } });
+  addEventListener('dragover', e => { if (hasFiles(e)) e.preventDefault(); });
+  addEventListener('drop', e => { if (!hasFiles(e)) return; e.preventDefault(); n = 0; show(false); addUploads([...e.dataTransfer.files]); });
+})();
+
+/* ---------- projeler ---------- */
+const PKEY = 'erdevelop-code-projeler';
+const projects = () => { try { return JSON.parse(store.get(PKEY) || '[]'); } catch (e) { return []; } };
+function putProjects(p) { if (!store.set(PKEY, JSON.stringify(p))) { toast('kaydedilemedi: tarayıcı deposu dolu (büyük veri dosyalarını silmeyi dene)'); return false; } return true; }
+const fmtDate = t => new Date(t).toLocaleString('tr-TR', { day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit' });
+const LTAG = l => `<span class="tag" style="background:${L[l] ? L[l].color : '#777'}">${esc(L[l] ? L[l].name : l)}</span>`;
+function buildProjects() {
+  const w = getWs(lang), P = projects().sort((a, b) => (b.l === lang) - (a.l === lang) || b.t - a.t);
+  $('projMenu').innerHTML =
+    `<button type="button" data-p="save">Kaydet<small>Ctrl+S · ${w.pname ? esc(w.pname) + ' güncellenir' : 'yeni proje olarak'}</small></button>` +
+    `<button type="button" data-p="saveas">Farklı kaydet…</button>` +
+    (w.pid ? `<button type="button" data-p="rename">Yeniden adlandır…<small>${esc(w.pname)}</small></button>` : '') +
+    `<button type="button" data-p="new">Yeni boş proje<small>${esc(L[lang].name)}</small></button>` +
+    `<hr><div class="lbl">Kayıtlı projeler · ${P.length}</div>` +
+    (P.length ? P.map(p => `<div class="row"><button type="button" data-o="${esc(p.id)}">${LTAG(p.l)}${esc(p.ad)}${p.id === w.pid ? ' ●' : ''}<small>${p.files.length} dosya · ${fmtDate(p.t)}</small></button><button type="button" class="del" data-d="${esc(p.id)}" title="Sil">×</button></div>`).join('')
+      : '<div class="empty">Henüz kayıtlı proje yok. Kodunu Ctrl+S ile kaydet.</div>') +
+    `<hr><button type="button" data-p="export">Tümünü dışa aktar<small>.json yedek dosyası</small></button><button type="button" data-p="import">İçe aktar<small>.json yedeğinden</small></button>`;
+}
+function saveProject(as) {
+  const w = getWs(lang), P = projects();
+  let id = as ? null : w.pid, ad = w.pname;
+  if (!id || !P.some(p => p.id === id)) {
+    ad = (prompt('Proje adı', as && ad ? ad + ' (kopya)' : ad || (L[lang].name + ' projesi ' + (P.filter(p => p.l === lang).length + 1))) || '').trim();
+    if (!ad) return;
+    id = Date.now().toString(36) + Math.random().toString(36).slice(2, 6);
+  }
+  const rec = { id, ad, l: lang, files: wsFiles(lang), t: Date.now() };
+  const i = P.findIndex(p => p.id === id); if (i >= 0) P[i] = rec; else P.push(rec);
+  if (!putProjects(P)) return;
+  w.pid = id; w.pname = ad; w.dirty = false; saveWs(lang); updMeta();
+  toast('“' + ad + '” kaydedildi');
+}
+function openProject(id) {
+  const p = projects().find(x => x.id === id); if (!p || !L[p.l]) return;
+  if (unsaved(p.l) && getWs(p.l).pid !== id && !confirm(L[p.l].name + ' editöründeki kaydedilmemiş kod kaybolacak. Devam edilsin mi?')) return;
+  setFiles(p.l, p.files, { pid: p.id, pname: p.ad }); getWs(p.l).dirty = false;
+  if (p.l !== lang) setLang(p.l); else { updMeta(); if (L[lang].live) run(true); }
+  toast('“' + p.ad + '” açıldı');
+}
+$('projMenu').onclick = e => {
+  const b = e.target.closest('button'); if (!b) return;
+  if (b.dataset.d) {
+    const P = projects(), p = P.find(x => x.id === b.dataset.d); if (!p || !confirm('“' + p.ad + '” silinsin mi? Geri alınamaz.')) return;
+    putProjects(P.filter(x => x.id !== p.id));
+    for (const l in WS) if (WS[l].pid === p.id) { WS[l].pid = null; WS[l].pname = null; WS[l].dirty = true; saveWs(l); }
+    updMeta(); buildProjects(); return;
+  }
+  closeMenus();
+  if (b.dataset.o) return openProject(b.dataset.o);
+  const a = b.dataset.p;
+  if (a === 'save') saveProject(false);
+  else if (a === 'saveas') saveProject(true);
+  else if (a === 'rename') {
+    const w = getWs(lang), ad = (prompt('Yeni ad', w.pname) || '').trim(); if (!ad) return;
+    const P = projects(), p = P.find(x => x.id === w.pid); if (p) { p.ad = ad; putProjects(P); }
+    w.pname = ad; saveWs(lang); updMeta();
+  }
+  else if (a === 'new') { if (unsaved(lang) && !confirm('Kaydedilmemiş kod silinecek. Devam edilsin mi?')) return; newBlank(); getWs(lang).dirty = false; }
+  else if (a === 'export') { const P = projects(); download('code-projeler-' + new Date().toISOString().slice(0, 10) + '.json', JSON.stringify({ tur: 'erdevelop-code', surum: 1, projeler: P }, null, 1), 'application/json'); toast(P.length + ' proje dışa aktarıldı'); }
+  else if (a === 'import') $('impIn').click();
+};
+$('impIn').onchange = async () => {
+  const f = $('impIn').files[0]; $('impIn').value = ''; if (!f) return;
+  try {
+    const j = JSON.parse(await f.text()), list = (j.projeler || j).filter(p => p && p.id && p.l && Array.isArray(p.files));
+    const P = projects(); let n = 0;
+    for (const p of list) { const i = P.findIndex(x => x.id === p.id); if (i >= 0) P[i] = p; else P.push(p); n++; }
+    if (putProjects(P)) toast(n + ' proje içe aktarıldı');
+  } catch (err) { toast('geçersiz yedek dosyası'); }
+};
+
+/* ---------- ZIP ---------- */
+async function zipProject() {
+  try {
+    if (!window.JSZip) { toast('ZIP aracı yükleniyor…'); await loadScript('https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js'); }
+    const z = new window.JSZip(), fs = wsFiles(lang);
+    fs.forEach(f => z.file(f.n, f.c));
+    const blob = await z.generateAsync({ type: 'blob', compression: 'DEFLATE' });
+    const a = document.createElement('a'); a.href = URL.createObjectURL(blob);
+    a.download = (getWs(lang).pname || L[lang].name).replace(/[^\wçğıöşüÇĞİÖŞÜ -]+/g, '_') + '.zip';
+    document.body.appendChild(a); a.click(); a.remove(); setTimeout(() => URL.revokeObjectURL(a.href), 3000);
+    toast(fs.length + ' dosya ZIP olarak indirildi');
+  } catch (err) { toast('ZIP oluşturulamadı: ' + (err.message || err)); }
+}
+
+/* ---------- paylaşım linki: kod sıkıştırılıp adresin # kısmına yazılır (sunucuya gitmez) ---------- */
+const b64u = buf => { let s = ''; const a = new Uint8Array(buf); for (let i = 0; i < a.length; i += 0x8000) s += String.fromCharCode.apply(null, a.subarray(i, i + 0x8000)); return btoa(s).replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, ''); };
+const unb64u = s => Uint8Array.from(atob(s.replace(/-/g, '+').replace(/_/g, '/')), ch => ch.charCodeAt(0));
+async function pack(obj) { const st = new Blob([JSON.stringify(obj)]).stream().pipeThrough(new CompressionStream('deflate-raw')); return b64u(await new Response(st).arrayBuffer()); }
+async function unpack(s) { const st = new Blob([unb64u(s)]).stream().pipeThrough(new DecompressionStream('deflate-raw')); return JSON.parse(await new Response(st).text()); }
+$('shareBtn').onclick = async () => {
+  try {
+    const fs = wsFiles(lang), w = getWs(lang);
+    const url = location.origin + location.pathname + '#k=' + await pack({ l: lang, a: w.pname || '', f: fs.map(f => [f.n, f.c]) });
+    let copied = false; try { await navigator.clipboard.writeText(url); copied = true; } catch (e) {}
+    if (!copied) prompt('Paylaşım linki (kopyala):', url);
+    toast((copied ? 'link kopyalandı' : 'link hazır') + ` · ${(url.length / 1024).toFixed(1).replace('.', ',')} KB` + (url.length > 30000 ? ' · çok uzun, bazı uygulamalar kesebilir' : ''));
+  } catch (e) { toast('link oluşturulamadı: ' + (e.message || e)); }
+};
+async function openShared() {
+  const m = location.hash.match(/^#k=([\w-]+)/); if (!m) return false;
+  history.replaceState(null, '', location.pathname + location.search);
+  try {
+    const o = await unpack(m[1]); if (!L[o.l] || !Array.isArray(o.f)) throw new Error('bozuk');
+    if (unsaved(o.l)) { // mevcut işi kaybetme: otomatik projeye yedekle
+      const P = projects(); P.push({ id: Date.now().toString(36), ad: 'Yedek · ' + fmtDate(Date.now()), l: o.l, files: wsFiles(o.l), t: Date.now() }); putProjects(P);
+      toast('önceki kodun Projeler’e yedeklendi');
+    }
+    setFiles(o.l, o.f.map(([n, c]) => ({ n, c })), { pname: o.a ? o.a + ' (paylaşılan)' : 'Paylaşılan kod' });
+    getWs(o.l).dirty = true;
+    return o.l;
+  } catch (e) { toast('paylaşım linki açılamadı'); return false; }
+}
 
 let toastT;
 function toast(t) { const el = $('toast'); el.textContent = t; el.classList.add('show'); clearTimeout(toastT); toastT = setTimeout(() => el.classList.remove('show'), 1600); }
@@ -1043,8 +1609,11 @@ let mode = store.get('erdevelop-mode') || 'dark';
 function applyMode() { document.documentElement.dataset.mode = mode; $('modeBtn').textContent = mode === 'dark' ? 'LIGHT' : 'DARK'; }
 $('modeBtn').onclick = () => { mode = mode === 'dark' ? 'light' : 'dark'; store.set('erdevelop-mode', mode); applyMode(); };
 applyMode();
+addEventListener('keydown', e => { if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 's' && !e.target.closest('.CodeMirror')) { e.preventDefault(); saveProject(false); } });
 setLang(lang, true);
-window.__code = { L, con, run, replRun, setLang, get lang() { return lang; }, cm, ready, busy };
+const onShared = () => openShared().then(l => { if (l) { if (l !== lang) setLang(l); else { showFile(0); if (L[l].live) run(true); } toast('paylaşılan kod açıldı'); } });
+onShared(); addEventListener('hashchange', onShared);
+window.__code = { L, con, run, replRun, setLang, get lang() { return lang; }, cm, ready, busy, getWs, wsFiles, setFiles, addFile, showFile, saveProject, openProject, projects, pack, unpack, exFiles, addUploads };
 })();
 </script>
 </body>
