@@ -41,8 +41,8 @@
   <header class="head"><h1>Uzay</h1><p>NASA’nın her gün seçtiği astronomi fotoğrafı ve Uluslararası Uzay İstasyonu’nun (ISS) şu anki yeri, hızı ve yüksekliği — canlı.</p></header>
 
   <div class="layer">
-    <div class="layer-head"><span class="swatch"></span><h2>Günün astronomi fotoğrafı</h2><span class="meta">NASA APOD · açıklamalar İngilizce</span></div>
-    <div class="ctl" style="margin-bottom:14px"><button class="btn" type="button" id="prev">← Önceki gün</button><input class="inp" type="date" id="day" min="1995-06-16" aria-label="Tarih"><button class="btn" type="button" id="next">Sonraki gün →</button><button class="btn" type="button" id="rand">🎲 Rastgele</button><span class="sp"></span><button class="btn" type="button" id="keyb">API anahtarı</button></div>
+    <div class="layer-head"><span class="swatch"></span><h2>Günün astronomi fotoğrafı</h2><span class="meta">NASA · açıklamalar İngilizce</span></div>
+    <div class="ctl" style="margin-bottom:14px"><button class="btn" type="button" id="prev">← Önceki gün</button><input class="inp" type="date" id="day" min="1995-06-16" aria-label="Tarih"><button class="btn" type="button" id="next">Sonraki gün →</button><button class="btn" type="button" id="rand">🎲 Rastgele</button></div>
     <div class="apod"><div class="media" id="media"><span class="spin"></span></div><div class="ap panel" id="ap"></div></div>
   </div>
   <div class="layer">
@@ -50,34 +50,41 @@
     <div class="split"><div id="iss" role="region" aria-label="ISS haritası"></div><div><div class="stats" id="ist"></div><p class="note">Konum 5 saniyede bir yenilenir. İstasyon saatte yaklaşık 28.000 km hızla, 90 dakikada bir Dünya’nın çevresini dolaşır. Daire, istasyonun o an görebildiği alanı gösterir.</p></div></div>
   </div>
 </main>
-<footer><div class="wrap"><span>Veri: <a href="https://api.nasa.gov/" target="_blank" rel="noopener">NASA APOD</a> · <a href="https://wheretheiss.at/" target="_blank" rel="noopener">Where the ISS at?</a></span><a href="../Tools.html">← tüm araçlar</a></div></footer>
+<footer><div class="wrap"><span>Veri: <a href="https://science.nasa.gov/apod/" target="_blank" rel="noopener">NASA APOD</a> · <a href="https://wheretheiss.at/" target="_blank" rel="noopener">Where the ISS at?</a></span><a href="../Tools.html">← tüm araçlar</a></div></footer>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.js"></script>
 <script src="tema.js"></script>
 <script>
 
-/* ---------- APOD ---------- */
+/* ---------- APOD (NASA science.nasa.gov, anahtarsız) ---------- */
+const APOD = 'https://science.nasa.gov/wp-json/wp/v2/apod-basic', MIN = '2000-01-01';
 const today = () => new Date(Date.now() - 5 * 36e5).toISOString().slice(0, 10); // APOD ABD doğu saatine göre yayınlanır
-let key = store.get('uzay:key', 'DEMO_KEY'); $('day').max = today(); $('day').value = today();
+$('day').min = MIN; $('day').max = today(); $('day').value = today();
 const shift = (d, n) => { const t = new Date(d + 'T12:00:00Z'); t.setUTCDate(t.getUTCDate() + n); return t.toISOString().slice(0, 10); };
-async function apod(d) {
-  d = d < '1995-06-16' ? '1995-06-16' : d > today() ? today() : d; $('day').value = d; $('next').disabled = d >= today();
-  $('media').innerHTML = '<span class="spin"></span>'; $('ap').innerHTML = '';
-  try { const j = await TM.json(`https://api.nasa.gov/planetary/apod?api_key=${encodeURIComponent(key)}&thumbs=true&date=${d}`);
-    let m;
-    if (j.media_type === 'image') m = `<img src="${esc(j.url)}" alt="${esc(j.title)}" id="pic">`;
-    else if (j.media_type === 'video' && /youtube|vimeo/.test(j.url)) m = `<iframe src="${esc(j.url)}" title="${esc(j.title)}" allow="fullscreen; picture-in-picture" allowfullscreen loading="lazy"></iframe>`;
-    else if (j.media_type === 'video') m = `<video src="${esc(j.url)}" controls playsinline></video>`;
-    else m = j.thumbnail_url ? `<img src="${esc(j.thumbnail_url)}" alt="">` : '<div class="empty">Bu gün için görüntü yok; kaynağa bak.</div>';
+const txt = h => { const d = new DOMParser().parseFromString('<div>' + (h || '') + '</div>', 'text/html'); return (d.body.textContent || '').replace(/\s+/g, ' ').trim(); };
+const page = d => `https://apod.nasa.gov/apod/ap${d.slice(2).replace(/-/g, '')}.html`;
+let tokA = 0;
+async function apod(d, latest) {
+  d = d < MIN ? MIN : d > today() ? today() : d; $('day').value = d; $('next').disabled = d >= today();
+  const my = ++tokA; $('media').innerHTML = '<span class="spin"></span>'; $('ap').innerHTML = '';
+  try {
+    let j = await TM.json(latest ? `${APOD}?per_page=1` : `${APOD}/${d.slice(2).replace(/-/g, '')}`, {}, 20000); if (Array.isArray(j)) j = j[0]; if (my !== tokA) return;
+    if (!j || !j.title) throw new Error('Bu gün için kayıt bulunamadı.');
+    if (j.date && /^\d{4}-\d{2}-\d{2}/.test(j.date)) { d = j.date.slice(0, 10); $('day').value = d; $('next').disabled = d >= today(); }
+    const doc = new DOMParser().parseFromString(j.basic_html || '', 'text/html'), ifr = doc.querySelector('iframe'), vid = doc.querySelector('video source, video'), img = doc.querySelector('img');
+    const isVid = j.media_type === 'video' || ifr || vid; let m;
+    if (ifr) m = `<iframe src="${esc(ifr.getAttribute('src'))}" title="${esc(txt(j.title))}" allow="fullscreen; picture-in-picture" allowfullscreen loading="lazy"></iframe>`;
+    else if (vid) m = `<video src="${esc(vid.getAttribute('src'))}" controls playsinline></video>`;
+    else { const src = j.hdurl || (img && img.getAttribute('src')); m = src ? `<img src="${esc(src)}" alt="${esc(txt(j.alt || j.title))}" id="pic">` : '<div class="empty">Görüntü bulunamadı; kaynağa bak.</div>'; }
     $('media').innerHTML = m;
-    $('ap').innerHTML = `<div class="muted mono small">${new Date(d + 'T12:00').toLocaleDateString('tr-TR', { day: 'numeric', month: 'long', year: 'numeric' })}</div><h2>${esc(j.title)}</h2>${j.copyright ? `<div class="muted small">© ${esc(j.copyright.trim())}</div>` : ''}
-      <p class="ex">${esc(j.explanation)}</p><div class="ctl">${j.hdurl ? `<a class="btn" href="${esc(j.hdurl)}" target="_blank" rel="noopener">Yüksek çözünürlük ↗</a>` : ''}<a class="btn" href="https://apod.nasa.gov/apod/ap${d.slice(2).replace(/-/g, '')}.html" target="_blank" rel="noopener">APOD sayfası ↗</a><a class="btn" href="https://translate.google.com/?sl=en&tl=tr&op=translate&text=${encodeURIComponent(j.explanation.slice(0, 4500))}" target="_blank" rel="noopener">Türkçeye çevir ↗</a></div>`;
-    const pic = $('pic'); if (pic) pic.onclick = () => { const f = document.createElement('div'); f.className = 'full'; f.innerHTML = `<img src="${esc(j.hdurl || j.url)}" alt="">`; f.onclick = () => f.remove(); document.body.appendChild(f); };
-  } catch (e) { $('media').innerHTML = `<div class="empty err" style="padding:30px">${esc(/429/.test(e.message) || /çok fazla/.test(e.message) ? 'NASA’nın ortak deneme anahtarının saatlik sınırı doldu. api.nasa.gov’dan ücretsiz kendi anahtarını alıp “API anahtarı”na yapıştırabilirsin.' : e.message)}</div>`; }
+    const credit = txt(j.copyright || j.credit || ''), link = j.permalink || page(d);
+    $('ap').innerHTML = `<div class="muted mono small">${new Date(d + 'T12:00').toLocaleDateString('tr-TR', { day: 'numeric', month: 'long', year: 'numeric' })}${isVid ? ' · video' : ''}</div><h2>${esc(txt(j.title))}</h2>${credit ? `<div class="muted small">${esc(credit.slice(0, 160))}</div>` : ''}
+      <p class="ex">${esc(txt(j.explanation))}</p><div class="ctl">${j.hdurl && !isVid ? `<a class="btn" href="${esc(j.hdurl)}" target="_blank" rel="noopener">Yüksek çözünürlük ↗</a>` : ''}<a class="btn" href="${esc(link)}" target="_blank" rel="noopener">NASA sayfası ↗</a><a class="btn" href="https://translate.google.com/?sl=en&tl=tr&op=translate&text=${encodeURIComponent(txt(j.explanation).slice(0, 4500))}" target="_blank" rel="noopener">Türkçeye çevir ↗</a></div>`;
+    const pic = $('pic'); if (pic) pic.onclick = () => { const f = document.createElement('div'); f.className = 'full'; f.innerHTML = `<img src="${esc(j.hdurl || pic.src)}" alt="">`; f.onclick = () => f.remove(); document.body.appendChild(f); };
+  } catch (e) { if (my !== tokA) return; $('media').innerHTML = `<div class="empty" style="padding:30px"><span class="err">${esc(/404/.test(e.message) ? 'Bu tarih için fotoğraf bulunamadı.' : e.message)}</span><br><br><a class="btn" href="${page(d)}" target="_blank" rel="noopener">Bu günün fotoğrafını NASA’da aç ↗</a></div>`; }
 }
 $('prev').onclick = () => apod(shift($('day').value, -1)); $('next').onclick = () => apod(shift($('day').value, 1)); $('day').onchange = () => apod($('day').value);
-$('rand').onclick = () => { const a = +new Date('1995-06-16'), b = Date.now() - 864e5; apod(new Date(a + Math.random() * (b - a)).toISOString().slice(0, 10)); };
-$('keyb').onclick = () => { const k = prompt('NASA API anahtarın (api.nasa.gov’dan ücretsiz alınır). Boş bırakırsan ortak deneme anahtarı kullanılır:', key === 'DEMO_KEY' ? '' : key); if (k === null) return; key = k.trim() || 'DEMO_KEY'; store.set('uzay:key', key); apod($('day').value); };
-apod(today());
+$('rand').onclick = () => { const a = +new Date(MIN), b = Date.now() - 864e5; apod(new Date(a + Math.random() * (b - a)).toISOString().slice(0, 10)); };
+apod(today(), true);
 /* ---------- ISS ---------- */
 const map = TM.map('iss', { center: [20, 0], zoom: 2, minZoom: 1 });
 const icon = L.divIcon({ className: '', html: '<div class="issico">🛰️</div>', iconSize: [30, 30], iconAnchor: [15, 15] });

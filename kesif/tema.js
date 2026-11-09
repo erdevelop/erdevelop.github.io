@@ -21,13 +21,13 @@ const TM = {
   /* Leaflet haritası, temaya göre açık/koyu altlık */
   map(el, opt = {}) {
     const m = L.map(el, { zoomControl: true, attributionControl: true, worldCopyJump: true, ...opt });
-    const url = mode => `https://{s}.basemaps.cartocdn.com/${mode === 'dark' ? 'dark_all' : 'light_all'}/{z}/{x}/{y}{r}.png`;
-    const tl = L.tileLayer(url(TM.mode), { maxZoom: 19, subdomains: 'abcd', attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> &copy; <a href="https://carto.com/attributions">CARTO</a>' }).addTo(m);
-    TM.onMode(md => tl.setUrl(url(md)));
+    /* OpenStreetMap altlığı; koyu temada CSS filtresiyle koyulaştırılır (anahtar gerektirmez) */
+    L.tileLayer('https://tile.openstreetmap.org/{z}/{x}/{y}.png', { maxZoom: 19, attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> katkıcıları' }).addTo(m);
     return m;
   },
   ago(t) { const s = (Date.now() - t) / 1000; if (s < 60) return 'az önce'; if (s < 3600) return Math.floor(s / 60) + ' dk önce'; if (s < 86400) return Math.floor(s / 3600) + ' sa önce'; return Math.floor(s / 86400) + ' gün önce'; },
-  download(name, blob) { const a = document.createElement('a'); a.href = URL.createObjectURL(blob); a.download = name; document.body.appendChild(a); a.click(); a.remove(); setTimeout(() => URL.revokeObjectURL(a.href), 3000); }
+  download(name, blob) { const tr = { ç: 'c', ğ: 'g', ı: 'i', İ: 'I', ö: 'o', ş: 's', ü: 'u', Ç: 'C', Ğ: 'G', Ö: 'O', Ş: 'S', Ü: 'U' }; name = String(name).replace(/[çğıİöşüÇĞÖŞÜ]/g, c => tr[c]).replace(/[^\w.\-]+/g, '-');
+    const a = document.createElement('a'); a.href = URL.createObjectURL(blob); a.download = name; document.body.appendChild(a); a.click(); a.remove(); setTimeout(() => URL.revokeObjectURL(a.href), 3000); }
 };
 TM.apply();
 document.addEventListener('DOMContentLoaded', () => { TM.apply(); const b = $('modeBtn'); if (b) b.addEventListener('click', () => { TM.mode = TM.mode === 'dark' ? 'light' : 'dark'; store.set('erdevelop-mode', TM.mode); TM.apply(); }); });

@@ -1,268 +1,223 @@
-<!DOCTYPE html>
-<html lang="en">
+<!doctype html>
+<html lang="tr" data-mode="dark">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Mind Map Editor</title>
-    <style>
-        body {
-            margin: 0;
-            overflow: hidden;
-        }
-        #container {
-            position: relative;
-            width: 100vw;
-            height: 100vh;
-        }
-        #toolbar {
-            position: absolute;
-            top: 10px;
-            left: 10px;
-            z-index: 10;
-            background: white;
-            padding: 5px;
-            border: 1px solid #ccc;
-        }
-        #toolbar button {
-            margin-right: 5px;
-        }
-        #map {
-            position: absolute;
-            top: 0;
-            left: 0;
-            width: 100%;
-            height: 100%;
-            transform-origin: 0 0;
-        }
-        .node {
-            position: absolute;
-            background: #f0f0f0;
-            border: 1px solid #999;
-            padding: 5px 10px;
-            white-space: nowrap;
-            cursor: pointer;
-        }
-        .node input {
-            border: none;
-            background: transparent;
-            outline: none;
-        }
-        .add-btn {
-            margin-left: 10px;
-            background: #4caf50;
-            color: white;
-            border: none;
-            cursor: pointer;
-            padding: 2px 5px;
-        }
-        .line {
-            position: absolute;
-            border-top: 1px solid #999;
-        }
-    </style>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+<meta charset="utf-8">
+<script src="kilit.js" data-gate></script>
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Zihin Haritası | erdevelop</title>
+<meta name="description" content="Klavyeyle hızlı zihin haritası: Tab alt dal, Enter kardeş, sürükleyerek taşı; PNG, SVG, JSON ve Markdown çıktısı.">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Chakra+Petch:wght@600;700&family=IBM+Plex+Sans:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500&display=swap">
+<link rel="stylesheet" href="kesif/tema.css">
+<style>
+html, body { height: 100%; overflow: hidden; }
+body { display: flex; flex-direction: column; }
+.tools { display: flex; gap: 6px; align-items: center; flex-wrap: wrap; padding: 8px 16px; border-bottom: 1px solid var(--line); background: var(--panel); }
+.tools .btn { padding: 6px 10px; font-size: 12px; }
+.tools .sep { width: 1px; height: 22px; background: var(--line); margin: 0 4px; }
+.tools .ttl { font: 600 14px var(--f-body); background: none; border: 1px solid transparent; color: var(--fg); padding: 5px 8px; border-radius: 4px; min-width: 120px; max-width: 240px; }
+.tools .ttl:hover, .tools .ttl:focus { border-color: var(--line); outline: none; }
+.sw { display: inline-flex; gap: 4px; } .sw button { width: 18px; height: 18px; border-radius: 50%; border: 2px solid var(--panel); box-shadow: 0 0 0 1px var(--line); cursor: pointer; padding: 0; }
+#stage { flex: 1; position: relative; overflow: hidden; touch-action: none; cursor: grab;
+  background-color: var(--bg); background-image: radial-gradient(var(--grid) 1.2px, transparent 1.2px); background-size: 22px 22px; }
+#stage.pan { cursor: grabbing; }
+#svg { position: absolute; inset: 0; width: 100%; height: 100%; }
+.nd { cursor: pointer; }
+.nd rect.b { stroke-width: 1.5; }
+.nd text { font-family: var(--f-body); dominant-baseline: central; pointer-events: none; }
+.nd.sel rect.b { stroke-width: 3; }
+.nd.drop rect.b { stroke-dasharray: 5 3; stroke-width: 3; }
+.lnk { fill: none; stroke-linecap: round; }
+.fold { cursor: pointer; }
+#edit { position: absolute; z-index: 5; font: 500 14px var(--f-body); color: var(--fg); background: var(--panel); border: 2px solid var(--accent); border-radius: 8px; padding: 6px 10px; outline: none; display: none; box-shadow: 0 6px 20px rgba(0,0,0,.25); }
+.menu { position: relative; } .menu > div { position: absolute; right: 0; top: calc(100% + 6px); background: var(--panel); border: 1px solid var(--line); border-radius: 6px; padding: 6px; z-index: 30; min-width: 210px; box-shadow: 0 10px 30px rgba(0,0,0,.3); }
+.menu > div button, .menu > div label { display: block; width: 100%; text-align: left; font: 400 13px var(--f-body); color: var(--fg); background: none; border: 0; padding: 7px 10px; border-radius: 4px; cursor: pointer; }
+.menu > div button:hover, .menu > div label:hover { background: var(--accent-dim); }
+.menu hr { border: 0; border-top: 1px solid var(--line); margin: 4px 0; }
+.help { position: absolute; left: 12px; bottom: 12px; font: 400 11.5px/1.7 var(--f-mono); color: var(--muted); background: color-mix(in srgb, var(--panel) 85%, transparent); border: 1px solid var(--line); border-radius: 6px; padding: 6px 10px; max-width: calc(100% - 24px); }
+.help kbd { font: 500 11px var(--f-mono); color: var(--fg); border: 1px solid var(--line); border-radius: 3px; padding: 0 4px; }
+.zoom { position: absolute; right: 12px; bottom: 12px; display: flex; gap: 4px; }
+.zoom .btn { background: var(--panel); padding: 6px 10px; }
+@media (max-width: 700px) { .help { display: none; } .tools .hide-m { display: none; } }
+</style>
 </head>
 <body>
-    <div id="container">
-        <div id="toolbar">
-            <button onclick="fitToPage()">Fit to Page</button>
-            <button onclick="exportToText()">Text Export</button>
-            <button onclick="exportToPNG()">PNG Export</button>
-            <button onclick="exportToPDF()">PDF Export</button>
-        </div>
-        <div id="map"></div>
-    </div>
-    <script>
-        class Node {
-            constructor(text = 'New Node') {
-                this.text = text;
-                this.children = [];
-            }
-        }
-
-        const root = new Node('Root');
-        let scale = 1;
-        let translateX = 0;
-        let translateY = 0;
-        let isDragging = false;
-        let startX, startY;
-
-        const map = document.getElementById('map');
-        const container = document.getElementById('container');
-
-        // Pan
-        container.addEventListener('mousedown', (e) => {
-            if (e.target.classList.contains('add-btn') || e.target.tagName === 'INPUT') return;
-            isDragging = true;
-            startX = e.clientX - translateX;
-            startY = e.clientY - translateY;
-            container.style.cursor = 'grabbing';
-        });
-
-        container.addEventListener('mousemove', (e) => {
-            if (!isDragging) return;
-            translateX = e.clientX - startX;
-            translateY = e.clientY - startY;
-            updateTransform();
-        });
-
-        container.addEventListener('mouseup', () => {
-            isDragging = false;
-            container.style.cursor = 'default';
-        });
-
-        container.addEventListener('mouseleave', () => {
-            isDragging = false;
-            container.style.cursor = 'default';
-        });
-
-        // Zoom
-        container.addEventListener('wheel', (e) => {
-            e.preventDefault();
-            const delta = e.deltaY > 0 ? -0.1 : 0.1;
-            const newScale = Math.max(0.1, scale + delta);
-            const rect = map.getBoundingClientRect();
-            const mouseX = e.clientX - rect.left;
-            const mouseY = e.clientY - rect.top;
-
-            translateX = mouseX - (mouseX - translateX) * (newScale / scale);
-            translateY = mouseY - (mouseY - translateY) * (newScale / scale);
-            scale = newScale;
-            updateTransform();
-        });
-
-        function updateTransform() {
-            map.style.transform = `translate(${translateX}px, ${translateY}px) scale(${scale})`;
-        }
-
-        // Layout and Render
-        function layoutAndRender() {
-            map.innerHTML = '';
-            const startX = window.innerWidth / (2 * scale); // Center root
-            const startY = window.innerHeight / (2 * scale);
-            layoutNode(root, startX, startY, 0);
-            renderLines(root);
-        }
-
-        function layoutNode(node, x, y, level) {
-            const nodeDiv = document.createElement('div');
-            nodeDiv.className = 'node';
-            nodeDiv.style.left = `${x}px`;
-            nodeDiv.style.top = `${y}px`;
-
-            const input = document.createElement('input');
-            input.value = node.text;
-            input.onchange = (e) => node.text = e.target.value;
-            nodeDiv.appendChild(input);
-
-            const addBtn = document.createElement('button');
-            addBtn.className = 'add-btn';
-            addBtn.innerText = '+';
-            addBtn.onclick = () => {
-                const child = new Node();
-                node.children.push(child);
-                layoutAndRender();
-            };
-            nodeDiv.appendChild(addBtn);
-
-            map.appendChild(nodeDiv);
-
-            let childY = y;
-            const horizontalSpacing = 200;
-            const verticalSpacing = 50;
-
-            node.children.forEach((child, index) => {
-                const childX = x + horizontalSpacing;
-                childY = y + (index - (node.children.length - 1) / 2) * verticalSpacing;
-                layoutNode(child, childX, childY, level + 1);
-            });
-
-            // Store bounds for fit
-            node._div = nodeDiv;
-        }
-
-        function renderLines(node) {
-            node.children.forEach(child => {
-                const parentRect = node._div.getBoundingClientRect();
-                const childRect = child._div.getBoundingClientRect();
-
-                const line = document.createElement('div');
-                line.className = 'line';
-                const left = Math.min(parentRect.right, childRect.left) - map.getBoundingClientRect().left;
-                const top = (parentRect.top + parentRect.height / 2) - map.getBoundingClientRect().top;
-                const width = Math.abs(childRect.left - parentRect.right);
-                line.style.left = `${left}px`;
-                line.style.top = `${top}px`;
-                line.style.width = `${width}px`;
-                const vLineHeight = (childRect.top + childRect.height / 2) - (parentRect.top + parentRect.height / 2);
-                if (vLineHeight !== 0) {
-                    // Simple horizontal line for now, can add vertical if needed
-                }
-                map.appendChild(line);
-
-                renderLines(child);
-            });
-        }
-
-        function fitToPage() {
-            const nodes = document.querySelectorAll('.node');
-            if (nodes.length === 0) return;
-
-            let minX = Infinity, minY = Infinity, maxX = -Infinity, maxY = -Infinity;
-            nodes.forEach(node => {
-                const rect = node.getBoundingClientRect();
-                minX = Math.min(minX, rect.left);
-                minY = Math.min(minY, rect.top);
-                maxX = Math.max(maxX, rect.right);
-                maxY = Math.max(maxY, rect.bottom);
-            });
-
-            const width = maxX - minX;
-            const height = maxY - minY;
-            const viewWidth = window.innerWidth;
-            const viewHeight = window.innerHeight;
-            const newScale = Math.min(viewWidth / width, viewHeight / height) * 0.9;
-
-            translateX = (viewWidth - width * newScale) / 2 - minX * newScale;
-            translateY = (viewHeight - height * newScale) / 2 - minY * newScale;
-            scale = newScale;
-            updateTransform();
-        }
-
-        function exportToText() {
-            const data = JSON.stringify(root, ['text', 'children'], 2);
-            download('mindmap.txt', data);
-        }
-
-        function exportToPNG() {
-            html2canvas(map, {scale: 1 / scale}).then(canvas => {
-                download('mindmap.png', canvas.toDataURL('image/png'));
-            });
-        }
-
-        function exportToPDF() {
-            html2canvas(map, {scale: 1 / scale}).then(canvas => {
-                const imgData = canvas.toDataURL('image/png');
-                const pdf = new jspdf.jsPDF({
-                    orientation: canvas.width > canvas.height ? 'l' : 'p',
-                    unit: 'px',
-                    format: [canvas.width, canvas.height]
-                });
-                pdf.addImage(imgData, 'PNG', 0, 0, canvas.width, canvas.height);
-                pdf.save('mindmap.pdf');
-            });
-        }
-
-        function download(filename, data) {
-            const a = document.createElement('a');
-            a.href = (filename.endsWith('.txt') ? 'data:text/plain;charset=utf-8,' : '') + encodeURIComponent(data);
-            a.download = filename;
-            a.click();
-        }
-
-        // Initial render
-        layoutAndRender();
-    </script>
+<div class="topbar"><div class="wrap" style="max-width:none">
+  <a class="brand" href="./">erdevelop<span>_</span></a><span class="crumb">/ tools / zihin haritası</span><span class="sp"></span>
+  <a class="tb" href="Tools.html">Araçlar</a><button class="tb" type="button" id="modeBtn">LIGHT</button>
+</div></div>
+<div class="tools">
+  <input class="ttl" id="title" aria-label="Harita adı" maxlength="60">
+  <span class="sep"></span>
+  <button class="btn" type="button" id="bChild" title="Alt dal (Tab)">＋ Alt dal</button>
+  <button class="btn" type="button" id="bSib" title="Kardeş dal (Enter)">＋ Kardeş</button>
+  <button class="btn" type="button" id="bEdit" title="Düzenle (F2 / çift tık)">✎</button>
+  <button class="btn" type="button" id="bFold" title="Katla / aç (boşluk)">⊟</button>
+  <button class="btn" type="button" id="bDel" title="Sil (Delete)">🗑</button>
+  <span class="sw hide-m" id="sw" title="Dal rengi"></span>
+  <span class="sep hide-m"></span>
+  <button class="btn" type="button" id="bUndo" title="Geri al (Ctrl+Z)">↶</button>
+  <button class="btn" type="button" id="bRedo" title="İleri al (Ctrl+Y)">↷</button>
+  <span class="sp"></span>
+  <div class="menu"><button class="btn" type="button" id="bMenu">Dosya ▾</button><div id="menu" hidden>
+    <button type="button" data-a="new">Yeni harita</button><hr>
+    <button type="button" data-a="png">PNG olarak indir</button><button type="button" data-a="svg">SVG olarak indir</button><button type="button" data-a="md">Metin (Markdown) olarak indir</button><button type="button" data-a="json">JSON olarak indir</button><hr>
+    <label>İçe aktar (JSON / Markdown)<input type="file" id="imp" accept=".json,.md,.txt,application/json,text/plain" hidden></label>
+    <button type="button" data-a="paste">Panodaki listeden oluştur</button>
+  </div></div>
+</div>
+<div id="stage"><svg id="svg"></svg><input id="edit" autocomplete="off" spellcheck="false">
+  <div class="help"><kbd>Tab</kbd> alt dal · <kbd>Enter</kbd> kardeş · <kbd>F2</kbd> düzenle · <kbd>Del</kbd> sil · <kbd>Boşluk</kbd> katla · <kbd>←↑↓→</kbd> gez · düğümü sürükleyip başka düğüme bırak: taşı</div>
+  <div class="zoom"><button class="btn" type="button" id="zOut">−</button><button class="btn" type="button" id="zFit">Sığdır</button><button class="btn" type="button" id="zIn">+</button></div>
+</div>
+<script src="kesif/tema.js"></script>
+<script>
+/* ---------- veri ---------- */
+const KEY = 'erdevelop-zihin', PAL = ['#5aa9ff', '#f0a04b', '#4cc38a', '#e5484d', '#a78bfa', '#2dd4bf', '#f472b6', '#facc15'];
+let uidN = 1; const nid = () => 'n' + (Date.now().toString(36)) + (uidN++);
+const mk = (t, kids = []) => ({ id: nid(), t, k: kids, c: null, f: false });
+const demo = () => mk('Proje', [mk('Hedefler', [mk('Teslim tarihi'), mk('Bütçe')]), mk('Ekip', [mk('Tasarım'), mk('Üretim')]), mk('Riskler'), mk('Fikirler', [mk('Parametrik cephe'), mk('Otomasyon')])]);
+let D = store.json(KEY, null); if (!D || !D.root) D = { title: 'Yeni zihin haritası', root: demo() };
+let sel = D.root.id, view = { x: 0, y: 0, s: 1 }, undo = [], redo = [];
+const save = () => store.put(KEY, D);
+const snap = () => { undo.push(JSON.stringify(D)); if (undo.length > 80) undo.shift(); redo = []; };
+const walk = (n, fn, p = null, d = 0) => { fn(n, p, d); n.k.forEach(c => walk(c, fn, n, d + 1)); };
+const find = id => { let r = null; walk(D.root, (n, p) => { if (n.id === id) r = { n, p }; }); return r; };
+/* ---------- ölçü ve yerleşim ---------- */
+const cv = document.createElement('canvas').getContext('2d');
+const FONT = d => d === 0 ? '600 18px "IBM Plex Sans", "Segoe UI", sans-serif' : d === 1 ? '600 15px "IBM Plex Sans", "Segoe UI", sans-serif' : '400 14px "IBM Plex Sans", "Segoe UI", sans-serif';
+const PAD = d => d === 0 ? [22, 14] : d === 1 ? [16, 10] : [12, 7], GX = 56, GY = 12;
+function measure(n, d) { cv.font = FONT(d); const lines = (n.t || ' ').split('\n'), w = Math.max(...lines.map(l => cv.measureText(l || ' ').width)), [px, py] = PAD(d), lh = d === 0 ? 24 : 20; n._w = Math.min(320, Math.ceil(w)) + px * 2; n._h = lines.length * lh + py * 2; n._lh = lh; n._d = d; }
+function size(n, d) { measure(n, d); const kids = n.f ? [] : n.k; kids.forEach(c => size(c, d + 1)); n._sh = Math.max(n._h, kids.reduce((a, c) => a + c._sh, 0) + GY * Math.max(0, kids.length - 1)); }
+function place(n, x, y, dir) { n._x = x; n._y = y; n._dir = dir; if (n.f) return; let cy = y - (n.k.reduce((a, c) => a + c._sh, 0) + GY * Math.max(0, n.k.length - 1)) / 2;
+  n.k.forEach(c => { const cx = dir > 0 ? x + n._w / 2 + GX + c._w / 2 : x - n._w / 2 - GX - c._w / 2; place(c, cx, cy + c._sh / 2, dir); cy += c._sh + GY; }); }
+function layout() {
+  const r = D.root; size(r, 0); r._x = 0; r._y = 0; r._dir = 0; if (r.f) return;
+  // birinci seviye dalları iki yana dengeli dağıt
+  const R = [], L = []; let hr = 0, hl = 0; r.k.forEach((c, i) => { if (c.side === 'L' || (c.side !== 'R' && hl < hr)) { L.push(c); hl += c._sh; } else { R.push(c); hr += c._sh; } });
+  [[R, 1], [L, -1]].forEach(([arr, dir]) => { const tot = arr.reduce((a, c) => a + c._sh, 0) + GY * 2 * Math.max(0, arr.length - 1); let cy = -tot / 2;
+    arr.forEach(c => { const cx = dir * (r._w / 2 + GX * 1.4 + c._w / 2); place(c, cx, cy + c._sh / 2, dir); cy += c._sh + GY * 2; }); });
+}
+/* ---------- çizim ---------- */
+const svg = $('svg'), stage = $('stage');
+const colorOf = (n, top) => n.c || (top && top.c) || (top ? PAL[D.root.k.indexOf(top) % PAL.length] : TM.css('--accent'));
+function render() {
+  layout(); const ns = 'http://www.w3.org/2000/svg', light = TM.mode === 'light', panel = TM.css('--panel'), fg = TM.css('--fg'), bg = TM.css('--bg');
+  let links = '', nodes = '';
+  const visit = (n, p, top) => {
+    const col = n === D.root ? TM.css('--accent') : colorOf(n, top), d = n._d;
+    if (p) { const sx = p._x + (n._dir > 0 ? p._w / 2 : -p._w / 2), sy = p._y, ex = n._x - n._dir * n._w / 2, ey = n._y, mx = (sx + ex) / 2;
+      links += `<path class="lnk" d="M${sx} ${sy} C${mx} ${sy} ${mx} ${ey} ${ex} ${ey}" stroke="${col}" stroke-width="${d === 1 ? 3 : 2}" opacity=".85"/>`; }
+    const x = n._x - n._w / 2, y = n._y - n._h / 2, fill = d === 0 ? col : d === 1 ? col : panel, tc = d === 0 ? bg : d === 1 ? '#0c1015' : fg;
+    const lines = (n.t || ' ').split('\n'), [px] = PAD(d);
+    nodes += `<g class="nd${n.id === sel ? ' sel' : ''}" data-id="${n.id}"><rect class="b" x="${x}" y="${y}" width="${n._w}" height="${n._h}" rx="${d === 0 ? 14 : 9}" fill="${fill}" stroke="${n.id === sel ? fg : col}" ${d === 1 ? 'fill-opacity=".92"' : ''}/>`
+      + lines.map((l, i) => `<text x="${n._x}" y="${n._y + (i - (lines.length - 1) / 2) * n._lh}" text-anchor="middle" fill="${tc}" style="font:${FONT(d).replace(/"/g, "'")}">${esc(l)}</text>`).join('')
+      + (n.k.length ? `<g class="fold" data-fold="${n.id}"><circle cx="${n._x + (n._dir < 0 ? -1 : 1) * (n._w / 2 + 9)}" cy="${n._y}" r="8" fill="${panel}" stroke="${col}" stroke-width="1.5"/><text x="${n._x + (n._dir < 0 ? -1 : 1) * (n._w / 2 + 9)}" y="${n._y}" text-anchor="middle" fill="${fg}" style="font:600 10px 'IBM Plex Mono',monospace">${n.f ? n.k.length : '−'}</text></g>` : '') + '</g>';
+    if (!n.f) n.k.forEach(c => visit(c, n, top || (n === D.root ? c : null)));
+  };
+  visit(D.root, null, null);
+  svg.innerHTML = `<g id="vp" transform="translate(${view.x} ${view.y}) scale(${view.s})">${links}${nodes}</g>`;
+  $('title').value = D.title; $('bUndo').disabled = !undo.length; $('bRedo').disabled = !redo.length;
+  const s = find(sel); $('bDel').disabled = !s || !s.p; $('bSib').disabled = !s || !s.p;
+}
+const vp = () => ({ w: stage.clientWidth, h: stage.clientHeight });
+function center(id) { const n = find(id || D.root.id).n; const { w, h } = vp(); view.x = w / 2 - n._x * view.s; view.y = h / 2 - n._y * view.s; render(); }
+function fit() { layout(); let a = 1e9, b = 1e9, c = -1e9, d = -1e9; walk(D.root, n => { if (n._x == null) return; a = Math.min(a, n._x - n._w / 2); b = Math.min(b, n._y - n._h / 2); c = Math.max(c, n._x + n._w / 2); d = Math.max(d, n._y + n._h / 2); }, null);
+  const { w, h } = vp(); view.s = Math.min(1.6, Math.max(.2, Math.min((w - 80) / (c - a), (h - 80) / (d - b)))); view.x = w / 2 - (a + c) / 2 * view.s; view.y = h / 2 - (b + d) / 2 * view.s; render(); }
+function ensureVisible(id) { const r = find(id); if (!r) return; const n = r.n, { w, h } = vp(), sx = n._x * view.s + view.x, sy = n._y * view.s + view.y; if (sx < 60 || sx > w - 60 || sy < 40 || sy > h - 40) { view.x += w / 2 - sx; view.y += h / 2 - sy; } }
+/* ---------- düzenleme ---------- */
+const commit = () => { save(); render(); };
+function addChild(edit = true) { const r = find(sel); if (!r) return; snap(); const c = mk(''); r.n.f = false; r.n.k.push(c); sel = c.id; commit(); ensureVisible(sel); render(); if (edit) startEdit(true); }
+function addSib() { const r = find(sel); if (!r || !r.p) return; snap(); const c = mk(''); if (r.p === D.root) c.side = r.n._dir < 0 ? 'L' : 'R'; r.p.k.splice(r.p.k.indexOf(r.n) + 1, 0, c); sel = c.id; commit(); ensureVisible(sel); render(); startEdit(true); }
+function del() { const r = find(sel); if (!r || !r.p) return; snap(); const i = r.p.k.indexOf(r.n); r.p.k.splice(i, 1); sel = (r.p.k[i] || r.p.k[i - 1] || r.p).id; commit(); }
+function fold() { const r = find(sel); if (!r || !r.n.k.length) return; snap(); r.n.f = !r.n.f; commit(); }
+const ed = $('edit'); let editing = null;
+function startEdit(isNew) { const r = find(sel); if (!r) return; const n = r.n; editing = { id: n.id, isNew, old: n.t }; const sx = (n._x - n._w / 2) * view.s + view.x, sy = (n._y - n._h / 2) * view.s + view.y;
+  Object.assign(ed.style, { display: 'block', left: sx + 'px', top: sy + 'px', minWidth: Math.max(140, n._w * view.s) + 'px', height: Math.max(34, n._h * view.s) + 'px', fontSize: Math.max(12, 14 * view.s) + 'px' }); ed.value = n.t; ed.focus(); ed.select(); }
+function endEdit(ok) { if (!editing) return; const r = find(editing.id); ed.style.display = 'none'; const e = editing; editing = null; if (!r) return;
+  const v = ed.value.trim(); if (ok && v) { if (v !== e.old) { if (!e.isNew) snap(); r.n.t = v; } } else if (e.isNew) { const i = r.p.k.indexOf(r.n); r.p.k.splice(i, 1); sel = r.p.id; undo.pop(); } commit(); }
+ed.addEventListener('keydown', e => { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); const was = editing && editing.isNew; endEdit(true); if (e.altKey || (was && false)) addSib(); } else if (e.key === 'Escape') { e.preventDefault(); endEdit(false); } else if (e.key === 'Tab') { e.preventDefault(); endEdit(true); addChild(); } });
+ed.addEventListener('blur', () => endEdit(true));
+/* ---------- gezinme ---------- */
+function nav(k) { const r = find(sel); if (!r) return; const n = r.n, dir = n._dir || 0;
+  const goChild = () => { if (!n.f && n.k.length) { const cs = n === D.root ? n.k.filter(c => (k === 'ArrowRight') === (c._dir > 0)) : n.k; if (cs.length) sel = cs[Math.floor((cs.length - 1) / 2)].id; } };
+  if (k === 'ArrowUp' || k === 'ArrowDown') { if (!r.p) return; const sib = r.p === D.root ? r.p.k.filter(c => c._dir === dir) : r.p.k, i = sib.indexOf(n), j = i + (k === 'ArrowUp' ? -1 : 1); if (sib[j]) sel = sib[j].id; }
+  else if (n === D.root) goChild();
+  else if ((k === 'ArrowRight') === (dir > 0)) goChild(); else sel = r.p.id;
+  ensureVisible(sel); render(); }
+addEventListener('keydown', e => {
+  if (editing || e.target.closest('input,textarea,select')) return; const k = e.key, mod = e.ctrlKey || e.metaKey;
+  if (mod && k.toLowerCase() === 'z') { e.preventDefault(); e.shiftKey ? doRedo() : doUndo(); return; } if (mod && k.toLowerCase() === 'y') { e.preventDefault(); doRedo(); return; }
+  if (k === 'Tab') { e.preventDefault(); addChild(); } else if (k === 'Enter') { e.preventDefault(); sel === D.root.id ? addChild() : addSib(); } else if (k === 'F2') { e.preventDefault(); startEdit(); }
+  else if (k === 'Delete' || k === 'Backspace') { e.preventDefault(); del(); } else if (k === ' ') { e.preventDefault(); fold(); } else if (k.startsWith('Arrow')) { e.preventDefault(); nav(k); }
+  else if (k.length === 1 && !mod && !e.altKey) { e.preventDefault(); startEdit(); ed.value = k; }
+});
+function doUndo() { if (!undo.length) return; redo.push(JSON.stringify(D)); D = JSON.parse(undo.pop()); if (!find(sel)) sel = D.root.id; commit(); }
+function doRedo() { if (!redo.length) return; undo.push(JSON.stringify(D)); D = JSON.parse(redo.pop()); if (!find(sel)) sel = D.root.id; commit(); }
+/* ---------- fare / dokunma: seç, sürükle-bırak, kaydır, yakınlaştır ---------- */
+const pts = new Map(); let act = null;
+const toW = (cx, cy) => { const b = stage.getBoundingClientRect(); return [(cx - b.left - view.x) / view.s, (cy - b.top - view.y) / view.s]; };
+function hitNode(cx, cy, skip) { let hit = null; const [x, y] = toW(cx, cy); walk(D.root, n => { if (n._x == null || n.id === skip) return; if (Math.abs(x - n._x) <= n._w / 2 && Math.abs(y - n._y) <= n._h / 2) hit = n; }); return hit; }
+stage.addEventListener('pointerdown', e => {
+  if (e.target === ed) return; stage.setPointerCapture(e.pointerId); pts.set(e.pointerId, [e.clientX, e.clientY]); $('menu').hidden = true;
+  if (pts.size === 2) { const [a, b] = [...pts.values()]; act = { pinch: Math.hypot(a[0] - b[0], a[1] - b[1]), s: view.s, cx: (a[0] + b[0]) / 2, cy: (a[1] + b[1]) / 2, vx: view.x, vy: view.y }; return; }
+  const fd = e.target.closest('[data-fold]'); if (fd) { sel = fd.dataset.fold; fold(); act = null; return; }
+  const g = e.target.closest('.nd'); if (g) { if (editing) endEdit(true); sel = g.dataset.id; render(); act = { node: sel, x: e.clientX, y: e.clientY, moved: false }; return; }
+  act = { pan: 1, x: e.clientX, y: e.clientY, vx: view.x, vy: view.y }; stage.classList.add('pan');
+});
+stage.addEventListener('pointermove', e => {
+  if (!pts.has(e.pointerId)) return; pts.set(e.pointerId, [e.clientX, e.clientY]); if (!act) return;
+  if (act.pinch) { const [a, b] = [...pts.values()], d = Math.hypot(a[0] - b[0], a[1] - b[1]), ns = Math.min(3, Math.max(.2, act.s * d / act.pinch)), bb = stage.getBoundingClientRect(), cx = act.cx - bb.left, cy = act.cy - bb.top; view.x = cx - (cx - act.vx) * ns / act.s; view.y = cy - (cy - act.vy) * ns / act.s; view.s = ns; render(); return; }
+  if (act.pan) { view.x = act.vx + e.clientX - act.x; view.y = act.vy + e.clientY - act.y; $('vp').setAttribute('transform', `translate(${view.x} ${view.y}) scale(${view.s})`); return; }
+  if (act.node && act.node !== D.root.id) { if (!act.moved && Math.hypot(e.clientX - act.x, e.clientY - act.y) < 8) return; act.moved = true;
+    const g = svg.querySelector(`.nd[data-id="${act.node}"]`); if (g) { g.setAttribute('transform', `translate(${(e.clientX - act.x) / view.s} ${(e.clientY - act.y) / view.s})`); g.style.opacity = .7; }
+    svg.querySelectorAll('.nd.drop').forEach(x => x.classList.remove('drop')); const t = hitNode(e.clientX, e.clientY, act.node); act.target = null;
+    if (t) { let bad = false; walk(find(act.node).n, n => { if (n.id === t.id) bad = true; }); if (!bad) { act.target = t.id; svg.querySelector(`.nd[data-id="${t.id}"]`).classList.add('drop'); } } }
+});
+const up = e => { pts.delete(e.pointerId); stage.classList.remove('pan'); if (!act) return;
+  if (act.node && act.moved) { if (act.target) { snap(); const r = find(act.node); r.p.k.splice(r.p.k.indexOf(r.n), 1); const t = find(act.target).n; t.f = false; delete r.n.side; t.k.push(r.n); save(); TM.toast('Taşındı'); } render(); }
+  if (!pts.size) act = null; };
+stage.addEventListener('pointerup', up); stage.addEventListener('pointercancel', up);
+stage.addEventListener('dblclick', e => { const g = e.target.closest('.nd'); if (g) { sel = g.dataset.id; startEdit(); } else { sel = D.root.id; addChild(); } });
+stage.addEventListener('wheel', e => { e.preventDefault(); const b = stage.getBoundingClientRect(), cx = e.clientX - b.left, cy = e.clientY - b.top, ns = Math.min(3, Math.max(.2, view.s * (e.deltaY > 0 ? .9 : 1.1))); view.x = cx - (cx - view.x) * ns / view.s; view.y = cy - (cy - view.y) * ns / view.s; view.s = ns; render(); }, { passive: false });
+const zoomBy = f => { const { w, h } = vp(), ns = Math.min(3, Math.max(.2, view.s * f)); view.x = w / 2 - (w / 2 - view.x) * ns / view.s; view.y = h / 2 - (h / 2 - view.y) * ns / view.s; view.s = ns; render(); };
+$('zIn').onclick = () => zoomBy(1.2); $('zOut').onclick = () => zoomBy(1 / 1.2); $('zFit').onclick = fit;
+/* ---------- araç çubuğu ---------- */
+$('bChild').onclick = () => addChild(); $('bSib').onclick = addSib; $('bEdit').onclick = () => startEdit(); $('bDel').onclick = del; $('bFold').onclick = fold; $('bUndo').onclick = doUndo; $('bRedo').onclick = doRedo;
+$('title').oninput = e => { D.title = e.target.value; save(); };
+$('sw').innerHTML = PAL.map(c => `<button type="button" data-c="${c}" style="background:${c}" aria-label="renk"></button>`).join('') + '<button type="button" data-c="" style="background:none" title="Varsayılan renk" aria-label="varsayılan renk"></button>';
+$('sw').onclick = e => { const b = e.target.closest('[data-c]'); if (!b) return; const r = find(sel); if (!r || r.n === D.root) return TM.toast('Önce bir dal seç'); snap(); r.n.c = b.dataset.c || null; commit(); };
+$('bMenu').onclick = e => { e.stopPropagation(); $('menu').hidden = !$('menu').hidden; };
+document.addEventListener('click', e => { if (!e.target.closest('.menu')) $('menu').hidden = true; });
+/* ---------- dışa / içe aktarma ---------- */
+const fname = ext => (D.title || 'zihin-haritasi').toLocaleLowerCase('tr').replace(/[^a-z0-9çğıöşü]+/g, '-').replace(/^-|-$/g, '') + '.' + ext;
+function toMd(n, d = 0) { return (d === 0 ? '# ' + n.t + '\n' : '  '.repeat(d - 1) + '- ' + n.t.replace(/\n/g, ' ') + '\n') + n.k.map(c => toMd(c, d + 1)).join(''); }
+function fromMd(txt) { const lines = txt.split(/\r?\n/).filter(l => l.trim()); if (!lines.length) return null; let root = null; const stack = [];
+  lines.forEach(l => { const h = l.match(/^#\s+(.*)/); if (h && !root) { root = mk(h[1].trim()); stack.length = 0; stack.push({ n: root, ind: -1 }); return; }
+    const m = l.match(/^(\s*)(?:[-*+]|\d+[.)])?\s*(.*)$/), ind = m[1].replace(/\t/g, '  ').length, t = m[2].trim(); if (!t) return;
+    if (!root) { root = mk('Harita'); stack.push({ n: root, ind: -1 }); } const node = mk(t); while (stack.length > 1 && stack[stack.length - 1].ind >= ind) stack.pop(); stack[stack.length - 1].n.k.push(node); stack.push({ n: node, ind }); });
+  return root; }
+function fromOld(o) { if (o && o.root && o.root.k) return o; if (o && typeof o.text === 'string' && Array.isArray(o.children)) { const cv2 = n => mk(n.text || '', (n.children || []).map(cv2)); return { title: o.text, root: cv2(o) }; }
+  if (o && Array.isArray(o.nodes) && Array.isArray(o.links)) { const by = new Map(o.nodes.map(n => [n.id, mk(n.text || '')])), kids = new Set(); o.links.forEach(l => { const p = by.get(l.parentId), c = by.get(l.childId); if (p && c) { p.k.push(c); kids.add(l.childId); } });
+    const roots = o.nodes.filter(n => !kids.has(n.id)).map(n => by.get(n.id)); return { title: 'İçe aktarılan harita', root: roots.length === 1 ? roots[0] : mk('Harita', roots) }; } return null; }
+function svgString(scale = 1) { layout(); let a = 1e9, b = 1e9, c = -1e9, d = -1e9; walk(D.root, n => { if (n._x == null) return; a = Math.min(a, n._x - n._w / 2 - 24); b = Math.min(b, n._y - n._h / 2); c = Math.max(c, n._x + n._w / 2 + 24); d = Math.max(d, n._y + n._h / 2); });
+  const pad = 40, W = c - a + pad * 2, H = d - b + pad * 2, saveV = { ...view }, s0 = sel; view = { x: pad - a, y: pad - b, s: 1 }; sel = null; render(); const inner = $('vp').outerHTML; view = saveV; sel = s0; render();
+  return { W, H, s: `<svg xmlns="http://www.w3.org/2000/svg" width="${W * scale}" height="${H * scale}" viewBox="0 0 ${W} ${H}"><rect width="100%" height="100%" fill="${TM.css('--bg')}"/>${inner}</svg>` }; }
+$('menu').onclick = async e => { const b = e.target.closest('[data-a]'); if (!b) return; $('menu').hidden = true; const a = b.dataset.a;
+  if (a === 'new') { if (!confirm('Yeni harita açılsın mı? Mevcut harita silinir (önce dışa aktarabilirsin).')) return; snap(); D = { title: 'Yeni zihin haritası', root: mk('Ana fikir') }; sel = D.root.id; save(); render(); center(); }
+  else if (a === 'json') TM.download(fname('json'), new Blob([JSON.stringify(D, (k, v) => k.startsWith('_') ? undefined : v, 1)], { type: 'application/json' }));
+  else if (a === 'md') TM.download(fname('md'), new Blob([toMd(D.root)], { type: 'text/markdown;charset=utf-8' }));
+  else if (a === 'svg') TM.download(fname('svg'), new Blob([svgString().s], { type: 'image/svg+xml' }));
+  else if (a === 'png') { const { W, H, s } = svgString(2), img = new Image(), url = URL.createObjectURL(new Blob([s], { type: 'image/svg+xml' })); img.onload = () => { const c = document.createElement('canvas'); c.width = W * 2; c.height = H * 2; c.getContext('2d').drawImage(img, 0, 0); URL.revokeObjectURL(url); c.toBlob(bl => TM.download(fname('png'), bl), 'image/png'); }; img.src = url; }
+  else if (a === 'paste') { try { const t = await navigator.clipboard.readText(), r = fromMd(t); if (!r) return TM.toast('Panoda liste bulunamadı'); snap(); D = { title: r.t, root: r }; sel = r.id; save(); fit(); } catch (er) { TM.toast('Panoya erişilemedi'); } }
+};
+$('imp').onchange = async e => { const f = e.target.files[0]; e.target.value = ''; if (!f) return; const t = await f.text(); let nd = null;
+  try { nd = fromOld(JSON.parse(t)); } catch (er) { const r = fromMd(t); if (r) nd = { title: r.t, root: r }; }
+  if (!nd) return TM.toast('Dosya okunamadı'); snap(); D = nd; sel = D.root.id; save(); $('menu').hidden = true; fit(); TM.toast('İçe aktarıldı'); };
+/* ---------- başlat ---------- */
+TM.onMode(() => render());
+addEventListener('resize', () => render());
+document.fonts && document.fonts.ready.then(() => fit()); fit();
+</script>
 </body>
 </html>

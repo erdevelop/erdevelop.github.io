@@ -1,302 +1,213 @@
-<!DOCTYPE html>
-<html lang="tr">
+<!doctype html>
+<html lang="tr" data-mode="dark">
 <head>
-  <meta charset="utf-8" />
-  <meta name="viewport" content="width=device-width,initial-scale=1" />
-  <title>Planlama Tahtası — Tam Özellikli</title>
-  <script src="https://cdn.tailwindcss.com"></script>
-  <style>
-    :root{--bg:#0f172a}
-    body{background:var(--bg);}
-    .board-wrap{height:78vh;background:linear-gradient(180deg,#0b1220 0%, #0f172a 100%);border-radius:12px;box-shadow:0 10px 30px rgba(2,6,23,.6);overflow:hidden}
-    .node{width:260px;min-height:100px;border-radius:12px;box-shadow:0 6px 18px rgba(2,6,23,.45);position:absolute;transform-origin:0 0}
-    .handle{cursor:move}
-    .guide-line{position:absolute;background:rgba(96,165,250,.85);pointer-events:none;z-index:50}
-    .guide-line.h{height:2px;left:0;right:0}
-    .guide-line.v{width:2px;top:0;bottom:0}
-    svg.edges{position:absolute;left:0;top:0;width:100%;height:100%;overflow:visible;pointer-events:none}
-    svg.edges path{cursor:pointer}
-    .selected-edge{stroke:#f97316 !important}
-    .mini{font-size:11px}
-    .panel{background:rgba(255,255,255,.04);backdrop-filter:blur(6px)}
-    input[type="color"]{height:28px;padding:0;border:none}
-  </style>
+<meta charset="utf-8">
+<script src="kilit.js" data-gate></script>
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Planlama Tahtası | erdevelop</title>
+<meta name="description" content="Renkli kartlarla planla: proje, iş, dil, alışveriş; kartları birbirine bağla, tarih ve etiket ekle, tamamlananları işaretle.">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Chakra+Petch:wght@600;700&family=IBM+Plex+Sans:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500&display=swap">
+<link rel="stylesheet" href="kesif/tema.css">
+<style>
+html, body { height: 100%; overflow: hidden; }
+body { display: flex; flex-direction: column; }
+.tools { display: flex; gap: 6px; align-items: center; flex-wrap: wrap; padding: 8px 16px; border-bottom: 1px solid var(--line); background: var(--panel); }
+.tools .btn, .tools .sel, .tools .inp { padding: 6px 10px; font-size: 12.5px; }
+.tools .sep { width: 1px; height: 22px; background: var(--line); margin: 0 4px; }
+.cats { display: inline-flex; gap: 4px; flex-wrap: wrap; }
+.cats button { font: 500 12px var(--f-mono); color: var(--text); background: none; border: 1px solid var(--line); border-radius: 999px; padding: 4px 10px; cursor: pointer; display: inline-flex; gap: 6px; align-items: center; }
+.cats button i { width: 9px; height: 9px; border-radius: 50%; display: inline-block; }
+.cats button.on { border-color: var(--accent); color: var(--fg); background: var(--accent-dim); }
+#stage { flex: 1; position: relative; overflow: hidden; touch-action: none; background-color: var(--bg);
+  background-image: radial-gradient(var(--grid) 1.2px, transparent 1.2px); background-size: 20px 20px; }
+#world { position: absolute; left: 0; top: 0; transform-origin: 0 0; }
+#edges { position: absolute; left: 0; top: 0; width: 1px; height: 1px; overflow: visible; pointer-events: none; }
+#edges path.e { fill: none; stroke-linecap: round; pointer-events: stroke; cursor: pointer; }
+#edges path.hit { fill: none; stroke: transparent; stroke-width: 14; pointer-events: stroke; cursor: pointer; }
+.card { position: absolute; width: 260px; background: var(--panel); border: 1px solid var(--line); border-radius: 10px; box-shadow: 0 8px 22px rgba(0,0,0,.18); display: flex; flex-direction: column; transition: box-shadow .15s, opacity .2s; }
+.card::before { content: ""; position: absolute; left: 0; top: 0; bottom: 0; width: 4px; border-radius: 10px 0 0 10px; background: var(--c); }
+.card.sel { box-shadow: 0 0 0 2px var(--c), 0 12px 28px rgba(0,0,0,.25); }
+.card.dim { opacity: .25; }
+.card.done .ttl { text-decoration: line-through; color: var(--muted); }
+.card .hd { display: flex; align-items: center; gap: 8px; padding: 9px 10px 6px 14px; cursor: grab; }
+.card .hd:active { cursor: grabbing; }
+.card .ttl { flex: 1; font: 600 14px var(--f-body); min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; outline: none; border-radius: 3px; }
+.card .ttl[contenteditable="true"] { white-space: normal; background: var(--panel-2); box-shadow: 0 0 0 1px var(--accent); padding: 0 3px; cursor: text; }
+.card .ck { width: 16px; height: 16px; accent-color: var(--c); margin: 0; cursor: pointer; }
+.card .ib { background: none; border: 0; color: var(--muted); cursor: pointer; font-size: 14px; padding: 2px 4px; border-radius: 4px; }
+.card .ib:hover { color: var(--fg); background: var(--accent-dim); }
+.card textarea { margin: 0 10px 0 14px; background: none; border: 0; resize: none; color: var(--text); font: 400 13.5px/1.45 var(--f-body); outline: none; min-height: 22px; overflow: hidden; padding: 0; }
+.card textarea::placeholder { color: var(--muted); }
+.card .ft { display: flex; flex-wrap: wrap; gap: 5px; align-items: center; padding: 8px 10px 10px 14px; }
+.tag { font: 400 11px var(--f-mono); color: var(--text); border: 1px solid var(--line); border-radius: 999px; padding: 0 7px; cursor: pointer; }
+.tag:hover { border-color: var(--bad); color: var(--bad); text-decoration: line-through; }
+.addtag { font: 400 11px var(--f-mono); color: var(--fg); background: none; border: 1px dashed var(--line); border-radius: 999px; padding: 0 7px; width: 70px; outline: none; }
+.due { font: 500 11px var(--f-mono); border-radius: 4px; padding: 1px 6px; background: var(--accent-dim); color: var(--accent); cursor: pointer; }
+.due.late { background: color-mix(in srgb, var(--bad) 18%, transparent); color: var(--bad); }
+.due.today { background: color-mix(in srgb, var(--hot) 20%, transparent); color: var(--hot); }
+.due input { font: 400 11px var(--f-mono); background: var(--panel); color: var(--fg); border: 1px solid var(--line); border-radius: 3px; }
+.port { position: absolute; right: -8px; top: 50%; width: 14px; height: 14px; margin-top: -7px; border-radius: 50%; background: var(--c); border: 3px solid var(--panel); cursor: crosshair; opacity: 0; transition: opacity .15s; }
+.card:hover .port, .card.sel .port { opacity: 1; }
+.card.target { box-shadow: 0 0 0 3px var(--accent); }
+.guide { position: absolute; background: var(--accent); pointer-events: none; opacity: .8; }
+.pop { position: absolute; z-index: 20; background: var(--panel); border: 1px solid var(--line); border-radius: 8px; padding: 8px; display: flex; gap: 6px; align-items: center; box-shadow: 0 10px 26px rgba(0,0,0,.3); }
+.pop .sw { width: 18px; height: 18px; border-radius: 50%; border: 0; cursor: pointer; }
+.cpick { display: flex; gap: 4px; padding: 6px 10px 0 14px; flex-wrap: wrap; } .cpick button { width: 16px; height: 16px; border-radius: 50%; border: 0; cursor: pointer; }
+.zoom { position: absolute; right: 12px; bottom: 12px; display: flex; gap: 4px; } .zoom .btn { background: var(--panel); padding: 6px 10px; }
+.sum { position: absolute; left: 12px; bottom: 12px; font: 400 12px var(--f-mono); color: var(--muted); background: color-mix(in srgb, var(--panel) 85%, transparent); border: 1px solid var(--line); border-radius: 6px; padding: 6px 10px; }
+.sum b { color: var(--fg); }
+@media (max-width: 700px) { .tools .hide-m { display: none; } }
+</style>
 </head>
-<body class="p-6 text-slate-100">
-  <div class="max-w-7xl mx-auto">
-    <header class="flex items-center gap-3 mb-4">
-      <h1 class="text-xl font-semibold">🧩 Planlama Tahtası — Tam</h1>
-      <input id="newTitle" class="px-3 py-2 rounded bg-white/5 text-white placeholder:text-white/60" placeholder="Yeni kutu başlığı" />
-      <select id="presetColor" class="px-2 py-2 rounded bg-white/5">
-        <option value="#f97316">Proje (Turuncu)</option>
-        <option value="#10b981">İş (Yeşil)</option>
-        <option value="#60a5fa">Dil (Mavi)</option>
-        <option value="#f43f5e">Alışveriş (Kırmızı)</option>
-      </select>
-      <button id="addBtn" class="ml-2 bg-indigo-600 px-4 py-2 rounded">Kutu Ekle</button>
-
-      <div class="ml-auto flex items-center gap-2">
-        <button id="connectToggle" class="bg-emerald-600 px-3 py-2 rounded">Bağla Modu: Kapalı</button>
-        <button id="edgeDeleteBtn" class="bg-red-600 px-3 py-2 rounded">Seçileni Sil</button>
-        <button id="exportBtn" class="bg-gray-700 px-3 py-2 rounded">JSON Dışa Aktar</button>
-        <button id="importBtn" class="bg-gray-700 px-3 py-2 rounded">JSON İçe Al</button>
-        <button id="resetBtn" class="bg-rose-600 px-3 py-2 rounded">Sıfırla</button>
-      </div>
-    </header>
-
-    <div class="board-wrap relative panel" id="wrap">
-      <svg class="edges" id="edgeSvg"></svg>
-      <div id="guideX" class="guide-line h hidden"></div>
-      <div id="guideY" class="guide-line v hidden"></div>
-      <div id="board" style="position:absolute;inset:0;touch-action:none"></div>
-    </div>
-
-    <section class="mt-4 grid grid-cols-1 md:grid-cols-3 gap-3">
-      <div class="panel p-3 rounded"> <h3 class="font-semibold">Seçili Kenar</h3>
-        <div class="mt-2 flex flex-col gap-2">
-          <label class="text-xs">Renk <input id="selEdgeColor" type="color" /></label>
-          <label class="text-xs">Kalınlık <input id="selEdgeWidth" type="range" min="1" max="10" value="2" /></label>
-          <div class="flex gap-2">
-            <button id="applyEdgeStyle" class="bg-indigo-600 px-3 py-1 rounded">Uygula</button>
-            <button id="clearSelEdge" class="bg-gray-600 px-3 py-1 rounded">Seçimi Kaldır</button>
-          </div>
-        </div>
-      </div>
-
-      <div class="panel p-3 rounded"> <h3 class="font-semibold">İpuçları</h3>
-        <ul class="text-sm mt-2 list-disc list-inside text-white/70">
-          <li>Başlığı çift tıkla — düzenle.</li>
-          <li>Başlığı sürükle — kutuyu taşı.</li>
-          <li>Boş alanda sürükle — pan (kaydırma).</li>
-          <li>Mouse tekerleği — zoom (odak noktasına göre).</li>
-          <li>Bağla Modu: aç → bir kutu seç → diğerine tıkla.</li>
-          <li>Kutuda renk, etiket ve tarih ekleyebilirsin.</li>
-        </ul>
-      </div>
-
-      <div class="panel p-3 rounded"> <h3 class="font-semibold">İşlemler</h3>
-        <div class="mt-2 flex flex-col gap-2">
-          <button id="zoomIn" class="bg-white/5 px-3 py-2 rounded">Zoom +</button>
-          <button id="zoomOut" class="bg-white/5 px-3 py-2 rounded">Zoom -</button>
-          <button id="fitBtn" class="bg-white/5 px-3 py-2 rounded">Hepsini Göster</button>
-        </div>
-      </div>
-    </section>
-  </div>
-
-  <!-- Node Template -->
-  <template id="nodeTpl">
-    <div class="node bg-white text-slate-900" data-id="">
-      <div class="handle px-3 py-2 flex items-center justify-between bg-white/80 rounded-t-xl border-b">
-        <div class="flex items-center gap-2">
-          <div class="dot w-3 h-3 rounded-full" style="background:#60a5fa"></div>
-          <div class="title text-sm font-semibold truncate">Yeni Kutu</div>
-        </div>
-        <div class="flex items-center gap-2">
-          <button class="mini connectBtn bg-emerald-500 text-white px-2 py-1 rounded">Bağla</button>
-          <button class="mini delBtn bg-rose-500 text-white px-2 py-1 rounded">Sil</button>
-        </div>
-      </div>
-      <div class="p-3 text-sm">
-        <textarea class="content w-full p-2 border rounded" rows="3" placeholder="Detay..."></textarea>
-        <div class="mt-2 flex gap-2 items-center">
-          <input type="color" class="colorPick" title="Renk" />
-          <input class="tagInp px-2 py-1 rounded bg-white/5" placeholder="Etiket (virgülle ayır)" />
-          <input type="datetime-local" class="dtInp rounded bg-white/5 px-2 py-1" />
-        </div>
-      </div>
-      <div class="px-3 pb-3 text-[11px] text-slate-400">ID: <span class="nid"></span></div>
-    </div>
-  </template>
-
-  <script>
-    // --- State & Storage ---
-    const LS = 'full-board-v1';
-    let state = { nodes: [], edges: [] };
-    let scale = 1, panX = 0, panY = 0;
-    let connectMode = false, connectFrom = null; // connection in-progress
-    let selectedEdgeId = null;
-
-    const wrap = document.getElementById('wrap');
-    const board = document.getElementById('board');
-    const svg = document.getElementById('edgeSvg');
-    const guideX = document.getElementById('guideX');
-    const guideY = document.getElementById('guideY');
-
-    // Helpers
-    const uid = ()=>Math.random().toString(36).slice(2,9);
-    const clamp = (v,a,b)=>Math.max(a,Math.min(b,v));
-    function save(){ localStorage.setItem(LS, JSON.stringify(state)); }
-    function load(){ try{ state = JSON.parse(localStorage.getItem(LS)) || state; }catch(e){} }
-
-    // Transform helpers
-    function applyTransform(){ board.style.transform = `translate(${panX}px,${panY}px) scale(${scale})`; svg.style.transform = `translate(${panX}px,${panY}px) scale(${scale})`; }
-
-    // --- Node creation / rendering ---
-    function createNodeObj({id,title,x,y,w=260,h=140,color='#60a5fa',tags=[],content='',datetime=null}){
-      return { id, title, x, y, w, h, color, tags, content, datetime };
-    }
-
-    function createNodeEl(node){
-      const tpl = document.getElementById('nodeTpl').content.firstElementChild.cloneNode(true);
-      tpl.dataset.id = node.id; tpl.style.left = node.x + 'px'; tpl.style.top = node.y + 'px'; tpl.style.width = node.w + 'px';
-      tpl.querySelector('.title').textContent = node.title; tpl.querySelector('.nid').textContent = node.id;
-      tpl.querySelector('.content').value = node.content || '';
-      tpl.querySelector('.colorPick').value = node.color || '#60a5fa';
-      tpl.querySelector('.dot').style.background = node.color || '#60a5fa';
-      tpl.querySelector('.tagInp').value = (node.tags||[]).join(',');
-      tpl.querySelector('.dtInp').value = node.datetime || '';
-
-      // delete
-      tpl.querySelector('.delBtn').addEventListener('click', (e)=>{ e.stopPropagation(); removeNode(node.id); });
-      // connect small button
-      tpl.querySelector('.connectBtn').addEventListener('click', (e)=>{ e.stopPropagation(); startConnect(node.id); });
-      // title dblclick
-      tpl.querySelector('.title').addEventListener('dblclick', (e)=>{
-        const nv = prompt('Başlığı değiştir:', node.title);
-        if(nv!==null){ node.title = nv; tpl.querySelector('.title').textContent = nv; save(); drawEdges(); }
-      });
-      // content
-      tpl.querySelector('.content').addEventListener('input', (e)=>{ node.content = e.target.value; save(); });
-      // color
-      tpl.querySelector('.colorPick').addEventListener('input', (e)=>{ node.color = e.target.value; tpl.querySelector('.dot').style.background = e.target.value; save(); });
-      // tags
-      tpl.querySelector('.tagInp').addEventListener('change', (e)=>{ node.tags = e.target.value.split(',').map(s=>s.trim()).filter(Boolean); save(); });
-      // datetime
-      tpl.querySelector('.dtInp').addEventListener('change', (e)=>{ node.datetime = e.target.value; save(); });
-
-      makeDraggable(tpl);
-      return tpl;
-    }
-
-    function addNode(title, x=60, y=60, color='#60a5fa'){
-      const id = uid();
-      const obj = createNodeObj({id, title, x, y, color});
-      state.nodes.push(obj); save(); render();
-      return obj;
-    }
-
-    function removeNode(id){ state.nodes = state.nodes.filter(n=>n.id!==id); state.edges = state.edges.filter(e=> e.from!==id && e.to!==id); save(); render(); }
-
-    function render(){ board.innerHTML = ''; // clear
-      state.nodes.forEach(n=> board.appendChild(createNodeEl(n)) );
-      drawEdges(); applyTransform(); }
-
-    // --- Dragging, snapping & guides ---
-    const SNAP = 10; // pixels
-    function findSnap(el, nx, ny){
-      const bw = board.getBoundingClientRect();
-      const r = el.getBoundingClientRect(); const w = r.width, h = r.height;
-      let x = nx, y = ny; let gx=null, gy=null; let bestX=SNAP+1, bestY=SNAP+1;
-      const others = Array.from(board.querySelectorAll('.node')).filter(o=>o!==el);
-      const ourXs = [nx, nx+w/2, nx+w]; const ourYs = [ny, ny+h/2, ny+h];
-      others.forEach(o=>{
-        const or = o.getBoundingClientRect(); const ox = or.left - bw.left, oy = or.top - bw.top, ow=or.width, oh=or.height;
-        const linesX = [ox, ox+ow/2, ox+ow]; const linesY = [oy, oy+oh/2, oy+oh];
-        linesX.forEach(L=>{ ourXs.forEach((OX)=>{ const d=Math.abs(OX-L); if(d<bestX && d<=SNAP){ bestX=d; const delta=L-OX; x = nx + delta; gx=L; } }); });
-        linesY.forEach(L=>{ ourYs.forEach((OY)=>{ const d=Math.abs(OY-L); if(d<bestY && d<=SNAP){ bestY=d; const delta=L-OY; y = ny + delta; gy=L; } }); });
-      });
-      if(gy!==null) showGuideX(gy); else hideGuideX();
-      if(gx!==null) showGuideY(gx); else hideGuideY();
-      if(gx===null) x = Math.round(x/10)*10; if(gy===null) y = Math.round(y/10)*10;
-      return {x,y};
-    }
-
-    function showGuideX(y){ guideX.classList.remove('hidden'); guideX.style.top = y + 'px'; }
-    function showGuideY(x){ guideY.classList.remove('hidden'); guideY.style.left = x + 'px'; }
-    function hideGuideX(){ guideX.classList.add('hidden'); }
-    function hideGuideY(){ guideY.classList.add('hidden'); }
-    function hideGuides(){ hideGuideX(); hideGuideY(); }
-
-    function makeDraggable(el){
-      const handle = el.querySelector('.handle');
-      let dragging=false, sx=0, sy=0, startX=0, startY=0, nodeObj=null;
-      handle.addEventListener('mousedown', (ev)=>{
-        ev.preventDefault(); ev.stopPropagation(); dragging=true; sx=ev.clientX; sy=ev.clientY; nodeObj = state.nodes.find(n=>n.id===el.dataset.id);
-        startX = nodeObj.x; startY = nodeObj.y; document.addEventListener('mousemove', onMove); document.addEventListener('mouseup', onUp);
-      });
-      function onMove(ev){ if(!dragging) return; let nx = startX + (ev.clientX - sx)/scale; let ny = startY + (ev.clientY - sy)/scale; const snapped = findSnap(el, nx, ny); nodeObj.x = snapped.x; nodeObj.y = snapped.y; el.style.left = nodeObj.x + 'px'; el.style.top = nodeObj.y + 'px'; drawEdges(); }
-      function onUp(){ if(!dragging) return; dragging=false; hideGuides(); save(); document.removeEventListener('mousemove', onMove); document.removeEventListener('mouseup', onUp); }
-    }
-
-    // --- Pan & Zoom ---
-    let panning=false, psx=0, psy=0, startPanX=0, startPanY=0;
-    board.addEventListener('mousedown', (e)=>{ // start pan if click background (not node)
-      if(e.target.closest('.node')) return;
-      panning=true; psx=e.clientX; psy=e.clientY; startPanX = panX; startPanY = panY; document.addEventListener('mousemove', onPanMove); document.addEventListener('mouseup', onPanUp);
-    });
-    function onPanMove(e){ if(!panning) return; panX = startPanX + (e.clientX - psx); panY = startPanY + (e.clientY - psy); applyTransform(); }
-    function onPanUp(){ panning=false; save(); document.removeEventListener('mousemove', onPanMove); document.removeEventListener('mouseup', onPanUp); }
-
-    // wheel zoom (cursor-centered)
-    wrap.addEventListener('wheel', (e)=>{
-      if(e.ctrlKey) return; // allow ctrl+wheel default
-      e.preventDefault(); const rect = wrap.getBoundingClientRect(); const mx = e.clientX - rect.left, my = e.clientY - rect.top; const prevScale = scale; const delta = -e.deltaY; const zoomFactor = Math.exp(delta*0.0012); scale = clamp(scale * zoomFactor, 0.3, 3);
-      // maintain cursor focus
-      panX = mx - (mx - panX) * (scale/prevScale);
-      panY = my - (my - panY) * (scale/prevScale);
-      applyTransform(); save();
-    }, { passive:false });
-
-    // zoom buttons
-    document.getElementById('zoomIn').addEventListener('click', ()=>{ scale=clamp(scale*1.12,0.3,3); applyTransform(); save(); });
-    document.getElementById('zoomOut').addEventListener('click', ()=>{ scale=clamp(scale/1.12,0.3,3); applyTransform(); save(); });
-
-    // fit (simple bounding box)
-    document.getElementById('fitBtn').addEventListener('click', ()=>{
-      if(state.nodes.length===0) return; const W = wrap.clientWidth, H = wrap.clientHeight; let minX=1e9,minY=1e9,maxX=0,maxY=0; state.nodes.forEach(n=>{ minX=Math.min(minX,n.x); minY=Math.min(minY,n.y); maxX=Math.max(maxX,n.x+n.w); maxY=Math.max(maxY,n.y+n.h); }); const bw = maxX-minX, bh = maxY-minY; const s = Math.min(W/bw, H/bh, 1); scale = s*0.9; panX = (W - bw*scale)/2 - minX*scale; panY = (H - bh*scale)/2 - minY*scale; applyTransform(); save(); });
-
-    // --- Edges (Bezier) ---
-    function addEdge(from,to,color='#6366f1',width=2){ if(from===to) return; if(state.edges.some(e=> e.from===from && e.to===to )) return; state.edges.push({ id: uid(), from, to, color, width }); save(); drawEdges(); }
-    function removeEdge(id){ state.edges = state.edges.filter(e=> e.id!==id); if(selectedEdgeId===id) selectedEdgeId=null; save(); drawEdges(); }
-
-    function drawEdges(){ svg.innerHTML = ''; injectDefs(); const B = board.getBoundingClientRect(); state.edges.forEach(ed=>{ const a = state.nodes.find(n=>n.id===ed.from); const b = state.nodes.find(n=>n.id===ed.to); if(!a || !b) return; const ar = { x: a.x + a.w, y: a.y + a.h/2 }; const br = { x: b.x, y: b.y + b.h/2 }; const dx = Math.max(60, Math.abs(br.x - ar.x)/2); const p = `M ${ar.x},${ar.y} C ${ar.x+dx},${ar.y} ${br.x-dx},${br.y} ${br.x},${br.y}`; const path = document.createElementNS('http://www.w3.org/2000/svg','path'); path.setAttribute('d', p); path.setAttribute('fill','none'); path.setAttribute('stroke', ed.color || '#6366f1'); path.setAttribute('stroke-width', ed.width || 2); path.dataset.id = ed.id; path.style.pointerEvents = 'auto'; if(ed.id===selectedEdgeId) path.classList.add('selected-edge'); svg.appendChild(path);
-        // edge click
-        path.addEventListener('click', (ev)=>{ ev.stopPropagation(); selectEdge(ed.id); });
-      }); }
-
-    function injectDefs(){ if(svg.querySelector('defs')) return; const defs = document.createElementNS('http://www.w3.org/2000/svg','defs'); const marker = document.createElementNS('http://www.w3.org/2000/svg','marker'); marker.setAttribute('id','arrow'); marker.setAttribute('markerWidth','10'); marker.setAttribute('markerHeight','10'); marker.setAttribute('refX','10'); marker.setAttribute('refY','5'); marker.setAttribute('orient','auto'); const arrow = document.createElementNS('http://www.w3.org/2000/svg','path'); arrow.setAttribute('d','M0,0 L10,5 L0,10 Z'); arrow.setAttribute('fill','#6366f1'); marker.appendChild(arrow); defs.appendChild(marker); svg.appendChild(defs); svg.setAttribute('marker-end','url(#arrow)'); }
-
-    // select edge
-    function selectEdge(id){ selectedEdgeId = id; const ed = state.edges.find(e=>e.id===id); if(!ed) return; document.getElementById('selEdgeColor').value = ed.color || '#6366f1'; document.getElementById('selEdgeWidth').value = ed.width || 2; drawEdges(); }
-    // apply style
-    document.getElementById('applyEdgeStyle').addEventListener('click', ()=>{
-      if(!selectedEdgeId) return; const ed = state.edges.find(e=>e.id===selectedEdgeId); ed.color = document.getElementById('selEdgeColor').value; ed.width = +document.getElementById('selEdgeWidth').value; save(); drawEdges(); });
-    document.getElementById('clearSelEdge').addEventListener('click', ()=>{ selectedEdgeId=null; drawEdges(); });
-    document.getElementById('edgeDeleteBtn').addEventListener('click', ()=>{ if(selectedEdgeId) removeEdge(selectedEdgeId); });
-
-    // --- Connect mode ---
-    document.getElementById('connectToggle').addEventListener('click', ()=>{ connectMode = !connectMode; updateConnectBtn(); });
-    function updateConnectBtn(){ const b = document.getElementById('connectToggle'); b.textContent = 'Bağla Modu: ' + (connectMode? 'Açık' : 'Kapalı'); b.classList.toggle('bg-emerald-600', connectMode); b.classList.toggle('bg-gray-700', !connectMode); }
-    function startConnect(id){ if(!connectMode){ connectMode = true; updateConnectBtn(); } connectFrom = id; highlightNode(id); }
-
-    function highlightNode(id){ document.querySelectorAll('.node').forEach(n=> n.classList.toggle('ring-4', n.dataset.id===id)); }
-
-    // click on board nodes to finish connect
-    board.addEventListener('click', (e)=>{
-      const nodeEl = e.target.closest('.node'); if(!nodeEl) return; const id = nodeEl.dataset.id; if(connectMode && connectFrom){ addEdge(connectFrom, id); connectFrom = null; connectMode = false; updateConnectBtn(); highlightNode(null); }
-    });
-
-    // --- Import/Export/Reset ---
-    document.getElementById('exportBtn').addEventListener('click', ()=>{ const data = JSON.stringify(state, null, 2); const blob = new Blob([data],{type:'application/json'}); const url = URL.createObjectURL(blob); const a = document.createElement('a'); a.href = url; a.download = 'board-export.json'; a.click(); URL.revokeObjectURL(url); });
-    document.getElementById('importBtn').addEventListener('click', ()=>{ const inp = document.createElement('input'); inp.type='file'; inp.accept='application/json'; inp.onchange = (ev)=>{ const f = ev.target.files[0]; if(!f) return; const r = new FileReader(); r.onload = ()=>{ try{ const dd = JSON.parse(r.result); if(dd.nodes && dd.edges){ state = dd; save(); render(); alert('İçe aktarma başarılı'); } else alert('Geçersiz dosya'); }catch(e){ alert('İçe aktarma hatası'); } }; r.readAsText(f); }; inp.click(); });
-    document.getElementById('resetBtn').addEventListener('click', ()=>{ if(confirm('Tüm veriler silinsin mi?')){ state={nodes:[],edges:[]}; save(); render(); } });
-
-    // add node button
-    document.getElementById('addBtn').addEventListener('click', ()=>{ const t = document.getElementById('newTitle'); const pcol = document.getElementById('presetColor').value; addNode(t.value || 'Yeni Kutu', 80 + Math.random()*80, 60 + Math.random()*80, pcol); t.value=''; });
-
-    // click outside to clear selected edge & connection
-    document.addEventListener('click', (e)=>{ if(!e.target.closest('svg')) selectedEdgeId = null; drawEdges(); });
-
-    // load & init
-    load(); if(state.nodes.length===0){ const a = addNode('İngilizce: 10 kelime', 60, 60, '#60a5fa'); const b = addNode('Markete git', 380, 120, '#f43f5e'); const c = addNode('A Projesi - Sunum', 200, 280, '#f97316'); addEdge(a.id, c.id); addEdge(b.id, c.id); }
-    render(); applyTransform(); updateConnectBtn();
-
-    // window resize redraw
-    window.addEventListener('resize', drawEdges);
-
-    // allow deleting selected edge with Delete key
-    window.addEventListener('keydown',(e)=>{ if(e.key==='Delete' && selectedEdgeId) removeEdge(selectedEdgeId); });
-  </script>
+<body>
+<div class="topbar"><div class="wrap" style="max-width:none">
+  <a class="brand" href="./">erdevelop<span>_</span></a><span class="crumb">/ tools / planlama</span><span class="sp"></span>
+  <a class="tb" href="Tools.html">Araçlar</a><button class="tb" type="button" id="modeBtn">LIGHT</button>
+</div></div>
+<div class="tools">
+  <form class="ctl" id="addF" autocomplete="off" style="gap:6px"><input class="inp" id="newTitle" placeholder="Yeni kart başlığı" style="width:190px"><select class="sel" id="cat" aria-label="Kategori"></select><button class="btn pri" type="submit">＋ Ekle</button></form>
+  <span class="sep hide-m"></span>
+  <input class="inp hide-m" id="q" placeholder="Ara / filtrele…" style="width:150px" aria-label="Ara">
+  <span class="cats hide-m" id="fcats"></span>
+  <span class="sp"></span>
+  <button class="btn" type="button" id="bUndo" title="Geri al (Ctrl+Z)">↶</button>
+  <button class="btn" type="button" id="bTidy" title="Kartları ızgaraya diz">Düzenle</button>
+  <button class="btn" type="button" id="exp">JSON</button><label class="btn">İçe al<input type="file" id="imp" accept=".json,application/json" hidden></label>
+  <button class="btn" type="button" id="reset">Sıfırla</button>
+</div>
+<div id="stage"><div id="world"><svg id="edges"></svg></div>
+  <div class="sum" id="sum"></div>
+  <div class="zoom"><button class="btn" type="button" id="zOut">−</button><button class="btn" type="button" id="zFit">Hepsini göster</button><button class="btn" type="button" id="zIn">+</button></div>
+</div>
+<script src="kesif/tema.js"></script>
+<script>
+/* eski sürümle aynı kayıt anahtarı ve biçim: mevcut planlar korunur */
+const LSK = 'full-board-v1', VK = 'planla:view';
+const CATS = [['Proje', '#f97316'], ['İş', '#10b981'], ['Dil', '#60a5fa'], ['Alışveriş', '#f43f5e'], ['Kişisel', '#a78bfa'], ['Fikir', '#facc15']];
+let S = store.json(LSK, null); if (!S || !Array.isArray(S.nodes)) S = { nodes: [], edges: [] };
+let view = store.json(VK, { x: 40, y: 30, s: 1 }), sel = null, selEdge = null, undo = [], filt = { q: '', c: '' };
+const save = () => store.put(LSK, S), saveV = () => store.put(VK, view), snap = () => { undo.push(JSON.stringify(S)); if (undo.length > 60) undo.shift(); $('bUndo').disabled = false; };
+const uid = () => Math.random().toString(36).slice(2, 9), byId = id => S.nodes.find(n => n.id === id);
+const world = $('world'), stage = $('stage'), svgE = $('edges');
+$('cat').innerHTML = CATS.map(([n, c]) => `<option value="${c}">${n}</option>`).join('');
+$('fcats').innerHTML = `<button type="button" data-c="" class="on">Tümü</button>` + CATS.map(([n, c]) => `<button type="button" data-c="${c}"><i style="background:${c}"></i>${n}</button>`).join('');
+const catName = c => (CATS.find(x => x[1] === c) || [''])[0];
+const today = () => new Date().toISOString().slice(0, 10);
+function dueInfo(dt) { if (!dt) return null; const d = dt.slice(0, 10), t = today(), late = d < t, isT = d === t, D = new Date(dt);
+  const txt = isT ? 'bugün' + (dt.length > 10 ? ' ' + D.toLocaleTimeString('tr-TR', { hour: '2-digit', minute: '2-digit' }) : '') : D.toLocaleDateString('tr-TR', { day: 'numeric', month: 'short' }); return { cls: late ? 'late' : isT ? 'today' : '', txt: (late ? '⚠ ' : '📅 ') + txt }; }
+function apply() { world.style.transform = `translate(${view.x}px,${view.y}px) scale(${view.s})`; }
+/* ---------- kart ---------- */
+function cardEl(n) {
+  const el = document.createElement('div'); el.className = 'card' + (n.done ? ' done' : '') + (sel === n.id ? ' sel' : ''); el.dataset.id = n.id; el.style.left = n.x + 'px'; el.style.top = n.y + 'px'; el.style.setProperty('--c', n.color || '#60a5fa'); if (n.w) el.style.width = n.w + 'px';
+  const di = dueInfo(n.datetime);
+  el.innerHTML = `<div class="hd"><input class="ck" type="checkbox" ${n.done ? 'checked' : ''} title="Tamamlandı"><div class="ttl" title="Çift tıkla: düzenle">${esc(n.title || 'Başlıksız')}</div><button class="ib" data-a="col" title="Renk">●</button><button class="ib" data-a="del" title="Sil">✕</button></div>
+    <textarea placeholder="Not ekle…" rows="1">${esc(n.content || '')}</textarea>
+    <div class="ft">${(n.tags || []).map((t, i) => `<span class="tag" data-ti="${i}" title="Kaldır">#${esc(t)}</span>`).join('')}<input class="addtag" placeholder="+ etiket" maxlength="24">
+      <span class="sp" style="flex:1"></span>${di ? `<span class="due ${di.cls}" data-a="due" title="Tarihi değiştir">${di.txt}</span>` : `<button class="ib" data-a="due" title="Tarih ekle">📅</button>`}</div><div class="port" title="Sürükleyip başka karta bırak: bağla"></div>`;
+  const ta = el.querySelector('textarea'), fit = () => { ta.style.height = 'auto'; ta.style.height = ta.scrollHeight + 'px'; }; setTimeout(fit);
+  ta.addEventListener('input', () => { n.content = ta.value; fit(); save(); drawEdges(); });
+  ta.addEventListener('focus', () => select(n.id, true));
+  el.querySelector('.ck').addEventListener('change', e => { snap(); n.done = e.target.checked; save(); el.classList.toggle('done', n.done); summary(); });
+  const ttl = el.querySelector('.ttl');
+  ttl.addEventListener('dblclick', () => { ttl.contentEditable = 'true'; ttl.focus(); document.getSelection().selectAllChildren(ttl); });
+  ttl.addEventListener('keydown', e => { if (e.key === 'Enter') { e.preventDefault(); ttl.blur(); } if (e.key === 'Escape') { ttl.textContent = n.title; ttl.blur(); } });
+  ttl.addEventListener('blur', () => { if (ttl.contentEditable !== 'true') return; ttl.contentEditable = 'false'; const v = ttl.textContent.trim(); if (v && v !== n.title) { snap(); n.title = v; save(); } ttl.textContent = n.title; });
+  el.querySelector('.addtag').addEventListener('keydown', e => { if (e.key === 'Enter' || e.key === ',') { e.preventDefault(); const v = e.target.value.trim().replace(/^#/, ''); if (v) { snap(); n.tags = [...(n.tags || []), v]; save(); renderOne(n); } } });
+  el.querySelector('.ft').addEventListener('click', e => { const t = e.target.closest('[data-ti]'); if (t) { snap(); n.tags.splice(+t.dataset.ti, 1); save(); renderOne(n); } });
+  el.querySelector('.hd').addEventListener('click', e => { const b = e.target.closest('[data-a]'); if (!b) return; e.stopPropagation(); if (b.dataset.a === 'del') { if ((n.content || n.title) && !confirm(`“${n.title}” silinsin mi?`)) return; snap(); S.nodes = S.nodes.filter(x => x !== n); S.edges = S.edges.filter(x => x.from !== n.id && x.to !== n.id); save(); render(); } else colorPop(n, b); });
+  el.querySelector('.ft').addEventListener('click', e => { const b = e.target.closest('[data-a="due"]'); if (!b) return; const inp = document.createElement('input'); inp.type = 'datetime-local'; inp.value = n.datetime || today() + 'T09:00'; b.replaceWith(inp); inp.focus(); try { inp.showPicker && inp.showPicker(); } catch (er) { }
+    const done = () => { snap(); n.datetime = inp.value || null; save(); renderOne(n); summary(); }; inp.addEventListener('change', done); inp.addEventListener('blur', done); });
+  dragCard(el, n); portDrag(el.querySelector('.port'), n);
+  return el;
+}
+function renderOne(n) { const old = world.querySelector(`.card[data-id="${n.id}"]`), el = cardEl(n); old ? old.replaceWith(el) : world.appendChild(el); filter(); drawEdges(); }
+function render() { world.querySelectorAll('.card').forEach(c => c.remove()); S.nodes.forEach(n => world.appendChild(cardEl(n))); filter(); drawEdges(); summary(); apply(); }
+function select(id, keep) { sel = id; selEdge = null; world.querySelectorAll('.card').forEach(c => c.classList.toggle('sel', c.dataset.id === id)); closePop(); drawEdges(); }
+/* ---------- renk menüsü ---------- */
+let pop = null; const closePop = () => { if (pop) { pop.remove(); pop = null; } };
+function colorPop(n, anchor) { closePop(); const r = anchor.getBoundingClientRect(), b = stage.getBoundingClientRect(); pop = document.createElement('div'); pop.className = 'pop';
+  pop.innerHTML = CATS.map(([nm, c]) => `<button class="sw" type="button" data-c="${c}" title="${nm}" style="background:${c}"></button>`).join('') + `<input type="color" value="${n.color || '#60a5fa'}" title="Özel renk" style="width:26px;height:22px;border:0;padding:0;background:none">`;
+  pop.style.left = Math.min(r.left - b.left, b.width - 260) + 'px'; pop.style.top = r.bottom - b.top + 6 + 'px'; stage.appendChild(pop);
+  const set = c => { snap(); n.color = c; save(); renderOne(n); }; pop.onclick = e => { const s = e.target.closest('[data-c]'); if (s) { set(s.dataset.c); closePop(); } }; pop.querySelector('input').onchange = e => { set(e.target.value); closePop(); }; }
+/* ---------- sürükleme + hizalama kılavuzları ---------- */
+const G = [document.createElement('div'), document.createElement('div')]; G.forEach((g, i) => { g.className = 'guide'; g.hidden = true; world.appendChild(g); });
+function dragCard(el, n) {
+  el.querySelector('.hd').addEventListener('pointerdown', e => { if (e.target.closest('button,input,[contenteditable="true"]')) return; e.preventDefault(); e.stopPropagation(); select(n.id); el.setPointerCapture(e.pointerId);
+    const sx = e.clientX, sy = e.clientY, ox = n.x, oy = n.y, before = JSON.stringify(S); let moved = false;
+    const others = S.nodes.filter(o => o !== n).map(o => { const oe = world.querySelector(`.card[data-id="${o.id}"]`); return { x: o.x, y: o.y, w: oe.offsetWidth, h: oe.offsetHeight }; }), W = el.offsetWidth, H = el.offsetHeight;
+    const mv = ev => { let x = ox + (ev.clientX - sx) / view.s, y = oy + (ev.clientY - sy) / view.s; if (!moved && Math.hypot(ev.clientX - sx, ev.clientY - sy) < 3) return; moved = true; let gx = null, gy = null, bx = 7, by = 7;
+      others.forEach(o => { [[x, o.x], [x + W / 2, o.x + o.w / 2], [x + W, o.x + o.w], [x, o.x + o.w], [x + W, o.x]].forEach(([a, b]) => { if (Math.abs(a - b) < bx) { bx = Math.abs(a - b); x += b - a; gx = b; } });
+        [[y, o.y], [y + H / 2, o.y + o.h / 2], [y + H, o.y + o.h]].forEach(([a, b]) => { if (Math.abs(a - b) < by) { by = Math.abs(a - b); y += b - a; gy = b; } }); });
+      if (gx == null) x = Math.round(x / 10) * 10; if (gy == null) y = Math.round(y / 10) * 10;
+      n.x = x; n.y = y; el.style.left = x + 'px'; el.style.top = y + 'px';
+      G[0].hidden = gx == null; G[1].hidden = gy == null; if (gx != null) Object.assign(G[0].style, { left: gx + 'px', top: '-5000px', width: '1px', height: '10000px' }); if (gy != null) Object.assign(G[1].style, { top: gy + 'px', left: '-5000px', height: '1px', width: '10000px' });
+      drawEdges(); };
+    const upf = () => { el.removeEventListener('pointermove', mv); el.removeEventListener('pointerup', upf); G.forEach(g => g.hidden = true); if (moved) { undo.push(before); $('bUndo').disabled = false; save(); } };
+    el.addEventListener('pointermove', mv); el.addEventListener('pointerup', upf); });
+}
+/* ---------- bağlantılar ---------- */
+let ghost = null;
+function portDrag(p, n) { p.addEventListener('pointerdown', e => { e.preventDefault(); e.stopPropagation(); p.setPointerCapture(e.pointerId); let tgt = null;
+  const mv = ev => { const b = stage.getBoundingClientRect(), wx = (ev.clientX - b.left - view.x) / view.s, wy = (ev.clientY - b.top - view.y) / view.s; ghost = { n, x: wx, y: wy }; drawEdges();
+    world.querySelectorAll('.card.target').forEach(c => c.classList.remove('target')); const el = document.elementsFromPoint(ev.clientX, ev.clientY).find(x => x.classList && x.classList.contains('card') && x.dataset.id !== n.id); tgt = el ? el.dataset.id : null; if (el) el.classList.add('target'); };
+  const upf = () => { p.removeEventListener('pointermove', mv); p.removeEventListener('pointerup', upf); ghost = null; world.querySelectorAll('.card.target').forEach(c => c.classList.remove('target'));
+    if (tgt && !S.edges.some(x => x.from === n.id && x.to === tgt)) { snap(); S.edges.push({ id: uid(), from: n.id, to: tgt, color: n.color || '#6366f1', width: 2 }); save(); } drawEdges(); };
+  p.addEventListener('pointermove', mv); p.addEventListener('pointerup', upf); }); }
+function box(id) { const n = byId(id), el = world.querySelector(`.card[data-id="${id}"]`); return el && { x: n.x, y: n.y, w: el.offsetWidth, h: el.offsetHeight }; }
+function anchor(a, b) { const ax = a.x + a.w / 2, ay = a.y + a.h / 2, bx = b.x + b.w / 2, by = b.y + b.h / 2, dx = bx - ax, dy = by - ay;
+  if (Math.abs(dx) * a.h > Math.abs(dy) * a.w) return dx > 0 ? [a.x + a.w, ay, 1, 0] : [a.x, ay, -1, 0]; return dy > 0 ? [ax, a.y + a.h, 0, 1] : [ax, a.y, 0, -1]; }
+function drawEdges() {
+  const muted = TM.css('--muted'); let h = `<defs>${[...new Set(S.edges.map(e => e.color || '#6366f1').concat([TM.css('--accent')]))].map(c => `<marker id="m${c.replace(/[^a-z0-9]/gi, '')}" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="6" markerHeight="6" orient="auto"><path d="M0 0L10 5L0 10z" fill="${c}"/></marker>`).join('')}</defs>`;
+  S.edges.forEach(ed => { const A = box(ed.from), B = box(ed.to); if (!A || !B) return; const [x1, y1, dx1, dy1] = anchor(A, B), [x2, y2, dx2, dy2] = anchor(B, A), k = Math.max(40, Math.hypot(x2 - x1, y2 - y1) * .4), c = ed.color || '#6366f1', on = selEdge === ed.id;
+    const d = `M${x1} ${y1} C${x1 + dx1 * k} ${y1 + dy1 * k} ${x2 + dx2 * k} ${y2 + dy2 * k} ${x2} ${y2}`;
+    h += `<path class="hit" data-e="${ed.id}" d="${d}"/><path class="e" data-e="${ed.id}" d="${d}" stroke="${c}" stroke-width="${(ed.width || 2) + (on ? 2 : 0)}" marker-end="url(#m${c.replace(/[^a-z0-9]/gi, '')})" ${on ? 'stroke-dasharray="8 5"' : ''} opacity="${on ? 1 : .85}"/>`; });
+  if (ghost) { const A = box(ghost.n.id); if (A) h += `<path d="M${A.x + A.w} ${A.y + A.h / 2} L${ghost.x} ${ghost.y}" stroke="${TM.css('--accent')}" stroke-width="2" stroke-dasharray="6 4" fill="none"/>`; }
+  svgE.innerHTML = h;
+}
+svgE.addEventListener('pointerdown', e => { const p = e.target.closest('[data-e]'); if (!p) return; e.stopPropagation(); selEdge = p.dataset.e; sel = null; world.querySelectorAll('.card.sel').forEach(c => c.classList.remove('sel')); drawEdges(); edgePop(e); });
+function edgePop(e) { closePop(); const ed = S.edges.find(x => x.id === selEdge); if (!ed) return; const b = stage.getBoundingClientRect(); pop = document.createElement('div'); pop.className = 'pop';
+  pop.innerHTML = CATS.map(([nm, c]) => `<button class="sw" type="button" data-c="${c}" style="background:${c}" title="${nm}"></button>`).join('') + `<input type="range" min="1" max="8" value="${ed.width || 2}" title="Kalınlık" style="width:70px"><button class="btn" type="button" data-del style="padding:3px 8px">Sil</button>`;
+  pop.style.left = Math.min(e.clientX - b.left, b.width - 300) + 'px'; pop.style.top = e.clientY - b.top + 10 + 'px'; stage.appendChild(pop);
+  pop.onclick = ev => { const s = ev.target.closest('[data-c]'); if (s) { snap(); ed.color = s.dataset.c; save(); drawEdges(); } if (ev.target.closest('[data-del]')) { snap(); S.edges = S.edges.filter(x => x !== ed); selEdge = null; save(); closePop(); drawEdges(); } };
+  pop.querySelector('input').oninput = ev => { ed.width = +ev.target.value; save(); drawEdges(); }; pop.addEventListener('pointerdown', ev => ev.stopPropagation()); }
+/* ---------- kaydır / yakınlaştır ---------- */
+const pts = new Map(); let pan = null;
+stage.addEventListener('pointerdown', e => { if (e.target.closest('.card,.pop,.zoom')) return; closePop(); if (selEdge || sel) { selEdge = null; select(null); }
+  stage.setPointerCapture(e.pointerId); pts.set(e.pointerId, [e.clientX, e.clientY]);
+  pan = pts.size === 2 ? (() => { const [a, b] = [...pts.values()]; return { pinch: Math.hypot(a[0] - b[0], a[1] - b[1]), s: view.s, vx: view.x, vy: view.y, cx: (a[0] + b[0]) / 2, cy: (a[1] + b[1]) / 2 }; })() : { x: e.clientX, y: e.clientY, vx: view.x, vy: view.y }; });
+stage.addEventListener('pointermove', e => { if (!pts.has(e.pointerId) || !pan) return; pts.set(e.pointerId, [e.clientX, e.clientY]);
+  if (pan.pinch) { const [a, b] = [...pts.values()], d = Math.hypot(a[0] - b[0], a[1] - b[1]), ns = Math.min(2.5, Math.max(.25, pan.s * d / pan.pinch)), bb = stage.getBoundingClientRect(), cx = pan.cx - bb.left, cy = pan.cy - bb.top; view.x = cx - (cx - pan.vx) * ns / pan.s; view.y = cy - (cy - pan.vy) * ns / pan.s; view.s = ns; }
+  else { view.x = pan.vx + e.clientX - pan.x; view.y = pan.vy + e.clientY - pan.y; } apply(); });
+const upP = e => { pts.delete(e.pointerId); if (!pts.size && pan) { pan = null; saveV(); } }; stage.addEventListener('pointerup', upP); stage.addEventListener('pointercancel', upP);
+stage.addEventListener('wheel', e => { if (e.target.closest('textarea') && e.target.scrollHeight > e.target.clientHeight) return; e.preventDefault(); const b = stage.getBoundingClientRect(), cx = e.clientX - b.left, cy = e.clientY - b.top, ns = Math.min(2.5, Math.max(.25, view.s * (e.deltaY > 0 ? .9 : 1.1))); view.x = cx - (cx - view.x) * ns / view.s; view.y = cy - (cy - view.y) * ns / view.s; view.s = ns; apply(); saveV(); }, { passive: false });
+const zoomBy = f => { const W = stage.clientWidth, H = stage.clientHeight, ns = Math.min(2.5, Math.max(.25, view.s * f)); view.x = W / 2 - (W / 2 - view.x) * ns / view.s; view.y = H / 2 - (H / 2 - view.y) * ns / view.s; view.s = ns; apply(); saveV(); };
+function fitAll() { if (!S.nodes.length) return; let a = 1e9, b = 1e9, c = -1e9, d = -1e9; S.nodes.forEach(n => { const B = box(n.id); a = Math.min(a, B.x); b = Math.min(b, B.y); c = Math.max(c, B.x + B.w); d = Math.max(d, B.y + B.h); });
+  const W = stage.clientWidth, H = stage.clientHeight; view.s = Math.min(1.3, Math.max(.25, Math.min((W - 60) / (c - a), (H - 90) / (d - b)))); view.x = (W - (c - a) * view.s) / 2 - a * view.s; view.y = (H - (d - b) * view.s) / 2 - b * view.s; apply(); saveV(); }
+$('zIn').onclick = () => zoomBy(1.15); $('zOut').onclick = () => zoomBy(1 / 1.15); $('zFit').onclick = fitAll;
+/* ---------- arama / filtre / özet ---------- */
+function filter() { const q = filt.q.toLocaleLowerCase('tr'); world.querySelectorAll('.card').forEach(el => { const n = byId(el.dataset.id), hay = (n.title + ' ' + (n.content || '') + ' ' + (n.tags || []).join(' ')).toLocaleLowerCase('tr'); el.classList.toggle('dim', (q && !hay.includes(q)) || (filt.c && n.color !== filt.c)); }); }
+$('q').oninput = e => { filt.q = e.target.value.trim(); filter(); };
+$('fcats').onclick = e => { const b = e.target.closest('[data-c]'); if (!b) return; filt.c = b.dataset.c; $('fcats').querySelectorAll('button').forEach(x => x.classList.toggle('on', x === b)); filter(); };
+function summary() { const t = today(), done = S.nodes.filter(n => n.done).length, late = S.nodes.filter(n => !n.done && n.datetime && n.datetime.slice(0, 10) < t).length, td = S.nodes.filter(n => !n.done && n.datetime && n.datetime.slice(0, 10) === t).length;
+  $('sum').innerHTML = `<b>${S.nodes.length}</b> kart · <b>${done}</b> tamam${td ? ` · <b style="color:var(--hot)">${td}</b> bugün` : ''}${late ? ` · <b style="color:var(--bad)">${late}</b> gecikmiş` : ''}`; }
+/* ---------- ekle / dışa-içe / sıfırla / düzenle ---------- */
+$('addF').onsubmit = e => { e.preventDefault(); snap(); const W = stage.clientWidth, H = stage.clientHeight, x = Math.round(((W / 2 - view.x) / view.s - 130 + (Math.random() - .5) * 120) / 10) * 10, y = Math.round(((H / 2 - view.y) / view.s - 60 + (Math.random() - .5) * 80) / 10) * 10;
+  const c = $('cat').value, n = { id: uid(), title: $('newTitle').value.trim() || catName(c) + ' kartı', x, y, w: 260, h: 140, color: c, tags: [], content: '', datetime: null }; S.nodes.push(n); save(); $('newTitle').value = ''; render(); select(n.id); };
+$('exp').onclick = () => TM.download('planlama-' + today() + '.json', new Blob([JSON.stringify(S, null, 2)], { type: 'application/json' }));
+$('imp').onchange = async e => { const f = e.target.files[0]; e.target.value = ''; if (!f) return; try { const o = JSON.parse(await f.text()); if (!Array.isArray(o.nodes)) throw 0; snap(); S = { nodes: o.nodes, edges: o.edges || [] }; save(); render(); fitAll(); TM.toast('İçe alındı'); } catch (er) { TM.toast('Dosya okunamadı'); } };
+$('reset').onclick = () => { if (!confirm('Tahtadaki tüm kartlar silinsin mi? (Önce JSON olarak indirebilirsin)')) return; snap(); S = { nodes: [], edges: [] }; save(); render(); };
+$('bTidy').onclick = () => { if (!S.nodes.length) return; snap(); const W = Math.max(1, Math.floor((stage.clientWidth / view.s - 40) / 290)); const order = [...S.nodes].sort((a, b) => (a.color || '').localeCompare(b.color || '') || (a.y - b.y) || (a.x - b.x));
+  order.forEach((n, i) => { n.x = 20 + (i % W) * 290; n.y = 20 + Math.floor(i / W) * 230; }); save(); render(); fitAll(); };
+$('bUndo').onclick = () => { if (!undo.length) return; S = JSON.parse(undo.pop()); $('bUndo').disabled = !undo.length; save(); render(); }; $('bUndo').disabled = true;
+addEventListener('keydown', e => { if (e.target.closest('input,textarea,[contenteditable="true"]')) return; if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'z') { e.preventDefault(); $('bUndo').click(); }
+  else if (e.key === 'Delete' && selEdge) { snap(); S.edges = S.edges.filter(x => x.id !== selEdge); selEdge = null; save(); closePop(); drawEdges(); }
+  else if (e.key === 'Delete' && sel) { const b = world.querySelector(`.card[data-id="${sel}"] [data-a="del"]`); b && b.click(); } else if (e.key === 'Escape') { closePop(); select(null); } });
+TM.onMode(() => drawEdges()); addEventListener('resize', drawEdges);
+if (!S.nodes.length) { const mkN = (t, x, y, c, content, tags, dt) => ({ id: uid(), title: t, x, y, w: 260, h: 140, color: c, tags, content, datetime: dt });
+  const a = mkN('A Projesi · sunum', 20, 20, '#f97316', 'Taslak hazır, görseller eksik.', ['sunum'], today() + 'T15:00'), b = mkN('Teklif gönder', 330, 40, '#10b981', '', ['müşteri'], null), c = mkN('İngilizce: 10 kelime', 20, 250, '#60a5fa', 'Her gün 10 yeni kelime.', ['dil'], null), d = mkN('Market', 330, 260, '#f43f5e', 'süt, ekmek, kahve', [], null);
+  S.nodes = [a, b, c, d]; S.edges = [{ id: uid(), from: a.id, to: b.id, color: '#f97316', width: 2 }]; save(); }
+render(); requestAnimationFrame(() => { drawEdges(); if (!store.get(VK)) fitAll(); });
+</script>
 </body>
 </html>

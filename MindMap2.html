@@ -1,214 +1,163 @@
-<!DOCTYPE html>
-<html lang="tr">
+<!doctype html>
+<html lang="tr" data-mode="dark">
 <head>
-<meta charset="UTF-8">
-<title>Mind Map</title>
+<meta charset="utf-8">
+<script src="kilit.js" data-gate></script>
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Fikir Tahtası | erdevelop</title>
+<meta name="description" content="Serbest zihin haritası: boş yere çift tıkla, kutuları sürükle, tutamaktan çekip bağla; PNG, SVG ve JSON çıktısı.">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Chakra+Petch:wght@600;700&family=IBM+Plex+Sans:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500&display=swap">
+<link rel="stylesheet" href="kesif/tema.css">
 <style>
-body { margin:0; font-family:sans-serif; }
-#toolbar {
-  padding:10px; background:#eee; border-bottom:1px solid #ccc;
-}
-#mindmap {
-  width:100vw; height:calc(100vh - 50px);
-  background:#fafafa; cursor:pointer;
-  position:relative;
-}
-.node rect { fill:#fff; stroke:#333; stroke-width:1.5px; rx:8; ry:8; }
-.node text { font-size:14px; user-select:none; }
-.add-btn { cursor:pointer; font-size:16px; font-weight:bold; fill:#0a0; }
-path { stroke:#555; stroke-width:1.5px; fill:none; }
-#popupMenu {
-  position:absolute; display:none; background:#fff; border:1px solid #ccc;
-  padding:4px 6px; border-radius:6px; box-shadow:0 2px 6px rgba(0,0,0,0.2);
-  font-size:14px;
-  z-index:10;
-}
-#popupMenu button { margin:2px; font-size:13px; }
+html, body { height: 100%; overflow: hidden; }
+body { display: flex; flex-direction: column; }
+.tools { display: flex; gap: 6px; align-items: center; flex-wrap: wrap; padding: 8px 16px; border-bottom: 1px solid var(--line); background: var(--panel); }
+.tools .btn { padding: 6px 10px; font-size: 12px; }
+.tools .sep { width: 1px; height: 22px; background: var(--line); margin: 0 4px; }
+.sw { display: inline-flex; gap: 4px; } .sw button { width: 18px; height: 18px; border-radius: 50%; border: 2px solid var(--panel); box-shadow: 0 0 0 1px var(--line); cursor: pointer; padding: 0; }
+.tools .sel { padding: 5px 8px; font-size: 12px; }
+#stage { flex: 1; position: relative; overflow: hidden; touch-action: none; cursor: default;
+  background-color: var(--bg); background-image: linear-gradient(var(--grid) 1px, transparent 1px), linear-gradient(90deg, var(--grid) 1px, transparent 1px); background-size: 24px 24px; }
+#svg { position: absolute; inset: 0; width: 100%; height: 100%; }
+.nd { cursor: move; } .nd text { font-family: var(--f-body); pointer-events: none; dominant-baseline: central; }
+.nd .hd { cursor: crosshair; opacity: 0; transition: opacity .15s; } .nd:hover .hd, .nd.sel .hd { opacity: 1; }
+.lk { fill: none; stroke-linecap: round; cursor: pointer; } .lkh { fill: none; stroke: transparent; stroke-width: 14; cursor: pointer; }
+#edit { position: absolute; z-index: 5; font: 500 14px var(--f-body); color: var(--fg); background: var(--panel); border: 2px solid var(--accent); border-radius: 8px; padding: 6px 10px; outline: none; display: none; resize: none; text-align: center; box-shadow: 0 6px 20px rgba(0,0,0,.25); }
+.hint { position: absolute; left: 50%; top: 40%; transform: translate(-50%, -50%); text-align: center; color: var(--muted); font: 400 14px var(--f-mono); pointer-events: none; }
+.hint b { display: block; font: 700 1.4rem var(--f-display); color: var(--fg); margin-bottom: 6px; text-transform: uppercase; }
+.help { position: absolute; left: 12px; bottom: 12px; font: 400 11.5px/1.7 var(--f-mono); color: var(--muted); background: color-mix(in srgb, var(--panel) 85%, transparent); border: 1px solid var(--line); border-radius: 6px; padding: 6px 10px; }
+.zoom { position: absolute; right: 12px; bottom: 12px; display: flex; gap: 4px; } .zoom .btn { background: var(--panel); padding: 6px 10px; }
+@media (max-width: 700px) { .help { display: none; } .tools .hide-m { display: none; } }
 </style>
 </head>
 <body>
-<div id="toolbar">
-  <button onclick="exportJSON()">JSON Dışa Aktar</button>
-  <input type="file" id="importFile" style="display:none" onchange="importJSON(event)">
-  <button onclick="document.getElementById('importFile').click()">JSON İçe Aktar</button>
-  <button onclick="exportPNG()">PNG İndir</button>
+<div class="topbar"><div class="wrap" style="max-width:none">
+  <a class="brand" href="./">erdevelop<span>_</span></a><span class="crumb">/ tools / fikir tahtası</span><span class="sp"></span>
+  <a class="tb" href="Tools.html">Araçlar</a><button class="tb" type="button" id="modeBtn">LIGHT</button>
+</div></div>
+<div class="tools">
+  <button class="btn" type="button" id="bAdd">＋ Kutu</button>
+  <span class="sw" id="sw" title="Renk"></span>
+  <select class="sel" id="shape" aria-label="Biçim"><option value="r">▭ Kutu</option><option value="p">⬭ Hap</option><option value="e">◯ Elips</option><option value="d">◇ Karar</option><option value="n">🗒 Not</option></select>
+  <select class="sel hide-m" id="lstyle" aria-label="Bağlantı"><option value="c">Eğri bağlantı</option><option value="s">Düz bağlantı</option><option value="o">Dik açılı bağlantı</option></select>
+  <button class="btn" type="button" id="bDel" title="Sil (Delete)">🗑</button>
+  <span class="sep"></span><button class="btn" type="button" id="bUndo" title="Geri al (Ctrl+Z)">↶</button><button class="btn" type="button" id="bRedo" title="İleri al (Ctrl+Y)">↷</button>
+  <span class="sp"></span>
+  <button class="btn hide-m" type="button" id="bPng">PNG</button><button class="btn hide-m" type="button" id="bSvg">SVG</button><button class="btn" type="button" id="bJson">JSON</button>
+  <label class="btn">İçe aktar<input type="file" id="imp" accept=".json,application/json" hidden></label>
+  <button class="btn" type="button" id="bClear">Temizle</button>
 </div>
-
-<div id="mindmapContainer" style="position:relative">
-  <svg id="mindmap"></svg>
-  <div id="popupMenu">
-    <button id="addNodeBtn">Ekle</button>
-    <button id="cancelBtn">İptal</button>
-  </div>
+<div id="stage"><svg id="svg"></svg><textarea id="edit" rows="1" spellcheck="false"></textarea>
+  <div class="hint" id="hint" hidden><b>Boş tahta</b>Bir yere çift tıkla ya da “＋ Kutu”ya bas.</div>
+  <div class="help">çift tık: yeni kutu / düzenle · kutunun sağındaki noktayı başka kutuya sürükle: bağla · ⊕: bağlı yeni kutu · Delete: sil</div>
+  <div class="zoom"><button class="btn" type="button" id="zOut">−</button><button class="btn" type="button" id="zFit">Sığdır</button><button class="btn" type="button" id="zIn">+</button></div>
 </div>
-
+<script src="kesif/tema.js"></script>
 <script>
-const svg = document.getElementById("mindmap");
-const popup = document.getElementById("popupMenu");
-const addBtn = document.getElementById("addNodeBtn");
-const cancelBtn = document.getElementById("cancelBtn");
-
-let nodes = [];
-let links = [];
-let idCounter = 0;
-let popupPos = {x:0, y:0};
-
-// Yeni düğüm oluştur
-function createNode(x, y, text="Yeni Düğüm", parentId=null){
-  const id = ++idCounter;
-  const group = document.createElementNS("http://www.w3.org/2000/svg", "g");
-  group.setAttribute("class", "node");
-  group.setAttribute("transform", `translate(${x},${y})`);
-  group.dataset.id = id;
-
-  const rect = document.createElementNS("http://www.w3.org/2000/svg", "rect");
-  rect.setAttribute("width", 100);
-  rect.setAttribute("height", 40);
-  rect.setAttribute("x", -50);
-  rect.setAttribute("y", -20);
-
-  const label = document.createElementNS("http://www.w3.org/2000/svg", "text");
-  label.setAttribute("text-anchor","middle");
-  label.setAttribute("dy","5");
-  label.textContent = text;
-
-  const plus = document.createElementNS("http://www.w3.org/2000/svg", "text");
-  plus.setAttribute("x", 55);
-  plus.setAttribute("y", -10);
-  plus.setAttribute("class","add-btn");
-  plus.textContent = "+";
-  plus.addEventListener("click", e=>{
-    e.stopPropagation();
-    const pos = group.getCTM();
-    const childX = pos.e + 150;
-    const childY = pos.f + (Math.random()*60-30);
-    const child = createNode(childX, childY, "Alt Düğüm", id);
-    drawLink(id, child.id);
-  });
-
-  group.appendChild(rect);
-  group.appendChild(label);
-  group.appendChild(plus);
-  svg.appendChild(group);
-
-  makeDraggable(group);
-  makeEditable(label, id);
-
-  nodes.push({id, x, y, text, parentId});
-  return {id, x, y, text, parentId};
+const KEY = 'erdevelop-fikir', PAL = ['#5aa9ff', '#f0a04b', '#4cc38a', '#e5484d', '#a78bfa', '#2dd4bf', '#f472b6', '#facc15', '#94a3b8'];
+let D = store.json(KEY, null); if (!D || !Array.isArray(D.nodes)) D = { nodes: [], links: [], ls: 'c' };
+let nextId = Math.max(0, ...D.nodes.map(n => +n.id || 0)) + 1, sel = null, view = { x: 0, y: 0, s: 1 }, undo = [], redo = [], color = store.get('fikir:col', PAL[0]), shape = store.get('fikir:shape', 'r');
+const save = () => store.put(KEY, D), snap = () => { undo.push(JSON.stringify(D)); if (undo.length > 80) undo.shift(); redo = []; };
+const byId = id => D.nodes.find(n => n.id == id);
+const cv = document.createElement('canvas').getContext('2d'); cv.font = '500 14px "IBM Plex Sans", "Segoe UI", sans-serif';
+function dims(n) { const L = (n.text || ' ').split('\n'), w = Math.max(...L.map(l => cv.measureText(l || ' ').width)); let W = Math.min(300, w) + 32, H = L.length * 20 + 20; if (n.shape === 'e') { W *= 1.3; H *= 1.35; } if (n.shape === 'd') { W *= 1.5; H = Math.max(H * 1.6, 56); } if (n.shape === 'n') { W = Math.max(W, 140); H = Math.max(H, 80); } return [Math.max(W, 70), Math.max(H, 40)]; }
+function edgePt(n, tx, ty) { const [w, h] = dims(n), dx = tx - n.x, dy = ty - n.y; if (!dx && !dy) return [n.x, n.y]; if (n.shape === 'e') { const t = 1 / Math.sqrt((dx * dx) / (w * w / 4) + (dy * dy) / (h * h / 4)); return [n.x + dx * t, n.y + dy * t]; }
+  if (n.shape === 'd') { const t = 1 / (Math.abs(dx) / (w / 2) + Math.abs(dy) / (h / 2)); return [n.x + dx * t, n.y + dy * t]; } const t = Math.min(Math.abs((w / 2) / dx || 1e9), Math.abs((h / 2) / dy || 1e9)); return [n.x + dx * t, n.y + dy * t]; }
+function linkPath(a, b) { const ls = D.ls || 'c';
+  if (ls === 'o') { const [ax, ay] = edgePt(a, b.x, a.y), [bx, by] = edgePt(b, a.x, b.y), mx = (ax + bx) / 2; return `M${ax} ${ay} H${mx} V${by} H${bx}`; }
+  const [ax, ay] = edgePt(a, b.x, b.y), [bx, by] = edgePt(b, a.x, a.y); if (ls === 's') return `M${ax} ${ay} L${bx} ${by}`;
+  const hor = Math.abs(b.x - a.x) > Math.abs(b.y - a.y), k = .5; return hor ? `M${ax} ${ay} C${ax + (bx - ax) * k} ${ay} ${bx - (bx - ax) * k} ${by} ${bx} ${by}` : `M${ax} ${ay} C${ax} ${ay + (by - ay) * k} ${bx} ${by - (by - ay) * k} ${bx} ${by}`; }
+function shapeSvg(n, w, h, fill, stroke, sw) { const x = n.x - w / 2, y = n.y - h / 2;
+  if (n.shape === 'e') return `<ellipse cx="${n.x}" cy="${n.y}" rx="${w / 2}" ry="${h / 2}" fill="${fill}" stroke="${stroke}" stroke-width="${sw}"/>`;
+  if (n.shape === 'd') return `<path d="M${n.x} ${y}L${x + w} ${n.y}L${n.x} ${y + h}L${x} ${n.y}Z" fill="${fill}" stroke="${stroke}" stroke-width="${sw}" stroke-linejoin="round"/>`;
+  if (n.shape === 'n') return `<path d="M${x} ${y}H${x + w - 16}L${x + w} ${y + 16}V${y + h}H${x}Z" fill="${fill}" stroke="${stroke}" stroke-width="${sw}" stroke-linejoin="round"/><path d="M${x + w - 16} ${y}V${y + 16}H${x + w}" fill="none" stroke="${stroke}" stroke-width="${sw}"/>`;
+  return `<rect x="${x}" y="${y}" width="${w}" height="${h}" rx="${n.shape === 'p' ? h / 2 : 10}" fill="${fill}" stroke="${stroke}" stroke-width="${sw}"/>`; }
+const svg = $('svg'), stage = $('stage');
+function render(ghost) {
+  const panel = TM.css('--panel'), fg = TM.css('--fg'), muted = TM.css('--muted'); let L = '', N = '';
+  (D.links || []).forEach(l => { const a = byId(l.parentId), b = byId(l.childId); if (!a || !b) return; const d = linkPath(a, b), on = sel === 'L' + l.id, col = on ? fg : (a.color || muted);
+    L += `<g data-link="${l.id}"><path class="lkh" d="${d}"/><path class="lk" d="${d}" stroke="${col}" stroke-width="${on ? 3 : 2}" marker-end="url(#ar)" opacity="${on ? 1 : .8}"/></g>`; });
+  if (ghost) L += `<path class="lk" d="M${ghost[0]} ${ghost[1]} L${ghost[2]} ${ghost[3]}" stroke="${TM.css('--accent')}" stroke-width="2" stroke-dasharray="6 4"/>`;
+  D.nodes.forEach(n => { const [w, h] = dims(n), c = n.color || PAL[0], on = sel == n.id, lines = (n.text || '').split('\n'), note = n.shape === 'n';
+    const fill = note ? c : `color-mix(in srgb, ${c} 16%, ${panel})`, tc = note ? '#10151c' : fg;
+    N += `<g class="nd${on ? ' sel' : ''}" data-id="${n.id}">${shapeSvg(n, w, h, fill, on ? fg : c, on ? 2.5 : 1.6)}`
+      + lines.map((t, i) => `<text x="${n.x}" y="${n.y + (i - (lines.length - 1) / 2) * 20}" text-anchor="middle" fill="${tc}" style="font:500 14px 'IBM Plex Sans','Segoe UI',sans-serif">${esc(t)}</text>`).join('')
+      + `<circle class="hd" data-h="${n.id}" cx="${n.x + w / 2}" cy="${n.y}" r="7" fill="${c}" stroke="${panel}" stroke-width="2"/><g class="hd" data-plus="${n.id}"><circle cx="${n.x}" cy="${n.y + h / 2 + 14}" r="9" fill="${panel}" stroke="${c}" stroke-width="1.5"/><text x="${n.x}" y="${n.y + h / 2 + 14}" text-anchor="middle" fill="${c}" style="font:700 14px sans-serif">+</text></g></g>`; });
+  svg.innerHTML = `<defs><marker id="ar" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0 0L10 5L0 10z" fill="${muted}"/></marker></defs><g id="vp" transform="translate(${view.x} ${view.y}) scale(${view.s})">${L}${N}</g>`;
+  $('hint').hidden = D.nodes.length > 0; $('bUndo').disabled = !undo.length; $('bRedo').disabled = !redo.length; $('bDel').disabled = !sel; $('lstyle').value = D.ls || 'c';
 }
-
-// Düzenleme
-function makeEditable(textEl, nodeId){
-  textEl.addEventListener("dblclick", e=>{
-    e.stopPropagation();
-    const node = nodes.find(n=>n.id==nodeId);
-    const newText = prompt("Düğüm metni:", node.text);
-    if(newText!==null){ node.text = newText; textEl.textContent=newText; }
-  });
-}
-
-// Spline bağlantı
-function drawLink(parentId, childId){
-  const parent = svg.querySelector(`[data-id='${parentId}']`);
-  const child = svg.querySelector(`[data-id='${childId}']`);
-  const p = parent.getCTM();
-  const c = child.getCTM();
-  const dx = (c.e - p.e)/2;
-  const path = document.createElementNS("http://www.w3.org/2000/svg","path");
-  path.setAttribute("d",`M${p.e},${p.f} C${p.e+dx},${p.f} ${c.e-dx},${c.f} ${c.e},${c.f}`);
-  path.dataset.parent = parentId;
-  path.dataset.child = childId;
-  svg.insertBefore(path, svg.firstChild);
-  links.push({parentId, childId});
-}
-
-// Bağlantı güncelle
-function updateLinks(nodeId){
-  svg.querySelectorAll("path").forEach(path=>{
-    if(path.dataset.parent==nodeId || path.dataset.child==nodeId){
-      const parent = svg.querySelector(`[data-id='${path.dataset.parent}']`).getCTM();
-      const child  = svg.querySelector(`[data-id='${path.dataset.child}']`).getCTM();
-      const dx = (child.e - parent.e)/2;
-      path.setAttribute("d",`M${parent.e},${parent.f} C${parent.e+dx},${parent.f} ${child.e-dx},${child.f} ${child.e},${child.f}`);
-    }
-  });
-}
-
-// Sürükleme
-function makeDraggable(group){
-  let offsetX, offsetY;
-  group.addEventListener("mousedown", e=>{
-    if(e.target.tagName==="rect" || e.target.tagName==="text"){
-      const m=group.getCTM();
-      offsetX=e.clientX - m.e;
-      offsetY=e.clientY - m.f;
-      function onMove(ev){
-        const x=ev.clientX-offsetX;
-        const y=ev.clientY-offsetY;
-        group.setAttribute("transform",`translate(${x},${y})`);
-        updateLinks(group.dataset.id);
-      }
-      function onUp(){ window.removeEventListener("mousemove",onMove); window.removeEventListener("mouseup",onUp); }
-      window.addEventListener("mousemove",onMove);
-      window.addEventListener("mouseup",onUp);
-    }
-  });
-}
-
-// Boş alana tıkla → popup
-svg.addEventListener("click", e=>{
-  if(e.target===svg){
-    popup.style.display="block";
-    popup.style.left = (e.clientX+10)+"px";
-    popup.style.top = (e.clientY+10)+"px";
-    popupPos = {x:e.offsetX, y:e.offsetY};
-  }
+const toW = (cx, cy) => { const b = stage.getBoundingClientRect(); return [(cx - b.left - view.x) / view.s, (cy - b.top - view.y) / view.s]; };
+function addNode(x, y, text = '', from) { snap(); const n = { id: nextId++, x: Math.round(x / 12) * 12, y: Math.round(y / 12) * 12, text, color: from ? (byId(from).color || color) : color, shape }; D.nodes.push(n); if (from) { D.links.push({ id: nextId++, parentId: from, childId: n.id }); } sel = n.id; save(); render(); edit(n.id, true); return n; }
+function delSel() { if (!sel) return; snap(); if (String(sel)[0] === 'L') D.links = D.links.filter(l => 'L' + l.id !== sel); else { D.nodes = D.nodes.filter(n => n.id != sel); D.links = D.links.filter(l => l.parentId != sel && l.childId != sel); } sel = null; save(); render(); }
+/* düzenleme */
+const ed = $('edit'); let editing = null;
+function edit(id, isNew) { const n = byId(id); if (!n) return; editing = { id, isNew, old: n.text }; const [w, h] = dims(n), b = stage.getBoundingClientRect();
+  Object.assign(ed.style, { display: 'block', left: (n.x - w / 2) * view.s + view.x + 'px', top: (n.y - h / 2) * view.s + view.y + 'px', width: Math.max(160, w * view.s) + 'px', height: Math.max(40, h * view.s) + 'px', fontSize: Math.max(12, 14 * view.s) + 'px' }); ed.value = n.text; ed.focus(); ed.select(); }
+function endEdit(ok) { if (!editing) return; const e = editing, n = byId(e.id); editing = null; ed.style.display = 'none'; if (!n) return; const v = ed.value.replace(/\s+$/, '');
+  if (ok && v) { if (v !== e.old) { if (!e.isNew) snap(); n.text = v; } } else if (e.isNew && !v) { D.nodes = D.nodes.filter(x => x !== n); D.links = D.links.filter(l => l.childId != n.id && l.parentId != n.id); undo.pop(); sel = null; } save(); render(); }
+ed.addEventListener('keydown', e => { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); endEdit(true); } else if (e.key === 'Escape') endEdit(false); else if (e.key === 'Tab') { e.preventDefault(); const id = editing && editing.id; endEdit(true); const n = byId(id); if (n) addNode(n.x + dims(n)[0] + 80, n.y, '', n.id); } });
+ed.addEventListener('blur', () => endEdit(true));
+/* işaretçi */
+const pts = new Map(); let act = null;
+stage.addEventListener('pointerdown', e => {
+  if (e.target === ed) return; stage.setPointerCapture(e.pointerId); pts.set(e.pointerId, [e.clientX, e.clientY]);
+  if (pts.size === 2) { const [a, b] = [...pts.values()]; act = { pinch: Math.hypot(a[0] - b[0], a[1] - b[1]), s: view.s, vx: view.x, vy: view.y, cx: (a[0] + b[0]) / 2, cy: (a[1] + b[1]) / 2 }; return; }
+  const plus = e.target.closest('[data-plus]'); if (plus) { const n = byId(plus.dataset.plus), [, h] = dims(n); addNode(n.x, n.y + h + 70, '', n.id); act = null; return; }
+  const hd = e.target.closest('[data-h]'); if (hd) { act = { link: hd.dataset.h }; return; }
+  const lk = e.target.closest('[data-link]'); if (lk) { sel = 'L' + lk.dataset.link; render(); act = null; return; }
+  const g = e.target.closest('.nd'); if (g) { if (editing) endEdit(true); sel = g.dataset.id; const n = byId(sel), [wx, wy] = toW(e.clientX, e.clientY); act = { node: n, dx: wx - n.x, dy: wy - n.y, moved: false, before: JSON.stringify(D) }; render(); return; }
+  sel = null; render(); act = { pan: 1, x: e.clientX, y: e.clientY, vx: view.x, vy: view.y };
 });
-
-// Popup menü
-addBtn.addEventListener("click", ()=>{
-  createNode(popupPos.x, popupPos.y, "Kök Düğüm");
-  popup.style.display="none";
+stage.addEventListener('pointermove', e => { if (!pts.has(e.pointerId) || !act) return; pts.set(e.pointerId, [e.clientX, e.clientY]);
+  if (act.pinch) { const [a, b] = [...pts.values()], d = Math.hypot(a[0] - b[0], a[1] - b[1]), ns = Math.min(3, Math.max(.2, act.s * d / act.pinch)), bb = stage.getBoundingClientRect(), cx = act.cx - bb.left, cy = act.cy - bb.top; view.x = cx - (cx - act.vx) * ns / act.s; view.y = cy - (cy - act.vy) * ns / act.s; view.s = ns; render(); return; }
+  if (act.pan) { view.x = act.vx + e.clientX - act.x; view.y = act.vy + e.clientY - act.y; $('vp').setAttribute('transform', `translate(${view.x} ${view.y}) scale(${view.s})`); return; }
+  const [wx, wy] = toW(e.clientX, e.clientY);
+  if (act.node) { act.moved = true; act.node.x = Math.round((wx - act.dx) / 12) * 12; act.node.y = Math.round((wy - act.dy) / 12) * 12; render(); return; }
+  if (act.link) { const n = byId(act.link); render([n.x + dims(n)[0] / 2, n.y, wx, wy]); act.wx = wx; act.wy = wy; }
 });
-cancelBtn.addEventListener("click", ()=>{
-  popup.style.display="none";
-});
-
-// JSON
-function exportJSON(){
-  const data={nodes,links};
-  const blob=new Blob([JSON.stringify(data)],{type:"application/json"});
-  const a=document.createElement("a");
-  a.href=URL.createObjectURL(blob);
-  a.download="mindmap.json";
-  a.click();
-}
-function importJSON(event){
-  const file=event.target.files[0];
-  if(!file) return;
-  const reader=new FileReader();
-  reader.onload=function(e){
-    const data=JSON.parse(e.target.result);
-    nodes=[]; links=[];
-    svg.innerHTML="";
-    data.nodes.forEach(n=>{
-      const node=createNode(n.x,n.y,n.text,n.parentId);
-      node.id=n.id; if(n.id>idCounter) idCounter=n.id;
-    });
-    data.links.forEach(l=>{ drawLink(l.parentId,l.childId); });
-  };
-  reader.readAsText(file);
-}
-function exportPNG(){
-  const xml=new XMLSerializer().serializeToString(svg);
-  const svg64=btoa(xml);
-  const image64='data:image/svg+xml;base64,'+svg64;
-  const a=document.createElement("a");
-  a.href=image64;
-  a.download="mindmap.png";
-  a.click();
-}
+const up = e => { pts.delete(e.pointerId); if (!act) return;
+  if (act.node && act.moved) { undo.push(act.before); redo = []; save(); }
+  if (act.link && act.wx != null) { const t = D.nodes.find(n => { const [w, h] = dims(n); return Math.abs(act.wx - n.x) <= w / 2 && Math.abs(act.wy - n.y) <= h / 2; });
+    if (t && t.id != act.link) { if (!D.links.some(l => l.parentId == act.link && l.childId == t.id)) { snap(); D.links.push({ id: nextId++, parentId: +act.link || act.link, childId: t.id }); save(); } } else if (!t) { const n = byId(act.link); addNode(act.wx, act.wy, '', n.id); } render(); }
+  if (!pts.size) act = null; };
+stage.addEventListener('pointerup', up); stage.addEventListener('pointercancel', up);
+stage.addEventListener('dblclick', e => { const g = e.target.closest('.nd'); if (g) return edit(g.dataset.id); if (e.target.closest('[data-link]')) return; const [x, y] = toW(e.clientX, e.clientY); addNode(x, y); });
+stage.addEventListener('wheel', e => { e.preventDefault(); const b = stage.getBoundingClientRect(), cx = e.clientX - b.left, cy = e.clientY - b.top, ns = Math.min(3, Math.max(.2, view.s * (e.deltaY > 0 ? .9 : 1.1))); view.x = cx - (cx - view.x) * ns / view.s; view.y = cy - (cy - view.y) * ns / view.s; view.s = ns; render(); }, { passive: false });
+addEventListener('keydown', e => { if (editing || e.target.closest('input,textarea,select')) return; const mod = e.ctrlKey || e.metaKey;
+  if (mod && e.key.toLowerCase() === 'z') { e.preventDefault(); e.shiftKey ? doRedo() : doUndo(); } else if (mod && e.key.toLowerCase() === 'y') { e.preventDefault(); doRedo(); }
+  else if ((e.key === 'Delete' || e.key === 'Backspace') && sel) { e.preventDefault(); delSel(); } else if ((e.key === 'F2' || e.key === 'Enter') && sel && String(sel)[0] !== 'L') { e.preventDefault(); edit(sel); }
+  else if (e.key === 'Tab' && sel && String(sel)[0] !== 'L') { e.preventDefault(); const n = byId(sel); addNode(n.x + dims(n)[0] + 80, n.y, '', n.id); } });
+function doUndo() { if (!undo.length) return; redo.push(JSON.stringify(D)); D = JSON.parse(undo.pop()); sel = null; save(); render(); }
+function doRedo() { if (!redo.length) return; undo.push(JSON.stringify(D)); D = JSON.parse(redo.pop()); sel = null; save(); render(); }
+function fit() { if (!D.nodes.length) { view = { x: stage.clientWidth / 2, y: stage.clientHeight / 2, s: 1 }; return render(); } let a = 1e9, b = 1e9, c = -1e9, d = -1e9; D.nodes.forEach(n => { const [w, h] = dims(n); a = Math.min(a, n.x - w / 2); b = Math.min(b, n.y - h / 2); c = Math.max(c, n.x + w / 2); d = Math.max(d, n.y + h / 2 + 24); });
+  const W = stage.clientWidth, H = stage.clientHeight; view.s = Math.min(1.5, Math.max(.2, Math.min((W - 80) / (c - a), (H - 80) / (d - b)))); view.x = W / 2 - (a + c) / 2 * view.s; view.y = H / 2 - (b + d) / 2 * view.s; render(); }
+const zoomBy = f => { const W = stage.clientWidth, H = stage.clientHeight, ns = Math.min(3, Math.max(.2, view.s * f)); view.x = W / 2 - (W / 2 - view.x) * ns / view.s; view.y = H / 2 - (H / 2 - view.y) * ns / view.s; view.s = ns; render(); };
+$('zIn').onclick = () => zoomBy(1.2); $('zOut').onclick = () => zoomBy(1 / 1.2); $('zFit').onclick = fit;
+/* araç çubuğu */
+$('sw').innerHTML = PAL.map(c => `<button type="button" data-c="${c}" style="background:${c}" aria-label="renk"></button>`).join('');
+const paintSw = () => $('sw').querySelectorAll('button').forEach(b => b.style.boxShadow = b.dataset.c === color ? `0 0 0 2px ${TM.css('--fg')}` : `0 0 0 1px ${TM.css('--line')}`);
+$('sw').onclick = e => { const b = e.target.closest('[data-c]'); if (!b) return; color = b.dataset.c; store.set('fikir:col', color); paintSw(); const n = byId(sel); if (n) { snap(); n.color = color; save(); render(); } };
+$('shape').value = shape; $('shape').onchange = () => { shape = $('shape').value; store.set('fikir:shape', shape); const n = byId(sel); if (n) { snap(); n.shape = shape; save(); render(); } };
+$('lstyle').onchange = () => { snap(); D.ls = $('lstyle').value; save(); render(); };
+$('bAdd').onclick = () => { const [x, y] = toW(stage.getBoundingClientRect().left + stage.clientWidth / 2 + (Math.random() - .5) * 120, stage.getBoundingClientRect().top + stage.clientHeight / 2 + (Math.random() - .5) * 80); addNode(x, y); };
+$('bDel').onclick = delSel; $('bUndo').onclick = doUndo; $('bRedo').onclick = doRedo;
+$('bClear').onclick = () => { if (!D.nodes.length || !confirm('Tahtadaki her şey silinsin mi?')) return; snap(); D = { nodes: [], links: [], ls: D.ls }; sel = null; save(); fit(); };
+function exportSvg() { let a = 1e9, b = 1e9, c = -1e9, d = -1e9; D.nodes.forEach(n => { const [w, h] = dims(n); a = Math.min(a, n.x - w / 2); b = Math.min(b, n.y - h / 2); c = Math.max(c, n.x + w / 2 + 10); d = Math.max(d, n.y + h / 2); });
+  const p = 40, W = c - a + 2 * p, H = d - b + 2 * p, v = { ...view }, s = sel; view = { x: p - a, y: p - b, s: 1 }; sel = null; render(); svg.querySelectorAll('.hd').forEach(x => x.remove()); const inner = svg.innerHTML.replace(/color-mix\([^)]*\)/g, m => mix(m)); view = v; sel = s; render();
+  return { W, H, s: `<svg xmlns="http://www.w3.org/2000/svg" width="${W}" height="${H}" viewBox="0 0 ${W} ${H}"><rect width="100%" height="100%" fill="${TM.css('--bg')}"/>${inner}</svg>` }; }
+function mix(m) { const r = m.match(/(#[0-9a-f]{6})\s+(\d+)%,\s*(#[0-9a-f]{6})/i); if (!r) return TM.css('--panel'); const A = parseInt(r[1].slice(1), 16), B = parseInt(r[3].slice(1), 16), t = +r[2] / 100, ch = s => Math.round(((A >> s) & 255) * t + ((B >> s) & 255) * (1 - t)); return `rgb(${ch(16)},${ch(8)},${ch(0)})`; }
+const empty = () => { if (!D.nodes.length) { TM.toast('Tahta boş'); return true; } };
+$('bSvg').onclick = () => { if (empty()) return; TM.download('fikir-tahtasi.svg', new Blob([exportSvg().s], { type: 'image/svg+xml' })); };
+$('bPng').onclick = () => { if (empty()) return; const { W, H, s } = exportSvg(), img = new Image(), u = URL.createObjectURL(new Blob([s], { type: 'image/svg+xml' })); img.onload = () => { const c = document.createElement('canvas'); c.width = W * 2; c.height = H * 2; const g = c.getContext('2d'); g.scale(2, 2); g.drawImage(img, 0, 0); URL.revokeObjectURL(u); c.toBlob(b => TM.download('fikir-tahtasi.png', b), 'image/png'); }; img.src = u; };
+$('bJson').onclick = () => TM.download('fikir-tahtasi.json', new Blob([JSON.stringify(D, null, 1)], { type: 'application/json' }));
+$('imp').onchange = async e => { const f = e.target.files[0]; e.target.value = ''; if (!f) return; try { const o = JSON.parse(await f.text()); if (!Array.isArray(o.nodes)) throw 0; snap();
+    D = { nodes: o.nodes.map(n => ({ id: n.id, x: +n.x || 0, y: +n.y || 0, text: n.text || '', color: n.color || PAL[0], shape: n.shape || 'r' })), links: (o.links || []).map((l, i) => ({ id: l.id || 'i' + i, parentId: l.parentId, childId: l.childId })), ls: o.ls || 'c' };
+    nextId = Math.max(0, ...D.nodes.map(n => +n.id || 0), ...D.links.map(l => +l.id || 0)) + 1; save(); fit(); TM.toast('İçe aktarıldı'); } catch (er) { TM.toast('Dosya okunamadı'); } };
+TM.onMode(() => { paintSw(); render(); }); addEventListener('resize', () => render());
+if (!D.nodes.length) { D.nodes = [{ id: 1, x: 0, y: 0, text: 'Ana fikir', color: '#5aa9ff', shape: 'p' }, { id: 2, x: 240, y: -84, text: 'Araştır', color: '#4cc38a', shape: 'r' }, { id: 3, x: 240, y: 84, text: 'Karar ver?', color: '#f0a04b', shape: 'd' }, { id: 4, x: -240, y: 0, text: 'Not:\nçift tıkla, yaz', color: '#facc15', shape: 'n' }];
+  D.links = [{ id: 5, parentId: 1, childId: 2 }, { id: 6, parentId: 1, childId: 3 }]; nextId = 7; save(); }
+paintSw(); fit();
 </script>
 </body>
 </html>
