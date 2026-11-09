@@ -1,164 +1,188 @@
-<!DOCTYPE html>
-<html lang="tr">
+<!doctype html>
+<html lang="tr" data-mode="dark">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Yakıt Hesaplama Aracı</title>
-    <style>
-        body {
-            display: flex;
-            justify-content: center;
-            align-items: center;
-            height: 100vh;
-            margin: 0;
-            font-family: Arial, sans-serif;
-            background-color: #f0f0f0;
-            overflow: hidden;
-        }
-        .calculator {
-            position: relative;
-            z-index: 1;
-            background: #fff;
-            padding: 20px;
-            border-radius: 10px;
-            box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
-            text-align: center;
-        }
-        .calculator label {
-            display: block;
-            margin-top: 10px;
-            font-weight: bold;
-        }
-        .calculator input {
-            width: 100%;
-            padding: 10px;
-            margin: 5px 0;
-            border: 1px solid #ccc;
-            border-radius: 5px;
-        }
-        #background {
-            position: absolute;
-            top: 0;
-            left: 0;
-            width: 100%;
-            height: 100%;
-            z-index: 0;
-        }
-    </style>
+<meta charset="utf-8">
+
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Yakıt Hesaplama | erdevelop</title>
+<meta name="description" content="Yolculuğun yakıt maliyeti, kişi başı payı, kaç depo yakacağın ve nerede yakıt alman gerektiği — bir de aracının gerçek tüketimini ölç.">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Chakra+Petch:wght@600;700&family=IBM+Plex+Sans:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500&display=swap">
+
+<link rel="stylesheet" href="kesif/tema.css">
+<style>
+
+.calc { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1.15fr); gap: 16px; align-items: start; }
+@media (max-width: 860px) { .calc { grid-template-columns: 1fr; } }
+.fg { display: grid; grid-template-columns: 1fr 1fr; gap: 12px 14px; }
+.fg .full { grid-column: 1 / -1; }
+.fd label { display: block; font: 500 11px var(--f-mono); color: var(--muted); text-transform: uppercase; letter-spacing: .8px; margin-bottom: 5px; }
+.fd .iw { position: relative; }
+.fd .inp { width: 100%; padding-right: 54px; font: 500 16px var(--f-mono); }
+.fd .u { position: absolute; right: 10px; top: 50%; transform: translateY(-50%); font: 400 12px var(--f-mono); color: var(--muted); pointer-events: none; }
+.fd small { display: block; color: var(--muted); font-size: 11.5px; margin-top: 4px; }
+.tg { display: flex; align-items: center; gap: 8px; font-size: 13.5px; cursor: pointer; user-select: none; }
+.tg input { width: 16px; height: 16px; accent-color: var(--accent); }
+.big { padding: 18px 20px; border: 1px solid var(--line); border-radius: 8px; background: var(--panel); position: relative; overflow: hidden; }
+.big::before { content: ""; position: absolute; inset: 0 auto 0 0; width: 4px; background: var(--accent); }
+.big span { font: 500 11px var(--f-mono); color: var(--muted); text-transform: uppercase; letter-spacing: 1px; }
+.big b { display: block; font: 700 clamp(2rem, 6vw, 2.9rem)/1.1 var(--f-display); margin: 4px 0 2px; color: var(--fg); }
+.big small { color: var(--muted); font-size: 13px; }
+.res .stats { margin-top: 12px; grid-template-columns: repeat(2, minmax(0, 1fr)); }
+.route { margin-top: 16px; }
+.route h3 { font: 600 13px var(--f-body); margin: 0 0 8px; display: flex; gap: 8px; align-items: baseline; }
+.route h3 small { color: var(--muted); font-weight: 400; }
+.bar { position: relative; height: 34px; border-radius: 6px; background: var(--panel-2); border: 1px solid var(--line); overflow: hidden; }
+.bar .seg2 { position: absolute; top: 0; bottom: 0; background: color-mix(in srgb, var(--accent) 22%, transparent); border-right: 2px solid var(--accent); }
+.bar .seg2:nth-child(even) { background: color-mix(in srgb, var(--accent) 12%, transparent); }
+.bar .pin { position: absolute; top: 50%; transform: translate(-50%, -50%); font-size: 15px; filter: drop-shadow(0 1px 2px rgba(0,0,0,.4)); }
+.bar .half { position: absolute; top: 0; bottom: 0; width: 0; border-left: 2px dashed var(--hot); }
+.axis { display: flex; justify-content: space-between; font: 400 11px var(--f-mono); color: var(--muted); margin-top: 5px; }
+.legend { display: flex; gap: 14px; flex-wrap: wrap; font-size: 12px; color: var(--muted); margin-top: 8px; }
+.legend i { display: inline-block; width: 10px; height: 10px; border-radius: 2px; margin-right: 5px; vertical-align: -1px; }
+.gauge { display: flex; align-items: center; gap: 12px; margin-top: 14px; }
+.gauge svg { flex: none; }
+.gauge p { margin: 0; font-size: 13.5px; color: var(--muted); }
+.gauge p b { color: var(--fg); }
+table.t td.r b { font-family: var(--f-mono); }
+.t tr.cur td { background: var(--accent-dim); }
+.mini { display: grid; grid-template-columns: 1fr 1fr auto; gap: 12px; align-items: end; }
+@media (max-width: 560px) { .fg, .mini { grid-template-columns: 1fr; } }
+.out { font: 700 1.6rem var(--f-display); }
+.res .stat b { font-size: clamp(1.15rem, 2.2vw, 1.45rem); white-space: nowrap; overflow: visible; text-overflow: clip; }
+.fd input[type=number] { -moz-appearance: textfield; } .fd input::-webkit-outer-spin-button, .fd input::-webkit-inner-spin-button { -webkit-appearance: none; margin: 0; }
+#fill { width: 100%; accent-color: var(--accent); height: 38px; }
+
+</style>
 </head>
 <body>
-    <canvas id="background"></canvas>
-    <div class="calculator">
-        <h2>Yakıt Hesaplama Aracı</h2>
-        <label for="fuelPrice">Yakıt Fiyatı (TL)</label>
-        <input type="number" id="fuelPrice" placeholder="Yakıt Fiyatı (TL)" step="0.01" oninput="calculate()">
-        
-        <label for="fuelConsumption">100 km'de Harcanan Yakıt (L)</label>
-        <input type="number" id="fuelConsumption" placeholder="100 km'de Harcanan Yakıt (L)" step="0.01" oninput="calculate()">
-        
-        <label for="tankCapacity">Depo Kapasitesi (L)</label>
-        <input type="number" id="tankCapacity" placeholder="Depo Kapasitesi (L)" step="0.01" oninput="calculate()">
-        
-        <label for="totalKm">Toplam Km</label>
-        <input type="number" id="totalKm" placeholder="Toplam Km" step="0.01" oninput="calculate()">
-        
-        <p id="result"></p>
+<div class="bg" aria-hidden="true"></div>
+<div class="topbar"><div class="wrap">
+  <a class="brand" href="./">erdevelop<span>_</span></a><span class="crumb">/ tools / yakıt</span><span class="sp"></span>
+  <a class="tb" href="Tools.html">Araçlar</a><button class="tb" type="button" id="modeBtn">LIGHT</button>
+</div></div>
+<main class="wrap">
+  <header class="head"><h1>Yakıt Hesaplama</h1><p>Yolculuğun yakıt maliyeti, kişi başı payı, kaç depo yakacağın ve nerede yakıt alman gerektiği — bir de aracının gerçek tüketimini ölç.</p></header>
+
+  <div class="layer">
+    <div class="layer-head"><span class="swatch"></span><h2>Yolculuk</h2><span class="sp"></span><button class="btn" type="button" id="share">🔗 Bağlantıyı kopyala</button><button class="btn" type="button" id="reset">Sıfırla</button></div>
+    <div class="calc">
+      <div class="panel">
+        <div class="fg">
+          <div class="fd full"><label>Yakıt türü</label><div class="seg" id="type" role="group" aria-label="Yakıt türü"><button type="button" data-t="benzin">⛽ Benzin</button><button type="button" data-t="motorin">🛢️ Motorin</button><button type="button" data-t="lpg">🔵 LPG</button></div></div>
+          <div class="fd"><label for="price">Litre fiyatı</label><div class="iw"><input class="inp" id="price" type="number" inputmode="decimal" min="0" step="0.01"><span class="u">TL/L</span></div><small id="priceNote">Türe göre ayrı hatırlanır</small></div>
+          <div class="fd"><label for="cons">Ortalama tüketim</label><div class="iw"><input class="inp" id="cons" type="number" inputmode="decimal" min="0" step="0.1"><span class="u">L/100</span></div><small><a href="#olc">Bilmiyorsan ölç ↓</a></small></div>
+          <div class="fd"><label for="km">Mesafe</label><div class="iw"><input class="inp" id="km" type="number" inputmode="decimal" min="0" step="1"><span class="u">km</span></div></div>
+          <div class="fd"><label for="tank">Depo hacmi</label><div class="iw"><input class="inp" id="tank" type="number" inputmode="decimal" min="0" step="1"><span class="u">L</span></div></div>
+          <div class="fd"><label for="fill">Yola çıkarken depo</label><div class="iw"><input id="fill" type="range" min="0" max="100" step="5"></div><small id="fillTxt"></small></div>
+          <div class="fd"><label for="ppl">Kişi sayısı</label><div class="iw"><input class="inp" id="ppl" type="number" inputmode="numeric" min="1" step="1"><span class="u">kişi</span></div></div>
+          <div class="fd"><label for="toll">Otoyol / köprü</label><div class="iw"><input class="inp" id="toll" type="number" inputmode="decimal" min="0" step="1"><span class="u">TL</span></div><small>Tek yön, isteğe bağlı</small></div>
+          <div class="fd" style="align-self:center"><label class="tg"><input type="checkbox" id="rt"> Gidiş-dönüş</label></div>
+        </div>
+      </div>
+      <div class="res" aria-live="polite">
+        <div class="big"><span>Toplam maliyet</span><b id="total">–</b><small id="totalSub"></small></div>
+        <div class="stats" id="st"></div>
+        <div class="route" id="route"></div>
+        <div class="gauge" id="gauge"></div>
+      </div>
     </div>
+  </div>
+  <div class="layer">
+    <div class="layer-head"><span class="swatch"></span><h2>Fiyat değişirse</h2><span class="meta">aynı yolculuk, farklı litre fiyatı</span></div>
+    <div class="tscroll"><table class="t" id="tbl"></table></div>
+  </div>
+  <div class="layer" id="olc">
+    <div class="layer-head"><span class="swatch"></span><h2>Tüketimini ölç</h2><span class="meta">depo-depo yöntemi</span></div>
+    <div class="panel">
+      <p class="note" style="margin-top:0">Depoyu ağzına kadar doldur, kilometre sayacını sıfırla. Bir sonraki dolumda yine tam doldur; aldığın litreyi ve gittiğin kilometreyi yaz.</p>
+      <div class="mini">
+        <div class="fd"><label for="mKm">Gidilen yol</label><div class="iw"><input class="inp" id="mKm" type="number" inputmode="decimal" min="0"><span class="u">km</span></div></div>
+        <div class="fd"><label for="mL">Alınan yakıt</label><div class="iw"><input class="inp" id="mL" type="number" inputmode="decimal" min="0" step="0.01"><span class="u">L</span></div></div>
+        <div><div class="out" id="mOut">–</div><button class="btn pri" type="button" id="mUse" disabled>Hesapta kullan ↑</button></div>
+      </div>
+    </div>
+  </div>
+</main>
+<footer><div class="wrap"><span>Hesaplar tarayıcında yapılır; girdiğin değerler bu cihazda saklanır.</span><a href="Tools.html">← tüm araçlar</a></div></footer>
 
-    <script>
-        function calculate() {
-            const fuelPrice = parseFloat(document.getElementById('fuelPrice').value);
-            const fuelConsumption = parseFloat(document.getElementById('fuelConsumption').value);
-            const tankCapacity = parseFloat(document.getElementById('tankCapacity').value);
-            const totalKm = parseFloat(document.getElementById('totalKm').value);
+<script src="kesif/tema.js"></script>
+<script>
 
-            if (isNaN(fuelPrice) || isNaN(fuelConsumption) || isNaN(tankCapacity) || isNaN(totalKm)) {
-                document.getElementById('result').innerText = 'Lütfen tüm alanları doldurun.';
-                return;
-            }
+const K = 'erdevelop-yakit', DEF = { type: 'benzin', prices: { benzin: '', motorin: '', lpg: '' }, cons: 7, km: 450, tank: 50, fill: 100, ppl: 1, toll: 0, rt: false };
+let S = { ...DEF, ...store.json(K, {}) }; S.prices = { ...DEF.prices, ...(S.prices || {}) };
+/* bağlantıyla gelen değerler */
+const q = new URLSearchParams(location.search);
+if (q.has('km')) { ['cons', 'km', 'tank', 'fill', 'ppl', 'toll'].forEach(k => q.has(k) && (S[k] = +q.get(k))); if (q.has('t')) S.type = q.get('t'); if (q.has('p')) S.prices[S.type] = q.get('p'); S.rt = q.get('rt') === '1'; }
+const ids = ['price', 'cons', 'km', 'tank', 'fill', 'ppl', 'toll'];
+const num = id => { const v = parseFloat(String($(id).value).replace(',', '.')); return isFinite(v) ? v : NaN; };
+const tl = (n, d = 2) => nf(n, d) + ' ₺';
+function load() {
+  $('price').value = S.prices[S.type] ?? ''; ['cons', 'km', 'tank', 'fill', 'ppl', 'toll'].forEach(k => $(k).value = S[k] ?? ''); $('rt').checked = !!S.rt;
+  document.querySelectorAll('#type button').forEach(b => b.classList.toggle('on', b.dataset.t === S.type));
+}
+function save() {
+  S.prices[S.type] = $('price').value; ['cons', 'km', 'tank', 'fill', 'ppl', 'toll'].forEach(k => S[k] = $(k).value === '' ? '' : num(k)); S.rt = $('rt').checked; store.put(K, S);
+}
+function calc() {
+  save();
+  const price = num('price'), cons = num('cons'), km1 = num('km'), tank = num('tank'), fill = num('fill') / 100, ppl = Math.max(1, Math.round(num('ppl')) || 1), toll1 = num('toll') || 0, rt = $('rt').checked;
+  $('fillTxt').textContent = fill >= 1 ? 'Dolu' : fill <= 0 ? 'Boş' : '%' + Math.round(fill * 100) + (isFinite(tank) ? ' · ' + nf(tank * fill, 1) + ' L' : '');
+  const km = km1 * (rt ? 2 : 1), toll = toll1 * (rt ? 2 : 1);
+  if (!(cons > 0) || !(km > 0)) { $('total').textContent = '–'; $('totalSub').textContent = 'Tüketim ve mesafeyi gir.'; $('st').innerHTML = ''; $('route').innerHTML = ''; $('gauge').innerHTML = ''; $('tbl').innerHTML = ''; return; }
+  const L = km * cons / 100, hasP = price > 0, fuelCost = hasP ? L * price : NaN, total = fuelCost + toll;
+  $('total').textContent = hasP ? tl(total) : nf(L, 1) + ' L';
+  $('totalSub').textContent = hasP ? `${nf(km)} km${rt ? ' (gidiş-dönüş)' : ''} · ${nf(L, 1)} L yakıt${toll ? ' + ' + tl(toll, 0) + ' geçiş' : ''}` : 'Maliyet için litre fiyatını gir.';
+  const st = [];
+  if (hasP && ppl > 1) st.push(['Kişi başı', tl(total / ppl), ppl + ' kişiye bölündü']);
+  if (hasP) st.push(['Km başına', tl(price * cons / 100), 'yalnız yakıt']);
+  if (hasP) st.push(['100 km', tl(price * cons, 0), nf(cons, 1) + ' L']);
+  if (tank > 0) { st.push(['Tam depo menzili', nf(tank / cons * 100) + ' km', hasP ? 'depo ' + tl(tank * price, 0) : nf(tank) + ' L']); }
+  $('st').innerHTML = st.map(s => `<div class="stat"><span>${s[0]}</span><b>${s[1]}</b><small>${s[2]}</small></div>`).join('');
+  /* rota çubuğu: nerede yakıt alınmalı */
+  if (tank > 0) {
+    const range = tank / cons * 100, start = range * fill, reserve = range * 0.1; /* %10 yedekle dur */
+    const stops = []; let pos = start - reserve;
+    if (start <= 0) { stops.push(0); pos = range - reserve; }
+    while (pos < km) { stops.push(Math.max(0, pos)); pos += range - reserve; }
+    const pct = x => Math.min(100, Math.max(0, x / km * 100));
+    let segs = '', prev = 0; [...stops, km].forEach(x => { segs += `<div class="seg2" style="left:${pct(prev)}%;width:${pct(x) - pct(prev)}%"></div>`; prev = x; });
+    const pins = stops.map((x, i) => `<span class="pin" style="left:${Math.max(2, pct(x))}%" title="${i + 1}. dolum · ${nf(x)}. km">⛽</span>`).join('');
+    const half = rt ? `<div class="half" style="left:50%" title="Dönüş noktası"></div>` : '';
+    const need = Math.max(0, L - tank * fill);
+    $('route').innerHTML = `<h3>Yol boyunca yakıt <small>${stops.length ? stops.length + ' kez yakıt alman gerekir' : 'Depodaki yakıt yeter, durmana gerek yok'}</small></h3>
+      <div class="bar" role="img" aria-label="${stops.length} yakıt durağı">${segs}${half}${pins}</div>
+      <div class="axis"><span>0 km</span>${rt ? `<span>${nf(km / 2)} · dönüş</span>` : ''}<span>${nf(km)} km</span></div>
+      <div class="legend"><span><i style="background:var(--accent)"></i>bir depoyla gidilen bölüm</span><span>⛽ depo %10'a inince yakıt al</span>${rt ? '<span><i style="background:var(--hot)"></i>dönüş noktası</span>' : ''}</div>
+      ${stops.length ? `<p class="note">Durak kilometreleri: ${stops.map(x => nf(x)).join(' · ')}. Satın alman gereken yakıt yaklaşık <b>${nf(need, 1)} L</b>${hasP ? ' (' + tl(need * price, 0) + ')' : ''}.</p>` : ''}`;
+    const left = Math.max(0, tank * fill - L), lf = left / tank;
+    if (!stops.length) {
+      const a = Math.PI * (1 - lf), x = 50 + 38 * Math.cos(a), y = 50 - 38 * Math.sin(a), col = lf < .15 ? 'var(--hot)' : 'var(--accent)';
+      $('gauge').innerHTML = `<svg width="100" height="58" viewBox="0 0 100 58" aria-hidden="true"><path d="M12 50 A38 38 0 0 1 88 50" fill="none" stroke="var(--line)" stroke-width="8" stroke-linecap="round"/><path d="M12 50 A38 38 0 0 1 ${x.toFixed(1)} ${y.toFixed(1)}" fill="none" stroke="${col}" stroke-width="8" stroke-linecap="round"/><text x="50" y="50" text-anchor="middle" font-family="var(--f-mono)" font-size="13" fill="var(--fg)">%${Math.round(lf * 100)}</text></svg>
+        <p>Vardığında depoda yaklaşık <b>${nf(left, 1)} L</b> kalır — <b>${nf(left / cons * 100)} km</b> daha gidebilirsin.</p>`;
+    } else $('gauge').innerHTML = '';
+  } else { $('route').innerHTML = '<p class="note">Depo hacmini girersen kaç kez ve nerede yakıt alacağını gösteririm.</p>'; $('gauge').innerHTML = ''; }
+  /* fiyat tablosu */
+  if (hasP) {
+    const step = price > 20 ? 2 : 1, rows = [];
+    for (let i = -3; i <= 3; i++) { const p = +(price + i * step).toFixed(2); if (p <= 0) continue; const c = L * p + toll; rows.push(`<tr class="${i === 0 ? 'cur' : ''}"><td>${tl(p)}</td><td class="r"><b>${tl(c, 0)}</b></td><td class="r">${ppl > 1 ? tl(c / ppl, 0) : '–'}</td><td class="r muted">${i === 0 ? 'şu an' : (i > 0 ? '+' : '') + tl(L * i * step, 0)}</td></tr>`); }
+    $('tbl').innerHTML = `<thead><tr><th>Litre fiyatı</th><th class="r">Toplam</th><th class="r">Kişi başı</th><th class="r">Fark</th></tr></thead><tbody>${rows.join('')}</tbody>`;
+  } else $('tbl').innerHTML = '<tbody><tr><td class="muted">Litre fiyatını girince burada farklı fiyatlarla karşılaştırma görünür.</td></tr></tbody>';
+}
+ids.forEach(id => $(id).addEventListener('input', calc)); $('rt').onchange = calc;
+document.querySelectorAll('#type button').forEach(b => b.onclick = () => { save(); S.type = b.dataset.t; load(); calc(); });
+$('reset').onclick = () => { S = JSON.parse(JSON.stringify(DEF)); store.put(K, S); history.replaceState(null, '', location.pathname); load(); calc(); TM.toast('Değerler sıfırlandı'); };
+$('share').onclick = async () => {
+  const p = new URLSearchParams({ t: S.type, p: $('price').value, cons: $('cons').value, km: $('km').value, tank: $('tank').value, fill: $('fill').value, ppl: $('ppl').value, toll: $('toll').value, rt: $('rt').checked ? 1 : 0 });
+  const u = location.origin + location.pathname + '?' + p;
+  try { await navigator.clipboard.writeText(u); TM.toast('Bağlantı kopyalandı'); } catch (e) { prompt('Bağlantı:', u); }
+};
+/* tüketim ölçme */
+function meas() { const k = parseFloat($('mKm').value), l = parseFloat($('mL').value), ok = k > 0 && l > 0; $('mOut').textContent = ok ? nf(l / k * 100, 2) + ' L/100' : '–'; $('mUse').disabled = !ok; return ok ? +(l / k * 100).toFixed(2) : null; }
+$('mKm').oninput = $('mL').oninput = meas;
+$('mUse').onclick = () => { const v = meas(); if (v) { $('cons').value = v; calc(); $('cons').scrollIntoView({ behavior: 'smooth', block: 'center' }); TM.toast('Tüketim ' + nf(v, 2) + ' L/100 km olarak ayarlandı'); } };
+load(); calc();
 
-            const totalFuelNeeded = (totalKm / 100) * fuelConsumption;
-            const totalCost = totalFuelNeeded * fuelPrice;
-            const numberOfTanks = totalFuelNeeded / tankCapacity;
-            const costPerKm = (fuelConsumption / 100) * fuelPrice;
-
-            document.getElementById('result').innerText = `Toplam Yakıt Maliyeti: ${totalCost.toFixed(2)} TL\nToplam Depo Sayısı: ${Math.ceil(numberOfTanks)}\nKm Başına Yakıt Maliyeti: ${costPerKm.toFixed(2)} TL`;
-        }
-
-        // Background animation
-        const canvas = document.getElementById('background');
-        const ctx = canvas.getContext('2d');
-        canvas.width = window.innerWidth;
-        canvas.height = window.innerHeight;
-
-        const nodes = [];
-        const triangles = [];
-        const nodeCount = 200; // Daha fazla üçgen için düğüm sayısını artırdım
-
-        for (let i = 0; i < nodeCount; i++) {
-            nodes.push({
-                x: Math.random() * canvas.width,
-                y: Math.random() * canvas.height,
-                vx: (Math.random() - 0.5) * 0.5,
-                vy: (Math.random() - 0.5) * 0.5
-            });
-        }
-
-        function draw() {
-            ctx.clearRect(0, 0, canvas.width, canvas.height);
-            ctx.fillStyle = 'rgba(200, 200, 200, 0.8)';
-            ctx.strokeStyle = 'rgba(200, 200, 200, 0.8)';
-
-            nodes.forEach(node => {
-                ctx.beginPath();
-                ctx.arc(node.x, node.y, 2, 0, Math.PI * 2);
-                ctx.fill();
-            });
-
-            triangles.length = 0;
-
-            for (let i = 0; i < nodes.length; i++) {
-                for (let j = i + 1; j < nodes.length; j++) {
-                    for (let k = j + 1; k < nodes.length; k++) {
-                        const dx1 = nodes[i].x - nodes[j].x;
-                        const dy1 = nodes[i].y - nodes[j].y;
-                        const dx2 = nodes[j].x - nodes[k].x;
-                        const dy2 = nodes[j].y - nodes[k].y;
-                        const dx3 = nodes[k].x - nodes[i].x;
-                        const dy3 = nodes[k].y - nodes[i].y;
-
-                        const distance1 = Math.sqrt(dx1 * dx1 + dy1 * dy1);
-                        const distance2 = Math.sqrt(dx2 * dx2 + dy2 * dy2);
-                        const distance3 = Math.sqrt(dx3 * dx3 + dy3 * dy3);
-
-                        if (distance1 < 100 && distance2 < 100 && distance3 < 100) {
-                            triangles.push([nodes[i], nodes[j], nodes[k]]);
-                        }
-                    }
-                }
-            }
-
-            triangles.forEach(triangle => {
-                ctx.beginPath();
-                ctx.moveTo(triangle[0].x, triangle[0].y);
-                ctx.lineTo(triangle[1].x, triangle[1].y);
-                ctx.lineTo(triangle[2].x, triangle[2].y);
-                ctx.closePath();
-                ctx.stroke();
-            });
-
-            nodes.forEach(node => {
-                node.x += node.vx;
-                node.y += node.vy;
-
-                if (node.x < 0 || node.x > canvas.width) node.vx *= -1;
-                if (node.y < 0 || node.y > canvas.height) node.vy *= -1;
-            });
-
-            requestAnimationFrame(draw);
-        }
-
-        draw();
-    </script>
+</script>
 </body>
 </html>
