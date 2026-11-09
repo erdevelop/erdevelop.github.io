@@ -1,0 +1,180 @@
+<!doctype html>
+<html lang="tr" data-mode="dark">
+<head>
+<meta charset="utf-8">
+
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Cam Kalınlığı | erdevelop</title>
+<meta name="description" content="Dört kenarı taşınan cam için rüzgar altında gerilme ve sehim kontrolü: tek cam, lamine ve çift cam (ısıcam). Hangi kalınlığın yettiğini gösterir.">
+<link rel="manifest" href="/manifest.webmanifest"><meta name="theme-color" content="#0c1015"><link rel="icon" href="/favicon.svg" type="image/svg+xml"><link rel="icon" href="/favicon.ico" sizes="any">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Chakra+Petch:wght@600;700&family=IBM+Plex+Sans:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500&display=swap">
+
+<link rel="stylesheet" href="tema.css">
+<style>
+
+.calc { display: grid; grid-template-columns: minmax(290px, .95fr) minmax(0, 1.3fr); gap: 16px; align-items: start; }
+@media (max-width: 900px) { .calc { grid-template-columns: 1fr; } }
+.fg { display: grid; grid-template-columns: 1fr 1fr; gap: 12px 14px; }
+.fg .full { grid-column: 1 / -1; }
+.fd label { display: block; font: 500 11px var(--f-mono); color: var(--muted); text-transform: uppercase; letter-spacing: .8px; margin-bottom: 5px; }
+.fd .iw { position: relative; } .fd .inp, .fd .sel { width: 100%; }
+.fd .inp { padding-right: 52px; font: 500 15px var(--f-mono); }
+.fd .u { position: absolute; right: 10px; top: 50%; transform: translateY(-50%); font: 400 12px var(--f-mono); color: var(--muted); pointer-events: none; }
+.fd small { display: block; color: var(--muted); font-size: 11.5px; margin-top: 4px; line-height: 1.4; }
+.fd input[type=number] { -moz-appearance: textfield; } .fd input::-webkit-outer-spin-button, .fd input::-webkit-inner-spin-button { -webkit-appearance: none; margin: 0; }
+.pane { border: 1px solid var(--line); border-radius: 6px; padding: 12px; background: var(--panel-2); }
+.pane h4 { margin: 0 0 10px; font: 600 12px var(--f-mono); text-transform: uppercase; letter-spacing: .8px; color: var(--text); }
+.verdict { padding: 16px 18px; border-radius: 8px; border: 1px solid var(--line); background: var(--panel); position: relative; overflow: hidden; }
+.verdict::before { content: ""; position: absolute; inset: 0 auto 0 0; width: 5px; background: var(--ok); }
+.verdict.bad::before { background: var(--bad); }
+.verdict b { display: block; font: 700 clamp(1.5rem, 4vw, 2.1rem)/1.15 var(--f-display); }
+.verdict.bad b { color: var(--bad); } .verdict.ok b { color: var(--ok); }
+.verdict small { color: var(--muted); font-size: 13px; }
+.meter { margin-top: 12px; }
+.meter .row { display: grid; grid-template-columns: 150px 1fr 92px; gap: 10px; align-items: center; font-size: 13px; margin-bottom: 8px; }
+.meter .tr { height: 12px; background: var(--panel-2); border: 1px solid var(--line); border-radius: 6px; overflow: hidden; position: relative; }
+.meter .tr i { position: absolute; inset: 0 auto 0 0; background: var(--ok); border-radius: 6px; }
+.meter .tr i.w { background: var(--warn); } .meter .tr i.x { background: var(--bad); }
+.meter .v { font: 500 12.5px var(--f-mono); text-align: right; }
+@media (max-width: 560px) { .fg { grid-template-columns: 1fr; } .meter .row { grid-template-columns: 1fr 70px; } .meter .row .tr { grid-column: 1 / -1; grid-row: 2; } }
+.t td.ok { color: var(--ok); } .t td.no { color: var(--bad); } .t tr.cur td { background: var(--accent-dim); }
+#draw { width: 100%; max-width: 360px; display: block; margin: 12px auto 0; }
+svg text { font-family: var(--f-mono); }
+.link { font-size: 12.5px; }
+
+</style>
+</head>
+<body>
+<div class="bg" aria-hidden="true"></div>
+<div class="topbar"><div class="wrap">
+  <a class="brand" href="../">erdevelop<span>_</span></a><span class="crumb">/ tools / cam</span><span class="sp"></span>
+  <a class="tb" href="../Tools.html">Araçlar</a><button class="tb" type="button" id="modeBtn">LIGHT</button>
+</div></div>
+<main class="wrap">
+  <header class="head"><h1>Cam Kalınlığı</h1><p>Dört kenarı taşınan cam için rüzgar altında gerilme ve sehim kontrolü: tek cam, lamine ve çift cam (ısıcam). Hangi kalınlığın yettiğini gösterir.</p></header>
+
+  <div class="layer">
+    <div class="layer-head"><span class="swatch"></span><h2>Cam ve yük</h2><span class="sp"></span><button class="btn" type="button" id="fromWind">⇐ Rüzgar sayfasından al</button><button class="btn" type="button" id="pdf">🖨 Rapor / PDF</button></div>
+    <div class="calc">
+      <div class="panel">
+        <div class="fg">
+          <div class="fd"><label for="a">Cam genişliği</label><div class="iw"><input class="inp" id="a" type="number" min="100" step="10"><span class="u">mm</span></div></div>
+          <div class="fd"><label for="b">Cam yüksekliği</label><div class="iw"><input class="inp" id="b" type="number" min="100" step="10"><span class="u">mm</span></div></div>
+          <div class="fd"><label for="q">Rüzgar yükü (servis)</label><div class="iw"><input class="inp" id="q" type="number" min="0" step="0.05"><span class="u">kN/m²</span></div><small id="qSrc">Basınç ya da emmenin büyüğü</small></div>
+          <div class="fd"><label for="lim">Sehim sınırı</label><select class="sel" id="lim"><option value="60">kısa kenar / 60</option><option value="65">kısa kenar / 65</option><option value="100">kısa kenar / 100</option><option value="175">kısa kenar / 175</option></select><small>En fazla 50 mm</small></div>
+          <div class="fd full"><label>Cam yapısı</label><div class="seg" id="kind"><button type="button" data-k="mono">Tek cam</button><button type="button" data-k="lam">Lamine</button><button type="button" data-k="igu">Çift cam (ısıcam)</button></div></div>
+          <div class="pane full" id="p1"><h4 id="p1h">Cam</h4><div class="fg">
+            <div class="fd"><label for="c1">Dizilim</label><input class="inp" id="c1" placeholder="8 · 6+6 · 44.2" style="padding-right:10px"><small>Tek: 8 — lamine: 6+6 ya da 44.2</small></div>
+            <div class="fd"><label for="g1">Cam türü</label><select class="sel" id="g1"><option value="ann">Float (temperlenmemiş)</option><option value="hs">Isıl güçlendirilmiş (TVG)</option><option value="ft">Temperli (ESG)</option></select></div></div></div>
+          <div class="pane full" id="p2" hidden><h4>İç cam</h4><div class="fg">
+            <div class="fd"><label for="c2">Dizilim</label><input class="inp" id="c2" placeholder="6 · 44.2" style="padding-right:10px"></div>
+            <div class="fd"><label for="g2">Cam türü</label><select class="sel" id="g2"><option value="ann">Float (temperlenmemiş)</option><option value="hs">Isıl güçlendirilmiş (TVG)</option><option value="ft">Temperli (ESG)</option></select></div></div></div>
+          <div class="fd full" id="omW"><label for="om">Lamine ara katman (kayma aktarımı ω)</label><select class="sel" id="om"><option value="0">Hesaba katma — güvenli taraf (ω = 0)</option><option value="0.1">Standart PVB, rüzgar (ω ≈ 0,1)</option><option value="0.5">Sert PVB / iyonoplast (ω ≈ 0,5)</option></select></div>
+        </div>
+        <svg id="draw" viewBox="0 0 360 260" role="img" aria-label="Cam ölçü çizimi"></svg>
+      </div>
+      <div class="res" aria-live="polite">
+        <div class="verdict" id="vd"><span class="lbl muted mono small">Sonuç</span><b id="vdT">–</b><small id="vdS"></small></div>
+        <div class="meter panel" id="mt" style="margin-top:12px"></div>
+        <div class="stats" id="st" style="margin-top:12px"></div>
+      </div>
+    </div>
+  </div>
+  <div class="layer">
+    <div class="layer-head"><span class="swatch"></span><h2>Hangi kalınlık yeter?</h2><span class="meta" id="tMeta">aynı ölçü ve yük, tek cam</span></div>
+    <div class="tscroll"><table class="t" id="tbl"></table></div>
+    <p class="note">Doğrusal plak teorisi büyük sehimlerde (sehim &gt; cam kalınlığı) gerilme ve sehimi olduğundan büyük verir; sonuç güvenli taraftadır. Isıcamda yük, camlara rijitlikleri (kalınlığın küpü) oranında paylaştırılır; boşluktaki gazın etkisi ve iklim yükleri ihmal edilir. Tasarım dayanımı EN 16612’ye göre kısa süreli rüzgar yükü için (k<sub>mod</sub> = 0,74), yük katsayısı 1,5.</p>
+  </div>
+</main>
+<footer><div class="wrap"><span>Yöntem: dört kenarı basit mesnetli plak (Roark, doğrusal teori) · Dayanım: EN 16612 · Lamine için etkili kalınlık yöntemi · Ön boyutlandırma içindir.</span><a href="../Tools.html">← tüm araçlar</a></div></footer>
+
+<script src="tema.js"></script>
+<script>
+
+const K = 'erdevelop-cam', DEF = { a: 1500, b: 2500, q: 1.2, lim: '65', kind: 'igu', c1: '8', g1: 'ft', c2: '44.2', g2: 'ann', om: '0' };
+let S = { ...DEF, ...store.json(K, {}) };
+const qs = new URLSearchParams(location.search); if (qs.has('q')) S.q = +qs.get('q');
+const E = 70000, GAM = 1.5, FB = { ann: 45, hs: 70, ft: 120 }, TN = { ann: 'float', hs: 'TVG', ft: 'temperli' };
+/* EN 16612: f_g;d = kmod·ksp·fg;k/γM;A + kv·(fb;k − fg;k)/γM;v */
+const fgd = g => .74 * 1 * 45 / 1.8 + (g === 'ann' ? 0 : (FB[g] - 45) / 1.2);
+/* Roark — dört kenar basit mesnet, düzgün yayılı yük (a/b ≥ 1) */
+const RT = [[1, .2874, .0444], [1.2, .3762, .0616], [1.4, .4530, .0770], [1.6, .5172, .0906], [1.8, .5688, .1017], [2, .6102, .1110], [3, .7134, .1335], [4, .7410, .1400], [5, .7476, .1417], [1e9, .75, .1421]];
+function coef(r) { for (let i = 1; i < RT.length; i++) if (r <= RT[i][0]) { const [x0, b0, a0] = RT[i - 1], [x1, b1, a1] = RT[i], t = x1 > 1e8 ? Math.min(1, (r - x0) / 5) : (r - x0) / (x1 - x0); return { beta: b0 + (b1 - b0) * t, alpha: a0 + (a1 - a0) * t }; } return { beta: .75, alpha: .1421 }; }
+/* dizilim çözümleyici: "8", "6+6", "44.2", "55.2", "66.4", "8+1.52+8" */
+function parse(s) {
+  s = String(s || '').trim().replace(',', '.').replace(/\s/g, '');
+  let m = s.match(/^(\d{1,2})$/); if (m) return { plies: [+m[1]], txt: m[1] + ' mm' };
+  m = s.match(/^(\d)(\d)\.(\d)$/); if (m) return { plies: [+m[1], +m[2]], pvb: +m[3] * .38, txt: `${m[1]}+${m[2]} mm, ${m[3]}×0,38 PVB` };
+  m = s.match(/^(\d{2})(\d{2})\.(\d)$/); if (m) return { plies: [+m[1], +m[2]], pvb: +m[3] * .38, txt: `${+m[1]}+${+m[2]} mm, ${m[3]}×0,38 PVB` };
+  const p = s.split('+').map(Number); if (p.length >= 2 && p.every(x => x > 0)) { const g = p.filter(x => x >= 2), il = p.filter(x => x < 2); return { plies: g, pvb: il.length ? il[0] : .76, txt: g.join('+') + ' mm lamine' }; }
+  return null;
+}
+/* etkili kalınlıklar (EN 16612 Ek B) */
+function eff(c, om) {
+  const h = c.plies; if (h.length === 1) return { w: h[0], s: [h[0]] };
+  const tot = h.reduce((a, b) => a + b, 0) + (c.pvb || .76) * (h.length - 1); let y = 0; const mids = h.map((hi, i) => { const m = y + hi / 2; y += hi + (c.pvb || .76); return m; });
+  const hm = mids.map(m => m - tot / 2), Is = h.reduce((a, hi, i) => a + hi * hm[i] ** 2, 0);
+  const w = Math.cbrt(h.reduce((a, hi) => a + hi ** 3, 0) + 12 * om * Is);
+  return { w, s: h.map((hi, i) => Math.sqrt(w ** 3 / (hi + 2 * om * Math.abs(hm[i])))) };
+}
+function check(a, b, q, panes, om, limDiv) {
+  const L = Math.min(a, b), r = Math.max(a, b) / L, { beta, alpha } = coef(r), qN = q / 1000;
+  const efs = panes.map(p => eff(p.c, om)), sum3 = efs.reduce((s, e) => s + e.w ** 3, 0);
+  const lim = Math.min(L / limDiv, 50);
+  const res = panes.map((p, i) => { const share = efs[i].w ** 3 / sum3, qi = qN * share, sig = beta * qi * GAM * L * L / Math.min(...efs[i].s) ** 2, f = fgd(p.g), defl = alpha * qi * L ** 4 / (E * efs[i].w ** 3);
+    return { share, sig, f, ur: sig / f, defl, hw: efs[i].w, hs: Math.min(...efs[i].s) }; });
+  const defl = Math.max(...res.map(x => x.defl));
+  return { res, defl, lim, dr: defl / lim, ok: res.every(x => x.ur <= 1) && defl <= lim, r, beta, alpha, L };
+}
+const F = ['a', 'b', 'q', 'lim', 'c1', 'g1', 'c2', 'g2', 'om'];
+const load = () => { F.forEach(k => $(k).value = S[k]); setKind(S.kind, true); };
+function setKind(k, quiet) { S.kind = k; document.querySelectorAll('#kind button').forEach(b => b.classList.toggle('on', b.dataset.k === k)); $('p2').hidden = k !== 'igu'; $('p1h').textContent = k === 'igu' ? 'Dış cam' : 'Cam';
+  if (!quiet) { if (k === 'mono' && parse($('c1').value)?.plies.length > 1) $('c1').value = '8'; if (k === 'lam' && parse($('c1').value)?.plies.length < 2) $('c1').value = '66.2'; } $('omW').hidden = !(k === 'lam' || (k === 'igu' && [$('c1').value, $('c2').value].some(v => (parse(v)?.plies.length || 1) > 1))); if (!quiet) calc(); }
+const kg = panes => panes.reduce((s, p) => s + p.c.plies.reduce((a, b) => a + b, 0) * 2.5, 0);
+function calc() {
+  F.forEach(k => S[k] = $(k).value); S.a = +S.a; S.b = +S.b; S.q = +S.q; store.put(K, S);
+  const a = +$('a').value, b = +$('b').value, q = parseFloat(String($('q').value).replace(',', '.')), om = +$('om').value, lim = +$('lim').value;
+  $('omW').hidden = !(S.kind === 'lam' || (S.kind === 'igu' && [$('c1').value, $('c2').value].some(v => (parse(v)?.plies.length || 1) > 1)));
+  const c1 = parse($('c1').value), c2 = S.kind === 'igu' ? parse($('c2').value) : null;
+  if (!(a > 0 && b > 0 && q >= 0) || !c1 || (S.kind === 'igu' && !c2)) { $('vdT').textContent = 'Değerleri kontrol et'; $('vdS').textContent = 'Dizilim örnekleri: 8, 6+6, 44.2'; $('vd').className = 'verdict'; return; }
+  const panes = [{ c: c1, g: $('g1').value, n: S.kind === 'igu' ? 'Dış cam' : 'Cam' }]; if (c2) panes.push({ c: c2, g: $('g2').value, n: 'İç cam' });
+  const R = check(a, b, q, panes, om, lim);
+  $('vd').className = 'verdict ' + (R.ok ? 'ok' : 'bad');
+  const worst = Math.max(R.dr, ...R.res.map(x => x.ur));
+  $('vdT').textContent = R.ok ? `Uygun — kapasitenin %${Math.round(worst * 100)}’i kullanılıyor` : (R.res.some(x => x.ur > 1) ? 'Gerilme aşılıyor' : 'Sehim sınırı aşılıyor');
+  $('vdS').textContent = `${panes.map(p => p.c.txt + ' ' + TN[p.g]).join(' / ')} · ${a}×${b} mm · ${nf(q, 2)} kN/m²`;
+  const bar = (n, v, lbl) => `<div class="row"><span>${n}</span><div class="tr"><i class="${v > 1 ? 'x' : v > .85 ? 'w' : ''}" style="width:${Math.min(100, v * 100)}%"></i></div><span class="v">${lbl}</span></div>`;
+  $('mt').innerHTML = R.res.map((x, i) => bar(`${panes[i].n} gerilme`, x.ur, `${nf(x.sig, 1)} / ${nf(x.f, 1)} MPa`)).join('') + bar('Sehim', R.dr, `${nf(R.defl, 1)} / ${nf(R.lim, 1)} mm`);
+  const area = a * b / 1e6, w = kg(panes);
+  $('st').innerHTML = `<div class="stat"><span>Cam ağırlığı</span><b>${nf(w * area, 1)} kg</b><small>${nf(w, 1)} kg/m² · ${nf(area, 2)} m²</small></div>
+    <div class="stat"><span>Kenar oranı</span><b>${nf(R.r, 2)}</b><small>β = ${nf(R.beta, 3)} · α = ${nf(R.alpha, 4)}</small></div>
+    ${R.res.map((x, i) => `<div class="stat"><span>${panes[i].n}</span><b>${nf(x.hw, 1)} mm</b><small>etkili kalınlık · yükün %${Math.round(x.share * 100)}’i</small></div>`).join('')}
+    <div class="stat"><span>Sehim / kalınlık</span><b>${nf(R.defl / Math.min(...R.res.map(x => x.hw)), 1)}</b><small>${R.defl > Math.min(...R.res.map(x => x.hw)) ? 'büyük sehim: sonuç güvenli tarafta' : 'doğrusal bölge'}</small></div>`;
+  draw(a, b, R);
+  /* kalınlık tablosu: tek cam alternatifleri */
+  const rows = []; for (const t of [4, 5, 6, 8, 10, 12, 15, 19]) for (const g of ['ann', 'ft']) { const X = check(a, b, q, [{ c: { plies: [t] }, g }], 0, lim); rows.push(`<tr><td>${t} mm ${TN[g]}</td><td class="r">${nf(X.res[0].sig, 1)} / ${nf(X.res[0].f, 1)}</td><td class="r ${X.res[0].ur <= 1 ? 'ok' : 'no'}">%${Math.round(X.res[0].ur * 100)}</td><td class="r">${nf(X.defl, 1)} / ${nf(X.lim, 1)}</td><td class="r ${X.dr <= 1 ? 'ok' : 'no'}">%${Math.round(X.dr * 100)}</td><td class="r"><b class="${X.ok ? 'ok' : ''}">${X.ok ? '✓ yeter' : '✗'}</b></td></tr>`); }
+  $('tbl').innerHTML = `<thead><tr><th>Cam</th><th class="r">Gerilme MPa</th><th class="r">Oran</th><th class="r">Sehim mm</th><th class="r">Oran</th><th class="r">Sonuç</th></tr></thead><tbody>${rows.join('')}</tbody>`;
+  $('tMeta').textContent = `${a}×${b} mm · ${nf(q, 2)} kN/m² · tek cam alternatifleri`;
+}
+function draw(a, b, R) {
+  const W = 360, H = 260, s = Math.min((W - 90) / a, (H - 60) / b), w = a * s, h = b * s, x = (W - w) / 2 + 10, y = (H - h) / 2;
+  const tint = R.ok ? 'var(--ok)' : 'var(--bad)';
+  let g = `<rect x="${x}" y="${y}" width="${w}" height="${h}" fill="var(--accent-dim)" stroke="var(--accent)" stroke-width="2"/>`;
+  g += `<ellipse cx="${x + w / 2}" cy="${y + h / 2}" rx="${w * .32}" ry="${h * .32}" fill="none" stroke="${tint}" stroke-dasharray="4 4" opacity=".8"/><ellipse cx="${x + w / 2}" cy="${y + h / 2}" rx="${w * .14}" ry="${h * .14}" fill="none" stroke="${tint}" stroke-dasharray="4 4" opacity=".8"/>`;
+  g += `<circle cx="${x + w / 2}" cy="${y + h / 2}" r="4" fill="${tint}"/><text x="${x + w / 2 + 8}" y="${y + h / 2 - 8}" font-size="11" fill="var(--fg)">${nf(R.defl, 1)} mm</text>`;
+  g += `<path d="M${x} ${y + h + 14}h${w}M${x} ${y + h + 9}v10M${x + w} ${y + h + 9}v10" stroke="var(--muted)"/><text x="${x + w / 2}" y="${y + h + 28}" font-size="11" text-anchor="middle" fill="var(--muted)">${a} mm</text>`;
+  g += `<path d="M${x - 14} ${y}v${h}M${x - 19} ${y}h10M${x - 19} ${y + h}h10" stroke="var(--muted)"/><text x="${x - 20}" y="${y + h / 2}" font-size="11" text-anchor="middle" fill="var(--muted)" transform="rotate(-90 ${x - 20} ${y + h / 2})" dy="-4">${b} mm</text>`;
+  $('draw').innerHTML = g;
+}
+document.querySelectorAll('#kind button').forEach(b => b.onclick = () => setKind(b.dataset.k));
+F.forEach(k => $(k).addEventListener(['lim', 'g1', 'g2', 'om'].includes(k) ? 'change' : 'input', calc));
+$('fromWind').onclick = () => { const w = store.json('erdevelop-ruzgar-son', null); if (!w) { TM.toast('Önce Rüzgar Yükü sayfasında bir hesap yap'); setTimeout(() => location.href = 'ruzgar.html', 900); return; }
+  $('q').value = +Math.max(Math.abs(w.suc), w.pre).toFixed(2); $('qSrc').innerHTML = `Rüzgar sayfasından: h = ${nf(w.h, 1)} m, ${esc(w.zone || 'A bölgesi')} · <a href="ruzgar.html">değiştir</a>`; calc(); TM.toast('Rüzgar yükü alındı'); };
+$('pdf').onclick = () => TM.report('Cam kalınlığı kontrolü');
+if (qs.has('q')) $('qSrc').innerHTML = 'Rüzgar sayfasından aktarıldı · <a href="ruzgar.html">değiştir</a>';
+load(); calc();
+
+</script>
+</body>
+</html>

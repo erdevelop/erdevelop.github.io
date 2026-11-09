@@ -6,7 +6,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <title>Rüzgar Yükü | erdevelop</title>
 <meta name="description" content="TS EN 1991-1-4 yöntemiyle cephe kaplaması için rüzgar ön hesabı: tepe hız basıncı, duvar bölgeleri (A–E), panel alanına göre basınç ve emme.">
-<link rel="icon" href="/favicon.svg" type="image/svg+xml"><link rel="icon" href="/favicon.ico" sizes="any">
+<link rel="manifest" href="/manifest.webmanifest"><meta name="theme-color" content="#0c1015"><link rel="icon" href="/favicon.svg" type="image/svg+xml"><link rel="icon" href="/favicon.ico" sizes="any">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Chakra+Petch:wght@600;700&family=IBM+Plex+Sans:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500&display=swap">
 
@@ -59,7 +59,7 @@ details.how ol { font-size: 13.5px; color: var(--text); padding-left: 20px; } de
 
   <p class="warn"><b>Türkiye için not:</b> TS EN 1991-1-4’ün ulusal ekinde temel rüzgar hızı haritası yok. Uygulamada çoğunlukla <b>28 m/s</b> kullanılır (TS 498’deki 0,5 kN/m² temel basınca karşılık gelir). Proje şartnamesinde başka bir değer varsa onu gir.</p>
   <div class="layer">
-    <div class="layer-head"><span class="swatch"></span><h2>Bina ve konum</h2><span class="sp"></span><button class="btn" type="button" id="share">🔗 Bağlantıyı kopyala</button><button class="btn" type="button" id="reset">Sıfırla</button></div>
+    <div class="layer-head"><span class="swatch"></span><h2>Bina ve konum</h2><span class="sp"></span><a class="btn" href="cam.html" id="toCam">Cam kontrolü →</a><a class="btn" href="profil.html?wind=1">Profil kontrolü →</a><button class="btn" type="button" id="pdf">🖨 Rapor / PDF</button><button class="btn" type="button" id="share">🔗 Bağlantıyı kopyala</button><button class="btn" type="button" id="reset">Sıfırla</button></div>
     <div class="calc">
       <div class="panel">
         <div class="fg">
@@ -146,6 +146,7 @@ function calc() {
   $('tblMeta').textContent = `A = ${nf(A, 2)} m² · c_pi ${$('cpi').value === 'std' ? '+0,2 / −0,3' : '0'}`;
   $('tbl').innerHTML = `<thead><tr><th>Bölge</th><th>Yer</th><th class="r">c<sub>pe,10</sub></th><th class="r">c<sub>pe,1</sub></th><th class="r">c<sub>pe</sub> (${nf(A, 1)} m²)</th><th class="r">Net w</th><th class="r">Tasarım ×1,5</th></tr></thead><tbody>` +
     shown.map(r => `<tr class="${r.zn === 'A' || r.zn === 'D' ? 'wst' : ''}"><td class="zn"><b style="background:${COL[r.zn]}">${r.zn}</b></td><td>${{ A: 'Yan cephe, köşe şeridi', B: 'Yan cephe, orta', C: 'Yan cephe, arka kısım', D: 'Rüzgar alan cephe', E: 'Rüzgar altı (arka) cephe' }[r.zn]}</td><td class="r">${nf(r.c10, 2)}</td><td class="r">${nf(r.c1, 2)}</td><td class="r"><b>${nf(r.c, 2)}</b></td><td class="r"><span class="${r.w < 0 ? 'neg' : 'pos'}">${r.w > 0 ? '+' : ''}${nf(r.w, 2)}</span></td><td class="r">${r.w > 0 ? '+' : ''}${nf(r.w * 1.5, 2)}</td></tr>`).join('') + '</tbody>';
+  store.put('erdevelop-ruzgar-son', { suc, pre, q: Q.q, h, z, zone: 'A ve D bölgesi, ' + nf(A, 1) + ' m²', at: Date.now() });
   plan(b, d, e, hasC); prof(h, vb, cat, co, z);
 }
 /* plan: rüzgar soldan */
@@ -186,6 +187,8 @@ F.forEach(k => $(k).addEventListener(k === 'cat' || k === 'cpi' ? 'change' : 'in
 $('reset').onclick = () => { S = { ...DEF }; store.put(K, S); history.replaceState(null, '', location.pathname); load(); calc(); TM.toast('Değerler sıfırlandı'); };
 $('share').onclick = async () => { const u = location.origin + location.pathname + '?' + new URLSearchParams(Object.fromEntries(F.map(k => [k, $(k).value]))); try { await navigator.clipboard.writeText(u); TM.toast('Bağlantı kopyalandı'); } catch (e) { prompt('Bağlantı:', u); } };
 TM.onMode(calc);
+$('pdf').onclick = () => TM.report('Rüzgar yükü ön hesabı');
+$('toCam').onclick = e => { e.preventDefault(); const w = store.json('erdevelop-ruzgar-son', {}); location.href = 'cam.html?q=' + (+Math.max(Math.abs(w.suc || 0), w.pre || 0).toFixed(2)); };
 load(); calc();
 
 </script>

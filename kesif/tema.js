@@ -26,8 +26,20 @@ const TM = {
     return m;
   },
   ago(t) { const s = (Date.now() - t) / 1000; if (s < 60) return 'az önce'; if (s < 3600) return Math.floor(s / 60) + ' dk önce'; if (s < 86400) return Math.floor(s / 3600) + ' sa önce'; return Math.floor(s / 86400) + ' gün önce'; },
+  /* yazdırılabilir rapor: başlık, proje adı, tarih; tarayıcının "PDF olarak kaydet" seçeneğiyle PDF olur */
+  report(title) {
+    const prev = store.get('erdevelop-proje', ''), pj = prompt('Rapordaki proje adı (boş bırakılabilir):', prev);
+    if (pj === null) return; store.set('erdevelop-proje', pj);
+    let h = document.getElementById('rph'); if (!h) { h = document.createElement('div'); h.id = 'rph'; h.className = 'rph'; const m = document.querySelector('main') || document.body; m.insertBefore(h, m.firstChild); }
+    const d = new Date().toLocaleString('tr-TR', { dateStyle: 'long', timeStyle: 'short' });
+    h.innerHTML = `<div><b>${esc(title)}</b>${pj ? `<span>${esc(pj)}</span>` : ''}</div><div class="rpm">${esc(d)}<br>Erdal Üstünol · erdevelop.github.io</div>`;
+    const was = TM.mode; if (was === 'dark') { TM.mode = 'light'; TM.apply(); }
+    setTimeout(() => { window.print(); if (was === 'dark') { TM.mode = was; TM.apply(); } }, 120);
+  },
   download(name, blob) { const tr = { ç: 'c', ğ: 'g', ı: 'i', İ: 'I', ö: 'o', ş: 's', ü: 'u', Ç: 'C', Ğ: 'G', Ö: 'O', Ş: 'S', Ü: 'U' }; name = String(name).replace(/[çğıİöşüÇĞÖŞÜ]/g, c => tr[c]).replace(/[^\w.\-]+/g, '-');
     const a = document.createElement('a'); a.href = URL.createObjectURL(blob); a.download = name; document.body.appendChild(a); a.click(); a.remove(); setTimeout(() => URL.revokeObjectURL(a.href), 3000); }
 };
 TM.apply();
 document.addEventListener('DOMContentLoaded', () => { TM.apply(); const b = $('modeBtn'); if (b) b.addEventListener('click', () => { TM.mode = TM.mode === 'dark' ? 'light' : 'dark'; store.set('erdevelop-mode', TM.mode); TM.apply(); }); });
+/* telefona kurulabilen site: service worker (yalnızca yayındaki https sitede) */
+if ('serviceWorker' in navigator && location.protocol === 'https:') addEventListener('load', () => navigator.serviceWorker.register('/sw.js').catch(() => { }));
