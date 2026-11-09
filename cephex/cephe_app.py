@@ -638,7 +638,7 @@ def cam_tablosu_oku(yol):
 
 
 # ısı bariyeri (PVC profil) seçimi: tablo dışı cam kalınlıklarında ara mesafeye göre
-BARIYER_PENCERE = (4.1, 10.2)   # cam kalınlığı - bariyer ara mesafesi toplamı: ASAŞ E50 cam tablosundan (18-38 mm) çıkarıldı
+BARIYER_PENCERE = (4.1, 10.2)   # cam kalınlığı - bariyer ara mesafesi toplamı (varsayılan aralık)
 BARIYER_HEDEF_BOSLUK = 9.3     # otomatik seçimde hedef boşluk (cam - bariyer toplamı): 32 mm camda 02.01.14 standardı
 BARIYER_OTO = "(cama göre otomatik)"
 ZINCIR_OTO, ZINCIR_YOK = "(otomatik)", "(yok)"
@@ -686,116 +686,15 @@ def bariyer_oku(yol):
 
 _BARIYER_KESIT_ONBELLEK = {}
 
-# Yerleşik ısı bariyeri verisi (ASAŞ E50 kataloğu + aksesuar DXF'i): bariyer_katalogu.csv bulunamazsa kullanılır
-BARIYER_VARSAYILAN = [("02.01.01", 7.9), ("02.01.02", 8.9), ("02.01.04", 10.9), ("02.01.05", 13.9), ("02.01.07", 11.9),
-                      ("02.01.08", 12.9), ("02.01.09", 15.9), ("02.01.13", 11.3), ("02.01.14", 22.7)]
-_BARIYER_DXF_GZ = (
-    "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"
-)
+# Yerleşik ısı bariyeri verisi yok: bariyerler sistem klasöründeki bariyer_katalogu.csv dosyasından okunur
+BARIYER_VARSAYILAN = []
+_BARIYER_DXF_GZ = ""
 
 
 def bariyer_varsayilan():
     """Yerleşik bariyer listesi (kesitleriyle birlikte)."""
+    if not _BARIYER_DXF_GZ or not BARIYER_VARSAYILAN:
+        return []
     import base64, gzip
     metin = gzip.decompress(base64.b64decode("".join(_BARIYER_DXF_GZ.split()))).decode("utf-8")
     s = metin.split("\n")
@@ -10356,7 +10255,7 @@ class Uygulama(tk.Tk):
             if oto_uyari:
                 messagebox.showwarning("Kütüphane (SISTEM / ISI_BARIYERI)", "\n".join(oto_uyari[:10]))
         if not self.bariyerler:
-            self.bariyerler = bariyer_varsayilan()      # klasörde bariyer_katalogu.csv yoksa yerleşik E50 verisi
+            self.bariyerler = bariyer_varsayilan()      # klasörde bariyer_katalogu.csv yoksa boş liste
         for k in self.katalog:          # şablonu olmayan kütüphane profilleri: kural tablosundaki ilk şablon
             if k.get("dosya") and not k["sablon_yol"]:
                 kr = next((r for r in self.kurallar if r.get(k["tur"])

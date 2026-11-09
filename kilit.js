@@ -1,16 +1,42 @@
-/* erdevelop – basit sayfa kilidi. Şifre düz yazıyla durmaz, sadece özeti (hash) saklanır.
-   Not: Statik sitede bu gerçek bir güvenlik değildir; sayfayı gelişigüzel açılmaktan korur. */
+/* erdevelop – sayfa kilidi (sürüm 2)
+   - Şifre hiçbir yerde düz yazıyla ya da tek adımlık özetle durmaz.
+   - Doğru şifre girilince şifreden yavaşça türetilen bir "açılış anahtarı" bu tarayıcıya kaydedilir.
+     Kaynak kodda yalnızca o anahtarın doğrulama özeti (V) vardır; özeti bilmek kilidi açmaya yetmez.
+   - Şifreyi değiştirmek için: tarayıcı konsolunda erLock.yeniOzet('yeni şifre') yaz, çıkan değeri aşağıdaki V'ye koy.
+   Not: Statik sitede sayfa kodları herkese açıktır; bu kilit araçları gelişigüzel kullanımdan korur, içerikteki gizli veriyi korumaz. */
 (function () {
-  var KEY = 'erdevelop-key', H = '247xxmobl5q';
-  function hash(str) { var h1 = 0xdeadbeef ^ 7, h2 = 0x41c6ce57 ^ 7; for (var i = 0, ch; i < str.length; i++) { ch = str.charCodeAt(i); h1 = Math.imul(h1 ^ ch, 2654435761); h2 = Math.imul(h2 ^ ch, 1597334677); }
-    h1 = Math.imul(h1 ^ (h1 >>> 16), 2246822507) ^ Math.imul(h2 ^ (h2 >>> 13), 3266489909); h2 = Math.imul(h2 ^ (h2 >>> 16), 2246822507) ^ Math.imul(h1 ^ (h1 >>> 13), 3266489909);
-    return (4294967296 * (2097151 & h2) + (h1 >>> 0)).toString(36); }
+  var KEY = 'erdevelop-key', V = 'd884dcfef9f1e7fbf545e14b4171a66cc9d9874308238f0473827f0fcbe3f904';
+  /* SHA-256 (saf JS, eşzamanlı) */
+  var K256 = [0x428a2f98,0x71374491,0xb5c0fbcf,0xe9b5dba5,0x3956c25b,0x59f111f1,0x923f82a4,0xab1c5ed5,0xd807aa98,0x12835b01,0x243185be,0x550c7dc3,0x72be5d74,0x80deb1fe,0x9bdc06a7,0xc19bf174,0xe49b69c1,0xefbe4786,0x0fc19dc6,0x240ca1cc,0x2de92c6f,0x4a7484aa,0x5cb0a9dc,0x76f988da,0x983e5152,0xa831c66d,0xb00327c8,0xbf597fc7,0xc6e00bf3,0xd5a79147,0x06ca6351,0x14292967,0x27b70a85,0x2e1b2138,0x4d2c6dfc,0x53380d13,0x650a7354,0x766a0abb,0x81c2c92e,0x92722c85,0xa2bfe8a1,0xa81a664b,0xc24b8b70,0xc76c51a3,0xd192e819,0xd6990624,0xf40e3585,0x106aa070,0x19a4c116,0x1e376c08,0x2748774c,0x34b0bcb5,0x391c0cb3,0x4ed8aa4a,0x5b9cca4f,0x682e6ff3,0x748f82ee,0x78a5636f,0x84c87814,0x8cc70208,0x90befffa,0xa4506ceb,0xbef9a3f7,0xc67178f2];
+  var W = new Int32Array(64);
+  function sha256(b) { /* b: Uint8Array → Uint8Array(32) */
+    var l = b.length, n = ((l + 9 + 63) >> 6) << 6, m = new Uint8Array(n); m.set(b); m[l] = 0x80; var bits = l * 8; m[n - 4] = bits >>> 24; m[n - 3] = bits >>> 16; m[n - 2] = bits >>> 8; m[n - 1] = bits;
+    var h0 = 0x6a09e667, h1 = 0xbb67ae85, h2 = 0x3c6ef372, h3 = 0xa54ff53a, h4 = 0x510e527f, h5 = 0x9b05688c, h6 = 0x1f83d9ab, h7 = 0x5be0cd19;
+    for (var o = 0; o < n; o += 64) {
+      for (var i = 0; i < 16; i++) W[i] = m[o + 4 * i] << 24 | m[o + 4 * i + 1] << 16 | m[o + 4 * i + 2] << 8 | m[o + 4 * i + 3];
+      for (i = 16; i < 64; i++) { var x = W[i - 15], y = W[i - 2]; W[i] = (((x >>> 7 | x << 25) ^ (x >>> 18 | x << 14) ^ x >>> 3) + W[i - 7] + ((y >>> 17 | y << 15) ^ (y >>> 19 | y << 13) ^ y >>> 10) + W[i - 16]) | 0; }
+      var a = h0, bb = h1, c = h2, d = h3, e = h4, f = h5, g = h6, h = h7;
+      for (i = 0; i < 64; i++) { var t1 = (h + ((e >>> 6 | e << 26) ^ (e >>> 11 | e << 21) ^ (e >>> 25 | e << 7)) + (e & f ^ ~e & g) + K256[i] + W[i]) | 0, t2 = (((a >>> 2 | a << 30) ^ (a >>> 13 | a << 19) ^ (a >>> 22 | a << 10)) + (a & bb ^ a & c ^ bb & c)) | 0;
+        h = g; g = f; f = e; e = (d + t1) | 0; d = c; c = bb; bb = a; a = (t1 + t2) | 0; }
+      h0 = h0 + a | 0; h1 = h1 + bb | 0; h2 = h2 + c | 0; h3 = h3 + d | 0; h4 = h4 + e | 0; h5 = h5 + f | 0; h6 = h6 + g | 0; h7 = h7 + h | 0;
+    }
+    var r = new Uint8Array(32), hs = [h0, h1, h2, h3, h4, h5, h6, h7]; for (i = 0; i < 8; i++) { r[4 * i] = hs[i] >>> 24; r[4 * i + 1] = hs[i] >>> 16; r[4 * i + 2] = hs[i] >>> 8; r[4 * i + 3] = hs[i]; } return r;
+  }
+  function utf8(s) { if (typeof TextEncoder !== 'undefined') return new TextEncoder().encode(s); var u = unescape(encodeURIComponent(s)), a = new Uint8Array(u.length); for (var i = 0; i < u.length; i++) a[i] = u.charCodeAt(i); return a; }
+  function hex(b) { var s = ''; for (var i = 0; i < b.length; i++) s += (b[i] < 16 ? '0' : '') + b[i].toString(16); return s; }
+  function cat(a, b) { var r = new Uint8Array(a.length + b.length); r.set(a); r.set(b, a.length); return r; }
+  var SALT = utf8('erdevelop.kilit.v2'), TUR = 50000;
+  /* şifre → açılış anahtarı (yavaş: tahmin denemelerini zorlaştırır) */
+  function derive(pw) { var h = sha256(cat(SALT, utf8(String(pw).trim().toLocaleLowerCase('tr')))), buf = new Uint8Array(32 + SALT.length); buf.set(SALT, 32); for (var i = 0; i < TUR; i++) { buf.set(h); h = sha256(buf); } return hex(h); }
+  /* açılış anahtarı → doğrulama özeti (kaynak kodda yalnızca bu durur) */
+  function verify(t) { return hex(sha256(utf8('ok:' + t))); }
   function get() { try { return localStorage.getItem(KEY); } catch (e) { return null; } }
   function set(v) { try { v ? localStorage.setItem(KEY, v) : localStorage.removeItem(KEY); } catch (e) {} }
   var api = window.erLock = {
-    ok: function () { return get() === H; },
-    check: function (pw) { var ok = hash(String(pw).trim().toLocaleLowerCase('tr')) === H; if (ok) set(H); return ok; },
-    lock: function () { set(null); }
+    ok: function () { var t = get(); return !!t && /^[0-9a-f]{64}$/.test(t) && verify(t) === V; },
+    check: function (pw) { var t = derive(pw); if (verify(t) === V) { set(t); return true; } return false; },
+    lock: function () { set(null); },
+    yeniOzet: function (pw) { return verify(derive(pw)); }
   };
   if (document.currentScript && document.currentScript.hasAttribute('data-gate') && !api.ok()) {
     var root = document.documentElement; root.classList.add('er-locked');
@@ -36,8 +62,9 @@
       var f = d.querySelector('form'), inp = d.querySelector('input'), err = d.querySelector('.err');
       inp.focus();
       f.addEventListener('submit', function (e) { e.preventDefault();
-        if (api.check(inp.value)) { location.reload(); }
-        else { err.textContent = en ? 'Wrong password.' : 'Şifre yanlış.'; inp.select(); d.classList.remove('shake'); void d.offsetWidth; d.classList.add('shake'); } });
+        err.textContent = en ? 'Checking…' : 'Kontrol ediliyor…'; var pw = inp.value;
+        setTimeout(function () { if (api.check(pw)) { location.reload(); return; }
+          err.textContent = en ? 'Wrong password.' : 'Şifre yanlış.'; inp.select(); d.classList.remove('shake'); void d.offsetWidth; d.classList.add('shake'); }, 30); });
     };
     if (document.body) show(); else document.addEventListener('DOMContentLoaded', show);
   }
