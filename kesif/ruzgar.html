@@ -1,0 +1,193 @@
+<!doctype html>
+<html lang="tr" data-mode="dark">
+<head>
+<meta charset="utf-8">
+
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Rüzgar Yükü | erdevelop</title>
+<meta name="description" content="TS EN 1991-1-4 yöntemiyle cephe kaplaması için rüzgar ön hesabı: tepe hız basıncı, duvar bölgeleri (A–E), panel alanına göre basınç ve emme.">
+<link rel="icon" href="/favicon.svg" type="image/svg+xml"><link rel="icon" href="/favicon.ico" sizes="any">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Chakra+Petch:wght@600;700&family=IBM+Plex+Sans:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500&display=swap">
+
+<link rel="stylesheet" href="tema.css">
+<style>
+
+.calc { display: grid; grid-template-columns: minmax(280px, .9fr) minmax(0, 1.4fr); gap: 16px; align-items: start; }
+@media (max-width: 900px) { .calc { grid-template-columns: 1fr; } }
+.fg { display: grid; grid-template-columns: 1fr 1fr; gap: 12px 14px; }
+.fg .full { grid-column: 1 / -1; }
+.fd label { display: block; font: 500 11px var(--f-mono); color: var(--muted); text-transform: uppercase; letter-spacing: .8px; margin-bottom: 5px; }
+.fd .iw { position: relative; }
+.fd .inp, .fd .sel { width: 100%; }
+.fd .inp { padding-right: 46px; font: 500 15px var(--f-mono); }
+.fd .u { position: absolute; right: 10px; top: 50%; transform: translateY(-50%); font: 400 12px var(--f-mono); color: var(--muted); pointer-events: none; }
+.fd small { display: block; color: var(--muted); font-size: 11.5px; margin-top: 4px; line-height: 1.4; }
+.fd input[type=number] { -moz-appearance: textfield; } .fd input::-webkit-outer-spin-button, .fd input::-webkit-inner-spin-button { -webkit-appearance: none; margin: 0; }
+.hero { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+.big { padding: 16px 18px; border: 1px solid var(--line); border-radius: 8px; background: var(--panel); position: relative; overflow: hidden; }
+.big::before { content: ""; position: absolute; inset: 0 auto 0 0; width: 4px; background: var(--accent); }
+.big.neg::before { background: var(--bad); } .big.pos::before { background: var(--hot); }
+.big span { font: 500 11px var(--f-mono); color: var(--muted); text-transform: uppercase; letter-spacing: 1px; }
+.big b { display: block; font: 700 clamp(1.7rem, 4.6vw, 2.4rem)/1.1 var(--f-display); margin: 4px 0 2px; }
+.big small { color: var(--muted); font-size: 12.5px; }
+@media (max-width: 560px) { .fg, .hero { grid-template-columns: 1fr; } }
+.res .stats { margin-top: 10px; }
+svg text { font-family: var(--f-mono); }
+.plan { width: 100%; display: block; background: var(--panel-2); border: 1px solid var(--line); border-radius: 6px; }
+.t td.zn b { display: inline-block; width: 22px; height: 22px; line-height: 22px; text-align: center; border-radius: 4px; font: 600 12px var(--f-mono); color: #fff; }
+.t td .neg { color: var(--bad); } .t td .pos { color: var(--hot); }
+.t tr.wst td { background: var(--accent-dim); }
+.sx { overflow-x: auto; } .sx svg { min-width: 520px; }
+@media (max-width: 560px) { #tbl th:nth-child(2), #tbl td:nth-child(2) { display: none; } }
+.prof { width: 100%; max-width: 860px; display: block; margin: 0 auto; }
+.warn { border: 1px solid color-mix(in srgb, var(--warn) 50%, var(--line)); background: color-mix(in srgb, var(--warn) 8%, transparent); border-radius: 6px; padding: 10px 14px; font-size: 13px; color: var(--text); margin: 0 0 14px; }
+.warn b { color: var(--fg); }
+details.how { margin-top: 14px; } details.how summary { cursor: pointer; font: 500 13px var(--f-mono); color: var(--accent); }
+details.how ol { font-size: 13.5px; color: var(--text); padding-left: 20px; } details.how code { font: 400 12.5px var(--f-mono); color: var(--fg); }
+
+</style>
+</head>
+<body>
+<div class="bg" aria-hidden="true"></div>
+<div class="topbar"><div class="wrap">
+  <a class="brand" href="../">erdevelop<span>_</span></a><span class="crumb">/ tools / rüzgar</span><span class="sp"></span>
+  <a class="tb" href="../Tools.html">Araçlar</a><button class="tb" type="button" id="modeBtn">LIGHT</button>
+</div></div>
+<main class="wrap">
+  <header class="head"><h1>Rüzgar Yükü</h1><p>TS EN 1991-1-4 yöntemiyle cephe kaplaması için rüzgar ön hesabı: tepe hız basıncı, duvar bölgeleri (A–E), panel alanına göre basınç ve emme.</p></header>
+
+  <p class="warn"><b>Türkiye için not:</b> TS EN 1991-1-4’ün ulusal ekinde temel rüzgar hızı haritası yok. Uygulamada çoğunlukla <b>28 m/s</b> kullanılır (TS 498’deki 0,5 kN/m² temel basınca karşılık gelir). Proje şartnamesinde başka bir değer varsa onu gir.</p>
+  <div class="layer">
+    <div class="layer-head"><span class="swatch"></span><h2>Bina ve konum</h2><span class="sp"></span><button class="btn" type="button" id="share">🔗 Bağlantıyı kopyala</button><button class="btn" type="button" id="reset">Sıfırla</button></div>
+    <div class="calc">
+      <div class="panel">
+        <div class="fg">
+          <div class="fd"><label for="vb0">Temel rüzgar hızı v<sub>b,0</sub></label><div class="iw"><input class="inp" id="vb0" type="number" inputmode="decimal" min="10" step="0.5"><span class="u">m/s</span></div></div>
+          <div class="fd"><label for="cat">Arazi kategorisi</label><select class="sel" id="cat">
+            <option value="0">0 · Deniz, kıyı şeridi</option><option value="1">I · Göl, engelsiz düz arazi</option><option value="2">II · Seyrek ağaç ve bina</option><option value="3">III · Köy, banliyö, orman</option><option value="4">IV · Şehir merkezi (%15+ bina, ort. 15 m+)</option></select></div>
+          <div class="fd"><label for="h">Bina yüksekliği h</label><div class="iw"><input class="inp" id="h" type="number" inputmode="decimal" min="1" step="0.5"><span class="u">m</span></div></div>
+          <div class="fd"><label for="b">Rüzgara dik genişlik b</label><div class="iw"><input class="inp" id="b" type="number" inputmode="decimal" min="1" step="0.5"><span class="u">m</span></div></div>
+          <div class="fd"><label for="d">Rüzgar yönünde derinlik d</label><div class="iw"><input class="inp" id="d" type="number" inputmode="decimal" min="1" step="0.5"><span class="u">m</span></div></div>
+          <div class="fd"><label for="ze">Panel kotu z</label><div class="iw"><input class="inp" id="ze" type="number" inputmode="decimal" min="0" step="0.5"><span class="u">m</span></div><small>Boş bırakırsan h kullanılır (güvenli taraf).</small></div>
+          <div class="fd"><label for="area">Panel / eleman alanı</label><div class="iw"><input class="inp" id="area" type="number" inputmode="decimal" min="0.1" step="0.1"><span class="u">m²</span></div><small>Küçük alanlarda katsayı büyür (c<sub>pe,1</sub>).</small></div>
+          <div class="fd"><label for="co">Topografya c<sub>o</sub></label><div class="iw"><input class="inp" id="co" type="number" inputmode="decimal" min="1" step="0.05"><span class="u">—</span></div><small>Düz arazide 1,0; tepe ve sırtlarda büyür.</small></div>
+          <div class="fd full"><label for="cpi">İç basınç c<sub>pi</sub></label><select class="sel" id="cpi"><option value="std">Belirsiz: +0,2 / −0,3 (en elverişsiz)</option><option value="0">Kapalı, sızdırmaz cephe: 0</option></select></div>
+        </div>
+        <details class="how"><summary>Nasıl hesaplanıyor?</summary><ol>
+          <li><code>v<sub>b</sub> = c<sub>dir</sub>·c<sub>season</sub>·v<sub>b,0</sub></code> (c<sub>dir</sub> = c<sub>season</sub> = 1)</li>
+          <li><code>k<sub>r</sub> = 0,19·(z<sub>0</sub>/0,05)<sup>0,07</sup></code>, <code>c<sub>r</sub>(z) = k<sub>r</sub>·ln(z/z<sub>0</sub>)</code>, z &lt; z<sub>min</sub> ise z<sub>min</sub></li>
+          <li><code>v<sub>m</sub> = c<sub>r</sub>·c<sub>o</sub>·v<sub>b</sub></code>, <code>I<sub>v</sub> = 1/(c<sub>o</sub>·ln(z/z<sub>0</sub>))</code></li>
+          <li><code>q<sub>p</sub> = (1 + 7·I<sub>v</sub>)·½·ρ·v<sub>m</sub>²</code>, ρ = 1,25 kg/m³</li>
+          <li>Duvar bölgeleri: <code>e = min(b, 2h)</code>; Tablo 7.1 katsayıları, alan için <code>c<sub>pe</sub> = c<sub>pe,1</sub> − (c<sub>pe,1</sub> − c<sub>pe,10</sub>)·log<sub>10</sub>A</code></li>
+          <li>Net yük <code>w = q<sub>p</sub>·(c<sub>pe</sub> − c<sub>pi</sub>)</code>; tasarım (ULS) için ×1,5</li></ol></details>
+      </div>
+      <div class="res" aria-live="polite">
+        <div class="hero">
+          <div class="big neg"><span>En büyük emme (A bölgesi)</span><b id="suc">–</b><small id="sucS"></small></div>
+          <div class="big pos"><span>En büyük basınç (D bölgesi)</span><b id="pre">–</b><small id="preS"></small></div>
+        </div>
+        <div class="stats" id="st"></div>
+        <div class="layer-head" style="margin-top:16px"><h2 style="font-size:14px">Bölgeler — plan görünüşü</h2></div>
+        <div class="sx"><svg class="plan" id="plan" viewBox="0 0 600 300" role="img" aria-label="Duvar bölgeleri planı"></svg></div>
+      </div>
+    </div>
+  </div>
+  <div class="layer">
+    <div class="layer-head"><span class="swatch"></span><h2>Bölge katsayıları ve net yükler</h2><span class="meta" id="tblMeta"></span></div>
+    <div class="tscroll"><table class="t" id="tbl"></table></div>
+    <p class="note">Değerler karakteristiktir (servis); taşıyıcı tasarımda 1,5 ile çarpılmış hali kullanılır. Kenar bölgesi A, köşeden itibaren e/5 genişliğindedir; cephe köşelerindeki paneller bu bölgededir.</p>
+  </div>
+  <div class="layer">
+    <div class="layer-head"><span class="swatch"></span><h2>Yüksekliğe göre tepe hız basıncı</h2><span class="meta">TS 498 ile karşılaştırma</span></div>
+    <div class="panel sx"><svg class="prof" id="prof" viewBox="0 0 700 300" role="img" aria-label="Yüksekliğe göre basınç grafiği"></svg></div>
+  </div>
+</main>
+<footer><div class="wrap"><span>Yöntem: TS EN 1991-1-4 (Eurocode 1, Kısım 1-4) önerilen değerleri · TS 498 karşılaştırması · Ön boyutlandırma içindir, statik hesabın yerini tutmaz.</span><a href="../Tools.html">← tüm araçlar</a></div></footer>
+
+<script src="tema.js"></script>
+<script>
+
+const K = 'erdevelop-ruzgar', DEF = { vb0: 28, cat: 3, h: 30, b: 40, d: 20, ze: '', area: 2, co: 1, cpi: 'std' };
+const TER = [[.003, 1], [.01, 1], [.05, 2], [.3, 5], [1, 10]], CN = ['0', 'I', 'II', 'III', 'IV'];
+let S = { ...DEF, ...store.json(K, {}) };
+const q = new URLSearchParams(location.search); if (q.has('h')) Object.keys(DEF).forEach(k => q.has(k) && (S[k] = k === 'cpi' ? q.get(k) : q.get(k) === '' ? '' : +q.get(k)));
+const F = ['vb0', 'cat', 'h', 'b', 'd', 'ze', 'area', 'co', 'cpi'];
+const load = () => F.forEach(k => $(k).value = S[k]);
+const val = k => { const v = parseFloat(String($(k).value).replace(',', '.')); return isFinite(v) ? v : NaN; };
+const kn = (v, d = 2) => nf(v, d) + ' kN/m²';
+/* tepe hız basıncı (kN/m²) */
+function qp(z, vb, cat, co) { const [z0, zmin] = TER[cat], zz = Math.max(z, zmin), kr = .19 * Math.pow(z0 / .05, .07), cr = kr * Math.log(zz / z0), vm = cr * co * vb, Iv = 1 / (co * Math.log(zz / z0));
+  return { q: (1 + 7 * Iv) * .5 * 1.25 * vm * vm / 1000, vm, Iv, cr, kr, z0, zmin, zz }; }
+/* TS 498 basınç (kN/m²), yüksekliğe göre */
+const ts498 = z => z <= 8 ? .5 : z <= 20 ? .8 : z <= 100 ? 1.1 : 1.3;
+/* Tablo 7.1 */
+function cpeTable(hd) { const lerp = (a, b, t) => a + (b - a) * t;
+  let D10, D1, E;
+  if (hd >= 5) { D10 = .8; D1 = 1; E = -.7; } else if (hd >= 1) { const t = (hd - 1) / 4; D10 = .8; D1 = 1; E = lerp(-.5, -.7, t); } else if (hd > .25) { const t = (hd - .25) / .75; D10 = lerp(.7, .8, t); D1 = 1; E = lerp(-.3, -.5, t); } else { D10 = .7; D1 = 1; E = -.3; }
+  return { A: [-1.2, -1.4], B: [-.8, -1.1], C: [-.5, -.5], D: [D10, D1], E: [E, E] }; }
+const cpeA = (c, A) => A >= 10 ? c[0] : A <= 1 ? c[1] : c[1] - (c[1] - c[0]) * Math.log10(A);
+const COL = { A: '#ef6b5b', B: '#f0a04b', C: '#e5b450', D: '#5aa9ff', E: '#8a7cf0' };
+function calc() {
+  F.forEach(k => S[k] = k === 'cpi' ? $(k).value : $(k).value === '' ? '' : val(k)); store.put(K, S);
+  const vb = val('vb0'), cat = +$('cat').value, h = val('h'), b = val('b'), d = val('d'), co = val('co') || 1, A = val('area') || 1, zIn = val('ze'), z = isFinite(zIn) && zIn > 0 ? Math.min(zIn, h) : h;
+  if (!(vb > 0 && h > 0 && b > 0 && d > 0)) { $('suc').textContent = $('pre').textContent = '–'; return; }
+  const Q = qp(z, vb, cat, co), Qh = qp(h, vb, cat, co), hd = h / d, T = cpeTable(hd), e = Math.min(b, 2 * h);
+  const cpis = $('cpi').value === 'std' ? [.2, -.3] : [0, 0];
+  const rows = ['A', 'B', 'C', 'D', 'E'].map(zn => { const c = cpeA(T[zn], A), net = [Q.q * (c - cpis[0]), Q.q * (c - cpis[1])], w = Math.abs(net[0]) > Math.abs(net[1]) ? net[0] : net[1]; return { zn, c, c10: T[zn][0], c1: T[zn][1], w }; });
+  const hasC = d > e; const shown = rows.filter(r => r.zn !== 'C' || hasC);
+  const suc = rows.find(r => r.zn === 'A').w, pre = rows.find(r => r.zn === 'D').w;
+  $('suc').textContent = kn(suc); $('sucS').textContent = `tasarım ×1,5 = ${kn(suc * 1.5)} · ${nf(Math.abs(suc) * 102, 0)} kg/m²`;
+  $('pre').textContent = '+' + kn(pre); $('preS').textContent = `tasarım ×1,5 = +${kn(pre * 1.5)} · ${nf(pre * 102, 0)} kg/m²`;
+  $('st').innerHTML = `<div class="stat"><span>Tepe basınç q<sub>p</sub></span><b>${nf(Q.q, 3)}</b><small>kN/m² · z = ${nf(z, 1)} m</small></div>
+    <div class="stat"><span>Ortalama hız v<sub>m</sub></span><b>${nf(Q.vm, 1)}</b><small>m/s · ${nf(Q.vm * 3.6, 0)} km/sa</small></div>
+    <div class="stat"><span>Türbülans I<sub>v</sub></span><b>${nf(Q.Iv, 3)}</b><small>c<sub>r</sub> = ${nf(Q.cr, 3)}</small></div>
+    <div class="stat"><span>e = min(b, 2h)</span><b>${nf(e, 1)} m</b><small>A bölgesi ${nf(e / 5, 2)} m · h/d ${nf(hd, 2)}</small></div>`;
+  $('tblMeta').textContent = `A = ${nf(A, 2)} m² · c_pi ${$('cpi').value === 'std' ? '+0,2 / −0,3' : '0'}`;
+  $('tbl').innerHTML = `<thead><tr><th>Bölge</th><th>Yer</th><th class="r">c<sub>pe,10</sub></th><th class="r">c<sub>pe,1</sub></th><th class="r">c<sub>pe</sub> (${nf(A, 1)} m²)</th><th class="r">Net w</th><th class="r">Tasarım ×1,5</th></tr></thead><tbody>` +
+    shown.map(r => `<tr class="${r.zn === 'A' || r.zn === 'D' ? 'wst' : ''}"><td class="zn"><b style="background:${COL[r.zn]}">${r.zn}</b></td><td>${{ A: 'Yan cephe, köşe şeridi', B: 'Yan cephe, orta', C: 'Yan cephe, arka kısım', D: 'Rüzgar alan cephe', E: 'Rüzgar altı (arka) cephe' }[r.zn]}</td><td class="r">${nf(r.c10, 2)}</td><td class="r">${nf(r.c1, 2)}</td><td class="r"><b>${nf(r.c, 2)}</b></td><td class="r"><span class="${r.w < 0 ? 'neg' : 'pos'}">${r.w > 0 ? '+' : ''}${nf(r.w, 2)}</span></td><td class="r">${r.w > 0 ? '+' : ''}${nf(r.w * 1.5, 2)}</td></tr>`).join('') + '</tbody>';
+  plan(b, d, e, hasC); prof(h, vb, cat, co, z);
+}
+/* plan: rüzgar soldan */
+function plan(b, d, e, hasC) {
+  const W = 600, H = 300, pad = 70, sc = Math.min((W - 2 * pad - 60) / d, (H - 2 * 40) / b), x0 = (W - d * sc) / 2 + 30, y0 = (H - b * sc) / 2, w = d * sc, hh = b * sc, t = 14;
+  let s = '';
+  for (let i = 0; i < 5; i++) { const y = y0 + hh * (i + .5) / 5; s += `<line x1="${x0 - 130}" y1="${y}" x2="${x0 - 22}" y2="${y}" stroke="var(--muted)" stroke-width="1.5" marker-end="url(#ar)"/>`; }
+  s = `<defs><marker id="ar" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="6" markerHeight="6" orient="auto"><path d="M0 0L10 5L0 10z" fill="var(--muted)"/></marker></defs>` + s + `<text x="${x0 - 130}" y="${y0 - 10}" font-size="11" fill="var(--muted)">rüzgar →</text>`;
+  s += `<rect x="${x0}" y="${y0}" width="${w}" height="${hh}" fill="var(--panel)" stroke="var(--line)"/>`;
+  s += `<rect x="${x0 - t}" y="${y0}" width="${t}" height="${hh}" fill="${COL.D}"/><rect x="${x0 + w}" y="${y0}" width="${t}" height="${hh}" fill="${COL.E}"/>`;
+  const seg = (x1, x2, z) => { x1 = Math.min(x1, d); x2 = Math.min(x2, d); if (x2 <= x1) return ''; return `<rect x="${x0 + x1 * sc}" y="${y0 - t}" width="${(x2 - x1) * sc}" height="${t}" fill="${COL[z]}"/><rect x="${x0 + x1 * sc}" y="${y0 + hh}" width="${(x2 - x1) * sc}" height="${t}" fill="${COL[z]}"/><text x="${x0 + (x1 + x2) / 2 * sc}" y="${y0 - t - 6}" font-size="12" font-weight="600" text-anchor="middle" fill="var(--fg)">${z}</text>`; };
+  s += seg(0, e / 5, 'A') + seg(e / 5, e, 'B') + (hasC ? seg(e, d, 'C') : '');
+  s += `<text x="${x0 - t / 2}" y="${y0 - 6}" font-size="12" font-weight="600" text-anchor="middle" fill="var(--fg)">D</text><text x="${x0 + w + t / 2}" y="${y0 - 6}" font-size="12" font-weight="600" text-anchor="middle" fill="var(--fg)">E</text>`;
+  s += `<text x="${x0 + w / 2}" y="${y0 + hh + t + 18}" font-size="11" text-anchor="middle" fill="var(--muted)">d = ${nf(d, 1)} m · e/5 = ${nf(e / 5, 2)} m</text><text x="${x0 + w / 2}" y="${y0 + hh / 2}" font-size="11" text-anchor="middle" dominant-baseline="central" fill="var(--muted)">b = ${nf(b, 1)} m</text>`;
+  $('plan').innerHTML = s;
+}
+/* yükseklik grafiği */
+function prof(h, vb, cat, co, zSel) {
+  const W = 700, H = 300, L = 56, Rr = 16, T = 16, B = 34, top = Math.max(h, 10) * 1.1, pts = [], ts = [];
+  let qmax = 0; for (let i = 0; i <= 80; i++) { const z = top * i / 80, qq = qp(Math.max(z, .01), vb, cat, co).q; pts.push([z, qq]); qmax = Math.max(qmax, qq, ts498(z)); }
+  qmax = Math.ceil(qmax * 5) / 5 + .2;
+  const X = v => L + v / qmax * (W - L - Rr), Y = z => H - B - z / top * (H - B - T);
+  let s = '';
+  for (let v = 0; v <= qmax + 1e-9; v += qmax > 2 ? .5 : .2) s += `<line x1="${X(v)}" y1="${T}" x2="${X(v)}" y2="${H - B}" stroke="var(--line)"/><text x="${X(v)}" y="${H - B + 16}" font-size="10" text-anchor="middle" fill="var(--muted)">${nf(v, 1)}</text>`;
+  const zs = top > 120 ? 25 : top > 50 ? 10 : 5; for (let z = 0; z <= top; z += zs) s += `<line x1="${L}" y1="${Y(z)}" x2="${W - Rr}" y2="${Y(z)}" stroke="var(--line)" stroke-dasharray="2 4"/><text x="${L - 6}" y="${Y(z)}" font-size="10" text-anchor="end" dominant-baseline="central" fill="var(--muted)">${z} m</text>`;
+  s += `<text x="${(L + W) / 2}" y="${H - 4}" font-size="10.5" text-anchor="middle" fill="var(--muted)">kN/m²</text>`;
+  let tsd = ''; [[0, 8], [8, 20], [20, 100], [100, 1e9]].forEach(([a, b2]) => { if (a >= top) return; const v = ts498((a + Math.min(b2, top)) / 2); tsd += `M${X(v)} ${Y(a)}L${X(v)} ${Y(Math.min(b2, top))}`; });
+  s += `<path d="${tsd}" stroke="var(--muted)" stroke-width="2" stroke-dasharray="5 4" fill="none"/>`;
+  s += `<path d="${pts.map((p, i) => (i ? 'L' : 'M') + X(p[1]).toFixed(1) + ' ' + Y(p[0]).toFixed(1)).join('')}" stroke="var(--accent)" stroke-width="2.5" fill="none"/>`;
+  s += `<line x1="${L}" y1="${Y(h)}" x2="${W - Rr}" y2="${Y(h)}" stroke="var(--fg)" stroke-width="1" opacity=".5"/><text x="${W - Rr}" y="${Y(h) - 5}" font-size="10.5" text-anchor="end" fill="var(--fg)">bina tepesi ${nf(h, 1)} m</text>`;
+  const qs = qp(zSel, vb, cat, co).q; s += `<circle cx="${X(qs)}" cy="${Y(zSel)}" r="5" fill="var(--hot)"/><text x="${X(qs) + 8}" y="${Y(zSel) + 14}" font-size="11" fill="var(--hot)">${nf(qs, 2)} @ ${nf(zSel, 1)} m</text>`;
+  const lx = L + 16, ly = T + 22;
+  s += `<rect x="${lx - 8}" y="${ly - 12}" width="304" height="46" rx="4" fill="var(--panel)" stroke="var(--line)"/><g font-size="11"><line x1="${lx}" y1="${ly}" x2="${lx + 24}" y2="${ly}" stroke="var(--accent)" stroke-width="2.5"/><text x="${lx + 30}" y="${ly}" dominant-baseline="central" fill="var(--fg)">q<tspan font-size="8" dy="3">p</tspan><tspan dy="-3"> (EN 1991-1-4, kategori ${CN[cat]})</tspan></text>
+    <line x1="${lx}" y1="${ly + 18}" x2="${lx + 24}" y2="${ly + 18}" stroke="var(--muted)" stroke-width="2" stroke-dasharray="5 4"/><text x="${lx + 30}" y="${ly + 18}" dominant-baseline="central" fill="var(--muted)">TS 498 rüzgar basıncı q</text></g>`;
+  $('prof').innerHTML = s;
+}
+F.forEach(k => $(k).addEventListener(k === 'cat' || k === 'cpi' ? 'change' : 'input', calc));
+$('reset').onclick = () => { S = { ...DEF }; store.put(K, S); history.replaceState(null, '', location.pathname); load(); calc(); TM.toast('Değerler sıfırlandı'); };
+$('share').onclick = async () => { const u = location.origin + location.pathname + '?' + new URLSearchParams(Object.fromEntries(F.map(k => [k, $(k).value]))); try { await navigator.clipboard.writeText(u); TM.toast('Bağlantı kopyalandı'); } catch (e) { prompt('Bağlantı:', u); } };
+TM.onMode(calc);
+load(); calc();
+
+</script>
+</body>
+</html>

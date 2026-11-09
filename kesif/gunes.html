@@ -1,0 +1,331 @@
+<!doctype html>
+<html lang="tr" data-mode="dark">
+<head>
+<meta charset="utf-8">
+
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Güneş ve Gölge | erdevelop</title>
+<meta name="description" content="Konum ve cephe yönü seç: güneşin yıl boyu yolu, cepheye hangi ay hangi saatlerde güneş vurduğu, saçak ve dikey kanatların ne kadar gölge yaptığı.">
+<link rel="icon" href="/favicon.svg" type="image/svg+xml"><link rel="icon" href="/favicon.ico" sizes="any">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Chakra+Petch:wght@600;700&family=IBM+Plex+Sans:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500&display=swap">
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.css">
+<link rel="stylesheet" href="tema.css">
+<style>
+
+#map { height: 380px; border-radius: 6px; border: 1px solid var(--line); cursor: crosshair; }
+.leaflet-container { font: 400 12px var(--f-mono); background: var(--panel-2); }
+.leaflet-bar a { background: var(--panel); color: var(--fg); border-color: var(--line); } .leaflet-control-attribution { background: color-mix(in srgb, var(--panel) 80%, transparent) !important; color: var(--muted); } .leaflet-control-attribution a { color: var(--accent); }
+.pin { width: 16px; height: 16px; border-radius: 50%; background: var(--accent); border: 3px solid #fff; box-shadow: 0 1px 6px rgba(0,0,0,.5); }
+.top { display: grid; grid-template-columns: minmax(0, 1.25fr) minmax(300px, 1fr); gap: 16px; }
+@media (max-width: 900px) { .top { grid-template-columns: 1fr; } }
+.fd label, .lbl { display: block; font: 500 11px var(--f-mono); color: var(--muted); text-transform: uppercase; letter-spacing: .8px; margin-bottom: 5px; }
+.row { display: flex; gap: 10px; flex-wrap: wrap; align-items: end; margin-bottom: 12px; }
+.row > .fd { flex: 1; min-width: 120px; }
+.row .inp, .row .sel { width: 100%; }
+.dialw { display: flex; gap: 14px; align-items: center; }
+#dial { width: 150px; height: 150px; flex: none; touch-action: none; cursor: grab; }
+.cmp { display: grid; grid-template-columns: repeat(4, 1fr); gap: 4px; }
+.cmp button { font: 500 12px var(--f-mono); padding: 6px 0; border: 1px solid var(--line); background: var(--panel-2); color: var(--text); border-radius: 4px; cursor: pointer; }
+.cmp button.on { background: var(--accent-dim); color: var(--accent); border-color: var(--accent); }
+.time { display: flex; gap: 10px; align-items: center; }
+.time input[type=range] { flex: 1; accent-color: var(--hot); }
+.time b { font: 600 1.3rem var(--f-display); min-width: 64px; text-align: right; }
+.vis { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1.35fr); gap: 16px; }
+@media (max-width: 900px) { .vis { grid-template-columns: 1fr; } }
+svg text { font-family: var(--f-mono); }
+#polar { width: 100%; max-width: 460px; display: block; margin: 0 auto; }
+.legend { display: flex; gap: 14px; flex-wrap: wrap; font-size: 12px; color: var(--muted); margin-top: 8px; justify-content: center; }
+.legend i { display: inline-block; width: 14px; height: 3px; border-radius: 2px; margin-right: 6px; vertical-align: 3px; }
+.hm { width: 100%; overflow-x: auto; }
+.hm table { border-collapse: separate; border-spacing: 2px; width: 100%; min-width: 560px; font: 400 11px var(--f-mono); table-layout: fixed; }
+.hm col.mc { width: 34px; } .hm col.sc { width: 42px; }
+.hm th { color: var(--muted); font-weight: 400; padding: 2px; }
+.hm td { height: 22px; border-radius: 3px; background: var(--panel-2); padding: 0; }
+.hm td.m { background: none; color: var(--muted); text-align: left; padding-right: 6px; white-space: nowrap; }
+.hm td.s { background: none; text-align: right; color: var(--fg); padding-left: 6px; white-space: nowrap; }
+.hm tr.cur td.m { color: var(--accent); font-weight: 500; }
+.scale { display: flex; align-items: center; gap: 8px; font-size: 11.5px; color: var(--muted); margin-top: 8px; }
+.scale span.g { width: 120px; height: 8px; border-radius: 4px; background: linear-gradient(90deg, var(--panel-2), #f5b342 40%, #ef6b5b); }
+.shd { display: grid; grid-template-columns: minmax(260px, 1fr) minmax(0, 1.3fr); gap: 16px; }
+@media (max-width: 900px) { .shd { grid-template-columns: 1fr; } }
+#sect { width: 100%; max-width: 420px; display: block; margin: 0 auto; background: var(--panel-2); border-radius: 6px; border: 1px solid var(--line); }
+.tscroll { max-height: 330px; overflow: auto; }
+.t td.dim { color: var(--muted); }
+.big { font: 700 2rem/1 var(--f-display); }
+#st .stat b, #sst .stat b { white-space: normal; font-size: clamp(1.1rem, 3.6vw, 1.45rem); }
+@media (max-width: 560px) { #st { grid-template-columns: 1fr 1fr; } }
+.warnbox { font-size: 13px; color: var(--muted); }
+
+</style>
+</head>
+<body>
+<div class="bg" aria-hidden="true"></div>
+<div class="topbar"><div class="wrap">
+  <a class="brand" href="../">erdevelop<span>_</span></a><span class="crumb">/ tools / güneş</span><span class="sp"></span>
+  <a class="tb" href="../Tools.html">Araçlar</a><button class="tb" type="button" id="modeBtn">LIGHT</button>
+</div></div>
+<main class="wrap">
+  <header class="head"><h1>Güneş ve Gölge</h1><p>Konum ve cephe yönü seç: güneşin yıl boyu yolu, cepheye hangi ay hangi saatlerde güneş vurduğu, saçak ve dikey kanatların ne kadar gölge yaptığı.</p></header>
+
+  <div class="layer">
+    <div class="layer-head"><span class="swatch"></span><h2>Konum ve cephe</h2><span class="meta" id="locName">İstanbul</span></div>
+    <div class="top">
+      <div>
+        <form class="ctl" id="sf" role="search" style="margin-bottom:10px"><input class="inp grow" id="q" placeholder="Adres, şehir ya da 41.01, 28.97" aria-label="Konum ara"><button class="btn pri">Ara</button><button class="btn" type="button" id="gps">📍 Konumum</button></form>
+        <div id="map" role="region" aria-label="Konum haritası — tıklayarak nokta seç"></div>
+        <p class="note">Haritaya tıklayarak noktayı değiştir. Turuncu çizgi gün doğumu, kırmızı gün batımı, sarı seçili saatteki güneş yönüdür; mavi ok cephenin baktığı yön.</p>
+      </div>
+      <div class="panel">
+        <div class="lbl">Cephenin baktığı yön</div>
+        <div class="dialw" style="margin-bottom:14px">
+          <svg id="dial" viewBox="0 0 150 150" role="slider" aria-label="Cephe yönü" tabindex="0"></svg>
+          <div style="flex:1">
+            <div class="cmp" id="cmp"></div>
+            <div class="fd" style="margin-top:10px"><label for="faz">Azimut (kuzeyden saat yönünde)</label><input class="inp" id="faz" type="number" min="0" max="359" step="1" style="width:100%"></div>
+          </div>
+        </div>
+        <div class="row">
+          <div class="fd"><label for="dt">Tarih</label><input class="inp" id="dt" type="date"></div>
+          <div class="fd"><label for="tz">Saat dilimi</label><select class="sel" id="tz"></select></div>
+        </div>
+        <div class="row" style="margin-bottom:6px">
+          <div class="seg" id="quick"><button type="button" data-d="03-20">21 Mart</button><button type="button" data-d="06-21">21 Haziran</button><button type="button" data-d="09-23">23 Eylül</button><button type="button" data-d="12-21">21 Aralık</button></div>
+        </div>
+        <div class="lbl" style="margin-top:12px">Saat</div>
+        <div class="time"><input type="range" id="tm" min="0" max="1439" step="5" aria-label="Saat"><b id="tmT">12:00</b><button class="btn" type="button" id="play" aria-label="Günü oynat">▶</button></div>
+      </div>
+    </div>
+    <div class="stats" id="st" style="margin-top:14px"></div>
+  </div>
+
+  <div class="layer">
+    <div class="layer-head"><span class="swatch"></span><h2>Güneş yolu ve güneşlenme takvimi</h2><span class="meta">her ayın 21’i</span></div>
+    <div class="vis">
+      <div class="panel"><svg id="polar" viewBox="0 0 420 420" role="img" aria-label="Güneş yolu diyagramı"></svg>
+        <div class="legend"><span><i style="background:#ef6b5b"></i>21 Haziran</span><span><i style="background:#f5b342"></i>21 Mart / Eylül</span><span><i style="background:#5aa9ff"></i>21 Aralık</span><span><i style="background:var(--fg)"></i>seçili gün</span><span><i style="background:var(--accent-dim);height:10px"></i>cephenin gördüğü gökyüzü</span></div>
+      </div>
+      <div class="panel">
+        <div class="lbl">Cepheye doğrudan güneş — ay × saat</div>
+        <div class="hm" id="hm"></div>
+        <div class="scale"><span>yok</span><span class="g"></span><span>dik geliş (yoğun)</span></div>
+        <p class="note" id="hmNote"></p>
+      </div>
+    </div>
+  </div>
+
+  <div class="layer">
+    <div class="layer-head"><span class="swatch"></span><h2>Saçak ve kanat gölgesi</h2><span class="meta">seçili gün ve saat</span></div>
+    <div class="shd">
+      <div class="panel">
+        <div class="row"><div class="fd"><label for="wh">Pencere yüksekliği</label><input class="inp" id="wh" type="number" min="0.1" step="0.05"></div><div class="fd"><label for="od">Saçak derinliği</label><input class="inp" id="od" type="number" min="0" step="0.05"></div></div>
+        <div class="row"><div class="fd"><label for="oe">Saçak, pencere üstünden</label><input class="inp" id="oe" type="number" min="0" step="0.05"></div><div class="fd"><label for="fd2">Kanat derinliği</label><input class="inp" id="fd2" type="number" min="0" step="0.05"></div></div>
+        <div class="row"><div class="fd"><label for="fs">Kanat aralığı</label><input class="inp" id="fs" type="number" min="0.1" step="0.05"></div><div class="fd" style="align-self:center"><span class="muted small">ölçüler metre</span></div></div>
+        <svg id="sect" viewBox="0 0 300 240" role="img" aria-label="Kesit: saçak ve güneş ışını"></svg>
+      </div>
+      <div>
+        <div class="stats" id="sst"></div>
+        <div class="lbl" style="margin-top:14px">Gün boyu (cepheye güneş vurduğu saatler)</div>
+        <div class="tscroll"><table class="t" id="stbl"></table></div>
+        <p class="note">Düşey gölge açısı (profil açısı), saçağın gölge boyunu belirler: gölge = derinlik × tan(açı). Yatay gölge açısı, güneşin cephe normaline göre yana sapmasıdır; dikey kanatlar bunu keser. Hesap sonsuz uzun saçak ve kanat varsayar; ön boyutlandırma içindir.</p>
+      </div>
+    </div>
+  </div>
+</main>
+<footer><div class="wrap"><span>Güneş konumu NOAA hesap yöntemiyle tarayıcıda hesaplanır · Harita: <a href="https://www.openstreetmap.org/copyright" target="_blank" rel="noopener">OpenStreetMap</a> · Arama: Nominatim</span><a href="../Tools.html">← tüm araçlar</a></div></footer>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.js"></script>
+<script src="tema.js"></script>
+<script>
+
+const R = Math.PI / 180, K = 'erdevelop-gunes';
+const DEF = { lat: 41.0082, lon: 28.9784, name: 'İstanbul', faz: 180, tz: -new Date().getTimezoneOffset() / 60, dt: '', tm: 720, wh: 1.5, od: 0.6, oe: 0.2, fd2: 0, fs: 1.2 };
+let S = { ...DEF, ...store.json(K, {}) };
+const save = () => store.put(K, S);
+/* ---------- güneş (NOAA) ---------- */
+function sun(ms, lat, lon) {
+  const jd = ms / 864e5 + 2440587.5, t = (jd - 2451545) / 36525;
+  const L0 = ((280.46646 + t * (36000.76983 + t * .0003032)) % 360 + 360) % 360, M = 357.52911 + t * (35999.05029 - .0001537 * t), e = .016708634 - t * (.000042037 + .0000001267 * t);
+  const C = Math.sin(M * R) * (1.914602 - t * (.004817 + .000014 * t)) + Math.sin(2 * M * R) * (.019993 - .000101 * t) + Math.sin(3 * M * R) * .000289;
+  const om = 125.04 - 1934.136 * t, lam = L0 + C - .00569 - .00478 * Math.sin(om * R);
+  const eps = 23 + (26 + (21.448 - t * (46.815 + t * (.00059 - t * .001813))) / 60) / 60 + .00256 * Math.cos(om * R);
+  const dec = Math.asin(Math.sin(eps * R) * Math.sin(lam * R)), y = Math.tan(eps * R / 2) ** 2;
+  const eot = 4 / R * (y * Math.sin(2 * L0 * R) - 2 * e * Math.sin(M * R) + 4 * e * y * Math.sin(M * R) * Math.cos(2 * L0 * R) - .5 * y * y * Math.sin(4 * L0 * R) - 1.25 * e * e * Math.sin(2 * M * R));
+  const d = new Date(ms), utcMin = d.getUTCHours() * 60 + d.getUTCMinutes() + d.getUTCSeconds() / 60;
+  const ha = ((utcMin + eot + 4 * lon) / 4 - 180) * R, la = lat * R;
+  const alt = Math.asin(Math.sin(la) * Math.sin(dec) + Math.cos(la) * Math.cos(dec) * Math.cos(ha));
+  let az = Math.atan2(Math.sin(ha), Math.cos(ha) * Math.sin(la) - Math.tan(dec) * Math.cos(la)) / R + 180;
+  return { alt: alt / R, az: (az + 360) % 360, dec: dec / R, eot };
+}
+const ms = (dt, min) => Date.parse(dt + 'T00:00:00Z') + (min - S.tz * 60) * 6e4;
+const hm = m => { m = ((Math.round(m) % 1440) + 1440) % 1440; return String(Math.floor(m / 60)).padStart(2, '0') + ':' + String(m % 60).padStart(2, '0'); };
+const dirName = a => ['K', 'KKD', 'KD', 'DKD', 'D', 'DGD', 'GD', 'GGD', 'G', 'GGB', 'GB', 'BGB', 'B', 'BKB', 'KB', 'KKB'][Math.round(((a % 360) + 360) % 360 / 22.5) % 16];
+const dirLong = a => ({ K: 'kuzey', KD: 'kuzeydoğu', D: 'doğu', GD: 'güneydoğu', G: 'güney', GB: 'güneybatı', B: 'batı', KB: 'kuzeybatı' })[['K', 'KD', 'D', 'GD', 'G', 'GB', 'B', 'KB'][Math.round(((a % 360) + 360) % 360 / 45) % 8]];
+const today = () => { const d = new Date(Date.now() + S.tz * 36e5); return d.toISOString().slice(0, 10); };
+/* cepheye geliş: cosθ = cos(alt)·cos(az − faz) (düşey yüzey) */
+const inc = (p, faz) => p.alt > 0 ? Math.cos(p.alt * R) * Math.cos((p.az - faz) * R) : -1;
+/* gün olayları: dakikalık tarama */
+function dayInfo(dt) {
+  const arr = []; for (let m = 0; m <= 1440; m += 2) arr.push([m, sun(ms(dt, m), S.lat, S.lon)]);
+  let rise = null, set = null, noon = arr[0], facade = 0, fFirst = null, fLast = null;
+  for (let i = 1; i < arr.length; i++) { const [m, p] = arr[i], q = arr[i - 1][1], h0 = -.833;
+    if (q.alt < h0 && p.alt >= h0 && rise == null) rise = m - 2 + 2 * (h0 - q.alt) / (p.alt - q.alt);
+    if (q.alt >= h0 && p.alt < h0) set = m - 2 + 2 * (q.alt - h0) / (q.alt - p.alt);
+    if (p.alt > noon[1].alt) noon = arr[i];
+    if (inc(p, S.faz) > 0) { facade += 2; if (fFirst == null) fFirst = m; fLast = m; } }
+  return { arr, rise, set, noon, facade, fFirst, fLast, polar: rise == null && set == null ? (arr[360][1].alt > 0 ? 'gündüz' : 'gece') : null };
+}
+/* ---------- arayüz kurulumu ---------- */
+for (let h = -12; h <= 14; h++) $('tz').insertAdjacentHTML('beforeend', `<option value="${h}">UTC${h >= 0 ? '+' : '−'}${Math.abs(h)}${h === 3 ? ' · Türkiye' : ''}</option>`);
+$('cmp').innerHTML = [['K', 0], ['KD', 45], ['D', 90], ['GD', 135], ['G', 180], ['GB', 225], ['B', 270], ['KB', 315]].map(([n, a]) => `<button type="button" data-a="${a}">${n}</button>`).join('');
+['wh', 'od', 'oe', 'fd2', 'fs'].forEach(k => { $(k).value = S[k]; $(k).oninput = () => { const v = parseFloat($(k).value); if (isFinite(v) && v >= 0) { S[k] = v; save(); shade(); } }; });
+$('dt').value = S.dt || today(); $('tz').value = S.tz; $('tm').value = S.tm; $('faz').value = S.faz; $('locName').textContent = S.name || `${S.lat.toFixed(4)}, ${S.lon.toFixed(4)}`;
+/* ---------- harita ---------- */
+const map = TM.map('map', { center: [S.lat, S.lon], zoom: 15 });
+const mk = L.marker([S.lat, S.lon], { keyboard: false, icon: L.divIcon({ className: '', html: '<div class="pin"></div>', iconSize: [16, 16], iconAnchor: [8, 8] }) }).addTo(map);
+const ray = (col, w, dash) => L.polyline([], { color: col, weight: w, dashArray: dash, interactive: false }).addTo(map);
+const rRise = ray('#f0a04b', 3), rSet = ray('#ef6b5b', 3), rNow = ray('#f5d142', 4), fLine = ray('#5aa9ff', 5), fArrow = ray('#5aa9ff', 3);
+function along(az, px) { const c = map.latLngToLayerPoint([S.lat, S.lon]); return map.layerPointToLatLng(L.point(c.x + px * Math.sin(az * R), c.y - px * Math.cos(az * R))); }
+function drawMap(info, p) {
+  const c = [S.lat, S.lon], at = m => sun(ms($('dt').value, m), S.lat, S.lon).az;
+  rRise.setLatLngs(info.rise != null ? [c, along(at(info.rise), 140)] : []); rSet.setLatLngs(info.set != null ? [c, along(at(info.set), 140)] : []);
+  rNow.setLatLngs(p.alt > 0 ? [c, along(p.az, 120)] : []);
+  fLine.setLatLngs([along(S.faz - 90, 34), along(S.faz + 90, 34)]);
+  const tip = along(S.faz, 60); fArrow.setLatLngs([[c, tip], [along(S.faz - 20, 48), tip, along(S.faz + 20, 48)]]);
+}
+map.on('zoomend', () => render(true));
+map.on('click', e => setLoc(e.latlng.lat, ((e.latlng.lng + 540) % 360) - 180));
+function setLoc(lat, lon, name) { S.lat = lat; S.lon = lon; S.name = name || null; save(); mk.setLatLng([lat, lon]); $('locName').textContent = name || `${lat.toFixed(4)}, ${lon.toFixed(4)}`; render(); }
+$('sf').onsubmit = async e => { e.preventDefault(); const q = $('q').value.trim(); if (!q) return; const m = q.match(/^\s*(-?\d+(?:[.,]\d+)?)\s*[,; ]\s*(-?\d+(?:[.,]\d+)?)\s*$/);
+  if (m) { const la = +m[1].replace(',', '.'), lo = +m[2].replace(',', '.'); map.setView([la, lo], 16); return setLoc(la, lo); }
+  try { const j = await TM.json(`https://nominatim.openstreetmap.org/search?format=jsonv2&limit=1&accept-language=tr&q=${encodeURIComponent(q)}`);
+    if (!j.length) return TM.toast('Bulunamadı'); const r = j[0]; map.setView([+r.lat, +r.lon], 16); setLoc(+r.lat, +r.lon, (r.name || r.display_name.split(',')[0]));
+  } catch (er) { TM.toast(er.message); } };
+$('gps').onclick = () => navigator.geolocation ? navigator.geolocation.getCurrentPosition(p => { map.setView([p.coords.latitude, p.coords.longitude], 17); setLoc(p.coords.latitude, p.coords.longitude, 'Konumum'); }, () => TM.toast('Konum alınamadı'), { enableHighAccuracy: true, timeout: 12000 }) : TM.toast('Konum desteklenmiyor');
+/* ---------- yön kadranı ---------- */
+function dial(p) {
+  const c = 75, r = 60, pt = (a, rr) => [c + rr * Math.sin(a * R), c - rr * Math.cos(a * R)];
+  let s = `<circle cx="${c}" cy="${c}" r="${r}" fill="var(--panel-2)" stroke="var(--line)"/>`;
+  for (let a = 0; a < 360; a += 15) { const [x1, y1] = pt(a, r), [x2, y2] = pt(a, a % 90 ? r - 5 : r - 10); s += `<line x1="${x1}" y1="${y1}" x2="${x2}" y2="${y2}" stroke="var(--muted)" stroke-width="${a % 90 ? 1 : 2}"/>`; }
+  [['K', 0], ['D', 90], ['G', 180], ['B', 270]].forEach(([n, a]) => { const [x, y] = pt(a, r + 9); s += `<text x="${x}" y="${y}" text-anchor="middle" dominant-baseline="central" font-size="10" fill="var(--muted)">${n}</text>`; });
+  /* cephenin gördüğü yarım düzlem */
+  const [a1x, a1y] = pt(S.faz - 90, r - 1), [a2x, a2y] = pt(S.faz + 90, r - 1);
+  s += `<path d="M${a1x} ${a1y} A${r - 1} ${r - 1} 0 0 1 ${a2x} ${a2y} Z" fill="var(--accent-dim)"/>`;
+  s += `<line x1="${a1x}" y1="${a1y}" x2="${a2x}" y2="${a2y}" stroke="var(--fg)" stroke-width="5" stroke-linecap="round"/>`;
+  const [tx, ty] = pt(S.faz, r - 14); s += `<line x1="${c}" y1="${c}" x2="${tx}" y2="${ty}" stroke="var(--accent)" stroke-width="3"/><circle cx="${tx}" cy="${ty}" r="5" fill="var(--accent)"/>`;
+  if (p && p.alt > 0) { const [sx, sy] = pt(p.az, r * (1 - p.alt / 90) * .85 + 4); s += `<circle cx="${sx}" cy="${sy}" r="6" fill="#f5d142" stroke="#c98f12"/>`; }
+  s += `<text x="${c}" y="${c + 22}" text-anchor="middle" font-size="12" font-weight="600" fill="var(--fg)">${Math.round(S.faz)}° ${dirName(S.faz)}</text>`;
+  $('dial').innerHTML = s;
+  document.querySelectorAll('#cmp button').forEach(b => b.classList.toggle('on', +b.dataset.a === Math.round(S.faz)));
+}
+function setFaz(a) { S.faz = Math.round(((a % 360) + 360) % 360); $('faz').value = S.faz; save(); render(); }
+(() => { const el = $('dial'); let drag = false;
+  const at = e => { const b = el.getBoundingClientRect(), x = e.clientX - b.left - b.width / 2, y = e.clientY - b.top - b.height / 2; let a = Math.atan2(x, -y) / R; if (!e.shiftKey) a = Math.round(a / 5) * 5; setFaz(a); };
+  el.addEventListener('pointerdown', e => { drag = true; el.setPointerCapture(e.pointerId); at(e); });
+  el.addEventListener('pointermove', e => drag && at(e)); el.addEventListener('pointerup', () => drag = false);
+  el.addEventListener('keydown', e => { if (e.key === 'ArrowRight' || e.key === 'ArrowUp') { setFaz(S.faz + (e.shiftKey ? 15 : 1)); e.preventDefault(); } if (e.key === 'ArrowLeft' || e.key === 'ArrowDown') { setFaz(S.faz - (e.shiftKey ? 15 : 1)); e.preventDefault(); } });
+})();
+$('cmp').onclick = e => { const b = e.target.closest('button'); if (b) setFaz(+b.dataset.a); };
+$('faz').oninput = () => { const v = parseFloat($('faz').value); if (isFinite(v)) setFaz(v); };
+$('dt').onchange = () => { S.dt = $('dt').value; save(); render(); };
+$('tz').onchange = () => { S.tz = +$('tz').value; save(); render(); };
+$('tm').oninput = () => { S.tm = +$('tm').value; save(); render(true); };
+$('quick').onclick = e => { const b = e.target.closest('button'); if (!b) return; $('dt').value = $('dt').value.slice(0, 4) + '-' + b.dataset.d; $('dt').onchange(); };
+let play = null;
+$('play').onclick = () => { if (play) { clearInterval(play); play = null; $('play').textContent = '▶'; return; } $('play').textContent = '❚❚'; play = setInterval(() => { S.tm = (S.tm + 10) % 1440; $('tm').value = S.tm; render(true); }, 60); };
+/* ---------- güneş yolu diyagramı ---------- */
+function polar(info, p) {
+  const c = 210, r = 175, xy = q => { const rr = r * (1 - Math.max(0, q.alt) / 90); return [c + rr * Math.sin(q.az * R), c - rr * Math.cos(q.az * R)]; };
+  let s = '';
+  const [a1x, a1y] = [c + r * Math.sin((S.faz - 90) * R), c - r * Math.cos((S.faz - 90) * R)], [a2x, a2y] = [c + r * Math.sin((S.faz + 90) * R), c - r * Math.cos((S.faz + 90) * R)];
+  s += `<path d="M${a1x} ${a1y} A${r} ${r} 0 0 1 ${a2x} ${a2y} Z" fill="var(--accent-dim)"/>`;
+  [0, 30, 60].forEach(a => { s += `<circle cx="${c}" cy="${c}" r="${r * (1 - a / 90)}" fill="none" stroke="var(--line)" ${a ? 'stroke-dasharray="3 4"' : ''}/>`; if (a) s += `<text x="${c + 3}" y="${c - r * (1 - a / 90) - 3}" font-size="10" fill="var(--muted)">${a}°</text>`; });
+  for (let a = 0; a < 360; a += 30) { const x = c + r * Math.sin(a * R), y = c - r * Math.cos(a * R); s += `<line x1="${c}" y1="${c}" x2="${x}" y2="${y}" stroke="var(--line)" stroke-width=".7"/>`; const lx = c + (r + 16) * Math.sin(a * R), ly = c - (r + 16) * Math.cos(a * R); s += `<text x="${lx}" y="${ly}" text-anchor="middle" dominant-baseline="central" font-size="11" fill="${a % 90 ? 'var(--muted)' : 'var(--fg)'}">${a % 90 ? a : ['K', 'D', 'G', 'B'][a / 90]}</text>`; }
+  s += `<line x1="${a1x}" y1="${a1y}" x2="${a2x}" y2="${a2y}" stroke="var(--fg)" stroke-width="2" opacity=".5"/>`;
+  const yr = $('dt').value.slice(0, 4), path = (dt, col, w) => { const pts = []; for (let m = 0; m <= 1440; m += 6) { const q = sun(ms(dt, m), S.lat, S.lon); if (q.alt > 0) pts.push(xy(q)); else if (pts.length && pts[pts.length - 1] !== null) pts.push(null); }
+    let d = '', pen = false; pts.forEach(pt => { if (!pt) { pen = false; return; } d += (pen ? 'L' : 'M') + pt[0].toFixed(1) + ' ' + pt[1].toFixed(1); pen = true; }); return d ? `<path d="${d}" fill="none" stroke="${col}" stroke-width="${w}" stroke-linecap="round"/>` : ''; };
+  s += path(yr + '-06-21', '#ef6b5b', 2.2) + path(yr + '-03-20', '#f5b342', 2.2) + path(yr + '-12-21', '#5aa9ff', 2.2);
+  s += path($('dt').value, 'var(--fg)', 1.6);
+  for (let h = 0; h < 24; h++) { const q = sun(ms($('dt').value, h * 60), S.lat, S.lon); if (q.alt <= 0) continue; const [x, y] = xy(q); s += `<circle cx="${x}" cy="${y}" r="2.5" fill="var(--fg)"/><text x="${x + 5}" y="${y - 5}" font-size="9.5" fill="var(--muted)">${h}</text>`; }
+  if (p.alt > 0) { const [x, y] = xy(p); s += `<circle cx="${x}" cy="${y}" r="10" fill="#f5d142" opacity=".35"/><circle cx="${x}" cy="${y}" r="6.5" fill="#f5d142" stroke="#c98f12" stroke-width="1.5"/>`; }
+  $('polar').innerHTML = s;
+}
+/* ---------- ay × saat ısı haritası ---------- */
+const AYL = ['Ocak', 'Şubat', 'Mart', 'Nisan', 'Mayıs', 'Haziran', 'Temmuz', 'Ağustos', 'Eylül', 'Ekim', 'Kasım', 'Aralık'];
+const AY = ['Oca', 'Şub', 'Mar', 'Nis', 'May', 'Haz', 'Tem', 'Ağu', 'Eyl', 'Eki', 'Kas', 'Ara'];
+function heat() {
+  const yr = $('dt').value.slice(0, 4), curM = +$('dt').value.slice(5, 7) - 1, col = v => { if (v <= 0) return 'var(--panel-2)'; const a = Math.min(1, v); const r = Math.round(245 + (239 - 245) * a), g = Math.round(179 + (107 - 179) * a), b = Math.round(66 + (91 - 66) * a); return `rgba(${r},${g},${b},${(.25 + .75 * a).toFixed(2)})`; };
+  let h = '<table><colgroup><col class="mc">' + '<col>'.repeat(24) + '<col class="sc"></colgroup><thead><tr><th></th>' + Array.from({ length: 24 }, (_, i) => `<th>${i % 3 ? '' : i}</th>`).join('') + '<th style="text-align:right">saat</th></tr></thead><tbody>', yearH = 0, best = [0, 0];
+  for (let mo = 0; mo < 12; mo++) { const dt = `${yr}-${String(mo + 1).padStart(2, '0')}-21`; let tot = 0, row = '';
+    for (let hr = 0; hr < 24; hr++) { let sum = 0, n = 0; for (let m = 0; m < 60; m += 10) { const v = inc(sun(ms(dt, hr * 60 + m + 5), S.lat, S.lon), S.faz); if (v > 0) { sum += v; n++; } } tot += n / 6; row += `<td style="background:${col(n ? sum / 6 : 0)}" title="${AY[mo]} ${hr}:00–${hr + 1}:00 · ${n ? Math.round(n / 6 * 60) + ' dk güneş' : 'güneş yok'}"></td>`; }
+    yearH += tot * (mo === 1 ? 28 : [3, 5, 8, 10].includes(mo) ? 30 : 31); if (tot > best[0]) best = [tot, mo];
+    h += `<tr class="${mo === curM ? 'cur' : ''}"><td class="m">${AY[mo]}</td>${row}<td class="s">${nf(tot, 1)}</td></tr>`; }
+  $('hm').innerHTML = h + '</tbody></table>';
+  $('hmNote').innerHTML = `Bu cephe yılda yaklaşık <b>${nf(yearH)}</b> saat doğrudan güneş görür (bulutsuz gökyüzü, çevre engelleri hariç). En çok <b>${AYL[best[1]]}</b> ayında, günde ${nf(best[0], 1)} saat. Renk ne kadar koyuysa ışık cepheye o kadar dik gelir.`;
+}
+/* ---------- saçak / kanat ---------- */
+function shadeAt(p) {
+  const rel = ((p.az - S.faz + 540) % 360) - 180, on = p.alt > 0 && Math.abs(rel) < 90;
+  if (!on) return { on, rel };
+  const vsa = Math.atan(Math.tan(p.alt * R) / Math.cos(rel * R)) / R, hsa = rel;
+  const oSh = S.od > 0 ? Math.min(1, Math.max(0, (S.od * Math.tan(vsa * R) - S.oe) / S.wh)) : 0;
+  const fSh = S.fd2 > 0 ? Math.min(1, S.fd2 * Math.tan(Math.abs(hsa) * R) / S.fs) : 0;
+  const need = (S.wh + S.oe) / Math.tan(vsa * R);
+  return { on, rel, vsa, hsa, oSh, fSh, tot: 1 - (1 - oSh) * (1 - fSh), need };
+}
+function sect(sh, p) {
+  const W = 300, H = 240, sc = 150 / Math.max(S.wh + S.oe + .4, S.od + .6, 1.6), wx = 70, top = 40, oy = top, wy1 = oy + S.oe * sc, wy2 = wy1 + S.wh * sc;
+  let s = `<rect x="${wx - 26}" y="10" width="26" height="${H - 20}" fill="var(--line)"/>`;
+  s += `<rect x="${wx - 26}" y="${wy1}" width="26" height="${S.wh * sc}" fill="var(--accent-dim)" stroke="var(--accent)"/>`;
+  s += `<text x="${wx - 30}" y="${(wy1 + wy2) / 2}" font-size="10" fill="var(--muted)" text-anchor="end" dominant-baseline="central">${nf(S.wh, 2)} m</text>`;
+  if (S.od > 0) s += `<rect x="${wx}" y="${oy - 4}" width="${S.od * sc}" height="6" fill="var(--fg)"/><text x="${wx + S.od * sc / 2}" y="${oy - 10}" font-size="10" fill="var(--muted)" text-anchor="middle">${nf(S.od, 2)} m</text>`;
+  if (sh.on && sh.vsa > 0) {
+    const t = Math.tan(sh.vsa * R), ex = wx + S.od * sc, ey = oy + 2, shY = Math.min(wy2, oy + S.od * t * sc);
+    if (S.od > 0 && shY > wy1) s += `<rect x="${wx - 26}" y="${wy1}" width="26" height="${shY - wy1}" fill="var(--muted)" opacity=".55"/><text x="${wx - 13}" y="${(wy1 + shY) / 2}" font-size="9" fill="var(--bg)" text-anchor="middle" dominant-baseline="central" transform="rotate(-90 ${wx - 13} ${(wy1 + shY) / 2})">gölge</text>`;
+    if (S.od > 0) { const hitY = ey + S.od * sc * t, endY = Math.min(H - 10, hitY), endX = ex - (endY - ey) / t;
+      s += `<line x1="${ex + 300 * Math.cos(sh.vsa * R)}" y1="${ey - 300 * Math.sin(sh.vsa * R)}" x2="${endX}" y2="${endY}" stroke="#f5b342" stroke-width="2" stroke-dasharray="6 4"/>`; }
+    for (let k = 1; k <= 3; k++) { const yy = wy2 - k * .24 * S.wh * sc; if (yy <= (S.od > 0 ? shY : wy1)) continue; s += `<line x1="${wx + 200 * Math.cos(sh.vsa * R)}" y1="${yy - 200 * Math.sin(sh.vsa * R)}" x2="${wx}" y2="${yy}" stroke="#f5b342" stroke-width="1.2" opacity=".55"/>`; }
+    const sx = Math.min(W - 24, ex + 110 * Math.cos(sh.vsa * R)), sy = Math.max(18, ey - 110 * Math.sin(sh.vsa * R));
+    s += `<circle cx="${sx}" cy="${sy}" r="11" fill="#f5d142" stroke="#c98f12"/>`;
+    s += `<text x="${W - 8}" y="${H - 12}" font-size="11" fill="var(--fg)" text-anchor="end">düşey gölge açısı ${nf(sh.vsa, 1)}°</text>`;
+  } else s += `<text x="${W - 8}" y="${H - 12}" font-size="11" fill="var(--muted)" text-anchor="end">${p.alt > 0 ? 'güneş cephenin arkasında' : 'güneş ufkun altında'}</text>`;
+  s += `<text x="10" y="${H - 12}" font-size="10" fill="var(--muted)">iç</text><text x="${wx + 6}" y="${H - 12}" font-size="10" fill="var(--muted)">dış →</text>`;
+  $('sect').innerHTML = s;
+}
+function shade() {
+  const dt = $('dt').value, p = sun(ms(dt, S.tm), S.lat, S.lon), sh = shadeAt(p); sect(sh, p);
+  const pct = v => '%' + Math.round(v * 100);
+  $('sst').innerHTML = sh.on ? `<div class="stat"><span>Pencere gölgede</span><b>${pct(sh.tot)}</b><small>saçak ${pct(sh.oSh)}${S.fd2 > 0 ? ' · kanat ' + pct(sh.fSh) : ''}</small></div>
+    <div class="stat"><span>Düşey gölge açısı</span><b>${nf(sh.vsa, 1)}°</b><small>profil açısı</small></div>
+    <div class="stat"><span>Yatay gölge açısı</span><b>${nf(sh.hsa, 1)}°</b><small>güneş ${dirLong(p.az)} tarafında</small></div>
+    <div class="stat"><span>Tam gölge için saçak</span><b>${sh.need > 20 ? '>20' : nf(sh.need, 2)} m</b><small>bu an için</small></div>`
+    : `<div class="stat"><span>Durum</span><b>Güneş yok</b><small>${p.alt > 0 ? 'güneş cephenin arkasında' : 'güneş ufkun altında'}</small></div>`;
+  let rows = '', maxNeed = 0, mid = 0;
+  for (let m = 0; m < 1440; m += 30) { const q = sun(ms(dt, m), S.lat, S.lon), s2 = shadeAt(q); if (!s2.on) continue;
+    if (m >= 600 && m <= 900) maxNeed = Math.max(maxNeed, s2.need), mid = 1;
+    rows += `<tr class="${Math.abs(m - S.tm) < 15 ? 'cur' : ''}"><td>${hm(m)}</td><td class="r">${nf(q.alt, 0)}°</td><td class="r">${nf(s2.vsa, 0)}°</td><td class="r">${nf(s2.hsa, 0)}°</td><td class="r"><b>%${Math.round(s2.tot * 100)}</b></td><td class="r ${s2.need > 5 ? 'dim' : ''}">${s2.need > 20 ? '>20' : nf(s2.need, 2)}</td></tr>`; }
+  $('stbl').innerHTML = rows ? `<thead><tr><th>Saat</th><th class="r">Yükseklik</th><th class="r">Düşey</th><th class="r">Yatay</th><th class="r">Gölge</th><th class="r">Gereken saçak m</th></tr></thead><tbody>${rows}</tbody>`
+    : '<tbody><tr><td class="muted">Bu gün cepheye doğrudan güneş vurmuyor.</td></tr></tbody>';
+}
+/* ---------- ana çizim ---------- */
+let lastInfo = null, lastKey = '';
+function render(light) {
+  const dt = $('dt').value || today(), key = [dt, S.lat, S.lon, S.tz, S.faz].join('|');
+  if (!light || key !== lastKey || !lastInfo) { lastInfo = dayInfo(dt); lastKey = key; }
+  const info = lastInfo, p = sun(ms(dt, S.tm), S.lat, S.lon);
+  $('tmT').textContent = hm(S.tm);
+  const len = info.rise != null && info.set != null ? info.set - info.rise : info.polar === 'gündüz' ? 1440 : 0;
+  const rel = ((p.az - S.faz + 540) % 360) - 180, on = p.alt > 0 && Math.abs(rel) < 90;
+  $('st').innerHTML = `<div class="stat"><span>Güneş şu an</span><b>${p.alt > 0 ? nf(p.alt, 1) + '°' : 'ufkun altında'}</b><small>${p.alt > 0 ? 'azimut ' + nf(p.az, 0) + '° ' + dirName(p.az) : nf(p.alt, 1) + '°'}</small></div>
+    <div class="stat"><span>Cepheye</span><b style="color:${on ? 'var(--hot)' : 'var(--muted)'}">${on ? 'güneş vuruyor' : 'güneş yok'}</b><small>${on ? 'geliş açısı ' + nf(Math.acos(inc(p, S.faz)) / R, 0) + '°' : (p.alt > 0 ? 'güneş arkada' : 'gece')}</small></div>
+    <div class="stat"><span>Doğuş · batış</span><b>${info.rise != null ? hm(info.rise) : '–'} · ${info.set != null ? hm(info.set) : '–'}</b><small>${info.polar ? 'kutup ' + info.polar + 'ü' : 'gün ' + Math.floor(len / 60) + ' sa ' + Math.round(len % 60) + ' dk'}</small></div>
+    <div class="stat"><span>Öğle (en yüksek)</span><b>${hm(info.noon[0])}</b><small>${nf(info.noon[1].alt, 1)}° yükseklik</small></div>
+    <div class="stat"><span>Cephe güneş süresi</span><b>${Math.floor(info.facade / 60)} sa ${info.facade % 60} dk</b><small>${info.fFirst != null ? hm(info.fFirst) + ' – ' + hm(info.fLast) : 'bu gün yok'}</small></div>`;
+  dial(p); polar(info, p); drawMap(info, p); shade();
+  if (!light) heat();
+}
+render();
+TM.onMode(() => render());
+
+</script>
+</body>
+</html>
