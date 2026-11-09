@@ -334,6 +334,9 @@
   .help-g code { font: 500 13px var(--f-mono); color: var(--fg); white-space: nowrap; }
   .help-g code i { font-style: normal; color: var(--muted); font-weight: 400; }
   .help-g small { color: var(--muted); font: 400 11px var(--f-mono); }
+  .wk { font: 400 14.5px/1.6 var(--f-body); color: var(--text); padding-top: 10px; } .wk::after { content: ''; display: block; clear: both; }
+  .wk img { float: right; max-width: min(42%, 240px); max-height: 260px; object-fit: cover; border-radius: 6px; border: 1px solid var(--line); margin: 4px 0 10px 16px; }
+  .wk-d { font: 500 12px var(--f-mono); color: var(--accent); margin: 0 0 6px; } .wk a { color: var(--accent); }
   .help-tip { border-top: 1px solid var(--line); padding: 8px 14px; font: 400 11px var(--f-mono); color: var(--muted); }
   @media (max-width: 560px) { .help-g button { grid-template-columns: 1fr; gap: 2px; } }
 
@@ -963,8 +966,22 @@ const COMMANDS = [
   { n: ['whoami', 'kimim'], g: 'gMisc', tr: 'Kısa tanıtım', en: 'Short intro', run: () => say(L('who')) },
   { n: ['history', 'gecmis'], g: 'gMisc', tr: 'Son yazılan komutlar', en: 'Recent commands', run: () => say(HIST.length ? HIST.slice(-8).join(' · ') : L('none')) },
   { n: ['clear', 'temizle'], g: 'gMisc', tr: 'Çıktıyı temizle', en: 'Clear output', run: () => say('') },
+  { n: ['wiki', 'vikipedi'], a: lang => lang === 'tr' ? 'konu' : 'topic', raw: 1, g: 'gMisc', tr: 'Vikipedi\'den kısa özet (ör. wiki Göbeklitepe)', en: 'Wikipedia summary (e.g. wiki Gobekli Tepe)', run: a => wiki(a) },
   { n: ['ziyaret', 'visits'], hide: 1, g: 'gMisc', run: () => showVisits() }
 ];
+// Vikipedi özeti (dil sitenin diline göre)
+async function wiki(q) {
+  const L = lang === 'tr' ? 'tr' : 'en', base = `https://${L}.wikipedia.org`; say('…');
+  try {
+    const os = await (await fetch(`${base}/w/api.php?action=opensearch&search=${encodeURIComponent(q)}&limit=1&namespace=0&format=json&origin=*`)).json(), title = os && os[1] && os[1][0];
+    if (!title) return say((L === 'tr' ? 'Vikipedi\'de bulunamadı: ' : 'Not found on Wikipedia: ') + q, 1);
+    const j = await (await fetch(`${base}/api/rest_v1/page/summary/${encodeURIComponent(title.replace(/ /g, '_'))}`)).json(), url = (j.content_urls && j.content_urls.desktop && j.content_urls.desktop.page) || `${base}/wiki/${encodeURIComponent(title)}`;
+    $('helpTitle').textContent = 'wiki — ' + (j.title || title);
+    $('helpBody').innerHTML = `<div class="wk">${j.thumbnail ? `<img src="${esc(j.thumbnail.source)}" alt="">` : ''}${j.description ? `<p class="wk-d">${esc(j.description)}</p>` : ''}<p>${esc(j.extract || '')}</p><p><a href="${esc(url)}" target="_blank" rel="noopener">${L === 'tr' ? 'Vikipedi\'de oku ↗' : 'Read on Wikipedia ↗'}</a></p></div>`;
+    $('helpTip').textContent = (L === 'tr' ? 'Kaynak: Vikipedi (CC BY-SA) · Esc kapatır' : 'Source: Wikipedia (CC BY-SA) · Esc closes');
+    $('help').hidden = false; document.body.style.overflow = 'hidden'; $('help').querySelector('.help-x').focus(); say('');
+  } catch (e) { say(L === 'tr' ? 'Vikipedi\'ye ulaşılamadı' : 'Could not reach Wikipedia', 1); }
+}
 // gizli ziyaret sayacı (Abacus): oturum başına bir kez sayılır, yalnızca "ziyaret" komutuyla görünür
 const VISIT = { url: 'https://abacus.jasoncameron.dev', ns: 'erdevelop.github.io', key: 'ana-sayfa', n: null };
 (function countVisit() {
@@ -985,12 +1002,13 @@ function runCmd(raw) {
   HIST.push(raw.trim()); if (HIST.length > 50) HIST.shift(); hi = -1;
   const [name, ...rest] = s.split(/\s+/), c = CMD_BY[name];
   if (!c) { const sug = Object.keys(CMD_BY).filter(k => !CMD_BY[k].hide && k.startsWith(name.slice(0, 2))).slice(0, 3); return say(`${T[lang].unknown}: ${name}${sug.length ? ' → ' + sug.join(', ') : ''} · help`, 1); }
-  if (c.a && !rest.length) { $('cmdInput').value = name + ' '; return say(`${name} ${c.a}`); }
-  c.run(rest.join(' '), name);
+  const argL = typeof c.a === 'function' ? c.a(lang) : c.a;
+  if (c.a && !rest.length) { $('cmdInput').value = name + ' '; return say(`${name} ${argL}`); }
+  c.run(c.raw ? raw.trim().replace(/^[_/]/, '').split(/\s+/).slice(1).join(' ') : rest.join(' '), name);
 }
 function openHelp() {
   const d = CMD_TXT[lang] || CMD_TXT.en, groups = ['gNav', 'gModel', 'gSite', 'gMisc'], nm = c => c.n.length > 1 && lang === 'tr' && c.n[1] !== '?' ? [c.n[1], c.n[0]] : c.n;
-  $('helpBody').innerHTML = groups.map(g => `<h4>${d[g]}</h4><div class="help-g">${COMMANDS.filter(c => c.g === g && !c.hide).map(c => { const ns = nm(c); return `<button type="button" data-c="${ns[0]}"${c.a ? ' data-a="1"' : ''}><code>${ns[0]}${c.a ? ` <i>${c.a}</i>` : ''}</code><span>${c[lang] || c.en}${ns.length > 1 ? ` <small>· ${ns.slice(1).join(', ')}</small>` : ''}</span></button>`; }).join('')}</div>`).join('');
+  $('helpBody').innerHTML = groups.map(g => `<h4>${d[g]}</h4><div class="help-g">${COMMANDS.filter(c => c.g === g && !c.hide).map(c => { const ns = nm(c); return `<button type="button" data-c="${ns[0]}"${c.a ? ' data-a="1"' : ''}><code>${ns[0]}${c.a ? ` <i>${typeof c.a === 'function' ? c.a(lang) : c.a}</i>` : ''}</code><span>${c[lang] || c.en}${ns.length > 1 ? ` <small>· ${ns.slice(1).join(', ')}</small>` : ''}</span></button>`; }).join('')}</div>`).join('');
   $('helpTitle').textContent = 'help — ' + d.helpT; $('helpTip').textContent = d.helpTip;
   $('help').hidden = false; document.body.style.overflow = 'hidden'; $('help').querySelector('.help-x').focus();
 }

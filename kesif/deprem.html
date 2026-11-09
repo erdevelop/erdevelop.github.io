@@ -1,0 +1,110 @@
+<!doctype html>
+<html lang="tr" data-mode="dark">
+<head>
+<meta charset="utf-8">
+
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Son Depremler | erdevelop</title>
+<meta name="description" content="Türkiye ve çevresinde ya da dünyada son depremler: harita, büyüklük, derinlik ve sana uzaklık. Veriler USGS’ten canlı gelir.">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Chakra+Petch:wght@600;700&family=IBM+Plex+Sans:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500&display=swap">
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.css">
+<link rel="stylesheet" href="tema.css">
+<style>
+
+#map { height: min(62vh, 560px); border-radius: 6px; border: 1px solid var(--line); background: var(--panel-2); }
+.leaflet-container { font: 400 12px var(--f-mono); }
+.leaflet-popup-content-wrapper, .leaflet-popup-tip { background: var(--panel); color: var(--fg); border: 1px solid var(--line); box-shadow: 0 8px 24px rgba(0,0,0,.25); }
+.leaflet-popup-content { margin: 10px 12px; } .leaflet-popup-content b { font: 600 14px var(--f-body); } .leaflet-popup-content a { color: var(--accent); }
+.leaflet-bar a { background: var(--panel); color: var(--fg); border-color: var(--line); } .leaflet-control-attribution { background: color-mix(in srgb, var(--panel) 80%, transparent) !important; color: var(--muted); } .leaflet-control-attribution a { color: var(--accent); }
+.legend { display: flex; gap: 14px; flex-wrap: wrap; font: 400 12px var(--f-mono); color: var(--muted); margin-top: 10px; align-items: center; }
+.legend i { display: inline-block; width: 11px; height: 11px; border-radius: 50%; margin-right: 6px; vertical-align: -1px; }
+.mag { display: inline-flex; justify-content: center; min-width: 44px; font: 600 13px var(--f-mono); border-radius: 4px; padding: 2px 6px; color: #fff; }
+.place b { font-weight: 500; } .place small { display: block; color: var(--muted); font: 400 11.5px var(--f-mono); }
+.pulse { animation: pl 1.6s ease-out infinite; transform-origin: center; transform-box: fill-box; }
+@keyframes pl { 0% { stroke-opacity: .9; stroke-width: 2; } 100% { stroke-opacity: 0; stroke-width: 18; } }
+.upd { font: 400 12px var(--f-mono); color: var(--muted); }
+
+</style>
+</head>
+<body>
+<div class="bg" aria-hidden="true"></div>
+<div class="topbar"><div class="wrap">
+  <a class="brand" href="../">erdevelop<span>_</span></a><span class="crumb">/ tools / deprem</span><span class="sp"></span>
+  <a class="tb" href="../Tools.html">Araçlar</a><button class="tb" type="button" id="modeBtn">LIGHT</button>
+</div></div>
+<main class="wrap">
+  <header class="head"><h1>Son Depremler</h1><p>Türkiye ve çevresinde ya da dünyada son depremler: harita, büyüklük, derinlik ve sana uzaklık. Veriler USGS’ten canlı gelir.</p></header>
+
+  <div class="layer">
+    <div class="ctl" style="margin-bottom:14px">
+      <div class="seg" id="reg"><button type="button" data-v="tr" class="on">Türkiye ve çevresi</button><button type="button" data-v="w">Dünya</button></div>
+      <div class="seg" id="per"><button type="button" data-v="1">24 saat</button><button type="button" data-v="7" class="on">7 gün</button><button type="button" data-v="30">30 gün</button></div>
+      <select class="sel" id="minm" aria-label="En küçük büyüklük"><option value="1">M 1+</option><option value="2">M 2+</option><option value="2.5" selected>M 2,5+</option><option value="3">M 3+</option><option value="4">M 4+</option><option value="5">M 5+</option></select>
+      <button class="btn" type="button" id="me">📍 Bana uzaklık</button>
+      <span class="sp"></span><span class="upd" id="upd"></span><button class="btn" type="button" id="ref">↻ Yenile</button>
+    </div>
+    <div class="stats" id="stats"></div>
+  </div>
+  <div class="layer">
+    <div class="split">
+      <div><div id="map" role="region" aria-label="Deprem haritası"></div>
+        <div class="legend"><span><i style="background:var(--m1)"></i>&lt; 3</span><span><i style="background:var(--m3)"></i>3–4</span><span><i style="background:var(--m4)"></i>4–5</span><span><i style="background:var(--m5)"></i>5+</span><span>· daire boyutu büyüklüğe göre · son 1 saat yanıp söner</span></div></div>
+      <div class="panel" style="padding:0"><div class="tscroll" style="max-height:min(62vh,560px)"><table class="t"><thead><tr><th>Zaman</th><th>M</th><th>Yer</th><th class="r">Derinlik</th><th class="r" id="thd" hidden>Uzaklık</th></tr></thead><tbody id="rows"></tbody></table></div></div>
+    </div>
+    <p class="note">USGS dünya genelini izler; Türkiye’deki küçük depremlerin bir kısmı listede olmayabilir. En ayrıntılı yerel veri için <a href="https://deprem.afad.gov.tr/last-earthquakes" target="_blank" rel="noopener">AFAD</a> ve <a href="http://www.koeri.boun.edu.tr/scripts/lst0.asp" target="_blank" rel="noopener">Kandilli</a>’ye bak. Liste 5 dakikada bir kendiliğinden yenilenir.</p>
+  </div>
+</main>
+<footer><div class="wrap"><span>Veri: <a href="https://earthquake.usgs.gov/" target="_blank" rel="noopener">USGS Earthquake Hazards Program</a></span><a href="../Tools.html">← tüm araçlar</a></div></footer>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.js"></script>
+<script src="tema.js"></script>
+<script>
+
+document.documentElement.style.setProperty('--m1', '#4cc38a'); document.documentElement.style.setProperty('--m3', '#e5b450'); document.documentElement.style.setProperty('--m4', '#f0803c'); document.documentElement.style.setProperty('--m5', '#ef4b4b');
+const MC = m => m >= 5 ? '#ef4b4b' : m >= 4 ? '#f0803c' : m >= 3 ? '#e5b450' : '#4cc38a';
+const S = { reg: store.get('deprem:reg', 'tr'), per: +store.get('deprem:per', 7), min: store.get('deprem:min', '2.5'), me: null, data: [], layer: null, marks: new Map() };
+const map = TM.map('map', { center: [39, 35], zoom: 5, minZoom: 2 });
+S.layer = L.layerGroup().addTo(map);
+const DIR = { N: 'K', S: 'G', E: 'D', W: 'B' };
+function trPlace(p) { if (!p) return ['Bilinmeyen yer', '']; p = p.replace(/\bTurkey\b|\bTürkiye\b/g, 'Türkiye').replace(/\bGreece\b/g, 'Yunanistan').replace(/\bIran\b/g, 'İran').replace(/\bSyria\b/g, 'Suriye').replace(/\bBulgaria\b/g, 'Bulgaristan').replace(/\bGeorgia\b/g, 'Gürcistan').replace(/\bCyprus\b/g, 'Kıbrıs').replace(/\bAegean Sea\b/g, 'Ege Denizi').replace(/\bBlack Sea\b/g, 'Karadeniz').replace(/\bIraq\b/g, 'Irak').replace(/\bArmenia\b/g, 'Ermenistan').replace(/\bAzerbaijan\b/g, 'Azerbaycan');
+  const m = p.match(/^(\d+(?:\.\d+)?) km ([NSEW]{1,3}) of (.+)$/); if (!m) return [p, '']; const [a, ...rest] = m[3].split(', '); return [a + (rest.length ? ', ' + rest.join(', ') : ''), m[1] + ' km ' + m[2].split('').map(c => DIR[c]).join('') + ' yönünde']; }
+const dist = (a, b, c, d) => { const r = Math.PI / 180, h = Math.sin((c - a) * r / 2) ** 2 + Math.cos(a * r) * Math.cos(c * r) * Math.sin((d - b) * r / 2) ** 2; return 12742 * Math.asin(Math.sqrt(h)); };
+const fmtT = t => new Date(t).toLocaleString('tr-TR', { day: '2-digit', month: 'short', hour: '2-digit', minute: '2-digit' });
+function segs() { [['reg', S.reg], ['per', String(S.per)]].forEach(([id, v]) => document.querySelectorAll('#' + id + ' button').forEach(b => b.classList.toggle('on', b.dataset.v === v))); $('minm').value = S.min; }
+async function load() {
+  const start = new Date(Date.now() - S.per * 864e5).toISOString().slice(0, 19);
+  let u = `https://earthquake.usgs.gov/fdsnws/event/1/query?format=geojson&orderby=time&limit=3000&starttime=${start}&minmagnitude=${S.min}`;
+  if (S.reg === 'tr') u += '&minlatitude=34&maxlatitude=43.5&minlongitude=24&maxlongitude=46';
+  $('ref').disabled = true; $('upd').innerHTML = '<span class="spin"></span>';
+  try { const j = await TM.json(u, {}, 25000); S.data = (j.features || []).filter(f => f.properties.mag != null).map(f => ({ id: f.id, m: f.properties.mag, t: f.properties.time, p: f.properties.place, url: f.properties.url, ts: f.properties.tsunami, lon: f.geometry.coordinates[0], lat: f.geometry.coordinates[1], dep: f.geometry.coordinates[2] }));
+    paint(); $('upd').textContent = 'güncellendi ' + new Date().toLocaleTimeString('tr-TR', { hour: '2-digit', minute: '2-digit' }); }
+  catch (e) { $('upd').innerHTML = '<span class="err">' + esc(e.message) + '</span>'; if (!S.data.length) $('rows').innerHTML = `<tr><td colspan="5" class="empty">${esc(e.message)}</td></tr>`; }
+  finally { $('ref').disabled = false; }
+}
+function paint() {
+  const D = S.data, now = Date.now(); S.layer.clearLayers(); S.marks.clear();
+  if (!D.length) { $('stats').innerHTML = ''; $('rows').innerHTML = '<tr><td colspan="5" class="empty">Bu aralıkta deprem yok.</td></tr>'; return; }
+  const big = D.reduce((a, b) => b.m > a.m ? b : a), last = D[0], avgD = D.reduce((a, b) => a + b.dep, 0) / D.length, n4 = D.filter(d => d.m >= 4).length;
+  const [bp] = trPlace(big.p);
+  $('stats').innerHTML = `<div class="stat"><span>Deprem</span><b>${nf(D.length)}</b><small>M ${String(S.min).replace('.', ',')}+ · ${S.per === 1 ? '24 saat' : S.per + ' gün'}</small></div>
+    <div class="stat"><span>En büyük</span><b style="color:${MC(big.m)}">M ${nf(big.m, 1)}</b><small title="${esc(bp)}">${esc(bp)}</small></div>
+    <div class="stat"><span>Son deprem</span><b>${TM.ago(last.t)}</b><small>M ${nf(last.m, 1)} · ${esc(trPlace(last.p)[0])}</small></div>
+    <div class="stat"><span>M 4 ve üstü</span><b>${n4}</b><small>ortalama derinlik ${nf(avgD, 1)} km</small></div>`;
+  [...D].reverse().forEach(d => { const fresh = now - d.t < 3600e3, r = Math.max(3, Math.pow(1.9, d.m) * 1.2), [pl, dir] = trPlace(d.p);
+    const c = L.circleMarker([d.lat, d.lon], { radius: r, color: MC(d.m), weight: fresh ? 2 : 1, fillColor: MC(d.m), fillOpacity: fresh ? .65 : .35, className: fresh ? 'pulse' : '' })
+      .bindPopup(`<b>M ${nf(d.m, 1)} · ${esc(pl)}</b><br>${dir ? esc(dir) + '<br>' : ''}${fmtT(d.t)} · ${TM.ago(d.t)}<br>Derinlik ${nf(d.dep, 1)} km${S.me ? ' · sana ' + nf(dist(S.me[0], S.me[1], d.lat, d.lon)) + ' km' : ''}${d.ts ? '<br><b style="color:var(--bad)">Tsunami uyarısı</b>' : ''}<br><a href="${esc(d.url)}" target="_blank" rel="noopener">USGS ayrıntı ↗</a>`);
+    c.addTo(S.layer); S.marks.set(d.id, c); });
+  $('thd').hidden = !S.me;
+  $('rows').innerHTML = D.slice(0, 400).map(d => { const [pl, dir] = trPlace(d.p); return `<tr data-id="${esc(d.id)}"><td class="mono small">${fmtT(d.t)}</td><td><span class="mag" style="background:${MC(d.m)}">${nf(d.m, 1)}</span></td><td class="place"><b>${esc(pl)}</b>${dir ? `<small>${esc(dir)}</small>` : ''}</td><td class="r mono small">${nf(d.dep, 1)} km</td>${S.me ? `<td class="r mono small">${nf(dist(S.me[0], S.me[1], d.lat, d.lon))} km</td>` : ''}</tr>`; }).join('');
+}
+$('rows').addEventListener('click', e => { const tr = e.target.closest('tr[data-id]'); if (!tr) return; const d = S.data.find(x => x.id === tr.dataset.id), mk = S.marks.get(tr.dataset.id); if (!d) return; map.flyTo([d.lat, d.lon], Math.max(map.getZoom(), 7), { duration: .8 }); setTimeout(() => mk && mk.openPopup(), 850); document.querySelectorAll('#rows tr.on').forEach(x => x.classList.remove('on')); tr.classList.add('on'); if (innerWidth < 860) $('map').scrollIntoView({ behavior: 'smooth', block: 'center' }); });
+document.querySelectorAll('#reg button').forEach(b => b.onclick = () => { S.reg = b.dataset.v; store.set('deprem:reg', S.reg); segs(); S.reg === 'tr' ? map.setView([39, 35], 5) : map.setView([20, 20], 2); load(); });
+document.querySelectorAll('#per button').forEach(b => b.onclick = () => { S.per = +b.dataset.v; store.set('deprem:per', S.per); segs(); load(); });
+$('minm').onchange = () => { S.min = $('minm').value; store.set('deprem:min', S.min); load(); };
+$('ref').onclick = load;
+$('me').onclick = () => { if (!navigator.geolocation) return TM.toast('Konum desteklenmiyor'); $('me').disabled = true; navigator.geolocation.getCurrentPosition(p => { S.me = [p.coords.latitude, p.coords.longitude]; $('me').disabled = false; $('me').textContent = '📍 Uzaklık açık'; L.circleMarker(S.me, { radius: 7, color: TM.css('--accent'), weight: 3, fillOpacity: 1, fillColor: '#fff' }).addTo(map).bindTooltip('Sen'); paint(); }, () => { $('me').disabled = false; TM.toast('Konum alınamadı'); }, { timeout: 12000, maximumAge: 600000 }); };
+segs(); if (S.reg === 'w') map.setView([20, 20], 2); load(); setInterval(() => { if (!document.hidden) load(); }, 300000);
+
+</script>
+</body>
+</html>

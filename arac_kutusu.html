@@ -639,6 +639,12 @@ input[type=color]{height:48px;padding:3px;cursor:pointer}
       <p class="hint">Bu günler iş günü hesabında tatil sayılır. Yalnızca bu cihazda saklanır.</p>
     </details>
   </div>
+  <div class="box"><h3>Başka ülkelerin resmi tatilleri</h3>
+    <div class="row"><div><label for="ng-c">Ülke</label><select id="ng-c"><option value="DE">Almanya</option></select></div><div><label for="ng-y">Yıl</label><select id="ng-y"></select></div></div>
+    <div class="btns"><button class="btn" type="button" id="ng-go">Tatilleri getir</button></div>
+    <div class="res" id="ng-out"><span class="ph">Yurt dışı projelerde iş günü planı için. Türkiye seçilirse yukarıdaki listeyle karşılaştırılır.</span></div>
+    <p class="hint">Veri: Nager.Date (date.nager.at). İnternet gerekir.</p>
+  </div>
 </section>
 
 <!-- POMODORO -->
@@ -1286,6 +1292,21 @@ byId('db-go').onclick=async()=>{if(db.s){dbStop();return}
 byId('db-rs').onclick=()=>{Object.assign(db,{hist:[],mn:Infinity,mx:-Infinity,sum:0,n:0});['db-mn','db-mx','db-av'].forEach(id=>byId(id).textContent='–');dbDraw()};
 window.addEventListener('hashchange',()=>{const h=location.hash.slice(1);if(h!=='ses'&&db.s)dbStop();if(h!=='pusula'&&cp.on)byId('cp-go').click()});
 document.addEventListener('visibilitychange',()=>{if(document.hidden&&db.s)dbStop()});
+
+/* ---------- Nager.Date: diğer ülkelerin tatilleri ---------- */
+{const NG='https://date.nager.at/api/v3',sel=byId('ng-c'),ys=byId('ng-y'),out=byId('ng-out'),y0=new Date().getFullYear();
+ ys.innerHTML=[y0-1,y0,y0+1,y0+2].map(v=>`<option${v===y0?' selected':''}>${v}</option>`).join('');
+ const TRN={DE:'Almanya',GB:'Birleşik Krallık',FR:'Fransa',NL:'Hollanda',BE:'Belçika',AT:'Avusturya',CH:'İsviçre',IT:'İtalya',ES:'İspanya',PL:'Polonya',RO:'Romanya',BG:'Bulgaristan',GR:'Yunanistan',AZ:'Azerbaycan',GE:'Gürcistan',US:'ABD',CA:'Kanada',SE:'İsveç',NO:'Norveç',DK:'Danimarka',FI:'Finlandiya',IE:'İrlanda',PT:'Portekiz',CZ:'Çekya',HU:'Macaristan',RU:'Rusya',UA:'Ukrayna',TR:'Türkiye',AU:'Avustralya',JP:'Japonya',CN:'Çin',KZ:'Kazakistan',MA:'Fas',EG:'Mısır',ZA:'Güney Afrika',BR:'Brezilya',MX:'Meksika',LU:'Lüksemburg',RS:'Sırbistan',HR:'Hırvatistan',SI:'Slovenya',SK:'Slovakya',EE:'Estonya',LV:'Letonya',LT:'Litvanya',AL:'Arnavutluk',MK:'Kuzey Makedonya',BA:'Bosna-Hersek',ME:'Karadağ',MD:'Moldova',IS:'İzlanda',MT:'Malta',CY:'Kıbrıs',NZ:'Yeni Zelanda',SG:'Singapur',KR:'Güney Kore'};
+ const fill=list=>{const cur=LS.get('ng-c')||'DE';sel.innerHTML=list.map(([k,n])=>[k,TRN[k]||n]).sort((a,b)=>a[1].localeCompare(b[1],'tr')).map(([k,n])=>`<option value="${k}"${k===cur?' selected':''}>${esc(n)}</option>`).join('')};
+ fill(Object.entries(TRN));
+ fetch(NG+'/AvailableCountries').then(r=>r.ok?r.json():null).then(a=>{if(Array.isArray(a)&&a.length)fill(a.map(c=>[c.countryCode,c.name]))}).catch(()=>{});
+ sel.addEventListener('change',e=>{e.stopPropagation();LS.set('ng-c',sel.value)});ys.addEventListener('change',e=>e.stopPropagation());
+ byId('ng-go').onclick=async()=>{const c=sel.value,y=+ys.value;out.innerHTML='<span class="ph">Yükleniyor…</span>';
+  try{const r=await fetch(`${NG}/PublicHolidays/${y}/${c}`);if(r.status===404)throw new Error('Bu ülke için veri yok');if(!r.ok)throw new Error('Servis yanıt vermedi');const a=await r.json();
+   const ours=c==='TR'?new Set(tatiller(y).filter(h=>!h.half).map(h=>h.d)):null,dn=d=>new Date(d+'T00:00').toLocaleDateString('tr-TR',{day:'numeric',month:'short',weekday:'short'});
+   let html=`<div class="nt">${esc(sel.selectedOptions[0].textContent)} · ${y} · ${a.length} gün</div>`+a.map(h=>`<div class="kv"><span>${dn(h.date)}${h.global===false&&h.counties?' <small style="color:var(--muted)">bölgesel</small>':''}</span><b>${esc(h.localName)}${h.localName!==h.name?` <small style="color:var(--muted);font-weight:400">${esc(h.name)}</small>`:''}${ours?(ours.has(h.date)?' ✓':' <small style="color:var(--warn)">bizde yok</small>'):''}</b></div>`).join('');
+   if(ours){const ng=new Set(a.map(h=>h.date)),miss=[...ours].filter(d=>!ng.has(d));html+=`<div class="nt" style="margin-top:8px">${miss.length?'Bizim listede olup Nager.Date’te olmayan: '+miss.map(dn).join(', '):'Tam gün tatiller iki listede de aynı.'}${DINI[y]&&DINI[y][2]?' · bu yılın bayram tarihleri tahmini':''}</div>`}
+   out.innerHTML=html}catch(e){out.innerHTML=`<span class="ph">${esc(e.message||'Bağlantı hatası')}</span>`}}}
 
 /* ---------- Değerleri hatırla ---------- */
 document.querySelectorAll('.tool input[id], .tool select[id]').forEach(el=>{

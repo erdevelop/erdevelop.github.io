@@ -1,0 +1,106 @@
+<!doctype html>
+<html lang="tr" data-mode="dark">
+<head>
+<meta charset="utf-8">
+
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Uzay | erdevelop</title>
+<meta name="description" content="NASA’nın her gün seçtiği astronomi fotoğrafı ve Uluslararası Uzay İstasyonu’nun (ISS) şu anki yeri, hızı ve yüksekliği — canlı.">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Chakra+Petch:wght@600;700&family=IBM+Plex+Sans:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500&display=swap">
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.css">
+<link rel="stylesheet" href="tema.css">
+<style>
+
+.apod { display: grid; grid-template-columns: minmax(0, 1.5fr) minmax(260px, 1fr); gap: 16px; }
+@media (max-width: 860px) { .apod { grid-template-columns: 1fr; } }
+.media { background: #000; border-radius: 6px; overflow: hidden; border: 1px solid var(--line); min-height: 280px; display: flex; align-items: center; justify-content: center; position: relative; }
+.media img { width: 100%; max-height: 72vh; object-fit: contain; display: block; cursor: zoom-in; }
+.media iframe, .media video { width: 100%; aspect-ratio: 16/9; border: 0; display: block; }
+.ap h2 { margin: 0 0 4px; font: 700 1.35rem/1.2 var(--f-display); }
+.ap .ex { color: var(--text); font-size: 14.5px; max-height: 420px; overflow: auto; }
+#iss { height: min(56vh, 480px); border-radius: 6px; border: 1px solid var(--line); }
+.leaflet-container { font: 400 12px var(--f-mono); background: var(--panel-2); }
+.leaflet-bar a { background: var(--panel); color: var(--fg); border-color: var(--line); } .leaflet-control-attribution { background: color-mix(in srgb, var(--panel) 80%, transparent) !important; color: var(--muted); } .leaflet-control-attribution a { color: var(--accent); }
+.issico { font-size: 26px; line-height: 1; filter: drop-shadow(0 2px 4px rgba(0,0,0,.6)); }
+.live { display: inline-flex; align-items: center; gap: 6px; font: 500 11px var(--f-mono); color: var(--ok); text-transform: uppercase; letter-spacing: 1px; }
+.live::before { content: ""; width: 8px; height: 8px; border-radius: 50%; background: var(--ok); animation: bl 1.4s infinite; }
+@keyframes bl { 50% { opacity: .25; } }
+.full { position: fixed; inset: 0; z-index: 60; background: rgba(0,0,0,.92); display: flex; align-items: center; justify-content: center; cursor: zoom-out; }
+.full img { max-width: 100%; max-height: 100%; }
+
+</style>
+</head>
+<body>
+<div class="bg" aria-hidden="true"></div>
+<div class="topbar"><div class="wrap">
+  <a class="brand" href="../">erdevelop<span>_</span></a><span class="crumb">/ tools / uzay</span><span class="sp"></span>
+  <a class="tb" href="../Tools.html">Araçlar</a><button class="tb" type="button" id="modeBtn">LIGHT</button>
+</div></div>
+<main class="wrap">
+  <header class="head"><h1>Uzay</h1><p>NASA’nın her gün seçtiği astronomi fotoğrafı ve Uluslararası Uzay İstasyonu’nun (ISS) şu anki yeri, hızı ve yüksekliği — canlı.</p></header>
+
+  <div class="layer">
+    <div class="layer-head"><span class="swatch"></span><h2>Günün astronomi fotoğrafı</h2><span class="meta">NASA APOD · açıklamalar İngilizce</span></div>
+    <div class="ctl" style="margin-bottom:14px"><button class="btn" type="button" id="prev">← Önceki gün</button><input class="inp" type="date" id="day" min="1995-06-16" aria-label="Tarih"><button class="btn" type="button" id="next">Sonraki gün →</button><button class="btn" type="button" id="rand">🎲 Rastgele</button><span class="sp"></span><button class="btn" type="button" id="keyb">API anahtarı</button></div>
+    <div class="apod"><div class="media" id="media"><span class="spin"></span></div><div class="ap panel" id="ap"></div></div>
+  </div>
+  <div class="layer">
+    <div class="layer-head"><span class="swatch"></span><h2>ISS şu an nerede?</h2><span class="live" id="live">canlı</span><span class="sp"></span><button class="btn" type="button" id="follow">Takip et: açık</button><button class="btn" type="button" id="meb">📍 Bana uzaklık</button></div>
+    <div class="split"><div id="iss" role="region" aria-label="ISS haritası"></div><div><div class="stats" id="ist"></div><p class="note">Konum 5 saniyede bir yenilenir. İstasyon saatte yaklaşık 28.000 km hızla, 90 dakikada bir Dünya’nın çevresini dolaşır. Daire, istasyonun o an görebildiği alanı gösterir.</p></div></div>
+  </div>
+</main>
+<footer><div class="wrap"><span>Veri: <a href="https://api.nasa.gov/" target="_blank" rel="noopener">NASA APOD</a> · <a href="https://wheretheiss.at/" target="_blank" rel="noopener">Where the ISS at?</a></span><a href="../Tools.html">← tüm araçlar</a></div></footer>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.js"></script>
+<script src="tema.js"></script>
+<script>
+
+/* ---------- APOD ---------- */
+const today = () => new Date(Date.now() - 5 * 36e5).toISOString().slice(0, 10); // APOD ABD doğu saatine göre yayınlanır
+let key = store.get('uzay:key', 'DEMO_KEY'); $('day').max = today(); $('day').value = today();
+const shift = (d, n) => { const t = new Date(d + 'T12:00:00Z'); t.setUTCDate(t.getUTCDate() + n); return t.toISOString().slice(0, 10); };
+async function apod(d) {
+  d = d < '1995-06-16' ? '1995-06-16' : d > today() ? today() : d; $('day').value = d; $('next').disabled = d >= today();
+  $('media').innerHTML = '<span class="spin"></span>'; $('ap').innerHTML = '';
+  try { const j = await TM.json(`https://api.nasa.gov/planetary/apod?api_key=${encodeURIComponent(key)}&thumbs=true&date=${d}`);
+    let m;
+    if (j.media_type === 'image') m = `<img src="${esc(j.url)}" alt="${esc(j.title)}" id="pic">`;
+    else if (j.media_type === 'video' && /youtube|vimeo/.test(j.url)) m = `<iframe src="${esc(j.url)}" title="${esc(j.title)}" allow="fullscreen; picture-in-picture" allowfullscreen loading="lazy"></iframe>`;
+    else if (j.media_type === 'video') m = `<video src="${esc(j.url)}" controls playsinline></video>`;
+    else m = j.thumbnail_url ? `<img src="${esc(j.thumbnail_url)}" alt="">` : '<div class="empty">Bu gün için görüntü yok; kaynağa bak.</div>';
+    $('media').innerHTML = m;
+    $('ap').innerHTML = `<div class="muted mono small">${new Date(d + 'T12:00').toLocaleDateString('tr-TR', { day: 'numeric', month: 'long', year: 'numeric' })}</div><h2>${esc(j.title)}</h2>${j.copyright ? `<div class="muted small">© ${esc(j.copyright.trim())}</div>` : ''}
+      <p class="ex">${esc(j.explanation)}</p><div class="ctl">${j.hdurl ? `<a class="btn" href="${esc(j.hdurl)}" target="_blank" rel="noopener">Yüksek çözünürlük ↗</a>` : ''}<a class="btn" href="https://apod.nasa.gov/apod/ap${d.slice(2).replace(/-/g, '')}.html" target="_blank" rel="noopener">APOD sayfası ↗</a><a class="btn" href="https://translate.google.com/?sl=en&tl=tr&op=translate&text=${encodeURIComponent(j.explanation.slice(0, 4500))}" target="_blank" rel="noopener">Türkçeye çevir ↗</a></div>`;
+    const pic = $('pic'); if (pic) pic.onclick = () => { const f = document.createElement('div'); f.className = 'full'; f.innerHTML = `<img src="${esc(j.hdurl || j.url)}" alt="">`; f.onclick = () => f.remove(); document.body.appendChild(f); };
+  } catch (e) { $('media').innerHTML = `<div class="empty err" style="padding:30px">${esc(/429/.test(e.message) || /çok fazla/.test(e.message) ? 'NASA’nın ortak deneme anahtarının saatlik sınırı doldu. api.nasa.gov’dan ücretsiz kendi anahtarını alıp “API anahtarı”na yapıştırabilirsin.' : e.message)}</div>`; }
+}
+$('prev').onclick = () => apod(shift($('day').value, -1)); $('next').onclick = () => apod(shift($('day').value, 1)); $('day').onchange = () => apod($('day').value);
+$('rand').onclick = () => { const a = +new Date('1995-06-16'), b = Date.now() - 864e5; apod(new Date(a + Math.random() * (b - a)).toISOString().slice(0, 10)); };
+$('keyb').onclick = () => { const k = prompt('NASA API anahtarın (api.nasa.gov’dan ücretsiz alınır). Boş bırakırsan ortak deneme anahtarı kullanılır:', key === 'DEMO_KEY' ? '' : key); if (k === null) return; key = k.trim() || 'DEMO_KEY'; store.set('uzay:key', key); apod($('day').value); };
+apod(today());
+/* ---------- ISS ---------- */
+const map = TM.map('iss', { center: [20, 0], zoom: 2, minZoom: 1 });
+const icon = L.divIcon({ className: '', html: '<div class="issico">🛰️</div>', iconSize: [30, 30], iconAnchor: [15, 15] });
+let mk = null, foot = null, trail = [], tline = L.polyline([], { color: TM.css('--accent'), weight: 2, opacity: .7 }).addTo(map), follow = true, me = null, last = null, fails = 0;
+TM.onMode(() => tline.setStyle({ color: TM.css('--accent') }));
+const dist = (a, b, c, d) => { const r = Math.PI / 180, h = Math.sin((c - a) * r / 2) ** 2 + Math.cos(a * r) * Math.cos(c * r) * Math.sin((d - b) * r / 2) ** 2; return 12742 * Math.asin(Math.sqrt(h)); };
+async function iss() {
+  try { const j = await TM.json('https://api.wheretheiss.at/v1/satellites/25544', {}, 8000); fails = 0; $('live').style.opacity = 1; last = j;
+    const ll = [j.latitude, j.longitude];
+    if (!mk) { mk = L.marker(ll, { icon, keyboard: false }).addTo(map).bindTooltip('ISS'); foot = L.circle(ll, { radius: j.footprint * 500, color: TM.css('--accent'), weight: 1, fillOpacity: .06 }).addTo(map); map.setView(ll, 3); }
+    else { mk.setLatLng(ll); foot.setLatLng(ll).setRadius(j.footprint * 500); if (follow) map.panTo(ll, { animate: true, duration: 1 }); }
+    if (trail.length && Math.abs(trail[trail.length - 1][1] - j.longitude) > 180) trail = []; trail.push(ll); if (trail.length > 400) trail.shift(); tline.setLatLngs(trail);
+    $('ist').innerHTML = `<div class="stat"><span>Enlem, boylam</span><b style="font-size:1.05rem;white-space:normal">${nf(j.latitude, 2)}°, ${nf(j.longitude, 2)}°</b><small>${j.visibility === 'daylight' ? '☀️ gündüz tarafında' : '🌙 Dünya’nın gölgesinde'}</small></div>
+      <div class="stat"><span>Hız</span><b>${nf(j.velocity)}</b><small>km/sa · saniyede ${nf(j.velocity / 3600, 1)} km</small></div>
+      <div class="stat"><span>Yükseklik</span><b>${nf(j.altitude)}</b><small>km</small></div>
+      ${me ? `<div class="stat"><span>Sana uzaklık</span><b>${nf(Math.hypot(dist(me[0], me[1], j.latitude, j.longitude), j.altitude))}</b><small>km (yeryüzünden ${nf(dist(me[0], me[1], j.latitude, j.longitude))} km)</small></div>` : ''}`;
+  } catch (e) { fails++; $('live').style.opacity = .3; if (fails === 3) TM.toast('ISS konumu alınamıyor; yeniden deneniyor'); }
+}
+$('follow').onclick = () => { follow = !follow; $('follow').textContent = 'Takip et: ' + (follow ? 'açık' : 'kapalı'); if (follow && last) map.panTo([last.latitude, last.longitude]); };
+map.on('dragstart', () => { if (follow) $('follow').click(); });
+$('meb').onclick = () => navigator.geolocation ? navigator.geolocation.getCurrentPosition(p => { me = [p.coords.latitude, p.coords.longitude]; L.circleMarker(me, { radius: 6, color: TM.css('--hot'), fillOpacity: 1 }).addTo(map).bindTooltip('Sen'); iss(); }, () => TM.toast('Konum alınamadı'), { timeout: 12000 }) : TM.toast('Konum desteklenmiyor');
+iss(); setInterval(() => { if (!document.hidden) iss(); }, 5000);
+
+</script>
+</body>
+</html>

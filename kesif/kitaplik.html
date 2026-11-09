@@ -1,0 +1,120 @@
+<!doctype html>
+<html lang="tr" data-mode="dark">
+<head>
+<meta charset="utf-8">
+<script src="../kilit.js" data-gate="../Tools.html"></script>
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Kitaplık | erdevelop</title>
+<meta name="description" content="Kitap ara, kapak ve özetine bak, okuma listene ekle: okuyacağım, okuyorum, okudum. Listen yalnızca bu tarayıcıda saklanır.">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Chakra+Petch:wght@600;700&family=IBM+Plex+Sans:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500&display=swap">
+
+<link rel="stylesheet" href="tema.css">
+<style>
+
+.tabs { display: flex; gap: 6px; margin: 4px 0 0; flex-wrap: wrap; }
+.books { display: grid; grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); gap: 14px; }
+.bk { background: var(--panel); border: 1px solid var(--line); border-radius: 6px; overflow: hidden; cursor: pointer; display: flex; flex-direction: column; text-align: left; padding: 0; color: inherit; font: inherit; transition: border-color .2s, transform .2s; }
+.bk:hover { border-color: var(--accent); transform: translateY(-2px); }
+.cv { aspect-ratio: 2/3; background: var(--panel-2); display: flex; align-items: center; justify-content: center; position: relative; overflow: hidden;
+  background-image: linear-gradient(var(--grid) 1px, transparent 1px), linear-gradient(90deg, var(--grid) 1px, transparent 1px); background-size: 12px 12px; }
+.cv img { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; display: block; z-index: 1; }
+.cv .st { z-index: 2; }
+.cv .ph { font: 600 13px var(--f-display); color: var(--muted); padding: 12px; text-align: center; text-transform: uppercase; }
+.cv .st { position: absolute; top: 6px; left: 6px; font: 500 10.5px var(--f-mono); background: var(--accent); color: var(--bg); border-radius: 3px; padding: 1px 6px; }
+.bk .bi { padding: 8px 10px 10px; display: flex; flex-direction: column; gap: 2px; min-width: 0; }
+.bk b { font: 600 13.5px/1.3 var(--f-body); display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
+.bk small { color: var(--muted); font: 400 11.5px var(--f-mono); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.stars { color: var(--hot); letter-spacing: 1px; font-size: 12px; }
+dialog { border: 1px solid var(--line); border-radius: 8px; background: var(--panel); color: var(--fg); padding: 0; width: min(760px, calc(100vw - 24px)); max-height: calc(100vh - 40px); }
+dialog::backdrop { background: rgba(5,8,12,.6); }
+.dl { display: grid; grid-template-columns: 180px 1fr; gap: 18px; padding: 18px; }
+@media (max-width: 560px) { .dl { grid-template-columns: 1fr; } .dl .cv { max-width: 160px; } }
+.dl h2 { margin: 0 0 4px; font: 700 1.3rem/1.2 var(--f-display); }
+.dl .au { color: var(--text); margin-bottom: 10px; }
+.dl .ds { color: var(--text); font-size: 14px; max-height: 240px; overflow: auto; white-space: pre-line; }
+.x { position: absolute; right: 10px; top: 10px; }
+.rate button { background: none; border: 0; font-size: 22px; color: var(--line); cursor: pointer; padding: 0 1px; } .rate button.on { color: var(--hot); }
+textarea.inp { width: 100%; min-height: 70px; resize: vertical; font-family: var(--f-body); }
+
+</style>
+</head>
+<body>
+<div class="bg" aria-hidden="true"></div>
+<div class="topbar"><div class="wrap">
+  <a class="brand" href="../">erdevelop<span>_</span></a><span class="crumb">/ tools / kitaplık</span><span class="sp"></span>
+  <a class="tb" href="../Tools.html">Araçlar</a><button class="tb" type="button" id="modeBtn">LIGHT</button>
+</div></div>
+<main class="wrap">
+  <header class="head"><h1>Kitaplık</h1><p>Kitap ara, kapak ve özetine bak, okuma listene ekle: okuyacağım, okuyorum, okudum. Listen yalnızca bu tarayıcıda saklanır.</p></header>
+
+  <div class="layer">
+    <form class="ctl" id="sf" autocomplete="off"><input class="inp grow" id="q" placeholder="Kitap adı, yazar ya da ISBN" aria-label="Kitap ara"><div class="seg" id="src"><button type="button" data-v="gb" class="on">Google Books</button><button type="button" data-v="ol">Open Library</button></div><button class="btn pri" type="submit">Ara</button></form>
+    <div class="tabs" style="margin-top:14px"><div class="seg" id="tab"><button type="button" data-v="ara" class="on">Arama</button><button type="button" data-v="0">Okuyacağım</button><button type="button" data-v="1">Okuyorum</button><button type="button" data-v="2">Okudum</button></div><span class="sp"></span></div>
+  </div>
+  <div class="layer" style="margin-top:16px"><div class="stats" id="stats" style="margin-bottom:14px"></div><div class="books" id="grid"></div><div class="empty" id="emp">Aramak için bir kitap ya da yazar adı yaz.</div>
+    <div class="ctl" style="margin-top:16px" id="io" hidden><button class="btn" type="button" id="exp">Listeyi dışa aktar (JSON)</button><label class="btn">İçe aktar<input type="file" id="imp" accept="application/json" hidden></label></div></div>
+  <dialog id="dlg"></dialog>
+</main>
+<footer><div class="wrap"><span>Veri: <a href="https://openlibrary.org/developers/api" target="_blank" rel="noopener">Open Library</a> · <a href="https://developers.google.com/books" target="_blank" rel="noopener">Google Books</a></span><a href="../Tools.html">← tüm araçlar</a></div></footer>
+
+<script src="tema.js"></script>
+<script>
+
+const ST = ['Okuyacağım', 'Okuyorum', 'Okudum'];
+const S = { src: store.get('kitap:src', 'gb'), tab: 'ara', res: [], lib: store.json('kitap:lib', []) };
+const save = () => store.put('kitap:lib', S.lib);
+const https = u => u ? u.replace(/^http:/, 'https:') : u;
+function segs() { document.querySelectorAll('#src button').forEach(b => b.classList.toggle('on', b.dataset.v === S.src)); document.querySelectorAll('#tab button').forEach(b => { b.classList.toggle('on', b.dataset.v === S.tab); if (b.dataset.v !== 'ara') b.textContent = ST[+b.dataset.v] + ' · ' + S.lib.filter(x => x.st === +b.dataset.v).length; }); }
+async function search(q) {
+  S.tab = 'ara'; segs(); $('grid').innerHTML = ''; $('emp').hidden = false; $('emp').innerHTML = '<span class="spin"></span> aranıyor…'; $('stats').innerHTML = ''; $('io').hidden = true;
+  const isbn = q.replace(/[-\s]/g, ''), isI = /^(\d{9}[\dXx]|\d{13})$/.test(isbn);
+  try {
+    if (S.src === 'gb') { const j = await TM.json(`https://www.googleapis.com/books/v1/volumes?maxResults=30&printType=books&q=${encodeURIComponent(isI ? 'isbn:' + isbn : q)}`);
+      S.res = (j.items || []).map(it => { const v = it.volumeInfo || {}; return { id: 'gb:' + it.id, t: v.title + (v.subtitle ? ': ' + v.subtitle : ''), a: (v.authors || []).join(', '), y: (v.publishedDate || '').slice(0, 4), pg: v.pageCount || null, img: https((v.imageLinks || {}).thumbnail), ds: v.description || '', pub: v.publisher || '', lang: v.language || '', link: v.infoLink }; }); }
+    else { const j = await TM.json(`https://openlibrary.org/search.json?limit=30&fields=key,title,author_name,first_publish_year,cover_i,number_of_pages_median,publisher,language&${isI ? 'isbn=' + isbn : 'q=' + encodeURIComponent(q)}`);
+      S.res = (j.docs || []).map(d => ({ id: 'ol:' + d.key, t: d.title, a: (d.author_name || []).slice(0, 3).join(', '), y: d.first_publish_year || '', pg: d.number_of_pages_median || null, img: d.cover_i ? `https://covers.openlibrary.org/b/id/${d.cover_i}-M.jpg` : null, ds: null, pub: (d.publisher || [])[0] || '', lang: (d.language || []).slice(0, 3).join(', '), link: 'https://openlibrary.org' + d.key })); }
+    render();
+  } catch (e) { $('emp').innerHTML = `<span class="err">${esc(e.message)}</span>`; }
+}
+const inLib = id => S.lib.find(x => x.id === id);
+function card(b) { const L = inLib(b.id); return `<button class="bk" type="button" data-id="${esc(b.id)}"><div class="cv">${b.img ? `<img src="${esc(b.img)}" alt="" loading="lazy" onerror="this.remove()">` : ''}<span class="ph">${esc(b.t || '').slice(0, 60)}</span>${L ? `<span class="st">${ST[L.st]}</span>` : ''}</div><div class="bi"><b>${esc(b.t)}</b><small>${esc(b.a || '–')}</small><small>${b.y || ''}${b.pg ? ' · ' + b.pg + ' sf' : ''}${L && L.r ? ` <span class="stars">${'★'.repeat(L.r)}</span>` : ''}</small></div></button>`; }
+function render() {
+  segs(); let list;
+  if (S.tab === 'ara') { list = S.res; $('stats').innerHTML = ''; $('io').hidden = true; $('emp').hidden = !!list.length; if (!list.length) $('emp').textContent = 'Sonuç yok. Diğer kaynağı ya da farklı bir yazımı dene.'; }
+  else { const st = +S.tab; list = S.lib.filter(x => x.st === st).sort((a, b) => (b.at || 0) - (a.at || 0)); $('io').hidden = false; $('emp').hidden = !!list.length; if (!list.length) $('emp').textContent = 'Bu listede henüz kitap yok. Arayıp ekleyebilirsin.';
+    const done = S.lib.filter(x => x.st === 2), yr = new Date().getFullYear(), thisY = done.filter(x => x.done && new Date(x.done).getFullYear() === yr);
+    $('stats').innerHTML = `<div class="stat"><span>Okunan</span><b>${done.length}</b><small>${yr}: ${thisY.length} kitap</small></div><div class="stat"><span>Okunan sayfa</span><b>${nf(done.reduce((a, b) => a + (b.pg || 0), 0))}</b><small>sayfa sayısı bilinenler</small></div><div class="stat"><span>Okuyorum</span><b>${S.lib.filter(x => x.st === 1).length}</b><small>şu an</small></div><div class="stat"><span>Okuyacağım</span><b>${S.lib.filter(x => x.st === 0).length}</b><small>sırada</small></div>`; }
+  $('grid').innerHTML = list.map(card).join('');
+}
+$('grid').onclick = e => { const b = e.target.closest('[data-id]'); if (!b) return; const id = b.dataset.id; openBook(inLib(id) || S.res.find(x => x.id === id)); };
+async function openBook(b) {
+  const d = $('dlg'), L = () => inLib(b.id);
+  const draw = () => { const l = L();
+    d.innerHTML = `<button class="btn x" type="button" id="dx" aria-label="Kapat">×</button><div class="dl"><div class="cv">${b.img ? `<img src="${esc(b.img.replace('-M.jpg', '-L.jpg'))}" alt="">` : `<span class="ph">${esc(b.t)}</span>`}</div><div>
+      <h2>${esc(b.t)}</h2><div class="au">${esc(b.a || 'Yazar bilinmiyor')}</div>
+      <div class="ctl" style="margin-bottom:10px">${b.y ? `<span class="chip">${b.y}</span>` : ''}${b.pg ? `<span class="chip">${b.pg} sayfa</span>` : ''}${b.pub ? `<span class="chip">${esc(b.pub)}</span>` : ''}${b.lang ? `<span class="chip">${esc(b.lang)}</span>` : ''}</div>
+      <div class="ds" id="ds">${b.ds == null ? '<span class="spin"></span>' : b.ds ? esc(b.ds.replace(/<[^>]+>/g, '')) : '<span class="muted">Özet yok.</span>'}</div>
+      <div class="seg" style="margin-top:14px" id="dst">${ST.map((s, i) => `<button type="button" data-s="${i}" class="${l && l.st === i ? 'on' : ''}">${s}</button>`).join('')}</div>
+      ${l ? `<div class="rate" style="margin-top:10px" id="rate">${[1, 2, 3, 4, 5].map(n => `<button type="button" data-r="${n}" class="${l.r >= n ? 'on' : ''}" aria-label="${n} yıldız">★</button>`).join('')}</div>
+      <textarea class="inp" id="nt" placeholder="Notun…" style="margin-top:8px">${esc(l.n || '')}</textarea>
+      <div class="ctl" style="margin-top:10px"><button class="btn" type="button" id="rm">Listeden çıkar</button>${b.link ? `<a class="btn" href="${esc(b.link)}" target="_blank" rel="noopener">Kaynakta aç ↗</a>` : ''}</div>`
+      : (b.link ? `<div class="ctl" style="margin-top:10px"><a class="btn" href="${esc(b.link)}" target="_blank" rel="noopener">Kaynakta aç ↗</a></div>` : '')}</div></div>`;
+    $('dx').onclick = () => d.close();
+    $('dst').onclick = e => { const x = e.target.closest('[data-s]'); if (!x) return; const st = +x.dataset.s, l2 = L(); if (l2) { l2.st = st; if (st === 2 && !l2.done) l2.done = Date.now(); } else S.lib.push({ ...b, st, at: Date.now(), done: st === 2 ? Date.now() : null, r: 0, n: '' }); save(); draw(); render(); TM.toast(ST[st] + ' listesine eklendi'); };
+    if (L()) { $('rate').onclick = e => { const x = e.target.closest('[data-r]'); if (!x) return; L().r = +x.dataset.r; save(); draw(); render(); }; $('nt').oninput = e => { L().n = e.target.value.slice(0, 2000); save(); }; $('rm').onclick = () => { S.lib = S.lib.filter(x => x.id !== b.id); save(); render(); d.close(); }; }
+  };
+  draw(); d.showModal();
+  if (b.ds == null && b.id.startsWith('ol:')) { try { const j = await TM.json('https://openlibrary.org' + b.id.slice(3) + '.json'); const ds = typeof j.description === 'string' ? j.description : (j.description && j.description.value) || ''; b.ds = ds; const l = inLib(b.id); if (l) { l.ds = ds; save(); } } catch (e) { b.ds = ''; } if (d.open) draw(); }
+}
+$('dlg').addEventListener('click', e => { if (e.target === $('dlg')) $('dlg').close(); });
+$('sf').onsubmit = e => { e.preventDefault(); const q = $('q').value.trim(); if (q) search(q); };
+document.querySelectorAll('#src button').forEach(b => b.onclick = () => { S.src = b.dataset.v; store.set('kitap:src', S.src); segs(); const q = $('q').value.trim(); if (q) search(q); });
+document.querySelectorAll('#tab button').forEach(b => b.onclick = () => { S.tab = b.dataset.v; render(); });
+$('exp').onclick = () => TM.download('kitapligim.json', new Blob([JSON.stringify(S.lib, null, 1)], { type: 'application/json' }));
+$('imp').onchange = async e => { const f = e.target.files[0]; if (!f) return; try { const a = JSON.parse(await f.text()); if (!Array.isArray(a)) throw 0; const ids = new Set(S.lib.map(x => x.id)); a.forEach(x => { if (x && x.id && !ids.has(x.id)) S.lib.push(x); }); save(); render(); TM.toast(a.length + ' kitap okundu'); } catch (er) { TM.toast('Dosya okunamadı'); } e.target.value = ''; };
+segs(); if (S.lib.length) { S.tab = S.lib.some(x => x.st === 1) ? '1' : '0'; render(); }
+
+</script>
+</body>
+</html>

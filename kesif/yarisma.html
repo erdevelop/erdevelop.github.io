@@ -1,0 +1,137 @@
+<!doctype html>
+<html lang="tr" data-mode="dark">
+<head>
+<meta charset="utf-8">
+
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Bilgi Yarışması | erdevelop</title>
+<meta name="description" content="24 kategoride binlerce soru: konu, zorluk ve süre seç, seri yaparak puan topla. Sorular Open Trivia DB’den gelir ve İngilizcedir.">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Chakra+Petch:wght@600;700&family=IBM+Plex+Sans:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500&display=swap">
+
+<link rel="stylesheet" href="tema.css">
+<style>
+
+.wrapq { max-width: 760px; }
+.setup .grid2 { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 12px; }
+.setup label { display: block; font: 400 12px var(--f-mono); color: var(--muted); margin-bottom: 4px; }
+.setup .sel { width: 100%; }
+.hud { display: flex; align-items: center; gap: 14px; font: 500 13px var(--f-mono); color: var(--muted); margin-bottom: 10px; flex-wrap: wrap; }
+.hud b { color: var(--fg); font: 600 1.15rem var(--f-display); }
+.prog { height: 4px; background: var(--grid); border-radius: 2px; overflow: hidden; margin-bottom: 18px; } .prog i { display: block; height: 100%; background: var(--accent); transition: width .3s; }
+.timer { height: 3px; background: var(--grid); border-radius: 2px; overflow: hidden; margin: -12px 0 18px; } .timer i { display: block; height: 100%; background: var(--hot); }
+.qcat { font: 400 12px var(--f-mono); color: var(--accent); text-transform: uppercase; letter-spacing: .6px; }
+.q { font: 600 clamp(1.15rem, 3vw, 1.45rem)/1.35 var(--f-body); margin: 6px 0 18px; }
+.ans { display: grid; gap: 10px; }
+.ans button { text-align: left; font: 500 15px var(--f-body); color: var(--fg); background: var(--panel); border: 1px solid var(--line); border-radius: 6px; padding: 12px 14px; cursor: pointer; display: flex; gap: 12px; align-items: center; transition: border-color .15s, background .15s; }
+.ans button:hover:not(:disabled) { border-color: var(--accent); }
+.ans button kbd { font: 500 12px var(--f-mono); color: var(--muted); border: 1px solid var(--line); border-radius: 3px; padding: 0 6px; }
+.ans button.ok { border-color: var(--ok); background: color-mix(in srgb, var(--ok) 16%, var(--panel)); }
+.ans button.no { border-color: var(--bad); background: color-mix(in srgb, var(--bad) 16%, var(--panel)); }
+.ans button:disabled { cursor: default; }
+.fb { min-height: 28px; margin-top: 14px; font: 500 14px var(--f-mono); }
+.pts { position: fixed; pointer-events: none; font: 700 22px var(--f-display); color: var(--ok); animation: up 1s ease-out forwards; z-index: 30; }
+@keyframes up { to { transform: translateY(-50px); opacity: 0; } }
+.sum li { padding: 8px 0; border-bottom: 1px solid var(--grid); font-size: 14px; } .sum li:last-child { border: 0; } .sum small { display: block; color: var(--muted); font: 400 12px var(--f-mono); }
+.sum { list-style: none; padding: 0; margin: 12px 0 0; }
+.big2 { font: 700 3rem/1 var(--f-display); color: var(--accent); }
+
+</style>
+</head>
+<body>
+<div class="bg" aria-hidden="true"></div>
+<div class="topbar"><div class="wrap">
+  <a class="brand" href="../">erdevelop<span>_</span></a><span class="crumb">/ tools / bilgi yarışması</span><span class="sp"></span>
+  <a class="tb" href="../Tools.html">Araçlar</a><button class="tb" type="button" id="modeBtn">LIGHT</button>
+</div></div>
+<main class="wrap">
+  <header class="head"><h1>Bilgi Yarışması</h1><p>24 kategoride binlerce soru: konu, zorluk ve süre seç, seri yaparak puan topla. Sorular Open Trivia DB’den gelir ve İngilizcedir.</p></header>
+
+  <div class="layer wrapq">
+    <section class="panel setup" id="setup">
+      <div class="grid2">
+        <div><label for="cat">Konu</label><select class="sel" id="cat"></select></div>
+        <div><label for="dif">Zorluk</label><select class="sel" id="dif"><option value="">Karışık</option><option value="easy">Kolay</option><option value="medium">Orta</option><option value="hard">Zor</option></select></div>
+        <div><label for="num">Soru sayısı</label><select class="sel" id="num"><option>5</option><option selected>10</option><option>15</option><option>20</option></select></div>
+        <div><label for="typ">Soru tipi</label><select class="sel" id="typ"><option value="">Karışık</option><option value="multiple">Dört şıklı</option><option value="boolean">Doğru / yanlış</option></select></div>
+        <div><label for="tim">Süre</label><select class="sel" id="tim"><option value="0">Süresiz</option><option value="15">15 saniye</option><option value="30" selected>30 saniye</option></select></div>
+      </div>
+      <div class="ctl" style="margin-top:16px"><button class="btn pri" type="button" id="go">Başla</button><span class="muted small" id="best"></span></div>
+      <p class="note">Puan: doğru cevap 100 + kalan süre bonusu; üst üste doğrularda seri çarpanı artar (en fazla ×3). Klavyede 1–4 ile cevap ver.</p>
+    </section>
+    <section id="game" hidden>
+      <div class="hud"><span>Soru <b id="qi">1</b>/<span id="qn">10</span></span><span>Puan <b id="sc">0</b></span><span>Seri <b id="sk">×1</b></span><span class="sp"></span><button class="btn" type="button" id="quit">Bitir</button></div>
+      <div class="prog"><i id="pg" style="width:0"></i></div><div class="timer" id="tw"><i id="tm" style="width:100%"></i></div>
+      <div class="qcat" id="qc"></div><div class="q" id="qt"></div><div class="ans" id="ans"></div><div class="fb" id="fb"></div>
+      <div class="ctl"><button class="btn pri" type="button" id="nx" hidden>Sonraki →</button></div>
+    </section>
+    <section class="panel" id="end" hidden></section>
+  </div>
+</main>
+<footer><div class="wrap"><span>Sorular: <a href="https://opentdb.com/" target="_blank" rel="noopener">Open Trivia Database</a> (CC BY-SA 4.0)</span><a href="../Tools.html">← tüm araçlar</a></div></footer>
+
+<script src="tema.js"></script>
+<script>
+
+const CATS = [[0, 'Hepsi'], [9, 'Genel kültür'], [17, 'Bilim ve doğa'], [18, 'Bilgisayar'], [19, 'Matematik'], [30, 'Teknoloji'], [22, 'Coğrafya'], [23, 'Tarih'], [20, 'Mitoloji'], [24, 'Siyaset'], [25, 'Sanat'], [10, 'Kitaplar'], [11, 'Sinema'], [12, 'Müzik'], [13, 'Müzikal ve tiyatro'], [14, 'Televizyon'], [15, 'Video oyunları'], [16, 'Masa oyunları'], [21, 'Spor'], [26, 'Ünlüler'], [27, 'Hayvanlar'], [28, 'Taşıtlar'], [29, 'Çizgi roman'], [31, 'Anime ve manga'], [32, 'Çizgi film']];
+const EN = { 'General Knowledge': 'Genel kültür', 'Entertainment: Books': 'Kitaplar', 'Entertainment: Film': 'Sinema', 'Entertainment: Music': 'Müzik', 'Entertainment: Musicals & Theatres': 'Müzikal ve tiyatro', 'Entertainment: Television': 'Televizyon', 'Entertainment: Video Games': 'Video oyunları', 'Entertainment: Board Games': 'Masa oyunları', 'Science & Nature': 'Bilim ve doğa', 'Science: Computers': 'Bilgisayar', 'Science: Mathematics': 'Matematik', 'Mythology': 'Mitoloji', 'Sports': 'Spor', 'Geography': 'Coğrafya', 'History': 'Tarih', 'Politics': 'Siyaset', 'Art': 'Sanat', 'Celebrities': 'Ünlüler', 'Animals': 'Hayvanlar', 'Vehicles': 'Taşıtlar', 'Entertainment: Comics': 'Çizgi roman', 'Science: Gadgets': 'Teknoloji', 'Entertainment: Japanese Anime & Manga': 'Anime ve manga', 'Entertainment: Cartoon & Animations': 'Çizgi film' };
+const DIF = { easy: 'kolay', medium: 'orta', hard: 'zor' };
+$('cat').innerHTML = CATS.map(([v, l]) => `<option value="${v}">${l}</option>`).join('');
+['cat', 'dif', 'num', 'typ', 'tim'].forEach(id => { const v = store.get('yar:' + id); if (v != null) $(id).value = v; $(id).onchange = () => { store.set('yar:' + id, $(id).value); best(); }; });
+const BEST = store.json('yar:best', {}); const bkey = () => $('cat').value + '|' + $('dif').value;
+function best() { const b = BEST[bkey()]; $('best').textContent = b ? `En iyi puanın bu ayarda: ${nf(b)}` : ''; } best();
+let token = store.get('yar:token'), G = null, tmr = 0;
+const dec = s => decodeURIComponent(s);
+async function getToken() { if (token) return token; try { const j = await TM.json('https://opentdb.com/api_token.php?command=request'); token = j.token; store.set('yar:token', token); } catch (e) { } return token; }
+async function fetchQ(retry = 0) {
+  const c = +$('cat').value, u = `https://opentdb.com/api.php?amount=${$('num').value}&encode=url3986${c ? '&category=' + c : ''}${$('dif').value ? '&difficulty=' + $('dif').value : ''}${$('typ').value ? '&type=' + $('typ').value : ''}${token ? '&token=' + token : ''}`;
+  const j = await TM.json(u);
+  if (j.response_code === 0) return j.results;
+  if (j.response_code === 5 && retry < 2) { await new Promise(r => setTimeout(r, 5200)); return fetchQ(retry + 1); }
+  if ((j.response_code === 3 || j.response_code === 4) && retry < 2) { if (j.response_code === 3) { token = null; store.set('yar:token', ''); await getToken(); } else if (token) await TM.json('https://opentdb.com/api_token.php?command=reset&token=' + token).catch(() => { }); return fetchQ(retry + 1); }
+  if (j.response_code === 1) throw new Error('Bu konu ve zorlukta yeterli soru yok. Soru sayısını azalt ya da ayarı değiştir.');
+  throw new Error('Sorular alınamadı (kod ' + j.response_code + ').');
+}
+$('go').onclick = async () => {
+  $('go').disabled = true; $('go').innerHTML = '<span class="spin"></span> sorular geliyor…';
+  try { await getToken(); const R = await fetchQ();
+    G = { qs: R.map(q => { const ok = dec(q.correct_answer), opts = q.type === 'boolean' ? ['True', 'False'] : [...q.incorrect_answers.map(dec), ok].sort(() => Math.random() - .5); return { q: dec(q.question), cat: EN[dec(q.category)] || dec(q.category), dif: q.difficulty, ok, opts, type: q.type }; }), i: 0, score: 0, streak: 0, right: 0, log: [] };
+    $('setup').hidden = true; $('end').hidden = true; $('game').hidden = false; $('qn').textContent = G.qs.length; show();
+  } catch (e) { TM.toast(e.message, 4000); } finally { $('go').disabled = false; $('go').textContent = 'Başla'; }
+};
+const TR = { True: 'Doğru', False: 'Yanlış' };
+function show() {
+  const q = G.qs[G.i], T = +$('tim').value; $('qi').textContent = G.i + 1; $('pg').style.width = (G.i / G.qs.length * 100) + '%'; $('sc').textContent = nf(G.score); $('sk').textContent = '×' + mult();
+  $('qc').textContent = `${q.cat} · ${DIF[q.dif]}`; $('qt').textContent = q.q; $('fb').textContent = ''; $('nx').hidden = true;
+  $('ans').innerHTML = q.opts.map((o, k) => `<button type="button" data-k="${k}"><kbd>${k + 1}</kbd><span>${esc(q.type === 'boolean' ? TR[o] + ' (' + o + ')' : o)}</span></button>`).join('');
+  $('tw').hidden = !T; clearInterval(tmr); G.t0 = Date.now();
+  if (T) { $('tm').style.width = '100%'; tmr = setInterval(() => { const l = 1 - (Date.now() - G.t0) / (T * 1000); $('tm').style.width = Math.max(0, l * 100) + '%'; if (l <= 0) answer(-1); }, 100); }
+}
+const mult = () => Math.min(3, 1 + Math.floor(G.streak / 2) * .5);
+function answer(k, ev) {
+  const q = G.qs[G.i]; if (!$('nx').hidden || q.done) return; q.done = true; clearInterval(tmr);
+  const T = +$('tim').value, left = T ? Math.max(0, 1 - (Date.now() - G.t0) / (T * 1000)) : 0, okK = q.opts.indexOf(q.ok), good = k === okK;
+  document.querySelectorAll('#ans button').forEach((b, j) => { b.disabled = true; if (j === okK) b.classList.add('ok'); else if (j === k) b.classList.add('no'); });
+  if (good) { G.streak++; G.right++; const p = Math.round((100 + left * 100) * mult()); G.score += p; $('fb').innerHTML = `<span style="color:var(--ok)">Doğru! +${p}</span>`;
+    if (ev) { const s = document.createElement('div'); s.className = 'pts'; s.textContent = '+' + p; s.style.left = ev.clientX + 'px'; s.style.top = ev.clientY - 20 + 'px'; document.body.appendChild(s); setTimeout(() => s.remove(), 1000); } }
+  else { G.streak = 0; $('fb').innerHTML = `<span style="color:var(--bad)">${k < 0 ? 'Süre doldu.' : 'Yanlış.'}</span> <span class="muted">Doğrusu: ${esc(q.type === 'boolean' ? TR[q.ok] : q.ok)}</span>`; }
+  G.log.push({ q: q.q, ok: q.type === 'boolean' ? TR[q.ok] : q.ok, good });
+  $('sc').textContent = nf(G.score); $('sk').textContent = '×' + mult(); $('nx').hidden = false; $('nx').textContent = G.i + 1 < G.qs.length ? 'Sonraki →' : 'Sonucu gör'; $('nx').focus();
+}
+$('ans').onclick = e => { const b = e.target.closest('[data-k]'); if (b) answer(+b.dataset.k, e); };
+$('nx').onclick = () => { G.i++; if (G.i < G.qs.length) show(); else finish(); };
+$('quit').onclick = () => { clearInterval(tmr); finish(); };
+addEventListener('keydown', e => { if (!G || $('game').hidden) return; const n = +e.key; if (n >= 1 && n <= 4 && $('nx').hidden) { const b = document.querySelector(`#ans [data-k="${n - 1}"]`); if (b) b.click(); } else if (e.key === 'Enter' && !$('nx').hidden) { e.preventDefault(); $('nx').click(); } });
+function finish() {
+  $('game').hidden = true; const k = bkey(), rec = !BEST[k] || G.score > BEST[k]; if (rec && G.score > 0) { BEST[k] = G.score; store.put('yar:best', BEST); }
+  const pct = G.log.length ? Math.round(G.right / G.log.length * 100) : 0;
+  $('end').hidden = false; $('end').innerHTML = `<div class="ctl" style="align-items:flex-end"><div><div class="muted small">Puan</div><div class="big2">${nf(G.score)}</div></div><div class="sp"></div><div class="stat"><span>Doğru</span><b>${G.right}/${G.log.length}</b><small>%${pct}</small></div></div>
+    ${rec && G.score > 0 ? '<p style="color:var(--ok);font:600 14px var(--f-mono)">Bu ayarda yeni rekor!</p>' : ''}
+    <ul class="sum">${G.log.map((l, i) => `<li>${l.good ? '✅' : '❌'} ${esc(l.q)}<small>Doğru cevap: ${esc(l.ok)}</small></li>`).join('')}</ul>
+    <div class="ctl" style="margin-top:14px"><button class="btn pri" type="button" id="again">Tekrar oyna</button><button class="btn" type="button" id="set">Ayarları değiştir</button></div>`;
+  $('again').onclick = () => { $('end').hidden = true; $('go').click(); }; $('set').onclick = () => { $('end').hidden = true; $('setup').hidden = false; best(); };
+}
+
+</script>
+</body>
+</html>
