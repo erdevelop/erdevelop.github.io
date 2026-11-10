@@ -3416,7 +3416,7 @@ Modules.kamera = (() => {
 
   const st = { model: null, loading: false, err: "", stream: null, facing: "user", busy: false, last: 0, preds: [], knn: [], fps: 0,
     classes: [], samples: [], adding: -1, frozen: false, emb: null };
-  let video, snap, sctx, pcv, pctx, kcv, kctx, mcv, mctx;
+  let video, snap, sctx, vcv, vctx, pcv, pctx, kcv, kctx, mcv, mctx;
 
   function newClass(name) { const i = st.classes.length; st.classes.push({ name: name || "Nesne " + (i + 1), color: COLORS[i % COLORS.length] }); }
   function loadScript([src, sri]) { return new Promise((res, rej) => { const s = document.createElement("script"); s.src = src; s.integrity = sri; s.crossOrigin = "anonymous"; s.onload = res; s.onerror = () => rej(new Error("Kütüphane yüklenemedi")); document.head.appendChild(s); }); }
@@ -3436,8 +3436,18 @@ Modules.kamera = (() => {
     } catch (e) { st.err = e.name === "NotAllowedError" ? "Kamera izni verilmedi. Adres çubuğundaki kamera simgesinden izin verip yeniden dene." : e.name === "NotFoundError" ? "Kamera bulunamadı." : "Kamera açılamadı: " + e.message; }
     mirror(); status(); ensureModel();
   }
-  function stopCam() { if (st.stream) st.stream.getTracks().forEach((t) => t.stop()); st.stream = null; if (video) video.srcObject = null; status(); }
-  function mirror() { const m = on("k-mirror") && st.facing === "user"; video.style.transform = m ? "scaleX(-1)" : ""; snap.style.transform = video.style.transform; }
+  function stopCam() { if (st.stream) st.stream.getTracks().forEach((t) => t.stop()); st.stream = null; if (video) video.srcObject = null; status(); view(true); }
+  function mirror() { view(true); }
+  /* görüntü video öğesiyle değil tuvale çizilerek gösterilir (iPhone Safari video katmanını kutu içinde göstermiyor) */
+  function view(force) {
+    if (!vcv) return; const r = vcv.getBoundingClientRect(), d = Math.min(2, window.devicePixelRatio || 1), W = Math.max(1, Math.round(r.width * d)), H = Math.max(1, Math.round(r.height * d));
+    if (vcv.width !== W || vcv.height !== H) { vcv.width = W; vcv.height = H; }
+    if (!st.stream) { vctx.fillStyle = "#000"; vctx.fillRect(0, 0, W, H); return; }
+    const s = st.frozen ? snap : video, sw = s.videoWidth || s.width, sh = s.videoHeight || s.height; if (!sw || !sh || (!st.frozen && video.readyState < 2)) return;
+    if (st.frozen && !force) return;
+    const k = Math.max(W / sw, H / sh), dw = sw * k, dh = sh * k, m = on("k-mirror") && st.facing === "user";
+    vctx.save(); if (m) { vctx.translate(W, 0); vctx.scale(-1, 1); } vctx.drawImage(s, (W - dw) / 2, (H - dh) / 2, dw, dh); vctx.restore();
+  }
   function status() {
     const s = $("#k-status"); if (!s) return;
     s.innerHTML = st.err ? `<span style="color:var(--bad)">${st.err}</span>` : st.loading ? "Model indiriliyor (yaklaşık 14 MB, ilk seferde birkaç saniye)…" : !st.stream ? "Kamera kapalı" : !st.model ? "Model hazırlanıyor…" : `Çalışıyor · ${st.fps.toFixed(1)} tahmin/sn · ${tf.getBackend() === "webgl" ? "ekran kartı" : "işlemci"}`;
@@ -3445,7 +3455,7 @@ Modules.kamera = (() => {
     $("#k-ph").style.display = st.stream ? "none" : "grid";
   }
   /* görüntüyü dondur: hareketli nesneleri incelemek için */
-  function freeze() { if (!st.stream) return; st.frozen = !st.frozen; if (st.frozen) { snap.width = video.videoWidth; snap.height = video.videoHeight; sctx.drawImage(video, 0, 0); } snap.hidden = !st.frozen; $("#k-freeze").textContent = st.frozen ? "▶ Devam" : "❚❚ Dondur"; }
+  function freeze() { if (!st.stream) return; st.frozen = !st.frozen; if (st.frozen) { snap.width = video.videoWidth; snap.height = video.videoHeight; sctx.drawImage(video, 0, 0); view(true); } $("#k-freeze").textContent = st.frozen ? "▶ Devam" : "❚❚ Dondur"; }
   const src = () => (st.frozen ? snap : video);
 
   /* ---- k-en yakın komşu (kosinüs benzerliği) ---- */
@@ -3535,8 +3545,8 @@ Modules.kamera = (() => {
         <div class="row">
           <div class="card" style="flex:1 1 360px"><h2>Kamera</h2><p class="sub">Bir nesneyi kameraya göster. <span id="k-status"></span></p>
             <div style="position:relative;background:#000;border-radius:8px;overflow:hidden;aspect-ratio:4/3">
-              <video id="k-video" playsinline muted style="width:100%;height:100%;object-fit:cover;display:block"></video>
-              <canvas id="k-snap" hidden style="position:absolute;inset:0;width:100%;height:100%;object-fit:cover"></canvas>
+              <video id="k-video" playsinline muted autoplay style="position:absolute;left:0;top:0;width:2px;height:2px;opacity:0;pointer-events:none"></video>
+              <canvas id="k-view" style="position:absolute;inset:0;width:100%;height:100%;display:block"></canvas>
               <div id="k-ph" style="position:absolute;inset:0;display:grid;place-items:center;color:#cfd8df;text-align:center;padding:20px;font-size:13px">Kamerayı açmak için sağdaki<br><b>▶ Kamerayı aç</b> düğmesine bas.</div>
               <div id="k-hud" style="position:absolute;left:10px;bottom:10px;right:10px;display:flex;flex-direction:column;gap:2px;color:#fff;text-shadow:0 1px 4px rgba(0,0,0,.8);font-size:13px"></div>
             </div>
@@ -3560,7 +3570,7 @@ Modules.kamera = (() => {
         <p class="note">İpucu: arka planı sade tut. Bir sınıfı "hiçbiri" olarak bırakıp boş masayı öğretirsen model nesne yokken de doğru cevap verir.</p>
       </aside>
     </div>`;
-    video = $("#k-video"); snap = $("#k-snap"); sctx = snap.getContext("2d");
+    video = $("#k-video"); snap = document.createElement("canvas"); sctx = snap.getContext("2d"); vcv = $("#k-view"); vctx = vcv.getContext("2d");
     pcv = $("#k-preds"); pctx = setupCanvas(pcv, 380, 175); kcv = $("#k-knn"); kctx = setupCanvas(kcv, 380, 175); mcv = $("#k-map"); mctx = setupCanvas(mcv, 380, 230);
     $("#k-cam").onclick = () => (st.stream ? stopCam() : startCam());
     $("#k-flip").onclick = () => { st.facing = st.facing === "user" ? "environment" : "user"; if (st.stream) startCam(); else mirror(); };
@@ -3576,10 +3586,10 @@ Modules.kamera = (() => {
     box.addEventListener("pointerdown", (e) => { const b = e.target.closest("[data-add]"); if (!b) return; if (!st.stream) { st.err = ""; $("#k-status").textContent = "Önce kamerayı aç."; return; } st.adding = +b.dataset.add; b.classList.add("on"); b.setPointerCapture(e.pointerId); });
     const up = (e) => { if (st.adding < 0) return; st.adding = -1; $$("[data-add]").forEach((b) => b.classList.remove("on")); Pn = -1; renderClasses(); drawMap(); };
     box.addEventListener("pointerup", up); box.addEventListener("pointercancel", up);
-    renderClasses(); drawPreds(); drawKnn(); drawMap(); explain(); status();
+    renderClasses(); drawPreds(); drawKnn(); drawMap(); explain(); status(); requestAnimationFrame(() => view(true));
   }
   return { init,
-    frame: () => { tick(); },
+    frame: () => { view(); tick(); },
     deactivate: () => { stopCam(); },
     onTheme: () => { drawPreds(); drawKnn(); drawMap(); },
     save: () => ({ classes: st.classes.map((c) => c.name), samples: st.samples.map((s) => ({ c: s.c, t: s.t, e: Array.from(s.e, (v) => Math.round(v * 1e4) / 1e4) })) }),
