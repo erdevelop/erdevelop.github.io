@@ -99,7 +99,7 @@ table.race td:last-child{text-align:right;font-family:var(--f-mono)}
 <header class="top">
   <div>
     <h1>Öğrenme Laboratuvarı</h1>
-    <p>Makine öğrenmesinin on farklı yüzü ve cephe tasarımından beş uygulama. Her sekmede bir model sıfırdan öğreniyor; sen ayarlarla oynayıp öğrenmenin nasıl ilerlediğini izliyorsun.</p>
+    <p>Makine öğrenmesinin on bir farklı yüzü ve cephe tasarımından beş uygulama. Her sekmede bir model sıfırdan öğreniyor; sen ayarlarla oynayıp öğrenmenin nasıl ilerlediğini izliyorsun.</p>
   </div>
 </header>
 <nav class="tabs" role="tablist" id="tabs">
@@ -108,6 +108,7 @@ table.race td:last-child{text-align:right;font-family:var(--f-mono)}
   <button role="tab" data-tab="kume"><b>Kümeleme</b><small>Etiketsiz gruplama</small></button>
   <button role="tab" data-tab="rakam"><b>Rakam Tanıma</b><small>Çiz, ağ tanısın</small></button>
   <button role="tab" data-tab="cnn"><b>Görüntü Tanıma</b><small>Evrişimli ağ (CNN)</small></button>
+  <button role="tab" data-tab="kamera"><b>Kamera ile Tanıma</b><small>Göster, tahmin etsin</small></button>
   <button role="tab" data-tab="agac"><b>Karar Ağacı</b><small>Soru sora sora bölmek</small></button>
   <button role="tab" data-tab="dil"><b>Mini Dil Modeli</b><small>Harf harf yazmayı öğrenir</small></button>
   <button role="tab" data-tab="araba"><b>Araba Sürme</b><small>Evrimle öğrenme</small></button>
@@ -128,6 +129,7 @@ table.race td:last-child{text-align:right;font-family:var(--f-mono)}
   <section class="tab" id="tab-kume" hidden></section>
   <section class="tab" id="tab-rakam" hidden></section>
   <section class="tab" id="tab-cnn" hidden></section>
+  <section class="tab" id="tab-kamera" hidden></section>
   <section class="tab" id="tab-agac" hidden></section>
   <section class="tab" id="tab-dil" hidden></section>
   <section class="tab" id="tab-araba" hidden></section>
@@ -3395,6 +3397,197 @@ Cephe.kk = (() => {
     save: () => ({ cols: st.cols, X: st.X, truth: st.truth, mask: st.mask, iter: st.iter }),
     load: (m) => { if (!m.X) return; setData({ cols: m.cols, X: m.X, truth: m.truth }); if (m.mask) { st.mask = m.mask; st.iter = m.iter || 0; fit(); } draw(); } };
 })();
+// ===================================================================== KAMERA İLE TANIMA
+// Hazır model (MobileNet v2, ImageNet'in 1000 sınıfı) + kendi nesnelerini birkaç örnekle öğretme (aktarım öğrenmesi + k-en yakın komşu)
+Modules.kamera = (() => {
+  const LIBS = [
+    ["https://cdn.jsdelivr.net/npm/@tensorflow/tfjs@4.22.0/dist/tf.min.js", "sha384-vE8hbVJ4lezako5rlvE7bY0BVzWlFhZncPlckrqNwcUQpVtgbENTgZ8TBbnPjZre"],
+    ["https://cdn.jsdelivr.net/npm/@tensorflow-models/mobilenet@2.1.1/dist/mobilenet.min.js", "sha384-oBAqwJ0tv9zzKlbIZyBhhXlEvU/PMrSMqDyOHlEZVC8xWHx4yPySuS7vRikRcYFq"]];
+  const COLORS = ["#0d7a78", "#e07b32", "#3672c9", "#a259c4", "#c4453c", "#2e8b57"];
+  /* sık görülen ImageNet sınıflarının Türkçesi (gerisi İngilizce gösterilir) */
+  const TR = { "coffee mug": "kahve kupası", "cup": "fincan", "water bottle": "su şişesi", "beer bottle": "bira şişesi", "wine bottle": "şarap şişesi", "pop bottle": "gazoz şişesi", "water jug": "sürahi", "teapot": "çaydanlık", "coffeepot": "cezve / kahve demliği", "espresso maker": "espresso makinesi", "measuring cup": "ölçü kabı", "mixing bowl": "karıştırma kabı", "soup bowl": "çorba kâsesi", "plate": "tabak", "frying pan": "tava", "wok": "wok tava", "spatula": "spatula", "wooden spoon": "tahta kaşık", "ladle": "kepçe",
+    "laptop": "dizüstü bilgisayar", "notebook": "dizüstü bilgisayar", "desktop computer": "masaüstü bilgisayar", "monitor": "monitör", "screen": "ekran", "computer keyboard": "klavye", "mouse": "fare", "joystick": "oyun kolu", "remote control": "uzaktan kumanda", "cellular telephone": "cep telefonu", "iPod": "müzik çalar", "hand-held computer": "el bilgisayarı", "modem": "modem", "printer": "yazıcı", "projector": "projektör", "television": "televizyon", "loudspeaker": "hoparlör", "microphone": "mikrofon", "headphone": "kulaklık", "electric fan": "vantilatör", "switch": "anahtar / şalter", "power drill": "matkap", "hair drier": "saç kurutma makinesi", "iron": "ütü", "toaster": "ekmek kızartma makinesi", "microwave": "mikrodalga fırın", "refrigerator": "buzdolabı", "washer": "çamaşır makinesi", "vacuum": "elektrikli süpürge", "lighter": "çakmak", "digital clock": "dijital saat", "digital watch": "dijital kol saati", "analog clock": "duvar saati", "wall clock": "duvar saati", "stopwatch": "kronometre", "calculator": "hesap makinesi", "camera": "fotoğraf makinesi", "reflex camera": "fotoğraf makinesi", "Polaroid camera": "anlık fotoğraf makinesi",
+    "ballpoint": "tükenmez kalem", "fountain pen": "dolma kalem", "pencil box": "kalem kutusu", "rubber eraser": "silgi", "pencil sharpener": "kalemtıraş", "binder": "klasör", "envelope": "zarf", "book jacket": "kitap", "comic book": "çizgi roman", "menu": "menü", "rule": "cetvel", "scissors": "makas", "letter opener": "zarf açacağı", "paper towel": "kâğıt havlu", "toilet tissue": "tuvalet kâğıdı", "carton": "karton kutu", "packet": "paket", "envelope": "zarf",
+    "sunglasses": "güneş gözlüğü", "sunglass": "güneş gözlüğü", "spectacles": "gözlük", "wallet": "cüzdan", "purse": "çanta", "backpack": "sırt çantası", "mailbag": "postacı çantası", "umbrella": "şemsiye", "sweatshirt": "sweatshirt", "jersey": "tişört / forma", "cardigan": "hırka", "suit": "takım elbise", "Windsor tie": "kravat", "bow tie": "papyon", "cowboy hat": "kovboy şapkası", "sombrero": "sombrero", "baseball": "beyzbol topu", "running shoe": "spor ayakkabı", "sandal": "sandalet", "Loafer": "makosen ayakkabı", "sock": "çorap", "mitten": "eldiven", "apron": "önlük", "lab coat": "laboratuvar önlüğü", "neck brace": "boyunluk",
+    "banana": "muz", "orange": "portakal", "lemon": "limon", "Granny Smith": "yeşil elma", "strawberry": "çilek", "pineapple": "ananas", "pomegranate": "nar", "fig": "incir", "bell pepper": "dolmalık biber", "cucumber": "salatalık", "broccoli": "brokoli", "cauliflower": "karnabahar", "head cabbage": "lahana", "mushroom": "mantar", "corn": "mısır", "bagel": "simit", "pretzel": "pretzel", "French loaf": "baget ekmek", "pizza": "pizza", "cheeseburger": "hamburger", "hotdog": "sosisli", "ice cream": "dondurma", "chocolate sauce": "çikolata sosu", "espresso": "espresso", "eggnog": "sütlü içecek",
+    "tabby": "tekir kedi", "tiger cat": "çizgili kedi", "Egyptian cat": "kedi", "Persian cat": "İran kedisi", "golden retriever": "golden retriever", "Labrador retriever": "labrador", "German shepherd": "Alman çoban köpeği", "pug": "pug", "goldfish": "japon balığı", "teddy": "oyuncak ayı", "balloon": "balon", "ping-pong ball": "masa tenisi topu", "tennis ball": "tenis topu", "soccer ball": "futbol topu", "basketball": "basketbol topu", "volleyball": "voleybol topu", "jigsaw puzzle": "yapboz", "plunger": "pompa", "toilet seat": "klozet", "bathtub": "küvet", "shower curtain": "duş perdesi", "soap dispenser": "sıvı sabunluk", "lotion": "losyon", "hair spray": "saç spreyi", "perfume": "parfüm", "face powder": "pudra", "lipstick": "ruj", "toothbrush": "diş fırçası",
+    "table lamp": "masa lambası", "lampshade": "abajur", "candle": "mum", "desk": "çalışma masası", "dining table": "yemek masası", "folding chair": "katlanır sandalye", "rocking chair": "sallanan sandalye", "studio couch": "kanepe", "pillow": "yastık", "quilt": "yorgan", "window shade": "stor perde", "window screen": "pencere teli", "sliding door": "sürgülü kapı", "shoji": "bölme paneli", "bookcase": "kitaplık", "chiffonier": "şifonyer", "wardrobe": "gardırop", "file": "dosya dolabı", "radiator": "radyatör", "space heater": "ısıtıcı", "vase": "vazo", "pot": "saksı", "doormat": "paspas", "pinwheel": "rüzgâr gülü", "screwdriver": "tornavida", "hammer": "çekiç", "padlock": "asma kilit", "safety pin": "çengelli iğne", "nail": "çivi", "screw": "vida", "chain": "zincir", "matchstick": "kibrit", "syringe": "şırınga", "pill bottle": "ilaç şişesi", "Band Aid": "yara bandı", "car mirror": "araba aynası", "seat belt": "emniyet kemeri", "steel drum": "varil", "crate": "kasa", "shopping basket": "alışveriş sepeti", "plastic bag": "naylon poşet" };
+  const trName = (cn) => { const parts = cn.split(",").map((s) => s.trim()), hit = parts.find((p) => TR[p]); return hit ? TR[hit] : null; };
+
+  const st = { model: null, loading: false, err: "", stream: null, facing: "user", busy: false, last: 0, preds: [], knn: [], fps: 0,
+    classes: [], samples: [], adding: -1, frozen: false, emb: null };
+  let video, snap, sctx, pcv, pctx, kcv, kctx, mcv, mctx;
+
+  function newClass(name) { const i = st.classes.length; st.classes.push({ name: name || "Nesne " + (i + 1), color: COLORS[i % COLORS.length] }); }
+  function loadScript([src, sri]) { return new Promise((res, rej) => { const s = document.createElement("script"); s.src = src; s.integrity = sri; s.crossOrigin = "anonymous"; s.onload = res; s.onerror = () => rej(new Error("Kütüphane yüklenemedi")); document.head.appendChild(s); }); }
+  async function ensureModel() {
+    if (st.model || st.loading) return; st.loading = true; st.err = ""; status();
+    try { for (const L of LIBS) if (!(L[0].includes("tfjs") ? window.tf : window.mobilenet)) await loadScript(L);
+      st.model = await mobilenet.load({ version: 2, alpha: 1.0 }); }
+    catch (e) { st.err = "Model yüklenemedi: " + (e.message || e) + ". İnternet bağlantını kontrol edip sayfayı yenile."; }
+    st.loading = false; status(); explain();
+  }
+  async function startCam() {
+    stopCam();
+    if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) { st.err = "Bu tarayıcı kameraya erişimi desteklemiyor."; return status(); }
+    try {
+      st.stream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: st.facing, width: { ideal: 640 }, height: { ideal: 480 } }, audio: false });
+      video.srcObject = st.stream; await video.play(); st.err = ""; st.frozen = false;
+    } catch (e) { st.err = e.name === "NotAllowedError" ? "Kamera izni verilmedi. Adres çubuğundaki kamera simgesinden izin verip yeniden dene." : e.name === "NotFoundError" ? "Kamera bulunamadı." : "Kamera açılamadı: " + e.message; }
+    mirror(); status(); ensureModel();
+  }
+  function stopCam() { if (st.stream) st.stream.getTracks().forEach((t) => t.stop()); st.stream = null; if (video) video.srcObject = null; status(); }
+  function mirror() { const m = on("k-mirror") && st.facing === "user"; video.style.transform = m ? "scaleX(-1)" : ""; snap.style.transform = video.style.transform; }
+  function status() {
+    const s = $("#k-status"); if (!s) return;
+    s.innerHTML = st.err ? `<span style="color:var(--bad)">${st.err}</span>` : st.loading ? "Model indiriliyor (yaklaşık 14 MB, ilk seferde birkaç saniye)…" : !st.stream ? "Kamera kapalı" : !st.model ? "Model hazırlanıyor…" : `Çalışıyor · ${st.fps.toFixed(1)} tahmin/sn · ${tf.getBackend() === "webgl" ? "ekran kartı" : "işlemci"}`;
+    $("#k-cam").textContent = st.stream ? "■ Kamerayı kapat" : "▶ Kamerayı aç";
+    $("#k-ph").style.display = st.stream ? "none" : "grid";
+  }
+  /* görüntüyü dondur: hareketli nesneleri incelemek için */
+  function freeze() { if (!st.stream) return; st.frozen = !st.frozen; if (st.frozen) { snap.width = video.videoWidth; snap.height = video.videoHeight; sctx.drawImage(video, 0, 0); } snap.hidden = !st.frozen; $("#k-freeze").textContent = st.frozen ? "▶ Devam" : "❚❚ Dondur"; }
+  const src = () => (st.frozen ? snap : video);
+
+  /* ---- k-en yakın komşu (kosinüs benzerliği) ---- */
+  function normed(a) { let s = 0; for (const v of a) s += v * v; s = Math.sqrt(s) || 1; return Float32Array.from(a, (v) => v / s); }
+  function knn(e) {
+    const k = Math.max(1, Math.min(num("k-k"), st.samples.length)); if (!st.samples.length || st.classes.length < 1) return [];
+    const d = st.samples.map((s) => { let dot = 0; for (let i = 0; i < e.length; i++) dot += e[i] * s.e[i]; return [dot, s.c]; }).sort((a, b) => b[0] - a[0]).slice(0, k);
+    const votes = st.classes.map(() => 0); d.forEach(([sim, c]) => (votes[c] += 1)); return votes.map((v, i) => ({ c: i, p: v / k, sim: Math.max(0, ...d.filter((x) => x[1] === i).map((x) => x[0])) }));
+  }
+  function thumb() { const c = document.createElement("canvas"); c.width = c.height = 56; const x = c.getContext("2d"), v = src(), w = v.videoWidth || v.width, h = v.videoHeight || v.height, m = Math.min(w, h); x.drawImage(v, (w - m) / 2, (h - m) / 2, m, m, 0, 0, 56, 56); return c.toDataURL("image/jpeg", 0.7); }
+  async function tick() {
+    if (st.busy || !st.model || !st.stream || video.readyState < 2) return;
+    const now = performance.now(); if (now - st.last < 1000 / num("k-rate") && st.adding < 0) return;
+    st.busy = true; const dt = now - st.last; st.last = now;
+    try {
+      const s = src();
+      const emb = tf.tidy(() => st.model.infer(s, true)); const arr = await emb.data(); emb.dispose(); st.emb = normed(arr);
+      if (st.adding >= 0 && st.samples.filter((x) => x.c === st.adding).length < 60) { st.samples.push({ c: st.adding, e: st.emb, t: thumb() }); renderClasses(); }
+      st.preds = await st.model.classify(s, 5); st.knn = knn(st.emb);
+      st.fps = st.fps * 0.8 + (1000 / Math.max(1, dt)) * 0.2;
+      drawPreds(); drawKnn(); drawMap(); hud(); if (Math.random() < 0.2) status();
+    } catch (e) { console.error(e); }
+    st.busy = false;
+  }
+  function hud() {
+    const mode = $("#k-mode").value, h = $("#k-hud");
+    if (mode === "ozel" && st.samples.length && st.knn.length) { const b = st.knn.reduce((a, x) => (x.p > a.p ? x : a)); const c = st.classes[b.c]; h.innerHTML = `<b style="color:${c.color}">${esc(c.name)}</b><span>%${Math.round(b.p * 100)} oy</span>`; }
+    else if (st.preds[0]) { const p = st.preds[0], t = trName(p.className); h.innerHTML = `<b>${esc(t || p.className.split(",")[0])}</b><span>%${Math.round(p.probability * 100)}${t ? " · " + esc(p.className.split(",")[0]) : ""}</span>`; }
+    else h.innerHTML = "";
+  }
+  const esc = (s) => String(s).replace(/[&<>"]/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c]));
+  function bars(ctx, cv, rows) {
+    const W = cv._w, H = cv._h, rh = Math.min(34, H / Math.max(rows.length, 1)); ctx.clearRect(0, 0, W, H);
+    rows.forEach((r, i) => { const y = i * rh + 4, bw = W - 70;
+      ctx.fillStyle = Theme.c.sunk; ctx.fillRect(0, y + 14, bw, 10); ctx.fillStyle = r.color || Theme.c.accent; ctx.fillRect(0, y + 14, Math.max(2, bw * r.p), 10);
+      ctx.fillStyle = Theme.c.ink; ctx.font = "600 12px " + getComputedStyle(document.body).fontFamily; ctx.textBaseline = "alphabetic"; ctx.fillText(r.label.length > 46 ? r.label.slice(0, 45) + "…" : r.label, 0, y + 11);
+      ctx.fillStyle = Theme.c.muted; ctx.font = "500 12px " + "JetBrains Mono, monospace"; ctx.textAlign = "right"; ctx.fillText("%" + (r.p * 100).toFixed(r.p < 0.1 ? 1 : 0), W, y + 24); ctx.textAlign = "left"; });
+    if (!rows.length) { ctx.fillStyle = Theme.c.muted; ctx.font = "13px sans-serif"; ctx.fillText("Kamera açılınca tahminler burada görünür.", 0, 20); }
+  }
+  function drawPreds() { bars(pctx, pcv, st.preds.map((p) => { const t = trName(p.className), en = p.className.split(",")[0]; return { label: t ? `${t} (${en})` : en, p: p.probability }; })); }
+  function drawKnn() {
+    if (!st.samples.length) { kctx.clearRect(0, 0, kcv._w, kcv._h); kctx.fillStyle = Theme.c.muted; kctx.font = "13px sans-serif"; kctx.fillText("Önce her sınıfa birkaç örnek ekle.", 0, 20); return; }
+    bars(kctx, kcv, st.classes.map((c, i) => ({ label: `${c.name} · ${st.samples.filter((s) => s.c === i).length} örnek`, p: (st.knn.find((x) => x.c === i) || { p: 0 }).p, color: c.color })));
+  }
+  /* ---- örnek haritası: 1280 boyutlu özellikleri iki ana bileşene (PCA) indir ---- */
+  function pca2(X) {
+    const n = X.length, d = X[0].length, mu = new Float32Array(d); X.forEach((x) => { for (let j = 0; j < d; j++) mu[j] += x[j] / n; });
+    const C = X.map((x) => Float32Array.from(x, (v, j) => v - mu[j])), G = C.map((a) => C.map((b) => { let s = 0; for (let j = 0; j < d; j++) s += a[j] * b[j]; return s; }));
+    const vecs = []; for (let k = 0; k < 2; k++) { let v = Array.from({ length: n }, (_, i) => Math.sin(i * 7.1 + k * 3 + 1)); for (let it = 0; it < 60; it++) { let w = G.map((r) => r.reduce((s, g, j) => s + g * v[j], 0)); vecs.forEach((u) => { const p = w.reduce((s, x, j) => s + x * u[j], 0); w = w.map((x, j) => x - p * u[j]); }); const nn = Math.hypot(...w) || 1; v = w.map((x) => x / nn); } vecs.push(v); }
+    const axes = vecs.map((v) => { const a = new Float32Array(d); C.forEach((c, i) => { for (let j = 0; j < d; j++) a[j] += v[i] * c[j]; }); const nn = Math.hypot(...a) || 1; return a.map((x) => x / nn); });
+    return { mu, axes, proj: (x) => axes.map((a) => { let s = 0; for (let j = 0; j < d; j++) s += (x[j] - mu[j]) * a[j]; return s; }) };
+  }
+  let P = null, Pn = -1;
+  function drawMap() {
+    const W = mcv._w, H = mcv._h; mctx.clearRect(0, 0, W, H); mctx.fillStyle = Theme.c.sunk; mctx.fillRect(0, 0, W, H);
+    if (st.samples.length < 3) { mctx.fillStyle = Theme.c.muted; mctx.font = "13px sans-serif"; mctx.fillText("En az 3 örnek olunca harita çizilir.", 12, 24); return; }
+    if (Pn !== st.samples.length) { P = pca2(st.samples.map((s) => s.e)); Pn = st.samples.length; P.pts = st.samples.map((s) => P.proj(s.e)); }
+    const all = P.pts.concat(st.emb ? [P.proj(st.emb)] : []), xs = all.map((p) => p[0]), ys = all.map((p) => p[1]);
+    const x0 = Math.min(...xs), x1 = Math.max(...xs), y0 = Math.min(...ys), y1 = Math.max(...ys), sx = (W - 30) / ((x1 - x0) || 1), sy = (H - 30) / ((y1 - y0) || 1);
+    const X = (p) => 15 + (p[0] - x0) * sx, Y = (p) => H - 15 - (p[1] - y0) * sy;
+    P.pts.forEach((p, i) => { mctx.fillStyle = st.classes[st.samples[i].c].color; mctx.globalAlpha = 0.75; mctx.beginPath(); mctx.arc(X(p), Y(p), 4.5, 0, 7); mctx.fill(); });
+    mctx.globalAlpha = 1;
+    if (st.emb) { const q = P.proj(st.emb); mctx.strokeStyle = Theme.c.ink; mctx.lineWidth = 2; mctx.beginPath(); mctx.arc(X(q), Y(q), 9, 0, 7); mctx.stroke(); mctx.beginPath(); mctx.moveTo(X(q) - 13, Y(q)); mctx.lineTo(X(q) + 13, Y(q)); mctx.moveTo(X(q), Y(q) - 13); mctx.lineTo(X(q), Y(q) + 13); mctx.stroke(); }
+  }
+  function renderClasses() {
+    const box = $("#k-classes");
+    box.innerHTML = st.classes.map((c, i) => { const ss = st.samples.filter((s) => s.c === i);
+      return `<div class="card" style="padding:10px;border-left:4px solid ${c.color}">
+        <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap"><input value="${esc(c.name)}" data-n="${i}" aria-label="Sınıf adı" style="flex:1;min-width:120px;font:inherit;font-weight:700;border:1px solid var(--line);border-radius:6px;padding:5px 8px;background:var(--sunk);color:var(--ink)">
+          <button class="btn" data-add="${i}" style="touch-action:none">● Basılı tut: örnek ekle</button><span class="note">${ss.length} örnek</span>
+          <button class="btn" data-clr="${i}" title="Bu sınıfın örneklerini sil">Temizle</button>${st.classes.length > 2 ? `<button class="btn" data-del="${i}" title="Sınıfı kaldır">×</button>` : ""}</div>
+        <div style="display:flex;gap:3px;flex-wrap:wrap;margin-top:6px">${ss.slice(-24).map((s) => `<img src="${s.t}" alt="" width="34" height="34" style="border-radius:4px">`).join("")}</div></div>`; }).join("");
+    $("#k-addc").disabled = st.classes.length >= 6;
+  }
+  function explain() {
+    const e = $("#k-explain"); if (!e) return;
+    e.innerHTML = `<b>Hazır model</b>, ImageNet adlı 1,2 milyon fotoğraflık veri setinde önceden eğitilmiş MobileNet ağı. 1000 sınıfı tanır: kupa, klavye, muz, makas gibi. "İnsan" diye bir sınıfı yoktur; yüzünü gösterirsen en çok benzediği nesneyi söyler (gözlük, takım elbise, maske…). Ağ yalnızca bildiği sınıflar arasından seçim yapabilir.<br><br>
+      <b>Kendi nesnelerin</b> bölümü <i>aktarım öğrenmesi</i> kullanır. Ağın son katmanını atıp bir önceki katmandan 1280 sayılık bir "özellik vektörü" alır; bu vektör görüntünün kenar, doku ve şekil özetidir. Her örnek bir nokta olarak saklanır. Yeni bir kare geldiğinde en benzer <b>k</b> örneğe bakılır ve hangi sınıftan çok varsa o seçilir (<i>k-en yakın komşu</i>). Ağ yeniden eğitilmez; bu yüzden birkaç saniyede öğrenir.<br><br>
+      <b>Örnek haritası</b>, 1280 boyutlu noktaları ana bileşen analiziyle (PCA) iki boyuta indirip gösterir. Sınıfların renkleri ayrı öbekler oluşturuyorsa model onları kolay ayırır; iç içe geçiyorsa daha çeşitli açı, ışık ve arka planla örnek ekle. Artı işaretli halka, kameradaki şu anki görüntü.<br><br>
+      <span class="note">Görüntüler bilgisayarından çıkmaz; model tarayıcında çalışır. Yalnızca model dosyası ilk açılışta internetten indirilir.</span>`;
+  }
+  function init(root) {
+    if (!st.classes.length) { newClass("Nesne 1"); newClass("Nesne 2"); }
+    root.innerHTML = `
+    <div class="lab">
+      <div class="stage">
+        <div class="row">
+          <div class="card" style="flex:1 1 360px"><h2>Kamera</h2><p class="sub">Bir nesneyi kameraya göster. <span id="k-status"></span></p>
+            <div style="position:relative;background:#000;border-radius:8px;overflow:hidden;aspect-ratio:4/3">
+              <video id="k-video" playsinline muted style="width:100%;height:100%;object-fit:cover;display:block"></video>
+              <canvas id="k-snap" hidden style="position:absolute;inset:0;width:100%;height:100%;object-fit:cover"></canvas>
+              <div id="k-ph" style="position:absolute;inset:0;display:grid;place-items:center;color:#cfd8df;text-align:center;padding:20px;font-size:13px">Kamerayı açmak için sağdaki<br><b>▶ Kamerayı aç</b> düğmesine bas.</div>
+              <div id="k-hud" style="position:absolute;left:10px;bottom:10px;right:10px;display:flex;flex-direction:column;gap:2px;color:#fff;text-shadow:0 1px 4px rgba(0,0,0,.8);font-size:13px"></div>
+            </div>
+            <style>#k-hud b{font-family:var(--f-display);font-size:26px;line-height:1.1}</style></div>
+          <div class="card" style="flex:1 1 300px"><h2>Hazır model ne görüyor?</h2><p class="sub">En olası 5 sınıf (ImageNet, 1000 sınıf).</p><canvas id="k-preds"></canvas></div>
+        </div>
+        <div class="card"><h2>Kendi nesnelerini öğret</h2><p class="sub">Her sınıf için nesneyi kameraya tutup düğmeye basılı tut; 15–30 örnek yeterli. Nesneyi biraz döndür ve uzaklaştır ki çeşitli örnekler toplansın.</p>
+          <div id="k-classes" style="display:flex;flex-direction:column;gap:8px"></div>
+          <div style="margin-top:8px"><button class="btn" id="k-addc">+ Sınıf ekle</button></div></div>
+        <div class="row">
+          <div class="card" style="flex:1 1 300px"><h2>Senin modelinin tahmini</h2><p class="sub">En yakın k örneğin oyları.</p><canvas id="k-knn"></canvas></div>
+          <div class="card" style="flex:1 1 300px"><h2>Örnek haritası</h2><p class="sub">Örneklerin 1280 boyuttan 2 boyuta indirilmiş hâli (PCA).</p><canvas id="k-map"></canvas></div>
+        </div>
+        <div class="explain" id="k-explain"></div>
+      </div>
+      <aside class="panel">
+        <div class="btns"><button class="btn primary" id="k-cam">▶ Kamerayı aç</button><button class="btn" id="k-flip">⟲ Ön / arka</button><button class="btn" id="k-freeze">❚❚ Dondur</button></div>
+        ${UI.group("Ekrandaki büyük etiket", UI.select("k-mode", "Gösterilen tahmin", [["hazir", "Hazır model (1000 sınıf)"], ["ozel", "Kendi sınıflarım"]], "hazir"))}
+        ${UI.group("Ayarlar", UI.range("k-k", "k (komşu sayısı)", 1, 15, 1, 5) + UI.range("k-rate", "Tahmin sıklığı (sn'de)", 1, 15, 1, 6) + UI.check("k-mirror", "Ön kamerada ayna görüntü", true))}
+        <div class="btns"><button class="btn wide" id="k-reset">Sınıfları ve örnekleri sıfırla</button></div>
+        <p class="note">İpucu: arka planı sade tut. Bir sınıfı "hiçbiri" olarak bırakıp boş masayı öğretirsen model nesne yokken de doğru cevap verir.</p>
+      </aside>
+    </div>`;
+    video = $("#k-video"); snap = $("#k-snap"); sctx = snap.getContext("2d");
+    pcv = $("#k-preds"); pctx = setupCanvas(pcv, 380, 175); kcv = $("#k-knn"); kctx = setupCanvas(kcv, 380, 175); mcv = $("#k-map"); mctx = setupCanvas(mcv, 380, 230);
+    $("#k-cam").onclick = () => (st.stream ? stopCam() : startCam());
+    $("#k-flip").onclick = () => { st.facing = st.facing === "user" ? "environment" : "user"; if (st.stream) startCam(); else mirror(); };
+    $("#k-freeze").onclick = freeze;
+    $("#k-mirror").onchange = mirror;
+    $("#k-addc").onclick = () => { if (st.classes.length < 6) { newClass(); renderClasses(); drawKnn(); } };
+    $("#k-reset").onclick = () => { st.classes = []; st.samples = []; newClass("Nesne 1"); newClass("Nesne 2"); Pn = -1; renderClasses(); drawKnn(); drawMap(); };
+    const box = $("#k-classes");
+    box.addEventListener("input", (e) => { const i = e.target.dataset.n; if (i != null) { st.classes[+i].name = e.target.value.slice(0, 40) || "Nesne"; drawKnn(); } });
+    box.addEventListener("click", (e) => { const t = e.target;
+      if (t.dataset.clr != null) { const c = +t.dataset.clr; st.samples = st.samples.filter((s) => s.c !== c); Pn = -1; renderClasses(); drawKnn(); drawMap(); }
+      if (t.dataset.del != null) { const c = +t.dataset.del; st.samples = st.samples.filter((s) => s.c !== c).map((s) => ({ ...s, c: s.c > c ? s.c - 1 : s.c })); st.classes.splice(c, 1); st.classes.forEach((k, i) => (k.color = COLORS[i % COLORS.length])); Pn = -1; renderClasses(); drawKnn(); drawMap(); } });
+    box.addEventListener("pointerdown", (e) => { const b = e.target.closest("[data-add]"); if (!b) return; if (!st.stream) { st.err = ""; $("#k-status").textContent = "Önce kamerayı aç."; return; } st.adding = +b.dataset.add; b.classList.add("on"); b.setPointerCapture(e.pointerId); });
+    const up = (e) => { if (st.adding < 0) return; st.adding = -1; $$("[data-add]").forEach((b) => b.classList.remove("on")); Pn = -1; renderClasses(); drawMap(); };
+    box.addEventListener("pointerup", up); box.addEventListener("pointercancel", up);
+    renderClasses(); drawPreds(); drawKnn(); drawMap(); explain(); status();
+  }
+  return { init,
+    frame: () => { tick(); },
+    deactivate: () => { stopCam(); },
+    onTheme: () => { drawPreds(); drawKnn(); drawMap(); },
+    save: () => ({ classes: st.classes.map((c) => c.name), samples: st.samples.map((s) => ({ c: s.c, t: s.t, e: Array.from(s.e, (v) => Math.round(v * 1e4) / 1e4) })) }),
+    load: (m) => { if (!m || !Array.isArray(m.classes)) return; st.classes = []; m.classes.slice(0, 6).forEach((n) => newClass(String(n)));
+      st.samples = (m.samples || []).filter((s) => s.c < st.classes.length && Array.isArray(s.e)).map((s) => ({ c: s.c, t: typeof s.t === "string" && s.t.startsWith("data:image/") ? s.t : "", e: normed(s.e) }));
+      Pn = -1; renderClasses(); drawKnn(); drawMap(); } };
+})();
+
 boot();
 </script>
 </body>
