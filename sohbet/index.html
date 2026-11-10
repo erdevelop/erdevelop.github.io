@@ -88,7 +88,7 @@ aside li{display:flex;align-items:center;gap:8px;padding:4px 0;overflow-wrap:any
 <section id="giris">
   <div class="kart">
     <h1 class="brand">Sohbet Odası</h1>
-    <p>Bir takma ad seç. Odadaki herkes yazdıklarını anında görür.</p>
+    <p>Bir takma ad seç. Odadaki herkes yazdıklarını anında görür. Sohbet her saat başı temizlenir.</p>
     <form id="girisForm" autocomplete="off">
       <label for="nick">Takma ad</label>
       <div class="satir">
@@ -108,6 +108,7 @@ aside li{display:flex;align-items:center;gap:8px;padding:4px 0;overflow-wrap:any
       <span class="kim">
         <span class="nokta ok" id="odaNokta"></span>
         <span class="benim" id="benimAd"></span>
+        <span id="sayac" title="Sohbet her saat başı temizlenir"></span>
         <button class="kucuk" id="kisiBtn">👥 <span id="sayi2">0</span></button>
         <button class="kucuk" id="cikBtn">Çık</button>
       </span>
@@ -320,11 +321,43 @@ function mesajEkle(m){
 let sonYazanBen = false;
 document.addEventListener('visibilitychange', () => { if (!document.hidden){ okunmamis = 0; document.title = baslik; } });
 
-function dinle(){
-  const q = R('mesajlar').orderByChild('ts').limitToLast(GECMIS);
+/* ---------- saat başı temizlik ---------- */
+const SAAT = 3600000;
+let mesajKapat = null, aktifSaat = 0;
+function saatBasi(){ const t = simdi(); return t - t % SAAT; }   // Türkiye UTC+3: saat başları UTC ile aynı
+
+function mesajDinle(){
+  if (mesajKapat) mesajKapat();
+  aktifSaat = saatBasi();
+  kutu.innerHTML = ''; sonYazan = null; sonGun = null; $('yeniBtn').style.display = 'none';
+  const q = R('mesajlar').orderByChild('ts').startAt(aktifSaat).limitToLast(GECMIS);
   const ekle = s => mesajEkle(s.val());
   q.on('child_added', ekle, e => yerelSistem(izinHatasi(e)));
-  kapat.push(() => q.off('child_added', ekle));
+  mesajKapat = () => { q.off('child_added', ekle); mesajKapat = null; };
+  eskileriSil();
+}
+function eskileriSil(){
+  // önceki saatlerden kalan mesajları veritabanından siler (odada kim varsa o yapar)
+  R('mesajlar').orderByChild('ts').endAt(aktifSaat - 1).limitToFirst(500).once('value').then(s => {
+    const u = {}; s.forEach(c => { u[c.key] = null; });
+    if (Object.keys(u).length) return R('mesajlar').update(u);
+  }).catch(() => {});
+}
+function sayacGuncelle(){
+  if (!ben) return;
+  const kalan = SAAT - simdi() % SAAT;
+  $('sayac').textContent = '🧹 ' + Math.ceil(kalan / 60000) + ' dk';
+  if (saatBasi() !== aktifSaat){
+    mesajDinle();
+    yerelSistem('Saat başı: sohbet temizlendi 🧹');
+  }
+}
+setInterval(sayacGuncelle, 1000);
+
+function dinle(){
+  mesajDinle();
+  sayacGuncelle();
+  kapat.push(() => { if (mesajKapat) mesajKapat(); });
 
   const ak = R('aktif');
   const listele = s => {
