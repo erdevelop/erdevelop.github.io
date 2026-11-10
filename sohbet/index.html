@@ -1,0 +1,394 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cut">
+<title>Sohbet Odası</title>
+<meta name="robots" content="noindex">
+<link rel="icon" href="/favicon.svg" type="image/svg+xml">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Chakra+Petch:wght@600;700&family=IBM+Plex+Sans:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500&display=swap">
+<style>
+:root{
+  --bg:#f4f5f2; --panel:#ffffff; --ink:#1d2321; --mute:#6b7470; --line:#e1e4df;
+  --acc:#2f7d6b; --acc-ink:#ffffff; --mine:#e3f1ec; --sys:#8a928e; --err:#b8452f;
+  --shadow:0 1px 2px rgba(0,0,0,.04),0 4px 16px rgba(0,0,0,.05);
+}
+@media (prefers-color-scheme: dark){
+  :root{ --bg:#141816; --panel:#1c2120; --ink:#e6ebe8; --mute:#8f9994; --line:#2b3230;
+    --acc:#5cb89f; --acc-ink:#0f1513; --mine:#1f3530; --sys:#7c8681; --err:#e0795f;
+    --shadow:0 1px 2px rgba(0,0,0,.3); }
+}
+*{box-sizing:border-box}
+html,body{height:100%;margin:0}
+body{background:var(--bg);color:var(--ink);font:15px/1.45 "IBM Plex Sans",system-ui,sans-serif;
+  display:flex;flex-direction:column;height:100dvh}
+button,input{font:inherit;color:inherit}
+.brand{font-family:"Chakra Petch",sans-serif;font-weight:700;letter-spacing:.02em}
+
+/* ---- giriş ---- */
+#giris{flex:1;display:flex;align-items:center;justify-content:center;padding:16px}
+.kart{background:var(--panel);border:1px solid var(--line);border-radius:14px;box-shadow:var(--shadow);
+  padding:28px 24px;width:100%;max-width:380px}
+.kart h1{margin:0 0 4px;font-size:26px}
+.kart p{margin:0 0 20px;color:var(--mute)}
+.kart label{display:block;font-size:13px;color:var(--mute);margin-bottom:6px}
+.satir{display:flex;gap:8px}
+input[type=text]{flex:1;min-width:0;background:var(--bg);border:1px solid var(--line);border-radius:10px;
+  padding:11px 12px;outline:none}
+input[type=text]:focus{border-color:var(--acc)}
+.btn{background:var(--acc);color:var(--acc-ink);border:0;border-radius:10px;padding:0 16px;
+  font-weight:600;cursor:pointer;white-space:nowrap}
+.btn:disabled{opacity:.45;cursor:default}
+.hata{color:var(--err);font-size:13px;min-height:20px;margin-top:8px}
+.durum{font-size:12px;color:var(--mute);margin-top:14px;display:flex;align-items:center;gap:6px}
+.nokta{width:8px;height:8px;border-radius:50%;background:var(--mute);flex:none}
+.nokta.ok{background:#3aa57a}
+
+/* ---- sohbet ---- */
+#oda{flex:1;display:none;min-height:0}
+#oda.acik{display:flex}
+.ana{flex:1;display:flex;flex-direction:column;min-width:0}
+header{display:flex;align-items:center;gap:12px;padding:10px 16px;border-bottom:1px solid var(--line);background:var(--panel)}
+header .brand{font-size:18px}
+header .kim{margin-left:auto;font-size:13px;color:var(--mute);display:flex;align-items:center;gap:8px}
+.kucuk{background:none;border:1px solid var(--line);border-radius:8px;padding:5px 10px;cursor:pointer;font-size:13px}
+#kisiBtn{display:none}
+#mesajlar{flex:1;overflow-y:auto;padding:14px 16px;display:flex;flex-direction:column;gap:2px}
+.m{max-width:min(78%,640px);align-self:flex-start;padding:7px 11px;border-radius:12px;background:var(--panel);
+  border:1px solid var(--line);margin-top:6px;overflow-wrap:anywhere;white-space:pre-wrap}
+.m.devam{margin-top:0;border-top-left-radius:4px}
+.m.ben{align-self:flex-end;background:var(--mine);border-color:transparent}
+.m.ben.devam{border-top-left-radius:12px;border-top-right-radius:4px}
+.m .ad{font-weight:600;font-size:13px;display:block;margin-bottom:1px}
+.m .saat{font:11px "IBM Plex Mono",monospace;color:var(--mute);margin-left:8px;float:right;margin-top:5px}
+.s{align-self:center;color:var(--sys);font-size:12px;margin:8px 0 2px;text-align:center}
+.gun{align-self:center;font:11px "IBM Plex Mono",monospace;color:var(--mute);background:var(--line);
+  border-radius:20px;padding:2px 10px;margin:12px 0 4px}
+#yaziyor{font-size:12px;color:var(--mute);padding:0 16px;height:18px}
+form#yaz{display:flex;gap:8px;padding:10px 16px calc(10px + env(safe-area-inset-bottom));border-top:1px solid var(--line);background:var(--panel)}
+form#yaz .btn{padding:0 18px}
+aside{width:210px;border-left:1px solid var(--line);background:var(--panel);padding:14px 16px;overflow-y:auto;flex:none}
+aside h2{font-size:12px;text-transform:uppercase;letter-spacing:.06em;color:var(--mute);margin:0 0 10px;font-weight:600}
+aside ul{list-style:none;margin:0;padding:0}
+aside li{display:flex;align-items:center;gap:8px;padding:4px 0;overflow-wrap:anywhere}
+.yeni{position:absolute;right:24px;bottom:84px;display:none;background:var(--acc);color:var(--acc-ink);border:0;
+  border-radius:20px;padding:6px 12px;font-size:13px;cursor:pointer;box-shadow:var(--shadow)}
+@media (max-width:700px){
+  aside{position:fixed;right:0;top:0;bottom:0;transform:translateX(100%);transition:transform .2s;z-index:5;box-shadow:var(--shadow)}
+  aside.acik{transform:none}
+  #kisiBtn{display:inline-block}
+  .m{max-width:88%}
+  header .benim{display:none}
+}
+</style>
+</head>
+<body>
+
+<section id="giris">
+  <div class="kart">
+    <h1 class="brand">Sohbet Odası</h1>
+    <p>Bir takma ad seç. Odadaki herkes yazdıklarını anında görür.</p>
+    <form id="girisForm" autocomplete="off">
+      <label for="nick">Takma ad</label>
+      <div class="satir">
+        <input type="text" id="nick" maxlength="16" placeholder="örn. erdal" autofocus>
+        <button class="btn" id="girBtn" disabled>Gir</button>
+      </div>
+      <div class="hata" id="girisHata"></div>
+    </form>
+    <div class="durum"><span class="nokta" id="baglNokta"></span><span id="baglYazi">Bağlanıyor…</span></div>
+  </div>
+</section>
+
+<section id="oda">
+  <div class="ana" style="position:relative">
+    <header>
+      <span class="brand">Sohbet Odası</span>
+      <span class="kim">
+        <span class="nokta ok" id="odaNokta"></span>
+        <span class="benim" id="benimAd"></span>
+        <button class="kucuk" id="kisiBtn">👥 <span id="sayi2">0</span></button>
+        <button class="kucuk" id="cikBtn">Çık</button>
+      </span>
+    </header>
+    <div id="mesajlar" aria-live="polite"></div>
+    <button class="yeni" id="yeniBtn">↓ Yeni mesajlar</button>
+    <div id="yaziyor"></div>
+    <form id="yaz" autocomplete="off">
+      <input type="text" id="metin" maxlength="500" placeholder="Mesaj yaz…" enterkeyhint="send">
+      <button class="btn" id="gonderBtn">Gönder</button>
+    </form>
+  </div>
+  <aside id="kisiler">
+    <h2>Şu an burada · <span id="sayi">0</span></h2>
+    <ul id="liste"></ul>
+  </aside>
+</section>
+
+<script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-database-compat.js"></script>
+<script>
+(function(){
+'use strict';
+const CONFIG = {
+  apiKey: "AIzaSyCQly5YyU9TNMfvZNBVA1UPZuglO8Rzogo",
+  authDomain: "mesaj1-fc2c5.firebaseapp.com",
+  databaseURL: "https://mesaj1-fc2c5-default-rtdb.firebaseio.com",
+  projectId: "mesaj1-fc2c5",
+  appId: "1:835014166916:web:f47e7f8ec1641bc44c75d1"
+};
+const KOK = 'sohbet';          // veritabanındaki klasör
+const GECMIS = 150;            // gösterilecek son mesaj sayısı
+
+const $ = id => document.getElementById(id);
+const ls = {
+  get(k){ try{ return localStorage.getItem(k); }catch(e){ return null; } },
+  set(k,v){ try{ localStorage.setItem(k,v); }catch(e){} }
+};
+const CID = Math.random().toString(36).slice(2) + Date.now().toString(36);
+
+if (!window.firebase){ $('baglYazi').textContent = 'Firebase yüklenemedi. İnternet bağlantını kontrol et.'; return; }
+firebase.initializeApp(CONFIG);
+const db = firebase.database();
+const TS = firebase.database.ServerValue.TIMESTAMP;
+const R = p => db.ref(KOK + '/' + p);
+
+let ben = null, anahtar = null, bagli = false, kapat = [];
+let saatFarki = 0;
+db.ref('.info/serverTimeOffset').on('value', s => saatFarki = s.val() || 0);
+const simdi = () => Date.now() + saatFarki;
+
+/* ---------- yardımcılar ---------- */
+function nickAnahtar(n){ return n.toLocaleLowerCase('tr-TR').replace(/[.#$\[\]\/\s]/g,'_'); }
+function nickGecerli(n){
+  if (n.length < 2) return 'En az 2 karakter olmalı.';
+  if (n.length > 16) return 'En fazla 16 karakter olabilir.';
+  if (!/^[\p{L}\p{N}_\-. ]+$/u.test(n)) return 'Sadece harf, rakam, boşluk ve _ - . kullanılabilir.';
+  return '';
+}
+function renk(n){
+  let h = 0; for (const c of n.toLocaleLowerCase('tr-TR')) h = (h*31 + c.charCodeAt(0)) >>> 0;
+  const koyu = matchMedia('(prefers-color-scheme: dark)').matches;
+  return `hsl(${h % 360} ${koyu?55:50}% ${koyu?68:36}%)`;
+}
+function saat(t){ return new Date(t).toLocaleTimeString('tr-TR',{hour:'2-digit',minute:'2-digit'}); }
+function gunAdi(t){
+  const d = new Date(t), b = new Date(); const fark = Math.round((new Date(b.toDateString()) - new Date(d.toDateString()))/864e5);
+  if (fark === 0) return 'Bugün'; if (fark === 1) return 'Dün';
+  return d.toLocaleDateString('tr-TR',{day:'numeric',month:'long',weekday:'long'});
+}
+function izinHatasi(e){
+  return e && /permission/i.test(e.code || e.message || '')
+    ? 'Veritabanı izin vermiyor. Firebase kurallarının güncellenmesi gerekiyor.'
+    : 'Bağlantı hatası: ' + (e && (e.message || e.code) || e);
+}
+
+/* ---------- bağlantı durumu ---------- */
+db.ref('.info/connected').on('value', s => {
+  bagli = s.val() === true;
+  $('baglNokta').classList.toggle('ok', bagli);
+  $('odaNokta').classList.toggle('ok', bagli);
+  $('baglYazi').textContent = bagli ? 'Bağlandı' : 'Bağlanıyor…';
+  girKontrol();
+  if (bagli && ben) yenidenKatil();
+});
+
+/* ---------- giriş ---------- */
+const nickIn = $('nick');
+nickIn.value = ls.get('sohbet_nick') || '';
+function girKontrol(){ $('girBtn').disabled = !bagli || nickIn.value.trim().length < 2; }
+nickIn.addEventListener('input', () => { $('girisHata').textContent = ''; girKontrol(); });
+girKontrol();
+
+$('girisForm').addEventListener('submit', async e => {
+  e.preventDefault();
+  const n = nickIn.value.trim().replace(/\s+/g,' ');
+  const h = nickGecerli(n); if (h){ $('girisHata').textContent = h; return; }
+  $('girBtn').disabled = true; $('girisHata').textContent = '';
+  try{
+    const ok = await nickAl(n);
+    if (!ok){ $('girisHata').textContent = '“' + n + '” şu an odada biri tarafından kullanılıyor. Başka bir ad dene.'; girKontrol(); return; }
+    ben = n; ls.set('sohbet_nick', n);
+    odayaGir();
+  }catch(err){ $('girisHata').textContent = izinHatasi(err); girKontrol(); }
+});
+
+async function nickAl(n){
+  const k = nickAnahtar(n);
+  const ref = R('aktif/' + k);
+  const sonuc = await ref.transaction(cur => {
+    if (cur && cur.cid !== CID) return;           // başkası kullanıyor → iptal
+    return { nick: n, cid: CID, ts: TS };
+  }, null, false);
+  if (!sonuc.committed) return false;
+  await ref.onDisconnect().remove();
+  anahtar = k;
+  return true;
+}
+
+function sistemMesaji(metin){ return R('mesajlar').push({ tip:'s', text: metin, ts: TS }); }
+
+async function odayaGir(){
+  $('giris').style.display = 'none';
+  $('oda').classList.add('acik');
+  $('benimAd').textContent = ben;
+  dinle();
+  try{
+    await sistemMesaji(ben + ' odaya katıldı');
+    ayrilmaHazirla();
+  }catch(e){ yerelSistem(izinHatasi(e)); }
+  setTimeout(() => $('metin').focus(), 50);
+}
+
+function ayrilmaHazirla(){
+  const r = R('mesajlar').push();            // anahtar şimdiden alınır, bağlantı koparsa yazılır
+  r.onDisconnect().set({ tip:'s', text: ben + ' odadan ayrıldı', ts: TS });
+  ayrilmaRef = r;
+}
+let ayrilmaRef = null;
+
+let ilkBaglanti = true;
+async function yenidenKatil(){
+  if (ilkBaglanti){ ilkBaglanti = false; return; }
+  // bağlantı koptuysa onDisconnect çalıştı; adı tekrar al
+  try{
+    const ok = await nickAl(ben);
+    if (!ok){ yerelSistem('Bağlantı koptuğu sırada “' + ben + '” adını başkası aldı. Lütfen yeniden gir.'); setTimeout(cik, 2500); return; }
+    ayrilmaHazirla();
+  }catch(e){ yerelSistem(izinHatasi(e)); }
+}
+
+async function cik(){
+  kapat.forEach(f => f()); kapat = [];
+  try{
+    if (ayrilmaRef){ await ayrilmaRef.onDisconnect().cancel(); await ayrilmaRef.set({ tip:'s', text: ben + ' odadan ayrıldı', ts: TS }); }
+    if (anahtar){ const a = R('aktif/' + anahtar); await a.onDisconnect().cancel(); await a.remove(); }
+    yaziyorBitir();
+  }catch(e){}
+  ben = null; anahtar = null; ayrilmaRef = null; ilkBaglanti = true;
+  $('mesajlar').innerHTML = ''; sonYazan = null; sonGun = null;
+  $('oda').classList.remove('acik'); $('giris').style.display = '';
+  girKontrol(); nickIn.focus();
+}
+$('cikBtn').addEventListener('click', cik);
+
+/* ---------- mesajlar ---------- */
+const kutu = $('mesajlar');
+let sonYazan = null, sonGun = null, okunmamis = 0;
+const baslik = document.title;
+
+function altta(){ return kutu.scrollHeight - kutu.scrollTop - kutu.clientHeight < 80; }
+function asagi(){ kutu.scrollTop = kutu.scrollHeight; $('yeniBtn').style.display = 'none'; }
+kutu.addEventListener('scroll', () => { if (altta()) $('yeniBtn').style.display = 'none'; });
+$('yeniBtn').addEventListener('click', asagi);
+
+function gunEkle(t){
+  const g = new Date(t).toDateString();
+  if (g !== sonGun){ sonGun = g; sonYazan = null;
+    const d = document.createElement('div'); d.className = 'gun'; d.textContent = gunAdi(t); kutu.appendChild(d); }
+}
+function yerelSistem(metin){
+  const d = document.createElement('div'); d.className = 's'; d.textContent = metin;
+  const asg = altta(); kutu.appendChild(d); if (asg) asagi();
+}
+function mesajEkle(m){
+  if (!m || typeof m.text !== 'string') return;
+  const t = typeof m.ts === 'number' ? m.ts : simdi();
+  const asg = altta();
+  gunEkle(t);
+  if (m.tip === 's'){
+    const d = document.createElement('div'); d.className = 's';
+    d.textContent = m.text + ' · ' + saat(t); kutu.appendChild(d); sonYazan = null;
+  } else {
+    const benimMi = m.cid === CID;
+    const devam = sonYazan === m.nick && !benimMi === !sonYazanBen;
+    const d = document.createElement('div');
+    d.className = 'm' + (benimMi ? ' ben' : '') + (devam ? ' devam' : '');
+    if (!devam && !benimMi){
+      const a = document.createElement('span'); a.className = 'ad'; a.textContent = m.nick; a.style.color = renk(m.nick); d.appendChild(a);
+    }
+    d.appendChild(document.createTextNode(m.text));
+    const s = document.createElement('span'); s.className = 'saat'; s.textContent = saat(t); d.appendChild(s);
+    kutu.appendChild(d);
+    sonYazan = m.nick; sonYazanBen = benimMi;
+    if (!benimMi && document.hidden){ okunmamis++; document.title = '(' + okunmamis + ') ' + baslik; }
+    if (benimMi){ asagi(); return; }
+  }
+  if (asg) asagi(); else $('yeniBtn').style.display = 'block';
+}
+let sonYazanBen = false;
+document.addEventListener('visibilitychange', () => { if (!document.hidden){ okunmamis = 0; document.title = baslik; } });
+
+function dinle(){
+  const q = R('mesajlar').orderByChild('ts').limitToLast(GECMIS);
+  const ekle = s => mesajEkle(s.val());
+  q.on('child_added', ekle, e => yerelSistem(izinHatasi(e)));
+  kapat.push(() => q.off('child_added', ekle));
+
+  const ak = R('aktif');
+  const listele = s => {
+    const v = s.val() || {};
+    const adlar = Object.values(v).map(x => x && x.nick).filter(Boolean).sort((a,b) => a.localeCompare(b,'tr'));
+    $('sayi').textContent = adlar.length; $('sayi2').textContent = adlar.length;
+    const ul = $('liste'); ul.innerHTML = '';
+    adlar.forEach(n => {
+      const li = document.createElement('li');
+      const nk = document.createElement('span'); nk.className = 'nokta ok';
+      const ad = document.createElement('span'); ad.textContent = n + (n === ben ? ' (sen)' : ''); ad.style.color = renk(n);
+      li.append(nk, ad); ul.appendChild(li);
+    });
+  };
+  ak.on('value', listele);
+  kapat.push(() => ak.off('value', listele));
+
+  const yz = R('yaziyor');
+  const yazanlar = s => {
+    const v = s.val() || {}; const t = simdi();
+    const adlar = Object.values(v).filter(x => x && x.nick !== ben && t - (x.ts||0) < 8000).map(x => x.nick);
+    $('yaziyor').textContent = adlar.length === 0 ? '' :
+      adlar.length === 1 ? adlar[0] + ' yazıyor…' :
+      adlar.length <= 3 ? adlar.join(', ') + ' yazıyor…' : 'Birkaç kişi yazıyor…';
+  };
+  yz.on('value', yazanlar);
+  kapat.push(() => yz.off('value', yazanlar));
+}
+
+/* ---------- yazma ---------- */
+const metinIn = $('metin');
+let yaziyorZaman = 0, yaziyorTimer = null;
+function yaziyorBitir(){
+  clearTimeout(yaziyorTimer); yaziyorZaman = 0;
+  if (anahtar) R('yaziyor/' + anahtar).remove().catch(()=>{});
+}
+metinIn.addEventListener('input', () => {
+  if (!anahtar) return;
+  if (!metinIn.value){ yaziyorBitir(); return; }
+  const t = Date.now();
+  if (t - yaziyorZaman > 3000){
+    yaziyorZaman = t;
+    const r = R('yaziyor/' + anahtar);
+    r.set({ nick: ben, ts: TS }).catch(()=>{}); r.onDisconnect().remove();
+  }
+  clearTimeout(yaziyorTimer); yaziyorTimer = setTimeout(yaziyorBitir, 5000);
+});
+
+let sonGonderim = [];
+$('yaz').addEventListener('submit', async e => {
+  e.preventDefault();
+  const metin = metinIn.value.trim();
+  if (!metin || !ben) return;
+  const t = Date.now(); sonGonderim = sonGonderim.filter(x => t - x < 10000);
+  if (sonGonderim.length >= 8){ yerelSistem('Biraz yavaş 🙂 Birkaç saniye bekle.'); return; }
+  sonGonderim.push(t);
+  metinIn.value = ''; yaziyorBitir();
+  try{ await R('mesajlar').push({ nick: ben, cid: CID, text: metin.slice(0,500), ts: TS }); }
+  catch(err){ metinIn.value = metin; yerelSistem(izinHatasi(err)); }
+});
+
+$('kisiBtn').addEventListener('click', ev => { ev.stopPropagation(); $('kisiler').classList.toggle('acik'); });
+document.addEventListener('click', ev => { if (!ev.target.closest('aside')) $('kisiler').classList.remove('acik'); });
+})();
+</script>
+</body>
+</html>
