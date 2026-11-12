@@ -74,6 +74,15 @@ aside ul{list-style:none;margin:0;padding:0}
 aside li{display:flex;align-items:center;gap:8px;padding:4px 0;overflow-wrap:anywhere}
 .yeni{position:absolute;right:24px;bottom:84px;display:none;background:var(--acc);color:var(--acc-ink);border:0;
   border-radius:20px;padding:6px 12px;font-size:13px;cursor:pointer;box-shadow:var(--shadow)}
+.m img.foto{display:block;max-width:100%;max-height:320px;border-radius:8px;margin:4px 0 2px;cursor:zoom-in;background:var(--line)}
+.m .dosya{display:flex;align-items:center;gap:8px;padding:7px 10px;margin:4px 0 2px;border-radius:8px;background:var(--bg);
+  color:var(--ink);text-decoration:none;border:1px solid var(--line);white-space:normal}
+.m .dosya small{color:var(--mute);white-space:nowrap}
+#ekBtn{padding:0 12px;background:var(--bg);color:var(--ink);border:1px solid var(--line);font-size:18px}
+#buyuk{position:fixed;inset:0;background:rgba(0,0,0,.88);display:none;align-items:center;justify-content:center;z-index:20;padding:16px;cursor:zoom-out}
+#buyuk.acik{display:flex}
+#buyuk img{max-width:100%;max-height:100%;border-radius:6px}
+#oda.surukle .ana{outline:3px dashed var(--acc);outline-offset:-8px}
 @media (max-width:700px){
   aside{position:fixed;right:0;top:0;bottom:0;transform:translateX(100%);transition:transform .2s;z-index:5;box-shadow:var(--shadow)}
   aside.acik{transform:none}
@@ -88,7 +97,7 @@ aside li{display:flex;align-items:center;gap:8px;padding:4px 0;overflow-wrap:any
 <section id="giris">
   <div class="kart">
     <h1 class="brand">Sohbet Odası</h1>
-    <p>Bir takma ad seç. Odadaki herkes yazdıklarını anında görür. Sohbet her saat başı temizlenir.</p>
+    <p>Bir takma ad seç. Odadaki herkes yazdıklarını, fotoğraf ve dosyalarını anında görür. Sohbet her saat başı temizlenir.</p>
     <form id="girisForm" autocomplete="off">
       <label for="nick">Takma ad</label>
       <div class="satir">
@@ -117,6 +126,8 @@ aside li{display:flex;align-items:center;gap:8px;padding:4px 0;overflow-wrap:any
     <button class="yeni" id="yeniBtn">↓ Yeni mesajlar</button>
     <div id="yaziyor"></div>
     <form id="yaz" autocomplete="off">
+      <button type="button" class="btn" id="ekBtn" title="Fotoğraf veya dosya gönder (dosyalar en fazla 1 MB)">📎</button>
+      <input type="file" id="dosyaIn" multiple hidden>
       <input type="text" id="metin" maxlength="500" placeholder="Mesaj yaz…" enterkeyhint="send">
       <button class="btn" id="gonderBtn">Gönder</button>
     </form>
@@ -126,6 +137,8 @@ aside li{display:flex;align-items:center;gap:8px;padding:4px 0;overflow-wrap:any
     <ul id="liste"></ul>
   </aside>
 </section>
+
+<div id="buyuk"><img id="buyukImg" alt="fotoğraf"></div>
 
 <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-database-compat.js"></script>
@@ -302,6 +315,7 @@ function mesajEkle(m){
     const d = document.createElement('div'); d.className = 's';
     d.textContent = m.text + ' · ' + saat(t); kutu.appendChild(d); sonYazan = null;
   } else {
+    if (!m.text && !m.img && !m.dosya) return;
     const benimMi = m.cid === CID;
     const devam = sonYazan === m.nick && !benimMi === !sonYazanBen;
     const d = document.createElement('div');
@@ -309,7 +323,23 @@ function mesajEkle(m){
     if (!devam && !benimMi){
       const a = document.createElement('span'); a.className = 'ad'; a.textContent = m.nick; a.style.color = renk(m.nick); d.appendChild(a);
     }
-    d.appendChild(document.createTextNode(m.text));
+    if (typeof m.img === 'string' && m.img.startsWith('data:image/')){
+      const im = document.createElement('img'); im.className = 'foto'; im.alt = 'fotoğraf'; im.src = m.img;
+      im.addEventListener('load', () => { if (asg || benimMi) asagi(); });
+      im.addEventListener('click', () => buyut(m.img));
+      d.appendChild(im);
+    }
+    if (m.dosya && typeof m.dosya.veri === 'string' && m.dosya.veri.startsWith('data:')){
+      const a = document.createElement('a'); a.className = 'dosya';
+      // her zaman indirilir, tarayıcıda açılmaz
+      a.href = 'data:application/octet-stream;base64,' + (m.dosya.veri.split(',')[1] || '');
+      a.download = String(m.dosya.ad || 'dosya').slice(0,120);
+      const ik = document.createElement('span'); ik.textContent = '📄';
+      const ad = document.createElement('span'); ad.textContent = a.download;
+      const bo = document.createElement('small'); bo.textContent = boyutYaz(m.dosya.boyut);
+      a.append(ik, ad, bo); d.appendChild(a);
+    }
+    if (m.text) d.appendChild(document.createTextNode(m.text));
     const s = document.createElement('span'); s.className = 'saat'; s.textContent = saat(t); d.appendChild(s);
     kutu.appendChild(d);
     sonYazan = m.nick; sonYazanBen = benimMi;
@@ -407,13 +437,98 @@ metinIn.addEventListener('input', () => {
 });
 
 let sonGonderim = [];
+function hizKontrol(){
+  const t = Date.now(); sonGonderim = sonGonderim.filter(x => t - x < 10000);
+  if (sonGonderim.length >= 8){ yerelSistem('Biraz yavaş 🙂 Birkaç saniye bekle.'); return false; }
+  sonGonderim.push(t); return true;
+}
+
+/* ---------- fotoğraf ve dosya ---------- */
+const DOSYA_MAX = 1024 * 1024;      // fotoğraf dışı dosyalar: en fazla 1 MB
+const FOTO_HEDEF = 400 * 1024;      // fotoğraflar bu boyutun altına küçültülür
+function boyutYaz(b){
+  if (typeof b !== 'number') return '';
+  return b < 1024 ? b + ' B' : b < 1048576 ? Math.round(b/1024) + ' KB' : (b/1048576).toFixed(1).replace('.', ',') + ' MB';
+}
+function dataUrlBoyut(u){ return Math.floor(((u.split(',')[1] || '').length) * 3 / 4); }
+function resimAc(file){
+  return new Promise((res, rej) => {
+    const u = URL.createObjectURL(file), im = new Image();
+    im.onload = () => { URL.revokeObjectURL(u); res(im); };
+    im.onerror = () => { URL.revokeObjectURL(u); rej(new Error('Bu fotoğraf açılamadı')); };
+    im.src = u;
+  });
+}
+async function fotoKucult(file){
+  const im = await resimAc(file);
+  let kenar = 1600, kalite = 0.82, url = '';
+  for (let i = 0; i < 7; i++){
+    const o = Math.min(1, kenar / Math.max(im.naturalWidth, im.naturalHeight));
+    const c = document.createElement('canvas');
+    c.width = Math.max(1, Math.round(im.naturalWidth * o)); c.height = Math.max(1, Math.round(im.naturalHeight * o));
+    const x = c.getContext('2d'); x.fillStyle = '#fff'; x.fillRect(0, 0, c.width, c.height);
+    x.drawImage(im, 0, 0, c.width, c.height);
+    url = c.toDataURL('image/jpeg', kalite);
+    if (dataUrlBoyut(url) <= FOTO_HEDEF) break;
+    kenar = Math.round(kenar * 0.8); kalite = Math.max(0.6, kalite - 0.06);
+  }
+  return url;
+}
+function dosyaOku(file){
+  return new Promise((res, rej) => { const f = new FileReader(); f.onload = () => res(f.result); f.onerror = () => rej(f.error); f.readAsDataURL(file); });
+}
+let gonderiliyor = false;
+async function ekGonder(file){
+  if (!ben || !file) return;
+  if (!hizKontrol()) return;
+  const foto = /^image\//.test(file.type) && !/svg/.test(file.type);
+  if (!foto && file.size > DOSYA_MAX){
+    yerelSistem('“' + file.name + '” çok büyük (' + boyutYaz(file.size) + '). Dosyalar en fazla 1 MB olabilir; fotoğraflarda sınır yok, otomatik küçültülür.');
+    return;
+  }
+  const aciklama = metinIn.value.trim().slice(0, 500);
+  gonderiliyor = true; $('ekBtn').disabled = true; $('ekBtn').textContent = '⏳';
+  try{
+    const msg = { nick: ben, cid: CID, text: aciklama, ts: TS };
+    if (foto) msg.img = await fotoKucult(file);
+    else msg.dosya = { ad: (file.name || 'dosya').slice(0, 120), boyut: file.size, veri: await dosyaOku(file) };
+    metinIn.value = ''; yaziyorBitir();
+    await R('mesajlar').push(msg);
+  }catch(err){
+    yerelSistem(err && err.code ? izinHatasi(err) : 'Gönderilemedi: ' + ((err && err.message) || err));
+  }finally{
+    gonderiliyor = false; $('ekBtn').disabled = false; $('ekBtn').textContent = '📎';
+  }
+}
+async function ekleriGonder(liste){
+  const fs = [...(liste || [])];
+  if (fs.length > 5) yerelSistem('Tek seferde en fazla 5 dosya gönderilir; ilk 5 tanesi gidiyor.');
+  for (const f of fs.slice(0, 5)) await ekGonder(f);
+}
+$('ekBtn').addEventListener('click', () => { if (!gonderiliyor) $('dosyaIn').click(); });
+$('dosyaIn').addEventListener('change', e => { const l = [...e.target.files]; e.target.value = ''; ekleriGonder(l); });
+document.addEventListener('paste', e => {
+  if (!ben || gonderiliyor) return;
+  const l = e.clipboardData && e.clipboardData.files;
+  if (l && l.length){ e.preventDefault(); ekleriGonder(l); }
+});
+const odaEl = $('oda');
+odaEl.addEventListener('dragover', e => { if (!ben) return; e.preventDefault(); odaEl.classList.add('surukle'); });
+odaEl.addEventListener('dragleave', e => { if (!odaEl.contains(e.relatedTarget)) odaEl.classList.remove('surukle'); });
+odaEl.addEventListener('drop', e => {
+  e.preventDefault(); odaEl.classList.remove('surukle');
+  if (ben && !gonderiliyor && e.dataTransfer) ekleriGonder(e.dataTransfer.files);
+});
+function buyut(src){ $('buyukImg').src = src; $('buyuk').classList.add('acik'); }
+function kucult(){ $('buyuk').classList.remove('acik'); $('buyukImg').removeAttribute('src'); }
+$('buyuk').addEventListener('click', kucult);
+document.addEventListener('keydown', e => { if (e.key === 'Escape') kucult(); });
+
 $('yaz').addEventListener('submit', async e => {
   e.preventDefault();
   const metin = metinIn.value.trim();
   if (!metin || !ben) return;
-  const t = Date.now(); sonGonderim = sonGonderim.filter(x => t - x < 10000);
-  if (sonGonderim.length >= 8){ yerelSistem('Biraz yavaş 🙂 Birkaç saniye bekle.'); return; }
-  sonGonderim.push(t);
+  if (!hizKontrol()) return;
   metinIn.value = ''; yaziyorBitir();
   try{ await R('mesajlar').push({ nick: ben, cid: CID, text: metin.slice(0,500), ts: TS }); }
   catch(err){ metinIn.value = metin; yerelSistem(izinHatasi(err)); }
