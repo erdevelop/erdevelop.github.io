@@ -485,7 +485,7 @@ const T = {
 };
 const store = { get(k) { try { return localStorage.getItem(k); } catch (e) { return null; } }, set(k, v) { try { localStorage.setItem(k, v); } catch (e) {} } };
 let lang = store.get('erdevelop-lang') === 'en' ? 'en' : 'tr';
-let mode = store.get('erdevelop-mode') || 'dark';
+let mode = (() => { try { const m = localStorage.getItem('erdevelop-mode'), g = localStorage.getItem('erdevelop-mode-gun'), t = new Date(); if (m && g === t.toDateString()) return m; const h = t.getHours(); return h >= 7 && h < 19 ? 'light' : 'dark'; } catch (e) { return 'dark'; } })() /* gündüz açık, gece koyu; elle seçim o gün geçerli */;
 const t = () => T[lang];
 const nf = (v, d = 0) => v == null || !isFinite(v) ? '–' : (+v).toLocaleString(lang === 'tr' ? 'tr-TR' : 'en-GB', { maximumFractionDigits: d, minimumFractionDigits: d });
 const fmtMbps = v => v == null ? '–' : v >= 100 ? nf(v) : v >= 10 ? nf(v, 1) : nf(v, 2);
@@ -1590,7 +1590,7 @@ function render() {
   renderExtras(); renderV2();
 }
 function applyMode() { document.documentElement.dataset.mode = mode; $('modeBtn').textContent = mode === 'dark' ? 'LIGHT' : 'DARK'; drawChart(); paintPing(); drawStab(); if (typeof mapRender === 'function' && $('mapC').clientWidth) { mapRender(); drawDist(); drawTrend(); } }
-$('modeBtn').addEventListener('click', () => { mode = mode === 'dark' ? 'light' : 'dark'; store.set('erdevelop-mode', mode); applyMode(); });
+$('modeBtn').addEventListener('click', () => { mode = mode === 'dark' ? 'light' : 'dark'; store.set('erdevelop-mode', mode); store.set('erdevelop-mode-gun', new Date().toDateString()); applyMode(); });
 $('langBtn').addEventListener('click', () => { lang = lang === 'tr' ? 'en' : 'tr'; store.set('erdevelop-lang', lang); render(); });
 $('runBtn').addEventListener('click', () => runAll(true));
 $('pingBtn').addEventListener('click', toggleLive); $('pingBtn2').addEventListener('click', toggleLive);
