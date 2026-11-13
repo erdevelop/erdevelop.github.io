@@ -94,7 +94,15 @@ export async function main(env = process.env) {
   const r = await fetch(base + ':runQuery', { method: 'POST', headers: { ...auth, 'Content-Type': 'application/json' },
     body: JSON.stringify({ structuredQuery: { from: [{ collectionId: 'push' }], where: { fieldFilter: { field: { fieldPath: 'on' }, op: 'EQUAL', value: { booleanValue: true } } } } }) });
   if (!r.ok) throw new Error('Firestore okunamadı: ' + r.status + ' ' + (await r.text()).slice(0, 200));
-  const docs = (await r.json()).filter(x => x.document).map(x => ({ name: x.document.name, ...fromFields(x.document.fields || {}) }));
+  const all = (await r.json()).filter(x => x.document).map(x => ({ ...fromFields(x.document.fields || {}), _path: x.document.name }));
+  /* aynı telefona bağlı birden fazla hesap varsa yalnızca en son ayarlanan kullanılır, diğerleri kapatılır (çift bildirim olmasın) */
+  const byEp = new Map(); for (const d of all) { const ep = d.sub && d.sub.endpoint; if (!ep) continue; const o = byEp.get(ep); if (!o || String(d.upd || '') > String(o.upd || '')) byEp.set(ep, d); }
+  const docs = [...byEp.values()], dupes = all.filter(d => d.sub && d.sub.endpoint && byEp.get(d.sub.endpoint) !== d);
+  const patch = async (d, upd) => { const mask = Object.keys(upd).map(k => 'updateMask.fieldPaths=' + k).join('&');
+    const url = env.FIRESTORE_BASE ? base + '/' + d._path.split('/documents/')[1] : 'https://firestore.googleapis.com/v1/' + d._path;
+    const p = await fetch(url + '?' + mask, { method: 'PATCH', headers: { ...auth, 'Content-Type': 'application/json' }, body: JSON.stringify({ fields: Object.fromEntries(Object.entries(upd).map(([k, v]) => [k, toValue(v)])) }) });
+    if (!p.ok) console.log('  kayıt güncellenemedi: ' + p.status + ' ' + (await p.text()).slice(0, 200)); return p.ok; };
+  for (const d of dupes) { await patch(d, { on: false, err: 'Bu telefon başka bir hesapla bildirim alıyor; çift bildirim olmasın diye bu hesapta kapatıldı.' }); console.log('  aynı telefonda ikinci hesap kapatıldı: ' + d._path.split('/').pop().slice(0, 6) + '…'); }
   let sent = 0, skipped = 0, failed = 0;
   for (const d of docs) {
     const key = force ? 'zorla|' + now.toISOString() : dueSlot(d, now), msg = key && d.sub && d.sub.endpoint ? message(d) : null;
@@ -102,14 +110,12 @@ export async function main(env = process.env) {
     const upd = {}; let res;
     try { res = await sendPush(d.sub, msg, env.VAPID_PRIVATE); } catch (e) { res = { status: 0, text: String(e.message || e) }; }
     if (res.status >= 200 && res.status < 300) { sent++; Object.assign(upd, { pos: (d.pos || 0) + 1, last: key, sentAt: now, err: '' }); }
-    else { failed++; console.log(`  ${d.name.split('/').pop().slice(0, 6)}… gönderilemedi: ${res.status} ${res.text}`);
+    else { failed++; console.log(`  ${d._path.split('/').pop().slice(0, 6)}… gönderilemedi: ${res.status} ${res.text}`);
       Object.assign(upd, res.status === 404 || res.status === 410 ? { on: false, err: 'Telefon aboneliği artık geçerli değil; sayfadan bildirimleri yeniden aç.' } : { last: key, err: 'Gönderim hatası ' + res.status }); }
-    const mask = Object.keys(upd).map(k => 'updateMask.fieldPaths=' + k).join('&');
-    const p = await fetch(`${env.FIRESTORE_BASE ? base + '/' + d.name.split('/documents/')[1] : 'https://firestore.googleapis.com/v1/' + d.name}?${mask}`, { method: 'PATCH', headers: { ...auth, 'Content-Type': 'application/json' }, body: JSON.stringify({ fields: Object.fromEntries(Object.entries(upd).map(([k, v]) => [k, toValue(v)])) }) });
-    if (!p.ok) console.log('  kayıt güncellenemedi: ' + p.status);
+    await patch(d, upd);
   }
-  console.log(`${docs.length} açık abonelik · ${sent} gönderildi · ${skipped} sırası gelmedi · ${failed} hata`);
-  return { docs: docs.length, sent, skipped, failed };
+  console.log(`${docs.length} açık abonelik · ${sent} gönderildi · ${skipped} sırası gelmedi · ${failed} hata${dupes.length ? ' · ' + dupes.length + ' çift kayıt kapatıldı' : ''}`);
+  return { docs: docs.length, sent, skipped, failed, dupes: dupes.length };
 }
 
 if (process.argv[1] && import.meta.url === pathToFileURL(process.argv[1]).href) main().catch(e => { console.error('HATA:', e.message); process.exit(1); });
