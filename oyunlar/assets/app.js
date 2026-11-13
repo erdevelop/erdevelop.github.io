@@ -205,11 +205,34 @@
       '<p class="auth-sub">Oyun bahçesine hoş geldin.</p>'+ f +
       '<button class="auth-btn" id="authSubmit">'+(up?'Oluştur':'Giriş')+'</button>'+
       '<div class="auth-err" id="authErr"></div>'+
+      (!up && cloud ? '<div class="auth-switch"><button id="authForgot">Şifremi unuttum</button></div>' : '')+
       '<div class="auth-switch">'+(up?'Zaten hesabın var mı? ':'Hesabın yok mu? ')+
       '<button id="authSwitch">'+(up?'Giriş yap':'Hesap oluştur')+'</button></div>';
   }
+  function forgotForm(email){
+    return '<h3 class="auth-h">Şifremi unuttum</h3>'+
+      '<p class="auth-sub">E-posta adresine şifre yenileme linki gönderelim. Linke tıklayıp yeni şifreni belirlersin.</p>'+
+      field('f_email','E-posta','email','ornek@mail.com')+
+      '<button class="auth-btn" id="authSubmit">Yenileme linki gönder</button>'+
+      '<div class="auth-err" id="authErr"></div>'+
+      '<div class="auth-switch"><button id="authSwitch">Giriş ekranına dön</button></div>';
+  }
+  function wireForgot(email){
+    const em=$('#f_email'); em.value=email||''; em.setAttribute('autocomplete','email'); em.focus();
+    $('#authSwitch').onclick=()=>{ openModal(authForm('in')); wireAuthForm('in'); };
+    $('#authSubmit').onclick=async ()=>{
+      const err=$('#authErr'), btn=$('#authSubmit'); err.textContent=''; err.style.color=''; btn.disabled=true; btn.textContent='…';
+      try{ await window.Auth.resetPassword(em.value);
+        err.style.color='var(--ok, #2e9e5b)'; err.textContent='Bu adrese kayıtlı bir hesap varsa şifre yenileme linki gönderildi. Gelen kutunu ve gereksiz (spam) klasörünü kontrol et.';
+        btn.textContent='Tekrar gönder'; }
+      catch(e){ err.textContent=e.message||'Bir şeyler ters gitti.'; btn.textContent='Yenileme linki gönder'; }
+      btn.disabled=false;
+    };
+    em.addEventListener('keydown', e=>{ if(e.key==='Enter') $('#authSubmit').click(); });
+  }
   function wireAuthForm(mode){
     $('#authSwitch').onclick=()=>{ openModal(authForm(mode==='up'?'in':'up')); wireAuthForm(mode==='up'?'in':'up'); };
+    if($('#authForgot')) $('#authForgot').onclick=()=>{ const em=(($('#f_email')||{}).value||'').trim(); openModal(forgotForm()); wireForgot(em); };
     $('#authSubmit').onclick=async ()=>{
       const err=$('#authErr'); err.textContent='';
       const name=($('#f_name')||{}).value||'';

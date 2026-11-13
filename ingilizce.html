@@ -1676,8 +1676,15 @@ const Cloud = {
   name() { return (this.user && (this.user.displayName || (this.user.email || '').split('@')[0])) || 'misafir'; },
   fail(e) { const m = String(e && (e.code || e.message) || e); this.err = /permission/i.test(m) ? 'Sunucu bu işleme izin vermedi. Oda kuralları Firebase\'e henüz eklenmemiş olabilir.' : /wrong-password|invalid-credential|user-not-found/.test(m) ? 'E-posta ya da şifre hatalı.' : /email-already/.test(m) ? 'Bu e-posta ile hesap var; giriş yap.' : /weak-password/.test(m) ? 'Şifre en az 6 karakter olmalı.' : /invalid-email/.test(m) ? 'E-posta geçersiz.' : 'Hata: ' + m; this.paint(); },
   async signIn(email, pass, name, up) {
-    this.err = ''; try { if (up) { const c = await this.auth.createUserWithEmailAndPassword(email, pass); await c.user.updateProfile({ displayName: name }); await this.db.collection('users').doc(c.user.uid).set({ name, email }, { merge: true }); this.user = this.auth.currentUser; accLabel(); this.paint(); }
+    this.err = ''; this.msg = ''; try { if (up) { const c = await this.auth.createUserWithEmailAndPassword(email, pass); await c.user.updateProfile({ displayName: name }); await this.db.collection('users').doc(c.user.uid).set({ name, email }, { merge: true }); this.user = this.auth.currentUser; accLabel(); this.paint(); }
       else await this.auth.signInWithEmailAndPassword(email, pass); } catch (e) { this.fail(e); } },
+  /* şifremi unuttum: Firebase e-postaya şifre yenileme linki gönderir; kayıtlı olmayan adres için de aynı mesaj gösterilir */
+  async reset(email) {
+    this.err = ''; this.msg = ''; if (!email) { this.err = 'Önce e-posta adresini yaz.'; return this.paint(); }
+    try { this.auth.languageCode = 'tr'; await this.auth.sendPasswordResetEmail(email); this.msg = 'Bu adrese kayıtlı bir hesap varsa şifre yenileme linki gönderildi. Gelen kutunu ve gereksiz (spam) klasörünü kontrol et; linke tıklayıp yeni şifreni belirle.'; }
+    catch (e) { this.err = /invalid-email/.test(e.code) ? 'E-posta adresi geçersiz görünüyor.' : /too-many/.test(e.code) ? 'Çok fazla deneme yapıldı; biraz sonra tekrar dene.' : /network/.test(e.code) ? 'Bağlantı hatası; internetini kontrol et.' : 'Gönderilemedi: ' + (e.message || e); }
+    this.paint();
+  },
   code() { const A = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789'; let s = ''; const r = crypto.getRandomValues(new Uint32Array(6)); for (const x of r) s += A[x % A.length]; return s; },
   async create(name) {
     this.err = ''; try { const id = this.code(); await this.db.collection('rooms').doc(id).set({ name: name.slice(0, 40) || 'İngilizce grubu', owner: this.user.uid, created: firebase.firestore.FieldValue.serverTimestamp() });
@@ -1718,8 +1725,10 @@ const Cloud = {
         <form id="aF" class="fg2"><div class="fd full" id="aNameW" hidden><label for="aName">Adın (arkadaşların görür)</label><input class="inp" id="aName" maxlength="24" autocomplete="nickname"></div>
           <div class="fd full"><label for="aMail">E-posta</label><input class="inp" id="aMail" type="email" required autocomplete="email"></div>
           <div class="fd full"><label for="aPass">Şifre</label><input class="inp" id="aPass" type="password" required minlength="6" autocomplete="current-password"></div>
-          <div class="full"><button class="btn pri" type="submit" id="aGo">Giriş yap</button></div></form>${err}`;
-      let up = false; $('aMode').onclick = e => { const b = e.target.closest('[data-m]'); if (!b) return; up = b.dataset.m === 'up'; document.querySelectorAll('#aMode button').forEach(x => x.classList.toggle('on', x === b)); $('aNameW').hidden = !up; $('aGo').textContent = up ? 'Hesap aç' : 'Giriş yap'; $('aPass').autocomplete = up ? 'new-password' : 'current-password'; };
+          <div class="full ctl"><button class="btn pri" type="submit" id="aGo">Giriş yap</button><button class="btn" type="button" id="aForgot">Şifremi unuttum</button></div></form>${this.msg ? `<p class="ok" style="margin-top:8px;color:var(--ok)">${esc(this.msg)}</p>` : ''}${err}`;
+      let up = false; $('aMode').onclick = e => { const b = e.target.closest('[data-m]'); if (!b) return; up = b.dataset.m === 'up'; document.querySelectorAll('#aMode button').forEach(x => x.classList.toggle('on', x === b)); $('aNameW').hidden = !up; $('aForgot').hidden = up; $('aGo').textContent = up ? 'Hesap aç' : 'Giriş yap'; $('aPass').autocomplete = up ? 'new-password' : 'current-password'; };
+      $('aForgot').onclick = () => { const m = $('aMail').value.trim(); if (!m) { $('aMail').focus(); return TM.toast('Önce e-posta adresini yaz'); } this.reset(m); };
+      if (this.mail) $('aMail').value = this.mail; $('aMail').oninput = () => { this.mail = $('aMail').value; };
       $('aF').onsubmit = e => { e.preventDefault(); const nm = $('aName').value.trim(); if (up && !nm) return TM.toast('Adını yaz'); this.signIn($('aMail').value.trim(), $('aPass').value, nm, up); };
       rb.innerHTML = `<div class="lbl muted mono small">Ortak oda</div><p>Bir oda açıp kodunu arkadaşlarına gönder. Odada:</p><ul class="muted"><li>herkesin eklediği kelimeler ortak listede toplanır,</li><li>haftanın yarışmasında herkese aynı sorular gelir ve sıralama tutulur,</li><li>kelime kartı, telaffuz ve konuşmadan kazanılan XP toplam tabloda görünür.</li></ul><p class="note">Giriş yapmadan da kelime kartları, konuşma, telaffuz ve yarışmayı kullanabilirsin.</p>`;
       return;

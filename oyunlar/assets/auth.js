@@ -85,7 +85,8 @@
     'auth/wrong-password':'Şifre yanlış.',
     'auth/invalid-credential':'E-posta veya şifre hatalı.',
     'auth/too-many-requests':'Çok fazla deneme. Biraz sonra tekrar deneyin.',
-    'auth/network-request-failed':'Ağ hatası. Bağlantını kontrol et.'
+    'auth/network-request-failed':'Ağ hatası. Bağlantını kontrol et.',
+    'auth/missing-email':'E-posta adresini yaz.'
   };
 
   /* ---------------- ORTAK API ---------------- */
@@ -125,6 +126,13 @@
       }
       const u = await Local.signIn(name, pass); current=u;
       if(window.Store) window.Store.setUser(u); emit(); return u;
+    },
+    /* şifremi unuttum: e-postaya şifre yenileme linki gönderir (şifrenin kendisi kimse tarafından görülemez) */
+    async resetPassword(email){
+      if(this.mode!=='cloud' || !fbAuth) throw new Error('Şifre yenileme yalnızca bulut hesaplarında çalışır.');
+      email=String(email||'').trim(); if(!email) throw new Error('E-posta adresini yaz.');
+      try{ fbAuth.languageCode='tr'; await fbAuth.sendPasswordResetEmail(email); }
+      catch(e){ throw new Error(errMap[e.code] || e.message); }
     },
     async signOut(){
       if(this.mode==='cloud' && fbReady){ await fbAuth.signOut(); }
