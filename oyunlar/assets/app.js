@@ -205,6 +205,7 @@
       '<p class="auth-sub">Oyun bahçesine hoş geldin.</p>'+ f +
       '<button class="auth-btn" id="authSubmit">'+(up?'Oluştur':'Giriş')+'</button>'+
       '<div class="auth-err" id="authErr"></div>'+
+      (cloud ? '<div class="auth-mode-note" style="margin-top:8px">Hangi verilerin tutulduğu: <a href="../gizlilik.html">Gizlilik</a></div>' : '')+
       (!up && cloud ? '<div class="auth-switch"><button id="authForgot">Şifremi unuttum</button></div>' : '')+
       '<div class="auth-switch">'+(up?'Zaten hesabın var mı? ':'Hesabın yok mu? ')+
       '<button id="authSwitch">'+(up?'Giriş yap':'Hesap oluştur')+'</button></div>';
@@ -252,7 +253,8 @@
     const initial=(u.name||'?').trim().charAt(0).toUpperCase();
     return '<div class="profile-row"><div class="avatar">'+initial+'</div>'+
       '<div class="meta"><b>'+u.name+'</b><span>'+(u.email|| (window.Auth.mode==='cloud'?'':'yerel profil'))+'</span></div></div>'+
-      '<button class="auth-btn" id="signOutBtn">Çıkış yap</button>';
+      '<button class="auth-btn" id="signOutBtn">Çıkış yap</button>'+
+      '<div class="auth-switch"><a href="../hesap.html">Hesabım: şifre, verilerim, hesabı sil</a> · <a href="../gizlilik.html">Gizlilik</a></div>';
   }
   $('#accountBtn').onclick=()=>{
     const u=window.Auth && window.Auth.current;

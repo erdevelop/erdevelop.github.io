@@ -1,0 +1,187 @@
+<!doctype html>
+<html lang="tr" data-mode="dark">
+<head>
+<meta charset="utf-8">
+
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Hesabım | erdevelop</title>
+<meta name="description" content="Oyun Bahçesi ve İngilizce Kulübü için ortak hesabın: adını ve şifreni değiştir, bildirimleri ve odaları yönet, verilerini indir ya da hesabını tamamen sil.">
+<link rel="manifest" href="/manifest.webmanifest"><meta name="theme-color" content="#0b1220"><link rel="icon" href="/favicon.svg" type="image/svg+xml"><link rel="icon" href="/favicon.ico" sizes="any">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Chakra+Petch:wght@600;700&family=IBM+Plex+Sans:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500&display=swap">
+
+<link rel="stylesheet" href="kesif/tema.css">
+<style>
+
+.grid2 { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 16px; align-items: start; }
+@media (max-width: 860px) { .grid2 { grid-template-columns: 1fr; } }
+.card { background: var(--panel); border: 1px solid var(--line); border-radius: 10px; padding: 18px; }
+.card h2 { font: 700 1.05rem var(--f-display); color: var(--fg); margin: 0 0 4px; }
+.card > p.d { color: var(--muted); font-size: 13px; margin: 0 0 12px; }
+.fd { display: grid; gap: 4px; margin-bottom: 10px; } .fd label { font: 500 12px var(--f-mono); color: var(--muted); }
+.row { display: flex; gap: 8px; flex-wrap: wrap; align-items: center; }
+.who { display: flex; gap: 14px; align-items: center; } .av { width: 52px; height: 52px; border-radius: 50%; background: var(--accent); color: var(--on-accent, #111); display: grid; place-items: center; font: 700 22px var(--f-display); flex: 0 0 auto; }
+.who b { color: var(--fg); font-size: 1.1rem; } .who span { color: var(--muted); font-size: 13px; display: block; }
+.msg { margin-top: 8px; font-size: 14px; } .msg.ok { color: var(--ok); } .msg.err { color: var(--bad); }
+.danger { border-color: color-mix(in srgb, var(--bad) 55%, var(--line)); }
+.danger h2 { color: var(--bad); }
+.btn.bad { background: var(--bad); border-color: var(--bad); color: #fff; }
+.list { display: grid; gap: 6px; } .list .it { display: flex; justify-content: space-between; gap: 10px; align-items: center; padding: 9px 10px; border: 1px solid var(--line); border-radius: 8px; background: var(--panel-2); color: var(--text); }
+.list .it b { color: var(--fg); }
+.full2 { grid-column: 1 / -1; }
+.chk { display: flex; gap: 8px; align-items: flex-start; font-size: 14px; color: var(--text); }
+
+</style>
+</head>
+<body>
+<div class="bg" aria-hidden="true"></div>
+<div class="topbar"><div class="wrap">
+  <a class="brand" href="./">erdevelop<span>_</span></a><span class="crumb">/ tools / hesap</span><span class="sp"></span>
+  <a class="tb" href="Tools.html">Araçlar</a><button class="tb" type="button" id="modeBtn">LIGHT</button>
+</div></div>
+<main class="wrap">
+  <header class="head"><h1>Hesabım</h1><p>Oyun Bahçesi ve İngilizce Kulübü için ortak hesabın: adını ve şifreni değiştir, bildirimleri ve odaları yönet, verilerini indir ya da hesabını tamamen sil.</p></header>
+
+<div id="app"><p class="muted">Yükleniyor…</p></div>
+<p class="note" style="margin-top:18px">Hesap açmadan kullandığın özelliklerin verileri yalnızca bu tarayıcıda durur. Aşağıdaki <b>Bu tarayıcı</b> bölümünden onları da indirebilir ya da silebilirsin. Hangi verinin nerede tutulduğunu <a href="gizlilik.html">Gizlilik</a> sayfası anlatır.</p>
+<section class="card" id="sayac" style="margin-top:16px">
+  <h2>Bu tarayıcı</h2>
+  <p class="d">Tema, kelime kartı ilerlemesi, kendi listelerin, araç ayarları gibi yalnızca bu cihazda tutulan veriler.</p>
+  <label class="chk" style="margin-bottom:12px"><input type="checkbox" id="skipGc"> Bu tarayıcıdan yaptığım ziyaretleri ziyaretçi sayacına sayma</label>
+  <div class="row"><button class="btn" type="button" id="locDl">⬇ Bu tarayıcıdaki verileri indir</button><button class="btn" type="button" id="locDel">Bu tarayıcıdaki verileri sil</button><span class="small muted" id="locInfo"></span></div>
+</section>
+</main>
+<footer><div class="wrap"><span>Hesaplar Google Firebase ile çalışır · Ayrıntılar: <a href="gizlilik.html">Gizlilik ve Kişisel Veriler</a></span><a href="Tools.html">← tüm araçlar</a></div></footer>
+
+<script src="kesif/tema.js"></script>
+<script>
+
+const FB = { apiKey: 'AIzaSyBtNow8j7AZQO2sWCiXb1WbOT261wJUGRU', authDomain: 'oyun-bahcesi-62633.firebaseapp.com', projectId: 'oyun-bahcesi-62633', storageBucket: 'oyun-bahcesi-62633.firebasestorage.app', messagingSenderId: '591926138614', appId: '1:591926138614:web:24101e1be195ebc04c3ed7' };
+const LIBS = ['firebase-app-compat', 'firebase-auth-compat', 'firebase-firestore-compat'].map(n => `https://www.gstatic.com/firebasejs/10.12.2/${n}.js`);
+const A = { auth: null, db: null, user: null, info: {}, rooms: [], push: null };
+const app = $('app');
+const errTr = e => { const c = String(e && (e.code || e.message) || e); return /wrong-password|invalid-credential|invalid-login/.test(c) ? 'Şifre hatalı.' : /user-not-found/.test(c) ? 'Bu e-postayla hesap bulunamadı.' : /too-many/.test(c) ? 'Çok fazla deneme; biraz sonra tekrar dene.' : /weak-password/.test(c) ? 'Yeni şifre en az 6 karakter olmalı.' : /requires-recent-login/.test(c) ? 'Güvenlik için şifreni yeniden girmen gerekiyor.' : /network/.test(c) ? 'Bağlantı hatası; internetini kontrol et.' : /invalid-email/.test(c) ? 'E-posta adresi geçersiz.' : /permission/.test(c) ? 'Sunucu bu işleme izin vermedi.' : 'Bir hata oluştu: ' + c; };
+const msg = (id, t, ok) => { const m = $(id); if (m) { m.className = 'msg ' + (ok ? 'ok' : 'err'); m.textContent = t; } };
+const busy = (b, on, t) => { if (!b) return; b.disabled = on; if (t) b.textContent = t; };
+const FV = () => firebase.firestore.FieldValue;
+const localRoom = () => { try { return (JSON.parse(localStorage.getItem('erdevelop-eng')) || {}).room || null; } catch (e) { return null; } };
+
+async function boot() {
+  try { for (const u of LIBS) await new Promise((res, rej) => { const s = document.createElement('script'); s.src = u; s.onload = res; s.onerror = () => rej(new Error('bağlantı')); document.head.appendChild(s); });
+    if (!firebase.apps.length) firebase.initializeApp(FB); A.auth = firebase.auth(); A.db = firebase.firestore(); A.auth.languageCode = 'tr';
+    A.auth.onAuthStateChanged(async u => { if (A.deleted) return; A.user = u; if (u) await load(); paint(); });
+  } catch (e) { app.innerHTML = '<div class="card"><p class="err">Sunucuya bağlanılamadı. İnternet bağlantını kontrol edip sayfayı yenile.</p></div>'; }
+}
+async function load() {
+  const uid = A.user.uid; A.info = {}; A.push = null; A.rooms = [];
+  try { const d = await A.db.collection('users').doc(uid).get(); A.info = d.exists ? d.data() : {}; } catch (e) { }
+  try { const p = await A.db.collection('push').doc(uid).get(); A.push = p.exists ? p.data() : null; } catch (e) { }
+  const codes = [...new Set([...(A.info.rooms || []), localRoom()].filter(Boolean))];
+  for (const c of codes) { try { const r = await A.db.collection('rooms').doc(c).get(); if (!r.exists) continue; const m = await A.db.collection('rooms').doc(c).collection('members').doc(uid).get(); if (m.exists) A.rooms.push({ id: c, ...r.data(), me: m.data() }); } catch (e) { } }
+}
+const nameOf = () => (A.user.displayName || A.info.name || (A.user.email || '').split('@')[0] || '?');
+
+function paint() {
+  if (!A.user) {
+    app.innerHTML = `<div class="grid2"><section class="card"><h2>Giriş yap</h2><p class="d">Oyun Bahçesi ya da İngilizce Kulübü'nde kullandığın e-posta ve şifre.</p>
+      <form id="lf"><div class="fd"><label for="lm">E-posta</label><input class="inp" id="lm" type="email" required autocomplete="email"></div>
+      <div class="fd"><label for="lp">Şifre</label><input class="inp" id="lp" type="password" required autocomplete="current-password"></div>
+      <div class="row"><button class="btn pri" type="submit" id="lb">Giriş yap</button><button class="btn" type="button" id="lr">Şifremi unuttum</button></div><div class="msg" id="lmsg"></div></form></section>
+      <section class="card"><h2>Hesabın yok mu?</h2><p class="d">Hesap açmak isteğe bağlıdır. Skorlarının ve ilerlemenin cihazlar arasında taşınması ve arkadaşlarınla oda kurmak için gerekir.</p>
+      <div class="row"><a class="btn" href="oyunlar/">Oyun Bahçesi'nde hesap aç</a><a class="btn" href="ingilizce.html#oda">İngilizce Kulübü'nde hesap aç</a></div></section></div>`;
+    $('lf').onsubmit = async e => { e.preventDefault(); busy($('lb'), true, '…'); try { await A.auth.signInWithEmailAndPassword($('lm').value.trim(), $('lp').value); } catch (x) { msg('lmsg', errTr(x)); } busy($('lb'), false, 'Giriş yap'); };
+    $('lr').onclick = async () => { const m = $('lm').value.trim(); if (!m) { $('lm').focus(); return msg('lmsg', 'Önce e-posta adresini yaz.'); }
+      try { await A.auth.sendPasswordResetEmail(m); msg('lmsg', 'Bu adrese kayıtlı bir hesap varsa şifre yenileme linki gönderildi. Gereksiz (spam) klasörünü de kontrol et.', true); } catch (x) { msg('lmsg', errTr(x)); } };
+    return;
+  }
+  const u = A.user, nm = nameOf(), created = u.metadata && u.metadata.creationTime ? new Date(u.metadata.creationTime).toLocaleDateString('tr-TR', { dateStyle: 'long' }) : '';
+  const scores = Object.keys(A.info.scores || {}).length, pushOn = A.push && A.push.on;
+  app.innerHTML = `<div class="grid2">
+    <section class="card full2"><div class="who"><div class="av">${esc(nm.charAt(0).toLocaleUpperCase('tr'))}</div><div><b>${esc(nm)}</b><span>${esc(u.email || '')}${created ? ' · üyelik: ' + esc(created) : ''}</span>
+      <span>${scores} oyunda skor · ${A.rooms.length} oda · bildirimler ${pushOn ? 'açık' : 'kapalı'}</span></div><span style="flex:1"></span><button class="btn" type="button" id="out">Çıkış yap</button></div></section>
+    <section class="card"><h2>Adın</h2><p class="d">Odalarda ve skor tablolarında görünen ad.</p>
+      <div class="fd"><label for="nm">Görünen ad</label><input class="inp" id="nm" maxlength="24" value="${esc(nm)}"></div><div class="row"><button class="btn pri" type="button" id="nmb">Kaydet</button></div><div class="msg" id="nmmsg"></div></section>
+    <section class="card"><h2>Şifre</h2><p class="d">Değiştirmek için mevcut şifren gerekir.</p>
+      <div class="fd"><label for="p0">Mevcut şifre</label><input class="inp" id="p0" type="password" autocomplete="current-password"></div>
+      <div class="fd"><label for="p1">Yeni şifre (en az 6 karakter)</label><input class="inp" id="p1" type="password" minlength="6" autocomplete="new-password"></div>
+      <div class="fd"><label for="p2">Yeni şifre (tekrar)</label><input class="inp" id="p2" type="password" minlength="6" autocomplete="new-password"></div>
+      <div class="row"><button class="btn pri" type="button" id="pb">Şifreyi değiştir</button></div><div class="msg" id="pmsg"></div></section>
+    <section class="card"><h2>Kelime bildirimleri</h2><p class="d">İngilizce Kulübü'nün telefonuna gönderdiği kelime bildirimleri.</p>
+      ${pushOn ? `<p>Açık: ${esc(A.push.from || '')}–${esc(A.push.to || '')} arası, ${esc(String(A.push.step || ''))} dakikada bir.</p><div class="row"><button class="btn" type="button" id="poff">Bildirimleri kapat</button><a class="btn" href="ingilizce.html#kelime">Ayarları değiştir</a></div>`
+        : `<p class="muted">Kapalı.</p><div class="row"><a class="btn" href="ingilizce.html#kelime">İngilizce Kulübü'nde aç</a></div>`}<div class="msg" id="pomsg"></div></section>
+    <section class="card"><h2>Odalar</h2><p class="d">Üyesi olduğun İngilizce Kulübü odaları. Ayrılınca adın ve puanların odadan silinir.</p>
+      <div class="list">${A.rooms.length ? A.rooms.map(r => `<div class="it"><span><b>${esc(r.name || r.id)}</b> <span class="mono small muted">${esc(r.id)}${r.owner === u.uid ? ' · kurucu' : ''}</span></span><button class="btn sm" type="button" data-leave="${esc(r.id)}">Ayrıl</button></div>`).join('') : '<p class="muted" style="margin:0">Bir odaya üye değilsin.</p>'}</div><div class="msg" id="rmsg"></div></section>
+    <section class="card full2"><h2>Verilerimi indir</h2><p class="d">Hesabına ait tüm kayıtlar (hesap bilgileri, skorlar, oyun ilerlemesi, oda üyelikleri, eklediğin kelimeler, bildirim ayarları) ve bu tarayıcıdaki veriler tek bir JSON dosyası olarak.</p>
+      <div class="row"><button class="btn" type="button" id="dl">⬇ Verilerimi indir</button></div><div class="msg" id="dlmsg"></div></section>
+    <section class="card full2 danger"><h2>Hesabımı sil</h2><p class="d">Hesabın, skorların, oyun ilerlemen, oda üyeliklerin, odalara eklediğin kelimeler ve bildirim kayıtların <b>kalıcı olarak</b> silinir. Kurucusu olduğun odalar da tamamen silinir. Bu işlem geri alınamaz.</p>
+      <div class="fd"><label for="dp">Onay için şifren</label><input class="inp" id="dp" type="password" autocomplete="current-password"></div>
+      <div class="fd"><label for="dc">Onay için büyük harflerle SİL yaz</label><input class="inp" id="dc" autocomplete="off"></div>
+      <label class="chk" style="margin-bottom:10px"><input type="checkbox" id="dloc" checked> Bu tarayıcıdaki verileri de sil</label>
+      <div class="row"><button class="btn bad" type="button" id="db">Hesabımı kalıcı olarak sil</button></div><div class="msg" id="dmsg"></div></section>
+  </div>`;
+  $('out').onclick = () => A.auth.signOut();
+  $('nmb').onclick = saveName; $('pb').onclick = changePass; $('dl').onclick = exportAll; $('db').onclick = delAccount;
+  if ($('poff')) $('poff').onclick = async () => { try { await A.db.collection('push').doc(u.uid).set({ on: false }, { merge: true }); try { const s = JSON.parse(localStorage.getItem('erdevelop-eng')) || {}; s.pushOn = false; localStorage.setItem('erdevelop-eng', JSON.stringify(s)); } catch (e) { } A.push.on = false; paint(); TM.toast('Bildirimler kapatıldı'); } catch (x) { msg('pomsg', errTr(x)); } };
+  app.querySelectorAll('[data-leave]').forEach(b => b.onclick = () => leaveRoom(b.dataset.leave));
+}
+async function reauth(pass) { const c = firebase.auth.EmailAuthProvider.credential(A.user.email, pass); await A.user.reauthenticateWithCredential(c); }
+async function saveName() {
+  const n = $('nm').value.trim().slice(0, 24); if (!n) return msg('nmmsg', 'Adını yaz.'); const b = $('nmb'); busy(b, true);
+  try { await A.user.updateProfile({ displayName: n }); await A.db.collection('users').doc(A.user.uid).set({ name: n }, { merge: true });
+    for (const r of A.rooms) { try { await A.db.collection('rooms').doc(r.id).collection('members').doc(A.user.uid).update({ name: n }); } catch (e) { } }
+    if (A.push) { try { await A.db.collection('push').doc(A.user.uid).set({ name: n }, { merge: true }); } catch (e) { } }
+    A.info.name = n; msg('nmmsg', 'Kaydedildi.', true); } catch (x) { msg('nmmsg', errTr(x)); } busy(b, false);
+}
+async function changePass() {
+  const p0 = $('p0').value, p1 = $('p1').value, p2 = $('p2').value;
+  if (!p0) return msg('pmsg', 'Mevcut şifreni yaz.'); if (p1.length < 6) return msg('pmsg', 'Yeni şifre en az 6 karakter olmalı.'); if (p1 !== p2) return msg('pmsg', 'Yeni şifreler aynı değil.');
+  const b = $('pb'); busy(b, true); try { await reauth(p0); await A.user.updatePassword(p1); ['p0', 'p1', 'p2'].forEach(i => $(i).value = ''); msg('pmsg', 'Şifren değiştirildi.', true); } catch (x) { msg('pmsg', errTr(x)); } busy(b, false);
+}
+async function leaveRoom(id) {
+  const r = A.rooms.find(x => x.id === id); if (!r) return;
+  if (!confirm(r.owner === A.user.uid ? `“${r.name || id}” odasının kurucususun. Ayrılırsan oda başkalarına açık kalır ama sen yönetemezsin. Devam edilsin mi?` : `“${r.name || id}” odasından ayrılınsın mı? Adın ve puanların odadan silinir.`)) return;
+  try { await A.db.collection('rooms').doc(id).collection('members').doc(A.user.uid).delete(); await A.db.collection('users').doc(A.user.uid).set({ rooms: FV().arrayRemove(id) }, { merge: true });
+    if (localRoom() === id) { try { const s = JSON.parse(localStorage.getItem('erdevelop-eng')) || {}; s.room = null; localStorage.setItem('erdevelop-eng', JSON.stringify(s)); } catch (e) { } }
+    A.rooms = A.rooms.filter(x => x.id !== id); paint(); TM.toast('Odadan ayrıldın'); } catch (x) { msg('rmsg', errTr(x)); }
+}
+function localData() { const o = {}; try { for (let i = 0; i < localStorage.length; i++) { const k = localStorage.key(i); if (k === 'erdevelop-key') continue; const v = localStorage.getItem(k); try { o[k] = JSON.parse(v); } catch (e) { o[k] = v; } } } catch (e) { } return o; }
+async function exportAll() {
+  const b = $('dl'); busy(b, true, '…'); const u = A.user, out = { olusturuldu: new Date().toISOString(), aciklama: 'erdevelop.github.io hesabına ve bu tarayıcıya ait veriler', hesap: { uid: u.uid, eposta: u.email, ad: u.displayName, uyelik: u.metadata.creationTime, sonGiris: u.metadata.lastSignInTime }, kullanici: A.info, bildirim: A.push, odalar: [], tarayici: localData() };
+  for (const r of A.rooms) { const ref = A.db.collection('rooms').doc(r.id); let words = []; try { const s = await ref.collection('words').where('by', '==', u.uid).get(); words = s.docs.map(d => ({ id: d.id, ...d.data() })); } catch (e) { }
+    out.odalar.push({ kod: r.id, ad: r.name, kurucu: r.owner === u.uid, uyelik: r.me, ekledigimKelimeler: words }); }
+  const txt = JSON.stringify(out, (k, v) => v && typeof v === 'object' && typeof v.toDate === 'function' ? v.toDate().toISOString() : v, 2);
+  TM.download('erdevelop-verilerim.json', new Blob([txt], { type: 'application/json' })); msg('dlmsg', 'Dosya indirildi.', true); busy(b, false, '⬇ Verilerimi indir');
+}
+async function wipeRoom(ref) { /* kurucu: odadaki tüm kelime ve üyeleri, sonra odayı sil */
+  for (const sub of ['words', 'members']) { const s = await ref.collection(sub).get(); const me = s.docs.filter(d => d.id === A.user.uid), rest = s.docs.filter(d => d.id !== A.user.uid);
+    for (let i = 0; i < rest.length; i += 400) { const b = A.db.batch(); rest.slice(i, i + 400).forEach(d => b.delete(d.ref)); await b.commit(); }
+    for (const d of me) await d.ref.delete(); }
+  await ref.delete();
+}
+async function delAccount() {
+  const pass = $('dp').value; if ($('dc').value.trim() !== 'SİL') return msg('dmsg', 'Onay için kutuya büyük harflerle SİL yaz.'); if (!pass) return msg('dmsg', 'Onay için şifreni yaz.');
+  const b = $('db'); busy(b, true, 'Siliniyor…'); const u = A.user, uid = u.uid;
+  try { await reauth(pass);
+    for (const r of A.rooms) { const ref = A.db.collection('rooms').doc(r.id);
+      if (r.owner === uid) await wipeRoom(ref);
+      else { const s = await ref.collection('words').where('by', '==', uid).get(); for (const d of s.docs) await d.ref.delete(); await ref.collection('members').doc(uid).delete(); } }
+    try { await A.db.collection('push').doc(uid).delete(); } catch (e) { }
+    await A.db.collection('users').doc(uid).delete();
+    const wipeLocal = $('dloc').checked; A.deleted = true; await u.delete();
+    if (wipeLocal) { try { const keep = localStorage.getItem('erdevelop-key'); localStorage.clear(); if (keep) localStorage.setItem('erdevelop-key', keep); } catch (e) { } }
+    app.innerHTML = '<section class="card"><h2>Hesabın silindi</h2><p>Hesabın ve sunucudaki tüm verilerin kalıcı olarak silindi. İstersen siteyi hesapsız kullanmaya devam edebilirsin.</p><a class="btn" href="./">Ana sayfa</a></section>';
+  } catch (x) { A.deleted = false; msg('dmsg', errTr(x)); busy(b, false, 'Hesabımı kalıcı olarak sil'); }
+}
+/* ---- bu tarayıcı ---- */
+const sg = $('skipGc'); try { sg.checked = localStorage.getItem('skipgc') === 't'; } catch (e) { }
+sg.onchange = () => { try { sg.checked ? localStorage.setItem('skipgc', 't') : localStorage.removeItem('skipgc'); } catch (e) { } TM.toast(sg.checked ? 'Bu tarayıcı artık sayılmayacak' : 'Sayaç bu tarayıcıda yeniden açık'); };
+function locInfo() { let n = 0, sz = 0; try { for (let i = 0; i < localStorage.length; i++) { const k = localStorage.key(i); n++; sz += (localStorage.getItem(k) || '').length + k.length; } } catch (e) { } $('locInfo').textContent = `${n} kayıt · yaklaşık ${nf(sz / 1024, 0)} KB`; }
+$('locDl').onclick = () => TM.download('erdevelop-tarayici-verileri.json', new Blob([JSON.stringify({ olusturuldu: new Date().toISOString(), tarayici: localData() }, null, 2)], { type: 'application/json' }));
+$('locDel').onclick = () => { if (!confirm('Bu tarayıcıdaki tüm site verileri (tema, ilerleme, listeler, ayarlar, taslaklar) silinsin mi? Hesabın etkilenmez.')) return;
+  try { const keep = localStorage.getItem('erdevelop-key'), skip = localStorage.getItem('skipgc'); localStorage.clear(); if (keep) localStorage.setItem('erdevelop-key', keep); if (skip) localStorage.setItem('skipgc', skip); } catch (e) { } locInfo(); TM.toast('Bu tarayıcıdaki veriler silindi'); };
+locInfo(); boot();
+
+</script>
+<script data-goatcounter="https://erdevelop.goatcounter.com/count" async src="//gc.zgo.at/count.js"></script>
+</body>
+</html>

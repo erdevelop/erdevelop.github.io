@@ -1897,6 +1897,7 @@ const Cloud = {
     try { const r = await this.db.collection('rooms').doc(code).get(); if (!r.exists) { this.err = 'Bu kodla bir oda bulunamadı.'; return this.paint(); }
       const m = this.db.collection('rooms').doc(code).collection('members').doc(this.user.uid), me = await m.get().catch(() => null);
       if (!me || !me.exists) await m.set({ name: this.name(), xp: S.xp || 0, wk: '', wkBest: 0, joined: firebase.firestore.FieldValue.serverTimestamp() });
+      this.db.collection('users').doc(this.user.uid).set({ rooms: firebase.firestore.FieldValue.arrayUnion(code) }, { merge: true }).catch(() => { }); /* Hesabım sayfası odaları listeleyebilsin */
       S.room = code; save(); this.open(code); TM.toast('Odaya girildi'); } catch (e) { this.fail(e); } },
   async open(code, quiet) {
     this.close(); try { const r = await this.db.collection('rooms').doc(code).get(); if (!r.exists) { S.room = null; save(); return this.paint(); }
@@ -1905,7 +1906,7 @@ const Cloud = {
       this.subs.push(ref.collection('words').orderBy('created', 'desc').limit(500).onSnapshot(s => { this.words = s.docs.map(d => ({ id: d.id, ...d.data() })); this.paint(); srcOpts(); if (S.src === 'oda') nextCard(); }, e => this.fail(e)));
       this.paint(); srcOpts(); } catch (e) { if (!quiet) this.fail(e); else { this.err = ''; this.paint(); } } },
   close() { this.subs.forEach(u => u()); this.subs = []; this.room = null; this.members = []; this.words = []; srcOpts(); },
-  async leave() { if (!this.room || !confirm('Odadan çıkılsın mı? Puanların odadan silinir.')) return; try { await this.db.collection('rooms').doc(this.room.id).collection('members').doc(this.user.uid).delete(); } catch (e) { } S.room = null; save(); this.close(); this.paint(); this.paintLb(); },
+  async leave() { if (!this.room || !confirm('Odadan çıkılsın mı? Puanların odadan silinir.')) return; try { await this.db.collection('rooms').doc(this.room.id).collection('members').doc(this.user.uid).delete(); this.db.collection('users').doc(this.user.uid).set({ rooms: firebase.firestore.FieldValue.arrayRemove(this.room.id) }, { merge: true }).catch(() => { }); } catch (e) { } S.room = null; save(); this.close(); this.paint(); this.paintLb(); },
   async addWord(w) { try { await this.db.collection('rooms').doc(this.room.id).collection('words').add({ en: w.en, tr: w.tr, ex: w.ex || '', by: this.user.uid, byName: this.name(), created: firebase.firestore.FieldValue.serverTimestamp() }); } catch (e) { this.fail(e); TM.toast('Odaya eklenemedi'); } },
   async delWord(id) { try { await this.db.collection('rooms').doc(this.room.id).collection('words').doc(id).delete(); } catch (e) { this.fail(e); } },
   xp(n) { if (!this.room || !this.user) return; this.db.collection('rooms').doc(this.room.id).collection('members').doc(this.user.uid).set({ name: this.name(), xp: firebase.firestore.FieldValue.increment(n) }, { merge: true }).catch(() => { }); },
@@ -1924,7 +1925,7 @@ const Cloud = {
       rb.innerHTML = this.loading ? '<p class="empty2">Oda özellikleri yükleniyor…</p>' : '<p class="empty2">Oda özellikleri şu an açılamadı. Kelime kartları, konuşma, telaffuz ve yarışma çalışmaya devam ediyor.</p><button class="btn" type="button" id="rRetry">Tekrar dene</button>';
       if ($('rRetry')) $('rRetry').onclick = () => { this.err = ''; this.ensure(); }; return; }
     if (!this.user) {
-      acc.innerHTML = `<div class="lbl muted mono small">Hesap</div><p class="note">Oda açmak ve skor tablosu için giriş yap. Oyun Bahçesi hesabın burada da geçerli.</p>
+      acc.innerHTML = `<div class="lbl muted mono small">Hesap</div><p class="note">Oda açmak ve skor tablosu için giriş yap. Oyun Bahçesi hesabın burada da geçerli. Hangi verilerin tutulduğu: <a href="gizlilik.html">Gizlilik</a>.</p>
         <div class="seg" id="aMode" style="margin:8px 0"><button type="button" data-m="in" class="on">Giriş</button><button type="button" data-m="up">Yeni hesap</button></div>
         <form id="aF" class="fg2"><div class="fd full" id="aNameW" hidden><label for="aName">Adın (arkadaşların görür)</label><input class="inp" id="aName" maxlength="24" autocomplete="nickname"></div>
           <div class="fd full"><label for="aMail">E-posta</label><input class="inp" id="aMail" type="email" required autocomplete="email"></div>
@@ -1937,7 +1938,7 @@ const Cloud = {
       rb.innerHTML = `<div class="lbl muted mono small">Ortak oda</div><p>Bir oda açıp kodunu arkadaşlarına gönder. Odada:</p><ul class="muted"><li>herkesin eklediği kelimeler ortak listede toplanır,</li><li>haftanın yarışmasında herkese aynı sorular gelir ve sıralama tutulur,</li><li>kelime kartı, telaffuz ve konuşmadan kazanılan XP toplam tabloda görünür.</li></ul><p class="note">Giriş yapmadan da kelime kartları, konuşma, telaffuz ve yarışmayı kullanabilirsin.</p>`;
       return;
     }
-    acc.innerHTML = `<div class="lbl muted mono small">Hesap</div><p><b>${esc(this.name())}</b><br><span class="muted small">${esc(this.user.email || '')}</span></p><p class="small">Toplam XP: <b>${nf(S.xp || 0)}</b></p><button class="btn" type="button" id="aOut">Çıkış yap</button>${err}`;
+    acc.innerHTML = `<div class="lbl muted mono small">Hesap</div><p><b>${esc(this.name())}</b><br><span class="muted small">${esc(this.user.email || '')}</span></p><p class="small">Toplam XP: <b>${nf(S.xp || 0)}</b></p><div class="ctl"><button class="btn" type="button" id="aOut">Çıkış yap</button><a class="btn" href="hesap.html">Hesabım</a></div><p class="small muted" style="margin-top:8px"><a href="gizlilik.html">Gizlilik ve kişisel veriler</a></p>${err}`;
     $('aOut').onclick = () => { this.close(); this.auth.signOut(); };
     if (!this.room) {
       rb.innerHTML = `<div class="lbl muted mono small">Ortak oda</div>
@@ -1978,5 +1979,6 @@ setTab(qs.has('oda') ? 'oda' : ['kelime', 'kalip', 'dinleme', 'konusma', 'sim', 
 if (S.room || S.pushOn) Cloud.ensure();
 
 </script>
+<script data-goatcounter="https://erdevelop.goatcounter.com/count" async src="//gc.zgo.at/count.js"></script>
 </body>
 </html>
