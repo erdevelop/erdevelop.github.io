@@ -4611,7 +4611,21 @@ def kayma_uygula(d, kural):
 def kayma_kurali(kayma, anahtar):
     """model['kayma'] içinden bir aksın/hattın kuralı: anahtar ('d', i) | ('y', j, q) -> {(blok, örnek): (dx, dy)}."""
     n = len(anahtar)
-    return {(k[n], k[n + 1]): v for k, v in (kayma or {}).items() if tuple(k[:n]) == tuple(anahtar)}
+    tur = "dikey" if anahtar and anahtar[0] == "d" else "yatay"
+    out = {}
+    for k, v in _KAYMA.items():                    # sistemin öğrendiği konumlar (yeni projede de geçerli)
+        a = str(k).split("|")
+        if len(a) == 3 and a[0] == tur:
+            try:
+                out[(a[1], int(a[2]))] = (float(v[0]), float(v[1]))
+            except (ValueError, TypeError, IndexError):
+                pass
+    out.update({(k[n], k[n + 1]): v for k, v in (kayma or {}).items() if tuple(k[:n]) == tuple(anahtar)})
+    return out
+
+
+def ogrenilen_anahtar(tur, blok, ornek):
+    return f"{tur}|{_norm(blok)}|{5000 if 5000 <= ornek < 9000 else ornek}"
 
 
 def detay_uyarla(detay, yapi, secim=None, tablo=None, bariyerler=None):
@@ -11600,9 +11614,10 @@ class Uygulama(tk.Tk):
         orn = getattr(gr, "ornek", 0)
         kayma = self.model.setdefault("kayma", {})
         anah = ak + (_norm(getattr(gr, "blok", "")), 5000 if 5000 <= orn < 9000 else orn)
-        eski = kayma.get(anah, (0.0, 0.0))
+        eski = kayma.get(anah) or self._ogrenilen_ver(g["tur"], getattr(gr, "blok", ""), orn)
         yeni = (eski[0] + d["sx"], eski[1] + d["sy"])
         kayma[anah] = yeni
+        self._ogrenilen_yaz(g["tur"], getattr(gr, "blok", ""), orn, yeni)
         ad_ = f"{g['idx'] + 1}. aks" if ak[0] == "d" else f"{hat_adi(tuple(ak[1:]))} hattı"
         self._log(f"{pc['kod']} konumu ({ad_}): Δx {yeni[0]:+.2f}, Δy {yeni[1]:+.2f} mm")
         self.hesapla()
@@ -11766,6 +11781,26 @@ class Uygulama(tk.Tk):
                   ("   — iki kesit farklı." if degisti else "   — kesitlerde fark yok (son işlem bu aksı etkilememiş olabilir)."),
                   foreground="#e65100" if degisti else "#7a858e").pack(anchor="w", padx=6, pady=(0, 6))
 
+    def _ogrenilen_ver(self, tur, blok, orn):
+        return _KAYMA.get(ogrenilen_anahtar(tur, blok, orn), (0.0, 0.0))
+
+    def _ogrenilen_yaz(self, tur, blok, orn, deger):
+        """Elle oturtulan konumu sistem kaydına da yazar: yeni projede ve diğer aks/hatlarda aynı parça aynı konumda gelir.
+        deger None: öğrenileni siler."""
+        k = ogrenilen_anahtar(tur, blok, orn)
+        if deger is None or (abs(deger[0]) < 1e-9 and abs(deger[1]) < 1e-9):
+            _KAYMA.pop(k, None)
+            deger = None
+        else:
+            _KAYMA[k] = (float(deger[0]), float(deger[1]))
+        try:
+            sis_ = self._aktif_sistem()
+            if sis_:
+                sistem_kaydi(sis_, True)            # kayıt yoksa oluştur (öğrenilenler kalıcı olsun)
+            kayma_yaz(sis_, k, deger)
+        except Exception:
+            pass
+
     def _ok_ayar(self, e, dx, dy):
         """Seçili parçayı ok tuşlarıyla kaydırır: ok 0,1 mm, Shift+ok 1 mm (ekranda yukarı = +y)."""
         try:
@@ -11783,9 +11818,10 @@ class Uygulama(tk.Tk):
         orn = sc_.get("ornek", 0)
         kayma = self.model.setdefault("kayma", {})
         anah = ak + (_norm(a.get("blok") or a["kod"]), 5000 if 5000 <= orn < 9000 else orn)
-        eski = kayma.get(anah, (0.0, 0.0))
+        eski = kayma.get(anah) or self._ogrenilen_ver(a["tur"], a.get("blok") or a["kod"], orn)
         yeni = (round(eski[0] + dx * adim, 3), round(eski[1] + dy * adim, 3))
         kayma[anah] = yeni
+        self._ogrenilen_yaz(a["tur"], a.get("blok") or a["kod"], orn, yeni)
         self._log(f"{a['kod']} ok tuşu ayarı: Δx {yeni[0]:+.2f}, Δy {yeni[1]:+.2f} mm")
         self.hesapla()
         return "break"
@@ -11806,6 +11842,21 @@ class Uygulama(tk.Tk):
         zc = False
         if tum:
             zc = self.model.setdefault("zincir_hat", {}).pop(tuple(ak), None) is not None
+            tur_ = a["tur"]
+            for k_ in list(_KAYMA):                  # bu aks/hatta öğrenilen konumlar da uygulanmasın (yalnız bu aks)
+                p_ = str(k_).split("|")
+                if len(p_) == 3 and p_[0] == tur_:
+                    kayma[tuple(ak) + (p_[1], int(p_[2]))] = (0.0, 0.0)
+                    sil.append(k_)
+        else:
+            ogr_ = False
+            for orn_ in {k[n + 1] for k in sil} | {self._secili.get("ornek", 0) if self._secili else 0}:
+                kk_ = ogrenilen_anahtar(a["tur"], a.get("blok") or a["kod"], orn_)
+                if kk_ in _KAYMA:
+                    self._ogrenilen_yaz(a["tur"], a.get("blok") or a["kod"], orn_, None)     # öğrenileni de sil
+                    ogr_ = True
+            if ogr_:
+                sil.append("ogr")
         self._pp_durum.config(text="Sıfırlandı." if (sil or zc) else "Bu aksta/hatta elle ayar yok.")
         if sil or zc:
             self.hesapla()
