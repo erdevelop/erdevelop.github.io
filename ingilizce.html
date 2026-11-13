@@ -176,7 +176,7 @@
           <div class="fd cal-only"><label for="hDays">Kaç gün</label><select class="sel" id="hDays"><option value="1">1 gün (deneme)</option><option value="3">3 gün</option><option value="7">1 hafta</option><option value="14">2 hafta</option><option value="30">1 ay</option></select></div>
           <div class="fd"><label for="hFrom">İlk bildirim</label><input class="inp" type="time" id="hFrom" step="900"></div>
           <div class="fd"><label for="hTo">Son bildirim</label><input class="inp" type="time" id="hTo" step="900"></div>
-          <div class="fd full"><label for="hStep">Ne sıklıkla</label><select class="sel" id="hStep"><option value="30">30 dakikada bir</option><option value="60">Saatte bir</option><option value="90">1,5 saatte bir</option><option value="120">2 saatte bir</option><option value="180">3 saatte bir</option><option value="240">4 saatte bir</option></select></div>
+          <div class="fd full"><label for="hStep">Ne sıklıkla</label><select class="sel" id="hStep"><option value="15">15 dakikada bir</option><option value="30">30 dakikada bir</option><option value="60">Saatte bir</option><option value="90">1,5 saatte bir</option><option value="120">2 saatte bir</option><option value="180">3 saatte bir</option><option value="240">4 saatte bir</option></select></div>
           <label class="chk full"><input type="checkbox" id="hMean"> Türkçe anlamı bildirimde görünsün (kapalıysa önce kendin hatırlamaya çalışırsın; dokununca anlamını görürsün)</label>
           <label class="chk full"><input type="checkbox" id="hRep"> Aralıklı tekrar: her kelime 1 ve 3 gün sonra yeniden gelsin</label>
           <div class="full hinfo" id="hInfo"></div>
@@ -1259,7 +1259,7 @@ function hPools() {
   return P;
 }
 function hTimes() { const m = v => { const [a, b] = String(v || '').split(':').map(Number); return a * 60 + (b || 0); }; let a = m($('hFrom').value), b = m($('hTo').value), st = +$('hStep').value;
-  if (!(a >= 0) || !(b >= 0)) return []; if (b < a) [a, b] = [b, a]; const out = []; for (let t = a; t <= b && out.length < 48; t += st) out.push(t); return out; }
+  if (!(a >= 0) || !(b >= 0)) return []; if (b < a) [a, b] = [b, a]; const out = []; for (let t = a; t <= b && out.length < 96; t += st) out.push(t); return out; }
 function hPlan(daysOv) {
   const pool = (hPools().find(p => p[0] === S.h.src) || hPools()[0])[2], days = daysOv || +$('hDays').value, T = hTimes(), rep = $('hRep').checked;
   const fresh = shuffle(pool).sort((x, y) => { const a = S.leit[hKey(x)], b = S.leit[hKey(y)]; return (a ? a.box : 0) - (b ? b.box : 0); });
@@ -1274,7 +1274,7 @@ function hPlan(daysOv) {
 function hInfo() {
   if (!$('hSrc').options.length) return; S.h = { ...S.h, src: $('hSrc').value, days: $('hDays').value, from: $('hFrom').value, to: $('hTo').value, step: $('hStep').value, mean: $('hMean').checked, rep: $('hRep').checked }; save();
   const push = S.h.mode !== 'cal', P = hPlan(push ? 30 : 0), f = t => String(Math.floor(t / 60)).padStart(2, '0') + ':' + String(t % 60).padStart(2, '0'), times = `Günde ${P.T.length} bildirim (${P.T.map(f).slice(0, 8).join(', ')}${P.T.length > 8 ? '…' : ''})`;
-  $('hInfo').innerHTML = !P.pool ? 'Bu listede kelime yok.' : push ? `${times}<br>Listede ${P.pool} kelime · ${$('hRep').checked ? 'her kelime 1 ve 3 gün sonra tekrar gelir' : 'tekrarsız'}` : `${times}<br>Toplam ${P.n} bildirim · ${P.uniq} farklı kelime`;
+  $('hInfo').innerHTML = !P.pool ? 'Bu listede kelime yok.' : push ? `${times}<br>Listede ${P.pool} kelime · ${$('hRep').checked ? 'her kelime 1 ve 3 gün sonra tekrar gelir' : 'tekrarsız'}` : `${times}<br>Toplam ${P.n} bildirim · ${P.uniq} farklı kelime${P.n > 500 ? '<br><span style="color:var(--warn)">Çok fazla etkinlik takvimi yavaşlatabilir; gün sayısını azaltmayı düşün.</span>' : ''}`;
   if (push && S.pushOn) pushQueueSave();
   $('hAdd').disabled = $('hDl').disabled = !P.pool || !P.T.length;
 }
@@ -1320,8 +1320,8 @@ function pPaint(msg) {
   if ($('pLogin')) $('pLogin').onclick = () => setTab('oda');
 }
 async function pushInfo() { if (!Cloud.user) return; try { const d = await pDoc().get(); pInfo = d.exists ? d.data() : null; if (S.pushOn && (!pInfo || pInfo.on === false)) { S.pushOn = false; save(); } } catch (e) { } pPaint(); }
-function pushQueue() { const n = Math.max(1, hTimes().length), P = hPlan(Math.min(60, Math.ceil(150 / n) + 3));
-  return P.plan.flat().slice(0, 150).map(([t, w]) => ({ e: w.en, t: w.tr, x: String(w.ex || '').slice(0, 160) })); }
+function pushQueue() { const n = Math.max(1, hTimes().length), N = n > 20 ? 280 : 150, P = hPlan(Math.min(60, Math.ceil(N / n) + 3));
+  return P.plan.flat().slice(0, N).map(([t, w]) => ({ e: w.en, t: w.tr, x: String(w.ex || '').slice(0, 160) })); }
 async function pushSave(sub) {
   const j = sub.toJSON(), q = pushQueue(); if (!q.length) throw new Error('Seçili listede kelime yok.');
   await pDoc().set({ on: true, sub: { endpoint: j.endpoint, keys: { p256dh: j.keys.p256dh, auth: j.keys.auth } }, tz: Intl.DateTimeFormat().resolvedOptions().timeZone || 'Europe/Istanbul',

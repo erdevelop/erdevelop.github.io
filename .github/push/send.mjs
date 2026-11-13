@@ -58,7 +58,7 @@ export function localNow(tz, now = new Date()) {
 const toMin = s => { const [h, m] = String(s || '').split(':').map(Number); return h * 60 + (m || 0); };
 /* saati gelmiş ve henüz gönderilmemiş en son bildirim anı; yoksa null. win: GitHub zamanlayıcısının gecikme payı (dk) */
 export function dueSlot(d, now = new Date(), win = 50) {
-  const { date, min } = localNow(d.tz, now); let a = toMin(d.from), b = toMin(d.to); const st = Math.max(30, +d.step || 180);
+  const { date, min } = localNow(d.tz, now); let a = toMin(d.from), b = toMin(d.to); const st = Math.max(15, +d.step || 180);
   if (!(a >= 0 && b >= 0)) return null; if (b < a) [a, b] = [b, a];
   let best = null; for (let s = a; s <= b; s += st) if (s <= min && min - s < win) best = s;
   if (best == null) return null; const key = date + '|' + best; return key === d.last ? null : key;
