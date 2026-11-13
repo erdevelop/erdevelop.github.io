@@ -150,6 +150,7 @@
         <div class="ctl" style="margin-bottom:10px"><select class="sel" id="kSrc" aria-label="Kelime kaynağı"></select><select class="sel" id="kLvl" aria-label="Seviye"><option value="0">Tüm seviyeler</option><option value="1">Başlangıç</option><option value="2">Orta</option><option value="3">İleri</option></select><label class="small muted" style="display:flex;gap:6px;align-items:center"><input type="checkbox" id="kRev"> Türkçeden sor</label></div>
         <div class="fcard" id="fcard" tabindex="0" role="button" aria-label="Kartı çevir"><div class="in"><div class="f"><span class="tag" id="fTag"></span><button class="btn spk" type="button" id="fSpk" aria-label="Dinle">🔊</button><div class="w" id="fW"></div><div class="muted small">dokun · çevir</div></div><div class="b"><span class="tag" id="bTag"></span><div class="w" id="bW" style="font-size:1.6rem"></div><div class="m" id="bM"></div><div class="ex" id="bEx"></div></div></div></div>
         <div class="rate"><button class="btn no" type="button" id="r0">✗ Bilmedim</button><button class="btn" type="button" id="r1">~ Zor</button><button class="btn ok" type="button" id="r2">✓ Bildim</button></div>
+        <div class="ctl" style="justify-content:center;margin-top:8px"><button class="btn" type="button" id="kShare">📤 Paylaş</button><button class="btn" type="button" id="kRoom" hidden>➕ Odaya ekle</button></div>
         <p class="note" id="kInfo"></p>
       </div>
       <div class="panel">
@@ -222,7 +223,7 @@
     <div class="zch" id="zG" role="tablist" aria-label="Zamanlar"></div>
     <div class="two">
       <div class="panel">
-        <div class="ctl" style="margin-bottom:8px"><button class="btn" type="button" id="zPrev" aria-label="Önceki kalıp">←</button><span class="mono small muted" id="zNo"></span><button class="btn" type="button" id="zNext" aria-label="Sonraki kalıp">→</button><span style="flex:1"></span>
+        <div class="ctl" style="margin-bottom:8px"><button class="btn" type="button" id="zPrev" aria-label="Önceki kalıp">←</button><span class="mono small muted" id="zNo"></span><button class="btn" type="button" id="zNext" aria-label="Sonraki kalıp">→</button><button class="btn" type="button" id="zShare" title="Kartı görsel olarak paylaş">📤 Paylaş</button><span style="flex:1"></span>
           <div class="seg" id="zMode"><button type="button" data-m="ogren" class="on">1 · Öğren</button><button type="button" data-m="cevir">2 · Çevir</button><button type="button" data-m="kur">3 · Kendi cümlen</button></div></div>
         <div class="mono small muted" id="zTag"></div>
         <div class="zf" id="zF"></div>
@@ -1216,10 +1217,10 @@ function deck() {
 let cur = null;
 function nextCard() {
   const L = deck(), now = Date.now(); $('fcard').classList.remove('flip');
-  if (!L.length) { cur = null; $('fW').textContent = S.src === 'oda' ? (Cloud.room ? 'Odada henüz kelime yok' : 'Önce bir odaya gir') : S.src === 'hazir' || S.src === 'temel' ? 'Bu seviyede kelime yok' : 'Listen boş'; $('fTag').textContent = ''; $('kInfo').textContent = S.src === 'benim' ? 'Sağdaki formdan kelime ekle.' : ''; boxes(); return; }
+  if (!L.length) { cur = null; kRoomBtn(); $('fW').textContent = S.src === 'oda' ? (Cloud.room ? 'Odada henüz kelime yok' : 'Önce bir odaya gir') : S.src === 'hazir' || S.src === 'temel' ? 'Bu seviyede kelime yok' : 'Listen boş'; $('fTag').textContent = ''; $('kInfo').textContent = S.src === 'benim' ? 'Sağdaki formdan kelime ekle.' : ''; boxes(); return; }
   const due = L.filter(w => { const s = S.leit[keyOf(w)]; return !s || s.due <= now; });
   const pool = due.length ? due : L; let c = pick(pool); if (cur && pool.length > 1 && keyOf(c) === keyOf(cur)) c = pick(pool.filter(w => keyOf(w) !== keyOf(cur)));
-  cur = c; const rev = S.rev;
+  cur = c; const rev = S.rev; kRoomBtn();
   $('fW').textContent = rev ? c.tr : c.en; $('fTag').textContent = c.tag || ''; $('bTag').textContent = c.tag || '';
   $('bW').textContent = c.en; $('bM').textContent = c.tr; $('bEx').textContent = c.ex || '';
   $('fSpk').hidden = rev;
@@ -1352,8 +1353,58 @@ $('hAdd').onclick = () => { const r = icsText(); if (isIOS) { location.href = 'd
   $('hDays').value = S.h.days || '7'; $('hFrom').value = S.h.from || '09:00'; $('hTo').value = S.h.to || '21:00'; $('hStep').value = S.h.step || '180'; $('hMean').checked = S.h.mean !== false; $('hRep').checked = S.h.rep !== false; })();
 /* bildirimden gelen kelimeyi kartta göster: ?k=kelime */
 function showWord(en) { const k = norm(en), w = [...WORDS.map(x => ({ en: x[0], tr: x[1], ex: x[2], tag: x[4] })), ...TW, ...S.my].find(x => norm(x.en) === k); if (!w) return;
-  cur = w; $('fcard').classList.remove('flip'); $('fW').textContent = w.en; $('fTag').textContent = w.tag || ''; $('bTag').textContent = w.tag || ''; $('bW').textContent = w.en; $('bM').textContent = w.tr; $('bEx').textContent = w.ex || ''; $('fSpk').hidden = false;
+  cur = w; kRoomBtn(); $('fcard').classList.remove('flip'); $('fW').textContent = w.en; $('fTag').textContent = w.tag || ''; $('bTag').textContent = w.tag || ''; $('bW').textContent = w.en; $('bM').textContent = w.tr; $('bEx').textContent = w.ex || ''; $('fSpk').hidden = false;
   $('kInfo').textContent = 'Hatırlatıcıdan gelen kelime. Biliyorsan ✓, bilmiyorsan ✗ de; sonra normal tekrar devam eder.'; }
+
+/* ============ PAYLAŞ: kartı görsel (PNG) olarak paylaş ============ */
+function wrapLines(ctx, text, maxW) { const out = []; let line = '';
+  const toks = []; for (const w of String(text).split(/\s+/)) { if (toks.length && /^[….,!?;:)\]]+$/.test(w)) toks[toks.length - 1] += ' ' + w; else toks.push(w); } /* tek başına kalan "…" önceki kelimeyle kalsın */
+  for (const w of toks) { const t = line ? line + ' ' + w : w; if (!line || ctx.measureText(t).width <= maxW) line = t; else { out.push(line); line = w; } }
+  if (line) out.push(line); return out; }
+function fitText(ctx, text, fam, weight, max, min, maxW, maxLines) {
+  for (let s = max; s >= min; s -= 4) { ctx.font = `${weight} ${s}px ${fam}`; const L = wrapLines(ctx, text, maxW); if (L.length <= maxLines && L.every(l => ctx.measureText(l).width <= maxW)) return { s, L }; }
+  ctx.font = `${weight} ${min}px ${fam}`; return { s: min, L: wrapLines(ctx, text, maxW) }; }
+/* o: { label, big, mean, ex: [[İngilizce, Türkçe]], kalip } → 1080×1350 tuval */
+function cardCanvas(o) {
+  const W = 1080, H = 1350, PAD = 90, MW = W - PAD * 2, c = document.createElement('canvas'); c.width = W; c.height = H; const x = c.getContext('2d');
+  const F = { d: TM.css('--f-display') || 'sans-serif', b: TM.css('--f-body') || 'sans-serif', m: TM.css('--f-mono') || 'monospace' }, A = '#f2b33d', FG = '#e8edf6', MU = '#8d9bb3';
+  const g = x.createLinearGradient(0, 0, W, H); g.addColorStop(0, '#0b1220'); g.addColorStop(1, '#17243d'); x.fillStyle = g; x.fillRect(0, 0, W, H);
+  x.strokeStyle = 'rgba(255,255,255,.035)'; x.lineWidth = 1;
+  for (let i = 0; i <= W; i += 60) { x.beginPath(); x.moveTo(i + .5, 0); x.lineTo(i + .5, H); x.stroke(); }
+  for (let j = 0; j <= H; j += 60) { x.beginPath(); x.moveTo(0, j + .5); x.lineTo(W, j + .5); x.stroke(); }
+  x.textBaseline = 'alphabetic'; x.fillStyle = A; x.fillRect(PAD, 100, 72, 8);
+  x.font = `500 30px ${F.m}`; x.fillText(o.label.toLocaleUpperCase('tr'), PAD, 168);
+  let y = o.kalip ? 300 : (o.ex || []).length ? 420 : 480;
+  const big = fitText(x, o.big, F.d, 700, o.kalip ? 100 : 150, 54, MW, 3); x.fillStyle = FG; x.font = `700 ${big.s}px ${F.d}`;
+  for (const l of big.L) { y += big.s * .9; x.fillText(l, PAD, y); y += big.s * .25; }
+  y += 30; const m = fitText(x, o.mean, F.b, 600, 58, 34, MW, 3); x.fillStyle = A; x.font = `600 ${m.s}px ${F.b}`;
+  for (const l of m.L) { y += m.s; x.fillText(l, PAD, y); y += m.s * .3; }
+  if ((o.ex || []).length) { y += 50; x.fillStyle = 'rgba(255,255,255,.14)'; x.fillRect(PAD, y, MW, 2); y += 40;
+    for (const [en, tr] of o.ex) { if (y > H - 300) break;
+      x.font = `500 44px ${F.b}`; x.fillStyle = FG; for (const l of wrapLines(x, en, MW)) { y += 50; x.fillText(l, PAD, y); y += 8; }
+      if (tr) { x.font = `400 33px ${F.b}`; x.fillStyle = MU; for (const l of wrapLines(x, tr, MW)) { y += 40; x.fillText(l, PAD, y); } }
+      y += 34; } }
+  x.fillStyle = 'rgba(255,255,255,.14)'; x.fillRect(PAD, H - 150, MW, 2);
+  x.font = `600 34px ${F.d}`; x.fillStyle = FG; x.fillText('İngilizce Kulübü', PAD, H - 88);
+  x.font = `400 28px ${F.m}`; x.fillStyle = MU; x.textAlign = 'right'; x.fillText('erdevelop.github.io/ingilizce', W - PAD, H - 88); x.textAlign = 'left';
+  return c;
+}
+/* Paylaşım menüsü kullanıcının dokunuşu içinde açılmalı; bu yüzden görsel eşzamanlı (toDataURL) üretilir */
+function shareCard(o, name) {
+  const d = cardCanvas(o).toDataURL('image/png'), bin = atob(d.split(',')[1]), u8 = new Uint8Array(bin.length); for (let i = 0; i < bin.length; i++) u8[i] = bin.charCodeAt(i);
+  const fn = String(name).toLowerCase().replace(/[çğıöşü]/g, ch => ({ ç: 'c', ğ: 'g', ı: 'i', ö: 'o', ş: 's', ü: 'u' }[ch])).replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '').slice(0, 40) || 'kart';
+  const file = new File([u8], fn + '.png', { type: 'image/png' });
+  if (navigator.canShare && navigator.canShare({ files: [file] })) return navigator.share({ files: [file] }).catch(e => { if (e.name !== 'AbortError') TM.toast('Paylaşılamadı: ' + e.message); });
+  TM.download(file.name, file); TM.toast('Görsel indirildi; istediğin yerde paylaşabilirsin');
+}
+function shareWord() { if (!cur) return; shareCard({ label: 'Kelime' + (cur.tag ? ' · ' + cur.tag : ''), big: cur.en, mean: cur.tr, ex: cur.ex ? [[cur.ex, '']] : [] }, 'kelime-' + cur.en); }
+function shareKalip() { const p = Z.cur; if (!p) return; const g = ZG(p.z); shareCard({ kalip: true, label: 'Konuşma kalıbı · ' + g[1], big: p.f, mean: p.tr, ex: p.ex }, 'kalip-' + p.f); }
+function kRoomBtn() { const b = $('kRoom'); if (!b) return; b.hidden = !(Cloud.room && Cloud.user && cur && S.src !== 'oda'); }
+$('kShare').onclick = shareWord; $('zShare').onclick = shareKalip;
+$('kRoom').onclick = async () => { if (!cur || !Cloud.room) return; if (Cloud.words.some(w => norm(w.en) === norm(cur.en))) return TM.toast('Bu kelime odada zaten var');
+  await Cloud.addWord({ en: cur.en, tr: cur.tr, ex: cur.ex || '' }); if (!Cloud.err) TM.toast('Odaya eklendi: ' + cur.en); };
+/* yazı tiplerini önceden yükle ki görselde de doğru görünsün */
+if (document.fonts && document.fonts.load) ['700 40px "Chakra Petch"', '600 40px "Chakra Petch"', '500 40px "IBM Plex Sans"', '600 40px "IBM Plex Sans"', '400 40px "IBM Plex Mono"', '500 40px "IBM Plex Mono"'].forEach(f => document.fonts.load(f, 'İğşçöü').catch(() => { }));
 
 /* ============ KONUŞMA ============ */
 const C = { left: 120, run: false, t: null, idx: 0 };
@@ -1714,6 +1765,7 @@ const Cloud = {
     box.innerHTML = L.length ? `<table class="lb"><tbody>${L.map((m, i) => `<tr class="${this.user && m.uid === this.user.uid ? 'me' : ''}"><td class="rk">${['🥇', '🥈', '🥉'][i] || i + 1}</td><td>${esc(m.name || '?')}</td><td class="n">${nf(m.wkBest)}</td></tr>`).join('')}</tbody></table>` : '<p class="empty2">Bu hafta henüz kimse yarışmadı. İlk sen ol!</p>';
   },
   paint() {
+    kRoomBtn();
     const acc = $('accBox'), rb = $('roomBox'); if (!acc) return;
     const err = this.err ? `<p class="err" style="margin-top:8px">${esc(this.err)}</p>` : '';
     if (this.loading || !this.ready) { acc.innerHTML = `<div class="lbl muted mono small">Hesap</div><p class="muted">${this.loading ? 'Bağlanıyor…' : ''}</p>${err}`;
