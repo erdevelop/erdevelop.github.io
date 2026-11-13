@@ -24,3 +24,18 @@ self.addEventListener('fetch', e => {
     e.respondWith(caches.match(r).then(m => m || fetch(r).then(res => { if (res.ok || res.type === 'opaque') { const cp = res.clone(); caches.open(LIBS).then(c => c.put(r, cp)); } return res; })));
   }
 });
+
+/* bildirimler (İngilizce Kulübü kelime bildirimi): sunucudan gelen mesajı gösterir, dokununca ilgili sayfayı açar */
+self.addEventListener('push', e => {
+  let d = {}; try { d = e.data ? e.data.json() : {}; } catch (x) { d = { title: e.data ? e.data.text() : '' }; }
+  e.waitUntil(self.registration.showNotification(d.title || 'erdevelop', { body: d.body || '', icon: '/icon-192.png', badge: '/icon-192.png', tag: d.tag || 'erdevelop', renotify: true, data: { url: d.url || '/' } }));
+});
+self.addEventListener('notificationclick', e => {
+  e.notification.close();
+  const url = new URL((e.notification.data && e.notification.data.url) || '/', location.origin).href, page = url.split(/[?#]/)[0];
+  e.waitUntil(clients.matchAll({ type: 'window', includeUncontrolled: true }).then(ws => {
+    const w = ws.find(c => c.url.split(/[?#]/)[0] === page);
+    if (w && 'navigate' in w) return w.navigate(url).then(c => (c || w).focus()).catch(() => clients.openWindow(url));
+    return clients.openWindow(url);
+  }));
+});
