@@ -62,6 +62,17 @@ header .kim{margin-left:auto;font-size:13px;color:var(--mute);display:flex;align
 .m.ben.devam{border-top-left-radius:12px;border-top-right-radius:4px}
 .m .ad{font-weight:600;font-size:13px;display:block;margin-bottom:1px}
 .m .saat{font:11px "IBM Plex Mono",monospace;color:var(--mute);margin-left:8px;float:right;margin-top:5px}
+.m .kalan{opacity:.75;margin-left:6px}
+.m{position:relative}
+.m .sil{position:absolute;top:-8px;left:-8px;width:22px;height:22px;border-radius:50%;border:1px solid var(--line);background:var(--panel);color:var(--mute);font-size:12px;line-height:1;cursor:pointer;display:none;padding:0}
+.m.ben:hover .sil,.m.ben:focus-within .sil,.m.ben.sec .sil{display:block}
+@media (hover:none){.m.ben .sil{display:block;opacity:.7}}
+.m.gidiyor{opacity:0;transition:opacity .4s}
+.menu{position:absolute;right:16px;top:52px;z-index:6;background:var(--panel);border:1px solid var(--line);border-radius:12px;box-shadow:var(--shadow);padding:12px;width:min(280px,calc(100vw - 32px));display:none}
+.menu.acik{display:block}.menu h3{margin:0 0 4px;font-size:14px}.menu p{margin:0 0 10px;font-size:12px;color:var(--mute)}
+.menu .sec4{display:grid;grid-template-columns:1fr 1fr;gap:6px}
+.menu .sec4 button{border:1px solid var(--line);background:var(--bg);color:var(--ink);border-radius:8px;padding:8px;cursor:pointer;font-size:13px}
+.menu .sec4 button.on{background:var(--acc);border-color:var(--acc);color:var(--acc-ink)}
 .s{align-self:center;color:var(--sys);font-size:12px;margin:8px 0 2px;text-align:center}
 .gun{align-self:center;font:11px "IBM Plex Mono",monospace;color:var(--mute);background:var(--line);
   border-radius:20px;padding:2px 10px;margin:12px 0 4px}
@@ -97,7 +108,7 @@ aside li{display:flex;align-items:center;gap:8px;padding:4px 0;overflow-wrap:any
 <section id="giris">
   <div class="kart">
     <h1 class="brand">Sohbet Odası</h1>
-    <p>Bir takma ad seç. Odadaki herkes yazdıklarını, fotoğraf ve dosyalarını anında görür. Sohbet her saat başı temizlenir.</p>
+    <p>Bir takma ad seç. Odadaki herkes yazdıklarını, fotoğraf ve dosyalarını anında görür. Mesajlar, odadakilerin seçtiği süre sonunda kendiliğinden silinir<span id="girisSure"></span>.</p>
     <form id="girisForm" autocomplete="off">
       <label for="nick">Takma ad</label>
       <div class="satir">
@@ -117,11 +128,16 @@ aside li{display:flex;align-items:center;gap:8px;padding:4px 0;overflow-wrap:any
       <span class="kim">
         <span class="nokta ok" id="odaNokta"></span>
         <span class="benim" id="benimAd"></span>
-        <span id="sayac" title="Sohbet her saat başı temizlenir"></span>
+        <button class="kucuk" id="sureBtn" title="Mesajların ne kadar süre saklanacağı">⏳ <span id="sureYazi">…</span></button>
         <button class="kucuk" id="kisiBtn">👥 <span id="sayi2">0</span></button>
         <button class="kucuk" id="cikBtn">Çık</button>
       </span>
     </header>
+    <div class="menu" id="sureMenu" role="dialog" aria-label="Saklama süresi">
+      <h3>Mesajlar ne kadar kalsın?</h3>
+      <p>Seçim odadaki herkes için geçerli; her mesaj yazıldıktan bu süre sonra silinir. Değiştiren kişi sohbette görünür.</p>
+      <div class="sec4" id="sureSec"></div>
+    </div>
     <div id="mesajlar" aria-live="polite"></div>
     <button class="yeni" id="yeniBtn">↓ Yeni mesajlar</button>
     <div id="yaziyor"></div>
@@ -141,6 +157,7 @@ aside li{display:flex;align-items:center;gap:8px;padding:4px 0;overflow-wrap:any
 <div id="buyuk"><img id="buyukImg" alt="fotoğraf"></div>
 
 <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-auth-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-database-compat.js"></script>
 <script>
 (function(){
@@ -161,12 +178,15 @@ const ls = {
   set(k,v){ try{ localStorage.setItem(k,v); }catch(e){} }
 };
 const CID = Math.random().toString(36).slice(2) + Date.now().toString(36);
+let UID = null;   // anonim giriş kimliği: yalnızca kendi mesajını silebilmek için (hesap açılmaz)
 
 if (!window.firebase){ $('baglYazi').textContent = 'Firebase yüklenemedi. İnternet bağlantını kontrol et.'; return; }
 firebase.initializeApp(CONFIG);
 const db = firebase.database();
 const TS = firebase.database.ServerValue.TIMESTAMP;
 const R = p => db.ref(KOK + '/' + p);
+try { firebase.auth().onAuthStateChanged(u => { UID = u ? u.uid : null; document.querySelectorAll('.m[data-uid]').forEach(e => e.classList.toggle('ben', e.dataset.uid === UID)); });
+  firebase.auth().signInAnonymously().catch(() => {}); } catch (e) {}
 
 let ben = null, anahtar = null, bagli = false, kapat = [];
 let saatFarki = 0;
@@ -241,7 +261,8 @@ async function nickAl(n){
   return true;
 }
 
-function sistemMesaji(metin){ return R('mesajlar').push({ tip:'s', text: metin, ts: TS }); }
+const kim = () => UID ? { uid: UID } : {};
+function sistemMesaji(metin){ return R('mesajlar').push({ tip:'s', text: metin, ts: TS, ...kim() }); }
 
 async function odayaGir(){
   $('giris').style.display = 'none';
@@ -257,7 +278,7 @@ async function odayaGir(){
 
 function ayrilmaHazirla(){
   const r = R('mesajlar').push();            // anahtar şimdiden alınır, bağlantı koparsa yazılır
-  r.onDisconnect().set({ tip:'s', text: ben + ' odadan ayrıldı', ts: TS });
+  r.onDisconnect().set({ tip:'s', text: ben + ' odadan ayrıldı', ts: TS, ...kim() });
   ayrilmaRef = r;
 }
 let ayrilmaRef = null;
@@ -276,7 +297,7 @@ async function yenidenKatil(){
 async function cik(){
   kapat.forEach(f => f()); kapat = [];
   try{
-    if (ayrilmaRef){ await ayrilmaRef.onDisconnect().cancel(); await ayrilmaRef.set({ tip:'s', text: ben + ' odadan ayrıldı', ts: TS }); }
+    if (ayrilmaRef){ await ayrilmaRef.onDisconnect().cancel(); await ayrilmaRef.set({ tip:'s', text: ben + ' odadan ayrıldı', ts: TS, ...kim() }); }
     if (anahtar){ const a = R('aktif/' + anahtar); await a.onDisconnect().cancel(); await a.remove(); }
     yaziyorBitir();
   }catch(e){}
@@ -306,20 +327,23 @@ function yerelSistem(metin){
   const d = document.createElement('div'); d.className = 's'; d.textContent = metin;
   const asg = altta(); kutu.appendChild(d); if (asg) asagi();
 }
-function mesajEkle(m){
+function mesajEkle(m, key){
   if (!m || typeof m.text !== 'string') return;
   const t = typeof m.ts === 'number' ? m.ts : simdi();
   const asg = altta();
   gunEkle(t);
   if (m.tip === 's'){
-    const d = document.createElement('div'); d.className = 's';
+    const d = document.createElement('div'); d.className = 's'; if (key) { d.dataset.k = key; d.dataset.ts = t; }
     d.textContent = m.text + ' · ' + saat(t); kutu.appendChild(d); sonYazan = null;
   } else {
     if (!m.text && !m.img && !m.dosya) return;
-    const benimMi = m.cid === CID;
+    const benimMi = m.cid === CID || (!!UID && m.uid === UID);
     const devam = sonYazan === m.nick && !benimMi === !sonYazanBen;
     const d = document.createElement('div');
     d.className = 'm' + (benimMi ? ' ben' : '') + (devam ? ' devam' : '');
+    if (key) { d.dataset.k = key; d.dataset.ts = t; } if (m.uid) d.dataset.uid = m.uid;
+    if (key && m.uid) { const x = document.createElement('button'); x.type = 'button'; x.className = 'sil'; x.title = 'Mesajımı sil'; x.setAttribute('aria-label', 'Mesajımı sil'); x.textContent = '✕';
+      x.addEventListener('click', ev => { ev.stopPropagation(); mesajSil(key, d); }); d.appendChild(x); }
     if (!devam && !benimMi){
       const a = document.createElement('span'); a.className = 'ad'; a.textContent = m.nick; a.style.color = renk(m.nick); d.appendChild(a);
     }
@@ -340,7 +364,8 @@ function mesajEkle(m){
       a.append(ik, ad, bo); d.appendChild(a);
     }
     if (m.text) d.appendChild(document.createTextNode(m.text));
-    const s = document.createElement('span'); s.className = 'saat'; s.textContent = saat(t); d.appendChild(s);
+    const s = document.createElement('span'); s.className = 'saat'; s.textContent = saat(t);
+    const kl = document.createElement('span'); kl.className = 'kalan'; s.appendChild(kl); d.appendChild(s); kalanYaz(d);
     kutu.appendChild(d);
     sonYazan = m.nick; sonYazanBen = benimMi;
     if (!benimMi && document.hidden){ okunmamis++; document.title = '(' + okunmamis + ') ' + baslik; }
@@ -351,42 +376,64 @@ function mesajEkle(m){
 let sonYazanBen = false;
 document.addEventListener('visibilitychange', () => { if (!document.hidden){ okunmamis = 0; document.title = baslik; } });
 
-/* ---------- saat başı temizlik ---------- */
-const SAAT = 3600000;
-let mesajKapat = null, aktifSaat = 0;
-function saatBasi(){ const t = simdi(); return t - t % SAAT; }   // Türkiye UTC+3: saat başları UTC ile aynı
+/* ---------- saklama süresi (odadakiler seçer) ---------- */
+const SURELER = [[3600000, '1 saat'], [86400000, '24 saat'], [604800000, '7 gün'], [0, 'Silme yok']];
+let SAKLAMA = 3600000, ayarGeldi = false;      // ayar yoksa varsayılan 1 saat
+const sureAd = ms => (SURELER.find(x => x[0] === ms) || [0, ms ? Math.round(ms / 36e5) + ' saat' : 'Silme yok'])[1];
+function kalanMetin(ms){ if (ms <= 0) return 'siliniyor'; const dk = Math.ceil(ms / 60000); return dk < 60 ? dk + ' dk' : dk < 2880 ? Math.round(dk / 60) + ' sa' : Math.round(dk / 1440) + ' gün'; }
+function kalanYaz(d){ const k = d.querySelector('.kalan'); if (!k) return; if (!SAKLAMA || !d.dataset.ts) { k.textContent = ''; k.title = ''; return; }
+  const ms = +d.dataset.ts + SAKLAMA - simdi(); k.textContent = '· ⏳ ' + kalanMetin(ms); k.title = 'Bu mesaj ' + kalanMetin(ms) + ' sonra silinecek'; }
+function sureGoster(){
+  $('sureYazi').textContent = sureAd(SAKLAMA); $('girisSure').textContent = ayarGeldi ? ' (şu an: ' + sureAd(SAKLAMA).toLocaleLowerCase('tr-TR') + ')' : '';
+  $('sureSec').innerHTML = ''; SURELER.forEach(([ms, ad]) => { const b = document.createElement('button'); b.type = 'button'; b.textContent = ad; b.className = ms === SAKLAMA ? 'on' : '';
+    b.addEventListener('click', () => sureDegistir(ms)); $('sureSec').appendChild(b); });
+}
+async function sureDegistir(ms){
+  $('sureMenu').classList.remove('acik'); if (ms === SAKLAMA || !ben) return;
+  try { await R('ayar').set({ saklama: ms, kim: ben, ts: TS }); await sistemMesaji(ben + ' saklama süresini “' + sureAd(ms).toLocaleLowerCase('tr-TR') + '” yaptı'); }
+  catch (e) { yerelSistem(izinHatasi(e)); }
+}
+$('sureBtn').addEventListener('click', ev => { ev.stopPropagation(); $('sureMenu').classList.toggle('acik'); });
+document.addEventListener('click', ev => { if (!ev.target.closest('#sureMenu')) $('sureMenu').classList.remove('acik'); });
+R('ayar').on('value', s => { const v = s.val(); const yeni = v && typeof v.saklama === 'number' ? v.saklama : 3600000; ayarGeldi = true;
+  const degisti = yeni !== SAKLAMA; SAKLAMA = yeni; sureGoster(); if (degisti && ben) mesajDinle(); else kutu.querySelectorAll('[data-ts]').forEach(kalanYaz); }, () => { ayarGeldi = true; sureGoster(); });
+sureGoster();
 
+let mesajKapat = null;
 function mesajDinle(){
   if (mesajKapat) mesajKapat();
-  aktifSaat = saatBasi();
   kutu.innerHTML = ''; sonYazan = null; sonGun = null; $('yeniBtn').style.display = 'none';
-  const q = R('mesajlar').orderByChild('ts').startAt(aktifSaat).limitToLast(GECMIS);
-  const ekle = s => mesajEkle(s.val());
-  q.on('child_added', ekle, e => yerelSistem(izinHatasi(e)));
-  mesajKapat = () => { q.off('child_added', ekle); mesajKapat = null; };
+  let q = R('mesajlar').orderByChild('ts'); if (SAKLAMA) q = q.startAt(simdi() - SAKLAMA); q = q.limitToLast(GECMIS);
+  const ekle = s => mesajEkle(s.val(), s.key);
+  const cikar = s => { const e = kutu.querySelector('[data-k="' + s.key + '"]'); if (e) e.remove(); };
+  q.on('child_added', ekle, e => yerelSistem(izinHatasi(e))); q.on('child_removed', cikar);
+  mesajKapat = () => { q.off('child_added', ekle); q.off('child_removed', cikar); mesajKapat = null; };
   eskileriSil();
 }
 function eskileriSil(){
-  // önceki saatlerden kalan mesajları veritabanından siler (odada kim varsa o yapar)
-  R('mesajlar').orderByChild('ts').endAt(aktifSaat - 1).limitToFirst(500).once('value').then(s => {
+  // süresi dolan mesajları veritabanından siler (odada kim varsa o yapar)
+  if (!SAKLAMA) return;
+  R('mesajlar').orderByChild('ts').endAt(simdi() - SAKLAMA - 1).limitToFirst(200).once('value').then(s => {
     const u = {}; s.forEach(c => { u[c.key] = null; });
     if (Object.keys(u).length) return R('mesajlar').update(u);
   }).catch(() => {});
 }
-function sayacGuncelle(){
-  if (!ben) return;
-  const kalan = SAAT - simdi() % SAAT;
-  $('sayac').textContent = '🧹 ' + Math.ceil(kalan / 60000) + ' dk';
-  if (saatBasi() !== aktifSaat){
-    mesajDinle();
-    yerelSistem('Saat başı: sohbet temizlendi 🧹');
-  }
+async function mesajSil(key, el){
+  if (!confirm('Bu mesaj herkes için silinsin mi?')) return;
+  try { await R('mesajlar/' + key).remove(); if (el) el.remove(); }
+  catch (e) { yerelSistem(/permission/i.test(e.code || e.message || '') ? 'Bu mesajı silemezsin (yalnızca kendi mesajlarını, aynı cihazdan silebilirsin).' : izinHatasi(e)); }
 }
-setInterval(sayacGuncelle, 1000);
+let temizlikSay = 0;
+function sureKontrol(){
+  if (!ben) return;
+  const sinir = SAKLAMA ? simdi() - SAKLAMA : -Infinity;
+  kutu.querySelectorAll('[data-ts]').forEach(d => { if (+d.dataset.ts < sinir) { d.classList.add('gidiyor'); setTimeout(() => d.remove(), 450); } else kalanYaz(d); });
+  if (++temizlikSay % 2 === 0) eskileriSil();     // dakikada bir veritabanı temizliği
+}
+setInterval(sureKontrol, 30000);
 
 function dinle(){
   mesajDinle();
-  sayacGuncelle();
   kapat.push(() => { if (mesajKapat) mesajKapat(); });
 
   const ak = R('aktif');
@@ -489,7 +536,7 @@ async function ekGonder(file){
   const aciklama = metinIn.value.trim().slice(0, 500);
   gonderiliyor = true; $('ekBtn').disabled = true; $('ekBtn').textContent = '⏳';
   try{
-    const msg = { nick: ben, cid: CID, text: aciklama, ts: TS };
+    const msg = { nick: ben, cid: CID, text: aciklama, ts: TS, ...kim() };
     if (foto) msg.img = await fotoKucult(file);
     else msg.dosya = { ad: (file.name || 'dosya').slice(0, 120), boyut: file.size, veri: await dosyaOku(file) };
     metinIn.value = ''; yaziyorBitir();
@@ -530,7 +577,7 @@ $('yaz').addEventListener('submit', async e => {
   if (!metin || !ben) return;
   if (!hizKontrol()) return;
   metinIn.value = ''; yaziyorBitir();
-  try{ await R('mesajlar').push({ nick: ben, cid: CID, text: metin.slice(0,500), ts: TS }); }
+  try{ await R('mesajlar').push({ nick: ben, cid: CID, text: metin.slice(0,500), ts: TS, ...kim() }); }
   catch(err){ metinIn.value = metin; yerelSistem(izinHatasi(err)); }
 });
 
