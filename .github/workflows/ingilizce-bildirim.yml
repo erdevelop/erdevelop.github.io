@@ -1,0 +1,39 @@
+# İngilizce Kulübü · kelime bildirimleri
+# Her 15 dakikada bir çalışır; saati gelen kullanıcılara sıradaki kelimeyi gönderir.
+# Elle denemek için: Actions → "İngilizce kelime bildirimleri" → Run workflow → "Herkese şimdi gönder" işaretle.
+name: İngilizce kelime bildirimleri
+
+on:
+  schedule:
+    - cron: '*/15 * * * *'
+  workflow_dispatch:
+    inputs:
+      force:
+        description: 'Saate bakmadan herkese şimdi bir kelime gönder (deneme)'
+        type: boolean
+        default: false
+
+concurrency:
+  group: ingilizce-bildirim
+  cancel-in-progress: false
+
+permissions:
+  contents: read
+
+jobs:
+  gonder:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          sparse-checkout: .github/push
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+      - name: Kelimeleri gönder
+        run: node .github/push/send.mjs
+        env:
+          FIREBASE_SA: ${{ secrets.FIREBASE_SA }}
+          VAPID_PRIVATE: ${{ secrets.VAPID_PRIVATE }}
+          FORCE: ${{ inputs.force }}
