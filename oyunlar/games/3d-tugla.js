@@ -9,10 +9,11 @@ registerGame({
     const holder=E('div',{style:{textAlign:'center'}}); root.append(holder);
     const msg=E('div',{class:'g-msg'},'Rakete dokun/sürükle, başlatmak için dokun.'); root.append(msg);
 
-    // Zorluk: top hızı, raket genişliği, puan çarpanı
-    const DIFFS=[['Kolay',{bs:4.2,pw:4.4,mult:1}],
-                 ['Orta', {bs:5.2,pw:3.4,mult:1.3}],
-                 ['Zor',  {bs:6.4,pw:2.6,mult:1.7}]];
+    // Zorluk: top hızı (birim/kare), raket genişliği, puan çarpanı
+    // not: hareket bz+=vz*(dt/16) → vz birim/16ms. Saha derinliği ~20, bu yüzden 0.15–0.25 bandı gerçekçi.
+    const DIFFS=[['Kolay',{bs:0.15,pw:4.4,mult:1}],
+                 ['Orta', {bs:0.19,pw:3.4,mult:1.3}],
+                 ['Zor',  {bs:0.24,pw:2.6,mult:1.7}]];
     let diffIdx=1, D=DIFFS[1][1];
     const diffBar=E('div',{style:{display:'flex',gap:'8px',justifyContent:'center',margin:'6px 0'}});
     DIFFS.forEach((d,i)=>{ const b=E('button',{class:'g-btn ghost'},d[0]); b.onclick=()=>{ diffIdx=i; D=d[1]; paintDiff(); reset(); }; diffBar.append(b); });
