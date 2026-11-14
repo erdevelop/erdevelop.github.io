@@ -1,0 +1,170 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Cam Ağırlığı</title>
+<meta name="description" content="Cam ölçüsü ve katmanlarından alan, birim ağırlık ve toplam ağırlık.">
+<style>
+  :root { --bg: #f6f7f9; --panel: #fff; --fg: #1d232b; --mut: #667085; --ac: #2463b0; --line: #d9dee5; --err: #c0392b; }
+  @media (prefers-color-scheme: dark) {
+    :root { --bg: #0f141b; --panel: #171e27; --fg: #e6eaf0; --mut: #93a0b2; --ac: #e8b04a; --line: #2a3441; }
+  }
+  * { box-sizing: border-box; }
+  body { margin: 0; font: 16px/1.5 system-ui, sans-serif; background: var(--bg); color: var(--fg); }
+  main { max-width: 640px; margin: 0 auto; padding: 16px; }
+  .kart { background: var(--panel); border: 1px solid var(--line); border-radius: 10px; padding: 16px; margin-bottom: 16px; }
+  .alanlar { display: grid; grid-template-columns: repeat(auto-fit, minmax(140px, 1fr)); gap: 12px; }
+  label { display: block; font-size: .85rem; color: var(--mut); }
+  input { width: 100%; padding: 8px 10px; font: inherit; color: inherit; background: var(--bg);
+          border: 1px solid var(--line); border-radius: 6px; }
+  input:focus { outline: 2px solid var(--ac); }
+  .sonuc { display: grid; grid-template-columns: 1fr auto; gap: 6px 16px; }
+  .sonuc b { text-align: right; font-variant-numeric: tabular-nums; }
+  .buyuk { font-size: 1.6rem; color: var(--ac); }
+  .hata { color: var(--err); min-height: 1.5em; }
+  button { padding: 8px 14px; font: inherit; border: 1px solid var(--ac); border-radius: 6px;
+           background: none; color: var(--ac); cursor: pointer; }
+  table { width: 100%; border-collapse: collapse; }
+  td, th { padding: 6px; border-bottom: 1px solid var(--line); text-align: right; }
+  td:first-child, th:first-child { text-align: left; }
+  @media print { button, .yok-baski { display: none; } .kart { border: 0; } }
+</style>
+</head>
+<body>
+<main>
+  <h1>Cam Ağırlığı</h1>
+
+  <section class="kart">
+    <div class="alanlar">
+      <div><label for="en">En (mm)</label><input id="en" type="number" min="1" value="1500" inputmode="decimal"></div>
+      <div><label for="boy">Boy (mm)</label><input id="boy" type="number" min="1" value="2500" inputmode="decimal"></div>
+      <div><label for="katman">Katmanlar (mm)</label><input id="katman" type="text" value="8+6"></div>
+      <div><label for="adet">Adet</label><input id="adet" type="number" min="1" step="1" value="1"></div>
+    </div>
+    <p class="hata" id="hata" role="alert"></p>
+  </section>
+
+  <section class="kart" aria-live="polite">
+    <div class="sonuc">
+      <span>Alan</span><b id="alan">–</b>
+      <span>Toplam cam kalınlığı</span><b id="kalinlik">–</b>
+      <span>Birim ağırlık</span><b id="birim">–</b>
+      <span>Bir cam</span><b id="tek">–</b>
+      <span>Toplam</span><b id="toplam" class="buyuk">–</b>
+    </div>
+  </section>
+
+  <section class="kart yok-baski">
+    <button id="kaydet">Listeye ekle</button>
+    <button id="paylas">Bağlantıyı kopyala</button>
+    <button id="csv">CSV indir</button>
+    <button onclick="print()">Yazdır</button>
+  </section>
+
+  <section class="kart">
+    <table>
+      <thead><tr><th>Ölçü</th><th>Katman</th><th>Adet</th><th>kg</th></tr></thead>
+      <tbody id="liste"></tbody>
+    </table>
+  </section>
+</main>
+
+<script>
+  const YOGUNLUK = 2.5; // kg/m² her 1 mm cam için
+
+  const $ = (id) => document.getElementById(id);
+  const sayi = (s) => parseFloat(String(s).replace(",", "."));
+  const bicim = (x, ondalik = 1) => x.toLocaleString("tr-TR", { minimumFractionDigits: ondalik, maximumFractionDigits: ondalik });
+
+  function katmanlar(metin) {
+    return metin.split("+").map(sayi);
+  }
+
+  function hesapla(en, boy, kat, adet) {
+    const alan = (en / 1000) * (boy / 1000);           // m²
+    const kalinlik = kat.reduce((a, b) => a + b, 0);    // mm
+    const birim = kalinlik * YOGUNLUK;                  // kg/m²
+    const tek = alan * birim;                           // kg
+    return { alan, kalinlik, birim, tek, toplam: tek * adet };
+  }
+
+  function oku() {
+    return { en: sayi($("en").value), boy: sayi($("boy").value),
+             kat: katmanlar($("katman").value), adet: sayi($("adet").value) };
+  }
+
+  function guncelle() {
+    const g = oku();
+    const hatalar = [];
+    if (!(g.en > 0)) hatalar.push("En pozitif bir sayı olmalı.");
+    if (!(g.boy > 0)) hatalar.push("Boy pozitif bir sayı olmalı.");
+    if (g.kat.some((k) => !(k > 0))) hatalar.push("Katmanları 8+6 gibi yaz.");
+    if (!(g.adet >= 1)) hatalar.push("Adet en az 1 olmalı.");
+    $("hata").textContent = hatalar.join(" ");
+    if (hatalar.length) return null;
+
+    const s = hesapla(g.en, g.boy, g.kat, g.adet);
+    $("alan").textContent = bicim(s.alan, 2) + " m²";
+    $("kalinlik").textContent = bicim(s.kalinlik, 0) + " mm";
+    $("birim").textContent = bicim(s.birim) + " kg/m²";
+    $("tek").textContent = bicim(s.tek) + " kg";
+    $("toplam").textContent = bicim(s.toplam) + " kg";
+    return { ...g, ...s };
+  }
+
+  // Liste ve kayıt
+  const ANAHTAR = "cam-agirligi-liste";
+  let liste = [];
+  try { liste = JSON.parse(localStorage.getItem(ANAHTAR)) || []; } catch (e) { liste = []; }
+
+  function listeyiCiz() {
+    $("liste").innerHTML = "";
+    for (const r of liste) {
+      const tr = document.createElement("tr");
+      for (const h of [`${r.en} × ${r.boy}`, r.katman, r.adet, bicim(r.toplam)]) {
+        const td = document.createElement("td");
+        td.textContent = h;
+        tr.append(td);
+      }
+      $("liste").append(tr);
+    }
+  }
+
+  $("kaydet").addEventListener("click", () => {
+    const s = guncelle();
+    if (!s) return;
+    liste.push({ en: s.en, boy: s.boy, katman: $("katman").value, adet: s.adet, toplam: s.toplam });
+    try { localStorage.setItem(ANAHTAR, JSON.stringify(liste)); } catch (e) {}
+    listeyiCiz();
+  });
+
+  $("csv").addEventListener("click", () => {
+    const satirlar = [["en", "boy", "katman", "adet", "kg"], ...liste.map((r) => [r.en, r.boy, r.katman, r.adet, r.toplam.toFixed(1)])];
+    const metin = satirlar.map((s) => s.join(";")).join("\n");
+    const blob = new Blob(["﻿" + metin], { type: "text/csv;charset=utf-8" });
+    const a = document.createElement("a");
+    a.href = URL.createObjectURL(blob);
+    a.download = "cam-agirligi.csv";
+    a.click();
+    URL.revokeObjectURL(a.href);
+  });
+
+  // Paylaşılabilir bağlantı: ?en=1500&boy=2500&katman=8%2B6&adet=1
+  const p = new URLSearchParams(location.search);
+  for (const k of ["en", "boy", "katman", "adet"]) if (p.has(k)) $(k).value = p.get(k);
+
+  $("paylas").addEventListener("click", async () => {
+    const q = new URLSearchParams();
+    for (const k of ["en", "boy", "katman", "adet"]) q.set(k, $(k).value);
+    const url = location.origin + location.pathname + "?" + q;
+    try { await navigator.clipboard.writeText(url); $("hata").textContent = "Bağlantı kopyalandı."; }
+    catch (e) { prompt("Bağlantı:", url); }
+  });
+
+  document.querySelectorAll("input").forEach((el) => el.addEventListener("input", guncelle));
+  guncelle();
+  listeyiCiz();
+</script>
+</body>
+</html>

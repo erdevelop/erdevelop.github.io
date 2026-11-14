@@ -1,0 +1,1338 @@
+<!doctype html>
+<html lang="tr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>SQL ve Veri · 7 günlük program | erdevelop</title>
+<meta name="description" content="Mühendisler için bol şemalı 7 günlük SQL eğitimi: tablolar ve SQLite, SELECT ve WHERE, GROUP BY ile özet, JOIN ile ilişkiler, UPDATE, işlemler ve kısıtlar, CTE ve pencere fonksiyonlarıyla hakediş hesabı, Python ve Excel'e rapor. Örnek cephe veritabanıyla.">
+<link rel="icon" href="/favicon.svg" type="image/svg+xml">
+<link rel="icon" href="/favicon.ico" sizes="any">
+<link rel="apple-touch-icon" href="/apple-touch-icon.png">
+<link rel="manifest" href="/manifest.webmanifest">
+<meta name="theme-color" content="#0b1220">
+<meta property="og:title" content="SQL ve Veri · 7 günlük program | erdevelop">
+<meta property="og:description" content="Şemalar ve gerçek sorgu sonuçlarıyla 7 günde SQL: cephe projeleri, camlar, siparişler ve hakedişler üzerinden.">>>>>>>>
+<meta property="og:url" content="https://erdevelop.github.io/egitimler/sql-veri/">
+<meta property="og:image" content="https://erdevelop.github.io/og.png">
+<meta name="twitter:card" content="summary_large_image">
+<link rel="canonical" href="https://erdevelop.github.io/egitimler/sql-veri/">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Chakra+Petch:wght@600;700&family=IBM+Plex+Sans:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500&display=swap">
+<style>
+  :root {
+    --bg: #eef2f6; --panel: #ffffff; --panel-2: #f5f7f9; --grid: #e3e8ed; --line: #cfd8e1;
+    --fg: #1c2833; --text: #45535f; --muted: #74838f; --accent: #2f6fb5; --accent-dim: rgba(47,111,181,.12); --hot: #c8731f; --ok: #2e8b57;
+    --f-display: 'Chakra Petch', 'Segoe UI', sans-serif; --f-body: 'IBM Plex Sans', 'Segoe UI', system-ui, sans-serif; --f-mono: 'IBM Plex Mono', Consolas, monospace;
+    color-scheme: light;
+  }
+  :root[data-mode="dark"] {
+    --bg: #0b1220; --panel: #111a2c; --panel-2: #0e1626; --grid: #182338; --line: #22304a;
+    --fg: #e2e8f2; --text: #a8b6cc; --muted: #73829b; --accent: #f2b33d; --accent-dim: rgba(242,179,61,.14); --hot: #6aa8ff; --ok: #5fc48d;
+    color-scheme: dark;
+  }
+  * { box-sizing: border-box; }
+  html { background: var(--bg); scroll-padding-top: 110px; }
+  body { margin: 0; color: var(--fg); font-family: var(--f-body); font-size: 16px; line-height: 1.65;
+    background-image: linear-gradient(var(--grid) 1px, transparent 1px), linear-gradient(90deg, var(--grid) 1px, transparent 1px); background-size: 80px 80px; background-attachment: fixed; }
+  a { color: var(--accent); }
+  :focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+  .wrap { max-width: 920px; margin: 0 auto; padding-left: max(16px, env(safe-area-inset-left, 0px)); padding-right: max(16px, env(safe-area-inset-right, 0px)); }
+
+  .topbar { position: sticky; top: 0; z-index: 20; background: color-mix(in srgb, var(--bg) 92%, transparent); backdrop-filter: blur(6px); border-bottom: 1px solid var(--line); }
+  .topbar .wrap { display: flex; align-items: center; gap: 12px; padding-block: 10px; max-width: 1160px; }
+  .brand { font: 700 15px var(--f-display); letter-spacing: 1px; text-transform: uppercase; text-decoration: none; color: var(--fg); }
+  .brand span { color: var(--accent); }
+  .crumb { font: 400 12px var(--f-mono); color: var(--muted); }
+  .sp { flex: 1; }
+  .tb { font: 500 12px var(--f-mono); color: var(--accent); padding: 6px 10px; border: 1px solid var(--line); border-radius: 4px; background: none; cursor: pointer; text-transform: uppercase; text-decoration: none; }
+  .tb:hover { border-color: var(--accent); }
+  .daynav { border-top: 1px solid var(--line); }
+  .daynav .wrap { display: flex; gap: 6px; padding-block: 8px; overflow-x: auto; max-width: 1160px; }
+  .daynav a { font: 500 12px var(--f-mono); text-decoration: none; color: var(--text); border: 1px solid var(--line); border-radius: 4px; padding: 4px 10px; white-space: nowrap; background: var(--panel); }
+  .daynav a.on { border-color: var(--accent); color: var(--accent); }
+  .daynav a.done { background: var(--accent-dim); }
+
+  header.head { padding-block: 34px 6px; }
+  .kicker { font: 500 12px var(--f-mono); color: var(--accent); letter-spacing: 1px; }
+  .head h1 { font: 700 clamp(2rem, 6vw, 3rem)/1.05 var(--f-display); margin: 6px 0 0; letter-spacing: -.5px; }
+  .head p.lead { margin: 12px 0 0; color: var(--text); max-width: 64ch; font-size: 1.05rem; }
+  .chips { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 16px; }
+  .chips span { font: 400 12px var(--f-mono); color: var(--muted); border: 1px solid var(--line); border-radius: 4px; padding: 3px 8px; background: var(--panel); }
+
+  .card { background: var(--panel); border: 1px solid var(--line); border-radius: 8px; padding: 22px clamp(16px, 4vw, 30px); margin-top: 28px; }
+  .day-head { display: flex; align-items: baseline; gap: 12px; flex-wrap: wrap; border-bottom: 1px solid var(--line); padding-bottom: 12px; margin-bottom: 6px; }
+  .day-head h2, .card > h2 { font: 700 1.45rem/1.2 var(--f-display); margin: 0; letter-spacing: .2px; }
+  .dn { font: 600 12px var(--f-mono); color: var(--panel); background: var(--accent); border-radius: 3px; padding: 2px 7px; }
+  :root[data-mode="dark"] .dn { color: #1a1204; }
+  .day-head .meta { font: 400 12px var(--f-mono); color: var(--muted); margin-left: auto; }
+  section.day { background: var(--panel); border: 1px solid var(--line); border-radius: 8px; padding: 22px clamp(16px, 4vw, 30px); margin-top: 28px; }
+
+  .prose h3 { font: 700 1.12rem/1.3 var(--f-display); margin: 30px 0 8px; letter-spacing: .2px; }
+  .prose p, .prose li { color: var(--text); }
+  .prose strong { color: var(--fg); font-weight: 600; }
+  .prose ol, .prose ul { padding-left: 1.4em; }
+  .prose li { margin: 4px 0; }
+  .prose li > ul, .prose li > ol { margin: 4px 0; }
+  .prose code { font: 400 .86em var(--f-mono); background: var(--panel-2); border: 1px solid var(--line); border-radius: 3px; padding: 1px 5px; color: var(--fg); overflow-wrap: anywhere; }
+  .tw { overflow-x: auto; margin: 14px 0; border: 1px solid var(--line); border-radius: 6px; }
+  .tw table { border-collapse: collapse; width: 100%; font-size: .9rem; }
+  .tw th, .tw td { text-align: left; padding: 8px 12px; border-bottom: 1px solid var(--line); vertical-align: top; }
+  .tw th { font: 600 12px var(--f-mono); color: var(--muted); background: var(--panel-2); }
+  .card .tw td:first-child, .card .tw td:last-child { white-space: nowrap; }
+  .tw tr:last-child td { border-bottom: 0; }
+  ul.tasks { list-style: none; padding-left: 0; }
+  li.task label { display: flex; gap: 10px; align-items: flex-start; cursor: pointer; padding: 4px 0; }
+  li.task input { width: 18px; height: 18px; margin-top: 4px; accent-color: var(--accent); flex: none; }
+  li.task input:checked + span { color: var(--muted); text-decoration: line-through; }
+  .pn { display: flex; justify-content: space-between; gap: 12px; margin-top: 26px; padding-top: 14px; border-top: 1px solid var(--line); font: 500 13px var(--f-mono); }
+  .pn a { text-decoration: none; }
+  .note { font-size: .9rem; color: var(--muted); }
+  .reset { font: 500 11px var(--f-mono); color: var(--muted); background: none; border: 1px solid var(--line); border-radius: 4px; padding: 3px 8px; cursor: pointer; text-transform: uppercase; }
+  .reset:hover { color: var(--hot); border-color: var(--hot); }
+
+  .fig { margin: 18px 0; padding: 16px 14px 12px; border: 1px solid var(--line); border-radius: 6px; background: var(--panel-2); }
+  .fig .sc { overflow-x: auto; }
+  .fig svg { display: block; width: 100%; min-width: 540px; height: auto; max-width: 720px; margin: 0 auto; overflow: visible; }
+  .fig figcaption { font-size: .85rem; color: var(--muted); margin-top: 10px; text-align: center; max-width: 62ch; margin-inline: auto; }
+  .fig .k { fill: none; stroke: var(--fg); stroke-width: 1.6; } .fig .k1 { fill: none; stroke: var(--fg); stroke-width: 1; }
+  .fig .mu { fill: none; stroke: var(--muted); stroke-width: 1.2; } .fig .mud { fill: none; stroke: var(--muted); stroke-width: 1; stroke-dasharray: 5 4; }
+  .fig .dm { fill: none; stroke: var(--muted); stroke-width: .9; }
+  .fig .rp { fill: none; stroke: var(--hot); stroke-width: 1; stroke-dasharray: 9 4 2 4; }
+  .fig .gd { fill: none; stroke: var(--fg); stroke-width: 1; stroke-dasharray: 16 4 3 4; }
+  .fig .ac { fill: none; stroke: var(--accent); stroke-width: 2; } .fig .acl { fill: none; stroke: var(--accent); stroke-width: 1; }
+  .fig .gl { fill: var(--accent-dim); stroke: var(--fg); stroke-width: .8; }
+  .fig .sp { fill: color-mix(in srgb, var(--fg) 40%, transparent); stroke: var(--fg); stroke-width: .8; }
+  .fig .fr { fill: color-mix(in srgb, var(--fg) 22%, transparent); stroke: none; } .fig .edge { fill: none; stroke: var(--fg); stroke-width: 1.8; }
+  .fig .so { fill: var(--panel); stroke: var(--fg); stroke-width: 1.6; } .fig .hole { fill: var(--panel-2); stroke: var(--fg); stroke-width: 1.2; }
+  .fig .rib { fill: var(--accent-dim); stroke: var(--accent); stroke-width: 1.4; stroke-dasharray: 6 4; }
+  .fig .sel { fill: none; stroke: var(--accent); stroke-width: 3; }
+  .fig .mul { stroke: var(--fg); stroke-width: 4; } .fig .tr { stroke: var(--fg); stroke-width: 3; } .fig .trA { stroke: var(--accent); stroke-width: 3; }
+  .fig .lh { fill: var(--panel); stroke: var(--fg); stroke-width: 1.4; }
+  .fig .dot { fill: var(--accent); } .fig .dotr { fill: var(--accent); stroke: var(--panel); stroke-width: 1; }
+  .fig .pt { fill: var(--accent); stroke: var(--panel); stroke-width: 2; } .fig .tpt { fill: var(--panel); font: 700 12px var(--f-mono); }
+  .fig .bx { fill: var(--panel); stroke: var(--line); stroke-width: 1.3; } .fig .bxa { fill: var(--accent-dim); stroke: var(--accent); stroke-width: 1.3; }
+  .fig .ar { fill: var(--muted); }
+  .fig .acd { fill: none; stroke: var(--accent); stroke-width: 1.6; stroke-dasharray: 6 4; }
+  .fig text { text-transform: none; letter-spacing: 0; } .fig .bg { fill: var(--panel); stroke: none; }
+  .fig .t { fill: var(--text); font: 400 13px var(--f-body); } .fig .tb { fill: var(--fg); font: 600 13px var(--f-body); }
+  .fig .tm { fill: var(--muted); font: 400 11px var(--f-mono); } .fig .ta { fill: var(--accent); font: 600 11px var(--f-mono); }
+  .fig .th { fill: var(--hot); font: 500 11px var(--f-mono); }
+  .fig .swb { fill: none; stroke: #2f7de1; stroke-width: 2; } .fig .swr { fill: none; stroke: #d64545; stroke-width: 2; } .fig .tr2 { fill: #d64545; font: 600 11px var(--f-mono); } .fig .tbl { fill: #2f7de1; font: 600 11px var(--f-mono); }
+  .prose pre { background: var(--panel-2); border: 1px solid var(--line); border-radius: 6px; padding: 12px 14px; overflow-x: auto; }
+  .prose pre code { background: none; border: 0; padding: 0; font: 400 .85rem/1.5 var(--f-mono); color: var(--fg); }
+  footer { margin-top: 56px; border-top: 1px solid var(--line); padding-block: 20px calc(20px + env(safe-area-inset-bottom, 0px)); font: 400 12px var(--f-mono); color: var(--muted); }
+  footer .wrap { display: flex; justify-content: space-between; gap: 12px; flex-wrap: wrap; }
+  footer a { color: inherit; } footer a:hover { color: var(--accent); }
+  @media print { .topbar, .daynav, .pn, footer, .reset { display: none !important; } body { background: #fff; } section.day, .card { break-inside: auto; border: 0; } }
+</style>
+<script async src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-4775308844679394" crossorigin="anonymous"></script>
+</head>
+<body>
+<div class="topbar">
+  <div class="wrap">
+    <a class="brand" href="/">erdevelop<span>_</span></a>
+    <span class="crumb">/ eğitimler / sql-veri</span>
+    <span class="sp"></span>
+    <a class="tb" href="../../Tools.html">Araçlar</a>
+    <button class="tb" type="button" id="modeBtn">DARK</button>
+  </div>
+  <nav class="daynav" aria-label="Günler"><div class="wrap"><a href="#genel" data-nav="0">Genel</a><a href="#gun1" data-nav="1">1</a><a href="#gun2" data-nav="2">2</a><a href="#gun3" data-nav="3">3</a><a href="#gun4" data-nav="4">4</a><a href="#gun5" data-nav="5">5</a><a href="#gun6" data-nav="6">6</a><a href="#gun7" data-nav="7">7</a></div></nav>
+</div>
+
+<main class="wrap">
+  <header class="head" id="genel">
+    <div class="kicker">Yazılım · SQL ve Veri</div>
+    <h1>SQL ve Veri</h1>
+    <p class="lead">Verini düzenli, güvenilir ve sorgulanabilir tutmak için 7 günlük, bol şemalı bir SQL programı. Tablolardan sorgulara, özetlerden ilişkilere, veri kalitesinden pencere fonksiyonlarına ve Python ile Excel raporlarına kadar; hepsi projeler, camlar, tedarikçiler, siparişler ve hakedişlerden oluşan örnek bir cephe veritabanı üzerinde. Her sorgunun sonucu sayfada.</p>
+    <div class="chips"><span>7 gün</span><span>günde ~4 saat</span><span>Türkçe</span><span>Kod örnekleri kopyalanabilir</span></div>
+  </header>
+
+  <div class="card">
+    <h2>Başlamadan önce</h2>
+    <div class="prose">
+      <h3>Kimler için</h3>
+      <p>Excel'de büyüyen listelerle uğraşan mühendisler, proje ve satın alma ekipleri, kendi programına veritabanı eklemek isteyenler. Ön bilgi gerekmez.</p>
+      <h3>Gerekenler</h3>
+      <ul>
+        <li>DB Browser for SQLite (ücretsiz).</li>
+        <li>Örnek veritabanı: ornek/cephe.db ya da ornek/cephe.sql (kurs sayfasının yanında).</li>
+      </ul>
+      <h3>Program</h3>
+      <div class="tw"><table><thead><tr><th>Gün</th><th>Konu</th><th>Ne öğrenirsin</th><th>Süre</th></tr></thead><tbody>
+<tr><td><a href="#gun1">1. gün</a></td><td>Veri ve tablolar</td><td>Excel ve veritabanı, tablo, satır, sütun, tipler, birincil anahtar, SQLite araçları, CREATE ve INSERT</td><td>~4 saat</td></tr>
+<tr><td><a href="#gun2">2. gün</a></td><td>Sorgulamak</td><td>SELECT, WHERE, ORDER BY, LIMIT, hesaplı sütunlar, tam sayı bölmesi, LIKE, IN, NULL</td><td>~4 saat</td></tr>
+<tr><td><a href="#gun3">3. gün</a></td><td>Özetlemek</td><td>COUNT, SUM, AVG, ağırlıklı ortalama, GROUP BY, HAVING, sorgu çalışma sırası</td><td>~4 saat</td></tr>
+<tr><td><a href="#gun4">4. gün</a></td><td>İlişkiler</td><td>Yabancı anahtar, normalleştirme, INNER JOIN, üç tablo, LEFT JOIN</td><td>~4 saat</td></tr>
+<tr><td><a href="#gun5">5. gün</a></td><td>Veriyi değiştirmek</td><td>UPDATE, DELETE, işlemler, kısıtlar, CSV içe aktarma ve temizlik</td><td>~4 saat</td></tr>
+<tr><td><a href="#gun6">6. gün</a></td><td>İleri sorgular</td><td>Alt sorgu, WITH, CASE, pencere fonksiyonları ve hakediş, VIEW, INDEX</td><td>~4 saat</td></tr>
+<tr><td><a href="#gun7">7. gün</a></td><td>Kodla veri</td><td>Python ve parametreli sorgu, pandas ve Excel, veritabanı tasarımı, büyük motorlar</td><td>~4 saat</td></tr>
+      </tbody></table></div>
+      <p class="note">Her günün sonunda bir kontrol listesi var. İşaretledikçe ilerlemen bu tarayıcıda saklanır. Hafta içi sadece akşamları çalışırsan program yaklaşık iki hafta sürer. Sorgular SQLite'ta çalıştırılıp sonuçları kontrol edilmiştir; PostgreSQL, SQL Server ve MySQL'de küçük yazım farkları olabilir. <button class="reset" type="button" id="resetBtn">ilerlemeyi sıfırla</button></p>
+    </div>
+  </div>
+
+<section class="day" id="gun1" data-day="1">
+  <div class="day-head"><span class="dn">GÜN 01</span><h2>Veri ve tablolar</h2><span class="meta">~4 saat · <span data-prog="1">0/5</span> kontrol</span></div>
+  <div class="prose"><h3>Hedef</h3>
+<p>Gün sonunda veritabanının ne olduğunu, Excel'den farkını, tablo, satır, sütun, veri tipi ve birincil anahtar kavramlarını bilecek; SQLite ile ilk tablonu oluşturup veri ekleyebileceksin. Süre yaklaşık 4 saat.</p>
+<p><strong>Bu kurs hakkında:</strong> SQL'i bir cephe şirketinin verileri üzerinden öğretir: projeler, camlar, tedarikçiler, siparişler ve hakedişler. Bütün sorgular kursun örnek veritabanında çalıştırılıp sonuçları kontrol edilmiştir. Örnek dosyalar: <a href="ornek/cephe.sql">cephe.sql</a> (tabloları oluşturan betik) ve <a href="ornek/cephe.db">cephe.db</a> (hazır veritabanı). Kurs, kurulumu en kolay veritabanı olan <strong>SQLite</strong>'ı kullanır; öğrendiğin SQL'in büyük kısmı PostgreSQL, SQL Server ve MySQL'de de aynıdır.</p>
+<h3>1. Neden veritabanı? (45 dk)</h3>
+<figure class="fig"><div class="sc"><svg viewBox="0 0 650 124" role="img" xmlns="http://www.w3.org/2000/svg"><defs><marker id="ah-excel_db" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0 0L10 5L0 10z" class="ar"/></marker></defs><rect x="10" y="30" width="190" height="50" rx="5" class="bx"/><text x="105.0" y="51.0" class="tb" text-anchor="middle">Excel</text><text x="105.0" y="67.0" class="tm" text-anchor="middle">hesap, sunum</text><rect x="220" y="30" width="190" height="50" rx="5" class="bxa"/><text x="315.0" y="51.0" class="tb" text-anchor="middle">Veritabanı</text><text x="315.0" y="67.0" class="tm" text-anchor="middle">veri: tip, kural, ilişki</text><rect x="430" y="30" width="190" height="50" rx="5" class="bx"/><text x="525.0" y="51.0" class="tb" text-anchor="middle">Rapor</text><text x="525.0" y="67.0" class="tm" text-anchor="middle">Excel / Python</text><text x="320" y="110" class="ta" text-anchor="middle">veri veritabanında, rapor Excel'de</text></svg></div><figcaption>Excel ve veritabanı birlikte: veri veritabanında güvenilir durur, rapor Excel&#x27;de hazırlanır.</figcaption></figure>
+<div class="tw"><table>
+<thead>
+<tr>
+<th>Excel</th>
+<th>Veritabanı</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Herkes her hücreye her şeyi yazabilir</td>
+<td>Her sütunun tipi ve kuralı vardır (sayı, zorunlu, pozitif)</td>
+</tr>
+<tr>
+<td>Aynı bilgi birçok sayfada kopyalanır</td>
+<td>Her bilgi bir kez, bir yerde tutulur; tablolar birbirine bağlanır</td>
+</tr>
+<tr>
+<td>Birkaç yüz bin satırda yavaşlar</td>
+<td>Milyonlarca satırda hızlıdır</td>
+</tr>
+<tr>
+<td>Aynı anda tek kişi düzenler</td>
+<td>Birçok kişi ve program aynı anda kullanır</td>
+</tr>
+<tr>
+<td>Formüller hücrelere dağılmıştır</td>
+<td>Sorgular (SQL) ayrı, okunur ve tekrar kullanılabilir</td>
+</tr>
+</tbody>
+</table></div>
+<p>Excel, hesap ve sunum için harikadır. Veritabanı, <strong>verinin kendisini</strong> düzenli ve güvenilir tutmak içindir. İkisi birlikte iyi çalışır: veri veritabanında, rapor Excel'de (7. gün).</p>
+<h3>2. Temel kavramlar (1 saat)</h3>
+<figure class="fig"><div class="sc"><svg viewBox="0 0 650 150" role="img" xmlns="http://www.w3.org/2000/svg"><defs><marker id="ah-tablo" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0 0L10 5L0 10z" class="ar"/></marker></defs><rect x="20" y="20" width="350" height="108" class="bx"/><text x="26" y="34" class="tb" text-anchor="start">camlar</text><text x="26" y="54" class="ta" text-anchor="start">id</text><text x="96" y="54" class="tm" text-anchor="start">poz</text><text x="166" y="54" class="tm" text-anchor="start">en</text><text x="236" y="54" class="tm" text-anchor="start">boy</text><text x="306" y="54" class="tm" text-anchor="start">adet</text><line x1="20" y1="60" x2="370" y2="60" class="mud"/><text x="26" y="78" class="tm" text-anchor="start">1</text><text x="96" y="78" class="tm" text-anchor="start">C-01</text><text x="166" y="78" class="tm" text-anchor="start">1500</text><text x="236" y="78" class="tm" text-anchor="start">2500</text><text x="306" y="78" class="tm" text-anchor="start">120</text><rect x="22" y="85" width="346" height="20" class="gl"/><text x="26" y="100" class="tm" text-anchor="start">2</text><text x="96" y="100" class="tm" text-anchor="start">C-02</text><text x="166" y="100" class="tm" text-anchor="start">1500</text><text x="236" y="100" class="tm" text-anchor="start">900</text><text x="306" y="100" class="tm" text-anchor="start">60</text><text x="26" y="122" class="tm" text-anchor="start">3</text><text x="96" y="122" class="tm" text-anchor="start">C-03</text><text x="166" y="122" class="tm" text-anchor="start">1200</text><text x="236" y="122" class="tm" text-anchor="start">2500</text><text x="306" y="122" class="tm" text-anchor="start">24</text><text x="400" y="60" class="tm" text-anchor="start">sütun: bir özellik, bir tip</text><text x="400" y="90" class="tm" text-anchor="start">satır: bir kayıt</text><text x="400" y="120" class="ta" text-anchor="start">id: birincil anahtar</text></svg></div><figcaption>Tablo, satır, sütun ve birincil anahtar.</figcaption></figure>
+<ol>
+<li><strong>Tablo:</strong> Bir tür şeyin listesi: projeler, camlar, siparişler.</li>
+<li><strong>Satır (kayıt):</strong> Tek bir şey: bir proje, bir cam pozu.</li>
+<li><strong>Sütun (alan):</strong> Bir özellik: en, boy, adet. Her sütunun bir <strong>tipi</strong> vardır.</li>
+<li><strong>Birincil anahtar (PRIMARY KEY):</strong> Her satırı benzersiz tanımlayan sütun, genellikle <code>id</code>.</li>
+</ol>
+<p>SQLite'ın temel tipleri:</p>
+<div class="tw"><table>
+<thead>
+<tr>
+<th>Tip</th>
+<th>İçerik</th>
+<th>Örnek</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>INTEGER</td>
+<td>Tam sayı</td>
+<td>en = 1500</td>
+</tr>
+<tr>
+<td>REAL</td>
+<td>Ondalıklı sayı</td>
+<td>tutar = 42000.0</td>
+</tr>
+<tr>
+<td>TEXT</td>
+<td>Metin, tarih (<code>'2026-03-10'</code>)</td>
+<td>poz = 'C-01'</td>
+</tr>
+<tr>
+<td>NULL</td>
+<td>Bilinmiyor / boş</td>
+<td>teslim = NULL</td>
+</tr>
+</tbody>
+</table></div>
+<p><strong>Tarih ipucu:</strong> Tarihleri <code>YYYY-AA-GG</code> biçiminde metin olarak sakla. Bu biçim alfabetik sıralamayla doğru sıralanır.</p>
+<h3>3. Araçlar (30 dk)</h3>
+<figure class="fig"><div class="sc"><svg viewBox="0 0 650 124" role="img" xmlns="http://www.w3.org/2000/svg"><defs><marker id="ah-araclar" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0 0L10 5L0 10z" class="ar"/></marker></defs><rect x="10" y="30" width="190" height="50" rx="5" class="bxa"/><text x="105.0" y="51.0" class="tb" text-anchor="middle">DB Browser</text><text x="105.0" y="67.0" class="tm" text-anchor="middle">görsel · önerilen</text><rect x="220" y="30" width="190" height="50" rx="5" class="bx"/><text x="315.0" y="51.0" class="tb" text-anchor="middle">sqlite3</text><text x="315.0" y="67.0" class="tm" text-anchor="middle">komut satırı</text><rect x="430" y="30" width="190" height="50" rx="5" class="bx"/><text x="525.0" y="51.0" class="tb" text-anchor="middle">Python</text><text x="525.0" y="67.0" class="tm" text-anchor="middle">import sqlite3</text><text x="320" y="110" class="tm" text-anchor="middle">veritabanı = tek dosya (cephe.db); yedek = kopyala</text></svg></div><figcaption>SQLite ile çalışmanın üç yolu.</figcaption></figure>
+<ol>
+<li><strong>DB Browser for SQLite:</strong> Ücretsiz, görsel. Veritabanı aç, tabloları gör, "SQL Çalıştır" sekmesinde sorgu yaz. <strong>Bu kurs için önerilen araç.</strong></li>
+<li><strong>sqlite3 komut satırı:</strong> <code>sqlite3 cephe.db</code></li>
+<li><strong>Python:</strong> <code>import sqlite3</code>, ek kurulum gerekmez (7. gün).</li>
+</ol>
+<p>Veritabanı <strong>tek bir dosyadır</strong> (<code>cephe.db</code>). Yedeklemek için dosyayı kopyalaman yeter.</p>
+<h3>4. İlk tablo (1 saat)</h3>
+<pre><code class="language-sql">CREATE TABLE projeler (
+  id         INTEGER PRIMARY KEY,
+  kod        TEXT NOT NULL UNIQUE,
+  ad         TEXT NOT NULL,
+  sehir      TEXT,
+  baslangic  TEXT            -- YYYY-AA-GG
+);
+
+INSERT INTO projeler (id, kod, ad, sehir, baslangic) VALUES
+  (1, 'P101', 'Ofis Kulesi',      'İstanbul', '2026-02-01'),
+  (2, 'P102', 'Hastane Ek Bina',  'Ankara',   '2026-04-15'),
+  (3, 'P103', 'Otel Cephesi',     'İzmir',    '2026-06-01');
+
+SELECT * FROM projeler;
+</code></pre>
+<div class="tw"><table>
+<thead>
+<tr>
+<th>Yazım kuralı</th>
+<th></th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Komutlar <code>;</code> ile biter</td>
+<td></td>
+</tr>
+<tr>
+<td>Metin tek tırnak içinde: <code>'P101'</code></td>
+<td>Çift tırnak sütun adları içindir</td>
+</tr>
+<tr>
+<td><code>--</code> ile başlayan satır yorumdur</td>
+<td></td>
+</tr>
+<tr>
+<td>SQL anahtar kelimeleri büyük harfle yazılır (gelenek, zorunlu değil)</td>
+<td></td>
+</tr>
+</tbody>
+</table></div>
+<p><strong>Alıştırma:</strong> DB Browser'da yeni bir veritabanı oluştur, <code>cephe.sql</code>'in tamamını "SQL Çalıştır" sekmesine yapıştırıp çalıştır, sonra "Veriyi Gözat" sekmesinde beş tabloya bak.</p>
+<h3>Gün sonu kontrolü (15 dk)</h3>
+<ul class="tasks">
+<li class="task"><label><input type="checkbox" data-id="g1-1"><span>Veritabanının Excel'den farklarını biliyorum.</span></label></li>
+<li class="task"><label><input type="checkbox" data-id="g1-2"><span>Tablo, satır, sütun, tip ve birincil anahtar kavramlarını biliyorum.</span></label></li>
+<li class="task"><label><input type="checkbox" data-id="g1-3"><span>DB Browser for SQLite ile veritabanı açıp sorgu çalıştırabiliyorum.</span></label></li>
+<li class="task"><label><input type="checkbox" data-id="g1-4"><span>CREATE TABLE ve INSERT ile tablo oluşturup veri ekleyebiliyorum.</span></label></li>
+<li class="task"><label><input type="checkbox" data-id="g1-5"><span>Örnek veritabanını kurdum.</span></label></li>
+</ul></div>
+  <div class="pn"><a href="#genel">← Genel bakış</a><a href="#gun2">2. gün →</a></div>
+</section>
+<section class="day" id="gun2" data-day="2">
+  <div class="day-head"><span class="dn">GÜN 02</span><h2>Sorgulamak</h2><span class="meta">~4 saat · <span data-prog="2">0/4</span> kontrol</span></div>
+  <div class="prose"><h3>Hedef</h3>
+<p>Gün sonunda SELECT ile veri sorgulayabileceksin: sütun seçmek, WHERE ile süzmek, sıralamak, sınırlamak, hesaplı sütunlar, LIKE, IN ve NULL. Süre yaklaşık 4 saat.</p>
+<h3>1. SELECT ve WHERE (1 saat)</h3>
+<figure class="fig"><div class="sc"><svg viewBox="0 0 640 120" role="img" xmlns="http://www.w3.org/2000/svg"><defs><marker id="ah-select" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0 0L10 5L0 10z" class="ar"/></marker></defs><rect x="10" y="40" width="140" height="56" rx="5" class="bx"/><text x="80.0" y="64.0" class="tb" text-anchor="middle">FROM</text><text x="80.0" y="80.0" class="tm" text-anchor="middle">camlar</text><rect x="170" y="40" width="140" height="56" rx="5" class="bxa"/><text x="240.0" y="64.0" class="tb" text-anchor="middle">WHERE</text><text x="240.0" y="80.0" class="tm" text-anchor="middle">proje_id = 1</text><line x1="152" y1="68.0" x2="168" y2="68.0" class="mu" marker-end="url(#ah-select)"/><rect x="330" y="40" width="140" height="56" rx="5" class="bx"/><text x="400.0" y="64.0" class="tb" text-anchor="middle">SELECT</text><text x="400.0" y="80.0" class="tm" text-anchor="middle">poz, en, boy, adet</text><line x1="312" y1="68.0" x2="328" y2="68.0" class="mu" marker-end="url(#ah-select)"/><rect x="490" y="40" width="140" height="56" rx="5" class="bx"/><text x="560.0" y="64.0" class="tb" text-anchor="middle">Sonuç</text><text x="560.0" y="80.0" class="tm" text-anchor="middle">3 satır</text><line x1="472" y1="68.0" x2="488" y2="68.0" class="mu" marker-end="url(#ah-select)"/></svg></div><figcaption>Sorgunun okunma sırası: tablo, süzme, sütunlar.</figcaption></figure>
+<pre><code class="language-sql">SELECT poz, en, boy, adet FROM camlar WHERE proje_id = 1;
+</code></pre>
+<div class="tw"><table>
+<thead>
+<tr>
+<th>poz</th>
+<th>en</th>
+<th>boy</th>
+<th>adet</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>C-01</td>
+<td>1500</td>
+<td>2500</td>
+<td>120</td>
+</tr>
+<tr>
+<td>C-02</td>
+<td>1500</td>
+<td>900</td>
+<td>60</td>
+</tr>
+<tr>
+<td>C-03</td>
+<td>1200</td>
+<td>2500</td>
+<td>24</td>
+</tr>
+</tbody>
+</table></div>
+<p>Okuma sırası: <strong>FROM</strong> (hangi tablo) → <strong>WHERE</strong> (hangi satırlar) → <strong>SELECT</strong> (hangi sütunlar).</p>
+<p><strong>Karşılaştırmalar:</strong> <code>=</code>, <code>&lt;&gt;</code> (eşit değil), <code>&lt;</code>, <code>&gt;</code>, <code>&lt;=</code>, <code>&gt;=</code>; birleştirme: <code>AND</code>, <code>OR</code>, <code>NOT</code>.</p>
+<h3>2. Sıralama ve sınırlama (45 dk)</h3>
+<pre><code class="language-sql">SELECT poz, en, boy, adet FROM camlar
+WHERE kalinlik &gt;= 16
+ORDER BY adet DESC;
+</code></pre>
+<div class="tw"><table>
+<thead>
+<tr>
+<th>poz</th>
+<th>en</th>
+<th>boy</th>
+<th>adet</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>C-01</td>
+<td>1200</td>
+<td>3000</td>
+<td>50</td>
+</tr>
+<tr>
+<td>C-02</td>
+<td>1200</td>
+<td>1000</td>
+<td>50</td>
+</tr>
+<tr>
+<td>C-03</td>
+<td>1200</td>
+<td>2500</td>
+<td>24</td>
+</tr>
+<tr>
+<td>C-04</td>
+<td>2700</td>
+<td>2200</td>
+<td>6</td>
+</tr>
+</tbody>
+</table></div>
+<p><code>ORDER BY ... DESC</code> büyükten küçüğe, <code>ASC</code> (varsayılan) küçükten büyüğe. <strong>ORDER BY yazmazsan sıra garanti değildir.</strong></p>
+<pre><code class="language-sql">SELECT poz, en, boy FROM camlar ORDER BY en * boy DESC LIMIT 3;   -- en büyük üç cam
+</code></pre>
+<div class="tw"><table>
+<thead>
+<tr>
+<th>poz</th>
+<th>en</th>
+<th>boy</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>C-04</td>
+<td>2700</td>
+<td>2200</td>
+</tr>
+<tr>
+<td>C-01</td>
+<td>1500</td>
+<td>2500</td>
+</tr>
+<tr>
+<td>C-01</td>
+<td>1200</td>
+<td>3000</td>
+</tr>
+</tbody>
+</table></div>
+<h3>3. Hesaplı sütunlar (45 dk)</h3>
+<figure class="fig"><div class="sc"><svg viewBox="0 0 640 100" role="img" xmlns="http://www.w3.org/2000/svg"><defs><marker id="ah-hesapli" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0 0L10 5L0 10z" class="ar"/></marker></defs><text x="20" y="40" class="tb" text-anchor="start">1500 * 2500 / 1000000</text><text x="300" y="40" class="tr2" text-anchor="start">→ 3</text><text x="380" y="40" class="tm" text-anchor="start">(tam sayı bölmesi, küsurat gider)</text><text x="20" y="80" class="tb" text-anchor="start">1500 * 2500 / 1e6</text><text x="300" y="80" class="ta" text-anchor="start">→ 3.75</text><text x="380" y="80" class="tm" text-anchor="start">(ondalıklı)</text></svg></div><figcaption>Tam sayı bölmesi tuzağı.</figcaption></figure>
+<pre><code class="language-sql">SELECT poz, en, boy, en * boy / 1e6 AS alan_m2
+FROM camlar WHERE proje_id = 1;
+</code></pre>
+<div class="tw"><table>
+<thead>
+<tr>
+<th>poz</th>
+<th>en</th>
+<th>boy</th>
+<th>alan_m2</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>C-01</td>
+<td>1500</td>
+<td>2500</td>
+<td>3.75</td>
+</tr>
+<tr>
+<td>C-02</td>
+<td>1500</td>
+<td>900</td>
+<td>1.35</td>
+</tr>
+<tr>
+<td>C-03</td>
+<td>1200</td>
+<td>2500</td>
+<td>3.0</td>
+</tr>
+</tbody>
+</table></div>
+<ol>
+<li><strong><code>AS</code></strong> sütuna ad verir.</li>
+<li><strong>Tam sayı bölmesi tuzağı:</strong> <code>1500 * 2500 / 1000000</code> iki tam sayıyı böler ve <strong>küsuratı atar</strong> (3). <code>1e6</code> ya da <code>1000000.0</code> yazarak ondalıklı bölme yap.</li>
+</ol>
+<h3>4. LIKE, IN, BETWEEN, NULL (1 saat)</h3>
+<pre><code class="language-sql">SELECT poz, durum FROM camlar WHERE durum IN ('sipariş', 'sahada') ORDER BY poz;
+SELECT ad, sehir FROM projeler WHERE ad LIKE '%Kule%';           -- içinde &quot;Kule&quot; geçen
+SELECT * FROM siparisler WHERE tarih BETWEEN '2026-03-01' AND '2026-03-31';
+SELECT id, tarih, tutar FROM siparisler WHERE teslim IS NULL;     -- teslim edilmemiş
+</code></pre>
+<p>Son sorgunun sonucu:</p>
+<div class="tw"><table>
+<thead>
+<tr>
+<th>id</th>
+<th>tarih</th>
+<th>tutar</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>4</td>
+<td>2026-05-02</td>
+<td>11800.0</td>
+</tr>
+<tr>
+<td>6</td>
+<td>2026-06-01</td>
+<td>27400.0</td>
+</tr>
+<tr>
+<td>7</td>
+<td>2026-07-15</td>
+<td>29000.0</td>
+</tr>
+</tbody>
+</table></div>
+<p><strong>NULL tuzağı:</strong> <code>teslim = NULL</code> <strong>hiçbir satır döndürmez</strong>; NULL "bilinmiyor" demektir ve hiçbir şeye eşit değildir. Her zaman <code>IS NULL</code> ya da <code>IS NOT NULL</code> kullan.</p>
+<p><strong>LIKE:</strong> <code>%</code> herhangi sayıda karakter, <code>_</code> tek karakter. SQLite'ta LIKE büyük-küçük harf ayrımını yalnızca İngilizce harflerde yok sayar; Türkçe <code>İ/i</code>, <code>Ş/ş</code> gibi harflerde ayrım yapar.</p>
+<h3>Gün sonu kontrolü (15 dk)</h3>
+<ul class="tasks">
+<li class="task"><label><input type="checkbox" data-id="g2-1"><span>SELECT, FROM ve WHERE ile sorgu yazabiliyorum.</span></label></li>
+<li class="task"><label><input type="checkbox" data-id="g2-2"><span>ORDER BY ve LIMIT kullanabiliyor, ORDER BY'sız sıranın garanti olmadığını biliyorum.</span></label></li>
+<li class="task"><label><input type="checkbox" data-id="g2-3"><span>Hesaplı sütun yazıp AS ile ad verebiliyorum; tam sayı bölmesi tuzağını biliyorum.</span></label></li>
+<li class="task"><label><input type="checkbox" data-id="g2-4"><span>IN, LIKE, BETWEEN ve IS NULL ile süzebiliyorum.</span></label></li>
+</ul></div>
+  <div class="pn"><a href="#gun1">← 1. gün</a><a href="#gun3">3. gün →</a></div>
+</section>
+<section class="day" id="gun3" data-day="3">
+  <div class="day-head"><span class="dn">GÜN 03</span><h2>Özetlemek</h2><span class="meta">~4 saat · <span data-prog="3">0/4</span> kontrol</span></div>
+  <div class="prose"><h3>Hedef</h3>
+<p>Gün sonunda verileri özetleyebileceksin: COUNT, SUM, AVG, MIN, MAX, GROUP BY ile gruplama, HAVING ile grupları süzme ve yuvarlama. Süre yaklaşık 4 saat.</p>
+<h3>1. Toplama fonksiyonları (1 saat)</h3>
+<figure class="fig"><div class="sc"><svg viewBox="0 0 670 100" role="img" xmlns="http://www.w3.org/2000/svg"><defs><marker id="ah-toplama" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0 0L10 5L0 10z" class="ar"/></marker></defs><rect x="10" y="30" width="150" height="50" rx="5" class="bx"/><text x="85.0" y="51.0" class="tb" text-anchor="middle">COUNT</text><text x="85.0" y="67.0" class="tm" text-anchor="middle">kaç</text><rect x="172" y="30" width="150" height="50" rx="5" class="bxa"/><text x="247.0" y="51.0" class="tb" text-anchor="middle">SUM</text><text x="247.0" y="67.0" class="tm" text-anchor="middle">toplam</text><rect x="334" y="30" width="150" height="50" rx="5" class="bx"/><text x="409.0" y="51.0" class="tb" text-anchor="middle">AVG</text><text x="409.0" y="67.0" class="tm" text-anchor="middle">ortalama</text><rect x="496" y="30" width="150" height="50" rx="5" class="bx"/><text x="571.0" y="51.0" class="tb" text-anchor="middle">MIN / MAX</text><text x="571.0" y="67.0" class="tm" text-anchor="middle">uçlar</text></svg></div><figcaption>Toplama fonksiyonları.</figcaption></figure>
+<pre><code class="language-sql">SELECT COUNT(*) AS cam_cesidi, SUM(adet) AS toplam_adet FROM camlar;
+</code></pre>
+<div class="tw"><table>
+<thead>
+<tr>
+<th>cam_cesidi</th>
+<th>toplam_adet</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>8</td>
+<td>430</td>
+</tr>
+</tbody>
+</table></div>
+<pre><code class="language-sql">SELECT MIN(en * boy / 1e6) AS en_kucuk, MAX(en * boy / 1e6) AS en_buyuk,
+       ROUND(AVG(kalinlik), 1) AS ort_kalinlik
+FROM camlar;
+</code></pre>
+<div class="tw"><table>
+<thead>
+<tr>
+<th>en_kucuk</th>
+<th>en_buyuk</th>
+<th>ort_kalinlik</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>1.08</td>
+<td>5.94</td>
+<td>15.0</td>
+</tr>
+</tbody>
+</table></div>
+<p><strong>Dikkat:</strong> <code>AVG(kalinlik)</code> her <strong>satırın</strong> ortalamasıdır, adetle ağırlıklı değildir. Ağırlıklı ortalama için: <code>SUM(kalinlik * adet) * 1.0 / SUM(adet)</code>.</p>
+<h3>2. GROUP BY (1,5 saat)</h3>
+<figure class="fig"><div class="sc"><svg viewBox="0 0 580 190" role="img" xmlns="http://www.w3.org/2000/svg"><defs><marker id="ah-groupby" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0 0L10 5L0 10z" class="ar"/></marker></defs><rect x="20" y="20" width="220" height="152" class="bx"/><text x="26" y="34" class="tb" text-anchor="start">camlar (proje_id, alan × adet)</text><text x="26" y="54" class="tm" text-anchor="start">proje</text><text x="136" y="54" class="tm" text-anchor="start">m²</text><line x1="20" y1="60" x2="240" y2="60" class="mud"/><rect x="22" y="63" width="216" height="20" class="gl"/><text x="26" y="78" class="tm" text-anchor="start">1</text><text x="136" y="78" class="tm" text-anchor="start">450</text><rect x="22" y="85" width="216" height="20" class="gl"/><text x="26" y="100" class="tm" text-anchor="start">1</text><text x="136" y="100" class="tm" text-anchor="start">81</text><rect x="22" y="107" width="216" height="20" class="gl"/><text x="26" y="122" class="tm" text-anchor="start">1</text><text x="136" y="122" class="tm" text-anchor="start">72</text><text x="26" y="144" class="tm" text-anchor="start">2</text><text x="136" y="144" class="tm" text-anchor="start">…</text><text x="26" y="166" class="tm" text-anchor="start">3</text><text x="136" y="166" class="tm" text-anchor="start">…</text><line x1="250" y1="90" x2="320" y2="90" class="mu" marker-end="url(#ah-groupby)"/><text x="285" y="80" class="ta" text-anchor="middle">GROUP BY</text><rect x="330" y="40" width="220" height="108" class="bx"/><text x="336" y="54" class="tb" text-anchor="start">sonuç</text><text x="336" y="74" class="tm" text-anchor="start">proje</text><text x="446" y="74" class="tm" text-anchor="start">alan_m2</text><line x1="330" y1="80" x2="550" y2="80" class="mud"/><rect x="332" y="83" width="216" height="20" class="gl"/><text x="336" y="98" class="tm" text-anchor="start">1</text><text x="446" y="98" class="tm" text-anchor="start">603.0</text><text x="336" y="120" class="tm" text-anchor="start">2</text><text x="446" y="120" class="tm" text-anchor="start">316.4</text><text x="336" y="142" class="tm" text-anchor="start">3</text><text x="446" y="142" class="tm" text-anchor="start">240.0</text></svg></div><figcaption>GROUP BY: aynı projenin satırları tek satırda toplanır; P101 için 450 + 81 + 72 = 603 m².</figcaption></figure>
+<p>Proje başına adet, alan ve cam ağırlığı (yoğunluk 2,5 kg/m²·mm):</p>
+<pre><code class="language-sql">SELECT proje_id,
+       SUM(adet) AS adet,
+       ROUND(SUM(en * boy / 1e6 * adet), 1) AS alan_m2,
+       ROUND(SUM(en * boy / 1e6 * kalinlik * 2.5 * adet) / 1000, 2) AS ton
+FROM camlar
+GROUP BY proje_id;
+</code></pre>
+<div class="tw"><table>
+<thead>
+<tr>
+<th>proje_id</th>
+<th>adet</th>
+<th>alan_m2</th>
+<th>ton</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>1</td>
+<td>204</td>
+<td>603.0</td>
+<td>21.46</td>
+</tr>
+<tr>
+<td>2</td>
+<td>126</td>
+<td>316.4</td>
+<td>10.21</td>
+</tr>
+<tr>
+<td>3</td>
+<td>100</td>
+<td>240.0</td>
+<td>9.6</td>
+</tr>
+</tbody>
+</table></div>
+<p><strong>Kontrol:</strong> P101'in C-01 pozu tek başına 1,5 × 2,5 × 120 = 450 m²; C-02 1,35 × 60 = 81; C-03 3,0 × 24 = 72; toplam <strong>603 m²</strong>. ✓</p>
+<p><strong>Kural:</strong> SELECT'teki her sütun ya GROUP BY'da olmalı ya da bir toplama fonksiyonunun içinde. SQLite bu kurala uymayan sorguya bile hata vermeden rastgele bir değer döndürür; bu yüzden kuralı kendin uygula.</p>
+<pre><code class="language-sql">SELECT durum, COUNT(*) AS cesit, SUM(adet) AS adet
+FROM camlar GROUP BY durum ORDER BY adet DESC;
+</code></pre>
+<div class="tw"><table>
+<thead>
+<tr>
+<th>durum</th>
+<th>cesit</th>
+<th>adet</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>tasarım</td>
+<td>4</td>
+<td>146</td>
+</tr>
+<tr>
+<td>montaj</td>
+<td>1</td>
+<td>120</td>
+</tr>
+<tr>
+<td>sipariş</td>
+<td>2</td>
+<td>104</td>
+</tr>
+<tr>
+<td>sahada</td>
+<td>1</td>
+<td>60</td>
+</tr>
+</tbody>
+</table></div>
+<h3>3. HAVING (45 dk)</h3>
+<figure class="fig"><div class="sc"><svg viewBox="0 0 660 120" role="img" xmlns="http://www.w3.org/2000/svg"><defs><marker id="ah-having" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0 0L10 5L0 10z" class="ar"/></marker></defs><rect x="10" y="40" width="96" height="56" rx="5" class="bx"/><text x="58.0" y="72.0" class="tb" text-anchor="middle">FROM</text><rect x="118" y="40" width="96" height="56" rx="5" class="bxa"/><text x="166.0" y="64.0" class="tb" text-anchor="middle">WHERE</text><text x="166.0" y="80.0" class="tm" text-anchor="middle">satır</text><line x1="108" y1="68.0" x2="116" y2="68.0" class="mu" marker-end="url(#ah-having)"/><rect x="226" y="40" width="96" height="56" rx="5" class="bx"/><text x="274.0" y="72.0" class="tb" text-anchor="middle">GROUP BY</text><line x1="216" y1="68.0" x2="224" y2="68.0" class="mu" marker-end="url(#ah-having)"/><rect x="334" y="40" width="96" height="56" rx="5" class="bxa"/><text x="382.0" y="64.0" class="tb" text-anchor="middle">HAVING</text><text x="382.0" y="80.0" class="tm" text-anchor="middle">grup</text><line x1="324" y1="68.0" x2="332" y2="68.0" class="mu" marker-end="url(#ah-having)"/><rect x="442" y="40" width="96" height="56" rx="5" class="bx"/><text x="490.0" y="72.0" class="tb" text-anchor="middle">SELECT</text><line x1="432" y1="68.0" x2="440" y2="68.0" class="mu" marker-end="url(#ah-having)"/><rect x="550" y="40" width="96" height="56" rx="5" class="bx"/><text x="598.0" y="72.0" class="tb" text-anchor="middle">ORDER BY</text><line x1="540" y1="68.0" x2="548" y2="68.0" class="mu" marker-end="url(#ah-having)"/></svg></div><figcaption>Sorgunun çalışma sırası: WHERE satırları, HAVING grupları süzer.</figcaption></figure>
+<p><strong>WHERE satırları</strong>, <strong>HAVING grupları</strong> süzer:</p>
+<pre><code class="language-sql">SELECT proje_id, SUM(tutar) AS toplam
+FROM siparisler
+GROUP BY proje_id
+HAVING SUM(tutar) &gt; 50000;
+</code></pre>
+<div class="tw"><table>
+<thead>
+<tr>
+<th>proje_id</th>
+<th>toplam</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>1</td>
+<td>124300.0</td>
+</tr>
+<tr>
+<td>2</td>
+<td>65900.0</td>
+</tr>
+</tbody>
+</table></div>
+<p>Sorgunun çalışma sırası: <strong>FROM → WHERE → GROUP BY → HAVING → SELECT → ORDER BY → LIMIT.</strong></p>
+<h3>4. Alıştırma (30 dk)</h3>
+<ol>
+<li>Her projenin teslim edilmemiş sipariş sayısı ve tutarı. (İpucu: <code>WHERE teslim IS NULL</code> ve <code>GROUP BY proje_id</code>. Cevap: P101 1 adet 11.800 €, P102 1 adet 27.400 €, P103 1 adet 29.000 €.)</li>
+<li>Kalınlığa göre cam alanı (m²).</li>
+</ol>
+<h3>Gün sonu kontrolü (15 dk)</h3>
+<ul class="tasks">
+<li class="task"><label><input type="checkbox" data-id="g3-1"><span>COUNT, SUM, AVG, MIN, MAX ve ROUND kullanabiliyorum.</span></label></li>
+<li class="task"><label><input type="checkbox" data-id="g3-2"><span>Ağırlıklı ortalamayı doğru yazabiliyorum.</span></label></li>
+<li class="task"><label><input type="checkbox" data-id="g3-3"><span>GROUP BY ile proje ve durum özetleri çıkarabiliyorum ve elle kontrol ettim.</span></label></li>
+<li class="task"><label><input type="checkbox" data-id="g3-4"><span>WHERE ile HAVING farkını ve sorgu çalışma sırasını biliyorum.</span></label></li>
+</ul></div>
+  <div class="pn"><a href="#gun2">← 2. gün</a><a href="#gun4">4. gün →</a></div>
+</section>
+<section class="day" id="gun4" data-day="4">
+  <div class="day-head"><span class="dn">GÜN 04</span><h2>İlişkiler</h2><span class="meta">~4 saat · <span data-prog="4">0/5</span> kontrol</span></div>
+  <div class="prose"><h3>Hedef</h3>
+<p>Gün sonunda tabloları birbirine bağlamayı öğreneceksin: yabancı anahtarlar, normalleştirme, INNER JOIN, LEFT JOIN ve birden çok tabloyu birleştiren raporlar. Süre yaklaşık 4 saat.</p>
+<h3>1. İlişkiler ve yabancı anahtar (1 saat)</h3>
+<figure class="fig"><div class="sc"><svg viewBox="0 0 520 176" role="img" xmlns="http://www.w3.org/2000/svg"><defs><marker id="ah-iliski" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0 0L10 5L0 10z" class="ar"/></marker></defs><rect x="20" y="20" width="140" height="108" class="bx"/><text x="26" y="34" class="tb" text-anchor="start">projeler</text><text x="26" y="54" class="ta" text-anchor="start">id</text><text x="96" y="54" class="tm" text-anchor="start">kod</text><line x1="20" y1="60" x2="160" y2="60" class="mud"/><text x="26" y="78" class="tm" text-anchor="start">1</text><text x="96" y="78" class="tm" text-anchor="start">P101</text><text x="26" y="100" class="tm" text-anchor="start">2</text><text x="96" y="100" class="tm" text-anchor="start">P102</text><text x="26" y="122" class="tm" text-anchor="start">3</text><text x="96" y="122" class="tm" text-anchor="start">P103</text><rect x="300" y="20" width="180" height="108" class="bx"/><text x="306" y="34" class="tb" text-anchor="start">camlar</text><text x="306" y="54" class="tm" text-anchor="start">poz</text><text x="396" y="54" class="ta" text-anchor="start">proje_id</text><line x1="300" y1="60" x2="480" y2="60" class="mud"/><text x="306" y="78" class="tm" text-anchor="start">C-01</text><text x="396" y="78" class="tm" text-anchor="start">1</text><text x="306" y="100" class="tm" text-anchor="start">C-02</text><text x="396" y="100" class="tm" text-anchor="start">1</text><text x="306" y="122" class="tm" text-anchor="start">C-01</text><text x="396" y="122" class="tm" text-anchor="start">2</text><line x1="300" y1="78" x2="166" y2="78" class="mu" marker-end="url(#ah-iliski)"/><line x1="300" y1="100" x2="166" y2="80" class="mu" marker-end="url(#ah-iliski)"/><line x1="300" y1="122" x2="166" y2="100" class="mu" marker-end="url(#ah-iliski)"/><text x="240" y="160" class="ta" text-anchor="middle">yabancı anahtar → birincil anahtar</text></svg></div><figcaption>İlişki: camlar.proje_id, projeler.id&#x27;yi gösterir; proje bilgisi bir kez tutulur.</figcaption></figure>
+<p>Camlar tablosunda proje adı yazmıyor, yalnızca <code>proje_id</code> var. Bu <strong>yabancı anahtardır (FOREIGN KEY)</strong>: projeler tablosundaki bir <code>id</code>'yi gösterir.</p>
+<pre><code class="language-sql">proje_id INTEGER NOT NULL REFERENCES projeler(id)
+</code></pre>
+<p><strong>Neden?</strong> Projenin adı değişirse tek bir satırı değiştirirsin; cam satırlarına dokunmazsın. Bu, <strong>normalleştirmenin</strong> özüdür: her bilgi bir kez, bir yerde.</p>
+<div class="tw"><table>
+<thead>
+<tr>
+<th>Kötü (her satırda tekrar)</th>
+<th>İyi (ilişkili)</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>camlar: poz, proje_adi, proje_sehri, ...</td>
+<td>camlar: poz, proje_id → projeler: id, ad, sehir</td>
+</tr>
+</tbody>
+</table></div>
+<p><strong>SQLite notu:</strong> Yabancı anahtar kontrolü varsayılan olarak kapalıdır. Her bağlantıda <code>PRAGMA foreign_keys = ON;</code> çalıştır (örnek betiğin ilk satırı).</p>
+<h3>2. INNER JOIN (1 saat)</h3>
+<figure class="fig"><div class="sc"><svg viewBox="0 0 500 206" role="img" xmlns="http://www.w3.org/2000/svg"><defs><marker id="ah-join" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0 0L10 5L0 10z" class="ar"/></marker></defs><circle cx="200" cy="100" r="70" class="gl"/><circle cx="300" cy="100" r="70" class="gl"/><path d="M 250 50 A 70 70 0 0 1 250 150 A 70 70 0 0 1 250 50" class="bxa"/><text x="160" y="104" class="tm" text-anchor="middle">camlar</text><text x="340" y="104" class="tm" text-anchor="middle">projeler</text><text x="250" y="190" class="ta" text-anchor="middle">INNER JOIN: iki tarafta da eşi olanlar</text></svg></div><figcaption>INNER JOIN.</figcaption></figure>
+<pre><code class="language-sql">SELECT p.kod, c.poz, c.adet
+FROM camlar AS c
+JOIN projeler AS p ON p.id = c.proje_id
+WHERE c.durum = 'tasarım';
+</code></pre>
+<div class="tw"><table>
+<thead>
+<tr>
+<th>kod</th>
+<th>poz</th>
+<th>adet</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>P102</td>
+<td>C-02</td>
+<td>40</td>
+</tr>
+<tr>
+<td>P102</td>
+<td>C-04</td>
+<td>6</td>
+</tr>
+<tr>
+<td>P103</td>
+<td>C-01</td>
+<td>50</td>
+</tr>
+<tr>
+<td>P103</td>
+<td>C-02</td>
+<td>50</td>
+</tr>
+</tbody>
+</table></div>
+<ol>
+<li><code>AS c</code>, <code>AS p</code>: tablolara kısa ad (takma ad).</li>
+<li><code>ON</code>: hangi sütunların eşleşeceği.</li>
+<li><code>JOIN</code> (= <code>INNER JOIN</code>): yalnızca <strong>iki tarafta da eşi olan</strong> satırlar.</li>
+</ol>
+<h3>3. Üç tablo (45 dk)</h3>
+<pre><code class="language-sql">SELECT p.kod, t.ad AS tedarikci, s.tutar
+FROM siparisler AS s
+JOIN projeler AS p      ON p.id = s.proje_id
+JOIN tedarikciler AS t  ON t.id = s.tedarikci_id
+ORDER BY p.kod, s.tutar DESC;
+</code></pre>
+<div class="tw"><table>
+<thead>
+<tr>
+<th>kod</th>
+<th>tedarikci</th>
+<th>tutar</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>P101</td>
+<td>Ekstrüzyon AŞ</td>
+<td>61000.0</td>
+</tr>
+<tr>
+<td>P101</td>
+<td>Anadolu Cam</td>
+<td>42000.0</td>
+</tr>
+<tr>
+<td>P101</td>
+<td>Anadolu Cam</td>
+<td>11800.0</td>
+</tr>
+<tr>
+<td>P101</td>
+<td>Bağlantı Ltd</td>
+<td>9500.0</td>
+</tr>
+<tr>
+<td>P102</td>
+<td>Ekstrüzyon AŞ</td>
+<td>38500.0</td>
+</tr>
+<tr>
+<td>P102</td>
+<td>Anadolu Cam</td>
+<td>27400.0</td>
+</tr>
+<tr>
+<td>P103</td>
+<td>Ekstrüzyon AŞ</td>
+<td>29000.0</td>
+</tr>
+</tbody>
+</table></div>
+<p>JOIN ve GROUP BY birlikte: tedarikçi başına toplam:</p>
+<pre><code class="language-sql">SELECT t.ad, ROUND(SUM(s.tutar)) AS toplam
+FROM tedarikciler AS t
+JOIN siparisler AS s ON s.tedarikci_id = t.id
+GROUP BY t.ad
+ORDER BY toplam DESC;
+</code></pre>
+<div class="tw"><table>
+<thead>
+<tr>
+<th>ad</th>
+<th>toplam</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Ekstrüzyon AŞ</td>
+<td>128500.0</td>
+</tr>
+<tr>
+<td>Anadolu Cam</td>
+<td>81200.0</td>
+</tr>
+<tr>
+<td>Bağlantı Ltd</td>
+<td>9500.0</td>
+</tr>
+</tbody>
+</table></div>
+<h3>4. LEFT JOIN (1 saat)</h3>
+<figure class="fig"><div class="sc"><svg viewBox="0 0 500 206" role="img" xmlns="http://www.w3.org/2000/svg"><defs><marker id="ah-left" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0 0L10 5L0 10z" class="ar"/></marker></defs><circle cx="200" cy="100" r="70" class="bxa"/><circle cx="300" cy="100" r="70" class="gl"/><path d="M 250 50 A 70 70 0 0 1 250 150 A 70 70 0 0 1 250 50" class="bxa"/><text x="170" y="104" class="tb" text-anchor="middle">projeler</text><text x="340" y="104" class="tm" text-anchor="middle">hakedişler</text><text x="250" y="190" class="ta" text-anchor="middle">LEFT JOIN: soldakilerin hepsi; eşi yoksa NULL (P103)</text></svg></div><figcaption>LEFT JOIN: soldaki tablonun bütün satırları gelir.</figcaption></figure>
+<p><strong>LEFT JOIN</strong>, soldaki tablonun <strong>bütün</strong> satırlarını getirir; sağda eşi yoksa NULL koyar:</p>
+<pre><code class="language-sql">SELECT p.kod, COUNT(h.id) AS hakedis_sayisi
+FROM projeler AS p
+LEFT JOIN hakedisler AS h ON h.proje_id = p.id
+GROUP BY p.kod;
+</code></pre>
+<div class="tw"><table>
+<thead>
+<tr>
+<th>kod</th>
+<th>hakedis_sayisi</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>P101</td>
+<td>4</td>
+</tr>
+<tr>
+<td>P102</td>
+<td>2</td>
+</tr>
+<tr>
+<td>P103</td>
+<td>0</td>
+</tr>
+</tbody>
+</table></div>
+<p>INNER JOIN kullansaydın <strong>P103 hiç görünmezdi</strong>. "Hakedişi olmayan projeler" gibi eksikleri bulmak için LEFT JOIN + <code>WHERE h.id IS NULL</code> kullanılır.</p>
+<p><strong>Dikkat:</strong> <code>COUNT(*)</code> değil <code>COUNT(h.id)</code> yazdık: <code>COUNT(*)</code> NULL satırı da sayar ve P103'e 1 der.</p>
+<h3>Gün sonu kontrolü (15 dk)</h3>
+<ul class="tasks">
+<li class="task"><label><input type="checkbox" data-id="g4-1"><span>Yabancı anahtar ve normalleştirmenin amacını biliyorum.</span></label></li>
+<li class="task"><label><input type="checkbox" data-id="g4-2"><span>SQLite'ta yabancı anahtar kontrolünü açmayı biliyorum.</span></label></li>
+<li class="task"><label><input type="checkbox" data-id="g4-3"><span>INNER JOIN ile iki ve üç tabloyu birleştirebiliyorum.</span></label></li>
+<li class="task"><label><input type="checkbox" data-id="g4-4"><span>LEFT JOIN ile eşi olmayan satırları da getirebiliyorum.</span></label></li>
+<li class="task"><label><input type="checkbox" data-id="g4-5"><span>COUNT(*) ile COUNT(sütun) farkını biliyorum.</span></label></li>
+</ul></div>
+  <div class="pn"><a href="#gun3">← 3. gün</a><a href="#gun5">5. gün →</a></div>
+</section>
+<section class="day" id="gun5" data-day="5">
+  <div class="day-head"><span class="dn">GÜN 05</span><h2>Veriyi değiştirmek</h2><span class="meta">~4 saat · <span data-prog="5">0/4</span> kontrol</span></div>
+  <div class="prose"><h3>Hedef</h3>
+<p>Gün sonunda veriyi güvenle değiştirebileceksin: UPDATE, DELETE, işlemler (transaction), kısıtlarla veri kalitesi, CSV içe aktarma ve veri temizliği. Süre yaklaşık 4 saat.</p>
+<h3>1. UPDATE ve DELETE (1 saat)</h3>
+<figure class="fig"><div class="sc"><svg viewBox="0 0 640 134" role="img" xmlns="http://www.w3.org/2000/svg"><defs><marker id="ah-update" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0 0L10 5L0 10z" class="ar"/></marker></defs><rect x="10" y="40" width="140" height="56" rx="5" class="bxa"/><text x="80.0" y="64.0" class="tb" text-anchor="middle">SELECT</text><text x="80.0" y="80.0" class="tm" text-anchor="middle">aynı WHERE</text><rect x="170" y="40" width="140" height="56" rx="5" class="bx"/><text x="240.0" y="64.0" class="tb" text-anchor="middle">Satırları gör</text><text x="240.0" y="80.0" class="tm" text-anchor="middle">doğru mu?</text><line x1="152" y1="68.0" x2="168" y2="68.0" class="mu" marker-end="url(#ah-update)"/><rect x="330" y="40" width="140" height="56" rx="5" class="bx"/><text x="400.0" y="64.0" class="tb" text-anchor="middle">UPDATE / DELETE</text><text x="400.0" y="80.0" class="tm" text-anchor="middle">aynı WHERE</text><line x1="312" y1="68.0" x2="328" y2="68.0" class="mu" marker-end="url(#ah-update)"/><rect x="490" y="40" width="140" height="56" rx="5" class="bx"/><text x="560.0" y="64.0" class="tb" text-anchor="middle">Sayıyı kontrol</text><text x="560.0" y="80.0" class="tm" text-anchor="middle">kaç satır?</text><line x1="472" y1="68.0" x2="488" y2="68.0" class="mu" marker-end="url(#ah-update)"/><text x="320" y="120" class="tr2" text-anchor="middle">WHERE'siz UPDATE bütün tabloyu değiştirir</text></svg></div><figcaption>Güvenli değiştirme alışkanlığı.</figcaption></figure>
+<pre><code class="language-sql">UPDATE camlar SET durum = 'sahada' WHERE proje_id = 1 AND poz = 'C-03';
+DELETE FROM siparisler WHERE id = 7;
+</code></pre>
+<p><strong>Altın kural: WHERE'i unutma.</strong> <code>UPDATE camlar SET durum = 'sahada';</code> bütün camları sahaya gönderir. Güvenli alışkanlık:</p>
+<ol>
+<li>Önce aynı WHERE ile <strong>SELECT</strong> yaz, hangi satırların etkileneceğini gör.</li>
+<li>Sonra SELECT'i UPDATE ya da DELETE'e çevir.</li>
+<li>Etkilenen satır sayısını kontrol et (DB Browser alt satırda yazar).</li>
+</ol>
+<h3>2. İşlem (transaction) (45 dk)</h3>
+<figure class="fig"><div class="sc"><svg viewBox="0 0 640 134" role="img" xmlns="http://www.w3.org/2000/svg"><defs><marker id="ah-islem" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0 0L10 5L0 10z" class="ar"/></marker></defs><rect x="10" y="40" width="140" height="56" rx="5" class="bx"/><text x="80.0" y="72.0" class="tb" text-anchor="middle">BEGIN</text><rect x="170" y="40" width="140" height="56" rx="5" class="bx"/><text x="240.0" y="72.0" class="tb" text-anchor="middle">UPDATE</text><line x1="152" y1="68.0" x2="168" y2="68.0" class="mu" marker-end="url(#ah-islem)"/><rect x="330" y="40" width="140" height="56" rx="5" class="bx"/><text x="400.0" y="72.0" class="tb" text-anchor="middle">INSERT</text><line x1="312" y1="68.0" x2="328" y2="68.0" class="mu" marker-end="url(#ah-islem)"/><rect x="490" y="40" width="140" height="56" rx="5" class="bxa"/><text x="560.0" y="64.0" class="tb" text-anchor="middle">COMMIT</text><text x="560.0" y="80.0" class="tm" text-anchor="middle">hepsi kalıcı</text><line x1="472" y1="68.0" x2="488" y2="68.0" class="mu" marker-end="url(#ah-islem)"/><text x="320" y="120" class="tm" text-anchor="middle">sorun olursa ROLLBACK: hiçbiri olmamış gibi</text></svg></div><figcaption>İşlem: ya hep ya hiç.</figcaption></figure>
+<p>Birbirine bağlı değişiklikler <strong>ya hep ya hiç</strong> yapılmalıdır:</p>
+<pre><code class="language-sql">BEGIN;
+UPDATE camlar SET durum = 'sipariş' WHERE proje_id = 2 AND poz = 'C-02';
+INSERT INTO siparisler (proje_id, tedarikci_id, tarih, tutar) VALUES (2, 1, '2026-08-01', 9800);
+COMMIT;      -- ya da bir sorun varsa: ROLLBACK;
+</code></pre>
+<p>ROLLBACK, BEGIN'den sonraki her şeyi geri alır. DB Browser'da değişiklikler "Değişiklikleri Yaz" (Write Changes) diyene kadar kalıcı değildir.</p>
+<h3>3. Kısıtlar: veri kalitesi (1 saat)</h3>
+<figure class="fig"><div class="sc"><svg viewBox="0 0 670 124" role="img" xmlns="http://www.w3.org/2000/svg"><defs><marker id="ah-kisit" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0 0L10 5L0 10z" class="ar"/></marker></defs><rect x="10" y="30" width="150" height="50" rx="5" class="bxa"/><text x="85.0" y="51.0" class="tb" text-anchor="middle">CHECK</text><text x="85.0" y="67.0" class="tm" text-anchor="middle">en &gt; 0</text><rect x="172" y="30" width="150" height="50" rx="5" class="bx"/><text x="247.0" y="51.0" class="tb" text-anchor="middle">FOREIGN KEY</text><text x="247.0" y="67.0" class="tm" text-anchor="middle">proje var mı</text><rect x="334" y="30" width="150" height="50" rx="5" class="bx"/><text x="409.0" y="51.0" class="tb" text-anchor="middle">UNIQUE</text><text x="409.0" y="67.0" class="tm" text-anchor="middle">kod tek</text><rect x="496" y="30" width="150" height="50" rx="5" class="bx"/><text x="571.0" y="51.0" class="tb" text-anchor="middle">NOT NULL</text><text x="571.0" y="67.0" class="tm" text-anchor="middle">boş olamaz</text><text x="330" y="110" class="ta" text-anchor="middle">hatalı veri daha girerken reddedilir</text></svg></div><figcaption>Kısıtlar veri kalitesini veritabanında korur.</figcaption></figure>
+<p>Örnek veritabanındaki kısıtlar hatalı veriyi daha girerken reddeder:</p>
+<div class="tw"><table>
+<thead>
+<tr>
+<th>Kısıt</th>
+<th>Örnek</th>
+<th>Denenen hatalı girdi</th>
+<th>Sonuç</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>CHECK</td>
+<td><code>en &gt; 0</code></td>
+<td>en = −500</td>
+<td><code>CHECK constraint failed: en &gt; 0</code></td>
+</tr>
+<tr>
+<td>FOREIGN KEY</td>
+<td><code>REFERENCES projeler(id)</code></td>
+<td>proje_id = 9</td>
+<td><code>FOREIGN KEY constraint failed</code></td>
+</tr>
+<tr>
+<td>UNIQUE</td>
+<td><code>kod UNIQUE</code></td>
+<td>ikinci 'P101'</td>
+<td><code>UNIQUE constraint failed: projeler.kod</code></td>
+</tr>
+<tr>
+<td>NOT NULL</td>
+<td><code>poz NOT NULL</code></td>
+<td>poz boş</td>
+<td><code>NOT NULL constraint failed</code></td>
+</tr>
+<tr>
+<td>DEFAULT</td>
+<td><code>adet DEFAULT 1</code></td>
+<td>adet yazılmadı</td>
+<td>1 kaydedilir</td>
+</tr>
+</tbody>
+</table></div>
+<p><strong>Kural:</strong> Kuralı uygulamada değil <strong>veritabanında</strong> koy. Excel'de, formda ya da programda unutulan kontrolü veritabanı yakalar.</p>
+<h3>4. CSV içe aktarma ve temizlik (1 saat)</h3>
+<figure class="fig"><div class="sc"><svg viewBox="0 0 640 120" role="img" xmlns="http://www.w3.org/2000/svg"><defs><marker id="ah-csv" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0 0L10 5L0 10z" class="ar"/></marker></defs><rect x="10" y="40" width="140" height="56" rx="5" class="bx"/><text x="80.0" y="64.0" class="tb" text-anchor="middle">CSV</text><text x="80.0" y="80.0" class="tm" text-anchor="middle">Excel</text><rect x="170" y="40" width="140" height="56" rx="5" class="bx"/><text x="240.0" y="64.0" class="tb" text-anchor="middle">Geçici tablo</text><text x="240.0" y="80.0" class="tm" text-anchor="middle">olduğu gibi</text><line x1="152" y1="68.0" x2="168" y2="68.0" class="mu" marker-end="url(#ah-csv)"/><rect x="330" y="40" width="140" height="56" rx="5" class="bxa"/><text x="400.0" y="64.0" class="tb" text-anchor="middle">Temizle</text><text x="400.0" y="80.0" class="tm" text-anchor="middle">TRIM, REPLACE</text><line x1="312" y1="68.0" x2="328" y2="68.0" class="mu" marker-end="url(#ah-csv)"/><rect x="490" y="40" width="140" height="56" rx="5" class="bx"/><text x="560.0" y="64.0" class="tb" text-anchor="middle">Asıl tablo</text><text x="560.0" y="80.0" class="tm" text-anchor="middle">INSERT … SELECT</text><line x1="472" y1="68.0" x2="488" y2="68.0" class="mu" marker-end="url(#ah-csv)"/></svg></div><figcaption>CSV içe aktarma akışı.</figcaption></figure>
+<p>DB Browser: Dosya → İçe Aktar → CSV'den tablo. Excel'den gelen verilerde sık sorunlar:</p>
+<div class="tw"><table>
+<thead>
+<tr>
+<th>Sorun</th>
+<th>Çözüm</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Ondalık virgül (<code>1,5</code>) metin olarak gelir</td>
+<td>CSV'yi noktayla kaydet ya da <code>REPLACE(sutun, ',', '.')</code> ile düzelt</td>
+</tr>
+<tr>
+<td>Başta ve sonda boşluk (<code>'C-01 '</code>)</td>
+<td><code>TRIM(poz)</code></td>
+</tr>
+<tr>
+<td>Aynı şeyin farklı yazımı (<code>Sipariş</code>, <code>siparis</code>)</td>
+<td>Tek bir listeye eşle; sonra CHECK ile kısıtla</td>
+</tr>
+<tr>
+<td>Tarih <code>10.03.2026</code></td>
+<td><code>YYYY-AA-GG</code>'ye çevir</td>
+</tr>
+<tr>
+<td>Tekrarlayan satırlar</td>
+<td><code>SELECT poz, COUNT(*) FROM ... GROUP BY poz HAVING COUNT(*) &gt; 1</code> ile bul</td>
+</tr>
+</tbody>
+</table></div>
+<p>Önerilen akış: CSV'yi önce <strong>geçici bir tabloya</strong> al, temizle, sonra <code>INSERT INTO camlar SELECT ... FROM gecici</code> ile asıl tabloya aktar.</p>
+<h3>Gün sonu kontrolü (15 dk)</h3>
+<ul class="tasks">
+<li class="task"><label><input type="checkbox" data-id="g5-1"><span>UPDATE ve DELETE'i önce SELECT ile deneyerek güvenle kullanabiliyorum.</span></label></li>
+<li class="task"><label><input type="checkbox" data-id="g5-2"><span>BEGIN, COMMIT ve ROLLBACK ile işlem yapabiliyorum.</span></label></li>
+<li class="task"><label><input type="checkbox" data-id="g5-3"><span>CHECK, FOREIGN KEY, UNIQUE, NOT NULL ve DEFAULT kısıtlarını biliyorum.</span></label></li>
+<li class="task"><label><input type="checkbox" data-id="g5-4"><span>CSV içe aktarıp tipik sorunları temizleyebiliyorum.</span></label></li>
+</ul></div>
+  <div class="pn"><a href="#gun4">← 4. gün</a><a href="#gun6">6. gün →</a></div>
+</section>
+<section class="day" id="gun6" data-day="6">
+  <div class="day-head"><span class="dn">GÜN 06</span><h2>İleri sorgular</h2><span class="meta">~4 saat · <span data-prog="6">0/5</span> kontrol</span></div>
+  <div class="prose"><h3>Hedef</h3>
+<p>Gün sonunda ileri sorgular yazabileceksin: alt sorgu, WITH (CTE), CASE, pencere fonksiyonları (kümülatif toplam, önceki satır), görünüm (VIEW) ve indeks. Süre yaklaşık 4 saat.</p>
+<h3>1. Alt sorgu (45 dk)</h3>
+<pre><code class="language-sql">SELECT id, tarih, tutar FROM siparisler
+WHERE tutar &gt; (SELECT AVG(tutar) FROM siparisler);
+</code></pre>
+<div class="tw"><table>
+<thead>
+<tr>
+<th>id</th>
+<th>tarih</th>
+<th>tutar</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>1</td>
+<td>2026-03-10</td>
+<td>42000.0</td>
+</tr>
+<tr>
+<td>2</td>
+<td>2026-03-05</td>
+<td>61000.0</td>
+</tr>
+<tr>
+<td>5</td>
+<td>2026-05-20</td>
+<td>38500.0</td>
+</tr>
+</tbody>
+</table></div>
+<p>Ortalama ≈ 31.314 €; üç sipariş bunun üstünde.</p>
+<h3>2. WITH (CTE) (1 saat)</h3>
+<figure class="fig"><div class="sc"><svg viewBox="0 0 640 110" role="img" xmlns="http://www.w3.org/2000/svg"><defs><marker id="ah-cte" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0 0L10 5L0 10z" class="ar"/></marker></defs><rect x="20" y="30" width="260" height="60" rx="5" class="gl"/><text x="150.0" y="56.0" class="tb" text-anchor="middle">WITH proje_alan AS (...)</text><text x="150.0" y="72.0" class="tm" text-anchor="middle">ara sonuç</text><line x1="284" y1="60" x2="340" y2="60" class="mu" marker-end="url(#ah-cte)"/><rect x="344" y="30" width="280" height="60" rx="5" class="bxa"/><text x="484.0" y="56.0" class="tb" text-anchor="middle">SELECT ... FROM proje_alan</text><text x="484.0" y="72.0" class="tm" text-anchor="middle">son sorgu</text></svg></div><figcaption>WITH: sorguyu okunur adımlara böler.</figcaption></figure>
+<p>Uzun sorguları adım adım, okunur yazmak için:</p>
+<pre><code class="language-sql">WITH proje_alan AS (
+  SELECT proje_id, SUM(en * boy / 1e6 * adet) AS alan FROM camlar GROUP BY proje_id
+)
+SELECT p.kod, ROUND(pa.alan, 1) AS alan_m2,
+       ROUND(100.0 * pa.alan / (SELECT SUM(alan) FROM proje_alan), 1) AS yuzde
+FROM proje_alan AS pa JOIN projeler AS p ON p.id = pa.proje_id;
+</code></pre>
+<div class="tw"><table>
+<thead>
+<tr>
+<th>kod</th>
+<th>alan_m2</th>
+<th>yuzde</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>P101</td>
+<td>603.0</td>
+<td>52.0</td>
+</tr>
+<tr>
+<td>P102</td>
+<td>316.4</td>
+<td>27.3</td>
+</tr>
+<tr>
+<td>P103</td>
+<td>240.0</td>
+<td>20.7</td>
+</tr>
+</tbody>
+</table></div>
+<h3>3. CASE (30 dk)</h3>
+<pre><code class="language-sql">SELECT poz, en, boy,
+       CASE WHEN en * boy / 1e6 &gt; 4 THEN 'büyük'
+            WHEN en * boy / 1e6 &gt; 2 THEN 'orta'
+            ELSE 'küçük' END AS sinif
+FROM camlar WHERE proje_id = 2;
+</code></pre>
+<div class="tw"><table>
+<thead>
+<tr>
+<th>poz</th>
+<th>en</th>
+<th>boy</th>
+<th>sinif</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>C-01</td>
+<td>1350</td>
+<td>2200</td>
+<td>orta</td>
+</tr>
+<tr>
+<td>C-02</td>
+<td>1350</td>
+<td>800</td>
+<td>küçük</td>
+</tr>
+<tr>
+<td>C-04</td>
+<td>2700</td>
+<td>2200</td>
+<td>büyük</td>
+</tr>
+</tbody>
+</table></div>
+<h3>4. Pencere fonksiyonları (1,5 saat)</h3>
+<figure class="fig"><div class="sc"><svg viewBox="0 0 640 256" role="img" xmlns="http://www.w3.org/2000/svg"><defs><marker id="ah-pencere" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0 0L10 5L0 10z" class="ar"/></marker></defs><text x="20" y="20" class="tb" text-anchor="start">P101 hakedişleri: kümülatif ve bu dönem (bin €)</text><rect x="60" y="158.0" width="50" height="62.0" class="gl"/><rect x="114" y="158.0" width="40" height="62.0" class="bxa"/><text x="85" y="152.0" class="tm" text-anchor="middle">31,0</text><text x="134" y="152.0" class="ta" text-anchor="middle">31,0</text><text x="107" y="240" class="tm" text-anchor="middle">H1</text><rect x="200" y="120.8" width="50" height="99.2" class="gl"/><rect x="254" y="182.8" width="40" height="37.2" class="bxa"/><text x="225" y="114.8" class="tm" text-anchor="middle">49,6</text><text x="274" y="176.8" class="ta" text-anchor="middle">18,6</text><text x="247" y="240" class="tm" text-anchor="middle">H2</text><rect x="340" y="89.80000000000001" width="50" height="130.2" class="gl"/><rect x="394" y="189.0" width="40" height="31.0" class="bxa"/><text x="365" y="83.80000000000001" class="tm" text-anchor="middle">65,1</text><text x="414" y="183.0" class="ta" text-anchor="middle">15,5</text><text x="387" y="240" class="tm" text-anchor="middle">H3</text><rect x="480" y="55.400000000000006" width="50" height="164.6" class="gl"/><rect x="534" y="185.6" width="40" height="34.4" class="bxa"/><text x="505" y="49.400000000000006" class="tm" text-anchor="middle">82,3</text><text x="554" y="179.6" class="ta" text-anchor="middle">17,2</text><text x="527" y="240" class="tm" text-anchor="middle">H4</text><line x1="40" y1="220" x2="620" y2="220" class="k1"/><text x="60" y="46" class="tm" text-anchor="start">gri: kümülatif</text><text x="60" y="64" class="ta" text-anchor="start">mavi: LAG ile bu dönem</text></svg></div><figcaption>Pencere fonksiyonu: her hakedişte kümülatiften bir öncekini çıkararak dönem tutarı.</figcaption></figure>
+<p>Pencere fonksiyonları, satırları gruplayıp <strong>kaybetmeden</strong> her satırın yanına bir hesap koyar.</p>
+<p><strong>Hakedişte bu dönemin tutarı</strong> (<a href="../cephe-metraj/">Cephe Metrajı</a>, 6. gün): kümülatiften bir önceki hakedişin kümülatifini çıkar.</p>
+<pre><code class="language-sql">SELECT proje_id, no, kumulatif,
+       kumulatif - LAG(kumulatif, 1, 0) OVER (PARTITION BY proje_id ORDER BY no) AS bu_donem
+FROM hakedisler
+ORDER BY proje_id, no;
+</code></pre>
+<div class="tw"><table>
+<thead>
+<tr>
+<th>proje_id</th>
+<th>no</th>
+<th>kumulatif</th>
+<th>bu_donem</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>1</td>
+<td>1</td>
+<td>31000.0</td>
+<td>31000.0</td>
+</tr>
+<tr>
+<td>1</td>
+<td>2</td>
+<td>49600.0</td>
+<td>18600.0</td>
+</tr>
+<tr>
+<td>1</td>
+<td>3</td>
+<td>65100.0</td>
+<td>15500.0</td>
+</tr>
+<tr>
+<td>1</td>
+<td>4</td>
+<td>82300.0</td>
+<td>17200.0</td>
+</tr>
+<tr>
+<td>2</td>
+<td>1</td>
+<td>18200.0</td>
+<td>18200.0</td>
+</tr>
+<tr>
+<td>2</td>
+<td>2</td>
+<td>34900.0</td>
+<td>16700.0</td>
+</tr>
+</tbody>
+</table></div>
+<ol>
+<li><code>LAG(sütun, 1, 0)</code>: bir önceki satırın değeri; yoksa 0.</li>
+<li><code>PARTITION BY proje_id</code>: her proje kendi içinde.</li>
+<li><code>ORDER BY no</code>: sıra.</li>
+</ol>
+<p><strong>Kümülatif sipariş toplamı:</strong></p>
+<pre><code class="language-sql">SELECT tarih, tutar, SUM(tutar) OVER (ORDER BY tarih) AS kumulatif
+FROM siparisler WHERE proje_id = 1 ORDER BY tarih;
+</code></pre>
+<div class="tw"><table>
+<thead>
+<tr>
+<th>tarih</th>
+<th>tutar</th>
+<th>kumulatif</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>2026-03-05</td>
+<td>61000.0</td>
+<td>61000.0</td>
+</tr>
+<tr>
+<td>2026-03-10</td>
+<td>42000.0</td>
+<td>103000.0</td>
+</tr>
+<tr>
+<td>2026-03-12</td>
+<td>9500.0</td>
+<td>112500.0</td>
+</tr>
+<tr>
+<td>2026-05-02</td>
+<td>11800.0</td>
+<td>124300.0</td>
+</tr>
+</tbody>
+</table></div>
+<h3>5. VIEW ve INDEX (30 dk)</h3>
+<pre><code class="language-sql">CREATE VIEW proje_ozet AS
+SELECT p.kod, SUM(c.adet) AS adet, ROUND(SUM(c.en * c.boy / 1e6 * c.adet), 1) AS alan_m2
+FROM projeler p JOIN camlar c ON c.proje_id = p.id GROUP BY p.kod;
+
+SELECT * FROM proje_ozet;          -- kaydedilmiş sorgu, tablo gibi kullanılır
+
+CREATE INDEX ix_camlar_proje ON camlar(proje_id);   -- büyük tablolarda aramayı hızlandırır
+</code></pre>
+<h3>Gün sonu kontrolü (15 dk)</h3>
+<ul class="tasks">
+<li class="task"><label><input type="checkbox" data-id="g6-1"><span>WHERE içinde alt sorgu yazabiliyorum.</span></label></li>
+<li class="task"><label><input type="checkbox" data-id="g6-2"><span>WITH ile sorguyu adımlara bölebiliyorum.</span></label></li>
+<li class="task"><label><input type="checkbox" data-id="g6-3"><span>CASE ile sınıflandırma yapabiliyorum.</span></label></li>
+<li class="task"><label><input type="checkbox" data-id="g6-4"><span>LAG ve SUM OVER ile hakediş dönem tutarını ve kümülatif toplamı hesaplayabiliyorum.</span></label></li>
+<li class="task"><label><input type="checkbox" data-id="g6-5"><span>VIEW ve INDEX'in ne işe yaradığını biliyorum.</span></label></li>
+</ul></div>
+  <div class="pn"><a href="#gun5">← 5. gün</a><a href="#gun7">7. gün →</a></div>
+</section>
+<section class="day" id="gun7" data-day="7">
+  <div class="day-head"><span class="dn">GÜN 07</span><h2>Kodla veri</h2><span class="meta">~4 saat · <span data-prog="7">0/4</span> kontrol</span></div>
+  <div class="prose"><h3>Hedef</h3>
+<p>Son gün veritabanını kodla kullanacak, Excel'e rapor alacak, kendi veritabanını tasarlayacak ve büyük veritabanlarına geçişi tanıyacaksın. Süre yaklaşık 4 saat.</p>
+<h3>1. Python ile (1,5 saat)</h3>
+<figure class="fig"><div class="sc"><svg viewBox="0 0 640 120" role="img" xmlns="http://www.w3.org/2000/svg"><defs><marker id="ah-python" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0 0L10 5L0 10z" class="ar"/></marker></defs><rect x="10" y="40" width="140" height="56" rx="5" class="bx"/><text x="80.0" y="72.0" class="tb" text-anchor="middle">cephe.db</text><rect x="170" y="40" width="140" height="56" rx="5" class="bxa"/><text x="240.0" y="64.0" class="tb" text-anchor="middle">sqlite3</text><text x="240.0" y="80.0" class="tm" text-anchor="middle">? parametre</text><line x1="152" y1="68.0" x2="168" y2="68.0" class="mu" marker-end="url(#ah-python)"/><rect x="330" y="40" width="140" height="56" rx="5" class="bx"/><text x="400.0" y="64.0" class="tb" text-anchor="middle">pandas</text><text x="400.0" y="80.0" class="tm" text-anchor="middle">read_sql_query</text><line x1="312" y1="68.0" x2="328" y2="68.0" class="mu" marker-end="url(#ah-python)"/><rect x="490" y="40" width="140" height="56" rx="5" class="bx"/><text x="560.0" y="64.0" class="tb" text-anchor="middle">Excel</text><text x="560.0" y="80.0" class="tm" text-anchor="middle">to_excel</text><line x1="472" y1="68.0" x2="488" y2="68.0" class="mu" marker-end="url(#ah-python)"/></svg></div><figcaption>Python ile veritabanından Excel raporuna.</figcaption></figure>
+<pre><code class="language-python">import sqlite3
+
+con = sqlite3.connect(&quot;cephe.db&quot;)
+con.execute(&quot;PRAGMA foreign_keys = ON&quot;)
+
+cur = con.execute(
+    &quot;SELECT poz, adet FROM camlar WHERE proje_id = ? AND durum = ?&quot;,
+    (1, &quot;montaj&quot;),
+)
+print(cur.fetchall())        # [('C-01', 120)]
+con.close()
+</code></pre>
+<p><strong>Parametre (<code>?</code>) kullan, metni birleştirme.</strong> <code>f"... WHERE poz = '{poz}'"</code> yazmak, içinde tırnak olan bir değerde sorguyu bozar ve <strong>SQL enjeksiyonu</strong> güvenlik açığına yol açar. <code>?</code> ile değerler güvenle aktarılır.</p>
+<p><strong>pandas ile tabloya ve Excel'e:</strong></p>
+<pre><code class="language-python">import sqlite3
+import pandas as pd
+
+con = sqlite3.connect(&quot;cephe.db&quot;)
+df = pd.read_sql_query(&quot;&quot;&quot;
+    SELECT p.kod, c.durum, SUM(c.adet) AS adet
+    FROM camlar c JOIN projeler p ON p.id = c.proje_id
+    GROUP BY p.kod, c.durum&quot;&quot;&quot;, con)
+
+tablo = df.pivot(index=&quot;kod&quot;, columns=&quot;durum&quot;, values=&quot;adet&quot;).fillna(0).astype(int)
+print(tablo)
+tablo.to_excel(&quot;durum_raporu.xlsx&quot;)      # openpyxl paketi gerekir
+</code></pre>
+<pre><code class="language-text">durum  montaj  sahada  sipariş  tasarım
+kod
+P101      120      60       24        0
+P102        0       0       80       46
+P103        0       0        0      100
+</code></pre>
+<p><a href="../python/">Python</a> kursunun 5. ve 6. günleri veri ve Excel işlerini daha ayrıntılı anlatır.</p>
+<h3>2. Excel'den doğrudan (30 dk)</h3>
+<p>Excel'in Power Query özelliği bir veritabanına (ODBC sürücüsüyle SQLite'a; SQL Server ve PostgreSQL'e doğrudan) bağlanıp sorgu sonucunu tabloya alabilir ve tek tıkla yenileyebilir. Böylece rapor Excel'de, veri veritabanında kalır.</p>
+<h3>3. Kendi veritabanını tasarlamak (1 saat)</h3>
+<figure class="fig"><div class="sc"><svg viewBox="0 0 600 190" role="img" xmlns="http://www.w3.org/2000/svg"><defs><marker id="ah-tasarim" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0 0L10 5L0 10z" class="ar"/></marker></defs><rect x="20" y="70" width="120" height="50" rx="5" class="bx"/><text x="80.0" y="99.0" class="tb" text-anchor="middle">projeler</text><rect x="220" y="20" width="120" height="50" rx="5" class="bx"/><text x="280.0" y="49.0" class="tb" text-anchor="middle">camlar</text><rect x="220" y="120" width="120" height="50" rx="5" class="bx"/><text x="280.0" y="149.0" class="tb" text-anchor="middle">siparisler</text><rect x="420" y="120" width="160" height="50" rx="5" class="bxa"/><text x="500.0" y="141.0" class="tb" text-anchor="middle">siparis_kalemleri</text><text x="500.0" y="157.0" class="tm" text-anchor="middle">ara tablo</text><rect x="420" y="20" width="120" height="50" rx="5" class="bx"/><text x="480.0" y="49.0" class="tb" text-anchor="middle">tedarikciler</text><line x1="140" y1="90" x2="220" y2="45" class="k1"/><text x="160" y="52" class="tm" text-anchor="start">1 → n</text><line x1="140" y1="100" x2="220" y2="145" class="k1"/><line x1="340" y1="145" x2="420" y2="145" class="k1"/><line x1="340" y1="140" x2="420" y2="50" class="mud"/></svg></div><figcaption>Tasarım: bire-çok ilişkiler ve çoka-çok için ara tablo.</figcaption></figure>
+<ol>
+<li><strong>Şeyleri (varlıkları) listele:</strong> Proje, cam, profil, tedarikçi, sipariş, hakediş, kişi.</li>
+<li><strong>Her şeyin özelliklerini yaz</strong> ve her birine bir tip ver.</li>
+<li><strong>İlişkileri çiz:</strong> Bir projenin çok camı var (bire-çok). Bir siparişte çok kalem, bir kalem birçok siparişte olabilir (çoka-çok) → ara tablo (<code>siparis_kalemleri</code>).</li>
+<li><strong>Kısıtları ekle:</strong> NOT NULL, CHECK, UNIQUE, FOREIGN KEY.</li>
+<li><strong>Adlandırma:</strong> küçük harf, Türkçe karakter ve boşluk yok (<code>siparis_kalemleri</code>), tablolar çoğul, anahtarlar <code>id</code> ve <code>&lt;tablo&gt;_id</code>.</li>
+<li><strong>Örnek veriyle dene:</strong> Raporda soracağın soruları SQL olarak yaz; yazamıyorsan tasarım eksiktir.</li>
+</ol>
+<h3>4. Büyük veritabanlarına geçiş (30 dk)</h3>
+<figure class="fig"><div class="sc"><svg viewBox="0 0 670 124" role="img" xmlns="http://www.w3.org/2000/svg"><defs><marker id="ah-motorlar" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0 0L10 5L0 10z" class="ar"/></marker></defs><rect x="10" y="30" width="150" height="50" rx="5" class="bxa"/><text x="85.0" y="51.0" class="tb" text-anchor="middle">SQLite</text><text x="85.0" y="67.0" class="tm" text-anchor="middle">tek dosya</text><rect x="172" y="30" width="150" height="50" rx="5" class="bx"/><text x="247.0" y="51.0" class="tb" text-anchor="middle">PostgreSQL</text><text x="247.0" y="67.0" class="tm" text-anchor="middle">sunucu</text><rect x="334" y="30" width="150" height="50" rx="5" class="bx"/><text x="409.0" y="51.0" class="tb" text-anchor="middle">SQL Server</text><text x="409.0" y="67.0" class="tm" text-anchor="middle">kurum</text><rect x="496" y="30" width="150" height="50" rx="5" class="bx"/><text x="571.0" y="51.0" class="tb" text-anchor="middle">MySQL</text><text x="571.0" y="67.0" class="tm" text-anchor="middle">web</text><text x="330" y="110" class="ta" text-anchor="middle">SELECT, JOIN, GROUP BY, pencere: hepsinde aynı</text></svg></div><figcaption>Veritabanı motorları.</figcaption></figure>
+<div class="tw"><table>
+<thead>
+<tr>
+<th>Motor</th>
+<th>Ne zaman</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>SQLite</td>
+<td>Tek kullanıcı, masaüstü programı, tek dosya, kurulum yok</td>
+</tr>
+<tr>
+<td>PostgreSQL</td>
+<td>Çok kullanıcılı, sunucuda; açık kaynak, güçlü</td>
+</tr>
+<tr>
+<td>SQL Server</td>
+<td>Kurum içinde Microsoft altyapısı, ERP sistemleri</td>
+</tr>
+<tr>
+<td>MySQL / MariaDB</td>
+<td>Web uygulamaları</td>
+</tr>
+</tbody>
+</table></div>
+<p>Bu kursta öğrendiğin SELECT, JOIN, GROUP BY, pencere fonksiyonları ve kısıtlar hepsinde aynıdır. Farklar çoğunlukla tipler, tarih fonksiyonları ve <code>LIMIT</code> gibi küçük yazım farklarındadır (SQL Server <code>TOP</code> kullanır).</p>
+<h3>5. Bitiş projesi (15 dk + kendi zamanın)</h3>
+<p>Örnek veritabanına bir <strong>profiller</strong> tablosu (poz, seri, uzunluk, kg/m, adet, proje_id) ekle ve şu soruları SQL ile cevapla:</p>
+<ol>
+<li>Proje başına toplam profil ağırlığı (kg) ve cephe alanına oranı (kg/m²).</li>
+<li>Teslim tarihi geçmiş ama teslim edilmemiş siparişler.</li>
+<li>Her proje için son hakedişin kümülatif tutarı ve sipariş toplamına oranı.</li>
+</ol>
+<h3>Gün sonu kontrolü (15 dk)</h3>
+<ul class="tasks">
+<li class="task"><label><input type="checkbox" data-id="g7-1"><span>Python'dan parametreli sorgu çalıştırabiliyorum ve SQL enjeksiyonunu biliyorum.</span></label></li>
+<li class="task"><label><input type="checkbox" data-id="g7-2"><span>pandas ile sorgu sonucunu tabloya ve Excel'e alabiliyorum.</span></label></li>
+<li class="task"><label><input type="checkbox" data-id="g7-3"><span>Bir veritabanını altı adımda tasarlayabiliyorum.</span></label></li>
+<li class="task"><label><input type="checkbox" data-id="g7-4"><span>SQLite, PostgreSQL, SQL Server ve MySQL'in kullanım yerlerini biliyorum.</span></label></li>
+</ul></div>
+  <div class="pn"><a href="#gun6">← 6. gün</a><a href="../../Tools.html">Araçlara dön →</a></div>
+</section>
+</main>
+
+<footer>
+  <div class="wrap">
+    <span>© 2026 Erdal Üstünol · <a href="/gizlilik.html">Gizlilik</a></span>
+    <a href="../../Tools.html">← Araçlar ve eğitimler</a>
+  </div>
+</footer>
+
+<script>
+(() => {
+  const $ = id => document.getElementById(id);
+  const KEY = 'erdevelop-egitim-sql';
+  const store = { get(k) { try { return localStorage.getItem(k); } catch (e) { return null; } }, set(k, v) { try { localStorage.setItem(k, v); } catch (e) {} } };
+  let mode = (() => { try { const m = localStorage.getItem('erdevelop-mode'), g = localStorage.getItem('erdevelop-mode-gun'), t = new Date(); if (m && g === t.toDateString()) return m; const h = t.getHours(); return h >= 7 && h < 19 ? 'light' : 'dark'; } catch (e) { return 'light'; } })();
+  const applyMode = () => { document.documentElement.dataset.mode = mode; $('modeBtn').textContent = mode === 'dark' ? 'LIGHT' : 'DARK'; };
+  $('modeBtn').addEventListener('click', () => { mode = mode === 'dark' ? 'light' : 'dark'; store.set('erdevelop-mode', mode); store.set('erdevelop-mode-gun', new Date().toDateString()); applyMode(); });
+  applyMode();
+
+  let done = {}; try { done = JSON.parse(store.get(KEY) || '{}') || {}; } catch (e) { done = {}; }
+  const boxes = [...document.querySelectorAll('li.task input')];
+  const prog = () => {
+    document.querySelectorAll('section.day').forEach(sec => {
+      const d = sec.dataset.day, bs = sec.querySelectorAll('li.task input'), c = [...bs].filter(b => b.checked).length;
+      sec.querySelector('[data-prog]').textContent = c + '/' + bs.length;
+      const n = document.querySelector('[data-nav="' + d + '"]'); if (n) n.classList.toggle('done', bs.length > 0 && c === bs.length);
+    });
+  };
+  boxes.forEach(b => { b.checked = !!done[b.dataset.id]; b.addEventListener('change', () => { if (b.checked) done[b.dataset.id] = 1; else delete done[b.dataset.id]; store.set(KEY, JSON.stringify(done)); prog(); }); });
+  $('resetBtn').addEventListener('click', () => { done = {}; store.set(KEY, '{}'); boxes.forEach(b => b.checked = false); prog(); });
+  prog();
+
+  const links = [...document.querySelectorAll('[data-nav]')];
+  const secs = [$('genel'), ...document.querySelectorAll('section.day')];
+  if ('IntersectionObserver' in window) {
+    const io = new IntersectionObserver(es => es.forEach(e => { if (e.isIntersecting) { const i = secs.indexOf(e.target); links.forEach((l, k) => l.classList.toggle('on', k === i)); } }), { rootMargin: '-40% 0px -55% 0px' });
+    secs.forEach(s => io.observe(s));
+  }
+})();
+</script>
+<script src="../ilerleme.js" data-key="erdevelop-egitim-sql"></script>
+<script>if ('serviceWorker' in navigator && location.protocol === 'https:') addEventListener('load', () => navigator.serviceWorker.register('/sw.js').catch(() => { }));</script>
+<script data-goatcounter="https://erdevelop.goatcounter.com/count" async src="//gc.zgo.at/count.js"></script>
+<script src="/uyari.js" data-tur="egitim"></script>
+</body>
+</html>
