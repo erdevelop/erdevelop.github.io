@@ -172,7 +172,7 @@ dialog.set input[type=range] { flex: 1 1 160px; accent-color: var(--accent); }
       <div class="sg"><div class="lbl muted mono small">🔊 Ses</div>
         <div class="row"><select class="sel" id="sVoice" aria-label="Ses"></select><button class="btn" type="button" id="sVTest">Dinle</button></div>
         <div class="row" style="margin-top:10px"><label class="small muted" for="sRate">Konuşma hızı</label><input type="range" id="sRate" min="0.6" max="1.3" step="0.05"><span class="mono small" id="sRateV"></span></div>
-        <p class="small muted" style="margin:8px 0 0">★ işaretli sesler daha doğal. Ses robot gibiyse Telaffuz sekmesindeki “Daha doğal ses ekle” adımlarına bak.</p></div>
+        <p class="small muted" style="margin:8px 0 0"><b>iPhone:</b> Ayarlar'dan indirdiğin Ava gibi sesler bu listede çıkmaz; <b>“iPhone ayarındaki ses · ABD”</b>'yi seçince o ses konuşur. ★ işaretli sesler daha doğal. Ses robot gibiyse Telaffuz sekmesindeki “Daha doğal ses ekle” adımlarına bak.</p></div>
       <div class="sg"><div class="lbl muted mono small">🔔 Kelime bildirimleri</div>
         <div class="row"><span class="small" id="sPush" style="flex:1"></span><button class="btn" type="button" id="sPushGo">Ayarla</button></div></div>
       <div class="sg"><div class="lbl muted mono small">👤 Hesap</div>
@@ -1377,24 +1377,32 @@ const V_TOP = /(Natural|Neural|Premium|Enhanced|Siri|Online)/i, V_GOOD = /(Googl
 const vId = v => v.voiceURI || v.name;
 const vQual = v => /premium/i.test(vId(v) + v.name) ? 'Yüksek kaliteli' : /enhanced/i.test(vId(v) + v.name) ? 'Geliştirilmiş' : /compact/i.test(vId(v)) ? 'Basit' : '';
 const vFind = id => voices.find(v => vId(v) === id) || voices.find(v => v.name === id);
-function vScore(v) { let n = 0; if (V_TOP.test(v.name)) n += 50; if (/premium/i.test(vId(v))) n += 60; else if (/enhanced/i.test(vId(v))) n += 45; if (V_GOOD.test(v.name)) n += 20; if (/en[-_](US|GB)/i.test(v.lang)) n += 8; else if (/en[-_](AU|IE|CA|NZ)/i.test(v.lang)) n += 4;
+function vScore(v) { if (v.sys) return 100; let n = 0; if (V_TOP.test(v.name)) n += 50; if (/premium/i.test(vId(v))) n += 60; else if (/enhanced/i.test(vId(v))) n += 45; if (V_GOOD.test(v.name)) n += 20; if (/en[-_](US|GB)/i.test(v.lang)) n += 8; else if (/en[-_](AU|IE|CA|NZ)/i.test(v.lang)) n += 4;
   if (!v.localService) n += 3; if (/compact/i.test(v.voiceURI || '')) n -= 25; return n; }
-function loadVoices() { if (!TTS) return; voices = speechSynthesis.getVoices().filter(v => /^en[-_]/i.test(v.lang) && !V_BAD.test(v.name)).sort((a, b) => vScore(b) - vScore(a)); const sel = $('tVoice'); if (!sel) return;
-  sel.innerHTML = voices.length ? voices.map(v => `<option value="${esc(vId(v))}">${vScore(v) >= 20 ? '★ ' : ''}${esc(v.name.replace(/Microsoft |Google | \(.*\)$/g, ''))}${vQual(v) ? ' (' + vQual(v) + ')' : ''} · ${esc(v.lang)}</option>`).join('') : '<option value="">varsayılan ses</option>';
+/* iPhone, Ayarlar'da indirilen Geliştirilmiş/Yüksek kaliteli sesleri sayfalara listelemiyor; ses seçilmeden dil verilirse
+   iPhone'un o dil için seçili sesini (Erişilebilirlik → Seslendirilen İçerik → Sesler) kullanır. Bu yüzden "iPhone ayarındaki ses" seçeneği eklenir. */
+const IOS_V = /iP(hone|ad|od)/.test(navigator.userAgent) || (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
+const SYS_V = [{ name: 'iPhone ayarındaki ses · ABD', lang: 'en-US', voiceURI: 'sys-en-US', sys: true }, { name: 'iPhone ayarındaki ses · İngiltere', lang: 'en-GB', voiceURI: 'sys-en-GB', sys: true }];
+const V_NOVEL = /speech\.synthesis\.voice\.(?!Alex\b)|eloquence/i;
+function loadVoices() { if (!TTS) return; const seen = new Set();
+  voices = speechSynthesis.getVoices().filter(v => /^en[-_]/i.test(v.lang) && !V_BAD.test(v.name) && !V_NOVEL.test(v.voiceURI || '') && !seen.has(vId(v)) && seen.add(vId(v))).sort((a, b) => vScore(b) - vScore(a));
+  if (IOS_V) { voices = [...SYS_V, ...voices]; if (!S.vMig) { S.vMig = 1; S.voice = 'sys-en-US'; save(); } }
+  const sel = $('tVoice'); if (!sel) return;
+  sel.innerHTML = voices.length ? voices.map(v => v.sys ? `<option value="${v.voiceURI}">★ ${esc(v.name)}</option>` : `<option value="${esc(vId(v))}">${vScore(v) >= 20 ? '★ ' : ''}${esc(v.name.replace(/Microsoft |Google | \(.*\)$/g, ''))}${vQual(v) ? ' (' + vQual(v) + ')' : ''} · ${esc(v.lang)}</option>`).join('') : '<option value="">varsayılan ses</option>';
   const cur = S.voice && vFind(S.voice); sel.value = cur ? vId(cur) : voices[0] ? vId(voices[0]) : '';
   if ($('sVoice') && $('setDlg') && $('setDlg').open) { $('sVoice').innerHTML = sel.innerHTML; $('sVoice').value = sel.value; } }
 if (TTS) { loadVoices(); speechSynthesis.onvoiceschanged = loadVoices; [400, 1500, 4000].forEach(t => setTimeout(loadVoices, t)); }
-function say(text, rate = 0.95) { if (!TTS) return TM.toast('Bu tarayıcı seslendirmeyi desteklemiyor'); speechSynthesis.cancel(); const u = new SpeechSynthesisUtterance(text); u.lang = 'en-GB'; u.rate = rate * (S.rate || 1); const v = vFind($('tVoice').value || S.voice); if (v) { u.voice = v; u.lang = v.lang; } speechSynthesis.speak(u); }
+function say(text, rate = 0.95) { if (!TTS) return TM.toast('Bu tarayıcı seslendirmeyi desteklemiyor'); speechSynthesis.cancel(); const u = new SpeechSynthesisUtterance(text); u.lang = 'en-GB'; u.rate = rate * (S.rate || 1); const v = vFind($('tVoice').value || S.voice); if (v) { if (!v.sys) u.voice = v; u.lang = v.lang; } speechSynthesis.speak(u); }
 /* sırayla konuşma: her konuşana ayrı ses; bitince çözülen Promise */
 /* konuşmalarda farklı kişiler için yalnızca iyi sesler sırayla kullanılır; iyi ses azsa ses tonu hafifçe değiştirilir */
-function vpool() { const sel = vFind($('tVoice').value || S.voice), best = voices[0] ? vScore(voices[0]) : 0;
-  const good = voices.filter(v => v !== sel && vScore(v) >= Math.max(20, best - 30)).slice(0, 4); return sel ? [sel, ...good] : good.length ? good : voices.slice(0, 1); }
+function vpool() { const sel = vFind($('tVoice').value || S.voice), best = Math.max(0, ...voices.filter(v => !v.sys).map(vScore));
+  const good = voices.filter(v => v !== sel && !v.sys && vScore(v) >= Math.max(20, best - 30)).slice(0, 4); return sel ? [sel, ...good] : good.length ? good : voices.slice(0, 1); }
 function speakP(text, rate = 1, vi = 0) {
   return new Promise(res => {
     if (!TTS) return setTimeout(res, 400);
     const u = new SpeechSynthesisUtterance(text), P = vpool(), pitch = [1, .93, 1.08, .97];
     u.lang = 'en-GB'; u.rate = rate * (S.rate || 1);
-    if (P.length) { const v = P[vi % P.length]; u.voice = v; u.lang = v.lang; u.pitch = pitch[Math.floor(vi / P.length) % 4]; } else u.pitch = pitch[vi % 4];
+    if (P.length) { const v = P[vi % P.length]; if (!v.sys) u.voice = v; u.lang = v.lang; u.pitch = pitch[Math.floor(vi / P.length) % 4]; } else u.pitch = pitch[vi % 4];
     let done = false; const fin = () => { if (done) return; done = true; clearTimeout(t); res(); };
     u.onend = fin; u.onerror = fin; const t = setTimeout(fin, 2500 + text.split(/\s+/).length * 600 / rate);
     speechSynthesis.speak(u);
@@ -2072,7 +2080,7 @@ document.querySelectorAll('#qMode button').forEach(x => x.classList.toggle('on',
 const h = location.hash.slice(1), qs = new URLSearchParams(location.search);
 if (qs.get('k')) setTimeout(() => { const i = KALIP.findIndex(p => norm(p.f) === norm(qs.get('k'))); if (i >= 0) { S.z.g = 'hepsi'; S.z.mode = 'ogren'; setTab('kalip'); zGroups(); zLoad(i); } else showWord(qs.get('k')); }, 0);
 /* ---------- üst çubuk: 🔄 yenile + ⚙ ayarlar ---------- */
-const VER = '14.11 12:23';
+const VER = '14.11 12:32';
 async function hardRefresh() {
   TM.toast('Yenileniyor…');
   try { const r = await navigator.serviceWorker?.getRegistration(); if (r) await r.update(); } catch (e) { }
