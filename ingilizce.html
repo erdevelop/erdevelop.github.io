@@ -214,7 +214,7 @@ dialog.set input[type=range] { flex: 1 1 160px; accent-color: var(--accent); }
         <div class="fg2 hbox" id="hBox" hidden>
           <div class="seg full" id="hMode"><button type="button" data-m="push" class="on">🔔 Anlık bildirim</button><button type="button" data-m="cal">📅 Takvim ile</button></div>
           <div class="full pstat push-only" id="pStat"></div>
-          <div class="fd full"><label for="hSrc">Hangi kelimeler</label><select class="sel" id="hSrc"></select></div>
+          <div class="fd full"><label for="hSrc">Ne gelsin (kelime ya da kalıp)</label><select class="sel" id="hSrc"></select></div>
           <div class="fd cal-only"><label for="hDate">Başlangıç günü</label><input class="inp" type="date" id="hDate"></div>
           <div class="fd cal-only"><label for="hDays">Kaç gün</label><select class="sel" id="hDays"><option value="1">1 gün (deneme)</option><option value="3">3 gün</option><option value="7">1 hafta</option><option value="14">2 hafta</option><option value="30">1 ay</option></select></div>
           <div class="fd"><label for="hFrom">İlk bildirim</label><input class="inp" type="time" id="hFrom" step="900"></div>
@@ -1373,16 +1373,21 @@ let voices = [];
 /* ses kalitesi: cihazdaki İngilizce sesler puanlanır; şaka/robot sesleri ve eski sentez sesleri elenir, en doğal olanlar öne alınır */
 const V_BAD = /\b(Albert|Bad News|Bahh|Bells|Boing|Bubbles|Cellos|Good News|Jester|Organ|Pipe Organ|Superstar|Trinoids|Whisper|Wobble|Zarvox|Ralph|Fred|Junior|Kathy|Grandma|Grandpa|Eddy|Flo|Reed|Rocko|Sandy|Shelley|eSpeak|espeak)\b/i;
 const V_TOP = /(Natural|Neural|Premium|Enhanced|Siri|Online)/i, V_GOOD = /(Google|Samantha|Daniel|Karen|Moira|Serena|Ava|Allison|Susan|Tom|Alex|Evan|Zoe|Nathan|Aria|Jenny|Guy|Sonia|Ryan|Libby|Natasha|William|Emma|Brian|Andrew|Christopher|Michelle)/i;
-function vScore(v) { let n = 0; if (V_TOP.test(v.name)) n += 50; if (V_GOOD.test(v.name)) n += 20; if (/en[-_](US|GB)/i.test(v.lang)) n += 8; else if (/en[-_](AU|IE|CA|NZ)/i.test(v.lang)) n += 4;
+/* iPhone'da aynı adlı birkaç ses olabilir (Ava, Ava Geliştirilmiş, Ava Yüksek Kaliteli); ayırt etmek için voiceURI kullanılır */
+const vId = v => v.voiceURI || v.name;
+const vQual = v => /premium/i.test(vId(v) + v.name) ? 'Yüksek kaliteli' : /enhanced/i.test(vId(v) + v.name) ? 'Geliştirilmiş' : /compact/i.test(vId(v)) ? 'Basit' : '';
+const vFind = id => voices.find(v => vId(v) === id) || voices.find(v => v.name === id);
+function vScore(v) { let n = 0; if (V_TOP.test(v.name)) n += 50; if (/premium/i.test(vId(v))) n += 60; else if (/enhanced/i.test(vId(v))) n += 45; if (V_GOOD.test(v.name)) n += 20; if (/en[-_](US|GB)/i.test(v.lang)) n += 8; else if (/en[-_](AU|IE|CA|NZ)/i.test(v.lang)) n += 4;
   if (!v.localService) n += 3; if (/compact/i.test(v.voiceURI || '')) n -= 25; return n; }
 function loadVoices() { if (!TTS) return; voices = speechSynthesis.getVoices().filter(v => /^en[-_]/i.test(v.lang) && !V_BAD.test(v.name)).sort((a, b) => vScore(b) - vScore(a)); const sel = $('tVoice'); if (!sel) return;
-  sel.innerHTML = voices.length ? voices.map(v => `<option value="${esc(v.name)}">${vScore(v) >= 20 ? '★ ' : ''}${esc(v.name.replace(/Microsoft |Google | \(.*\)$/g, ''))} · ${esc(v.lang)}</option>`).join('') : '<option value="">varsayılan ses</option>';
-  if (S.voice && voices.some(v => v.name === S.voice)) sel.value = S.voice; else if (voices[0]) sel.value = voices[0].name; }
-if (TTS) { loadVoices(); speechSynthesis.onvoiceschanged = loadVoices; }
-function say(text, rate = 0.95) { if (!TTS) return TM.toast('Bu tarayıcı seslendirmeyi desteklemiyor'); speechSynthesis.cancel(); const u = new SpeechSynthesisUtterance(text); u.lang = 'en-GB'; u.rate = rate * (S.rate || 1); const v = voices.find(v => v.name === ($('tVoice').value || S.voice)); if (v) { u.voice = v; u.lang = v.lang; } speechSynthesis.speak(u); }
+  sel.innerHTML = voices.length ? voices.map(v => `<option value="${esc(vId(v))}">${vScore(v) >= 20 ? '★ ' : ''}${esc(v.name.replace(/Microsoft |Google | \(.*\)$/g, ''))}${vQual(v) ? ' (' + vQual(v) + ')' : ''} · ${esc(v.lang)}</option>`).join('') : '<option value="">varsayılan ses</option>';
+  const cur = S.voice && vFind(S.voice); sel.value = cur ? vId(cur) : voices[0] ? vId(voices[0]) : '';
+  if ($('sVoice') && $('setDlg') && $('setDlg').open) { $('sVoice').innerHTML = sel.innerHTML; $('sVoice').value = sel.value; } }
+if (TTS) { loadVoices(); speechSynthesis.onvoiceschanged = loadVoices; [400, 1500, 4000].forEach(t => setTimeout(loadVoices, t)); }
+function say(text, rate = 0.95) { if (!TTS) return TM.toast('Bu tarayıcı seslendirmeyi desteklemiyor'); speechSynthesis.cancel(); const u = new SpeechSynthesisUtterance(text); u.lang = 'en-GB'; u.rate = rate * (S.rate || 1); const v = vFind($('tVoice').value || S.voice); if (v) { u.voice = v; u.lang = v.lang; } speechSynthesis.speak(u); }
 /* sırayla konuşma: her konuşana ayrı ses; bitince çözülen Promise */
 /* konuşmalarda farklı kişiler için yalnızca iyi sesler sırayla kullanılır; iyi ses azsa ses tonu hafifçe değiştirilir */
-function vpool() { const sel = voices.find(v => v.name === ($('tVoice').value || S.voice)), best = voices[0] ? vScore(voices[0]) : 0;
+function vpool() { const sel = vFind($('tVoice').value || S.voice), best = voices[0] ? vScore(voices[0]) : 0;
   const good = voices.filter(v => v !== sel && vScore(v) >= Math.max(20, best - 30)).slice(0, 4); return sel ? [sel, ...good] : good.length ? good : voices.slice(0, 1); }
 function speakP(text, rate = 1, vi = 0) {
   return new Promise(res => {
@@ -1460,7 +1465,10 @@ function hPools() {
   const zor = Object.entries(S.leit).filter(([k, v]) => v.box <= 1).map(([k]) => by.get(k)).filter(Boolean);
   const P = [['trk', `Seçili bölüm · ${TR(S.trk)[2]}`, trkWords().map(w => ({ en: w[0], tr: w[1], ex: w[2] }))]];
   for (const l of [1, 2, 3, 4]) P.push(['t' + l, `Temel kelimeler · ${CEFR[l]}`, TW.filter(w => w.lvl === l)]);
-  P.push(['kalip', 'Konuşma kalıpları', KALIP.map(p => { const e = pick(p.ex); return { en: p.f, tr: p.tr, ex: e[0] + ' (' + e[1] + ')' }; })]);
+  const kw = L => L.map(p => { const e = pick(p.ex); return { en: p.f, tr: p.tr, ex: e[0] + ' (' + e[1] + ')' }; });
+  P.push(['karisik', `Karışık · ${TR(S.trk)[2]} + konuşma kalıpları`, [...P[0][2], ...kw(KALIP)]]);
+  P.push(['kalip', 'Konuşma kalıpları · hepsi', kw(KALIP)]);
+  for (const z of KALIP_Z) P.push(['kz-' + z[0], `Kalıplar · ${z[1]}`, kw(KALIP.filter(p => p.z === z[0]))]);
   P.push(['benim', 'Benim listem', S.my.slice()]);
   if (Cloud.words.length) P.push(['oda', 'Oda listesi', Cloud.words.map(w => ({ en: w.en, tr: w.tr, ex: w.ex || '' }))]);
   P.push(['zor', 'Bilemediklerim (kartlarda ✗ dediklerin)', zor]);
@@ -2064,7 +2072,7 @@ document.querySelectorAll('#qMode button').forEach(x => x.classList.toggle('on',
 const h = location.hash.slice(1), qs = new URLSearchParams(location.search);
 if (qs.get('k')) setTimeout(() => { const i = KALIP.findIndex(p => norm(p.f) === norm(qs.get('k'))); if (i >= 0) { S.z.g = 'hepsi'; S.z.mode = 'ogren'; setTab('kalip'); zGroups(); zLoad(i); } else showWord(qs.get('k')); }, 0);
 /* ---------- üst çubuk: 🔄 yenile + ⚙ ayarlar ---------- */
-const VER = '14.11 12:02';
+const VER = '14.11 12:23';
 async function hardRefresh() {
   TM.toast('Yenileniyor…');
   try { const r = await navigator.serviceWorker?.getRegistration(); if (r) await r.update(); } catch (e) { }
@@ -2085,7 +2093,7 @@ function setFill() {
   $('sAcc').textContent = Cloud.user ? Cloud.name() + ' · ' + nf(S.xp || 0) + ' XP' : 'Giriş yapılmadı (misafir)'; $('sAccGo').textContent = Cloud.user ? 'Hesabım' : 'Giriş yap';
   $('sMode').textContent = TM.mode === 'dark' ? 'Koyu tema' : 'Açık tema'; $('sVer').textContent = VER; $('sInst').hidden = !instEv;
 }
-function openSet() { setFill(); const d = $('setDlg'); if (d.showModal) d.showModal(); else d.setAttribute('open', ''); }
+function openSet() { loadVoices(); setFill(); const d = $('setDlg'); if (d.showModal) d.showModal(); else d.setAttribute('open', ''); }
 function closeSet() { const d = $('setDlg'); if (d.close) d.close(); else d.removeAttribute('open'); }
 $('setX').onclick = closeSet; $('setDlg').addEventListener('click', e => { if (e.target === $('setDlg')) closeSet(); });
 $('sVoice').onchange = () => { S.voice = $('sVoice').value; save(); if ($('tVoice')) $('tVoice').value = S.voice; say('Hi! This is how I sound. Nice to meet you.'); };
