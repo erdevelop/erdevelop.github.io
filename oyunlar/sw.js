@@ -1,6 +1,6 @@
 /* Oyun Bahçesi — Service Worker (offline oynanabilirlik)
    Sürüm değişince eski önbellek silinir. Uygulama kabuğu + oyunlar + three.js önbelleğe alınır. */
-const VERSION = 'ob-v1';
+const VERSION = 'ob-v2';
 const CORE = [
   './',
   './index.html',
@@ -36,15 +36,19 @@ self.addEventListener('fetch', e=>{
     e.respondWith(fetch(req).catch(()=>caches.match('./index.html')));
     return;
   }
-  // Aynı origin → önce önbellek, sonra ağ (ve önbelleğe ekle)
+  // Aynı origin → önbellekteki kopya hemen verilir, arkada ağdan tazelenir (güncellemeler bir sonraki açılışta gelir).
+  // Yalnızca sağlam (200) yanıtlar saklanır.
   if(url.origin===location.origin){
-    e.respondWith(caches.match(req).then(hit=> hit || fetch(req).then(res=>{
-      const copy=res.clone(); caches.open(VERSION).then(c=>c.put(req,copy)); return res;
-    }).catch(()=>hit)));
+    e.respondWith(caches.match(req).then(hit=>{
+      const net=fetch(req).then(res=>{ if(res.ok){ const copy=res.clone(); caches.open(VERSION).then(c=>c.put(req,copy)); } return res; });
+      if(hit){ e.waitUntil(net.catch(()=>{})); return hit; }
+      return net.catch(()=>hit);
+    }));
     return;
   }
-  // Çapraz origin (three.js, Google Fonts) → önbellek varsa onu, yoksa ağdan alıp sakla (opak yanıt)
-  e.respondWith(caches.match(req).then(hit=> hit || fetch(req).then(res=>{
-    const copy=res.clone(); caches.open(VERSION).then(c=>c.put(req,copy)); return res;
-  }).catch(()=>hit)));
+  // Çapraz origin (three.js, Google Fonts) → sürümlü kütüphaneler; önbellekte sağlam kopya varsa o, yoksa ağ (yalnızca sağlam yanıt saklanır)
+  e.respondWith(caches.match(req).then(hit=> (hit && hit.ok) ? hit : fetch(req).then(res=>{
+    if(res.ok && res.type==='cors'){ const copy=res.clone(); caches.open(VERSION).then(c=>c.put(req,copy)); }
+    return res;
+  }).catch(()=>hit || Response.error())));
 });

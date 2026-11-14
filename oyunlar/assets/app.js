@@ -102,7 +102,7 @@
     if(window.THREE) return Promise.resolve();
     if(threeLoading) return threeLoading;
     threeLoading=new Promise((res,rej)=>{ const s=document.createElement('script');
-      s.src='https://cdnjs.cloudflare.com/ajax/libs/three.js/0.160.0/three.min.js';
+      s.crossOrigin='anonymous'; s.src='https://cdnjs.cloudflare.com/ajax/libs/three.js/0.160.0/three.min.js';
       s.onload=()=>res(); s.onerror=()=>rej(new Error('three yüklenemedi')); document.head.appendChild(s); });
     return threeLoading;
   }
