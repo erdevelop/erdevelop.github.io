@@ -1,0 +1,1267 @@
+<!doctype html>
+<html lang="tr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>AutoLISP Eğitimi · 7 günlük yoğun program | erdevelop</title>
+<meta name="description" content="AutoCAD kullanıcıları için 7 günlük yoğun AutoLISP eğitimi: ifadeler ve komut tanımı, kullanıcı girdisi, döngüler ve listeler, seçim ve entget, ActiveX ile blok nitelikleri, hata yönetimi ve CSV, kit olarak dağıtım.">
+<link rel="icon" href="/favicon.svg" type="image/svg+xml">
+<link rel="icon" href="/favicon.ico" sizes="any">
+<link rel="apple-touch-icon" href="/apple-touch-icon.png">
+<link rel="manifest" href="/manifest.webmanifest">
+<meta name="theme-color" content="#0b1220">
+<meta property="og:title" content="AutoLISP Eğitimi · 7 günlük yoğun program | erdevelop">
+<meta property="og:description" content="AutoCAD otomasyonu için adım adım AutoLISP: aks, panel numaralama, alan toplama, blok sayma, CSV ve kendi komut kitin.">
+<meta property="og:url" content="https://erdevelop.github.io/egitimler/autolisp/">
+<meta property="og:image" content="https://erdevelop.github.io/og.png">
+<meta name="twitter:card" content="summary_large_image">
+<link rel="canonical" href="https://erdevelop.github.io/egitimler/autolisp/">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Chakra+Petch:wght@600;700&family=IBM+Plex+Sans:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500&display=swap">
+<style>
+  :root {
+    --bg: #eef2f6; --panel: #ffffff; --panel-2: #f5f7f9; --grid: #e3e8ed; --line: #cfd8e1;
+    --fg: #1c2833; --text: #45535f; --muted: #74838f; --accent: #2f6fb5; --accent-dim: rgba(47,111,181,.12); --hot: #c8731f; --ok: #2e8b57;
+    --f-display: 'Chakra Petch', 'Segoe UI', sans-serif; --f-body: 'IBM Plex Sans', 'Segoe UI', system-ui, sans-serif; --f-mono: 'IBM Plex Mono', Consolas, monospace;
+    color-scheme: light;
+  }
+  :root[data-mode="dark"] {
+    --bg: #0b1220; --panel: #111a2c; --panel-2: #0e1626; --grid: #182338; --line: #22304a;
+    --fg: #e2e8f2; --text: #a8b6cc; --muted: #73829b; --accent: #f2b33d; --accent-dim: rgba(242,179,61,.14); --hot: #6aa8ff; --ok: #5fc48d;
+    color-scheme: dark;
+  }
+  * { box-sizing: border-box; }
+  html { background: var(--bg); scroll-padding-top: 110px; }
+  body { margin: 0; color: var(--fg); font-family: var(--f-body); font-size: 16px; line-height: 1.65;
+    background-image: linear-gradient(var(--grid) 1px, transparent 1px), linear-gradient(90deg, var(--grid) 1px, transparent 1px); background-size: 80px 80px; background-attachment: fixed; }
+  a { color: var(--accent); }
+  :focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+  .wrap { max-width: 920px; margin: 0 auto; padding-left: max(16px, env(safe-area-inset-left, 0px)); padding-right: max(16px, env(safe-area-inset-right, 0px)); }
+
+  .topbar { position: sticky; top: 0; z-index: 20; background: color-mix(in srgb, var(--bg) 92%, transparent); backdrop-filter: blur(6px); border-bottom: 1px solid var(--line); }
+  .topbar .wrap { display: flex; align-items: center; gap: 12px; padding-block: 10px; max-width: 1160px; }
+  .brand { font: 700 15px var(--f-display); letter-spacing: 1px; text-transform: uppercase; text-decoration: none; color: var(--fg); }
+  .brand span { color: var(--accent); }
+  .crumb { font: 400 12px var(--f-mono); color: var(--muted); }
+  .sp { flex: 1; }
+  .tb { font: 500 12px var(--f-mono); color: var(--accent); padding: 6px 10px; border: 1px solid var(--line); border-radius: 4px; background: none; cursor: pointer; text-transform: uppercase; text-decoration: none; }
+  .tb:hover { border-color: var(--accent); }
+  .daynav { border-top: 1px solid var(--line); }
+  .daynav .wrap { display: flex; gap: 6px; padding-block: 8px; overflow-x: auto; max-width: 1160px; }
+  .daynav a { font: 500 12px var(--f-mono); text-decoration: none; color: var(--text); border: 1px solid var(--line); border-radius: 4px; padding: 4px 10px; white-space: nowrap; background: var(--panel); }
+  .daynav a.on { border-color: var(--accent); color: var(--accent); }
+  .daynav a.done { background: var(--accent-dim); }
+
+  header.head { padding-block: 34px 6px; }
+  .kicker { font: 500 12px var(--f-mono); color: var(--accent); letter-spacing: 1px; }
+  .head h1 { font: 700 clamp(2rem, 6vw, 3rem)/1.05 var(--f-display); margin: 6px 0 0; letter-spacing: -.5px; }
+  .head p.lead { margin: 12px 0 0; color: var(--text); max-width: 64ch; font-size: 1.05rem; }
+  .chips { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 16px; }
+  .chips span { font: 400 12px var(--f-mono); color: var(--muted); border: 1px solid var(--line); border-radius: 4px; padding: 3px 8px; background: var(--panel); }
+
+  .card { background: var(--panel); border: 1px solid var(--line); border-radius: 8px; padding: 22px clamp(16px, 4vw, 30px); margin-top: 28px; }
+  .day-head { display: flex; align-items: baseline; gap: 12px; flex-wrap: wrap; border-bottom: 1px solid var(--line); padding-bottom: 12px; margin-bottom: 6px; }
+  .day-head h2, .card > h2 { font: 700 1.45rem/1.2 var(--f-display); margin: 0; letter-spacing: .2px; }
+  .dn { font: 600 12px var(--f-mono); color: var(--panel); background: var(--accent); border-radius: 3px; padding: 2px 7px; }
+  :root[data-mode="dark"] .dn { color: #1a1204; }
+  .day-head .meta { font: 400 12px var(--f-mono); color: var(--muted); margin-left: auto; }
+  section.day { background: var(--panel); border: 1px solid var(--line); border-radius: 8px; padding: 22px clamp(16px, 4vw, 30px); margin-top: 28px; }
+
+  .prose h3 { font: 700 1.12rem/1.3 var(--f-display); margin: 30px 0 8px; letter-spacing: .2px; }
+  .prose p, .prose li { color: var(--text); }
+  .prose strong { color: var(--fg); font-weight: 600; }
+  .prose ol, .prose ul { padding-left: 1.4em; }
+  .prose li { margin: 4px 0; }
+  .prose li > ul, .prose li > ol { margin: 4px 0; }
+  .prose code { font: 400 .86em var(--f-mono); background: var(--panel-2); border: 1px solid var(--line); border-radius: 3px; padding: 1px 5px; color: var(--fg); overflow-wrap: anywhere; }
+  .tw { overflow-x: auto; margin: 14px 0; border: 1px solid var(--line); border-radius: 6px; }
+  .tw table { border-collapse: collapse; width: 100%; font-size: .9rem; }
+  .tw th, .tw td { text-align: left; padding: 8px 12px; border-bottom: 1px solid var(--line); vertical-align: top; }
+  .tw th { font: 600 12px var(--f-mono); color: var(--muted); background: var(--panel-2); }
+  .card .tw td:first-child, .card .tw td:last-child { white-space: nowrap; }
+  .tw tr:last-child td { border-bottom: 0; }
+  ul.tasks { list-style: none; padding-left: 0; }
+  li.task label { display: flex; gap: 10px; align-items: flex-start; cursor: pointer; padding: 4px 0; }
+  li.task input { width: 18px; height: 18px; margin-top: 4px; accent-color: var(--accent); flex: none; }
+  li.task input:checked + span { color: var(--muted); text-decoration: line-through; }
+  .pn { display: flex; justify-content: space-between; gap: 12px; margin-top: 26px; padding-top: 14px; border-top: 1px solid var(--line); font: 500 13px var(--f-mono); }
+  .pn a { text-decoration: none; }
+  .note { font-size: .9rem; color: var(--muted); }
+  .reset { font: 500 11px var(--f-mono); color: var(--muted); background: none; border: 1px solid var(--line); border-radius: 4px; padding: 3px 8px; cursor: pointer; text-transform: uppercase; }
+  .reset:hover { color: var(--hot); border-color: var(--hot); }
+
+  .fig { margin: 18px 0; padding: 16px 14px 12px; border: 1px solid var(--line); border-radius: 6px; background: var(--panel-2); }
+  .fig .sc { overflow-x: auto; }
+  .fig svg { display: block; width: 100%; min-width: 540px; height: auto; max-width: 720px; margin: 0 auto; overflow: visible; }
+  .fig figcaption { font-size: .85rem; color: var(--muted); margin-top: 10px; text-align: center; max-width: 62ch; margin-inline: auto; }
+  .fig .k { fill: none; stroke: var(--fg); stroke-width: 1.6; } .fig .k1 { fill: none; stroke: var(--fg); stroke-width: 1; }
+  .fig .mu { fill: none; stroke: var(--muted); stroke-width: 1.2; } .fig .mud { fill: none; stroke: var(--muted); stroke-width: 1; stroke-dasharray: 5 4; }
+  .fig .dm { fill: none; stroke: var(--muted); stroke-width: .9; }
+  .fig .rp { fill: none; stroke: var(--hot); stroke-width: 1; stroke-dasharray: 9 4 2 4; }
+  .fig .gd { fill: none; stroke: var(--fg); stroke-width: 1; stroke-dasharray: 16 4 3 4; }
+  .fig .ac { fill: none; stroke: var(--accent); stroke-width: 2; } .fig .acl { fill: none; stroke: var(--accent); stroke-width: 1; }
+  .fig .gl { fill: var(--accent-dim); stroke: var(--fg); stroke-width: .8; }
+  .fig .sp { fill: color-mix(in srgb, var(--fg) 40%, transparent); stroke: var(--fg); stroke-width: .8; }
+  .fig .fr { fill: color-mix(in srgb, var(--fg) 22%, transparent); stroke: none; } .fig .edge { fill: none; stroke: var(--fg); stroke-width: 1.8; }
+  .fig .so { fill: var(--panel); stroke: var(--fg); stroke-width: 1.6; } .fig .hole { fill: var(--panel-2); stroke: var(--fg); stroke-width: 1.2; }
+  .fig .rib { fill: var(--accent-dim); stroke: var(--accent); stroke-width: 1.4; stroke-dasharray: 6 4; }
+  .fig .sel { fill: none; stroke: var(--accent); stroke-width: 3; }
+  .fig .mul { stroke: var(--fg); stroke-width: 4; } .fig .tr { stroke: var(--fg); stroke-width: 3; } .fig .trA { stroke: var(--accent); stroke-width: 3; }
+  .fig .lh { fill: var(--panel); stroke: var(--fg); stroke-width: 1.4; }
+  .fig .dot { fill: var(--accent); } .fig .dotr { fill: var(--accent); stroke: var(--panel); stroke-width: 1; }
+  .fig .pt { fill: var(--accent); stroke: var(--panel); stroke-width: 2; } .fig .tpt { fill: var(--panel); font: 700 12px var(--f-mono); }
+  .fig .bx { fill: var(--panel); stroke: var(--line); stroke-width: 1.3; } .fig .bxa { fill: var(--accent-dim); stroke: var(--accent); stroke-width: 1.3; }
+  .fig .ar { fill: var(--muted); }
+  .fig .acd { fill: none; stroke: var(--accent); stroke-width: 1.6; stroke-dasharray: 6 4; }
+  .fig text { text-transform: none; letter-spacing: 0; } .fig .bg { fill: var(--panel); stroke: none; }
+  .fig .t { fill: var(--text); font: 400 13px var(--f-body); } .fig .tb { fill: var(--fg); font: 600 13px var(--f-body); }
+  .fig .tm { fill: var(--muted); font: 400 11px var(--f-mono); } .fig .ta { fill: var(--accent); font: 600 11px var(--f-mono); }
+  .fig .th { fill: var(--hot); font: 500 11px var(--f-mono); }
+  .fig .swb { fill: none; stroke: #2f7de1; stroke-width: 2; } .fig .swr { fill: none; stroke: #d64545; stroke-width: 2; } .fig .tr2 { fill: #d64545; font: 600 11px var(--f-mono); } .fig .tbl { fill: #2f7de1; font: 600 11px var(--f-mono); }
+  .prose pre { background: var(--panel-2); border: 1px solid var(--line); border-radius: 6px; padding: 12px 14px; overflow-x: auto; }
+  .prose pre code { background: none; border: 0; padding: 0; font: 400 .85rem/1.5 var(--f-mono); color: var(--fg); }
+  footer { margin-top: 56px; border-top: 1px solid var(--line); padding-block: 20px calc(20px + env(safe-area-inset-bottom, 0px)); font: 400 12px var(--f-mono); color: var(--muted); }
+  footer .wrap { display: flex; justify-content: space-between; gap: 12px; flex-wrap: wrap; }
+  footer a { color: inherit; } footer a:hover { color: var(--accent); }
+  @media print { .topbar, .daynav, .pn, footer, .reset { display: none !important; } body { background: #fff; } section.day, .card { break-inside: auto; border: 0; } }
+</style>
+<script async src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-4775308844679394" crossorigin="anonymous"></script>
+</head>
+<body>
+<div class="topbar">
+  <div class="wrap">
+    <a class="brand" href="/">erdevelop<span>_</span></a>
+    <span class="crumb">/ eğitimler / autolisp</span>
+    <span class="sp"></span>
+    <a class="tb" href="../../Tools.html">Araçlar</a>
+    <button class="tb" type="button" id="modeBtn">DARK</button>
+  </div>
+  <nav class="daynav" aria-label="Günler"><div class="wrap"><a href="#genel" data-nav="0">Genel</a><a href="#gun1" data-nav="1">1</a><a href="#gun2" data-nav="2">2</a><a href="#gun3" data-nav="3">3</a><a href="#gun4" data-nav="4">4</a><a href="#gun5" data-nav="5">5</a><a href="#gun6" data-nav="6">6</a><a href="#gun7" data-nav="7">7</a></div></nav>
+</div>
+
+<main class="wrap">
+  <header class="head" id="genel">
+    <div class="kicker">Eğitimler · AutoLISP</div>
+    <h1>AutoLISP Eğitimi</h1>
+    <p class="lead">AutoCAD kullanıcıları için 7 günlük yoğun program. Hiç kod yazmamış olsan da ilk gün kendi komutunu çalıştırırsın. Hafta sonunda aks çizen, panelleri numaralayan, alan toplayan, blokları sayan, CSV okuyup yazan komutlardan oluşan ve ekibine şerit düğmesiyle dağıtabileceğin bir Cephe Kiti'n olur.</p>
+    <div class="chips"><span>7 gün</span><span>günde ~5 saat</span><span>Türkçe</span><span>Kod örnekleri kopyalanabilir</span></div>
+  </header>
+
+  <div class="card">
+    <h2>Başlamadan önce</h2>
+    <div class="prose">
+      <h3>Kimler için</h3>
+      <p>AutoCAD'i iyi kullanan ve tekrar eden işleri otomatikleştirmek isteyen cephe, mimari ve makine ressamları. Programlama bilgisi gerekmez. Örnekler, bu sitedeki <a href="../autocad/">AutoCAD eğitiminin</a> katman standardını ve bloklarını (PANEL_ETIKET) kullanır.</p>
+      <h3>Gerekenler</h3>
+      <ul>
+        <li><strong>AutoCAD</strong> (tam sürüm, Windows). Deneme sürümü yeterli.</li>
+        <li><strong>Visual Studio Code</strong> ve AutoCAD AutoLISP Extension (VLISP komutu kurulumu yönlendirir) ya da sadece Not Defteri.</li>
+        <li>AutoCAD eğitimindeki PANEL_ETIKET bloğu (5-6. günler için) ve Excel.</li>
+      </ul>
+      <h3>Program</h3>
+      <div class="tw"><table><thead><tr><th>Gün</th><th>Konu</th><th>Ne öğrenirsin</th><th>Süre</th></tr></thead><tbody>
+<tr><td><a href="#gun1">1. gün</a></td><td>İfadeler ve ilk komut</td><td>Editör, yükleme, parantez mantığı, veri türleri, defun c:, yerel değişken, command</td><td>~5 saat</td></tr>
+<tr><td><a href="#gun2">2. gün</a></td><td>Kullanıcı girdisi ve geometri</td><td>getpoint, getdist, getkword, initget, polar, radyan, PLAKA komutu</td><td>~5 saat</td></tr>
+<tr><td><a href="#gun3">3. gün</a></td><td>Koşullar, döngüler ve listeler</td><td>if, cond, repeat, foreach, mapcar, lambda, liste kurma, AKS komutu</td><td>~5 saat</td></tr>
+<tr><td><a href="#gun4">4. gün</a></td><td>Seçim ve nesne verisi</td><td>ssget filtreleri, entget, DXF kodları, entmod, entmake, CAMALAN, PNUM</td><td>~5 saat</td></tr>
+<tr><td><a href="#gun5">5. gün</a></td><td>ActiveX: bloklar ve nitelikler</td><td>vla- ve vlax- fonksiyonları, BLOKSAY, nitelik okuma-yazma, ETIKETNO</td><td>~5 saat</td></tr>
+<tr><td><a href="#gun6">6. gün</a></td><td>Hata yönetimi ve dosyalar</td><td>*error*, undo mark, CSV yazma ve okuma, CSV&#x27;den blok yerleştirme</td><td>~5 saat</td></tr>
+<tr><td><a href="#gun7">7. gün</a></td><td>Cephe Kiti: düzen ve dağıtım</td><td>Kod düzeni, acaddoc.lsp, güvenilir konum, şerit düğmeleri, derleme, KONTROL</td><td>~5 saat</td></tr>
+      </tbody></table></div>
+      <p class="note">Her günün sonunda bir kontrol listesi var. İşaretledikçe ilerlemen bu tarayıcıda saklanır. Hafta içi sadece akşamları çalışırsan program yaklaşık iki hafta sürer. Kodlar AutoCAD 2021 ve sonrası için yazıldı. ActiveX (vla-, vlax-) fonksiyonları sadece Windows'taki tam AutoCAD'de çalışır; AutoCAD LT 2024+ temel AutoLISP'i destekler. <button class="reset" type="button" id="resetBtn">ilerlemeyi sıfırla</button></p>
+    </div>
+  </div>
+
+<section class="day" id="gun1" data-day="1">
+  <div class="day-head"><span class="dn">GÜN 01</span><h2>İfadeler ve ilk komut</h2><span class="meta">~5 saat · <span data-prog="1">0/6</span> kontrol</span></div>
+  <div class="prose"><h3>Hedef ve AutoLISP mantığı</h3>
+<p>Gün sonunda kendi yazdığın iki AutoCAD komutunu yükleyip çalıştırmış, AutoLISP'in ifade yapısını okuyabilir olacaksın. Süre yaklaşık 5 saat. Dosya: <code>gun1.lsp</code>.</p>
+<p>AutoLISP, AutoCAD'in içinde gelen programlama dilidir. Komut satırına yazdığın her şeyi yapabilir: çizer, seçer, sayar, parametre okur, dosyaya yazar. Cephe çiziminde tekrar eden işler (aks çizme, panel numaralama, alan toplama, blok sayma) birkaç satırlık rutinlerle saniyelere iner.</p>
+<p><strong>Ortam:</strong> AutoCAD'in tam sürümü. AutoCAD LT, 2024 sürümünden itibaren AutoLISP'i destekler ama ActiveX (<code>vla-</code> fonksiyonları, 5. gün) LT'de yoktur.</p>
+<h3>1. Editör ve yükleme (1 saat)</h3>
+<ol>
+<li>AutoCAD 2021 ve sonrasında AutoLISP editörü <strong>Visual Studio Code</strong>'dur. <strong>VLISP</strong> komutunu yaz; AutoCAD, VS Code ve <strong>AutoCAD AutoLISP Extension</strong> kurulumunu yönlendirir. Eski editörü kullanmak için <strong>LISPSYS</strong> sistem değişkeni 0 yapılır.</li>
+<li>Basit işler için Not Defteri de yeterlidir. Dosyayı <code>.lsp</code> uzantısıyla, Türkçe karakterler için <strong>ANSI</strong> kodlamasıyla kaydet.</li>
+<li>Yükleme yolları:</li>
+</ol>
+<div class="tw"><table>
+<thead>
+<tr>
+<th>Yöntem</th>
+<th>Nasıl</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>APPLOAD</td>
+<td>Komut; dosyayı seç, Load. Startup Suite'e eklersen her açılışta yüklenir</td>
+</tr>
+<tr>
+<td>Sürükle bırak</td>
+<td><code>.lsp</code> dosyasını çizim penceresine sürükle</td>
+</tr>
+<tr>
+<td>Komut satırı</td>
+<td><code>(load "C:/Lisp/gun1.lsp")</code> (yolda ters bölü yerine <code>/</code> kullan)</td>
+</tr>
+<tr>
+<td>acaddoc.lsp</td>
+<td>Her çizim açıldığında otomatik yüklenen dosya (7. gün)</td>
+</tr>
+</tbody>
+</table></div>
+<h3>2. İfadeler (1,5 saat)</h3>
+<p>AutoLISP'te her şey parantez içindeki bir listedir. İlk öğe fonksiyon, gerisi argümanlardır. İçteki parantez önce hesaplanır.</p>
+<figure class="fig"><div class="sc"><svg viewBox="0 0 680 240" role="img" xmlns="http://www.w3.org/2000/svg"><defs><marker id="ah-ifade" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0 0L10 5L0 10z" class="ar"/></marker></defs><text x="20" y="40" class="tm" text-anchor="start">Yazılan ifade</text><text x="20" y="64" class="tb" text-anchor="start">(setq a (+ 1500 (* 2 600)))</text><circle cx="34" cy="114" r="12" class="so"/><text x="34" y="118" class="tb" text-anchor="middle">1</text><rect x="58" y="100" width="200" height="28" class="bxa"/><text x="68" y="119" class="ta" text-anchor="start">(* 2 600)</text><line x1="262" y1="114" x2="300" y2="114" class="mu" marker-end="url(#ah-ifade)"/><text x="308" y="119" class="tb" text-anchor="start">1200</text><text x="400" y="119" class="tm" text-anchor="start">en içteki parantez önce</text><circle cx="34" cy="160" r="12" class="so"/><text x="34" y="164" class="tb" text-anchor="middle">2</text><rect x="58" y="146" width="200" height="28" class="bx"/><text x="68" y="165" class="ta" text-anchor="start">(+ 1500 1200)</text><line x1="262" y1="160" x2="300" y2="160" class="mu" marker-end="url(#ah-ifade)"/><text x="308" y="165" class="tb" text-anchor="start">2700</text><text x="400" y="165" class="tm" text-anchor="start">sonuç dıştakine argüman olur</text><circle cx="34" cy="206" r="12" class="so"/><text x="34" y="210" class="tb" text-anchor="middle">3</text><rect x="58" y="192" width="200" height="28" class="bx"/><text x="68" y="211" class="ta" text-anchor="start">(setq a 2700)</text><line x1="262" y1="206" x2="300" y2="206" class="mu" marker-end="url(#ah-ifade)"/><text x="308" y="211" class="tb" text-anchor="start">a = 2700</text><text x="400" y="211" class="tm" text-anchor="start">en dış ifade en son</text><text x="400" y="40" class="tm" text-anchor="start">( fonksiyon  argüman  argüman … )</text><text x="400" y="60" class="tm" text-anchor="start">ilk öğe her zaman fonksiyon</text></svg></div><figcaption>AutoLISP ifadesi: parantezin ilk öğesi fonksiyon, gerisi argümanlar. Değerlendirme en içteki parantezden dışa doğru ilerler.</figcaption></figure>
+<p>Komut satırında doğrudan dene:</p>
+<pre><code class="language-lisp">(+ 1 2)                 ; 3
+(* 1500 4)              ; 6000
+(/ 9000 1500)           ; 6   (iki tam sayı: tam bölme)
+(/ 9000 1500.0)         ; 6.0 (biri ondalık: ondalık sonuç)
+(setq g 1500)           ; g değişkenine 1500 atar
+(* g 4)                 ; 6000
+(strcat &quot;P-&quot; &quot;001&quot;)     ; &quot;P-001&quot;
+(list 0 0 0)            ; (0 0 0)  bir nokta
+</code></pre>
+<div class="tw"><table>
+<thead>
+<tr>
+<th>Tür</th>
+<th>Örnek</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Tam sayı (INT)</td>
+<td><code>1500</code></td>
+</tr>
+<tr>
+<td>Ondalık (REAL)</td>
+<td><code>1500.0</code>, <code>1e6</code></td>
+</tr>
+<tr>
+<td>Metin (STR)</td>
+<td><code>"C-CAM"</code></td>
+</tr>
+<tr>
+<td>Liste</td>
+<td><code>(0 0 0)</code>, <code>("A" "B")</code></td>
+</tr>
+<tr>
+<td>Sembol</td>
+<td><code>g</code>, <code>nil</code> (boş / yanlış), <code>T</code> (doğru)</td>
+</tr>
+<tr>
+<td>Varlık adı (ENAME)</td>
+<td>çizimdeki bir nesnenin kimliği (4. gün)</td>
+</tr>
+</tbody>
+</table></div>
+<p><strong>Dikkat:</strong> <code>(/ 7 2)</code> sonucu 3'tür; iki tam sayının bölümü tam sayıdır. Ölçü hesaplarında sayılardan birini ondalık yaz.</p>
+<h3>3. İlk komutlar (1,5 saat)</h3>
+<p><code>defun</code> ile fonksiyon tanımlanır. Adı <code>c:</code> ile başlayan fonksiyon AutoCAD komutu olur.</p>
+<figure class="fig"><div class="sc"><svg viewBox="0 0 720 196" role="img" xmlns="http://www.w3.org/2000/svg"><defs><marker id="ah-defun" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0 0L10 5L0 10z" class="ar"/></marker></defs><text x="20" y="36" class="ta" text-anchor="start">(defun c:KARE (/ p a)</text><line x1="330" y1="32" x2="356" y2="32" class="acl"/><text x="362" y="36" class="tm" text-anchor="start">c: → AutoCAD komutu olur; / sonrası yerel değişkenler</text><text x="20" y="70" class="tm" text-anchor="start">  (setq p (getpoint "\nSol alt köşe: "))</text><line x1="330" y1="66" x2="356" y2="66" class="acl"/><text x="362" y="70" class="tm" text-anchor="start">kullanıcıdan nokta al</text><text x="20" y="104" class="tm" text-anchor="start">  (command "_.RECTANG" "_non" p …)</text><line x1="330" y1="100" x2="356" y2="100" class="acl"/><text x="362" y="104" class="tm" text-anchor="start">_. İngilizce komut · _non osnap kapalı</text><text x="20" y="138" class="ta" text-anchor="start">  (princ)</text><line x1="330" y1="134" x2="356" y2="134" class="acl"/><text x="362" y="138" class="tm" text-anchor="start">sessiz çıkış: ekrana nil yazmaz</text><text x="20" y="172" class="tm" text-anchor="start">)</text></svg></div><figcaption>Komut tanımının anatomisi: c: öneki, yerel değişkenler, gövde ve sessiz çıkış.</figcaption></figure>
+<p><code>gun1.lsp</code> dosyasını oluştur:</p>
+<pre><code class="language-lisp">;;; gun1.lsp - ilk komutlar
+
+(defun c:MERHABA ()
+  (princ &quot;\nMerhaba, AutoLISP!&quot;)
+  (princ)
+)
+
+(defun c:KARE (/ p a)
+  (setq p (getpoint &quot;\nSol alt köşe: &quot;))
+  (setq a (getdist p &quot;\nKenar uzunluğu: &quot;))
+  (command &quot;_.RECTANG&quot;
+           &quot;_non&quot; p
+           &quot;_non&quot; (list (+ (car p) a) (+ (cadr p) a)))
+  (princ)
+)
+</code></pre>
+<ol>
+<li>Kaydet, <strong>APPLOAD</strong> ile yükle. Komut satırına <code>MERHABA</code>, sonra <code>KARE</code> yaz.</li>
+<li><code>(/ p a)</code>: <code>p</code> ve <code>a</code> <strong>yerel</strong> değişkenlerdir; komut bitince silinir. Eğik çizginin solu argümanlar, sağı yerel değişkenlerdir. Yerel yazılmayan değişkenler çizim boyunca kalır ve başka rutinleri bozabilir.</li>
+<li>Son satırdaki <code>(princ)</code>: komutun sonunda ekrana <code>nil</code> yazılmasını engeller (sessiz çıkış).</li>
+<li><code>"_non"</code>: o tıklama için nesne yakalamayı kapatır. Koordinatı programla verdiğin her noktadan önce kullan; yoksa açık olan Osnap noktayı yakındaki bir nesneye kaydırabilir.</li>
+<li><code>"_.RECTANG"</code>: alt çizgi komutu her dildeki AutoCAD'de İngilizce adıyla çalıştırır, nokta ise yeniden tanımlanmış komut yerine orijinalini çağırır.</li>
+</ol>
+<h3>4. Nokta listeleri (45 dk)</h3>
+<p>Nokta, sayılardan oluşan bir listedir: <code>(x y)</code> ya da <code>(x y z)</code>.</p>
+<pre><code class="language-lisp">(setq p (list 100 200 0))
+(car p)      ; 100  ilk öğe   (x)
+(cadr p)     ; 200  ikinci öğe (y)
+(caddr p)    ; 0    üçüncü öğe (z)
+</code></pre>
+<p>Alıştırma: <code>KARE</code> komutunu <code>DIKDORTGEN</code> adıyla kopyala, genişlik ve yüksekliği ayrı ayrı sorsun.</p>
+<h3>Gün sonu kontrolü (15 dk)</h3>
+<p>Hepsini işaretleyebiliyorsan 2. güne geçebilirsin.</p>
+<ul class="tasks">
+<li class="task"><label><input type="checkbox" data-id="g1-1"><span>Bir <code>.lsp</code> dosyasını yükleyip içindeki komutu çalıştırabiliyorum.</span></label></li>
+<li class="task"><label><input type="checkbox" data-id="g1-2"><span>İfadelerin içten dışa hesaplandığını ve ilk öğenin fonksiyon olduğunu biliyorum.</span></label></li>
+<li class="task"><label><input type="checkbox" data-id="g1-3"><span>Tam sayı bölmesi tuzağını biliyorum.</span></label></li>
+<li class="task"><label><input type="checkbox" data-id="g1-4"><span><code>defun c:</code> ile komut tanımlayıp yerel değişkenleri doğru yazabiliyorum.</span></label></li>
+<li class="task"><label><input type="checkbox" data-id="g1-5"><span><code>command</code> ile AutoCAD komutu çalıştırırken <code>_non</code> ve <code>_.</code> kullanmanın nedenini biliyorum.</span></label></li>
+<li class="task"><label><input type="checkbox" data-id="g1-6"><span>Nokta listesinden x ve y'yi <code>car</code> ve <code>cadr</code> ile alabiliyorum.</span></label></li>
+</ul>
+<p><strong>Bonus:</strong> <code>c:KARE</code> komutuna bir de merkezine çarpı (iki çizgi) çizdir. Merkez noktayı <code>(list (+ (car p) (/ a 2.0)) (+ (cadr p) (/ a 2.0)))</code> ile hesapla.</p></div>
+  <div class="pn"><a href="#genel">← Genel bakış</a><a href="#gun2">2. gün →</a></div>
+</section>
+<section class="day" id="gun2" data-day="2">
+  <div class="day-head"><span class="dn">GÜN 02</span><h2>Kullanıcı girdisi ve geometri</h2><span class="meta">~5 saat · <span data-prog="2">0/6</span> kontrol</span></div>
+  <div class="prose"><h3>Hedef</h3>
+<p>Gün sonunda kullanıcıdan nokta, ölçü ve seçenek alan, varsayılan değerleri olan, delikli ankraj plakası çizen bir <code>PLAKA</code> komutun olacak. Süre yaklaşık 5 saat. Dosya: <code>gun2.lsp</code>.</p>
+<h3>1. Kullanıcıdan girdi almak (1,5 saat)</h3>
+<div class="tw"><table>
+<thead>
+<tr>
+<th>Fonksiyon</th>
+<th>Ne ister</th>
+<th>Döndürür</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>getpoint</td>
+<td>Nokta (tıkla ya da yaz)</td>
+<td><code>(x y z)</code></td>
+</tr>
+<tr>
+<td>getcorner</td>
+<td>İkinci köşe (pencere gibi)</td>
+<td><code>(x y z)</code></td>
+</tr>
+<tr>
+<td>getdist</td>
+<td>Mesafe (yaz ya da iki nokta)</td>
+<td>ondalık</td>
+</tr>
+<tr>
+<td>getreal / getint</td>
+<td>Sayı</td>
+<td>ondalık / tam sayı</td>
+</tr>
+<tr>
+<td>getangle</td>
+<td>Açı</td>
+<td>radyan</td>
+</tr>
+<tr>
+<td>getstring</td>
+<td>Metin (<code>T</code> ile boşluklu)</td>
+<td>metin</td>
+</tr>
+<tr>
+<td>getkword</td>
+<td>Anahtar kelime (seçenek)</td>
+<td>metin</td>
+</tr>
+</tbody>
+</table></div>
+<p>Kullanıcı Enter'a basarsa bu fonksiyonlar <code>nil</code> döndürür. Varsayılan değer vermek için:</p>
+<pre><code class="language-lisp">(setq g (getdist &quot;\nGenişlik &lt;200&gt;: &quot;))
+(if (not g) (setq g 200.0))
+</code></pre>
+<p><strong>initget ile kısıt ve seçenek</strong></p>
+<pre><code class="language-lisp">(initget 7)                         ; 1: boş olamaz, 2: sıfır olamaz, 4: negatif olamaz
+(setq n (getint &quot;\nAks sayısı: &quot;))
+
+(initget &quot;Yatay Dusey&quot;)              ; anahtar kelimeler
+(setq yon (getkword &quot;\nYön [Yatay/Dusey] &lt;Yatay&gt;: &quot;))
+(if (not yon) (setq yon &quot;Yatay&quot;))
+</code></pre>
+<p>Kullanıcı sadece büyük harfli kısmı (Y ya da D) yazarak seçebilir. Seçenekler komut satırında tıklanabilir görünür.</p>
+<h3>2. Geometri fonksiyonları (1 saat)</h3>
+<figure class="fig"><div class="sc"><svg viewBox="0 0 640 270" role="img" xmlns="http://www.w3.org/2000/svg"><defs><marker id="ah-polar" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0 0L10 5L0 10z" class="ar"/></marker></defs><line x1="40" y1="230" x2="600" y2="230" class="mu" marker-end="url(#ah-polar)"/><line x1="60" y1="250" x2="60" y2="20" class="mu" marker-end="url(#ah-polar)"/><circle cx="140" cy="200" r="5" class="dot"/><text x="130" y="220" class="ta" text-anchor="end">p</text><line x1="140" y1="200" x2="353.0" y2="50.9" class="ac"/><circle cx="353.0" cy="50.9" r="5" class="dot"/><path d="M200 200 A60 60 0 0 0 189 165" class="mu"/><text x="206" y="188" class="tm" text-anchor="start">angle (radyan)</text><line x1="140" y1="200" x2="420" y2="200" class="mud"/><text x="363.0" y="44.9" class="ta" text-anchor="start">(polar p açı mesafe)</text><text x="280" y="120" class="tm" text-anchor="start">distance</text><text x="420" y="260" class="tm" text-anchor="start">(dtr 35) = 0,611 radyan</text></svg></div><figcaption>polar: bir noktadan açı ve mesafeyle yeni nokta. AutoLISP açıları radyan kullanır; derece için dtr yardımcı fonksiyonu yazılır.</figcaption></figure>
+<div class="tw"><table>
+<thead>
+<tr>
+<th>Fonksiyon</th>
+<th>İşlev</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>(distance p1 p2)</code></td>
+<td>İki nokta arası mesafe</td>
+</tr>
+<tr>
+<td><code>(angle p1 p2)</code></td>
+<td>p1'den p2'ye açı (radyan)</td>
+</tr>
+<tr>
+<td><code>(polar p aci mesafe)</code></td>
+<td>p'den verilen açı ve mesafedeki nokta</td>
+</tr>
+<tr>
+<td><code>(inters p1 p2 p3 p4)</code></td>
+<td>İki çizginin kesişimi</td>
+</tr>
+<tr>
+<td><code>(rtos sayi 2 1)</code></td>
+<td>Sayıyı metne çevir (2 = ondalık, 1 basamak)</td>
+</tr>
+<tr>
+<td><code>(itoa n)</code> / <code>(atoi "5")</code></td>
+<td>Tam sayı ↔ metin</td>
+</tr>
+<tr>
+<td><code>(atof "1.5")</code></td>
+<td>Metin → ondalık</td>
+</tr>
+</tbody>
+</table></div>
+<p>AutoLISP açıları <strong>radyan</strong> cinsinden kullanır. Derece çevirisi için küçük bir yardımcı fonksiyon:</p>
+<pre><code class="language-lisp">(defun dtr (d) (* pi (/ d 180.0)))   ; derece → radyan
+(defun rtd (r) (* 180.0 (/ r pi)))   ; radyan → derece
+
+(polar '(0 0) (dtr 90) 1500)         ; (0.0 1500.0)
+</code></pre>
+<h3>3. PLAKA komutu (2 saat)</h3>
+<figure class="fig"><div class="sc"><svg viewBox="0 0 660 314" role="img" xmlns="http://www.w3.org/2000/svg"><defs><marker id="ah-plaka" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0 0L10 5L0 10z" class="ar"/></marker></defs><rect x="150" y="40" width="320" height="220" class="so"/><circle cx="195" cy="215" r="11" class="hole"/><circle cx="425" cy="215" r="11" class="hole"/><circle cx="425" cy="85" r="11" class="hole"/><circle cx="195" cy="85" r="11" class="hole"/><circle cx="150" cy="260" r="5" class="dot"/><text x="140" y="278" class="ta" text-anchor="end">p</text><line x1="150" y1="286" x2="470" y2="286" class="dm"/><line x1="150" y1="281" x2="150" y2="291" class="dm"/><line x1="470" y1="281" x2="470" y2="291" class="dm"/><text x="310.0" y="302" class="tm" text-anchor="middle">g &lt;200&gt;</text><line x1="130" y1="40" x2="130" y2="260" class="dm"/><line x1="125" y1="40" x2="135" y2="40" class="dm"/><line x1="125" y1="260" x2="135" y2="260" class="dm"/><text x="120" y="154.0" class="tm" text-anchor="end">y &lt;150&gt;</text><line x1="150" y1="20" x2="195" y2="20" class="dm"/><line x1="150" y1="15" x2="150" y2="25" class="dm"/><line x1="195" y1="15" x2="195" y2="25" class="dm"/><text x="172.5" y="14" class="tm" text-anchor="middle">e &lt;30&gt;</text><line x1="425" y1="85" x2="470" y2="60" class="acl"/><text x="474" y="58" class="ta" text-anchor="start">Ø d &lt;14&gt;</text><text x="560" y="140" class="tm" text-anchor="start">foreach ile</text><text x="560" y="156" class="tm" text-anchor="start">4 köşe deliği</text></svg></div><figcaption>PLAKA komutunun çizdiği: kullanıcıdan alınan p noktası, g, y, e ve d değerleri. Köşeli parantezdekiler Enter&#x27;a basılınca kullanılan varsayılanlardır.</figcaption></figure>
+<pre><code class="language-lisp">;;; gun2.lsp - parametrik ankraj plakası
+
+(defun c:PLAKA (/ p g y d e k)
+  (setq p (getpoint &quot;\nPlaka sol alt köşesi: &quot;))
+  (if p
+    (progn
+      (setq g (getdist &quot;\nGenişlik &lt;200&gt;: &quot;))      (if (not g) (setq g 200.0))
+      (setq y (getdist &quot;\nYükseklik &lt;150&gt;: &quot;))     (if (not y) (setq y 150.0))
+      (setq d (getreal &quot;\nDelik çapı &lt;14&gt;: &quot;))     (if (not d) (setq d 14.0))
+      (setq e (getdist &quot;\nKenar mesafesi &lt;30&gt;: &quot;)) (if (not e) (setq e 30.0))
+      ;; dış kontur
+      (command &quot;_.RECTANG&quot; &quot;_non&quot; p
+               &quot;_non&quot; (list (+ (car p) g) (+ (cadr p) y)))
+      ;; dört köşe deliği
+      (foreach k (list (list e e) (list (- g e) e)
+                       (list (- g e) (- y e)) (list e (- y e)))
+        (command &quot;_.CIRCLE&quot; &quot;_non&quot;
+                 (list (+ (car p) (car k)) (+ (cadr p) (cadr k)))
+                 (/ d 2.0))
+      )
+    )
+  )
+  (princ)
+)
+</code></pre>
+<ol>
+<li>Yükle ve <code>PLAKA</code> ile dene. Enter'a basarak varsayılanları kabul et.</li>
+<li><code>progn</code>: birden çok ifadeyi tek bir ifade gibi gruplar. <code>if</code>'in "doğru" kısmında birden fazla iş yapmak için gerekir.</li>
+<li><code>foreach</code>: listedeki her öğe için gövdeyi çalıştırır (3. günde ayrıntılı).</li>
+<li>Geliştir: kenar mesafesi, kalınlığa bağlı otomatik hesaplansın: <code>(setq e (* 3 t_kalinlik))</code>.</li>
+</ol>
+<h3>Gün sonu kontrolü (15 dk)</h3>
+<p>Hepsini işaretleyebiliyorsan 3. güne geçebilirsin.</p>
+<ul class="tasks">
+<li class="task"><label><input type="checkbox" data-id="g2-1"><span>getpoint, getdist, getreal, getint ve getkword kullanabiliyorum.</span></label></li>
+<li class="task"><label><input type="checkbox" data-id="g2-2"><span>Enter'a basılınca dönen <code>nil</code> ile varsayılan değer verebiliyorum.</span></label></li>
+<li class="task"><label><input type="checkbox" data-id="g2-3"><span>initget ile boş, sıfır ve negatif girişi engelleyebiliyorum.</span></label></li>
+<li class="task"><label><input type="checkbox" data-id="g2-4"><span>polar, distance ve angle ile nokta hesabı yapabiliyorum.</span></label></li>
+<li class="task"><label><input type="checkbox" data-id="g2-5"><span>Derece-radyan çevirisini yapabiliyorum.</span></label></li>
+<li class="task"><label><input type="checkbox" data-id="g2-6"><span>Girdileri alıp ölçülü geometri çizen bir komut yazabiliyorum.</span></label></li>
+</ul>
+<p><strong>Bonus:</strong> <code>PLAKA</code> komutuna <code>[Yuvarlak/Oval]</code> seçeneği ekle. Oval seçilirse delik yerine 14 x 30 mm oval çiz: iki daire + iki çizgi + <code>TRIM</code>, ya da <code>PLINE</code> ile yay segmentli kapalı polyline.</p></div>
+  <div class="pn"><a href="#gun1">← 1. gün</a><a href="#gun3">3. gün →</a></div>
+</section>
+<section class="day" id="gun3" data-day="3">
+  <div class="day-head"><span class="dn">GÜN 03</span><h2>Koşullar, döngüler ve listeler</h2><span class="meta">~5 saat · <span data-prog="3">0/6</span> kontrol</span></div>
+  <div class="prose"><h3>Hedef</h3>
+<p>Gün sonunda koşullar, döngüler ve liste fonksiyonlarıyla bir cephe aks sistemi çizen <code>AKS</code> komutun ve panel genişliğine göre tip veren yardımcı fonksiyonların olacak. Süre yaklaşık 5 saat. Dosya: <code>gun3.lsp</code>.</p>
+<h3>1. Koşullar (1 saat)</h3>
+<div class="tw"><table>
+<thead>
+<tr>
+<th>Yapı</th>
+<th>Kullanım</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>(if koşul doğru yanlış)</code></td>
+<td>Tek koşul, iki yol</td>
+</tr>
+<tr>
+<td><code>(cond (k1 ...) (k2 ...) (T ...))</code></td>
+<td>Birden çok koşul; ilk doğru olan çalışır</td>
+</tr>
+<tr>
+<td><code>(and a b)</code> / <code>(or a b)</code> / <code>(not a)</code></td>
+<td>Mantık</td>
+</tr>
+<tr>
+<td><code>(= a b)</code> <code>(/= a b)</code> <code>(&lt; a b)</code> <code>(&gt; a b)</code></td>
+<td>Karşılaştırma</td>
+</tr>
+<tr>
+<td><code>(equal a b 0.01)</code></td>
+<td>Toleranslı eşitlik (ondalık ve nokta karşılaştırmada)</td>
+</tr>
+</tbody>
+</table></div>
+<pre><code class="language-lisp">(defun panel-tip (g)
+  (cond ((&gt; g 1400) &quot;G01&quot;)
+        ((&gt; g 900)  &quot;G02&quot;)
+        (T          &quot;G03&quot;))
+)
+
+(panel-tip 1500)   ; &quot;G01&quot;
+(panel-tip 1200)   ; &quot;G02&quot;
+</code></pre>
+<p><strong>Dikkat:</strong> Ondalık sayıları <code>=</code> ile karşılaştırma. 1500.0 ile 1499.9999 eşit çıkmaz. <code>(equal a b 0.01)</code> kullan.</p>
+<h3>2. Döngüler (1 saat)</h3>
+<figure class="fig"><div class="sc"><svg viewBox="0 0 660 232" role="img" xmlns="http://www.w3.org/2000/svg"><defs><marker id="ah-dongu" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0 0L10 5L0 10z" class="ar"/></marker></defs><rect x="20" y="20" width="160" height="40" rx="5" class="bx"/><text x="100.0" y="44.0" class="tb" text-anchor="middle">(seri 0 1500 5)</text><text x="100" y="80" class="tm" text-anchor="middle">(0 1500 3000 4500 6000)</text><line x1="100" y1="88" x2="100" y2="118" class="ac" marker-end="url(#ah-dongu)"/><rect x="20" y="120" width="160" height="40" rx="5" class="bxa"/><text x="100.0" y="144.0" class="tb" text-anchor="middle">mapcar + lambda</text><text x="100" y="180" class="tm" text-anchor="middle">(+ x0 k) her öğeye</text><line x1="180" y1="140" x2="230" y2="140" class="ac" marker-end="url(#ah-dongu)"/><rect x="230" y="120" width="140" height="40" rx="5" class="bx"/><text x="300.0" y="144.0" class="tb" text-anchor="middle">foreach x xs</text><line x1="420" y1="60" x2="420" y2="200" class="gd"/><circle cx="420" cy="46" r="12" class="so"/><text x="420" y="50" class="tb" text-anchor="middle">1</text><line x1="465" y1="60" x2="465" y2="200" class="gd"/><circle cx="465" cy="46" r="12" class="so"/><text x="465" y="50" class="tb" text-anchor="middle">2</text><line x1="510" y1="60" x2="510" y2="200" class="gd"/><circle cx="510" cy="46" r="12" class="so"/><text x="510" y="50" class="tb" text-anchor="middle">3</text><line x1="555" y1="60" x2="555" y2="200" class="gd"/><circle cx="555" cy="46" r="12" class="so"/><text x="555" y="50" class="tb" text-anchor="middle">4</text><line x1="600" y1="60" x2="600" y2="200" class="gd"/><circle cx="600" cy="46" r="12" class="so"/><text x="600" y="50" class="tb" text-anchor="middle">5</text><line x1="370" y1="140" x2="412" y2="140" class="ac" marker-end="url(#ah-dongu)"/><text x="510" y="222" class="tm" text-anchor="middle">her x için LINE + CIRCLE + TEXT</text></svg></div><figcaption>AKS komutunun akışı: önce aralık listesi, mapcar ile gerçek x konumları, foreach ile her aks için çizim.</figcaption></figure>
+<div class="tw"><table>
+<thead>
+<tr>
+<th>Yapı</th>
+<th>Ne zaman</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>(repeat n ...)</code></td>
+<td>Sayısı belli tekrar</td>
+</tr>
+<tr>
+<td><code>(while koşul ...)</code></td>
+<td>Koşul doğru oldukça (ör. kullanıcı tıkladıkça)</td>
+</tr>
+<tr>
+<td><code>(foreach x liste ...)</code></td>
+<td>Listedeki her öğe için</td>
+</tr>
+<tr>
+<td><code>(mapcar 'fonksiyon liste)</code></td>
+<td>Her öğeye fonksiyon uygula, yeni liste döndür</td>
+</tr>
+<tr>
+<td><code>(lambda (x) ...)</code></td>
+<td>Adsız, yerinde tanımlanan fonksiyon</td>
+</tr>
+</tbody>
+</table></div>
+<pre><code class="language-lisp">(mapcar '1+ '(1 2 3))                          ; (2 3 4)
+(mapcar '(lambda (x) (* x 1500)) '(0 1 2 3))   ; (0 1500 3000 4500)
+(apply '+ '(1500 1500 1200))                   ; 4200  listeyi topla
+</code></pre>
+<h3>3. Liste fonksiyonları (1 saat)</h3>
+<div class="tw"><table>
+<thead>
+<tr>
+<th>Fonksiyon</th>
+<th>İşlev</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>car</code> / <code>cdr</code></td>
+<td>İlk öğe / ilk öğe hariç geri kalanı</td>
+</tr>
+<tr>
+<td><code>nth</code></td>
+<td>n. öğe (0'dan başlar)</td>
+</tr>
+<tr>
+<td><code>length</code></td>
+<td>Öğe sayısı</td>
+</tr>
+<tr>
+<td><code>cons</code></td>
+<td>Listenin başına ekle</td>
+</tr>
+<tr>
+<td><code>append</code></td>
+<td>Listeleri birleştir</td>
+</tr>
+<tr>
+<td><code>reverse</code></td>
+<td>Ters çevir</td>
+</tr>
+<tr>
+<td><code>member</code></td>
+<td>Öğe listede var mı</td>
+</tr>
+<tr>
+<td><code>vl-sort</code></td>
+<td>Sırala (karşılaştırma fonksiyonuyla)</td>
+</tr>
+<tr>
+<td><code>assoc</code></td>
+<td>Anahtar-değer listesinde ara (4. gün)</td>
+</tr>
+</tbody>
+</table></div>
+<p>Bir sayı dizisi üreten yardımcı fonksiyon:</p>
+<pre><code class="language-lisp">(defun seri (bas adim n / l)
+  (repeat n
+    (setq l (cons bas l)
+          bas (+ bas adim)))
+  (reverse l)
+)
+
+(seri 0 1500 5)   ; (0 1500 3000 4500 6000)
+</code></pre>
+<p><code>cons</code> listenin başına eklediği için en sonda <code>reverse</code> gerekir. Bu, AutoLISP'te liste kurmanın en hızlı yoludur.</p>
+<h3>4. AKS komutu (1,5 saat)</h3>
+<pre><code class="language-lisp">;;; gun3.lsp - cephe aksları
+
+(defun c:AKS (/ p n ara h xs y0 i)
+  (setq p (getpoint &quot;\nİlk aksın alt noktası: &quot;))
+  (initget 7) (setq n   (getint  &quot;\nAks sayısı: &quot;))
+  (initget 7) (setq ara (getdist &quot;\nAks aralığı: &quot;))
+  (initget 7) (setq h   (getdist &quot;\nAks yüksekliği: &quot;))
+  (setq xs (mapcar '(lambda (k) (+ (car p) k)) (seri 0 ara n))
+        y0 (cadr p)
+        i  1)
+  (foreach x xs
+    (command &quot;_.LINE&quot; &quot;_non&quot; (list x y0) &quot;_non&quot; (list x (+ y0 h)) &quot;&quot;)
+    (command &quot;_.CIRCLE&quot; &quot;_non&quot; (list x (+ y0 h 300)) 300)
+    (command &quot;_.TEXT&quot; &quot;_J&quot; &quot;_MC&quot; &quot;_non&quot; (list x (+ y0 h 300)) 250 0 (itoa i))
+    (setq i (1+ i))
+  )
+  (princ (strcat &quot;\n&quot; (itoa n) &quot; aks çizildi, toplam &quot;
+                 (rtos (* (1- n) ara) 2 0) &quot; mm.&quot;))
+  (princ)
+)
+</code></pre>
+<ol>
+<li><code>seri</code> fonksiyonunun da aynı dosyada olduğundan emin ol.</li>
+<li>TEXT komutu yazı yüksekliğini sadece aktif yazı stilinin yüksekliği 0 ise sorar. Stilde sabit yükseklik varsa sıradaki değer (250) yanlış yere gider ve komut kayar. Bu sorunu 4. günde TEXT komutu yerine <code>entmake</code> kullanarak tamamen çözeceğiz.</li>
+<li>Komutu <code>CMDECHO</code> 0 iken çalıştır (<code>(setvar "CMDECHO" 0)</code>): komut satırı kalabalık olmaz. Değeri komut bitince eski haline döndürmeyi 6. günde öğreneceğiz.</li>
+</ol>
+<h3>Gün sonu kontrolü (15 dk)</h3>
+<p>Hepsini işaretleyebiliyorsan 4. güne geçebilirsin.</p>
+<ul class="tasks">
+<li class="task"><label><input type="checkbox" data-id="g3-1"><span>if, cond ve progn'u doğru yerde kullanabiliyorum.</span></label></li>
+<li class="task"><label><input type="checkbox" data-id="g3-2"><span>Ondalık karşılaştırmada equal ve tolerans kullanmanın nedenini biliyorum.</span></label></li>
+<li class="task"><label><input type="checkbox" data-id="g3-3"><span>repeat, while ve foreach arasında seçim yapabiliyorum.</span></label></li>
+<li class="task"><label><input type="checkbox" data-id="g3-4"><span>mapcar ve lambda ile bir listeyi dönüştürebiliyorum.</span></label></li>
+<li class="task"><label><input type="checkbox" data-id="g3-5"><span>cons + reverse ile liste kurabiliyorum.</span></label></li>
+<li class="task"><label><input type="checkbox" data-id="g3-6"><span>Döngüyle aks sistemi çizen bir komut yazabiliyorum.</span></label></li>
+</ul>
+<p><strong>Bonus:</strong> <code>AKS</code> komutuna <code>[Esit/Liste]</code> seçeneği ekle. Liste seçilirse kullanıcıdan <code>1500,1500,1200,1500</code> gibi bir metin al, virgülden böl (6. gündeki <code>bol</code> fonksiyonu) ve eşit olmayan aralıklarla aks çiz.</p></div>
+  <div class="pn"><a href="#gun2">← 2. gün</a><a href="#gun4">4. gün →</a></div>
+</section>
+<section class="day" id="gun4" data-day="4">
+  <div class="day-head"><span class="dn">GÜN 04</span><h2>Seçim ve nesne verisi</h2><span class="meta">~5 saat · <span data-prog="4">0/6</span> kontrol</span></div>
+  <div class="prose"><h3>Hedef</h3>
+<p>Gün sonunda çizimden nesne seçip verilerini okuyan ve değiştiren komutların olacak: seçilen camların toplam alanı, nesneleri katmana taşıma ve panelleri konuma göre sıralayıp numaralayan sağlam bir <code>PNUM</code>. Süre yaklaşık 5 saat. Dosya: <code>gun4.lsp</code>.</p>
+<h3>1. Seçim kümeleri (1 saat)</h3>
+<div class="tw"><table>
+<thead>
+<tr>
+<th>Fonksiyon</th>
+<th>İşlev</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>(ssget)</code></td>
+<td>Kullanıcıdan seçim ister</td>
+</tr>
+<tr>
+<td><code>(ssget "_X" filtre)</code></td>
+<td>Çizimin tamamından filtreye uyanları seçer</td>
+</tr>
+<tr>
+<td><code>(sslength ss)</code></td>
+<td>Seçimdeki nesne sayısı</td>
+</tr>
+<tr>
+<td><code>(ssname ss i)</code></td>
+<td>i. nesnenin adı (ENAME), 0'dan başlar</td>
+</tr>
+<tr>
+<td><code>(entsel)</code></td>
+<td>Tek nesne seçtirir, <code>(ename nokta)</code> döndürür</td>
+</tr>
+</tbody>
+</table></div>
+<p><strong>Filtreler</strong>, DXF grup kodlarıyla yazılır:</p>
+<pre><code class="language-lisp">(ssget '((0 . &quot;LWPOLYLINE&quot;)))                         ; sadece polyline
+(ssget '((0 . &quot;LWPOLYLINE&quot;) (8 . &quot;C-CAM&quot;)))           ; C-CAM katmanındaki polyline
+(ssget '((0 . &quot;INSERT&quot;) (2 . &quot;PANEL_ETIKET&quot;)))        ; belirli blok
+(ssget '((0 . &quot;LWPOLYLINE&quot;) (-4 . &quot;&amp;&quot;) (70 . 1)))     ; sadece kapalı polyline (bit filtresi)
+(ssget '((0 . &quot;CIRCLE,ARC&quot;)))                         ; birden çok tür: virgülle
+</code></pre>
+<h3>2. Nesne verisi: entget ve entmod (1,5 saat)</h3>
+<figure class="fig"><div class="sc"><svg viewBox="0 0 640 240" role="img" xmlns="http://www.w3.org/2000/svg"><defs><marker id="ah-entget" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0 0L10 5L0 10z" class="ar"/></marker></defs><rect x="10" y="30" width="110" height="40" rx="5" class="bxa"/><text x="65.0" y="46.0" class="tb" text-anchor="middle">ssget</text><text x="65.0" y="62.0" class="tm" text-anchor="middle">filtre</text><rect x="150" y="30" width="110" height="40" rx="5" class="bx"/><text x="205.0" y="46.0" class="tb" text-anchor="middle">ssname</text><text x="205.0" y="62.0" class="tm" text-anchor="middle">ENAME</text><rect x="290" y="30" width="110" height="40" rx="5" class="bxa"/><text x="345.0" y="46.0" class="tb" text-anchor="middle">entget</text><text x="345.0" y="62.0" class="tm" text-anchor="middle">liste</text><line x1="120" y1="50" x2="148" y2="50" class="mu" marker-end="url(#ah-entget)"/><line x1="260" y1="50" x2="288" y2="50" class="mu" marker-end="url(#ah-entget)"/><rect x="430" y="20" width="190" height="24" class="bx"/><text x="440" y="37" class="tm" text-anchor="start">(0 . "LWPOLYLINE")</text><rect x="430" y="46" width="190" height="24" class="bxa"/><text x="440" y="63" class="tm" text-anchor="start">(8 . "C-CAM")</text><rect x="430" y="72" width="190" height="24" class="bx"/><text x="440" y="89" class="tm" text-anchor="start">(70 . 1)</text><rect x="430" y="98" width="190" height="24" class="bx"/><text x="440" y="115" class="tm" text-anchor="start">(10 0.0 0.0)</text><rect x="430" y="124" width="190" height="24" class="bx"/><text x="440" y="141" class="tm" text-anchor="start">(10 1500.0 0.0)</text><rect x="430" y="150" width="190" height="24" class="bx"/><text x="440" y="167" class="tm" text-anchor="start">…</text><line x1="400" y1="50" x2="428" y2="50" class="mu"/><rect x="150" y="130" width="250" height="40" rx="5" class="bx"/><text x="275.0" y="154.0" class="tb" text-anchor="middle">subst (8 . "C-YAZI") (8 . "C-CAM")</text><rect x="150" y="190" width="110" height="36" rx="5" class="bxa"/><text x="205.0" y="212.0" class="tb" text-anchor="middle">entmod</text><line x1="520" y1="176" x2="402" y2="150" class="mu" marker-end="url(#ah-entget)"/><line x1="205" y1="170" x2="205" y2="188" class="mu" marker-end="url(#ah-entget)"/><text x="280" y="212" class="tm" text-anchor="start">çizim güncellenir</text></svg></div><figcaption>Nesne verisi: seçim kümesinden ENAME, entget ile DXF noktalı çiftler listesi. Bir çift subst ile değiştirilip entmod ile çizime geri yazılır.</figcaption></figure>
+<p><code>entget</code>, bir nesnenin bütün verisini <strong>noktalı çiftlerden</strong> oluşan bir liste olarak verir:</p>
+<div class="tw"><table>
+<thead>
+<tr>
+<th>Kod</th>
+<th>Anlamı</th>
+<th>Örnek</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>0</td>
+<td>Nesne türü</td>
+<td><code>(0 . "LWPOLYLINE")</code></td>
+</tr>
+<tr>
+<td>8</td>
+<td>Katman</td>
+<td><code>(8 . "C-CAM")</code></td>
+</tr>
+<tr>
+<td>10</td>
+<td>Nokta (polyline'da her köşe ayrı 10)</td>
+<td><code>(10 1500.0 0.0)</code></td>
+</tr>
+<tr>
+<td>40</td>
+<td>Yarıçap / yazı yüksekliği</td>
+<td><code>(40 . 7.0)</code></td>
+</tr>
+<tr>
+<td>1</td>
+<td>Metin içeriği</td>
+<td><code>(1 . "P-001")</code></td>
+</tr>
+<tr>
+<td>2</td>
+<td>Blok adı</td>
+<td><code>(2 . "PANEL_ETIKET")</code></td>
+</tr>
+<tr>
+<td>62</td>
+<td>Renk (yoksa ByLayer)</td>
+<td><code>(62 . 1)</code></td>
+</tr>
+</tbody>
+</table></div>
+<pre><code class="language-lisp">(setq ed (entget (car (entsel))))
+(cdr (assoc 8 ed))            ; katman adı
+(cdr (assoc 0 ed))            ; nesne türü
+</code></pre>
+<p><strong>Değiştirmek:</strong> listede ilgili çifti <code>subst</code> ile değiştir, <code>entmod</code> ile çizime geri yaz.</p>
+<pre><code class="language-lisp">(defun c:CAMKATMAN (/ ss i ed)
+  (if (setq ss (ssget))
+    (repeat (setq i (sslength ss))
+      (setq ed (entget (ssname ss (setq i (1- i)))))
+      (setq ed (subst (cons 8 &quot;C-CAM&quot;) (assoc 8 ed) ed))
+      (entmod ed)
+    )
+  )
+  (princ)
+)
+</code></pre>
+<p><code>(repeat (setq i (sslength ss)) ... (ssname ss (setq i (1- i))))</code> kalıbı, seçim kümesini sondan başa dolaşmanın kısa ve hızlı yoludur.</p>
+<p><strong>Oluşturmak:</strong> <code>entmake</code>, <code>command</code>'dan bağımsızdır; aktif Osnap'ten ve yazı stilinden etkilenmez.</p>
+<pre><code class="language-lisp">(defun yazi (p h s)
+  (entmake (list '(0 . &quot;TEXT&quot;) (cons 8 &quot;C-YAZI&quot;)
+                 (cons 10 p) (cons 11 p)
+                 (cons 40 h) (cons 1 s)
+                 '(72 . 1) '(73 . 2)))     ; ortala: yatay orta, dikey orta
+)
+</code></pre>
+<h3>3. Alan toplama (45 dk)</h3>
+<pre><code class="language-lisp">(defun c:CAMALAN (/ ss i top)
+  (vl-load-com)
+  (setq top 0.0)
+  (if (setq ss (ssget '((0 . &quot;LWPOLYLINE&quot;) (-4 . &quot;&amp;&quot;) (70 . 1))))
+    (repeat (setq i (sslength ss))
+      (setq top (+ top (vlax-curve-getArea (ssname ss (setq i (1- i))))))
+    )
+  )
+  (princ (strcat &quot;\n&quot; (if ss (itoa (sslength ss)) &quot;0&quot;) &quot; panel, toplam &quot;
+                 (rtos (/ top 1e6) 2 2) &quot; m²&quot;))
+  (princ)
+)
+</code></pre>
+<p><code>vlax-curve-getArea</code>, kapalı eğrinin alanını verir. <code>(vl-load-com)</code> bu <code>vlax-</code> fonksiyonlarını etkinleştirir (5. gün).</p>
+<h3>4. Sağlam PNUM (1,5 saat)</h3>
+<figure class="fig"><div class="sc"><svg viewBox="0 0 760 262" role="img" xmlns="http://www.w3.org/2000/svg"><defs><marker id="ah-pnum" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0 0L10 5L0 10z" class="ar"/></marker></defs><rect x="60" y="150" width="114" height="100" class="gl"/><circle cx="117" cy="200" r="3" class="dot"/><text x="117" y="222" class="tb" text-anchor="middle">P-001</text><rect x="180" y="154" width="114" height="100" class="gl"/><circle cx="237" cy="204" r="3" class="dot"/><text x="237" y="226" class="tb" text-anchor="middle">P-002</text><rect x="300" y="150" width="114" height="100" class="gl"/><circle cx="357" cy="200" r="3" class="dot"/><text x="357" y="222" class="tb" text-anchor="middle">P-003</text><rect x="420" y="154" width="114" height="100" class="gl"/><circle cx="477" cy="204" r="3" class="dot"/><text x="477" y="226" class="tb" text-anchor="middle">P-004</text><rect x="66" y="40" width="114" height="100" class="gl"/><circle cx="123" cy="90" r="3" class="dot"/><text x="123" y="112" class="tb" text-anchor="middle">P-005</text><rect x="186" y="44" width="114" height="100" class="gl"/><circle cx="243" cy="94" r="3" class="dot"/><text x="243" y="116" class="tb" text-anchor="middle">P-006</text><rect x="306" y="40" width="114" height="100" class="gl"/><circle cx="363" cy="90" r="3" class="dot"/><text x="363" y="112" class="tb" text-anchor="middle">P-007</text><rect x="426" y="44" width="114" height="100" class="gl"/><circle cx="483" cy="94" r="3" class="dot"/><text x="483" y="116" class="tb" text-anchor="middle">P-008</text><text x="560" y="120" class="tm" text-anchor="start">merkez = köşe ortalaması</text><text x="560" y="140" class="tm" text-anchor="start">aynı kat: |Δy| &lt; 100</text><text x="560" y="160" class="tm" text-anchor="start">sonra x'e göre</text><text x="560" y="190" class="ta" text-anchor="start">entmake TEXT</text><text x="560" y="206" class="tm" text-anchor="start">(osnap ve stilden bağımsız)</text></svg></div><figcaption>PNUM: panellerin merkezleri birkaç mm farklı olsa da 100 mm toleransla aynı kat sayılır, sonra soldan sağa sıralanır ve numaralar entmake ile yazılır.</figcaption></figure>
+<p>Hedef: Panel sınırı olan kapalı polyline'ları seç, merkezlerini bul, önce kata (Y) sonra soldan sağa (X) göre sırala ve her birinin ortasına P-001, P-002… yaz.</p>
+<pre><code class="language-lisp">;;; gun4.lsp - panel numaralama
+
+(defun merkez (e / pts)          ; polyline köşelerinin ortalaması
+  (setq pts (mapcar 'cdr (vl-remove-if-not '(lambda (x) (= (car x) 10)) (entget e))))
+  (list (/ (apply '+ (mapcar 'car pts)) (length pts))
+        (/ (apply '+ (mapcar 'cadr pts)) (length pts)))
+)
+
+(defun pad3 (n) (substr (itoa (+ 1000 n)) 2))   ; 7 → &quot;007&quot;
+
+(defun c:PNUM (/ ss i l n h)
+  (vl-load-com)
+  (setq h (getdist &quot;\nYazı yüksekliği &lt;125&gt;: &quot;)) (if (not h) (setq h 125.0))
+  (if (setq ss (ssget '((0 . &quot;LWPOLYLINE&quot;) (-4 . &quot;&amp;&quot;) (70 . 1))))
+    (progn
+      (repeat (setq i (sslength ss))
+        (setq e (ssname ss (setq i (1- i)))
+              l (cons (list e (merkez e)) l)))
+      ;; önce Y (100 mm tolerans aynı kat), sonra X
+      (setq l (vl-sort l '(lambda (a b)
+                (if (equal (cadr (cadr a)) (cadr (cadr b)) 100.0)
+                  (&lt; (car (cadr a)) (car (cadr b)))
+                  (&lt; (cadr (cadr a)) (cadr (cadr b)))))))
+      (setq n 0)
+      (foreach x l
+        (yazi (cadr x) h (strcat &quot;P-&quot; (pad3 (setq n (1+ n))))))
+      (princ (strcat &quot;\n&quot; (itoa n) &quot; panel numaralandı.&quot;))
+    )
+  )
+  (princ)
+)
+</code></pre>
+<ol>
+<li><code>yazi</code> fonksiyonu (2. bölüm) aynı dosyada olmalı.</li>
+<li>Yerel değişken listesine <code>e</code>'yi eklemeyi unutma: <code>(/ ss i l n h e)</code>. Eklemezsen <code>e</code> genel değişken olarak kalır. Bu küçük hatayı bilerek bıraktık; düzelt.</li>
+<li>Yazılar <code>C-YAZI</code> katmanına gider; katman yoksa <code>entmake</code> onu oluşturur.</li>
+</ol>
+<h3>Gün sonu kontrolü (15 dk)</h3>
+<p>Hepsini işaretleyebiliyorsan 5. güne geçebilirsin.</p>
+<ul class="tasks">
+<li class="task"><label><input type="checkbox" data-id="g4-1"><span>DXF grup kodlarıyla ssget filtresi yazabiliyorum.</span></label></li>
+<li class="task"><label><input type="checkbox" data-id="g4-2"><span>Seçim kümesini repeat + ssname ile dolaşabiliyorum.</span></label></li>
+<li class="task"><label><input type="checkbox" data-id="g4-3"><span>entget listesinden assoc ile değer okuyabiliyorum.</span></label></li>
+<li class="task"><label><input type="checkbox" data-id="g4-4"><span>subst + entmod ile nesneyi değiştirebiliyorum.</span></label></li>
+<li class="task"><label><input type="checkbox" data-id="g4-5"><span>entmake ile Osnap ve yazı stilinden bağımsız yazı oluşturabiliyorum.</span></label></li>
+<li class="task"><label><input type="checkbox" data-id="g4-6"><span>Nesneleri merkezlerine göre iki ölçütle sıralayabiliyorum.</span></label></li>
+</ul>
+<p><strong>Bonus:</strong> <code>PNUM</code>'a bir önek sorusu ekle (<code>P-</code>, <code>K-</code>, <code>S-</code>) ve başlangıç numarası verilebilsin. Ayrıca yazıların önceden var olup olmadığını kontrol et: aynı noktada bir TEXT varsa yenisini yazmadan önce onu sil.</p></div>
+  <div class="pn"><a href="#gun3">← 3. gün</a><a href="#gun5">5. gün →</a></div>
+</section>
+<section class="day" id="gun5" data-day="5">
+  <div class="day-head"><span class="dn">GÜN 05</span><h2>ActiveX: bloklar ve nitelikler</h2><span class="meta">~5 saat · <span data-prog="5">0/5</span> kontrol</span></div>
+  <div class="prose"><h3>Hedef</h3>
+<p>Gün sonunda Visual LISP'in ActiveX fonksiyonlarıyla blokları sayan, blok niteliklerini (attribute) okuyup yazan ve nesne özelliklerini doğrudan değiştiren komutların olacak. Süre yaklaşık 5 saat. Dosya: <code>gun5.lsp</code>.</p>
+<p>ActiveX (COM) arayüzü AutoCAD'in nesne modeline erişir. <code>entget</code> ile zor olan işler (blok nitelikleri, dinamik blok adı, alan, uzunluk, sınır kutusu) burada tek satırdır. Sadece Windows'taki tam AutoCAD'de çalışır.</p>
+<h3>1. Nesne modeli (1 saat)</h3>
+<figure class="fig"><div class="sc"><svg viewBox="0 0 660 262" role="img" xmlns="http://www.w3.org/2000/svg"><defs><marker id="ah-nesne_modeli" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0 0L10 5L0 10z" class="ar"/></marker></defs><rect x="20" y="20" width="170" height="50" rx="5" class="bx"/><text x="105.0" y="41.0" class="tb" text-anchor="middle">Application</text><text x="105.0" y="57.0" class="tm" text-anchor="middle">vlax-get-acad-object</text><rect x="200" y="20" width="170" height="50" rx="5" class="bx"/><text x="285.0" y="41.0" class="tb" text-anchor="middle">ActiveDocument</text><text x="285.0" y="57.0" class="tm" text-anchor="middle">vla-get-ActiveDocument</text><rect x="380" y="20" width="260" height="50" rx="5" class="bx"/><text x="510.0" y="41.0" class="tb" text-anchor="middle">ModelSpace</text><text x="510.0" y="57.0" class="tm" text-anchor="middle">vla-get-ModelSpace</text><rect x="380" y="110" width="260" height="50" rx="5" class="bxa"/><text x="510.0" y="131.0" class="tb" text-anchor="middle">BlockReference</text><text x="510.0" y="147.0" class="tm" text-anchor="middle">EffectiveName · InsertionPoint</text><rect x="380" y="200" width="260" height="50" rx="5" class="bxa"/><text x="510.0" y="221.0" class="tb" text-anchor="middle">Attributes</text><text x="510.0" y="237.0" class="tm" text-anchor="middle">GetAttributes → TagString / TextString</text><line x1="190" y1="45" x2="198" y2="45" class="mu" marker-end="url(#ah-nesne_modeli)"/><line x1="370" y1="45" x2="378" y2="45" class="mu" marker-end="url(#ah-nesne_modeli)"/><line x1="510" y1="70" x2="510" y2="108" class="mu" marker-end="url(#ah-nesne_modeli)"/><line x1="510" y1="160" x2="510" y2="198" class="mu" marker-end="url(#ah-nesne_modeli)"/><rect x="20" y="140" width="280" height="50" rx="5" class="bx"/><text x="160.0" y="161.0" class="tb" text-anchor="middle">vlax-ename-&gt;vla-object</text><text x="160.0" y="177.0" class="tm" text-anchor="middle">ENAME ↔ VLA nesnesi</text><line x1="300" y1="165" x2="378" y2="140" class="mu" marker-end="url(#ah-nesne_modeli)"/></svg></div><figcaption>ActiveX nesne modeli: uygulamadan açık çizime, model alanına, blok referansına ve niteliklerine inilir. entget ile seçilen nesneler vlax-ename-&gt;vla-object ile bu modele geçer.</figcaption></figure>
+<pre><code class="language-lisp">(vl-load-com)                                  ; her dosyanın başına bir kez
+(setq acad (vlax-get-acad-object))             ; Application
+(setq doc  (vla-get-ActiveDocument acad))      ; açık çizim
+(setq ms   (vla-get-ModelSpace doc))           ; model alanı
+
+(setq obj (vlax-ename-&gt;vla-object (car (entsel))))   ; ENAME → VLA nesnesi
+(vla-get-Layer obj)                                  ; katman
+(vla-put-Layer obj &quot;C-CAM&quot;)                          ; katmanı değiştir
+(vla-get-ObjectName obj)                             ; &quot;AcDbPolyline&quot;
+(vlax-dump-object obj T)                             ; bütün özellik ve metotları listele
+</code></pre>
+<div class="tw"><table>
+<thead>
+<tr>
+<th>Kalıp</th>
+<th>Anlamı</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>(vla-get-Ozellik obj)</code></td>
+<td>Özelliği oku</td>
+</tr>
+<tr>
+<td><code>(vla-put-Ozellik obj deger)</code></td>
+<td>Özelliği yaz</td>
+</tr>
+<tr>
+<td><code>(vla-Metot obj ...)</code></td>
+<td>Metot çalıştır</td>
+</tr>
+<tr>
+<td><code>(vlax-get obj 'Ozellik)</code></td>
+<td>Özelliği AutoLISP listesi olarak oku (noktalar için pratik)</td>
+</tr>
+<tr>
+<td><code>(vlax-invoke obj 'Metot ...)</code></td>
+<td>Metodu çalıştır, sonucu liste olarak al</td>
+</tr>
+</tbody>
+</table></div>
+<p><code>vlax-dump-object</code>, bir nesnede neler olduğunu öğrenmenin en hızlı yoludur. Kullanacağın özelliğin adını buradan bul.</p>
+<h3>2. Blok sayma (1 saat)</h3>
+<pre><code class="language-lisp">(defun c:BLOKSAY (/ ss i ad kayit liste)
+  (vl-load-com)
+  (if (setq ss (ssget '((0 . &quot;INSERT&quot;))))
+    (progn
+      (repeat (setq i (sslength ss))
+        (setq ad (vla-get-EffectiveName
+                   (vlax-ename-&gt;vla-object (ssname ss (setq i (1- i))))))
+        (if (setq kayit (assoc ad liste))
+          (setq liste (subst (cons ad (1+ (cdr kayit))) kayit liste))
+          (setq liste (cons (cons ad 1) liste)))
+      )
+      (setq liste (vl-sort liste '(lambda (a b) (&lt; (car a) (car b)))))
+      (foreach k liste
+        (princ (strcat &quot;\n&quot; (car k) &quot; : &quot; (itoa (cdr k)))))
+    )
+  )
+  (princ)
+)
+</code></pre>
+<p><code>EffectiveName</code>, dinamik blokların gerçek adını verir. <code>entget</code>'teki 2 kodu dinamik bloklarda <code>*U12</code> gibi anonim bir ad döndürür.</p>
+<h3>3. Blok nitelikleri (1,5 saat)</h3>
+<pre><code class="language-lisp">(defun nitelik-oku (blk tag / sonuc)
+  (foreach a (vlax-invoke blk 'GetAttributes)
+    (if (= (strcase (vla-get-TagString a)) (strcase tag))
+      (setq sonuc (vla-get-TextString a))))
+  sonuc
+)
+
+(defun nitelik-yaz (blk tag deger)
+  (foreach a (vlax-invoke blk 'GetAttributes)
+    (if (= (strcase (vla-get-TagString a)) (strcase tag))
+      (vla-put-TextString a deger)))
+)
+</code></pre>
+<p><strong>ETIKETNO komutu:</strong> AutoCAD eğitiminin 4. günündeki <code>PANEL_ETIKET</code> bloklarını konuma göre sıralayıp <code>PANEL_NO</code> niteliğine P-001… yaz.</p>
+<pre><code class="language-lisp">(defun c:ETIKETNO (/ ss i blk l n)
+  (vl-load-com)
+  (if (setq ss (ssget '((0 . &quot;INSERT&quot;) (66 . 1))))   ; 66 = nitelikli blok
+    (progn
+      (repeat (setq i (sslength ss))
+        (setq blk (vlax-ename-&gt;vla-object (ssname ss (setq i (1- i)))))
+        (if (= (strcase (vla-get-EffectiveName blk)) &quot;PANEL_ETIKET&quot;)
+          (setq l (cons (list blk (vlax-get blk 'InsertionPoint)) l))))
+      (setq l (vl-sort l '(lambda (a b)
+                (if (equal (cadr (cadr a)) (cadr (cadr b)) 100.0)
+                  (&lt; (car (cadr a)) (car (cadr b)))
+                  (&lt; (cadr (cadr a)) (cadr (cadr b)))))))
+      (setq n 0)
+      (foreach x l
+        (nitelik-yaz (car x) &quot;PANEL_NO&quot; (strcat &quot;P-&quot; (pad3 (setq n (1+ n))))))
+      (princ (strcat &quot;\n&quot; (itoa n) &quot; etiket güncellendi.&quot;))
+    )
+  )
+  (princ)
+)
+</code></pre>
+<p><code>pad3</code> 4. günden gelir; aynı dosyada ya da yüklü olmalı.</p>
+<h3>4. Eğri bilgileri (45 dk)</h3>
+<p><code>vlax-curve-</code> fonksiyonları çizgi, yay, polyline ve spline'da ortak çalışır:</p>
+<div class="tw"><table>
+<thead>
+<tr>
+<th>Fonksiyon</th>
+<th>İşlev</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>vlax-curve-getDistAtParam</code> + <code>vlax-curve-getEndParam</code></td>
+<td>Toplam uzunluk</td>
+</tr>
+<tr>
+<td><code>vlax-curve-getArea</code></td>
+<td>Alan (kapalı)</td>
+</tr>
+<tr>
+<td><code>vlax-curve-getPointAtDist</code></td>
+<td>Başlangıçtan verilen mesafedeki nokta</td>
+</tr>
+<tr>
+<td><code>vlax-curve-getClosestPointTo</code></td>
+<td>Eğri üzerindeki en yakın nokta</td>
+</tr>
+<tr>
+<td><code>vlax-curve-getFirstDeriv</code></td>
+<td>Bir noktadaki yön (teğet)</td>
+</tr>
+</tbody>
+</table></div>
+<p>Profil metrajı için alıştırma: seçilen tüm çizgi ve polyline'ların toplam uzunluğunu katmana göre ayrı ayrı yazan <code>PROFILBOY</code> komutunu yaz. Uzunluk: <code>(vlax-curve-getDistAtParam e (vlax-curve-getEndParam e))</code>.</p>
+<h3>Gün sonu kontrolü (15 dk)</h3>
+<p>Hepsini işaretleyebiliyorsan 6. güne geçebilirsin.</p>
+<ul class="tasks">
+<li class="task"><label><input type="checkbox" data-id="g5-1"><span>ENAME ile VLA nesnesi arasında dönüşüm yapabiliyorum.</span></label></li>
+<li class="task"><label><input type="checkbox" data-id="g5-2"><span>vla-get, vla-put ve vlax-dump-object kullanabiliyorum.</span></label></li>
+<li class="task"><label><input type="checkbox" data-id="g5-3"><span>Dinamik blokları EffectiveName ile doğru sayabiliyorum.</span></label></li>
+<li class="task"><label><input type="checkbox" data-id="g5-4"><span>Blok niteliklerini okuyup yazabiliyorum.</span></label></li>
+<li class="task"><label><input type="checkbox" data-id="g5-5"><span>vlax-curve fonksiyonlarıyla uzunluk ve alan hesaplayabiliyorum.</span></label></li>
+</ul>
+<p><strong>Bonus:</strong> <code>BLOKSAY</code> sonucunu çizime bir AutoCAD tablosu olarak ekle: <code>(vla-AddTable ms (vlax-3d-point p) satir sutun yukseklik genislik)</code> ve <code>vla-SetText</code> ile hücreleri doldur.</p></div>
+  <div class="pn"><a href="#gun4">← 4. gün</a><a href="#gun6">6. gün →</a></div>
+</section>
+<section class="day" id="gun6" data-day="6">
+  <div class="day-head"><span class="dn">GÜN 06</span><h2>Hata yönetimi ve dosyalar</h2><span class="meta">~5 saat · <span data-prog="6">0/5</span> kontrol</span></div>
+  <div class="prose"><h3>Hedef</h3>
+<p>Gün sonunda hata ve Esc durumunda AutoCAD ayarlarını geri yükleyen, tek adımda geri alınabilen, CSV dosyasına panel listesi yazan ve CSV'den okuduğu koordinatlara blok yerleştiren komutların olacak. Süre yaklaşık 5 saat. Dosya: <code>gun6.lsp</code>.</p>
+<h3>1. Hata yönetimi ve geri alma (1,5 saat)</h3>
+<p>Bir rutin <code>OSMODE</code>'u 0 yapıp sonra Esc ile yarıda kesilirse kullanıcının nesne yakalama ayarı kaybolur. Profesyonel rutinler bunu önler.</p>
+<figure class="fig"><div class="sc"><svg viewBox="0 0 710 206" role="img" xmlns="http://www.w3.org/2000/svg"><defs><marker id="ah-hata" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0 0L10 5L0 10z" class="ar"/></marker></defs><rect x="10" y="40" width="170" height="50" rx="5" class="bxa"/><text x="95.0" y="61.0" class="tb" text-anchor="middle">Başlangıç</text><text x="95.0" y="77.0" class="tm" text-anchor="middle">OSMODE sakla · UndoMark</text><rect x="200" y="40" width="140" height="50" rx="5" class="bx"/><text x="270.0" y="61.0" class="tb" text-anchor="middle">Asıl iş</text><text x="270.0" y="77.0" class="tm" text-anchor="middle">çizim · değişiklik</text><rect x="380" y="40" width="150" height="50" rx="5" class="bxa"/><text x="455.0" y="61.0" class="tb" text-anchor="middle">Normal bitiş</text><text x="455.0" y="77.0" class="tm" text-anchor="middle">ayarları geri yükle</text><rect x="200" y="140" width="140" height="50" rx="5" class="bx"/><text x="270.0" y="169.0" class="tb" text-anchor="middle">Esc / hata</text><rect x="380" y="140" width="150" height="50" rx="5" class="bxa"/><text x="455.0" y="161.0" class="tb" text-anchor="middle">*error*</text><text x="455.0" y="177.0" class="tm" text-anchor="middle">ayarları geri yükle</text><line x1="180" y1="65" x2="198" y2="65" class="mu" marker-end="url(#ah-hata)"/><line x1="340" y1="65" x2="378" y2="65" class="mu" marker-end="url(#ah-hata)"/><line x1="270" y1="90" x2="270" y2="138" class="swr" marker-end="url(#ah-hata)"/><line x1="340" y1="165" x2="378" y2="165" class="swr" marker-end="url(#ah-hata)"/><rect x="570" y="90" width="130" height="50" rx="5" class="bx"/><text x="635.0" y="119.0" class="tb" text-anchor="middle">EndUndoMark</text><line x1="530" y1="65" x2="568" y2="105" class="mu" marker-end="url(#ah-hata)"/><line x1="530" y1="165" x2="568" y2="125" class="mu" marker-end="url(#ah-hata)"/></svg></div><figcaption>Güvenli komut: ayarlar başta saklanır; ister normal bitsin ister Esc ya da hatayla kesilsin, ayarlar geri yüklenir ve bütün iş tek bir geri al adımı olur.</figcaption></figure>
+<pre><code class="language-lisp">(defun c:GUVENLIORNEK (/ *error* doc eskiOs eskiEcho)
+  (vl-load-com)
+  (setq doc (vla-get-ActiveDocument (vlax-get-acad-object)))
+
+  (defun *error* (msg)                               ; yerel hata yakalayıcı
+    (if eskiOs   (setvar &quot;OSMODE&quot; eskiOs))
+    (if eskiEcho (setvar &quot;CMDECHO&quot; eskiEcho))
+    (vla-EndUndoMark doc)
+    (if (not (wcmatch (strcase msg) &quot;*BREAK*,*CANCEL*,*EXIT*&quot;))
+      (princ (strcat &quot;\nHata: &quot; msg)))
+    (princ)
+  )
+
+  (vla-StartUndoMark doc)                            ; tek geri al adımı başlar
+  (setq eskiOs (getvar &quot;OSMODE&quot;) eskiEcho (getvar &quot;CMDECHO&quot;))
+  (setvar &quot;OSMODE&quot; 0) (setvar &quot;CMDECHO&quot; 0)
+
+  ;; ... asıl iş burada ...
+  (command &quot;_.LINE&quot; '(0 0) '(1500 0) &quot;&quot;)
+
+  (setvar &quot;OSMODE&quot; eskiOs) (setvar &quot;CMDECHO&quot; eskiEcho)
+  (vla-EndUndoMark doc)
+  (princ)
+)
+</code></pre>
+<ol>
+<li><code>*error*</code> fonksiyonu yerel değişken listesine yazılarak <strong>sadece bu komut için</strong> tanımlanır; komut bitince AutoCAD'in kendi hata yakalayıcısı geri gelir.</li>
+<li>Esc'e basıldığında mesaj "Function cancelled" olur; bunu hata gibi göstermemek için <code>wcmatch</code> ile filtrelenir.</li>
+<li><code>StartUndoMark</code> / <code>EndUndoMark</code> arasındaki her şey tek bir <strong>U</strong> (Undo) ile geri alınır. Yüzlerce nesne değiştiren rutinlerde mutlaka kullan.</li>
+<li>Bu kalıbı 1-5. günlerin komutlarına (AKS, PNUM, ETIKETNO) uygula.</li>
+</ol>
+<h3>2. Dosyaya yazmak: CSV (1,5 saat)</h3>
+<pre><code class="language-lisp">(defun c:PANELCSV (/ ss i f blk yol)
+  (vl-load-com)
+  (setq yol (getfiled &quot;Panel listesi&quot; (strcat (getvar &quot;DWGPREFIX&quot;) &quot;paneller&quot;) &quot;csv&quot; 1))
+  (if (and yol (setq ss (ssget '((0 . &quot;INSERT&quot;) (66 . 1)))))
+    (progn
+      (setq f (open yol &quot;w&quot;))
+      (write-line &quot;PANEL_NO;CAM_KODU;OLCU&quot; f)
+      (repeat (setq i (sslength ss))
+        (setq blk (vlax-ename-&gt;vla-object (ssname ss (setq i (1- i)))))
+        (if (= (strcase (vla-get-EffectiveName blk)) &quot;PANEL_ETIKET&quot;)
+          (write-line (strcat (nitelik-oku blk &quot;PANEL_NO&quot;) &quot;;&quot;
+                              (nitelik-oku blk &quot;CAM_KODU&quot;) &quot;;&quot;
+                              (nitelik-oku blk &quot;OLCU&quot;)) f)))
+      (close f)
+      (princ (strcat &quot;\nYazıldı: &quot; yol))
+    )
+  )
+  (princ)
+)
+</code></pre>
+<ol>
+<li><code>getfiled</code>: dosya kaydetme penceresi açar (son argüman 1 = yeni dosya).</li>
+<li><code>open</code> ile <code>"w"</code> yazma, <code>"a"</code> ekleme, <code>"r"</code> okuma. Dosyayı her zaman <code>close</code> ile kapat; kapatılmayan dosya Excel'de açılmaz.</li>
+<li>Ayırıcı noktalı virgül: Türkçe Excel ondalıkta virgül kullandığı için CSV'de noktalı virgül daha güvenlidir.</li>
+<li>Türkçe karakterler: AutoLISP dosyaya sistem kodlamasıyla (ANSI) yazar. Excel'de bozuk görünürse <strong>Veri &gt; Metinden/CSV'den</strong> ile içe aktarıp kodlamayı seç.</li>
+</ol>
+<h3>3. Dosyadan okumak (1,5 saat)</h3>
+<figure class="fig"><div class="sc"><svg viewBox="0 0 650 220" role="img" xmlns="http://www.w3.org/2000/svg"><defs><marker id="ah-csv" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0 0L10 5L0 10z" class="ar"/></marker></defs><rect x="20" y="50" width="150" height="56" rx="5" class="bxa"/><text x="95.0" y="74.0" class="tb" text-anchor="middle">Çizim</text><text x="95.0" y="90.0" class="tm" text-anchor="middle">PANEL_ETIKET blokları</text><rect x="260" y="50" width="150" height="56" rx="5" class="bx"/><text x="335.0" y="74.0" class="tb" text-anchor="middle">paneller.csv</text><text x="335.0" y="90.0" class="tm" text-anchor="middle">PANEL_NO;CAM_KODU;OLCU</text><rect x="500" y="50" width="130" height="56" rx="5" class="bx"/><text x="565.0" y="74.0" class="tb" text-anchor="middle">Excel</text><text x="565.0" y="90.0" class="tm" text-anchor="middle">liste · sipariş</text><line x1="170" y1="70" x2="258" y2="70" class="ac" marker-end="url(#ah-csv)"/><text x="214" y="62" class="ta" text-anchor="middle">PANELCSV</text><line x1="410" y1="78" x2="498" y2="78" class="mu" marker-end="url(#ah-csv)"/><rect x="260" y="150" width="150" height="56" rx="5" class="bx"/><text x="335.0" y="174.0" class="tb" text-anchor="middle">noktalar.csv</text><text x="335.0" y="190.0" class="tm" text-anchor="middle">x;y;panel_no</text><rect x="500" y="150" width="130" height="56" rx="5" class="bx"/><text x="565.0" y="174.0" class="tb" text-anchor="middle">Grasshopper</text><text x="565.0" y="190.0" class="tm" text-anchor="middle">ya da Excel</text><line x1="498" y1="178" x2="412" y2="178" class="mu" marker-end="url(#ah-csv)"/><line x1="258" y1="178" x2="172" y2="92" class="ac" marker-end="url(#ah-csv)"/><text x="196" y="160" class="ta" text-anchor="middle">CSVETIKET</text></svg></div><figcaption>CSV ile iki yönlü veri: çizimdeki etiketler listeye yazılır; başka programdan gelen noktalar okunup etiket bloğu olarak yerleştirilir.</figcaption></figure>
+<p>Hedef: Grasshopper ya da Excel'den gelen <code>x;y;panel_no</code> satırlarını okuyup her noktaya <code>PANEL_ETIKET</code> bloğu yerleştirmek ve PANEL_NO'yu yazmak.</p>
+<pre><code class="language-lisp">(defun bol (s ayr / p l)              ; &quot;1500;0;P-001&quot; → (&quot;1500&quot; &quot;0&quot; &quot;P-001&quot;)
+  (while (setq p (vl-string-search ayr s))
+    (setq l (cons (substr s 1 p) l)
+          s (substr s (+ p 2))))
+  (reverse (cons s l))
+)
+
+(defun c:CSVETIKET (/ yol f satir a ms blk n)
+  (vl-load-com)
+  (setq ms (vla-get-ModelSpace (vla-get-ActiveDocument (vlax-get-acad-object))))
+  (if (setq yol (getfiled &quot;Panel noktaları&quot; (getvar &quot;DWGPREFIX&quot;) &quot;csv&quot; 0))
+    (progn
+      (setq f (open yol &quot;r&quot;) n 0)
+      (read-line f)                                       ; başlık satırını atla
+      (while (setq satir (read-line f))
+        (if (&gt; (strlen satir) 0)
+          (progn
+            (setq a (bol satir &quot;;&quot;))
+            (setq blk (vla-InsertBlock ms
+                        (vlax-3d-point (atof (nth 0 a)) (atof (nth 1 a)) 0.0)
+                        &quot;PANEL_ETIKET&quot; 1.0 1.0 1.0 0.0))
+            (nitelik-yaz blk &quot;PANEL_NO&quot; (nth 2 a))
+            (setq n (1+ n)))))
+      (close f)
+      (princ (strcat &quot;\n&quot; (itoa n) &quot; etiket yerleştirildi.&quot;))
+    )
+  )
+  (princ)
+)
+</code></pre>
+<ol>
+<li><code>PANEL_ETIKET</code> bloğu çizimde tanımlı olmalı (AutoCAD eğitiminin 4. günü). Değilse <code>vla-InsertBlock</code> hata verir; blok adı yerine tam dosya yolu (<code>"C:/Kutuphane/PANEL_ETIKET.dwg"</code>) da verilebilir.</li>
+<li><code>nitelik-yaz</code> 5. günden gelir.</li>
+<li><code>atof</code> ondalık ayırıcı olarak nokta bekler. CSV'de virgüllü sayı varsa önce <code>vl-string-subst</code> ile noktaya çevir.</li>
+</ol>
+<h3>Gün sonu kontrolü (15 dk)</h3>
+<p>Hepsini işaretleyebiliyorsan 7. güne geçebilirsin.</p>
+<ul class="tasks">
+<li class="task"><label><input type="checkbox" data-id="g6-1"><span>Yerel <em>error</em> fonksiyonu yazıp sistem değişkenlerini geri yükleyebiliyorum.</span></label></li>
+<li class="task"><label><input type="checkbox" data-id="g6-2"><span>Undo mark ile rutini tek adımda geri alınabilir yapabiliyorum.</span></label></li>
+<li class="task"><label><input type="checkbox" data-id="g6-3"><span>getfiled ile dosya seçtirip CSV yazabiliyorum.</span></label></li>
+<li class="task"><label><input type="checkbox" data-id="g6-4"><span>CSV satırlarını okuyup ayırıcıya göre bölebiliyorum.</span></label></li>
+<li class="task"><label><input type="checkbox" data-id="g6-5"><span>Okunan verilerle ActiveX üzerinden blok yerleştirip nitelik yazabiliyorum.</span></label></li>
+</ul>
+<p><strong>Bonus:</strong> Basit bir diyalog kutusu için DCL'e bak: önek, başlangıç numarası ve yazı yüksekliğini tek pencerede soran bir <code>PNUM</code> arayüzü. DCL dosyası ayrı bir <code>.dcl</code> metin dosyasıdır; <code>load_dialog</code>, <code>new_dialog</code>, <code>action_tile</code> ve <code>start_dialog</code> ile kullanılır.</p></div>
+  <div class="pn"><a href="#gun5">← 5. gün</a><a href="#gun7">7. gün →</a></div>
+</section>
+<section class="day" id="gun7" data-day="7">
+  <div class="day-head"><span class="dn">GÜN 07</span><h2>Cephe Kiti: düzen ve dağıtım</h2><span class="meta">~5 saat · <span data-prog="7">0/6</span> kontrol</span></div>
+  <div class="prose"><h3>Hedef</h3>
+<p>Son gün yazdığın rutinleri bir <strong>Cephe Kiti</strong> halinde topluyorsun: tek bir dosya, otomatik yükleme, güvenilir konum, şerit (ribbon) düğmeleri ve isteğe bağlı derlenmiş sürüm. Ekip arkadaşların komutları kod görmeden kullanabilecek. Süre yaklaşık 5 saat.</p>
+<h3>1. Kod düzeni (1 saat)</h3>
+<p>Kit büyüdükçe düzen önemli hale gelir.</p>
+<div class="tw"><table>
+<thead>
+<tr>
+<th>Kural</th>
+<th>Örnek</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Yardımcı fonksiyonlara önek ver</td>
+<td><code>cph:merkez</code>, <code>cph:pad3</code>, <code>cph:bol</code> (başka rutinlerle çakışmasın)</td>
+</tr>
+<tr>
+<td>Komutlara kısa ve anlaşılır ad</td>
+<td><code>c:AKS</code>, <code>c:PNUM</code>, <code>c:CAMALAN</code>, <code>c:PANELCSV</code></td>
+</tr>
+<tr>
+<td>Her fonksiyonun başına açıklama</td>
+<td><code>;;; cph:pad3 - sayıyı 3 haneli metne çevirir (7 → "007")</code></td>
+</tr>
+<tr>
+<td>Bütün değişkenler yerel</td>
+<td><code>(defun c:PNUM (/ ss i l n h e) ...)</code></td>
+</tr>
+<tr>
+<td>Sistem değişkenlerini değiştiren her komut <em>error</em> ile korunur</td>
+<td>6. gün kalıbı</td>
+</tr>
+<tr>
+<td>Dosya başında sürüm ve tarih</td>
+<td><code>;;; Cephe Kiti v1.2 - 2026-11-14</code></td>
+</tr>
+</tbody>
+</table></div>
+<ol>
+<li>1-6. günlerin kodlarını <code>cephe_kiti.lsp</code> adlı tek bir dosyada topla.</li>
+<li>Yardımcı fonksiyonları başa, komutları sona koy.</li>
+<li>Dosyanın en sonuna yükleme mesajı ekle:</li>
+</ol>
+<pre><code class="language-lisp">(princ &quot;\nCephe Kiti v1.0 yüklendi: AKS, PLAKA, PNUM, CAMALAN, BLOKSAY, ETIKETNO, PANELCSV, CSVETIKET&quot;)
+(princ)
+</code></pre>
+<h3>2. Otomatik yükleme ve güvenlik (1 saat)</h3>
+<figure class="fig"><div class="sc"><svg viewBox="0 0 710 152" role="img" xmlns="http://www.w3.org/2000/svg"><defs><marker id="ah-dagitim" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0 0L10 5L0 10z" class="ar"/></marker></defs><rect x="10" y="40" width="140" height="50" rx="5" class="bx"/><text x="80.0" y="61.0" class="tb" text-anchor="middle">cephe_kiti.lsp</text><text x="80.0" y="77.0" class="tm" text-anchor="middle">kaynak kod</text><rect x="190" y="40" width="140" height="50" rx="5" class="bxa"/><text x="260.0" y="61.0" class="tb" text-anchor="middle">MAKELISPAPP</text><text x="260.0" y="77.0" class="tm" text-anchor="middle">.vlx (isteğe bağlı)</text><rect x="370" y="40" width="150" height="50" rx="5" class="bx"/><text x="445.0" y="61.0" class="tb" text-anchor="middle">Ortak klasör</text><text x="445.0" y="77.0" class="tm" text-anchor="middle">Trusted + Support</text><rect x="560" y="10" width="140" height="44" rx="5" class="bxa"/><text x="630.0" y="28.0" class="tb" text-anchor="middle">acaddoc.lsp</text><text x="630.0" y="44.0" class="tm" text-anchor="middle">otomatik yükleme</text><rect x="560" y="76" width="140" height="44" rx="5" class="bxa"/><text x="630.0" y="94.0" class="tb" text-anchor="middle">cephe.cuix</text><text x="630.0" y="110.0" class="tm" text-anchor="middle">Cephe şerit sekmesi</text><line x1="150" y1="65" x2="188" y2="65" class="mu" marker-end="url(#ah-dagitim)"/><line x1="330" y1="65" x2="368" y2="65" class="mu" marker-end="url(#ah-dagitim)"/><line x1="520" y1="58" x2="558" y2="34" class="mu" marker-end="url(#ah-dagitim)"/><line x1="520" y1="72" x2="558" y2="96" class="mu" marker-end="url(#ah-dagitim)"/><text x="355" y="140" class="tm" text-anchor="middle">ekip: komutları şerit düğmesinden çalıştırır, kod görmez</text></svg></div><figcaption>Kitin dağıtımı: tek kaynak dosya, isteğe bağlı derleme, güvenilir ortak klasör, otomatik yükleme ve şerit düğmeleri.</figcaption></figure>
+<p><strong>Otomatik yükleme yolları</strong></p>
+<div class="tw"><table>
+<thead>
+<tr>
+<th>Yöntem</th>
+<th>Ne zaman</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>APPLOAD &gt; Startup Suite</td>
+<td>Kişisel kullanım, tek bilgisayar</td>
+</tr>
+<tr>
+<td><code>acaddoc.lsp</code></td>
+<td>Her çizim açılışında yüklenir; ekip için ortak klasörde tutulur</td>
+</tr>
+<tr>
+<td>CUI'de LISP dosyası (Main CUIx &gt; LISP Files)</td>
+<td>Arayüz dosyasıyla birlikte dağıtım</td>
+</tr>
+<tr>
+<td><code>(autoload "cephe_kiti" '("AKS" "PNUM"))</code></td>
+<td>Dosyayı sadece komut ilk kez yazıldığında yükler; açılışı hızlandırır</td>
+</tr>
+</tbody>
+</table></div>
+<p><code>acaddoc.lsp</code> örneği (ortak klasörde):</p>
+<pre><code class="language-lisp">(load &quot;cephe_kiti.lsp&quot; &quot;\nCephe Kiti bulunamadı.&quot;)
+</code></pre>
+<p><strong>Güvenlik</strong></p>
+<ol>
+<li>AutoCAD, güvenilmeyen konumlardan yüklenen kod için uyarı verir. <strong>SECURELOAD</strong> sistem değişkeni bu davranışı belirler (1 = uyar, varsayılan).</li>
+<li>Kit klasörünü <strong>Options &gt; Files &gt; Trusted Locations</strong> (ya da <strong>TRUSTEDPATHS</strong> değişkeni) listesine ekle. Bu klasörü aynı zamanda <strong>Support File Search Path</strong>'e de ekle ki <code>load</code> dosyayı adıyla bulsun.</li>
+<li>Güvenilir klasörün yazma iznini sınırlı tut; herkesin dosya bırakabildiği bir klasör güvenlik açığıdır.</li>
+</ol>
+<h3>3. Şerit düğmeleri (1 saat)</h3>
+<ol>
+<li><strong>CUI</strong> komutunu aç. Sol üstte <strong>Commands</strong> listesinde <strong>Create a new command</strong>.</li>
+<li>Ad: <code>Panel Numarala</code>. Macro: <code>^C^C_PNUM</code>. Küçük bir ikon seç ya da çiz.</li>
+<li><strong>Ribbon &gt; Tabs</strong> altında yeni bir sekme: <code>Cephe</code>. Altına bir panel: <code>Kit</code>. Komutları sürükle bırak.</li>
+<li>Diğer komutlar için tekrarla: <code>^C^C_AKS</code>, <code>^C^C_CAMALAN</code>, <code>^C^C_PANELCSV</code>.</li>
+<li>Ekip için: bu değişiklikleri ayrı bir <strong>partial CUIx</strong> dosyasında (<code>cephe.cuix</code>) yap; ana CUIx'e eklenir ve ortak klasörden dağıtılır.</li>
+</ol>
+<p><code>^C^C</code> önce çalışan komutu iptal eder; düğmeye komut ortasında basılsa da temiz başlar.</p>
+<h3>4. Derleme ve dağıtım (1 saat)</h3>
+<ol>
+<li><strong>MAKELISPAPP</strong> komutu (AutoCAD 2021 ve sonrası) uygulama oluşturma sihirbazını açar. <code>cephe_kiti.lsp</code> dosyasını seç, çıktı türü <strong>VLX</strong>.</li>
+<li>Derlenmiş <code>.vlx</code> ya da <code>.fas</code> dosyası daha hızlı yüklenir ve kaynak kodu açıkça görünmez. Kaynak <code>.lsp</code> dosyasını mutlaka sakla: derlenmiş dosyadan geri dönüş yoktur.</li>
+<li><code>acaddoc.lsp</code>'deki <code>load</code> satırını <code>.vlx</code> dosyasına çevir.</li>
+<li>Dağıtım paketi: <code>cephe_kiti.vlx</code> (ya da <code>.lsp</code>), <code>acaddoc.lsp</code>, <code>cephe.cuix</code>, kısa bir <code>BENIOKU.txt</code> (komutlar ve ne yaptıkları).</li>
+<li>Sürüm değişince dosya başındaki sürüm notunu ve yükleme mesajını güncelle.</li>
+</ol>
+<h3>5. Son proje (1 saat)</h3>
+<p>Kitine bir komut daha ekle ve baştan sona bütün kuralları uygula:</p>
+<p><strong>KONTROL komutu:</strong> Çizimdeki bütün <code>PANEL_ETIKET</code> bloklarını tara ve rapor ver:</p>
+<ul>
+<li>Boş <code>PANEL_NO</code> olan etiket sayısı</li>
+<li>Aynı <code>PANEL_NO</code>'yu taşıyan etiketler (çift numara)</li>
+<li>Cam koduna göre adetler</li>
+</ul>
+<p>İpucu: <code>(ssget "_X" '((0 . "INSERT") (66 . 1)))</code> ile tüm nitelikli bloklar, <code>nitelik-oku</code> ile değerler, <code>BLOKSAY</code>'daki <code>assoc</code> + <code>subst</code> sayma kalıbıyla gruplama. Sorunlu etiketlerin yerine kırmızı bir daire çizerek göster ve undo mark ile sar.</p>
+<h3>Gün sonu kontrolü (15 dk)</h3>
+<ul class="tasks">
+<li class="task"><label><input type="checkbox" data-id="g7-1"><span>Rutinlerimi önekli yardımcı fonksiyonlar ve açıklamalarla tek dosyada topladım.</span></label></li>
+<li class="task"><label><input type="checkbox" data-id="g7-2"><span>acaddoc.lsp ya da Startup Suite ile otomatik yükleme kurdum.</span></label></li>
+<li class="task"><label><input type="checkbox" data-id="g7-3"><span>Kit klasörünü güvenilir konum ve destek yolu olarak ekledim.</span></label></li>
+<li class="task"><label><input type="checkbox" data-id="g7-4"><span>CUI'de kendi şerit sekmemi ve düğmelerimi oluşturdum.</span></label></li>
+<li class="task"><label><input type="checkbox" data-id="g7-5"><span>MAKELISPAPP ile derlenmiş sürüm alabiliyorum.</span></label></li>
+<li class="task"><label><input type="checkbox" data-id="g7-6"><span>KONTROL komutunu kurallara uygun yazdım.</span></label></li>
+</ul>
+<p><strong>Haftadan sonra</strong></p>
+<ul>
+<li><strong>Kaynaklar:</strong> Autodesk AutoLISP Developer's Guide (AutoCAD yardımında), Lee Mac'in sitesi (lee-mac.com) ve AutoCAD forumlarındaki Visual LISP bölümü.</li>
+<li><strong>Sonraki adım:</strong> Daha büyük araçlar için .NET (C#) API ya da Python tabanlı araçlar; AutoLISP ise küçük ve hızlı otomasyonlarda her zaman en pratik yol olarak kalır.</li>
+<li><strong>Bu sitede:</strong> Kitinin kullanacağı katman standardı, bloklar ve şablon için <a href="../autocad/">AutoCAD eğitimi</a>.</li>
+</ul></div>
+  <div class="pn"><a href="#gun6">← 6. gün</a><a href="../../Tools.html">Araçlara dön →</a></div>
+</section>
+</main>
+
+<footer>
+  <div class="wrap">
+    <span>© 2026 Erdal Üstünol · <a href="/gizlilik.html">Gizlilik</a></span>
+    <a href="../../Tools.html">← Araçlar ve eğitimler</a>
+  </div>
+</footer>
+
+<script>
+(() => {
+  const $ = id => document.getElementById(id);
+  const KEY = 'erdevelop-egitim-autolisp';
+  const store = { get(k) { try { return localStorage.getItem(k); } catch (e) { return null; } }, set(k, v) { try { localStorage.setItem(k, v); } catch (e) {} } };
+  let mode = (() => { try { const m = localStorage.getItem('erdevelop-mode'), g = localStorage.getItem('erdevelop-mode-gun'), t = new Date(); if (m && g === t.toDateString()) return m; const h = t.getHours(); return h >= 7 && h < 19 ? 'light' : 'dark'; } catch (e) { return 'light'; } })();
+  const applyMode = () => { document.documentElement.dataset.mode = mode; $('modeBtn').textContent = mode === 'dark' ? 'LIGHT' : 'DARK'; };
+  $('modeBtn').addEventListener('click', () => { mode = mode === 'dark' ? 'light' : 'dark'; store.set('erdevelop-mode', mode); store.set('erdevelop-mode-gun', new Date().toDateString()); applyMode(); });
+  applyMode();
+
+  let done = {}; try { done = JSON.parse(store.get(KEY) || '{}') || {}; } catch (e) { done = {}; }
+  const boxes = [...document.querySelectorAll('li.task input')];
+  const prog = () => {
+    document.querySelectorAll('section.day').forEach(sec => {
+      const d = sec.dataset.day, bs = sec.querySelectorAll('li.task input'), c = [...bs].filter(b => b.checked).length;
+      sec.querySelector('[data-prog]').textContent = c + '/' + bs.length;
+      const n = document.querySelector('[data-nav="' + d + '"]'); if (n) n.classList.toggle('done', bs.length > 0 && c === bs.length);
+    });
+  };
+  boxes.forEach(b => { b.checked = !!done[b.dataset.id]; b.addEventListener('change', () => { if (b.checked) done[b.dataset.id] = 1; else delete done[b.dataset.id]; store.set(KEY, JSON.stringify(done)); prog(); }); });
+  $('resetBtn').addEventListener('click', () => { done = {}; store.set(KEY, '{}'); boxes.forEach(b => b.checked = false); prog(); });
+  prog();
+
+  const links = [...document.querySelectorAll('[data-nav]')];
+  const secs = [$('genel'), ...document.querySelectorAll('section.day')];
+  if ('IntersectionObserver' in window) {
+    const io = new IntersectionObserver(es => es.forEach(e => { if (e.isIntersecting) { const i = secs.indexOf(e.target); links.forEach((l, k) => l.classList.toggle('on', k === i)); } }), { rootMargin: '-40% 0px -55% 0px' });
+    secs.forEach(s => io.observe(s));
+  }
+})();
+</script>
+<script>if ('serviceWorker' in navigator && location.protocol === 'https:') addEventListener('load', () => navigator.serviceWorker.register('/sw.js').catch(() => { }));</script>
+<script data-goatcounter="https://erdevelop.goatcounter.com/count" async src="//gc.zgo.at/count.js"></script>
+</body>
+</html>
