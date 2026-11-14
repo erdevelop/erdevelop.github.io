@@ -28,6 +28,15 @@
 .btn.bad { background: var(--bad); border-color: var(--bad); color: #fff; }
 .list { display: grid; gap: 6px; } .list .it { display: flex; justify-content: space-between; gap: 10px; align-items: center; padding: 9px 10px; border: 1px solid var(--line); border-radius: 8px; background: var(--panel-2); color: var(--text); }
 .list .it b { color: var(--fg); }
+.tiles { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 10px; margin: 12px 0 4px; }
+.tile { border: 1px solid var(--line); border-radius: 10px; padding: 12px; background: var(--panel-2, transparent); text-decoration: none; color: inherit; display: block; }
+.tile:hover { border-color: var(--accent); }
+.tile .n { font: 700 1.6rem/1.1 var(--f-display, inherit); color: var(--fg); } .tile .l { font-size: 12px; color: var(--muted); margin-top: 4px; } .tile .s { font-size: 12px; color: var(--accent); margin-top: 6px; }
+.bar { height: 6px; border-radius: 3px; background: var(--line); overflow: hidden; margin-top: 6px; } .bar i { display: block; height: 100%; background: var(--accent); }
+.nexts { display: grid; gap: 8px; margin-top: 12px; }
+.nexts a { display: flex; gap: 12px; align-items: center; padding: 10px 12px; border: 1px solid var(--line); border-radius: 8px; text-decoration: none; color: var(--fg); }
+.nexts a:hover { border-color: var(--accent); } .nexts a .k { font: 600 11px var(--f-mono, monospace); color: var(--accent); min-width: 70px; text-transform: uppercase; } .nexts a .g { margin-left: auto; color: var(--accent); }
+@media (max-width: 640px) { .tiles { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
 .full2 { grid-column: 1 / -1; }
 .chk { display: flex; gap: 8px; align-items: flex-start; font-size: 14px; color: var(--text); }
 
@@ -84,6 +93,11 @@ async function load() {
   for (const c of codes) { try { const r = await A.db.collection('rooms').doc(c).get(); if (!r.exists) continue; const m = await A.db.collection('rooms').doc(c).collection('members').doc(uid).get(); if (m.exists) A.rooms.push({ id: c, ...r.data(), me: m.data() }); } catch (e) { } }
 }
 const egList = () => Object.entries(A.info.egitim || {}).map(([k, e]) => { const c = Object.keys((e && e.done) || {}).length, n = (e && e.n) || 0; return [k, Object.assign({}, e, { c, p: n ? Math.min(100, Math.round(c * 100 / n)) : 0 })]; }).sort((a, b) => (b[1].t || 0) - (a[1].t || 0));
+const GAMES = { yilan: 'Yılan', mayin: 'Mayın Tarlası', kelime: 'Kelime Bul', matematik: 'Hızlı Matematik', karsiya3d: '3B Karşıya Geç', kosu3d: '3B Sonsuz Koşu', kule3d: '3B Kule', labirent3d: '3B Labirent', top3d: '3B Top Yuvarla', tugla3d: '3B Tuğla Kır', uzay3d: '3B Uzay' };
+const CLUBS = [['erdevelop-eng', 'İngilizce', 'ingilizce.html', ''], ['erdevelop-fra', 'Fransızca', 'fransizca.html', 'fr'], ['erdevelop-deu', 'Almanca', 'almanca.html', 'de']];
+const clubStats = () => CLUBS.map(([k, ad, url, lang]) => { let S = {}; try { S = JSON.parse(localStorage.getItem(k)) || {}; } catch (e) { }
+  const L = Object.values(S.leit || {}), learned = L.filter(x => x && x.box >= 3).length, roomXp = A.rooms.filter(r => (r.lang || '') === lang).reduce((t, r) => t + ((r.me && r.me.xp) || 0), 0);
+  return { ad, url, xp: Math.max(S.xp || 0, roomXp), learned, seen: L.length, my: (S.my || []).length }; });
 const nameOf = () => (A.user.displayName || A.info.name || (A.user.email || '').split('@')[0] || '?');
 
 function paint() {
@@ -110,6 +124,23 @@ function paint() {
   app.innerHTML = `<div class="grid2">
     <section class="card full2"><div class="who"><div class="av">${esc(nm.charAt(0).toLocaleUpperCase('tr'))}</div><div><b>${esc(nm)}</b><span>${esc(u.email || '')}${created ? ' · üyelik: ' + esc(created) : ''}</span>
       <span>${egList().length} eğitim · ${scores} oyunda skor · ${A.rooms.length} oda · bildirimler ${pushOn || pushFrOn || pushDeOn ? 'açık' : 'kapalı'}</span></div><span style="flex:1"></span><button class="btn" type="button" id="out">Çıkış yap</button></div></section>
+    ${(() => { const eg = egList(), egOn = eg.filter(([, e]) => e.p < 100), egDone = eg.filter(([, e]) => e.p === 100).length, cl = clubStats(), clXp = cl.reduce((t, c) => t + c.xp, 0), clW = cl.reduce((t, c) => t + c.learned, 0);
+      const sc = Object.entries(A.info.scores || {}).filter(([, v]) => v > 0).sort((a, b) => b[1] - a[1]);
+      const nx = [];
+      egOn.slice(0, 2).forEach(([k, e]) => nx.push(`<a href="${esc(e.url || 'Tools.html')}"><span class="k">Eğitim</span><span>${esc(e.ad || k)} <span class="muted small">%${e.p}</span><div class="bar" style="width:140px"><i style="width:${e.p}%"></i></div></span><span class="g">Devam et →</span></a>`));
+      cl.filter(c => c.seen || c.xp).slice(0, 2).forEach(c => nx.push(`<a href="${c.url}#kelime"><span class="k">${c.ad}</span><span>${c.learned} kelime öğrenildi · ${c.xp} XP</span><span class="g">Kelime çalış →</span></a>`));
+      if (sc[0]) nx.push(`<a href="oyunlar/#o/${esc(sc[0][0])}"><span class="k">Oyun</span><span>${esc(GAMES[sc[0][0]] || sc[0][0])} · en iyi skorun ${sc[0][1]}</span><span class="g">Rekoru kır →</span></a>`);
+      if (!nx.length) nx.push(`<a href="Tools.html#edu"><span class="k">Başla</span><span>Henüz kayıtlı bir şey yok. Bir eğitime ya da dil kulübüne göz at.</span><span class="g">Keşfet →</span></a>`);
+      return `<section class="card full2"><h2>Panelim</h2><p class="d">Sitedeki tüm ilerlemen tek yerde. Kaldığın yerden devam et.</p>
+      <div class="tiles">
+        <a class="tile" href="#egitimler"><div class="n">${egOn.length}<span class="muted small"> / ${eg.length}</span></div><div class="l">devam eden eğitim</div><div class="s">${egDone ? '★ ' + egDone + ' tamamlandı' : 'tamamlanan yok'}</div></a>
+        <a class="tile" href="#diller"><div class="n">${clW}</div><div class="l">öğrenilen kelime</div><div class="s">${clXp} XP · ${cl.filter(c => c.seen || c.xp).length} dil</div></a>
+        <a class="tile" href="oyunlar/"><div class="n">${sc.length}</div><div class="l">oyunda rekor</div><div class="s">${sc[0] ? 'en iyisi ' + esc(GAMES[sc[0][0]] || sc[0][0]) : 'henüz oynanmadı'}</div></a>
+        <a class="tile" href="#odalar"><div class="n">${A.rooms.length}</div><div class="l">oda</div><div class="s">${A.rooms.length ? 'arkadaşlarınla yarış' : 'oda kur, arkadaşını davet et'}</div></a>
+      </div>
+      <div class="nexts">${nx.join('')}</div>
+      <div class="list" id="diller" style="margin-top:14px">${cl.map(c => `<div class="it"><span><b>${c.ad} Kulübü</b> <span class="mono small muted">${c.learned} öğrenildi · ${c.seen} çalışıldı · ${c.my} kendi kelimen · ${c.xp} XP</span></span><a class="btn" href="${c.url}">${c.seen || c.xp ? 'Devam et' : 'Başla'}</a></div>`).join('')}</div>
+      <p class="small muted" style="margin:8px 0 0">Dil kulübü kelime kutuları bu cihazda tutulur; XP odalardaki puanınla birleştirilir.</p></section>`; })()}
     <section class="card"><h2>Adın</h2><p class="d">Odalarda ve skor tablolarında görünen ad.</p>
       <div class="fd"><label for="nm">Görünen ad</label><input class="inp" id="nm" maxlength="24" value="${esc(nm)}"></div><div class="row"><button class="btn pri" type="button" id="nmb">Kaydet</button></div><div class="msg" id="nmmsg"></div></section>
     <section class="card"><h2>Şifre</h2><p class="d">Değiştirmek için mevcut şifren gerekir.</p>
@@ -120,9 +151,9 @@ function paint() {
     <section class="card"><h2>Kelime bildirimleri</h2><p class="d">Dil kulüplerinin telefonuna gönderdiği kelime bildirimleri.</p>
       ${[['İngilizce', A.push, pushOn, 'ingilizce', 'poff'], ['Fransızca', A.pushFr, pushFrOn, 'fransizca', 'pofffr'], ['Almanca', A.pushDe, pushDeOn, 'almanca', 'poffde']].map(([ad, P, on, pg, id]) => `<p style="margin:10px 0 6px"><b>${ad}:</b> ${on ? `açık, ${esc(P.from || '')}–${esc(P.to || '')} arası, ${esc(String(P.step || ''))} dakikada bir.` : '<span class="muted">kapalı</span>'}</p>
       <div class="row">${on ? `<button class="btn" type="button" id="${id}">Kapat</button><a class="btn" href="${pg}.html#kelime">Ayarları değiştir</a>` : `<a class="btn" href="${pg}.html#kelime">${ad} Kulübü'nde aç</a>`}</div>`).join('')}<div class="msg" id="pomsg"></div></section>
-    <section class="card"><h2>Eğitimler</h2><p class="d">Hesabına kaydedilen eğitim ilerlemen. Her cihazda kaldığın yerden devam edersin.</p>
+    <section class="card" id="egitimler"><h2>Eğitimler</h2><p class="d">Hesabına kaydedilen eğitim ilerlemen. Her cihazda kaldığın yerden devam edersin.</p>
       <div class="list">${egList().length ? egList().map(([k, e]) => `<div class="it"><span><b>${esc(e.ad || k)}</b> <span class="mono small muted">%${e.p} · ${e.c}/${e.n || '?'} kontrol</span></span><a class="btn" href="${esc(e.url || '/Tools.html')}">${e.p === 100 ? 'Göz at' : 'Devam et'}</a></div>`).join('') : '<p class="muted small">Henüz kayıtlı eğitim ilerlemesi yok. <a href="Tools.html#edu">Eğitimlere göz at</a>; işaretlediğin kontrol maddeleri buraya gelir.</p>'}</div></section>
-    <section class="card"><h2>Odalar</h2><p class="d">Üyesi olduğun dil kulübü odaları. Ayrılınca adın ve puanların odadan silinir.</p>
+    <section class="card" id="odalar"><h2>Odalar</h2><p class="d">Üyesi olduğun dil kulübü odaları. Ayrılınca adın ve puanların odadan silinir.</p>
       <div class="list">${A.rooms.length ? A.rooms.map(r => `<div class="it"><span><b>${esc(r.name || r.id)}</b> <span class="mono small muted">${esc(r.id)} · ${r.lang === 'fr' ? 'Fransızca' : r.lang === 'de' ? 'Almanca' : 'İngilizce'}${r.owner === u.uid ? ' · kurucu' : ''}</span></span><button class="btn sm" type="button" data-leave="${esc(r.id)}">Ayrıl</button></div>`).join('') : '<p class="muted" style="margin:0">Bir odaya üye değilsin.</p>'}</div><div class="msg" id="rmsg"></div></section>
     <section class="card full2"><h2>Verilerimi indir</h2><p class="d">Hesabına ait tüm kayıtlar (hesap bilgileri, eğitim ilerlemesi, skorlar, oyun ilerlemesi, oda üyelikleri, eklediğin kelimeler, bildirim ayarları) ve bu tarayıcıdaki veriler tek bir JSON dosyası olarak.</p>
       <div class="row"><button class="btn" type="button" id="dl">⬇ Verilerimi indir</button></div><div class="msg" id="dlmsg"></div></section>
