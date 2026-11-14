@@ -5,13 +5,13 @@
                                                                  → onay, yalnızca bu bölümlerle ilk etkileşimde
      <script src="/uyari.js" data-tur="egitim"></script>         → yalnızca not
      data-metin="..."  → notun metnini değiştirir
-   Onay bu tarayıcıda sayfa başına ONAY_GUN gün hatırlanır. */
+   Onay bu tarayıcıda sayfa başına o günün sonuna kadar geçerlidir; ertesi gün yeniden sorulur. */
 (() => {
   'use strict';
   const me = document.currentScript || document.querySelector('script[src*="uyari.js"]');
   const D = (me && me.dataset) || {};
   const tur = D.tur || 'genel', kapsam = D.kapsam || '';
-  const ONAY_GUN = 90, SURUM = 1;
+  const SURUM = 1, bugun = () => new Date().toDateString();
   const T = {
     muhendislik: {
       bas: 'Ön hesap · eğitim amaçlı',
@@ -63,7 +63,7 @@
 
   /* --- onay penceresi --- */
   const KEY = 'erdevelop-onay:' + tur + ':' + location.pathname;
-  const ok = () => { try { const v = JSON.parse(localStorage.getItem(KEY) || 'null'); return v && v.s === SURUM && Date.now() - v.t < ONAY_GUN * 864e5; } catch (e) { return false; } };
+  const ok = () => { try { const v = JSON.parse(localStorage.getItem(KEY) || 'null'); return v && v.s === SURUM && v.g === bugun(); } catch (e) { return false; } };
   let open = false;
   function ask(after) {
     if (!T.onay || ok() || open) { after && after(); return; }
@@ -74,7 +74,7 @@
       <ul>${T.onay.map(x => `<li>${x}</li>`).join('')}</ul>
       <label><input type="checkbox"> <span>Okudum ve anladım. Bu aracı eğitim ve ön bilgi amacıyla kullanacağımı, sonuçların sorumluluğunun bana ait olduğunu kabul ediyorum.</span></label>
       <div class="b"><a href="/Tools.html">Vazgeç</a><button type="button" disabled>Onayla ve devam et</button></div>
-      <p class="f">Onayın bu tarayıcıda ${ONAY_GUN} gün hatırlanır. Ayrıntılar: <a href="/kullanim.html" target="_blank" rel="noopener">Kullanım şartları</a></p></div>`;
+      <p class="f">Onayın bugün gün sonuna kadar geçerli; yarın yeniden sorulur. Ayrıntılar: <a href="/kullanim.html" target="_blank" rel="noopener">Kullanım şartları</a></p></div>`;
     document.body.appendChild(w);
     const cb = w.querySelector('input'), bt = w.querySelector('button');
     const rest = [...document.body.children].filter(e => e !== w && e.tagName !== 'SCRIPT' && e.tagName !== 'STYLE');
@@ -82,7 +82,7 @@
     const prevOv = document.documentElement.style.overflow; document.documentElement.style.overflow = 'hidden';
     cb.addEventListener('change', () => { bt.disabled = !cb.checked; });
     bt.addEventListener('click', () => {
-      try { localStorage.setItem(KEY, JSON.stringify({ s: SURUM, t: Date.now() })); } catch (e) { }
+      try { localStorage.setItem(KEY, JSON.stringify({ s: SURUM, g: bugun(), t: Date.now() })); } catch (e) { }
       rest.forEach(e => { e.removeAttribute('inert'); e.removeAttribute('aria-hidden'); });
       document.documentElement.style.overflow = prevOv; w.remove(); open = false;
       if (prevFocus && prevFocus.focus) try { prevFocus.focus(); } catch (e) { }
