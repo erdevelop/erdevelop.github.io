@@ -41,7 +41,7 @@ registerGame({
 
     const COLORS=[0xe45858,0xf6c85f,0x3bb27a,0xa06cff,0x19b5b5];
     let obstacles=[], coins=[], lane=0, targetX=0, py=0, vy=0, onGround=true;
-    let speed=8, score=0, gold=0, over=false, raf, spawnZ=-30, lastT=performance.now(), running=true;
+    let speed=5, score=0, gold=0, over=false, raf, spawnZ=-30, lastT=performance.now(), running=true, started=false;
 
     function spawnRow(z){
       const openLane=(Math.random()*3|0)-1; // bu şerit boş (geçiş garantili)
@@ -55,13 +55,13 @@ registerGame({
       c.position.set(l*LANE,1.0,z); c.rotation.x=Math.PI/2; scene.add(c); coins.push(c); }
 
     function reset(){ obstacles.forEach(o=>scene.remove(o)); coins.forEach(c=>scene.remove(c)); obstacles=[]; coins=[];
-      lane=0; targetX=0; player.position.x=0; py=0; vy=0; onGround=true; speed=8; score=0; gold=0; over=false;
-      hud.set('skor',0); hud.set('altin',0); msg.textContent='Kaydır & zıpla!';
+      lane=0; targetX=0; player.position.x=0; py=0; vy=0; onGround=true; speed=5; score=0; gold=0; over=false;
+      started=false; hud.set('skor',0); hud.set('altin',0); msg.textContent='Başlamak için dokun · sağ/sol kaydır, yukarı zıpla';
       spawnZ=-18; for(let i=0;i<7;i++){ spawnRow(spawnZ); spawnZ-=6; } }
 
     function tick(){ if(!running) return; const now=performance.now(); let dt=Math.min(50,now-lastT)/1000; lastT=now; raf=requestAnimationFrame(tick);
-      if(!over){
-        score+=dt*speed*1.2; hud.set('skor',score|0); speed+=dt*0.25;
+      if(!over && started){
+        score+=dt*speed*1.2; hud.set("skor",score|0); speed=Math.min(15, speed+dt*0.12);
         // dash kaydır
         dashes.forEach(d=>{ d.position.z+=speed*dt; if(d.position.z>8) d.position.z-=60; });
         // engeller yaklaşır
@@ -86,8 +86,8 @@ registerGame({
       renderer.render(scene,camera);
     }
     function hit(){ if(over) return; over=true; msg.textContent='Çarptın! Skor: '+(score|0)+' · tekrar için dokun'; if(api.sound)api.sound('lose'); api.submitScore(score|0); }
-    function move(d){ if(over) return; lane=Math.max(-1,Math.min(1,lane+d)); targetX=lane*LANE; if(api.sound)api.sound('tap'); }
-    function jump(){ if(over){ reset(); return; } if(onGround){ onGround=false; vy=7.2; if(api.sound)api.sound('click'); } }
+    function move(d){ if(over) return; started=true; msg.textContent=''; lane=Math.max(-1,Math.min(1,lane+d)); targetX=lane*LANE; if(api.sound)api.sound('tap'); }
+    function jump(){ if(over){ reset(); return; } started=true; msg.textContent=''; if(onGround){ onGround=false; vy=7.2; if(api.sound)api.sound('click'); } }
 
     function onKey(e){ if(e.key==='ArrowLeft'||e.key==='a') move(-1); else if(e.key==='ArrowRight'||e.key==='d') move(1);
       else if(e.key==='ArrowUp'||e.key===' '){ e.preventDefault(); jump(); } }

@@ -18,11 +18,11 @@ registerGame({
     const ctrl=E('div',{style:{display:'grid',gridTemplateColumns:'repeat(3,56px)',gap:'6px',justifyContent:'center',marginTop:'10px'}}); root.append(ctrl);
 
     function cssVar(n){ return getComputedStyle(document.documentElement).getPropertyValue(n).trim(); }
-    let cells, segPx, dir, next, food, foodPx, score, alive, grew, lastStep, loop, particles, shake, pulse;
+    let cells, segPx, dir, next, food, foodPx, score, alive, grew, lastStep, loop, particles, shake, pulse, started;
 
     function center(c){ return {x:c.x*CELL+CELL/2, y:c.y*CELL+CELL/2}; }
     function reset(){ cells=[{x:8,y:8},{x:7,y:8},{x:6,y:8}]; segPx=cells.map(center); dir={x:1,y:0}; next=dir;
-      score=0; alive=true; grew=false; particles=[]; shake=0; pulse=0; hud.set('skor',0); hud.set('hiz',diffName); msg.textContent='';
+      score=0; alive=true; started=false; grew=false; particles=[]; shake=0; pulse=0; hud.set('skor',0); hud.set('hiz',diffName); msg.textContent='Yön ver ya da kaydır ile başla';
       placeFood(); lastStep=performance.now(); if(!loop) loop=makeLoop(frame,api); }
     function placeFood(){ do{ food={x:(Math.random()*N)|0,y:(Math.random()*N)|0}; } while(cells.some(s=>s.x===food.x&&s.y===food.y)); foodPx=center(food); }
 
@@ -36,7 +36,7 @@ registerGame({
     function burst(p,color){ for(let i=0;i<16;i++){ const a=Math.random()*7, s=1+Math.random()*3; particles.push({x:p.x,y:p.y,vx:Math.cos(a)*s,vy:Math.sin(a)*s,life:1,color}); } }
 
     function frame(dt){ const now=performance.now();
-      if(alive && now-lastStep>=stepMs){ lastStep=now; step(); }
+      if(started && alive && now-lastStep>=stepMs){ lastStep=now; step(); }
       // yumuşak takip
       const ease=0.35; for(let i=0;i<segPx.length;i++){ const t=center(cells[i]); segPx[i].x+=(t.x-segPx[i].x)*ease; segPx[i].y+=(t.y-segPx[i].y)*ease; }
       pulse+=dt/400; shake*=0.86;
@@ -67,7 +67,7 @@ registerGame({
       ctx.restore();
     }
 
-    function turn(nx,ny){ if(nx===-dir.x&&ny===-dir.y) return; next={x:nx,y:ny}; }
+    function turn(nx,ny){ if(nx===-dir.x&&ny===-dir.y) return; if(!started){ started=true; lastStep=performance.now(); msg.textContent=''; } next={x:nx,y:ny}; }
     const keys={ArrowUp:[0,-1],ArrowDown:[0,1],ArrowLeft:[-1,0],ArrowRight:[1,0],w:[0,-1],s:[0,1],a:[-1,0],d:[1,0]};
     function onKey(e){ const k=keys[e.key]; if(k){ e.preventDefault(); if(!alive){ reset(); return; } turn(k[0],k[1]); } }
     window.addEventListener('keydown',onKey);
