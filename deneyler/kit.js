@@ -8,6 +8,7 @@ function Kit(o) {
   Object.assign(v, def, saved);
   const save = () => { try { localStorage.setItem(KEY, JSON.stringify(v)); } catch (e) { } };
   const reduced = matchMedia('(prefers-reduced-motion: reduce)').matches;
+  [['apple-mobile-web-app-capable', 'yes'], ['mobile-web-app-capable', 'yes'], ['apple-mobile-web-app-status-bar-style', 'black-translucent'], ['apple-mobile-web-app-title', o.title]].forEach(([n, c]) => { if (!document.querySelector(`meta[name="${n}"]`)) { const m = document.createElement('meta'); m.name = n; m.content = c; document.head.appendChild(m); } });
 
   /* üst çubuk */
   const bar = $('div', 'k-bar');
@@ -15,7 +16,7 @@ function Kit(o) {
   const mk = (ic, tip, fn) => { const b = $('button', 'k-chip k-btn', ic); b.type = 'button'; b.title = tip; b.setAttribute('aria-label', tip); b.onclick = fn; bar.appendChild(b); return b; };
   const bPause = mk('❚❚', 'Duraklat (boşluk)', () => K.pause(!K.paused));
   if (o.snapshot !== false) mk('⤓', 'PNG kaydet (S)', () => K.snap());
-  mk('⛶', 'Tam ekran (F)', () => K.full());
+  mk('⛶', 'Tam ekran · ekran koruyucu (F)', () => K.full());
   const bSet = mk('⚙', 'Ayarlar (H)', () => K.panel(panel.hidden));
   document.body.appendChild(bar);
 
@@ -42,7 +43,7 @@ function Kit(o) {
     panel.appendChild(row);
   });
   const foot = $('div', 'k-btns'); const bReset = $('button', '', 'Varsayılan'); bReset.type = 'button'; bReset.onclick = () => K.reset(); foot.appendChild(bReset); panel.appendChild(foot);
-  panel.appendChild($('p', 'k-hint', (o.help ? o.help + '<br>' : '') + 'Kısayollar: boşluk duraklat · S resim · F tam ekran · H ayarlar'));
+  panel.appendChild($('p', 'k-hint', (o.help ? o.help + '<br>' : '') + 'Kısayollar: boşluk duraklat · S resim · F tam ekran · H ayarlar<br>Ekran koruyucu: ⛶ ile tam ekrana geç; fare durunca düğmeler gizlenir, ekran kararmaz. iPhone’da Paylaş › Ana Ekrana Ekle ile tam ekran açılır.'));
   document.body.appendChild(panel);
 
   /* bildirim */
@@ -57,7 +58,12 @@ function Kit(o) {
     toast(m) { toastEl.textContent = m; toastEl.classList.add('on'); clearTimeout(tt); tt = setTimeout(() => toastEl.classList.remove('on'), 2000); },
     pause(p) { K.paused = p; bPause.textContent = p ? '▶' : '❚❚'; bPause.classList.toggle('on', p); if (!p) { last = performance.now(); } o.onPause && o.onPause(p); },
     panel(show) { panel.hidden = !show; bSet.classList.toggle('on', show); },
-    full() { const d = document; if (!d.fullscreenElement) (d.documentElement.requestFullscreen || d.documentElement.webkitRequestFullscreen || (() => { })).call(d.documentElement); else (d.exitFullscreen || d.webkitExitFullscreen).call(d); },
+    full() {
+      const d = document, el = d.documentElement, fs = d.fullscreenElement || d.webkitFullscreenElement, req = el.requestFullscreen || el.webkitRequestFullscreen;
+      if (fs) { (d.exitFullscreen || d.webkitExitFullscreen).call(d); return; }
+      if (!req) { K.toast(/iPhone|iPad|iPod/.test(navigator.userAgent) ? 'iPhone’da tam ekran için: Paylaş › Ana Ekrana Ekle' : 'Bu tarayıcı tam ekranı desteklemiyor'); return; }
+      K.panel(false); try { const p = req.call(el); p && p.catch && p.catch(() => { }); } catch (e) { }
+    },
     set(k, x, silent) { v[k] = x; const I = inputs[k]; if (I) { if (I.c.t === 'check') I.inp.checked = !!x; else I.inp.value = x; if (I.c.t === 'range') I.row.querySelector('b').textContent = fmtv(I.c, x); } save(); if (!silent && o.onChange) o.onChange(k, x, v); },
     reset() { Object.keys(def).forEach(k => K.set(k, def[k], true)); save(); o.onChange && o.onChange('*', null, v); K.toast('Varsayılan ayarlar'); },
     snap() { const c = o.snapshot ? o.snapshot() : K.cv; if (!c) return; const go = cv => cv.toBlob(b => { const a = document.createElement('a'); a.href = URL.createObjectURL(b); a.download = `${o.id}-${new Date().toISOString().slice(0, 19).replace(/[:T]/g, '-')}.png`; document.body.appendChild(a); a.click(); a.remove(); setTimeout(() => URL.revokeObjectURL(a.href), 3000); K.toast('PNG kaydedildi'); }, 'image/png'); c.then ? c.then(go) : go(c); },
@@ -77,6 +83,17 @@ function Kit(o) {
     loop(fn) { let raf = 0; const step = t => { raf = requestAnimationFrame(step); if (K.paused || document.hidden) { last = t; return; } const dt = Math.min(0.05, (t - last) / 1000 || 0.016); last = t; fn(dt, t / 1000); }; raf = requestAnimationFrame(step); }
   };
   let last = performance.now();
+  /* ekran koruyucu modu: tam ekrandayken (ya da ana ekrandan açılınca) ekran kararmasın */
+  const bFull = [...bar.querySelectorAll('.k-btn')].find(b => b.textContent === '⛶');
+  let lock = null;
+  const standalone = matchMedia('(display-mode: standalone)').matches || navigator.standalone;
+  const isFull = () => !!(document.fullscreenElement || document.webkitFullscreenElement) || standalone;
+  const keepAwake = async () => {
+    if (isFull() && !document.hidden && 'wakeLock' in navigator) { if (!lock) try { lock = await navigator.wakeLock.request('screen'); lock.addEventListener('release', () => { lock = null; }); } catch (e) { lock = null; } }
+    else if (lock) { try { lock.release(); } catch (e) { } lock = null; }
+  };
+  const onFull = () => { if (bFull) bFull.classList.toggle('on', isFull()); document.body.classList.toggle('k-full', isFull()); keepAwake(); wake(); };
+  ['fullscreenchange', 'webkitfullscreenchange', 'visibilitychange'].forEach(t => document.addEventListener(t, onFull)); onFull();
   addEventListener('keydown', e => {
     if (e.target.closest && e.target.closest('input, select, textarea')) return;
     const k = e.key.toLowerCase();
