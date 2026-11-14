@@ -13,6 +13,8 @@ import { pathToFileURL } from 'node:url';
 export const VAPID_PUBLIC = 'BGPY6KZFQc8GQbAQQiw-0CBI8X6mrn9VHS7yC8fU8Lbw3Ep5H1OyBLXl6ADn_vGn2fp6F64JL1cMdIFhooZM_BQ';
 const SUBJECT = process.env.VAPID_SUBJECT || 'https://erdevelop.github.io';
 const SITE = 'https://erdevelop.github.io/ingilizce.html';
+/* hangi kulübün sayfası: push belgesindeki page alanı (yoksa İngilizce) */
+const PAGES = { ingilizce: { url: SITE, icon: '📚', tag: 'eng-kelime' }, fransizca: { url: 'https://erdevelop.github.io/fransizca.html', icon: '🇫🇷', tag: 'fra-kelime' } };
 const b64u = b => Buffer.from(b).toString('base64url');
 const unb64u = s => Buffer.from(String(s), 'base64url');
 const hmac = (key, data) => crypto.createHmac('sha256', key).update(data).digest();
@@ -65,8 +67,9 @@ export function dueSlot(d, now = new Date(), win = 50) {
 }
 export function message(d) {
   const q = d.q || []; if (!q.length) return null; const w = q[(d.pos || 0) % q.length];
-  return { title: '📚 ' + w.e + (d.mean !== false ? ' — ' + w.t : ''), body: d.mean !== false ? (w.x || 'Dokun, kartı aç.') : 'Anlamını hatırlıyor musun? Dokun ve kontrol et.',
-    url: SITE + '?k=' + encodeURIComponent(w.e) + '#kelime', tag: 'eng-kelime' };
+  const P = PAGES[d.page] || PAGES.ingilizce;
+  return { title: P.icon + ' ' + w.e + (d.mean !== false ? ' — ' + w.t : ''), body: d.mean !== false ? (w.x || 'Dokun, kartı aç.') : 'Anlamını hatırlıyor musun? Dokun ve kontrol et.',
+    url: P.url + '?k=' + encodeURIComponent(w.e) + '#kelime', tag: P.tag };
 }
 
 /* ---------- Firestore REST ---------- */
@@ -96,8 +99,10 @@ export async function main(env = process.env) {
   if (!r.ok) throw new Error('Firestore okunamadı: ' + r.status + ' ' + (await r.text()).slice(0, 200));
   const all = (await r.json()).filter(x => x.document).map(x => ({ ...fromFields(x.document.fields || {}), _path: x.document.name }));
   /* aynı telefona bağlı birden fazla hesap varsa yalnızca en son ayarlanan kullanılır, diğerleri kapatılır (çift bildirim olmasın) */
-  const byEp = new Map(); for (const d of all) { const ep = d.sub && d.sub.endpoint; if (!ep) continue; const o = byEp.get(ep); if (!o || String(d.upd || '') > String(o.upd || '')) byEp.set(ep, d); }
-  const docs = [...byEp.values()], dupes = all.filter(d => d.sub && d.sub.endpoint && byEp.get(d.sub.endpoint) !== d);
+  /* İngilizce ve Fransızca aynı telefonda ayrı ayrı açık olabilir: anahtar = adres + sayfa */
+  const epKey = d => d.sub.endpoint + '|' + (d.page || 'ingilizce');
+  const byEp = new Map(); for (const d of all) { const ep = d.sub && d.sub.endpoint; if (!ep) continue; const k = epKey(d), o = byEp.get(k); if (!o || String(d.upd || '') > String(o.upd || '')) byEp.set(k, d); }
+  const docs = [...byEp.values()], dupes = all.filter(d => d.sub && d.sub.endpoint && byEp.get(epKey(d)) !== d);
   const patch = async (d, upd) => { const mask = Object.keys(upd).map(k => 'updateMask.fieldPaths=' + k).join('&');
     const url = env.FIRESTORE_BASE ? base + '/' + d._path.split('/documents/')[1] : 'https://firestore.googleapis.com/v1/' + d._path;
     const p = await fetch(url + '?' + mask, { method: 'PATCH', headers: { ...auth, 'Content-Type': 'application/json' }, body: JSON.stringify({ fields: Object.fromEntries(Object.entries(upd).map(([k, v]) => [k, toValue(v)])) }) });
