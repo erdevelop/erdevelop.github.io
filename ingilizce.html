@@ -120,6 +120,18 @@
 .rooms button { border: 1px solid var(--line); background: transparent; color: var(--text); border-radius: 999px; padding: 6px 12px; font: 500 13px var(--f-body); cursor: pointer; }
 .rooms button.on { background: var(--accent); border-color: var(--accent); color: var(--on-accent, #fff); }
 .rooms button.add { border-style: dashed; color: var(--muted); }
+.tbx { font-size: 15px; padding: 4px 9px; }
+dialog.set { border: 1px solid var(--line); border-radius: 14px; background: var(--bg); color: var(--text); padding: 0; width: min(460px, calc(100vw - 24px)); max-height: calc(100dvh - 40px); }
+dialog.set::backdrop { background: rgba(0,0,0,.55); }
+dialog.set .sh { display: flex; align-items: center; justify-content: space-between; padding: 14px 16px; border-bottom: 1px solid var(--line); position: sticky; top: 0; background: var(--bg); z-index: 1; }
+dialog.set .sh b { font: 700 1.1rem var(--f-display); color: var(--fg); }
+dialog.set .sb { padding: 4px 16px 16px; }
+dialog.set .sg { padding: 12px 0; border-bottom: 1px solid var(--line); }
+dialog.set .sg:last-child { border-bottom: 0; }
+dialog.set .sg > .lbl { margin-bottom: 8px; }
+dialog.set .row { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; }
+dialog.set .row .sel { flex: 1 1 200px; min-width: 0; }
+dialog.set input[type=range] { flex: 1 1 160px; accent-color: var(--accent); }
 .rpick { margin: 10px auto 0; max-width: 420px; border: 1px solid var(--line); border-radius: 12px; padding: 10px 12px; background: var(--card, transparent); text-align: left; }
 .rpick .lbl { margin-bottom: 8px; }
 .rpick .rooms { margin: 0; }
@@ -154,6 +166,24 @@
     <button type="button" data-t="kelime" class="on">📚 Kelimeler</button><button type="button" data-t="kalip">🧩 Kalıplar</button><button type="button" data-t="dinleme">🎧 Dinleme</button><button type="button" data-t="konusma">💬 Konuşma</button><button type="button" data-t="sim">🗣 Toplantı</button><button type="button" data-t="telaffuz">🎙 Telaffuz</button><button type="button" data-t="yarisma">🏆 Yarışma</button><button type="button" data-t="oda">👥 Oda</button>
     <button type="button" class="inst" id="instBtn" hidden title="Uygulama olarak yükle">📲 Yükle</button><span class="acc" id="accLbl">misafir</span>
   </div>
+  <dialog class="set" id="setDlg" aria-labelledby="setT">
+    <div class="sh"><b id="setT">⚙ Ayarlar</b><button class="btn sm" type="button" id="setX" aria-label="Kapat">✕</button></div>
+    <div class="sb">
+      <div class="sg"><div class="lbl muted mono small">🔊 Ses</div>
+        <div class="row"><select class="sel" id="sVoice" aria-label="Ses"></select><button class="btn" type="button" id="sVTest">Dinle</button></div>
+        <div class="row" style="margin-top:10px"><label class="small muted" for="sRate">Konuşma hızı</label><input type="range" id="sRate" min="0.6" max="1.3" step="0.05"><span class="mono small" id="sRateV"></span></div>
+        <p class="small muted" style="margin:8px 0 0">★ işaretli sesler daha doğal. Ses robot gibiyse Telaffuz sekmesindeki “Daha doğal ses ekle” adımlarına bak.</p></div>
+      <div class="sg"><div class="lbl muted mono small">🔔 Kelime bildirimleri</div>
+        <div class="row"><span class="small" id="sPush" style="flex:1"></span><button class="btn" type="button" id="sPushGo">Ayarla</button></div></div>
+      <div class="sg"><div class="lbl muted mono small">👤 Hesap</div>
+        <div class="row"><span class="small" id="sAcc" style="flex:1"></span><a class="btn" id="sAccGo" href="hesap.html">Hesabım</a></div></div>
+      <div class="sg"><div class="lbl muted mono small">🎨 Görünüm</div>
+        <div class="row"><span class="small" id="sMode" style="flex:1"></span><button class="btn" type="button" id="sModeBtn">Değiştir</button></div></div>
+      <div class="sg"><div class="lbl muted mono small">📱 Uygulama</div>
+        <div class="row"><button class="btn pri" type="button" id="sRefresh">🔄 Yenile · son sürümü yükle</button><button class="btn" type="button" id="sInst" hidden>📲 Ana ekrana yükle</button></div>
+        <p class="small muted" style="margin:8px 0 0">Bu cihazdaki sürüm: <b class="mono" id="sVer"></b></p></div>
+    </div>
+  </dialog>
 
   <section class="pane2 on" id="p-kelime">
     <div class="two">
@@ -1349,7 +1379,7 @@ function loadVoices() { if (!TTS) return; voices = speechSynthesis.getVoices().f
   sel.innerHTML = voices.length ? voices.map(v => `<option value="${esc(v.name)}">${vScore(v) >= 20 ? '★ ' : ''}${esc(v.name.replace(/Microsoft |Google | \(.*\)$/g, ''))} · ${esc(v.lang)}</option>`).join('') : '<option value="">varsayılan ses</option>';
   if (S.voice && voices.some(v => v.name === S.voice)) sel.value = S.voice; else if (voices[0]) sel.value = voices[0].name; }
 if (TTS) { loadVoices(); speechSynthesis.onvoiceschanged = loadVoices; }
-function say(text, rate = 0.95) { if (!TTS) return TM.toast('Bu tarayıcı seslendirmeyi desteklemiyor'); speechSynthesis.cancel(); const u = new SpeechSynthesisUtterance(text); u.lang = 'en-GB'; u.rate = rate; const v = voices.find(v => v.name === ($('tVoice').value || S.voice)); if (v) { u.voice = v; u.lang = v.lang; } speechSynthesis.speak(u); }
+function say(text, rate = 0.95) { if (!TTS) return TM.toast('Bu tarayıcı seslendirmeyi desteklemiyor'); speechSynthesis.cancel(); const u = new SpeechSynthesisUtterance(text); u.lang = 'en-GB'; u.rate = rate * (S.rate || 1); const v = voices.find(v => v.name === ($('tVoice').value || S.voice)); if (v) { u.voice = v; u.lang = v.lang; } speechSynthesis.speak(u); }
 /* sırayla konuşma: her konuşana ayrı ses; bitince çözülen Promise */
 /* konuşmalarda farklı kişiler için yalnızca iyi sesler sırayla kullanılır; iyi ses azsa ses tonu hafifçe değiştirilir */
 function vpool() { const sel = voices.find(v => v.name === ($('tVoice').value || S.voice)), best = voices[0] ? vScore(voices[0]) : 0;
@@ -1358,7 +1388,7 @@ function speakP(text, rate = 1, vi = 0) {
   return new Promise(res => {
     if (!TTS) return setTimeout(res, 400);
     const u = new SpeechSynthesisUtterance(text), P = vpool(), pitch = [1, .93, 1.08, .97];
-    u.lang = 'en-GB'; u.rate = rate;
+    u.lang = 'en-GB'; u.rate = rate * (S.rate || 1);
     if (P.length) { const v = P[vi % P.length]; u.voice = v; u.lang = v.lang; u.pitch = pitch[Math.floor(vi / P.length) % 4]; } else u.pitch = pitch[vi % 4];
     let done = false; const fin = () => { if (done) return; done = true; clearTimeout(t); res(); };
     u.onend = fin; u.onerror = fin; const t = setTimeout(fin, 2500 + text.split(/\s+/).length * 600 / rate);
@@ -2033,6 +2063,40 @@ C.left = +S.cDur; tshow(); showTurn(); paintTrk(); newPrompt(); paintPh(); srcOp
 document.querySelectorAll('#qMode button').forEach(x => x.classList.toggle('on', x.dataset.m === S.qMode));
 const h = location.hash.slice(1), qs = new URLSearchParams(location.search);
 if (qs.get('k')) setTimeout(() => { const i = KALIP.findIndex(p => norm(p.f) === norm(qs.get('k'))); if (i >= 0) { S.z.g = 'hepsi'; S.z.mode = 'ogren'; setTab('kalip'); zGroups(); zLoad(i); } else showWord(qs.get('k')); }, 0);
+/* ---------- üst çubuk: 🔄 yenile + ⚙ ayarlar ---------- */
+const VER = '14.11 12:02';
+async function hardRefresh() {
+  TM.toast('Yenileniyor…');
+  try { const r = await navigator.serviceWorker?.getRegistration(); if (r) await r.update(); } catch (e) { }
+  try { const ks = await caches.keys(); await Promise.all(ks.filter(k => /sayfa/.test(k)).map(k => caches.delete(k))); } catch (e) { }
+  try { await fetch(location.pathname, { cache: 'reload' }); } catch (e) { }
+  try { sessionStorage.setItem('ing-yenilendi', VER); } catch (e) { }
+  location.reload();
+}
+try { const was = sessionStorage.getItem('ing-yenilendi'); if (was) { sessionStorage.removeItem('ing-yenilendi'); setTimeout(() => TM.toast(was === VER ? 'Yenilendi · zaten son sürüm (' + VER + ')' : 'Güncellendi · yeni sürüm ' + VER), 600); } } catch (e) { }
+(function topBtns() { const mb = $('modeBtn'); if (!mb) return;
+  const mk = (id, txt, title) => { const b = document.createElement('button'); b.type = 'button'; b.className = 'tb tbx'; b.id = id; b.textContent = txt; b.title = title; b.setAttribute('aria-label', title); mb.before(b); return b; };
+  mk('tbRef', '🔄', 'Yenile (son sürümü yükle)').onclick = hardRefresh;
+  mk('tbSet', '⚙', 'Ayarlar').onclick = openSet; })();
+function setFill() {
+  const tv = $('tVoice'); $('sVoice').innerHTML = tv ? tv.innerHTML : '<option value="">varsayılan ses</option>'; if (tv) $('sVoice').value = tv.value;
+  $('sRate').value = S.rate || 1; $('sRateV').textContent = '×' + (+(S.rate || 1)).toFixed(2);
+  $('sPush').textContent = S.pushOn ? 'Açık' + (S.h && S.h.step ? ' · ' + S.h.step + ' dk arayla' : '') : 'Kapalı';
+  $('sAcc').textContent = Cloud.user ? Cloud.name() + ' · ' + nf(S.xp || 0) + ' XP' : 'Giriş yapılmadı (misafir)'; $('sAccGo').textContent = Cloud.user ? 'Hesabım' : 'Giriş yap';
+  $('sMode').textContent = TM.mode === 'dark' ? 'Koyu tema' : 'Açık tema'; $('sVer').textContent = VER; $('sInst').hidden = !instEv;
+}
+function openSet() { setFill(); const d = $('setDlg'); if (d.showModal) d.showModal(); else d.setAttribute('open', ''); }
+function closeSet() { const d = $('setDlg'); if (d.close) d.close(); else d.removeAttribute('open'); }
+$('setX').onclick = closeSet; $('setDlg').addEventListener('click', e => { if (e.target === $('setDlg')) closeSet(); });
+$('sVoice').onchange = () => { S.voice = $('sVoice').value; save(); if ($('tVoice')) $('tVoice').value = S.voice; say('Hi! This is how I sound. Nice to meet you.'); };
+$('sVTest').onclick = () => say('Hi! This is how I sound. Nice to meet you.');
+$('sRate').oninput = () => { S.rate = +$('sRate').value; $('sRateV').textContent = '×' + S.rate.toFixed(2); save(); };
+$('sRate').onchange = () => say('This is my speaking speed.');
+$('sPushGo').onclick = () => { closeSet(); setTab('kelime'); if ($('hBox').hidden) $('hOpen').click(); setTimeout(() => $('hBox').scrollIntoView({ block: 'start', behavior: 'smooth' }), 80); };
+$('sAccGo').onclick = e => { if (Cloud.user) return; e.preventDefault(); closeSet(); setTab('oda'); };
+$('sModeBtn').onclick = () => { $('modeBtn').click(); setFill(); };
+$('sRefresh').onclick = hardRefresh;
+$('sInst').onclick = () => { closeSet(); $('instBtn').click(); };
 setTab(qs.has('oda') ? 'oda' : ['kelime', 'kalip', 'dinleme', 'konusma', 'sim', 'telaffuz', 'yarisma', 'oda'].includes(h) ? h : S.tab || 'kelime');
 if (S.room || S.pushOn) Cloud.ensure();
 
