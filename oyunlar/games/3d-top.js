@@ -8,6 +8,16 @@ registerGame({
     const hud=makeHUD(root,[{id:'altin',label:'Altın',value:0},{id:'sure',label:'Süre',value:'0'}]);
     const holder=E('div',{style:{textAlign:'center'}}); root.append(holder);
     const msg=E('div',{class:'g-msg'},'Zemini eğ (kaydır/ok): topu altınlarla hedefe götür.'); root.append(msg);
+
+    // Zorluk: altın sayısı, eğim gücü, puan çarpanı
+    const DIFFS=[['Kolay',{coins:4,g:0.035,mult:1}],
+                 ['Orta', {coins:5,g:0.045,mult:1.3}],
+                 ['Zor',  {coins:7,g:0.055,mult:1.6}]];
+    let diffIdx=1, D=DIFFS[1][1];
+    const diffBar=E('div',{style:{display:'flex',gap:'8px',justifyContent:'center',margin:'6px 0'}});
+    DIFFS.forEach((d,i)=>{ const b=E('button',{class:'g-btn ghost'},d[0]); b.onclick=()=>{ diffIdx=i; D=d[1]; paintDiff(); reset(); }; diffBar.append(b); });
+    function paintDiff(){ [...diffBar.children].forEach((c,i)=>{ const on=i===diffIdx; c.style.background=on?'var(--accent)':'var(--accent-soft)'; c.style.color=on?'#fff':'var(--accent-ink)'; }); }
+    root.append(diffBar);
     const scene=new THREE.Scene(); scene.background=new THREE.Color(0x101830);
     const camera=new THREE.PerspectiveCamera(50,W/H,0.1,100); camera.position.set(0,14,12); camera.lookAt(0,0,0);
     const renderer=new THREE.WebGLRenderer({antialias:true}); renderer.setPixelRatio(Math.min(2,window.devicePixelRatio||1));
@@ -28,14 +38,14 @@ registerGame({
     function layout(){ coins.forEach(c=>plate.remove(c)); coins=[]; gold=0; hud.set('altin',0);
       goalPos={x:(Math.random()-0.5)*SZ*0.6, z:(Math.random()-0.5)*SZ*0.6}; goal.position.set(goalPos.x,0.3,goalPos.z);
       bx=-SZ*0.35; bz=-SZ*0.35; vx=0; vz=0;
-      for(let i=0;i<5;i++){ const c=new THREE.Mesh(new THREE.TorusGeometry(0.4,0.14,8,16), new THREE.MeshStandardMaterial({color:0xf6c85f,emissive:0x5a4500,metalness:0.6})); c.rotation.x=Math.PI/2; c.position.set((Math.random()-0.5)*SZ*0.7,0.5,(Math.random()-0.5)*SZ*0.7); c.userData.got=false; plate.add(c); coins.push(c); } }
+      for(let i=0;i<D.coins;i++){ const c=new THREE.Mesh(new THREE.TorusGeometry(0.4,0.14,8,16), new THREE.MeshStandardMaterial({color:0xf6c85f,emissive:0x5a4500,metalness:0.6})); c.rotation.x=Math.PI/2; c.position.set((Math.random()-0.5)*SZ*0.7,0.5,(Math.random()-0.5)*SZ*0.7); c.userData.got=false; plate.add(c); coins.push(c); } }
     function reset(){ over=false; tiltX=0; tiltZ=0; layout(); startT=performance.now(); msg.textContent='Eğ ve topu yönlendir.'; if(!loop) loop=makeLoop(step,api); }
     function step(dt){ const k=dt/16; plate.rotation.z += (tiltX-plate.rotation.z)*0.1; plate.rotation.x += (tiltZ-plate.rotation.x)*0.1;
-      if(!over){ vx += plate.rotation.z*0.04*k; vz += -plate.rotation.x*0.04*k; vx*=0.98; vz*=0.98; bx+=vx*k; bz+=vz*k;
+      if(!over){ vx += plate.rotation.z*D.g*k; vz += -plate.rotation.x*D.g*k; vx*=0.98; vz*=0.98; bx+=vx*k; bz+=vz*k;
         const lim=SZ/2-0.8; if(bx<-lim){bx=-lim;vx*=-0.4;} if(bx>lim){bx=lim;vx*=-0.4;} if(bz<-lim){bz=-lim;vz*=-0.4;} if(bz>lim){bz=lim;vz*=-0.4;}
         hud.set('sure',((performance.now()-startT)/1000|0));
         coins.forEach(c=>{ if(!c.userData.got && Math.hypot(bx-c.position.x,bz-c.position.z)<0.9){ c.userData.got=true; c.visible=false; gold++; hud.set('altin',gold); if(api.sound)api.sound('score'); } });
-        if(gold===coins.length && Math.hypot(bx-goalPos.x,bz-goalPos.z)<1.1){ over=true; const sec=((performance.now()-startT)/1000)|0; const score=Math.max(20,500-sec*8); msg.textContent='Hedefe vardın! '+score+' puan · dokun: yeni'; api.submitScore(score); if(api.sound)api.sound('win'); } }
+        if(gold===coins.length && Math.hypot(bx-goalPos.x,bz-goalPos.z)<1.1){ over=true; const sec=((performance.now()-startT)/1000)|0; const score=Math.round(Math.max(20,500-sec*8)*D.mult); msg.textContent='Hedefe vardın! '+score+' puan · dokun: yeni'; api.submitScore(score); if(api.sound)api.sound('win'); } }
       // topu eğik plakaya göre yerleştir
       const lp=new THREE.Vector3(bx,0.6,bz); ball.position.copy(lp.applyAxisAngle? lp:lp); // basit
       ball.position.set(bx,0.9,bz); ball.rotation.x+=vz*0.3; ball.rotation.z-=vx*0.3;
@@ -50,7 +60,7 @@ registerGame({
     cv.addEventListener('pointerup',()=>{ px=null; });
     api.onCleanup(()=>{ if(loop)loop.stop(); window.removeEventListener('keydown',onKey); window.removeEventListener('keyup',onKeyUp); try{ renderer.dispose(); renderer.forceContextLoss&&renderer.forceContextLoss(); }catch(e){}
       scene.traverse(o=>{ if(o.geometry)o.geometry.dispose&&o.geometry.dispose(); if(o.material){(Array.isArray(o.material)?o.material:[o.material]).forEach(m=>m.dispose&&m.dispose());} }); });
-    reset();
+    paintDiff(); reset();
     return ()=>{ if(loop)loop.stop(); window.removeEventListener('keydown',onKey); window.removeEventListener('keyup',onKeyUp); try{ renderer.dispose(); }catch(e){} };
   }
 });

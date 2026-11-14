@@ -9,6 +9,16 @@ registerGame({
     const holder=E('div',{style:{textAlign:'center'}}); root.append(holder);
     const msg=E('div',{class:'g-msg'},'Rakete dokun/sürükle, başlatmak için dokun.'); root.append(msg);
 
+    // Zorluk: top hızı, raket genişliği, puan çarpanı
+    const DIFFS=[['Kolay',{bs:4.2,pw:4.4,mult:1}],
+                 ['Orta', {bs:5.2,pw:3.4,mult:1.3}],
+                 ['Zor',  {bs:6.4,pw:2.6,mult:1.7}]];
+    let diffIdx=1, D=DIFFS[1][1];
+    const diffBar=E('div',{style:{display:'flex',gap:'8px',justifyContent:'center',margin:'6px 0'}});
+    DIFFS.forEach((d,i)=>{ const b=E('button',{class:'g-btn ghost'},d[0]); b.onclick=()=>{ diffIdx=i; D=d[1]; paintDiff(); reset(); }; diffBar.append(b); });
+    function paintDiff(){ [...diffBar.children].forEach((c,i)=>{ const on=i===diffIdx; c.style.background=on?'var(--accent)':'var(--accent-soft)'; c.style.color=on?'#fff':'var(--accent-ink)'; }); }
+    root.append(diffBar);
+
     const FIELD_W=14, FIELD_D=20;
     const scene=new THREE.Scene(); scene.background=new THREE.Color(0x0e1326); scene.fog=new THREE.Fog(0x0e1326, 22, 50);
     const camera=new THREE.PerspectiveCamera(55, W/H, 0.1, 120); camera.position.set(0,16,16); camera.lookAt(0,0,-1);
@@ -31,7 +41,7 @@ registerGame({
 
     const COLS=7, ROWS=5, bw=FIELD_W/COLS; let bricks=[], paddle, ball, bx,bz,vx,vz, px=0, score,lives,over,launched,loop,r=0.5, pw=3.4;
     function colorRow(r0){ return new THREE.Color(`hsl(${(r0*40+200)%360},65%,60%)`); }
-    paddle=new THREE.Mesh(new THREE.BoxGeometry(pw,0.7,0.8), new THREE.MeshStandardMaterial({color:0x7f9bff, emissive:0x24305e, metalness:0.3, roughness:0.4}));
+    paddle=new THREE.Mesh(new THREE.BoxGeometry(1,0.7,0.8), new THREE.MeshStandardMaterial({color:0x7f9bff, emissive:0x24305e, metalness:0.3, roughness:0.4}));
     paddle.position.set(0,0.4,FIELD_D/2-1.5); paddle.castShadow=true; scene.add(paddle);
     const ballMesh=new THREE.Mesh(new THREE.SphereGeometry(r,20,20), new THREE.MeshStandardMaterial({color:0xff6a6a, emissive:0x661010, metalness:0.2, roughness:0.3}));
     ballMesh.castShadow=true; scene.add(ballMesh);
@@ -41,7 +51,7 @@ registerGame({
         m.position.set(-FIELD_W/2+bw/2+c*bw, 0.5, -FIELD_D/2+2+r0*1.3); m.castShadow=true; scene.add(m); bricks.push(m); } }
     function resetBall(){ launched=false; bx=px; bz=FIELD_D/2-3; vx=0; vz=0; place(); }
     function place(){ ballMesh.position.set(bx,0.5,bz); }
-    function reset(){ score=0; lives=3; over=false; px=0; hud.set('skor',0); hud.set('can',3); msg.textContent='Dokun ile başlat.'; buildBricks(); resetBall(); if(!loop) loop=makeLoop(step,api); }
+    function reset(){ score=0; lives=3; over=false; px=0; pw=D.pw; paddle.scale.x=pw; hud.set('skor',0); hud.set('can',3); msg.textContent='Dokun ile başlat.'; buildBricks(); resetBall(); if(!loop) loop=makeLoop(step,api); }
 
     function step(dt){ paddle.position.x += (px-paddle.position.x)*Math.min(1,dt/60*8);
       ptLight.position.set(ballMesh.position.x, 3, ballMesh.position.z);
@@ -51,10 +61,10 @@ registerGame({
           if(bx< -FIELD_W/2+r){ bx=-FIELD_W/2+r; vx=Math.abs(vx); } if(bx>FIELD_W/2-r){ bx=FIELD_W/2-r; vx=-Math.abs(vx); }
           if(bz< -FIELD_D/2+r){ bz=-FIELD_D/2+r; vz=Math.abs(vz); }
           // raket
-          if(bz>paddle.position.z-0.8 && bz<paddle.position.z+0.8 && Math.abs(bx-paddle.position.x)<pw/2+r && vz>0){ vz=-Math.abs(vz); vx=(bx-paddle.position.x)/(pw/2)*4.2; if(api.sound)api.sound('tap'); }
+          if(bz>paddle.position.z-0.8 && bz<paddle.position.z+0.8 && Math.abs(bx-paddle.position.x)<pw/2+r && vz>0){ vz=-Math.abs(vz); vx=(bx-paddle.position.x)/(pw/2)*D.bs; if(api.sound)api.sound('tap'); }
           // tuğlalar
           for(let i=bricks.length-1;i>=0;i--){ const b=bricks[i]; if(Math.abs(bx-b.position.x)<bw*0.5+r && Math.abs(bz-b.position.z)<0.7+r){
-            scene.remove(b); bricks.splice(i,1); vz=-vz; score+=10; hud.set('skor',score); if(api.sound)api.sound('score');
+            scene.remove(b); bricks.splice(i,1); vz=-vz; score+=Math.round(10*D.mult); hud.set('skor',score); if(api.sound)api.sound('score');
             if(!bricks.length){ over=true; msg.textContent='Hepsini kırdın! 🎉 '+score; api.submitScore(score); if(api.sound)api.sound('win'); } break; } }
           if(bz>FIELD_D/2){ lives--; hud.set('can',lives); if(lives<=0){ over=true; msg.textContent='Bitti! Skor: '+score+' · tekrar için dokun'; api.submitScore(score); if(api.sound)api.sound('lose'); } else resetBall(); }
           place();
@@ -62,7 +72,7 @@ registerGame({
       }
       renderer.render(scene,camera);
     }
-    function launch(){ if(launched) return; launched=true; const a=(-70-Math.random()*40)*Math.PI/180; vx=Math.cos(a)*5; vz=-Math.abs(Math.sin(a)*5)- 3; vz=-5; vx=(Math.random()-0.5)*3; }
+    function launch(){ if(launched) return; launched=true; vz=-D.bs; vx=(Math.random()-0.5)*D.bs*0.6; }
     function movePad(clientX){ const rect=renderer.domElement.getBoundingClientRect(); const t=(clientX-rect.left)/rect.width; px=(t-0.5)*FIELD_W; px=Math.max(-FIELD_W/2+pw/2,Math.min(FIELD_W/2-pw/2,px)); }
     renderer.domElement.addEventListener('pointermove',e=>{ if(e.buttons||e.pointerType!=='mouse') movePad(e.clientX); });
     renderer.domElement.addEventListener('pointerdown',e=>{ if(over){ reset(); return; } movePad(e.clientX); launch(); });
@@ -72,7 +82,7 @@ registerGame({
     api.onCleanup(()=>{ if(loop)loop.stop(); window.removeEventListener('keydown',onKey);
       try{ renderer.dispose(); renderer.forceContextLoss&&renderer.forceContextLoss(); }catch(e){}
       scene.traverse(o=>{ if(o.geometry)o.geometry.dispose&&o.geometry.dispose(); if(o.material){(Array.isArray(o.material)?o.material:[o.material]).forEach(m=>m.dispose&&m.dispose());} }); });
-    reset();
+    paintDiff(); reset();
     return ()=>{ if(loop)loop.stop(); window.removeEventListener('keydown',onKey); try{ renderer.dispose(); }catch(e){} };
   }
 });

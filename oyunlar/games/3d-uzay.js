@@ -9,6 +9,16 @@ registerGame({
     const holder=E('div',{style:{textAlign:'center'}}); root.append(holder);
     const msg=E('div',{class:'g-msg'},'Gemiyi kaydır (sağ/sol), otomatik ateş.'); root.append(msg);
 
+    // Zorluk: başlangıç hızı, düşman sıklığı(ms), hız tavanı, puan çarpanı
+    const DIFFS=[['Kolay',{spd:0.26,spawn:1150,cap:0.85,mult:1}],
+                 ['Orta', {spd:0.35,spawn:900, cap:1.1, mult:1.35}],
+                 ['Zor',  {spd:0.46,spawn:720, cap:1.45,mult:1.75}]];
+    let diffIdx=1, D=DIFFS[1][1];
+    const diffBar=E('div',{style:{display:'flex',gap:'8px',justifyContent:'center',margin:'6px 0'}});
+    DIFFS.forEach((d,i)=>{ const b=E('button',{class:'g-btn ghost'},d[0]); b.onclick=()=>{ diffIdx=i; D=d[1]; paintDiff(); reset(); }; diffBar.append(b); });
+    function paintDiff(){ [...diffBar.children].forEach((c,i)=>{ const on=i===diffIdx; c.style.background=on?'var(--accent)':'var(--accent-soft)'; c.style.color=on?'#fff':'var(--accent-ink)'; }); }
+    root.append(diffBar);
+
     const scene=new THREE.Scene(); scene.background=new THREE.Color(0x05070f); scene.fog=new THREE.Fog(0x05070f, 30, 90);
     const camera=new THREE.PerspectiveCamera(60, W/H, 0.1, 200); camera.position.set(0,6,14); camera.lookAt(0,0,-18);
     const renderer=new THREE.WebGLRenderer({antialias:true}); renderer.setPixelRatio(Math.min(2,window.devicePixelRatio||1));
@@ -34,7 +44,7 @@ registerGame({
 
     const BOUND=8; let shipX=0, bullets=[], foes=[], blasts=[], score,lives,over,loop,fireAcc,spawnAcc,speed;
     function reset(){ bullets.forEach(b=>scene.remove(b)); foes.forEach(f=>scene.remove(f)); blasts.forEach(b=>scene.remove(b.mesh));
-      bullets=[]; foes=[]; blasts=[]; shipX=0; score=0; lives=3; over=false; fireAcc=0; spawnAcc=0; speed=0.35;
+      bullets=[]; foes=[]; blasts=[]; shipX=0; score=0; lives=3; over=false; fireAcc=0; spawnAcc=0; speed=D.spd;
       hud.set('skor',0); hud.set('can',3); msg.textContent='Kaydır, otomatik ateş.'; if(!loop) loop=makeLoop(step,api); }
 
     function fire(){ const b=new THREE.Mesh(new THREE.CylinderGeometry(0.12,0.12,1.1,6), new THREE.MeshBasicMaterial({color:0xf6c85f}));
@@ -50,11 +60,11 @@ registerGame({
       ship.position.x += (shipX-ship.position.x)*Math.min(1,k*0.2); ship.rotation.z=(shipX-ship.position.x)*0.2; neon.position.x=ship.position.x;
       if(!over){
         fireAcc+=dt; if(fireAcc>240){ fireAcc=0; fire(); }
-        spawnAcc+=dt; const gap=Math.max(420,900-score); if(spawnAcc>gap){ spawnAcc=0; spawnFoe(); if(speed<1.1) speed+=0.01; }
+        spawnAcc+=dt; const gap=Math.max(D.spawn*0.45,D.spawn-score); if(spawnAcc>gap){ spawnAcc=0; spawnFoe(); if(speed<D.cap) speed+=0.01; }
       }
       bullets.forEach(b=>b.position.z-=1.6*k); bullets=bullets.filter(b=>{ if(b.position.z<-80){ scene.remove(b); return false; } return true; });
       for(let i=foes.length-1;i>=0;i--){ const f=foes[i]; if(!over) f.position.z+=speed*4*k; f.rotation.x+=f.userData.spin; f.rotation.y+=f.userData.spin;
-        for(let j=bullets.length-1;j>=0;j--){ if(f.position.distanceTo(bullets[j].position)<1.4){ blast(f.position,0xf6c85f); scene.remove(f); foes.splice(i,1); scene.remove(bullets[j]); bullets.splice(j,1); score+=5; hud.set('skor',score); if(api.sound)api.sound('score'); break; } }
+        for(let j=bullets.length-1;j>=0;j--){ if(f.position.distanceTo(bullets[j].position)<1.4){ blast(f.position,0xf6c85f); scene.remove(f); foes.splice(i,1); scene.remove(bullets[j]); bullets.splice(j,1); score+=Math.round(5*D.mult); hud.set('skor',score); if(api.sound)api.sound('score'); break; } }
         if(f && f.position.z>7 && Math.abs(f.position.x-ship.position.x)<1.6){ blast(f.position,0xe45858); scene.remove(f); foes.splice(i,1); lives--; hud.set('can',lives); if(api.sound)api.sound('bad'); if(lives<=0) end(); }
         else if(f && f.position.z>14){ scene.remove(f); foes.splice(i,1); } }
       blasts=blasts.filter(b=>{ b.mesh.position.add(b.v); b.life-=0.04; b.mesh.scale.setScalar(Math.max(0.01,b.life)); if(b.life<=0){ scene.remove(b.mesh); return false; } return true; });
@@ -70,7 +80,7 @@ registerGame({
     api.onCleanup(()=>{ if(loop)loop.stop(); window.removeEventListener('keydown',onKey);
       try{ renderer.dispose(); renderer.forceContextLoss&&renderer.forceContextLoss(); }catch(e){}
       scene.traverse(o=>{ if(o.geometry)o.geometry.dispose&&o.geometry.dispose(); if(o.material){(Array.isArray(o.material)?o.material:[o.material]).forEach(m=>m.dispose&&m.dispose());} }); });
-    reset();
+    paintDiff(); reset();
     return ()=>{ if(loop)loop.stop(); window.removeEventListener('keydown',onKey); try{ renderer.dispose(); }catch(e){} };
   }
 });

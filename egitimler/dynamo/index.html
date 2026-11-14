@@ -1,0 +1,950 @@
+<!doctype html>
+<html lang="tr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Dynamo Eğitimi · 7 günlük yoğun program | erdevelop</title>
+<meta name="description" content="Revit kullanan cephe ve mimari tasarımcılar için 7 günlük yoğun Dynamo eğitimi: düğümler ve DesignScript, listeler ve lacing, Revit parametrelerini Excel ile okuma ve yazma, otomatik numaralama, adaptive panel yerleştirme, Grasshopper'dan CSV aktarımı ve Python.">
+<link rel="icon" href="/favicon.svg" type="image/svg+xml">
+<link rel="icon" href="/favicon.ico" sizes="any">
+<link rel="apple-touch-icon" href="/apple-touch-icon.png">
+<link rel="manifest" href="/manifest.webmanifest">
+<meta name="theme-color" content="#0b1220">
+<meta property="og:title" content="Dynamo Eğitimi · 7 günlük yoğun program | erdevelop">
+<meta property="og:description" content="Revit otomasyonu için adım adım Dynamo: listeler, Excel, numaralama, adaptive paneller, CSV aktarımı ve Python.">
+<meta property="og:url" content="https://erdevelop.github.io/egitimler/dynamo/">
+<meta property="og:image" content="https://erdevelop.github.io/og.png">
+<meta name="twitter:card" content="summary_large_image">
+<link rel="canonical" href="https://erdevelop.github.io/egitimler/dynamo/">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Chakra+Petch:wght@600;700&family=IBM+Plex+Sans:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500&display=swap">
+<style>
+  :root {
+    --bg: #eef2f6; --panel: #ffffff; --panel-2: #f5f7f9; --grid: #e3e8ed; --line: #cfd8e1;
+    --fg: #1c2833; --text: #45535f; --muted: #74838f; --accent: #2f6fb5; --accent-dim: rgba(47,111,181,.12); --hot: #c8731f; --ok: #2e8b57;
+    --f-display: 'Chakra Petch', 'Segoe UI', sans-serif; --f-body: 'IBM Plex Sans', 'Segoe UI', system-ui, sans-serif; --f-mono: 'IBM Plex Mono', Consolas, monospace;
+    color-scheme: light;
+  }
+  :root[data-mode="dark"] {
+    --bg: #0b1220; --panel: #111a2c; --panel-2: #0e1626; --grid: #182338; --line: #22304a;
+    --fg: #e2e8f2; --text: #a8b6cc; --muted: #73829b; --accent: #f2b33d; --accent-dim: rgba(242,179,61,.14); --hot: #6aa8ff; --ok: #5fc48d;
+    color-scheme: dark;
+  }
+  * { box-sizing: border-box; }
+  html { background: var(--bg); scroll-padding-top: 110px; }
+  body { margin: 0; color: var(--fg); font-family: var(--f-body); font-size: 16px; line-height: 1.65;
+    background-image: linear-gradient(var(--grid) 1px, transparent 1px), linear-gradient(90deg, var(--grid) 1px, transparent 1px); background-size: 80px 80px; background-attachment: fixed; }
+  a { color: var(--accent); }
+  :focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+  .wrap { max-width: 920px; margin: 0 auto; padding-left: max(16px, env(safe-area-inset-left, 0px)); padding-right: max(16px, env(safe-area-inset-right, 0px)); }
+
+  .topbar { position: sticky; top: 0; z-index: 20; background: color-mix(in srgb, var(--bg) 92%, transparent); backdrop-filter: blur(6px); border-bottom: 1px solid var(--line); }
+  .topbar .wrap { display: flex; align-items: center; gap: 12px; padding-block: 10px; max-width: 1160px; }
+  .brand { font: 700 15px var(--f-display); letter-spacing: 1px; text-transform: uppercase; text-decoration: none; color: var(--fg); }
+  .brand span { color: var(--accent); }
+  .crumb { font: 400 12px var(--f-mono); color: var(--muted); }
+  .sp { flex: 1; }
+  .tb { font: 500 12px var(--f-mono); color: var(--accent); padding: 6px 10px; border: 1px solid var(--line); border-radius: 4px; background: none; cursor: pointer; text-transform: uppercase; text-decoration: none; }
+  .tb:hover { border-color: var(--accent); }
+  .daynav { border-top: 1px solid var(--line); }
+  .daynav .wrap { display: flex; gap: 6px; padding-block: 8px; overflow-x: auto; max-width: 1160px; }
+  .daynav a { font: 500 12px var(--f-mono); text-decoration: none; color: var(--text); border: 1px solid var(--line); border-radius: 4px; padding: 4px 10px; white-space: nowrap; background: var(--panel); }
+  .daynav a.on { border-color: var(--accent); color: var(--accent); }
+  .daynav a.done { background: var(--accent-dim); }
+
+  header.head { padding-block: 34px 6px; }
+  .kicker { font: 500 12px var(--f-mono); color: var(--accent); letter-spacing: 1px; }
+  .head h1 { font: 700 clamp(2rem, 6vw, 3rem)/1.05 var(--f-display); margin: 6px 0 0; letter-spacing: -.5px; }
+  .head p.lead { margin: 12px 0 0; color: var(--text); max-width: 64ch; font-size: 1.05rem; }
+  .chips { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 16px; }
+  .chips span { font: 400 12px var(--f-mono); color: var(--muted); border: 1px solid var(--line); border-radius: 4px; padding: 3px 8px; background: var(--panel); }
+
+  .card { background: var(--panel); border: 1px solid var(--line); border-radius: 8px; padding: 22px clamp(16px, 4vw, 30px); margin-top: 28px; }
+  .day-head { display: flex; align-items: baseline; gap: 12px; flex-wrap: wrap; border-bottom: 1px solid var(--line); padding-bottom: 12px; margin-bottom: 6px; }
+  .day-head h2, .card > h2 { font: 700 1.45rem/1.2 var(--f-display); margin: 0; letter-spacing: .2px; }
+  .dn { font: 600 12px var(--f-mono); color: var(--panel); background: var(--accent); border-radius: 3px; padding: 2px 7px; }
+  :root[data-mode="dark"] .dn { color: #1a1204; }
+  .day-head .meta { font: 400 12px var(--f-mono); color: var(--muted); margin-left: auto; }
+  section.day { background: var(--panel); border: 1px solid var(--line); border-radius: 8px; padding: 22px clamp(16px, 4vw, 30px); margin-top: 28px; }
+
+  .prose h3 { font: 700 1.12rem/1.3 var(--f-display); margin: 30px 0 8px; letter-spacing: .2px; }
+  .prose p, .prose li { color: var(--text); }
+  .prose strong { color: var(--fg); font-weight: 600; }
+  .prose ol, .prose ul { padding-left: 1.4em; }
+  .prose li { margin: 4px 0; }
+  .prose li > ul, .prose li > ol { margin: 4px 0; }
+  .prose code { font: 400 .86em var(--f-mono); background: var(--panel-2); border: 1px solid var(--line); border-radius: 3px; padding: 1px 5px; color: var(--fg); overflow-wrap: anywhere; }
+  .tw { overflow-x: auto; margin: 14px 0; border: 1px solid var(--line); border-radius: 6px; }
+  .tw table { border-collapse: collapse; width: 100%; font-size: .9rem; }
+  .tw th, .tw td { text-align: left; padding: 8px 12px; border-bottom: 1px solid var(--line); vertical-align: top; }
+  .tw th { font: 600 12px var(--f-mono); color: var(--muted); background: var(--panel-2); }
+  .card .tw td:first-child, .card .tw td:last-child { white-space: nowrap; }
+  .tw tr:last-child td { border-bottom: 0; }
+  ul.tasks { list-style: none; padding-left: 0; }
+  li.task label { display: flex; gap: 10px; align-items: flex-start; cursor: pointer; padding: 4px 0; }
+  li.task input { width: 18px; height: 18px; margin-top: 4px; accent-color: var(--accent); flex: none; }
+  li.task input:checked + span { color: var(--muted); text-decoration: line-through; }
+  .pn { display: flex; justify-content: space-between; gap: 12px; margin-top: 26px; padding-top: 14px; border-top: 1px solid var(--line); font: 500 13px var(--f-mono); }
+  .pn a { text-decoration: none; }
+  .note { font-size: .9rem; color: var(--muted); }
+  .reset { font: 500 11px var(--f-mono); color: var(--muted); background: none; border: 1px solid var(--line); border-radius: 4px; padding: 3px 8px; cursor: pointer; text-transform: uppercase; }
+  .reset:hover { color: var(--hot); border-color: var(--hot); }
+
+  .fig { margin: 18px 0; padding: 16px 14px 12px; border: 1px solid var(--line); border-radius: 6px; background: var(--panel-2); }
+  .fig .sc { overflow-x: auto; }
+  .fig svg { display: block; width: 100%; min-width: 540px; height: auto; max-width: 720px; margin: 0 auto; overflow: visible; }
+  .fig figcaption { font-size: .85rem; color: var(--muted); margin-top: 10px; text-align: center; max-width: 62ch; margin-inline: auto; }
+  .fig .k { fill: none; stroke: var(--fg); stroke-width: 1.6; } .fig .k1 { fill: none; stroke: var(--fg); stroke-width: 1; }
+  .fig .mu { fill: none; stroke: var(--muted); stroke-width: 1.2; } .fig .mud { fill: none; stroke: var(--muted); stroke-width: 1; stroke-dasharray: 5 4; }
+  .fig .dm { fill: none; stroke: var(--muted); stroke-width: .9; }
+  .fig .rp { fill: none; stroke: var(--hot); stroke-width: 1; stroke-dasharray: 9 4 2 4; }
+  .fig .gd { fill: none; stroke: var(--fg); stroke-width: 1; stroke-dasharray: 16 4 3 4; }
+  .fig .ac { fill: none; stroke: var(--accent); stroke-width: 2; } .fig .acl { fill: none; stroke: var(--accent); stroke-width: 1; }
+  .fig .gl { fill: var(--accent-dim); stroke: var(--fg); stroke-width: .8; }
+  .fig .sp { fill: color-mix(in srgb, var(--fg) 40%, transparent); stroke: var(--fg); stroke-width: .8; }
+  .fig .fr { fill: color-mix(in srgb, var(--fg) 22%, transparent); stroke: none; } .fig .edge { fill: none; stroke: var(--fg); stroke-width: 1.8; }
+  .fig .so { fill: var(--panel); stroke: var(--fg); stroke-width: 1.6; } .fig .hole { fill: var(--panel-2); stroke: var(--fg); stroke-width: 1.2; }
+  .fig .rib { fill: var(--accent-dim); stroke: var(--accent); stroke-width: 1.4; stroke-dasharray: 6 4; }
+  .fig .sel { fill: none; stroke: var(--accent); stroke-width: 3; }
+  .fig .mul { stroke: var(--fg); stroke-width: 4; } .fig .tr { stroke: var(--fg); stroke-width: 3; } .fig .trA { stroke: var(--accent); stroke-width: 3; }
+  .fig .lh { fill: var(--panel); stroke: var(--fg); stroke-width: 1.4; }
+  .fig .dot { fill: var(--accent); } .fig .dotr { fill: var(--accent); stroke: var(--panel); stroke-width: 1; }
+  .fig .pt { fill: var(--accent); stroke: var(--panel); stroke-width: 2; } .fig .tpt { fill: var(--panel); font: 700 12px var(--f-mono); }
+  .fig .bx { fill: var(--panel); stroke: var(--line); stroke-width: 1.3; } .fig .bxa { fill: var(--accent-dim); stroke: var(--accent); stroke-width: 1.3; }
+  .fig .ar { fill: var(--muted); }
+  .fig .acd { fill: none; stroke: var(--accent); stroke-width: 1.6; stroke-dasharray: 6 4; }
+  .fig text { text-transform: none; letter-spacing: 0; } .fig .bg { fill: var(--panel); stroke: none; }
+  .fig .t { fill: var(--text); font: 400 13px var(--f-body); } .fig .tb { fill: var(--fg); font: 600 13px var(--f-body); }
+  .fig .tm { fill: var(--muted); font: 400 11px var(--f-mono); } .fig .ta { fill: var(--accent); font: 600 11px var(--f-mono); }
+  .fig .th { fill: var(--hot); font: 500 11px var(--f-mono); }
+  .fig .swb { fill: none; stroke: #2f7de1; stroke-width: 2; } .fig .swr { fill: none; stroke: #d64545; stroke-width: 2; } .fig .tr2 { fill: #d64545; font: 600 11px var(--f-mono); } .fig .tbl { fill: #2f7de1; font: 600 11px var(--f-mono); }
+  .prose pre { background: var(--panel-2); border: 1px solid var(--line); border-radius: 6px; padding: 12px 14px; overflow-x: auto; }
+  .prose pre code { background: none; border: 0; padding: 0; font: 400 .85rem/1.5 var(--f-mono); color: var(--fg); }
+  footer { margin-top: 56px; border-top: 1px solid var(--line); padding-block: 20px calc(20px + env(safe-area-inset-bottom, 0px)); font: 400 12px var(--f-mono); color: var(--muted); }
+  footer .wrap { display: flex; justify-content: space-between; gap: 12px; flex-wrap: wrap; }
+  footer a { color: inherit; } footer a:hover { color: var(--accent); }
+  @media print { .topbar, .daynav, .pn, footer, .reset { display: none !important; } body { background: #fff; } section.day, .card { break-inside: auto; border: 0; } }
+</style>
+<script async src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-4775308844679394" crossorigin="anonymous"></script>
+</head>
+<body>
+<div class="topbar">
+  <div class="wrap">
+    <a class="brand" href="/">erdevelop<span>_</span></a>
+    <span class="crumb">/ eğitimler / dynamo</span>
+    <span class="sp"></span>
+    <a class="tb" href="../../Tools.html">Araçlar</a>
+    <button class="tb" type="button" id="modeBtn">DARK</button>
+  </div>
+  <nav class="daynav" aria-label="Günler"><div class="wrap"><a href="#genel" data-nav="0">Genel</a><a href="#gun1" data-nav="1">1</a><a href="#gun2" data-nav="2">2</a><a href="#gun3" data-nav="3">3</a><a href="#gun4" data-nav="4">4</a><a href="#gun5" data-nav="5">5</a><a href="#gun6" data-nav="6">6</a><a href="#gun7" data-nav="7">7</a></div></nav>
+</div>
+
+<main class="wrap">
+  <header class="head" id="genel">
+    <div class="kicker">Eğitimler · Dynamo</div>
+    <h1>Dynamo Eğitimi</h1>
+    <p class="lead">Revit kullanan cephe ve mimari tasarımcılar için 7 günlük yoğun program. Önce Dynamo'nun mantığını ve listeleri oturtur, sonra yüzlerce panelin parametresini Excel ile yöneten, panelleri otomatik numaralayan, adaptive panel yerleştiren ve Grasshopper'dan veri alan grafikler kurarsın.</p>
+    <div class="chips"><span>7 gün</span><span>günde ~5 saat</span><span>Türkçe</span><span>Düğüm adları İngilizce</span></div>
+  </header>
+
+  <div class="card">
+    <h2>Başlamadan önce</h2>
+    <div class="prose">
+      <h3>Kimler için</h3>
+      <p>Revit'i temel düzeyde kullanan ve tekrar eden işleri (parametre doldurma, numaralama, eleman yerleştirme) otomatikleştirmek isteyen cephe ve mimari tasarımcılar. Revit'te curtain wall, aile ve shared parameter bilmiyorsan önce bu sitedeki <a href="../revit/">Revit eğitiminin</a> ilk dört gününü yap; örnekler o eğitimin dosyalarını kullanır.</p>
+      <h3>Gerekenler</h3>
+      <ul>
+        <li><strong>Revit</strong> (Dynamo Revit ile birlikte gelir: Manage > Dynamo). Deneme sürümü yeterli.</li>
+        <li>Revit eğitiminin 1-4. günlerinde hazırlanan cephe dosyası, <code>Panel_Adaptive_4N</code> ailesi ve shared parametreler (Panel_ID, Cam_Kodu).</li>
+        <li>Excel; 6. gün için Rhino 8 ve Grasshopper (isteğe bağlı).</li>
+      </ul>
+      <h3>Program</h3>
+      <div class="tw"><table><thead><tr><th>Gün</th><th>Konu</th><th>Ne öğrenirsin</th><th>Süre</th></tr></thead><tbody>
+<tr><td><a href="#gun1">1. gün</a></td><td>Arayüz, düğümler ve Revit&#x27;e ilk yazım</td><td>Library, Run modları, Code Block, Watch, model çizgisi, element binding</td><td>~5 saat</td></tr>
+<tr><td><a href="#gun2">2. gün</a></td><td>Listeler, lacing ve seviyeler</td><td>DesignScript aralıkları, Shortest/Longest/Cross Product, iç içe liste, panel köşeleri</td><td>~5 saat</td></tr>
+<tr><td><a href="#gun3">3. gün</a></td><td>Revit parametreleri ve Excel</td><td>Kategori ile seçim, parametre okuma, Excel&#x27;e yazma, Element ID ile geri yazma</td><td>~5 saat</td></tr>
+<tr><td><a href="#gun4">4. gün</a></td><td>Otomatik numaralama ve Player</td><td>Panel merkezi, birleşik anahtarla sıralama, P-001, tip ve cam kodu, Dynamo Player</td><td>~5 saat</td></tr>
+<tr><td><a href="#gun5">5. gün</a></td><td>Yüzeyden adaptive panel</td><td>Select Face, uv ile bölme, AdaptiveComponent.ByPoints, warp ve cam kodu</td><td>~5 saat</td></tr>
+<tr><td><a href="#gun6">6. gün</a></td><td>Grasshopper&#x27;dan CSV ve paketler</td><td>GH&#x27;den köşe noktaları, CSV okuma, koordinat uyumu, Clockwork, archi-lab, Rhythm</td><td>~5 saat</td></tr>
+<tr><td><a href="#gun7">7. gün</a></td><td>Python, custom node ve paylaşım</td><td>Revit API, transaction, UnwrapElement, .dyf düğüm, ekipte paylaşım kuralları</td><td>~5 saat</td></tr>
+      </tbody></table></div>
+      <p class="note">Her günün sonunda bir kontrol listesi var. İşaretledikçe ilerlemen bu tarayıcıda saklanır. Hafta içi sadece akşamları çalışırsan program yaklaşık iki hafta sürer. Düğüm adları Dynamo 2.x / 3.x (Revit 2023 ve sonrası) sürümlerine göre yazıldı; eski sürümlerde bazı düğümlerin adı ve Python motoru farklıdır. <button class="reset" type="button" id="resetBtn">ilerlemeyi sıfırla</button></p>
+    </div>
+  </div>
+
+<section class="day" id="gun1" data-day="1">
+  <div class="day-head"><span class="dn">GÜN 01</span><h2>Arayüz, düğümler ve Revit&#x27;e ilk yazım</h2><span class="meta">~5 saat · <span data-prog="1">0/5</span> kontrol</span></div>
+  <div class="prose"><h3>Hedef ve Dynamo mantığı</h3>
+<p>Gün sonunda Revit içinden açtığın Dynamo'da slider'larla yönetilen ilk grafiğini kurmuş, sonucunu Watch düğümüyle okuyabilir ve Revit'e model çizgisi olarak yazabilir olacaksın. Süre yaklaşık 5 saat. Dosya: <code>Gun1.dyn</code>.</p>
+<p>Dynamo, Revit'in içinde çalışan görsel programlama ortamıdır. Grasshopper'a benzer, ama asıl gücü <strong>Revit verisine</strong> erişmesidir: elemanları seçmek, parametre okumak ve yazmak, eleman oluşturmak. Cephe işinde en çok kullanıldığı yer, yüzlerce panelin parametresini elle girmek yerine otomatik doldurmaktır.</p>
+<figure class="fig"><div class="sc"><svg viewBox="0 0 720 182" role="img" xmlns="http://www.w3.org/2000/svg"><defs><marker id="ah-revit_dynamo" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0 0L10 5L0 10z" class="ar"/></marker></defs><rect x="10" y="60" width="190" height="80" rx="5" class="bxa"/><text x="105.0" y="96.0" class="tb" text-anchor="middle">Revit modeli</text><text x="105.0" y="112.0" class="tm" text-anchor="middle">elemanlar · parametreler</text><rect x="290" y="60" width="170" height="80" rx="5" class="bx"/><text x="375.0" y="96.0" class="tb" text-anchor="middle">Dynamo grafiği</text><text x="375.0" y="112.0" class="tm" text-anchor="middle">.dyn</text><rect x="560" y="60" width="150" height="80" rx="5" class="bx"/><text x="635.0" y="96.0" class="tb" text-anchor="middle">Dynamo Player</text><text x="635.0" y="112.0" class="tm" text-anchor="middle">tek düğmeyle çalıştır</text><line x1="200" y1="85" x2="288" y2="85" class="mu" marker-end="url(#ah-revit_dynamo)"/><text x="244" y="77" class="tm" text-anchor="middle">oku</text><line x1="288" y1="115" x2="202" y2="115" class="ac" marker-end="url(#ah-revit_dynamo)"/><text x="245" y="132" class="ta" text-anchor="middle">yaz / oluştur</text><line x1="460" y1="100" x2="558" y2="100" class="mu" marker-end="url(#ah-revit_dynamo)"/><text x="509" y="92" class="tm" text-anchor="middle">girdiler</text><text x="375" y="170" class="tm" text-anchor="middle">Dynamo, Revit açıkken onun içinde çalışır</text></svg></div><figcaption>Dynamo Revit verisini okur, işler ve modele geri yazar. Hazır grafikler Dynamo Player ile açılmadan çalıştırılabilir.</figcaption></figure>
+<div class="tw"><table>
+<thead>
+<tr>
+<th>Grasshopper</th>
+<th>Dynamo</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Bileşen (component)</td>
+<td>Düğüm (node)</td>
+</tr>
+<tr>
+<td>Tuval (canvas)</td>
+<td>Çalışma alanı (workspace)</td>
+</tr>
+<tr>
+<td>Panel</td>
+<td>Watch düğümü</td>
+</tr>
+<tr>
+<td>Data tree</td>
+<td>İç içe liste (list of lists) ve liste seviyeleri (@L1, @L2)</td>
+</tr>
+<tr>
+<td>Bake</td>
+<td>Revit elemanı oluşturan düğümler (doğrudan modele yazar)</td>
+</tr>
+<tr>
+<td>Python / C# Script</td>
+<td>Python Script düğümü, Code Block (DesignScript)</td>
+</tr>
+</tbody>
+</table></div>
+<h3>1. Arayüz (45 dk)</h3>
+<ol>
+<li>Revit'te bir proje aç (1. günün Revit eğitimi dosyası ya da boş bir proje). <strong>Manage &gt; Dynamo</strong>.</li>
+<li><strong>New</strong> ile yeni grafik. Ekranı tanı:<ul>
+<li><strong>Library</strong> (sol): düğümler kategorilere göre. Üstteki arama kutusu en hızlı yoldur.</li>
+<li><strong>Workspace</strong> (orta): düğümlerin bağlandığı alan. Arkada 3B önizleme vardır.</li>
+<li><strong>Run</strong> (sol alt): <strong>Automatic</strong> her değişiklikte çalıştırır, <strong>Manual</strong> sadece Run'a basınca. Revit'e yazan grafiklerde Manual kullan.</li>
+</ul>
+</li>
+<li>Önizleme ile grafik arasında geçiş: sağ üstteki düğmeler ya da <strong>Ctrl + B</strong>.</li>
+<li>Boş alana çift tıkla: <strong>Code Block</strong> açılır. Dynamo'nun en çok kullanılan düğümü budur.</li>
+</ol>
+<p><strong>Kısayollar</strong></p>
+<div class="tw"><table>
+<thead>
+<tr>
+<th>Kısayol</th>
+<th>İşlev</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Çift tık (boş alan)</td>
+<td>Code Block</td>
+</tr>
+<tr>
+<td>Sağ tık (boş alan)</td>
+<td>Düğüm arama</td>
+</tr>
+<tr>
+<td>Ctrl + G</td>
+<td>Seçili düğümleri grupla</td>
+</tr>
+<tr>
+<td>Ctrl + W</td>
+<td>Not (note) ekle</td>
+</tr>
+<tr>
+<td>Ctrl + L</td>
+<td>Düğümleri otomatik hizala (Cleanup)</td>
+</tr>
+<tr>
+<td>Ctrl + Shift + sürükle</td>
+<td>Kabloları başka bağlantı noktasına taşı</td>
+</tr>
+</tbody>
+</table></div>
+<h3>2. İlk grafik: noktalar ve çizgiler (1,5 saat)</h3>
+<figure class="fig"><div class="sc"><svg viewBox="0 0 700 250" role="img" xmlns="http://www.w3.org/2000/svg"><defs><marker id="ah-dugum" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0 0L10 5L0 10z" class="ar"/></marker></defs><rect x="20" y="30" width="140" height="52" rx="3" class="bx"/><rect x="20" y="30" width="140" height="24" rx="3" class="bxa"/><text x="28" y="47" class="tb" text-anchor="start">Number Slider</text><text x="152" y="74" class="tm" text-anchor="end">2500</text><rect x="156" y="66" width="8" height="8" class="dotr"/><line x1="30" y1="72" x2="130" y2="72" class="k1"/><circle cx="80" cy="72" r="5" class="pt"/><rect x="220" y="30" width="180" height="88" rx="3" class="bx"/><rect x="220" y="30" width="180" height="24" rx="3" class="bxa"/><text x="228" y="47" class="tb" text-anchor="start">Point.ByCoordinates</text><text x="228" y="74" class="tm" text-anchor="start">x</text><rect x="216" y="66" width="8" height="8" class="dotr"/><text x="228" y="92" class="tm" text-anchor="start">y</text><rect x="216" y="84" width="8" height="8" class="dotr"/><text x="228" y="110" class="tm" text-anchor="start">z</text><rect x="216" y="102" width="8" height="8" class="dotr"/><text x="392" y="74" class="tm" text-anchor="end">Point</text><rect x="396" y="66" width="8" height="8" class="dotr"/><rect x="460" y="60" width="200" height="70" rx="3" class="bx"/><rect x="460" y="60" width="200" height="24" rx="3" class="bxa"/><text x="468" y="77" class="tb" text-anchor="start">Line.ByStartPoint…</text><text x="468" y="104" class="tm" text-anchor="start">startPoint</text><rect x="456" y="96" width="8" height="8" class="dotr"/><text x="468" y="122" class="tm" text-anchor="start">endPoint</text><rect x="456" y="114" width="8" height="8" class="dotr"/><text x="652" y="104" class="tm" text-anchor="end">Line</text><rect x="656" y="96" width="8" height="8" class="dotr"/><path d="M164 70 C190 70, 195 70, 216 70" class="mu"/><path d="M404 70 C430 70, 430 100, 456 100" class="mu"/><rect x="460" y="170" width="200" height="60" rx="3" class="bx"/><text x="470" y="190" class="tb" text-anchor="start">Watch</text><text x="470" y="212" class="tm" text-anchor="start">Line(StartPoint = …)</text><path d="M664 100 C690 100, 690 200, 664 200" class="mu"/><rect x="20" y="190" width="200" height="50" rx="3" class="bx"/><text x="30" y="210" class="tb" text-anchor="start">Code Block</text><text x="30" y="230" class="ta" text-anchor="start">x = 0..6000..1500;</text></svg></div><figcaption>Düğüm: girdiler solda, çıktılar sağda. Code Block, birkaç düğümün işini tek satırda yapar; Watch sonucu okumayı sağlar.</figcaption></figure>
+<ol>
+<li><strong>Number Slider</strong> (0-5000): <code>X</code>. Bir tane daha: <code>Y</code>.</li>
+<li><strong>Point.ByCoordinates</strong>: x = X, y = Y. Önizlemede bir nokta görünür.</li>
+<li>İkinci bir <strong>Point.ByCoordinates</strong> (0, 0, 0) koy: başlangıç noktası.</li>
+<li><strong>Line.ByStartPointEndPoint</strong>: iki noktadan çizgi.</li>
+<li><strong>Watch</strong> düğümünü çizginin çıkışına bağla: çizginin bilgisi yazılır. <strong>Curve.Length</strong> ile uzunluğu oku.</li>
+<li>Slider'ı oynat: Automatic modda çizgi anında değişir.</li>
+</ol>
+<p><strong>Code Block ile aynı iş</strong></p>
+<p>Code Block içine şunu yaz:</p>
+<pre><code class="language-text">x = 0..6000..1500;
+p = Point.ByCoordinates(x, 0, 0);
+</code></pre>
+<p><code>0..6000..1500</code> ifadesi 0, 1500, 3000, 4500, 6000 listesini üretir. Bir satırda 5 nokta.</p>
+<h3>3. Revit'e yazmak (1 saat)</h3>
+<ol>
+<li>Run modunu <strong>Manual</strong> yap.</li>
+<li>Code Block ile her 1500 mm'de bir, 4000 mm yükseklikte düşey çizgiler üret:</li>
+</ol>
+<pre><code class="language-text">x = 0..6000..1500;
+alt = Point.ByCoordinates(x, 0, 0);
+ust = Point.ByCoordinates(x, 0, 4000);
+cizgi = Line.ByStartPointEndPoint(alt, ust);
+</code></pre>
+<ol start="3">
+<li><strong>ModelCurve.ByCurve</strong> düğümüne <code>cizgi</code> çıkışını bağla, <strong>Run</strong>. Revit'te 5 model çizgisi oluşur.</li>
+<li>Bir değeri değiştirip tekrar <strong>Run</strong>: Dynamo eski çizgileri silip yenilerini koyar (aynı grafik, aynı oturum içinde). Buna <strong>element binding</strong> denir.</li>
+<li>Dynamo'yu kapatıp yeniden açınca bağ, dosyaya kaydedilmiş bilgi sayesinde genelde korunur; ama grafiği farklı bir projede çalıştırırsan yeni elemanlar oluşturur.</li>
+</ol>
+<h3>4. Düzen ve kayıt (30 dk)</h3>
+<ol>
+<li>Düğümleri seç, <strong>Ctrl + G</strong> ile grupla, gruba ad ver: <code>Girdiler</code>, <code>Geometri</code>, <code>Revit'e yaz</code>.</li>
+<li>Girdi düğümlerini (slider'lar) sağ tıkla &gt; <strong>Rename</strong>: anlamlı adlar ver.</li>
+<li><strong>Ctrl + W</strong> ile grafiğin başına bir not ekle: ne yaptığını iki cümleyle yaz.</li>
+<li>Kaydet: <code>Gun1.dyn</code>.</li>
+</ol>
+<h3>Gün sonu kontrolü (15 dk)</h3>
+<p>Hepsini işaretleyebiliyorsan 2. güne geçebilirsin.</p>
+<ul class="tasks">
+<li class="task"><label><input type="checkbox" data-id="g1-1"><span>Dynamo'nun Grasshopper'dan farkını ve Revit'teki asıl gücünü biliyorum.</span></label></li>
+<li class="task"><label><input type="checkbox" data-id="g1-2"><span>Automatic ve Manual çalışma modunu ne zaman kullanacağımı biliyorum.</span></label></li>
+<li class="task"><label><input type="checkbox" data-id="g1-3"><span>Düğüm ekleyip bağlayabiliyor, sonucu Watch ile okuyabiliyorum.</span></label></li>
+<li class="task"><label><input type="checkbox" data-id="g1-4"><span>Code Block'ta aralık (<code>0..6000..1500</code>) yazabiliyorum.</span></label></li>
+<li class="task"><label><input type="checkbox" data-id="g1-5"><span>Dynamo'dan Revit'e eleman yazıp element binding davranışını gördüm.</span></label></li>
+</ul>
+<p><strong>Bonus:</strong> Aynı çizgileri yatay kat hatlarıyla birleştirip bir ızgara yap: <code>y</code> için ikinci bir aralık tanımla ve Point.ByCoordinates'in lacing ayarını <strong>Cross Product</strong> yap (2. günün konusu).</p></div>
+  <div class="pn"><a href="#genel">← Genel bakış</a><a href="#gun2">2. gün →</a></div>
+</section>
+<section class="day" id="gun2" data-day="2">
+  <div class="day-head"><span class="dn">GÜN 02</span><h2>Listeler, lacing ve seviyeler</h2><span class="meta">~5 saat · <span data-prog="2">0/5</span> kontrol</span></div>
+  <div class="prose"><h3>Hedef</h3>
+<p>Gün sonunda listeleri, iç içe listeleri ve eşleşme (lacing) kurallarını kullanarak bir cephe ızgarası kurmuş, her panelin köşe noktalarını toplamış olacaksın. Süre yaklaşık 5 saat. Dosya: <code>Gun2_Liste.dyn</code>.</p>
+<h3>1. Listeler ve DesignScript (1,5 saat)</h3>
+<p>Code Block, <strong>DesignScript</strong> dilini kullanır. Kısa ve okunaklıdır:</p>
+<div class="tw"><table>
+<thead>
+<tr>
+<th>Yazım</th>
+<th>Anlamı</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>0..10</code></td>
+<td>0'dan 10'a, adım 1</td>
+</tr>
+<tr>
+<td><code>0..6000..1500</code></td>
+<td>0'dan 6000'e, adım 1500</td>
+</tr>
+<tr>
+<td><code>0..6000..#5</code></td>
+<td>0 ile 6000 arasında eşit aralıklı 5 sayı</td>
+</tr>
+<tr>
+<td><code>1..#10..2</code></td>
+<td>1'den başlayarak 10 adet, adım 2</td>
+</tr>
+<tr>
+<td><code>[1, 2, 3]</code></td>
+<td>Liste</td>
+</tr>
+<tr>
+<td><code>a[0]</code></td>
+<td>İlk öğe (indeks 0'dan başlar)</td>
+</tr>
+<tr>
+<td><code>a[-1]</code></td>
+<td>Son öğe</td>
+</tr>
+<tr>
+<td><code>x &gt; 3 ? "A" : "B"</code></td>
+<td>Koşul</td>
+</tr>
+</tbody>
+</table></div>
+<p><strong>Temel liste düğümleri</strong></p>
+<div class="tw"><table>
+<thead>
+<tr>
+<th>Düğüm</th>
+<th>İşlev</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>List.Count</td>
+<td>Öğe sayısı</td>
+</tr>
+<tr>
+<td>List.GetItemAtIndex</td>
+<td>Belirli indeksteki öğe</td>
+</tr>
+<tr>
+<td>List.FirstItem / List.LastItem</td>
+<td>İlk / son öğe</td>
+</tr>
+<tr>
+<td>List.Reverse</td>
+<td>Ters çevir</td>
+</tr>
+<tr>
+<td>List.SortByKey</td>
+<td>Anahtar listesine göre sırala</td>
+</tr>
+<tr>
+<td>List.FilterByBoolMask</td>
+<td>True/False listesine göre ayır (in / out)</td>
+</tr>
+<tr>
+<td>List.Chop</td>
+<td>Listeyi N'li gruplara böl</td>
+</tr>
+<tr>
+<td>List.Flatten</td>
+<td>İç içe listeyi düzleştir</td>
+</tr>
+<tr>
+<td>List.Transpose</td>
+<td>Satırları sütun yap</td>
+</tr>
+</tbody>
+</table></div>
+<h3>2. Lacing: listeler nasıl eşleşir (1 saat)</h3>
+<p>Bir düğüme iki liste verdiğinde öğelerin nasıl eşleşeceğini düğümün <strong>lacing</strong> ayarı belirler (düğüme sağ tık &gt; Lacing).</p>
+<figure class="fig"><div class="sc"><svg viewBox="0 0 710 226" role="img" xmlns="http://www.w3.org/2000/svg"><defs><marker id="ah-lacing" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0 0L10 5L0 10z" class="ar"/></marker></defs><rect x="15" y="10" width="215" height="170" class="bx"/><text x="122" y="200" class="tb" text-anchor="middle">Shortest</text><text x="122" y="216" class="tm" text-anchor="middle">3 nokta</text><circle cx="40" cy="150" r="6" class="pt"/><circle cx="80" cy="100" r="6" class="pt"/><circle cx="120" cy="50" r="6" class="pt"/><rect x="245" y="10" width="215" height="170" class="bx"/><text x="352" y="200" class="tb" text-anchor="middle">Longest</text><text x="352" y="216" class="tm" text-anchor="middle">5 nokta</text><circle cx="270" cy="150" r="6" class="pt"/><circle cx="310" cy="100" r="6" class="pt"/><circle cx="350" cy="50" r="6" class="pt"/><circle cx="390" cy="50" r="6" class="pt"/><circle cx="430" cy="50" r="6" class="pt"/><rect x="475" y="10" width="215" height="170" class="bx"/><text x="582" y="200" class="tb" text-anchor="middle">Cross Product</text><text x="582" y="216" class="tm" text-anchor="middle">15 nokta</text><circle cx="500" cy="150" r="6" class="pt"/><circle cx="500" cy="100" r="6" class="pt"/><circle cx="500" cy="50" r="6" class="pt"/><circle cx="540" cy="150" r="6" class="pt"/><circle cx="540" cy="100" r="6" class="pt"/><circle cx="540" cy="50" r="6" class="pt"/><circle cx="580" cy="150" r="6" class="pt"/><circle cx="580" cy="100" r="6" class="pt"/><circle cx="580" cy="50" r="6" class="pt"/><circle cx="620" cy="150" r="6" class="pt"/><circle cx="620" cy="100" r="6" class="pt"/><circle cx="620" cy="50" r="6" class="pt"/><circle cx="660" cy="150" r="6" class="pt"/><circle cx="660" cy="100" r="6" class="pt"/><circle cx="660" cy="50" r="6" class="pt"/></svg></div><figcaption>Aynı iki liste (5 x, 3 z) üç farklı lacing ile: kısa liste kadar, uzun liste kadar (son öğe tekrar) ya da her x her z ile.</figcaption></figure>
+<ol>
+<li><code>x = 0..6000..1500;</code> (5 öğe) ve <code>z = 0..8000..4000;</code> (3 öğe) tanımla.</li>
+<li><strong>Point.ByCoordinates</strong> (x, 0, z) ile dene:<ul>
+<li><strong>Shortest</strong>: 3 nokta (kısa liste kadar).</li>
+<li><strong>Longest</strong>: 5 nokta (kısa listenin sonu tekrarlanır).</li>
+<li><strong>Cross Product</strong>: 15 nokta, her x her z ile. Izgara budur.</li>
+</ul>
+</li>
+<li>Code Block içinde aynı sonuç için <strong>replication guide</strong> kullanılır: <code>Point.ByCoordinates(x&lt;1&gt;, 0, z&lt;2&gt;);</code></li>
+</ol>
+<h3>3. İç içe listeler ve seviyeler (1,5 saat)</h3>
+<p>Cross Product sonucu düz bir liste değil, <strong>listelerin listesidir</strong>: 5 alt liste, her birinde 3 nokta (her sütun bir alt liste).</p>
+<figure class="fig"><div class="sc"><svg viewBox="0 0 640 206" role="img" xmlns="http://www.w3.org/2000/svg"><defs><marker id="ah-seviye" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0 0L10 5L0 10z" class="ar"/></marker></defs><text x="150" y="20" class="tb" text-anchor="middle">Cross Product sonucu (@L2)</text><text x="470" y="20" class="tb" text-anchor="middle">List.Transpose</text><rect x="30" y="34" width="44" height="120" class="bxa"/><text x="52" y="170" class="tm" text-anchor="middle">[0]</text><rect x="36" y="44" width="32" height="28" class="bx"/><text x="52" y="62" class="tm" text-anchor="middle">0,0</text><rect x="36" y="80" width="32" height="28" class="bx"/><text x="52" y="98" class="tm" text-anchor="middle">0,1</text><rect x="36" y="116" width="32" height="28" class="bx"/><text x="52" y="134" class="tm" text-anchor="middle">0,2</text><rect x="80" y="34" width="44" height="120" class="bxa"/><text x="102" y="170" class="tm" text-anchor="middle">[1]</text><rect x="86" y="44" width="32" height="28" class="bx"/><text x="102" y="62" class="tm" text-anchor="middle">1,0</text><rect x="86" y="80" width="32" height="28" class="bx"/><text x="102" y="98" class="tm" text-anchor="middle">1,1</text><rect x="86" y="116" width="32" height="28" class="bx"/><text x="102" y="134" class="tm" text-anchor="middle">1,2</text><rect x="130" y="34" width="44" height="120" class="bxa"/><text x="152" y="170" class="tm" text-anchor="middle">[2]</text><rect x="136" y="44" width="32" height="28" class="bx"/><text x="152" y="62" class="tm" text-anchor="middle">2,0</text><rect x="136" y="80" width="32" height="28" class="bx"/><text x="152" y="98" class="tm" text-anchor="middle">2,1</text><rect x="136" y="116" width="32" height="28" class="bx"/><text x="152" y="134" class="tm" text-anchor="middle">2,2</text><rect x="180" y="34" width="44" height="120" class="bxa"/><text x="202" y="170" class="tm" text-anchor="middle">[3]</text><rect x="186" y="44" width="32" height="28" class="bx"/><text x="202" y="62" class="tm" text-anchor="middle">3,0</text><rect x="186" y="80" width="32" height="28" class="bx"/><text x="202" y="98" class="tm" text-anchor="middle">3,1</text><rect x="186" y="116" width="32" height="28" class="bx"/><text x="202" y="134" class="tm" text-anchor="middle">3,2</text><rect x="230" y="34" width="44" height="120" class="bxa"/><text x="252" y="170" class="tm" text-anchor="middle">[4]</text><rect x="236" y="44" width="32" height="28" class="bx"/><text x="252" y="62" class="tm" text-anchor="middle">4,0</text><rect x="236" y="80" width="32" height="28" class="bx"/><text x="252" y="98" class="tm" text-anchor="middle">4,1</text><rect x="236" y="116" width="32" height="28" class="bx"/><text x="252" y="134" class="tm" text-anchor="middle">4,2</text><rect x="340" y="34" width="260" height="38" class="bxa"/><text x="612" y="58" class="tm" text-anchor="start">[0]</text><rect x="346" y="39" width="46" height="28" class="bx"/><text x="369" y="57" class="tm" text-anchor="middle">0,0</text><rect x="397" y="39" width="46" height="28" class="bx"/><text x="420" y="57" class="tm" text-anchor="middle">1,0</text><rect x="448" y="39" width="46" height="28" class="bx"/><text x="471" y="57" class="tm" text-anchor="middle">2,0</text><rect x="499" y="39" width="46" height="28" class="bx"/><text x="522" y="57" class="tm" text-anchor="middle">3,0</text><rect x="550" y="39" width="46" height="28" class="bx"/><text x="573" y="57" class="tm" text-anchor="middle">4,0</text><rect x="340" y="78" width="260" height="38" class="bxa"/><text x="612" y="102" class="tm" text-anchor="start">[1]</text><rect x="346" y="83" width="46" height="28" class="bx"/><text x="369" y="101" class="tm" text-anchor="middle">0,1</text><rect x="397" y="83" width="46" height="28" class="bx"/><text x="420" y="101" class="tm" text-anchor="middle">1,1</text><rect x="448" y="83" width="46" height="28" class="bx"/><text x="471" y="101" class="tm" text-anchor="middle">2,1</text><rect x="499" y="83" width="46" height="28" class="bx"/><text x="522" y="101" class="tm" text-anchor="middle">3,1</text><rect x="550" y="83" width="46" height="28" class="bx"/><text x="573" y="101" class="tm" text-anchor="middle">4,1</text><rect x="340" y="122" width="260" height="38" class="bxa"/><text x="612" y="146" class="tm" text-anchor="start">[2]</text><rect x="346" y="127" width="46" height="28" class="bx"/><text x="369" y="145" class="tm" text-anchor="middle">0,2</text><rect x="397" y="127" width="46" height="28" class="bx"/><text x="420" y="145" class="tm" text-anchor="middle">1,2</text><rect x="448" y="127" width="46" height="28" class="bx"/><text x="471" y="145" class="tm" text-anchor="middle">2,2</text><rect x="499" y="127" width="46" height="28" class="bx"/><text x="522" y="145" class="tm" text-anchor="middle">3,2</text><rect x="550" y="127" width="46" height="28" class="bx"/><text x="573" y="145" class="tm" text-anchor="middle">4,2</text><text x="150" y="194" class="tm" text-anchor="middle">5 sütun listesi × 3 nokta</text><text x="470" y="194" class="tm" text-anchor="middle">3 kat listesi × 5 nokta</text></svg></div><figcaption>İç içe liste: dış liste sütunlar, iç listeler noktalar. Transpose satırla sütunu değiştirir; @L2 bir düğümü iç listelerde çalıştırır.</figcaption></figure>
+<ol>
+<li>Watch ile yapıyı incele: <code>List</code> &gt; <code>0</code> &gt; <code>List</code> &gt; <code>0, 1, 2</code>.</li>
+<li><strong>List.Transpose</strong>: 3 alt liste, her birinde 5 nokta (her kat bir alt liste).</li>
+<li><strong>List.Count</strong> düğümünü bağla: 5 verir (dış liste). İç listelerin her birinin sayısı için girdi kablosunun yanındaki oka tıkla ve <strong>@L2</strong> seç: <code>[3, 3, 3, 3, 3]</code>.</li>
+<li>Liste seviyesi, Grasshopper'daki ağaç dallarının Dynamo'daki karşılığıdır. Bir düğümün hangi seviyede çalışacağını bu ok ile seçersin.</li>
+</ol>
+<p><strong>Alıştırma: panel köşeleri</strong></p>
+<ol>
+<li>Izgara noktaları: 5 sütun × 3 kat. Her panelin 4 köşesi, x ve z listelerinin komşu öğelerinden gelir.</li>
+<li>Code Block ile:</li>
+</ol>
+<pre><code class="language-text">x = 0..6000..1500;
+z = 0..8000..4000;
+n = List.Count(x) - 1;   // sütun aralığı sayısı: 4
+m = List.Count(z) - 1;   // kat aralığı sayısı: 2
+k1 = Point.ByCoordinates(x[0..n-1]&lt;1&gt;, 0, z[0..m-1]&lt;2&gt;);
+k2 = Point.ByCoordinates(x[1..n]&lt;1&gt;,   0, z[0..m-1]&lt;2&gt;);
+k3 = Point.ByCoordinates(x[1..n]&lt;1&gt;,   0, z[1..m]&lt;2&gt;);
+k4 = Point.ByCoordinates(x[0..n-1]&lt;1&gt;, 0, z[1..m]&lt;2&gt;);
+kose = List.Transpose([List.Flatten(k1), List.Flatten(k2), List.Flatten(k3), List.Flatten(k4)]);
+panel = Polygon.ByPoints(kose);
+</code></pre>
+<ol start="3">
+<li><code>x[0..n-1]</code> listeden bir dilim alır; <code>&lt;1&gt;</code> ve <code>&lt;2&gt;</code> ile sütun ve kat dilimleri çapraz eşleşir.</li>
+<li><code>kose</code> her panel için 4 noktalı bir liste olur: sol alt, sağ alt, sağ üst, sol üst.</li>
+<li>Panel sayısını kontrol et: 4 sütun aralığı × 2 kat aralığı = 8 panel.</li>
+</ol>
+<h3>Gün sonu kontrolü (15 dk)</h3>
+<p>Hepsini işaretleyebiliyorsan 3. güne geçebilirsin.</p>
+<ul class="tasks">
+<li class="task"><label><input type="checkbox" data-id="g2-1"><span>Code Block'ta aralık, liste, indeks ve koşul yazabiliyorum.</span></label></li>
+<li class="task"><label><input type="checkbox" data-id="g2-2"><span>Shortest, Longest ve Cross Product lacing farkını biliyorum.</span></label></li>
+<li class="task"><label><input type="checkbox" data-id="g2-3"><span>Replication guide (<code>&lt;1&gt;</code>, <code>&lt;2&gt;</code>) ile ızgara üretebiliyorum.</span></label></li>
+<li class="task"><label><input type="checkbox" data-id="g2-4"><span>İç içe listeyi Watch'ta okuyup Transpose edebiliyorum.</span></label></li>
+<li class="task"><label><input type="checkbox" data-id="g2-5"><span>Liste seviyesi (@L2) seçerek bir düğümü iç listelerde çalıştırabiliyorum.</span></label></li>
+</ul>
+<p><strong>Bonus:</strong> Her ikinci katı spandrel olarak ayır: kat indeksleri listesini <code>j % 2 == 0</code> ile True/False maskesine çevir ve <strong>List.FilterByBoolMask</strong> ile panelleri ikiye ayır.</p></div>
+  <div class="pn"><a href="#gun1">← 1. gün</a><a href="#gun3">3. gün →</a></div>
+</section>
+<section class="day" id="gun3" data-day="3">
+  <div class="day-head"><span class="dn">GÜN 03</span><h2>Revit parametreleri ve Excel</h2><span class="meta">~5 saat · <span data-prog="3">0/5</span> kontrol</span></div>
+  <div class="prose"><h3>Hedef</h3>
+<p>Gün sonunda Revit modelindeki curtain panelleri Dynamo ile okuyup ölçülerini ve parametrelerini Excel'e aktarmış, Excel'de düzenlediğin değerleri modele geri yazmış olacaksın. Süre yaklaşık 5 saat. Dosya: <code>Gun3_Excel.dyn</code>.</p>
+<p>Bu, cephe işinde Dynamo'nun en hızlı geri dönüş veren kullanımıdır: yüzlerce paneli tek tek tıklamak yerine bir tabloda düzenlemek.</p>
+<h3>1. Revit elemanlarını seçmek (1 saat)</h3>
+<div class="tw"><table>
+<thead>
+<tr>
+<th>Yöntem</th>
+<th>Düğüm</th>
+<th>Ne zaman</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Tek eleman</td>
+<td>Select Model Element</td>
+<td>Deneme, tek panel üzerinde test</td>
+</tr>
+<tr>
+<td>Birden çok eleman</td>
+<td>Select Model Elements</td>
+<td>Ekranda bir grup</td>
+</tr>
+<tr>
+<td>Kategori</td>
+<td>Categories + All Elements of Category</td>
+<td>Projedeki tüm curtain paneller</td>
+</tr>
+<tr>
+<td>Tip</td>
+<td>Family Types + All Elements of Family Type</td>
+<td>Belirli bir panel tipinin hepsi</td>
+</tr>
+<tr>
+<td>Görünüşteki</td>
+<td>All Elements In Active View (paketlerle)</td>
+<td>Sadece aktif görünüşteki elemanlar</td>
+</tr>
+</tbody>
+</table></div>
+<ol>
+<li>Revit eğitiminin 1-4. günlerinde yaptığın cepheyi aç (curtain wall ve paneller).</li>
+<li><strong>Categories</strong>: Curtain Panels. <strong>All Elements of Category</strong>: tüm paneller.</li>
+<li><strong>List.Count</strong> ile panel sayısını oku. Revit'teki panel tablosu (schedule) ile karşılaştır.</li>
+<li>Bir paneli <strong>Select Model Element</strong> ile seç, Watch'ta Revit eleman kimliğini (Element ID) gör.</li>
+</ol>
+<h3>2. Parametre okumak (1 saat)</h3>
+<ol>
+<li><strong>Element.GetParameterValueByName</strong>: element = paneller, parameterName = <code>"Width"</code>. Tüm panellerin genişlikleri gelir.</li>
+<li>Aynısını <code>"Height"</code>, <code>"Area"</code>, <code>"Panel_ID"</code>, <code>"Cam_Kodu"</code> için yap. Parametre adı Revit'te göründüğü gibi, büyük-küçük harf dahil yazılmalı.</li>
+<li>Parametre bulunamazsa düğüm uyarı verir ve <code>null</code> döner. Watch'ta hangi elemanların boş geldiğini gör.</li>
+<li><strong>Element.Parameters</strong> ile bir elemanın tüm parametre adlarını listele; doğru adı buradan kopyala.</li>
+<li>Birimler: Revit iç birimi feet olsa da Dynamo, proje birimlerine göre değer döndürür. Watch'ta mm geldiğini kontrol et.</li>
+</ol>
+<h3>3. Excel'e yazmak (1 saat)</h3>
+<figure class="fig"><div class="sc"><svg viewBox="0 0 650 206" role="img" xmlns="http://www.w3.org/2000/svg"><defs><marker id="ah-excel" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0 0L10 5L0 10z" class="ar"/></marker></defs><rect x="10" y="40" width="140" height="50" rx="5" class="bxa"/><text x="80.0" y="61.0" class="tb" text-anchor="middle">Curtain Panels</text><text x="80.0" y="77.0" class="tm" text-anchor="middle">All Elements</text><rect x="180" y="40" width="150" height="50" rx="5" class="bx"/><text x="255.0" y="61.0" class="tb" text-anchor="middle">GetParameter</text><text x="255.0" y="77.0" class="tm" text-anchor="middle">Width · Cam_Kodu</text><rect x="360" y="40" width="140" height="50" rx="5" class="bxa"/><text x="430.0" y="61.0" class="tb" text-anchor="middle">Excel</text><text x="430.0" y="77.0" class="tm" text-anchor="middle">panel listesi</text><rect x="360" y="140" width="140" height="50" rx="5" class="bx"/><text x="430.0" y="161.0" class="tb" text-anchor="middle">Excel'de düzenle</text><text x="430.0" y="177.0" class="tm" text-anchor="middle">G01 → G02</text><rect x="180" y="140" width="150" height="50" rx="5" class="bx"/><text x="255.0" y="161.0" class="tb" text-anchor="middle">Element.Id ile</text><text x="255.0" y="177.0" class="tm" text-anchor="middle">eşleştir</text><rect x="10" y="140" width="140" height="50" rx="5" class="bxa"/><text x="80.0" y="161.0" class="tb" text-anchor="middle">SetParameter</text><text x="80.0" y="177.0" class="tm" text-anchor="middle">Cam_Kodu</text><line x1="150" y1="65" x2="178" y2="65" class="mu" marker-end="url(#ah-excel)"/><line x1="330" y1="65" x2="358" y2="65" class="mu" marker-end="url(#ah-excel)"/><line x1="430" y1="90" x2="430" y2="138" class="mu" marker-end="url(#ah-excel)"/><line x1="358" y1="165" x2="332" y2="165" class="mu" marker-end="url(#ah-excel)"/><line x1="178" y1="165" x2="152" y2="165" class="mu" marker-end="url(#ah-excel)"/><text x="560" y="70" class="ta" text-anchor="start">oku → Excel</text><text x="560" y="170" class="ta" text-anchor="start">Excel → yaz</text></svg></div><figcaption>Excel döngüsü: paneller okunup tabloya yazılır, tabloda düzenlenir, Element ID ile eşleştirilerek modele geri yazılır.</figcaption></figure>
+<ol>
+<li>Her panel için bir satır kur: Element ID, Panel_ID, Width, Height, Area, Cam_Kodu.</li>
+<li>Code Block ile listeleri birleştir: <code>[id, pid, w, h, a, ck];</code> sonra <strong>List.Transpose</strong> ile satır satır yap.</li>
+<li>Başlık satırını ekle: <strong>List.AddItemToFront</strong> ile <code>["ElementId", "Panel_ID", "Genislik", "Yukseklik", "Alan", "Cam_Kodu"]</code>.</li>
+<li><strong>Data.OpenXMLExportExcel</strong> (Excel kurulu olmasa da çalışır) ya da <strong>Data.ExportExcel</strong>: dosya yolu, sayfa adı <code>Paneller</code>, başlangıç satır ve sütunu 0, veri.</li>
+<li><strong>Run</strong>. Excel dosyasını aç ve kontrol et.</li>
+</ol>
+<h3>4. Excel'den geri yazmak (1,5 saat)</h3>
+<p>Hedef: Excel'de Cam_Kodu sütununu düzenleyip modeldeki panellere geri yazmak.</p>
+<ol>
+<li>Excel'de birkaç panelin Cam_Kodu'nu değiştir (G01 → G02), kaydet ve kapat.</li>
+<li>Dynamo'da <strong>Data.OpenXMLImportExcel</strong>: aynı dosya, aynı sayfa. Watch'ta satırların geldiğini gör.</li>
+<li>Başlık satırını <strong>List.RestOfItems</strong> ile at. <strong>List.Transpose</strong> ile sütunlara çevir.</li>
+<li>Modeldeki panelleri yeniden al (All Elements of Category) ve <strong>Element.Id</strong> ile ID'lerini listele. Excel'deki ID sütununu <strong>String.ToNumber</strong> ile sayıya çevir (metin olarak gelebilir).</li>
+<li>Excel'deki her satırın modeldeki karşılığını bul: <strong>List.IndexOf</strong> (liste = model ID'leri, öğe = Excel ID'leri), sonra <strong>List.GetItemAtIndex</strong> ile panelleri Excel sırasına diz.</li>
+<li><strong>Element.SetParameterByName</strong>: element = bu sıradaki paneller, parameterName = <code>"Cam_Kodu"</code>, value = Excel'deki Cam_Kodu sütunu.</li>
+<li>Run modu <strong>Manual</strong>. <strong>Run</strong>. Revit'te bir paneli seçip Cam_Kodu'nun değiştiğini kontrol et.</li>
+</ol>
+<p><strong>Dikkat</strong></p>
+<ul>
+<li>Geri yazma işlemi geri alınabilir (Revit'te Ctrl+Z), ama yüzlerce elemanı değiştiren bir grafiği çalıştırmadan önce dosyayı kaydet.</li>
+<li>Satır sırasına güvenme; her zaman Element ID ile eşleştir. Excel'de sıralama yapılırsa sıra bozulur, ID bozulmaz.</li>
+</ul>
+<h3>Gün sonu kontrolü (15 dk)</h3>
+<p>Hepsini işaretleyebiliyorsan 4. güne geçebilirsin.</p>
+<ul class="tasks">
+<li class="task"><label><input type="checkbox" data-id="g3-1"><span>Kategori ve tip ile Revit elemanlarını toplu seçebiliyorum.</span></label></li>
+<li class="task"><label><input type="checkbox" data-id="g3-2"><span>Parametre değerlerini adıyla okuyabiliyor, boş gelenleri bulabiliyorum.</span></label></li>
+<li class="task"><label><input type="checkbox" data-id="g3-3"><span>Panel listesini başlıklı bir Excel sayfasına yazabiliyorum.</span></label></li>
+<li class="task"><label><input type="checkbox" data-id="g3-4"><span>Excel'den değerleri okuyup Element ID ile eşleştirerek modele geri yazabiliyorum.</span></label></li>
+<li class="task"><label><input type="checkbox" data-id="g3-5"><span>Revit'e yazan grafiklerde neden Manual mod kullandığımı biliyorum.</span></label></li>
+</ul>
+<p><strong>Bonus:</strong> Excel'e yazarken bir de <strong>Özet</strong> sayfası oluştur: Cam_Kodu'na göre gruplanmış adet ve toplam alan. <strong>List.GroupByKey</strong> ile grupla, <strong>Math.Sum</strong> ile topla.</p></div>
+  <div class="pn"><a href="#gun2">← 2. gün</a><a href="#gun4">4. gün →</a></div>
+</section>
+<section class="day" id="gun4" data-day="4">
+  <div class="day-head"><span class="dn">GÜN 04</span><h2>Otomatik numaralama ve Player</h2><span class="meta">~5 saat · <span data-prog="4">0/5</span> kontrol</span></div>
+  <div class="prose"><h3>Hedef</h3>
+<p>Gün sonunda cephedeki panelleri konumlarına göre sıralayıp otomatik numaralayan, ölçülerine göre tip ve cam kodu atayan bir grafiğin olacak. Grafik, Revit bilmeyen bir ekip arkadaşının da kullanabileceği şekilde Dynamo Player'a hazırlanacak. Süre yaklaşık 5 saat. Dosya: <code>Gun4_Numara.dyn</code>.</p>
+<h3>1. Panellerin konumu (1 saat)</h3>
+<p>Curtain panellerin tek bir "konum noktası" yoktur. Konumu geometrisinden çıkarırız.</p>
+<ol>
+<li><strong>All Elements of Category</strong>: Curtain Panels.</li>
+<li><strong>Element.BoundingBox</strong> ile her panelin çevreleyen kutusunu al.</li>
+<li><strong>BoundingBox.MinPoint</strong> ve <strong>BoundingBox.MaxPoint</strong>'in ortası panel merkezidir. Code Block: <code>m = Point.ByCoordinates((a.X + b.X) / 2, (a.Y + b.Y) / 2, (a.Z + b.Z) / 2);</code> (a = MinPoint, b = MaxPoint).</li>
+<li>Merkezlerin <strong>Point.Z</strong> ve <strong>Point.X</strong> değerlerini al.</li>
+<li>Kavisli ya da çok yüzlü cephede X yerine cephe boyunca mesafe gerekir: cephe çizgisini (bir <strong>Model Curve</strong> ya da curtain wall'ın location line'ı) al, <strong>Curve.ParameterAtPoint</strong> ile her merkezin çizgi üzerindeki konumunu bul.</li>
+</ol>
+<h3>2. Sıralama ve numara (1,5 saat)</h3>
+<figure class="fig"><div class="sc"><svg viewBox="0 -10 600 346" role="img" xmlns="http://www.w3.org/2000/svg"><defs><marker id="ah-numara" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0 0L10 5L0 10z" class="ar"/></marker></defs><rect x="60" y="200" width="96" height="76" class="gl"/><text x="108" y="244" class="tb" text-anchor="middle">P-001</text><rect x="160" y="200" width="96" height="76" class="gl"/><text x="208" y="244" class="tb" text-anchor="middle">P-002</text><rect x="260" y="200" width="96" height="76" class="gl"/><text x="308" y="244" class="tb" text-anchor="middle">P-003</text><rect x="360" y="200" width="96" height="76" class="gl"/><text x="408" y="244" class="tb" text-anchor="middle">P-004</text><rect x="460" y="200" width="96" height="76" class="gl"/><text x="508" y="244" class="tb" text-anchor="middle">P-005</text><rect x="60" y="120" width="96" height="76" class="gl"/><text x="108" y="164" class="tb" text-anchor="middle">P-006</text><rect x="160" y="120" width="96" height="76" class="gl"/><text x="208" y="164" class="tb" text-anchor="middle">P-007</text><rect x="260" y="120" width="96" height="76" class="gl"/><text x="308" y="164" class="tb" text-anchor="middle">P-008</text><rect x="360" y="120" width="96" height="76" class="gl"/><text x="408" y="164" class="tb" text-anchor="middle">P-009</text><rect x="460" y="120" width="96" height="76" class="gl"/><text x="508" y="164" class="tb" text-anchor="middle">P-010</text><rect x="60" y="40" width="96" height="76" class="gl"/><text x="108" y="84" class="tb" text-anchor="middle">P-011</text><rect x="160" y="40" width="96" height="76" class="gl"/><text x="208" y="84" class="tb" text-anchor="middle">P-012</text><rect x="260" y="40" width="96" height="76" class="gl"/><text x="308" y="84" class="tb" text-anchor="middle">P-013</text><rect x="360" y="40" width="96" height="76" class="gl"/><text x="408" y="84" class="tb" text-anchor="middle">P-014</text><rect x="460" y="40" width="96" height="76" class="gl"/><text x="508" y="84" class="tb" text-anchor="middle">P-015</text><line x1="40" y1="270" x2="40" y2="60" class="ac" marker-end="url(#ah-numara)"/><text x="30" y="48" class="ta" text-anchor="start">1. kattan yukarı</text><line x1="60" y1="296" x2="560" y2="296" class="ac" marker-end="url(#ah-numara)"/><text x="310" y="316" class="ta" text-anchor="middle">2. soldan sağa (X ya da cephe çizgisi boyunca)</text><text x="310" y="336" class="tm" text-anchor="middle">anahtar = kat × 1 000 000 + x  →  List.SortByKey</text></svg></div><figcaption>Numaralama sırası: panel merkezleri önce kata, sonra yatay konuma göre sıralanır. Birleşik anahtar iki ölçütü tek sayıya toplar.</figcaption></figure>
+<p>İstenen sıra: önce kat (alttan üste), sonra soldan sağa.</p>
+<ol>
+<li>Kat değerini yuvarla: <code>kat = Math.Round(z / 100) * 100;</code> Aynı kattaki paneller birkaç mm farklı Z verse bile aynı değere düşer.</li>
+<li>Sıralama anahtarı: <code>anahtar = kat * 1000000 + x;</code> (kat önce, aynı katta X'e göre).</li>
+<li><strong>List.SortByKey</strong>: paneller, anahtarlar. Sıralanmış paneller.</li>
+<li>Numaralar: <code>n = 1..List.Count(siraliPaneller);</code></li>
+<li>Metin: <code>"P-" + String.PadLeft(String.FromObject(n), 3, "0");</code> → P-001, P-002…</li>
+<li><strong>Element.SetParameterByName</strong>: siralı paneller, <code>"Panel_ID"</code>, numaralar. <strong>Run</strong>.</li>
+<li>Revit'te bir görünüşe <strong>Tag by Category</strong> ile panel etiketleri koy ve sıranın doğru olduğunu kontrol et.</li>
+</ol>
+<h3>3. Tip ve cam kodu (1 saat)</h3>
+<ol>
+<li>Genişlik ve yüksekliği oku (3. gün). 10 mm'ye yuvarla.</li>
+<li>Tip anahtarı: <code>Genislik + "x" + Yukseklik</code> → <code>1500x4000</code>.</li>
+<li><strong>List.UniqueItems</strong> ile benzersiz tipleri bul, <strong>List.IndexOf</strong> ile her panelin tip sırasını bul, <code>"T" + (i + 1)</code> ile tip kodu yap.</li>
+<li>Cam kodu kuralı: spandrel paneller <code>S01</code>, diğerleri ölçüye göre: <code>w &gt; 1400 ? "G01" : "G02"</code>. Spandrel ayrımı için panel tipinin adını oku (<strong>Element.ElementType</strong> + <strong>Element.Name</strong>).</li>
+<li>İki parametreyi tek seferde yaz: <strong>Element.SetParameterByName</strong>'e parametre adlarını liste olarak (<code>["Panel_Tip", "Cam_Kodu"]</code>) ve değerleri karşılık gelen listeler olarak ver; lacing'e dikkat et.</li>
+</ol>
+<h3>4. Dynamo Player (1 saat)</h3>
+<p>Dynamo Player, grafiği açmadan bir düğmeyle çalıştırmayı sağlar. Ekip arkadaşların grafiğin içini görmeden kullanabilir.</p>
+<figure class="fig"><div class="sc"><svg viewBox="0 0 640 252" role="img" xmlns="http://www.w3.org/2000/svg"><defs><marker id="ah-player" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0 0L10 5L0 10z" class="ar"/></marker></defs><rect x="20" y="20" width="300" height="200" rx="6" class="mud"/><text x="170" y="240" class="tm" text-anchor="middle">grafik (.dyn)</text><rect x="35" y="40" width="150" height="34" rx="3" class="bxa"/><text x="45" y="62" class="tm" text-anchor="start">Önek [Is Input]</text><rect x="35" y="90" width="150" height="34" rx="3" class="bxa"/><text x="45" y="112" class="tm" text-anchor="start">Başlangıç [Is Input]</text><rect x="205" y="70" width="100" height="60" rx="3" class="bx"/><text x="255" y="104" class="tm" text-anchor="middle">…düğümler…</text><rect x="185" y="160" width="125" height="34" rx="3" class="bxa"/><text x="195" y="182" class="tm" text-anchor="start">Adet [Is Output]</text><line x1="330" y1="120" x2="380" y2="120" class="ac" marker-end="url(#ah-player)"/><rect x="390" y="20" width="230" height="220" class="so"/><text x="400" y="42" class="tb" text-anchor="start">Dynamo Player</text><rect x="400" y="56" width="210" height="28" class="bx"/><text x="408" y="75" class="tm" text-anchor="start">Önek: P-</text><rect x="400" y="92" width="210" height="28" class="bx"/><text x="408" y="111" class="tm" text-anchor="start">Başlangıç: 1</text><rect x="400" y="140" width="210" height="28" class="bx"/><text x="408" y="159" class="ta" text-anchor="start">Adet: 24</text><rect x="520" y="196" width="90" height="30" rx="15" class="bxa"/><text x="565" y="216" class="tb" text-anchor="middle">▶ Play</text></svg></div><figcaption>Is Input ve Is Output işaretlenen düğümler Dynamo Player&#x27;da form alanı olarak görünür; kullanıcı grafiği açmadan değerleri değiştirip çalıştırır.</figcaption></figure>
+<ol>
+<li>Kullanıcının değiştirmesini istediğin düğümleri belirle: başlangıç numarası, önek (<code>P-</code>), kat yuvarlama adımı.</li>
+<li>Bu düğümlere sağ tık &gt; <strong>Is Input</strong> işaretle ve anlamlı ad ver: <code>Başlangıç numarası</code>, <code>Önek</code>.</li>
+<li>Sonucu göstermek istediğin bir Watch düğümüne sağ tık &gt; <strong>Is Output</strong>: <code>Numaralanan panel sayısı</code>.</li>
+<li>Grafiği bir klasöre kaydet. Revit'te <strong>Manage &gt; Dynamo Player</strong>, klasörü seç.</li>
+<li>Player'da grafiğin girdilerini gör, değerleri değiştir, <strong>Play</strong>.</li>
+</ol>
+<h3>Gün sonu kontrolü (15 dk)</h3>
+<p>Hepsini işaretleyebiliyorsan 5. güne geçebilirsin.</p>
+<ul class="tasks">
+<li class="task"><label><input type="checkbox" data-id="g4-1"><span>Panel merkezini bounding box'tan hesaplayabiliyorum.</span></label></li>
+<li class="task"><label><input type="checkbox" data-id="g4-2"><span>Kat ve yatay konuma göre birleşik anahtarla sıralama yapabiliyorum.</span></label></li>
+<li class="task"><label><input type="checkbox" data-id="g4-3"><span>Sıfırla doldurulmuş numara (P-001) üretip parametreye yazabiliyorum.</span></label></li>
+<li class="task"><label><input type="checkbox" data-id="g4-4"><span>Ölçüye göre tip kodu ve kurala göre cam kodu atayabiliyorum.</span></label></li>
+<li class="task"><label><input type="checkbox" data-id="g4-5"><span>Grafiği girdi ve çıktılarıyla Dynamo Player'a hazırlayabiliyorum.</span></label></li>
+</ul>
+<p><strong>Bonus:</strong> Numaralamayı cephe yüzlerine göre ayır: kuzey cephe <code>K-001</code>, güney cephe <code>G-001</code>. Panel normalini (ya da curtain wall'ın yönünü) okuyup yöne göre grupla, her grupta numaralamayı yeniden başlat.</p></div>
+  <div class="pn"><a href="#gun3">← 3. gün</a><a href="#gun5">5. gün →</a></div>
+</section>
+<section class="day" id="gun5" data-day="5">
+  <div class="day-head"><span class="dn">GÜN 05</span><h2>Yüzeyden adaptive panel</h2><span class="meta">~5 saat · <span data-prog="5">0/5</span> kontrol</span></div>
+  <div class="prose"><h3>Hedef</h3>
+<p>Gün sonunda Revit'teki eğrisel bir kitle yüzünü Dynamo'da bölüp her hücreye 4 noktalı adaptive panel yerleştirmiş, panellerin düzlemden sapmasını hesaplayıp parametreye yazmış olacaksın. Süre yaklaşık 5 saat. Dosya: <code>Gun5_Adaptive.dyn</code>.</p>
+<p>Bu gün, Revit eğitiminin 4. gününde yaptığın <code>Panel_Adaptive_4N</code> ailesini kullanır.</p>
+<h3>1. Revit yüzeyini almak (45 dk)</h3>
+<ol>
+<li>Revit'te eğrisel bir kitle (In-Place Mass) hazırla ya da Revit eğitiminin 2. günündeki Rhino'dan alınan kitleyi kullan.</li>
+<li>Dynamo'da <strong>Select Face</strong>: kitlenin cephe yüzüne tıkla. Önizlemede yüzey görünür.</li>
+<li>Yüzey seçimi modele bağlıdır: kitle değişince Dynamo yeniden çalıştırıldığında yeni yüzeyi kullanır.</li>
+</ol>
+<h3>2. Yüzeyi bölmek (1,5 saat)</h3>
+<figure class="fig"><div class="sc"><svg viewBox="0 0 720 262" role="img" xmlns="http://www.w3.org/2000/svg"><defs><marker id="ah-yuzey" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0 0L10 5L0 10z" class="ar"/></marker></defs><polygon points="80.0,220.0 130.0,229.6 146.7,172.9 96.7,163.3" class="gl"/><polygon points="96.7,163.3 146.7,172.9 163.3,116.2 113.3,106.7" class="gl"/><polygon points="113.3,106.7 163.3,116.2 180.0,59.6 130.0,50.0" class="gl"/><polygon points="130.0,229.6 180.0,237.7 196.7,181.0 146.7,172.9" class="gl"/><polygon points="146.7,172.9 196.7,181.0 213.3,124.3 163.3,116.2" class="gl"/><polygon points="163.3,116.2 213.3,124.3 230.0,67.7 180.0,59.6" class="gl"/><polygon points="180.0,237.7 230.0,243.1 246.7,186.4 196.7,181.0" class="gl"/><polygon points="196.7,181.0 246.7,186.4 263.3,129.8 213.3,124.3" class="gl"/><polygon points="213.3,124.3 263.3,129.8 280.0,73.1 230.0,67.7" class="gl"/><polygon points="230.0,243.1 280.0,245.0 296.7,188.3 246.7,186.4" class="gl"/><polygon points="246.7,186.4 296.7,188.3 313.3,131.7 263.3,129.8" class="bxa"/><polygon points="263.3,129.8 313.3,131.7 330.0,75.0 280.0,73.1" class="gl"/><polygon points="280.0,245.0 330.0,243.1 346.7,186.4 296.7,188.3" class="gl"/><polygon points="296.7,188.3 346.7,186.4 363.3,129.8 313.3,131.7" class="gl"/><polygon points="313.3,131.7 363.3,129.8 380.0,73.1 330.0,75.0" class="gl"/><polygon points="330.0,243.1 380.0,237.7 396.7,181.0 346.7,186.4" class="gl"/><polygon points="346.7,186.4 396.7,181.0 413.3,124.3 363.3,129.8" class="gl"/><polygon points="363.3,129.8 413.3,124.3 430.0,67.7 380.0,73.1" class="gl"/><polygon points="380.0,237.7 430.0,229.6 446.7,172.9 396.7,181.0" class="gl"/><polygon points="396.7,181.0 446.7,172.9 463.3,116.2 413.3,124.3" class="gl"/><polygon points="413.3,124.3 463.3,116.2 480.0,59.6 430.0,67.7" class="gl"/><polygon points="430.0,229.6 480.0,220.0 496.7,163.3 446.7,172.9" class="gl"/><polygon points="446.7,172.9 496.7,163.3 513.3,106.7 463.3,116.2" class="gl"/><polygon points="463.3,116.2 513.3,106.7 530.0,50.0 480.0,59.6" class="gl"/><circle cx="246.7" cy="186.4" r="9" class="pt"/><text x="246.7" y="190.4" class="tpt" text-anchor="middle">1</text><circle cx="296.7" cy="188.3" r="9" class="pt"/><text x="296.7" y="192.3" class="tpt" text-anchor="middle">2</text><circle cx="313.3" cy="131.7" r="9" class="pt"/><text x="313.3" y="135.7" class="tpt" text-anchor="middle">3</text><circle cx="263.3" cy="129.8" r="9" class="pt"/><text x="263.3" y="133.8" class="tpt" text-anchor="middle">4</text><text x="560" y="90" class="ta" text-anchor="start">Select Face</text><text x="560" y="108" class="tm" text-anchor="start">Surface.PointAtParameter</text><text x="560" y="126" class="tm" text-anchor="start">→ k1, k2, k3, k4</text><text x="560" y="160" class="ta" text-anchor="start">AdaptiveComponent</text><text x="560" y="178" class="ta" text-anchor="start">.ByPoints</text></svg></div><figcaption>Revit kitle yüzü u ve v parametreleriyle bölünür; her hücrenin dört köşesi adaptive ailenin 1-2-3-4 sırasıyla toplanıp panel yerleştirilir.</figcaption></figure>
+<ol>
+<li>Slider'lar: <code>U_Adet</code> = 8, <code>V_Adet</code> = 3.</li>
+<li>Code Block:</li>
+</ol>
+<pre><code class="language-text">u = 0..1..#(U_Adet + 1);
+v = 0..1..#(V_Adet + 1);
+k1 = Surface.PointAtParameter(yuzey, u[0..U_Adet-1]&lt;1&gt;, v[0..V_Adet-1]&lt;2&gt;);
+k2 = Surface.PointAtParameter(yuzey, u[1..U_Adet]&lt;1&gt;,   v[0..V_Adet-1]&lt;2&gt;);
+k3 = Surface.PointAtParameter(yuzey, u[1..U_Adet]&lt;1&gt;,   v[1..V_Adet]&lt;2&gt;);
+k4 = Surface.PointAtParameter(yuzey, u[0..U_Adet-1]&lt;1&gt;, v[1..V_Adet]&lt;2&gt;);
+kose = List.Transpose([List.Flatten(k1), List.Flatten(k2), List.Flatten(k3), List.Flatten(k4)]);
+</code></pre>
+<ol start="3">
+<li><code>yuzey</code> girdisine Select Face çıkışını, <code>U_Adet</code> ve <code>V_Adet</code> girdilerine slider'ları bağla.</li>
+<li>Bu, 2. gündeki köşe yönteminin aynısıdır; tek fark x ve z yerine yüzeyin u ve v parametrelerinin kullanılmasıdır.</li>
+<li><code>kose</code> her panel için 4 noktalı bir liste olmalı. Watch'ta 24 alt liste (8 × 3), her birinde 4 nokta.</li>
+<li>Sıra önemli: 1 sol alt, 2 sağ alt, 3 sağ üst, 4 sol üst. Adaptive ailedeki nokta numaralarıyla aynı olmalı. Yüzeyin u yönü ters ise paneller ters yerleşir; o zaman <code>u</code> listesini ters çevir.</li>
+</ol>
+<h3>3. Adaptive panelleri yerleştirmek (1 saat)</h3>
+<ol>
+<li><strong>Family Types</strong>: <code>Panel_Adaptive_4N</code>.</li>
+<li><strong>AdaptiveComponent.ByPoints</strong>: points = <code>kose</code>, familyType = seçilen tip.</li>
+<li>Run modu <strong>Manual</strong>, <strong>Run</strong>. Revit'te 24 adaptive panel oluşur.</li>
+<li>Önce <code>U_Adet</code> = 2, <code>V_Adet</code> = 1 ile 2 panel üzerinde dene; doğruysa gerçek sayıya çık.</li>
+<li>Kitlenin şeklini Revit'te değiştir, Dynamo'da tekrar <strong>Run</strong>: paneller yeni yüzeye göre güncellenir.</li>
+</ol>
+<h3>4. Warp hesabı ve yazımı (1,5 saat)</h3>
+<figure class="fig"><div class="sc"><svg viewBox="0 0 640 230" role="img" xmlns="http://www.w3.org/2000/svg"><defs><marker id="ah-warp_dyn" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0 0L10 5L0 10z" class="ar"/></marker></defs><polygon points="60,200 260,210 270,60" class="gl"/><polyline points="60,200 260,210 270,60 70,80 60,200" class="k1"/><circle cx="60" cy="200" r="9" class="pt"/><text x="60" y="204" class="tpt" text-anchor="middle">1</text><circle cx="260" cy="210" r="9" class="pt"/><text x="260" y="214" class="tpt" text-anchor="middle">2</text><circle cx="270" cy="60" r="9" class="pt"/><text x="270" y="64" class="tpt" text-anchor="middle">3</text><circle cx="70" cy="80" r="9" class="pt"/><text x="70" y="84" class="tpt" text-anchor="middle">4</text><line x1="70" y1="80" x2="64" y2="100" class="swr"/><text x="48" y="98" class="tr2" text-anchor="end">d</text><text x="330" y="80" class="tm" text-anchor="start">Plane.ByThreePoints(k1, k2, k3)</text><text x="330" y="104" class="tm" text-anchor="start">d = Geometry.DistanceTo(k4, düzlem)</text><text x="330" y="140" class="ta" text-anchor="start">d &lt; Warp_Tol ? "G01" : "G02"</text><text x="330" y="176" class="tm" text-anchor="start">→ Element.SetParameterByName</text><text x="350" y="194" class="tm" text-anchor="start">"Cam_Kodu"</text></svg></div><figcaption>Warp: ilk üç köşeden düzlem kurulur, dördüncü köşenin düzleme uzaklığı ölçülür. Eşiğe göre cam kodu belirlenip panele yazılır.</figcaption></figure>
+<ol>
+<li>Her panelin ilk üç noktasından düzlem: <strong>Plane.ByThreePoints</strong> (k1, k2, k3).</li>
+<li>Dördüncü noktanın düzleme uzaklığı: <strong>Geometry.DistanceTo</strong> (k4, düzlem).</li>
+<li>Eşik slider'ı: <code>Warp_Tol</code> = 3 mm.</li>
+<li>Cam kodu kuralı: <code>ck = d &lt; Warp_Tol ? "G01" : "G02";</code></li>
+<li>Panel numarası: <code>"P-" + String.PadLeft(String.FromObject(1..List.Count(kose)), 3, "0");</code></li>
+<li><strong>Element.SetParameterByName</strong> ile yerleştirilen adaptive panellere <code>Panel_ID</code> ve <code>Cam_Kodu</code> yaz.</li>
+<li>Revit'te Generic Models tablosuyla sonuçları kontrol et.</li>
+</ol>
+<p><strong>Görsel kontrol</strong></p>
+<p><strong>Display.ByGeometryColor</strong> ile önizlemede panelleri warp değerine göre renklendir: <strong>Color Range</strong> düğümüyle yeşilden kırmızıya bir renk aralığı kur, warp değerlerini 0-1'e indirip renk al.</p>
+<h3>Gün sonu kontrolü (15 dk)</h3>
+<p>Hepsini işaretleyebiliyorsan 6. güne geçebilirsin.</p>
+<ul class="tasks">
+<li class="task"><label><input type="checkbox" data-id="g5-1"><span>Revit kitle yüzünü Dynamo'ya alabiliyorum.</span></label></li>
+<li class="task"><label><input type="checkbox" data-id="g5-2"><span>Yüzeyi uv parametreleriyle bölüp panel köşelerini toplayabiliyorum.</span></label></li>
+<li class="task"><label><input type="checkbox" data-id="g5-3"><span>Köşe sırasının adaptive aileyle neden aynı olması gerektiğini biliyorum.</span></label></li>
+<li class="task"><label><input type="checkbox" data-id="g5-4"><span>AdaptiveComponent.ByPoints ile panelleri yerleştirebiliyorum.</span></label></li>
+<li class="task"><label><input type="checkbox" data-id="g5-5"><span>Warp hesaplayıp cam koduna çevirerek parametreye yazabiliyorum.</span></label></li>
+</ul>
+<p><strong>Bonus:</strong> Panel genişliğini sabit tutmak için u parametrelerini eşit aralıklı değil, yüzeyin alt kenarının uzunluğuna göre hesapla: kenarı <strong>Curve.PointsAtEqualSegmentLength</strong> ile böl ve noktaların yüzeydeki uv'lerini <strong>Surface.UVParameterAtPoint</strong> ile bul.</p></div>
+  <div class="pn"><a href="#gun4">← 4. gün</a><a href="#gun6">6. gün →</a></div>
+</section>
+<section class="day" id="gun6" data-day="6">
+  <div class="day-head"><span class="dn">GÜN 06</span><h2>Grasshopper&#x27;dan CSV ve paketler</h2><span class="meta">~5 saat · <span data-prog="6">0/5</span> kontrol</span></div>
+  <div class="prose"><h3>Hedef</h3>
+<p>Gün sonunda Rhino/Grasshopper'da ürettiğin panelleri CSV dosyası üzerinden Revit'e aktaran bir grafiğin olacak. Ayrıca Dynamo paketlerini kurmayı ve kullanmayı öğreneceksin. Süre yaklaşık 5 saat. Dosya: <code>Gun6_Aktarim.dyn</code>.</p>
+<p>Panelleme çoğu zaman Grasshopper'da yapılır. Rhino.Inside.Revit kullanılamıyorsa en sağlam köprü, düz bir metin dosyasıdır: Grasshopper köşe noktalarını yazar, Dynamo okur ve Revit'te paneli kurar.</p>
+<h3>1. Aktarım akışı (30 dk)</h3>
+<figure class="fig"><div class="sc"><svg viewBox="0 0 690 152" role="img" xmlns="http://www.w3.org/2000/svg"><defs><marker id="ah-csv_akis" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0 0L10 5L0 10z" class="ar"/></marker></defs><rect x="10" y="50" width="140" height="56" rx="5" class="bx"/><text x="80.0" y="74.0" class="tb" text-anchor="middle">Grasshopper</text><text x="80.0" y="90.0" class="tm" text-anchor="middle">panel köşeleri</text><rect x="185" y="50" width="130" height="56" rx="5" class="bxa"/><text x="250.0" y="74.0" class="tb" text-anchor="middle">paneller.csv</text><text x="250.0" y="90.0" class="tm" text-anchor="middle">satır = panel</text><rect x="350" y="50" width="140" height="56" rx="5" class="bx"/><text x="420.0" y="74.0" class="tb" text-anchor="middle">Dynamo</text><text x="420.0" y="90.0" class="tm" text-anchor="middle">ImportCSV · Point</text><rect x="525" y="50" width="150" height="56" rx="5" class="bxa"/><text x="600.0" y="74.0" class="tb" text-anchor="middle">Revit</text><text x="600.0" y="90.0" class="tm" text-anchor="middle">Adaptive + parametre</text><line x1="150" y1="78" x2="183" y2="78" class="mu" marker-end="url(#ah-csv_akis)"/><line x1="315" y1="78" x2="348" y2="78" class="mu" marker-end="url(#ah-csv_akis)"/><line x1="490" y1="78" x2="523" y2="78" class="mu" marker-end="url(#ah-csv_akis)"/><text x="340" y="140" class="tm" text-anchor="middle">koordinat ve birim iki tarafta aynı olmalı (mm, ortak referans noktası)</text></svg></div><figcaption>Rhino.Inside olmadan köprü: Grasshopper köşe noktalarını CSV&#x27;ye yazar, Dynamo okuyup Revit&#x27;te adaptive panelleri kurar.</figcaption></figure>
+<p>CSV dosyasının biçimi: her satır bir panel.</p>
+<div class="tw"><table>
+<thead>
+<tr>
+<th>Panel_ID</th>
+<th>X1</th>
+<th>Y1</th>
+<th>Z1</th>
+<th>X2</th>
+<th>Y2</th>
+<th>Z2</th>
+<th>X3</th>
+<th>Y3</th>
+<th>Z3</th>
+<th>X4</th>
+<th>Y4</th>
+<th>Z4</th>
+<th>Cam_Kodu</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>P-001</td>
+<td>0</td>
+<td>0</td>
+<td>0</td>
+<td>1500</td>
+<td>0</td>
+<td>0</td>
+<td>1500</td>
+<td>0</td>
+<td>4000</td>
+<td>0</td>
+<td>0</td>
+<td>4000</td>
+<td>G01</td>
+</tr>
+</tbody>
+</table></div>
+<h3>2. Grasshopper tarafı (1 saat)</h3>
+<ol>
+<li>Grasshopper eğitiminin 4. günündeki panelleme tanımını aç.</li>
+<li>Her panelin 4 köşesini adaptive sırasıyla al (uv = 0,0 · 1,0 · 1,1 · 0,1).</li>
+<li><strong>Deconstruct Point</strong> ile X, Y, Z'leri ayır; <strong>Concatenate</strong> ya da <strong>Format</strong> ile her panel için bir satır kur, ayırıcı noktalı virgül.</li>
+<li>Başlık satırını ekle, <strong>Panel</strong> &gt; <strong>Stream Contents</strong> ile <code>paneller.csv</code> olarak kaydet.</li>
+<li><strong>Koordinat uyumu:</strong> Rhino'daki 0,0,0 ile Revit'in proje taban noktası aynı yerde olmalı. Değilse iki programda aynı aks kesişimini referans alıp Rhino modelini oraya taşı. Birimler iki tarafta da mm olmalı.</li>
+</ol>
+<h3>3. Dynamo tarafı (2 saat)</h3>
+<ol>
+<li><strong>File Path</strong> düğümüyle CSV'yi seç. <strong>Data.ImportCSV</strong>: satırlar listesi gelir. Ayırıcı noktalı virgül ise <strong>File.ReadText</strong> + <strong>String.Split</strong> ile kendin ayır:</li>
+</ol>
+<pre><code class="language-text">temiz = String.Replace(metin, &quot;\r&quot;, &quot;&quot;);     // Windows satır sonlarını temizle
+satirlar = String.Split(temiz, &quot;\n&quot;);
+veri = List.RestOfItems(satirlar);           // başlığı at
+veri2 = List.FilterByBoolMask(veri, String.Length(veri) &gt; 0)[&quot;in&quot;];  // boş satırları at
+alan = String.Split(veri2, &quot;;&quot;);
+sutun = List.Transpose(alan);
+</code></pre>
+<ol start="2">
+<li>Sayısal sütunları <strong>String.ToNumber</strong> ile sayıya çevir.</li>
+<li>Her panel için 4 nokta: <code>Point.ByCoordinates(x1, y1, z1)</code> … <code>Point.ByCoordinates(x4, y4, z4)</code>.</li>
+<li><code>kose = List.Transpose([p1, p2, p3, p4]);</code> → her panel için 4 noktalı liste.</li>
+<li><strong>AdaptiveComponent.ByPoints</strong> ile <code>Panel_Adaptive_4N</code> yerleştir.</li>
+<li><strong>Element.SetParameterByName</strong> ile CSV'deki Panel_ID ve Cam_Kodu'nu yaz.</li>
+<li>Önce ilk 2 satırla dene (<strong>List.TakeItems</strong>), sonra hepsini çalıştır.</li>
+<li>Grasshopper'da panellemeyi değiştir, CSV'yi yeniden yaz, Dynamo'da <strong>Run</strong>: element binding sayesinde paneller güncellenir.</li>
+</ol>
+<h3>4. Paketler (1 saat)</h3>
+<p>Dynamo'nun çekirdek düğümleri yetmediğinde topluluk paketleri kullanılır.</p>
+<ol>
+<li><strong>Packages &gt; Search for a Package</strong> (sürüme göre Package Manager).</li>
+<li>Sık kullanılan paketler:</li>
+</ol>
+<div class="tw"><table>
+<thead>
+<tr>
+<th>Paket</th>
+<th>Ne işe yarar</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Clockwork</td>
+<td>Yüzlerce yardımcı düğüm: eleman, parametre, liste işlemleri</td>
+</tr>
+<tr>
+<td>archi-lab</td>
+<td>Revit tabloları, görünüşler, Excel ile ileri işlemler</td>
+</tr>
+<tr>
+<td>Rhythm</td>
+<td>Revit eleman işlemleri, Element.ById benzeri yardımcılar</td>
+</tr>
+<tr>
+<td>Data-Shapes</td>
+<td>Dynamo Player için açılır pencere ve form arayüzleri</td>
+</tr>
+</tbody>
+</table></div>
+<ol start="3">
+<li>Paket kurduğunda grafiği başkasıyla paylaşırken aynı paketin aynı sürümünü onun da kurması gerekir. Grafiğin notuna kullandığın paketleri ve sürümlerini yaz.</li>
+<li>Kurulan paketin düğümleri Library'de <strong>Add-ons</strong> altında görünür.</li>
+</ol>
+<h3>Gün sonu kontrolü (15 dk)</h3>
+<p>Hepsini işaretleyebiliyorsan 7. güne geçebilirsin.</p>
+<ul class="tasks">
+<li class="task"><label><input type="checkbox" data-id="g6-1"><span>Grasshopper'dan panel köşelerini CSV olarak yazabiliyorum.</span></label></li>
+<li class="task"><label><input type="checkbox" data-id="g6-2"><span>Rhino ile Revit arasındaki koordinat ve birim uyumunu kontrol edebiliyorum.</span></label></li>
+<li class="task"><label><input type="checkbox" data-id="g6-3"><span>Dynamo'da CSV okuyup metni sayıya çevirebiliyorum.</span></label></li>
+<li class="task"><label><input type="checkbox" data-id="g6-4"><span>CSV'deki panelleri adaptive aile olarak yerleştirip parametrelerini yazabiliyorum.</span></label></li>
+<li class="task"><label><input type="checkbox" data-id="g6-5"><span>Paket kurabiliyor ve paylaşımda paket bağımlılığını yönetebiliyorum.</span></label></li>
+</ul>
+<p><strong>Bonus:</strong> CSV'ye bir <code>Tip</code> sütunu ekle ve Dynamo'da her satır için farklı bir adaptive aile tipi seç: tip adlarını <strong>Family Types</strong> listesinde <strong>List.IndexOf</strong> ile bul.</p></div>
+  <div class="pn"><a href="#gun5">← 5. gün</a><a href="#gun7">7. gün →</a></div>
+</section>
+<section class="day" id="gun7" data-day="7">
+  <div class="day-head"><span class="dn">GÜN 07</span><h2>Python, custom node ve paylaşım</h2><span class="meta">~5 saat · <span data-prog="7">0/5</span> kontrol</span></div>
+  <div class="prose"><h3>Hedef</h3>
+<p>Son gün Dynamo'nun sınırlarını aşmayı öğreniyorsun: Python Script düğümü ile Revit API'ye doğrudan erişim, tekrar eden düğüm gruplarını özel düğüm (custom node) yapmak ve grafikleri ekipte güvenle paylaşmak. Süre yaklaşık 5 saat.</p>
+<h3>1. Python Script düğümü (2 saat)</h3>
+<p>Bazı işler düğümlerle çok uzun sürer ya da hiç yapılamaz. Python Script düğümü, Revit API'yi doğrudan kullanmanı sağlar.</p>
+<figure class="fig"><div class="sc"><svg viewBox="0 0 670 172" role="img" xmlns="http://www.w3.org/2000/svg"><defs><marker id="ah-python" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0 0L10 5L0 10z" class="ar"/></marker></defs><rect x="10" y="60" width="120" height="46" rx="5" class="bx"/><text x="70.0" y="79.0" class="tb" text-anchor="middle">IN[0], IN[1]</text><text x="70.0" y="95.0" class="tm" text-anchor="middle">Dynamo girdileri</text><rect x="160" y="60" width="130" height="46" rx="5" class="bxa"/><text x="225.0" y="79.0" class="tb" text-anchor="middle">UnwrapElement</text><text x="225.0" y="95.0" class="tm" text-anchor="middle">Revit elemanı</text><rect x="320" y="30" width="200" height="106" rx="6" class="mud"/><text x="420" y="24" class="th" text-anchor="middle">Transaction</text><rect x="335" y="45" width="170" height="34" rx="5" class="bx"/><text x="420.0" y="66.0" class="tb" text-anchor="middle">EnsureInTransaction</text><rect x="335" y="88" width="170" height="34" rx="5" class="bxa"/><text x="420.0" y="109.0" class="tb" text-anchor="middle">prm.Set(...)</text><rect x="550" y="60" width="110" height="46" rx="5" class="bx"/><text x="605.0" y="79.0" class="tb" text-anchor="middle">OUT</text><text x="605.0" y="95.0" class="tm" text-anchor="middle">sonuç</text><line x1="130" y1="83" x2="158" y2="83" class="mu" marker-end="url(#ah-python)"/><line x1="290" y1="83" x2="333" y2="62" class="mu" marker-end="url(#ah-python)"/><line x1="505" y1="105" x2="548" y2="83" class="mu" marker-end="url(#ah-python)"/><text x="420" y="160" class="tm" text-anchor="middle">TransactionTaskDone ile kapanır</text></svg></div><figcaption>Python Script düğümü: girdiler IN listesinden gelir, Revit elemanları UnwrapElement ile çözülür, model değişikliği transaction içinde yapılır, sonuç OUT&#x27;a yazılır.</figcaption></figure>
+<ol>
+<li>Library'de <strong>Python Script</strong> düğümünü ekle. Çift tıkla, editör açılır. Yeni sürümlerde motor olarak <strong>CPython3</strong> seçili olsun.</li>
+<li>Girdiler <code>IN[0]</code>, <code>IN[1]</code> … olarak gelir; sonuç <code>OUT</code> değişkenine yazılır.</li>
+<li>Alıştırma: seçilen panellerin <code>Panel_ID</code> parametresini okuyup boş olanları bulan ve onlara geçici bir değer yazan betik:</li>
+</ol>
+<pre><code class="language-python">import clr
+clr.AddReference(&quot;RevitServices&quot;)
+from RevitServices.Persistence import DocumentManager
+from RevitServices.Transactions import TransactionManager
+
+doc = DocumentManager.Instance.CurrentDBDocument
+paneller = UnwrapElement(IN[0])     # Dynamo elemanını Revit elemanına çevir
+onek = IN[1]                        # ör. &quot;TMP-&quot;
+
+bos = []
+TransactionManager.Instance.EnsureInTransaction(doc)
+for i, p in enumerate(paneller):
+    prm = p.LookupParameter(&quot;Panel_ID&quot;)
+    if prm and not prm.AsString():
+        prm.Set(&quot;{}{:03d}&quot;.format(onek, i + 1))
+        bos.append(p.Id.ToString())
+TransactionManager.Instance.TransactionTaskDone()
+
+OUT = bos
+</code></pre>
+<ol start="4">
+<li>Düğüme iki girdi ekle (+ işareti): <code>IN[0]</code> = All Elements of Category (Curtain Panels), <code>IN[1]</code> = <code>"TMP-"</code>.</li>
+<li><strong>Run</strong>. Çıkış, değer yazılan panellerin ID'leridir.</li>
+</ol>
+<p><strong>Önemli kurallar</strong></p>
+<ul>
+<li>Revit'te bir şeyi değiştiren her kod <strong>transaction</strong> içinde olmalı: <code>EnsureInTransaction</code> ile başla, <code>TransactionTaskDone</code> ile bitir.</li>
+<li>Dynamo'dan gelen elemanları API'de kullanmadan önce <strong>UnwrapElement</strong> ile çevir.</li>
+<li>Parametre tipine göre okuma: metin <code>AsString()</code>, sayı <code>AsDouble()</code> (Revit iç birimi feet!), tam sayı <code>AsInteger()</code>.</li>
+</ul>
+<h3>2. Özel düğüm (custom node) (1 saat)</h3>
+<figure class="fig"><div class="sc"><svg viewBox="0 0 660 212" role="img" xmlns="http://www.w3.org/2000/svg"><defs><marker id="ah-custom" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0 0L10 5L0 10z" class="ar"/></marker></defs><rect x="20" y="30" width="300" height="150" rx="8" class="mud"/><rect x="40" y="50" width="120" height="30" rx="5" class="bx"/><text x="100.0" y="69.0" class="tb" text-anchor="middle">SortByKey</text><rect x="180" y="50" width="120" height="30" rx="5" class="bx"/><text x="240.0" y="69.0" class="tb" text-anchor="middle">Code Block</text><rect x="40" y="110" width="120" height="30" rx="5" class="bx"/><text x="100.0" y="129.0" class="tb" text-anchor="middle">PadLeft</text><rect x="180" y="110" width="120" height="30" rx="5" class="bx"/><text x="240.0" y="129.0" class="tb" text-anchor="middle">Concat</text><text x="170" y="200" class="tm" text-anchor="middle">4. günün numaralama düğümleri</text><line x1="335" y1="105" x2="395" y2="105" class="ac" marker-end="url(#ah-custom)"/><text x="365" y="95" class="ta" text-anchor="middle">Custom Node</text><rect x="470" y="60" width="160" height="88" rx="3" class="bx"/><rect x="470" y="60" width="160" height="24" rx="3" class="bxa"/><text x="478" y="77" class="tb" text-anchor="start">Panel.Numarala</text><text x="478" y="104" class="tm" text-anchor="start">paneller</text><rect x="466" y="96" width="8" height="8" class="dotr"/><text x="478" y="122" class="tm" text-anchor="start">onek</text><rect x="466" y="114" width="8" height="8" class="dotr"/><text x="478" y="140" class="tm" text-anchor="start">baslangic</text><rect x="466" y="132" width="8" height="8" class="dotr"/><text x="622" y="104" class="tm" text-anchor="end">numaralar</text><rect x="626" y="96" width="8" height="8" class="dotr"/><text x="550" y="180" class="tm" text-anchor="middle">Cephe kategorisinde · .dyf</text></svg></div><figcaption>Custom node: bir düğüm grubu adlandırılmış girdi ve çıktılarla tek bir düğüme dönüşür ve kütüphanede başka grafiklerde kullanılır.</figcaption></figure>
+<ol>
+<li>
+<ol start="4">
+<li>günün numaralama düğümlerini seç (sıralama anahtarı, sıralama, numara metni).</li>
+</ol>
+</li>
+<li>Sağ tık &gt; <strong>Create Custom Node</strong>. Ad: <code>Panel.Numarala</code>, kategori: <code>Cephe</code>.</li>
+<li>Özel düğüm ayrı bir <code>.dyf</code> dosyasında açılır. <strong>Input</strong> düğümlerine ad ver (<code>paneller</code>, <code>onek</code>, <code>baslangic</code>), <strong>Output</strong> düğümüne ad ver (<code>numaralar</code>).</li>
+<li>Kaydet. Library'de <code>Cephe</code> kategorisinde kendi düğümün görünür ve başka grafiklerde kullanılabilir.</li>
+<li>Özel düğümü değiştirince onu kullanan bütün grafikler güncellenir.</li>
+</ol>
+<h3>3. Ekipte paylaşım (1 saat)</h3>
+<div class="tw"><table>
+<thead>
+<tr>
+<th>Kural</th>
+<th>Neden</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Her grafiğin başına ne yaptığını, girdileri ve kullanılan paketleri anlatan bir not koy</td>
+<td>Grafiği açan kişi ne yapacağını bilir</td>
+</tr>
+<tr>
+<td>Girdiler solda, Revit'e yazan düğümler sağda, ikisi de grupla ve renkle ayrılmış</td>
+<td>Hata ayıklama kolaylaşır</td>
+</tr>
+<tr>
+<td>Revit'e yazan grafikler Manual modda kaydedilsin</td>
+<td>Açılır açılmaz modeli değiştirmez</td>
+</tr>
+<tr>
+<td>Dynamo Player için girdiler <strong>Is Input</strong>, sonuçlar <strong>Is Output</strong></td>
+<td>Ekip grafiği açmadan kullanır</td>
+</tr>
+<tr>
+<td>Ortak klasör: <code>Dynamo\Grafikler</code>, <code>Dynamo\OzelDugumler</code></td>
+<td>Herkes aynı sürümü kullanır</td>
+</tr>
+<tr>
+<td>Dosya adında sürüm: <code>Panel_Numarala_v03.dyn</code></td>
+<td>Hangi sürümün çalıştığı belli olur</td>
+</tr>
+</tbody>
+</table></div>
+<ol>
+<li>1-6. günlerin grafiklerinden en kullanışlı ikisini (Excel aktarımı ve numaralama) bu kurallara göre düzenle.</li>
+<li>Ortak bir klasöre koy ve Dynamo Player'ı o klasöre yönlendir.</li>
+<li>Bir ekip arkadaşına sadece Player üzerinden çalıştırmasını söyle; açıklama ve girdi adlarının yeterli olup olmadığını onun gözünden kontrol et.</li>
+</ol>
+<h3>Gün sonu kontrolü (15 dk)</h3>
+<ul class="tasks">
+<li class="task"><label><input type="checkbox" data-id="g7-1"><span>Python Script düğümünde girdileri okuyup OUT ile sonuç verebiliyorum.</span></label></li>
+<li class="task"><label><input type="checkbox" data-id="g7-2"><span>Revit'i değiştiren kodu transaction içine almayı biliyorum.</span></label></li>
+<li class="task"><label><input type="checkbox" data-id="g7-3"><span>UnwrapElement'in neden gerektiğini biliyorum.</span></label></li>
+<li class="task"><label><input type="checkbox" data-id="g7-4"><span>Düğüm grubunu custom node yapıp kütüphaneye ekleyebiliyorum.</span></label></li>
+<li class="task"><label><input type="checkbox" data-id="g7-5"><span>Grafiği ekipte paylaşmaya uygun hale getirebiliyorum.</span></label></li>
+</ul>
+<p><strong>Haftadan sonra</strong></p>
+<ul>
+<li><strong>Revit API:</strong> Python düğümünde ustalaştıkça Revit API dokümantasyonu (revitapidocs.com) en sık açacağın kaynak olur.</li>
+<li><strong>Grasshopper ile birlikte:</strong> Panellemeyi Grasshopper'da, Revit verisini Dynamo'da yönetmek iyi bir iş bölümüdür. Doğrudan bağlantı için bu sitedeki <a href="../revit/">Revit eğitiminin</a> 5. günü Rhino.Inside.Revit'i anlatıyor; <a href="../grasshopper/">Grasshopper eğitimi</a> panelleme tarafını.</li>
+<li><strong>Otomasyon fikirleri:</strong> Paftaları toplu oluşturma, görünüş adlarını düzeltme, eksik parametre raporu, model kontrolü (boş Panel_ID, çift numara) için birer grafik.</li>
+</ul></div>
+  <div class="pn"><a href="#gun6">← 6. gün</a><a href="../../Tools.html">Araçlara dön →</a></div>
+</section>
+</main>
+
+<footer>
+  <div class="wrap">
+    <span>© 2026 Erdal Üstünol · <a href="/gizlilik.html">Gizlilik</a></span>
+    <a href="../../Tools.html">← Araçlar ve eğitimler</a>
+  </div>
+</footer>
+
+<script>
+(() => {
+  const $ = id => document.getElementById(id);
+  const KEY = 'erdevelop-egitim-dynamo';
+  const store = { get(k) { try { return localStorage.getItem(k); } catch (e) { return null; } }, set(k, v) { try { localStorage.setItem(k, v); } catch (e) {} } };
+  let mode = (() => { try { const m = localStorage.getItem('erdevelop-mode'), g = localStorage.getItem('erdevelop-mode-gun'), t = new Date(); if (m && g === t.toDateString()) return m; const h = t.getHours(); return h >= 7 && h < 19 ? 'light' : 'dark'; } catch (e) { return 'light'; } })();
+  const applyMode = () => { document.documentElement.dataset.mode = mode; $('modeBtn').textContent = mode === 'dark' ? 'LIGHT' : 'DARK'; };
+  $('modeBtn').addEventListener('click', () => { mode = mode === 'dark' ? 'light' : 'dark'; store.set('erdevelop-mode', mode); store.set('erdevelop-mode-gun', new Date().toDateString()); applyMode(); });
+  applyMode();
+
+  let done = {}; try { done = JSON.parse(store.get(KEY) || '{}') || {}; } catch (e) { done = {}; }
+  const boxes = [...document.querySelectorAll('li.task input')];
+  const prog = () => {
+    document.querySelectorAll('section.day').forEach(sec => {
+      const d = sec.dataset.day, bs = sec.querySelectorAll('li.task input'), c = [...bs].filter(b => b.checked).length;
+      sec.querySelector('[data-prog]').textContent = c + '/' + bs.length;
+      const n = document.querySelector('[data-nav="' + d + '"]'); if (n) n.classList.toggle('done', bs.length > 0 && c === bs.length);
+    });
+  };
+  boxes.forEach(b => { b.checked = !!done[b.dataset.id]; b.addEventListener('change', () => { if (b.checked) done[b.dataset.id] = 1; else delete done[b.dataset.id]; store.set(KEY, JSON.stringify(done)); prog(); }); });
+  $('resetBtn').addEventListener('click', () => { done = {}; store.set(KEY, '{}'); boxes.forEach(b => b.checked = false); prog(); });
+  prog();
+
+  const links = [...document.querySelectorAll('[data-nav]')];
+  const secs = [$('genel'), ...document.querySelectorAll('section.day')];
+  if ('IntersectionObserver' in window) {
+    const io = new IntersectionObserver(es => es.forEach(e => { if (e.isIntersecting) { const i = secs.indexOf(e.target); links.forEach((l, k) => l.classList.toggle('on', k === i)); } }), { rootMargin: '-40% 0px -55% 0px' });
+    secs.forEach(s => io.observe(s));
+  }
+})();
+</script>
+<script>if ('serviceWorker' in navigator && location.protocol === 'https:') addEventListener('load', () => navigator.serviceWorker.register('/sw.js').catch(() => { }));</script>
+<script data-goatcounter="https://erdevelop.goatcounter.com/count" async src="//gc.zgo.at/count.js"></script>
+</body>
+</html>

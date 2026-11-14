@@ -142,6 +142,7 @@
           toast('🎉 Yeni rekor: '+r.best);
           const bb=$('#bestBadge'); bb.hidden=false; bb.textContent='En iyi: '+r.best;
           if(window.FX) FX.record();
+          setTimeout(pulseShare, 400);
         }
         // İlerleme: XP, seviye, rozetler
         if(window.Progress){ const p=Progress.onGamePlayed(g.id, n, r.isNew);
@@ -175,6 +176,25 @@
   $('#homeBtn').onclick=goHome;
   $('#restartBtn').onclick=()=>{ if(currentGame) mountGame(currentGame); };
 
+  // Sosyal paylaşım: oyunu + en iyi skoru paylaş / linki kopyala
+  async function shareScore(){
+    if(!currentGame) return;
+    const best=(window.Store && window.Store.getBest(currentGame.id))||0;
+    let url;
+    try{ url=location.origin+location.pathname+'#o/'+currentGame.id; }catch(e){ url='https://erdevelop.github.io/oyunlar/'; }
+    const text = best>0
+      ? 'Oyun Bahçesi\'nde "'+currentGame.title+'" oynadım, en iyi skorum '+best+'! Geçebilir misin?'
+      : 'Oyun Bahçesi\'nde "'+currentGame.title+'" oynuyorum. Sen de dene!';
+    const data={ title:'Oyun Bahçesi', text, url };
+    try{
+      if(navigator.share){ await navigator.share(data); return; }
+    }catch(e){ if(e && e.name==='AbortError') return; }
+    try{ await navigator.clipboard.writeText(text+' '+url); toast('🔗 Bağlantı kopyalandı'); }
+    catch(e){ toast('Paylaşım bu cihazda desteklenmiyor'); }
+  }
+  const shareBtn=$('#shareBtn'); if(shareBtn) shareBtn.onclick=shareScore;
+  function pulseShare(){ const b=$('#shareBtn'); if(!b) return; b.classList.remove('pulse'); void b.offsetWidth; b.classList.add('pulse'); }
+
   window.addEventListener('hashchange', ()=>{
     const h=location.hash.replace(/^#/,'');
     if(!h && currentGame) goHome();
@@ -205,35 +225,11 @@
       '<p class="auth-sub">Oyun bahçesine hoş geldin.</p>'+ f +
       '<button class="auth-btn" id="authSubmit">'+(up?'Oluştur':'Giriş')+'</button>'+
       '<div class="auth-err" id="authErr"></div>'+
-      (cloud ? '<div class="auth-mode-note" style="margin-top:8px">Hangi verilerin tutulduğu: <a href="../gizlilik.html">Gizlilik</a></div>' : '')+
-      (!up && cloud ? '<div class="auth-switch"><button id="authForgot">Şifremi unuttum</button></div>' : '')+
       '<div class="auth-switch">'+(up?'Zaten hesabın var mı? ':'Hesabın yok mu? ')+
       '<button id="authSwitch">'+(up?'Giriş yap':'Hesap oluştur')+'</button></div>';
   }
-  function forgotForm(email){
-    return '<h3 class="auth-h">Şifremi unuttum</h3>'+
-      '<p class="auth-sub">E-posta adresine şifre yenileme linki gönderelim. Linke tıklayıp yeni şifreni belirlersin.</p>'+
-      field('f_email','E-posta','email','ornek@mail.com')+
-      '<button class="auth-btn" id="authSubmit">Yenileme linki gönder</button>'+
-      '<div class="auth-err" id="authErr"></div>'+
-      '<div class="auth-switch"><button id="authSwitch">Giriş ekranına dön</button></div>';
-  }
-  function wireForgot(email){
-    const em=$('#f_email'); em.value=email||''; em.setAttribute('autocomplete','email'); em.focus();
-    $('#authSwitch').onclick=()=>{ openModal(authForm('in')); wireAuthForm('in'); };
-    $('#authSubmit').onclick=async ()=>{
-      const err=$('#authErr'), btn=$('#authSubmit'); err.textContent=''; err.style.color=''; btn.disabled=true; btn.textContent='…';
-      try{ await window.Auth.resetPassword(em.value);
-        err.style.color='var(--ok, #2e9e5b)'; err.textContent='Bu adrese kayıtlı bir hesap varsa şifre yenileme linki gönderildi. Gelen kutunu ve gereksiz (spam) klasörünü kontrol et.';
-        btn.textContent='Tekrar gönder'; }
-      catch(e){ err.textContent=e.message||'Bir şeyler ters gitti.'; btn.textContent='Yenileme linki gönder'; }
-      btn.disabled=false;
-    };
-    em.addEventListener('keydown', e=>{ if(e.key==='Enter') $('#authSubmit').click(); });
-  }
   function wireAuthForm(mode){
     $('#authSwitch').onclick=()=>{ openModal(authForm(mode==='up'?'in':'up')); wireAuthForm(mode==='up'?'in':'up'); };
-    if($('#authForgot')) $('#authForgot').onclick=()=>{ const em=(($('#f_email')||{}).value||'').trim(); openModal(forgotForm()); wireForgot(em); };
     $('#authSubmit').onclick=async ()=>{
       const err=$('#authErr'); err.textContent='';
       const name=($('#f_name')||{}).value||'';
@@ -253,8 +249,7 @@
     const initial=(u.name||'?').trim().charAt(0).toUpperCase();
     return '<div class="profile-row"><div class="avatar">'+initial+'</div>'+
       '<div class="meta"><b>'+u.name+'</b><span>'+(u.email|| (window.Auth.mode==='cloud'?'':'yerel profil'))+'</span></div></div>'+
-      '<button class="auth-btn" id="signOutBtn">Çıkış yap</button>'+
-      '<div class="auth-switch"><a href="../hesap.html">Hesabım: şifre, verilerim, hesabı sil</a> · <a href="../gizlilik.html">Gizlilik</a></div>';
+      '<button class="auth-btn" id="signOutBtn">Çıkış yap</button>';
   }
   $('#accountBtn').onclick=()=>{
     const u=window.Auth && window.Auth.current;
