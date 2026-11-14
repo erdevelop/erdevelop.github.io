@@ -1,7 +1,7 @@
 /* erdevelop · site geneli service worker
    Strateji: sayfalar her zaman önce ağdan alınır (güncel kalır), ağ yoksa son kaydedilen kopya açılır.
    Değişmeyen kütüphaneler (CDN, yazı tipleri) önbellekten verilir. Büyük dosyalar ve kendi service worker'ı olan klasörler önbelleğe alınmaz. */
-const V = 'erdevelop-v1', PAGES = V + '-sayfa', LIBS = V + '-kutup';
+const V = 'erdevelop-v2', PAGES = V + '-sayfa', LIBS = V + '-kutup';
 const CORE = ['/', '/Tools.html', '/404.html', '/favicon.svg', '/kesif/tema.css', '/kesif/tema.js',
   '/kesif/ruzgar.html', '/kesif/cam.html', '/kesif/kar.html', '/kesif/profil.html', '/kesif/genlesme.html', '/kesif/yogusma.html', '/kesif/ucw.html', '/kesif/ral.html', '/kesif/gunes.html',
   '/arac_kutusu.html', '/YakitHesapla.html', '/cam-agirlik.html', '/cephe-bolme.html'];
@@ -21,7 +21,8 @@ self.addEventListener('fetch', e => {
     return;
   }
   if (LIB_HOSTS.includes(u.hostname)) {
-    e.respondWith(caches.match(r).then(m => m || fetch(r).then(res => { if (res.ok || res.type === 'opaque') { const cp = res.clone(); caches.open(LIBS).then(c => c.put(r, cp)); } return res; })));
+    /* yalnızca sağlam (200) kopyalar saklanır; bozuk ya da durumu görünmeyen (opaque) yanıt saklanmaz, böylece bir kez başarısız olan kütüphane kalıcı bozulmaz */
+    e.respondWith(caches.match(r).then(m => m && m.ok ? m : fetch(r).then(res => { if (res.ok && res.type === 'cors') { const cp = res.clone(); caches.open(LIBS).then(c => c.put(r, cp)); } return res; }).catch(() => m || Response.error())));
   }
 });
 
