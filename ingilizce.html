@@ -283,7 +283,13 @@
   <section class="pane2" id="p-telaffuz">
     <div class="two">
       <div class="panel">
-        <div class="ctl" style="margin-bottom:10px"><button class="btn" type="button" id="tPrev">←</button><span class="small muted" id="tNo"></span><button class="btn" type="button" id="tNext">→</button><span class="sp"></span><select class="sel" id="tVoice" aria-label="Ses"></select></div>
+        <div class="ctl" style="margin-bottom:10px"><button class="btn" type="button" id="tPrev">←</button><span class="small muted" id="tNo"></span><button class="btn" type="button" id="tNext">→</button><span class="sp"></span><select class="sel" id="tVoice" aria-label="Ses" title="★ işaretli sesler daha doğal"></select><button class="btn" type="button" id="tVTest" title="Sesi dene">🔊</button></div>
+        <details class="small muted" style="margin:-4px 0 10px"><summary>Ses robot gibi mi? Daha doğal ses ekle</summary>
+          <ul style="margin:6px 0 0;padding-left:18px">
+            <li><b>iPhone:</b> Ayarlar → Erişilebilirlik → Seslendirilen İçerik → Sesler → İngilizce → bir “Gelişmiş” ya da “Premium” ses indir (ör. Ava, Zoe, Evan). Sonra sayfayı yenileyip yukarıdan seç.</li>
+            <li><b>Android:</b> Ayarlar → Metin okuma (Text-to-speech) → tercih edilen motor <b>Google</b> → ⚙ → Ses verilerini yükle → İngilizce (ABD veya BK). Sayfayı Chrome'da aç.</li>
+            <li><b>Bilgisayar:</b> En doğal sesler Microsoft Edge'deki “Natural” sesler.</li>
+          </ul></details>
         <div class="muted small" id="tFocus"></div>
         <div class="sent" id="tS"></div>
         <div class="ctl" style="margin:16px 0;align-items:center;gap:14px"><button class="btn" type="button" id="tListen">🔊 Dinle</button><button class="btn" type="button" id="tSlow">🐢 Yavaş</button><button class="mic" type="button" id="tMic" aria-label="Kaydet">🎙</button><div><div class="score" id="tScore">–</div><div class="small muted" id="tBest"></div></div></div>
@@ -1334,17 +1340,24 @@ function setTrk(k) { S.trk = k; S.tIdx = 0; S.dIdx = 0; S.sIdx = 0; save(); pain
 /* ---- seslendirme ---- */
 const TTS = 'speechSynthesis' in window;
 let voices = [];
-function loadVoices() { if (!TTS) return; voices = speechSynthesis.getVoices().filter(v => /^en[-_]/i.test(v.lang)); const sel = $('tVoice'); if (!sel) return;
-  sel.innerHTML = voices.length ? voices.map(v => `<option value="${esc(v.name)}">${esc(v.name.replace(/Microsoft |Google /, ''))} · ${esc(v.lang)}</option>`).join('') : '<option value="">varsayılan ses</option>';
-  if (S.voice && voices.some(v => v.name === S.voice)) sel.value = S.voice; else { const pref = voices.find(v => /en-GB/i.test(v.lang)) || voices[0]; if (pref) sel.value = pref.name; } }
+/* ses kalitesi: cihazdaki İngilizce sesler puanlanır; şaka/robot sesleri ve eski sentez sesleri elenir, en doğal olanlar öne alınır */
+const V_BAD = /\b(Albert|Bad News|Bahh|Bells|Boing|Bubbles|Cellos|Good News|Jester|Organ|Pipe Organ|Superstar|Trinoids|Whisper|Wobble|Zarvox|Ralph|Fred|Junior|Kathy|Grandma|Grandpa|Eddy|Flo|Reed|Rocko|Sandy|Shelley|eSpeak|espeak)\b/i;
+const V_TOP = /(Natural|Neural|Premium|Enhanced|Siri|Online)/i, V_GOOD = /(Google|Samantha|Daniel|Karen|Moira|Serena|Ava|Allison|Susan|Tom|Alex|Evan|Zoe|Nathan|Aria|Jenny|Guy|Sonia|Ryan|Libby|Natasha|William|Emma|Brian|Andrew|Christopher|Michelle)/i;
+function vScore(v) { let n = 0; if (V_TOP.test(v.name)) n += 50; if (V_GOOD.test(v.name)) n += 20; if (/en[-_](US|GB)/i.test(v.lang)) n += 8; else if (/en[-_](AU|IE|CA|NZ)/i.test(v.lang)) n += 4;
+  if (!v.localService) n += 3; if (/compact/i.test(v.voiceURI || '')) n -= 25; return n; }
+function loadVoices() { if (!TTS) return; voices = speechSynthesis.getVoices().filter(v => /^en[-_]/i.test(v.lang) && !V_BAD.test(v.name)).sort((a, b) => vScore(b) - vScore(a)); const sel = $('tVoice'); if (!sel) return;
+  sel.innerHTML = voices.length ? voices.map(v => `<option value="${esc(v.name)}">${vScore(v) >= 20 ? '★ ' : ''}${esc(v.name.replace(/Microsoft |Google | \(.*\)$/g, ''))} · ${esc(v.lang)}</option>`).join('') : '<option value="">varsayılan ses</option>';
+  if (S.voice && voices.some(v => v.name === S.voice)) sel.value = S.voice; else if (voices[0]) sel.value = voices[0].name; }
 if (TTS) { loadVoices(); speechSynthesis.onvoiceschanged = loadVoices; }
 function say(text, rate = 0.95) { if (!TTS) return TM.toast('Bu tarayıcı seslendirmeyi desteklemiyor'); speechSynthesis.cancel(); const u = new SpeechSynthesisUtterance(text); u.lang = 'en-GB'; u.rate = rate; const v = voices.find(v => v.name === ($('tVoice').value || S.voice)); if (v) { u.voice = v; u.lang = v.lang; } speechSynthesis.speak(u); }
 /* sırayla konuşma: her konuşana ayrı ses; bitince çözülen Promise */
-function vpool() { const sel = voices.find(v => v.name === ($('tVoice').value || S.voice)); return sel ? [sel, ...voices.filter(v => v !== sel)] : voices.slice(); }
+/* konuşmalarda farklı kişiler için yalnızca iyi sesler sırayla kullanılır; iyi ses azsa ses tonu hafifçe değiştirilir */
+function vpool() { const sel = voices.find(v => v.name === ($('tVoice').value || S.voice)), best = voices[0] ? vScore(voices[0]) : 0;
+  const good = voices.filter(v => v !== sel && vScore(v) >= Math.max(20, best - 30)).slice(0, 4); return sel ? [sel, ...good] : good.length ? good : voices.slice(0, 1); }
 function speakP(text, rate = 1, vi = 0) {
   return new Promise(res => {
     if (!TTS) return setTimeout(res, 400);
-    const u = new SpeechSynthesisUtterance(text), P = vpool(), pitch = [1, .82, 1.22, .92];
+    const u = new SpeechSynthesisUtterance(text), P = vpool(), pitch = [1, .93, 1.08, .97];
     u.lang = 'en-GB'; u.rate = rate;
     if (P.length) { const v = P[vi % P.length]; u.voice = v; u.lang = v.lang; u.pitch = pitch[Math.floor(vi / P.length) % 4]; } else u.pitch = pitch[vi % 4];
     let done = false; const fin = () => { if (done) return; done = true; clearTimeout(t); res(); };
@@ -1740,7 +1753,8 @@ function done(r, heard) { $('tDiff').innerHTML = r.html + `<div class="small mut
   const tk = k + '|' + today(); if (r.score >= 80 && !S.tXp[tk]) { S.tXp = { [tk]: 1, ...Object.fromEntries(Object.entries(S.tXp).slice(0, 200)) }; save(); addXP(5, 'telaffuz'); } }
 $('tMic').onclick = micStart; $('tListen').onclick = () => say(tCur.s); $('tSlow').onclick = () => say(tCur.s, .65);
 $('tPrev').onclick = () => tLoad(S.tIdx - 1); $('tNext').onclick = () => tLoad(S.tIdx + 1);
-$('tVoice').onchange = () => { S.voice = $('tVoice').value; save(); };
+$('tVoice').onchange = () => { S.voice = $('tVoice').value; save(); say('Hi! This is how I sound. Nice to meet you.'); };
+$('tVTest').onclick = () => say('Hi! This is how I sound. Nice to meet you.');
 $('tUse').onclick = () => { const s = $('tOwn').value.trim(); if (s) { tCur = { s, f: '' }; tPaint(); } };
 if (!SR) { $('tMic').disabled = true; $('tMic').style.opacity = .4; $('tWarn').textContent = 'Bu tarayıcı ses tanımayı desteklemiyor. Chrome, Edge ya da iPhone\'da Safari ile aç; yine de cümleleri dinleyebilirsin.'; }
 
