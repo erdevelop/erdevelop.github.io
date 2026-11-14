@@ -116,6 +116,13 @@
 .lb td.n { font: 600 14px var(--f-mono); text-align: right; } .lb tr.me td { background: var(--accent-dim); }
 .lb .rk { width: 30px; font: 700 14px var(--f-mono); color: var(--muted); }
 .code { font: 700 1.6rem var(--f-mono); letter-spacing: 3px; color: var(--accent); }
+.rooms { display: flex; gap: 6px; flex-wrap: wrap; margin: 2px 0 12px; }
+.rooms button { border: 1px solid var(--line); background: transparent; color: var(--text); border-radius: 999px; padding: 6px 12px; font: 500 13px var(--f-body); cursor: pointer; }
+.rooms button.on { background: var(--accent); border-color: var(--accent); color: var(--on-accent, #fff); }
+.rooms button.add { border-style: dashed; color: var(--muted); }
+.radd { border: 1px dashed var(--line); border-radius: 10px; padding: 10px 12px; margin-bottom: 12px; }
+.tabs2 .inst { flex: 0 0 auto; margin-left: auto; }
+.tabs2 .inst + .acc { margin-left: 8px; }
 .wl { max-height: 360px; overflow: auto; } .wl div { display: flex; gap: 8px; padding: 7px 0; border-bottom: 1px solid var(--line); align-items: baseline; font-size: 14px; }
 .wl b { color: var(--fg); } .wl span { color: var(--text); flex: 1; } .wl small { color: var(--muted); font: 400 11px var(--f-mono); }
 .wl button { background: none; border: 0; color: var(--muted); cursor: pointer; }
@@ -141,7 +148,7 @@
   <p class="trkinfo" id="trkInfo"></p>
   <div class="tabs2" id="tabs2" role="tablist">
     <button type="button" data-t="kelime" class="on">📚 Kelimeler</button><button type="button" data-t="kalip">🧩 Kalıplar</button><button type="button" data-t="dinleme">🎧 Dinleme</button><button type="button" data-t="konusma">💬 Konuşma</button><button type="button" data-t="sim">🗣 Toplantı</button><button type="button" data-t="telaffuz">🎙 Telaffuz</button><button type="button" data-t="yarisma">🏆 Yarışma</button><button type="button" data-t="oda">👥 Oda</button>
-    <span class="acc" id="accLbl">misafir</span>
+    <button type="button" class="inst" id="instBtn" hidden title="Uygulama olarak yükle">📲 Yükle</button><span class="acc" id="accLbl">misafir</span>
   </div>
 
   <section class="pane2 on" id="p-kelime">
@@ -184,7 +191,7 @@
           <div class="full ctl push-only"><button class="btn pri" type="button" id="pOn">🔔 Bildirimleri aç</button><button class="btn" type="button" id="pTest">Örnek bildirim göster</button><button class="btn" type="button" id="pOff">Bildirimleri kapat</button></div>
           <div class="full push-only"><div class="lbl muted mono small">Nasıl çalışır</div><ol class="steps2">
             <li><b>iPhone:</b> Önce sayfayı ana ekrana ekle: Safari'de <b>Paylaş</b> → <b>Ana Ekrana Ekle</b>. Ana ekrandaki <b>İngilizce</b> simgesinden aç, giriş yap ve <b>Bildirimleri aç</b>'a dokun (iOS 16.4 ve sonrası).</li>
-            <li><b>Android ve bilgisayar:</b> Chrome ya da Edge'de doğrudan <b>Bildirimleri aç</b>.</li>
+            <li><b>Android ve bilgisayar:</b> Chrome ya da Edge'de doğrudan <b>Bildirimleri aç</b>. Uygulama gibi açmak için üstteki <b>📲 Yükle</b>'ye ya da Chrome menüsünde (⋮) <b>Uygulamayı yükle</b>'ye dokun. Simge ana ekranda çıkmazsa uygulama listesinde <b>İngilizce</b>'yi bul, basılı tutup ana ekrana sürükle.</li>
             <li>Bildirimler hesabına bağlıdır; ayar değiştirince kendiliğinden kaydedilir. Sayfayı her açtığında sıradaki kelimeler, bilemediklerin öne gelecek şekilde yenilenir.</li>
             <li>Sunucu 15 dakikada bir kontrol eder; bildirim seçtiğin saatten birkaç dakika sonra gelebilir.</li></ol></div>
           <div class="full ctl cal-only"><button class="btn pri" type="button" id="hAdd">📅 Takvime ekle</button><button class="btn" type="button" id="hDl">⬇ Dosyayı indir (.ics)</button></div>
@@ -1453,6 +1460,11 @@ const PUSH_PUB = 'BGPY6KZFQc8GQbAQQiw-0CBI8X6mrn9VHS7yC8fU8Lbw3Ep5H1OyBLXl6ADn_v
 const P_OK = 'serviceWorker' in navigator && 'PushManager' in window && 'Notification' in window && window.isSecureContext;
 const STANDALONE = matchMedia('(display-mode: standalone)').matches || navigator.standalone === true;
 const pDoc = () => Cloud.db.collection('push').doc(Cloud.user.uid);
+/* Android/Chrome: "uygulama olarak yükle" düğmesi (tarayıcı izin verince görünür) */
+let instEv = null;
+addEventListener('beforeinstallprompt', e => { e.preventDefault(); instEv = e; if (!STANDALONE) $('instBtn').hidden = false; });
+$('instBtn').onclick = async () => { if (!instEv) return; instEv.prompt(); const r = await instEv.userChoice.catch(() => ({})); instEv = null; $('instBtn').hidden = true; if (r.outcome === 'accepted') TM.toast('Yükleniyor… Simge ana ekranda yoksa uygulama listesinde “İngilizce”yi ara.'); };
+addEventListener('appinstalled', () => { $('instBtn').hidden = true; });
 let pInfo = null, pT = null;
 function hModeSet(m) { S.h.mode = m; save(); document.querySelectorAll('#hMode button').forEach(b => b.classList.toggle('on', b.dataset.m === m));
   document.querySelectorAll('#hBox .cal-only').forEach(e => e.hidden = m !== 'cal'); document.querySelectorAll('#hBox .push-only').forEach(e => e.hidden = m !== 'push');
@@ -1867,12 +1879,13 @@ $('qMode').onclick = e => { const b = e.target.closest('[data-m]'); if (!b || Q.
 const FB = { apiKey: 'AIzaSyBtNow8j7AZQO2sWCiXb1WbOT261wJUGRU', authDomain: 'oyun-bahcesi-62633.firebaseapp.com', projectId: 'oyun-bahcesi-62633', storageBucket: 'oyun-bahcesi-62633.firebasestorage.app', messagingSenderId: '591926138614', appId: '1:591926138614:web:24101e1be195ebc04c3ed7' };
 const FB_LIBS = ['firebase-app-compat', 'firebase-auth-compat', 'firebase-firestore-compat'].map(n => `https://www.gstatic.com/firebasejs/10.12.2/${n}.js`);
 const Cloud = {
-  ready: false, loading: false, err: '', user: null, room: null, members: [], words: [], subs: [],
+  ready: false, loading: false, err: '', user: null, room: null, members: [], words: [], subs: [], mine: S.rooms || [], addOpen: false,
   async ensure() {
     if (this.ready || this.loading) return this.paint(); this.loading = true; this.paint();
     try { for (const u of FB_LIBS) await new Promise((res, rej) => { const s = document.createElement('script'); s.src = u; s.onload = res; s.onerror = () => rej(new Error('bağlantı')); document.head.appendChild(s); });
       if (!firebase.apps.length) firebase.initializeApp(FB); this.auth = firebase.auth(); this.db = firebase.firestore(); this.ready = true;
-      this.auth.onAuthStateChanged(u => { this.user = u; accLabel(); if (u && S.room) this.open(S.room, true); else { this.close(); this.paint(); } pPaint(); if (u) pushAuto(); });
+      this.auth.onAuthStateChanged(u => { this.user = u; accLabel(); if (u) { this.loadMine(); const q = new URLSearchParams(location.search).get('oda'); const Q2 = q && q.toUpperCase(); if (Q2 && S.room && Q2 !== S.room) { if (this.mine.some(x => x.id === Q2)) { S.room = Q2; save(); } else this.addOpen = true; } }
+        if (u && S.room) this.open(S.room, true); else { this.close(); this.paint(); } pPaint(); if (u) pushAuto(); });
     } catch (e) { this.err = 'Sunucuya bağlanılamadı. İnternet bağlantını kontrol et.'; }
     this.loading = false; this.paint(); pPaint();
   },
@@ -1888,6 +1901,14 @@ const Cloud = {
     catch (e) { this.err = /invalid-email/.test(e.code) ? 'E-posta adresi geçersiz görünüyor.' : /too-many/.test(e.code) ? 'Çok fazla deneme yapıldı; biraz sonra tekrar dene.' : /network/.test(e.code) ? 'Bağlantı hatası; internetini kontrol et.' : 'Gönderilemedi: ' + (e.message || e); }
     this.paint();
   },
+  /* birden fazla oda: kullanıcının odaları users/{uid}.rooms dizisinde tutulur; adlar bu cihazda önbelleğe alınır */
+  async loadMine() {
+    try { const d = await this.db.collection('users').doc(this.user.uid).get(); const ids = [...new Set([...((d.exists && d.data().rooms) || []), ...(S.room ? [S.room] : [])])];
+      const L = await Promise.all(ids.map(id => this.db.collection('rooms').doc(id).get().then(r => r.exists ? { id, name: r.data().name || id } : null).catch(() => ({ id, name: (this.mine.find(x => x.id === id) || {}).name || id }))));
+      this.mine = L.filter(Boolean); S.rooms = this.mine; save(); this.paint(); } catch (e) { }
+  },
+  remember(id, name) { const i = this.mine.findIndex(x => x.id === id); if (i < 0) this.mine.push({ id, name }); else this.mine[i].name = name; S.rooms = this.mine; save(); },
+  switchTo(id) { if (this.room && this.room.id === id) return; this.addOpen = false; this.err = ''; S.room = id; save(); this.open(id); },
   code() { const A = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789'; let s = ''; const r = crypto.getRandomValues(new Uint32Array(6)); for (const x of r) s += A[x % A.length]; return s; },
   async create(name) {
     this.err = ''; try { const id = this.code(); await this.db.collection('rooms').doc(id).set({ name: name.slice(0, 40) || 'İngilizce grubu', owner: this.user.uid, created: firebase.firestore.FieldValue.serverTimestamp() });
@@ -1898,15 +1919,17 @@ const Cloud = {
       const m = this.db.collection('rooms').doc(code).collection('members').doc(this.user.uid), me = await m.get().catch(() => null);
       if (!me || !me.exists) await m.set({ name: this.name(), xp: S.xp || 0, wk: '', wkBest: 0, joined: firebase.firestore.FieldValue.serverTimestamp() });
       this.db.collection('users').doc(this.user.uid).set({ rooms: firebase.firestore.FieldValue.arrayUnion(code) }, { merge: true }).catch(() => { }); /* Hesabım sayfası odaları listeleyebilsin */
+      this.remember(code, r.data().name || code); this.addOpen = false;
       S.room = code; save(); this.open(code); TM.toast('Odaya girildi'); } catch (e) { this.fail(e); } },
   async open(code, quiet) {
-    this.close(); try { const r = await this.db.collection('rooms').doc(code).get(); if (!r.exists) { S.room = null; save(); return this.paint(); }
-      this.room = { id: code, ...r.data() }; const ref = this.db.collection('rooms').doc(code);
+    this.close(); try { const r = await this.db.collection('rooms').doc(code).get(); if (!r.exists) { S.room = null; this.mine = this.mine.filter(x => x.id !== code); S.rooms = this.mine; save(); return this.paint(); }
+      this.room = { id: code, ...r.data() }; this.remember(code, this.room.name || code); const ref = this.db.collection('rooms').doc(code);
       this.subs.push(ref.collection('members').onSnapshot(s => { this.members = s.docs.map(d => ({ uid: d.id, ...d.data() })); this.paint(); this.paintLb(); }, e => this.fail(e)));
       this.subs.push(ref.collection('words').orderBy('created', 'desc').limit(500).onSnapshot(s => { this.words = s.docs.map(d => ({ id: d.id, ...d.data() })); this.paint(); srcOpts(); if (S.src === 'oda') nextCard(); }, e => this.fail(e)));
       this.paint(); srcOpts(); } catch (e) { if (!quiet) this.fail(e); else { this.err = ''; this.paint(); } } },
   close() { this.subs.forEach(u => u()); this.subs = []; this.room = null; this.members = []; this.words = []; srcOpts(); },
-  async leave() { if (!this.room || !confirm('Odadan çıkılsın mı? Puanların odadan silinir.')) return; try { await this.db.collection('rooms').doc(this.room.id).collection('members').doc(this.user.uid).delete(); this.db.collection('users').doc(this.user.uid).set({ rooms: firebase.firestore.FieldValue.arrayRemove(this.room.id) }, { merge: true }).catch(() => { }); } catch (e) { } S.room = null; save(); this.close(); this.paint(); this.paintLb(); },
+  async leave() { if (!this.room || !confirm('Odadan çıkılsın mı? Puanların odadan silinir.')) return; try { await this.db.collection('rooms').doc(this.room.id).collection('members').doc(this.user.uid).delete(); this.db.collection('users').doc(this.user.uid).set({ rooms: firebase.firestore.FieldValue.arrayRemove(this.room.id) }, { merge: true }).catch(() => { }); } catch (e) { } const gone = this.room.id; this.mine = this.mine.filter(x => x.id !== gone); S.rooms = this.mine; S.room = null; save(); this.close();
+    if (this.mine.length) this.switchTo(this.mine[0].id); else { this.paint(); this.paintLb(); } },
   async addWord(w) { try { await this.db.collection('rooms').doc(this.room.id).collection('words').add({ en: w.en, tr: w.tr, ex: w.ex || '', by: this.user.uid, byName: this.name(), created: firebase.firestore.FieldValue.serverTimestamp() }); } catch (e) { this.fail(e); TM.toast('Odaya eklenemedi'); } },
   async delWord(id) { try { await this.db.collection('rooms').doc(this.room.id).collection('words').doc(id).delete(); } catch (e) { this.fail(e); } },
   xp(n) { if (!this.room || !this.user) return; this.db.collection('rooms').doc(this.room.id).collection('members').doc(this.user.uid).set({ name: this.name(), xp: firebase.firestore.FieldValue.increment(n) }, { merge: true }).catch(() => { }); },
@@ -1939,18 +1962,20 @@ const Cloud = {
       return;
     }
     acc.innerHTML = `<div class="lbl muted mono small">Hesap</div><p><b>${esc(this.name())}</b><br><span class="muted small">${esc(this.user.email || '')}</span></p><p class="small">Toplam XP: <b>${nf(S.xp || 0)}</b></p><div class="ctl"><button class="btn" type="button" id="aOut">Çıkış yap</button><a class="btn" href="hesap.html">Hesabım</a></div><p class="small muted" style="margin-top:8px"><a href="gizlilik.html">Gizlilik ve kişisel veriler</a></p>${err}`;
-    $('aOut').onclick = () => { this.close(); this.auth.signOut(); };
+    $('aOut').onclick = () => { this.close(); this.mine = []; S.rooms = []; save(); this.auth.signOut(); };
+    const addForm = `<div class="fd" style="margin-top:8px"><label for="rCode">Arkadaşının verdiği oda kodu</label><div class="ctl"><input class="inp grow" id="rCode" maxlength="12" placeholder="ör. K7QX2M" style="text-transform:uppercase;font-family:var(--f-mono)"><button class="btn pri" type="button" id="rJoin">Katıl</button></div></div>
+        <div class="fd" style="margin-top:14px"><label for="rName">ya da yeni oda aç</label><div class="ctl"><input class="inp grow" id="rName" maxlength="40" placeholder="Oda adı, ör. Salı akşamı grubu"><button class="btn" type="button" id="rNew">Oda aç</button></div></div>`;
+    const bindAdd = () => { if (!$('rJoin')) return; $('rJoin').onclick = () => this.join($('rCode').value); $('rNew').onclick = () => this.create($('rName').value.trim());
+      const q = new URLSearchParams(location.search).get('oda'); if (q && !this.mine.some(x => x.id === q.toUpperCase())) $('rCode').value = q; };
+    const chips = this.mine.length ? `<div class="lbl muted mono small">Odalarım · ${this.mine.length}</div><div class="rooms" id="rList">${this.mine.map(x => `<button type="button" data-r="${esc(x.id)}" class="${this.room && this.room.id === x.id ? 'on' : ''}">${esc(x.name)}</button>`).join('')}${this.room ? `<button type="button" class="add" id="rAdd">${this.addOpen ? '× Kapat' : '＋ Oda ekle'}</button>` : ''}</div>` : '';
+    const bindChips = () => { if ($('rList')) $('rList').onclick = e => { const b = e.target.closest('[data-r]'); if (b) this.switchTo(b.dataset.r); }; if ($('rAdd')) $('rAdd').onclick = () => { this.addOpen = !this.addOpen; this.paint(); if (this.addOpen) $('rCode').focus(); }; };
     if (!this.room) {
-      rb.innerHTML = `<div class="lbl muted mono small">Ortak oda</div>
-        <div class="fd" style="margin-top:8px"><label for="rCode">Arkadaşının verdiği oda kodu</label><div class="ctl"><input class="inp grow" id="rCode" maxlength="12" placeholder="ör. K7QX2M" style="text-transform:uppercase;font-family:var(--f-mono)"><button class="btn pri" type="button" id="rJoin">Katıl</button></div></div>
-        <div class="fd" style="margin-top:14px"><label for="rName">ya da yeni oda aç</label><div class="ctl"><input class="inp grow" id="rName" maxlength="40" placeholder="Oda adı, ör. Salı akşamı grubu"><button class="btn" type="button" id="rNew">Oda aç</button></div></div>${err}`;
-      $('rJoin').onclick = () => this.join($('rCode').value); $('rNew').onclick = () => this.create($('rName').value.trim());
-      const q = new URLSearchParams(location.search).get('oda'); if (q) $('rCode').value = q;
-      return;
+      rb.innerHTML = `${chips}<div class="lbl muted mono small">${this.mine.length ? 'Başka bir odaya katıl' : 'Ortak oda'}</div>${addForm}${err}`;
+      bindChips(); bindAdd(); return;
     }
     const link = location.origin + location.pathname + '?oda=' + this.room.id + '#oda', wk = weekKey();
     const M = this.members.slice().sort((a, b) => (b.xp || 0) - (a.xp || 0));
-    rb.innerHTML = `<div class="ctl"><div><div class="lbl muted mono small">Oda</div><b style="font-size:1.2rem">${esc(this.room.name || '')}</b></div><span class="sp"></span><div style="text-align:right"><div class="lbl muted mono small">Kod</div><span class="code">${esc(this.room.id)}</span></div></div>
+    rb.innerHTML = `${chips}${this.addOpen ? `<div class="radd">${addForm}</div>` : ''}<div class="ctl"><div><div class="lbl muted mono small">Oda</div><b style="font-size:1.2rem">${esc(this.room.name || '')}</b></div><span class="sp"></span><div style="text-align:right"><div class="lbl muted mono small">Kod</div><span class="code">${esc(this.room.id)}</span></div></div>
       <div class="ctl" style="margin:10px 0"><button class="btn pri" type="button" id="rShare">Davet linkini kopyala</button><button class="btn" type="button" id="rWa">WhatsApp ile gönder</button><span class="sp"></span><button class="btn" type="button" id="rLeave">Odadan çık</button></div>
       <div class="lbl muted mono small" style="margin-top:12px">Skor tablosu · toplam XP</div>
       <table class="lb"><thead><tr><th></th><th>Ad</th><th style="text-align:right">XP</th><th style="text-align:right">Bu hafta</th></tr></thead><tbody>${M.map((m, i) => `<tr class="${m.uid === this.user.uid ? 'me' : ''}"><td class="rk">${['🥇', '🥈', '🥉'][i] || i + 1}</td><td>${esc(m.name || '?')}${m.uid === this.room.owner ? ' <span class="chip">kurucu</span>' : ''}</td><td class="n">${nf(m.xp || 0)}</td><td class="n">${m.wk === wk ? nf(m.wkBest) : '–'}</td></tr>`).join('')}</tbody></table>
@@ -1958,7 +1983,7 @@ const Cloud = {
       <div class="wl">${this.words.length ? this.words.map(w => `<div><b>${esc(w.en)}</b><span>${esc(w.tr)}</span><small>${esc(w.byName || '')}</small>${w.by === this.user.uid || this.room.owner === this.user.uid ? `<button type="button" data-del="${esc(w.id)}" aria-label="Sil">×</button>` : ''}</div>`).join('') : '<p class="empty2">Henüz kelime yok. Kelimeler sekmesinden ekle; herkes görür.</p>'}</div>${err}`;
     $('rShare').onclick = async () => { try { await navigator.clipboard.writeText(link); TM.toast('Davet linki kopyalandı'); } catch (e) { prompt('Davet linki:', link); } };
     $('rWa').onclick = () => window.open('https://wa.me/?text=' + encodeURIComponent(`İngilizce Kulübü odama katıl: ${link} (kod: ${this.room.id})`), '_blank', 'noopener');
-    $('rLeave').onclick = () => this.leave();
+    $('rLeave').onclick = () => this.leave(); bindChips(); bindAdd();
     rb.querySelector('.wl').onclick = e => { const b = e.target.closest('[data-del]'); if (b && confirm('Kelime silinsin mi?')) this.delWord(b.dataset.del); };
   }
 };
