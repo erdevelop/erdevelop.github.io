@@ -120,6 +120,10 @@
 .rooms button { border: 1px solid var(--line); background: transparent; color: var(--text); border-radius: 999px; padding: 6px 12px; font: 500 13px var(--f-body); cursor: pointer; }
 .rooms button.on { background: var(--accent); border-color: var(--accent); color: var(--on-accent, #fff); }
 .rooms button.add { border-style: dashed; color: var(--muted); }
+.rpick { margin: 10px auto 0; max-width: 420px; border: 1px solid var(--line); border-radius: 12px; padding: 10px 12px; background: var(--card, transparent); text-align: left; }
+.rpick .lbl { margin-bottom: 8px; }
+.rpick .rooms { margin: 0; }
+.rpick .rooms button.done { opacity: .55; }
 .radd { border: 1px dashed var(--line); border-radius: 10px; padding: 10px 12px; margin-bottom: 12px; }
 .tabs2 .inst { flex: 0 0 auto; margin-left: auto; }
 .tabs2 .inst + .acc { margin-left: 8px; }
@@ -158,6 +162,7 @@
         <div class="fcard" id="fcard" tabindex="0" role="button" aria-label="Kartı çevir"><div class="in"><div class="f"><span class="tag" id="fTag"></span><button class="btn spk" type="button" id="fSpk" aria-label="Dinle">🔊</button><div class="w" id="fW"></div><div class="muted small">dokun · çevir</div></div><div class="b"><span class="tag" id="bTag"></span><div class="w" id="bW" style="font-size:1.6rem"></div><div class="m" id="bM"></div><div class="ex" id="bEx"></div></div></div></div>
         <div class="rate"><button class="btn no" type="button" id="r0">✗ Bilmedim</button><button class="btn" type="button" id="r1">~ Zor</button><button class="btn ok" type="button" id="r2">✓ Bildim</button></div>
         <div class="ctl" style="justify-content:center;margin-top:8px"><button class="btn" type="button" id="kShare">📤 Paylaş</button><button class="btn" type="button" id="kRoom" hidden>➕ Odaya ekle</button></div>
+        <div class="rpick" id="kRoomMenu" hidden></div>
         <p class="note" id="kInfo"></p>
       </div>
       <div class="panel">
@@ -1563,10 +1568,22 @@ function shareCard(o, name) {
 }
 function shareWord() { if (!cur) return; shareCard({ label: 'Kelime' + (cur.tag ? ' · ' + cur.tag : ''), big: cur.en, mean: cur.tr, ex: cur.ex ? [[cur.ex, '']] : [] }, 'kelime-' + cur.en); }
 function shareKalip() { const p = Z.cur; if (!p) return; const g = ZG(p.z); shareCard({ kalip: true, label: 'Konuşma kalıbı · ' + g[1], big: p.f, mean: p.tr, ex: p.ex }, 'kalip-' + p.f); }
-function kRoomBtn() { const b = $('kRoom'); if (!b) return; b.hidden = !(Cloud.room && Cloud.user && cur && S.src !== 'oda'); }
+function kRoomBtn() { const b = $('kRoom'); if (!b) return; const n = Cloud.mine.length; b.hidden = !(Cloud.user && n && cur && (S.src !== 'oda' || n > 1)); $('kRoomMenu').hidden = true; }
 $('kShare').onclick = shareWord; $('zShare').onclick = shareKalip;
-$('kRoom').onclick = async () => { if (!cur || !Cloud.room) return; if (Cloud.words.some(w => norm(w.en) === norm(cur.en))) return TM.toast('Bu kelime odada zaten var');
-  await Cloud.addWord({ en: cur.en, tr: cur.tr, ex: cur.ex || '' }); if (!Cloud.err) TM.toast('Odaya eklendi: ' + cur.en); };
+/* "Odaya ekle": birden fazla oda varsa hangisine ekleneceği sorulur */
+async function wordToRoom(id) { const w = { en: cur.en, tr: cur.tr, ex: cur.ex || '' }, ad = (Cloud.mine.find(x => x.id === id) || {}).name || id;
+  if (await Cloud.hasWord(id, w.en)) { TM.toast('Bu kelime “' + ad + '” odasında zaten var'); return false; }
+  const ok = await Cloud.addWord(w, id); if (ok) TM.toast('“' + ad + '” odasına eklendi: ' + w.en); return ok; }
+$('kRoom').onclick = async () => { if (!cur || !Cloud.user || !Cloud.mine.length) return; const m = $('kRoomMenu');
+  if (Cloud.mine.length === 1) return wordToRoom(Cloud.mine[0].id);
+  if (!m.hidden) { m.hidden = true; return; }
+  const L = Cloud.mine.filter(x => !(S.src === 'oda' && Cloud.room && x.id === Cloud.room.id));
+  m.innerHTML = `<div class="lbl muted mono small">“${esc(cur.en)}” hangi odaya eklensin?</div><div class="rooms">${L.map(x => `<button type="button" data-r="${esc(x.id)}">${esc(x.name)}</button>`).join('')}${L.length > 1 ? '<button type="button" class="add" data-r="*">Hepsine</button>' : ''}</div>`;
+  m.hidden = false; m.scrollIntoView({ block: 'nearest', behavior: 'smooth' });
+  m.onclick = async e => { const b = e.target.closest('[data-r]'); if (!b || b.disabled) return; b.disabled = true;
+    if (b.dataset.r === '*') { let n = 0; for (const x of L) if (await Cloud.hasWord(x.id, cur.en) || await Cloud.addWord({ en: cur.en, tr: cur.tr, ex: cur.ex || '' }, x.id)) n++; m.hidden = true; TM.toast(n + ' odaya eklendi: ' + cur.en); return; }
+    const ok = await wordToRoom(b.dataset.r); b.classList.add('done'); if (ok) m.hidden = true; else b.disabled = false; };
+};
 /* yazı tiplerini önceden yükle ki görselde de doğru görünsün */
 if (document.fonts && document.fonts.load) ['700 40px "Chakra Petch"', '600 40px "Chakra Petch"', '500 40px "IBM Plex Sans"', '600 40px "IBM Plex Sans"', '400 40px "IBM Plex Mono"', '500 40px "IBM Plex Mono"'].forEach(f => document.fonts.load(f, 'İğşçöü').catch(() => { }));
 
@@ -1930,7 +1947,9 @@ const Cloud = {
   close() { this.subs.forEach(u => u()); this.subs = []; this.room = null; this.members = []; this.words = []; srcOpts(); },
   async leave() { if (!this.room || !confirm('Odadan çıkılsın mı? Puanların odadan silinir.')) return; try { await this.db.collection('rooms').doc(this.room.id).collection('members').doc(this.user.uid).delete(); this.db.collection('users').doc(this.user.uid).set({ rooms: firebase.firestore.FieldValue.arrayRemove(this.room.id) }, { merge: true }).catch(() => { }); } catch (e) { } const gone = this.room.id; this.mine = this.mine.filter(x => x.id !== gone); S.rooms = this.mine; S.room = null; save(); this.close();
     if (this.mine.length) this.switchTo(this.mine[0].id); else { this.paint(); this.paintLb(); } },
-  async addWord(w) { try { await this.db.collection('rooms').doc(this.room.id).collection('words').add({ en: w.en, tr: w.tr, ex: w.ex || '', by: this.user.uid, byName: this.name(), created: firebase.firestore.FieldValue.serverTimestamp() }); } catch (e) { this.fail(e); TM.toast('Odaya eklenemedi'); } },
+  async addWord(w, id) { id = id || (this.room && this.room.id); if (!id) return false; try { await this.db.collection('rooms').doc(id).collection('words').add({ en: w.en, tr: w.tr, ex: w.ex || '', by: this.user.uid, byName: this.name(), created: firebase.firestore.FieldValue.serverTimestamp() }); return true; } catch (e) { this.fail(e); TM.toast('Odaya eklenemedi'); return false; } },
+  async hasWord(id, en) { if (this.room && this.room.id === id) return this.words.some(w => norm(w.en) === norm(en));
+    try { const q = await this.db.collection('rooms').doc(id).collection('words').where('en', '==', en).limit(1).get(); return !q.empty; } catch (e) { return false; } },
   async delWord(id) { try { await this.db.collection('rooms').doc(this.room.id).collection('words').doc(id).delete(); } catch (e) { this.fail(e); } },
   xp(n) { if (!this.room || !this.user) return; this.db.collection('rooms').doc(this.room.id).collection('members').doc(this.user.uid).set({ name: this.name(), xp: firebase.firestore.FieldValue.increment(n) }, { merge: true }).catch(() => { }); },
   async weekScore(wk, pts) { if (!this.room || !this.user) return; const me = this.members.find(m => m.uid === this.user.uid); if (me && me.wk === wk && me.wkBest >= pts) return;
