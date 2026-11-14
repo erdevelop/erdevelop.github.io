@@ -1,0 +1,536 @@
+<!doctype html>
+<html lang="tr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="theme-color" content="#f5f6f4" media="(prefers-color-scheme: light)">
+<meta name="theme-color" content="#151a18" media="(prefers-color-scheme: dark)">
+<title>Dosya Dönüştürücü</title>
+<meta name="description" content="PDF'i resme ve metne, Excel'i CSV ve JSON'a, Word'ü HTML ve Markdown'a çevir; bozuk Türkçe karakterli CSV dosyalarını düzelt. Dosyalar cihazından çıkmaz.">
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Crect width='64' height='64' rx='14' fill='%233f8f7a'/%3E%3Cpath d='M16 24h26l-7-7M48 40H22l7 7' fill='none' stroke='white' stroke-width='5' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E">
+<link rel="stylesheet" href="ortak.css">
+<style>
+.drop{margin-bottom:12px}
+.fc{border:1px solid var(--line);border-radius:12px;padding:12px;margin-top:10px;background:var(--bg)}
+.fc .top{display:flex;align-items:center;gap:10px}
+.fc .ic{width:40px;height:40px;border-radius:10px;background:var(--acc-soft);color:var(--acc);display:grid;place-items:center;font-weight:700;font-size:.72rem;flex:none;text-transform:uppercase}
+.fc .nm{flex:1;min-width:0}
+.fc .nm b{display:block;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.fc .nm small{color:var(--muted)}
+.fc .to{display:flex;flex-wrap:wrap;gap:6px;margin-top:10px}
+.fc .to .btn{flex:none}
+.fc .opt{display:flex;flex-wrap:wrap;gap:8px 14px;align-items:center;margin-top:8px;font-size:.85rem;color:var(--muted)}
+.fc .opt select{width:auto;padding:6px 8px;font-size:.85rem}
+.fc .opt label{margin:0;display:flex;gap:6px;align-items:center}
+.fc .note{font-size:.82rem;color:var(--acc);margin-top:8px}
+.fc .err{font-size:.85rem;color:var(--warn);margin-top:8px}
+.out{list-style:none;margin:0;padding:0}
+.out li{display:flex;align-items:center;gap:8px;padding:8px 0;border-bottom:1px dashed var(--line);font-size:.9rem}
+.out li:last-child{border-bottom:0}
+.out .nm{flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.pre{white-space:pre-wrap;word-break:break-word;max-height:260px;overflow:auto;background:var(--bg);border:1px solid var(--line);border-radius:10px;padding:10px;font-size:.8rem;margin-top:8px}
+.what{display:grid;grid-template-columns:repeat(auto-fill,minmax(220px,1fr));gap:8px;margin-top:8px}
+.what div{background:var(--bg);border:1px solid var(--line);border-radius:10px;padding:8px 10px;font-size:.84rem}
+.what b{display:block;font-size:.88rem}
+.what span{color:var(--muted)}
+.mt{display:grid;grid-template-columns:1fr auto 1fr;gap:8px;align-items:end}
+.mt .sw{height:46px}
+@media (max-width:560px){.mt{grid-template-columns:1fr 1fr}.mt .sw{display:none}}
+</style>
+</head>
+<body>
+<header><div class="wrap wide"><div class="hrow"><a class="back" href="../Tools.html" aria-label="Araçlar">‹</a><h1>🔁 Dosya Dönüştürücü</h1></div>
+  <div class="tabs"><button data-tab="dosya">Dosya</button><button data-tab="metin">Metin yapıştır</button><button data-tab="medya">Ses &amp; video</button></div>
+</div></header>
+<main class="wrap wide">
+
+  <!-- DOSYA -->
+  <section class="pane" data-pane="dosya">
+    <label class="drop" id="drop"><input type="file" multiple><b>Dosya seç veya buraya bırak</b>PDF, Excel, CSV, Word, Markdown, HTML, JSON, YAML, XML, SVG, metin ve resim dosyaları. Birden çok dosya eklenebilir. Ses ve video için <b>Ses &amp; video</b> sekmesi.</label>
+    <div class="box" id="fbox" hidden><div class="hrow"><h3 style="flex:1">Dosyalar</h3><button class="btn sm ghost" id="fclr">Temizle</button></div><div id="flist"></div></div>
+    <div class="box">
+      <h3>Neyi neye çevirebilirim?</h3>
+      <div class="what">
+        <div><b>PDF</b><span>→ PNG / JPG (her sayfa), metin</span></div>
+        <div><b>Excel (XLSX, XLS, ODS)</b><span>→ CSV, JSON, HTML tablo</span></div>
+        <div><b>CSV / TSV</b><span>→ Excel, JSON; bozuk Türkçe karakter düzeltme</span></div>
+        <div><b>Word (DOCX)</b><span>→ HTML, Markdown, metin</span></div>
+        <div><b>Markdown / HTML</b><span>→ birbirine, düz metin</span></div>
+        <div><b>JSON / YAML / XML</b><span>→ birbirine; JSON → CSV, Excel</span></div>
+        <div><b>SVG</b><span>→ PNG (1×, 2×, 4×)</span></div>
+        <div><b>Metin dosyası</b><span>→ UTF-8 (Türkçe karakter onarımı)</span></div>
+        <div><b>Her dosya</b><span>→ Base64 (resimler için data URI)</span></div>
+        <div><b>Ses / video</b><span>→ MP3, MP4, GIF, WAV… (Ses &amp; video sekmesi)</span></div>
+      </div>
+      <p class="hint">Resim biçimi değiştirmek (HEIC, JPG, PNG, WebP) için <a href="resim.html">Resim Araçları</a>, PDF birleştirme ve bölme için <a href="pdf.html">PDF Araçları</a>.</p>
+    </div>
+  </section>
+
+  <!-- METİN -->
+  <section class="pane" data-pane="metin">
+    <div class="box">
+      <div class="mt">
+        <div><label for="mf">Kaynak</label><select id="mf" data-keep></select></div>
+        <button class="btn ghost sw" id="msw" type="button" title="Yer değiştir" aria-label="Yer değiştir">⇄</button>
+        <div><label for="mto">Hedef</label><select id="mto" data-keep></select></div>
+      </div>
+      <label for="min">Metin</label><textarea id="min" spellcheck="false" class="mono" placeholder="Buraya yapıştır…"></textarea>
+      <div class="btns"><button class="btn" id="mgo">Dönüştür</button><button class="btn ghost" id="mpaste">Yapıştır</button></div>
+      <div id="mres" hidden>
+        <label for="mout">Sonuç</label><textarea id="mout" spellcheck="false" class="mono" readonly></textarea>
+        <div class="btns"><button class="btn ghost" id="mcp">Kopyala</button><button class="btn ghost" id="mdl">İndir</button><button class="btn ghost" id="muse">Sonucu kaynağa al</button></div>
+      </div>
+      <p class="err" id="merr" style="color:var(--warn);font-size:.88rem" hidden></p>
+    </div>
+  </section>
+
+  <!-- SES & VİDEO -->
+  <section class="pane" data-pane="medya">
+    <div class="box" id="eng">
+      <h3>Dönüştürme motoru</h3>
+      <p id="engMsg" class="ph" style="margin:6px 0 0"></p>
+      <div id="engWarn" hidden>
+        <p style="margin:8px 0 0;font-size:.92rem">Ses ve video dönüştürmek için <b>ffmpeg</b> motorunun tarayıcına bir kez indirilmesi gerekiyor:</p>
+        <div class="stat"><div><b>≈ 10 MB</b><span>indirilecek</span></div><div><b>32 MB</b><span>açılınca kapladığı yer</span></div><div><b>1 kez</b><span>sonra bu tarayıcıda saklanır</span></div></div>
+        <p class="hint">Mobil veride isen Wi-Fi'ye geçmeni öneririm. Dönüştürme bilgisayarda hızlı, telefonda yavaştır; telefonda birkaç dakikalık kısa dosyalar için uygundur. Dosyaların yine hiçbir yere yüklenmez.</p>
+        <div class="btns"><button class="btn" id="engGo">Motoru indir ve başlat (≈ 10 MB)</button></div>
+      </div>
+      <div id="engProg" hidden><div class="bar"><i id="engBar"></i></div><p class="hint" id="engTxt">Bağlanıyor…</p><div class="btns"><button class="btn sm ghost" id="engStop">İptal</button></div></div>
+      <p class="hint" id="engDel" hidden><a href="#" id="engDelA">Kayıtlı motoru sil (32 MB yer aç)</a></p>
+    </div>
+    <div id="mwrap" hidden>
+      <label class="drop" id="mdrop"><input type="file" accept="audio/*,video/*,.mkv,.avi,.mov,.flv,.wmv,.m4a,.flac,.ogg,.opus,.aac,.amr,.3gp" multiple><b>Ses ya da video seç veya buraya bırak</b>MP4, MOV, MKV, AVI, WebM, MP3, WAV, M4A, FLAC, OGG…</label>
+      <div class="box" id="mbox" hidden><div class="hrow"><h3 style="flex:1">Dosyalar</h3><button class="btn sm ghost" id="mclr">Temizle</button></div><div id="mlist"></div></div>
+    </div>
+    <div class="box">
+      <h3>Neler yapılabilir?</h3>
+      <div class="what">
+        <div><b>Video → MP3</b><span>videonun sesini çıkar</span></div>
+        <div><b>Video → MP4</b><span>küçült, çözünürlüğü düşür, uyumlu hale getir</span></div>
+        <div><b>Video → GIF</b><span>kısa bir bölümden hareketli resim</span></div>
+        <div><b>Ses → MP3, WAV, M4A, OGG</b><span>biçim değiştir, kaliteyi ayarla</span></div>
+        <div><b>Kırp</b><span>başlangıç ve bitiş zamanı vererek bir bölümü al</span></div>
+      </div>
+    </div>
+  </section>
+
+    <div class="box" id="obox" hidden><div class="hrow"><h3 style="flex:1">Sonuçlar <small class="ph" id="ocnt"></small></h3><button class="btn sm" id="zip">Hepsini ZIP indir</button><button class="btn sm ghost" id="oclr">Temizle</button></div>
+      <ul class="out" id="olist"></ul><div id="oprev"></div></div>
+
+<!-- sayfa açıklaması (AdSense / arama motorları için) -->
+<style>
+.er-about{max-width:860px;margin:40px auto 28px;padding:20px 22px;border:1px solid var(--line,rgba(127,127,127,.3));border-radius:12px;line-height:1.65;font-size:15px;color:inherit;box-sizing:border-box;text-align:left;font-family:inherit}
+.er-about h2{font-size:1.15rem;line-height:1.3;margin:0 0 10px;color:inherit}
+.er-about h3{font-size:1rem;margin:18px 0 6px;color:inherit}
+.er-about p{margin:0 0 10px}.er-about p,.er-about li{opacity:.9}
+.er-about ol,.er-about ul{padding-left:22px;margin:6px 0}.er-about li{margin:4px 0}
+.er-about a{color:inherit;text-decoration:underline}
+@media (max-width:600px){.er-about{margin:28px 12px 20px;padding:16px;font-size:14.5px}}
+</style>
+<section class="er-about" id="hakkinda" aria-labelledby="hakkinda-b">
+<h2 id="hakkinda-b">Dosya dönüştürücü hakkında</h2>
+<p>Gündelik işte en sık gereken dosya dönüşümlerini program kurmadan yapar: PDF sayfalarını resme çevirme ya da içindeki yazıyı çıkarma, Excel tablosunu CSV veya JSON'a çevirme, CSV'yi Excel'e aktarma, Word belgesini HTML, Markdown ya da düz metne dönüştürme ve JSON, YAML, XML gibi veri biçimleri arasında geçiş.</p>
+<p>Eski programların ya da Excel'in kaydettiği, Türkçe karakterleri "Ã¼", "Ä±", "ÅŸ" gibi bozuk görünen CSV ve metin dosyalarını da otomatik tanır ve düzgün UTF-8'e çevirir. Excel'e geri açılacak CSV dosyaları Türkçe Excel'in beklediği noktalı virgüllü biçimde ve doğru karakter kodlamasıyla kaydedilir.</p>
+<p>Dosyaların internete yüklenmez; bütün dönüşümler senin tarayıcında yapılır. Bu yüzden iş belgeleri ve kişisel dosyalar için de güvenle kullanılabilir.</p>
+<h3>Nasıl kullanılır?</h3><ol><li>Dosyayı seç ya da sayfaya sürükle; tür otomatik algılanır.</li><li>Dosyanın altında çıkan hedef biçimlerden birine bas.</li><li>Sonuç listede görünür; tek tek ya da hepsini ZIP olarak indir.</li><li>Elindeki veri bir dosya değil de kopyalanmış bir metinse <b>Metin yapıştır</b> sekmesini kullan.</li></ol>
+<h3>Bilmen gerekenler</h3><ul><li>Taranmış (resim olarak kaydedilmiş) PDF'lerden metin çıkmaz; bunun için yazı tanıma (OCR) gerekir.</li><li>Word → HTML/Markdown dönüşümünde başlıklar, listeler, tablolar ve kalın/italik korunur; sayfa düzeni ve yazı tipleri taşınmaz.</li><li>Ses ve video dönüşümü için ffmpeg motoru ilk kullanımda bir kez indirilir (yaklaşık 10 MB); sonra tarayıcıda saklanır. Uzun ve büyük videolar telefonda yavaş olabilir.</li><li>Word ↔ PDF, PowerPoint ve DWG dönüşümleri tarayıcıda düzgün yapılamadığı için burada yok.</li></ul>
+</section>
+</main>
+<footer>Dosyaların cihazında işlenir, hiçbir yere yüklenmez. · <a href="../kullanim.html" style="color:inherit">Kullanım şartları</a></footer>
+<script src="ortak.js"></script>
+<script>
+keepInputs('donustur');
+tabs('donustur');
+const LIB = { pdf: 'lib/pdf.min.js', xlsx: 'lib/xlsx.full.min.js', mammoth: 'lib/mammoth.browser.min.js', marked: 'lib/marked.min.js', turndown: 'lib/turndown.browser.umd.js', yaml: 'lib/js-yaml.min.js' };
+const need = async (...k) => { for (const x of k) await loadScript(LIB[x]); if (k.includes('pdf') && window.pdfjsLib) pdfjsLib.GlobalWorkerOptions.workerSrc = 'lib/pdf.worker.min.js'; };
+
+/* ================= ortak dönüşümler ================= */
+const enc = new TextEncoder();
+const blobT = (s, mime) => new Blob([s], { type: (mime || 'text/plain') + ';charset=utf-8' });
+const BOM = '﻿';
+
+/* metin çözme: UTF-8 → olmazsa Windows-1254 (Türkçe); UTF-8 içinde "Ã¼/Ä±" gibi bozulma varsa onarır */
+const CP1252 = { 0x20AC: 0x80, 0x201A: 0x82, 0x0192: 0x83, 0x201E: 0x84, 0x2026: 0x85, 0x2020: 0x86, 0x2021: 0x87, 0x02C6: 0x88, 0x2030: 0x89, 0x0160: 0x8A, 0x2039: 0x8B, 0x0152: 0x8C, 0x017D: 0x8E, 0x2018: 0x91, 0x2019: 0x92, 0x201C: 0x93, 0x201D: 0x94, 0x2022: 0x95, 0x2013: 0x96, 0x2014: 0x97, 0x02DC: 0x98, 0x2122: 0x99, 0x0161: 0x9A, 0x203A: 0x9B, 0x0153: 0x9C, 0x017E: 0x9E, 0x0178: 0x9F, 0x011E: 0xD0, 0x0130: 0xDD, 0x015E: 0xDE, 0x011F: 0xF0, 0x0131: 0xFD, 0x015F: 0xFE };
+const MOJI = /Ã[¼¶§‡–œ‰¢£¤©ª«®¯°±²³´µ·¸¹º»¿]|Ä[±°ŸžŒ]|Å[Ÿž]|Ã‡|Ãœ|Ã–/;
+function unMoji(s) {
+  const b = new Uint8Array(s.length); for (let i = 0; i < s.length; i++) { const c = s.charCodeAt(i); if (c < 256) b[i] = c; else if (CP1252[c] != null) b[i] = CP1252[c]; else return null; }
+  try { return new TextDecoder('utf-8', { fatal: true }).decode(b); } catch (e) { return null; }
+}
+function decodeText(buf) {
+  let u = new Uint8Array(buf), note = '';
+  if (u[0] === 0xFF && u[1] === 0xFE) return { text: new TextDecoder('utf-16le').decode(u.subarray(2)), note: 'UTF-16 dosya okundu' };
+  if (u[0] === 0xFE && u[1] === 0xFF) return { text: new TextDecoder('utf-16be').decode(u.subarray(2)), note: 'UTF-16 dosya okundu' };
+  let text;
+  try { text = new TextDecoder('utf-8', { fatal: true }).decode(u); }
+  catch (e) { text = new TextDecoder('windows-1254').decode(u); note = 'Dosya Windows-1254 (eski Türkçe) kodlamasındaydı; UTF-8\'e çevrildi'; }
+  if (text.charCodeAt(0) === 0xFEFF) text = text.slice(1);
+  /* iki kez kodlanmış (mojibake) metni satır satır onar */
+  if (MOJI.test(text)) { let n = 0; text = text.split('\n').map(l => { if (!MOJI.test(l)) return l; const f = unMoji(l); if (f != null) { n++; return f; } return l; }).join('\n'); if (n) note = `Bozuk Türkçe karakterler onarıldı (${n} satır)`; }
+  return { text, note };
+}
+
+/* CSV */
+function sniff(s) { const L = s.split(/\r?\n/).slice(0, 20).join('\n'), c = { ';': 0, ',': 0, '\t': 0, '|': 0 }; let q = false; for (const ch of L) { if (ch === '"') q = !q; else if (!q && ch in c) c[ch]++; } return Object.entries(c).sort((a, b) => b[1] - a[1])[0][1] ? Object.entries(c).sort((a, b) => b[1] - a[1])[0][0] : ','; }
+function parseCSV(s, d) {
+  d = d || sniff(s); const rows = []; let row = [], f = '', q = false;
+  for (let i = 0; i < s.length; i++) { const c = s[i];
+    if (q) { if (c === '"') { if (s[i + 1] === '"') { f += '"'; i++; } else q = false; } else f += c; }
+    else if (c === '"' && f === '') q = true; else if (c === d) { row.push(f); f = ''; } else if (c === '\n' || c === '\r') { if (c === '\r' && s[i + 1] === '\n') i++; row.push(f); rows.push(row); row = []; f = ''; } else f += c; }
+  if (f !== '' || row.length) { row.push(f); rows.push(row); }
+  while (rows.length && rows[rows.length - 1].every(x => x === '')) rows.pop();
+  return { rows, d };
+}
+const csvCell = (v, d) => { v = v == null ? '' : String(v); return /["\r\n]/.test(v) || v.includes(d) ? '"' + v.replace(/"/g, '""') + '"' : v; };
+const toCSV = (rows, d) => rows.map(r => r.map(v => csvCell(v, d)).join(d)).join('\r\n');
+/* Türkçe sayı ("1.234,56") ve ondalık virgülü sayıya çevir; diğerleri metin kalır */
+function cellVal(v) { const t = String(v).trim(); if (!t || t.length > 18 || /^0\d/.test(t)) return v;
+  if (/^-?\d+$/.test(t)) return +t; if (/^-?\d{1,3}(\.\d{3})+(,\d+)?$/.test(t)) return +t.replace(/\./g, '').replace(',', '.'); if (/^-?\d+,\d+$/.test(t)) return +t.replace(',', '.'); if (/^-?\d+\.\d+$/.test(t)) return +t; return v; }
+function rowsToObjs(rows) { const [h, ...r] = rows; const H = h.map((x, i) => String(x || '').trim() || 'sutun' + (i + 1)); return r.map(a => Object.fromEntries(H.map((k, i) => [k, cellVal(a[i] ?? '')]))); }
+function objsToRows(arr) { if (!Array.isArray(arr)) arr = [arr]; const flat = o => { const r = {}; const go = (x, p) => { if (x && typeof x === 'object' && !Array.isArray(x)) Object.entries(x).forEach(([k, v]) => go(v, p ? p + '.' + k : k)); else r[p || 'deger'] = Array.isArray(x) ? JSON.stringify(x) : x; }; go(o, ''); return r; };
+  const F = arr.map(flat), H = [...new Set(F.flatMap(Object.keys))]; return [H, ...F.map(o => H.map(k => o[k] ?? ''))]; }
+
+/* XML ↔ JSON */
+function xmlToObj(node) {
+  const o = {}; if (node.attributes) for (const a of node.attributes) o['@' + a.name] = a.value;
+  const kids = [...node.childNodes].filter(n => n.nodeType === 1), txt = [...node.childNodes].filter(n => n.nodeType === 3 || n.nodeType === 4).map(n => n.nodeValue).join('').trim();
+  kids.forEach(k => { const v = xmlToObj(k); if (k.nodeName in o) { if (!Array.isArray(o[k.nodeName])) o[k.nodeName] = [o[k.nodeName]]; o[k.nodeName].push(v); } else o[k.nodeName] = v; });
+  if (!kids.length && !node.attributes?.length) return txt === '' ? '' : cellVal(txt);
+  if (txt) o['#text'] = txt; return o;
+}
+function parseXML(s) { const d = new DOMParser().parseFromString(s, 'application/xml'), e = d.querySelector('parsererror'); if (e) throw new Error('XML okunamadı: ' + e.textContent.split('\n')[0]); const r = d.documentElement; return { [r.nodeName]: xmlToObj(r) }; }
+const xEsc = s => String(s).replace(/[&<>"]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
+const xName = k => { let n = String(k).replace(/[^\w.\-]/g, '_'); if (!/^[A-Za-z_]/.test(n)) n = '_' + n; return n; };
+function objToXml(v, name, ind = '') {
+  if (Array.isArray(v)) return v.map(x => objToXml(x, name, ind)).join('');
+  name = xName(name);
+  if (v === null || typeof v !== 'object') return `${ind}<${name}>${xEsc(v ?? '')}</${name}>\n`;
+  const at = Object.entries(v).filter(([k]) => k.startsWith('@')).map(([k, x]) => ` ${xName(k.slice(1))}="${xEsc(x)}"`).join('');
+  const kids = Object.entries(v).filter(([k]) => !k.startsWith('@') && k !== '#text'), t = v['#text'];
+  if (!kids.length) return `${ind}<${name}${at}>${xEsc(t ?? '')}</${name}>\n`;
+  return `${ind}<${name}${at}>\n${t != null ? ind + '  ' + xEsc(t) + '\n' : ''}${kids.map(([k, x]) => objToXml(x, k, ind + '  ')).join('')}${ind}</${name}>\n`;
+}
+function toXml(o) { const keys = o && typeof o === 'object' && !Array.isArray(o) ? Object.keys(o) : []; const body = Array.isArray(o) ? `<kok>\n${objToXml(o, 'oge', '  ')}</kok>\n` : keys.length === 1 && !Array.isArray(o[keys[0]]) ? objToXml(o[keys[0]], keys[0]) : objToXml(o, 'kok'); return '<?xml version="1.0" encoding="UTF-8"?>\n' + body; }
+
+/* Markdown / HTML */
+let TD = null;
+const turndown = () => { if (TD) return TD; TD = new TurndownService({ headingStyle: 'atx', codeBlockStyle: 'fenced', bulletListMarker: '-' });
+  /* tablolar: Markdown boru tablosu (ilk satır başlık) */
+  TD.addRule('tablo', { filter: 'table', replacement: (c, node) => { const rows = [...node.querySelectorAll('tr')].map(tr => [...tr.children].map(td => td.textContent.replace(/\s+/g, ' ').trim().replace(/\|/g, '\\|'))); if (!rows.length) return ''; const n = Math.max(...rows.map(r => r.length)), pad = r => [...r, ...Array(n - r.length).fill('')]; return '\n\n' + [pad(rows[0]), Array(n).fill('---'), ...rows.slice(1).map(pad)].map(r => '| ' + r.join(' | ') + ' |').join('\n') + '\n\n'; } });
+  return TD; };
+const htmlDoc = (body, title) => `<!doctype html>\n<html lang="tr">\n<head>\n<meta charset="utf-8">\n<meta name="viewport" content="width=device-width, initial-scale=1">\n<title>${xEsc(title || 'Belge')}</title>\n<style>body{font-family:system-ui,sans-serif;max-width:820px;margin:32px auto;padding:0 16px;line-height:1.6;color:#222}table{border-collapse:collapse}td,th{border:1px solid #ccc;padding:4px 8px}img{max-width:100%}pre{background:#f4f4f4;padding:10px;overflow:auto}</style>\n</head>\n<body>\n${body}\n</body>\n</html>\n`;
+const htmlText = h => { const d = new DOMParser().parseFromString(h, 'text/html'); d.querySelectorAll('script,style').forEach(e => e.remove()); d.querySelectorAll('br').forEach(b => b.replaceWith('\n')); d.querySelectorAll('p,div,li,h1,h2,h3,h4,h5,h6,tr,table').forEach(e => e.append('\n')); return (d.body.textContent || '').replace(/[ \t]+\n/g, '\n').replace(/\n{3,}/g, '\n\n').trim() + '\n'; };
+
+/* ================= dosya türleri ================= */
+const ext = n => (n.match(/\.([^.]+)$/) || [, ''])[1].toLowerCase();
+function kind(f) {
+  const e = ext(f.name), t = f.type;
+  if (e === 'pdf' || t === 'application/pdf') return 'pdf';
+  if (['xlsx', 'xls', 'xlsm', 'xlsb', 'ods'].includes(e)) return 'xlsx';
+  if (['csv', 'tsv'].includes(e)) return 'csv';
+  if (e === 'docx') return 'docx';
+  if (['md', 'markdown'].includes(e)) return 'md';
+  if (['html', 'htm'].includes(e)) return 'html';
+  if (e === 'json') return 'json';
+  if (['yaml', 'yml'].includes(e)) return 'yaml';
+  if (e === 'xml') return 'xml';
+  if (e === 'svg' || t === 'image/svg+xml') return 'svg';
+  if (t.startsWith('image/')) return 'img';
+  if (['txt', 'log', 'ini', 'cfg', 'lsp', 'scr', 'py', 'js', 'css', 'sql', 'bas', 'vb', 'cs'].includes(e) || t.startsWith('text/')) return 'txt';
+  if (e === 'doc') return 'doc';
+  return 'other';
+}
+const TITLE = { pdf: 'PDF', xlsx: 'Excel', csv: 'CSV', docx: 'Word', md: 'Markdown', html: 'HTML', json: 'JSON', yaml: 'YAML', xml: 'XML', svg: 'SVG', img: 'Resim', txt: 'Metin', doc: 'Eski Word', other: 'Dosya' };
+const TARGETS = {
+  pdf: [['png', 'PNG resimler'], ['jpg', 'JPG resimler'], ['txt', 'Metin']],
+  xlsx: [['csv', 'CSV'], ['json', 'JSON'], ['html', 'HTML tablo']],
+  csv: [['xlsx', 'Excel'], ['json', 'JSON'], ['utf8', 'UTF-8 CSV (Excel uyumlu)']],
+  docx: [['html', 'HTML'], ['md', 'Markdown'], ['txt', 'Metin']],
+  md: [['html', 'HTML'], ['txt', 'Metin']],
+  html: [['md', 'Markdown'], ['txt', 'Metin']],
+  json: [['yaml', 'YAML'], ['xml', 'XML'], ['csv', 'CSV'], ['xlsx', 'Excel']],
+  yaml: [['json', 'JSON'], ['xml', 'XML']],
+  xml: [['json', 'JSON'], ['yaml', 'YAML']],
+  svg: [['png1', 'PNG 1×'], ['png2', 'PNG 2×'], ['png4', 'PNG 4×']],
+  img: [['b64', 'Base64 (data URI)']],
+  txt: [['utf8', 'UTF-8 metin'], ['b64', 'Base64']],
+  doc: [], other: [['b64', 'Base64']]
+};
+const files = [];
+dropZone(byId('drop'), fs => { fs.forEach(f => files.push({ f, k: kind(f), id: Math.random().toString(36).slice(2) })); paintFiles(); });
+byId('fclr').onclick = () => { files.length = 0; paintFiles(); };
+function paintFiles() {
+  byId('fbox').hidden = !files.length;
+  byId('flist').innerHTML = files.map(x => {
+    const t = TARGETS[x.k] || [], big = x.f.size > 150 * 1048576;
+    const opt = x.k === 'pdf' ? `<div class="opt"><label>Çözünürlük <select data-o="dpi"><option value="1">72 dpi (ekran)</option><option value="2" selected>144 dpi</option><option value="4">288 dpi (baskı)</option></select></label><label>Sayfalar <input data-o="pg" placeholder="hepsi (ör. 1-3,5)" style="width:150px;padding:6px 8px;font-size:.85rem"></label></div>`
+      : (x.k === 'xlsx' || x.k === 'json') ? `<div class="opt"><label>CSV ayırıcı <select data-o="sep"><option value=";">; (Türkçe Excel)</option><option value=",">, (virgül)</option><option value="\t">sekme</option></select></label></div>`
+      : x.k === 'csv' ? `<div class="opt"><label>Çıktı ayırıcı <select data-o="sep"><option value=";">; (Türkçe Excel)</option><option value=",">, (virgül)</option><option value="\t">sekme</option></select></label><label><input type="checkbox" data-o="num" checked style="width:16px;height:16px"> "1.234,56" gibi sayıları sayıya çevir</label></div>` : '';
+    return `<div class="fc" data-id="${x.id}"><div class="top"><span class="ic">${esc(ext(x.f.name) || '?')}</span><span class="nm"><b>${esc(x.f.name)}</b><small>${TITLE[x.k]} · ${size(x.f.size)}</small></span><button class="ib" data-rm title="Kaldır" aria-label="Kaldır">✕</button></div>
+      ${opt}${t.length ? `<div class="to">${t.map(([k, l]) => `<button class="btn sm${k === 'b64' ? ' ghost' : ''}" data-to="${k}">→ ${l}</button>`).join('')}</div>` : `<p class="err">Eski Word (.doc) biçimi tarayıcıda okunamıyor. Word'de “Farklı kaydet → .docx” yapıp tekrar dene.</p>`}
+      ${big ? '<p class="err">Dosya çok büyük; işlem yavaş olabilir ya da telefonda bellek yetmeyebilir.</p>' : ''}<div class="msg"></div></div>`;
+  }).join('');
+}
+byId('flist').addEventListener('click', async e => {
+  const c = e.target.closest('.fc'); if (!c) return; const x = files.find(f => f.id === c.dataset.id);
+  if (e.target.closest('[data-rm]')) { files.splice(files.indexOf(x), 1); paintFiles(); return; }
+  const b = e.target.closest('[data-to]'); if (!b) return;
+  const o = {}; c.querySelectorAll('[data-o]').forEach(i => o[i.dataset.o] = i.type === 'checkbox' ? i.checked : i.value);
+  const msg = c.querySelector('.msg'), lbl = b.textContent; b.disabled = true; b.textContent = 'Çalışıyor…'; msg.innerHTML = '';
+  try { const n = await convert(x, b.dataset.to, o, (t) => { msg.innerHTML = `<p class="note">${esc(t)}</p>`; }); if (n) msg.innerHTML = `<p class="note">✓ ${esc(n)}</p>`; }
+  catch (err) { console.error(err); msg.innerHTML = `<p class="err">${esc(err.message || String(err))}</p>`; }
+  b.disabled = false; b.textContent = lbl;
+});
+
+/* ================= çıktı listesi ================= */
+const outs = [];
+function addOut(name, blob, prev) { outs.push({ name, blob, prev }); paintOuts(); if (outs.length === 1) setTimeout(() => byId('obox').scrollIntoView({ behavior: 'smooth', block: 'nearest' }), 60); }
+function paintOuts() {
+  byId('obox').hidden = !outs.length; byId('ocnt').textContent = outs.length ? `(${outs.length})` : ''; byId('zip').hidden = outs.length < 2;
+  byId('olist').innerHTML = outs.map((o, i) => `<li><span class="nm">${esc(o.name)}</span><small class="ph">${size(o.blob.size)}</small>${o.prev != null ? `<button class="ib" data-pv="${i}" title="Önizle">👁</button>` : ''}<button class="btn sm" data-dl="${i}">İndir</button></li>`).join('');
+}
+byId('olist').addEventListener('click', e => {
+  const d = e.target.closest('[data-dl]'); if (d) { const o = outs[+d.dataset.dl]; download(o.name, o.blob); return; }
+  const p = e.target.closest('[data-pv]'); if (p) { const o = outs[+p.dataset.pv]; byId('oprev').innerHTML = `<div class="hrow" style="margin-top:10px"><b style="flex:1;font-size:.9rem">${esc(o.name)}</b><button class="btn sm ghost" id="pvcp">Kopyala</button></div><div class="pre mono">${esc(o.prev.slice(0, 20000))}${o.prev.length > 20000 ? '\n…' : ''}</div>`; byId('pvcp').onclick = ev => copy(o.prev, ev.currentTarget); }
+});
+byId('oclr').onclick = () => { outs.length = 0; byId('oprev').innerHTML = ''; paintOuts(); };
+byId('zip').onclick = async () => download('donusturulen-' + stamp() + '.zip', await makeZip(outs.map(o => ({ name: o.name, data: o.blob }))));
+const outText = (name, s, mime) => addOut(name, blobT(s, mime), s);
+
+/* ================= dönüştür ================= */
+function pageList(s, n) { if (!s.trim()) return [...Array(n)].map((_, i) => i + 1); const r = new Set(); s.split(',').forEach(p => { const m = p.trim().match(/^(\d+)(?:\s*-\s*(\d+))?$/); if (!m) return; const a = +m[1], b = m[2] ? +m[2] : a; for (let i = Math.min(a, b); i <= Math.max(a, b); i++) if (i >= 1 && i <= n) r.add(i); }); return [...r].sort((a, b) => a - b); }
+const canvasBlob = (cv, type, q) => new Promise(ok => cv.toBlob(ok, type, q));
+
+async function convert(x, to, o, prog) {
+  const f = x.f, base = baseName(f.name), k = x.k;
+  const text = async () => decodeText(await f.arrayBuffer());
+
+  if (to === 'b64') { const u = new Uint8Array(await f.arrayBuffer()); let s = ''; for (let i = 0; i < u.length; i += 0x8000) s += String.fromCharCode.apply(null, u.subarray(i, i + 0x8000)); const b = btoa(s), out = k === 'img' || k === 'svg' ? `data:${f.type || 'application/octet-stream'};base64,${b}` : b; outText(base + '.base64.txt', out); return 'Base64 hazır'; }
+
+  if (k === 'pdf') {
+    await need('pdf'); const pdf = await pdfjsLib.getDocument({ data: new Uint8Array(await f.arrayBuffer()) }).promise, P = pageList(o.pg || '', pdf.numPages);
+    if (to === 'txt') { let all = ''; for (const i of P) { prog(`Sayfa ${i} / ${pdf.numPages}`); const tc = await (await pdf.getPage(i)).getTextContent(); let line = ''; tc.items.forEach(it => { line += it.str; if (it.hasEOL) line += '\n'; }); all += (P.length > 1 ? `\n——— Sayfa ${i} ———\n` : '') + line.trim() + '\n'; }
+      if (!all.replace(/[—\s\dSayf]/g, '')) throw new Error('Bu PDF\'te seçilebilir yazı yok; büyük ihtimalle taranmış bir belge (OCR gerekir).');
+      outText(base + '.txt', all.trim() + '\n'); return `${P.length} sayfanın yazısı çıkarıldı`; }
+    const sc = +o.dpi || 2, jpg = to === 'jpg';
+    for (const i of P) { prog(`Sayfa ${i} / ${pdf.numPages} çiziliyor…`); const pg = await pdf.getPage(i), vp = pg.getViewport({ scale: sc }), cv = document.createElement('canvas'); cv.width = Math.ceil(vp.width); cv.height = Math.ceil(vp.height); const g = cv.getContext('2d'); g.fillStyle = '#fff'; g.fillRect(0, 0, cv.width, cv.height); await pg.render({ canvasContext: g, viewport: vp }).promise;
+      addOut(`${base}-sayfa${String(i).padStart(String(pdf.numPages).length, '0')}.${jpg ? 'jpg' : 'png'}`, await canvasBlob(cv, jpg ? 'image/jpeg' : 'image/png', .9)); cv.width = cv.height = 0; }
+    return `${P.length} sayfa ${jpg ? 'JPG' : 'PNG'} olarak hazır`;
+  }
+
+  if (k === 'xlsx') {
+    await need('xlsx'); const wb = XLSX.read(new Uint8Array(await f.arrayBuffer()), { type: 'array', cellDates: true }), names = wb.SheetNames, one = names.length === 1;
+    const nm = (s, e) => one ? `${base}.${e}` : `${base}-${s.replace(/[\\/:*?"<>|]/g, '_')}.${e}`;
+    const sep = o.sep || ';', p2d = d => p2(d.getDate()) + '.' + p2(d.getMonth() + 1) + '.' + d.getFullYear();
+    if (to === 'csv') names.forEach(s => { const rows = XLSX.utils.sheet_to_json(wb.Sheets[s], { header: 1, raw: true, defval: '', blankrows: false }).map(r => r.map(v => v instanceof Date ? p2d(v) : typeof v === 'number' && sep === ';' ? String(v).replace('.', ',') : v)); outText(nm(s, 'csv'), BOM + toCSV(rows, sep), 'text/csv'); });
+    if (to === 'json') { const all = {}; names.forEach(s => all[s] = XLSX.utils.sheet_to_json(wb.Sheets[s], { defval: '', raw: true })); const v = one ? all[names[0]] : all; outText(base + '.json', JSON.stringify(v, (k2, v2) => v2 instanceof Date ? v2.toISOString().slice(0, 10) : v2, 2), 'application/json'); }
+    if (to === 'html') { const body = names.map(s => (one ? '' : `<h2>${xEsc(s)}</h2>\n`) + XLSX.utils.sheet_to_html(wb.Sheets[s], { header: '', footer: '' })).join('\n'); outText(base + '.html', htmlDoc(body, base), 'text/html'); }
+    return `${names.length} sayfa${names.length > 1 ? ' (her biri ayrı dosya)' : ''} dönüştürüldü`;
+  }
+
+  if (k === 'csv' || (k === 'txt' && to !== 'utf8')) {
+    const { text: s, note } = await text(); const P = parseCSV(s, ext(f.name) === 'tsv' ? '\t' : null); if (!P.rows.length) throw new Error('Dosya boş.');
+    const sepName = { ';': 'noktalı virgül', ',': 'virgül', '\t': 'sekme', '|': 'dikey çizgi' }[P.d];
+    if (to === 'xlsx') { await need('xlsx'); const rows = o.num ? P.rows.map((r, i) => i ? r.map(cellVal) : r) : P.rows; const ws = XLSX.utils.aoa_to_sheet(rows), wb = XLSX.utils.book_new(); ws['!cols'] = rows[0].map((_, c) => ({ wch: Math.min(40, Math.max(6, ...rows.slice(0, 200).map(r => String(r[c] ?? '').length))) })); XLSX.utils.book_append_sheet(wb, ws, 'Sayfa1');
+      addOut(base + '.xlsx', new Blob([XLSX.write(wb, { type: 'array', bookType: 'xlsx' })], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' })); }
+    if (to === 'json') outText(base + '.json', JSON.stringify(rowsToObjs(P.rows), null, 2), 'application/json');
+    if (to === 'utf8') outText(base + '-utf8.csv', BOM + toCSV(P.rows, o.sep || ';'), 'text/csv');
+    return `${P.rows.length} satır · ayırıcı: ${sepName}${note ? ' · ' + note : ''}`;
+  }
+
+  if (k === 'txt' && to === 'utf8') { const { text: s, note } = await text(); outText(base + '-utf8.' + (ext(f.name) || 'txt'), s); return note || 'Dosya zaten düzgün UTF-8; yeniden kaydedildi'; }
+
+  if (k === 'docx') {
+    await need('mammoth'); const ab = await f.arrayBuffer();
+    if (to === 'txt') { const r = await mammoth.extractRawText({ arrayBuffer: ab }); outText(base + '.txt', r.value.replace(/\n{3,}/g, '\n\n').trim() + '\n'); return 'Metin çıkarıldı'; }
+    const r = await mammoth.convertToHtml({ arrayBuffer: ab }), warn = r.messages.filter(m => m.type === 'warning').length;
+    if (to === 'html') outText(base + '.html', htmlDoc(r.value, base), 'text/html');
+    if (to === 'md') { await need('turndown'); outText(base + '.md', turndown().turndown(r.value) + '\n', 'text/markdown'); }
+    return 'Dönüştürüldü' + (warn ? ` · ${warn} biçim aktarılamadı (ör. özel stiller)` : '');
+  }
+
+  if (k === 'md') { const { text: s } = await text(); await need('marked'); const h = marked.parse(s); if (to === 'html') outText(base + '.html', htmlDoc(h, base), 'text/html'); if (to === 'txt') outText(base + '.txt', htmlText(h)); return 'Dönüştürüldü'; }
+  if (k === 'html') { const { text: s } = await text(); if (to === 'md') { await need('turndown'); const d = new DOMParser().parseFromString(s, 'text/html'); d.querySelectorAll('script,style,noscript').forEach(e => e.remove()); outText(base + '.md', turndown().turndown(d.body.innerHTML) + '\n', 'text/markdown'); } if (to === 'txt') outText(base + '.txt', htmlText(s)); return 'Dönüştürüldü'; }
+
+  if (k === 'json' || k === 'yaml' || k === 'xml') {
+    const { text: s } = await text(); let v;
+    if (k === 'json') { try { v = JSON.parse(s); } catch (e) { throw new Error('JSON okunamadı: ' + e.message); } }
+    if (k === 'yaml') { await need('yaml'); v = jsyaml.load(s); }
+    if (k === 'xml') v = parseXML(s);
+    if (to === 'json') outText(base + '.json', JSON.stringify(v, null, 2), 'application/json');
+    if (to === 'yaml') { await need('yaml'); outText(base + '.yaml', jsyaml.dump(v, { lineWidth: 120, noRefs: true }), 'text/yaml'); }
+    if (to === 'xml') outText(base + '.xml', toXml(v), 'application/xml');
+    if (to === 'csv' || to === 'xlsx') { const arr = Array.isArray(v) ? v : (Object.values(v).find(Array.isArray) || [v]); const rows = objsToRows(arr);
+      if (to === 'csv') outText(base + '.csv', BOM + toCSV(rows, o.sep || ';'), 'text/csv');
+      else { await need('xlsx'); const wb = XLSX.utils.book_new(); XLSX.utils.book_append_sheet(wb, XLSX.utils.aoa_to_sheet(rows), 'Sayfa1'); addOut(base + '.xlsx', new Blob([XLSX.write(wb, { type: 'array', bookType: 'xlsx' })], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' })); }
+      return `${rows.length - 1} satır, ${rows[0].length} sütun`; }
+    return 'Dönüştürüldü';
+  }
+
+  if (k === 'svg') {
+    const sc = +to.slice(3) || 1, { text: s } = await text(), d = new DOMParser().parseFromString(s, 'image/svg+xml'), sv = d.documentElement;
+    if (sv.nodeName !== 'svg') throw new Error('SVG okunamadı.');
+    let w = parseFloat(sv.getAttribute('width')), h = parseFloat(sv.getAttribute('height')); const vb = (sv.getAttribute('viewBox') || '').split(/[\s,]+/).map(Number);
+    if (!(w > 0 && h > 0)) { if (vb.length === 4 && vb[2] > 0) { w = vb[2]; h = vb[3]; } else { w = 512; h = 512; } }
+    if (/%/.test(sv.getAttribute('width') || '')) { w = vb[2] || 512; h = vb[3] || 512; }
+    sv.setAttribute('width', w); sv.setAttribute('height', h); if (!sv.getAttribute('xmlns')) sv.setAttribute('xmlns', 'http://www.w3.org/2000/svg');
+    const url = URL.createObjectURL(new Blob([new XMLSerializer().serializeToString(sv)], { type: 'image/svg+xml' }));
+    const img = await new Promise((ok, no) => { const i = new Image(); i.onload = () => ok(i); i.onerror = () => no(new Error('SVG çizilemedi (dış kaynak ya da yazı tipi kullanıyor olabilir).')); i.src = url; });
+    const cv = document.createElement('canvas'); cv.width = Math.round(w * sc); cv.height = Math.round(h * sc); cv.getContext('2d').drawImage(img, 0, 0, cv.width, cv.height); URL.revokeObjectURL(url);
+    addOut(`${base}@${sc}x.png`, await canvasBlob(cv, 'image/png')); return `${cv.width} × ${cv.height} px PNG hazır`;
+  }
+  throw new Error('Bu dönüşüm desteklenmiyor.');
+}
+
+/* ================= METİN sekmesi ================= */
+const MF = [['json', 'JSON'], ['yaml', 'YAML'], ['xml', 'XML'], ['csv', 'CSV / Excel’den yapıştır'], ['md', 'Markdown'], ['html', 'HTML'], ['txt', 'Düz metin'], ['b64', 'Base64']];
+const MT = { json: ['yaml', 'xml', 'csv'], yaml: ['json', 'xml'], xml: ['json', 'yaml'], csv: ['json', 'md', 'html'], md: ['html', 'txt'], html: ['md', 'txt'], txt: ['b64', 'url', 'moji'], b64: ['txt'] };
+const MTL = { json: 'JSON', yaml: 'YAML', xml: 'XML', csv: 'CSV (;)', md: 'Markdown', html: 'HTML', txt: 'Düz metin', b64: 'Base64', url: 'URL kodlama (%20…)', moji: 'Bozuk Türkçe karakter onarımı' };
+const mf = byId('mf'), mto = byId('mto');
+mf.innerHTML = MF.map(([k, l]) => `<option value="${k}">${l}</option>`).join('');
+const fillTo = () => { const keep = mto.value; mto.innerHTML = MT[mf.value].map(k => `<option value="${k}">${MTL[k]}</option>`).join(''); if ([...mto.options].some(o => o.value === keep)) mto.value = keep; };
+{ const v = LS.get('donustur:mf'); if (v && MT[v]) mf.value = v; } fillTo(); { const v = LS.get('donustur:mto'); if (v && [...mto.options].some(o => o.value === v)) mto.value = v; }
+mf.addEventListener('change', fillTo);
+byId('msw').onclick = () => { const a = mf.value, b = mto.value; if (!MT[b] || !MT[b].includes(a)) return toast('Bu yönde dönüşüm yok'); mf.value = b; fillTo(); mto.value = a; if (!byId('mres').hidden) { byId('min').value = byId('mout').value; } };
+byId('mpaste').onclick = async () => { try { byId('min').value = await navigator.clipboard.readText(); } catch (e) { toast('Pano okunamadı; uzun basıp yapıştır'); } };
+const MEXT = { json: 'json', yaml: 'yaml', xml: 'xml', csv: 'csv', md: 'md', html: 'html', txt: 'txt', b64: 'txt', url: 'txt', moji: 'txt' };
+byId('mgo').onclick = async () => {
+  const s = byId('min').value, a = mf.value, b = mto.value, E = byId('merr'); E.hidden = true;
+  if (!s.trim()) return toast('Önce metin yapıştır');
+  try {
+    let r, v;
+    if (a === 'json') v = JSON.parse(s);
+    if (a === 'yaml') { await need('yaml'); v = jsyaml.load(s); }
+    if (a === 'xml') v = parseXML(s);
+    if (a === 'csv') { const P = parseCSV(s, s.includes('\t') && !s.includes(';') ? '\t' : null); if (b === 'json') r = JSON.stringify(rowsToObjs(P.rows), null, 2);
+      else { const [h, ...rs] = P.rows; if (b === 'md') { const c = x => String(x ?? '').replace(/\|/g, '\\|').replace(/\n/g, ' '); r = `| ${h.map(c).join(' | ')} |\n| ${h.map(() => '---').join(' | ')} |\n` + rs.map(x => `| ${h.map((_, i) => c(x[i])).join(' | ')} |`).join('\n'); } else r = `<table>\n<thead><tr>${h.map(x => `<th>${xEsc(x)}</th>`).join('')}</tr></thead>\n<tbody>\n${rs.map(x => `<tr>${h.map((_, i) => `<td>${xEsc(x[i] ?? '')}</td>`).join('')}</tr>`).join('\n')}\n</tbody>\n</table>`; } }
+    if (v !== undefined) { if (b === 'json') r = JSON.stringify(v, null, 2); if (b === 'yaml') { await need('yaml'); r = jsyaml.dump(v, { lineWidth: 120, noRefs: true }); } if (b === 'xml') r = toXml(v); if (b === 'csv') r = toCSV(objsToRows(Array.isArray(v) ? v : (Object.values(v).find(Array.isArray) || [v])), ';'); }
+    if (a === 'md') { await need('marked'); const h = marked.parse(s); r = b === 'html' ? h : htmlText(h); }
+    if (a === 'html') { if (b === 'md') { await need('turndown'); r = turndown().turndown(s); } else r = htmlText(s); }
+    if (a === 'txt') { if (b === 'b64') r = btoa(String.fromCharCode(...enc.encode(s))); if (b === 'url') r = encodeURIComponent(s); if (b === 'moji') { const f = s.split('\n').map(l => unMoji(l) ?? l).join('\n'); r = f; if (f === s) toast('Onarılacak bozuk karakter bulunamadı'); } }
+    if (a === 'b64') { const bin = atob(s.replace(/^data:[^,]*,/, '').replace(/\s/g, '')); r = new TextDecoder('utf-8').decode(Uint8Array.from(bin, c => c.charCodeAt(0))); }
+    byId('mout').value = r ?? ''; byId('mres').hidden = false;
+  } catch (e) { E.textContent = 'Okunamadı: ' + String(e.message || e).replace(/^(SyntaxError|YAMLException|Error): /, ''); E.hidden = false; byId('mres').hidden = true; }
+};
+byId('mcp').onclick = e => copy(byId('mout').value, e.currentTarget);
+byId('mdl').onclick = () => download('donusum-' + stamp() + '.' + MEXT[mto.value], blobT((mto.value === 'csv' ? BOM : '') + byId('mout').value));
+byId('muse').onclick = () => { const b = mto.value; if (MT[b]) { mf.value = b; fillTo(); } byId('min').value = byId('mout').value; byId('mres').hidden = true; };
+
+/* ================= SES & VİDEO (ffmpeg.wasm) ================= */
+const FFV = '0.12.6', CORE = [`https://cdn.jsdelivr.net/npm/@ffmpeg/core@${FFV}/dist/umd/`, `https://unpkg.com/@ffmpeg/core@${FFV}/dist/umd/`];
+const FCACHE = 'erdevelop-ffmpeg-' + FFV, WASM_MB = 32.1;
+let FF = null, ffBusy = false, dlAbort = null;
+const engMsg = t => byId('engMsg').textContent = t;
+async function engCached() { try { const c = await caches.open(FCACHE); return !!(await c.match('ffmpeg-core.wasm')) && !!(await c.match('ffmpeg-core.js')); } catch (e) { return false; } }
+async function engState() {
+  if (FF) { engMsg('✓ Motor hazır.'); byId('engWarn').hidden = true; byId('mwrap').hidden = false; byId('engDel').hidden = !(await engCached()); return; }
+  if (await engCached()) { engMsg('Motor bu tarayıcıda kayıtlı; yeniden indirilmeden açılıyor…'); byId('engWarn').hidden = true; startEngine(); }
+  else { engMsg('Motor henüz indirilmedi.'); byId('engWarn').hidden = false; }
+}
+/* motor dosyasını ilerleme göstererek indir, tarayıcı önbelleğine kaydet */
+async function getCore(name, onp) {
+  let c = null; try { c = await caches.open(FCACHE); const hit = await c.match(name); if (hit) return URL.createObjectURL(await hit.blob()); } catch (e) { }
+  let lastErr;
+  for (const base of CORE) {
+    try {
+      dlAbort = new AbortController(); const r = await fetch(base + name, { signal: dlAbort.signal }); if (!r.ok) throw new Error('HTTP ' + r.status);
+      const rd = r.body.getReader(), parts = []; let got = 0;
+      for (;;) { const { done, value } = await rd.read(); if (done) break; parts.push(value); got += value.length; onp(got); }
+      const type = name.endsWith('.wasm') ? 'application/wasm' : 'text/javascript', blob = new Blob(parts, { type });
+      try { if (c) await c.put(name, new Response(blob, { headers: { 'Content-Type': type } })); } catch (e) { }
+      return URL.createObjectURL(blob);
+    } catch (e) { if (e.name === 'AbortError') throw e; lastErr = e; }
+  }
+  throw lastErr || new Error('Motor indirilemedi');
+}
+async function startEngine() {
+  if (FF || ffBusy) return; ffBusy = true;
+  byId('engWarn').hidden = true; byId('engProg').hidden = false; byId('engStop').hidden = false;
+  const bar = byId('engBar'), txt = byId('engTxt');
+  try {
+    await loadScript('lib/ffmpeg/ffmpeg.js');
+    const js = await getCore('ffmpeg-core.js', () => { });
+    const wasm = await getCore('ffmpeg-core.wasm', n => { const mb = n / 1048576; bar.style.width = Math.min(100, mb / WASM_MB * 100) + '%'; txt.textContent = `İndiriliyor: ${fmt(mb, 1)} / ${fmt(WASM_MB, 1)} MB`; });
+    txt.textContent = 'Motor başlatılıyor…'; bar.style.width = '100%'; byId('engStop').hidden = true;
+    const f = new FFmpegWASM.FFmpeg();
+    await f.load({ coreURL: js, wasmURL: wasm });
+    FF = f; byId('engProg').hidden = true; toast('Motor hazır');
+  } catch (e) {
+    byId('engProg').hidden = true; byId('engWarn').hidden = false;
+    engMsg(e.name === 'AbortError' ? 'İndirme iptal edildi.' : 'Motor yüklenemedi: ' + (e.message || e) + '. İnternet bağlantını kontrol edip tekrar dene.');
+  }
+  ffBusy = false; engState();
+}
+byId('engGo').onclick = startEngine;
+byId('engStop').onclick = () => { if (dlAbort) dlAbort.abort(); };
+byId('engDelA').onclick = async e => { e.preventDefault(); if (!confirm('Kayıtlı ses/video motoru silinsin mi? Bir sonraki kullanımda yeniden indirilir (≈ 10 MB).')) return; try { await caches.delete(FCACHE); } catch (x) { } toast('Silindi'); byId('engDel').hidden = true; };
+let medTab = false;
+const _goTab = document.querySelector('.tabs [data-tab="medya"]'); _goTab.addEventListener('click', () => { if (!medTab) { medTab = true; engState(); } });
+if (_goTab.classList.contains('on')) { medTab = true; engState(); }
+
+const MED = [];
+dropZone(byId('mdrop'), fs => { fs.forEach(f => { const v = /^video\//.test(f.type) || /\.(mp4|mov|mkv|avi|webm|flv|wmv|3gp|m4v)$/i.test(f.name); MED.push({ f, v, id: Math.random().toString(36).slice(2), dur: 0 }); probe(MED[MED.length - 1]); }); paintMed(); });
+byId('mclr').onclick = () => { MED.length = 0; paintMed(); };
+function probe(x) { const el = document.createElement(x.v ? 'video' : 'audio'), u = URL.createObjectURL(x.f); el.preload = 'metadata'; el.onloadedmetadata = () => { x.dur = el.duration; if (x.v) { x.w = el.videoWidth; x.h = el.videoHeight; } URL.revokeObjectURL(u); paintMed(); }; el.onerror = () => URL.revokeObjectURL(u); el.src = u; }
+const hms = t => { if (!isFinite(t) || !t) return '—'; t = Math.round(t); const h = Math.floor(t / 3600), m = Math.floor(t % 3600 / 60), s = t % 60; return (h ? h + ':' + p2(m) : m) + ':' + p2(s); };
+const pTime = s => { s = String(s || '').trim().replace(',', '.'); if (!s) return null; const a = s.split(':').map(Number); if (a.some(isNaN)) return NaN; return a.reduce((t, v) => t * 60 + v, 0); };
+function paintMed() {
+  byId('mbox').hidden = !MED.length;
+  byId('mlist').innerHTML = MED.map(x => {
+    const T = x.v ? [['mp3', 'MP3 (sesi çıkar)'], ['mp4', 'MP4'], ['gif', 'GIF']] : [['mp3', 'MP3'], ['wav', 'WAV'], ['m4a', 'M4A'], ['ogg', 'OGG']];
+    const big = x.f.size > 300 * 1048576 ? '<p class="err">Çok büyük dosya: tarayıcının belleği yetmeyebilir. Önce kırpmayı dene.</p>' : x.f.size > 80 * 1048576 ? '<p class="note">Büyük dosya: işlem birkaç dakika sürebilir.</p>' : '';
+    return `<div class="fc" data-id="${x.id}"><div class="top"><span class="ic">${esc(ext(x.f.name) || '?')}</span><span class="nm"><b>${esc(x.f.name)}</b><small>${x.v ? 'Video' : 'Ses'} · ${size(x.f.size)} · ${hms(x.dur)}${x.w ? ' · ' + x.w + '×' + x.h : ''}</small></span><button class="ib" data-rm title="Kaldır" aria-label="Kaldır">✕</button></div>
+      <div class="opt"><label>Başlangıç <input data-o="ss" placeholder="0:00" style="width:80px;padding:6px 8px;font-size:.85rem"></label><label>Bitiş <input data-o="to" placeholder="${hms(x.dur) === '—' ? 'sonu' : hms(x.dur)}" style="width:80px;padding:6px 8px;font-size:.85rem"></label>
+        <label>Ses kalitesi <select data-o="br"><option value="128">128 kbps</option><option value="192" selected>192 kbps</option><option value="320">320 kbps</option></select></label>
+        ${x.v ? `<label>Video boyutu <select data-o="h"><option value="0">orijinal</option><option value="1080">1080p</option><option value="720" selected>720p</option><option value="480">480p</option></select></label><label>GIF <select data-o="gw"><option value="320">320 px</option><option value="480" selected>480 px</option><option value="640">640 px</option></select></label><label>GIF kare/sn <select data-o="fps"><option value="10" selected>10</option><option value="15">15</option></select></label>` : ''}</div>
+      <div class="to">${T.map(([k, l]) => `<button class="btn sm" data-mt="${k}">→ ${l}</button>`).join('')}<button class="btn sm red" data-stop hidden>Durdur</button></div>${big}
+      <div class="bar" hidden><i></i></div><div class="msg"></div></div>`;
+  }).join('');
+}
+let curJob = null;
+byId('mlist').addEventListener('click', async e => {
+  const c = e.target.closest('.fc'); if (!c) return; const x = MED.find(m => m.id === c.dataset.id);
+  if (e.target.closest('[data-rm]')) { MED.splice(MED.indexOf(x), 1); paintMed(); return; }
+  if (e.target.closest('[data-stop]')) { if (curJob) { curJob.stop = true; try { FF.terminate(); } catch (x2) { } FF = null; toast('Durduruldu; motor yeniden başlatılıyor'); startEngine(); } return; }
+  const b = e.target.closest('[data-mt]'); if (!b) return;
+  if (!FF) return toast('Motor hazır değil');
+  if (curJob) return toast('Bir dönüştürme sürüyor; bitmesini bekle');
+  const o = {}; c.querySelectorAll('[data-o]').forEach(i => o[i.dataset.o] = i.value);
+  const msg = c.querySelector('.msg'), bar = c.querySelector('.bar'), bi = bar.querySelector('i'), stop = c.querySelector('[data-stop]'), btns = [...c.querySelectorAll('[data-mt]')];
+  msg.innerHTML = ''; bar.hidden = false; bi.style.width = '0'; stop.hidden = false; btns.forEach(z => z.disabled = true);
+  const job = curJob = { stop: false };
+  try { const n = await media(x, b.dataset.mt, o, (pct, t) => { bi.style.width = Math.round(pct * 100) + '%'; if (t) msg.innerHTML = `<p class="note">${esc(t)}</p>`; }); if (!job.stop) msg.innerHTML = `<p class="note">✓ ${esc(n)}</p>`; }
+  catch (err) { console.error(err); if (!job.stop) msg.innerHTML = `<p class="err">${esc(err.message || String(err))}</p>`; }
+  curJob = null; bar.hidden = true; stop.hidden = true; btns.forEach(z => z.disabled = false);
+});
+async function media(x, to, o, prog) {
+  const base = baseName(x.f.name), inName = 'in.' + (ext(x.f.name) || 'bin'), ss = pTime(o.ss), te = pTime(o.to);
+  if (Number.isNaN(ss) || Number.isNaN(te)) throw new Error('Zamanı 1:30 ya da 90 gibi yaz.');
+  if (ss != null && te != null && te <= ss) throw new Error('Bitiş, başlangıçtan sonra olmalı.');
+  const span = (te ?? x.dur ?? 0) - (ss ?? 0), log = [];
+  const onP = ({ progress, time }) => { let p = progress; if (!(p >= 0 && p <= 1) && span > 0 && time) p = time / 1e6 / span; prog(Math.max(0, Math.min(1, p || 0)), 'Dönüştürülüyor… %' + Math.round(Math.max(0, Math.min(1, p || 0)) * 100)); };
+  const onL = ({ message }) => { log.push(message); if (log.length > 40) log.shift(); };
+  FF.on('progress', onP); FF.on('log', onL);
+  try {
+    prog(0, 'Dosya hazırlanıyor…'); await FF.writeFile(inName, new Uint8Array(await x.f.arrayBuffer()));
+    const cut = [...(ss != null ? ['-ss', String(ss)] : []), ...(te != null ? ['-to', String(te)] : [])];
+    const br = (o.br || '192') + 'k'; let out, args, mime;
+    if (to === 'mp3') { out = base + '.mp3'; mime = 'audio/mpeg'; args = ['-i', inName, ...cut, '-vn', '-c:a', 'libmp3lame', '-b:a', br, 'out.mp3']; }
+    if (to === 'wav') { out = base + '.wav'; mime = 'audio/wav'; args = ['-i', inName, ...cut, '-vn', '-c:a', 'pcm_s16le', 'out.wav']; }
+    if (to === 'm4a') { out = base + '.m4a'; mime = 'audio/mp4'; args = ['-i', inName, ...cut, '-vn', '-c:a', 'aac', '-b:a', br, 'out.m4a']; }
+    if (to === 'ogg') { out = base + '.ogg'; mime = 'audio/ogg'; args = ['-i', inName, ...cut, '-vn', '-c:a', 'libvorbis', '-b:a', br, 'out.ogg']; }
+    if (to === 'mp4') { out = base + (ext(x.f.name) === 'mp4' ? '-donusturuldu' : '') + '.mp4'; mime = 'video/mp4'; const h = +o.h || 0, vf = h && (!x.h || x.h > h) ? ['-vf', `scale=-2:${h}`] : [];
+      args = ['-i', inName, ...cut, ...vf, '-c:v', 'libx264', '-preset', 'veryfast', '-crf', '24', '-pix_fmt', 'yuv420p', '-c:a', 'aac', '-b:a', br, '-movflags', '+faststart', 'out.mp4']; }
+    if (to === 'gif') { out = base + '.gif'; mime = 'image/gif'; if (span > 30) throw new Error('GIF için en fazla 30 saniyelik bir bölüm seç (başlangıç ve bitiş ver).');
+      args = ['-i', inName, ...cut, '-vf', `fps=${o.fps || 10},scale=${o.gw || 480}:-1:flags=lanczos,split[a][b];[a]palettegen=max_colors=128[p];[b][p]paletteuse=dither=bayer`, '-loop', '0', 'out.gif']; }
+    const tmp = 'out.' + to;
+    const code = await FF.exec(args);
+    if (code !== 0) { const last = log.filter(l => /error|invalid|not|unable/i.test(l)).slice(-2).join(' · '); throw new Error('Dönüştürülemedi' + (last ? ': ' + last : '. Dosya biçimi desteklenmiyor olabilir.')); }
+    const data = await FF.readFile(tmp); await FF.deleteFile(tmp).catch(() => { });
+    addOut(out, new Blob([data.buffer], { type: mime }));
+    return `${out} hazır · ${size(data.length)}`;
+  } finally { FF.off('progress', onP); FF.off('log', onL); FF.deleteFile(inName).catch(() => { }); }
+}
+</script>
+<script data-goatcounter="https://erdevelop.goatcounter.com/count" async src="//gc.zgo.at/count.js"></script>
+</body>
+</html>

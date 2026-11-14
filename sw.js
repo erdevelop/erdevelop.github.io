@@ -20,6 +20,7 @@ self.addEventListener('fetch', e => {
       .catch(() => caches.match(r, { ignoreSearch: r.mode === 'navigate' }).then(m => m || (r.mode === 'navigate' ? caches.match('/Tools.html') : Response.error()))));
     return;
   }
+  if (/\/@ffmpeg\/core@/.test(u.pathname)) return; /* ses/video motoru (32 MB) sayfanın kendi önbelleğinde tutulur, burada ikinci kez saklanmaz */
   if (LIB_HOSTS.includes(u.hostname)) {
     /* yalnızca sağlam (200) kopyalar saklanır; bozuk ya da durumu görünmeyen (opaque) yanıt saklanmaz, böylece bir kez başarısız olan kütüphane kalıcı bozulmaz */
     e.respondWith(caches.match(r).then(m => m && m.ok ? m : fetch(r).then(res => { if (res.ok && res.type === 'cors') { const cp = res.clone(); caches.open(LIBS).then(c => c.put(r, cp)); } return res; }).catch(() => m || Response.error())));
