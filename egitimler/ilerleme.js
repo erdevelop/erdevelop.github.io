@@ -45,6 +45,13 @@
   .ilk-cert { margin-top: 14px; padding-top: 14px; border-top: 1px solid var(--line); display: none; }
   .ilk-cert.on { display: block; }
   .ilk-cert input { font: 400 14px var(--f-body); padding: 7px 10px; border: 1px solid var(--line); border-radius: 6px; background: var(--panel-2); color: var(--fg); min-width: 0; flex: 1 1 200px; }
+  .ilk-tabs { display: flex; gap: 6px; margin-bottom: 10px; }
+  .ilk-tabs button { font: 500 12px var(--f-mono); color: var(--muted); background: none; border: 1px solid var(--line); border-radius: 6px; padding: 6px 12px; cursor: pointer; }
+  .ilk-tabs button.on { color: var(--accent); border-color: var(--accent); background: var(--accent-dim); }
+  .ilk-form label { display: block; font: 500 12px var(--f-mono); color: var(--muted); margin-top: 8px; }
+  .ilk-form input { display: block; width: 100%; margin-top: 4px; font: 400 15px var(--f-body); padding: 8px 10px; border: 1px solid var(--line); border-radius: 6px; background: var(--panel-2); color: var(--fg); }
+  .ilk-msg { font-size: 13px; margin-top: 8px; min-height: 1em; } .ilk-msg.bad { color: #c0392b; } .ilk-msg.ok { color: var(--ok); }
+  .ilk-small { font-size: 12px; color: var(--muted); margin: 8px 0 0; }
   .ilk-toast { position: fixed; left: 50%; bottom: 22px; transform: translate(-50%, 20px); opacity: 0; transition: .3s; background: var(--fg); color: var(--bg); font: 500 13px var(--f-body); padding: 9px 16px; border-radius: 8px; z-index: 50; pointer-events: none; }
   .ilk-toast.on { opacity: 1; transform: translate(-50%, 0); }`;
   document.head.appendChild($('style', '', css));
@@ -134,25 +141,79 @@
     cv.toBlob(b => { const a = document.createElement('a'); a.href = URL.createObjectURL(b); a.download = `belge-${SLUG}.png`; document.body.appendChild(a); a.click(); a.remove(); setTimeout(() => URL.revokeObjectURL(a.href), 3000); say('Belge indirildi'); }, 'image/png');
   });
 
-  /* ---------- hesapla eşitleme (yalnızca daha önce giriş yapılmışsa Firebase yüklenir) ---------- */
+  /* ---------- tek hesap: giriş / kayıt / eşitleme (Firebase yalnızca gerekince yüklenir) ---------- */
   const FB = { apiKey: 'AIzaSyBtNow8j7AZQO2sWCiXb1WbOT261wJUGRU', authDomain: 'oyun-bahcesi-62633.firebaseapp.com', projectId: 'oyun-bahcesi-62633' };
-  let db = null, user = null, pushT = 0;
+  let db = null, auth = null, user = null, pushT = 0, fresh = false, listening = false;
   const acc = q('.ilk-acc');
-  const accNo = () => { acc.innerHTML = 'İlerlemen bu tarayıcıda saklanıyor. <a href="/hesap.html">Hesabınla giriş yaparsan</a> telefonda ve bilgisayarda aynı yerden devam edersin.'; };
-  accNo();
+  const errTr = e => { const c = String(e && (e.code || e.message) || e); return /wrong-password|invalid-credential|invalid-login/.test(c) ? 'E-posta ya da şifre hatalı.' : /user-not-found/.test(c) ? 'Bu e-postayla hesap bulunamadı.' : /email-already-in-use/.test(c) ? 'Bu e-postayla zaten bir hesap var; Giriş yap sekmesini kullan.' : /too-many/.test(c) ? 'Çok fazla deneme; biraz sonra tekrar dene.' : /weak-password/.test(c) ? 'Şifre en az 6 karakter olmalı.' : /network/.test(c) ? 'Bağlantı hatası; internetini kontrol et.' : /invalid-email/.test(c) ? 'E-posta adresi geçersiz.' : 'Bir hata oluştu: ' + c; };
+  const accNo = () => {
+    acc.innerHTML = `İlerlemen bu tarayıcıda saklanıyor. Hesapla kaydedersen telefonda ve bilgisayarda aynı yerden devam edersin; tek hesap tüm sitede (eğitimler, dil kulüpleri, Oyun Bahçesi) geçerli. Hesap isteğe bağlıdır.
+      <div class="ilk-row"><button class="ilk-btn" type="button" data-a="giris">Giriş yap</button><button class="ilk-btn" type="button" data-a="kayit">Hesap aç</button></div>`;
+    acc.querySelectorAll('[data-a]').forEach(b => b.onclick = () => form(b.dataset.a));
+  };
+  function form(tab) {
+    const up = tab === 'kayit';
+    acc.innerHTML = `<div class="ilk-tabs"><button type="button" class="${up ? '' : 'on'}" data-t="giris">Giriş yap</button><button type="button" class="${up ? 'on' : ''}" data-t="kayit">Hesap aç</button><span style="flex:1"></span><button type="button" data-x title="Kapat">✕</button></div>
+      <form class="ilk-form" autocomplete="on">
+        ${up ? '<label>Adın<input name="ad" maxlength="24" required autocomplete="nickname"></label>' : ''}
+        <label>E-posta<input name="m" type="email" required autocomplete="email"></label>
+        <label>Şifre${up ? ' (en az 6 karakter)' : ''}<input name="p" type="password" minlength="6" required autocomplete="${up ? 'new-password' : 'current-password'}"></label>
+        <div class="ilk-row"><button class="ilk-go" type="submit">${up ? 'Hesap aç ve kaydet' : 'Giriş yap'}</button>${up ? '' : '<button class="ilk-btn" type="button" data-r>Şifremi unuttum</button>'}</div>
+        <div class="ilk-msg" role="status"></div>
+        <p class="ilk-small">Aynı hesap Oyun Bahçesi, dil kulüpleri ve tüm eğitimlerde geçerli. Bu cihazda işaretlediklerin hesabına eklenir. <a href="/gizlilik.html">Gizlilik</a></p>
+      </form>`;
+    acc.querySelectorAll('[data-t]').forEach(b => b.onclick = () => form(b.dataset.t));
+    acc.querySelector('[data-x]').onclick = accNo;
+    const f = acc.querySelector('form'), M = acc.querySelector('.ilk-msg'), msg = (t, ok) => { M.textContent = t; M.className = 'ilk-msg' + (ok ? ' ok' : ' bad'); };
+    f.querySelector('input').focus();
+    const r = acc.querySelector('[data-r]');
+    if (r) r.onclick = async () => { const m = f.m.value.trim(); if (!m) { f.m.focus(); return msg('Önce e-posta adresini yaz.'); } try { await ensureFb(); await auth.sendPasswordResetEmail(m); msg('Bu adrese kayıtlı bir hesap varsa şifre yenileme linki gönderildi. Gereksiz (spam) klasörünü de kontrol et.', true); } catch (e) { msg(errTr(e)); } };
+    f.onsubmit = async e => {
+      e.preventDefault(); const bt = f.querySelector('[type=submit]'), lb = bt.textContent; bt.disabled = true; bt.textContent = '…';
+      try {
+        await ensureFb(); fresh = true;
+        if (up) { const ad = f.ad.value.trim(), c = await auth.createUserWithEmailAndPassword(f.m.value.trim(), f.p.value); await c.user.updateProfile({ displayName: ad }); await db.collection('users').doc(c.user.uid).set({ name: ad, email: c.user.email }, { merge: true }); fresh = true; onUser(auth.currentUser); }
+        else await auth.signInWithEmailAndPassword(f.m.value.trim(), f.p.value);
+      } catch (x) { fresh = false; msg(errTr(x)); bt.disabled = false; bt.textContent = lb; }
+    };
+  }
+  const summary = () => { const done = {}; boxes.forEach(b => { if (b.checked) done[b.dataset.id] = 1; }); return { done, n: boxes.length, ad: title, url: location.pathname.replace(/index\.html$/, ''), t: +st.get(TK) || Date.now() }; };
   function push() {
     if (!db || !user) return; clearTimeout(pushT);
-    pushT = setTimeout(() => {
-      const done = {}; boxes.forEach(b => { if (b.checked) done[b.dataset.id] = 1; });
-      db.collection('users').doc(user.uid).set({ egitim: { [SLUG]: { done, t: +st.get(TK) || Date.now() } } }, { merge: true }).catch(() => { });
-    }, 1200);
+    pushT = setTimeout(() => { db.collection('users').doc(user.uid).set({ egitim: { [SLUG]: summary() } }, { merge: true }).catch(() => { }); }, 1200);
   }
-  function apply(remote) {
+  function apply(remote, union) {
     applying = true;
-    boxes.forEach(b => { const want = !!remote.done[b.dataset.id]; if (b.checked !== want) { b.checked = want; b.dispatchEvent(new Event('change')); } });
-    applying = false; st.set(TK, String(remote.t)); paint();
+    boxes.forEach(b => { const want = !!remote.done[b.dataset.id] || (union && b.checked); if (b.checked !== want) { b.checked = want; b.dispatchEvent(new Event('change')); } });
+    applying = false; st.set(TK, String(union ? Date.now() : remote.t)); paint();
   }
   const load = src => new Promise((res, rej) => { const s = document.createElement('script'); s.src = src; s.onload = res; s.onerror = rej; document.head.appendChild(s); });
+  let fbP = null;
+  const ensureFb = () => fbP || (fbP = (async () => {
+    const V = 'https://www.gstatic.com/firebasejs/10.12.2/';
+    if (!window.firebase) await load(V + 'firebase-app-compat.js');
+    await Promise.all(['auth', 'firestore'].filter(n => !firebase[n]).map(n => load(V + `firebase-${n}-compat.js`)));
+    if (!firebase.apps.length) firebase.initializeApp(FB);
+    db = firebase.firestore(); auth = firebase.auth(); auth.languageCode = 'tr';
+    if (!listening) { listening = true; auth.onAuthStateChanged(onUser); }
+  })().catch(e => { fbP = null; throw e; }));
+  async function onUser(u) {
+    if (u && user && u.uid === user.uid && !fresh) return;
+    if (!u) { const was = user; user = null; if (was || !acc.querySelector('form')) accNo(); return; }
+    user = u;
+    const nmShow = u.displayName || (u.email || '').split('@')[0];
+    acc.innerHTML = `☁ İlerlemen hesabına kaydediliyor (${esc(nmShow)}). Diğer cihazlarında da aynı yerden devam edersin. <a href="/hesap.html">Hesabım</a> · <a href="#" data-out>Çıkış yap</a>`;
+    acc.querySelector('[data-out]').onclick = e => { e.preventDefault(); auth.signOut(); };
+    try {
+      const d = await db.collection('users').doc(u.uid).get(), r = d.exists && d.data().egitim && d.data().egitim[SLUG];
+      const lt = +st.get(TK) || 0;
+      if (fresh) { if (r && r.done) apply(r, true); push(); say('Giriş yapıldı; ilerlemen hesabına kaydedildi'); }
+      else if (r && r.done && (r.t || 0) > lt) { apply(r, false); say('İlerlemen hesabından yüklendi'); }
+      else if (boxes.some(b => b.checked)) push();
+      if (!nm.value && nmShow) nm.value = u.displayName || '';
+    } catch (e) { }
+    fresh = false;
+  }
   const hadUser = () => new Promise(res => {
     try {
       const r = indexedDB.open('firebaseLocalStorageDb'); r.onerror = () => res(false);
@@ -160,27 +221,8 @@
       r.onsuccess = () => { const d = r.result; try { const tx = d.transaction('firebaseLocalStorage', 'readonly'), g = tx.objectStore('firebaseLocalStorage').getAll(); g.onsuccess = () => { res((g.result || []).some(x => String(x.fbase_key || '').startsWith('firebase:authUser:'))); d.close(); }; g.onerror = () => { res(false); d.close(); }; } catch (e) { res(false); d.close(); } };
     } catch (e) { res(false); }
   });
-  async function sync() {
-    if (!(await hadUser())) return;
-    try {
-      const V = 'https://www.gstatic.com/firebasejs/10.12.2/';
-      if (!window.firebase) await load(V + 'firebase-app-compat.js');
-      await Promise.all(['auth', 'firestore'].filter(n => !firebase[n]).map(n => load(V + `firebase-${n}-compat.js`)));
-      if (!firebase.apps.length) firebase.initializeApp(FB);
-      db = firebase.firestore();
-      firebase.auth().onAuthStateChanged(async u => {
-        user = u; if (!u) { accNo(); return; }
-        acc.innerHTML = `☁ İlerlemen hesabına kaydediliyor${u.displayName ? ' (' + esc(u.displayName) + ')' : ''}. Diğer cihazlarında da aynı yerden devam edersin.`;
-        try {
-          const d = await db.collection('users').doc(u.uid).get(), r = d.exists && d.data().egitim && d.data().egitim[SLUG];
-          const lt = +st.get(TK) || 0;
-          if (r && r.done && (r.t || 0) > lt) { apply(r); say('İlerlemen hesabından yüklendi'); }
-          else if (boxes.some(b => b.checked)) push();
-          if (!nm.value && u.displayName) nm.value = u.displayName;
-        } catch (e) { }
-      });
-    } catch (e) { }
-  }
+  accNo();
+  async function sync() { if (await hadUser()) try { await ensureFb(); } catch (e) { } }
   paint();
   (window.requestIdleCallback || (f => setTimeout(f, 1500)))(sync);
 })();
