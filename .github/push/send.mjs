@@ -14,7 +14,8 @@ export const VAPID_PUBLIC = 'BGPY6KZFQc8GQbAQQiw-0CBI8X6mrn9VHS7yC8fU8Lbw3Ep5H1O
 const SUBJECT = process.env.VAPID_SUBJECT || 'https://erdevelop.github.io';
 const SITE = 'https://erdevelop.github.io/ingilizce.html';
 /* hangi kulübün sayfası: push belgesindeki page alanı (yoksa İngilizce) */
-const PAGES = { ingilizce: { url: SITE, icon: '📚', tag: 'eng-kelime' }, fransizca: { url: 'https://erdevelop.github.io/fransizca.html', icon: '🇫🇷', tag: 'fra-kelime' } };
+const PAGES = { ingilizce: { url: SITE, icon: '📚', tag: 'eng-kelime' }, fransizca: { url: 'https://erdevelop.github.io/fransizca.html', icon: '🇫🇷', tag: 'fra-kelime' },
+  almanca: { url: 'https://erdevelop.github.io/almanca.html', icon: '🇩🇪', tag: 'deu-kelime' } };
 const b64u = b => Buffer.from(b).toString('base64url');
 const unb64u = s => Buffer.from(String(s), 'base64url');
 const hmac = (key, data) => crypto.createHmac('sha256', key).update(data).digest();
