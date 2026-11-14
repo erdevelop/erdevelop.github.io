@@ -82,6 +82,19 @@
   details.lab summary .tw { font: 500 12px var(--f-mono); color: var(--accent); }
   details.lab .lab-d { margin: 0 0 16px; color: var(--muted); font-size: .92rem; max-width: 70ch; }
   details.lab[open] summary .tw::after { content: ' ▲'; } details.lab:not([open]) summary .tw::after { content: ' ▼'; }
+  details.layer > summary.layer-head { cursor: pointer; list-style: none; }
+  details.layer > summary.layer-head::-webkit-details-marker { display: none; }
+  details.layer:not([open]) > summary.layer-head { margin-bottom: 0; }
+  details.layer:not([open]), details.lab:not([open]) { margin-top: 10px; }
+  details.lab:not([open]) { border-top: 0; padding-top: 0; }
+  details.lab:not([open]) > summary { border-bottom: 1px solid var(--line); padding: 0 0 10px; }
+  details.layer > summary .tw, details.lab > summary .tw { font: 500 12px var(--f-mono); color: var(--accent); }
+  details.layer > summary .tw::before, details.lab > summary .tw::before { content: attr(data-b); }
+  details.layer[open] > summary .tw::before, details.lab[open] > summary .tw::before { content: attr(data-a); }
+  details.layer[open] > summary .tw::after { content: ' ▲'; } details.layer:not([open]) > summary .tw::after { content: ' ▼'; }
+  details.layer > summary:hover h2, details.lab > summary:hover h2 { color: var(--accent); }
+  .tgl { font: 500 12px var(--f-mono); color: var(--accent); background: none; border: 1px solid var(--line); border-radius: 4px; padding: 5px 10px; cursor: pointer; }
+  .tgl:hover { border-color: var(--accent); }
   .empty { display: none; color: var(--muted); font: 400 13px var(--f-mono); margin-top: 24px; }
 
   footer { margin-top: 56px; border-top: 1px solid var(--line); padding-block: 20px calc(20px + env(safe-area-inset-bottom, 0px)); font: 400 12px var(--f-mono); color: var(--muted); }
@@ -152,7 +165,7 @@
     <p data-k="lead">Tarayıcıda çalışan araçlarım, oyunlarım ve denemelerim. Kurulum gerekmez; telefonda da açılır.</p>
     <div class="search">
       <input id="q" type="search" autocomplete="off" aria-label="Ara" placeholder="ara: levha, plan, oyun…">
-      <span class="count" id="count"></span>
+      <span class="count" id="count"></span><button class="tgl" type="button" id="tglAll"></button>
     </div>
   </header>
   <div id="groups"></div>
@@ -237,8 +250,8 @@
     spark: '<path d="M16 4v6M16 22v6M4 16h6M22 16h6M8 8l4 4M20 20l4 4M24 8l-4 4M12 20l-4 4"/>'
   };
   const T = {
-    tr: { title: 'Araçlar', lead: 'Tarayıcıda çalışan araçlarım, oyunlarım ve denemelerim. Kurulum gerekmez; telefonda da açılır.', home: 'Ana sayfa', back: '← erdevelop ana sayfa', none: 'Aramaya uyan araç yok.', ph: 'ara: rüzgar, cam, plan, oyun…  (Ctrl+K)', items: 'araç', show: 'göster', btn: 'EN', lockT: 'Bu bölüm şifreli.', pw: 'şifre', open: 'Aç', wrong: 'Şifre yanlış.', relock: 'kilitle' },
-    en: { title: 'Tools', lead: 'Tools, games and experiments that run in the browser. Nothing to install; they open on a phone too.', home: 'Home', back: '← erdevelop home', none: 'Nothing matches your search.', ph: 'search: wind, glass, plan, game…  (Ctrl+K)', items: 'tools', show: 'show', btn: 'TR', lockT: 'This section is password protected.', pw: 'password', open: 'Unlock', wrong: 'Wrong password.', relock: 'lock' }
+    tr: { title: 'Araçlar', lead: 'Tarayıcıda çalışan araçlarım, oyunlarım ve denemelerim. Kurulum gerekmez; telefonda da açılır.', home: 'Ana sayfa', back: '← erdevelop ana sayfa', none: 'Aramaya uyan araç yok.', ph: 'ara: rüzgar, cam, plan, oyun…  (Ctrl+K)', items: 'araç', hide: 'gizle', all: 'tümünü aç', none2: 'tümünü kapat', show: 'göster', btn: 'EN', lockT: 'Bu bölüm şifreli.', pw: 'şifre', open: 'Aç', wrong: 'Şifre yanlış.', relock: 'kilitle' },
+    en: { title: 'Tools', lead: 'Tools, games and experiments that run in the browser. Nothing to install; they open on a phone too.', home: 'Home', back: '← erdevelop home', none: 'Nothing matches your search.', ph: 'search: wind, glass, plan, game…  (Ctrl+K)', items: 'tools', hide: 'hide', all: 'open all', none2: 'close all', show: 'show', btn: 'TR', lockT: 'This section is password protected.', pw: 'password', open: 'Unlock', wrong: 'Wrong password.', relock: 'lock' }
   };
   const G = [
     { id: 'daily', h: { tr: 'Günlük araçlar', en: 'Everyday tools' }, items: [
@@ -364,24 +377,35 @@
     document.title = (lang === 'tr' ? 'Araçlar' : 'Tools') + ' | erdevelop';
     document.querySelectorAll('[data-k]').forEach(el => { if (t[el.dataset.k]) el.textContent = t[el.dataset.k]; });
     $('q').placeholder = t.ph; $('langBtn').textContent = t.btn;
-    const open = $('lab') ? $('lab').open : false;
+    const OPEN = openState();
     const unlocked = window.erLock && erLock.ok();
     $('groups').innerHTML = G.map((g, n) => {
       const locked = g.lock && !unlocked;
       if (locked) return `<form class="gate" id="gate" data-g data-locked autocomplete="off"><input type="password" id="pw" placeholder="password" aria-label="password"><span data-n hidden>0</span></form>`;
-      return `<section class="layer${g.lock ? ' priv' : ''}" data-g>
-        <div class="layer-head"><span class="swatch"></span><h2>${g.h[lang]}</h2><span class="meta">LAYER 0${n + 1} · <span data-n>${g.items.length}</span></span>
-          ${g.lock ? `<button class="relock" type="button" id="relock">${t.relock}</button>` : ''}</div>
+      return `<details class="layer${g.lock ? ' priv' : ''}" data-g data-id="${g.id}" id="${g.id}" ${OPEN[g.id] ? 'open' : ''}>
+        <summary class="layer-head"><span class="swatch"></span><h2>${g.h[lang]}</h2><span class="meta">LAYER ${String(n + 1).padStart(2, '0')} · <span data-n>${g.items.length}</span></span>
+          <span class="tw" data-a="${t.hide}" data-b="${t.show}"></span>
+          ${g.lock ? `<button class="relock" type="button" id="relock">${t.relock}</button>` : ''}</summary>
         <div class="grid">${g.items.map(card).join('')}</div>
-      </section>`; }).join('') +
-      `<details class="lab" id="lab" data-g ${open ? 'open' : ''}><summary><span class="swatch"></span><h2>${LAB.h[lang]}</h2><span class="meta">LAYER 0${G.length + (unlocked ? 1 : 0)} · <span data-n>${LAB.items.length}</span></span><span class="tw">${t.show}</span></summary>
+      </details>`; }).join('') +
+      `<details class="lab" id="lab" data-g data-id="lab" ${OPEN.lab ? 'open' : ''}><summary><span class="swatch"></span><h2>${LAB.h[lang]}</h2><span class="meta">LAYER ${String(G.length + (unlocked ? 1 : 0)).padStart(2, '0')} · <span data-n>${LAB.items.length}</span></span><span class="tw" data-a="${t.hide}" data-b="${t.show}"></span></summary>
         <p class="lab-d">${LAB.d[lang]}</p><div class="grid">${LAB.items.map(card).join('')}</div></details>`;
-    filter(); animateCards();
+    document.querySelectorAll('#groups details[data-id]').forEach(d => d.addEventListener('toggle', () => { if (!searching) saveOpen(); tglLabel(); }));
+    $('tglAll').onclick = () => { const ds = [...document.querySelectorAll('#groups details[data-id]')], any = ds.some(d => !d.open); ds.forEach(d => d.open = any); saveOpen(); tglLabel(); };
+    filter(); animateCards(); tglLabel();
     if ($('gate')) $('gate').addEventListener('submit', e => { e.preventDefault();
       if (erLock.check($('pw').value)) { render(); }
       else { $('pw').value = ''; const g = $('gate'); g.classList.remove('shake'); void g.offsetWidth; g.classList.add('shake'); } });
-    if ($('relock')) $('relock').addEventListener('click', () => { erLock.lock(); render(); });
+    if ($('relock')) $('relock').addEventListener('click', e => { e.preventDefault(); e.stopPropagation(); erLock.lock(); render(); });
   }
+  /* hangi grubun açık olduğu bu tarayıcıda hatırlanır; ilk ziyarette hepsi kapalı başlar (başlık listesi gibi) */
+  const OK = 'erdevelop-tools-acik';
+  let searching = false;
+  function openState() { try { return JSON.parse(localStorage.getItem(OK) || '{}') || {}; } catch (e) { return {}; } }
+  function saveOpen() { const o = {}; document.querySelectorAll('#groups details[data-id]').forEach(d => { if (d.open) o[d.dataset.id] = 1; }); try { localStorage.setItem(OK, JSON.stringify(o)); } catch (e) { } }
+  function tglLabel() { const ds = [...document.querySelectorAll('#groups details[data-id]')]; if ($('tglAll')) $('tglAll').textContent = ds.some(d => !d.open) ? T[lang].all : T[lang].none2; }
+  function openHash() { const id = decodeURIComponent(location.hash.slice(1)); const d = id && document.querySelector(`#groups details[data-id="${CSS.escape(id)}"]`); if (d) { d.open = true; saveOpen(); tglLabel(); setTimeout(() => d.scrollIntoView({ block: 'start' }), 50); } }
+  addEventListener('hashchange', openHash);
   function filter() {
     const q = fold($('q').value.trim()), qs = q.split(/\s+/).filter(Boolean);
     let total = 0;
@@ -390,8 +414,9 @@
       sec.querySelectorAll('.card').forEach(c => { const ok = !qs.length || qs.every(w => c.dataset.s.includes(w)); c.hidden = !ok; if (ok) n++; });
       if (sec.hasAttribute('data-locked')) { sec.hidden = !!q; return; }
       sec.hidden = n === 0; sec.querySelector('[data-n]').textContent = n; total += n;
-      if (q && n && sec.tagName === 'DETAILS') sec.open = true;
+      if (sec.tagName === 'DETAILS') { if (q) { if (n) sec.open = true; } else if (searching) sec.open = !!openState()[sec.dataset.id]; }
     });
+    searching = !!q; tglLabel();
     $('count').textContent = `${total} ${T[lang].items}`;
     $('empty').style.display = total ? 'none' : 'block';
   }
@@ -426,7 +451,7 @@
   });
   $('langBtn').addEventListener('click', () => { lang = lang === 'tr' ? 'en' : 'tr'; render(); });
   $('modeBtn').addEventListener('click', () => { mode = mode === 'dark' ? 'light' : 'dark'; store.set('erdevelop-mode', mode); store.set('erdevelop-mode-gun', new Date().toDateString()); applyMode(); });
-  applyMode(); render();
+  applyMode(); render(); openHash();
 })();
 </script>
 <script>if ('serviceWorker' in navigator && location.protocol === 'https:') addEventListener('load', () => navigator.serviceWorker.register('/sw.js').catch(() => { }));</script>
