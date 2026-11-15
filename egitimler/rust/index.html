@@ -1,0 +1,1370 @@
+<!doctype html>
+<html lang="tr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Rust Programlama · 7 günlük program | erdevelop</title>
+<meta name="description" content="Bol şemalı 7 günlük Rust eğitimi: rustup ve cargo, let ve mut, tipler, gölgeleme, if ve match ifadeleri, döngüler, sahiplik, taşıma ve ödünç alma, referanslar, String ve &amp;str, Vec, HashMap, yineleyiciler, struct, enum, Option, Result ve ? işlemi, trait&#x27;ler.">
+<link rel="icon" href="/favicon.svg" type="image/svg+xml">
+<link rel="icon" href="/favicon.ico" sizes="any">
+<link rel="apple-touch-icon" href="/apple-touch-icon.png">
+<link rel="manifest" href="/manifest.webmanifest">
+<meta name="theme-color" content="#0b1220">
+<meta property="og:title" content="Rust Programlama · 7 günlük program | erdevelop">
+<meta property="og:description" content="7 günde Rust: sahiplik ve ödünç alma, Vec ve HashMap, yineleyiciler, struct, enum, Option, Result ve trait&#x27;ler. rustc ile derlenmiş örnekler.">
+<meta property="og:url" content="https://erdevelop.github.io/egitimler/rust/">
+<meta property="og:image" content="https://erdevelop.github.io/og.png">
+<meta name="twitter:card" content="summary_large_image">
+<link rel="canonical" href="https://erdevelop.github.io/egitimler/rust/">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Chakra+Petch:wght@600;700&family=IBM+Plex+Sans:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500&display=swap">
+<style>
+  :root {
+    --bg: #eef2f6; --panel: #ffffff; --panel-2: #f5f7f9; --grid: #e3e8ed; --line: #cfd8e1;
+    --fg: #1c2833; --text: #45535f; --muted: #74838f; --accent: #2f6fb5; --accent-dim: rgba(47,111,181,.12); --hot: #c8731f; --ok: #2e8b57;
+    --f-display: 'Chakra Petch', 'Segoe UI', sans-serif; --f-body: 'IBM Plex Sans', 'Segoe UI', system-ui, sans-serif; --f-mono: 'IBM Plex Mono', Consolas, monospace;
+    color-scheme: light;
+  }
+  :root[data-mode="dark"] {
+    --bg: #0b1220; --panel: #111a2c; --panel-2: #0e1626; --grid: #182338; --line: #22304a;
+    --fg: #e2e8f2; --text: #a8b6cc; --muted: #73829b; --accent: #f2b33d; --accent-dim: rgba(242,179,61,.14); --hot: #6aa8ff; --ok: #5fc48d;
+    color-scheme: dark;
+  }
+  * { box-sizing: border-box; }
+  html { background: var(--bg); scroll-padding-top: 110px; }
+  body { margin: 0; color: var(--fg); font-family: var(--f-body); font-size: 16px; line-height: 1.65;
+    background-image: linear-gradient(var(--grid) 1px, transparent 1px), linear-gradient(90deg, var(--grid) 1px, transparent 1px); background-size: 80px 80px; background-attachment: fixed; }
+  a { color: var(--accent); }
+  :focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+  .wrap { max-width: 920px; margin: 0 auto; padding-left: max(16px, env(safe-area-inset-left, 0px)); padding-right: max(16px, env(safe-area-inset-right, 0px)); }
+
+  .topbar { position: sticky; top: 0; z-index: 20; background: color-mix(in srgb, var(--bg) 92%, transparent); backdrop-filter: blur(6px); border-bottom: 1px solid var(--line); }
+  .topbar .wrap { display: flex; align-items: center; gap: 12px; padding-block: 10px; max-width: 1160px; }
+  .brand { font: 700 15px var(--f-display); letter-spacing: 1px; text-transform: uppercase; text-decoration: none; color: var(--fg); }
+  .brand span { color: var(--accent); }
+  .crumb { font: 400 12px var(--f-mono); color: var(--muted); }
+  .sp { flex: 1; }
+  .tb { font: 500 12px var(--f-mono); color: var(--accent); padding: 6px 10px; border: 1px solid var(--line); border-radius: 4px; background: none; cursor: pointer; text-transform: uppercase; text-decoration: none; }
+  .tb:hover { border-color: var(--accent); }
+  .daynav { border-top: 1px solid var(--line); }
+  .daynav .wrap { display: flex; gap: 6px; padding-block: 8px; overflow-x: auto; max-width: 1160px; }
+  .daynav a { font: 500 12px var(--f-mono); text-decoration: none; color: var(--text); border: 1px solid var(--line); border-radius: 4px; padding: 4px 10px; white-space: nowrap; background: var(--panel); }
+  .daynav a.on { border-color: var(--accent); color: var(--accent); }
+  .daynav a.done { background: var(--accent-dim); }
+
+  header.head { padding-block: 34px 6px; }
+  .kicker { font: 500 12px var(--f-mono); color: var(--accent); letter-spacing: 1px; }
+  .head h1 { font: 700 clamp(2rem, 6vw, 3rem)/1.05 var(--f-display); margin: 6px 0 0; letter-spacing: -.5px; }
+  .head p.lead { margin: 12px 0 0; color: var(--text); max-width: 64ch; font-size: 1.05rem; }
+  .chips { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 16px; }
+  .chips span { font: 400 12px var(--f-mono); color: var(--muted); border: 1px solid var(--line); border-radius: 4px; padding: 3px 8px; background: var(--panel); }
+
+  .card { background: var(--panel); border: 1px solid var(--line); border-radius: 8px; padding: 22px clamp(16px, 4vw, 30px); margin-top: 28px; }
+  .day-head { display: flex; align-items: baseline; gap: 12px; flex-wrap: wrap; border-bottom: 1px solid var(--line); padding-bottom: 12px; margin-bottom: 6px; }
+  .day-head h2, .card > h2 { font: 700 1.45rem/1.2 var(--f-display); margin: 0; letter-spacing: .2px; }
+  .dn { font: 600 12px var(--f-mono); color: var(--panel); background: var(--accent); border-radius: 3px; padding: 2px 7px; }
+  :root[data-mode="dark"] .dn { color: #1a1204; }
+  .day-head .meta { font: 400 12px var(--f-mono); color: var(--muted); margin-left: auto; }
+  section.day { background: var(--panel); border: 1px solid var(--line); border-radius: 8px; padding: 22px clamp(16px, 4vw, 30px); margin-top: 28px; }
+
+  .prose h3 { font: 700 1.12rem/1.3 var(--f-display); margin: 30px 0 8px; letter-spacing: .2px; }
+  .prose p, .prose li { color: var(--text); }
+  .prose strong { color: var(--fg); font-weight: 600; }
+  .prose ol, .prose ul { padding-left: 1.4em; }
+  .prose li { margin: 4px 0; }
+  .prose li > ul, .prose li > ol { margin: 4px 0; }
+  .prose code { font: 400 .86em var(--f-mono); background: var(--panel-2); border: 1px solid var(--line); border-radius: 3px; padding: 1px 5px; color: var(--fg); overflow-wrap: anywhere; }
+  .tw { overflow-x: auto; margin: 14px 0; border: 1px solid var(--line); border-radius: 6px; }
+  .tw table { border-collapse: collapse; width: 100%; font-size: .9rem; }
+  .tw th, .tw td { text-align: left; padding: 8px 12px; border-bottom: 1px solid var(--line); vertical-align: top; }
+  .tw th { font: 600 12px var(--f-mono); color: var(--muted); background: var(--panel-2); }
+  .card .tw td:first-child, .card .tw td:last-child { white-space: nowrap; }
+  .tw tr:last-child td { border-bottom: 0; }
+  ul.tasks { list-style: none; padding-left: 0; }
+  li.task label { display: flex; gap: 10px; align-items: flex-start; cursor: pointer; padding: 4px 0; }
+  li.task input { width: 18px; height: 18px; margin-top: 4px; accent-color: var(--accent); flex: none; }
+  li.task input:checked + span { color: var(--muted); text-decoration: line-through; }
+  .pn { display: flex; justify-content: space-between; gap: 12px; margin-top: 26px; padding-top: 14px; border-top: 1px solid var(--line); font: 500 13px var(--f-mono); }
+  .pn a { text-decoration: none; }
+  .note { font-size: .9rem; color: var(--muted); }
+  .reset { font: 500 11px var(--f-mono); color: var(--muted); background: none; border: 1px solid var(--line); border-radius: 4px; padding: 3px 8px; cursor: pointer; text-transform: uppercase; }
+  .reset:hover { color: var(--hot); border-color: var(--hot); }
+
+  .fig { margin: 18px 0; padding: 16px 14px 12px; border: 1px solid var(--line); border-radius: 6px; background: var(--panel-2); }
+  .fig .sc { overflow-x: auto; }
+  .fig svg { display: block; width: 100%; min-width: 540px; height: auto; max-width: 720px; margin: 0 auto; overflow: visible; }
+  .fig figcaption { font-size: .85rem; color: var(--muted); margin-top: 10px; text-align: center; max-width: 62ch; margin-inline: auto; }
+  .fig .k { fill: none; stroke: var(--fg); stroke-width: 1.6; } .fig .k1 { fill: none; stroke: var(--fg); stroke-width: 1; }
+  .fig .mu { fill: none; stroke: var(--muted); stroke-width: 1.2; } .fig .mud { fill: none; stroke: var(--muted); stroke-width: 1; stroke-dasharray: 5 4; }
+  .fig .dm { fill: none; stroke: var(--muted); stroke-width: .9; }
+  .fig .rp { fill: none; stroke: var(--hot); stroke-width: 1; stroke-dasharray: 9 4 2 4; }
+  .fig .gd { fill: none; stroke: var(--fg); stroke-width: 1; stroke-dasharray: 16 4 3 4; }
+  .fig .ac { fill: none; stroke: var(--accent); stroke-width: 2; } .fig .acl { fill: none; stroke: var(--accent); stroke-width: 1; }
+  .fig .gl { fill: var(--accent-dim); stroke: var(--fg); stroke-width: .8; }
+  .fig .sp { fill: color-mix(in srgb, var(--fg) 40%, transparent); stroke: var(--fg); stroke-width: .8; }
+  .fig .fr { fill: color-mix(in srgb, var(--fg) 22%, transparent); stroke: none; } .fig .edge { fill: none; stroke: var(--fg); stroke-width: 1.8; }
+  .fig .so { fill: var(--panel); stroke: var(--fg); stroke-width: 1.6; } .fig .hole { fill: var(--panel-2); stroke: var(--fg); stroke-width: 1.2; }
+  .fig .rib { fill: var(--accent-dim); stroke: var(--accent); stroke-width: 1.4; stroke-dasharray: 6 4; }
+  .fig .sel { fill: none; stroke: var(--accent); stroke-width: 3; }
+  .fig .mul { stroke: var(--fg); stroke-width: 4; } .fig .tr { stroke: var(--fg); stroke-width: 3; } .fig .trA { stroke: var(--accent); stroke-width: 3; }
+  .fig .lh { fill: var(--panel); stroke: var(--fg); stroke-width: 1.4; }
+  .fig .dot { fill: var(--accent); } .fig .dotr { fill: var(--accent); stroke: var(--panel); stroke-width: 1; }
+  .fig .pt { fill: var(--accent); stroke: var(--panel); stroke-width: 2; } .fig .tpt { fill: var(--panel); font: 700 12px var(--f-mono); }
+  .fig .bx { fill: var(--panel); stroke: var(--line); stroke-width: 1.3; } .fig .bxa { fill: var(--accent-dim); stroke: var(--accent); stroke-width: 1.3; }
+  .fig .ar { fill: var(--muted); }
+  .fig .acd { fill: none; stroke: var(--accent); stroke-width: 1.6; stroke-dasharray: 6 4; }
+  .fig text { text-transform: none; letter-spacing: 0; } .fig .bg { fill: var(--panel); stroke: none; }
+  .fig .t { fill: var(--text); font: 400 13px var(--f-body); } .fig .tb { fill: var(--fg); font: 600 13px var(--f-body); }
+  .fig .tm { fill: var(--muted); font: 400 11px var(--f-mono); } .fig .ta { fill: var(--accent); font: 600 11px var(--f-mono); }
+  .fig .th { fill: var(--hot); font: 500 11px var(--f-mono); }
+  .fig .swb { fill: none; stroke: #2f7de1; stroke-width: 2; } .fig .swr { fill: none; stroke: #d64545; stroke-width: 2; } .fig .tr2 { fill: #d64545; font: 600 11px var(--f-mono); } .fig .tbl { fill: #2f7de1; font: 600 11px var(--f-mono); }
+  .prose pre { background: var(--panel-2); border: 1px solid var(--line); border-radius: 6px; padding: 12px 14px; overflow-x: auto; }
+  .prose pre code { background: none; border: 0; padding: 0; font: 400 .85rem/1.5 var(--f-mono); color: var(--fg); }
+  footer { margin-top: 56px; border-top: 1px solid var(--line); padding-block: 20px calc(20px + env(safe-area-inset-bottom, 0px)); font: 400 12px var(--f-mono); color: var(--muted); }
+  footer .wrap { display: flex; justify-content: space-between; gap: 12px; flex-wrap: wrap; }
+  footer a { color: inherit; } footer a:hover { color: var(--accent); }
+  @media print { .topbar, .daynav, .pn, footer, .reset { display: none !important; } body { background: #fff; } section.day, .card { break-inside: auto; border: 0; } }
+</style>
+<script async src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-4775308844679394" crossorigin="anonymous"></script>
+</head>
+<body>
+<div class="topbar">
+  <div class="wrap">
+    <a class="brand" href="/">erdevelop<span>_</span></a>
+    <span class="crumb">/ eğitimler / rust</span>
+    <span class="sp"></span>
+    <a class="tb" href="../../Tools.html">Araçlar</a>
+    <button class="tb" type="button" id="modeBtn">DARK</button>
+  </div>
+  <nav class="daynav" aria-label="Günler"><div class="wrap"><a href="#genel" data-nav="0">Genel</a><a href="#gun1" data-nav="1">1</a><a href="#gun2" data-nav="2">2</a><a href="#gun3" data-nav="3">3</a><a href="#gun4" data-nav="4">4</a><a href="#gun5" data-nav="5">5</a><a href="#gun6" data-nav="6">6</a><a href="#gun7" data-nav="7">7</a></div></nav>
+</div>
+
+<main class="wrap">
+  <header class="head" id="genel">
+    <div class="kicker">Programlama Dilleri · Rust Programlama</div>
+    <h1>Rust Programlama</h1>
+    <p class="lead">C ve C++&#x27;ın hızını bellek güvenliği garantisiyle birleştiren Rust&#x27;ı 7 günde, bol şemayla öğreten bir program. Değişkenlerden match ifadesine, Rust&#x27;ın kalbi olan sahiplik ve ödünç alma kurallarından koleksiyonlara ve yineleyicilere, struct ve enum&#x27;lardan Option ve Result ile hata yönetimine, trait&#x27;lere kadar ilerlersin. Her örnek rustc ile derlenip çalıştırılmış, çıktısı sayfadadır.</p>
+    <div class="chips"><span>7 gün</span><span>günde ~4 saat</span><span>Türkçe</span><span>Kod örnekleri kopyalanabilir</span></div>
+  </header>
+
+  <div class="card">
+    <h2>Başlamadan önce</h2>
+    <div class="prose">
+      <h3>Kimler için</h3>
+      <p>Temel programlamayı bilen ve hızlı, güvenilir sistem yazılımları, komut satırı araçları, WebAssembly ya da gömülü sistemler yazmak isteyenler. Rust&#x27;ın öğrenme eğrisi diğer dillerden diktir; C, C++ ya da Go deneyimi faydalıdır ama şart değildir.</p>
+      <h3>Gerekenler</h3>
+      <ul>
+        <li>rustup ile Rust (<a href="https://rustup.rs" target="_blank" rel="noopener">rustup.rs</a>); Windows'ta Visual Studio C++ Build Tools da gerekir.</li>
+        <li>VS Code ve rust-analyzer eklentisi.</li>
+        <li>Programlama Temelleri seviyesinde bilgi.</li>
+      </ul>
+      <h3>Program</h3>
+      <div class="tw"><table><thead><tr><th>Gün</th><th>Konu</th><th>Ne öğrenirsin</th><th>Süre</th></tr></thead><tbody>
+<tr><td><a href="#gun1">1. gün</a></td><td>Tanışma ve cargo</td><td>Rust nerede, rustup, cargo new, cargo run, println!, derleyici hata mesajları</td><td>~4 saat</td></tr>
+<tr><td><a href="#gun2">2. gün</a></td><td>Değişkenler ve tipler</td><td>let ve mut, gölgeleme, tam sayı ve ondalık tipler, bool, char, demet, dizi, tip dönüşümü</td><td>~4 saat</td></tr>
+<tr><td><a href="#gun3">3. gün</a></td><td>Kontrol akışı</td><td>if ifadesi, loop, while, for ve aralıklar, match, desenler</td><td>~4 saat</td></tr>
+<tr><td><a href="#gun4">4. gün</a></td><td>Sahiplik ve ödünç alma</td><td>Sahiplik kuralları, taşıma ve kopyalama, clone, referanslar, &amp;mut, ödünç alma kuralları, String ve &amp;str</td><td>~4 saat</td></tr>
+<tr><td><a href="#gun5">5. gün</a></td><td>Koleksiyonlar ve yineleyiciler</td><td>Vec, dilimler, HashMap, BTreeMap, yineleyiciler: map, filter, sum, collect, kapanışlar</td><td>~4 saat</td></tr>
+<tr><td><a href="#gun6">6. gün</a></td><td>struct, enum ve hatalar</td><td>struct ve impl, enum ve match, Option, Result, ? işlemi, kendi hata tipin</td><td>~4 saat</td></tr>
+<tr><td><a href="#gun7">7. gün</a></td><td>Trait&#x27;ler ve proje</td><td>trait, Display ve Debug, derive, generics, envanter programı, cargo ve crates.io</td><td>~4 saat</td></tr>
+      </tbody></table></div>
+      <p class="note">Her günün sonunda bir kontrol listesi var. İşaretledikçe ilerlemen bu tarayıcıda saklanır. Hafta içi sadece akşamları çalışırsan program yaklaşık iki hafta sürer. Bütün örnekler Rust 1.97 (2021 sürümü) ile derlenip çalıştırılarak çıktıları kontrol edilmiştir. Derleyici hata mesajları kısaltılarak gösterilmiştir. <button class="reset" type="button" id="resetBtn">ilerlemeyi sıfırla</button></p>
+    </div>
+  </div>
+
+<section class="day" id="gun1" data-day="1">
+  <div class="day-head"><span class="dn">GÜN 01</span><h2>Tanışma ve cargo</h2><span class="meta">~4 saat · <span data-prog="1">0/5</span> kontrol</span></div>
+  <div class="prose"><h3>Hedef</h3>
+<p>Gün sonunda Rust'ın neden geliştirildiğini ve nerede kullanıldığını bilecek, rustup ile kurulum yapıp cargo ile ilk projeni oluşturup çalıştırabilecek ve Rust derleyicisinin açıklayıcı hata mesajlarını okuyabileceksin. Süre yaklaşık 4 saat.</p>
+<p><strong>Bu kurs hakkında:</strong> Programlama Dilleri grubundaki bütün eğitimler aynı iskeleti izler ve 7. günde aynı <strong>envanter özeti</strong> projesiyle biter. Rust, diğer dillerde olmayan bir kavram içerir: <strong>sahiplik</strong>. 4. gün bu kursun kalbidir; acele etme.</p>
+<h3>1. Rust nerede? (30 dk)</h3>
+<figure class="fig"><div class="sc"><svg viewBox="0 0 640 122" role="img" xmlns="http://www.w3.org/2000/svg"><defs><marker id="ah-nerede" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0 0L10 5L0 10z" class="ar"/></marker></defs><rect x="10.0" y="10" width="200.0" height="48" rx="5" class="bxa"/><text x="110.0" y="30.0" class="tb" text-anchor="middle">Sistem yazılımı</text><text x="110.0" y="46.0" class="tm" text-anchor="middle">Linux, Windows, Android</text><rect x="220.0" y="10" width="200.0" height="48" rx="5" class="bx"/><text x="320.0" y="30.0" class="tb" text-anchor="middle">Komut satırı</text><text x="320.0" y="46.0" class="tm" text-anchor="middle">ripgrep, fd, uv</text><rect x="430.0" y="10" width="200.0" height="48" rx="5" class="bx"/><text x="530.0" y="30.0" class="tb" text-anchor="middle">Web ve bulut</text><text x="530.0" y="46.0" class="tm" text-anchor="middle">Cloudflare, AWS</text><rect x="10.0" y="66" width="200.0" height="48" rx="5" class="bx"/><text x="110.0" y="86.0" class="tb" text-anchor="middle">WebAssembly</text><text x="110.0" y="102.0" class="tm" text-anchor="middle">tarayıcıda hızlı kod</text><rect x="220.0" y="66" width="200.0" height="48" rx="5" class="bx"/><text x="320.0" y="86.0" class="tb" text-anchor="middle">Gömülü sistemler</text><text x="320.0" y="102.0" class="tm" text-anchor="middle">mikrodenetleyici</text><rect x="430.0" y="66" width="200.0" height="48" rx="5" class="bx"/><text x="530.0" y="86.0" class="tb" text-anchor="middle">Oyun motorları</text><text x="530.0" y="102.0" class="tm" text-anchor="middle">Bevy</text></svg></div><figcaption>Rust&#x27;ın kullanıldığı başlıca alanlar.</figcaption></figure>
+<p>Rust, Mozilla'da başlayıp 2015'te 1.0 sürümüne ulaştı. Amacı: C ve C++ kadar hızlı ve donanıma yakın, ama <strong>bellek hatalarını derleme anında imkânsız kılan</strong> bir dil.</p>
+<p>C ve C++'ta güvenlik açıklarının büyük kısmı bellek hatalarından gelir (tampon taşması, serbest bırakılmış belleğe erişim, veri yarışı). Rust bunları <strong>çöp toplayıcı kullanmadan</strong>, derleyicinin sıkı kurallarıyla önler.</p>
+<ul>
+<li><strong>Sistem yazılımı:</strong> Linux çekirdeğine ve Windows'a Rust kodu ekleniyor; Android'in yeni bileşenleri.</li>
+<li><strong>Komut satırı araçları:</strong> ripgrep, fd, bat, uv (Python paket yöneticisi).</li>
+<li><strong>Web ve bulut:</strong> Cloudflare, Discord, AWS altyapı bileşenleri; WebAssembly.</li>
+<li><strong>Oyun ve gömülü sistemler.</strong></li>
+</ul>
+<p>Rust, Stack Overflow anketlerinde yıllardır "en sevilen dil" seçilir. Ama öğrenme eğrisi diktir: derleyici başta çok şeye "hayır" der. Her "hayır", çalışma anında çıkacak bir hatanın önceden yakalanmasıdır.</p>
+<h3>2. Kurulum (30 dk)</h3>
+<p>rustup.rs adresindeki talimatla <strong>rustup</strong> kur (Windows'ta <code>rustup-init.exe</code>; Visual Studio C++ Build Tools'u kurmayı önerir, kabul et). rustup derleyiciyi (<code>rustc</code>), paket yöneticisini (<code>cargo</code>) ve belgeleri kurar.</p>
+<pre><code>rustc --version
+cargo --version
+rustup update            Rust'ı günceller
+rustup doc --book        &quot;The Rust Programming Language&quot; kitabını çevrimdışı açar
+</code></pre>
+<p>VS Code'a <strong>rust-analyzer</strong> eklentisini kur.</p>
+<h3>3. cargo ile ilk proje (1,5 saat)</h3>
+<pre><code>cargo new merhaba
+cd merhaba
+cargo run
+</code></pre>
+<p><code>cargo new</code>, bir <code>Cargo.toml</code> (proje tanımı) ve <code>src/main.rs</code> dosyası oluşturur. <code>src/main.rs</code>:</p>
+<pre><code class="language-rust">fn main() {
+    let ad = &quot;Ayşe&quot;;
+    let adet = 3;
+    let fiyat = 12.5;
+    println!(&quot;Merhaba {}!&quot;, ad);
+    println!(&quot;{adet} adet x {fiyat} TL = {} TL&quot;, adet as f64 * fiyat);
+    println!(&quot;{:.2} | {:&gt;6} | {:&lt;6}| {:?}&quot;, 3.14159, &quot;sağ&quot;, &quot;sol&quot;, &quot;tırnaklı&quot;);
+}
+</code></pre>
+<pre><code class="language-text">Merhaba Ayşe!
+3 adet x 12.5 TL = 37.5 TL
+3.14 |    sağ | sol   | &quot;tırnaklı&quot;
+</code></pre>
+<ul>
+<li><code>fn main()</code> programın başlangıcıdır.</li>
+<li><code>println!</code> bir <strong>makrodur</strong> (sonundaki <code>!</code> bunu gösterir): derleme anında biçim dizesini kontrol eder. <code>{}</code> değeri yerleştirir; <code>{adet}</code> gibi değişken adı doğrudan yazılabilir.</li>
+<li><code>{:.2}</code> iki ondalık, <code>{:&gt;6}</code> sağa yaslı 6 karakter, <code>{:?}</code> hata ayıklama biçimi.</li>
+<li><code>adet as f64</code>: Rust tipleri <strong>otomatik dönüştürmez</strong>; tam sayı ile ondalığı çarpmak için açık dönüşüm gerekir.</li>
+<li>Her ifade noktalı virgülle biter.</li>
+</ul>
+<div class="tw"><table>
+<thead>
+<tr>
+<th>Komut</th>
+<th>İşi</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>cargo new ad</code></td>
+<td>Yeni proje</td>
+</tr>
+<tr>
+<td><code>cargo run</code></td>
+<td>Derle ve çalıştır</td>
+</tr>
+<tr>
+<td><code>cargo build --release</code></td>
+<td>Optimize edilmiş derleme (<code>target/release/</code>)</td>
+</tr>
+<tr>
+<td><code>cargo check</code></td>
+<td>Sadece hata denetimi (çok hızlı)</td>
+</tr>
+<tr>
+<td><code>cargo fmt</code></td>
+<td>Biçimle</td>
+</tr>
+<tr>
+<td><code>cargo clippy</code></td>
+<td>İyi uygulama önerileri</td>
+</tr>
+</tbody>
+</table></div>
+<h3>4. Derleyiciyle konuşmak (1 saat)</h3>
+<p>Rust derleyicisinin hata mesajları, yazılım dünyasının en açıklayıcıları arasındadır. Değiştirilemez bir değişkeni değiştirmeye çalışalım:</p>
+<pre><code class="language-rust">fn main() {
+    let stok = 40;
+    stok = 25;
+    println!(&quot;{stok}&quot;);
+}
+</code></pre>
+<p>Derleyici şöyle yanıt verir (kısaltılmış):</p>
+<pre><code>error[E0384]: cannot assign twice to immutable variable `stok`
+ --&gt; src/main.rs:3:5
+  |
+2 |     let stok = 40;
+  |         ---- first assignment to `stok`
+3 |     stok = 25;
+  |     ^^^^^^^^^ cannot assign twice to immutable variable
+  |
+help: consider making this binding mutable
+  |
+2 |     let mut stok = 40;
+  |         +++
+</code></pre>
+<p>Mesaj sorunun <strong>ne</strong> olduğunu, <strong>nerede</strong> olduğunu ve <strong>nasıl düzeltileceğini</strong> söylüyor. <code>rustc --explain E0384</code> hatanın uzun açıklamasını verir. Rust öğrenirken en iyi öğretmenin derleyicinin kendisi olduğunu göreceksin: mesajları sonuna kadar oku.</p>
+<p><strong>Alıştırma:</strong> Adını ve doğum yılını değişkenlere yazıp yaşını hesaplayan bir program yaz. Sonra bir değişkeni kullanmadan bırak ve derleyicinin verdiği <strong>uyarıyı</strong> oku (<code>unused variable</code>).</p>
+<h3>Gün sonu kontrolü (15 dk)</h3>
+<ul class="tasks">
+<li class="task"><label><input type="checkbox" data-id="g1-1"><span>Rust'ın neden geliştirildiğini ve kullanıldığı alanları biliyorum.</span></label></li>
+<li class="task"><label><input type="checkbox" data-id="g1-2"><span>rustup ile Rust'ı kurdum; cargo new ve cargo run ile ilk projemi çalıştırdım.</span></label></li>
+<li class="task"><label><input type="checkbox" data-id="g1-3"><span>println! makrosunu ve {} biçimlerini kullanabiliyorum.</span></label></li>
+<li class="task"><label><input type="checkbox" data-id="g1-4"><span>cargo build --release, check, fmt ve clippy komutlarını biliyorum.</span></label></li>
+<li class="task"><label><input type="checkbox" data-id="g1-5"><span>Derleyici hata mesajını okuyup önerisini uygulayabiliyorum.</span></label></li>
+</ul></div>
+  <div class="pn"><a href="#genel">← Genel bakış</a><a href="#gun2">2. gün →</a></div>
+</section>
+<section class="day" id="gun2" data-day="2">
+  <div class="day-head"><span class="dn">GÜN 02</span><h2>Değişkenler ve tipler</h2><span class="meta">~4 saat · <span data-prog="2">0/5</span> kontrol</span></div>
+  <div class="prose"><h3>Hedef</h3>
+<p>Gün sonunda Rust'ta let ve mut ile değişken tanımlayabilecek, gölgelemeyi kullanabilecek, tam sayı ve ondalık tiplerini, bool, char, demet ve dizileri, as ile tip dönüşümünü ve tam sayı taşmasının Rust'taki davranışını bileceksin. Süre yaklaşık 4 saat.</p>
+<h3>1. let, mut ve gölgeleme (1 saat)</h3>
+<figure class="fig"><div class="sc"><svg viewBox="0 0 640 116" role="img" xmlns="http://www.w3.org/2000/svg"><defs><marker id="ah-degisken" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0 0L10 5L0 10z" class="ar"/></marker></defs><rect x="28.33333333333333" y="36" width="170" height="50" class="bx"/><text x="113.33333333333333" y="66" class="tb" text-anchor="middle">12.5</text><rect x="58.33333333333333" y="20" width="110" height="22" class="bxa"/><text x="113.33333333333333" y="36" class="tb" text-anchor="middle">let fiyat</text><text x="113.33333333333333" y="104" class="tm" text-anchor="middle">değiştirilemez</text><rect x="235.0" y="36" width="170" height="50" class="bx"/><text x="320.0" y="66" class="tb" text-anchor="middle">40 → 25</text><rect x="265.0" y="20" width="110" height="22" class="bxa"/><text x="320.0" y="36" class="tb" text-anchor="middle">let mut stok</text><text x="320.0" y="104" class="tm" text-anchor="middle">değişebilir</text><rect x="441.66666666666663" y="36" width="170" height="50" class="bx"/><text x="526.6666666666666" y="66" class="tb" text-anchor="middle">"42" → 42 → 84</text><rect x="471.66666666666663" y="20" width="110" height="22" class="bxa"/><text x="526.6666666666666" y="36" class="tb" text-anchor="middle">let girdi</text><text x="526.6666666666666" y="104" class="tm" text-anchor="middle">gölgeleme</text></svg></div><figcaption>Rust&#x27;ta değişkenler varsayılan olarak değiştirilemez.</figcaption></figure>
+<pre><code class="language-rust">fn main() {
+    let fiyat = 12.5;
+    let mut stok = 40;
+    stok -= 15;
+    println!(&quot;{fiyat} {stok}&quot;);
+
+    let girdi = &quot;42&quot;;
+    let girdi: i32 = girdi.parse().unwrap();
+    let girdi = girdi * 2;
+    println!(&quot;{girdi}&quot;);
+
+    const KDV: f64 = 0.20;
+    println!(&quot;{}&quot;, 250.0 * (1.0 + KDV));
+}
+</code></pre>
+<pre><code class="language-text">12.5 25
+84
+300
+</code></pre>
+<ul>
+<li>Rust'ta değişkenler <strong>varsayılan olarak değiştirilemez</strong>. Değişmesi gerekiyorsa açıkça <code>mut</code> yazılır. Bu, kodun hangi değerlerin değiştiğini bir bakışta göstermesini sağlar.</li>
+<li><strong>Gölgeleme</strong> (shadowing): aynı adla yeni bir <code>let</code> yazmak, öncekini gizleyen <strong>yeni</strong> bir değişken oluşturur; tipi bile farklı olabilir. "Metin olarak okudum, sayıya çevirdim" gibi dönüşümlerde yeni ad uydurmaktan kurtarır.</li>
+<li><code>const</code> derleme anında bilinen sabittir; tipi her zaman yazılır.</li>
+<li><code>.unwrap()</code> "başarılıysa değeri ver, değilse programı durdur" demektir; 6. günde doğru hata yönetimini göreceğiz.</li>
+</ul>
+<h3>2. Sayı tipleri (1 saat)</h3>
+<figure class="fig"><div class="sc"><svg viewBox="0 0 640 126" role="img" xmlns="http://www.w3.org/2000/svg"><defs><marker id="ah-tipler" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0 0L10 5L0 10z" class="ar"/></marker></defs><rect x="10" y="10" width="150" height="50" rx="5" class="bxa"/><text x="85.0" y="31.0" class="tb" text-anchor="middle">i32</text><text x="85.0" y="47.0" class="tm" text-anchor="middle">-42 · varsayılan</text><rect x="167" y="10" width="150" height="50" rx="5" class="bx"/><text x="242.0" y="31.0" class="tb" text-anchor="middle">u8</text><text x="242.0" y="47.0" class="tm" text-anchor="middle">0 … 255</text><rect x="324" y="10" width="150" height="50" rx="5" class="bx"/><text x="399.0" y="31.0" class="tb" text-anchor="middle">i64</text><text x="399.0" y="47.0" class="tm" text-anchor="middle">büyük tam sayı</text><rect x="481" y="10" width="150" height="50" rx="5" class="bx"/><text x="556.0" y="31.0" class="tb" text-anchor="middle">usize</text><text x="556.0" y="47.0" class="tm" text-anchor="middle">indeks, uzunluk</text><rect x="10" y="68" width="150" height="50" rx="5" class="bx"/><text x="85.0" y="89.0" class="tb" text-anchor="middle">f64</text><text x="85.0" y="105.0" class="tm" text-anchor="middle">12.5 · varsayılan</text><rect x="167" y="68" width="150" height="50" rx="5" class="bx"/><text x="242.0" y="89.0" class="tb" text-anchor="middle">bool</text><text x="242.0" y="105.0" class="tm" text-anchor="middle">true / false</text><rect x="324" y="68" width="150" height="50" rx="5" class="bx"/><text x="399.0" y="89.0" class="tb" text-anchor="middle">char</text><text x="399.0" y="105.0" class="tm" text-anchor="middle">'ş' · 4 bayt</text><rect x="481" y="68" width="150" height="50" rx="5" class="bx"/><text x="556.0" y="89.0" class="tb" text-anchor="middle">(&amp;str, f64)</text><text x="556.0" y="105.0" class="tm" text-anchor="middle">demet</text></svg></div><figcaption>Rust&#x27;ın temel tipleri.</figcaption></figure>
+<pre><code class="language-rust">fn main() {
+    let a: i32 = -42;
+    let b: u8 = 255;
+    let c: i64 = 85_000_000;
+    let d: f64 = 0.1 + 0.2;
+    let e = 7 / 2;
+    let f = 7.0 / 2.0;
+    println!(&quot;{a} {b} {c} {d} {e} {f} {}&quot;, 7 % 2);
+    println!(&quot;{} {}&quot;, i32::MAX, u64::MAX);
+    println!(&quot;{} {}&quot;, b.checked_add(1).is_none(), b.wrapping_add(1));
+    println!(&quot;{} {} {}&quot;, 3.99_f64 as i32, -1_i32 as u8, 300_i32 as u8);
+    println!(&quot;{:.3} {} {}&quot;, 2f64.sqrt(), 2_i32.pow(10), (17.5_f64).round());
+}
+</code></pre>
+<pre><code class="language-text">-42 255 85000000 0.30000000000000004 3 3.5 1
+2147483647 18446744073709551615
+true 0
+3 255 44
+1.414 1024 18
+</code></pre>
+<div class="tw"><table>
+<thead>
+<tr>
+<th>Tip</th>
+<th>Boyut</th>
+<th>Aralık</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>i8, i16, i32, i64, i128</code></td>
+<td>1–16 bayt</td>
+<td>İşaretli tam sayı (varsayılan <code>i32</code>)</td>
+</tr>
+<tr>
+<td><code>u8, u16, u32, u64, u128</code></td>
+<td>1–16 bayt</td>
+<td>İşaretsiz (negatif olamaz)</td>
+</tr>
+<tr>
+<td><code>isize, usize</code></td>
+<td>işaretçi boyutu</td>
+<td>İndeks ve uzunluk (<code>usize</code>)</td>
+</tr>
+<tr>
+<td><code>f32, f64</code></td>
+<td>4, 8 bayt</td>
+<td>Ondalık (varsayılan <code>f64</code>)</td>
+</tr>
+</tbody>
+</table></div>
+<ul>
+<li><strong>Taşma:</strong> Hata ayıklama derlemesinde (<code>cargo run</code>) tam sayı taşması programı <strong>durdurur</strong> (panic); release derlemesinde başa döner. Bilerek kontrol etmek için <code>checked_add</code> (taşarsa <code>None</code>), <code>wrapping_add</code> (başa dön), <code>saturating_add</code> (sınırda kal) kullanılır.</li>
+<li><code>as</code> açık dönüşümdür ve <strong>bilgi kaybedebilir</strong>: <code>3.99 as i32</code> → 3, <code>300 as u8</code> → 44 (300 − 256). Kayıpsız ve kontrollü dönüşüm için <code>u8::try_from(300)</code> hata döndürür.</li>
+<li><code>3.99_f64</code> gibi sayılara tip son eki yazılabilir.</li>
+</ul>
+<h3>3. bool, char, demet, dizi (1 saat)</h3>
+<pre><code class="language-rust">fn main() {
+    let stokta: bool = true;
+    let harf: char = 'ş';
+    println!(&quot;{stokta} {harf} {} {}&quot;, harf as u32, 'A'.is_alphabetic());
+
+    let urun: (&amp;str, f64, u32) = (&quot;Kalem&quot;, 12.5, 40);
+    let (ad, fiyat, stok) = urun;
+    println!(&quot;{} {} {}&quot;, urun.0, fiyat * stok as f64, ad.len());
+
+    let notlar: [i32; 5] = [72, 85, 64, 91, 58];
+    let sifirlar = [0.0; 3];
+    println!(&quot;{} {} {:?} {:?}&quot;, notlar[0], notlar.len(), sifirlar, notlar);
+    let toplam: i32 = notlar.iter().sum();
+    println!(&quot;ortalama {:.1}&quot;, toplam as f64 / notlar.len() as f64);
+}
+</code></pre>
+<pre><code class="language-text">true ş 351 true
+Kalem 500 5
+72 5 [0.0, 0.0, 0.0] [72, 85, 64, 91, 58]
+ortalama 74.0
+</code></pre>
+<ul>
+<li><code>char</code> 4 baytlık bir <strong>Unicode karakteridir</strong> (<code>'ş'</code> = 351); tek tırnakla yazılır.</li>
+<li><strong>Demet</strong> (tuple) farklı tipte değerleri bir arada tutar; <code>.0</code>, <code>.1</code> ile ya da <code>let (a, b, c) = ...</code> ile açılır.</li>
+<li><strong>Dizi</strong> (<code>[i32; 5]</code>) sabit boyutludur; boyut tipin parçasıdır. Değişken boyutlu liste için <code>Vec</code> (5. gün).</li>
+<li>Rust <strong>sınır kontrolü yapar</strong>: <code>notlar[10]</code> programı güvenle durdurur (panic), belleği bozmaz.</li>
+<li><code>{:?}</code> diziler gibi bileşik değerleri yazdırır.</li>
+</ul>
+<h3>4. İfadeler ve bloklar (30 dk)</h3>
+<p>Rust'ta neredeyse her şey bir <strong>ifadedir</strong> ve bir değer üretir. Süslü parantezli bir bloğun son satırı noktalı virgülsüzse, bloğun değeri odur:</p>
+<pre><code class="language-rust">fn main() {
+    let fiyat = 249.9;
+    let kdvli = {
+        let oran = 0.20;
+        (fiyat * (1.0 + oran) * 100.0_f64).round() / 100.0
+    };
+    println!(&quot;{kdvli}&quot;);
+}
+</code></pre>
+<pre><code class="language-text">299.88
+</code></pre>
+<p>Son satırın sonuna <code>;</code> koyarsan değer <code>()</code> (boş birim) olur ve tip hatası alırsın. Bu kural fonksiyonlar (4. gün) ve <code>if</code> (yarın) için de geçerlidir.</p>
+<h3>Gün sonu kontrolü (15 dk)</h3>
+<ul class="tasks">
+<li class="task"><label><input type="checkbox" data-id="g2-1"><span>let, mut ve const farkını biliyorum; değişkenlerin varsayılan olarak değiştirilemez olduğunu biliyorum.</span></label></li>
+<li class="task"><label><input type="checkbox" data-id="g2-2"><span>Gölgelemeyi ve ne zaman kullanılacağını biliyorum.</span></label></li>
+<li class="task"><label><input type="checkbox" data-id="g2-3"><span>i32, u8, i64, usize, f64 tiplerini ve taşmanın Rust'taki davranışını biliyorum.</span></label></li>
+<li class="task"><label><input type="checkbox" data-id="g2-4"><span>as dönüşümünün bilgi kaybedebileceğini biliyorum.</span></label></li>
+<li class="task"><label><input type="checkbox" data-id="g2-5"><span>char, demet ve diziyi kullanabiliyor, bloğun son ifadesinin değer ürettiğini biliyorum.</span></label></li>
+</ul></div>
+  <div class="pn"><a href="#gun1">← 1. gün</a><a href="#gun3">3. gün →</a></div>
+</section>
+<section class="day" id="gun3" data-day="3">
+  <div class="day-head"><span class="dn">GÜN 03</span><h2>Kontrol akışı</h2><span class="meta">~4 saat · <span data-prog="3">0/4</span> kontrol</span></div>
+  <div class="prose"><h3>Hedef</h3>
+<p>Gün sonunda Rust'ta if'i bir ifade olarak kullanabilecek, loop, while ve for döngülerini aralıklarla yazabilecek ve Rust'ın en güçlü kontrol yapısı olan match ile desen eşleştirmeyi kullanabileceksin. Süre yaklaşık 4 saat.</p>
+<h3>1. if bir ifadedir (45 dk)</h3>
+<figure class="fig"><div class="sc"><svg viewBox="0 0 640 86" role="img" xmlns="http://www.w3.org/2000/svg"><defs><marker id="ah-kosul" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0 0L10 5L0 10z" class="ar"/></marker></defs><polygon points="320,10 430,42 320,74 210,42" class="bxa"/><text x="320" y="47" class="tb" text-anchor="middle">stok &lt; esik</text><line x1="430" y1="42" x2="470" y2="42" class="mu" marker-end="url(#ah-kosul)"/><text x="450" y="34" class="ta" text-anchor="middle">evet</text><rect x="472" y="24" width="158" height="36" rx="5" class="bx"/><text x="551.0" y="46.0" class="tb" text-anchor="middle">Az kaldı</text><line x1="210" y1="42" x2="170" y2="42" class="mu" marker-end="url(#ah-kosul)"/><text x="190" y="34" class="ta" text-anchor="middle">hayır</text><rect x="10" y="24" width="158" height="36" rx="5" class="bx"/><text x="89.0" y="46.0" class="tb" text-anchor="middle">Yeterli</text></svg></div><figcaption>if bir ifadedir: let karar = if … { } else { };</figcaption></figure>
+<pre><code class="language-rust">fn main() {
+    let stok = 4;
+    let esik = 10;
+    if stok == 0 {
+        println!(&quot;Tükendi&quot;);
+    } else if stok &lt; esik {
+        println!(&quot;Az kaldı: {stok}&quot;);
+    } else {
+        println!(&quot;Yeterli&quot;);
+    }
+
+    let karar = if stok &gt; 0 &amp;&amp; stok &lt; esik { &quot;sipariş ver&quot; } else { &quot;bekle&quot; };
+    println!(&quot;{karar}&quot;);
+}
+</code></pre>
+<pre><code class="language-text">Az kaldı: 4
+sipariş ver
+</code></pre>
+<ul>
+<li>Koşulda parantez yok, süslü parantez zorunlu; koşul <code>bool</code> olmalı.</li>
+<li><code>if</code> bir <strong>ifadedir</strong>: değer üretir. Bu yüzden Rust'ta ayrı bir üçlü işlem (<code>? :</code>) yoktur. İki dalın tipi aynı olmalıdır.</li>
+</ul>
+<h3>2. Döngüler (1 saat)</h3>
+<figure class="fig"><div class="sc"><svg viewBox="0 0 640 150" role="img" xmlns="http://www.w3.org/2000/svg"><defs><marker id="ah-dongu" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0 0L10 5L0 10z" class="ar"/></marker></defs><rect x="250" y="6" width="140" height="30" rx="5" class="bx"/><text x="320.0" y="25.0" class="tb" text-anchor="middle">for i in</text><line x1="320" y1="36" x2="320" y2="52" class="mu" marker-end="url(#ah-dongu)"/><polygon points="320,54 420,82 320,110 220,82" class="bxa"/><text x="320" y="87" class="tb" text-anchor="middle">1..=100</text><line x1="420" y1="82" x2="470" y2="82" class="mu" marker-end="url(#ah-dongu)"/><text x="444" y="74" class="ta" text-anchor="middle">evet</text><rect x="472" y="62" width="158" height="40" rx="5" class="bx"/><text x="551.0" y="78.0" class="tb" text-anchor="middle">toplam += i</text><text x="551.0" y="94.0" class="tm" text-anchor="middle">sonraki i</text><path d="M551 102 V140 H320 V112" class="mu" marker-end="url(#ah-dongu)"/><text x="560" y="132" class="ta" text-anchor="start">tekrar</text><line x1="220" y1="82" x2="172" y2="82" class="mu" marker-end="url(#ah-dongu)"/><text x="196" y="74" class="ta" text-anchor="middle">hayır</text><rect x="20" y="64" width="150" height="36" rx="5" class="bx"/><text x="95.0" y="86.0" class="tb" text-anchor="middle">döngüden çık</text></svg></div><figcaption>for ve aralıklar; loop break ile değer döndürebilir.</figcaption></figure>
+<pre><code class="language-rust">fn main() {
+    let mut toplam = 0;
+    for i in 1..=100 {
+        toplam += i;
+    }
+    println!(&quot;toplam {toplam}&quot;);
+
+    let mut para = 1000.0_f64;
+    let mut ay = 0;
+    while para &lt; 2000.0 {
+        para *= 1.03;
+        ay += 1;
+    }
+    println!(&quot;{ay} ayda {para:.2}&quot;);
+
+    let mut n = 0;
+    let ilk_kat = loop {
+        n += 1;
+        if n % 7 == 0 {
+            break n;
+        }
+    };
+    println!(&quot;ilk 7 katı: {ilk_kat}&quot;);
+
+    for i in (0..10).step_by(3).rev() {
+        print!(&quot;{i} &quot;);
+    }
+    println!();
+
+    let sehirler = [&quot;Adana&quot;, &quot;Bursa&quot;, &quot;İzmir&quot;];
+    for (i, s) in sehirler.iter().enumerate() {
+        print!(&quot;{i}:{s} &quot;);
+    }
+    println!();
+}
+</code></pre>
+<pre><code class="language-text">toplam 5050
+24 ayda 2032.79
+ilk 7 katı: 7
+9 6 3 0 
+0:Adana 1:Bursa 2:İzmir 
+</code></pre>
+<ul>
+<li><code>1..=100</code> 1'den 100'e (dahil), <code>0..10</code> 0'dan 9'a <strong>aralıktır</strong>.</li>
+<li><code>loop</code> sonsuz döngüdür; <code>break değer;</code> ile döngüden çıkarken bir değer döndürebilir.</li>
+<li><code>.step_by(3)</code>, <code>.rev()</code>, <code>.enumerate()</code> yineleyici metotlarıdır (5. gün).</li>
+<li><code>print!</code> satır atlamaz, <code>println!()</code> boş satır atlar.</li>
+</ul>
+<h3>3. match (1,5 saat)</h3>
+<figure class="fig"><div class="sc"><svg viewBox="0 0 640 86" role="img" xmlns="http://www.w3.org/2000/svg"><defs><marker id="ah-match" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0 0L10 5L0 10z" class="ar"/></marker></defs><rect x="10.0" y="16" width="109.6" height="56" rx="5" class="bx"/><text x="64.8" y="40.0" class="tb" text-anchor="middle">kg</text><text x="64.8" y="56.0" class="tm" text-anchor="middle">14</text><rect x="137.6" y="16" width="109.6" height="56" rx="5" class="bx"/><text x="192.39999999999998" y="40.0" class="tb" text-anchor="middle">0 =&gt;</text><text x="192.39999999999998" y="56.0" class="tm" text-anchor="middle">geçersiz</text><line x1="121.6" y1="44.0" x2="135.6" y2="44.0" class="mu" marker-end="url(#ah-match)"/><rect x="265.2" y="16" width="109.6" height="56" rx="5" class="bx"/><text x="320.0" y="40.0" class="tb" text-anchor="middle">1..=2 =&gt;</text><text x="320.0" y="56.0" class="tm" text-anchor="middle">60 TL</text><line x1="249.2" y1="44.0" x2="263.2" y2="44.0" class="mu" marker-end="url(#ah-match)"/><rect x="392.79999999999995" y="16" width="109.6" height="56" rx="5" class="bx"/><text x="447.59999999999997" y="40.0" class="tb" text-anchor="middle">3..=10 =&gt;</text><text x="447.59999999999997" y="56.0" class="tm" text-anchor="middle">95 TL</text><line x1="376.79999999999995" y1="44.0" x2="390.79999999999995" y2="44.0" class="mu" marker-end="url(#ah-match)"/><rect x="520.4" y="16" width="109.6" height="56" rx="5" class="bxa"/><text x="575.1999999999999" y="40.0" class="tb" text-anchor="middle">fazla =&gt;</text><text x="575.1999999999999" y="56.0" class="tm" text-anchor="middle">143 TL</text><line x1="504.4" y1="44.0" x2="518.4" y2="44.0" class="mu" marker-end="url(#ah-match)"/></svg></div><figcaption>match: ilk eşleşen desen kazanır, bütün olasılıklar ele alınmalı.</figcaption></figure>
+<p><code>match</code>, bir değeri desenlerle karşılaştırır ve <strong>bütün olasılıkların</strong> ele alınmasını zorunlu kılar:</p>
+<pre><code class="language-rust">fn harf_notu(ort: f64, final_notu: f64) -&gt; &amp;'static str {
+    match (ort, final_notu) {
+        (_, f) if f &lt; 50.0 =&gt; &quot;FF&quot;,
+        (o, _) if o &gt;= 85.0 =&gt; &quot;AA&quot;,
+        (o, _) if o &gt;= 70.0 =&gt; &quot;BB&quot;,
+        (o, _) if o &gt;= 55.0 =&gt; &quot;CC&quot;,
+        (o, _) if o &gt;= 45.0 =&gt; &quot;DD&quot;,
+        _ =&gt; &quot;FF&quot;,
+    }
+}
+
+fn kargo(kg: u32) -&gt; String {
+    match kg {
+        0 =&gt; String::from(&quot;geçersiz&quot;),
+        1..=2 =&gt; String::from(&quot;60 TL&quot;),
+        3..=10 =&gt; String::from(&quot;95 TL&quot;),
+        fazla =&gt; format!(&quot;{} TL&quot;, 95 + (fazla - 10) * 12),
+    }
+}
+
+fn main() {
+    println!(&quot;{} {} {}&quot;, harf_notu(73.4, 81.0), harf_notu(90.0, 45.0), harf_notu(30.0, 60.0));
+    println!(&quot;{} {} {}&quot;, kargo(1), kargo(7), kargo(14));
+
+    let gun = &quot;Pazar&quot;;
+    let tur = match gun {
+        &quot;Cumartesi&quot; | &quot;Pazar&quot; =&gt; &quot;hafta sonu&quot;,
+        &quot;Pazartesi&quot; | &quot;Salı&quot; | &quot;Çarşamba&quot; | &quot;Perşembe&quot; | &quot;Cuma&quot; =&gt; &quot;iş günü&quot;,
+        _ =&gt; &quot;geçersiz&quot;,
+    };
+    println!(&quot;{tur}&quot;);
+
+    let nokta = (0, 5);
+    match nokta {
+        (0, 0) =&gt; println!(&quot;orijin&quot;),
+        (0, y) =&gt; println!(&quot;y ekseninde, y = {y}&quot;),
+        (x, 0) =&gt; println!(&quot;x ekseninde, x = {x}&quot;),
+        (x, y) =&gt; println!(&quot;({x}, {y})&quot;),
+    }
+}
+</code></pre>
+<pre><code class="language-text">BB FF FF
+60 TL 95 TL 143 TL
+hafta sonu
+y ekseninde, y = 5
+</code></pre>
+<ul>
+<li>Her kol <code>desen =&gt; ifade</code> biçimindedir; yukarıdan aşağı ilk eşleşen kazanır.</li>
+<li><code>|</code> birden çok deseni birleştirir, <code>1..=2</code> aralık desenidir, <code>if</code> ile <strong>koruma</strong> (guard) eklenir.</li>
+<li><code>fazla</code> gibi bir ad, değeri yakalayıp kolda kullanmayı sağlar; <code>_</code> her şeyi yakalar ama adını vermez.</li>
+<li><strong>Kapsamlılık:</strong> <code>match</code>, olası her değeri karşılamazsa derleme hatası verir. <code>kargo</code>'dan <code>fazla =&gt;</code> kolunu silersen derleyici "4 ve üstü ele alınmadı" der. Bu, <code>enum</code>'larla (6. gün) birlikte Rust'ın en güvenli özelliklerinden biridir.</li>
+<li><code>match</code> de bir ifadedir ve değer döndürür.</li>
+</ul>
+<p><code>if let</code> tek bir deseni kontrol etmenin kısa yoludur; 6. günde <code>Option</code> ile çok kullanacağız.</p>
+<p><strong>Alıştırma:</strong> 1'den 30'a kadar FizzBuzz'ı <code>match (i % 3, i % 5)</code> kullanarak yaz.</p>
+<h3>Gün sonu kontrolü (15 dk)</h3>
+<ul class="tasks">
+<li class="task"><label><input type="checkbox" data-id="g3-1"><span>if'i ifade olarak kullanıp değer atayabiliyorum.</span></label></li>
+<li class="task"><label><input type="checkbox" data-id="g3-2"><span>for ve aralıklar (1..=100, 0..10), while ve loop ile break değeri kullanabiliyorum.</span></label></li>
+<li class="task"><label><input type="checkbox" data-id="g3-3"><span>match ile değer, aralık, | ve koruma desenleri yazabiliyorum.</span></label></li>
+<li class="task"><label><input type="checkbox" data-id="g3-4"><span>match'in bütün olasılıkları ele almayı zorunlu kıldığını biliyorum.</span></label></li>
+</ul></div>
+  <div class="pn"><a href="#gun2">← 2. gün</a><a href="#gun4">4. gün →</a></div>
+</section>
+<section class="day" id="gun4" data-day="4">
+  <div class="day-head"><span class="dn">GÜN 04</span><h2>Sahiplik ve ödünç alma</h2><span class="meta">~4 saat · <span data-prog="4">0/5</span> kontrol</span></div>
+  <div class="prose"><h3>Hedef</h3>
+<p>Gün sonunda Rust'ın sahiplik kurallarını, taşıma ile kopyalama arasındaki farkı, clone'u, referanslarla ödünç almayı, &amp;mut ile değiştirilebilir ödünç almayı, ödünç alma kurallarını ve String ile &amp;str arasındaki farkı bileceksin. Bu, Rust'ın en önemli ve en özgün günüdür. Süre yaklaşık 4 saat.</p>
+<h3>1. Fonksiyonlar (30 dk)</h3>
+<figure class="fig"><div class="sc"><svg viewBox="0 0 640 110" role="img" xmlns="http://www.w3.org/2000/svg"><defs><marker id="ah-fonksiyon" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0 0L10 5L0 10z" class="ar"/></marker></defs><rect x="6" y="18" width="160" height="32" rx="5" class="bx"/><text x="86.0" y="38.0" class="tb" text-anchor="middle">sayilar: &amp;[i32]</text><line x1="168" y1="34" x2="192" y2="60" class="mu" marker-end="url(#ah-fonksiyon)"/><rect x="194" y="26" width="300" height="70" rx="5" class="bxa"/><text x="344.0" y="57.0" class="tb" text-anchor="middle">fn min_max(s: &amp;[i32]) -&gt; (i32, i32)</text><text x="344.0" y="73.0" class="tm" text-anchor="middle">son ifade döner</text><line x1="496" y1="61" x2="514" y2="61" class="mu" marker-end="url(#ah-fonksiyon)"/><rect x="516" y="40" width="118" height="42" rx="5" class="bx"/><text x="575.0" y="57.0" class="tb" text-anchor="middle">dönüş</text><text x="575.0" y="73.0" class="tm" text-anchor="middle">(58, 91)</text></svg></div><figcaption>Fonksiyon: son ifade dönüş değeridir.</figcaption></figure>
+<pre><code class="language-rust">fn kdv_dahil(tutar: f64, oran: f64) -&gt; f64 {
+    tutar * (1.0 + oran / 100.0)
+}
+
+fn min_max(sayilar: &amp;[i32]) -&gt; (i32, i32) {
+    let mut min = sayilar[0];
+    let mut max = sayilar[0];
+    for &amp;x in sayilar {
+        if x &lt; min { min = x; }
+        if x &gt; max { max = x; }
+    }
+    (min, max)
+}
+
+fn main() {
+    println!(&quot;{}&quot;, kdv_dahil(1000.0, 20.0));
+    let (enk, enb) = min_max(&amp;[72, 85, 64, 91, 58]);
+    println!(&quot;{enk} {enb}&quot;);
+}
+</code></pre>
+<pre><code class="language-text">1200
+58 91
+</code></pre>
+<p>Parametre tipleri her zaman yazılır; dönüş tipi <code>-&gt;</code> ile belirtilir. Son ifade (noktalı virgülsüz) dönüş değeridir; erken dönmek için <code>return</code> kullanılır. Varsayılan argüman ve aşırı yükleme yoktur.</p>
+<h3>2. Sahiplik kuralları (1 saat)</h3>
+<figure class="fig"><div class="sc"><svg viewBox="0 0 640 150" role="img" xmlns="http://www.w3.org/2000/svg"><defs><marker id="ah-sahiplik" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0 0L10 5L0 10z" class="ar"/></marker></defs><rect x="20" y="30" width="150" height="44" rx="5" class="bxa"/><text x="95.0" y="48.0" class="tb" text-anchor="middle">let a =</text><text x="95.0" y="64.0" class="tm" text-anchor="middle">String::from("Kalem")</text><line x1="172" y1="52" x2="228" y2="52" class="mu" marker-end="url(#ah-sahiplik)"/><text x="200" y="44" class="tm" text-anchor="middle">taşı</text><rect x="230" y="30" width="150" height="44" rx="5" class="bxa"/><text x="305.0" y="48.0" class="tb" text-anchor="middle">let b = a;</text><text x="305.0" y="64.0" class="tm" text-anchor="middle">sahip artık b</text><rect x="20" y="100" width="150" height="34" rx="5" class="bx"/><text x="95.0" y="121.0" class="tb" text-anchor="middle">a: kullanılamaz ✗</text><line x1="382" y1="52" x2="438" y2="52" class="mu" marker-end="url(#ah-sahiplik)"/><text x="410" y="44" class="tm" text-anchor="middle">clone</text><rect x="440" y="30" width="170" height="44" rx="5" class="bx"/><text x="525.0" y="48.0" class="tb" text-anchor="middle">let c = b.clone();</text><text x="525.0" y="64.0" class="tm" text-anchor="middle">ayrı kopya</text><rect x="230" y="100" width="380" height="34" rx="5" class="bx"/><text x="420.0" y="121.0" class="tb" text-anchor="middle">i32, f64, bool, char: Copy tipler, atama kopyalar</text></svg></div><figcaption>Sahiplik: her değerin tek sahibi vardır; atama sahipliği taşır.</figcaption></figure>
+<p>Rust belleği çöp toplayıcı olmadan, şu üç kuralla yönetir:</p>
+<ol>
+<li>Her değerin <strong>tek bir sahibi</strong> (değişken) vardır.</li>
+<li>Aynı anda sadece bir sahip olabilir.</li>
+<li>Sahip kapsamdan çıkınca değer <strong>otomatik olarak silinir</strong> (drop).</li>
+</ol>
+<pre><code class="language-rust">fn main() {
+    let a = String::from(&quot;Kalem&quot;);
+    let b = a;                       // sahiplik a'dan b'ye TAŞINDI
+    println!(&quot;{b}&quot;);
+    // println!(&quot;{a}&quot;);              // HATA: a artık geçerli değil
+
+    let c = b.clone();               // derin kopya: iki ayrı String
+    println!(&quot;{b} {c}&quot;);
+
+    let x = 5;
+    let y = x;                       // tam sayılar KOPYALANIR
+    println!(&quot;{x} {y}&quot;);
+}
+</code></pre>
+<pre><code class="language-text">Kalem
+Kalem Kalem
+5 5
+</code></pre>
+<ul>
+<li><code>String</code> metni öbekte (heap) tutar. <code>let b = a;</code> metni kopyalamaz; sahipliği <strong>taşır</strong> ve <code>a</code> artık kullanılamaz. Böylece aynı bellek iki kez silinmeye çalışılmaz.</li>
+<li><code>.clone()</code> açıkça kopyalar; maliyetli olabileceği için Rust bunu sana gizlice yapmaz.</li>
+<li><code>i32</code>, <code>f64</code>, <code>bool</code>, <code>char</code> gibi küçük, yığında duran tipler <strong>Copy</strong>'dir: atama kopyalar, taşıma yoktur.</li>
+</ul>
+<p>Yorum satırını kaldırırsan derleyici şunu söyler:</p>
+<pre><code>error[E0382]: borrow of moved value: `a`
+  |
+2 |     let a = String::from(&quot;Kalem&quot;);
+  |         - move occurs because `a` has type `String`, which does not implement the `Copy` trait
+3 |     let b = a;
+  |             - value moved here
+</code></pre>
+<p>Fonksiyona değer vermek de sahipliği taşır:</p>
+<pre><code class="language-rust">fn yazdir(s: String) {
+    println!(&quot;{s}&quot;);
+}                                    // s burada silinir
+
+fn main() {
+    let ad = String::from(&quot;Defter&quot;);
+    yazdir(ad);
+    // yazdir(ad);                   // HATA: ad taşındı
+}
+</code></pre>
+<pre><code class="language-text">Defter
+</code></pre>
+<h3>3. Ödünç alma: referanslar (1,5 saat)</h3>
+<figure class="fig"><div class="sc"><svg viewBox="0 0 640 180" role="img" xmlns="http://www.w3.org/2000/svg"><defs><marker id="ah-odunc" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0 0L10 5L0 10z" class="ar"/></marker></defs><rect x="240" y="14" width="160" height="40" rx="5" class="bxa"/><text x="320.0" y="30.0" class="tb" text-anchor="middle">ad: String</text><text x="320.0" y="46.0" class="tm" text-anchor="middle">(sahip)</text><rect x="40" y="100" width="160" height="40" rx="5" class="bx"/><text x="120.0" y="116.0" class="tb" text-anchor="middle">&amp;ad</text><text x="120.0" y="132.0" class="tm" text-anchor="middle">okur</text><line x1="120" y1="98" x2="320" y2="56" class="mu" marker-end="url(#ah-odunc)"/><rect x="240" y="100" width="160" height="40" rx="5" class="bx"/><text x="320.0" y="116.0" class="tb" text-anchor="middle">&amp;ad</text><text x="320.0" y="132.0" class="tm" text-anchor="middle">okur</text><line x1="320" y1="98" x2="320" y2="56" class="mu" marker-end="url(#ah-odunc)"/><rect x="440" y="100" width="160" height="40" rx="5" class="bx"/><text x="520.0" y="116.0" class="tb" text-anchor="middle">&amp;mut ad</text><text x="520.0" y="132.0" class="tm" text-anchor="middle">tek yazar</text><line x1="520" y1="98" x2="320" y2="56" class="mu" marker-end="url(#ah-odunc)"/><text x="320" y="166" class="tm" text-anchor="middle">ya çok sayıda &amp;  ya da tek bir &amp;mut, aynı anda ikisi değil</text></svg></div><figcaption>Ödünç alma kuralları: veri yarışı derleme anında engellenir.</figcaption></figure>
+<p>Her seferinde sahipliği vermek pratik değildir. Bunun yerine değeri <strong>ödünç verirsin</strong>: <code>&amp;</code> ile bir <strong>referans</strong> oluşturulur.</p>
+<pre><code class="language-rust">fn uzunluk(s: &amp;String) -&gt; usize {
+    s.len()
+}
+
+fn ek_yap(s: &amp;mut String) {
+    s.push_str(&quot; (stokta)&quot;);
+}
+
+fn main() {
+    let mut ad = String::from(&quot;Kalem&quot;);
+    let n = uzunluk(&amp;ad);            // ödünç ver, sahiplik bende kalır
+    println!(&quot;{ad} {n}&quot;);
+
+    ek_yap(&amp;mut ad);                 // değiştirilebilir ödünç
+    println!(&quot;{ad}&quot;);
+
+    let r1 = &amp;ad;
+    let r2 = &amp;ad;                    // birden çok okuyucu: sorun yok
+    println!(&quot;{r1} | {r2}&quot;);
+    let r3 = &amp;mut ad;                // r1 ve r2 artık kullanılmadığı için izinli
+    r3.push('!');
+    println!(&quot;{ad}&quot;);
+}
+</code></pre>
+<pre><code class="language-text">Kalem 5
+Kalem (stokta)
+Kalem (stokta) | Kalem (stokta)
+Kalem (stokta)!
+</code></pre>
+<p><strong>Ödünç alma kuralları</strong> (derleyicinin "ödünç denetçisi" uygular):</p>
+<div class="tw"><table>
+<thead>
+<tr>
+<th>Aynı anda izinli olan</th>
+<th></th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>İstediğin kadar <strong>salt okunur</strong> referans (<code>&amp;T</code>)</td>
+<td>✓</td>
+</tr>
+<tr>
+<td><strong>ya da</strong> tek bir <strong>değiştirilebilir</strong> referans (<code>&amp;mut T</code>)</td>
+<td>✓</td>
+</tr>
+<tr>
+<td>İkisi birlikte</td>
+<td>✗</td>
+</tr>
+</tbody>
+</table></div>
+<p>Ayrıca bir referans, gösterdiği değerden <strong>uzun yaşayamaz</strong> (sarkan referans olmaz).</p>
+<p>Bu kurallar, C ve C++'taki "bir yerde okurken başka bir yerde değiştirme" hatalarını ve çok iş parçacıklı programlardaki <strong>veri yarışlarını</strong> derleme anında imkânsız kılar. Başta zorlayıcıdır; zamanla kodu daha düzenli tasarlamaya yönlendirdiğini görürsün.</p>
+<h3>4. String ve &amp;str (45 dk)</h3>
+<figure class="fig"><div class="sc"><svg viewBox="0 0 640 114" role="img" xmlns="http://www.w3.org/2000/svg"><defs><marker id="ah-string" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0 0L10 5L0 10z" class="ar"/></marker></defs><text x="160" y="18" class="ta" text-anchor="middle">String</text><text x="480" y="18" class="ta" text-anchor="middle">&amp;str</text><rect x="10" y="26" width="300" height="78" class="bx"/><rect x="330" y="26" width="300" height="78" class="bxa"/><text x="22" y="46" class="tm" text-anchor="start">sahipli, öbekte</text><text x="22" y="68" class="tm" text-anchor="start">büyüyebilir (mut)</text><text x="22" y="90" class="tm" text-anchor="start">String::from, format!</text><text x="342" y="46" class="tm" text-anchor="start">ödünç dilim</text><text x="342" y="68" class="tm" text-anchor="start">değişmez</text><text x="342" y="90" class="tm" text-anchor="start">"sabit", &amp;s[..]</text></svg></div><figcaption>String ve &amp;str: parametrelerde &amp;str kullan.</figcaption></figure>
+<pre><code class="language-rust">fn ilk_kelime(s: &amp;str) -&gt; &amp;str {
+    s.split(' ').next().unwrap_or(&quot;&quot;)
+}
+
+fn main() {
+    let sabit: &amp;str = &quot;Cephe paneli&quot;;              // program içine gömülü, değişmez
+    let mut sahipli: String = String::from(&quot;Cam&quot;);  // öbekte, büyüyebilir
+    sahipli.push_str(&quot; panel&quot;);
+    sahipli += &quot; P-01&quot;;
+
+    println!(&quot;{} | {} | {}&quot;, ilk_kelime(sabit), ilk_kelime(&amp;sahipli), &amp;sahipli[0..3]);
+    println!(&quot;{} {} {}&quot;, sahipli.len(), &quot;şeker&quot;.len(), &quot;şeker&quot;.chars().count());
+    println!(&quot;{} {}&quot;, sabit.to_uppercase(), sabit.contains(&quot;panel&quot;));
+    let parcalar: Vec&lt;&amp;str&gt; = sabit.split(' ').collect();
+    println!(&quot;{:?} {}&quot;, parcalar, format!(&quot;{}-{}&quot;, parcalar[0], 1));
+}
+</code></pre>
+<pre><code class="language-text">Cephe | Cam | Cam
+14 6 5
+CEPHE PANELI true
+[&quot;Cephe&quot;, &quot;paneli&quot;] Cephe-1
+</code></pre>
+<div class="tw"><table>
+<thead>
+<tr>
+<th></th>
+<th><code>String</code></th>
+<th><code>&amp;str</code></th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Ne</td>
+<td>Sahipli, büyüyebilen metin (öbekte)</td>
+<td>Bir metnin <strong>dilimine</strong> ödünç referans</td>
+</tr>
+<tr>
+<td>Değiştirilebilir mi</td>
+<td><code>mut</code> ise evet</td>
+<td>Hayır</td>
+</tr>
+<tr>
+<td>Nereden</td>
+<td><code>String::from</code>, <code>format!</code>, <code>.to_string()</code></td>
+<td><code>"sabit metin"</code>, <code>&amp;s[..]</code>, <code>&amp;string</code></td>
+</tr>
+</tbody>
+</table></div>
+<ul>
+<li>Fonksiyon parametrelerinde <strong><code>&amp;str</code></strong> kullan: hem <code>String</code> (<code>&amp;sahipli</code>) hem sabit metin kabul eder.</li>
+<li>Metinler UTF-8'dir; <code>len()</code> bayt sayısıdır. <code>&amp;s[0..3]</code> bir <strong>bayt</strong> aralığıdır; bir harfin ortasından kesersen program panic verir. Karakterler için <code>.chars()</code>.</li>
+</ul>
+<h3>Gün sonu kontrolü (15 dk)</h3>
+<ul class="tasks">
+<li class="task"><label><input type="checkbox" data-id="g4-1"><span>Rust'ta fonksiyon yazıp son ifadeyle değer döndürebiliyorum.</span></label></li>
+<li class="task"><label><input type="checkbox" data-id="g4-2"><span>Sahipliğin üç kuralını sayabiliyorum.</span></label></li>
+<li class="task"><label><input type="checkbox" data-id="g4-3"><span>Taşıma, Copy tipler ve clone arasındaki farkı biliyorum.</span></label></li>
+<li class="task"><label><input type="checkbox" data-id="g4-4"><span>&amp; ve &amp;mut ile ödünç verebiliyor, ödünç alma kurallarını açıklayabiliyorum.</span></label></li>
+<li class="task"><label><input type="checkbox" data-id="g4-5"><span>String ile &amp;str farkını ve parametrelerde &amp;str kullanmayı biliyorum.</span></label></li>
+</ul></div>
+  <div class="pn"><a href="#gun3">← 3. gün</a><a href="#gun5">5. gün →</a></div>
+</section>
+<section class="day" id="gun5" data-day="5">
+  <div class="day-head"><span class="dn">GÜN 05</span><h2>Koleksiyonlar ve yineleyiciler</h2><span class="meta">~4 saat · <span data-prog="5">0/5</span> kontrol</span></div>
+  <div class="prose"><h3>Hedef</h3>
+<p>Gün sonunda Rust'ta Vec ile değişken boyutlu liste tutabilecek, dilimleri kullanabilecek, HashMap ve BTreeMap ile anahtar-değer verisi saklayabilecek, yineleyici metotları (map, filter, sum, collect) ve kapanışlarla (closure) döngü yazmadan veri işleyebileceksin. Süre yaklaşık 4 saat.</p>
+<h3>1. Vec (1 saat)</h3>
+<figure class="fig"><div class="sc"><svg viewBox="0 0 640 118" role="img" xmlns="http://www.w3.org/2000/svg"><defs><marker id="ah-vec" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0 0L10 5L0 10z" class="ar"/></marker></defs><text x="20" y="18" class="tb" text-anchor="start">Vec&lt;i32&gt;</text><rect x="20" y="28" width="60" height="36" class="bx"/><text x="50.0" y="51.0" class="tb" text-anchor="middle">58</text><text x="50.0" y="80" class="tm" text-anchor="middle">0</text><rect x="80" y="28" width="60" height="36" class="bxa"/><text x="110.0" y="51.0" class="tb" text-anchor="middle">64</text><text x="110.0" y="80" class="tm" text-anchor="middle">1</text><rect x="140" y="28" width="60" height="36" class="bxa"/><text x="170.0" y="51.0" class="tb" text-anchor="middle">72</text><text x="170.0" y="80" class="tm" text-anchor="middle">2</text><rect x="200" y="28" width="60" height="36" class="bx"/><text x="230.0" y="51.0" class="tb" text-anchor="middle">85</text><text x="230.0" y="80" class="tm" text-anchor="middle">3</text><rect x="260" y="28" width="60" height="36" class="bx"/><text x="290.0" y="51.0" class="tb" text-anchor="middle">91</text><text x="290.0" y="80" class="tm" text-anchor="middle">4</text><text x="20" y="106" class="ta" text-anchor="start">get(1) → Some(64) · get(10) → None · notlar[10] → panic</text></svg></div><figcaption>Vec: büyüyebilen liste; &amp;notlar[1..3] bir dilimdir.</figcaption></figure>
+<pre><code class="language-rust">fn main() {
+    let mut sehirler: Vec&lt;String&gt; = Vec::new();
+    sehirler.push(String::from(&quot;Adana&quot;));
+    sehirler.push(&quot;Bursa&quot;.to_string());
+    sehirler.push(&quot;İzmir&quot;.into());
+    sehirler.insert(1, &quot;Ankara&quot;.into());
+    let son = sehirler.pop();
+    println!(&quot;{:?} {:?} {}&quot;, sehirler, son, sehirler.len());
+
+    let mut notlar = vec![72, 85, 64, 91, 58];
+    notlar.sort();
+    println!(&quot;{:?} {:?} {}&quot;, notlar, &amp;notlar[1..3], notlar.contains(&amp;64));
+    println!(&quot;{:?} {:?}&quot;, notlar.get(1), notlar.get(10));
+
+    for n in notlar.iter_mut() {
+        *n += 5;
+    }
+    println!(&quot;{:?}&quot;, notlar);
+}
+</code></pre>
+<pre><code class="language-text">[&quot;Adana&quot;, &quot;Ankara&quot;, &quot;Bursa&quot;] Some(&quot;İzmir&quot;) 3
+[58, 64, 72, 85, 91] [64, 72] true
+Some(64) None
+[63, 69, 77, 90, 96]
+</code></pre>
+<ul>
+<li><code>Vec&lt;T&gt;</code> öbekte duran, büyüyebilen listedir; <code>vec![...]</code> makrosuyla kısaca oluşturulur.</li>
+<li><code>pop()</code> ve <code>get(i)</code> bir <strong><code>Option</code></strong> döndürür: <code>Some(değer)</code> ya da liste boşsa / indeks yoksa <code>None</code>. Böylece "olmayan öğe" durumu atlanamaz (6. gün). <code>notlar[10]</code> ise panic verir.</li>
+<li><code>&amp;notlar[1..3]</code> bir <strong>dilimdir</strong> (<code>&amp;[i32]</code>): Vec'in bir bölümüne ödünç referans. Fonksiyon parametrelerinde <code>&amp;Vec&lt;T&gt;</code> yerine <code>&amp;[T]</code> kullan.</li>
+<li><code>iter_mut()</code> öğelere değiştirilebilir referanslar verir; <code>*n</code> ile değer değiştirilir.</li>
+</ul>
+<h3>2. HashMap ve BTreeMap (1 saat)</h3>
+<figure class="fig"><div class="sc"><svg viewBox="0 0 640 144" role="img" xmlns="http://www.w3.org/2000/svg"><defs><marker id="ah-map" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0 0L10 5L0 10z" class="ar"/></marker></defs><text x="20" y="20" class="tb" text-anchor="start">HashMap&lt;&amp;str, u32&gt;</text><rect x="60" y="30" width="150" height="28" rx="5" class="bx"/><text x="135.0" y="48.0" class="tb" text-anchor="middle">"Ankara"</text><line x1="212" y1="44" x2="278" y2="44" class="mu" marker-end="url(#ah-map)"/><rect x="280" y="30" width="170" height="28" rx="5" class="bx"/><text x="365.0" y="48.0" class="tb" text-anchor="middle">6</text><rect x="60" y="66" width="150" height="28" rx="5" class="bx"/><text x="135.0" y="84.0" class="tb" text-anchor="middle">"Bursa"</text><line x1="212" y1="80" x2="278" y2="80" class="mu" marker-end="url(#ah-map)"/><rect x="280" y="66" width="170" height="28" rx="5" class="bx"/><text x="365.0" y="84.0" class="tb" text-anchor="middle">Some(16)</text><rect x="60" y="102" width="150" height="28" rx="5" class="bxa"/><text x="135.0" y="120.0" class="tb" text-anchor="middle">"Rize"</text><line x1="212" y1="116" x2="278" y2="116" class="mu" marker-end="url(#ah-map)"/><rect x="280" y="102" width="170" height="28" rx="5" class="bx"/><text x="365.0" y="120.0" class="tb" text-anchor="middle">None</text></svg></div><figcaption>HashMap: get bir Option döndürür.</figcaption></figure>
+<pre><code class="language-rust">use std::collections::{BTreeMap, HashMap};
+
+fn main() {
+    let mut plaka: HashMap&lt;&amp;str, u32&gt; = HashMap::new();
+    plaka.insert(&quot;Ankara&quot;, 6);
+    plaka.insert(&quot;İzmir&quot;, 35);
+    plaka.insert(&quot;Bursa&quot;, 16);
+    println!(&quot;{:?} {:?} {}&quot;, plaka.get(&quot;Bursa&quot;), plaka.get(&quot;Rize&quot;), plaka.contains_key(&quot;Ankara&quot;));
+
+    match plaka.get(&quot;Rize&quot;) {
+        Some(no) =&gt; println!(&quot;Rize: {no}&quot;),
+        None =&gt; println!(&quot;Rize yok&quot;),
+    }
+
+    let mut sayac: BTreeMap&lt;&amp;str, u32&gt; = BTreeMap::new();
+    for k in &quot;elma armut elma kiraz elma&quot;.split(' ') {
+        *sayac.entry(k).or_insert(0) += 1;
+    }
+    println!(&quot;{:?}&quot;, sayac);
+}
+</code></pre>
+<pre><code class="language-text">Some(16) None true
+Rize yok
+{&quot;armut&quot;: 1, &quot;elma&quot;: 3, &quot;kiraz&quot;: 1}
+</code></pre>
+<ul>
+<li><code>HashMap</code> sırasızdır ve ortalama O(1)'dir; <code>BTreeMap</code> anahtarları <strong>sıralı</strong> tutar.</li>
+<li><code>get</code> bir <code>Option&lt;&amp;V&gt;</code> döndürür; <code>match</code> ile iki durum da ele alınır.</li>
+<li><code>entry(k).or_insert(0)</code> "anahtar yoksa 0 ile ekle, değerine değiştirilebilir referans ver" demektir: sayma kalıbının Rust hâli.</li>
+</ul>
+<h3>3. Yineleyiciler ve kapanışlar (1,5 saat)</h3>
+<figure class="fig"><div class="sc"><svg viewBox="0 0 640 86" role="img" xmlns="http://www.w3.org/2000/svg"><defs><marker id="ah-iter" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0 0L10 5L0 10z" class="ar"/></marker></defs><rect x="10.0" y="16" width="109.6" height="56" rx="5" class="bx"/><text x="64.8" y="40.0" class="tb" text-anchor="middle">urunler</text><text x="64.8" y="56.0" class="tm" text-anchor="middle">Vec&lt;Urun&gt;</text><rect x="137.6" y="16" width="109.6" height="56" rx="5" class="bx"/><text x="192.39999999999998" y="40.0" class="tb" text-anchor="middle">.iter()</text><text x="192.39999999999998" y="56.0" class="tm" text-anchor="middle">referanslar</text><line x1="121.6" y1="44.0" x2="135.6" y2="44.0" class="mu" marker-end="url(#ah-iter)"/><rect x="265.2" y="16" width="109.6" height="56" rx="5" class="bx"/><text x="320.0" y="40.0" class="tb" text-anchor="middle">.filter(|u| …)</text><text x="320.0" y="56.0" class="tm" text-anchor="middle">süz</text><line x1="249.2" y1="44.0" x2="263.2" y2="44.0" class="mu" marker-end="url(#ah-iter)"/><rect x="392.79999999999995" y="16" width="109.6" height="56" rx="5" class="bx"/><text x="447.59999999999997" y="40.0" class="tb" text-anchor="middle">.map(|u| u.ad)</text><text x="447.59999999999997" y="56.0" class="tm" text-anchor="middle">dönüştür</text><line x1="376.79999999999995" y1="44.0" x2="390.79999999999995" y2="44.0" class="mu" marker-end="url(#ah-iter)"/><rect x="520.4" y="16" width="109.6" height="56" rx="5" class="bxa"/><text x="575.1999999999999" y="40.0" class="tb" text-anchor="middle">.collect()</text><text x="575.1999999999999" y="56.0" class="tm" text-anchor="middle">Vec&lt;&amp;str&gt;</text><line x1="504.4" y1="44.0" x2="518.4" y2="44.0" class="mu" marker-end="url(#ah-iter)"/></svg></div><figcaption>Yineleyici zinciri: tembeldir, collect çağrılınca çalışır.</figcaption></figure>
+<p>Rust'ta koleksiyon işlemenin en doğal yolu <strong>yineleyici</strong> (iterator) zinciridir. Derleyici bunları elle yazılmış döngü kadar hızlı koda çevirir (<strong>sıfır maliyetli soyutlama</strong>).</p>
+<pre><code class="language-rust">struct Urun {
+    ad: &amp;'static str,
+    kategori: &amp;'static str,
+    fiyat: f64,
+    stok: u32,
+}
+
+fn main() {
+    let urunler = vec![
+        Urun { ad: &quot;Kalem&quot;, kategori: &quot;kırtasiye&quot;, fiyat: 12.5, stok: 40 },
+        Urun { ad: &quot;Kulaklık&quot;, kategori: &quot;elektronik&quot;, fiyat: 850.0, stok: 5 },
+        Urun { ad: &quot;Defter&quot;, kategori: &quot;kırtasiye&quot;, fiyat: 45.0, stok: 25 },
+        Urun { ad: &quot;Mouse&quot;, kategori: &quot;elektronik&quot;, fiyat: 320.0, stok: 12 },
+    ];
+
+    let pahalilar: Vec&lt;&amp;str&gt; = urunler.iter().filter(|u| u.fiyat &gt; 40.0).map(|u| u.ad).collect();
+    println!(&quot;{:?}&quot;, pahalilar);
+
+    let toplam: f64 = urunler.iter().map(|u| u.fiyat * u.stok as f64).sum();
+    let az_var = urunler.iter().any(|u| u.stok &lt; 10);
+    let ilk_az = urunler.iter().find(|u| u.stok &lt; 10).map(|u| u.ad);
+    println!(&quot;{toplam} {az_var} {:?}&quot;, ilk_az);
+
+    let en_degerli = urunler.iter().max_by(|a, b| {
+        (a.fiyat * a.stok as f64).total_cmp(&amp;(b.fiyat * b.stok as f64))
+    });
+    println!(&quot;{}&quot;, en_degerli.unwrap().ad);
+
+    let mut kopya: Vec&lt;&amp;Urun&gt; = urunler.iter().collect();
+    kopya.sort_by(|a, b| a.ad.cmp(b.ad));
+    let adlar: Vec&lt;_&gt; = kopya.iter().map(|u| u.ad).collect();
+    println!(&quot;{} {}&quot;, adlar.join(&quot;, &quot;), urunler.iter().filter(|u| u.kategori == &quot;kırtasiye&quot;).count());
+
+    let kdv = 1.2;
+    let kdvli: Vec&lt;f64&gt; = urunler.iter().map(|u| (u.fiyat * kdv * 100.0).round() / 100.0).collect();
+    println!(&quot;{:?}&quot;, kdvli);
+}
+</code></pre>
+<pre><code class="language-text">[&quot;Kulaklık&quot;, &quot;Defter&quot;, &quot;Mouse&quot;]
+9715 true Some(&quot;Kulaklık&quot;)
+Kulaklık
+Defter, Kalem, Kulaklık, Mouse 2
+[15.0, 1020.0, 54.0, 384.0]
+</code></pre>
+<div class="tw"><table>
+<thead>
+<tr>
+<th>Metot</th>
+<th>İşi</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>iter()</code> / <code>iter_mut()</code> / <code>into_iter()</code></td>
+<td>Referans / değiştirilebilir referans / sahipli öğeler üzerinde yinele</td>
+</tr>
+<tr>
+<td><code>map(|x| ...)</code></td>
+<td>Dönüştür</td>
+</tr>
+<tr>
+<td><code>filter(|x| ...)</code></td>
+<td>Süz</td>
+</tr>
+<tr>
+<td><code>sum()</code>, <code>count()</code>, <code>max_by</code>, <code>min_by</code></td>
+<td>Özetle</td>
+</tr>
+<tr>
+<td><code>any</code>, <code>all</code>, <code>find</code></td>
+<td>Kontrol et, bul (<code>find</code> Option döndürür)</td>
+</tr>
+<tr>
+<td><code>collect()</code></td>
+<td>Sonucu <code>Vec</code>, <code>HashMap</code>, <code>String</code> gibi bir koleksiyona topla</td>
+</tr>
+<tr>
+<td><code>enumerate()</code>, <code>zip()</code>, <code>rev()</code>, <code>take(n)</code>, <code>skip(n)</code></td>
+<td>Konum, eşleştirme, ters, ilk n</td>
+</tr>
+</tbody>
+</table></div>
+<ul>
+<li><code>|u| u.fiyat &gt; 40.0</code> bir <strong>kapanıştır</strong> (closure): isimsiz fonksiyon. Dışarıdaki değişkenleri (<code>kdv</code>) yakalayabilir.</li>
+<li>Yineleyiciler <strong>tembeldir</strong>: <code>collect</code>, <code>sum</code> gibi bir "tüketici" çağrılana kadar hiçbir şey çalışmaz.</li>
+<li><code>f64</code> değerleri doğrudan sıralanamaz (NaN yüzünden); <code>total_cmp</code> ile karşılaştırılır.</li>
+<li><code>&amp;'static str</code> programın sonuna kadar yaşayan sabit metin referansıdır; örneği kısa tutmak için kullandık.</li>
+</ul>
+<h3>Gün sonu kontrolü (15 dk)</h3>
+<ul class="tasks">
+<li class="task"><label><input type="checkbox" data-id="g5-1"><span>Vec oluşturup push, pop, insert, sort ve get kullanabiliyorum; get'in Option döndürdüğünü biliyorum.</span></label></li>
+<li class="task"><label><input type="checkbox" data-id="g5-2"><span>Dilim (&amp;[T]) kavramını ve parametrelerde kullanımını biliyorum.</span></label></li>
+<li class="task"><label><input type="checkbox" data-id="g5-3"><span>HashMap ve BTreeMap kullanıp entry().or_insert() ile sayma yapabiliyorum.</span></label></li>
+<li class="task"><label><input type="checkbox" data-id="g5-4"><span>iter, map, filter, sum, find ve collect zincirini kapanışlarla yazabiliyorum.</span></label></li>
+<li class="task"><label><input type="checkbox" data-id="g5-5"><span>Yineleyicilerin tembel ve sıfır maliyetli olduğunu biliyorum.</span></label></li>
+</ul></div>
+  <div class="pn"><a href="#gun4">← 4. gün</a><a href="#gun6">6. gün →</a></div>
+</section>
+<section class="day" id="gun6" data-day="6">
+  <div class="day-head"><span class="dn">GÜN 06</span><h2>struct, enum ve hatalar</h2><span class="meta">~4 saat · <span data-prog="6">0/5</span> kontrol</span></div>
+  <div class="prose"><h3>Hedef</h3>
+<p>Gün sonunda Rust'ta struct tanımlayıp impl bloğuyla metot ekleyebilecek, veri taşıyan enum'lar yazıp match ile işleyebilecek, null yerine Option'ı, istisna yerine Result'ı kullanabilecek, ? işlemiyle hataları yukarı aktarabilecek ve kendi hata tipini tanımlayabileceksin. Süre yaklaşık 4 saat.</p>
+<h3>1. struct ve impl (1 saat)</h3>
+<figure class="fig"><div class="sc"><svg viewBox="0 0 640 152" role="img" xmlns="http://www.w3.org/2000/svg"><defs><marker id="ah-struct" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0 0L10 5L0 10z" class="ar"/></marker></defs><rect x="200" y="8" width="240" height="136" class="bxa"/><text x="320.0" y="26" class="tb" text-anchor="middle">Urun (struct)</text><line x1="200" y1="34" x2="440" y2="34" class="k1"/><text x="208" y="50" class="tm" text-anchor="start">ad: String</text><text x="208" y="66" class="tm" text-anchor="start">fiyat: f64</text><text x="208" y="82" class="tm" text-anchor="start">stok: u32</text><line x1="200" y1="90" x2="440" y2="90" class="k1"/><text x="208" y="106" class="tm" text-anchor="start">yeni(…) -&gt; Result</text><text x="208" y="122" class="tm" text-anchor="start">deger(&amp;self)</text><text x="208" y="138" class="tm" text-anchor="start">sat(&amp;mut self, adet)</text></svg></div><figcaption>struct ve impl: &amp;self okur, &amp;mut self değiştirir.</figcaption></figure>
+<pre><code class="language-rust">#[derive(Debug, Clone)]
+struct Urun {
+    ad: String,
+    fiyat: f64,
+    stok: u32,
+}
+
+impl Urun {
+    fn yeni(ad: &amp;str, fiyat: f64, stok: u32) -&gt; Result&lt;Urun, String&gt; {
+        if fiyat &lt; 0.0 {
+            return Err(format!(&quot;{ad}: fiyat negatif olamaz&quot;));
+        }
+        Ok(Urun { ad: ad.to_string(), fiyat, stok })
+    }
+
+    fn deger(&amp;self) -&gt; f64 {
+        self.fiyat * self.stok as f64
+    }
+
+    fn sat(&amp;mut self, adet: u32) -&gt; bool {
+        if adet &gt; self.stok {
+            return false;
+        }
+        self.stok -= adet;
+        true
+    }
+}
+
+fn main() {
+    let mut u = Urun::yeni(&quot;Kalem&quot;, 12.5, 40).unwrap();
+    u.sat(15);
+    let satildi = u.sat(100);
+    println!(&quot;{} {} {} {}&quot;, u.ad, u.stok, u.deger(), satildi);
+    println!(&quot;{:?}&quot;, u);
+    println!(&quot;{:?}&quot;, Urun::yeni(&quot;X&quot;, -5.0, 1).err());
+}
+</code></pre>
+<pre><code class="language-text">Kalem 25 312.5 false
+Urun { ad: &quot;Kalem&quot;, fiyat: 12.5, stok: 25 }
+Some(&quot;X: fiyat negatif olamaz&quot;)
+</code></pre>
+<ul>
+<li><code>impl Urun { ... }</code> struct'a metot ekler. İlk parametresi <code>&amp;self</code> (okur), <code>&amp;mut self</code> (değiştirir) ya da <code>self</code> (sahipliği alır) olan fonksiyonlar metottur; olmayanlar (<code>yeni</code>) <strong>ilişkili fonksiyondur</strong> ve <code>Urun::yeni</code> ile çağrılır.</li>
+<li>Kurucu yoktur; gelenek <code>new</code> (burada <code>yeni</code>) adında bir ilişkili fonksiyondur.</li>
+<li><code>#[derive(Debug, Clone)]</code> derleyiciye <code>{:?}</code> ile yazdırma ve <code>.clone()</code> kodunu otomatik üretmesini söyler.</li>
+<li><code>Urun { ad: ..., fiyat, stok }</code>: değişken adı alan adıyla aynıysa kısaca yazılır.</li>
+<li><code>u.sat(100)</code> sonucu önce bir değişkene alındı: aynı <code>println!</code> içinde <code>u</code> hem okunup (<code>u.ad</code>) hem değiştirilerek (<code>&amp;mut self</code>) ödünç alınamaz; ödünç alma kuralı (4. gün) burada da geçerli.</li>
+</ul>
+<h3>2. enum ve match (1 saat)</h3>
+<figure class="fig"><div class="sc"><svg viewBox="0 0 640 86" role="img" xmlns="http://www.w3.org/2000/svg"><defs><marker id="ah-enum" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0 0L10 5L0 10z" class="ar"/></marker></defs><rect x="10.0" y="16" width="141.5" height="56" rx="5" class="bxa"/><text x="80.75" y="40.0" class="tb" text-anchor="middle">Sekil</text><text x="80.75" y="56.0" class="tm" text-anchor="middle">enum</text><rect x="169.5" y="16" width="141.5" height="56" rx="5" class="bx"/><text x="240.25" y="40.0" class="tb" text-anchor="middle">Daire { r }</text><text x="240.25" y="56.0" class="tm" text-anchor="middle">π·r²</text><line x1="153.5" y1="44.0" x2="167.5" y2="44.0" class="mu" marker-end="url(#ah-enum)"/><rect x="329.0" y="16" width="141.5" height="56" rx="5" class="bx"/><text x="399.75" y="40.0" class="tb" text-anchor="middle">Dikdortgen {…}</text><text x="399.75" y="56.0" class="tm" text-anchor="middle">en·boy</text><line x1="313.0" y1="44.0" x2="327.0" y2="44.0" class="mu" marker-end="url(#ah-enum)"/><rect x="488.5" y="16" width="141.5" height="56" rx="5" class="bx"/><text x="559.25" y="40.0" class="tb" text-anchor="middle">Ucgen(a, b, c)</text><text x="559.25" y="56.0" class="tm" text-anchor="middle">Heron</text><line x1="472.5" y1="44.0" x2="486.5" y2="44.0" class="mu" marker-end="url(#ah-enum)"/></svg></div><figcaption>Veri taşıyan enum: her seçenek farklı alanlara sahip olabilir.</figcaption></figure>
+<p>Rust'ın enum'ları sadece sabit listesi değildir; her seçenek <strong>farklı veri taşıyabilir</strong>:</p>
+<pre><code class="language-rust">enum Sekil {
+    Daire { r: f64 },
+    Dikdortgen { en: f64, boy: f64 },
+    Ucgen(f64, f64, f64),
+}
+
+impl Sekil {
+    fn alan(&amp;self) -&gt; f64 {
+        match self {
+            Sekil::Daire { r } =&gt; std::f64::consts::PI * r * r,
+            Sekil::Dikdortgen { en, boy } =&gt; en * boy,
+            Sekil::Ucgen(a, b, c) =&gt; {
+                let s = (a + b + c) / 2.0;
+                (s * (s - a) * (s - b) * (s - c)).sqrt()
+            }
+        }
+    }
+}
+
+fn main() {
+    let sekiller = [Sekil::Daire { r: 1.0 }, Sekil::Dikdortgen { en: 2.0, boy: 3.0 }, Sekil::Ucgen(3.0, 4.0, 5.0)];
+    for s in &amp;sekiller {
+        println!(&quot;{:.2}&quot;, s.alan());
+    }
+    let toplam: f64 = sekiller.iter().map(|s| s.alan()).sum();
+    println!(&quot;toplam {:.2}&quot;, toplam);
+}
+</code></pre>
+<pre><code class="language-text">3.14
+6.00
+6.00
+toplam 15.14
+</code></pre>
+<p>Yeni bir şekil (örneğin <code>Kare</code>) eklersen, <code>match</code> onu ele almadığı için derleyici <strong>her</strong> <code>match</code>'i sana gösterir. Bir durumu unutmak imkânsız hâle gelir.</p>
+<h3>3. Option: null yerine (45 dk)</h3>
+<p>Rust'ta <strong>null yoktur</strong>. "Değer olmayabilir" durumu <code>Option&lt;T&gt;</code> enum'uyla ifade edilir: <code>Some(değer)</code> ya da <code>None</code>. Derleyici, değeri kullanmadan önce <code>None</code> durumunu ele almanı zorunlu kılar.</p>
+<pre><code class="language-rust">fn bul&lt;'a&gt;(liste: &amp;'a [&amp;'a str], aranan: &amp;str) -&gt; Option&lt;usize&gt; {
+    liste.iter().position(|s| *s == aranan)
+}
+
+fn main() {
+    let sehirler = [&quot;Adana&quot;, &quot;Bursa&quot;, &quot;İzmir&quot;];
+    match bul(&amp;sehirler, &quot;Bursa&quot;) {
+        Some(i) =&gt; println!(&quot;Bursa {i}. sırada&quot;),
+        None =&gt; println!(&quot;yok&quot;),
+    }
+    if let Some(i) = bul(&amp;sehirler, &quot;Rize&quot;) {
+        println!(&quot;Rize {i}&quot;);
+    } else {
+        println!(&quot;Rize yok&quot;);
+    }
+    println!(&quot;{} {}&quot;, bul(&amp;sehirler, &quot;Rize&quot;).unwrap_or(99), bul(&amp;sehirler, &quot;İzmir&quot;).map(|i| i + 1).unwrap_or(0));
+}
+</code></pre>
+<pre><code class="language-text">Bursa 1. sırada
+Rize yok
+99 3
+</code></pre>
+<p><code>unwrap_or(varsayılan)</code>, <code>map</code>, <code>if let</code> Option ile çalışmanın kısa yollarıdır. <code>unwrap()</code> None'da panic verir; denemeler dışında kaçın.</p>
+<h3>4. Result ve ? işlemi (1 saat)</h3>
+<figure class="fig"><div class="sc"><svg viewBox="0 0 640 114" role="img" xmlns="http://www.w3.org/2000/svg"><defs><marker id="ah-result" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0 0L10 5L0 10z" class="ar"/></marker></defs><text x="160" y="18" class="ta" text-anchor="middle">Option&lt;T&gt;</text><text x="480" y="18" class="ta" text-anchor="middle">Result&lt;T, E&gt;</text><rect x="10" y="26" width="300" height="78" class="bx"/><rect x="330" y="26" width="300" height="78" class="bxa"/><text x="22" y="46" class="tm" text-anchor="start">Some(değer)</text><text x="22" y="68" class="tm" text-anchor="start">None</text><text x="22" y="90" class="tm" text-anchor="start">null yerine</text><text x="342" y="46" class="tm" text-anchor="start">Ok(değer)</text><text x="342" y="68" class="tm" text-anchor="start">Err(hata)</text><text x="342" y="90" class="tm" text-anchor="start">? ile yukarı aktar</text></svg></div><figcaption>Option ve Result: eksik değer ve hata, atlanamayan tiplerdir.</figcaption></figure>
+<p>Başarısız olabilecek işlemler <code>Result&lt;T, E&gt;</code> döndürür: <code>Ok(değer)</code> ya da <code>Err(hata)</code>. Rust'ta istisna yoktur; hatalar değerdir ve görmezden gelinemez.</p>
+<pre><code class="language-rust">use std::fmt;
+use std::num::ParseIntError;
+
+#[derive(Debug)]
+enum SiparisHatasi {
+    Okunamadi(ParseIntError),
+    Yetersiz { istenen: u32, stok: u32 },
+}
+
+impl fmt::Display for SiparisHatasi {
+    fn fmt(&amp;self, f: &amp;mut fmt::Formatter) -&gt; fmt::Result {
+        match self {
+            SiparisHatasi::Okunamadi(e) =&gt; write!(f, &quot;sayı okunamadı ({e})&quot;),
+            SiparisHatasi::Yetersiz { istenen, stok } =&gt; write!(f, &quot;{istenen} istendi, stokta {stok} var&quot;),
+        }
+    }
+}
+
+impl From&lt;ParseIntError&gt; for SiparisHatasi {
+    fn from(e: ParseIntError) -&gt; Self {
+        SiparisHatasi::Okunamadi(e)
+    }
+}
+
+fn siparis(stok: u32, girdi: &amp;str) -&gt; Result&lt;u32, SiparisHatasi&gt; {
+    let adet: u32 = girdi.trim().parse()?;
+    if adet &gt; stok {
+        return Err(SiparisHatasi::Yetersiz { istenen: adet, stok });
+    }
+    Ok(stok - adet)
+}
+
+fn main() {
+    let mut stok = 10;
+    for g in [&quot;3&quot;, &quot;x&quot;, &quot;20&quot;, &quot; 2 &quot;] {
+        match siparis(stok, g) {
+            Ok(kalan) =&gt; { stok = kalan; println!(&quot;kalan {stok}&quot;); }
+            Err(e) =&gt; println!(&quot;hata: {e}&quot;),
+        }
+    }
+}
+</code></pre>
+<pre><code class="language-text">kalan 7
+hata: sayı okunamadı (invalid digit found in string)
+hata: 20 istendi, stokta 7 var
+kalan 5
+</code></pre>
+<ul>
+<li><strong><code>?</code> işlemi</strong>: <code>Ok</code> ise içindeki değeri verir, <code>Err</code> ise fonksiyondan <strong>hemen o hatayla döner</strong>. Go'daki <code>if err != nil { return err }</code> kalıbının tek karakterlik hâlidir.</li>
+<li><code>From&lt;ParseIntError&gt;</code> uygulaması sayesinde <code>?</code>, <code>parse</code> hatasını otomatik olarak bizim hata tipimize çevirdi.</li>
+<li><code>Display</code> trait'i (yarın) hatanın kullanıcıya nasıl yazılacağını belirler.</li>
+<li>Gerçek projelerde bu kalıp için <code>thiserror</code> (kütüphaneler) ve <code>anyhow</code> (uygulamalar) crate'leri yaygındır.</li>
+</ul>
+<h3>Gün sonu kontrolü (15 dk)</h3>
+<ul class="tasks">
+<li class="task"><label><input type="checkbox" data-id="g6-1"><span>struct tanımlayıp impl ile &amp;self, &amp;mut self metotları ve ilişkili fonksiyon yazabiliyorum.</span></label></li>
+<li class="task"><label><input type="checkbox" data-id="g6-2"><span>derive(Debug, Clone) ile otomatik özellik ekleyebiliyorum.</span></label></li>
+<li class="task"><label><input type="checkbox" data-id="g6-3"><span>Veri taşıyan enum yazıp match ile bütün seçenekleri işleyebiliyorum.</span></label></li>
+<li class="task"><label><input type="checkbox" data-id="g6-4"><span>Option ile Some, None, if let ve unwrap_or kullanabiliyorum.</span></label></li>
+<li class="task"><label><input type="checkbox" data-id="g6-5"><span>Result, ? işlemi ve kendi hata enum'umla hata yönetebiliyorum.</span></label></li>
+</ul></div>
+  <div class="pn"><a href="#gun5">← 5. gün</a><a href="#gun7">7. gün →</a></div>
+</section>
+<section class="day" id="gun7" data-day="7">
+  <div class="day-head"><span class="dn">GÜN 07</span><h2>Trait&#x27;ler ve proje</h2><span class="meta">~4 saat · <span data-prog="7">0/5</span> kontrol</span></div>
+  <div class="prose"><h3>Hedef</h3>
+<p>Gün sonunda Rust'ta trait tanımlayıp uygulayabilecek, Display ve Debug trait'lerini yazabilecek, trait sınırlı generic fonksiyonlar kullanabilecek, envanter özeti programını yazmış olacak ve cargo ile dış crate'leri kullanmayı bileceksin. Süre yaklaşık 4 saat.</p>
+<h3>1. Trait'ler (1,5 saat)</h3>
+<figure class="fig"><div class="sc"><svg viewBox="0 0 640 236" role="img" xmlns="http://www.w3.org/2000/svg"><defs><marker id="ah-trait" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0 0L10 5L0 10z" class="ar"/></marker></defs><rect x="200" y="8" width="240" height="88" class="bxa"/><text x="320.0" y="26" class="tb" text-anchor="middle">Sekil (trait)</text><line x1="200" y1="34" x2="440" y2="34" class="k1"/><line x1="200" y1="58" x2="440" y2="58" class="k1"/><text x="208" y="74" class="tm" text-anchor="start">alan(&amp;self) -&gt; f64</text><text x="208" y="90" class="tm" text-anchor="start">ad(&amp;self) (varsayılan)</text><rect x="112.0" y="138" width="200" height="88" class="bx"/><text x="212.0" y="156" class="tb" text-anchor="middle">Dikdortgen</text><line x1="112.0" y1="164" x2="312.0" y2="164" class="k1"/><text x="120.0" y="180" class="tm" text-anchor="start">en, boy</text><line x1="112.0" y1="188" x2="312.0" y2="188" class="k1"/><text x="120.0" y="204" class="tm" text-anchor="start">alan()</text><text x="120.0" y="220" class="tm" text-anchor="start">ad()</text><line x1="212.0" y1="136" x2="320" y2="98" class="mu" marker-end="url(#ah-trait)"/><rect x="328.0" y="138" width="200" height="88" class="bx"/><text x="428.0" y="156" class="tb" text-anchor="middle">Daire</text><line x1="328.0" y1="164" x2="528.0" y2="164" class="k1"/><text x="336.0" y="180" class="tm" text-anchor="start">r</text><line x1="328.0" y1="188" x2="528.0" y2="188" class="k1"/><text x="336.0" y="204" class="tm" text-anchor="start">alan()</text><text x="336.0" y="220" class="tm" text-anchor="start">Display</text><line x1="428.0" y1="136" x2="320" y2="98" class="mu" marker-end="url(#ah-trait)"/><text x="330" y="122" class="ta" text-anchor="start">impl</text></svg></div><figcaption>trait: ortak davranış sözleşmesi; impl Sekil for Daire.</figcaption></figure>
+<p><strong>Trait</strong>, bir tipin sahip olması gereken davranışları tanımlar; diğer dillerdeki interface'e benzer. Kalıtım yoktur; davranış trait'lerle paylaşılır.</p>
+<pre><code class="language-rust">use std::fmt;
+
+trait Sekil {
+    fn alan(&amp;self) -&gt; f64;
+    fn ad(&amp;self) -&gt; String {
+        String::from(&quot;şekil&quot;)
+    }
+}
+
+struct Dikdortgen { en: f64, boy: f64 }
+struct Daire { r: f64 }
+
+impl Sekil for Dikdortgen {
+    fn alan(&amp;self) -&gt; f64 { self.en * self.boy }
+    fn ad(&amp;self) -&gt; String { format!(&quot;dikdörtgen {}x{}&quot;, self.en, self.boy) }
+}
+
+impl Sekil for Daire {
+    fn alan(&amp;self) -&gt; f64 { std::f64::consts::PI * self.r * self.r }
+}
+
+impl fmt::Display for Daire {
+    fn fmt(&amp;self, f: &amp;mut fmt::Formatter) -&gt; fmt::Result {
+        write!(f, &quot;Daire(r={})&quot;, self.r)
+    }
+}
+
+fn rapor(s: &amp;impl Sekil) -&gt; String {
+    format!(&quot;{}: {:.2}&quot;, s.ad(), s.alan())
+}
+
+fn toplam_alan(sekiller: &amp;[Box&lt;dyn Sekil&gt;]) -&gt; f64 {
+    sekiller.iter().map(|s| s.alan()).sum()
+}
+
+fn main() {
+    let d = Daire { r: 1.0 };
+    println!(&quot;{}&quot;, rapor(&amp;Dikdortgen { en: 2.0, boy: 3.0 }));
+    println!(&quot;{} | {}&quot;, rapor(&amp;d), d);
+    let liste: Vec&lt;Box&lt;dyn Sekil&gt;&gt; = vec![Box::new(d), Box::new(Dikdortgen { en: 1.0, boy: 1.0 })];
+    println!(&quot;{:.2}&quot;, toplam_alan(&amp;liste));
+}
+</code></pre>
+<pre><code class="language-text">dikdörtgen 2x3: 6.00
+şekil: 3.14 | Daire(r=1)
+4.14
+</code></pre>
+<ul>
+<li><code>trait Sekil { fn alan(&amp;self) -&gt; f64; }</code> bir sözleşmedir; <code>impl Sekil for Daire</code> uygular. <code>ad</code> gibi <strong>varsayılan</strong> metotlar trait içinde yazılabilir.</li>
+<li><strong><code>Display</code></strong> standart trait'i uygulanınca tip <code>{}</code> ile yazdırılabilir; <code>Debug</code> ise <code>{:?}</code> içindir (genelde <code>derive</code> ile).</li>
+<li><code>&amp;impl Sekil</code>: "Sekil'i uygulayan herhangi bir tip". Derleyici her tip için ayrı, hızlı bir sürüm üretir (statik çağrı).</li>
+<li><code>Box&lt;dyn Sekil&gt;</code>: farklı tipleri <strong>aynı listede</strong> tutmak için; çağrı çalışma anında çözülür (dinamik çağrı).</li>
+</ul>
+<h3>2. Generics ve derive (45 dk)</h3>
+<pre><code class="language-rust">#[derive(Debug, Clone, PartialEq, PartialOrd)]
+struct Fiyat(f64);
+
+fn en_buyuk&lt;T: PartialOrd + Copy&gt;(liste: &amp;[T]) -&gt; Option&lt;T&gt; {
+    let mut eb = *liste.first()?;
+    for &amp;x in liste {
+        if x &gt; eb { eb = x; }
+    }
+    Some(eb)
+}
+
+fn main() {
+    println!(&quot;{:?} {:?} {:?}&quot;, en_buyuk(&amp;[3, 9, 2]), en_buyuk(&amp;[1.5, 0.2]), en_buyuk::&lt;i32&gt;(&amp;[]));
+    println!(&quot;{}&quot;, Fiyat(12.5) &lt; Fiyat(45.0));
+}
+</code></pre>
+<pre><code class="language-text">Some(9) Some(1.5) None
+true
+</code></pre>
+<ul>
+<li><code>&lt;T: PartialOrd + Copy&gt;</code> bir <strong>trait sınırıdır</strong>: T'nin karşılaştırılabilir ve kopyalanabilir olmasını şart koşar.</li>
+<li><code>derive</code> ile <code>PartialEq</code> (<code>==</code>), <code>PartialOrd</code> (<code>&lt;</code>), <code>Hash</code>, <code>Default</code> gibi trait'ler otomatik üretilir.</li>
+</ul>
+<h3>3. Envanter özeti (1 saat)</h3>
+<figure class="fig"><div class="sc"><svg viewBox="0 0 640 134" role="img" xmlns="http://www.w3.org/2000/svg"><defs><marker id="ah-proje" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0 0L10 5L0 10z" class="ar"/></marker></defs><rect x="230" y="8" width="180" height="40" rx="5" class="bxa"/><text x="320.0" y="32.0" class="tb" text-anchor="middle">envanter özeti</text><line x1="320" y1="48" x2="83.0" y2="78" class="mu" marker-end="url(#ah-proje)"/><rect x="10.0" y="80" width="146.0" height="44" rx="5" class="bx"/><text x="83.0" y="98.0" class="tb" text-anchor="middle">[Urun; 5]</text><text x="83.0" y="114.0" class="tm" text-anchor="middle">struct</text><line x1="320" y1="48" x2="241.0" y2="78" class="mu" marker-end="url(#ah-proje)"/><rect x="168.0" y="80" width="146.0" height="44" rx="5" class="bx"/><text x="241.0" y="98.0" class="tb" text-anchor="middle">iter().map().sum()</text><text x="241.0" y="114.0" class="tm" text-anchor="middle">toplam</text><line x1="320" y1="48" x2="399.0" y2="78" class="mu" marker-end="url(#ah-proje)"/><rect x="326.0" y="80" width="146.0" height="44" rx="5" class="bx"/><text x="399.0" y="98.0" class="tb" text-anchor="middle">BTreeMap</text><text x="399.0" y="114.0" class="tm" text-anchor="middle">kategoriler</text><line x1="320" y1="48" x2="557.0" y2="78" class="mu" marker-end="url(#ah-proje)"/><rect x="484.0" y="80" width="146.0" height="44" rx="5" class="bx"/><text x="557.0" y="98.0" class="tb" text-anchor="middle">filter(stok &lt; 10)</text><text x="557.0" y="114.0" class="tm" text-anchor="middle">az stok</text></svg></div><figcaption>Envanter özeti: Rust.</figcaption></figure>
+<pre><code class="language-rust">use std::collections::BTreeMap;
+
+struct Urun {
+    ad: &amp;'static str,
+    kategori: &amp;'static str,
+    fiyat: f64,
+    stok: u32,
+}
+
+impl Urun {
+    fn deger(&amp;self) -&gt; f64 {
+        self.fiyat * self.stok as f64
+    }
+}
+
+fn main() {
+    let urunler = [
+        Urun { ad: &quot;Kalem&quot;, kategori: &quot;kırtasiye&quot;, fiyat: 12.5, stok: 40 },
+        Urun { ad: &quot;Defter&quot;, kategori: &quot;kırtasiye&quot;, fiyat: 45.0, stok: 25 },
+        Urun { ad: &quot;Kulaklık&quot;, kategori: &quot;elektronik&quot;, fiyat: 850.0, stok: 5 },
+        Urun { ad: &quot;Mouse&quot;, kategori: &quot;elektronik&quot;, fiyat: 320.0, stok: 12 },
+        Urun { ad: &quot;Çay&quot;, kategori: &quot;gıda&quot;, fiyat: 95.0, stok: 30 },
+    ];
+
+    let toplam: f64 = urunler.iter().map(Urun::deger).sum();
+    println!(&quot;Toplam stok değeri: {toplam:.2} TL&quot;);
+
+    let mut kategori: BTreeMap&lt;&amp;str, f64&gt; = BTreeMap::new();
+    for u in &amp;urunler {
+        *kategori.entry(u.kategori).or_insert(0.0) += u.deger();
+    }
+    for (ad, t) in &amp;kategori {
+        println!(&quot;{ad}: {t:.2}&quot;);
+    }
+
+    for u in urunler.iter().filter(|u| u.stok &lt; 10) {
+        println!(&quot;Az stok: {} ({})&quot;, u.ad, u.stok);
+    }
+}
+</code></pre>
+<pre><code class="language-text">Toplam stok değeri: 12565.00 TL
+elektronik: 8090.00
+gıda: 2850.00
+kırtasiye: 1625.00
+Az stok: Kulaklık (5)
+</code></pre>
+<p><code>map(Urun::deger)</code> bir metodu doğrudan fonksiyon olarak verir. <code>BTreeMap</code> sıralı olduğu için kategoriler alfabetik geldi.</p>
+<h3>4. cargo ve crates.io (45 dk)</h3>
+<p>Rust'ın paket deposu <strong>crates.io</strong>'dur; paketlere <strong>crate</strong> denir. Bağımlılık eklemek:</p>
+<pre><code>cargo add serde --features derive
+cargo add serde_json
+cargo add csv
+</code></pre>
+<p><code>Cargo.toml</code>'a eklenir; <code>cargo build</code> indirir ve derler. Sık kullanılan crate'ler:</p>
+<div class="tw"><table>
+<thead>
+<tr>
+<th>Crate</th>
+<th>İşi</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>serde</code>, <code>serde_json</code></td>
+<td>Struct ↔ JSON (ve birçok biçim)</td>
+</tr>
+<tr>
+<td><code>csv</code></td>
+<td>CSV okuma / yazma</td>
+</tr>
+<tr>
+<td><code>clap</code></td>
+<td>Komut satırı argümanları</td>
+</tr>
+<tr>
+<td><code>anyhow</code>, <code>thiserror</code></td>
+<td>Hata yönetimi</td>
+</tr>
+<tr>
+<td><code>tokio</code></td>
+<td>Asenkron çalışma zamanı</td>
+</tr>
+<tr>
+<td><code>reqwest</code></td>
+<td>HTTP istemcisi</td>
+</tr>
+<tr>
+<td><code>rayon</code></td>
+<td>Yineleyicileri paralel çalıştırma (<code>iter()</code> → <code>par_iter()</code>)</td>
+</tr>
+</tbody>
+</table></div>
+<p>Testler aynı dosyada <code>#[cfg(test)] mod tests { #[test] fn ... }</code> içinde yazılır ve <code>cargo test</code> ile çalışır. <code>cargo doc --open</code> bütün bağımlılıklarının belgelerini yerel olarak açar.</p>
+<p><strong>Sonraki adımlar:</strong> "The Rust Programming Language" kitabı (doc.rust-lang.org/book, ücretsiz), <strong>Rustlings</strong> alıştırmaları, "Rust by Example". Ömürler (lifetimes), akıllı işaretçiler (<code>Rc</code>, <code>RefCell</code>, <code>Arc</code>) ve eşzamanlılık bu kursun ötesindeki konulardır.</p>
+<h3>Gün sonu kontrolü (15 dk)</h3>
+<ul class="tasks">
+<li class="task"><label><input type="checkbox" data-id="g7-1"><span>trait tanımlayıp varsayılan metotla birlikte uygulayabiliyorum.</span></label></li>
+<li class="task"><label><input type="checkbox" data-id="g7-2"><span>Display trait'ini yazabiliyor, derive ile Debug ve PartialOrd ekleyebiliyorum.</span></label></li>
+<li class="task"><label><input type="checkbox" data-id="g7-3"><span>impl Trait ile Box<dyn Trait> farkını biliyorum.</span></label></li>
+<li class="task"><label><input type="checkbox" data-id="g7-4"><span>Trait sınırlı generic fonksiyon yazabiliyorum.</span></label></li>
+<li class="task"><label><input type="checkbox" data-id="g7-5"><span>Envanter özeti programını yazdım; cargo add ve crates.io'yu biliyorum.</span></label></li>
+</ul></div>
+  <div class="pn"><a href="#gun6">← 6. gün</a><a href="../../Tools.html">Araçlara dön →</a></div>
+</section>
+</main>
+
+<footer>
+  <div class="wrap">
+    <span>© 2026 Erdal Üstünol · <a href="/gizlilik.html">Gizlilik</a></span>
+    <a href="../../Tools.html">← Araçlar ve eğitimler</a>
+  </div>
+</footer>
+
+<script>
+(() => {
+  const $ = id => document.getElementById(id);
+  const KEY = 'erdevelop-egitim-rust';
+  const store = { get(k) { try { return localStorage.getItem(k); } catch (e) { return null; } }, set(k, v) { try { localStorage.setItem(k, v); } catch (e) {} } };
+  let mode = (() => { try { const m = localStorage.getItem('erdevelop-mode'), g = localStorage.getItem('erdevelop-mode-gun'), t = new Date(); if (m && g === t.toDateString()) return m; const h = t.getHours(); return h >= 7 && h < 19 ? 'light' : 'dark'; } catch (e) { return 'light'; } })();
+  const applyMode = () => { document.documentElement.dataset.mode = mode; $('modeBtn').textContent = mode === 'dark' ? 'LIGHT' : 'DARK'; };
+  $('modeBtn').addEventListener('click', () => { mode = mode === 'dark' ? 'light' : 'dark'; store.set('erdevelop-mode', mode); store.set('erdevelop-mode-gun', new Date().toDateString()); applyMode(); });
+  applyMode();
+
+  let done = {}; try { done = JSON.parse(store.get(KEY) || '{}') || {}; } catch (e) { done = {}; }
+  const boxes = [...document.querySelectorAll('li.task input')];
+  const prog = () => {
+    document.querySelectorAll('section.day').forEach(sec => {
+      const d = sec.dataset.day, bs = sec.querySelectorAll('li.task input'), c = [...bs].filter(b => b.checked).length;
+      sec.querySelector('[data-prog]').textContent = c + '/' + bs.length;
+      const n = document.querySelector('[data-nav="' + d + '"]'); if (n) n.classList.toggle('done', bs.length > 0 && c === bs.length);
+    });
+  };
+  boxes.forEach(b => { b.checked = !!done[b.dataset.id]; b.addEventListener('change', () => { if (b.checked) done[b.dataset.id] = 1; else delete done[b.dataset.id]; store.set(KEY, JSON.stringify(done)); prog(); }); });
+  $('resetBtn').addEventListener('click', () => { done = {}; store.set(KEY, '{}'); boxes.forEach(b => b.checked = false); prog(); });
+  prog();
+
+  const links = [...document.querySelectorAll('[data-nav]')];
+  const secs = [$('genel'), ...document.querySelectorAll('section.day')];
+  if ('IntersectionObserver' in window) {
+    const io = new IntersectionObserver(es => es.forEach(e => { if (e.isIntersecting) { const i = secs.indexOf(e.target); links.forEach((l, k) => l.classList.toggle('on', k === i)); } }), { rootMargin: '-40% 0px -55% 0px' });
+    secs.forEach(s => io.observe(s));
+  }
+})();
+</script>
+<script src="../ilerleme.js" data-key="erdevelop-egitim-rust"></script>
+<script>if ('serviceWorker' in navigator && location.protocol === 'https:') addEventListener('load', () => navigator.serviceWorker.register('/sw.js').catch(() => { }));</script>
+<script data-goatcounter="https://erdevelop.goatcounter.com/count" async src="//gc.zgo.at/count.js"></script>
+<script src="/uyari.js" data-tur="egitim"></script>
+</body>
+</html>
