@@ -73,3 +73,6 @@ function keepInputs(prefix) {
     const s = () => LS.set(k, el.type === 'checkbox' ? (el.checked ? '1' : '0') : el.value); el.addEventListener('input', s); el.addEventListener('change', s);
   });
 }
+
+/* dil düğmesi: dil.js yüklüyse başlığa TR/EN düğmesi eklenir */
+if (window.erDil) { const h = document.querySelector('header .hrow'); if (h && !h.querySelector('[data-dil-btn]')) { const b = document.createElement('button'); b.type = 'button'; b.className = 'back lng'; b.setAttribute('data-dil-btn', ''); b.textContent = erDil.lang === 'tr' ? 'EN' : 'TR'; h.appendChild(b); } }

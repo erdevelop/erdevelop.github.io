@@ -2,6 +2,7 @@
 <html lang="tr">
 <head>
 <meta charset="utf-8">
+<script src="/dil.js"></script>
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover, user-scalable=no">
 <title>Meteor War Endless</title>
 <meta name="description" content="Meteor War Endless — göktaşlarını ve plazma dalgalarını vur, yakıtını topla, hayatta kal. erdevelop">
@@ -32,26 +33,26 @@
 <body>
 <div id="wrap">
   <canvas id="c"></canvas>
-  <button class="btn-pause" id="pauseBtn" type="button" aria-label="Duraklat" hidden>II</button>
-  <button class="btn-missile" id="misBtn" type="button" aria-label="Füze at" hidden>FÜZE</button>
+  <button class="btn-pause" id="pauseBtn" type="button" aria-label="Duraklat" data-en-aria="Pause" hidden>II</button>
+  <button class="btn-missile" id="misBtn" type="button" aria-label="Füze at" data-en-aria="Fire missile" hidden data-en="MISSILE">FÜZE</button>
 
   <div class="screen" id="start">
     <div>
       <h1>METEOR WAR<small>ENDLESS</small></h1>
-      <p>Göktaşlarını ve mor plazma dalgalarını vur. Mavi küreler yakıt, yeşiller can, turuncular füze, morlar silah seviyesi verir. Yakıtın biterse gemin hasar almaya başlar.</p>
-      <div class="keys">Telefonda: parmağını sürükle · Bilgisayarda: fare ya da ← → ↑ ↓, füze için Boşluk</div>
-      <button class="go" id="goBtn" type="button">BAŞLA</button>
+      <p data-en="Shoot the meteors and the purple plasma waves. Blue orbs give fuel, green ones health, orange ones missiles and purple ones weapon levels. If you run out of fuel, your ship starts taking damage.">Göktaşlarını ve mor plazma dalgalarını vur. Mavi küreler yakıt, yeşiller can, turuncular füze, morlar silah seviyesi verir. Yakıtın biterse gemin hasar almaya başlar.</p>
+      <div class="keys" data-en="Phone: drag your finger · Computer: mouse or ← → ↑ ↓, Space for missiles">Telefonda: parmağını sürükle · Bilgisayarda: fare ya da ← → ↑ ↓, füze için Boşluk</div>
+      <button class="go" id="goBtn" type="button" data-en="START">BAŞLA</button>
       <div class="best" id="bestStart"></div>
-      <div class="row"><button class="ghost" id="sndBtn" type="button">Ses: açık</button><a class="ghost" href="../">← erdevelop</a></div>
+      <div class="row"><button class="ghost" id="sndBtn" type="button">Ses: açık</button><button class="ghost" type="button" data-dil-btn>EN</button><a class="ghost" href="../">← erdevelop</a></div>
     </div>
   </div>
   <div class="screen" id="pause" hidden>
-    <div><h1>DURAKLATILDI</h1><button class="go" id="resumeBtn" type="button">DEVAM</button>
-      <div class="row"><button class="ghost" id="quitBtn" type="button">Ana menü</button></div></div>
+    <div><h1 data-en="PAUSED">DURAKLATILDI</h1><button class="go" id="resumeBtn" type="button" data-en="RESUME">DEVAM</button>
+      <div class="row"><button class="ghost" id="quitBtn" type="button" data-en="Main menu">Ana menü</button></div></div>
   </div>
   <div class="screen" id="over" hidden>
-    <div><h1>GEMİ DÜŞTÜ</h1><div class="big" id="overScore">0</div><div class="best" id="overInfo"></div>
-      <button class="go" id="againBtn" type="button">TEKRAR</button>
+    <div><h1 data-en="SHIP DOWN">GEMİ DÜŞTÜ</h1><div class="big" id="overScore">0</div><div class="best" id="overInfo"></div>
+      <button class="go" id="againBtn" type="button" data-en="AGAIN">TEKRAR</button>
       <div class="row"><a class="ghost" href="../">← erdevelop</a></div></div>
   </div>
 </div>
@@ -380,7 +381,7 @@
     S.mode = 'over'; const b = best(), rec = S.score > b;
     if (rec) store.set('mw-best', S.score);
     $('overScore').textContent = S.score;
-    $('overInfo').textContent = (rec ? 'Yeni rekor! · ' : 'En iyi: ' + b + ' · ') + 'Dalga ' + S.wave;
+    $('overInfo').textContent = (rec ? erDil.t('Yeni rekor! · ', 'New record! · ') : erDil.t('En iyi: ', 'Best: ') + b + ' · ') + erDil.t('Dalga ', 'Wave ') + S.wave;
     $('pauseBtn').hidden = true; $('misBtn').hidden = true;
     setTimeout(() => { $('over').hidden = false; }, 700);
   }
@@ -393,10 +394,10 @@
   $('pauseBtn').addEventListener('click', togglePause);
   $('resumeBtn').addEventListener('click', togglePause);
   $('quitBtn').addEventListener('click', () => { S.mode = 'menu'; $('pause').hidden = true; $('pauseBtn').hidden = true; $('misBtn').hidden = true; $('start').hidden = false; showBest(); });
-  const setSnd = () => { $('sndBtn').textContent = 'Ses: ' + (sound ? 'açık' : 'kapalı'); };
+  const setSnd = () => { $('sndBtn').textContent = erDil.t('Ses: ', 'Sound: ') + (sound ? erDil.t('açık', 'on') : erDil.t('kapalı', 'off')); };
   $('sndBtn').addEventListener('click', () => { sound = !sound; store.set('mw-sound', sound ? '1' : '0'); setSnd(); audio(); });
   document.addEventListener('visibilitychange', () => { if (document.hidden && S.mode === 'play') togglePause(); });
-  function showBest() { $('bestStart').textContent = best() ? 'En iyi skorun: ' + best() : ''; }
+  function showBest() { $('bestStart').textContent = best() ? erDil.t('En iyi skorun: ', 'Your best score: ') + best() : ''; }
 
   function resize() {
     DPR = Math.min(devicePixelRatio || 1, 2);
@@ -406,6 +407,7 @@
   }
   addEventListener('resize', resize);
   resize(); makeArt(); setSnd(); showBest(); reset(); S.mode = 'menu';
+  erDil.on(() => { setSnd(); showBest(); });
   requestAnimationFrame(frame);
 })();
 </script>
@@ -426,12 +428,18 @@ details.er-fab>summary::-webkit-details-marker{display:none}
 details.er-fab[open]>summary{margin-bottom:8px}
 details.er-fab .er-about{margin:0;max-height:min(70vh,560px);overflow:auto;background:rgba(20,24,33,.96);color:#eef1f6;border-color:rgba(255,255,255,.18);box-shadow:0 10px 40px rgba(0,0,0,.45)}
 </style>
-<details class="er-fab"><summary>ℹ️ Nasıl kullanılır?</summary>
-<section class="er-about" id="hakkinda" aria-labelledby="hakkinda-b">
+<details class="er-fab"><summary data-en="ℹ️ How to play">ℹ️ Nasıl kullanılır?</summary>
+<section class="er-about" id="hakkinda" data-l="tr" aria-labelledby="hakkinda-b">
 <h2 id="hakkinda-b">Meteor War Endless hakkında</h2>
 <p>Meteor War Endless, uzay gemini yönetip yağan göktaşlarını ve mor plazma dalgalarını vurduğun, sonu olmayan bir hayatta kalma oyunudur. Ne kadar uzun dayanırsan o kadar yüksek puan alırsın; oyun ilerledikçe hızlanır ve zorlaşır.</p>
 <h3>Nasıl kullanılır?</h3><ol><li>Telefonda parmağını sürükleyerek, bilgisayarda fareyle ya da ok tuşlarıyla gemini yönet.</li><li>Mavi küreleri topla: yakıtını doldurur. Yeşiller can, turuncular füze, morlar silah seviyesi verir.</li><li>Füze atmak için bilgisayarda <b>Boşluk</b> tuşunu kullan; füzeleri zor anlar için sakla.</li></ol>
 <h3>Bilmen gerekenler</h3><ul><li>Yakıtın biterse gemin hasar almaya başlar; yakıt kürelerini kaçırma.</li><li>Ekranın ortasında kalmak, iki yandan gelen tehlikelere karşı daha çok zaman kazandırır.</li><li>En yüksek skorun bu cihazda saklanır.</li></ul>
+</section>
+<section class="er-about" data-l="en" hidden aria-labelledby="about-en">
+<h2 id="about-en">About Meteor War Endless</h2>
+<p>Meteor War Endless is an endless survival game: you steer a spaceship and shoot down falling meteors and purple plasma waves. The longer you survive, the higher your score; the game gets faster and harder as you go.</p>
+<h3>How to play</h3><ol><li>Steer your ship by dragging your finger on a phone, or with the mouse or arrow keys on a computer.</li><li>Collect blue orbs to refill your fuel. Green ones give health, orange ones missiles and purple ones weapon levels.</li><li>On a computer, press <b>Space</b> to fire a missile; save missiles for tough moments.</li></ol>
+<h3>Good to know</h3><ul><li>When your fuel runs out, your ship starts taking damage, so don't miss the fuel orbs.</li><li>Staying near the middle of the screen gives you more time to react to threats from both sides.</li><li>Your best score is saved on this device.</li></ul>
 </section>
 </details>
 </body>

@@ -2,6 +2,8 @@
 <html lang="tr">
 <head>
 <meta charset="utf-8">
+<script src="/dil.js"></script>
+<script src="ceviri.js"></script>
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <meta name="theme-color" content="#f5f6f4" media="(prefers-color-scheme: light)">
 <meta name="theme-color" content="#151a18" media="(prefers-color-scheme: dark)">
@@ -76,12 +78,19 @@ details.er-fab>summary::-webkit-details-marker{display:none}
 details.er-fab[open]>summary{margin-bottom:8px}
 details.er-fab .er-about{margin:0;max-height:min(70vh,560px);overflow:auto;background:rgba(20,24,33,.96);color:#eef1f6;border-color:rgba(255,255,255,.18);box-shadow:0 10px 40px rgba(0,0,0,.45)}
 </style>
-<section class="er-about" id="hakkinda" aria-labelledby="hakkinda-b">
+<section class="er-about" id="hakkinda" data-l="tr" aria-labelledby="hakkinda-b">
 <h2 id="hakkinda-b">Resim araçları hakkında</h2>
 <p>Fotoğrafları toplu halde boyutlandırmak, sıkıştırmak ve biçim değiştirmek için kullanılır. iPhone’un HEIC fotoğraflarını JPG’ye çevirebilir; JPG, PNG, WebP ve GIF dosyalarını kırpabilir, döndürebilir ve fotoğrafların içindeki konum ve kamera (EXIF) bilgilerini silebilirsin.</p>
 <p>E-postayla gönderilecek, bir siteye yüklenecek ya da bir forma eklenecek fotoğrafların boyutunu küçültmek için idealdir. Resimler sunucuya gönderilmez, işlemler tarayıcında yapılır.</p>
 <h3>Nasıl kullanılır?</h3><ol><li>Resimleri seç ya da sayfaya sürükle; birden çok dosya aynı anda işlenir.</li><li>Çıktı biçimini (aynı, JPG, WebP, PNG) ve kaliteyi seç.</li><li>Gerekirse en uzun kenar için en büyük boyutu belirle.</li><li>Sonuçları tek tek ya da hepsini birden indir.</li></ol>
 <h3>Bilmen gerekenler</h3><ul><li>Paylaşmadan önce EXIF bilgisini silmek, fotoğrafın çekildiği yerin konumunu gizler.</li><li>Web için genelde 1600–2000 piksel genişlik ve %75–85 kalite yeterlidir.</li><li>WebP, aynı kalitede JPG’den genellikle daha küçük dosya üretir.</li></ul>
+</section>
+<section class="er-about" data-l="en" hidden aria-labelledby="about-en">
+<h2 id="about-en">About the image tools</h2>
+<p>Resize, compress and convert photos in bulk. You can convert iPhone HEIC photos to JPG; crop and rotate JPG, PNG, WebP and GIF files; and remove location and camera (EXIF) data from your photos.</p>
+<p>Ideal for shrinking photos you're going to email, upload to a website or attach to a form. Images are not sent to a server; everything happens in your browser.</p>
+<h3>How to use</h3><ol><li>Choose images or drag them onto the page; several files are processed at once.</li><li>Pick the output format (same, JPG, WebP, PNG) and quality.</li><li>If needed, set the maximum size for the longest side.</li><li>Download the results one by one or all at once.</li></ol>
+<h3>Good to know</h3><ul><li>Removing EXIF data before sharing hides where the photo was taken.</li><li>For the web, a width of 1600–2000 pixels and 75–85% quality is usually enough.</li><li>WebP usually gives a smaller file than JPG at the same quality.</li></ul>
 </section>
 </main>
 <footer>Resimler cihazında işlenir, hiçbir yere yüklenmez.</footer>
@@ -119,9 +128,9 @@ async function decode(it) {
   const url = URL.createObjectURL(blob), img = new Image(); img.src = url; await img.decode(); it.url = url; it.img = img; return img;
 }
 dropZone(byId('drop'), async files => {
-  for (const f of files) { if (!/^image\//.test(f.type) && !isHeic(f)) { toast(f.name + ': resim değil'); continue; }
+  for (const f of files) { if (!/^image\//.test(f.type) && !isHeic(f)) { toast(f.name + erDil.t(': resim değil', ': not an image')); continue; }
     const it = { id: ++uid, file: f, rot: 0, flip: false, crop: null, out: null }; items.push(it);
-    try { it.exif = exifInfo(await f.slice(0, 131072).arrayBuffer()); await decode(it); } catch (e) { it.err = 'açılamadı'; console.error(e); } }
+    try { it.exif = exifInfo(await f.slice(0, 131072).arrayBuffer()); await decode(it); } catch (e) { it.err = erDil.t('açılamadı', 'could not open'); console.error(e); } }
   paint();
 });
 function geom(it) { const r = it.rot % 180 !== 0, W = r ? it.img.naturalHeight : it.img.naturalWidth, H = r ? it.img.naturalWidth : it.img.naturalHeight, c = it.crop || { x: 0, y: 0, w: W, h: H }; return { W, H, c }; }
@@ -183,10 +192,10 @@ function optsUI() {
 byId('o-ch').onclick = e => { const b = e.target.closest('button'); if (!b) return; byId('o-v').value = b.dataset.v; byId('o-v').dispatchEvent(new Event('input')); };
 byId('go').onclick = async () => {
   const b = byId('go'), bar = byId('bar'); b.disabled = true; let before = 0, after = 0, n = 0;
-  for (let k = 0; k < items.length; k++) { const it = items[k]; try { await process(it); before += it.file.size; after += it.out.blob.size; n++; } catch (e) { it.err = 'işlenemedi'; console.error(e); } bar.style.width = ((k + 1) / items.length * 100) + '%'; }
+  for (let k = 0; k < items.length; k++) { const it = items[k]; try { await process(it); before += it.file.size; after += it.out.blob.size; n++; } catch (e) { it.err = erDil.t('işlenemedi', 'could not process'); console.error(e); } bar.style.width = ((k + 1) / items.length * 100) + '%'; }
   paint(); b.disabled = false; setTimeout(() => bar.style.width = '0', 1200);
   const pct = before ? (1 - after / before) * 100 : 0;
-  byId('sum').innerHTML = `<div class="big">${size(after)}</div><div class="nt">${n} resim · ${pct >= 0 ? '%' + fmt(pct, 0) + ' küçüldü' : '%' + fmt(-pct, 0) + ' büyüdü'}</div><div class="kv"><span>Önce</span><b>${size(before)}</b></div><div class="kv"><span>Sonra</span><b>${size(after)}</b></div>`;
+  byId('sum').innerHTML = `<div class="big">${size(after)}</div><div class="nt">${n} ${erDil.t('resim', 'images')} · ${pct >= 0 ? erDil.t('%' + fmt(pct, 0) + ' küçüldü', fmt(pct, 0) + '% smaller') : erDil.t('%' + fmt(-pct, 0) + ' büyüdü', fmt(-pct, 0) + '% larger')}</div><div class="kv"><span>Önce</span><b>${size(before)}</b></div><div class="kv"><span>Sonra</span><b>${size(after)}</b></div>`;
   if (n === 1) { const k = items.findIndex(i => i.out); download(outName(items[k], k), items[k].out.blob); }
 };
 byId('zip').onclick = async () => { const f = items.map((it, k) => it.out && { name: outName(it, k), data: it.out.blob }).filter(Boolean); if (!f.length) return; download('resimler-' + stamp() + '.zip', await makeZip(f)); };
@@ -222,6 +231,7 @@ cr.addEventListener('pointermove', e => {
   E.crop = { x, y, w, h }; mRect();
 });
 ['pointerup', 'pointercancel'].forEach(t => cr.addEventListener(t, () => dg = null));
+erDil.on(() => { try { if (items.length) paint(); } catch (e) { } });
 </script>
 <script data-goatcounter="https://erdevelop.goatcounter.com/count" async src="//gc.zgo.at/count.js"></script>
 </body>

@@ -2,6 +2,7 @@
 <html lang="tr">
 <head>
 <meta charset="utf-8">
+<script src="/dil.js"></script>
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover, user-scalable=no">
 <title>Numbermatic</title>
 <meta name="description" content="Numbermatic — hedef sayıyı süre bitmeden bul. erdevelop">
@@ -81,14 +82,14 @@
 <div id="app">
   <canvas id="fx"></canvas>
   <div class="hud">
-    <div><div class="score">Skor: <span id="score">0</span></div><div class="sub">Seviye <span id="level">1</span> · <span id="clock">00m00s</span></div></div>
+    <div><div class="score"><span data-en="Score:">Skor:</span> <span id="score">0</span></div><div class="sub"><span data-en="Level">Seviye</span> <span id="level">1</span> · <span id="clock">00m00s</span></div></div>
     <div class="count" id="count">10</div>
   </div>
   <div class="top-btns">
-    <a class="mini home" href="../" aria-label="Ana sayfa">⌂</a>
-    <button class="mini" id="soundBtn" type="button" aria-label="Ses">♪ açık</button>
+    <a class="mini home" href="../" aria-label="Ana sayfa" data-en-aria="Home">⌂</a>
+    <button class="mini" type="button" data-dil-btn>EN</button><button class="mini" id="soundBtn" type="button" aria-label="Ses" data-en-aria="Sound">♪ açık</button>
   </div>
-  <div class="target" id="targetBox"><small>Hedef sayı</small><b id="target">3</b></div>
+  <div class="target" id="targetBox"><small data-en="Target">Hedef sayı</small><b id="target">3</b></div>
 
   <div id="keys"></div>
   <div class="bubble-wrap">
@@ -101,20 +102,20 @@
   <div class="overlay" id="start">
     <div class="card">
       <h1>Number<span>matic</span></h1>
-      <p>Rakamlara ve işlemlere dokunarak <b>hedef sayıyı</b> veren işlemi kur. Süre bitmeden bulursan kalan saniyeler puanına eklenir.</p>
+      <p data-en="Tap digits and operators to build a calculation that gives the &lt;b&gt;target number&lt;/b&gt;. If you find it before time runs out, the remaining seconds are added to your score.">Rakamlara ve işlemlere dokunarak <b>hedef sayıyı</b> veren işlemi kur. Süre bitmeden bulursan kalan saniyeler puanına eklenir.</p>
       <div class="ex"><i>9 ÷ 3</i>→<i class="g">3</i></div>
       <div class="best" id="bestStart"></div>
-      <button class="play" id="playBtn" type="button">Oyna</button>
-      <a class="back-link" href="../">← erdevelop</a>
+      <button class="play" id="playBtn" type="button" data-en="Play">Oyna</button>
+      <a class="back-link" href="../">← erdevelop</a> · <a class="back-link" href="#" data-dil-btn>EN</a>
     </div>
   </div>
   <div class="overlay" id="over" hidden>
     <div class="card">
-      <h1>Süre doldu</h1>
+      <h1 data-en="Time&#x27;s up">Süre doldu</h1>
       <p id="overText"></p>
       <div class="big" id="overScore">0</div>
       <div class="best" id="bestOver"></div>
-      <button class="play" id="againBtn" type="button">Tekrar oyna</button>
+      <button class="play" id="againBtn" type="button" data-en="Play again">Tekrar oyna</button>
       <a class="back-link" href="../">← erdevelop</a>
     </div>
   </div>
@@ -225,8 +226,8 @@
     const b = best(), rec = score > b;
     if (rec) store.set('nm-best', score);
     $('overScore').textContent = score;
-    $('overText').textContent = `Hedef ${target} idi. ${level - 1} sayı buldun.`;
-    $('bestOver').textContent = rec && score > 0 ? '🏆 Yeni rekor!' : 'En iyi: ' + Math.max(b, score);
+    $('overText').textContent = erDil.t(`Hedef ${target} idi. ${level - 1} sayı buldun.`, `The target was ${target}. You found ${level - 1} numbers.`);
+    $('bestOver').textContent = rec && score > 0 ? erDil.t('🏆 Yeni rekor!', '🏆 New record!') : erDil.t('En iyi: ', 'Best: ') + Math.max(b, score);
     $('over').hidden = false; beep(200, 0.25, 'sawtooth');
   }
   function start() {
@@ -252,8 +253,8 @@
     o.start(t); o.stop(t + d);
   }
   function chord() { [523, 659, 784].forEach((f, i) => beep(f, 0.18, 'triangle', i * 0.07)); }
-  $('soundBtn').textContent = sound ? '♪ açık' : '♪ kapalı';
-  $('soundBtn').addEventListener('click', () => { sound = !sound; store.set('nm-sound', sound ? '1' : '0'); $('soundBtn').textContent = sound ? '♪ açık' : '♪ kapalı'; ctx(); });
+  $('soundBtn').textContent = sound ? erDil.t('♪ açık', '♪ on') : erDil.t('♪ kapalı', '♪ off');
+  $('soundBtn').addEventListener('click', () => { sound = !sound; store.set('nm-sound', sound ? '1' : '0'); $('soundBtn').textContent = sound ? erDil.t('♪ açık', '♪ on') : erDil.t('♪ kapalı', '♪ off'); ctx(); });
 
   // ---- particles ----
   const cv = $('fx'), g = cv.getContext('2d');
@@ -290,7 +291,8 @@
   });
   $('playBtn').addEventListener('click', start);
   $('againBtn').addEventListener('click', start);
-  $('bestStart').textContent = best() ? 'En iyi skorun: ' + best() : '';
+  const showBest = () => { $('bestStart').textContent = best() ? erDil.t('En iyi skorun: ', 'Your best score: ') + best() : ''; $('soundBtn').textContent = sound ? erDil.t('♪ açık', '♪ on') : erDil.t('♪ kapalı', '♪ off'); };
+  showBest(); erDil.on(showBest);
   addEventListener('resize', () => { layout(); sizeFx(); });
   layout(); sizeFx(); requestAnimationFrame(frame);
 })();
@@ -312,12 +314,18 @@ details.er-fab>summary::-webkit-details-marker{display:none}
 details.er-fab[open]>summary{margin-bottom:8px}
 details.er-fab .er-about{margin:0;max-height:min(70vh,560px);overflow:auto;background:rgba(20,24,33,.96);color:#eef1f6;border-color:rgba(255,255,255,.18);box-shadow:0 10px 40px rgba(0,0,0,.45)}
 </style>
-<details class="er-fab"><summary>ℹ️ Nasıl kullanılır?</summary>
-<section class="er-about" id="hakkinda" aria-labelledby="hakkinda-b">
+<details class="er-fab"><summary data-en="ℹ️ How to play">ℹ️ Nasıl kullanılır?</summary>
+<section class="er-about" id="hakkinda" data-l="tr" aria-labelledby="hakkinda-b">
 <h2 id="hakkinda-b">Numbermatic hakkında</h2>
 <p>Numbermatic, verilen rakamlar ve dört işlemle hedef sayıya ulaşmaya çalıştığın bir zihinden hesap oyunudur. Süre bitmeden hedefi bulursan kalan saniyeler puanına eklenir ve bir sonraki seviyeye geçersin. Seviyeler ilerledikçe hedefler büyür, süre kısalır.</p>
 <h3>Nasıl kullanılır?</h3><ol><li>Ekrandaki hedef sayıya bak.</li><li>Rakamlara ve işlem işaretlerine sırayla dokunarak işlemi kur.</li><li>Sonuç hedefe eşitse seviye tamamlanır.</li></ol>
 <h3>Bilmen gerekenler</h3><ul><li>Önce hedefe yakın bir çarpım bulup sonra toplama ya da çıkarmayla düzeltmek çoğu zaman en hızlı yoldur.</li><li>Zihinden işlem pratiği için öğrencilere uygundur.</li><li>Sesi oyun ekranındaki ♪ düğmesiyle açıp kapatabilirsin.</li></ul>
+</section>
+<section class="er-about" data-l="en" hidden aria-labelledby="about-en">
+<h2 id="about-en">About Numbermatic</h2>
+<p>Numbermatic is a mental arithmetic game where you try to reach a target number using the given digits and the four operations. If you find the target before time runs out, the remaining seconds are added to your score and you move on to the next level. As levels go up, targets get bigger and time gets shorter.</p>
+<h3>How to play</h3><ol><li>Look at the target number on the screen.</li><li>Tap digits and operators in order to build a calculation.</li><li>If the result equals the target, the level is complete.</li></ol>
+<h3>Good to know</h3><ul><li>Finding a product close to the target first and then adjusting with addition or subtraction is often the fastest way.</li><li>Great mental-math practice for students.</li><li>You can turn the sound on or off with the ♪ button on the game screen.</li></ul>
 </section>
 </details>
 </body>

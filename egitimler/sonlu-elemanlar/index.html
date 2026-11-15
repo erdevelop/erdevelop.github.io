@@ -1,0 +1,798 @@
+<!doctype html>
+<html lang="tr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Sonlu Elemanlara Giriş (Cephe için) · 7 günlük program | erdevelop</title>
+<meta name="description" content="Cephe mühendisleri için bol şemalı 7 günlük sonlu elemanlar eğitimi: K × u = F, kiriş elemanla dikme ve yakınsama, eleman türleri, ağ ve tekillik, camın kabuk modeli ve büyük sehim, braketin katı modeli ve von Mises, sonuç kontrol listesi, FEM araçları ve küçük bir Python kiriş programı.">
+<link rel="icon" href="/favicon.svg" type="image/svg+xml">
+<link rel="icon" href="/favicon.ico" sizes="any">
+<link rel="apple-touch-icon" href="/apple-touch-icon.png">
+<link rel="manifest" href="/manifest.webmanifest">
+<meta name="theme-color" content="#0b1220">
+<meta property="og:title" content="Sonlu Elemanlara Giriş (Cephe için) · 7 günlük program | erdevelop">
+<meta property="og:description" content="Hesaplanmış örneklerle sonlu elemanlar: dikme, cam ve braket nasıl modellenir, sonuç nasıl okunur ve kontrol edilir.">>>>>>>>
+<meta property="og:url" content="https://erdevelop.github.io/egitimler/sonlu-elemanlar/">
+<meta property="og:image" content="https://erdevelop.github.io/og.png">
+<meta name="twitter:card" content="summary_large_image">
+<link rel="canonical" href="https://erdevelop.github.io/egitimler/sonlu-elemanlar/">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Chakra+Petch:wght@600;700&family=IBM+Plex+Sans:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500&display=swap">
+<style>
+  :root {
+    --bg: #eef2f6; --panel: #ffffff; --panel-2: #f5f7f9; --grid: #e3e8ed; --line: #cfd8e1;
+    --fg: #1c2833; --text: #45535f; --muted: #74838f; --accent: #2f6fb5; --accent-dim: rgba(47,111,181,.12); --hot: #c8731f; --ok: #2e8b57;
+    --f-display: 'Chakra Petch', 'Segoe UI', sans-serif; --f-body: 'IBM Plex Sans', 'Segoe UI', system-ui, sans-serif; --f-mono: 'IBM Plex Mono', Consolas, monospace;
+    color-scheme: light;
+  }
+  :root[data-mode="dark"] {
+    --bg: #0b1220; --panel: #111a2c; --panel-2: #0e1626; --grid: #182338; --line: #22304a;
+    --fg: #e2e8f2; --text: #a8b6cc; --muted: #73829b; --accent: #f2b33d; --accent-dim: rgba(242,179,61,.14); --hot: #6aa8ff; --ok: #5fc48d;
+    color-scheme: dark;
+  }
+  * { box-sizing: border-box; }
+  html { background: var(--bg); scroll-padding-top: 110px; }
+  body { margin: 0; color: var(--fg); font-family: var(--f-body); font-size: 16px; line-height: 1.65;
+    background-image: linear-gradient(var(--grid) 1px, transparent 1px), linear-gradient(90deg, var(--grid) 1px, transparent 1px); background-size: 80px 80px; background-attachment: fixed; }
+  a { color: var(--accent); }
+  :focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+  .wrap { max-width: 920px; margin: 0 auto; padding-left: max(16px, env(safe-area-inset-left, 0px)); padding-right: max(16px, env(safe-area-inset-right, 0px)); }
+
+  .topbar { position: sticky; top: 0; z-index: 20; background: color-mix(in srgb, var(--bg) 92%, transparent); backdrop-filter: blur(6px); border-bottom: 1px solid var(--line); }
+  .topbar .wrap { display: flex; align-items: center; gap: 12px; padding-block: 10px; max-width: 1160px; }
+  .brand { font: 700 15px var(--f-display); letter-spacing: 1px; text-transform: uppercase; text-decoration: none; color: var(--fg); }
+  .brand span { color: var(--accent); }
+  .crumb { font: 400 12px var(--f-mono); color: var(--muted); }
+  .sp { flex: 1; }
+  .tb { font: 500 12px var(--f-mono); color: var(--accent); padding: 6px 10px; border: 1px solid var(--line); border-radius: 4px; background: none; cursor: pointer; text-transform: uppercase; text-decoration: none; }
+  .tb:hover { border-color: var(--accent); }
+  .daynav { border-top: 1px solid var(--line); }
+  .daynav .wrap { display: flex; gap: 6px; padding-block: 8px; overflow-x: auto; max-width: 1160px; }
+  .daynav a { font: 500 12px var(--f-mono); text-decoration: none; color: var(--text); border: 1px solid var(--line); border-radius: 4px; padding: 4px 10px; white-space: nowrap; background: var(--panel); }
+  .daynav a.on { border-color: var(--accent); color: var(--accent); }
+  .daynav a.done { background: var(--accent-dim); }
+
+  header.head { padding-block: 34px 6px; }
+  .kicker { font: 500 12px var(--f-mono); color: var(--accent); letter-spacing: 1px; }
+  .head h1 { font: 700 clamp(2rem, 6vw, 3rem)/1.05 var(--f-display); margin: 6px 0 0; letter-spacing: -.5px; }
+  .head p.lead { margin: 12px 0 0; color: var(--text); max-width: 64ch; font-size: 1.05rem; }
+  .chips { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 16px; }
+  .chips span { font: 400 12px var(--f-mono); color: var(--muted); border: 1px solid var(--line); border-radius: 4px; padding: 3px 8px; background: var(--panel); }
+
+  .card { background: var(--panel); border: 1px solid var(--line); border-radius: 8px; padding: 22px clamp(16px, 4vw, 30px); margin-top: 28px; }
+  .day-head { display: flex; align-items: baseline; gap: 12px; flex-wrap: wrap; border-bottom: 1px solid var(--line); padding-bottom: 12px; margin-bottom: 6px; }
+  .day-head h2, .card > h2 { font: 700 1.45rem/1.2 var(--f-display); margin: 0; letter-spacing: .2px; }
+  .dn { font: 600 12px var(--f-mono); color: var(--panel); background: var(--accent); border-radius: 3px; padding: 2px 7px; }
+  :root[data-mode="dark"] .dn { color: #1a1204; }
+  .day-head .meta { font: 400 12px var(--f-mono); color: var(--muted); margin-left: auto; }
+  section.day { background: var(--panel); border: 1px solid var(--line); border-radius: 8px; padding: 22px clamp(16px, 4vw, 30px); margin-top: 28px; }
+
+  .prose h3 { font: 700 1.12rem/1.3 var(--f-display); margin: 30px 0 8px; letter-spacing: .2px; }
+  .prose p, .prose li { color: var(--text); }
+  .prose strong { color: var(--fg); font-weight: 600; }
+  .prose ol, .prose ul { padding-left: 1.4em; }
+  .prose li { margin: 4px 0; }
+  .prose li > ul, .prose li > ol { margin: 4px 0; }
+  .prose code { font: 400 .86em var(--f-mono); background: var(--panel-2); border: 1px solid var(--line); border-radius: 3px; padding: 1px 5px; color: var(--fg); overflow-wrap: anywhere; }
+  .tw { overflow-x: auto; margin: 14px 0; border: 1px solid var(--line); border-radius: 6px; }
+  .tw table { border-collapse: collapse; width: 100%; font-size: .9rem; }
+  .tw th, .tw td { text-align: left; padding: 8px 12px; border-bottom: 1px solid var(--line); vertical-align: top; }
+  .tw th { font: 600 12px var(--f-mono); color: var(--muted); background: var(--panel-2); }
+  .card .tw td:first-child, .card .tw td:last-child { white-space: nowrap; }
+  .tw tr:last-child td { border-bottom: 0; }
+  ul.tasks { list-style: none; padding-left: 0; }
+  li.task label { display: flex; gap: 10px; align-items: flex-start; cursor: pointer; padding: 4px 0; }
+  li.task input { width: 18px; height: 18px; margin-top: 4px; accent-color: var(--accent); flex: none; }
+  li.task input:checked + span { color: var(--muted); text-decoration: line-through; }
+  .pn { display: flex; justify-content: space-between; gap: 12px; margin-top: 26px; padding-top: 14px; border-top: 1px solid var(--line); font: 500 13px var(--f-mono); }
+  .pn a { text-decoration: none; }
+  .note { font-size: .9rem; color: var(--muted); }
+  .reset { font: 500 11px var(--f-mono); color: var(--muted); background: none; border: 1px solid var(--line); border-radius: 4px; padding: 3px 8px; cursor: pointer; text-transform: uppercase; }
+  .reset:hover { color: var(--hot); border-color: var(--hot); }
+
+  .fig { margin: 18px 0; padding: 16px 14px 12px; border: 1px solid var(--line); border-radius: 6px; background: var(--panel-2); }
+  .fig .sc { overflow-x: auto; }
+  .fig svg { display: block; width: 100%; min-width: 540px; height: auto; max-width: 720px; margin: 0 auto; overflow: visible; }
+  .fig figcaption { font-size: .85rem; color: var(--muted); margin-top: 10px; text-align: center; max-width: 62ch; margin-inline: auto; }
+  .fig .k { fill: none; stroke: var(--fg); stroke-width: 1.6; } .fig .k1 { fill: none; stroke: var(--fg); stroke-width: 1; }
+  .fig .mu { fill: none; stroke: var(--muted); stroke-width: 1.2; } .fig .mud { fill: none; stroke: var(--muted); stroke-width: 1; stroke-dasharray: 5 4; }
+  .fig .dm { fill: none; stroke: var(--muted); stroke-width: .9; }
+  .fig .rp { fill: none; stroke: var(--hot); stroke-width: 1; stroke-dasharray: 9 4 2 4; }
+  .fig .gd { fill: none; stroke: var(--fg); stroke-width: 1; stroke-dasharray: 16 4 3 4; }
+  .fig .ac { fill: none; stroke: var(--accent); stroke-width: 2; } .fig .acl { fill: none; stroke: var(--accent); stroke-width: 1; }
+  .fig .gl { fill: var(--accent-dim); stroke: var(--fg); stroke-width: .8; }
+  .fig .sp { fill: color-mix(in srgb, var(--fg) 40%, transparent); stroke: var(--fg); stroke-width: .8; }
+  .fig .fr { fill: color-mix(in srgb, var(--fg) 22%, transparent); stroke: none; } .fig .edge { fill: none; stroke: var(--fg); stroke-width: 1.8; }
+  .fig .so { fill: var(--panel); stroke: var(--fg); stroke-width: 1.6; } .fig .hole { fill: var(--panel-2); stroke: var(--fg); stroke-width: 1.2; }
+  .fig .rib { fill: var(--accent-dim); stroke: var(--accent); stroke-width: 1.4; stroke-dasharray: 6 4; }
+  .fig .sel { fill: none; stroke: var(--accent); stroke-width: 3; }
+  .fig .mul { stroke: var(--fg); stroke-width: 4; } .fig .tr { stroke: var(--fg); stroke-width: 3; } .fig .trA { stroke: var(--accent); stroke-width: 3; }
+  .fig .lh { fill: var(--panel); stroke: var(--fg); stroke-width: 1.4; }
+  .fig .dot { fill: var(--accent); } .fig .dotr { fill: var(--accent); stroke: var(--panel); stroke-width: 1; }
+  .fig .pt { fill: var(--accent); stroke: var(--panel); stroke-width: 2; } .fig .tpt { fill: var(--panel); font: 700 12px var(--f-mono); }
+  .fig .bx { fill: var(--panel); stroke: var(--line); stroke-width: 1.3; } .fig .bxa { fill: var(--accent-dim); stroke: var(--accent); stroke-width: 1.3; }
+  .fig .ar { fill: var(--muted); }
+  .fig .acd { fill: none; stroke: var(--accent); stroke-width: 1.6; stroke-dasharray: 6 4; }
+  .fig text { text-transform: none; letter-spacing: 0; } .fig .bg { fill: var(--panel); stroke: none; }
+  .fig .t { fill: var(--text); font: 400 13px var(--f-body); } .fig .tb { fill: var(--fg); font: 600 13px var(--f-body); }
+  .fig .tm { fill: var(--muted); font: 400 11px var(--f-mono); } .fig .ta { fill: var(--accent); font: 600 11px var(--f-mono); }
+  .fig .th { fill: var(--hot); font: 500 11px var(--f-mono); }
+  .fig .swb { fill: none; stroke: #2f7de1; stroke-width: 2; } .fig .swr { fill: none; stroke: #d64545; stroke-width: 2; } .fig .tr2 { fill: #d64545; font: 600 11px var(--f-mono); } .fig .tbl { fill: #2f7de1; font: 600 11px var(--f-mono); }
+  .prose pre { background: var(--panel-2); border: 1px solid var(--line); border-radius: 6px; padding: 12px 14px; overflow-x: auto; }
+  .prose pre code { background: none; border: 0; padding: 0; font: 400 .85rem/1.5 var(--f-mono); color: var(--fg); }
+  footer { margin-top: 56px; border-top: 1px solid var(--line); padding-block: 20px calc(20px + env(safe-area-inset-bottom, 0px)); font: 400 12px var(--f-mono); color: var(--muted); }
+  footer .wrap { display: flex; justify-content: space-between; gap: 12px; flex-wrap: wrap; }
+  footer a { color: inherit; } footer a:hover { color: var(--accent); }
+  @media print { .topbar, .daynav, .pn, footer, .reset { display: none !important; } body { background: #fff; } section.day, .card { break-inside: auto; border: 0; } }
+</style>
+<script async src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-4775308844679394" crossorigin="anonymous"></script>
+</head>
+<body>
+<div class="topbar">
+  <div class="wrap">
+    <a class="brand" href="/">erdevelop<span>_</span></a>
+    <span class="crumb">/ eğitimler / sonlu-elemanlar</span>
+    <span class="sp"></span>
+    <a class="tb" href="../../Tools.html">Araçlar</a>
+    <button class="tb" type="button" id="modeBtn">DARK</button>
+  </div>
+  <nav class="daynav" aria-label="Günler"><div class="wrap"><a href="#genel" data-nav="0">Genel</a><a href="#gun1" data-nav="1">1</a><a href="#gun2" data-nav="2">2</a><a href="#gun3" data-nav="3">3</a><a href="#gun4" data-nav="4">4</a><a href="#gun5" data-nav="5">5</a><a href="#gun6" data-nav="6">6</a><a href="#gun7" data-nav="7">7</a></div></nav>
+</div>
+
+<main class="wrap">
+  <header class="head" id="genel">
+    <div class="kicker">Cephe Bilgisi · Sonlu Elemanlar</div>
+    <h1>Sonlu Elemanlara Giriş</h1>
+    <p class="lead">Statik kursunun bir üst basamağı olarak 7 günlük, bol şemalı bir sonlu elemanlar programı. Amaç bir programın düğmelerini değil, modelin nasıl kurulduğunu ve sonucun nasıl kontrol edildiğini öğretmek: yaylardan kiriş elemanlara, dikmeden cama ve brakete, tekilliklerden hesap raporu okumaya kadar. Örnekler Python'da yazılmış küçük bir FEM programı ve kapalı çözümlerle karşılaştırılmıştır.</p>
+    <div class="chips"><span>7 gün</span><span>günde ~4 saat</span><span>Türkçe</span><span>Kod örnekleri kopyalanabilir</span></div>
+  </header>
+
+  <div class="card">
+    <h2>Başlamadan önce</h2>
+    <div class="prose">
+      <h3>Kimler için</h3>
+      <p>Cephe tasarımcıları ve mühendisleri, FEM raporlarını okuyup kontrol etmesi gerekenler. Ön bilgi: <a href="../statik-temelleri/">Statiğin Temelleri</a>.</p>
+      <h3>Gerekenler</h3>
+      <ul>
+        <li>Ön koşul yok; denemek için SolidWorks Simulation ya da başka bir FEM programı faydalıdır.</li>
+        <li>Son günün alıştırması için Python ve numpy.</li>
+      </ul>
+      <h3>Program</h3>
+      <div class="tw"><table><thead><tr><th>Gün</th><th>Konu</th><th>Ne öğrenirsin</th><th>Süre</th></tr></thead><tbody>
+<tr><td><a href="#gun1">1. gün</a></td><td>FEM fikri</td><td>Neden FEM, düğüm, eleman, ağ, serbestlik derecesi, K × u = F, iki yaylı örnek</td><td>~4 saat</td></tr>
+<tr><td><a href="#gun2">2. gün</a></td><td>Kiriş elemanla dikme</td><td>Kiriş elemanı, dikme modeli, eleman sayısı ve yakınsama, mesnet modelleme</td><td>~4 saat</td></tr>
+<tr><td><a href="#gun3">3. gün</a></td><td>Eleman ve ağ</td><td>Çubuk, kiriş, kabuk, katı, ağ boyutu, yakınsama kontrolü, tekillikler</td><td>~4 saat</td></tr>
+<tr><td><a href="#gun4">4. gün</a></td><td>Cam</td><td>Kabuk elemanlar, kenar mesnetleri, kapalı çözümle kontrol, büyük sehim, yalıtım ve lamine cam</td><td>~4 saat</td></tr>
+<tr><td><a href="#gun5">5. gün</a></td><td>Braket</td><td>Sadeleştirme, dübel ve cıvata, temas, von Mises, el hesabıyla karşılaştırma</td><td>~4 saat</td></tr>
+<tr><td><a href="#gun6">6. gün</a></td><td>Sonucu kontrol etmek</td><td>Sık hatalar, dokuz maddelik kontrol listesi, denge, rapor okuma, uzmana sorma</td><td>~4 saat</td></tr>
+<tr><td><a href="#gun7">7. gün</a></td><td>Araçlar ve iş akışı</td><td>FEM programları, basitten ayrıntılıya, Python kiriş programı, bitiş alıştırması</td><td>~4 saat</td></tr>
+      </tbody></table></div>
+      <p class="note">Her günün sonunda bir kontrol listesi var. İşaretledikçe ilerlemen bu tarayıcıda saklanır. Hafta içi sadece akşamları çalışırsan program yaklaşık iki hafta sürer. Bu kurs modelleme mantığını öğretir; gerçek projelerde hesap, ilgili standartlara göre yetkili mühendis tarafından yapılır. <button class="reset" type="button" id="resetBtn">ilerlemeyi sıfırla</button></p>
+    </div>
+  </div>
+
+<section class="day" id="gun1" data-day="1">
+  <div class="day-head"><span class="dn">GÜN 01</span><h2>FEM fikri</h2><span class="meta">~4 saat · <span data-prog="1">0/5</span> kontrol</span></div>
+  <div class="prose"><h3>Hedef</h3>
+<p>Gün sonunda sonlu elemanlar yönteminin (FEM) temel fikrini bileceksin: ayrıklaştırma, düğüm, eleman, serbestlik derecesi, rijitlik matrisi ve "K × u = F" denklemi; iki yaylı bir örneği elle çözeceksin. Süre yaklaşık 4 saat.</p>
+<p><strong>Bu kurs hakkında:</strong> <a href="../statik-temelleri/">Statiğin Temelleri</a> kursunun bir üst basamağıdır. Amacı sonlu eleman programı kullanmayı öğretmek değil, <strong>bir modelin nasıl kurulduğunu ve sonucun nasıl okunup kontrol edildiğini</strong> anlatmaktır: dikme, cam ve braket örnekleriyle. Kurstaki sayısal örnekler Python'da küçük bir sonlu eleman programıyla ve kapalı formüllerle hesaplanıp karşılaştırılmıştır. Gerçek projelerde hesap, yetkili mühendis tarafından ilgili standartlara göre yapılır.</p>
+<h3>1. Neden FEM? (45 dk)</h3>
+<figure class="fig"><div class="sc"><svg viewBox="0 0 650 100" role="img" xmlns="http://www.w3.org/2000/svg"><defs><marker id="ah-neden" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0 0L10 5L0 10z" class="ar"/></marker></defs><rect x="10" y="30" width="190" height="50" rx="5" class="bx"/><text x="105.0" y="51.0" class="tb" text-anchor="middle">Formül</text><text x="105.0" y="67.0" class="tm" text-anchor="middle">basit geometri</text><rect x="220" y="30" width="190" height="50" rx="5" class="bx"/><text x="315.0" y="51.0" class="tb" text-anchor="middle">Gerçek cephe</text><text x="315.0" y="67.0" class="tm" text-anchor="middle">delik, kaynak, cam</text><rect x="430" y="30" width="190" height="50" rx="5" class="bxa"/><text x="525.0" y="51.0" class="tb" text-anchor="middle">FEM</text><text x="525.0" y="67.0" class="tm" text-anchor="middle">parçalara böl, birlikte çöz</text></svg></div><figcaption>Formüller basit geometriler içindir; FEM karmaşık yapıyı basit elemanlara böler.</figcaption></figure>
+<p>Statik kursundaki formüller (qL²/8, 5qL⁴/384EI) <strong>basit geometriler</strong> içindir: düz kiriş, düzgün yük, bilinen mesnet. Gerçek cephede:</p>
+<ol>
+<li>Braketin karmaşık bir şekli, delikleri, kaynakları vardır.</li>
+<li>Cam dört kenarından mesnetlidir ve büyük sehim yapar.</li>
+<li>Yükler ve mesnetler düzensizdir.</li>
+</ol>
+<p>FEM, karmaşık bir yapıyı <strong>çok sayıda basit parçaya (elemana)</strong> böler; her elemanın davranışı bilinen basit denklemlerle yazılır; bütün denklemler birlikte çözülür.</p>
+<h3>2. Temel kavramlar (1 saat)</h3>
+<figure class="fig"><div class="sc"><svg viewBox="0 0 660 200" role="img" xmlns="http://www.w3.org/2000/svg"><defs><marker id="ah-kavram" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0 0L10 5L0 10z" class="ar"/></marker></defs><line x1="60" y1="40" x2="120" y2="40" class="k1"/><line x1="60" y1="40" x2="60" y2="100" class="k1"/><circle cx="60" cy="40" r="4" class="dotr"/><line x1="60" y1="100" x2="120" y2="100" class="k1"/><line x1="60" y1="100" x2="60" y2="160" class="k1"/><circle cx="60" cy="100" r="4" class="dotr"/><line x1="60" y1="160" x2="120" y2="160" class="k1"/><circle cx="60" cy="160" r="4" class="dotr"/><line x1="120" y1="40" x2="180" y2="40" class="k1"/><line x1="120" y1="40" x2="120" y2="100" class="k1"/><circle cx="120" cy="40" r="4" class="dotr"/><line x1="120" y1="100" x2="180" y2="100" class="k1"/><line x1="120" y1="100" x2="120" y2="160" class="k1"/><circle cx="120" cy="100" r="4" class="dotr"/><line x1="120" y1="160" x2="180" y2="160" class="k1"/><circle cx="120" cy="160" r="4" class="dotr"/><line x1="180" y1="40" x2="240" y2="40" class="k1"/><line x1="180" y1="40" x2="180" y2="100" class="k1"/><circle cx="180" cy="40" r="4" class="dotr"/><line x1="180" y1="100" x2="240" y2="100" class="k1"/><line x1="180" y1="100" x2="180" y2="160" class="k1"/><circle cx="180" cy="100" r="4" class="dotr"/><line x1="180" y1="160" x2="240" y2="160" class="k1"/><circle cx="180" cy="160" r="4" class="dotr"/><line x1="240" y1="40" x2="300" y2="40" class="k1"/><line x1="240" y1="40" x2="240" y2="100" class="k1"/><circle cx="240" cy="40" r="4" class="dotr"/><line x1="240" y1="100" x2="300" y2="100" class="k1"/><line x1="240" y1="100" x2="240" y2="160" class="k1"/><circle cx="240" cy="100" r="4" class="dotr"/><line x1="240" y1="160" x2="300" y2="160" class="k1"/><circle cx="240" cy="160" r="4" class="dotr"/><line x1="300" y1="40" x2="360" y2="40" class="k1"/><line x1="300" y1="40" x2="300" y2="100" class="k1"/><circle cx="300" cy="40" r="4" class="dotr"/><line x1="300" y1="100" x2="360" y2="100" class="k1"/><line x1="300" y1="100" x2="300" y2="160" class="k1"/><circle cx="300" cy="100" r="4" class="dotr"/><line x1="300" y1="160" x2="360" y2="160" class="k1"/><circle cx="300" cy="160" r="4" class="dotr"/><line x1="360" y1="40" x2="360" y2="100" class="k1"/><circle cx="360" cy="40" r="4" class="dotr"/><line x1="360" y1="100" x2="360" y2="160" class="k1"/><circle cx="360" cy="100" r="4" class="dotr"/><circle cx="360" cy="160" r="4" class="dotr"/><rect x="120" y="100" width="60" height="60" class="gl"/><text x="150" y="134" class="tm" text-anchor="middle">eleman</text><text x="420" y="60" class="tr2" text-anchor="start">düğüm: kırmızı noktalar</text><text x="420" y="86" class="tm" text-anchor="start">eleman: aralarındaki parça</text><text x="420" y="112" class="tm" text-anchor="start">ağ: hepsi</text><text x="420" y="138" class="ta" text-anchor="start">DOF: düğüm başına hareketler</text></svg></div><figcaption>Düğüm, eleman ve ağ.</figcaption></figure>
+<div class="tw"><table>
+<thead>
+<tr>
+<th>Kavram</th>
+<th>Anlamı</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><strong>Düğüm (node)</strong></td>
+<td>Elemanların birleştiği nokta; bilinmeyenler burada hesaplanır</td>
+</tr>
+<tr>
+<td><strong>Eleman</strong></td>
+<td>Düğümleri birleştiren parça (çubuk, kiriş, kabuk, katı)</td>
+</tr>
+<tr>
+<td><strong>Ağ (mesh)</strong></td>
+<td>Elemanların tamamı</td>
+</tr>
+<tr>
+<td><strong>Serbestlik derecesi (DOF)</strong></td>
+<td>Bir düğümün yapabileceği hareketler: yer değiştirme ve dönme</td>
+</tr>
+<tr>
+<td><strong>Mesnet (sınır koşulu)</strong></td>
+<td>Engellenen serbestlik dereceleri</td>
+</tr>
+<tr>
+<td><strong>Yük</strong></td>
+<td>Düğümlere ya da elemanlara uygulanan kuvvetler</td>
+</tr>
+</tbody>
+</table></div>
+<p>Düzlemde bir kiriş düğümünün 3 serbestlik derecesi vardır (x, y yer değiştirmesi ve dönme); uzayda 6.</p>
+<h3>3. Rijitlik: K × u = F (1,5 saat)</h3>
+<figure class="fig"><div class="sc"><svg viewBox="0 0 600 170" role="img" xmlns="http://www.w3.org/2000/svg"><defs><marker id="ah-yay" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0 0L10 5L0 10z" class="ar"/></marker></defs><rect x="20" y="60" width="14" height="80" class="fr"/><polyline points="34,100 54.75,108 75.5,92 96.25,108 117.0,92 137.75,108 158.5,92 179.25,108 200,100" class="ac"/><circle cx="200" cy="100" r="8" class="bxa"/><polyline points="208,100 229.5,108 251.0,92 272.5,108 294.0,92 315.5,108 337.0,92 358.5,108 380,100" class="ac"/><circle cx="380" cy="100" r="8" class="bxa"/><line x1="390" y1="100" x2="460" y2="100" class="swr" marker-end="url(#ah-yay)"/><text x="117" y="80" class="tm" text-anchor="middle">k₁ = 1000</text><text x="294" y="80" class="tm" text-anchor="middle">k₂ = 2000</text><text x="470" y="104" class="tr2" text-anchor="start">F = 300 N</text><text x="200" y="140" class="ta" text-anchor="middle">u₁ = 0,30</text><text x="380" y="140" class="ta" text-anchor="middle">u₂ = 0,45 mm</text></svg></div><figcaption>İki yaylı sistem: K × u = F çözümü.</figcaption></figure>
+<p>Bir yay için kuvvet ile uzama ilişkisi: <strong>F = k × u</strong>. FEM, bunun matris hâlidir:</p>
+<pre><code class="language-text">K × u = F
+K: rijitlik matrisi   u: düğüm yer değiştirmeleri (bilinmeyen)   F: düğüm kuvvetleri
+</code></pre>
+<p><strong>Örnek:</strong> Duvara bağlı iki yay art arda. k₁ = 1000 N/mm, k₂ = 2000 N/mm; uçtaki düğüme F = 300 N.</p>
+<pre><code class="language-text">Düğümler: 0 (duvar, sabit), 1, 2
+Eleman matrisleri:  k₁ [ 1 -1 ]    k₂ [ 1 -1 ]
+                       [-1  1 ]       [-1  1 ]
+
+Birleştirilmiş sistem (düğüm 0 sabit olduğu için atıldı):
+[ k₁ + k₂   -k₂ ] [u₁]   [  0 ]        [ 3000  -2000 ] [u₁]   [  0 ]
+[  -k₂       k₂ ] [u₂] = [ 300]   →    [-2000   2000 ] [u₂] = [ 300]
+
+Çözüm: u₁ = 0,30 mm,  u₂ = 0,45 mm
+Kontrol: u₁ = F / k₁ = 300 / 1000 = 0,30 ✓   u₂ − u₁ = 300 / 2000 = 0,15 ✓
+Duvar tepkisi: k₁ × u₁ = 300 N ✓ (uygulanan yüke eşit)
+</code></pre>
+<p>Bir sonlu eleman programı tam olarak bunu yapar, yalnızca binlerce ya da milyonlarca bilinmeyenle.</p>
+<h3>4. Bir FEM çözümünün adımları (30 dk)</h3>
+<figure class="fig"><div class="sc"><svg viewBox="0 0 670 120" role="img" xmlns="http://www.w3.org/2000/svg"><defs><marker id="ah-adimlar" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0 0L10 5L0 10z" class="ar"/></marker></defs><rect x="10" y="40" width="72" height="56" rx="5" class="bx"/><text x="46.0" y="72.0" class="tb" text-anchor="middle">Geometri</text><rect x="92" y="40" width="72" height="56" rx="5" class="bx"/><text x="128.0" y="72.0" class="tb" text-anchor="middle">Malzeme</text><line x1="84" y1="68.0" x2="90" y2="68.0" class="mu" marker-end="url(#ah-adimlar)"/><rect x="174" y="40" width="72" height="56" rx="5" class="bx"/><text x="210.0" y="72.0" class="tb" text-anchor="middle">Ağ</text><line x1="166" y1="68.0" x2="172" y2="68.0" class="mu" marker-end="url(#ah-adimlar)"/><rect x="256" y="40" width="72" height="56" rx="5" class="bx"/><text x="292.0" y="72.0" class="tb" text-anchor="middle">Mesnet</text><line x1="248" y1="68.0" x2="254" y2="68.0" class="mu" marker-end="url(#ah-adimlar)"/><rect x="338" y="40" width="72" height="56" rx="5" class="bx"/><text x="374.0" y="72.0" class="tb" text-anchor="middle">Yük</text><line x1="330" y1="68.0" x2="336" y2="68.0" class="mu" marker-end="url(#ah-adimlar)"/><rect x="420" y="40" width="72" height="56" rx="5" class="bx"/><text x="456.0" y="72.0" class="tb" text-anchor="middle">Çöz</text><line x1="412" y1="68.0" x2="418" y2="68.0" class="mu" marker-end="url(#ah-adimlar)"/><rect x="502" y="40" width="72" height="56" rx="5" class="bx"/><text x="538.0" y="72.0" class="tb" text-anchor="middle">Sonuç</text><line x1="494" y1="68.0" x2="500" y2="68.0" class="mu" marker-end="url(#ah-adimlar)"/><rect x="584" y="40" width="72" height="56" rx="5" class="bxa"/><text x="620.0" y="72.0" class="tb" text-anchor="middle">Kontrol</text><line x1="576" y1="68.0" x2="582" y2="68.0" class="mu" marker-end="url(#ah-adimlar)"/></svg></div><figcaption>Bir FEM çözümünün sekiz adımı.</figcaption></figure>
+<ol>
+<li><strong>Geometri:</strong> Yapının (sadeleştirilmiş) modeli.</li>
+<li><strong>Malzeme:</strong> E, ν, yoğunluk.</li>
+<li><strong>Ağ:</strong> Eleman türü ve boyutu.</li>
+<li><strong>Mesnetler:</strong> Hangi düğümler nasıl tutuluyor?</li>
+<li><strong>Yükler:</strong> Nerede, ne kadar, hangi yönde?</li>
+<li><strong>Çözüm:</strong> K × u = F.</li>
+<li><strong>Sonuçlar:</strong> Yer değiştirme, gerilme, mesnet tepkileri.</li>
+<li><strong>Kontrol:</strong> Sonuç makul mü? (6. gün)</li>
+</ol>
+<h3>Gün sonu kontrolü (15 dk)</h3>
+<ul class="tasks">
+<li class="task"><label><input type="checkbox" data-id="g1-1"><span>FEM'in neden gerektiğini biliyorum.</span></label></li>
+<li class="task"><label><input type="checkbox" data-id="g1-2"><span>Düğüm, eleman, ağ, serbestlik derecesi ve mesnet kavramlarını biliyorum.</span></label></li>
+<li class="task"><label><input type="checkbox" data-id="g1-3"><span>K × u = F denkleminin anlamını biliyorum.</span></label></li>
+<li class="task"><label><input type="checkbox" data-id="g1-4"><span>İki yaylı sistemi elle çözüp tepkiyle kontrol edebiliyorum.</span></label></li>
+<li class="task"><label><input type="checkbox" data-id="g1-5"><span>Bir FEM çözümünün sekiz adımını sayabiliyorum.</span></label></li>
+</ul></div>
+  <div class="pn"><a href="#genel">← Genel bakış</a><a href="#gun2">2. gün →</a></div>
+</section>
+<section class="day" id="gun2" data-day="2">
+  <div class="day-head"><span class="dn">GÜN 02</span><h2>Kiriş elemanla dikme</h2><span class="meta">~4 saat · <span data-prog="2">0/5</span> kontrol</span></div>
+  <div class="prose"><h3>Hedef</h3>
+<p>Gün sonunda bir dikmeyi kiriş elemanlarla modelleyebilecek, eleman sayısının sonuca etkisini görecek ve yer değiştirme ile gerilmenin neden farklı hızda yakınsadığını bileceksin. Süre yaklaşık 4 saat.</p>
+<h3>1. Kiriş elemanı (1 saat)</h3>
+<figure class="fig"><div class="sc"><svg viewBox="0 0 640 160" role="img" xmlns="http://www.w3.org/2000/svg"><defs><marker id="ah-kiris" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0 0L10 5L0 10z" class="ar"/></marker></defs><line x1="60" y1="100" x2="300" y2="100" class="k"/><circle cx="60" cy="100" r="6" class="bxa"/><circle cx="300" cy="100" r="6" class="bxa"/><line x1="60" y1="100" x2="60" y2="50" class="ac" marker-end="url(#ah-kiris)"/><path d="M 80 80 A 20 20 0 0 1 80 120" class="ac" marker-end="url(#ah-kiris)"/><text x="40" y="46" class="ta" text-anchor="start">v₁</text><text x="90" y="76" class="ta" text-anchor="start">θ₁</text><line x1="300" y1="100" x2="300" y2="50" class="ac" marker-end="url(#ah-kiris)"/><path d="M 320 80 A 20 20 0 0 1 320 120" class="ac" marker-end="url(#ah-kiris)"/><text x="280" y="46" class="ta" text-anchor="start">v₂</text><text x="330" y="76" class="ta" text-anchor="start">θ₂</text><text x="380" y="100" class="tm" text-anchor="start">düğüm başına: sehim + dönme</text><text x="380" y="124" class="tm" text-anchor="start">eleman içi: kübik eğri</text></svg></div><figcaption>Kiriş elemanı: iki düğüm, her birinde sehim ve dönme.</figcaption></figure>
+<p>Bir kiriş elemanının iki düğümü vardır; düzlemde her düğümde düşey yer değiştirme ve dönme (eksenel kuvvet yoksa) bilinmeyendir. Eleman içinde sehim, düğüm değerlerinden <strong>kübik</strong> bir eğriyle hesaplanır. Bu eleman, statik kursundaki kiriş teorisini tam olarak içerir.</p>
+<h3>2. Dikme modeli (1 saat)</h3>
+<figure class="fig"><div class="sc"><svg viewBox="0 0 640 160" role="img" xmlns="http://www.w3.org/2000/svg"><defs><marker id="ah-model" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0 0L10 5L0 10z" class="ar"/></marker></defs><line x1="60" y1="100" x2="580" y2="100" class="k"/><polygon points="60,100 50,116 70,116" class="bx"/><polygon points="580,100 570,116 590,116" class="bx"/><circle cx="60" cy="100" r="5" class="dotr"/><circle cx="190" cy="100" r="5" class="dotr"/><circle cx="320" cy="100" r="5" class="dotr"/><circle cx="450" cy="100" r="5" class="dotr"/><circle cx="580" cy="100" r="5" class="dotr"/><line x1="60" y1="60" x2="60" y2="96" class="ac" marker-end="url(#ah-model)"/><line x1="100" y1="60" x2="100" y2="96" class="ac" marker-end="url(#ah-model)"/><line x1="140" y1="60" x2="140" y2="96" class="ac" marker-end="url(#ah-model)"/><line x1="180" y1="60" x2="180" y2="96" class="ac" marker-end="url(#ah-model)"/><line x1="220" y1="60" x2="220" y2="96" class="ac" marker-end="url(#ah-model)"/><line x1="260" y1="60" x2="260" y2="96" class="ac" marker-end="url(#ah-model)"/><line x1="300" y1="60" x2="300" y2="96" class="ac" marker-end="url(#ah-model)"/><line x1="340" y1="60" x2="340" y2="96" class="ac" marker-end="url(#ah-model)"/><line x1="380" y1="60" x2="380" y2="96" class="ac" marker-end="url(#ah-model)"/><line x1="420" y1="60" x2="420" y2="96" class="ac" marker-end="url(#ah-model)"/><line x1="460" y1="60" x2="460" y2="96" class="ac" marker-end="url(#ah-model)"/><line x1="500" y1="60" x2="500" y2="96" class="ac" marker-end="url(#ah-model)"/><line x1="540" y1="60" x2="540" y2="96" class="ac" marker-end="url(#ah-model)"/><line x1="580" y1="60" x2="580" y2="96" class="ac" marker-end="url(#ah-model)"/><line x1="60" y1="60" x2="580" y2="60" class="ac"/><text x="320" y="50" class="ta" text-anchor="middle">q = 1,8 kN/m</text><text x="320" y="140" class="tm" text-anchor="middle">4 eleman, 5 düğüm, L = 3,6 m</text></svg></div><figcaption>Dikme modeli: dört kiriş elemanı.</figcaption></figure>
+<p><a href="../statik-temelleri/">Statiğin Temelleri</a> kursundaki dikme: L = 3,6 m, q = 1,8 kN/m, E = 70 000 N/mm², I = 311 cm⁴ (50 × 150 × 3), basit kiriş.</p>
+<ol>
+<li>Dikmeyi n elemana böl.</li>
+<li>Sol uçta düşey yer değiştirmeyi tut (sabit mesnet), sağ uçta da düşey yer değiştirmeyi tut (kayar mesnet; eksenel hareket serbest).</li>
+<li>Yayılı yükü elemanlara uygula (program bunu düğümlere eşdeğer kuvvet ve momentlere çevirir).</li>
+</ol>
+<h3>3. Eleman sayısı ve yakınsama (1,5 saat)</h3>
+<figure class="fig"><div class="sc"><svg viewBox="0 0 640 236" role="img" xmlns="http://www.w3.org/2000/svg"><defs><marker id="ah-yakinsama" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0 0L10 5L0 10z" class="ar"/></marker></defs><text x="20" y="20" class="tb" text-anchor="start">Ortada moment (kNm), kesin 2,916</text><line x1="60" y1="200" x2="600" y2="200" class="k1"/><line x1="60" y1="200" x2="60" y2="30" class="k1"/><line x1="60" y1="86.72" x2="600" y2="86.72" class="swr"/><text x="600" y="104.72" class="tr2" text-anchor="end">kesin</text><polyline points="60,164.48000000000002 220,47.839999999999975 380,76.96000000000001 540,84.32" class="ac"/><circle cx="60" cy="164.48000000000002" r="5" class="dotr"/><text x="60" y="220" class="tm" text-anchor="middle">1 eleman</text><text x="68" y="156.48000000000002" class="ta" text-anchor="start">1,944</text><circle cx="220" cy="47.839999999999975" r="5" class="dotr"/><text x="220" y="220" class="tm" text-anchor="middle">2 eleman</text><text x="228" y="39.839999999999975" class="ta" text-anchor="start">3,402</text><circle cx="380" cy="76.96000000000001" r="5" class="dotr"/><text x="380" y="220" class="tm" text-anchor="middle">4 eleman</text><text x="388" y="68.96000000000001" class="ta" text-anchor="start">3,038</text><circle cx="540" cy="84.32" r="5" class="dotr"/><text x="540" y="220" class="tm" text-anchor="middle">8 eleman</text><text x="548" y="76.32" class="ta" text-anchor="start">2,946</text><text x="600" y="180" class="tm" text-anchor="end">sehim 2 elemandan itibaren kesin</text></svg></div><figcaption>Moment eleman sayısıyla yakınsar; sehim çok daha hızlı yakınsar (hesaplanmış).</figcaption></figure>
+<p>Kapalı formüller: sehim = 5qL⁴ / 384EI = <strong>18,06 mm</strong>, açıklık ortası moment = qL²/8 = <strong>2,916 kNm</strong>. Python'da yazılmış küçük bir kiriş FEM programıyla:</p>
+<div class="tw"><table>
+<thead>
+<tr>
+<th>Eleman sayısı</th>
+<th>Ortada sehim (mm)</th>
+<th>Ortada moment (kNm)</th>
+<th>Mesnet tepkisi (kN)</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>1</td>
+<td>14,45</td>
+<td>1,944</td>
+<td>3,24</td>
+</tr>
+<tr>
+<td>2</td>
+<td><strong>18,06</strong></td>
+<td>3,402</td>
+<td>3,24</td>
+</tr>
+<tr>
+<td>4</td>
+<td><strong>18,06</strong></td>
+<td>3,038</td>
+<td>3,24</td>
+</tr>
+<tr>
+<td>8</td>
+<td><strong>18,06</strong></td>
+<td>2,946</td>
+<td>3,24</td>
+</tr>
+<tr>
+<td>Kesin</td>
+<td>18,06</td>
+<td>2,916</td>
+<td>3,24</td>
+</tr>
+</tbody>
+</table></div>
+<p><strong>Ne öğrendik?</strong></p>
+<ol>
+<li><strong>Mesnet tepkisi</strong> her durumda doğru: denge her zaman sağlanır.</li>
+<li><strong>Sehim</strong> (yer değiştirme) düğümlerde çok hızlı doğru çıkar; ortada bir düğüm olduğu anda kesin değer.</li>
+<li><strong>Moment</strong> (ve dolayısıyla gerilme) yavaş yakınsar: 8 elemanla bile %1 fark var; 2 elemanla %17 fazla.</li>
+</ol>
+<p><strong>Genel kural:</strong> FEM'de <strong>yer değiştirmeler gerilmelerden daha hızlı yakınsar.</strong> Bir model sehimde doğru görünürken gerilmede hâlâ hatalı olabilir. Gerilme için ağı sık tutmak ya da ağ yakınsama kontrolü yapmak gerekir (3. gün).</p>
+<h3>4. Mesnet modelleme (30 dk)</h3>
+<figure class="fig"><div class="sc"><svg viewBox="0 0 670 100" role="img" xmlns="http://www.w3.org/2000/svg"><defs><marker id="ah-mesnet" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0 0L10 5L0 10z" class="ar"/></marker></defs><rect x="10" y="30" width="150" height="50" rx="5" class="bx"/><text x="85.0" y="51.0" class="tb" text-anchor="middle">Asma braket</text><text x="85.0" y="67.0" class="tm" text-anchor="middle">x + y tutulu</text><rect x="172" y="30" width="150" height="50" rx="5" class="bxa"/><text x="247.0" y="51.0" class="tb" text-anchor="middle">Kayar braket</text><text x="247.0" y="67.0" class="tm" text-anchor="middle">yalnızca rüzgâr</text><rect x="334" y="30" width="150" height="50" rx="5" class="bx"/><text x="409.0" y="51.0" class="tb" text-anchor="middle">Esnek bağlantı</text><text x="409.0" y="67.0" class="tm" text-anchor="middle">yay</text><rect x="496" y="30" width="150" height="50" rx="5" class="bx"/><text x="571.0" y="51.0" class="tb" text-anchor="middle">Sürekli dikme</text><text x="571.0" y="67.0" class="tm" text-anchor="middle">ara mesnet</text></svg></div><figcaption>Gerçek bağlantıların mesnet modelleri.</figcaption></figure>
+<div class="tw"><table>
+<thead>
+<tr>
+<th>Gerçek</th>
+<th>Model</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Asma braket (yük taşır)</td>
+<td>Düşey ve yatay tutulmuş düğüm</td>
+</tr>
+<tr>
+<td>Kayar braket</td>
+<td>Yalnızca rüzgâr yönünde tutulmuş düğüm</td>
+</tr>
+<tr>
+<td>Esnek braket ve dübel</td>
+<td>Yay mesnet (rijitliği braket hesabından)</td>
+</tr>
+<tr>
+<td>Sürekli dikme</td>
+<td>İki açıklık, ortada ara mesnet</td>
+</tr>
+</tbody>
+</table></div>
+<p>Mesnetlerin yanlış modellenmesi, en sık ve en büyük FEM hatasıdır: bir kayar mesnedi sabit modellemek dikmede olmayan eksenel kuvvetler doğurur.</p>
+<h3>Gün sonu kontrolü (15 dk)</h3>
+<ul class="tasks">
+<li class="task"><label><input type="checkbox" data-id="g2-1"><span>Kiriş elemanının bilinmeyenlerini biliyorum.</span></label></li>
+<li class="task"><label><input type="checkbox" data-id="g2-2"><span>Bir dikmeyi kiriş elemanlarla modelleyebiliyorum.</span></label></li>
+<li class="task"><label><input type="checkbox" data-id="g2-3"><span>Eleman sayısının sehim, moment ve tepkiye etkisini okuyabiliyorum.</span></label></li>
+<li class="task"><label><input type="checkbox" data-id="g2-4"><span>Yer değiştirmenin gerilmeden hızlı yakınsadığını biliyorum.</span></label></li>
+<li class="task"><label><input type="checkbox" data-id="g2-5"><span>Gerçek bağlantıları mesnet ya da yay olarak modelleyebiliyorum.</span></label></li>
+</ul></div>
+  <div class="pn"><a href="#gun1">← 1. gün</a><a href="#gun3">3. gün →</a></div>
+</section>
+<section class="day" id="gun3" data-day="3">
+  <div class="day-head"><span class="dn">GÜN 03</span><h2>Eleman ve ağ</h2><span class="meta">~4 saat · <span data-prog="3">0/4</span> kontrol</span></div>
+  <div class="prose"><h3>Hedef</h3>
+<p>Gün sonunda eleman türlerini, hangisinin ne zaman kullanılacağını, ağ boyutunu, ağ yakınsama kontrolünü ve gerilme tekilliklerini bileceksin. Süre yaklaşık 4 saat.</p>
+<h3>1. Eleman türleri (1,5 saat)</h3>
+<figure class="fig"><div class="sc"><svg viewBox="0 0 680 160" role="img" xmlns="http://www.w3.org/2000/svg"><defs><marker id="ah-turler" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0 0L10 5L0 10z" class="ar"/></marker></defs><line x1="30" y1="100" x2="130" y2="100" class="k"/><circle cx="30" cy="100" r="4" class="dotr"/><circle cx="130" cy="100" r="4" class="dotr"/><text x="80" y="140" class="tm" text-anchor="middle">çubuk / kiriş</text><polygon points="190,120 290,120 310,80 210,80" class="gl"/><text x="250" y="140" class="tm" text-anchor="middle">kabuk</text><polygon points="370,120 450,120 450,70 370,70" class="gl"/><polygon points="370,70 450,70 470,55 390,55" class="bx"/><polygon points="450,120 470,105 470,55 450,70" class="bx"/><text x="420" y="140" class="tm" text-anchor="middle">katı</text><text x="560" y="80" class="ta" text-anchor="start">en basit yeterli</text><text x="560" y="100" class="ta" text-anchor="start">eleman türünü seç</text></svg></div><figcaption>Eleman türleri: çubuk ve kiriş, kabuk, katı.</figcaption></figure>
+<div class="tw"><table>
+<thead>
+<tr>
+<th>Eleman</th>
+<th>Geometri</th>
+<th>Cephede</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><strong>Çubuk (truss)</strong></td>
+<td>Yalnızca eksenel kuvvet</td>
+<td>Gergi çubukları, kafes</td>
+</tr>
+<tr>
+<td><strong>Kiriş (beam)</strong></td>
+<td>Eğilme, kesme, burulma</td>
+<td>Dikme, kayıt, çelik konstrüksiyon (2. gün)</td>
+</tr>
+<tr>
+<td><strong>Kabuk / plak (shell / plate)</strong></td>
+<td>İnce yüzey</td>
+<td>Cam, sac panel, kompozit panel (4. gün)</td>
+</tr>
+<tr>
+<td><strong>Katı (solid)</strong></td>
+<td>Hacim</td>
+<td>Braket, döküm parça, kalın bağlantı (5. gün)</td>
+</tr>
+</tbody>
+</table></div>
+<p><strong>Kural:</strong> En basit yeterli elemanı seç. Bir dikmeyi katı elemanlarla modellemek, milyonlarca bilinmeyen ve uzun süre demektir; sonucu kiriş elemandan genellikle daha iyi değildir.</p>
+<h3>2. Ağ boyutu (45 dk)</h3>
+<figure class="fig"><div class="sc"><svg viewBox="0 0 640 210" role="img" xmlns="http://www.w3.org/2000/svg"><defs><marker id="ah-ag" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0 0L10 5L0 10z" class="ar"/></marker></defs><rect x="40" y="30" width="300" height="160" class="bx"/><line x1="90" y1="30" x2="90" y2="190" class="mud"/><line x1="140" y1="30" x2="140" y2="190" class="mud"/><line x1="190" y1="30" x2="190" y2="190" class="mud"/><line x1="240" y1="30" x2="240" y2="190" class="mud"/><line x1="290" y1="30" x2="290" y2="190" class="mud"/><line x1="40" y1="70" x2="340" y2="70" class="mud"/><line x1="40" y1="110" x2="340" y2="110" class="mud"/><line x1="40" y1="150" x2="340" y2="150" class="mud"/><circle cx="190" cy="110" r="22" class="bg"/><circle cx="190" cy="110" r="22" class="k1"/><line x1="212.0" y1="110.0" x2="230.0" y2="110.0" class="ac"/><line x1="209.05255888325766" y1="121.0" x2="224.64101615137756" y2="130.0" class="ac"/><line x1="201.0" y1="129.05255888325766" x2="210.0" y2="144.64101615137753" class="ac"/><line x1="190.0" y1="132.0" x2="190.0" y2="150.0" class="ac"/><line x1="179.0" y1="129.05255888325766" x2="170.0" y2="144.64101615137756" class="ac"/><line x1="170.94744111674234" y1="121.0" x2="155.35898384862244" y2="130.0" class="ac"/><line x1="168.0" y1="110.0" x2="150.0" y2="110.0" class="ac"/><line x1="170.94744111674234" y1="99.0" x2="155.35898384862247" y2="90.0" class="ac"/><line x1="179.0" y1="90.94744111674235" x2="169.99999999999997" y2="75.35898384862247" class="ac"/><line x1="190.0" y1="88.0" x2="190.0" y2="70.0" class="ac"/><line x1="201.0" y1="90.94744111674235" x2="210.0" y2="75.35898384862246" class="ac"/><line x1="209.05255888325763" y1="98.99999999999999" x2="224.64101615137753" y2="89.99999999999999" class="ac"/><text x="370" y="90" class="ta" text-anchor="start">delik çevresinde yerel sık ağ</text><text x="370" y="116" class="tm" text-anchor="start">uzakta kaba ağ</text></svg></div><figcaption>Yerel ağ sıklaştırma.</figcaption></figure>
+<ol>
+<li><strong>Eleman boyutu küçüldükçe</strong> sonuç kesin değere yaklaşır ama çözüm süresi artar.</li>
+<li>Gerilmenin hızlı değiştiği yerlerde (delik kenarı, köşe, yük noktası) <strong>yerel olarak sık</strong> ağ.</li>
+<li>Kabuk ve katı elemanlarda <strong>kalınlık boyunca</strong> yeterli eleman (katı elemanlarda en az 2-3 eleman ya da ikinci dereceden elemanlar).</li>
+<li>Elemanlar aşırı uzun ya da çarpık olmamalı (en-boy oranı).</li>
+</ol>
+<h3>3. Ağ yakınsama kontrolü (1 saat)</h3>
+<figure class="fig"><div class="sc"><svg viewBox="0 0 640 120" role="img" xmlns="http://www.w3.org/2000/svg"><defs><marker id="ah-yakinsama2" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0 0L10 5L0 10z" class="ar"/></marker></defs><rect x="10" y="40" width="140" height="56" rx="5" class="bx"/><text x="80.0" y="64.0" class="tb" text-anchor="middle">Çöz</text><text x="80.0" y="80.0" class="tm" text-anchor="middle">ağ h</text><rect x="170" y="40" width="140" height="56" rx="5" class="bx"/><text x="240.0" y="64.0" class="tb" text-anchor="middle">Not al</text><text x="240.0" y="80.0" class="tm" text-anchor="middle">σ₁</text><line x1="152" y1="68.0" x2="168" y2="68.0" class="mu" marker-end="url(#ah-yakinsama2)"/><rect x="330" y="40" width="140" height="56" rx="5" class="bx"/><text x="400.0" y="64.0" class="tb" text-anchor="middle">Ağı yarıya</text><text x="400.0" y="80.0" class="tm" text-anchor="middle">h/2</text><line x1="312" y1="68.0" x2="328" y2="68.0" class="mu" marker-end="url(#ah-yakinsama2)"/><rect x="490" y="40" width="140" height="56" rx="5" class="bxa"/><text x="560.0" y="64.0" class="tb" text-anchor="middle">Karşılaştır</text><text x="560.0" y="80.0" class="tm" text-anchor="middle">fark &lt; %2-5?</text><line x1="472" y1="68.0" x2="488" y2="68.0" class="mu" marker-end="url(#ah-yakinsama2)"/></svg></div><figcaption>Ağ yakınsama kontrolü.</figcaption></figure>
+<p>Doğru ağ boyutunu bilmenin tek yolu denemektir:</p>
+<ol>
+<li>Modeli bir ağ boyutuyla çöz; incelediğin noktadaki gerilmeyi not et.</li>
+<li>Ağı (o bölgede) <strong>yarıya</strong> indir, tekrar çöz.</li>
+<li>
+<p>Sonuç %2-5'ten az değiştiyse ağ yeterli; değişmeye devam ediyorsa sıklaştır ya da 4. maddeye bak.</p>
+</li>
+<li>
+<p>gündeki tabloda 4'ten 8 elemana geçişte moment %3 değişti; 16 elemanla bir kez daha denenirse yakınsama netleşir.</p>
+</li>
+</ol>
+<h3>4. Tekillikler (45 dk)</h3>
+<figure class="fig"><div class="sc"><svg viewBox="0 0 640 236" role="img" xmlns="http://www.w3.org/2000/svg"><defs><marker id="ah-tekillik" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0 0L10 5L0 10z" class="ar"/></marker></defs><text x="20" y="20" class="tb" text-anchor="start">Keskin köşede gerilme (şematik)</text><line x1="60" y1="200" x2="600" y2="200" class="k1"/><line x1="60" y1="200" x2="60" y2="30" class="k1"/><polyline points="60,140 160,110 260,80 360,50 460,35 560,30" class="ac"/><text x="80" y="50" class="ta" text-anchor="start">yarıçaplı: yakınsar</text><polyline points="60,140 160,120 260,95 360,65 460,30 560,-10" class="swr"/><text x="80" y="74" class="tr2" text-anchor="start">keskin köşe: sonsuza</text><text x="330" y="226" class="tm" text-anchor="middle">ağ sıklığı →</text></svg></div><figcaption>Tekillik: keskin köşede gerilme ağ sıklaştıkça büyümeye devam eder.</figcaption></figure>
+<p>Bazı noktalarda gerilme ağ sıklaştıkça <strong>sonsuza gider</strong>; buna <strong>tekillik</strong> (singularity) denir:</p>
+<ol>
+<li><strong>Keskin iç köşeler</strong> (yarıçapsız): gerçekte her köşede küçük bir yarıçap vardır.</li>
+<li><strong>Nokta yükler ve nokta mesnetler:</strong> gerçekte yük bir alana yayılır.</li>
+<li><strong>Rijit bağlantının kenarı.</strong></li>
+</ol>
+<p>Tekil noktadaki gerilme <strong>anlamsızdır</strong>: "Ağı sıklaştırdım, gerilme 400'den 900 N/mm²'ye çıktı" bir tekillik işaretidir, malzeme hatası değil. Çözüm: gerçek yarıçapı modellemek, yükü gerçek alanına yaymak, tekil noktadan biraz uzaktaki gerilmeye bakmak ya da o bölgeyi yerel bir yöntemle (ör. kaynak, cıvata hesabı) ayrıca kontrol etmek.</p>
+<h3>Gün sonu kontrolü (15 dk)</h3>
+<ul class="tasks">
+<li class="task"><label><input type="checkbox" data-id="g3-1"><span>Çubuk, kiriş, kabuk ve katı elemanları ve cephedeki kullanımlarını biliyorum.</span></label></li>
+<li class="task"><label><input type="checkbox" data-id="g3-2"><span>Ağ boyutunun ve yerel sıklaştırmanın etkisini biliyorum.</span></label></li>
+<li class="task"><label><input type="checkbox" data-id="g3-3"><span>Ağ yakınsama kontrolü yapabiliyorum.</span></label></li>
+<li class="task"><label><input type="checkbox" data-id="g3-4"><span>Tekilliği tanıyabiliyor ve nasıl ele alınacağını biliyorum.</span></label></li>
+</ul></div>
+  <div class="pn"><a href="#gun2">← 2. gün</a><a href="#gun4">4. gün →</a></div>
+</section>
+<section class="day" id="gun4" data-day="4">
+  <div class="day-head"><span class="dn">GÜN 04</span><h2>Cam</h2><span class="meta">~4 saat · <span data-prog="4">0/5</span> kontrol</span></div>
+  <div class="prose"><h3>Hedef</h3>
+<p>Gün sonunda bir camın sonlu elemanlarla nasıl modellendiğini bileceksin: kabuk elemanlar, kenar mesnetleri, doğrusal ve doğrusal olmayan (büyük sehim) çözüm, yalıtım ve lamine camın modellenmesi, sonucun kapalı çözümle karşılaştırılması. Süre yaklaşık 4 saat.</p>
+<h3>1. Cam: kabuk elemanlar (45 dk)</h3>
+<figure class="fig"><div class="sc"><svg viewBox="0 0 560 250" role="img" xmlns="http://www.w3.org/2000/svg"><defs><marker id="ah-cam" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0 0L10 5L0 10z" class="ar"/></marker></defs><rect x="60" y="30" width="140" height="200" class="gl"/><line x1="80" y1="30" x2="80" y2="230" class="mud"/><line x1="100" y1="30" x2="100" y2="230" class="mud"/><line x1="120" y1="30" x2="120" y2="230" class="mud"/><line x1="140" y1="30" x2="140" y2="230" class="mud"/><line x1="160" y1="30" x2="160" y2="230" class="mud"/><line x1="180" y1="30" x2="180" y2="230" class="mud"/><line x1="60" y1="50" x2="200" y2="50" class="mud"/><line x1="60" y1="70" x2="200" y2="70" class="mud"/><line x1="60" y1="90" x2="200" y2="90" class="mud"/><line x1="60" y1="110" x2="200" y2="110" class="mud"/><line x1="60" y1="130" x2="200" y2="130" class="mud"/><line x1="60" y1="150" x2="200" y2="150" class="mud"/><line x1="60" y1="170" x2="200" y2="170" class="mud"/><line x1="60" y1="190" x2="200" y2="190" class="mud"/><line x1="60" y1="210" x2="200" y2="210" class="mud"/><text x="240" y="80" class="tm" text-anchor="start">1400 × 2800, 8 mm</text><text x="240" y="104" class="ta" text-anchor="start">kabuk eleman ağı</text><text x="240" y="128" class="tm" text-anchor="start">kalınlık: eleman özelliği</text></svg></div><figcaption>Camın kabuk eleman ağı.</figcaption></figure>
+<p>Cam ince bir plaktır; kalınlığı (8 mm), açıklığına (1400 mm) göre çok küçüktür. Bu yüzden <strong>kabuk/plak elemanlarla</strong> modellenir: her düğümde yer değiştirme ve dönmeler bilinmeyendir, kalınlık eleman özelliği olarak girilir.</p>
+<h3>2. Kenar mesnetleri (1 saat)</h3>
+<figure class="fig"><div class="sc"><svg viewBox="0 0 600 230" role="img" xmlns="http://www.w3.org/2000/svg"><defs><marker id="ah-kenar" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0 0L10 5L0 10z" class="ar"/></marker></defs><rect x="60" y="40" width="140" height="160" class="gl"/><rect x="56" y="36" width="148" height="168" class="k1"/><polygon points="60,204 50,220 70,220" class="bx"/><polygon points="80,204 70,220 90,220" class="bx"/><polygon points="100,204 90,220 110,220" class="bx"/><polygon points="120,204 110,220 130,220" class="bx"/><polygon points="140,204 130,220 150,220" class="bx"/><polygon points="160,204 150,220 170,220" class="bx"/><polygon points="180,204 170,220 190,220" class="bx"/><polygon points="200,204 190,220 210,220" class="bx"/><text x="240" y="80" class="ta" text-anchor="start">dört kenar: düzleme dik tutulu</text><text x="240" y="104" class="tm" text-anchor="start">dönme serbest (basit mesnet)</text><text x="240" y="140" class="tr2" text-anchor="start">ankastre: güvensiz taraf</text></svg></div><figcaption>Camın kenar mesnetleri.</figcaption></figure>
+<div class="tw"><table>
+<thead>
+<tr>
+<th>Gerçek</th>
+<th>Model</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Dört kenarı çerçeveli, contalı</td>
+<td>Dört kenarda düzleme dik yer değiştirme tutulur; dönme serbest (<strong>basit mesnet</strong>)</td>
+</tr>
+<tr>
+<td>İki kenarı yapısal silikonlu, ikisi serbest</td>
+<td>Yalnızca iki kenarda mesnet</td>
+</tr>
+<tr>
+<td>Nokta tutuculu (spider)</td>
+<td>Delik çevresinde yaylı mesnetler; ayrıntılı katı ya da kabuk modeli</td>
+</tr>
+<tr>
+<td>Çerçevenin kendisi esnek</td>
+<td>Mesnet yerine yay ya da çerçeveyi de modellemek</td>
+</tr>
+</tbody>
+</table></div>
+<p>Kenarın tam ankastre (dönmesi tutulmuş) modellenmesi, gerçekte olmayan bir rijitlik verir ve camın ortasındaki gerilmeyi <strong>olduğundan küçük</strong> gösterir. Güvensiz taraftadır.</p>
+<h3>3. Doğrusal çözüm ve kapalı formül (1 saat)</h3>
+<figure class="fig"><div class="sc"><svg viewBox="0 0 650 124" role="img" xmlns="http://www.w3.org/2000/svg"><defs><marker id="ah-navier" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0 0L10 5L0 10z" class="ar"/></marker></defs><rect x="10" y="30" width="190" height="50" rx="5" class="bx"/><text x="105.0" y="51.0" class="tb" text-anchor="middle">Kapalı çözüm</text><text x="105.0" y="67.0" class="tm" text-anchor="middle">Navier</text><rect x="220" y="30" width="190" height="50" rx="5" class="bx"/><text x="315.0" y="51.0" class="tb" text-anchor="middle">w ≈ 14,8 mm</text><text x="315.0" y="67.0" class="tm" text-anchor="middle">ortada</text><rect x="430" y="30" width="190" height="50" rx="5" class="bxa"/><text x="525.0" y="51.0" class="tb" text-anchor="middle">σ ≈ 22,2 N/mm²</text><text x="525.0" y="67.0" class="tm" text-anchor="middle">kısa yön</text><text x="320" y="110" class="ta" text-anchor="middle">doğrusal kabuk modeli buna yakınsamalı</text></svg></div><figcaption>Doğrusal plak teorisi: modeli kontrol etmek için kapalı çözüm (hesaplanmış).</figcaption></figure>
+<p><a href="../cam-tasarimi/">Cam Tasarımı</a> kursundaki örnek: 1400 × 2800 mm, 8 mm tek cam, 1,2 kN/m² rüzgâr, dört kenarı basit mesnetli. Doğrusal plak teorisinin kapalı çözümüyle (Navier serisi, E = 70 000 N/mm², ν = 0,23):</p>
+<pre><code class="language-text">En büyük sehim (ortada)        ≈ 14,8 mm
+En büyük gerilme (kısa yönde)  ≈ 22,2 N/mm²
+</code></pre>
+<p>Doğrusal bir kabuk modeli, yeterli ağla bu değerlere yakınsamalıdır. Bu, modelin <strong>mesnet ve yük tanımının doğru olduğunun</strong> en iyi kontrolüdür: önce doğrusal modeli kapalı çözümle karşılaştır, sonra doğrusal olmayan çözüme geç.</p>
+<h3>4. Büyük sehim: doğrusal olmayan çözüm (45 dk)</h3>
+<figure class="fig"><div class="sc"><svg viewBox="0 0 680 200" role="img" xmlns="http://www.w3.org/2000/svg"><defs><marker id="ah-zar" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0 0L10 5L0 10z" class="ar"/></marker></defs><line x1="60" y1="60" x2="360" y2="60" class="k1"/><path d="M 60 60 Q 210 200 360 60" class="mud"/><path d="M 60 60 Q 210 160 360 60" class="ac"/><text x="380" y="120" class="tm" text-anchor="start">kesik: doğrusal (eğilme)</text><text x="380" y="144" class="ta" text-anchor="start">mavi: zar etkisiyle daha az</text><text x="380" y="170" class="tm" text-anchor="start">sehim &gt; kalınlık / 2 → büyük sehim</text></svg></div><figcaption>Büyük sehimde cam zar gibi de taşır; doğrusal olmayan çözüm (şematik).</figcaption></figure>
+<p>Sehim (14,8 mm) cam kalınlığının (8 mm) yaklaşık <strong>iki katı</strong>. Sehim kalınlığın yarısını aştığında, cam yalnızca eğilmeyle değil, bir <strong>zar (membran)</strong> gibi gerilerek de yük taşır. Doğrusal teori bunu görmez.</p>
+<ol>
+<li><strong>Geometrik olarak doğrusal olmayan</strong> çözümde (büyük deformasyon seçeneği) yük adım adım uygulanır ve rijitlik deforme olmuş geometriye göre güncellenir.</li>
+<li>Dört kenarı mesnetli camda sonuç genellikle <strong>daha küçük sehim ve gerilmedir</strong>; ne kadar küçük olduğu geometri ve yüke bağlıdır.</li>
+<li>Cam hesabına özel programlar (MEPLA benzeri) bu çözümü varsayılan olarak yapar.</li>
+</ol>
+<h3>5. Yalıtım ve lamine cam (30 dk)</h3>
+<ol>
+<li><strong>Yalıtım camı:</strong> İki cam ve aradaki gaz; dış cama gelen rüzgâr gaz aracılığıyla iç cama da aktarılır (<a href="../cam-tasarimi/">Cam Tasarımı</a>, 4. gün). Özel programlar bunu gaz hacmi ve basınç ilişkisiyle modeller.</li>
+<li><strong>Lamine cam:</strong> Ara katmanın (PVB, SGP) kayma rijitliği sıcaklık ve yük süresine bağlıdır. Ya katmanlı kabuk modeliyle ya da <strong>etkin kalınlık</strong> yöntemiyle hesaplanır.</li>
+</ol>
+<h3>Gün sonu kontrolü (15 dk)</h3>
+<ul class="tasks">
+<li class="task"><label><input type="checkbox" data-id="g4-1"><span>Camın neden kabuk elemanlarla modellendiğini biliyorum.</span></label></li>
+<li class="task"><label><input type="checkbox" data-id="g4-2"><span>Kenar mesnetlerini doğru modelleyebiliyorum ve ankastre modellemenin riskini biliyorum.</span></label></li>
+<li class="task"><label><input type="checkbox" data-id="g4-3"><span>Doğrusal modeli kapalı çözümle karşılaştırarak kontrol edebiliyorum.</span></label></li>
+<li class="task"><label><input type="checkbox" data-id="g4-4"><span>Büyük sehimde zar etkisini ve doğrusal olmayan çözümü biliyorum.</span></label></li>
+<li class="task"><label><input type="checkbox" data-id="g4-5"><span>Yalıtım ve lamine camın modellenmesindeki özel durumları biliyorum.</span></label></li>
+</ul></div>
+  <div class="pn"><a href="#gun3">← 3. gün</a><a href="#gun5">5. gün →</a></div>
+</section>
+<section class="day" id="gun5" data-day="5">
+  <div class="day-head"><span class="dn">GÜN 05</span><h2>Braket</h2><span class="meta">~4 saat · <span data-prog="5">0/5</span> kontrol</span></div>
+  <div class="prose"><h3>Hedef</h3>
+<p>Gün sonunda bir braketin katı elemanlarla nasıl modellendiğini bileceksin: geometri sadeleştirme, malzeme, mesnet ve yük tanımı, cıvata ve temas, von Mises gerilmesi ve sonucun el hesabıyla karşılaştırılması. Süre yaklaşık 4 saat.</p>
+<h3>1. Geometri (45 dk)</h3>
+<figure class="fig"><div class="sc"><svg viewBox="0 0 560 230" role="img" xmlns="http://www.w3.org/2000/svg"><defs><marker id="ah-braket" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0 0L10 5L0 10z" class="ar"/></marker></defs><rect x="40" y="30" width="20" height="180" class="gl"/><rect x="60" y="110" width="140" height="14" class="bxa"/><rect x="186" y="60" width="14" height="64" class="bxa"/><path d="M 60 124 Q 72 124 72 112" class="swr"/><text x="230" y="80" class="tm" text-anchor="start">kozmetik detaylar silinir</text><text x="230" y="104" class="ta" text-anchor="start">köşe yarıçapları korunur</text><text x="230" y="128" class="tm" text-anchor="start">simetri varsa yarım model</text></svg></div><figcaption>Braket modelinin sadeleştirilmesi.</figcaption></figure>
+<p>Model, imalat modeli değildir; <strong>analiz için sadeleştirilir</strong>:</p>
+<ol>
+<li>Yükü etkilemeyen küçük pahlar, yazılar, kozmetik detaylar silinir.</li>
+<li>Gerilmenin yoğunlaştığı yerlerdeki <strong>yarıçaplar korunur</strong> (3. gün, tekillik).</li>
+<li>Simetri varsa yarım ya da çeyrek model (simetri sınır koşuluyla) çözüm süresini kısaltır.</li>
+</ol>
+<h3>2. Mesnet ve yük (1,5 saat)</h3>
+<figure class="fig"><div class="sc"><svg viewBox="0 0 620 230" role="img" xmlns="http://www.w3.org/2000/svg"><defs><marker id="ah-sinir" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0 0L10 5L0 10z" class="ar"/></marker></defs><rect x="40" y="30" width="20" height="180" class="gl"/><rect x="60" y="110" width="140" height="14" class="bxa"/><rect x="186" y="60" width="14" height="64" class="bxa"/><circle cx="50" cy="60" r="6" class="swr"/><circle cx="50" cy="180" r="6" class="swr"/><line x1="260" y1="90" x2="204" y2="90" class="ac" marker-end="url(#ah-sinir)"/><text x="268" y="94" class="ta" text-anchor="start">dağıtılmış yük 4,86 kN</text><text x="268" y="140" class="tr2" text-anchor="start">dübel deliği: sabit</text><text x="268" y="164" class="tm" text-anchor="start">beton yüzü: yalnız basınç (temas)</text></svg></div><figcaption>Braketin mesnet ve yük tanımı.</figcaption></figure>
+<div class="tw"><table>
+<thead>
+<tr>
+<th>Gerçek</th>
+<th>Model</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Betona dübelle bağlı yüz</td>
+<td>Dübel deliği çevresinde sabit; betona basan yüzde yalnızca basınca çalışan <strong>temas</strong> ya da yay</td>
+</tr>
+<tr>
+<td>Dikmeye cıvatayla bağlı kol</td>
+<td>Cıvata deliği yüzeyinde yük (cıvata yük dağılımı) ya da cıvatayı eleman olarak modellemek</td>
+</tr>
+<tr>
+<td>Rüzgâr yükü (4,86 kN tasarım)</td>
+<td>Cıvata deliğine dağıtılmış kuvvet (nokta yük değil)</td>
+</tr>
+</tbody>
+</table></div>
+<p><strong>Sık hata:</strong> Betona basan yüzün tamamını sabitlemek. Gerçekte braket bir kenarında betondan <strong>ayrılmaya</strong> çalışır; tam sabitlemek çekme bölgesini de tutar ve dübel kuvvetlerini yanlış verir.</p>
+<h3>3. Sonuçları okumak (1 saat)</h3>
+<figure class="fig"><div class="sc"><svg viewBox="0 0 680 150" role="img" xmlns="http://www.w3.org/2000/svg"><defs><marker id="ah-vonmises" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0 0L10 5L0 10z" class="ar"/></marker></defs><rect x="40" y="60" width="300" height="40" class="fr"/><rect x="40" y="60" width="60" height="40" class="bx"/><rect x="100" y="60" width="60" height="40" class="gl"/><rect x="160" y="60" width="60" height="40" class="bxa"/><rect x="220" y="60" width="60" height="40" class="sel"/><rect x="280" y="60" width="60" height="40" class="swr"/><text x="40" y="126" class="tm" text-anchor="start">düşük</text><text x="340" y="126" class="tr2" text-anchor="end">yüksek</text><text x="380" y="60" class="tb" text-anchor="start">kırmızı ≠ her zaman sorun</text><text x="380" y="86" class="tm" text-anchor="start">tekil nokta mı, gerçek kesit mi?</text><text x="380" y="112" class="ta" text-anchor="start">deformasyon ölçeği büyütülmüş</text></svg></div><figcaption>von Mises renk ölçeğini okumak.</figcaption></figure>
+<ol>
+<li><strong>von Mises gerilmesi:</strong> Çok eksenli gerilme durumunu, malzemenin tek eksenli akma dayanımıyla karşılaştırılabilir tek bir değere indirger. Çelik ve alüminyum gibi sünek malzemeler için kullanılır.</li>
+<li><strong>Renk ölçeği:</strong> Program en büyük değeri kırmızı gösterir. Kırmızı bir yer <strong>her zaman sorun değildir</strong>: tekil bir noktaysa anlamsızdır, gerçek bir kesitse önemlidir.</li>
+<li><strong>Deformasyon büyütme ölçeği:</strong> Görüntüdeki şekil genellikle yüzlerce kez büyütülmüştür. Gerçek değeri sayıdan oku.</li>
+<li><strong>Mesnet tepkileri:</strong> Dübel kuvvetleri buradan okunur; dübel üreticisinin değerleriyle ayrıca kontrol edilir.</li>
+</ol>
+<h3>4. El hesabıyla karşılaştırma (30 dk)</h3>
+<p><a href="../statik-temelleri/">Statiğin Temelleri</a>, 7. gün: 150 × 10 mm plaka, 80 mm kol, 4,86 kN tasarım yükü → el hesabıyla eğilme gerilmesi ≈ <strong>156 N/mm²</strong>.</p>
+<p>Katı model, kolun kök kesitinde (köşe yarıçapından biraz uzakta) bu değere yakın bir gerilme vermelidir. Çok farklıysa, büyük olasılıkla <strong>mesnet ya da yük tanımında</strong> bir hata vardır. Köşe yarıçapında daha yüksek gerilme (gerilme yığılması) beklenir; yarıçap modellenmediyse orası tekildir.</p>
+<h3>Gün sonu kontrolü (15 dk)</h3>
+<ul class="tasks">
+<li class="task"><label><input type="checkbox" data-id="g5-1"><span>Bir parçayı analiz için sadeleştirmenin kurallarını biliyorum.</span></label></li>
+<li class="task"><label><input type="checkbox" data-id="g5-2"><span>Dübel ve cıvata bağlantılarını gerçekçi modelleyebiliyorum.</span></label></li>
+<li class="task"><label><input type="checkbox" data-id="g5-3"><span>von Mises gerilmesinin anlamını biliyorum.</span></label></li>
+<li class="task"><label><input type="checkbox" data-id="g5-4"><span>Renk ölçeği ve deformasyon büyütmesini doğru okuyabiliyorum.</span></label></li>
+<li class="task"><label><input type="checkbox" data-id="g5-5"><span>Katı modeli el hesabıyla karşılaştırabiliyorum.</span></label></li>
+</ul></div>
+  <div class="pn"><a href="#gun4">← 4. gün</a><a href="#gun6">6. gün →</a></div>
+</section>
+<section class="day" id="gun6" data-day="6">
+  <div class="day-head"><span class="dn">GÜN 06</span><h2>Sonucu kontrol etmek</h2><span class="meta">~4 saat · <span data-prog="6">0/14</span> kontrol</span></div>
+  <div class="prose"><h3>Hedef</h3>
+<p>Gün sonunda bir sonlu eleman sonucunu sistemli olarak kontrol edebileceksin: birimler, denge, deformasyon şekli, el hesabıyla karşılaştırma, ağ ve tekillikler; bir başkasının hesap raporunu nasıl okuyacağını bileceksin. Süre yaklaşık 4 saat.</p>
+<h3>1. "Program hesapladı" yeterli değil (30 dk)</h3>
+<figure class="fig"><div class="sc"><svg viewBox="0 0 650 120" role="img" xmlns="http://www.w3.org/2000/svg"><defs><marker id="ah-gigo" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0 0L10 5L0 10z" class="ar"/></marker></defs><rect x="10" y="40" width="190" height="56" rx="5" class="bx"/><text x="105.0" y="64.0" class="tb" text-anchor="middle">Model</text><text x="105.0" y="80.0" class="tm" text-anchor="middle">hatalı</text><rect x="220" y="40" width="190" height="56" rx="5" class="bx"/><text x="315.0" y="64.0" class="tb" text-anchor="middle">Çözücü</text><text x="315.0" y="80.0" class="tm" text-anchor="middle">kusursuz</text><line x1="202" y1="68.0" x2="218" y2="68.0" class="mu" marker-end="url(#ah-gigo)"/><rect x="430" y="40" width="190" height="56" rx="5" class="bxa"/><text x="525.0" y="64.0" class="tb" text-anchor="middle">Sonuç</text><text x="525.0" y="80.0" class="tm" text-anchor="middle">kusursuz yanlış</text><line x1="412" y1="68.0" x2="428" y2="68.0" class="mu" marker-end="url(#ah-gigo)"/></svg></div><figcaption>Çöp girer, çöp çıkar.</figcaption></figure>
+<p>Program, verilen modeli <strong>kusursuz bir şekilde</strong> çözer. Model yanlışsa sonuç da kusursuz bir şekilde yanlıştır ("çöp girer, çöp çıkar"). En sık hatalar:</p>
+<div class="tw"><table>
+<thead>
+<tr>
+<th>Hata</th>
+<th>Belirti</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Birim karışıklığı (mm, m, N, kN)</td>
+<td>Sonuç 1000 ya da 10⁶ kat farklı</td>
+</tr>
+<tr>
+<td>Yanlış mesnet</td>
+<td>Deformasyon şekli tuhaf; tepkiler beklenenden farklı</td>
+</tr>
+<tr>
+<td>Yükün yanlış yeri ya da yönü</td>
+<td>Tepki toplamı yük toplamına eşit değil</td>
+</tr>
+<tr>
+<td>Yanlış malzeme (çelik yerine alüminyum E)</td>
+<td>Sehim üç kat farklı</td>
+</tr>
+<tr>
+<td>Eksik bağlantı (parçalar birbirine bağlanmamış)</td>
+<td>Çözüm hatası ya da serbest dönen parça</td>
+</tr>
+</tbody>
+</table></div>
+<h3>2. Kontrol listesi (1,5 saat)</h3>
+<figure class="fig"><div class="sc"><svg viewBox="0 0 670 150" role="img" xmlns="http://www.w3.org/2000/svg"><defs><marker id="ah-kontrol" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0 0L10 5L0 10z" class="ar"/></marker></defs><rect x="10" y="30" width="150" height="50" rx="5" class="bx"/><text x="85.0" y="59.0" class="tb" text-anchor="middle">Birim</text><rect x="172" y="30" width="150" height="50" rx="5" class="bx"/><text x="247.0" y="59.0" class="tb" text-anchor="middle">Malzeme</text><rect x="334" y="30" width="150" height="50" rx="5" class="bxa"/><text x="409.0" y="51.0" class="tb" text-anchor="middle">Denge</text><text x="409.0" y="67.0" class="tm" text-anchor="middle">Σtepki = Σyük</text><rect x="496" y="30" width="150" height="50" rx="5" class="bx"/><text x="571.0" y="59.0" class="tb" text-anchor="middle">Şekil</text><rect x="10" y="90" width="150" height="50" rx="5" class="bx"/><text x="85.0" y="111.0" class="tb" text-anchor="middle">Büyüklük</text><text x="85.0" y="127.0" class="tm" text-anchor="middle">el hesabı</text><rect x="172" y="90" width="150" height="50" rx="5" class="bx"/><text x="247.0" y="119.0" class="tb" text-anchor="middle">Simetri</text><rect x="334" y="90" width="150" height="50" rx="5" class="bx"/><text x="409.0" y="111.0" class="tb" text-anchor="middle">Ağ</text><text x="409.0" y="127.0" class="tm" text-anchor="middle">yakınsama</text><rect x="496" y="90" width="150" height="50" rx="5" class="bx"/><text x="571.0" y="119.0" class="tb" text-anchor="middle">Tekillik</text></svg></div><figcaption>FEM sonucunu kontrol listesi.</figcaption></figure>
+<ul class="tasks">
+<li class="task"><label><input type="checkbox" data-id="g6-1"><span><strong>Birimler:</strong> Modelin birim sistemi ve girdiler tutarlı mı?</span></label></li>
+<li class="task"><label><input type="checkbox" data-id="g6-2"><span><strong>Malzeme:</strong> E, ν, yoğunluk doğru mu?</span></label></li>
+<li class="task"><label><input type="checkbox" data-id="g6-3"><span><strong>Denge:</strong> Mesnet tepkilerinin toplamı uygulanan yük toplamına eşit mi?</span></label></li>
+<li class="task"><label><input type="checkbox" data-id="g6-4"><span><strong>Şekil:</strong> Deformasyon beklenen yönde ve şekilde mi? (Büyütülmüş şekle bak.)</span></label></li>
+<li class="task"><label><input type="checkbox" data-id="g6-5"><span><strong>Büyüklük:</strong> Sehim ve gerilme bir el hesabıyla aynı mertebede mi?</span></label></li>
+<li class="task"><label><input type="checkbox" data-id="g6-6"><span><strong>Simetri:</strong> Simetrik yükte sonuç simetrik mi?</span></label></li>
+<li class="task"><label><input type="checkbox" data-id="g6-7"><span><strong>Ağ:</strong> Kritik bölgede ağ yakınsaması yapıldı mı?</span></label></li>
+<li class="task"><label><input type="checkbox" data-id="g6-8"><span><strong>Tekillik:</strong> En büyük gerilme bir köşede ya da nokta yükte mi?</span></label></li>
+<li class="task"><label><input type="checkbox" data-id="g6-9"><span><strong>Doğrusal olmama:</strong> Büyük sehim, temas, malzeme akması gerekiyor muydu?</span></label></li>
+</ul>
+<p><strong>Denge örneği:</strong> Dikme modelinde toplam yük 1,8 × 3,6 = 6,48 kN; iki mesnet tepkisinin toplamı 2 × 3,24 = 6,48 kN olmalı (2. gün tablosu).</p>
+<h3>3. Hesap raporunu okumak (1 saat)</h3>
+<figure class="fig"><div class="sc"><svg viewBox="0 0 670 100" role="img" xmlns="http://www.w3.org/2000/svg"><defs><marker id="ah-rapor" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0 0L10 5L0 10z" class="ar"/></marker></defs><rect x="10" y="30" width="150" height="50" rx="5" class="bx"/><text x="85.0" y="51.0" class="tb" text-anchor="middle">Model</text><text x="85.0" y="67.0" class="tm" text-anchor="middle">eleman, ağ</text><rect x="172" y="30" width="150" height="50" rx="5" class="bx"/><text x="247.0" y="51.0" class="tb" text-anchor="middle">Sınırlar</text><text x="247.0" y="67.0" class="tm" text-anchor="middle">görsel</text><rect x="334" y="30" width="150" height="50" rx="5" class="bx"/><text x="409.0" y="51.0" class="tb" text-anchor="middle">Sonuç</text><text x="409.0" y="67.0" class="tm" text-anchor="middle">ölçek, birim</text><rect x="496" y="30" width="150" height="50" rx="5" class="bxa"/><text x="571.0" y="51.0" class="tb" text-anchor="middle">Doğrulama</text><text x="571.0" y="67.0" class="tm" text-anchor="middle">denge, el hesabı</text></svg></div><figcaption>Kontrol edilebilir bir FEM raporu.</figcaption></figure>
+<p>Bir başkasının FEM raporunda bakılacaklar:</p>
+<ol>
+<li>Model tanımı: geometri, eleman türü, ağ boyutu, malzeme.</li>
+<li>Mesnet ve yük tanımı: görsel olarak gösterilmiş mi, gerçekle uyumlu mu?</li>
+<li>Yük kombinasyonları ve katsayılar (<a href="../statik-temelleri/">Statiğin Temelleri</a>, 5. gün).</li>
+<li>Sonuç görselleri: ölçek, birim, en büyük değerin yeri.</li>
+<li>Doğrulama: denge, el hesabı, ağ yakınsaması belirtilmiş mi?</li>
+<li>Sonuç: hangi değer hangi sınırla karşılaştırıldı, kullanım oranı.</li>
+</ol>
+<p>Yalnızca renkli resimlerden oluşan ve sınır koşullarını göstermeyen bir rapor, <strong>kontrol edilemez</strong> bir rapordur.</p>
+<h3>4. Ne zaman uzmana sor? (30 dk)</h3>
+<ol>
+<li>Doğrusal olmayan analizler (temas, büyük deformasyon, akma) ve dinamik analizler.</li>
+<li>Yorulma, kaynak ve cıvata gerilmeleri.</li>
+<li>Cam hesabında kalıcı yükler, yalıtım camı iklim yükleri, lamine camın sıcaklık etkisi.</li>
+<li>Sonuç el hesabından açıklanamayacak kadar farklıysa.</li>
+</ol>
+<h3>Gün sonu kontrolü (15 dk)</h3>
+<ul class="tasks">
+<li class="task"><label><input type="checkbox" data-id="g6-10"><span>FEM'de en sık beş hatayı ve belirtilerini biliyorum.</span></label></li>
+<li class="task"><label><input type="checkbox" data-id="g6-11"><span>Dokuz maddelik kontrol listesini uygulayabiliyorum.</span></label></li>
+<li class="task"><label><input type="checkbox" data-id="g6-12"><span>Denge kontrolü yapabiliyorum.</span></label></li>
+<li class="task"><label><input type="checkbox" data-id="g6-13"><span>Bir FEM hesap raporunu okuyup eksiklerini bulabiliyorum.</span></label></li>
+<li class="task"><label><input type="checkbox" data-id="g6-14"><span>Ne zaman uzmana başvurmam gerektiğini biliyorum.</span></label></li>
+</ul></div>
+  <div class="pn"><a href="#gun5">← 5. gün</a><a href="#gun7">7. gün →</a></div>
+</section>
+<section class="day" id="gun7" data-day="7">
+  <div class="day-head"><span class="dn">GÜN 07</span><h2>Araçlar ve iş akışı</h2><span class="meta">~4 saat · <span data-prog="7">0/4</span> kontrol</span></div>
+  <div class="prose"><h3>Hedef</h3>
+<p>Son gün cephe işinde kullanılan sonlu eleman araçlarını, tipik iş akışını, kendi küçük kiriş programını ve bitiş alıştırmasını öğreneceksin. Süre yaklaşık 4 saat.</p>
+<h3>1. Araçlar (1 saat)</h3>
+<figure class="fig"><div class="sc"><svg viewBox="0 0 670 100" role="img" xmlns="http://www.w3.org/2000/svg"><defs><marker id="ah-araclar" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0 0L10 5L0 10z" class="ar"/></marker></defs><rect x="10" y="30" width="150" height="50" rx="5" class="bx"/><text x="85.0" y="51.0" class="tb" text-anchor="middle">CAD içi</text><text x="85.0" y="67.0" class="tm" text-anchor="middle">SolidWorks, CATIA</text><rect x="172" y="30" width="150" height="50" rx="5" class="bx"/><text x="247.0" y="51.0" class="tb" text-anchor="middle">Genel FEM</text><text x="247.0" y="67.0" class="tm" text-anchor="middle">ANSYS, Abaqus</text><rect x="334" y="30" width="150" height="50" rx="5" class="bx"/><text x="409.0" y="51.0" class="tb" text-anchor="middle">Yapısal</text><text x="409.0" y="67.0" class="tm" text-anchor="middle">RFEM, SAP2000</text><rect x="496" y="30" width="150" height="50" rx="5" class="bxa"/><text x="571.0" y="51.0" class="tb" text-anchor="middle">Cam</text><text x="571.0" y="67.0" class="tm" text-anchor="middle">MEPLA benzeri</text></svg></div><figcaption>Cephe işinde FEM araçları.</figcaption></figure>
+<div class="tw"><table>
+<thead>
+<tr>
+<th>Araç türü</th>
+<th>Örnek</th>
+<th>Cephede</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>CAD içi analiz</td>
+<td>SolidWorks Simulation, CATIA analiz modülleri</td>
+<td>Braket, bağlantı parçaları, ilk kontrol</td>
+</tr>
+<tr>
+<td>Genel amaçlı FEM</td>
+<td>ANSYS, Abaqus</td>
+<td>Ayrıntılı, doğrusal olmayan analizler</td>
+</tr>
+<tr>
+<td>Yapısal analiz</td>
+<td>RFEM, SAP2000, Robot</td>
+<td>Dikme-kayıt çerçeveleri, çelik konstrüksiyon</td>
+</tr>
+<tr>
+<td>Cama özel</td>
+<td>MEPLA benzeri programlar</td>
+<td>Cam: büyük sehim, yalıtım camı, lamine</td>
+</tr>
+</tbody>
+</table></div>
+<p><a href="../solidworks/">SolidWorks</a> ve <a href="../catia/">CATIA</a> kurslarındaki modeller, sadeleştirilerek doğrudan bu programlara aktarılabilir.</p>
+<h3>2. İş akışı (1 saat)</h3>
+<figure class="fig"><div class="sc"><svg viewBox="0 0 660 120" role="img" xmlns="http://www.w3.org/2000/svg"><defs><marker id="ah-akis" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0 0L10 5L0 10z" class="ar"/></marker></defs><rect x="10" y="40" width="118" height="56" rx="5" class="bxa"/><text x="69.0" y="64.0" class="tb" text-anchor="middle">El hesabı</text><text x="69.0" y="80.0" class="tm" text-anchor="middle">mertebe</text><rect x="140" y="40" width="118" height="56" rx="5" class="bx"/><text x="199.0" y="72.0" class="tb" text-anchor="middle">Kiriş modeli</text><line x1="130" y1="68.0" x2="138" y2="68.0" class="mu" marker-end="url(#ah-akis)"/><rect x="270" y="40" width="118" height="56" rx="5" class="bx"/><text x="329.0" y="64.0" class="tb" text-anchor="middle">Kabuk / katı</text><text x="329.0" y="80.0" class="tm" text-anchor="middle">gerekirse</text><line x1="260" y1="68.0" x2="268" y2="68.0" class="mu" marker-end="url(#ah-akis)"/><rect x="400" y="40" width="118" height="56" rx="5" class="bx"/><text x="459.0" y="72.0" class="tb" text-anchor="middle">Doğrulama</text><line x1="390" y1="68.0" x2="398" y2="68.0" class="mu" marker-end="url(#ah-akis)"/><rect x="530" y="40" width="118" height="56" rx="5" class="bx"/><text x="589.0" y="72.0" class="tb" text-anchor="middle">Rapor</text><line x1="520" y1="68.0" x2="528" y2="68.0" class="mu" marker-end="url(#ah-akis)"/></svg></div><figcaption>Basitten ayrıntılıya iş akışı.</figcaption></figure>
+<pre><code class="language-text">El hesabı (ön boyut) → Basit model (kiriş) → Gerekiyorsa ayrıntılı model (kabuk / katı)
+→ Doğrulama (denge, el hesabı, ağ) → Rapor
+</code></pre>
+<ol>
+<li><strong>Önce el hesabı:</strong> Beklenen sonucun mertebesini bil. FEM sonucu bununla karşılaştırılacak.</li>
+<li><strong>Basitten ayrıntılıya:</strong> Dikmeyi kiriş elemanla, camı kabukla, yalnızca braketi katı elemanla.</li>
+<li><strong>Bir değişiklik, bir çözüm:</strong> Modelde aynı anda birçok şeyi değiştirme; hangi değişikliğin ne yaptığını görmezsin.</li>
+<li><strong>Model dosyası ve rapor birlikte saklanır.</strong></li>
+</ol>
+<h3>3. Kendi kiriş programın (1,5 saat)</h3>
+<figure class="fig"><div class="sc"><svg viewBox="0 0 660 120" role="img" xmlns="http://www.w3.org/2000/svg"><defs><marker id="ah-kod" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0 0L10 5L0 10z" class="ar"/></marker></defs><rect x="10" y="40" width="118" height="56" rx="5" class="bx"/><text x="69.0" y="64.0" class="tb" text-anchor="middle">Eleman K</text><text x="69.0" y="80.0" class="tm" text-anchor="middle">4×4</text><rect x="140" y="40" width="118" height="56" rx="5" class="bx"/><text x="199.0" y="64.0" class="tb" text-anchor="middle">Birleştir</text><text x="199.0" y="80.0" class="tm" text-anchor="middle">global K</text><line x1="130" y1="68.0" x2="138" y2="68.0" class="mu" marker-end="url(#ah-kod)"/><rect x="270" y="40" width="118" height="56" rx="5" class="bx"/><text x="329.0" y="64.0" class="tb" text-anchor="middle">Mesnet</text><text x="329.0" y="80.0" class="tm" text-anchor="middle">satır sil</text><line x1="260" y1="68.0" x2="268" y2="68.0" class="mu" marker-end="url(#ah-kod)"/><rect x="400" y="40" width="118" height="56" rx="5" class="bxa"/><text x="459.0" y="64.0" class="tb" text-anchor="middle">Çöz</text><text x="459.0" y="80.0" class="tm" text-anchor="middle">K u = F</text><line x1="390" y1="68.0" x2="398" y2="68.0" class="mu" marker-end="url(#ah-kod)"/><rect x="530" y="40" width="118" height="56" rx="5" class="bx"/><text x="589.0" y="64.0" class="tb" text-anchor="middle">Tepki</text><text x="589.0" y="80.0" class="tm" text-anchor="middle">K u − F</text><line x1="520" y1="68.0" x2="528" y2="68.0" class="mu" marker-end="url(#ah-kod)"/></svg></div><figcaption>Küçük kiriş programının adımları.</figcaption></figure>
+<ol start="2">
+<li>gündeki tablo, aşağıdaki küçük Python programıyla hesaplandı. Kendin çalıştırıp eleman sayısını değiştirebilirsin (<a href="../python/">Python</a> kursu yeterli; numpy paketi gerekir):</li>
+</ol>
+<pre><code class="language-python">import numpy as np
+
+q, L, E, I = 1.8, 3600.0, 70000.0, 3113892.0   # N/mm, mm, N/mm², mm⁴
+
+def kiris(n):
+    le = L / n
+    N = n + 1
+    K = np.zeros((2 * N, 2 * N))
+    F = np.zeros(2 * N)
+    k = E * I / le**3 * np.array([[12, 6*le, -12, 6*le],
+                                  [6*le, 4*le**2, -6*le, 2*le**2],
+                                  [-12, -6*le, 12, -6*le],
+                                  [6*le, 2*le**2, -6*le, 4*le**2]])
+    f = q * le / 2 * np.array([1, le / 6, 1, -le / 6])   # yayılı yükün düğüm eşdeğeri
+    for e in range(n):
+        i = [2*e, 2*e + 1, 2*e + 2, 2*e + 3]
+        K[np.ix_(i, i)] += k
+        F[i] += f
+    sabit = [0, 2 * n]                     # iki uçta düşey yer değiştirme = 0
+    serbest = [i for i in range(2 * N) if i not in sabit]
+    u = np.zeros(2 * N)
+    u[serbest] = np.linalg.solve(K[np.ix_(serbest, serbest)], F[serbest])
+    tepki = (K @ u - F)[sabit]
+    return u, tepki
+
+u, R = kiris(4)
+print(&quot;ortada sehim:&quot;, abs(u[4]), &quot;mm&quot;)          # 4 elemanda orta düğüm: 2 → serbestlik 4
+print(&quot;tepkiler:&quot;, R / 1000, &quot;kN&quot;)                # her biri −3,24 (yükün ters yönünde)
+</code></pre>
+<p>Çıktı: ortada sehim <strong>18,06 mm</strong>, tepkiler <strong>−3,24 kN</strong> (yüke ters yönde, büyüklükleri 3,24): kapalı formüllerle aynı.</p>
+<h3>4. Bitiş alıştırması (30 dk + kendi zamanın)</h3>
+<ol>
+<li>Programı, ortada ara mesnetli <strong>iki açıklıklı sürekli dikme</strong> için değiştir (ortadaki düğümde de düşey yer değiştirme sıfır). Açıklık ortası momentin basit kirişe göre nasıl değiştiğini incele (<a href="../statik-temelleri/">Statiğin Temelleri</a>, 3. gün).</li>
+<li>Kullandığın bir FEM programında aynı dikmeyi modelle ve tabloyla karşılaştır.</li>
+<li>Bir braket modeli kur, el hesabıyla karşılaştır ve 6. günün kontrol listesini uygula.</li>
+</ol>
+<h3>Gün sonu kontrolü (15 dk)</h3>
+<ul class="tasks">
+<li class="task"><label><input type="checkbox" data-id="g7-1"><span>Cephe işinde kullanılan FEM araç türlerini biliyorum.</span></label></li>
+<li class="task"><label><input type="checkbox" data-id="g7-2"><span>El hesabından ayrıntılı modele giden iş akışını biliyorum.</span></label></li>
+<li class="task"><label><input type="checkbox" data-id="g7-3"><span>Küçük kiriş programını çalıştırıp sonucunu yorumlayabiliyorum.</span></label></li>
+<li class="task"><label><input type="checkbox" data-id="g7-4"><span>Bitiş alıştırmasını tamamladım.</span></label></li>
+</ul></div>
+  <div class="pn"><a href="#gun6">← 6. gün</a><a href="../../Tools.html">Araçlara dön →</a></div>
+</section>
+</main>
+
+<footer>
+  <div class="wrap">
+    <span>© 2026 Erdal Üstünol · <a href="/gizlilik.html">Gizlilik</a></span>
+    <a href="../../Tools.html">← Araçlar ve eğitimler</a>
+  </div>
+</footer>
+
+<script>
+(() => {
+  const $ = id => document.getElementById(id);
+  const KEY = 'erdevelop-egitim-fem';
+  const store = { get(k) { try { return localStorage.getItem(k); } catch (e) { return null; } }, set(k, v) { try { localStorage.setItem(k, v); } catch (e) {} } };
+  let mode = (() => { try { const m = localStorage.getItem('erdevelop-mode'), g = localStorage.getItem('erdevelop-mode-gun'), t = new Date(); if (m && g === t.toDateString()) return m; const h = t.getHours(); return h >= 7 && h < 19 ? 'light' : 'dark'; } catch (e) { return 'light'; } })();
+  const applyMode = () => { document.documentElement.dataset.mode = mode; $('modeBtn').textContent = mode === 'dark' ? 'LIGHT' : 'DARK'; };
+  $('modeBtn').addEventListener('click', () => { mode = mode === 'dark' ? 'light' : 'dark'; store.set('erdevelop-mode', mode); store.set('erdevelop-mode-gun', new Date().toDateString()); applyMode(); });
+  applyMode();
+
+  let done = {}; try { done = JSON.parse(store.get(KEY) || '{}') || {}; } catch (e) { done = {}; }
+  const boxes = [...document.querySelectorAll('li.task input')];
+  const prog = () => {
+    document.querySelectorAll('section.day').forEach(sec => {
+      const d = sec.dataset.day, bs = sec.querySelectorAll('li.task input'), c = [...bs].filter(b => b.checked).length;
+      sec.querySelector('[data-prog]').textContent = c + '/' + bs.length;
+      const n = document.querySelector('[data-nav="' + d + '"]'); if (n) n.classList.toggle('done', bs.length > 0 && c === bs.length);
+    });
+  };
+  boxes.forEach(b => { b.checked = !!done[b.dataset.id]; b.addEventListener('change', () => { if (b.checked) done[b.dataset.id] = 1; else delete done[b.dataset.id]; store.set(KEY, JSON.stringify(done)); prog(); }); });
+  $('resetBtn').addEventListener('click', () => { done = {}; store.set(KEY, '{}'); boxes.forEach(b => b.checked = false); prog(); });
+  prog();
+
+  const links = [...document.querySelectorAll('[data-nav]')];
+  const secs = [$('genel'), ...document.querySelectorAll('section.day')];
+  if ('IntersectionObserver' in window) {
+    const io = new IntersectionObserver(es => es.forEach(e => { if (e.isIntersecting) { const i = secs.indexOf(e.target); links.forEach((l, k) => l.classList.toggle('on', k === i)); } }), { rootMargin: '-40% 0px -55% 0px' });
+    secs.forEach(s => io.observe(s));
+  }
+})();
+</script>
+<script src="../ilerleme.js" data-key="erdevelop-egitim-fem"></script>
+<script>if ('serviceWorker' in navigator && location.protocol === 'https:') addEventListener('load', () => navigator.serviceWorker.register('/sw.js').catch(() => { }));</script>
+<script data-goatcounter="https://erdevelop.goatcounter.com/count" async src="//gc.zgo.at/count.js"></script>
+<script src="/uyari.js" data-tur="egitim"></script>
+</body>
+</html>

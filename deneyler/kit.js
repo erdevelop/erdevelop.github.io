@@ -1,5 +1,71 @@
 /* erdevelop · deneyler ortak arayüzü: üst çubuk, ayar paneli, döngü, ekran görüntüsü */
 'use strict';
+/* İngilizce karşılıklar (Türkçe metin → İngilizce). Yeni bir deneyde Türkçe etiket eklersen buraya karşılığını yaz. */
+const KIT_EN = {
+  'Araçlar': 'Tools', 'Duraklat (boşluk)': 'Pause (Space)', 'PNG kaydet (S)': 'Save PNG (S)', 'Tam ekran · ekran koruyucu (F)': 'Full screen · screensaver (F)', 'Ayarlar (H)': 'Settings (H)', 'Ayarlar': 'Settings',
+  'Varsayılan': 'Defaults', 'Varsayılan ayarlar': 'Default settings', 'PNG kaydedildi': 'PNG saved', 'Bu tarayıcı tam ekranı desteklemiyor': 'This browser does not support full screen',
+  'iPhone’da tam ekran için: Paylaş › Ana Ekrana Ekle': 'For full screen on iPhone: Share › Add to Home Screen',
+  'Kısayollar: boşluk duraklat · S resim · F tam ekran · H ayarlar': 'Shortcuts: Space pause · S image · F full screen · H settings',
+  'Ekran koruyucu: ⛶ ile tam ekrana geç; fare durunca düğmeler gizlenir, ekran kararmaz. iPhone’da Paylaş › Ana Ekrana Ekle ile tam ekran açılır.': 'Screensaver: press ⛶ for full screen; the buttons hide when the mouse stops and the screen stays on. On iPhone, Share › Add to Home Screen opens it full screen.',
+  'Kapat': 'Close', 'köşe': 'vertices', 'kenar': 'edges', 'yüz': 'faces',
+  'Eğri yüzeyli cisim: Euler formülü (K − Kn + Y = 2) yalnızca çokyüzlüler için geçerlidir.': 'Curved solid: Euler’s formula (V − E + F = 2) only applies to polyhedra.',
+  /* başlıklar */
+  '3B Cisimler': '3D Solids', 'geometri galerisi': 'geometry gallery', '3B derinlik': '3D depth', '5 mod': '5 modes', 'Akış Alanı': 'Flow Field', 'Gradyan Stüdyosu': 'Gradient Studio', 'Matrix Yağmuru': 'Matrix Rain',
+  'Parçacık Atölyesi': 'Particle Workshop', 'Renkli Daireler': 'Colour Circles', 'Three.js Oyun Alanı': 'Three.js Playground', 'hareketli arka plan': 'animated background', 'iz ve nefes': 'trails & breathing',
+  'malzeme ve ışık': 'materials & light', 'takımyıldız ağı': 'constellation', 'çarpışma': 'collisions', 'üretken sanat': 'generative art', 'klasik': 'classic',
+  /* yardım metinleri */
+  'Ağ: fareye yakın noktalar ona bağlanır. Kar: fare rüzgâr gibi iter. Kabarcık: tıklayınca patlar. Yıldız yolculuğu: fare yönü belirler. Ateş böceği: fareye yaklaşır.': 'Network: points near the mouse link to it. Snow: the mouse pushes like wind. Bubbles: pop when clicked. Starfield: the mouse sets the direction. Fireflies: drift towards the mouse.',
+  'Binlerce parçacık görünmez bir rüzgâr alanını izler ve iz bırakır. Her tohum farklı bir resim üretir; beğendiğini PNG olarak kaydet. Tıkla: o noktaya parçacık bırak.': 'Thousands of particles follow an invisible wind field and leave trails. Every seed makes a different picture; save the ones you like as PNG. Click: drop particles there.',
+  'Birbirine yaklaşan noktalar çizgiyle bağlanır. Fare de bir düğüm gibi davranır; tıkla: yeni noktalar ekle.': 'Points that come close are linked with lines. The mouse acts as a node too; click to add new points.',
+  'Daireler nefes alır gibi parlayıp söner ve arkalarında iz bırakır. Fareyi ya da parmağını gezdir: daireler etrafında döner.': 'Circles glow and fade as if breathing and leave trails behind. Move the mouse or your finger: the circles orbit around it.',
+  'Fareyle daireleri it ya da çek. Tıkla ya da dokun: o noktaya yeni daireler saçılır.': 'Push or pull the circles with the mouse. Click or tap to scatter new circles there.',
+  'Sürükle: cismi çevir · tekerlek ya da iki parmak: yakınlaştır. Malzemeyi, ışığı ve gölgeyi değiştirip farkı gör.': 'Drag: rotate the object · wheel or two fingers: zoom. Change the material, light and shadow to see the difference.',
+  'Sürükle: döndür · tekerlek ya da iki parmak: yakınlaştır · bir cisme tıkla: köşe, kenar, yüz sayıları ve formülleri.': 'Drag: rotate · wheel or two fingers: zoom · click a solid: its vertices, edges, faces and formulas.',
+  'Yakındaki katmanlar büyük, parlak ve hızlı; uzaktakiler küçük ve soluk. Fareyi gezdir: katmanlar farklı oranda kayar (paralaks).': 'Near layers are big, bright and fast; far ones are small and faint. Move the mouse: layers shift at different rates (parallax).',
+  '“Gizli mesaj” kutusuna yaz: yağmur o satırdan geçtikçe harfler tek tek ortaya çıkar. Tıkla: o sütuna yeni damla.': 'Type in the “Hidden message” box: letters appear one by one as the rain passes that row. Click: a new drop in that column.',
+  /* 3B cisimler */
+  'Küp': 'Cube', 'Kare prizma': 'Square prism', 'Üçgen prizma': 'Triangular prism', 'Beşgen prizma': 'Pentagonal prism', 'Altıgen prizma': 'Hexagonal prism', 'Düzgün dörtyüzlü': 'Regular tetrahedron',
+  'Kare piramit': 'Square pyramid', 'Beşgen piramit': 'Pentagonal pyramid', 'Altıgen piramit': 'Hexagonal pyramid', 'Sekizyüzlü': 'Octahedron', 'Onikiyüzlü': 'Dodecahedron', 'Yirmiyüzlü': 'Icosahedron',
+  'Silindir': 'Cylinder', 'Koni': 'Cone', 'Küre': 'Sphere', 'Simit (torus)': 'Torus', 'Simit': 'Torus', 'Düğüm (torus knot)': 'Torus knot',
+  'Altı eş kareden oluşur; bütün açıları dik.': 'Made of six equal squares; all its angles are right angles.', 'Tabanları kare, yan yüzleri dikdörtgen.': 'Square bases, rectangular sides.',
+  'İki eş üçgen taban, üç dikdörtgen yan yüz.': 'Two equal triangular bases, three rectangular sides.', 'Tabanları düzgün beşgen.': 'Its bases are regular pentagons.', 'Bal peteğinin hücre biçimi.': 'The shape of a honeycomb cell.',
+  'Dört eşkenar üçgenden oluşan en basit çokyüzlü (üçgen piramit).': 'The simplest polyhedron, made of four equilateral triangles (triangular pyramid).', 'Mısır piramitlerinin biçimi.': 'The shape of the Egyptian pyramids.',
+  'Tabanı beşgen, tepesi tek nokta.': 'A pentagonal base and a single apex.', 'Tabanı düzgün altıgen.': 'Its base is a regular hexagon.', 'Tabanları birleştirilmiş iki kare piramit.': 'Two square pyramids joined at their bases.',
+  'On iki düzgün beşgen yüzü var; Platon cisimlerinden biri.': 'Twelve regular pentagonal faces; one of the Platonic solids.', 'Yirmi eşkenar üçgen; en çok yüzlü Platon cismi.': 'Twenty equilateral triangles; the Platonic solid with the most faces.',
+  'Eğri yüzeyli olduğu için Euler formülü geçerli değil.': 'It has a curved surface, so Euler’s formula does not apply.', 'Tepe noktası tek bir köşe sayılır.': 'The apex counts as a single vertex.',
+  'Aynı yüzey alanıyla en büyük hacmi saran cisim.': 'The solid that encloses the largest volume for a given surface area.', 'Ortasında delik olan halka; delik sayısı 1.': 'A ring with a hole in the middle; it has one hole.',
+  /* ayarlar */
+  'Alan zamanla değişsin': 'Field changes over time', 'Arka plan': 'Background', 'Ateş böcekleri': 'Fireflies', 'Açı': 'Angle', 'Açık': 'Light', 'Ağ (bağlantılı noktalar)': 'Network (linked points)',
+  'Bağlantı mesafesi': 'Link distance', 'Bağlantılar': 'Links', 'Bağlanır ve çeker': 'Links and attracts', 'Beyaz': 'White', 'Bir tur süresi': 'Cycle duration', 'Birbirine çarpsın': 'Collide with each other',
+  'Biçim': 'Shape', 'Boyut': 'Size', 'CSS kopyalandı': 'CSS copied', "CSS'i kopyala": 'Copy CSS', 'Cam': 'Glass', 'Cisim': 'Object', 'Cisimler kendi etrafında dönsün': 'Solids spin on their own',
+  'Daireler': 'Circles', 'Dalga genişliği': 'Wave width', 'Damla ucu beyaz parlasın': 'Bright white drop heads', 'Derinliğe göre renk': 'Colour by depth', 'Desen ölçeği': 'Pattern scale',
+  'Dönme hızı': 'Spin speed', 'Düzensiz': 'Irregular', 'Efekt': 'Effect', 'En büyük boyut': 'Maximum size', 'Etkisiz': 'No effect', 'Fare': 'Mouse', 'Fare ile etkileşim': 'Mouse interaction',
+  'Fareye çekim': 'Pull towards mouse', 'Fizik': 'Physics', 'Gece': 'Night', 'Gece mavisi': 'Midnight blue', 'Gizli mesaj': 'Hidden message', 'Gri tonlar': 'Greyscale', 'Gökkuşağı': 'Rainbow',
+  'Gökkuşağı akışı': 'Rainbow flow', 'Gölge ve zemin': 'Shadow and floor', 'Görünüm': 'Appearance', 'Görünümü sıfırla': 'Reset view', 'Gün batımı': 'Sunset', 'Hareket': 'Motion',
+  'Hareket biçimi': 'Motion style', 'Hazır renkler': 'Presets', 'Hız': 'Speed', 'Hız (kare/sn)': 'Speed (fps)', 'Işık açısı': 'Light angle', 'Işık gibi üst üste binsin': 'Blend like light',
+  'Işık şiddeti': 'Light intensity', 'Işıltı': 'Glow', 'Kabarcıklar': 'Bubbles', 'Kar yağışı': 'Snowfall', 'Karakter seti': 'Character set', 'Karakterler': 'Characters', 'Karışık': 'Mixed',
+  'Katakana': 'Katakana', 'Katman sayısı': 'Layers', 'Kehribar': 'Amber', 'Kenar çizgisi': 'Outline', 'Kenarları çiz': 'Draw edges', 'Klasik': 'Classic', 'Klasik mod rengi': 'Classic mode colour',
+  'Klasik yeşil': 'Classic green', 'Koyu': 'Dark', 'Kuzey ışıkları': 'Northern lights', 'Kâğıt': 'Paper', 'Kırmızı': 'Red', 'Kıvrım': 'Curl', 'Lacivert': 'Navy', 'Latin harfleri': 'Latin letters',
+  'Malzeme': 'Material', 'Mat boya': 'Matte paint', 'Mavi': 'Blue', 'Mesajı yeniden göster': 'Show message again', 'Metal': 'Metal', 'Mod': 'Mode', 'Nefes hızı': 'Breathing speed', 'Neon': 'Neon',
+  'Noktalar': 'Points', 'Okyanus': 'Ocean', 'Orijinal': 'Original', 'Orman': 'Forest', 'Ortadaki yazı': 'Centre text', 'Pamuk şeker': 'Cotton candy', 'Paralaks': 'Parallax',
+  'Parlak plastik': 'Glossy plastic', 'Parçacık': 'Particles', 'Parçacık rengi': 'Particle colour', 'Parçacık sayısı': 'Particle count', 'Pastel': 'Pastel', 'Rakamlar': 'Digits',
+  'Rastgele renkler': 'Random colours', 'Renk': 'Colour', 'Renk 1': 'Colour 1', 'Renk 2': 'Colour 2', 'Renk 3': 'Colour 3', 'Renk 4': 'Colour 4', 'Renk paleti': 'Colour palette',
+  'Renk ve hareket': 'Colour and motion', 'Renkler': 'Colours', 'Sabit hızda': 'Constant speed', 'Sahne': 'Scene', 'Saydam beyaz': 'Translucent white', 'Sayı': 'Count', 'Siyah': 'Black',
+  'Siyah-beyaz': 'Black & white', 'Stüdyo (geçişli)': 'Studio (gradient)', 'Tek renk (beyaz)': 'Single colour (white)', 'Tel kafes': 'Wireframe', 'Temizle': 'Clear', 'Tohum': 'Seed',
+  'Türkçe alfabe': 'Turkish alphabet', 'Yalnızca tel kafes': 'Wireframe only', 'Yazı': 'Text', 'Yazı boyutu': 'Font size', 'Yazı rengi': 'Text colour', 'Yeni tohum': 'New seed',
+  'Yeniden dağıt': 'Scatter again', 'Yerçekimi': 'Gravity', 'Yeşil': 'Green', 'Yoğunluk': 'Density', 'Yumuşak gidip gel': 'Smooth back and forth', 'Yüzey yönleri (normal)': 'Surface normals',
+  'Yıldız yolculuğu': 'Starfield', 'Zemin': 'Background', 'boş bırakabilirsin': 'optional', 'Çeker': 'Attract', 'Çizgi kalınlığı': 'Line width', 'Çizgi rengi uçlara göre geçişli': 'Line colour blends between ends',
+  'Çizgi yoğunluğu': 'Line density', "Renkleri ve hızı ayarla, sonra “CSS'i kopyala” ile kendi sitende kullan.": 'Set the colours and speed, then use “Copy CSS” on your own site.', 'Özel': 'Custom', 'Üçgenleri doldur': 'Fill triangles', 'ör. Merhaba': 'e.g. Hello', 'İkili (0 1)': 'Binary (0 1)', 'İter': 'Repel', 'İz': 'Trail', 'İz uzunluğu': 'Trail length'
+};
+/* dil: /dil.js varsa onun seçimini kullanır; yoksa Türkçe kalır */
+const kT = s => (s != null && window.erDil && erDil.lang === 'en' && KIT_EN[s]) || s;
+/* Türkçe metni data-ktr'de saklayıp çevirisini basar; dil değişince relabel() hepsini günceller */
+const kL = s => s == null ? '' : `<span data-ktr="${String(s).replace(/"/g, '&quot;')}">${kT(s)}</span>`;
+function kitRelabel(root) {
+  (root || document).querySelectorAll('[data-ktr]').forEach(el => { el.innerHTML = kT(el.dataset.ktr); });
+  (root || document).querySelectorAll('[data-ktip]').forEach(el => { const t = kT(el.dataset.ktip); el.title = t; el.setAttribute('aria-label', t); });
+  (root || document).querySelectorAll('[data-kph]').forEach(el => { el.placeholder = kT(el.dataset.kph); });
+}
 function Kit(o) {
   const $ = (t, c, h) => { const e = document.createElement(t); if (c) e.className = c; if (h != null) e.innerHTML = h; return e; };
   const KEY = 'erdevelop-deney:' + o.id, def = {}, v = {};
@@ -12,8 +78,8 @@ function Kit(o) {
 
   /* üst çubuk */
   const bar = $('div', 'k-bar');
-  bar.innerHTML = `<a class="k-chip" href="Tools.html" title="Araçlar">‹ <span class="k-hide-sm">Araçlar</span></a><span class="k-chip k-title">${o.title}${o.sub ? ` <small>· ${o.sub}</small>` : ''}</span><span class="k-sp"></span>`;
-  const mk = (ic, tip, fn) => { const b = $('button', 'k-chip k-btn', ic); b.type = 'button'; b.title = tip; b.setAttribute('aria-label', tip); b.onclick = fn; bar.appendChild(b); return b; };
+  bar.innerHTML = `<a class="k-chip" href="Tools.html" data-ktip="Araçlar">‹ <span class="k-hide-sm">${kL('Araçlar')}</span></a><span class="k-chip k-title">${kL(o.title)}${o.sub ? ` <small>· ${kL(o.sub)}</small>` : ''}</span><span class="k-sp"></span>${window.erDil ? '<button class="k-chip k-btn" type="button" data-dil-btn>EN</button>' : ''}`;
+  const mk = (ic, tip, fn) => { const b = $('button', 'k-chip k-btn', ic); b.type = 'button'; b.dataset.ktip = tip; b.title = kT(tip); b.setAttribute('aria-label', kT(tip)); b.onclick = fn; bar.appendChild(b); return b; };
   const bPause = mk('❚❚', 'Duraklat (boşluk)', () => K.pause(!K.paused));
   if (o.snapshot !== false) mk('⤓', 'PNG kaydet (S)', () => K.snap());
   mk('⛶', 'Tam ekran · ekran koruyucu (F)', () => K.full());
@@ -21,19 +87,19 @@ function Kit(o) {
   document.body.appendChild(bar);
 
   /* ayar paneli */
-  const panel = $('div', 'k-panel'); panel.hidden = true; panel.setAttribute('role', 'dialog'); panel.setAttribute('aria-label', 'Ayarlar');
+  const panel = $('div', 'k-panel'); panel.hidden = true; panel.setAttribute('role', 'dialog'); panel.setAttribute('aria-label', kT('Ayarlar'));
   const inputs = {};
   const fmtv = (c, x) => c.fmt ? c.fmt(x) : x;
   (o.controls || []).forEach(c => {
-    if (c.t === 'h') { panel.appendChild($('h4', '', c.l)); return; }
-    if (c.t === 'note') { panel.appendChild($('p', 'k-hint', c.l)); return; }
-    if (c.t === 'buttons') { const w = $('div', 'k-btns'); c.b.forEach(([l, fn, pri]) => { const b = $('button', pri ? 'pri' : '', l); b.type = 'button'; b.onclick = fn; w.appendChild(b); }); panel.appendChild(w); return; }
+    if (c.t === 'h') { panel.appendChild($('h4', '', kL(c.l))); return; }
+    if (c.t === 'note') { panel.appendChild($('p', 'k-hint', kL(c.l))); return; }
+    if (c.t === 'buttons') { const w = $('div', 'k-btns'); c.b.forEach(([l, fn, pri]) => { const b = $('button', pri ? 'pri' : '', kL(l)); b.type = 'button'; b.onclick = fn; w.appendChild(b); }); panel.appendChild(w); return; }
     const row = $('div', 'k-row'), id = 'k-' + c.k; let inp;
-    if (c.t === 'range') { row.innerHTML = `<label for="${id}">${c.l}<b></b></label><input type="range" id="${id}" min="${c.min}" max="${c.max}" step="${c.step || 1}">`; inp = row.querySelector('input'); inp.value = v[c.k]; row.querySelector('b').textContent = fmtv(c, v[c.k]); }
-    else if (c.t === 'select') { row.innerHTML = `<label for="${id}">${c.l}</label><select id="${id}">${c.o.map(([a, b]) => `<option value="${a}">${b}</option>`).join('')}</select>`; inp = row.querySelector('select'); inp.value = v[c.k]; if (inp.value !== String(v[c.k])) { v[c.k] = def[c.k]; inp.value = v[c.k]; } }
-    else if (c.t === 'color') { row.innerHTML = `<label for="${id}">${c.l}</label><input type="color" id="${id}">`; inp = row.querySelector('input'); inp.value = v[c.k]; }
-    else if (c.t === 'check') { row.innerHTML = `<label class="k-chk"><input type="checkbox" id="${id}"> ${c.l}</label>`; inp = row.querySelector('input'); inp.checked = !!v[c.k]; }
-    else if (c.t === 'text') { row.innerHTML = `<label for="${id}">${c.l}</label><input type="text" id="${id}" maxlength="${c.max || 60}" placeholder="${c.ph || ''}" autocomplete="off">`; inp = row.querySelector('input'); inp.value = v[c.k]; }
+    if (c.t === 'range') { row.innerHTML = `<label for="${id}">${kL(c.l)}<b></b></label><input type="range" id="${id}" min="${c.min}" max="${c.max}" step="${c.step || 1}">`; inp = row.querySelector('input'); inp.value = v[c.k]; row.querySelector('b').textContent = fmtv(c, v[c.k]); }
+    else if (c.t === 'select') { row.innerHTML = `<label for="${id}">${kL(c.l)}</label><select id="${id}">${c.o.map(([a, b]) => `<option value="${a}" data-ktr="${String(b).replace(/"/g, '&quot;')}">${kT(b)}</option>`).join('')}</select>`; inp = row.querySelector('select'); inp.value = v[c.k]; if (inp.value !== String(v[c.k])) { v[c.k] = def[c.k]; inp.value = v[c.k]; } }
+    else if (c.t === 'color') { row.innerHTML = `<label for="${id}">${kL(c.l)}</label><input type="color" id="${id}">`; inp = row.querySelector('input'); inp.value = v[c.k]; }
+    else if (c.t === 'check') { row.innerHTML = `<label class="k-chk"><input type="checkbox" id="${id}"> ${kL(c.l)}</label>`; inp = row.querySelector('input'); inp.checked = !!v[c.k]; }
+    else if (c.t === 'text') { row.innerHTML = `<label for="${id}">${kL(c.l)}</label><input type="text" id="${id}" maxlength="${c.max || 60}" placeholder="${kT(c.ph || '')}" data-kph="${c.ph || ''}" autocomplete="off">`; inp = row.querySelector('input'); inp.value = v[c.k]; }
     inputs[c.k] = { inp, c, row };
     inp.addEventListener(c.t === 'select' || c.t === 'check' || c.t === 'color' ? 'change' : 'input', () => {
       let x = c.t === 'check' ? inp.checked : c.t === 'range' ? +inp.value : inp.value;
@@ -42,9 +108,10 @@ function Kit(o) {
     if (c.t === 'color') inp.addEventListener('input', () => { v[c.k] = inp.value; o.onChange && o.onChange(c.k, inp.value, v); });
     panel.appendChild(row);
   });
-  const foot = $('div', 'k-btns'); const bReset = $('button', '', 'Varsayılan'); bReset.type = 'button'; bReset.onclick = () => K.reset(); foot.appendChild(bReset); panel.appendChild(foot);
-  panel.appendChild($('p', 'k-hint', (o.help ? o.help + '<br>' : '') + 'Kısayollar: boşluk duraklat · S resim · F tam ekran · H ayarlar<br>Ekran koruyucu: ⛶ ile tam ekrana geç; fare durunca düğmeler gizlenir, ekran kararmaz. iPhone’da Paylaş › Ana Ekrana Ekle ile tam ekran açılır.'));
+  const foot = $('div', 'k-btns'); const bReset = $('button', '', kL('Varsayılan')); bReset.type = 'button'; bReset.onclick = () => K.reset(); foot.appendChild(bReset); panel.appendChild(foot);
+  panel.appendChild($('p', 'k-hint', (o.help ? kL(o.help) + '<br>' : '') + kL('Kısayollar: boşluk duraklat · S resim · F tam ekran · H ayarlar') + '<br>' + kL('Ekran koruyucu: ⛶ ile tam ekrana geç; fare durunca düğmeler gizlenir, ekran kararmaz. iPhone’da Paylaş › Ana Ekrana Ekle ile tam ekran açılır.')));
   document.body.appendChild(panel);
+  if (window.erDil) erDil.on(() => { kitRelabel(); });
 
   /* bildirim */
   const toastEl = $('div', 'k-toast'); document.body.appendChild(toastEl); let tt = 0;
@@ -55,7 +122,7 @@ function Kit(o) {
 
   const K = {
     v, def, reduced, paused: false, ptr: { x: -1e4, y: -1e4, px: -1e4, py: -1e4, down: false, active: false, vx: 0, vy: 0 },
-    toast(m) { toastEl.textContent = m; toastEl.classList.add('on'); clearTimeout(tt); tt = setTimeout(() => toastEl.classList.remove('on'), 2000); },
+    toast(m) { toastEl.textContent = kT(m); toastEl.classList.add('on'); clearTimeout(tt); tt = setTimeout(() => toastEl.classList.remove('on'), 2000); },
     pause(p) { K.paused = p; bPause.textContent = p ? '▶' : '❚❚'; bPause.classList.toggle('on', p); if (!p) { last = performance.now(); } o.onPause && o.onPause(p); },
     panel(show) { panel.hidden = !show; bSet.classList.toggle('on', show); },
     full() {

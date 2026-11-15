@@ -2,6 +2,8 @@
 <html lang="tr">
 <head>
 <meta charset="utf-8">
+<script src="/dil.js"></script>
+<script src="ceviri.js"></script>
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <meta name="theme-color" content="#f5f6f4" media="(prefers-color-scheme: light)">
 <meta name="theme-color" content="#151a18" media="(prefers-color-scheme: dark)">
@@ -75,12 +77,19 @@ details.er-fab>summary::-webkit-details-marker{display:none}
 details.er-fab[open]>summary{margin-bottom:8px}
 details.er-fab .er-about{margin:0;max-height:min(70vh,560px);overflow:auto;background:rgba(20,24,33,.96);color:#eef1f6;border-color:rgba(255,255,255,.18);box-shadow:0 10px 40px rgba(0,0,0,.45)}
 </style>
-<section class="er-about" id="hakkinda" aria-labelledby="hakkinda-b">
+<section class="er-about" id="hakkinda" data-l="tr" aria-labelledby="hakkinda-b">
 <h2 id="hakkinda-b">QR ve barkod aracı hakkında</h2>
 <p>Bağlantı, düz metin, Wi-Fi ağı, kartvizit (vCard), e-posta, telefon, SMS, WhatsApp mesajı ya da konum için QR kod üretir; telefonun ya da bilgisayarın kamerasıyla QR kod ve barkod okur. QR kodun rengini, boyutunu ve hata düzeltme seviyesini ayarlayabilir, ortasına logo koyabilirsin.</p>
 <p>Restoran menüsü, etkinlik davetiyesi, ofis Wi-Fi şifresi ya da kartvizit için hızlıca QR hazırlamak, ya da bir ürünün barkodunu okumak için kullanılır. Her şey tarayıcında yapılır; okunan ya da üretilen içerik bir sunucuya gönderilmez.</p>
 <h3>Nasıl kullanılır?</h3><ol><li><b>QR oluştur</b> sekmesinde içerik türünü seç ve bilgileri yaz.</li><li>Renk, boyut ve kenar boşluğunu ayarla; istersen ortaya logo ekle.</li><li>Sonucu PNG ya da SVG olarak indir veya kopyala.</li><li>Okutmak için <b>Okut</b> sekmesinde kamerayı başlat ya da bir resim seç.</li></ol>
 <h3>Bilmen gerekenler</h3><ul><li>Logo eklenince hata düzeltme otomatik olarak en yüksek seviyeye çıkar; böylece kodun bir kısmı kapansa da okunur.</li><li>Baskıda en güvenli seçenek koyu kod ve açık zemindir; ters renkler bazı okuyucularda sorun çıkarabilir.</li><li>Wi-Fi QR kodu okutulduğunda telefon şifre yazmadan ağa bağlanır.</li></ul>
+</section>
+<section class="er-about" data-l="en" hidden aria-labelledby="about-en">
+<h2 id="about-en">About the QR & barcode tool</h2>
+<p>Creates QR codes for a link, plain text, a Wi-Fi network, a contact card (vCard), email, phone, SMS, a WhatsApp message or a location, and reads QR codes and barcodes with your phone or computer camera. You can set the colour, size and error-correction level of the QR code and put a logo in the middle.</p>
+<p>Use it to quickly make a QR code for a restaurant menu, an event invitation, the office Wi-Fi password or a business card, or to read a product barcode. Everything happens in your browser; nothing you scan or create is sent to a server.</p>
+<h3>How to use</h3><ol><li>On the <b>Create QR</b> tab, choose the content type and fill in the details.</li><li>Adjust the colour, size and margin; add a centre logo if you like.</li><li>Download the result as PNG or SVG, or copy it.</li><li>To scan, start the camera on the <b>Scan</b> tab or pick an image.</li></ol>
+<h3>Good to know</h3><ul><li>When you add a logo, error correction goes up to the highest level automatically, so the code still reads even if part of it is covered.</li><li>For print, a dark code on a light background is the safest choice; inverted colours can cause problems with some readers.</li><li>Scanning a Wi-Fi QR code connects the phone to the network without typing the password.</li></ul>
 </section>
 </main>
 <footer>Kamera görüntüsü cihazında işlenir, hiçbir yere gönderilmez.</footer>
@@ -145,7 +154,7 @@ function draw() {
   const txt = content(), cv = byId('qc'), info = byId('qi');
   ['png', 'svg', 'cpy'].forEach(id => byId(id).disabled = !txt);
   if (!txt) { Q = null; cv.width = cv.height = 280; const g = cv.getContext('2d'); g.fillStyle = getComputedStyle(document.body).getPropertyValue('--line'); g.fillRect(0, 0, 280, 280); info.textContent = 'Bilgileri girince kod burada oluşur.'; return; }
-  try { Q = make(txt); paintQR(cv, Q, 560); const n = Q.getModuleCount(); info.textContent = `${n}×${n} modül · ${new TextEncoder().encode(txt).length} bayt · sürüm ${(n - 17) / 4}`; }
+  try { Q = make(txt); paintQR(cv, Q, 560); const n = Q.getModuleCount(); info.textContent = erDil.t(`${n}×${n} modül · ${new TextEncoder().encode(txt).length} bayt · sürüm ${(n - 17) / 4}`, `${n}×${n} modules · ${new TextEncoder().encode(txt).length} bytes · version ${(n - 17) / 4}`); }
   catch (e) { Q = null; info.textContent = 'İçerik bir QR koda sığmayacak kadar uzun.'; }
 }
 byId('ty').addEventListener('change', () => { buildFields(); draw(); });
@@ -170,7 +179,7 @@ let BD = null, stream = null, raf = 0, last = { t: '', at: 0 }, jsqrReady = null
 const FORMATS = ['qr_code', 'ean_13', 'ean_8', 'code_128', 'code_39', 'code_93', 'upc_a', 'upc_e', 'itf', 'codabar', 'data_matrix', 'pdf417', 'aztec'];
 async function engine() {
   if (BD !== null) return BD;
-  if ('BarcodeDetector' in window) { try { const sup = await BarcodeDetector.getSupportedFormats(); const f = FORMATS.filter(x => sup.includes(x)); if (f.length) { BD = new BarcodeDetector({ formats: f }); byId('eng').textContent = 'QR ve barkodlar okunur (' + f.length + ' biçim).'; return BD; } } catch (e) { } }
+  if ('BarcodeDetector' in window) { try { const sup = await BarcodeDetector.getSupportedFormats(); const f = FORMATS.filter(x => sup.includes(x)); if (f.length) { BD = new BarcodeDetector({ formats: f }); byId('eng').textContent = erDil.t('QR ve barkodlar okunur (' + f.length + ' biçim).', 'Reads QR codes and barcodes (' + f.length + ' formats).'); return BD; } } catch (e) { } }
   BD = false; byId('eng').textContent = 'Bu tarayıcıda yalnızca QR kod okunur (barkod için Chrome / Android önerilir).'; jsqrReady = jsqrReady || loadScript('lib/jsQR.js'); await jsqrReady; return BD;
 }
 const work = document.createElement('canvas'), wg = work.getContext('2d', { willReadFrequently: true });
@@ -198,7 +207,7 @@ function addHit(h) {
   HITS.unshift({ ...h, at: new Date() }); if (HITS.length > 30) HITS.pop(); paintHits(); try { navigator.vibrate && navigator.vibrate(80); } catch (e) { } return true;
 }
 function paintHits() {
-  byId('hits').innerHTML = HITS.length ? HITS.map((h, i) => { const d = describe(h.text); return `<div class="hit" data-i="${i}"><div class="t">${FN[h.fmt] || h.fmt} · ${d.k} · ${h.at.toLocaleTimeString('tr-TR')}</div><div class="v">${esc(h.text.length > 400 ? h.text.slice(0, 400) + '…' : h.text)}</div>${d.extra || ''}<div class="btns">${d.act || ''}<button class="btn sm ghost" data-cp="${d.copy != null ? 'p' : 't'}">${d.copy != null ? 'Şifreyi kopyala' : 'Kopyala'}</button></div></div>`; }).join('') : '<p class="ph">Henüz bir şey okunmadı.</p>';
+  byId('hits').innerHTML = HITS.length ? HITS.map((h, i) => { const d = describe(h.text); return `<div class="hit" data-i="${i}"><div class="t">${erDil.tr(FN[h.fmt] || h.fmt)} · ${erDil.tr(d.k)} · ${h.at.toLocaleTimeString(erDil.lang === 'en' ? 'en-GB' : 'tr-TR')}</div><div class="v">${esc(h.text.length > 400 ? h.text.slice(0, 400) + '…' : h.text)}</div>${d.extra || ''}<div class="btns">${d.act || ''}<button class="btn sm ghost" data-cp="${d.copy != null ? 'p' : 't'}">${d.copy != null ? 'Şifreyi kopyala' : 'Kopyala'}</button></div></div>`; }).join('') : '<p class="ph">Henüz bir şey okunmadı.</p>';
 }
 byId('hits').onclick = e => { const h = HITS[+(e.target.closest('.hit') || {}).dataset?.i]; if (!h) return; const cp = e.target.closest('[data-cp]');
   if (cp) copy(cp.dataset.cp === 'p' ? describe(h.text).copy : h.text, cp); if (e.target.closest('[data-vcf]')) download('kisi.vcf', new Blob([h.text], { type: 'text/vcard' })); };
@@ -223,6 +232,7 @@ byId('imf').onchange = async e => { const f = e.target.files[0]; if (!f) return;
   try { const img = new Image(); img.src = URL.createObjectURL(f); await img.decode(); const r = await detect(img, img.naturalWidth, img.naturalHeight); if (!r.length) return toast('Resimde kod bulunamadı'); last = { t: '', at: 0 }; r.forEach(addHit); } catch (er) { console.error(er); toast('Resim okunamadı'); } };
 tabs('qr', t => { if (t !== 'oku') stopCam(); });
 document.addEventListener('visibilitychange', () => { if (document.hidden) stopCam(); });
+erDil.on(() => { try { draw(); paintHits(); } catch (e) { } });
 </script>
 <script data-goatcounter="https://erdevelop.goatcounter.com/count" async src="//gc.zgo.at/count.js"></script>
 </body>
