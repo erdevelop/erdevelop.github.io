@@ -4,7 +4,7 @@ const $ = s => document.querySelector(s);
 const $$ = s => [...document.querySelectorAll(s)];
 const byId = id => document.getElementById(id);
 const esc = s => String(s).replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
-const fmt = (n, d = 2) => isFinite(n) ? n.toLocaleString('tr-TR', { maximumFractionDigits: d }) : '—';
+const fmt = (n, d = 2) => isFinite(n) ? n.toLocaleString(window.erDil && erDil.lang === 'en' ? 'en-GB' : 'tr-TR', { maximumFractionDigits: d }) : '—';
 const p2 = n => String(n).padStart(2, '0');
 const LS = { get(k) { try { return localStorage.getItem('ak:' + k); } catch (e) { return null; } }, set(k, v) { try { localStorage.setItem('ak:' + k, v); } catch (e) { } } };
 function pnum(s) { s = String(s == null ? '' : s).replace(/\s/g, ''); if (!s) return NaN; if (s.indexOf(',') > -1 && s.indexOf('.') > -1) s = s.replace(/\./g, '').replace(',', '.'); else s = s.replace(',', '.'); const v = parseFloat(s); return isFinite(v) ? v : NaN; }
