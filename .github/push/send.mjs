@@ -48,7 +48,9 @@ export async function sendPush(sub, data, privateKey) {
   const body = encrypt(JSON.stringify(data), sub.keys.p256dh, sub.keys.auth);
   const r = await fetch(sub.endpoint, { method: 'POST', body, headers: {
     Authorization: vapidAuth(sub.endpoint, privateKey), 'Content-Encoding': 'aes128gcm', 'Content-Type': 'application/octet-stream',
-    TTL: '3600', Urgency: 'normal', Topic: 'eng-kelime' } });
+    /* Urgency high: Android uyku modundayken (Doze) normal öncelikli bildirimler saatlerce bekletilip TTL dolunca düşüyordu.
+       Topic: kulüp başına ayrı; aynı telefonda İngilizce ve Fransızca açıksa biri diğerinin yerine geçmesin. */
+    TTL: '3600', Urgency: 'high', Topic: String(data.tag || 'erdevelop').replace(/[^A-Za-z0-9_-]/g, '').slice(0, 32) } });
   return { status: r.status, text: r.ok ? '' : (await r.text()).slice(0, 300) };
 }
 
@@ -91,6 +93,9 @@ async function token(sa) {
   const j = await r.json(); if (!j.access_token) throw new Error('Google girişi başarısız: ' + JSON.stringify(j).slice(0, 200)); return j.access_token;
 }
 
+/* hangi bildirim servisi: teşhis için (kişisel bilgi içermez) */
+export const svc = ep => { try { const h = new URL(ep).hostname; return /fcm|googleapis/.test(h) ? 'Android/Chrome' : /apple/.test(h) ? 'iPhone/Safari' : /mozilla/.test(h) ? 'Firefox' : /notify\.windows|wns/.test(h) ? 'Windows/Edge' : h; } catch (e) { return '?'; } };
+
 export async function main(env = process.env) {
   if (!env.FIREBASE_SA || !env.VAPID_PRIVATE) throw new Error('FIREBASE_SA ve VAPID_PRIVATE gizli değişkenleri tanımlı değil.');
   const sa = JSON.parse(env.FIREBASE_SA), base = (env.FIRESTORE_BASE || 'https://firestore.googleapis.com/v1') + `/projects/${sa.project_id}/databases/(default)/documents`;
@@ -112,10 +117,11 @@ export async function main(env = process.env) {
   let sent = 0, skipped = 0, failed = 0;
   for (const d of docs) {
     const key = force ? 'zorla|' + now.toISOString() : dueSlot(d, now), msg = key && d.sub && d.sub.endpoint ? message(d) : null;
-    if (!msg) { skipped++; continue; }
+    if (!msg) { skipped++; if (d.sub && d.sub.endpoint) console.log(`  ${d._path.split('/').pop().slice(0, 6)}… ${d.page || 'ingilizce'} · ${svc(d.sub.endpoint)} · sırası gelmedi (${d.from}–${d.to}, ${d.step || 180} dk)`); continue; }
     const upd = {}; let res;
     try { res = await sendPush(d.sub, msg, env.VAPID_PRIVATE); } catch (e) { res = { status: 0, text: String(e.message || e) }; }
-    if (res.status >= 200 && res.status < 300) { sent++; Object.assign(upd, { pos: (d.pos || 0) + 1, last: key, sentAt: now, err: '' }); }
+    const kim = `${d._path.split('/').pop().slice(0, 6)}… ${d.page || 'ingilizce'} · ${svc(d.sub.endpoint)}`;
+    if (res.status >= 200 && res.status < 300) { sent++; console.log(`  ${kim} → gönderildi (${res.status}) ${key.split('|').pop()}`); Object.assign(upd, { pos: (d.pos || 0) + 1, last: key, sentAt: now, err: '' }); }
     else { failed++; console.log(`  ${d._path.split('/').pop().slice(0, 6)}… gönderilemedi: ${res.status} ${res.text}`);
       Object.assign(upd, res.status === 404 || res.status === 410 ? { on: false, err: 'Telefon aboneliği artık geçerli değil; sayfadan bildirimleri yeniden aç.' } : { last: key, err: 'Gönderim hatası ' + res.status }); }
     await patch(d, upd);
