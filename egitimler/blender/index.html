@@ -1,0 +1,994 @@
+<!doctype html>
+<html lang="tr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Blender Modelleme ve Render · 7 günlük program | erdevelop</title>
+<meta name="description" content="Bol şemalı 7 günlük Blender eğitimi: arayüz ve gezinme, ölçülü modelleme, Extrude, Inset, Bevel, Loop Cut, Knife, modifier&#x27;lar (Mirror, Array, Solidify, Boolean, Subdivision Surface), CAD ve Rhino modellerini içe alma ve temizleme, Principled BSDF malzemeler, UV, ışık ve HDRI, kamera, Cycles ve EEVEE ile render. Komutlar ikon ve kısayollarıyla.">
+<link rel="icon" href="/favicon.svg" type="image/svg+xml">
+<link rel="icon" href="/favicon.ico" sizes="any">
+<link rel="apple-touch-icon" href="/apple-touch-icon.png">
+<link rel="manifest" href="/manifest.webmanifest">
+<meta name="theme-color" content="#0b1220">
+<meta property="og:title" content="Blender Modelleme ve Render · 7 günlük program | erdevelop">
+<meta property="og:description" content="7 günde Blender: ölçülü modelleme, mesh düzenleme, modifier&#x27;lar, CAD&#x27;den içe alma, malzeme, ışık, kamera ve Cycles/EEVEE render. Her komut ikonu ve kısayoluyla.">
+<meta property="og:url" content="https://erdevelop.github.io/egitimler/blender/">
+<meta property="og:image" content="https://erdevelop.github.io/og.png">
+<meta name="twitter:card" content="summary_large_image">
+<link rel="canonical" href="https://erdevelop.github.io/egitimler/blender/">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Chakra+Petch:wght@600;700&family=IBM+Plex+Sans:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500&display=swap">
+<style>
+  :root {
+    --bg: #eef2f6; --panel: #ffffff; --panel-2: #f5f7f9; --grid: #e3e8ed; --line: #cfd8e1;
+    --fg: #1c2833; --text: #45535f; --muted: #74838f; --accent: #2f6fb5; --accent-dim: rgba(47,111,181,.12); --hot: #c8731f; --ok: #2e8b57;
+    --f-display: 'Chakra Petch', 'Segoe UI', sans-serif; --f-body: 'IBM Plex Sans', 'Segoe UI', system-ui, sans-serif; --f-mono: 'IBM Plex Mono', Consolas, monospace;
+    color-scheme: light;
+  }
+  :root[data-mode="dark"] {
+    --bg: #0b1220; --panel: #111a2c; --panel-2: #0e1626; --grid: #182338; --line: #22304a;
+    --fg: #e2e8f2; --text: #a8b6cc; --muted: #73829b; --accent: #f2b33d; --accent-dim: rgba(242,179,61,.14); --hot: #6aa8ff; --ok: #5fc48d;
+    color-scheme: dark;
+  }
+  * { box-sizing: border-box; }
+  html { background: var(--bg); scroll-padding-top: 110px; }
+  body { margin: 0; color: var(--fg); font-family: var(--f-body); font-size: 16px; line-height: 1.65;
+    background-image: linear-gradient(var(--grid) 1px, transparent 1px), linear-gradient(90deg, var(--grid) 1px, transparent 1px); background-size: 80px 80px; background-attachment: fixed; }
+  a { color: var(--accent); }
+  :focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+  .wrap { max-width: 920px; margin: 0 auto; padding-left: max(16px, env(safe-area-inset-left, 0px)); padding-right: max(16px, env(safe-area-inset-right, 0px)); }
+
+  .topbar { position: sticky; top: 0; z-index: 20; background: color-mix(in srgb, var(--bg) 92%, transparent); backdrop-filter: blur(6px); border-bottom: 1px solid var(--line); }
+  .topbar .wrap { display: flex; align-items: center; gap: 12px; padding-block: 10px; max-width: 1160px; }
+  .brand { font: 700 15px var(--f-display); letter-spacing: 1px; text-transform: uppercase; text-decoration: none; color: var(--fg); }
+  .brand span { color: var(--accent); }
+  .crumb { font: 400 12px var(--f-mono); color: var(--muted); }
+  .sp { flex: 1; }
+  .tb { font: 500 12px var(--f-mono); color: var(--accent); padding: 6px 10px; border: 1px solid var(--line); border-radius: 4px; background: none; cursor: pointer; text-transform: uppercase; text-decoration: none; }
+  .tb:hover { border-color: var(--accent); }
+  .daynav { border-top: 1px solid var(--line); }
+  .daynav .wrap { display: flex; gap: 6px; padding-block: 8px; overflow-x: auto; max-width: 1160px; }
+  .daynav a { font: 500 12px var(--f-mono); text-decoration: none; color: var(--text); border: 1px solid var(--line); border-radius: 4px; padding: 4px 10px; white-space: nowrap; background: var(--panel); }
+  .daynav a.on { border-color: var(--accent); color: var(--accent); }
+  .daynav a.done { background: var(--accent-dim); }
+
+  header.head { padding-block: 34px 6px; }
+  .kicker { font: 500 12px var(--f-mono); color: var(--accent); letter-spacing: 1px; }
+  .head h1 { font: 700 clamp(2rem, 6vw, 3rem)/1.05 var(--f-display); margin: 6px 0 0; letter-spacing: -.5px; }
+  .head p.lead { margin: 12px 0 0; color: var(--text); max-width: 64ch; font-size: 1.05rem; }
+  .chips { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 16px; }
+  .chips span { font: 400 12px var(--f-mono); color: var(--muted); border: 1px solid var(--line); border-radius: 4px; padding: 3px 8px; background: var(--panel); }
+
+  .card { background: var(--panel); border: 1px solid var(--line); border-radius: 8px; padding: 22px clamp(16px, 4vw, 30px); margin-top: 28px; }
+  .day-head { display: flex; align-items: baseline; gap: 12px; flex-wrap: wrap; border-bottom: 1px solid var(--line); padding-bottom: 12px; margin-bottom: 6px; }
+  .day-head h2, .card > h2 { font: 700 1.45rem/1.2 var(--f-display); margin: 0; letter-spacing: .2px; }
+  .dn { font: 600 12px var(--f-mono); color: var(--panel); background: var(--accent); border-radius: 3px; padding: 2px 7px; }
+  :root[data-mode="dark"] .dn { color: #1a1204; }
+  .day-head .meta { font: 400 12px var(--f-mono); color: var(--muted); margin-left: auto; }
+  section.day { background: var(--panel); border: 1px solid var(--line); border-radius: 8px; padding: 22px clamp(16px, 4vw, 30px); margin-top: 28px; }
+
+  .prose h3 { font: 700 1.12rem/1.3 var(--f-display); margin: 30px 0 8px; letter-spacing: .2px; }
+  .prose p, .prose li { color: var(--text); }
+  .prose strong { color: var(--fg); font-weight: 600; }
+  .prose ol, .prose ul { padding-left: 1.4em; }
+  .prose li { margin: 4px 0; }
+  .prose li > ul, .prose li > ol { margin: 4px 0; }
+  .prose code { font: 400 .86em var(--f-mono); background: var(--panel-2); border: 1px solid var(--line); border-radius: 3px; padding: 1px 5px; color: var(--fg); overflow-wrap: anywhere; }
+  .tw { overflow-x: auto; margin: 14px 0; border: 1px solid var(--line); border-radius: 6px; }
+  .tw table { border-collapse: collapse; width: 100%; font-size: .9rem; }
+  .tw th, .tw td { text-align: left; padding: 8px 12px; border-bottom: 1px solid var(--line); vertical-align: top; }
+  .tw th { font: 600 12px var(--f-mono); color: var(--muted); background: var(--panel-2); }
+  .card .tw td:first-child, .card .tw td:last-child { white-space: nowrap; }
+  .tw tr:last-child td { border-bottom: 0; }
+  ul.tasks { list-style: none; padding-left: 0; }
+  li.task label { display: flex; gap: 10px; align-items: flex-start; cursor: pointer; padding: 4px 0; }
+  li.task input { width: 18px; height: 18px; margin-top: 4px; accent-color: var(--accent); flex: none; }
+  li.task input:checked + span { color: var(--muted); text-decoration: line-through; }
+  .pn { display: flex; justify-content: space-between; gap: 12px; margin-top: 26px; padding-top: 14px; border-top: 1px solid var(--line); font: 500 13px var(--f-mono); }
+  .pn a { text-decoration: none; }
+  .note { font-size: .9rem; color: var(--muted); }
+  .reset { font: 500 11px var(--f-mono); color: var(--muted); background: none; border: 1px solid var(--line); border-radius: 4px; padding: 3px 8px; cursor: pointer; text-transform: uppercase; }
+  .reset:hover { color: var(--hot); border-color: var(--hot); }
+
+  .fig { margin: 18px 0; padding: 16px 14px 12px; border: 1px solid var(--line); border-radius: 6px; background: var(--panel-2); }
+  .fig .sc { overflow-x: auto; }
+  .fig svg { display: block; width: 100%; min-width: 540px; height: auto; max-width: 720px; margin: 0 auto; overflow: visible; }
+  .fig figcaption { font-size: .85rem; color: var(--muted); margin-top: 10px; text-align: center; max-width: 62ch; margin-inline: auto; }
+  .fig .k { fill: none; stroke: var(--fg); stroke-width: 1.6; } .fig .k1 { fill: none; stroke: var(--fg); stroke-width: 1; }
+  .fig .mu { fill: none; stroke: var(--muted); stroke-width: 1.2; } .fig .mud { fill: none; stroke: var(--muted); stroke-width: 1; stroke-dasharray: 5 4; }
+  .fig .dm { fill: none; stroke: var(--muted); stroke-width: .9; }
+  .fig .rp { fill: none; stroke: var(--hot); stroke-width: 1; stroke-dasharray: 9 4 2 4; }
+  .fig .gd { fill: none; stroke: var(--fg); stroke-width: 1; stroke-dasharray: 16 4 3 4; }
+  .fig .ac { fill: none; stroke: var(--accent); stroke-width: 2; } .fig .acl { fill: none; stroke: var(--accent); stroke-width: 1; }
+  .fig .gl { fill: var(--accent-dim); stroke: var(--fg); stroke-width: .8; }
+  .fig .sp { fill: color-mix(in srgb, var(--fg) 40%, transparent); stroke: var(--fg); stroke-width: .8; }
+  .fig .fr { fill: color-mix(in srgb, var(--fg) 22%, transparent); stroke: none; } .fig .edge { fill: none; stroke: var(--fg); stroke-width: 1.8; }
+  .fig .so { fill: var(--panel); stroke: var(--fg); stroke-width: 1.6; } .fig .hole { fill: var(--panel-2); stroke: var(--fg); stroke-width: 1.2; }
+  .fig .rib { fill: var(--accent-dim); stroke: var(--accent); stroke-width: 1.4; stroke-dasharray: 6 4; }
+  .fig .sel { fill: none; stroke: var(--accent); stroke-width: 3; }
+  .fig .mul { stroke: var(--fg); stroke-width: 4; } .fig .tr { stroke: var(--fg); stroke-width: 3; } .fig .trA { stroke: var(--accent); stroke-width: 3; }
+  .fig .lh { fill: var(--panel); stroke: var(--fg); stroke-width: 1.4; }
+  .fig .dot { fill: var(--accent); } .fig .dotr { fill: var(--accent); stroke: var(--panel); stroke-width: 1; }
+  .fig .pt { fill: var(--accent); stroke: var(--panel); stroke-width: 2; } .fig .tpt { fill: var(--panel); font: 700 12px var(--f-mono); }
+  .fig .bx { fill: var(--panel); stroke: var(--line); stroke-width: 1.3; } .fig .bxa { fill: var(--accent-dim); stroke: var(--accent); stroke-width: 1.3; }
+  .fig .ar { fill: var(--muted); }
+  .fig .acd { fill: none; stroke: var(--accent); stroke-width: 1.6; stroke-dasharray: 6 4; }
+  .fig text { text-transform: none; letter-spacing: 0; } .fig .bg { fill: var(--panel); stroke: none; }
+  .fig .t { fill: var(--text); font: 400 13px var(--f-body); } .fig .tb { fill: var(--fg); font: 600 13px var(--f-body); }
+  .fig .tm { fill: var(--muted); font: 400 11px var(--f-mono); } .fig .ta { fill: var(--accent); font: 600 11px var(--f-mono); }
+  .fig .th { fill: var(--hot); font: 500 11px var(--f-mono); }
+  .fig .swb { fill: none; stroke: #2f7de1; stroke-width: 2; } .fig .swr { fill: none; stroke: #d64545; stroke-width: 2; } .fig .tr2 { fill: #d64545; font: 600 11px var(--f-mono); } .fig .tbl { fill: #2f7de1; font: 600 11px var(--f-mono); }
+  .prose pre { background: var(--panel-2); border: 1px solid var(--line); border-radius: 6px; padding: 12px 14px; overflow-x: auto; }
+  .prose pre code { background: none; border: 0; padding: 0; font: 400 .85rem/1.5 var(--f-mono); color: var(--fg); }
+  footer { margin-top: 56px; border-top: 1px solid var(--line); padding-block: 20px calc(20px + env(safe-area-inset-bottom, 0px)); font: 400 12px var(--f-mono); color: var(--muted); }
+  footer .wrap { display: flex; justify-content: space-between; gap: 12px; flex-wrap: wrap; }
+  footer a { color: inherit; } footer a:hover { color: var(--accent); }
+  @media print { .topbar, .daynav, .pn, footer, .reset { display: none !important; } body { background: #fff; } section.day, .card { break-inside: auto; border: 0; } }
+</style>
+<script async src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-4775308844679394" crossorigin="anonymous"></script>
+</head>
+<body>
+<div class="topbar">
+  <div class="wrap">
+    <a class="brand" href="/">erdevelop<span>_</span></a>
+    <span class="crumb">/ eğitimler / blender</span>
+    <span class="sp"></span>
+    <a class="tb" href="../../Tools.html">Araçlar</a>
+    <button class="tb" type="button" id="modeBtn">DARK</button>
+  </div>
+  <nav class="daynav" aria-label="Günler"><div class="wrap"><a href="#genel" data-nav="0">Genel</a><a href="#gun1" data-nav="1">1</a><a href="#gun2" data-nav="2">2</a><a href="#gun3" data-nav="3">3</a><a href="#gun4" data-nav="4">4</a><a href="#gun5" data-nav="5">5</a><a href="#gun6" data-nav="6">6</a><a href="#gun7" data-nav="7">7</a></div></nav>
+</div>
+
+<main class="wrap">
+  <header class="head" id="genel">
+    <div class="kicker">Eğitimler · Blender Modelleme ve Render</div>
+    <h1>Blender Modelleme ve Render</h1>
+    <p class="lead">Ücretsiz ve açık kaynak Blender ile ölçülü modellemeyi ve gerçekçi render almayı 7 günde, bol şemayla öğreten bir program. Arayüz ve gezinmeden hassas yerleşime, Extrude, Inset, Bevel ve Loop Cut ile mesh düzenlemeden modifier&#x27;lara, CAD ve Rhino modellerini içe alıp temizlemekten malzeme, ışık, kamera ve Cycles render&#x27;a kadar ilerlersin. Metinde geçen her komutun yanında ikonu var; ikona tıklayınca komutun kısayolu ve açıklaması açılır. Hafta sonunda bir cephe modülünün render&#x27;ını alırsın.</p>
+    <div class="chips"><span>7 gün</span><span>günde ~4 saat</span><span>Türkçe</span><span>Kod örnekleri kopyalanabilir</span></div>
+  </header>
+
+  <div class="card">
+    <h2>Başlamadan önce</h2>
+    <div class="prose">
+      <h3>Kimler için</h3>
+      <p>Mimarlar, cephe ve iç mimari tasarımcıları, endüstriyel tasarımcılar ve Rhino, SolidWorks ya da AutoCAD kullanıp modellerine ücretsiz bir programla gerçekçi render almak isteyen herkes. 3B deneyimi faydalıdır ama şart değildir.</p>
+      <h3>Gerekenler</h3>
+      <ul>
+        <li>Blender 5.2 LTS ya da daha yeni sürüm (<a href="https://www.blender.org/download/" target="_blank" rel="noopener">blender.org</a>, ücretsiz).</li>
+        <li>Üç tuşlu fare; mümkünse sayısal tuş takımı (Numpad). Yoksa Preferences › Input › Emulate Numpad.</li>
+        <li>Render için ayrı ekran kartı faydalıdır; yoksa da çalışır. Kısayol listesi: <a href="../../komutlar/blender.html">Blender Kısayolları</a>.</li>
+      </ul>
+      <h3>Program</h3>
+      <div class="tw"><table><thead><tr><th>Gün</th><th>Konu</th><th>Ne öğrenirsin</th><th>Süre</th></tr></thead><tbody>
+<tr><td><a href="#gun1">1. gün</a></td><td>Arayüz ve gezinme</td><td>Kurulum, editörler, gezinme, görünüşler, nesne ve düzenleme modu, birimler, kaydetme</td><td>~4 saat</td></tr>
+<tr><td><a href="#gun2">2. gün</a></td><td>Nesneler ve hassas yerleşim</td><td>Nesne ekleme, eksenle ve sayıyla taşıma, döndürme, ölçekleme, yakalama, 3B imleç, kopya, Apply Scale, orijin, koleksiyonlar</td><td>~4 saat</td></tr>
+<tr><td><a href="#gun3">3. gün</a></td><td>Mesh düzenleme</td><td>Köşe, kenar, yüz; halka seçimi; Extrude, Inset, Loop Cut, Bevel, Merge, Fill, silme; pencere doğraması projesi</td><td>~4 saat</td></tr>
+<tr><td><a href="#gun4">4. gün</a></td><td>Modifier&#x27;lar</td><td>Knife, Bridge, Spin; Mirror, Array, Solidify, Bevel, Boolean, Subdivision Surface; modifier sırası; lamelli cephe modülü</td><td>~4 saat</td></tr>
+<tr><td><a href="#gun5">5. gün</a></td><td>CAD&#x27;den Blender&#x27;a</td><td>OBJ, FBX, glTF, IFC içe alma; ölçek ve birim, Merge by Distance, normaller, yumuşatma, yoğun ağları azaltma, düzen</td><td>~4 saat</td></tr>
+<tr><td><a href="#gun6">6. gün</a></td><td>Malzeme, UV ve ışık</td><td>Principled BSDF, cam, metal, beton; Image Texture ve UV; Node Wrangler; güneş, alan ve nokta ışık, HDRI</td><td>~4 saat</td></tr>
+<tr><td><a href="#gun7">7. gün</a></td><td>Kamera ve render</td><td>Kamera ve odak uzaklığı, düşey çizgiler için Shift, Cycles ve EEVEE, örnekleme ve gürültü temizleme, AgX, render ve kaydetme; cephe modülü render&#x27;ı</td><td>~4 saat</td></tr>
+      </tbody></table></div>
+      <p class="note">Her günün sonunda bir kontrol listesi var. İşaretledikçe ilerlemen bu tarayıcıda saklanır. Hafta içi sadece akşamları çalışırsan program yaklaşık iki hafta sürer. Örnekler Blender 5.2 LTS ve 5.3 için yazıldı; menü adları İngilizce arayüze göredir. Komut ikonları komutun yaptığı işi anlatan genel çizimlerdir, Blender'ın resmi simgeleri değildir. <button class="reset" type="button" id="resetBtn">ilerlemeyi sıfırla</button></p>
+    </div>
+  </div>
+
+<section class="day" id="gun1" data-day="1">
+  <div class="day-head"><span class="dn">GÜN 01</span><h2>Arayüz ve gezinme</h2><span class="meta">~4 saat · <span data-prog="1">0/5</span> kontrol</span></div>
+  <div class="prose"><h3>Hedef</h3>
+<p>Gün sonunda Blender'ı kurup ayarlayabilecek, arayüzün bölümlerini tanıyacak, 3B görünümde rahatça gezinebilecek, nesne ve düzenleme modları arasında geçebilecek ve sahne birimlerini ayarlayıp dosyanı kaydedebileceksin. Süre yaklaşık 4 saat.</p>
+<p><strong>Bu kurs hakkında:</strong> Metinde kalın yazılan her komutun yanında bir ikon var. İkona tıklayınca o komut <a href="../../komutlar/blender.html">Blender Kısayolları</a> sayfasında kısayolu ve Türkçe açıklamasıyla açılır. Kısayolu olmayan komutları Blender'da <strong>Menu Search</strong> (<code>F3</code>) ile adını yazarak çalıştırabilirsin. Menü adları İngilizce arayüze göredir; Türkçe arayüz kullanırsan menüler farklı görünür ama kısayollar aynıdır.</p>
+<h3>1. Kurulum ve ilk ayarlar (45 dk)</h3>
+<p>blender.org'dan <strong>Blender 5.2 LTS</strong> ya da daha yeni bir sürümü indir. LTS (uzun süreli destek) sürümü iki yıl hata düzeltmesi alır; bir projede tek sürümde kalmak istiyorsan onu seç.</p>
+<p>İlk açılışta <strong>Edit › Preferences</strong>:</p>
+<ol>
+<li><strong>Input › Emulate 3 Button Mouse:</strong> Dizüstü dokunmatik yüzeyle çalışıyorsan aç (Alt + sol tık orta tuş gibi davranır).</li>
+<li><strong>Input › Emulate Numpad:</strong> Sayısal tuş takımı yoksa aç; üst sıradaki rakamlar Numpad gibi çalışır.</li>
+<li><strong>System › Cycles Render Devices:</strong> Ekran kartın varsa CUDA, OptiX (NVIDIA), HIP (AMD) ya da Metal (Apple) seç.</li>
+<li><strong>Interface › Resolution Scale:</strong> Yazılar küçükse büyüt.</li>
+</ol>
+<h3>2. Arayüz (45 dk)</h3>
+<figure class="fig"><div class="sc"><svg viewBox="0 0 640 230" role="img" xmlns="http://www.w3.org/2000/svg"><defs><marker id="ah-arayuz" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0 0L10 5L0 10z" class="ar"/></marker></defs><rect x="10" y="10" width="620" height="210" class="bx"/><rect x="10" y="10" width="620" height="22" class="bg"/><text x="20" y="25" class="tm" text-anchor="start">Layout · Modeling · Shading · UV Editing …  (workspaces)</text><rect x="10" y="32" width="30" height="150" class="bx"/><text x="25" y="108" class="ta" text-anchor="middle">T</text><rect x="40" y="32" width="380" height="150" class="bxa"/><text x="230" y="100" class="tb" text-anchor="middle">3D Viewport</text><text x="230" y="118" class="tm" text-anchor="middle">modellediğin alan</text><rect x="330" y="32" width="90" height="150" class="bx"/><text x="375" y="100" class="tm" text-anchor="middle">Sidebar</text><text x="375" y="116" class="ta" text-anchor="middle">N</text><rect x="420" y="32" width="210" height="60" class="bx"/><text x="525" y="66" class="tb" text-anchor="middle">Outliner</text><rect x="420" y="92" width="210" height="128" class="bx"/><text x="525" y="150" class="tb" text-anchor="middle">Properties</text><text x="525" y="168" class="tm" text-anchor="middle">render · sahne · modifier · malzeme</text><rect x="10" y="182" width="410" height="38" class="bx"/><text x="215" y="206" class="tm" text-anchor="middle">Timeline</text></svg></div><figcaption>Blender arayüzü: 3B görünüm, Outliner, Properties ve açılıp kapanan Toolbar ile Sidebar.</figcaption></figure>
+<div class="tw"><table>
+<thead>
+<tr>
+<th>Bölüm</th>
+<th>Ne işe yarar</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>3D Viewport</td>
+<td>Modellediğin alan</td>
+</tr>
+<tr>
+<td>Outliner (sağ üst)</td>
+<td>Sahnedeki nesneler ve koleksiyonlar; göz simgesiyle gizle</td>
+</tr>
+<tr>
+<td>Properties (sağ alt)</td>
+<td>Sekmeler: render, çıktı, sahne, dünya, nesne, modifier, malzeme</td>
+</tr>
+<tr>
+<td>Timeline (alt)</td>
+<td>Animasyon; bu kursta pek kullanmayacağız</td>
+</tr>
+<tr>
+<td>Workspaces (üst sekmeler)</td>
+<td>Layout, Modeling, Shading, UV Editing… hazır düzenler</td>
+</tr>
+</tbody>
+</table></div>
+<p>3B görünümde <strong>Toolbar</strong> (<code>T</code>) solda araçları, <strong>Sidebar</strong> (<code>N</code>) sağda seçili nesnenin konum, döndürme, ölçek ve ölçülerini gösterir. Sidebar'ı açık tutmaya alış: ölçülü modellemenin anahtarı oradadır.</p>
+<h3>3. Gezinme (1 saat)</h3>
+<figure class="fig"><div class="sc"><svg viewBox="0 0 640 122" role="img" xmlns="http://www.w3.org/2000/svg"><defs><marker id="ah-gezinme" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0 0L10 5L0 10z" class="ar"/></marker></defs><rect x="10.0" y="10" width="200.0" height="48" rx="5" class="bxa"/><text x="110.0" y="30.0" class="tb" text-anchor="middle">Orbit</text><text x="110.0" y="46.0" class="tm" text-anchor="middle">orta tuş sürükle</text><rect x="220.0" y="10" width="200.0" height="48" rx="5" class="bx"/><text x="320.0" y="30.0" class="tb" text-anchor="middle">Pan</text><text x="320.0" y="46.0" class="tm" text-anchor="middle">Shift + orta tuş</text><rect x="430.0" y="10" width="200.0" height="48" rx="5" class="bx"/><text x="530.0" y="30.0" class="tb" text-anchor="middle">Zoom</text><text x="530.0" y="46.0" class="tm" text-anchor="middle">tekerlek</text><rect x="10.0" y="66" width="200.0" height="48" rx="5" class="bx"/><text x="110.0" y="86.0" class="tb" text-anchor="middle">View Selected</text><text x="110.0" y="102.0" class="tm" text-anchor="middle">Numpad .</text><rect x="220.0" y="66" width="200.0" height="48" rx="5" class="bx"/><text x="320.0" y="86.0" class="tb" text-anchor="middle">Front / Right / Top</text><text x="320.0" y="102.0" class="tm" text-anchor="middle">Numpad 1 / 3 / 7</text><rect x="430.0" y="66" width="200.0" height="48" rx="5" class="bx"/><text x="530.0" y="86.0" class="tb" text-anchor="middle">Persp / Ortho</text><text x="530.0" y="102.0" class="tm" text-anchor="middle">Numpad 5</text></svg></div><figcaption>Gezinme: fare orta tuşu ve sayısal tuş takımı.</figcaption></figure>
+<div class="tw"><table>
+<thead>
+<tr>
+<th>İş</th>
+<th>Fare / tuş</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><strong>Orbit</strong> (döndür)</td>
+<td>Orta tuş sürükle</td>
+</tr>
+<tr>
+<td><strong>Pan</strong> (kaydır)</td>
+<td>Shift + orta tuş</td>
+</tr>
+<tr>
+<td><strong>Zoom</strong></td>
+<td>Tekerlek</td>
+</tr>
+<tr>
+<td><strong>View Selected</strong></td>
+<td>Numpad <code>.</code></td>
+</tr>
+<tr>
+<td><strong>Frame All</strong></td>
+<td><code>Home</code></td>
+</tr>
+<tr>
+<td><strong>Front View</strong>, <strong>Right View</strong>, <strong>Top View</strong></td>
+<td>Numpad <code>1</code>, <code>3</code>, <code>7</code> (Ctrl ile karşı taraf)</td>
+</tr>
+<tr>
+<td><strong>Perspective/Orthographic</strong></td>
+<td>Numpad <code>5</code></td>
+</tr>
+<tr>
+<td><strong>Local View</strong></td>
+<td>Numpad <code>/</code></td>
+</tr>
+<tr>
+<td><strong>View Pie</strong></td>
+<td><code>`</code></td>
+</tr>
+</tbody>
+</table></div>
+<p>Mimari ve CAD alışkanlığıyla en çok kullanacağın ikili: <strong>Top View</strong> (plan) ile <strong>Perspective/Orthographic</strong>. Ortografik üst görünüş, AutoCAD'deki plan gibidir.</p>
+<p><strong>Toggle Maximize Area</strong> (<code>Ctrl+Space</code>) fare altındaki editörü tam ekran yapar; dar ekranda çok işe yarar.</p>
+<h3>4. Nesne modu ve düzenleme modu (45 dk)</h3>
+<figure class="fig"><div class="sc"><svg viewBox="0 0 640 114" role="img" xmlns="http://www.w3.org/2000/svg"><defs><marker id="ah-mod" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0 0L10 5L0 10z" class="ar"/></marker></defs><text x="160" y="18" class="ta" text-anchor="middle">Object Mode</text><text x="480" y="18" class="ta" text-anchor="middle">Edit Mode</text><rect x="10" y="26" width="300" height="78" class="bx"/><rect x="330" y="26" width="300" height="78" class="bxa"/><text x="22" y="46" class="tm" text-anchor="start">nesneyi bütün olarak taşı, döndür</text><text x="22" y="68" class="tm" text-anchor="start">kopyala, birleştir, modifier ekle</text><text x="22" y="90" class="tm" text-anchor="start">Apply Scale, Set Origin</text><text x="342" y="46" class="tm" text-anchor="start">köşe, kenar, yüz düzenle</text><text x="342" y="68" class="tm" text-anchor="start">Extrude, Inset, Bevel, Loop Cut</text><text x="342" y="90" class="tm" text-anchor="start">1 / 2 / 3: seçim modları</text></svg></div><figcaption>Tab ile iki mod arasında geçilir.</figcaption></figure>
+<p>Blender'da bir nesneyle iki düzeyde çalışırsın:</p>
+<ul>
+<li><strong>Nesne modu (Object Mode):</strong> Nesneyi bir bütün olarak taşırsın, döndürürsün, kopyalarsın.</li>
+<li><strong>Düzenleme modu (Edit Mode):</strong> Nesnenin köşelerini, kenarlarını ve yüzlerini değiştirirsin.</li>
+</ul>
+<p>İkisi arasında <strong>Toggle Edit Mode</strong> (<code>Tab</code>) ile geçilir. Yeni başlayanların en sık yaşadığı şaşkınlık: bir komut çalışmıyorsa büyük olasılıkla yanlış moddasın. Sol üstteki mod listesi hangi modda olduğunu gösterir.</p>
+<p><strong>Shading Pie</strong> (<code>Z</code>) görünüm modunu seçer: Wireframe (tel kafes), Solid (katı), Material Preview (malzeme önizleme), Rendered (render önizleme). <strong>Toggle X-Ray</strong> (<code>Alt+Z</code>) içi görmeyi ve arkadaki elemanları seçmeyi sağlar.</p>
+<h3>5. Birimler ve kaydetme (30 dk)</h3>
+<p><strong>Properties › Scene › Units:</strong></p>
+<ul>
+<li>Unit System: <strong>Metric</strong></li>
+<li>Length: <strong>Meters</strong> (ya da Millimeters)</li>
+<li>Unit Scale: <strong>1</strong></li>
+</ul>
+<p>Blender'ın ışık ve fizik hesapları gerçek ölçüye göre çalışır; bu yüzden 1 Blender birimi = 1 metre olarak bırakmak en güvenlisidir. Ölçü girerken <code>mm</code> yazabilirsin: Sidebar'da boyut kutusuna <code>450mm</code> yazınca 0,45 m olur.</p>
+<p>Dosyayı <strong>Save</strong> (<code>Ctrl+S</code>) ile kaydet. Blender sık sık kaydetmeni ister; <strong>Undo</strong> (<code>Ctrl+Z</code>) ve <strong>Redo</strong> (<code>Shift+Ctrl+Z</code>) ise her zaman yanındadır.</p>
+<p><strong>Alıştırma:</strong> Varsayılan sahnedeki küpü Front View, Right View ve Top View'dan incele; Perspective/Orthographic geçişi yap. Tab ile düzenleme moduna gir, Shading Pie ile Wireframe'e geç, sonra dosyayı birimleri metre olarak ayarlayıp kaydet.</p>
+<h3>Gün sonu kontrolü (15 dk)</h3>
+<ul class="tasks">
+<li class="task"><label><input type="checkbox" data-id="g1-1"><span>Blender'ı kurdum; Emulate Numpad ve render cihazı ayarlarını yaptım.</span></label></li>
+<li class="task"><label><input type="checkbox" data-id="g1-2"><span>3D Viewport, Outliner, Properties ve Sidebar'ın ne işe yaradığını biliyorum.</span></label></li>
+<li class="task"><label><input type="checkbox" data-id="g1-3"><span>Orbit, Pan, Zoom ve standart görünüşlerle rahatça geziniyorum.</span></label></li>
+<li class="task"><label><input type="checkbox" data-id="g1-4"><span>Nesne ve düzenleme modu farkını biliyorum, Tab ile geçiyorum.</span></label></li>
+<li class="task"><label><input type="checkbox" data-id="g1-5"><span>Sahne birimlerini metreye ayarlayıp dosyamı kaydettim.</span></label></li>
+</ul></div>
+  <div class="pn"><a href="#genel">← Genel bakış</a><a href="#gun2">2. gün →</a></div>
+</section>
+<section class="day" id="gun2" data-day="2">
+  <div class="day-head"><span class="dn">GÜN 02</span><h2>Nesneler ve hassas yerleşim</h2><span class="meta">~4 saat · <span data-prog="2">0/7</span> kontrol</span></div>
+  <div class="prose"><h3>Hedef</h3>
+<p>Gün sonunda sahneye nesne ekleyebilecek, nesneleri eksene kilitleyerek ve sayı yazarak tam ölçüyle taşıyıp döndürüp ölçekleyebilecek, yakalamayı ve 3B imleci kullanabilecek, kopya alabilecek, ölçeği uygulamanın neden şart olduğunu bilecek ve nesneleri koleksiyonlarla düzenleyebileceksin. Süre yaklaşık 4 saat.</p>
+<h3>1. Nesne eklemek (30 dk)</h3>
+<p><strong>Add</strong> (<code>Shift+A</code>) menüsü: Mesh (Cube, Plane, Cylinder, UV Sphere…), Curve, Text, Light, Camera. Yeni nesne <strong>3B imlecin</strong> (kırmızı-beyaz halka) bulunduğu yere eklenir.</p>
+<p>Ekledikten hemen sonra sol altta bir panel açılır: boyut, köşe sayısı (silindirde), konum. Kapattıysan <strong>Adjust Last Operation</strong> (<code>F9</code>) ile geri getir. Silindiri mimari modellerde 32 ya da 64 köşeyle eklemek yeterince yuvarlak görünür.</p>
+<h3>2. Taşı, döndür, ölçekle — eksen ve sayıyla (1 saat 15 dk)</h3>
+<figure class="fig"><div class="sc"><svg viewBox="0 0 640 222" role="img" xmlns="http://www.w3.org/2000/svg"><defs><marker id="ah-donustur" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0 0L10 5L0 10z" class="ar"/></marker></defs><polygon points="60,90 150,90 190,66.0 100,66.0" class="bxa"/><polygon points="150,90 190,66.0 190,136.0 150,160" class="bx"/><rect x="60" y="90" width="90" height="70" class="bx"/><polygon points="330,90 420,90 460,66.0 370,66.0" class="bxa"/><polygon points="420,90 460,66.0 460,136.0 420,160" class="bxa"/><rect x="330" y="90" width="90" height="70" class="bxa"/><line x1="200" y1="125" x2="310" y2="125" class="ac" marker-end="url(#ah-donustur)"/><text x="255" y="112" class="ta" text-anchor="middle">G X 2 Enter</text><line x1="40" y1="175" x2="600" y2="175" class="swr"/><text x="604" y="179" class="tr2" text-anchor="start">X</text><text x="60" y="210" class="tm" text-anchor="start">G: Move · R: Rotate · S: Scale · ardından eksen harfi ve sayı</text></svg></div><figcaption>Dönüştürme: komut, eksen ve sayı yazarak tam ölçüyle taşı.</figcaption></figure>
+<p>Blender'da dönüştürme komutları <strong>klavyeden yazılarak</strong> en hızlı ve en hassas çalışır:</p>
+<div class="tw"><table>
+<thead>
+<tr>
+<th>Yaz</th>
+<th>Sonuç</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>G</code></td>
+<td><strong>Move</strong>: fareyle serbest taşı</td>
+</tr>
+<tr>
+<td><code>G</code> <code>X</code></td>
+<td>Yalnızca X ekseninde</td>
+</tr>
+<tr>
+<td><code>G</code> <code>X</code> <code>2</code> <code>Enter</code></td>
+<td>X'te tam 2 m</td>
+</tr>
+<tr>
+<td><code>G</code> <code>Z</code> <code>-0.45</code> <code>Enter</code></td>
+<td>Aşağı 450 mm</td>
+</tr>
+<tr>
+<td><code>G</code> <code>Shift+Z</code></td>
+<td>Z dışında (XY düzleminde)</td>
+</tr>
+<tr>
+<td><code>R</code> <code>Z</code> <code>90</code> <code>Enter</code></td>
+<td><strong>Rotate</strong>: Z ekseninde 90°</td>
+</tr>
+<tr>
+<td><code>S</code> <code>0.5</code> <code>Enter</code></td>
+<td><strong>Scale</strong>: yarıya</td>
+</tr>
+<tr>
+<td><code>S</code> <code>X</code> <code>2</code> <code>Enter</code></td>
+<td>Yalnızca X'te iki kat</td>
+</tr>
+</tbody>
+</table></div>
+<p>İki kez aynı eksene basarsan (<code>G</code> <code>X</code> <code>X</code>) eksen nesnenin kendi (yerel) eksenine döner. İşlemi iptal etmek için sağ tık ya da <code>Esc</code>.</p>
+<p>Aynı değerleri <strong>Sidebar</strong> (<code>N</code>) içindeki Location, Rotation, Scale ve <strong>Dimensions</strong> kutularına da yazabilirsin. Dimensions kutusu CAD alışkanlığına en yakın olanıdır: küpü 1,20 × 0,60 × 0,75 m yapmak için üç kutuya değeri yaz.</p>
+<h3>3. Yakalama, 3B imleç ve dönme merkezi (1 saat)</h3>
+<figure class="fig"><div class="sc"><svg viewBox="0 0 640 226" role="img" xmlns="http://www.w3.org/2000/svg"><defs><marker id="ah-yakala" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0 0L10 5L0 10z" class="ar"/></marker></defs><polygon points="100,70 260,70 320,34.0 160,34.0" class="bxa"/><polygon points="260,70 320,34.0 320,54.0 260,90" class="bx"/><rect x="100" y="70" width="160" height="20" class="bx"/><text x="180" y="52" class="tm" text-anchor="middle">masa tablası</text><rect x="104" y="90" width="12" height="100" class="bxa"/><circle cx="104" cy="90" r="6" class="dotr"/><text x="120" y="212" class="ta" text-anchor="start">ayak, köşe yakalamayla</text><circle cx="420" cy="130" r="14" class="acl"/><line x1="400" y1="130" x2="440" y2="130" class="swr"/><line x1="420" y1="110" x2="420" y2="150" class="swr"/><text x="420" y="172" class="tm" text-anchor="middle">3B imleç (Shift + sağ tık)</text><text x="420" y="196" class="ta" text-anchor="middle">Shift+S: imleci seçime / orijine</text></svg></div><figcaption>Yakalama ve 3B imleç: parçaları birbirine tam oturt.</figcaption></figure>
+<ul>
+<li><strong>Toggle Snapping</strong> (<code>Shift+Tab</code>) yakalamayı açar. Üstteki mıknatıs menüsünden ne yakalanacağını seç: Increment (ızgara), Vertex (köşe), Edge, Face. Taşırken <code>Ctrl</code> basılı tutmak yakalamayı geçici olarak tersine çevirir.</li>
+<li><strong>3B imleç</strong>, yeni nesnelerin ekleneceği ve gerekirse dönme merkezi olarak kullanılacak noktadır. <code>Shift</code> + sağ tık ile yerleştirilir; <strong>Snap Menu</strong> (<code>Shift+S</code>) ile seçili nesneye ya da orijine taşınır (Cursor to Selected, Cursor to World Origin).</li>
+<li><strong>Pivot Point</strong> (<code>.</code>) dönme ve ölçekleme merkezini seçer: Median Point (ortalama), 3D Cursor, Individual Origins (her nesne kendi merkezinde), Active Element.</li>
+</ul>
+<p>Örnek: Bir masa ayağını masanın köşesine koymak için köşe yakalamayı (Vertex) aç, ayağı <code>G</code> ile taşırken köşenin üstüne getir.</p>
+<h3>4. Kopya ve bağlı kopya (30 dk)</h3>
+<ul>
+<li><strong>Duplicate</strong> (<code>Shift+D</code>): bağımsız kopya; hemen taşımaya başlar, <code>X</code> <code>0.6</code> <code>Enter</code> gibi yazabilirsin.</li>
+<li><strong>Duplicate Linked</strong> (<code>Alt+D</code>): aynı ağı paylaşan kopya. Birini düzenleme modunda değiştirince hepsi değişir. Dört aynı sandalye ya da tekrarlanan cephe modülleri için idealdir.</li>
+<li><strong>Repeat Last</strong> (<code>Shift+R</code>): son kopya-taşı işlemini tekrarlar; eşit aralıklı dizi için hızlı yol (daha iyisi yarın Array modifier'ı).</li>
+</ul>
+<h3>5. Ölçeği uygulamak ve orijin (30 dk)</h3>
+<figure class="fig"><div class="sc"><svg viewBox="0 0 640 114" role="img" xmlns="http://www.w3.org/2000/svg"><defs><marker id="ah-apply" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0 0L10 5L0 10z" class="ar"/></marker></defs><text x="160" y="18" class="ta" text-anchor="middle">önce</text><text x="480" y="18" class="ta" text-anchor="middle">sonra</text><rect x="10" y="26" width="300" height="78" class="bx"/><rect x="330" y="26" width="300" height="78" class="bxa"/><text x="22" y="46" class="tm" text-anchor="start">küp nesne modunda ölçeklendi</text><text x="22" y="68" class="tm" text-anchor="start">Scale = (1,2 ; 0,6 ; 0,03)</text><text x="22" y="90" class="tm" text-anchor="start">Bevel her kenarda farklı çıkar</text><text x="342" y="46" class="tm" text-anchor="start">Ctrl+A › Scale</text><text x="342" y="68" class="tm" text-anchor="start">Scale = (1 ; 1 ; 1), boyut aynı</text><text x="342" y="90" class="tm" text-anchor="start">Bevel, Solidify, Array doğru çalışır</text></svg></div><figcaption>Apply Scale: nesne modunda ölçekledikten sonra hep uygula.</figcaption></figure>
+<p>Nesne modunda <strong>Scale</strong> ile büyüttüğün bir küp aslında hâlâ 1 m'lik bir küptür; Blender üstüne bir ölçek çarpanı yazar. Bu çarpan 1 değilken Bevel, Solidify, Array ve UV gibi işlemler <strong>yanlış ölçüde</strong> çalışır: pah bir kenarda kalın, diğerinde ince çıkar.</p>
+<p>Çözüm: <strong>Apply Scale</strong> (<code>Ctrl+A</code> › Scale). Ölçek 1'e döner, boyut korunur. <strong>Kural: nesne modunda ölçekledikten sonra hep Apply Scale yap.</strong> Gerekirse <strong>Apply All Transforms</strong> konum ve döndürmeyi de işler.</p>
+<p><strong>Set Origin</strong> (sağ tık menüsü) nesnenin merkez noktasını taşır: Origin to Geometry (ağın ortasına), Origin to 3D Cursor (ör. kapının menteşe noktasına, böylece kapı oradan döner).</p>
+<h3>6. Koleksiyonlar ve birleştirme (15 dk)</h3>
+<ul>
+<li><strong>Move to Collection</strong> (<code>M</code>): Nesneleri koleksiyonlara ayır (Cephe, Döşeme, Mobilya, Işıklar); Outliner'da her koleksiyonu gizleyip gösterebilirsin. AutoCAD katmanlarına benzer.</li>
+<li><strong>Join</strong> (<code>Ctrl+J</code>): Seçili nesneleri tek nesnede birleştirir. Düzenleme modunda <strong>Separate</strong> (<code>P</code>) tersini yapar.</li>
+</ul>
+<p><strong>Alıştırma:</strong> 1,20 × 0,60 m tablalı, 0,75 m yüksekliğinde bir masa modelle: tabla 30 mm, ayaklar 50 × 50 mm. Ayakları köşe yakalamayla yerleştir, ilk ayağı çoğaltırken Duplicate Linked kullan. Tablaya Apply Scale yap ve hepsini “Mobilya” koleksiyonuna taşı.</p>
+<h3>Gün sonu kontrolü (15 dk)</h3>
+<ul class="tasks">
+<li class="task"><label><input type="checkbox" data-id="g2-1"><span>Add menüsüyle nesne ekleyip F9 ile ayarlarını değiştirebiliyorum.</span></label></li>
+<li class="task"><label><input type="checkbox" data-id="g2-2"><span>G, R, S'yi eksen harfi ve sayı yazarak kullanabiliyorum.</span></label></li>
+<li class="task"><label><input type="checkbox" data-id="g2-3"><span>Sidebar'daki Dimensions kutusuyla ölçü verebiliyorum.</span></label></li>
+<li class="task"><label><input type="checkbox" data-id="g2-4"><span>Yakalama, 3B imleç ve dönme merkezini kullanabiliyorum.</span></label></li>
+<li class="task"><label><input type="checkbox" data-id="g2-5"><span>Duplicate ile Duplicate Linked farkını biliyorum.</span></label></li>
+<li class="task"><label><input type="checkbox" data-id="g2-6"><span>Ölçekledikten sonra neden Apply Scale yapmam gerektiğini biliyorum.</span></label></li>
+<li class="task"><label><input type="checkbox" data-id="g2-7"><span>Nesneleri koleksiyonlara ayırabiliyorum.</span></label></li>
+</ul></div>
+  <div class="pn"><a href="#gun1">← 1. gün</a><a href="#gun3">3. gün →</a></div>
+</section>
+<section class="day" id="gun3" data-day="3">
+  <div class="day-head"><span class="dn">GÜN 03</span><h2>Mesh düzenleme</h2><span class="meta">~4 saat · <span data-prog="3">0/6</span> kontrol</span></div>
+  <div class="prose"><h3>Hedef</h3>
+<p>Gün sonunda düzenleme modunda köşe, kenar ve yüz seçebilecek, halka seçimiyle hızlı çalışabilecek, Extrude, Inset, Loop Cut, Bevel, Merge ve Fill ile bir nesnenin biçimini değiştirebilecek ve ölçülü bir pencere doğraması modelleyebileceksin. Süre yaklaşık 4 saat.</p>
+<h3>1. Köşe, kenar, yüz ve seçim (45 dk)</h3>
+<figure class="fig"><div class="sc"><svg viewBox="0 0 640 204" role="img" xmlns="http://www.w3.org/2000/svg"><defs><marker id="ah-eleman" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0 0L10 5L0 10z" class="ar"/></marker></defs><polygon points="60,60 160,60 160,160 60,160" class="bx"/><circle cx="160" cy="60" r="7" class="dotr"/><text x="110" y="190" class="ta" text-anchor="middle">Vertex · 1</text><polygon points="260,60 360,60 360,160 260,160" class="bx"/><line x1="260" y1="60" x2="360" y2="60" class="sel"/><text x="310" y="190" class="ta" text-anchor="middle">Edge · 2</text><polygon points="460,60 560,60 560,160 460,160" class="bx"/><polygon points="460,60 560,60 560,160 460,160" class="bxa"/><text x="510" y="190" class="ta" text-anchor="middle">Face · 3</text></svg></div><figcaption>Düzenleme modunda üç seçim modu: köşe, kenar, yüz.</figcaption></figure>
+<p>Düzenleme modunda (<code>Tab</code>) üç seçim modu vardır: <strong>Vertex Select Mode</strong> (<code>1</code>), <strong>Edge Select Mode</strong> (<code>2</code>), <strong>Face Select Mode</strong> (<code>3</code>).</p>
+<div class="tw"><table>
+<thead>
+<tr>
+<th>Seçim</th>
+<th>Nasıl</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Tek eleman</td>
+<td>Sol tık; Shift ile ekle/çıkar</td>
+</tr>
+<tr>
+<td><strong>Select All</strong> / <strong>Deselect All</strong></td>
+<td><code>A</code> / <code>Alt+A</code></td>
+</tr>
+<tr>
+<td><strong>Box Select</strong></td>
+<td><code>B</code> ya da sol tuşla sürükle</td>
+</tr>
+<tr>
+<td><strong>Select Loop</strong></td>
+<td><code>Alt</code> + sol tık: bir kenar ya da yüz halkasının tamamı</td>
+</tr>
+<tr>
+<td><strong>Select Linked</strong></td>
+<td><code>Ctrl+L</code>: seçiliye bağlı tüm parça; <code>L</code> fare altındakini seçer</td>
+</tr>
+<tr>
+<td><strong>Select Shortest Path</strong></td>
+<td><code>Ctrl</code> + sol tık: iki eleman arasındaki yol</td>
+</tr>
+</tbody>
+</table></div>
+<p><strong>Select Loop</strong> mimari modellemede en çok kullanacağın seçimdir: bir kolonun tüm çevresini, bir pencerenin iç halkasını tek tıkla seçer.</p>
+<h3>2. Extrude ve Inset (1 saat)</h3>
+<figure class="fig"><div class="sc"><svg viewBox="0 0 640 214" role="img" xmlns="http://www.w3.org/2000/svg"><defs><marker id="ah-extrude" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0 0L10 5L0 10z" class="ar"/></marker></defs><rect x="40" y="90" width="140" height="90" class="bx"/><rect x="70" y="110" width="80" height="50" class="bxa"/><text x="110" y="200" class="ta" text-anchor="middle">Inset (I)</text><polygon points="260,110 400,110 430,92.0 290,92.0" class="bxa"/><polygon points="400,110 430,92.0 430,162.0 400,180" class="bx"/><rect x="260" y="110" width="140" height="70" class="bx"/><polygon points="290,70 370,70 390,58.0 310,58.0" class="bxa"/><polygon points="370,70 390,58.0 390,98.0 370,110" class="bxa"/><rect x="290" y="70" width="80" height="40" class="bxa"/><text x="330" y="200" class="ta" text-anchor="middle">Extrude (E)</text><text x="470" y="110" class="tm" text-anchor="start">I 0.05 Enter → 50 mm içeri</text><text x="470" y="130" class="tm" text-anchor="start">E 0.3 Enter → 30 cm dışarı</text></svg></div><figcaption>Inset yüzün içine yeni yüz açar; Extrude yüzü dışarı çeker.</figcaption></figure>
+<ul>
+<li><strong>Extrude</strong> (<code>E</code>): Seçili yüzü dışarı çeker, aradaki yan yüzleri kendisi oluşturur. <code>E</code> <code>0.3</code> <code>Enter</code> yüzü normali yönünde 30 cm çeker. Kenar ya da köşeyle de çalışır.</li>
+<li><strong>Inset</strong> (<code>I</code>): Seçili yüzün içine, kenarlarına paralel yeni bir yüz açar. <code>I</code> <code>0.05</code> <code>Enter</code> her kenardan 50 mm içeride bir yüz verir.</li>
+</ul>
+<p>Inset ve Extrude birlikte bir doğramanın ya da panelin temel hareketidir: önce <strong>Inset</strong> ile çerçeve genişliğini ver, sonra ortadaki yüzü <strong>Extrude</strong> ile geri it (eksi değer).</p>
+<p>Birden çok yüzü tek tek içe almak için Inset sırasında <code>I</code>'ya bir kez daha bas (Individual).</p>
+<h3>3. Loop Cut (45 dk)</h3>
+<figure class="fig"><div class="sc"><svg viewBox="0 0 640 200" role="img" xmlns="http://www.w3.org/2000/svg"><defs><marker id="ah-loopcut" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0 0L10 5L0 10z" class="ar"/></marker></defs><polygon points="120,60 380,60 430,30.0 170,30.0" class="bxa"/><polygon points="380,60 430,30.0 430,150.0 380,180" class="bx"/><rect x="120" y="60" width="260" height="120" class="bx"/><line x1="207" y1="60" x2="207" y2="180" class="ac"/><line x1="207" y1="60" x2="257" y2="30" class="ac"/><line x1="293" y1="60" x2="293" y2="180" class="ac"/><line x1="293" y1="60" x2="343" y2="30" class="ac"/><text x="440" y="110" class="ta" text-anchor="start">Ctrl+R · tekerlek: halka sayısı</text><text x="440" y="130" class="tm" text-anchor="start">tıkla, kaydır, bırak</text></svg></div><figcaption>Loop Cut: yüz halkası boyunca yeni kenar halkaları ekler.</figcaption></figure>
+<p><strong>Loop Cut</strong> (<code>Ctrl+R</code>): Fareyi bir kenarın üstüne getir; dik yönde sarı bir önizleme halkası çıkar. Tekerlekle halka sayısını artır, tıklayınca yerleşir, sonra kaydırarak konumunu ver (sağ tık ortada bırakır).</p>
+<p>Kullanım alanları:</p>
+<ul>
+<li>Bir duvara pencere açmadan önce pencere kenarlarına halka eklemek,</li>
+<li>Kayıt ve dikme çizgilerini bir panelin üstüne bölmek,</li>
+<li>Subdivision Surface kullanırken keskin kenarları korumak için destek halkası (yarın).</li>
+</ul>
+<h3>4. Bevel (45 dk)</h3>
+<figure class="fig"><div class="sc"><svg viewBox="0 0 640 206" role="img" xmlns="http://www.w3.org/2000/svg"><defs><marker id="ah-bevel" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0 0L10 5L0 10z" class="ar"/></marker></defs><polygon points="60,170 60,60 200,60 200,170" class="bx"/><text x="130" y="196" class="tm" text-anchor="middle">keskin kenar</text><polygon points="300,170 300,76 316,60 440,60 440,170" class="bxa"/><text x="370" y="196" class="ta" text-anchor="middle">Ctrl+B · 1 parça (pah)</text><path d="M 500 170 L 500 82 Q 500 60 522 60 L 610 60 L 610 170 Z" class="bxa"/><text x="555" y="196" class="ta" text-anchor="middle">tekerlek: yuvarlak</text></svg></div><figcaption>Bevel: kenarı pahlar ya da yuvarlatır; render&#x27;da kenarlar ışık yakalar.</figcaption></figure>
+<p><strong>Bevel</strong> (<code>Ctrl+B</code>): Seçili kenarları pahlar ya da yuvarlatır. Fareyi çekerek genişliği, <strong>tekerlekle parça sayısını</strong> ayarla; <code>0.005</code> yazarak 5 mm pah verebilirsin. Köşe pahı için <code>Ctrl+Shift+B</code>.</p>
+<p>Gerçek dünyada hiçbir kenar sıfır keskinlikte değildir; 1–3 mm'lik küçük bir pah bile render'da kenarda ışık parlaması yaratır ve modeli “bilgisayar çizimi” görünümünden kurtarır.</p>
+<p><strong>Bevel çalışmıyor ya da yamuk çıkıyorsa:</strong> neredeyse her zaman nesnenin ölçeği uygulanmamıştır. Nesne moduna dön, <strong>Apply Scale</strong> yap.</p>
+<h3>5. Merge, Fill, silme (30 dk)</h3>
+<ul>
+<li><strong>Merge</strong> (<code>M</code>): Seçili köşeleri tek noktada birleştirir (At Center, At First, At Last).</li>
+<li><strong>Fill</strong> (<code>F</code>): İki köşe arasına kenar, kapalı bir kenar zincirine yüz oluşturur.</li>
+<li><strong>Delete</strong> (<code>X</code>): Köşe, kenar ya da yüz silme menüsü.</li>
+<li><strong>Dissolve Edges</strong> (<code>Ctrl+X</code>): Kenarı silerken yüzü korur; gereksiz bölümleri temizler.</li>
+</ul>
+<h3>6. Proje: pencere doğraması (15 dk + ödev)</h3>
+<figure class="fig"><div class="sc"><svg viewBox="0 0 640 240" role="img" xmlns="http://www.w3.org/2000/svg"><defs><marker id="ah-pencere" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0 0L10 5L0 10z" class="ar"/></marker></defs><rect x="160" y="20" width="240" height="180.0" class="so"/><rect x="196" y="56" width="168" height="108" class="gl"/><line x1="160" y1="12" x2="400" y2="12" class="dm"/><line x1="160" y1="7" x2="160" y2="17" class="dm"/><line x1="400" y1="7" x2="400" y2="17" class="dm"/><text x="280.0" y="6" class="tm" text-anchor="middle">1200</text><line x1="150" y1="20" x2="150" y2="200" class="dm"/><line x1="145" y1="20" x2="155" y2="20" class="dm"/><line x1="145" y1="200" x2="155" y2="200" class="dm"/><text x="140" y="114.0" class="tm" text-anchor="end">1500</text><line x1="160" y1="216" x2="196" y2="216" class="dm"/><line x1="160" y1="211" x2="160" y2="221" class="dm"/><line x1="196" y1="211" x2="196" y2="221" class="dm"/><text x="178.0" y="232" class="tm" text-anchor="middle">60</text><text x="420" y="100" class="ta" text-anchor="start">Inset 60 mm</text><text x="420" y="120" class="tm" text-anchor="start">iç yüzleri sil</text><text x="420" y="140" class="tm" text-anchor="start">Bridge Edge Loops</text><text x="420" y="160" class="tm" text-anchor="start">Bevel 2 mm</text></svg></div><figcaption>Proje: 1200 × 1500 mm pencere kasası.</figcaption></figure>
+<p>1,20 × 1,50 m bir pencere kasası:</p>
+<ol>
+<li>1,20 × 0,07 × 1,50 m bir küp ekle (Dimensions), <strong>Apply Scale</strong>.</li>
+<li>Düzenleme modunda ön ve arka yüzü seç, <strong>Inset</strong> ile 60 mm içeri al (kasa genişliği).</li>
+<li>Ortadaki iki yüzü (ön ve arka) <strong>Delete</strong> › Faces ile sil. Kalan iki iç kenar halkasını seçip <strong>Bridge Edge Loops</strong> ile birleştir: açıklığın iç yüzleri oluşur (aracı yarın ayrıntılı göreceğiz).</li>
+<li>Dış kenarlara 2 mm <strong>Bevel</strong>.</li>
+<li>Ortaya 6 mm kalınlığında bir cam paneli ekle.</li>
+</ol>
+<p><strong>Alıştırma:</strong> Pencereyi bir orta kayıtla iki bölmeye ayır: <strong>Loop Cut</strong> ile ortadan bir halka ekle, halkayı 60 mm genişliğe aç ve doğramayla aynı derinlikte bırak.</p>
+<h3>Gün sonu kontrolü (15 dk)</h3>
+<ul class="tasks">
+<li class="task"><label><input type="checkbox" data-id="g3-1"><span>Köşe, kenar ve yüz seçim modlarını kullanıyorum; Select Loop ile halka seçebiliyorum.</span></label></li>
+<li class="task"><label><input type="checkbox" data-id="g3-2"><span>Extrude ve Inset'i sayı yazarak ölçülü kullanabiliyorum.</span></label></li>
+<li class="task"><label><input type="checkbox" data-id="g3-3"><span>Loop Cut ile halka ekleyip kaydırabiliyorum.</span></label></li>
+<li class="task"><label><input type="checkbox" data-id="g3-4"><span>Bevel ile pah verebiliyor, çalışmadığında Apply Scale'i kontrol ediyorum.</span></label></li>
+<li class="task"><label><input type="checkbox" data-id="g3-5"><span>Merge, Fill, Delete ve Dissolve Edges'i biliyorum.</span></label></li>
+<li class="task"><label><input type="checkbox" data-id="g3-6"><span>Ölçülü bir pencere doğraması modelledim.</span></label></li>
+</ul></div>
+  <div class="pn"><a href="#gun2">← 2. gün</a><a href="#gun4">4. gün →</a></div>
+</section>
+<section class="day" id="gun4" data-day="4">
+  <div class="day-head"><span class="dn">GÜN 04</span><h2>Modifier&#x27;lar</h2><span class="meta">~4 saat · <span data-prog="4">0/6</span> kontrol</span></div>
+  <div class="prose"><h3>Hedef</h3>
+<p>Gün sonunda Knife, Bridge Edge Loops ve Spin gibi ek düzenleme araçlarını kullanabilecek, modifier'larla geri alınabilir (yıkıcı olmayan) modellemenin mantığını bilecek, Mirror, Array, Solidify, Boolean, Bevel Modifier ve Subdivision Surface ile çalışabilecek ve lamelli bir cephe modülü kurabileceksin. Süre yaklaşık 4 saat.</p>
+<h3>1. Ek düzenleme araçları (45 dk)</h3>
+<ul>
+<li><strong>Knife</strong> (<code>K</code>): Yüzlerin üstüne serbestçe yeni kenarlar keser. <code>C</code> açıyı kilitler, <code>Enter</code> onaylar.</li>
+<li><strong>Bisect</strong>: Ağı bir düzlemle ikiye keser; bir duvarı kat seviyesinden bölmek için.</li>
+<li><strong>Bridge Edge Loops</strong>: İki kenar halkası arasını yüzlerle birleştirir; bir duvarda karşılıklı iki pencere deliğini açıklık hâline getirir.</li>
+<li><strong>Grid Fill</strong>: Kapalı bir halkayı düzgün dörtgenlerle doldurur.</li>
+<li><strong>Spin</strong>: Bir profili eksen etrafında döndürür (kolon başlığı, korkuluk babası, yuvarlak kanopi).</li>
+</ul>
+<h3>2. Modifier nedir? (30 dk)</h3>
+<figure class="fig"><div class="sc"><svg viewBox="0 0 640 216" role="img" xmlns="http://www.w3.org/2000/svg"><defs><marker id="ah-yigin" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0 0L10 5L0 10z" class="ar"/></marker></defs><rect x="60" y="20" width="200" height="34" rx="5" class="bx"/><text x="160.0" y="41.0" class="tb" text-anchor="middle">Mesh (asıl ağ)</text><line x1="160" y1="56" x2="160" y2="72" class="mu" marker-end="url(#ah-yigin)"/><rect x="60" y="74" width="200" height="36" rx="5" class="bxa"/><text x="160.0" y="88.0" class="tb" text-anchor="middle">Array</text><text x="160.0" y="104.0" class="tm" text-anchor="middle">X'te 10 adet</text><line x1="160" y1="102" x2="160" y2="118" class="mu" marker-end="url(#ah-yigin)"/><rect x="60" y="120" width="200" height="36" rx="5" class="bxa"/><text x="160.0" y="134.0" class="tb" text-anchor="middle">Solidify</text><text x="160.0" y="150.0" class="tm" text-anchor="middle">40 mm kalınlık</text><line x1="160" y1="148" x2="160" y2="164" class="mu" marker-end="url(#ah-yigin)"/><rect x="60" y="166" width="200" height="36" rx="5" class="bxa"/><text x="160.0" y="180.0" class="tb" text-anchor="middle">Bevel Modifier</text><text x="160.0" y="196.0" class="tm" text-anchor="middle">3 mm, açı 30°</text><text x="300" y="100" class="ta" text-anchor="start">yukarıdan aşağı uygulanır</text><text x="300" y="120" class="tm" text-anchor="start">değerler her zaman değişebilir</text><text x="300" y="140" class="tm" text-anchor="start">Ctrl+A: kalıcı yap (Apply Modifier)</text></svg></div><figcaption>Modifier yığını: asıl ağ değişmez, işlemler sırayla üstüne eklenir.</figcaption></figure>
+<p><strong>Modifier</strong>, nesnenin ağını değiştirmeden üstüne uygulanan bir işlemdir. Properties › Modifiers (anahtar simgesi) › <strong>Add Modifier</strong>. Avantajı:</p>
+<ul>
+<li>Değerler her zaman değiştirilebilir (kalınlığı 40 mm'den 60 mm'ye çıkar, her şey güncellenir).</li>
+<li>Kapatıp açabilir, sırasını değiştirebilirsin.</li>
+<li>Ağ hafif kalır.</li>
+</ul>
+<p>Modifier'lar <strong>yukarıdan aşağı</strong> sırayla uygulanır; sıra sonucu değiştirir. Örnek: önce Array sonra Bevel Modifier, çoğaltılan her parçanın kenarını pahlar.</p>
+<p>Kalıcı yapmak istersen fare modifier'ın üstündeyken <strong>Apply Modifier</strong> (<code>Ctrl+A</code>).</p>
+<h3>3. Mirror, Array, Solidify (1 saat)</h3>
+<figure class="fig"><div class="sc"><svg viewBox="0 0 640 220" role="img" xmlns="http://www.w3.org/2000/svg"><defs><marker id="ah-array" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0 0L10 5L0 10z" class="ar"/></marker></defs><polygon points="40,80 90,80 110,68.0 60,68.0" class="bxa"/><polygon points="90,80 110,68.0 110,138.0 90,150" class="bxa"/><rect x="40" y="80" width="50" height="70" class="bxa"/><polygon points="106,80 156,80 176,68.0 126,68.0" class="bx"/><polygon points="156,80 176,68.0 176,138.0 156,150" class="bx"/><rect x="106" y="80" width="50" height="70" class="bx"/><polygon points="172,80 222,80 242,68.0 192,68.0" class="bx"/><polygon points="222,80 242,68.0 242,138.0 222,150" class="bx"/><rect x="172" y="80" width="50" height="70" class="bx"/><polygon points="238,80 288,80 308,68.0 258,68.0" class="bx"/><polygon points="288,80 308,68.0 308,138.0 288,150" class="bx"/><rect x="238" y="80" width="50" height="70" class="bx"/><polygon points="304,80 354,80 374,68.0 324,68.0" class="bx"/><polygon points="354,80 374,68.0 374,138.0 354,150" class="bx"/><rect x="304" y="80" width="50" height="70" class="bx"/><polygon points="370,80 420,80 440,68.0 390,68.0" class="bx"/><polygon points="420,80 440,68.0 440,138.0 420,150" class="bx"/><rect x="370" y="80" width="50" height="70" class="bx"/><polygon points="436,80 486,80 506,68.0 456,68.0" class="bx"/><polygon points="486,80 506,68.0 506,138.0 486,150" class="bx"/><rect x="436" y="80" width="50" height="70" class="bx"/><polygon points="502,80 552,80 572,68.0 522,68.0" class="bx"/><polygon points="552,80 572,68.0 572,138.0 552,150" class="bx"/><rect x="502" y="80" width="50" height="70" class="bx"/><text x="40" y="190" class="ta" text-anchor="start">Count 8 · Relative Offset 1,3</text><text x="40" y="210" class="tm" text-anchor="start">ya da Constant Offset 0,30 m · Fit Length</text></svg></div><figcaption>Array: tek parçayı aralıklarla çoğaltır.</figcaption></figure>
+<ul>
+<li><strong>Mirror</strong>: Nesneyi bir eksene göre aynalar. Simetrik bir modelin (bir bina cephesi, bir sandalye) yarısını modellersin, diğer yarısı kendiliğinden oluşur. <strong>Clipping</strong> seçeneği ortadaki köşelerin simetri düzleminden kaçmasını önler.</li>
+<li><strong>Array</strong>: Nesneyi çoğaltır. <strong>Relative Offset</strong> nesnenin boyuna göre (1 = yan yana bitişik), <strong>Constant Offset</strong> sabit mesafeyle (ör. 0,30 m). <strong>Count</strong> adet, ya da <strong>Fit Type: Fit Length</strong> ile verilen boyu dolduracak kadar.</li>
+<li><strong>Solidify</strong>: Yüzeye kalınlık verir. Bir düzlemi 3 mm alüminyum levhaya, 10 mm cama dönüştürmek için. <strong>Offset</strong> kalınlığın hangi yöne ekleneceğini seçer.</li>
+</ul>
+<p>Array'leri iç içe kullanmak mümkündür: önce X'te 10 adet, sonra Z'de 5 adet → 50 parçalık bir ızgara.</p>
+<h3>4. Boolean ve Bevel Modifier (45 dk)</h3>
+<ul>
+<li><strong>Boolean</strong>: Başka bir nesneyle <strong>Difference</strong> (fark: delik açma), <strong>Union</strong> (birleşim) ya da <strong>Intersect</strong> (kesişim) alır. Kesici nesneyi Outliner'da gizle ya da Display As › Wire yap.</li>
+<li><strong>Bevel Modifier</strong>: Ağı değiştirmeden tüm kenarları pahlar. <strong>Limit Method: Angle</strong> (ör. 30°) yalnızca keskin kenarlarda çalışır; mimari modellerin tümüne birkaç milimetrelik bir pah vermenin en hızlı yolu.</li>
+</ul>
+<p>Örnek: delikli cephe paneli. Bir levhaya <strong>Solidify</strong>, delik için küçük bir silindire iki yönde <strong>Array</strong> ver, sonra levhaya bu silindirle <strong>Boolean</strong> (Difference) uygula. Delik çapı ya da aralığı değişince panel kendiliğinden güncellenir.</p>
+<h3>5. Subdivision Surface ve yumuşatma (30 dk)</h3>
+<figure class="fig"><div class="sc"><svg viewBox="0 0 640 204" role="img" xmlns="http://www.w3.org/2000/svg"><defs><marker id="ah-subsurf" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0 0L10 5L0 10z" class="ar"/></marker></defs><rect x="40" y="50" width="140" height="110" class="bx"/><text x="110" y="190" class="tm" text-anchor="middle">küp</text><rect x="240" y="50" width="140" height="110" rx="45" class="bxa"/><text x="310" y="190" class="ta" text-anchor="middle">Subdivision 2</text><rect x="440" y="50" width="140" height="110" rx="10" class="bxa"/><line x1="452" y1="50" x2="452" y2="160" class="acl"/><line x1="568" y1="50" x2="568" y2="160" class="acl"/><text x="510" y="190" class="ta" text-anchor="middle">+ destek halkaları</text></svg></div><figcaption>Subdivision Surface: destek halkaları kenara yaklaştıkça köşe keskinleşir.</figcaption></figure>
+<p><strong>Subdivision Surface</strong> (<code>Ctrl+1</code>…<code>Ctrl+5</code>): Ağı bölerek yumuşatır. Mobilya, yastık, organik biçimler için. Keskin kalması gereken kenarlara <strong>Loop Cut</strong> ile yakın bir destek halkası eklenir; halka kenara ne kadar yakınsa kenar o kadar keskin kalır.</p>
+<p>Gölgelendirme: <strong>Shade Smooth</strong> yüzü yumuşak, <strong>Shade Auto Smooth</strong> yalnızca belirli açının altındaki kenarları yumuşak gösterir (keskin köşeler keskin kalır). Mimari nesnelerde Shade Auto Smooth güvenli seçimdir.</p>
+<h3>6. Proje: lamelli cephe modülü (15 dk + ödev)</h3>
+<figure class="fig"><div class="sc"><svg viewBox="0 0 640 250" role="img" xmlns="http://www.w3.org/2000/svg"><defs><marker id="ah-lamel" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0 0L10 5L0 10z" class="ar"/></marker></defs><rect x="60" y="20" width="12" height="220" class="so"/><rect x="260" y="20" width="12" height="220" class="so"/><polygon points="72,34 260,34 260,41 72,41" class="bxa"/><polygon points="72,55 260,55 260,62 72,62" class="bx"/><polygon points="72,76 260,76 260,83 72,83" class="bx"/><polygon points="72,97 260,97 260,104 72,104" class="bx"/><polygon points="72,118 260,118 260,125 72,125" class="bx"/><polygon points="72,139 260,139 260,146 72,146" class="bx"/><polygon points="72,160 260,160 260,167 72,167" class="bx"/><polygon points="72,181 260,181 260,188 72,188" class="bx"/><polygon points="72,202 260,202 260,209 72,209" class="bx"/><polygon points="72,223 260,223 260,230 72,230" class="bx"/><line x1="300" y1="34" x2="300" y2="55" class="dm"/><line x1="295" y1="34" x2="305" y2="34" class="dm"/><line x1="295" y1="55" x2="305" y2="55" class="dm"/><text x="310" y="48.5" class="tm" text-anchor="start">0,35 m</text><text x="320" y="120" class="ta" text-anchor="start">Array: Z yönünde, Fit Length 3,40 m</text><text x="320" y="140" class="tm" text-anchor="start">Bevel Modifier 5 mm</text><text x="320" y="160" class="tm" text-anchor="start">aralığı değiştir → cephe güncellenir</text></svg></div><figcaption>Lamelli cephe modülü: tek lamel + Array.</figcaption></figure>
+<ol>
+<li>1,50 × 3,60 m bir cephe modülü: dikme ve kayıtları dünkü yöntemle (Inset + Extrude) kur.</li>
+<li>300 × 40 mm kesitli bir lamel modelle, uçlarına 5 mm <strong>Bevel Modifier</strong>.</li>
+<li>Lamele <strong>Array</strong> ver: Z yönünde Constant Offset 0,35 m, <strong>Fit Length</strong> 3,40 m.</li>
+<li>Lameller arasına eğim vermek için lameli X ekseninde 20° döndür (Rotate, Apply Rotation).</li>
+<li>Modülü <strong>Duplicate Linked</strong> ile yan yana çoğalt ya da modüle de bir <strong>Array</strong> ver.</li>
+</ol>
+<p><strong>Alıştırma:</strong> Lamel aralığını 0,35'ten 0,25 m'ye düşür ve sonucu gör: modifier'lar sayesinde tek değer değiştirerek tüm cephe güncelleniyor.</p>
+<h3>Gün sonu kontrolü (15 dk)</h3>
+<ul class="tasks">
+<li class="task"><label><input type="checkbox" data-id="g4-1"><span>Knife, Bisect, Bridge Edge Loops, Grid Fill ve Spin'in ne işe yaradığını biliyorum.</span></label></li>
+<li class="task"><label><input type="checkbox" data-id="g4-2"><span>Modifier'ların yıkıcı olmayan çalıştığını ve sıranın önemli olduğunu biliyorum.</span></label></li>
+<li class="task"><label><input type="checkbox" data-id="g4-3"><span>Mirror, Array ve Solidify'ı ölçülü kullanabiliyorum.</span></label></li>
+<li class="task"><label><input type="checkbox" data-id="g4-4"><span>Boolean ile delik açabiliyor, Bevel Modifier'ı açı sınırıyla kullanabiliyorum.</span></label></li>
+<li class="task"><label><input type="checkbox" data-id="g4-5"><span>Subdivision Surface'te keskin kenar için destek halkası eklemeyi biliyorum.</span></label></li>
+<li class="task"><label><input type="checkbox" data-id="g4-6"><span>Lamelli bir cephe modülünü modifier'larla kurdum.</span></label></li>
+</ul></div>
+  <div class="pn"><a href="#gun3">← 3. gün</a><a href="#gun5">5. gün →</a></div>
+</section>
+<section class="day" id="gun5" data-day="5">
+  <div class="day-head"><span class="dn">GÜN 05</span><h2>CAD&#x27;den Blender&#x27;a</h2><span class="meta">~4 saat · <span data-prog="5">0/6</span> kontrol</span></div>
+  <div class="prose"><h3>Hedef</h3>
+<p>Gün sonunda Rhino, AutoCAD, SolidWorks ya da Revit'te hazırlanmış bir modeli Blender'a doğru ölçekte alabilecek, içe alınan ağdaki çift köşeleri, ters normalleri ve gölgelendirme hatalarını temizleyebilecek, çok yoğun ağları hafifletebilecek ve render için düzenli bir sahne kurabileceksin. Süre yaklaşık 4 saat.</p>
+<h3>1. Hangi biçim? (1 saat)</h3>
+<figure class="fig"><div class="sc"><svg viewBox="0 0 640 86" role="img" xmlns="http://www.w3.org/2000/svg"><defs><marker id="ah-bicim" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0 0L10 5L0 10z" class="ar"/></marker></defs><rect x="10.0" y="16" width="109.6" height="56" rx="5" class="bx"/><text x="64.8" y="40.0" class="tb" text-anchor="middle">Rhino, SW</text><text x="64.8" y="56.0" class="tm" text-anchor="middle">NURBS, katı</text><rect x="137.6" y="16" width="109.6" height="56" rx="5" class="bx"/><text x="192.39999999999998" y="40.0" class="tb" text-anchor="middle">Mesh'e çevir</text><text x="192.39999999999998" y="56.0" class="tm" text-anchor="middle">OBJ, FBX, glTF</text><line x1="121.6" y1="44.0" x2="135.6" y2="44.0" class="mu" marker-end="url(#ah-bicim)"/><rect x="265.2" y="16" width="109.6" height="56" rx="5" class="bxa"/><text x="320.0" y="40.0" class="tb" text-anchor="middle">Import</text><text x="320.0" y="56.0" class="tm" text-anchor="middle">Scale 0.001</text><line x1="249.2" y1="44.0" x2="263.2" y2="44.0" class="mu" marker-end="url(#ah-bicim)"/><rect x="392.79999999999995" y="16" width="109.6" height="56" rx="5" class="bx"/><text x="447.59999999999997" y="40.0" class="tb" text-anchor="middle">Temizle</text><text x="447.59999999999997" y="56.0" class="tm" text-anchor="middle">merge, normal</text><line x1="376.79999999999995" y1="44.0" x2="390.79999999999995" y2="44.0" class="mu" marker-end="url(#ah-bicim)"/><rect x="520.4" y="16" width="109.6" height="56" rx="5" class="bx"/><text x="575.1999999999999" y="40.0" class="tb" text-anchor="middle">Blender sahnesi</text><text x="575.1999999999999" y="56.0" class="tm" text-anchor="middle">koleksiyonlar</text><line x1="504.4" y1="44.0" x2="518.4" y2="44.0" class="mu" marker-end="url(#ah-bicim)"/></svg></div><figcaption>CAD&#x27;den Blender&#x27;a: model önce ağa çevrilir, sonra içe alınıp temizlenir.</figcaption></figure>
+<p>Blender CAD programlarının NURBS ve katı modellerini doğrudan açmaz; modelin <strong>ağa (mesh)</strong> çevrilmiş bir biçimi gerekir. <strong>Import</strong> (File › Import) ile:</p>
+<div class="tw"><table>
+<thead>
+<tr>
+<th>Biçim</th>
+<th>Ne zaman</th>
+<th>Not</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>OBJ</td>
+<td>Rhino, SolidWorks, çoğu program</td>
+<td>Basit, güvenilir; malzeme adları korunur</td>
+</tr>
+<tr>
+<td>FBX</td>
+<td>Rhino, 3ds Max, Revit (eklentiyle)</td>
+<td>Hiyerarşi ve birimler taşınır</td>
+</tr>
+<tr>
+<td>glTF / GLB</td>
+<td>Web, Revit ve SketchUp eklentileri</td>
+<td>Malzemeler Principled BSDF'e yakın gelir</td>
+</tr>
+<tr>
+<td>STL</td>
+<td>3B baskı modelleri</td>
+<td>Malzeme ve renk yok</td>
+</tr>
+<tr>
+<td>USD</td>
+<td>Pipeline'lar, büyük sahneler</td>
+<td>Gelişmiş, katmanlı</td>
+</tr>
+<tr>
+<td>IFC</td>
+<td>BIM modelleri</td>
+<td><strong>Bonsai</strong> eklentisiyle (Extensions'tan)</td>
+</tr>
+<tr>
+<td>DXF</td>
+<td>2B çizimler, basit 3B</td>
+<td>DXF içe alma eklentisi (Extensions)</td>
+</tr>
+</tbody>
+</table></div>
+<p><strong>Rhino'dan dışa verirken:</strong> Export › OBJ ya da FBX; ağ ayarında “Detailed Controls” ile yeterli yoğunluk ver (eğrisel yüzeyler köşeli görünmesin), birimi belirt. Katmanlar Blender'da ayrı nesnelere dönüşür, bu sahneyi düzenlemeyi kolaylaştırır.</p>
+<h3>2. Ölçek ve birim (45 dk)</h3>
+<figure class="fig"><div class="sc"><svg viewBox="0 0 640 114" role="img" xmlns="http://www.w3.org/2000/svg"><defs><marker id="ah-olcek" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0 0L10 5L0 10z" class="ar"/></marker></defs><text x="160" y="18" class="ta" text-anchor="middle">yanlış</text><text x="480" y="18" class="ta" text-anchor="middle">doğru</text><rect x="10" y="26" width="300" height="78" class="bx"/><rect x="330" y="26" width="300" height="78" class="bxa"/><text x="22" y="46" class="tm" text-anchor="start">1500 mm'lik modül birimsiz gelir</text><text x="22" y="68" class="tm" text-anchor="start">Blender'da 1500 m'lik dev</text><text x="22" y="90" class="tm" text-anchor="start">ışık ve kamera anlamsız</text><text x="342" y="46" class="tm" text-anchor="start">Import › Scale 0.001</text><text x="342" y="68" class="tm" text-anchor="start">Dimensions: 1,5 m</text><text x="342" y="90" class="tm" text-anchor="start">ardından Apply Scale</text></svg></div><figcaption>Ölçek: milimetre modeller metreye çevrilerek alınır.</figcaption></figure>
+<p>CAD modelleri genellikle <strong>milimetre</strong>, Blender ise varsayılanda <strong>metre</strong> ile çalışır. 1500 mm'lik bir cephe modülü, birim belirtilmeden içe alınırsa 1500 m'lik bir dev olarak gelir.</p>
+<ul>
+<li>İçe alırken <strong>Scale</strong> seçeneğine <code>0.001</code> yaz (mm → m) ya da dışa verirken birimi metre seç.</li>
+<li>Kontrol: Sidebar'da (<code>N</code>) Dimensions modülün gerçek ölçüsünü göstermeli (1,5 m).</li>
+<li>Sonra mutlaka <strong>Apply Scale</strong>.</li>
+</ul>
+<p>Model sahnenin merkezinden çok uzakta (koordinatları binlerce metrede) geliyorsa görüntüde titreme ve kırpılma olur. Tüm modeli seç, <strong>Snap Menu</strong> (<code>Shift+S</code>) ile 3B imleci seçime al ve modeli orijine yakın taşı.</p>
+<h3>3. Ağ temizliği (1 saat)</h3>
+<figure class="fig"><div class="sc"><svg viewBox="0 0 640 210" role="img" xmlns="http://www.w3.org/2000/svg"><defs><marker id="ah-normal" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0 0L10 5L0 10z" class="ar"/></marker></defs><rect x="60" y="60" width="200" height="110" class="bxa"/><text x="160" y="120" class="ta" text-anchor="middle">dış yüz (mavi)</text><rect x="340" y="60" width="200" height="110" class="bx" style="fill:color-mix(in srgb,#d64545 22%,transparent)"/><text x="440" y="120" class="tr2" text-anchor="middle">ters yüz (kırmızı)</text><line x1="160" y1="60" x2="160" y2="24" class="ac" marker-end="url(#ah-normal)"/><line x1="440" y1="60" x2="440" y2="96" class="ac" marker-end="url(#ah-normal)"/><text x="320" y="200" class="tm" text-anchor="middle">Overlays › Face Orientation · düzelt: Recalculate Normals (Shift+N)</text></svg></div><figcaption>Normaller: render&#x27;da görünen yüzler dışa bakmalı.</figcaption></figure>
+<p>İçe alınan ağlarda sık görülen sorunlar ve çözümleri:</p>
+<div class="tw"><table>
+<thead>
+<tr>
+<th>Sorun</th>
+<th>Belirtisi</th>
+<th>Çözüm</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Çift köşeler</td>
+<td>Bevel ve yumuşatma bozuk, yüzlerde çizgiler</td>
+<td>Düzenleme modunda tümünü seç, <strong>Merge by Distance</strong></td>
+</tr>
+<tr>
+<td>Ters normaller</td>
+<td>Yüz karanlık ya da şeffaf görünür</td>
+<td><strong>Recalculate Normals</strong> (<code>Shift+N</code>) ya da <strong>Flip Normals</strong></td>
+</tr>
+<tr>
+<td>Kötü gölgelendirme</td>
+<td>Düz yüzlerde lekeler, kenarlarda kararma</td>
+<td><strong>Shade Auto Smooth</strong> ya da <strong>Shade Flat</strong></td>
+</tr>
+<tr>
+<td>Çok fazla üçgen</td>
+<td>Ağ dağınık, düzenlenemiyor</td>
+<td><strong>Tris to Quads</strong> (<code>Alt+J</code>)</td>
+</tr>
+<tr>
+<td>Gereksiz yoğun ağ</td>
+<td>Dosya ağır, görünüm yavaş</td>
+<td><strong>Decimate</strong> modifier</td>
+</tr>
+</tbody>
+</table></div>
+<p>Normalleri görmek için görünüm üst menüsünde Overlays › <strong>Face Orientation</strong>: mavi dış yüz, kırmızı iç yüz. Render'da görünen yüzlerin mavi olması gerekir.</p>
+<h3>4. Sahne düzeni (45 dk)</h3>
+<ul>
+<li>İçe alınan nesneleri <strong>Move to Collection</strong> ile koleksiyonlara ayır: Cephe, Bina, Çevre, Işıklar, Kameralar.</li>
+<li>Aynı malzemeyi kullanan parçaları gerekirse <strong>Join</strong> ile birleştir; nesne sayısı azalınca sahne hızlanır.</li>
+<li>Ağır çevre modellerini (komşu binalar, ağaçlar) ayrı bir koleksiyonda tut ve çalışırken gizle.</li>
+<li><strong>Append</strong> ile başka bir .blend dosyasından hazır malzeme, mobilya ya da ışık kurulumu al. Blender'ın <strong>Asset Browser</strong>'ı sık kullandığın nesneleri bir kütüphanede toplar.</li>
+</ul>
+<h3>5. Revit ve BIM'den gelen modeller (15 dk)</h3>
+<p>Revit modeli FBX, glTF ya da IFC olarak alınabilir. IFC için <strong>Bonsai</strong> eklentisi (eski adıyla BlenderBIM) modeli bina elemanlarıyla birlikte açar. Büyük BIM modellerinde render için gerekmeyen elemanları (iç tesisat, gizli elemanlar) dışa vermeden önce Revit'te kapatmak dosyayı çok hafifletir.</p>
+<p><strong>Alıştırma:</strong> Rhino ya da SolidWorks'ten bir cephe modülünü OBJ olarak (mm) dışa ver, Blender'a Scale 0.001 ile al. Dimensions ile ölçüyü kontrol et, Apply Scale yap, Face Orientation ile normalleri kontrol et, Merge by Distance ve Recalculate Normals ile temizle, Shade Auto Smooth uygula ve nesneleri koleksiyonlara ayır.</p>
+<h3>Gün sonu kontrolü (15 dk)</h3>
+<ul class="tasks">
+<li class="task"><label><input type="checkbox" data-id="g5-1"><span>OBJ, FBX, glTF, STL, USD, IFC ve DXF'in hangi durumda kullanıldığını biliyorum.</span></label></li>
+<li class="task"><label><input type="checkbox" data-id="g5-2"><span>Milimetre modeli doğru ölçekte içe alıp Apply Scale yapabiliyorum.</span></label></li>
+<li class="task"><label><input type="checkbox" data-id="g5-3"><span>Çift köşeleri Merge by Distance ile temizliyorum.</span></label></li>
+<li class="task"><label><input type="checkbox" data-id="g5-4"><span>Face Orientation ile normalleri kontrol edip Recalculate Normals ile düzeltiyorum.</span></label></li>
+<li class="task"><label><input type="checkbox" data-id="g5-5"><span>Gölgelendirme hatalarını Shade Auto Smooth ile çözüyorum.</span></label></li>
+<li class="task"><label><input type="checkbox" data-id="g5-6"><span>Sahneyi koleksiyonlarla düzenleyebiliyorum.</span></label></li>
+</ul></div>
+  <div class="pn"><a href="#gun4">← 4. gün</a><a href="#gun6">6. gün →</a></div>
+</section>
+<section class="day" id="gun6" data-day="6">
+  <div class="day-head"><span class="dn">GÜN 06</span><h2>Malzeme, UV ve ışık</h2><span class="meta">~4 saat · <span data-prog="6">0/6</span> kontrol</span></div>
+  <div class="prose"><h3>Hedef</h3>
+<p>Gün sonunda Principled BSDF ile cam, alüminyum, beton ve ahşap malzemeleri kurabilecek, resim dokularını UV ile doğru ölçekte yerleştirebilecek, Node Wrangler ile hızlı çalışabilecek ve güneş, alan ve nokta ışıklarla, HDRI gökyüzüyle gerçekçi bir aydınlatma kurabileceksin. Süre yaklaşık 4 saat.</p>
+<h3>1. Principled BSDF (1 saat 15 dk)</h3>
+<figure class="fig"><div class="sc"><svg viewBox="0 0 640 230" role="img" xmlns="http://www.w3.org/2000/svg"><defs><marker id="ah-bsdf" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0 0L10 5L0 10z" class="ar"/></marker></defs><rect x="40" y="20" width="200" height="200" class="bxa"/><text x="140" y="44" class="tb" text-anchor="middle">Principled BSDF</text><circle cx="40" cy="70" r="4" class="dotr"/><text x="52" y="74" class="tm" text-anchor="start">Base Color</text><circle cx="40" cy="94" r="4" class="dotr"/><text x="52" y="98" class="tm" text-anchor="start">Metallic</text><circle cx="40" cy="118" r="4" class="dotr"/><text x="52" y="122" class="tm" text-anchor="start">Roughness</text><circle cx="40" cy="142" r="4" class="dotr"/><text x="52" y="146" class="tm" text-anchor="start">IOR</text><circle cx="40" cy="166" r="4" class="dotr"/><text x="52" y="170" class="tm" text-anchor="start">Transmission</text><circle cx="40" cy="190" r="4" class="dotr"/><text x="52" y="194" class="tm" text-anchor="start">Normal</text><line x1="242" y1="120" x2="320" y2="120" class="mu" marker-end="url(#ah-bsdf)"/><rect x="322" y="100" width="110" height="40" rx="5" class="bx"/><text x="377.0" y="116.0" class="tb" text-anchor="middle">Material</text><text x="377.0" y="132.0" class="tm" text-anchor="middle">Output</text><text x="460" y="60" class="tm" text-anchor="start">alüminyum: Metallic 1</text><text x="460" y="80" class="tm" text-anchor="start">boya: Metallic 0</text><text x="460" y="100" class="tm" text-anchor="start">cam: Transmission 1</text><text x="460" y="120" class="tm" text-anchor="start">IOR 1,5</text><text x="460" y="140" class="tm" text-anchor="start">beton: Roughness 0,8+</text></svg></div><figcaption>Principled BSDF: mimari malzemelerin çoğu tek düğümle yapılır.</figcaption></figure>
+<p>Blender'da malzemelerin çoğu tek bir düğümle yapılır: <strong>Principled BSDF</strong>. Properties › Material › New dediğinde gelen düğüm budur. En önemli ayarları:</p>
+<div class="tw"><table>
+<thead>
+<tr>
+<th>Ayar</th>
+<th>Ne yapar</th>
+<th>Değer aralığı</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Base Color</td>
+<td>Rengi</td>
+<td>RAL renk kodunu RGB olarak gir</td>
+</tr>
+<tr>
+<td>Metallic</td>
+<td>Metal mi?</td>
+<td>0 (metal değil) ya da 1 (metal); ara değer nadiren</td>
+</tr>
+<tr>
+<td>Roughness</td>
+<td>Pürüzlülük</td>
+<td>0 ayna gibi, 1 tamamen mat</td>
+</tr>
+<tr>
+<td>IOR</td>
+<td>Kırılma indisi</td>
+<td>Cam ≈ 1,5</td>
+</tr>
+<tr>
+<td>Transmission › Weight</td>
+<td>Işık geçirgenliği</td>
+<td>Cam için 1</td>
+</tr>
+<tr>
+<td>Normal</td>
+<td>Yüzey kabartması</td>
+<td>Normal ya da Bump haritası bağlanır</td>
+</tr>
+</tbody>
+</table></div>
+<p>Mimari malzemeler için başlangıç noktaları:</p>
+<div class="tw"><table>
+<thead>
+<tr>
+<th>Malzeme</th>
+<th>Metallic</th>
+<th>Roughness</th>
+<th>Not</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Eloksal alüminyum</td>
+<td>1</td>
+<td>0,3–0,5</td>
+<td>Base Color gri tonu</td>
+</tr>
+<tr>
+<td>Toz boyalı alüminyum</td>
+<td>0</td>
+<td>0,4–0,6</td>
+<td>RAL rengi, boya metal değildir</td>
+</tr>
+<tr>
+<td>Cam (şeffaf)</td>
+<td>0</td>
+<td>0–0,05</td>
+<td>Transmission 1, IOR 1,5, hafif renk</td>
+</tr>
+<tr>
+<td>Beton</td>
+<td>0</td>
+<td>0,8–0,9</td>
+<td>Resim dokusu + Bump</td>
+</tr>
+<tr>
+<td>Ahşap</td>
+<td>0</td>
+<td>0,5–0,7</td>
+<td>Resim dokusu, yön önemli</td>
+</tr>
+</tbody>
+</table></div>
+<p>Malzemeleri <strong>Shading Pie</strong> (<code>Z</code>) › Material Preview ya da Rendered görünümde kontrol et.</p>
+<h3>2. Resim dokusu ve UV (1 saat)</h3>
+<figure class="fig"><div class="sc"><svg viewBox="0 0 640 86" role="img" xmlns="http://www.w3.org/2000/svg"><defs><marker id="ah-uv" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0 0L10 5L0 10z" class="ar"/></marker></defs><rect x="10.0" y="16" width="141.5" height="56" rx="5" class="bx"/><text x="80.75" y="40.0" class="tb" text-anchor="middle">Mark Seam</text><text x="80.75" y="56.0" class="tm" text-anchor="middle">kesim çizgisi</text><rect x="169.5" y="16" width="141.5" height="56" rx="5" class="bxa"/><text x="240.25" y="40.0" class="tb" text-anchor="middle">Unwrap</text><text x="240.25" y="56.0" class="tm" text-anchor="middle">U</text><line x1="153.5" y1="44.0" x2="167.5" y2="44.0" class="mu" marker-end="url(#ah-uv)"/><rect x="329.0" y="16" width="141.5" height="56" rx="5" class="bx"/><text x="399.75" y="40.0" class="tb" text-anchor="middle">UV ölçeği</text><text x="399.75" y="56.0" class="tm" text-anchor="middle">gerçek ölçü</text><line x1="313.0" y1="44.0" x2="327.0" y2="44.0" class="mu" marker-end="url(#ah-uv)"/><rect x="488.5" y="16" width="141.5" height="56" rx="5" class="bx"/><text x="559.25" y="40.0" class="tb" text-anchor="middle">Image Texture</text><text x="559.25" y="56.0" class="tm" text-anchor="middle">doku</text><line x1="472.5" y1="44.0" x2="486.5" y2="44.0" class="mu" marker-end="url(#ah-uv)"/></svg></div><figcaption>UV: 3B yüzeyi düzleme açıp dokuyu gerçek ölçüde yerleştirir.</figcaption></figure>
+<p>Beton, ahşap ve taş gibi malzemeler bir resim dokusu ister: Shader Editor'de <strong>Add Node</strong> (<code>Shift+A</code>) › <strong>Image Texture</strong>, resmi aç ve Base Color'a bağla.</p>
+<p>Dokunun nesneye nasıl sarılacağını <strong>UV</strong> belirler:</p>
+<ul>
+<li><strong>Unwrap</strong> (<code>U</code>): Ağı düzleme açar. Önce <strong>Mark Seam</strong> ile kesim çizgilerini işaretlersen açılım düzenli olur.</li>
+<li><strong>Smart UV Project</strong> (<code>U</code> menüsü): Ağı açılara göre otomatik parçalara ayırıp açar. Kutu biçimli mimari elemanlarda hızlı ve yeterlidir.</li>
+</ul>
+<p><strong>Gerçek ölçüde doku:</strong> 1 × 1 m'lik bir beton fotoğrafının duvarda gerçek ölçüde görünmesi için UV ölçeğini doku ölçüsüne göre ayarla (UV Editing çalışma alanında UV'leri ölçekle ya da Mapping düğümünde Scale ver). Doku tekrarının fark edilmesi gerçekçiliği en çok bozan hatadır.</p>
+<p><strong>Node Wrangler</strong> eklentisi (Preferences › Add-ons) açıkken bir doku düğümünü seçip <strong>Node Wrangler Texture Setup</strong> (<code>Ctrl+T</code>) yaparsan doku koordinat ve eşleme düğümleri kendiliğinden eklenir. Sık kullandığın düğüm düzenlerini <strong>Make Group</strong> (<code>Ctrl+G</code>) ile gruplayıp tekrar kullanabilirsin.</p>
+<h3>3. Işıklar (1 saat)</h3>
+<figure class="fig"><div class="sc"><svg viewBox="0 0 640 122" role="img" xmlns="http://www.w3.org/2000/svg"><defs><marker id="ah-isik" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0 0L10 5L0 10z" class="ar"/></marker></defs><rect x="10.0" y="10" width="200.0" height="48" rx="5" class="bxa"/><text x="110.0" y="30.0" class="tb" text-anchor="middle">Sun Light</text><text x="110.0" y="46.0" class="tm" text-anchor="middle">gün ışığı, paralel gölge</text><rect x="220.0" y="10" width="200.0" height="48" rx="5" class="bx"/><text x="320.0" y="30.0" class="tb" text-anchor="middle">Area Light</text><text x="320.0" y="46.0" class="tm" text-anchor="middle">pencere, armatür</text><rect x="430.0" y="10" width="200.0" height="48" rx="5" class="bx"/><text x="530.0" y="30.0" class="tb" text-anchor="middle">Point Light</text><text x="530.0" y="46.0" class="tm" text-anchor="middle">ampul</text><rect x="10.0" y="66" width="200.0" height="48" rx="5" class="bx"/><text x="110.0" y="86.0" class="tb" text-anchor="middle">Spot Light</text><text x="110.0" y="102.0" class="tm" text-anchor="middle">spot, cephe aydınlatma</text><rect x="220.0" y="66" width="200.0" height="48" rx="5" class="bxa"/><text x="320.0" y="86.0" class="tb" text-anchor="middle">HDRI World</text><text x="320.0" y="102.0" class="tm" text-anchor="middle">gökyüzü, yansıma</text><rect x="430.0" y="66" width="200.0" height="48" rx="5" class="bx"/><text x="530.0" y="86.0" class="tb" text-anchor="middle">Boyut</text><text x="530.0" y="102.0" class="tm" text-anchor="middle">büyük ışık, yumuşak gölge</text></svg></div><figcaption>Işık türleri: dış mekânda HDRI + güneş en sık kullanılan ikilidir.</figcaption></figure>
+<p><strong>Add</strong> (<code>Shift+A</code>) › Light:</p>
+<div class="tw"><table>
+<thead>
+<tr>
+<th>Işık</th>
+<th>Ne zaman</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><strong>Sun Light</strong></td>
+<td>Gün ışığı: yalnızca yönü önemlidir, mesafesi değil. Gölgeler paraleldir</td>
+</tr>
+<tr>
+<td><strong>Area Light</strong></td>
+<td>Pencereden giren ışık, tavan armatürü, stüdyo softbox'ı</td>
+</tr>
+<tr>
+<td><strong>Point Light</strong></td>
+<td>Ampul, aplik</td>
+</tr>
+<tr>
+<td><strong>Spot Light</strong></td>
+<td>Spot armatür, cephe aydınlatması</td>
+</tr>
+</tbody>
+</table></div>
+<ul>
+<li>Güneşin yönünü gerçek konum ve saate göre ayarlamak için sitedeki <a href="../../kesif/gunes.html">Güneş ve Gölge</a> aracından güneş yüksekliği ve azimutu alıp güneş ışığını o açılarla döndürebilirsin.</li>
+<li>Güneş gücü W/m², diğer ışıklar Watt cinsindendir. Gücü küçük adımlarla değiştirip Rendered görünümde kontrol et; sahne çok parlaksa ışığı kısmak yerine önce pozlamayı (yarın, Color Management › Exposure) dene.</li>
+<li>Gölgenin yumuşaklığı ışığın <strong>boyutuyla</strong> (güneşte Angle, alan ışığında Size) belirlenir: büyük ışık yumuşak gölge verir.</li>
+</ul>
+<h3>4. HDRI gökyüzü (30 dk)</h3>
+<p><strong>HDRI World</strong>: Properties › World › Color'ın yanındaki noktaya tıkla › <strong>Environment Texture</strong> › bir HDR gökyüzü resmi aç. Gökyüzü hem arka plan hem ortam ışığı olur; camlarda gerçekçi yansımalar oluşur.</p>
+<p>Ücretsiz ve telifsiz HDRI resimleri Poly Haven gibi kaynaklarda bulunur. Mimari dış mekânda en iyi sonuç çoğu zaman <strong>HDRI + Sun Light</strong> birlikte kullanılarak alınır: HDRI ortamı ve yansımaları, güneş keskin gölgeleri verir.</p>
+<p><strong>Alıştırma:</strong> Dünkü cephe modülüne dört malzeme ver: eloksal alüminyum dikmeler, toz boyalı lameller (RAL 7016), şeffaf cam ve beton döşeme alnı (resim dokusu, Smart UV Project). Bir HDRI ve güneş ekle; güneşi öğleden sonra batı güneşi gibi alçaktan ver ve lamellerin camda bıraktığı gölgeyi gör.</p>
+<h3>Gün sonu kontrolü (15 dk)</h3>
+<ul class="tasks">
+<li class="task"><label><input type="checkbox" data-id="g6-1"><span>Principled BSDF'in Base Color, Metallic, Roughness, IOR ve Transmission ayarlarını biliyorum.</span></label></li>
+<li class="task"><label><input type="checkbox" data-id="g6-2"><span>Alüminyum, cam, beton ve ahşap malzemesi kurabiliyorum.</span></label></li>
+<li class="task"><label><input type="checkbox" data-id="g6-3"><span>Image Texture ekleyip Unwrap ya da Smart UV Project ile yerleştirebiliyorum.</span></label></li>
+<li class="task"><label><input type="checkbox" data-id="g6-4"><span>Node Wrangler ile doku düzenini hızlıca kurabiliyorum.</span></label></li>
+<li class="task"><label><input type="checkbox" data-id="g6-5"><span>Sun, Area, Point ve Spot ışıkların ne zaman kullanıldığını biliyorum.</span></label></li>
+<li class="task"><label><input type="checkbox" data-id="g6-6"><span>HDRI gökyüzü ekleyip güneşle birlikte kullanabiliyorum.</span></label></li>
+</ul></div>
+  <div class="pn"><a href="#gun5">← 5. gün</a><a href="#gun7">7. gün →</a></div>
+</section>
+<section class="day" id="gun7" data-day="7">
+  <div class="day-head"><span class="dn">GÜN 07</span><h2>Kamera ve render</h2><span class="meta">~4 saat · <span data-prog="7">0/7</span> kontrol</span></div>
+  <div class="prose"><h3>Hedef</h3>
+<p>Gün sonunda bir kamera kurup mimari görselde düşey çizgileri düz tutabilecek, Cycles ve EEVEE arasında seçim yapabilecek, örnekleme ve gürültü temizleme ayarlarıyla render süresini dengeleyebilecek, renk yönetimini ayarlayıp render alıp kaydedebilecek ve haftanın projesi olan cephe modülü görselini tamamlamış olacaksın. Süre yaklaşık 4 saat.</p>
+<h3>1. Kamera (1 saat)</h3>
+<figure class="fig"><div class="sc"><svg viewBox="0 0 640 206" role="img" xmlns="http://www.w3.org/2000/svg"><defs><marker id="ah-kamera" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0 0L10 5L0 10z" class="ar"/></marker></defs><polygon points="60,140 -14,40 134,40" class="bx"/><text x="60" y="168" class="tm" text-anchor="middle">24 mm</text><polygon points="210,140 156,40 264,40" class="bxa"/><text x="210" y="168" class="ta" text-anchor="middle">35 mm</text><polygon points="360,140 320,40 400,40" class="bx"/><text x="360" y="168" class="tm" text-anchor="middle">50 mm</text><polygon points="510,140 486,40 534,40" class="bx"/><text x="510" y="168" class="tm" text-anchor="middle">85 mm</text><text x="320" y="196" class="tm" text-anchor="middle">dış mimari için 28–35 mm dengeli; 50 mm detay</text></svg></div><figcaption>Odak uzaklığı: küçük değer geniş açı, büyük değer dar açı.</figcaption></figure>
+<ul>
+<li><strong>Camera</strong>: <strong>Add</strong> (<code>Shift+A</code>) › Camera. Sahnede birden çok kamera olabilir; render alınan kamera <strong>Set Active Camera</strong> (<code>Ctrl+Numpad 0</code>) ile seçilir.</li>
+<li><strong>Camera View</strong> (<code>Numpad 0</code>): Kameranın gözünden bak.</li>
+<li><strong>Align Camera to View</strong> (<code>Ctrl+Alt+Numpad 0</code>): Beğendiğin bir görünümde gezinirken kamerayı oraya taşır. En hızlı kamera kurma yolu.</li>
+<li><strong>Lock Camera to View</strong> (Sidebar › View): Kamera görünümündeyken normal gezinmeyle kamerayı hareket ettirir.</li>
+</ul>
+<p><strong>Odak uzaklığı</strong> (Camera Properties › Lens › Focal Length, 36 mm sensörde):</p>
+<div class="tw"><table>
+<thead>
+<tr>
+<th>Odak</th>
+<th>Kullanım</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>18–24 mm</td>
+<td>Dar iç mekân, geniş dış görünüş (kenarlarda bozulma artar)</td>
+</tr>
+<tr>
+<td>28–35 mm</td>
+<td>Dış mimari görünüş için dengeli</td>
+</tr>
+<tr>
+<td>50 mm</td>
+<td>İnsan gözüne yakın; detay ve yakın plan</td>
+</tr>
+<tr>
+<td>85 mm ve üstü</td>
+<td>Detay, ürün, sıkıştırılmış perspektif</td>
+</tr>
+</tbody>
+</table></div>
+<h3>2. Düşey çizgiler: Shift (30 dk)</h3>
+<figure class="fig"><div class="sc"><svg viewBox="0 0 640 114" role="img" xmlns="http://www.w3.org/2000/svg"><defs><marker id="ah-shift" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0 0L10 5L0 10z" class="ar"/></marker></defs><text x="160" y="18" class="ta" text-anchor="middle">eğik kamera</text><text x="480" y="18" class="ta" text-anchor="middle">Shift Y</text><rect x="10" y="26" width="300" height="78" class="bx"/><rect x="330" y="26" width="300" height="78" class="bxa"/><text x="22" y="46" class="tm" text-anchor="start">kamera yukarı eğik</text><text x="22" y="68" class="tm" text-anchor="start">düşeyler yukarıda birleşir</text><text x="22" y="90" class="tm" text-anchor="start">üç nokta perspektif</text><text x="342" y="46" class="tm" text-anchor="start">kamera tam yatay (X = 90°)</text><text x="342" y="68" class="tm" text-anchor="start">Lens › Shift Y artırılır</text><text x="342" y="90" class="tm" text-anchor="start">düşeyler düşey kalır</text></svg></div><figcaption>Mimari görselde düşey çizgiler: kamerayı eğme, Shift Y kullan.</figcaption></figure>
+<p>Bir binayı yerden yukarı bakarak çekersen düşey çizgiler yukarıda birleşir (üç nokta perspektif). Mimari fotoğrafçılıkta istenen <strong>iki nokta perspektiftir</strong>: düşeyler düşey kalır.</p>
+<p>Blender'da:</p>
+<ol>
+<li>Kamerayı <strong>tam yatay</strong> tut: Rotation X = 90°, Y = 0°.</li>
+<li>Binayı kadraja almak için kamerayı eğme; Camera Properties › Lens › <strong>Shift Y</strong> değerini artır.</li>
+</ol>
+<p>Bu, mimari fotoğrafçıların kaydırmalı (tilt-shift) objektifinin aynısıdır.</p>
+<h3>3. Cycles ve EEVEE (45 dk)</h3>
+<figure class="fig"><div class="sc"><svg viewBox="0 0 640 114" role="img" xmlns="http://www.w3.org/2000/svg"><defs><marker id="ah-motor" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0 0L10 5L0 10z" class="ar"/></marker></defs><text x="160" y="18" class="ta" text-anchor="middle">Cycles</text><text x="480" y="18" class="ta" text-anchor="middle">EEVEE</text><rect x="10" y="26" width="300" height="78" class="bx"/><rect x="330" y="26" width="300" height="78" class="bxa"/><text x="22" y="46" class="tm" text-anchor="start">ışın izleme</text><text x="22" y="68" class="tm" text-anchor="start">cam ve yansıma fiziksel doğru</text><text x="22" y="90" class="tm" text-anchor="start">son görseller</text><text x="342" y="46" class="tm" text-anchor="start">gerçek zamanlı</text><text x="342" y="68" class="tm" text-anchor="start">kare başına saniyeler</text><text x="342" y="90" class="tm" text-anchor="start">taslak, animasyon, sunum</text></svg></div><figcaption>Render motorları.</figcaption></figure>
+<div class="tw"><table>
+<thead>
+<tr>
+<th></th>
+<th><strong>Cycles</strong></th>
+<th><strong>EEVEE</strong></th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Yöntem</td>
+<td>Işın izleme (path tracing)</td>
+<td>Gerçek zamanlı (oyun motoru gibi)</td>
+</tr>
+<tr>
+<td>Gerçekçilik</td>
+<td>Fiziksel olarak doğru; cam, yansıma, dolaylı ışık</td>
+<td>Çok iyi, ama bazı ışık etkileri yaklaşık</td>
+</tr>
+<tr>
+<td>Hız</td>
+<td>Saniyelerden dakikalara, kare başına</td>
+<td>Kare başına saniyeler</td>
+</tr>
+<tr>
+<td>Ne zaman</td>
+<td>Son görseller, cam ağırlıklı cepheler</td>
+<td>Hızlı taslak, animasyon, sunum turu</td>
+</tr>
+</tbody>
+</table></div>
+<p>Properties › Render › Render Engine. Cam cephede yansıma ve geçirgenlik çok önemli olduğu için son görseli genellikle <strong>Cycles</strong> ile al.</p>
+<h3>4. Örnekleme, gürültü ve renk (45 dk)</h3>
+<p><strong>Cycles ayarları (Render Properties › Sampling):</strong></p>
+<ul>
+<li><strong>Noise Threshold:</strong> Uyarlamalı örnekleme. Görüntü bu gürültü seviyesine ulaşınca durur; düşük değer daha temiz ama daha yavaş.</li>
+<li><strong>Max Samples:</strong> Üst sınır. Gürültü temizleme ile birlikte çoğu mimari görselde birkaç yüz örnek yeterli olur; önce düşük değerle dene.</li>
+<li><strong>Denoise:</strong> OpenImageDenoise (her ekran kartında), OptiX ve DLSS (NVIDIA). Gürültüyü yapay zekâyla temizler; örnek sayısını büyük ölçüde azaltır.</li>
+</ul>
+<p><strong>Color Management</strong> (Render Properties):</p>
+<ul>
+<li><strong>View Transform: AgX</strong> (varsayılan). Parlak gökyüzü ve güneş alan yüzeyler beyaza patlamadan yumuşakça doyar.</li>
+<li><strong>Exposure:</strong> Sahne genel olarak karanlık ya da parlaksa ışıklarla oynamadan önce buradan ayarla.</li>
+<li><strong>Look:</strong> Kontrast seçenekleri.</li>
+</ul>
+<p><strong>Çıktı (Output Properties):</strong> Resolution (ör. 3000 × 2000 piksel), File Format PNG (kayıpsız) ya da sonradan işlemek için OpenEXR.</p>
+<h3>5. Render ve kaydetme (30 dk)</h3>
+<ul>
+<li><strong>Render Region</strong> (<code>Ctrl+B</code>): Kamera görünümünde yalnızca bir bölgeyi render et; malzeme ve ışık denemelerinde zaman kazandırır. <code>Ctrl+Alt+B</code> temizler.</li>
+<li><strong>Render Image</strong> (<code>F12</code>): Son render'ı al.</li>
+<li><strong>View Render</strong> (<code>F11</code>): Son render penceresini geri getir.</li>
+<li><strong>Save Image As</strong> (<code>Shift+Alt+S</code>): Render penceresinde resmi kaydet. <strong>Render'ı kaydetmezsen kaybolur;</strong> .blend dosyasıyla birlikte saklanmaz.</li>
+</ul>
+<h3>6. Proje: cephe modülü render'ı (30 dk + ödev)</h3>
+<figure class="fig"><div class="sc"><svg viewBox="0 0 640 134" role="img" xmlns="http://www.w3.org/2000/svg"><defs><marker id="ah-proje" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0 0L10 5L0 10z" class="ar"/></marker></defs><rect x="230" y="8" width="180" height="40" rx="5" class="bxa"/><text x="320.0" y="32.0" class="tb" text-anchor="middle">cephe modülü render'ı</text><line x1="320" y1="48" x2="56.666666666666664" y2="78" class="mu" marker-end="url(#ah-proje)"/><rect x="10.0" y="80" width="93.33333333333333" height="44" rx="5" class="bx"/><text x="56.666666666666664" y="98.0" class="tb" text-anchor="middle">Model</text><text x="56.666666666666664" y="114.0" class="tm" text-anchor="middle">modül, lamel</text><line x1="320" y1="48" x2="162.0" y2="78" class="mu" marker-end="url(#ah-proje)"/><rect x="115.33333333333333" y="80" width="93.33333333333333" height="44" rx="5" class="bx"/><text x="162.0" y="98.0" class="tb" text-anchor="middle">Malzeme</text><text x="162.0" y="114.0" class="tm" text-anchor="middle">metal, cam</text><line x1="320" y1="48" x2="267.3333333333333" y2="78" class="mu" marker-end="url(#ah-proje)"/><rect x="220.66666666666666" y="80" width="93.33333333333333" height="44" rx="5" class="bx"/><text x="267.3333333333333" y="98.0" class="tb" text-anchor="middle">Işık</text><text x="267.3333333333333" y="114.0" class="tm" text-anchor="middle">HDRI + güneş</text><line x1="320" y1="48" x2="372.6666666666667" y2="78" class="mu" marker-end="url(#ah-proje)"/><rect x="326.0" y="80" width="93.33333333333333" height="44" rx="5" class="bx"/><text x="372.6666666666667" y="98.0" class="tb" text-anchor="middle">Kamera</text><text x="372.6666666666667" y="114.0" class="tm" text-anchor="middle">35 mm, Shift</text><line x1="320" y1="48" x2="478.0" y2="78" class="mu" marker-end="url(#ah-proje)"/><rect x="431.3333333333333" y="80" width="93.33333333333333" height="44" rx="5" class="bx"/><text x="478.0" y="98.0" class="tb" text-anchor="middle">Render</text><text x="478.0" y="114.0" class="tm" text-anchor="middle">Cycles</text><line x1="320" y1="48" x2="583.3333333333333" y2="78" class="mu" marker-end="url(#ah-proje)"/><rect x="536.6666666666666" y="80" width="93.33333333333333" height="44" rx="5" class="bx"/><text x="583.3333333333333" y="98.0" class="tb" text-anchor="middle">Kaydet</text><text x="583.3333333333333" y="114.0" class="tm" text-anchor="middle">PNG</text></svg></div><figcaption>Hafta sonu projesi: cephe modülünün render&#x27;ı.</figcaption></figure>
+<p>Hafta boyunca kurduğun cephe modülünü bitir:</p>
+<ol>
+<li><strong>Model:</strong> Modül, lameller, döşeme alnı ve arkada basit bir iç mekân (zemin, tavan, arka duvar) — cam arkasının boş görünmemesi için.</li>
+<li><strong>Malzemeler:</strong> Alüminyum, lamel, cam, beton (dün).</li>
+<li><strong>Işık:</strong> HDRI + alçak açılı Sun Light (batı güneşi).</li>
+<li><strong>Kamera:</strong> 35 mm, yatay, düşeyler için Shift Y; ikinci kamera 85 mm ile lamel detayı.</li>
+<li><strong>Render:</strong> Cycles, Denoise açık, AgX; önce Render Region ile dene, sonra Render Image.</li>
+<li><strong>Kaydet:</strong> Her iki kamerayı ayrı PNG olarak kaydet.</li>
+</ol>
+<p><strong>Sonraki adımlar:</strong> Blender'ın resmî belgeleri (docs.blender.org), Blender Studio'nun ücretsiz eğitimleri; mimari görselleştirmede çevre (ağaç, insan) için Asset Browser kütüphaneleri; parametrik çalışmalar için <a href="../grasshopper/index.html">Grasshopper</a> ve <a href="../rhino/index.html">Rhino</a> eğitimlerinden gelen modelleri Blender'da render'lamak. Komutların tamamı için <a href="../../komutlar/blender.html">Blender Kısayolları</a> sayfasını yer imlerine ekle.</p>
+<h3>Gün sonu kontrolü (15 dk)</h3>
+<ul class="tasks">
+<li class="task"><label><input type="checkbox" data-id="g7-1"><span>Kamera ekleyip Align Camera to View ile yerleştirebiliyor, Set Active Camera ile seçebiliyorum.</span></label></li>
+<li class="task"><label><input type="checkbox" data-id="g7-2"><span>Odak uzaklığını kullanıma göre seçebiliyorum.</span></label></li>
+<li class="task"><label><input type="checkbox" data-id="g7-3"><span>Shift Y ile düşey çizgileri düz tutabiliyorum.</span></label></li>
+<li class="task"><label><input type="checkbox" data-id="g7-4"><span>Cycles ile EEVEE farkını ve ne zaman hangisini kullanacağımı biliyorum.</span></label></li>
+<li class="task"><label><input type="checkbox" data-id="g7-5"><span>Noise Threshold, Denoise ve AgX ayarlarını biliyorum.</span></label></li>
+<li class="task"><label><input type="checkbox" data-id="g7-6"><span>Render Region ile deneyip Render Image ile render alıp Save Image As ile kaydediyorum.</span></label></li>
+<li class="task"><label><input type="checkbox" data-id="g7-7"><span>Cephe modülü render'ını iki kameradan tamamladım.</span></label></li>
+</ul></div>
+  <div class="pn"><a href="#gun6">← 6. gün</a><a href="../../Tools.html">Araçlara dön →</a></div>
+</section>
+</main>
+
+<footer>
+  <div class="wrap">
+    <span>© 2026 Erdal Üstünol · <a href="/gizlilik.html">Gizlilik</a></span>
+    <a href="../../Tools.html">← Araçlar ve eğitimler</a>
+  </div>
+</footer>
+
+<script>
+(() => {
+  const $ = id => document.getElementById(id);
+  const KEY = 'erdevelop-egitim-blender';
+  const store = { get(k) { try { return localStorage.getItem(k); } catch (e) { return null; } }, set(k, v) { try { localStorage.setItem(k, v); } catch (e) {} } };
+  let mode = (() => { try { const m = localStorage.getItem('erdevelop-mode'), g = localStorage.getItem('erdevelop-mode-gun'), t = new Date(); if (m && g === t.toDateString()) return m; const h = t.getHours(); return h >= 7 && h < 19 ? 'light' : 'dark'; } catch (e) { return 'light'; } })();
+  const applyMode = () => { document.documentElement.dataset.mode = mode; $('modeBtn').textContent = mode === 'dark' ? 'LIGHT' : 'DARK'; };
+  $('modeBtn').addEventListener('click', () => { mode = mode === 'dark' ? 'light' : 'dark'; store.set('erdevelop-mode', mode); store.set('erdevelop-mode-gun', new Date().toDateString()); applyMode(); });
+  applyMode();
+
+  let done = {}; try { done = JSON.parse(store.get(KEY) || '{}') || {}; } catch (e) { done = {}; }
+  const boxes = [...document.querySelectorAll('li.task input')];
+  const prog = () => {
+    document.querySelectorAll('section.day').forEach(sec => {
+      const d = sec.dataset.day, bs = sec.querySelectorAll('li.task input'), c = [...bs].filter(b => b.checked).length;
+      sec.querySelector('[data-prog]').textContent = c + '/' + bs.length;
+      const n = document.querySelector('[data-nav="' + d + '"]'); if (n) n.classList.toggle('done', bs.length > 0 && c === bs.length);
+    });
+  };
+  boxes.forEach(b => { b.checked = !!done[b.dataset.id]; b.addEventListener('change', () => { if (b.checked) done[b.dataset.id] = 1; else delete done[b.dataset.id]; store.set(KEY, JSON.stringify(done)); prog(); }); });
+  $('resetBtn').addEventListener('click', () => { done = {}; store.set(KEY, '{}'); boxes.forEach(b => b.checked = false); prog(); });
+  prog();
+
+  const links = [...document.querySelectorAll('[data-nav]')];
+  const secs = [$('genel'), ...document.querySelectorAll('section.day')];
+  if ('IntersectionObserver' in window) {
+    const io = new IntersectionObserver(es => es.forEach(e => { if (e.isIntersecting) { const i = secs.indexOf(e.target); links.forEach((l, k) => l.classList.toggle('on', k === i)); } }), { rootMargin: '-40% 0px -55% 0px' });
+    secs.forEach(s => io.observe(s));
+  }
+})();
+</script>
+<script src="../ilerleme.js" data-key="erdevelop-egitim-blender"></script>
+<script>if ('serviceWorker' in navigator && location.protocol === 'https:') addEventListener('load', () => navigator.serviceWorker.register('/sw.js').catch(() => { }));</script>
+<script data-goatcounter="https://erdevelop.goatcounter.com/count" async src="//gc.zgo.at/count.js"></script>
+<script src="/uyari.js" data-tur="egitim"></script>
+<script src="../komut-ikon.js" data-prog="blender" defer></script>
+</body>
+</html>

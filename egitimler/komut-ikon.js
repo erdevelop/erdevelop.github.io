@@ -40,7 +40,7 @@
       a.href = new URL(r.sayfa, base).href + '#ara=' + encodeURIComponent(r.c);
       a.title = `${r.ad} · ${r.c}: ${r.d}`;
       a.setAttribute('aria-label', `${r.ad} komutu ${r.c}`);
-      a.innerHTML = window.erIkon(r.c, r.g);
+      a.innerHTML = window.erIkon(r.c, r.g, r.p);
       ust.insertBefore(a, once);
       n++;
     };

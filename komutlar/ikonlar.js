@@ -175,12 +175,14 @@
     [/draworder|modify/, 'select']
   ];
   const CAT = { 'Çizim': 'pencil', 'Eğri': 'curve', 'Yüzey': 'surface', 'Katı': 'box', 'Mimari': 'revit', 'Taşıyıcı': 'beam', 'Referans': 'level', 'Görünüm': 'eye', 'Montaj': 'assembly', 'Teknik resim': 'dim', 'Analiz': 'measure', 'Genel': 'cmd', 'Input': 'slider', 'List': 'list', 'Math': 'math', 'String': 'text', 'Data': 'data', 'Logic': 'math', 'Script': 'code' };
+  /* programa özel eşleştirmeler: aynı ad başka programda farklı anlama gelebildiği için ortak kurallardan önce bakılır */
+  const OV = { blender: {"orbit": "rotate", "view selected": "zoom", "frame all": "zoom", "perspective/orthographic": "eye", "toggle x-ray": "eye", "toggle maximize area": "zoom", "toggle edit mode": "pencil", "adjust last operation": "settings", "menu search": "keyboard", "append": "file", "import": "file", "proportional editing": "settings", "apply all transforms": "settings", "clear location": "move", "clear rotation": "rotate", "set origin": "point", "pivot point": "point", "add": "box", "separate": "split", "parent": "tree", "move to collection": "layers", "shade smooth": "sphere", "shade auto smooth": "sphere", "shade flat": "box", "convert to mesh": "mesh", "sidebar": "props", "toolbar": "settings", "shading pie": "eye", "view pie": "eye", "vertex select mode": "point", "edge select mode": "line", "face select mode": "surface", "inset": "offset", "bevel": "chamfer", "bevel modifier": "chamfer", "loop cut": "split", "knife": "split", "bisect": "split", "rip": "split", "merge": "join", "merge by distance": "join", "weld": "join", "fill": "surface", "grid fill": "grid", "bridge edge loops": "loft", "subdivide": "grid", "dissolve edges": "trim", "edge slide": "move", "spin": "revolve", "recalculate normals": "refresh", "flip normals": "refresh", "triangulate faces": "mesh", "tris to quads": "mesh", "subdivision surface": "sphere", "solidify": "shell", "boolean": "subtract", "screw": "revolve", "displace": "surface", "decimate": "mesh", "wireframe": "grid", "apply modifier": "settings", "unwrap": "sheet", "smart uv project": "sheet", "mark seam": "curve", "principled bsdf": "material", "image texture": "material", "add node": "tree", "node wrangler texture setup": "material", "make group": "group", "hdri world": "sun", "camera": "eye", "set active camera": "eye", "render image": "eye", "render animation": "eye", "view render": "eye", "render region": "rect", "cycles": "sun", "eevee": "eye", "denoise": "settings", "color management": "props"} };
   const fold = s => String(s).toLocaleLowerCase('tr').replace(/ı/g, 'i').replace(/İ/g, 'i');
   const cache = new Map();
-  window.erIkon = (name, cat) => {
-    const key = name + '|' + cat; if (cache.has(key)) return cache.get(key);
-    const n = fold(name), c = fold(cat); let id = null;
-    for (const [re, k] of R) if (re.test(n)) { id = k; break; }
+  window.erIkon = (name, cat, prog) => {
+    const key = name + '|' + cat + '|' + (prog || ''); if (cache.has(key)) return cache.get(key);
+    const n = fold(name), c = fold(cat); let id = (prog && OV[prog] && OV[prog][n]) || null;
+    if (!id) for (const [re, k] of R) if (re.test(n)) { id = k; break; }
     if (!id) for (const [re, k] of R) if (re.test(c)) { id = k; break; }
     if (!id) { const top = String(cat).split(' › ')[0]; id = CAT[top] || CAT[cat] || 'cmd'; }
     const svg = `<svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${D[id] || D.cmd}</svg>`;

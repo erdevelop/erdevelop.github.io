@@ -33,7 +33,7 @@
     if (words.length) list.sort((a, b) => b[0] - a[0]);
     $('kn').textContent = list.length + ' komut' + (raw || cat || onlyKey ? ' bulundu' : '');
     if (!list.length) { $('kl').innerHTML = `<p class="ph">“${esc(raw)}” için sonuç yok. Komutun İngilizce adını, Türkçe açıklamasından bir kelimeyi ya da kısayolu (ör. <b>CO</b>, <b>Ctrl+J</b>) yazmayı dene.</p>`; return; }
-    const row = ([, r]) => `<div class="kr"><button class="kc" type="button" data-c="${esc(r.c)}" title="Kopyala"><span class="ki ki-${r.p}">${window.erIkon ? erIkon(r.c, r.g) : ''}</span><span class="kt">${mark(r.c, words)}</span></button><span class="ks">${keys(r.s)}</span>${multi ? `<span class="kp kp-${r.p}">${esc(KMT[r.p].ad)}</span>` : ''}<p class="kd">${mark(r.d, words)}${multi || words.length ? ` <small>· ${esc(r.g)}</small>` : ''}</p></div>`;
+    const row = ([, r]) => `<div class="kr"><button class="kc" type="button" data-c="${esc(r.c)}" title="Kopyala"><span class="ki ki-${r.p}">${window.erIkon ? erIkon(r.c, r.g, r.p) : ''}</span><span class="kt">${mark(r.c, words)}</span></button><span class="ks">${keys(r.s)}</span>${multi ? `<span class="kp kp-${r.p}">${esc(KMT[r.p].ad)}</span>` : ''}<p class="kd">${mark(r.d, words)}${multi || words.length ? ` <small>· ${esc(r.g)}</small>` : ''}</p></div>`;
     if (words.length || multi) { $('kl').innerHTML = list.slice(0, 400).map(row).join(''); return; }
     const by = {}; list.forEach(x => (by[x[1].g] = by[x[1].g] || []).push(x));
     $('kl').innerHTML = Object.keys(by).map(g => `<h2 class="kg"${/^(grasshopper|dynamo)$/.test(progs[0]) ? ' lang="en"' : ''}>${esc(g)} <small>${by[g].length}</small></h2>` + by[g].map(row).join('')).join('');
