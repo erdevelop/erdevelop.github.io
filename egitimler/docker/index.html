@@ -1,0 +1,1609 @@
+<!doctype html>
+<html lang="tr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Docker · 7 günlük program | erdevelop</title>
+<meta name="description" content="Bol şemalı 7 günlük Docker eğitimi: kapsayıcı ve imaj kavramları, docker run, ps, logs, exec, Dockerfile yazmak, katmanlar ve önbellek, volume ve bind mount, ağlar, Docker Compose, çok aşamalı build, güvenlik ve iki servisli bir proje. Komutlar gerçek çıktılarıyla.">
+<link rel="icon" href="/favicon.svg" type="image/svg+xml">
+<link rel="icon" href="/favicon.ico" sizes="any">
+<link rel="apple-touch-icon" href="/apple-touch-icon.png">
+<link rel="manifest" href="/manifest.webmanifest">
+<meta name="theme-color" content="#0b1220">
+<meta property="og:title" content="Docker · 7 günlük program | erdevelop">
+<meta property="og:description" content="7 günde Docker: imaj, kapsayıcı, Dockerfile, volume, ağ, Docker Compose ve iyi uygulamalar. Çıktılarıyla.">
+<meta property="og:url" content="https://erdevelop.github.io/egitimler/docker/">
+<meta property="og:image" content="https://erdevelop.github.io/og.png">
+<meta name="twitter:card" content="summary_large_image">
+<link rel="canonical" href="https://erdevelop.github.io/egitimler/docker/">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Chakra+Petch:wght@600;700&family=IBM+Plex+Sans:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500&display=swap">
+<style>
+  :root {
+    --bg: #eef2f6; --panel: #ffffff; --panel-2: #f5f7f9; --grid: #e3e8ed; --line: #cfd8e1;
+    --fg: #1c2833; --text: #45535f; --muted: #74838f; --accent: #2f6fb5; --accent-dim: rgba(47,111,181,.12); --hot: #c8731f; --ok: #2e8b57;
+    --f-display: 'Chakra Petch', 'Segoe UI', sans-serif; --f-body: 'IBM Plex Sans', 'Segoe UI', system-ui, sans-serif; --f-mono: 'IBM Plex Mono', Consolas, monospace;
+    color-scheme: light;
+  }
+  :root[data-mode="dark"] {
+    --bg: #0b1220; --panel: #111a2c; --panel-2: #0e1626; --grid: #182338; --line: #22304a;
+    --fg: #e2e8f2; --text: #a8b6cc; --muted: #73829b; --accent: #f2b33d; --accent-dim: rgba(242,179,61,.14); --hot: #6aa8ff; --ok: #5fc48d;
+    color-scheme: dark;
+  }
+  * { box-sizing: border-box; }
+  html { background: var(--bg); scroll-padding-top: 110px; }
+  body { margin: 0; color: var(--fg); font-family: var(--f-body); font-size: 16px; line-height: 1.65;
+    background-image: linear-gradient(var(--grid) 1px, transparent 1px), linear-gradient(90deg, var(--grid) 1px, transparent 1px); background-size: 80px 80px; background-attachment: fixed; }
+  a { color: var(--accent); }
+  :focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+  .wrap { max-width: 920px; margin: 0 auto; padding-left: max(16px, env(safe-area-inset-left, 0px)); padding-right: max(16px, env(safe-area-inset-right, 0px)); }
+
+  .topbar { position: sticky; top: 0; z-index: 20; background: color-mix(in srgb, var(--bg) 92%, transparent); backdrop-filter: blur(6px); border-bottom: 1px solid var(--line); }
+  .topbar .wrap { display: flex; align-items: center; gap: 12px; padding-block: 10px; max-width: 1160px; }
+  .brand { font: 700 15px var(--f-display); letter-spacing: 1px; text-transform: uppercase; text-decoration: none; color: var(--fg); }
+  .brand span { color: var(--accent); }
+  .crumb { font: 400 12px var(--f-mono); color: var(--muted); }
+  .sp { flex: 1; }
+  .tb { font: 500 12px var(--f-mono); color: var(--accent); padding: 6px 10px; border: 1px solid var(--line); border-radius: 4px; background: none; cursor: pointer; text-transform: uppercase; text-decoration: none; }
+  .tb:hover { border-color: var(--accent); }
+  .daynav { border-top: 1px solid var(--line); }
+  .daynav .wrap { display: flex; gap: 6px; padding-block: 8px; overflow-x: auto; max-width: 1160px; }
+  .daynav a { font: 500 12px var(--f-mono); text-decoration: none; color: var(--text); border: 1px solid var(--line); border-radius: 4px; padding: 4px 10px; white-space: nowrap; background: var(--panel); }
+  .daynav a.on { border-color: var(--accent); color: var(--accent); }
+  .daynav a.done { background: var(--accent-dim); }
+
+  header.head { padding-block: 34px 6px; }
+  .kicker { font: 500 12px var(--f-mono); color: var(--accent); letter-spacing: 1px; }
+  .head h1 { font: 700 clamp(2rem, 6vw, 3rem)/1.05 var(--f-display); margin: 6px 0 0; letter-spacing: -.5px; }
+  .head p.lead { margin: 12px 0 0; color: var(--text); max-width: 64ch; font-size: 1.05rem; }
+  .chips { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 16px; }
+  .chips span { font: 400 12px var(--f-mono); color: var(--muted); border: 1px solid var(--line); border-radius: 4px; padding: 3px 8px; background: var(--panel); }
+
+  .card { background: var(--panel); border: 1px solid var(--line); border-radius: 8px; padding: 22px clamp(16px, 4vw, 30px); margin-top: 28px; }
+  .day-head { display: flex; align-items: baseline; gap: 12px; flex-wrap: wrap; border-bottom: 1px solid var(--line); padding-bottom: 12px; margin-bottom: 6px; }
+  .day-head h2, .card > h2 { font: 700 1.45rem/1.2 var(--f-display); margin: 0; letter-spacing: .2px; }
+  .dn { font: 600 12px var(--f-mono); color: var(--panel); background: var(--accent); border-radius: 3px; padding: 2px 7px; }
+  :root[data-mode="dark"] .dn { color: #1a1204; }
+  .day-head .meta { font: 400 12px var(--f-mono); color: var(--muted); margin-left: auto; }
+  section.day { background: var(--panel); border: 1px solid var(--line); border-radius: 8px; padding: 22px clamp(16px, 4vw, 30px); margin-top: 28px; }
+
+  .prose h3 { font: 700 1.12rem/1.3 var(--f-display); margin: 30px 0 8px; letter-spacing: .2px; }
+  .prose p, .prose li { color: var(--text); }
+  .prose strong { color: var(--fg); font-weight: 600; }
+  .prose ol, .prose ul { padding-left: 1.4em; }
+  .prose li { margin: 4px 0; }
+  .prose li > ul, .prose li > ol { margin: 4px 0; }
+  .prose code { font: 400 .86em var(--f-mono); background: var(--panel-2); border: 1px solid var(--line); border-radius: 3px; padding: 1px 5px; color: var(--fg); overflow-wrap: anywhere; }
+  .tw { overflow-x: auto; margin: 14px 0; border: 1px solid var(--line); border-radius: 6px; }
+  .tw table { border-collapse: collapse; width: 100%; font-size: .9rem; }
+  .tw th, .tw td { text-align: left; padding: 8px 12px; border-bottom: 1px solid var(--line); vertical-align: top; }
+  .tw th { font: 600 12px var(--f-mono); color: var(--muted); background: var(--panel-2); }
+  .card .tw td:first-child, .card .tw td:last-child { white-space: nowrap; }
+  .tw tr:last-child td { border-bottom: 0; }
+  ul.tasks { list-style: none; padding-left: 0; }
+  li.task label { display: flex; gap: 10px; align-items: flex-start; cursor: pointer; padding: 4px 0; }
+  li.task input { width: 18px; height: 18px; margin-top: 4px; accent-color: var(--accent); flex: none; }
+  li.task input:checked + span { color: var(--muted); text-decoration: line-through; }
+  .pn { display: flex; justify-content: space-between; gap: 12px; margin-top: 26px; padding-top: 14px; border-top: 1px solid var(--line); font: 500 13px var(--f-mono); }
+  .pn a { text-decoration: none; }
+  .note { font-size: .9rem; color: var(--muted); }
+  .reset { font: 500 11px var(--f-mono); color: var(--muted); background: none; border: 1px solid var(--line); border-radius: 4px; padding: 3px 8px; cursor: pointer; text-transform: uppercase; }
+  .reset:hover { color: var(--hot); border-color: var(--hot); }
+
+  .fig { margin: 18px 0; padding: 16px 14px 12px; border: 1px solid var(--line); border-radius: 6px; background: var(--panel-2); }
+  .fig .sc { overflow-x: auto; }
+  .fig svg { display: block; width: 100%; min-width: 540px; height: auto; max-width: 720px; margin: 0 auto; overflow: visible; }
+  .fig figcaption { font-size: .85rem; color: var(--muted); margin-top: 10px; text-align: center; max-width: 62ch; margin-inline: auto; }
+  .fig .k { fill: none; stroke: var(--fg); stroke-width: 1.6; } .fig .k1 { fill: none; stroke: var(--fg); stroke-width: 1; }
+  .fig .mu { fill: none; stroke: var(--muted); stroke-width: 1.2; } .fig .mud { fill: none; stroke: var(--muted); stroke-width: 1; stroke-dasharray: 5 4; }
+  .fig .dm { fill: none; stroke: var(--muted); stroke-width: .9; }
+  .fig .rp { fill: none; stroke: var(--hot); stroke-width: 1; stroke-dasharray: 9 4 2 4; }
+  .fig .gd { fill: none; stroke: var(--fg); stroke-width: 1; stroke-dasharray: 16 4 3 4; }
+  .fig .ac { fill: none; stroke: var(--accent); stroke-width: 2; } .fig .acl { fill: none; stroke: var(--accent); stroke-width: 1; }
+  .fig .gl { fill: var(--accent-dim); stroke: var(--fg); stroke-width: .8; }
+  .fig .sp { fill: color-mix(in srgb, var(--fg) 40%, transparent); stroke: var(--fg); stroke-width: .8; }
+  .fig .fr { fill: color-mix(in srgb, var(--fg) 22%, transparent); stroke: none; } .fig .edge { fill: none; stroke: var(--fg); stroke-width: 1.8; }
+  .fig .so { fill: var(--panel); stroke: var(--fg); stroke-width: 1.6; } .fig .hole { fill: var(--panel-2); stroke: var(--fg); stroke-width: 1.2; }
+  .fig .rib { fill: var(--accent-dim); stroke: var(--accent); stroke-width: 1.4; stroke-dasharray: 6 4; }
+  .fig .sel { fill: none; stroke: var(--accent); stroke-width: 3; }
+  .fig .mul { stroke: var(--fg); stroke-width: 4; } .fig .tr { stroke: var(--fg); stroke-width: 3; } .fig .trA { stroke: var(--accent); stroke-width: 3; }
+  .fig .lh { fill: var(--panel); stroke: var(--fg); stroke-width: 1.4; }
+  .fig .dot { fill: var(--accent); } .fig .dotr { fill: var(--accent); stroke: var(--panel); stroke-width: 1; }
+  .fig .pt { fill: var(--accent); stroke: var(--panel); stroke-width: 2; } .fig .tpt { fill: var(--panel); font: 700 12px var(--f-mono); }
+  .fig .bx { fill: var(--panel); stroke: var(--line); stroke-width: 1.3; } .fig .bxa { fill: var(--accent-dim); stroke: var(--accent); stroke-width: 1.3; }
+  .fig .ar { fill: var(--muted); }
+  .fig .acd { fill: none; stroke: var(--accent); stroke-width: 1.6; stroke-dasharray: 6 4; }
+  .fig text { text-transform: none; letter-spacing: 0; } .fig .bg { fill: var(--panel); stroke: none; }
+  .fig .t { fill: var(--text); font: 400 13px var(--f-body); } .fig .tb { fill: var(--fg); font: 600 13px var(--f-body); }
+  .fig .tm { fill: var(--muted); font: 400 11px var(--f-mono); } .fig .ta { fill: var(--accent); font: 600 11px var(--f-mono); }
+  .fig .th { fill: var(--hot); font: 500 11px var(--f-mono); }
+  .fig .swb { fill: none; stroke: #2f7de1; stroke-width: 2; } .fig .swr { fill: none; stroke: #d64545; stroke-width: 2; } .fig .tr2 { fill: #d64545; font: 600 11px var(--f-mono); } .fig .tbl { fill: #2f7de1; font: 600 11px var(--f-mono); }
+  .prose pre { background: var(--panel-2); border: 1px solid var(--line); border-radius: 6px; padding: 12px 14px; overflow-x: auto; }
+  .prose pre code { background: none; border: 0; padding: 0; font: 400 .85rem/1.5 var(--f-mono); color: var(--fg); }
+  footer { margin-top: 56px; border-top: 1px solid var(--line); padding-block: 20px calc(20px + env(safe-area-inset-bottom, 0px)); font: 400 12px var(--f-mono); color: var(--muted); }
+  footer .wrap { display: flex; justify-content: space-between; gap: 12px; flex-wrap: wrap; }
+  footer a { color: inherit; } footer a:hover { color: var(--accent); }
+  @media print { .topbar, .daynav, .pn, footer, .reset { display: none !important; } body { background: #fff; } section.day, .card { break-inside: auto; border: 0; } }
+</style>
+<script async src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-4775308844679394" crossorigin="anonymous"></script>
+</head>
+<body>
+<div class="topbar">
+  <div class="wrap">
+    <a class="brand" href="/">erdevelop<span>_</span></a>
+    <span class="crumb">/ eğitimler / docker</span>
+    <span class="sp"></span>
+    <a class="tb" href="../../Tools.html">Araçlar</a>
+    <button class="tb" type="button" id="modeBtn">DARK</button>
+  </div>
+  <nav class="daynav" aria-label="Günler"><div class="wrap"><a href="#genel" data-nav="0">Genel</a><a href="#gun1" data-nav="1">1</a><a href="#gun2" data-nav="2">2</a><a href="#gun3" data-nav="3">3</a><a href="#gun4" data-nav="4">4</a><a href="#gun5" data-nav="5">5</a><a href="#gun6" data-nav="6">6</a><a href="#gun7" data-nav="7">7</a></div></nav>
+</div>
+
+<main class="wrap">
+  <header class="head" id="genel">
+    <div class="kicker">Yazılım · Docker</div>
+    <h1>Docker</h1>
+    <p class="lead">&quot;Benim bilgisayarımda çalışıyordu&quot; sorununu bitirmek için 7 günlük bir program. Kapsayıcının ne olduğunu, imajların nasıl katman katman kurulduğunu öğrenir; kapsayıcı çalıştırıp yönetir, kendi Dockerfile&#x27;ını yazar, verini volume&#x27;larda saklar, kapsayıcıları ağlarla konuşturur ve Docker Compose ile çok servisli bir uygulamayı tek komutla ayağa kaldırırsın. Sonunda bir sipariş API&#x27;si ve onu kullanan bir rapor servisinden oluşan kendi projeni kurarsın.</p>
+    <div class="chips"><span>7 gün</span><span>günde ~4 saat</span><span>Türkçe</span><span>Kod örnekleri kopyalanabilir</span></div>
+  </header>
+
+  <div class="card">
+    <h2>Başlamadan önce</h2>
+    <div class="prose">
+      <h3>Kimler için</h3>
+      <p>Yazdığı programı başka bilgisayarlarda ya da sunucuda sorunsuz çalıştırmak isteyen yazılımcılar, veri ile çalışanlar ve sistem yönetimine başlayanlar. Temel komut satırı bilgisi gerekir (Linux ve Komut Satırı eğitiminin ilk üç günü yeterli); örneklerde az miktarda Python vardır.</p>
+      <h3>Gerekenler</h3>
+      <ul>
+        <li>Windows ve macOS için Docker Desktop (<a href="https://www.docker.com/products/docker-desktop/" target="_blank" rel="noopener">docker.com</a>); Windows'ta WSL 2 ile birlikte kurulur.</li>
+        <li>Linux için Docker Engine (<a href="https://docs.docker.com/engine/install/" target="_blank" rel="noopener">kurulum belgesi</a>).</li>
+        <li>En az 8 GB RAM ve birkaç GB boş disk; imajları indirmek için internet bağlantısı.</li>
+        <li>VS Code ve Docker (Container Tools) eklentisi önerilir.</li>
+      </ul>
+      <h3>Program</h3>
+      <div class="tw"><table><thead><tr><th>Gün</th><th>Konu</th><th>Ne öğrenirsin</th><th>Süre</th></tr></thead><tbody>
+<tr><td><a href="#gun1">1. gün</a></td><td>Docker nedir?</td><td>Kapsayıcı ve sanal makine, imaj, kapsayıcı, kayıt, Docker Desktop kurulumu, ilk docker run</td><td>~4 saat</td></tr>
+<tr><td><a href="#gun2">2. gün</a></td><td>Kapsayıcıları yönetmek</td><td>run -it, -d, --name, --rm, ps, logs, exec, stop, rm, port yayınlama, ortam değişkeni, kaynak sınırları</td><td>~4 saat</td></tr>
+<tr><td><a href="#gun3">3. gün</a></td><td>Dockerfile yazmak</td><td>FROM, WORKDIR, COPY, RUN, CMD, ENV, EXPOSE, build ve etiket, katmanlar ve önbellek, .dockerignore</td><td>~4 saat</td></tr>
+<tr><td><a href="#gun4">4. gün</a></td><td>Veriyi saklamak</td><td>Kapsayıcı yazılabilir katmanı, named volume, bind mount, SQLite ile kalıcı veri, yedek ve geri yükleme</td><td>~4 saat</td></tr>
+<tr><td><a href="#gun5">5. gün</a></td><td>Ağlar</td><td>Bridge ağı, kullanıcı tanımlı ağ ve DNS, kapsayıcılar arası iletişim, port ve ağ farkı, host ağı</td><td>~4 saat</td></tr>
+<tr><td><a href="#gun6">6. gün</a></td><td>Docker Compose</td><td>compose.yaml, services, build, ports, volumes, environment, depends_on, healthcheck, up, down, logs, exec</td><td>~4 saat</td></tr>
+<tr><td><a href="#gun7">7. gün</a></td><td>İyi uygulamalar ve proje</td><td>Çok aşamalı build, root olmayan kullanıcı, küçük imaj, etiketleme, kayda göndermek, sipariş API&#x27;si ve rapor servisi projesi</td><td>~4 saat</td></tr>
+      </tbody></table></div>
+      <p class="note">Her günün sonunda bir kontrol listesi var. İşaretledikçe ilerlemen bu tarayıcıda saklanır. Hafta içi sadece akşamları çalışırsan program yaklaşık iki hafta sürer. Örnekler Docker Engine 29 ve Docker Compose 5 ile Linux üzerinde tek tek çalıştırılıp çıktıları kontrol edilmiştir. Bu ortamda Docker Hub'a erişilemediği için python:3.12-slim imajının yerine aynı Python sürümünü içeren yerel bir imaj kullanıldı; resmi imajla indirme ve build satırları, imaj boyutları ve kimlik numaraları farklı görünür. Docker Hub'dan çekilmesi gereken hello-world, nginx ve postgres örnekleri bu yüzden çalıştırılamadı; metinde bunlar ayrıca belirtilmiştir. <button class="reset" type="button" id="resetBtn">ilerlemeyi sıfırla</button></p>
+    </div>
+  </div>
+
+<section class="day" id="gun1" data-day="1">
+  <div class="day-head"><span class="dn">GÜN 01</span><h2>Docker nedir?</h2><span class="meta">~4 saat · <span data-prog="1">0/6</span> kontrol</span></div>
+  <div class="prose"><h3>Hedef</h3>
+<p>Gün sonunda Docker'ın hangi sorunu çözdüğünü, kapsayıcının sanal makineden farkını ve imaj, kapsayıcı, kayıt kavramlarını bilecek; Docker'ı kurup ilk kapsayıcını çalıştırmış olacaksın. Süre yaklaşık 4 saat.</p>
+<p><strong>Bu kurs hakkında:</strong> Örneklerde Python ile yazılmış küçük programlar kullanılır, ama Docker dilden bağımsızdır: Node.js, Java, Go ya da bir veritabanı da aynı şekilde kapsayıcıya konur. Komutlar Windows (PowerShell), macOS ve Linux'ta aynıdır.</p>
+<h3>1. Hangi sorunu çözer? (30 dk)</h3>
+<p>Bir Python programını arkadaşına gönderdin. Onun bilgisayarında çalışmıyor: Python sürümü farklı, bir kütüphane eksik, başka bir programın istediği sürümle çakışıyor. Sunucuya kurarken de aynı sorunlar çıkıyor. Klasik çözüm, uzun bir "kurulum adımları" belgesidir ve her seferinde bir şey eksik kalır.</p>
+<p><strong>Docker</strong>, programı çalışması için gereken her şeyle (işletim sistemi dosyaları, dil sürümü, kütüphaneler, ayarlar) birlikte tek bir pakete koyar. Bu pakete <strong>imaj</strong> denir. İmajı Docker kurulu her bilgisayarda aynı şekilde çalıştırırsın; çalışan hâline <strong>kapsayıcı</strong> (container) denir.</p>
+<p>Benzetme: Gemilerdeki standart konteynerler gibi. İçinde ne olduğu önemli değil (muz, otomobil, kumaş); vinç, gemi ve kamyon onu hep aynı biçimde taşır. Docker da içindeki program ne olursa olsun kapsayıcıyı aynı komutlarla çalıştırır, durdurur ve taşır.</p>
+<h3>2. Kapsayıcı ve sanal makine (30 dk)</h3>
+<figure class="fig"><div class="sc"><svg viewBox="0 0 640 192" role="img" xmlns="http://www.w3.org/2000/svg"><defs><marker id="ah-vm" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0 0L10 5L0 10z" class="ar"/></marker></defs><text x="150" y="16" class="tb" text-anchor="middle">Sanal makineler</text><text x="490" y="16" class="tb" text-anchor="middle">Kapsayıcılar</text><rect x="20" y="24" width="126" height="26" rx="5" class="bxa"/><text x="83.0" y="41.0" class="tb" text-anchor="middle">Uygulama A</text><rect x="20" y="52" width="126" height="22" rx="5" class="bx"/><text x="83.0" y="67.0" class="tb" text-anchor="middle">kütüphaneler</text><rect x="20" y="76" width="126" height="26" rx="5" class="bx"/><text x="83.0" y="93.0" class="tb" text-anchor="middle">Konuk işletim s.</text><rect x="152" y="24" width="126" height="26" rx="5" class="bxa"/><text x="215.0" y="41.0" class="tb" text-anchor="middle">Uygulama B</text><rect x="152" y="52" width="126" height="22" rx="5" class="bx"/><text x="215.0" y="67.0" class="tb" text-anchor="middle">kütüphaneler</text><rect x="152" y="76" width="126" height="26" rx="5" class="bx"/><text x="215.0" y="93.0" class="tb" text-anchor="middle">Konuk işletim s.</text><rect x="20" y="106" width="258" height="24" rx="5" class="bx"/><text x="149.0" y="122.0" class="tb" text-anchor="middle">Hipervizör</text><rect x="20" y="132" width="258" height="24" rx="5" class="bx"/><text x="149.0" y="148.0" class="tb" text-anchor="middle">Bilgisayar işletim sistemi</text><rect x="20" y="158" width="258" height="24" rx="5" class="bx"/><text x="149.0" y="174.0" class="tb" text-anchor="middle">Donanım</text><rect x="362" y="50" width="84" height="26" rx="5" class="bxa"/><text x="404.0" y="67.0" class="tb" text-anchor="middle">App A</text><rect x="362" y="78" width="84" height="24" rx="5" class="bx"/><text x="404.0" y="94.0" class="tb" text-anchor="middle">kütüph.</text><rect x="450" y="50" width="84" height="26" rx="5" class="bxa"/><text x="492.0" y="67.0" class="tb" text-anchor="middle">App B</text><rect x="450" y="78" width="84" height="24" rx="5" class="bx"/><text x="492.0" y="94.0" class="tb" text-anchor="middle">kütüph.</text><rect x="538" y="50" width="84" height="26" rx="5" class="bxa"/><text x="580.0" y="67.0" class="tb" text-anchor="middle">App C</text><rect x="538" y="78" width="84" height="24" rx="5" class="bx"/><text x="580.0" y="94.0" class="tb" text-anchor="middle">kütüph.</text><rect x="362" y="106" width="260" height="24" rx="5" class="bx"/><text x="492.0" y="122.0" class="tb" text-anchor="middle">Docker motoru</text><rect x="362" y="132" width="260" height="24" rx="5" class="bx"/><text x="492.0" y="148.0" class="tb" text-anchor="middle">İşletim sistemi (Linux çekirdeği)</text><rect x="362" y="158" width="260" height="24" rx="5" class="bx"/><text x="492.0" y="174.0" class="tb" text-anchor="middle">Donanım</text></svg></div><figcaption>Sanal makine kendi işletim sistemini taşır; kapsayıcılar çekirdeği paylaşır, sadece uygulamayı ve kütüphaneleri içerir.</figcaption></figure>
+<p>Bir <strong>sanal makine</strong> (VirtualBox, VMware, Hyper-V) donanımı taklit eder ve içinde tam bir işletim sistemi çekirdeğiyle birlikte çalışır. Ağırdır: gigabaytlarca yer kaplar, açılması dakikalar sürer.</p>
+<p>Bir <strong>kapsayıcı</strong> ise kendi çekirdeğini getirmez; bilgisayarın Linux çekirdeğini paylaşır. Sadece programı ve onun ihtiyaç duyduğu dosyaları içerir. Çekirdek, kapsayıcıları birbirinden ve bilgisayardan <strong>yalıtır</strong>: her kapsayıcı kendi dosya sistemini, süreçlerini ve ağını görür.</p>
+<div class="tw"><table>
+<thead>
+<tr>
+<th></th>
+<th>Sanal makine</th>
+<th>Kapsayıcı</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>İçinde</td>
+<td>Tam işletim sistemi ve çekirdek</td>
+<td>Program ve bağımlılıkları</td>
+</tr>
+<tr>
+<td>Boyut</td>
+<td>GB'larca</td>
+<td>Genellikle onlarca–yüzlerce MB</td>
+</tr>
+<tr>
+<td>Açılış</td>
+<td>Dakikalar</td>
+<td>Saniyenin altı</td>
+</tr>
+<tr>
+<td>Yalıtım</td>
+<td>Çok güçlü (ayrı çekirdek)</td>
+<td>Güçlü (aynı çekirdek, ayrı ad alanları)</td>
+</tr>
+<tr>
+<td>Bir bilgisayarda</td>
+<td>Birkaç tane</td>
+<td>Onlarca, yüzlerce</td>
+</tr>
+</tbody>
+</table></div>
+<p>Kapsayıcılar Linux çekirdeğinin özelliklerine dayanır. Windows ve macOS'ta Docker Desktop, arka planda küçük bir Linux sanal makinesi (Windows'ta WSL 2) çalıştırır ve kapsayıcıları onun içinde başlatır; sen bunu fark etmezsin.</p>
+<h3>3. Üç kavram: imaj, kapsayıcı, kayıt (45 dk)</h3>
+<figure class="fig"><div class="sc"><svg viewBox="0 0 640 178" role="img" xmlns="http://www.w3.org/2000/svg"><defs><marker id="ah-kavram" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0 0L10 5L0 10z" class="ar"/></marker></defs><rect x="20" y="40" width="150" height="50" rx="5" class="bx"/><text x="95.0" y="61.0" class="tb" text-anchor="middle">Dockerfile</text><text x="95.0" y="77.0" class="tm" text-anchor="middle">tarif</text><line x1="172" y1="65" x2="238" y2="65" class="mu" marker-end="url(#ah-kavram)"/><text x="205" y="57" class="ta" text-anchor="middle">build</text><rect x="240" y="40" width="150" height="50" rx="5" class="bxa"/><text x="315.0" y="61.0" class="tb" text-anchor="middle">İmaj</text><text x="315.0" y="77.0" class="tm" text-anchor="middle">salt okunur kalıp</text><line x1="392" y1="52" x2="468" y2="28" class="mu" marker-end="url(#ah-kavram)"/><line x1="392" y1="65" x2="468" y2="65" class="mu" marker-end="url(#ah-kavram)"/><line x1="392" y1="78" x2="468" y2="102" class="mu" marker-end="url(#ah-kavram)"/><text x="430" y="50" class="ta" text-anchor="middle">run</text><rect x="470" y="14" width="150" height="30" rx="5" class="bx"/><text x="545.0" y="33.0" class="tb" text-anchor="middle">Kapsayıcı 1</text><rect x="470" y="52" width="150" height="30" rx="5" class="bx"/><text x="545.0" y="71.0" class="tb" text-anchor="middle">Kapsayıcı 2</text><rect x="470" y="90" width="150" height="30" rx="5" class="bx"/><text x="545.0" y="109.0" class="tb" text-anchor="middle">Kapsayıcı 3</text><line x1="315" y1="92" x2="315" y2="132" class="mu" marker-end="url(#ah-kavram)"/><line x1="300" y1="132" x2="300" y2="94" class="mu" marker-end="url(#ah-kavram)"/><text x="326" y="118" class="ta" text-anchor="start">push</text><text x="290" y="118" class="ta" text-anchor="end">pull</text><rect x="240" y="134" width="150" height="34" rx="5" class="bx"/><text x="315.0" y="155.0" class="tb" text-anchor="middle">Kayıt (Docker Hub)</text></svg></div><figcaption>Dockerfile&#x27;dan imaj üretilir; bir imajdan istenen sayıda kapsayıcı başlatılır; imajlar kayıtta paylaşılır.</figcaption></figure>
+<ul>
+<li><strong>İmaj (image):</strong> Programın ve ihtiyaçlarının salt okunur bir kalıbı. Bir tarif ya da bir sınıf (class) gibidir. Adı <code>ad:etiket</code> biçimindedir: <code>python:3.12-slim</code>, <code>postgres:17</code>, <code>nginx:latest</code>. Etiket verilmezse <code>latest</code> varsayılır.</li>
+<li><strong>Kapsayıcı (container):</strong> İmajdan başlatılan çalışan bir örnek. Aynı imajdan istediğin kadar kapsayıcı başlatabilirsin; her birinin kendi yazılabilir alanı vardır. Tariften pişirilmiş yemek ya da sınıftan oluşturulmuş nesne gibidir.</li>
+<li><strong>Kayıt (registry):</strong> İmajların saklandığı depo. En bilineni <strong>Docker Hub</strong>'dır (hub.docker.com); GitHub Container Registry (ghcr.io) ve bulut sağlayıcılarının kayıtları da yaygındır. <code>docker pull</code> indirir, <code>docker push</code> gönderir.</li>
+</ul>
+<p>İmajı sen de yazabilirsin: bir <strong>Dockerfile</strong> ("şu imajdan başla, şu dosyaları kopyala, şu komutu çalıştır") yazıp <code>docker build</code> ile imaj üretirsin. Bunu 3. günde yapacağız.</p>
+<p><strong>Resmî imajlar:</strong> Docker Hub'da <code>python</code>, <code>node</code>, <code>postgres</code>, <code>nginx</code> gibi adların başında kullanıcı adı olmayan imajlar resmî imajlardır ve güvenle kullanılabilir. <code>birisi/imaj-adi</code> biçimindekiler kişi ya da kurumlara aittir; kaynağını bilmediğin imajları kullanma.</p>
+<h3>4. Kurulum (45 dk)</h3>
+<ol>
+<li><strong>Windows:</strong> Önce WSL'yi kur (yönetici PowerShell'de <code>wsl --install</code>), sonra docker.com'dan <strong>Docker Desktop</strong>'ı indirip kur. Kurulumda "Use WSL 2" seçeneği işaretli olsun. Bilgisayarı yeniden başlat ve Docker Desktop'ı aç; sol altta motorun çalıştığını gösteren yeşil bir işaret görünür.</li>
+<li><strong>macOS:</strong> Docker Desktop'ı indir (Apple Silicon ya da Intel sürümünü seç) ve Uygulamalar'a sürükle.</li>
+<li><strong>Linux (Ubuntu):</strong> Docker'ın belgesindeki depo kurulumunu izle, ardından kullanıcını <code>docker</code> grubuna ekle ki her komutta <code>sudo</code> gerekmesin:</li>
+</ol>
+<!-- yok -->
+
+<pre><code class="language-bash">sudo usermod -aG docker $USER
+newgrp docker
+</code></pre>
+<p>Kurulumu terminalde doğrula:</p>
+<!-- yok -->
+
+<pre><code class="language-bash">docker version
+docker run hello-world
+</code></pre>
+<p><code>docker version</code> hem istemcinin (Client) hem motorun (Server) sürümünü yazmalıdır; sadece Client görünüyorsa Docker Desktop açık değildir. <code>hello-world</code> imajı küçük bir test programıdır: indirilir, çalışır ve "Hello from Docker!" ile başlayan, az önce olanları adım adım anlatan bir mesaj yazar.</p>
+<h3>5. İlk kapsayıcı (1 saat)</h3>
+<figure class="fig"><div class="sc"><svg viewBox="0 0 640 110" role="img" xmlns="http://www.w3.org/2000/svg"><defs><marker id="ah-run" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0 0L10 5L0 10z" class="ar"/></marker></defs><rect x="10.0" y="16" width="109.6" height="56" rx="5" class="bx"/><text x="64.8" y="40.0" class="tb" text-anchor="middle">docker run</text><text x="64.8" y="56.0" class="tm" text-anchor="middle">python:3.12-slim</text><rect x="137.6" y="16" width="109.6" height="56" rx="5" class="bx"/><text x="192.39999999999998" y="40.0" class="tb" text-anchor="middle">imaj var mı?</text><text x="192.39999999999998" y="56.0" class="tm" text-anchor="middle">yoksa pull</text><line x1="121.6" y1="44.0" x2="135.6" y2="44.0" class="mu" marker-end="url(#ah-run)"/><rect x="265.2" y="16" width="109.6" height="56" rx="5" class="bx"/><text x="320.0" y="40.0" class="tb" text-anchor="middle">create</text><text x="320.0" y="56.0" class="tm" text-anchor="middle">yazılabilir katman</text><line x1="249.2" y1="44.0" x2="263.2" y2="44.0" class="mu" marker-end="url(#ah-run)"/><rect x="392.79999999999995" y="16" width="109.6" height="56" rx="5" class="bxa"/><text x="447.59999999999997" y="40.0" class="tb" text-anchor="middle">start</text><text x="447.59999999999997" y="56.0" class="tm" text-anchor="middle">komutu çalıştır</text><line x1="376.79999999999995" y1="44.0" x2="390.79999999999995" y2="44.0" class="mu" marker-end="url(#ah-run)"/><rect x="520.4" y="16" width="109.6" height="56" rx="5" class="bx"/><text x="575.1999999999999" y="40.0" class="tb" text-anchor="middle">komut biter</text><text x="575.1999999999999" y="56.0" class="tm" text-anchor="middle">--rm → sil</text><line x1="504.4" y1="44.0" x2="518.4" y2="44.0" class="mu" marker-end="url(#ah-run)"/><text x="320" y="98" class="ta" text-anchor="middle">her kapsayıcı imajın temiz bir kopyasıyla başlar</text></svg></div><figcaption>docker run&#x27;ın arka planda yaptıkları.</figcaption></figure>
+<p><code>docker run imaj komut</code> imajdan yeni bir kapsayıcı oluşturur, içinde komutu çalıştırır ve komut bitince kapsayıcı durur. İmaj bilgisayarda yoksa önce kayıttan indirilir (ilk seferde biraz sürer, sonra önbellekten gelir).</p>
+<pre><code class="language-bash">docker run --rm python:3.12-slim python -c &quot;print('Merhaba kapsayıcıdan!')&quot;
+</code></pre>
+<pre><code class="language-text">Merhaba kapsayıcıdan!
+</code></pre>
+<p><code>--rm</code> kapsayıcıyı iş bitince siler; denemelerde ortalığı temiz tutar. Bilgisayarında Python kurulu olmasa bile bu komut çalışır: Python, imajın içindedir.</p>
+<p>Kapsayıcının kendi dünyasını gördüğünü kontrol edelim:</p>
+<pre><code class="language-bash">docker run --rm python:3.12-slim bash -c 'whoami; pwd; ls /; echo &quot;süreç sayısı: $(ls /proc | grep -c &quot;^[0-9]&quot;)&quot;'
+</code></pre>
+<p>Çıktıda kapsayıcının <code>root</code> kullanıcısıyla çalıştığını, kendi kök dosya sistemini (<code>/bin</code>, <code>/etc</code>, <code>/usr</code>…) gördüğünü ve içinde sadece birkaç süreç olduğunu görürsün: bilgisayarındaki yüzlerce süreç kapsayıcıdan görünmez. Kapsayıcıdaki <code>root</code>, varsayılan olarak bilgisayarındaki dosyalara erişemez; 7. günde imajları root olmayan bir kullanıcıyla çalıştırmayı da göreceğiz.</p>
+<p><strong>Yalıtım denemesi:</strong> Bir kapsayıcıda dosya oluşturup başka bir kapsayıcıda arayalım:</p>
+<pre><code class="language-bash">docker run --rm python:3.12-slim bash -c 'echo deneme &gt; /tmp/not.txt &amp;&amp; cat /tmp/not.txt'
+docker run --rm python:3.12-slim bash -c 'cat /tmp/not.txt 2&gt;&amp;1 || true'
+</code></pre>
+<pre><code class="language-text">deneme
+cat: /tmp/not.txt: No such file or directory
+</code></pre>
+<p>İkinci kapsayıcı aynı imajdan yepyeni başladı; ilkinin yaptığı değişikliği görmez. Her kapsayıcı imajın temiz bir kopyasıyla başlar. Bu, Docker'ın en önemli özelliğidir: <strong>her çalıştırma tekrarlanabilir</strong>. Kalıcı veri saklamanın yolunu 4. günde göreceğiz.</p>
+<p>İndirilmiş imajları <code>docker images</code> (ya da <code>docker image ls</code>) listeler; ad, etiket, kimlik ve boyut gösterir.</p>
+<pre><code class="language-bash">docker images --format '{{.Repository}}:{{.Tag}}' | grep python
+</code></pre>
+<pre><code class="language-text">python:3.12-slim
+</code></pre>
+<p><code>--format</code> çıktıyı istediğin sütunlarla sınırlar; betiklerde çok kullanılır.</p>
+<p><strong>Alıştırma:</strong> <code>python:3.12-slim</code> imajında bir kapsayıcı çalıştırıp içinde <code>python -c "import sys; print(sys.version)"</code> komutuyla Python sürümünü yazdır. Sonra aynı imajla <code>cat /etc/os-release</code> çalıştırıp kapsayıcının hangi Linux dağıtımına dayandığına bak.</p>
+<h3>Gün sonu kontrolü (15 dk)</h3>
+<ul class="tasks">
+<li class="task"><label><input type="checkbox" data-id="g1-1"><span>Docker'ın "benim bilgisayarımda çalışıyordu" sorununu nasıl çözdüğünü anlatabiliyorum.</span></label></li>
+<li class="task"><label><input type="checkbox" data-id="g1-2"><span>Kapsayıcı ile sanal makine arasındaki farkı biliyorum.</span></label></li>
+<li class="task"><label><input type="checkbox" data-id="g1-3"><span>İmaj, kapsayıcı ve kayıt kavramlarını ayırt edebiliyorum; imaj:etiket yazımını biliyorum.</span></label></li>
+<li class="task"><label><input type="checkbox" data-id="g1-4"><span>Docker'ı kurdum; docker version hem Client hem Server gösteriyor.</span></label></li>
+<li class="task"><label><input type="checkbox" data-id="g1-5"><span>docker run --rm ile bir kapsayıcıda komut çalıştırabiliyorum.</span></label></li>
+<li class="task"><label><input type="checkbox" data-id="g1-6"><span>Her kapsayıcının imajın temiz bir kopyasıyla başladığını gördüm.</span></label></li>
+</ul></div>
+  <div class="pn"><a href="#genel">← Genel bakış</a><a href="#gun2">2. gün →</a></div>
+</section>
+<section class="day" id="gun2" data-day="2">
+  <div class="day-head"><span class="dn">GÜN 02</span><h2>Kapsayıcıları yönetmek</h2><span class="meta">~4 saat · <span data-prog="2">0/6</span> kontrol</span></div>
+  <div class="prose"><h3>Hedef</h3>
+<p>Gün sonunda kapsayıcıları etkileşimli ya da arka planda çalıştırabilecek, adlandırıp listeleyebilecek, günlüklerini okuyup içine girebilecek; port yayınlayıp ortam değişkeni geçebilecek ve işin bitince durdurup silebileceksin. Süre yaklaşık 4 saat.</p>
+<h3>1. Kapsayıcının yaşam döngüsü (30 dk)</h3>
+<figure class="fig"><div class="sc"><svg viewBox="0 0 640 136" role="img" xmlns="http://www.w3.org/2000/svg"><defs><marker id="ah-yasam" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0 0L10 5L0 10z" class="ar"/></marker></defs><rect x="20" y="40" width="130" height="44" rx="5" class="bx"/><text x="85.0" y="58.0" class="tb" text-anchor="middle">created</text><text x="85.0" y="74.0" class="tm" text-anchor="middle">oluşturuldu</text><rect x="178" y="40" width="130" height="44" rx="5" class="bxa"/><text x="243.0" y="58.0" class="tb" text-anchor="middle">running</text><text x="243.0" y="74.0" class="tm" text-anchor="middle">çalışıyor</text><line x1="152" y1="62" x2="176" y2="62" class="mu" marker-end="url(#ah-yasam)"/><rect x="336" y="40" width="130" height="44" rx="5" class="bx"/><text x="401.0" y="58.0" class="tb" text-anchor="middle">exited</text><text x="401.0" y="74.0" class="tm" text-anchor="middle">durdu</text><line x1="310" y1="62" x2="334" y2="62" class="mu" marker-end="url(#ah-yasam)"/><rect x="494" y="40" width="130" height="44" rx="5" class="bx"/><text x="559.0" y="58.0" class="tb" text-anchor="middle">silindi</text><text x="559.0" y="74.0" class="tm" text-anchor="middle">rm</text><line x1="468" y1="62" x2="492" y2="62" class="mu" marker-end="url(#ah-yasam)"/><text x="165" y="34" class="ta" text-anchor="middle">start</text><text x="323" y="34" class="ta" text-anchor="middle">stop</text><text x="481" y="34" class="ta" text-anchor="middle">rm</text><path d="M 336 86 Q 257 128 178 86" class="mu" marker-end="url(#ah-yasam)"/><text x="257" y="124" class="ta" text-anchor="middle">start (yeniden)</text></svg></div><figcaption>Kapsayıcının yaşam döngüsü; docker run = create + start.</figcaption></figure>
+<p>Bir kapsayıcı şu durumlardan geçer: <strong>oluşturuldu</strong> (created), <strong>çalışıyor</strong> (running), <strong>durdu</strong> (exited) ve <strong>silindi</strong>. <code>docker run</code> aslında üç işi birden yapar: imajı gerekirse indirir (<code>pull</code>), kapsayıcıyı oluşturur (<code>create</code>) ve başlatır (<code>start</code>).</p>
+<p>Duran bir kapsayıcı silinmediği sürece diskte kalır; <code>docker start</code> ile yeniden başlatılabilir ve içindeki değişiklikler korunur. <code>--rm</code> verirsen durduğu anda silinir.</p>
+<div class="tw"><table>
+<thead>
+<tr>
+<th>Komut</th>
+<th>Ne yapar</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>docker ps</code></td>
+<td>Çalışan kapsayıcılar</td>
+</tr>
+<tr>
+<td><code>docker ps -a</code></td>
+<td>Duranlar dahil hepsi</td>
+</tr>
+<tr>
+<td><code>docker stop ad</code></td>
+<td>Durdurur (önce SIGTERM, 10 sn sonra SIGKILL)</td>
+</tr>
+<tr>
+<td><code>docker start ad</code></td>
+<td>Duranı yeniden başlatır</td>
+</tr>
+<tr>
+<td><code>docker restart ad</code></td>
+<td>Durdurup başlatır</td>
+</tr>
+<tr>
+<td><code>docker rm ad</code></td>
+<td>Duranı siler (<code>-f</code> çalışanı da zorla siler)</td>
+</tr>
+<tr>
+<td><code>docker container prune</code></td>
+<td>Bütün duran kapsayıcıları siler</td>
+</tr>
+</tbody>
+</table></div>
+<h3>2. Etkileşimli kapsayıcı: -it (30 dk)</h3>
+<p><code>-i</code> (interactive) girdiyi açık tutar, <code>-t</code> (tty) bir terminal ayırır. Birlikte, kapsayıcının içinde bir kabuk açmanı sağlar:</p>
+<!-- yok -->
+
+<pre><code class="language-bash">docker run -it --rm python:3.12-slim bash
+</code></pre>
+<p>İstem <code>root@3f2a9c1b7d4e:/#</code> gibi bir şeye döner; <code>@</code>'ten sonraki kapsayıcının kimliğidir. İçeride istediğin komutu dene, <code>exit</code> yazınca kabuk biter ve kapsayıcı durur (<code>--rm</code> olduğu için silinir). Etkileşimli Python için sondaki <code>bash</code> yerine <code>python</code> yaz.</p>
+<h3>3. Arka planda çalıştırmak: -d ve --name (45 dk)</h3>
+<p>Web sunucusu gibi sürekli çalışan programlar <code>-d</code> (detached) ile arka planda başlatılır. <code>--name</code> kapsayıcıya hatırlanabilir bir ad verir; vermezsen Docker <code>heuristic_curie</code> gibi rastgele bir ad koyar.</p>
+<p>Python'un yerleşik web sunucusunu bir kapsayıcıda başlatalım:</p>
+<pre><code class="language-bash">docker run -d --name web python:3.12-slim python -m http.server 8000 &gt; /dev/null
+docker ps --format '{{.Names}}  {{.Image}}  {{.Command}}'
+</code></pre>
+<pre><code class="language-text">web  python:3.12-slim  &quot;python -m http.serv…&quot;
+</code></pre>
+<p><code>docker run -d</code> başlattığı kapsayıcının uzun kimliğini yazar; burada <code>&gt; /dev/null</code> ile gizledik. <code>docker ps</code> normalde kimlik, imaj, komut, oluşturulma zamanı, durum, portlar ve ad sütunlarını gösterir.</p>
+<h3>4. Port yayınlamak: -p (45 dk)</h3>
+<figure class="fig"><div class="sc"><svg viewBox="0 0 640 134" role="img" xmlns="http://www.w3.org/2000/svg"><defs><marker id="ah-port" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0 0L10 5L0 10z" class="ar"/></marker></defs><rect x="330" y="14" width="290" height="110" class="bx"/><text x="475" y="32" class="ta" text-anchor="middle">kapsayıcı (kendi ağı)</text><rect x="380" y="50" width="200" height="40" rx="5" class="bxa"/><text x="480.0" y="66.0" class="tb" text-anchor="middle">http.server</text><text x="480.0" y="82.0" class="tm" text-anchor="middle">:8000</text><rect x="20" y="50" width="180" height="40" rx="5" class="bx"/><text x="110.0" y="66.0" class="tb" text-anchor="middle">Tarayıcı</text><text x="110.0" y="82.0" class="tm" text-anchor="middle">localhost:8080</text><line x1="202" y1="70" x2="378" y2="70" class="mu" marker-end="url(#ah-port)"/><text x="290" y="62" class="ta" text-anchor="middle">-p 8080:8000</text><text x="290" y="104" class="tm" text-anchor="middle">bilgisayar portu : kapsayıcı portu</text></svg></div><figcaption>Port yayınlama: bilgisayardaki 8080 portuna gelen istek kapsayıcının 8000 portuna iletilir.</figcaption></figure>
+<p>Kapsayıcının içindeki sunucu 8000 portunu dinliyor, ama bu port kapsayıcının kendi ağındadır; bilgisayarından ulaşamazsın. <code>-p bilgisayar_portu:kapsayıcı_portu</code> ile bir portu dışarı <strong>yayınlarsın</strong>:</p>
+<pre><code class="language-bash">docker rm -f web &gt; /dev/null
+mkdir -p site &amp;&amp; echo &quot;&lt;h1&gt;Kule A şantiye sayfası&lt;/h1&gt;&quot; &gt; site/index.html
+docker run -d --name web -p 8080:8000 -v &quot;$PWD/site:/site&quot; -w /site python:3.12-slim python -m http.server 8000 &gt; /dev/null
+sleep 1
+curl -s http://localhost:8080/
+docker port web
+</code></pre>
+<pre><code class="language-text">&lt;h1&gt;Kule A şantiye sayfası&lt;/h1&gt;
+8000/tcp -&gt; 0.0.0.0:8080
+</code></pre>
+<p>Artık tarayıcıda <code>http://localhost:8080</code> adresine gidersen sayfayı görürsün. İki yeni seçenek de kullandık; ikisini de ilerleyen günlerde ayrıntılı göreceğiz:</p>
+<ul>
+<li><code>-v "$PWD/site:/site"</code> bilgisayarındaki <code>site</code> klasörünü kapsayıcının içinde <code>/site</code> olarak gösterir (<strong>bind mount</strong>, 4. gün). Windows PowerShell'de <code>$PWD</code> yerine <code>${PWD}</code> yazılır.</li>
+<li><code>-w /site</code> kapsayıcıdaki çalışma klasörünü belirler.</li>
+</ul>
+<p>Bilgisayar portu boşta olmalıdır: aynı anda iki kapsayıcı <code>-p 8080:...</code> kullanamaz. Kapsayıcı tarafı ise her kapsayıcıda aynı olabilir. Örneğin <code>-p 8081:8000</code> ile ikinci bir kopyayı başka porttan yayınlayabilirsin.</p>
+<h3>5. Günlükler ve içine girmek: logs ve exec (45 dk)</h3>
+<p>Bir kapsayıcının ekrana (stdout ve stderr) yazdığı her şey Docker tarafından saklanır. <code>docker logs</code> bunları gösterir:</p>
+<pre><code class="language-bash">curl -s -o /dev/null http://localhost:8080/olmayan.html
+docker logs web 2&gt;&amp;1 | grep -c &quot;GET&quot;
+docker logs web 2&gt;&amp;1 | grep -o '&quot;GET [^&quot;]*&quot; [0-9]*'
+</code></pre>
+<pre><code class="language-text">2
+&quot;GET / HTTP/1.1&quot; 200
+&quot;GET /olmayan.html HTTP/1.1&quot; 404
+</code></pre>
+<p><code>docker logs -f web</code> günlüğü canlı izler (Ctrl+C ile çıkılır), <code>--tail 20</code> son 20 satırı, <code>--since 10m</code> son 10 dakikayı gösterir. Kapsayıcıda çalışan programlar günlükleri dosyaya değil ekrana yazmalıdır; Docker'ın günlük sistemi buna göre tasarlanmıştır.</p>
+<p><code>docker exec</code> <strong>çalışan</strong> bir kapsayıcının içinde ek bir komut çalıştırır. Hata ayıklamanın en önemli aracıdır:</p>
+<pre><code class="language-bash">docker exec web ls /site
+docker exec web python -c &quot;import os; print(os.getcwd())&quot;
+</code></pre>
+<pre><code class="language-text">index.html
+/site
+</code></pre>
+<p>İçeride bir kabuk açmak için <code>docker exec -it web bash</code> kullanılır. <code>run</code> yeni bir kapsayıcı başlatır; <code>exec</code> var olana girer. Bu farkı karıştırmamak önemlidir.</p>
+<h3>6. Ortam değişkenleri: -e (30 dk)</h3>
+<p>Programın ayarlarını (veritabanı adresi, dil, hata ayıklama modu) imajın içine yazmak yerine <strong>ortam değişkeniyle</strong> dışarıdan vermek Docker'ın temel kurallarından biridir. Böylece aynı imaj geliştirme, test ve canlı ortamda farklı ayarlarla çalışır.</p>
+<pre><code class="language-bash">docker run --rm -e PROJE=&quot;Kule B&quot; -e KAT=24 python:3.12-slim \
+  python -c &quot;import os; print(os.environ['PROJE'], '-', os.environ['KAT'], 'kat')&quot;
+</code></pre>
+<pre><code class="language-text">Kule B - 24 kat
+</code></pre>
+<p>Çok sayıda değişken için bir dosya kullanılır: her satırda <code>AD=değer</code> olan bir <code>.env</code> dosyası yazıp <code>--env-file .env</code> ile verirsin. Parola gibi gizli değerleri içeren <code>.env</code> dosyalarını Git'e ekleme.</p>
+<h3>7. Durdurmak, silmek, temizlik (30 dk)</h3>
+<pre><code class="language-bash">docker stop web &gt; /dev/null
+docker ps --format '{{.Names}}' | grep -c web || true
+docker ps -a --filter name=web --format '{{.Names}}: {{.State}}'
+docker rm web
+</code></pre>
+<pre><code class="language-text">0
+web: exited
+web
+</code></pre>
+<p><code>docker stop</code> kapsayıcıyı durdurdu ama silmedi (<code>ps -a</code>'da <code>exited</code> görünüyor); <code>docker rm</code> sildi ve adını yazdı.</p>
+<p>Zamanla diskte kullanılmayan kapsayıcı ve imajlar birikir. Ne kadar yer kapladıklarını <code>docker system df</code> gösterir; temizlik için:</p>
+<!-- yok -->
+
+<pre><code class="language-bash">docker container prune   # duran bütün kapsayıcılar
+docker image prune       # etiketsiz (dangling) imajlar
+docker system prune      # hepsi: duran kapsayıcılar, kullanılmayan ağlar, dangling imajlar, önbellek
+</code></pre>
+<p>Hepsi silmeden önce onay ister. <code>docker system prune -a</code> kullanılmayan bütün imajları da siler; sonra hepsi yeniden indirilir.</p>
+<p><strong>Kaynak sınırı:</strong> Bir kapsayıcının bütün belleği yemesini önlemek için <code>--memory 512m</code> ve <code>--cpus 1.5</code> gibi sınırlar verilebilir. <code>docker stats</code> çalışan kapsayıcıların CPU ve bellek kullanımını canlı gösterir.</p>
+<p><strong>Alıştırma:</strong> <code>python:3.12-slim</code> ile iki web sunucusu başlat: <code>site1</code> adlısı 8081, <code>site2</code> adlısı 8082 portundan yayınlansın ve farklı birer <code>index.html</code> göstersin. <code>curl</code> ile ikisini de dene, <code>docker logs</code> ile isteklerin geldiğini gör, <code>docker exec</code> ile <code>site1</code>'in içinde yeni bir dosya oluşturup tarayıcıdan aç. Son olarak tek komutla ikisini birden sil: <code>docker rm -f site1 site2</code>.</p>
+<h3>Gün sonu kontrolü (15 dk)</h3>
+<ul class="tasks">
+<li class="task"><label><input type="checkbox" data-id="g2-1"><span>Kapsayıcının oluşturuldu, çalışıyor, durdu, silindi durumlarını biliyorum.</span></label></li>
+<li class="task"><label><input type="checkbox" data-id="g2-2"><span>-it ile kapsayıcı içinde kabuk açabiliyor, -d ve --name ile arka planda çalıştırabiliyorum.</span></label></li>
+<li class="task"><label><input type="checkbox" data-id="g2-3"><span>-p ile port yayınlayıp kapsayıcıdaki sunucuya tarayıcıdan ulaşabiliyorum.</span></label></li>
+<li class="task"><label><input type="checkbox" data-id="g2-4"><span>docker logs ile günlüklere bakabiliyor, docker exec ile çalışan kapsayıcıda komut çalıştırabiliyorum.</span></label></li>
+<li class="task"><label><input type="checkbox" data-id="g2-5"><span>-e ve --env-file ile ayarları ortam değişkeniyle verebiliyorum.</span></label></li>
+<li class="task"><label><input type="checkbox" data-id="g2-6"><span>stop, rm ve prune komutlarıyla temizlik yapabiliyorum.</span></label></li>
+</ul></div>
+  <div class="pn"><a href="#gun1">← 1. gün</a><a href="#gun3">3. gün →</a></div>
+</section>
+<section class="day" id="gun3" data-day="3">
+  <div class="day-head"><span class="dn">GÜN 03</span><h2>Dockerfile yazmak</h2><span class="meta">~4 saat · <span data-prog="3">0/6</span> kontrol</span></div>
+  <div class="prose"><h3>Hedef</h3>
+<p>Gün sonunda kendi programın için bir Dockerfile yazıp <code>docker build</code> ile imaj üretebilecek, imajı etiketleyip çalıştırabilecek; katmanların ve build önbelleğinin nasıl çalıştığını anlayıp Dockerfile'ı hızlı build edilecek şekilde sıralayabileceksin. Süre yaklaşık 4 saat.</p>
+<h3>1. Uygulama (30 dk)</h3>
+<p>Kapsayıcıya koyacağımız program, cephe panellerinin listesini JSON olarak veren küçük bir web servisi. Python'un popüler web kütüphanesi <strong>Flask</strong> ile yazıldı. Bir klasör oluştur ve içine üç dosya koy.</p>
+<pre><code class="language-bash">mkdir -p panel-api &amp;&amp; cd panel-api
+</code></pre>
+<p><strong>app.py</strong></p>
+<!-- dosya: app.py -->
+
+<pre><code class="language-python">import os
+from flask import Flask, jsonify
+
+app = Flask(__name__)
+PANELLER = [
+    {&quot;kod&quot;: &quot;P-101&quot;, &quot;kat&quot;: 3, &quot;en&quot;: 1500, &quot;boy&quot;: 3200, &quot;durum&quot;: &quot;montaj&quot;},
+    {&quot;kod&quot;: &quot;P-102&quot;, &quot;kat&quot;: 3, &quot;en&quot;: 1500, &quot;boy&quot;: 3200, &quot;durum&quot;: &quot;üretim&quot;},
+    {&quot;kod&quot;: &quot;P-201&quot;, &quot;kat&quot;: 4, &quot;en&quot;: 1200, &quot;boy&quot;: 3200, &quot;durum&quot;: &quot;tasarım&quot;},
+]
+
+
+@app.get(&quot;/&quot;)
+def ana():
+    return jsonify(proje=os.environ.get(&quot;PROJE&quot;, &quot;tanımsız&quot;), panel_sayisi=len(PANELLER))
+
+
+@app.get(&quot;/paneller&quot;)
+def paneller():
+    return jsonify(PANELLER)
+
+
+if __name__ == &quot;__main__&quot;:
+    app.run(host=&quot;0.0.0.0&quot;, port=8000)
+</code></pre>
+<p><code>host="0.0.0.0"</code> önemlidir: Flask varsayılan olarak sadece <code>127.0.0.1</code>'i dinler ve kapsayıcının içinden dışarıya kapalı kalır. Kapsayıcıda çalışan sunucular bütün arayüzleri dinlemelidir.</p>
+<p><strong>requirements.txt</strong> (kütüphaneler ve sürümleri)</p>
+<!-- dosya: requirements.txt -->
+
+<pre><code>flask==3.1.1
+</code></pre>
+<h3>2. Dockerfile (1 saat)</h3>
+<figure class="fig"><div class="sc"><svg viewBox="0 0 640 182" role="img" xmlns="http://www.w3.org/2000/svg"><defs><marker id="ah-dockerfile" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0 0L10 5L0 10z" class="ar"/></marker></defs><rect x="20" y="8" width="260" height="24" class="bx"/><text x="30" y="25" class="tm" text-anchor="start">FROM python:3.12-slim</text><text x="296" y="25" class="ta" text-anchor="start">temel imaj</text><rect x="20" y="36" width="260" height="24" class="bx"/><text x="30" y="53" class="tm" text-anchor="start">WORKDIR /app</text><text x="296" y="53" class="ta" text-anchor="start">çalışma klasörü</text><rect x="20" y="64" width="260" height="24" class="bx"/><text x="30" y="81" class="tm" text-anchor="start">COPY requirements.txt .</text><text x="296" y="81" class="ta" text-anchor="start">önce bağımlılık listesi</text><rect x="20" y="92" width="260" height="24" class="bxa"/><text x="30" y="109" class="tm" text-anchor="start">RUN pip install …</text><text x="296" y="109" class="ta" text-anchor="start">build sırasında bir kez</text><rect x="20" y="120" width="260" height="24" class="bx"/><text x="30" y="137" class="tm" text-anchor="start">COPY app.py .</text><text x="296" y="137" class="ta" text-anchor="start">sonra kod</text><rect x="20" y="148" width="260" height="24" class="bxa"/><text x="30" y="165" class="tm" text-anchor="start">CMD ["python", "app.py"]</text><text x="296" y="165" class="ta" text-anchor="start">her başlangıçta</text></svg></div><figcaption>Dockerfile yukarıdan aşağı okunur; RUN build sırasında, CMD kapsayıcı başlarken çalışır.</figcaption></figure>
+<p><strong>Dockerfile</strong> (uzantısız, büyük D ile) imajın nasıl kurulacağını adım adım anlatan metin dosyasıdır. Her satır bir <strong>talimat</strong> ve argümanlarıdır:</p>
+<!-- dosya: Dockerfile -->
+
+<pre><code class="language-dockerfile"># 1. Temel imaj: içinde Python 3.12 olan küçük bir Linux
+FROM python:3.12-slim
+
+# 2. Kapsayıcıdaki çalışma klasörü (yoksa oluşturulur)
+WORKDIR /app
+
+# 3. Önce sadece bağımlılık listesini kopyala ve kur
+COPY requirements.txt .
+RUN pip install --no-cache-dir -r requirements.txt
+
+# 4. Sonra uygulama kodunu kopyala
+COPY app.py .
+
+# 5. Varsayılan ayarlar ve belgeleme
+ENV PROJE=&quot;Kule A&quot;
+EXPOSE 8000
+
+# 6. Kapsayıcı başlayınca çalışacak komut
+CMD [&quot;python&quot;, &quot;app.py&quot;]
+</code></pre>
+<div class="tw"><table>
+<thead>
+<tr>
+<th>Talimat</th>
+<th>Ne yapar</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>FROM</code></td>
+<td>Hangi imajın üzerine kurulacağı. Her Dockerfile bununla başlar.</td>
+</tr>
+<tr>
+<td><code>WORKDIR</code></td>
+<td>Sonraki komutların çalışacağı klasör. <code>cd</code> yerine kullanılır.</td>
+</tr>
+<tr>
+<td><code>COPY kaynak hedef</code></td>
+<td>Bilgisayardaki dosyaları imaja kopyalar. <code>.</code> WORKDIR demektir.</td>
+</tr>
+<tr>
+<td><code>RUN komut</code></td>
+<td>Build sırasında komut çalıştırır (paket kurmak gibi). Sonucu imaja kaydedilir.</td>
+</tr>
+<tr>
+<td><code>ENV AD=değer</code></td>
+<td>Ortam değişkeni; <code>docker run -e</code> ile ezilebilir.</td>
+</tr>
+<tr>
+<td><code>EXPOSE</code></td>
+<td>Programın hangi portu dinlediğini belgeler. Portu kendisi yayınlamaz; yine <code>-p</code> gerekir.</td>
+</tr>
+<tr>
+<td><code>CMD [...]</code></td>
+<td>Kapsayıcı başlayınca çalışacak varsayılan komut. <code>docker run imaj başka-komut</code> ile ezilebilir.</td>
+</tr>
+</tbody>
+</table></div>
+<p><code>RUN</code> build sırasında <strong>bir kez</strong> çalışır; <code>CMD</code> her kapsayıcı başladığında çalışır. Bu ayrımı karıştırmak yaygın bir hatadır.</p>
+<p><code>CMD</code>'yi köşeli parantezli liste biçiminde (exec biçimi) yaz. <code>CMD python app.py</code> biçimi bir kabuk üzerinden çalışır ve <code>docker stop</code> sinyali programa ulaşmayabilir; kapsayıcı 10 saniye bekleyip zorla öldürülür.</p>
+<h3>3. Build ve çalıştırmak (45 dk)</h3>
+<p><code>docker build -t ad:etiket klasör</code> Dockerfile'ı okuyup imaj üretir. Sondaki <code>.</code> <strong>build bağlamıdır</strong>: Docker bu klasördeki dosyaları motora gönderir; <code>COPY</code> sadece bu dosyalara ulaşabilir.</p>
+<pre><code class="language-bash">docker build -t panel-api:1.0 . &gt; build.log 2&gt;&amp;1 &amp;&amp; echo &quot;build tamam&quot;
+docker images --format '{{.Repository}}:{{.Tag}}' | grep panel-api
+</code></pre>
+<pre><code class="language-text">build tamam
+panel-api:1.0
+</code></pre>
+<p>Build çıktısını görmek için <code>&gt; build.log 2&gt;&amp;1</code> kısmını yazmadan çalıştır: her talimat için bir satır ve <code>pip</code>'in indirme çıktıları görünür. İlk build birkaç dakika sürebilir; temel imaj ve kütüphaneler indirilir.</p>
+<p>Çalıştıralım:</p>
+<pre><code class="language-bash">docker run -d --name api -p 8000:8000 panel-api:1.0 &gt; /dev/null
+sleep 2
+curl -s http://localhost:8000/
+curl -s http://localhost:8000/paneller | python3 -c &quot;import json,sys; [print(p['kod'], p['durum']) for p in json.load(sys.stdin)]&quot;
+</code></pre>
+<pre><code class="language-text">{&quot;panel_sayisi&quot;:3,&quot;proje&quot;:&quot;Kule A&quot;}
+P-101 montaj
+P-102 üretim
+P-201 tasarım
+</code></pre>
+<p><code>ENV</code> ile verdiğimiz varsayılanı <code>-e</code> ile ezelim:</p>
+<pre><code class="language-bash">docker rm -f api &gt; /dev/null
+docker run -d --name api -p 8000:8000 -e PROJE=&quot;AVM Cephe&quot; panel-api:1.0 &gt; /dev/null
+sleep 2
+curl -s http://localhost:8000/
+docker rm -f api &gt; /dev/null
+</code></pre>
+<pre><code class="language-text">{&quot;panel_sayisi&quot;:3,&quot;proje&quot;:&quot;AVM Cephe&quot;}
+</code></pre>
+<p>Aynı imaj, farklı ayarla. Bu imajı Docker kurulu başka bir bilgisayara taşıdığında (7. günde kayda göndereceğiz) tam olarak aynı şekilde çalışır; o bilgisayarda Python ya da Flask kurulu olmasına gerek yoktur.</p>
+<h3>4. Katmanlar ve önbellek (1 saat)</h3>
+<figure class="fig"><div class="sc"><svg viewBox="0 0 640 186" role="img" xmlns="http://www.w3.org/2000/svg"><defs><marker id="ah-katman" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0 0L10 5L0 10z" class="ar"/></marker></defs><rect x="40" y="8" width="240" height="22" rx="5" class="bx"/><text x="160.0" y="23.0" class="tb" text-anchor="middle">CMD (ayar)</text><text x="300" y="24" class="ta" text-anchor="start">→ yeniden üretilir</text><rect x="40" y="34" width="240" height="22" rx="5" class="bxa"/><text x="160.0" y="49.0" class="tb" text-anchor="middle">COPY app.py</text><text x="300" y="50" class="ta" text-anchor="start">→ yeniden üretilir</text><rect x="40" y="60" width="240" height="22" rx="5" class="bx"/><text x="160.0" y="75.0" class="tb" text-anchor="middle">RUN pip install</text><text x="300" y="76" class="tm" text-anchor="start">→ önbellekten (CACHED)</text><rect x="40" y="86" width="240" height="22" rx="5" class="bx"/><text x="160.0" y="101.0" class="tb" text-anchor="middle">COPY requirements.txt</text><text x="300" y="102" class="tm" text-anchor="start">→ önbellekten (CACHED)</text><rect x="40" y="112" width="240" height="22" rx="5" class="bx"/><text x="160.0" y="127.0" class="tb" text-anchor="middle">WORKDIR /app</text><text x="300" y="128" class="tm" text-anchor="start">→ önbellekten (CACHED)</text><rect x="40" y="138" width="240" height="22" rx="5" class="bx"/><text x="160.0" y="153.0" class="tb" text-anchor="middle">python:3.12-slim katmanları</text><text x="300" y="154" class="tm" text-anchor="start">→ önbellekten (CACHED)</text><text x="40" y="176" class="ta" text-anchor="start">app.py değişince sadece o katman ve üstündekiler yeniden üretilir</text></svg></div><figcaption>İmaj katmanlardan oluşur; değişen katmandan sonrakiler yeniden üretilir.</figcaption></figure>
+<p>Dockerfile'daki dosya sistemini değiştiren her talimat (<code>RUN</code>, <code>COPY</code>) imaja bir <strong>katman</strong> ekler. Katmanlar üst üste binen salt okunur değişiklik listeleridir. <code>docker history</code> bunları gösterir:</p>
+<pre><code class="language-bash">docker history panel-api:1.0 --format '{{.CreatedBy}}' | head -n 6 | cut -c1-70
+</code></pre>
+<pre><code class="language-text">CMD [&quot;python&quot; &quot;app.py&quot;]
+EXPOSE [8000/tcp]
+ENV PROJE=Kule A
+COPY app.py . # buildkit
+RUN /bin/sh -c pip install --no-cache-dir -r…
+COPY requirements.txt . # buildkit
+</code></pre>
+<p>Liste yeniden eskiye doğrudur: en üstte <code>CMD</code>, en altta temel imajın katmanları. Boyutu sıfır olan satırlar (<code>CMD</code>, <code>ENV</code>, <code>EXPOSE</code>) sadece imajın ayarlarını değiştirir.</p>
+<p><strong>Önbellek:</strong> Docker build sırasında her talimatı önceki build'le karşılaştırır. Talimat ve kopyalanan dosyalar değişmemişse katmanı yeniden üretmez, önbellekten kullanır (<code>CACHED</code>). Ama bir katman değişirse <strong>ondan sonraki bütün katmanlar</strong> yeniden üretilir.</p>
+<p>Sadece <code>app.py</code>'yi değiştirip yeniden build edelim ve hangi adımların önbellekten geldiğine bakalım:</p>
+<pre><code class="language-bash">sed -i 's/&quot;tanımsız&quot;/&quot;belirtilmedi&quot;/' app.py
+docker build --progress=plain -t panel-api:1.1 . 2&gt;&amp;1 \
+  | awk '/^#[0-9]+ \[[2-5]\/5\]/ { ad[$1] = $2 &quot; &quot; $3 &quot; &quot; $4 }
+         /^#[0-9]+ CACHED/ { onb[$1] = 1 }
+         END { for (k in ad) print ad[k], (k in onb ? &quot;→ önbellekten&quot; : &quot;→ yeniden üretildi&quot;) }' | sort
+</code></pre>
+<pre><code class="language-text">[2/5] WORKDIR /app → önbellekten
+[3/5] COPY requirements.txt → önbellekten
+[4/5] RUN pip → önbellekten
+[5/5] COPY app.py → yeniden üretildi
+</code></pre>
+<p>Build çıktısında her adımın bir numarası (<code>#5</code> gibi) vardır ve önbellekten gelen adımların altında <code>CACHED</code> yazar; <code>awk</code> ile bunları eşleştirip özetledik. Kendi denemende <code>awk</code> kısmını yazmadan çıktının tamamına bakabilirsin.</p>
+<p><code>pip install</code> önbellekten geldi, sadece <code>COPY app.py</code> ve sonrası yeniden üretildi; build birkaç saniye sürdü. Bu yüzden Dockerfile'da <strong>az değişen şeyler üste, sık değişenler alta</strong> yazılır: önce bağımlılık listesi ve kurulum, sonra kod. <code>COPY . .</code> ile her şeyi en başta kopyalasaydık kodda yaptığın her küçük değişiklik <code>pip install</code>'ı baştan çalıştırırdı.</p>
+<h3>5. .dockerignore (20 dk)</h3>
+<p>Build bağlamındaki her dosya motora gönderilir ve <code>COPY . .</code> ile imaja girer. <code>.git</code>, sanal ortam (<code>.venv</code>), <code>__pycache__</code>, büyük veri dosyaları ve parolaları içeren <code>.env</code> dosyaları imaja girmemelidir. <code>.dockerignore</code> dosyası, <code>.gitignore</code> gibi, bunları dışarıda bırakır:</p>
+<!-- dosya: .dockerignore -->
+
+<pre><code>.git
+.venv
+__pycache__/
+*.pyc
+.env
+build.log
+veri/
+</code></pre>
+<p>Hem build hızlanır, hem imaj küçülür, hem de gizli bilgilerin yanlışlıkla imaja girip kayda gönderilmesi önlenir.</p>
+<h3>6. Sık hatalar (15 dk)</h3>
+<ul>
+<li><strong><code>COPY failed: file not found</code>:</strong> Dosya build bağlamında değil ya da <code>.dockerignore</code> onu dışarıda bırakıyor. <code>docker build</code> komutunu Dockerfile'ın bulunduğu klasörde çalıştırdığından emin ol.</li>
+<li><strong>Kapsayıcı hemen duruyor:</strong> <code>CMD</code>'deki program bittiyse kapsayıcı da biter. <code>docker logs ad</code> ile hatayı oku; çoğu zaman bir Python hatası ya da eksik kütüphanedir.</li>
+<li><strong>Tarayıcıdan ulaşamıyorum:</strong> <code>-p</code> unutuldu ya da program <code>127.0.0.1</code>'i dinliyor (<code>0.0.0.0</code> olmalı).</li>
+<li><strong>Değişiklik görünmüyor:</strong> Kodu değiştirdikten sonra yeniden build etmeyi ve yeni etiketle (ya da aynı etiketle) kapsayıcıyı yeniden başlatmayı unutma; çalışan kapsayıcı eski imajdan devam eder.</li>
+</ul>
+<p><strong>Alıştırma:</strong> Uygulamaya <code>/paneller/&lt;kod&gt;</code> adresinde tek bir paneli döndüren yeni bir sayfa ekle (bulunamazsa 404 dönsün). İmajı <code>panel-api:1.2</code> etiketiyle yeniden build et, önbellekten gelen adımları gözlemle ve yeni adresi <code>curl</code> ile dene.</p>
+<h3>Gün sonu kontrolü (15 dk)</h3>
+<ul class="tasks">
+<li class="task"><label><input type="checkbox" data-id="g3-1"><span>FROM, WORKDIR, COPY, RUN, ENV, EXPOSE ve CMD talimatlarının ne yaptığını biliyorum.</span></label></li>
+<li class="task"><label><input type="checkbox" data-id="g3-2"><span>RUN ile CMD arasındaki farkı biliyorum.</span></label></li>
+<li class="task"><label><input type="checkbox" data-id="g3-3"><span>docker build -t ile imaj üretip docker run ile çalıştırabiliyorum.</span></label></li>
+<li class="task"><label><input type="checkbox" data-id="g3-4"><span>Katman ve önbellek mantığını biliyor, Dockerfile'ı az değişenler üstte olacak şekilde sıralıyorum.</span></label></li>
+<li class="task"><label><input type="checkbox" data-id="g3-5"><span>.dockerignore ile gereksiz ve gizli dosyaları imajdan uzak tutuyorum.</span></label></li>
+<li class="task"><label><input type="checkbox" data-id="g3-6"><span>Kapsayıcı çalışmadığında docker logs ile nedenini bulabiliyorum.</span></label></li>
+</ul></div>
+  <div class="pn"><a href="#gun2">← 2. gün</a><a href="#gun4">4. gün →</a></div>
+</section>
+<section class="day" id="gun4" data-day="4">
+  <div class="day-head"><span class="dn">GÜN 04</span><h2>Veriyi saklamak</h2><span class="meta">~4 saat · <span data-prog="4">0/6</span> kontrol</span></div>
+  <div class="prose"><h3>Hedef</h3>
+<p>Gün sonunda kapsayıcı silindiğinde verinin neden kaybolduğunu bilecek; <strong>named volume</strong> ile veriyi kalıcı yapabilecek, <strong>bind mount</strong> ile bilgisayarındaki bir klasörü kapsayıcıya bağlayabilecek ve bir volume'u yedekleyip geri yükleyebileceksin. Süre yaklaşık 4 saat.</p>
+<h3>1. Veri nerede yaşar? (30 dk)</h3>
+<figure class="fig"><div class="sc"><svg viewBox="0 0 640 196" role="img" xmlns="http://www.w3.org/2000/svg"><defs><marker id="ah-volume" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0 0L10 5L0 10z" class="ar"/></marker></defs><rect x="20" y="14" width="180" height="30" rx="5" class="bxa"/><text x="110.0" y="33.0" class="tb" text-anchor="middle">Kapsayıcı</text><rect x="20" y="46" width="180" height="26" rx="5" class="bx"/><text x="110.0" y="63.0" class="tb" text-anchor="middle">yazılabilir katman</text><text x="210" y="64" class="ta" text-anchor="start">← kapsayıcıyla silinir</text><rect x="20" y="74" width="180" height="26" rx="5" class="bx"/><text x="110.0" y="91.0" class="tb" text-anchor="middle">imaj (salt okunur)</text><line x1="110" y1="102" x2="110" y2="132" class="mu" marker-end="url(#ah-volume)"/><line x1="160" y1="102" x2="380" y2="132" class="mu" marker-end="url(#ah-volume)"/><rect x="20" y="134" width="200" height="36" rx="5" class="bx"/><text x="120.0" y="148.0" class="tb" text-anchor="middle">named volume</text><text x="120.0" y="164.0" class="tm" text-anchor="middle">-v siparis-veri:/veri</text><rect x="300" y="134" width="220" height="36" rx="5" class="bx"/><text x="410.0" y="148.0" class="tb" text-anchor="middle">bind mount</text><text x="410.0" y="164.0" class="tm" text-anchor="middle">-v "$PWD/veri:/veri"</text><text x="120" y="186" class="tm" text-anchor="middle">Docker yönetir</text><text x="410" y="186" class="tm" text-anchor="middle">senin klasörün</text></svg></div><figcaption>Kalıcı veri kapsayıcının dışında tutulur: Docker&#x27;ın yönettiği volume ya da bilgisayardaki bir klasör.</figcaption></figure>
+<p>İmaj salt okunurdur. Kapsayıcı başlarken Docker imajın üstüne ince bir <strong>yazılabilir katman</strong> ekler; kapsayıcının yaptığı her değişiklik buraya yazılır. Kapsayıcı silinince bu katman da silinir. 1. günde <code>/tmp/not.txt</code>'nin ikinci kapsayıcıda görünmemesinin nedeni buydu.</p>
+<p>Bu, uygulama kodu için istediğimiz bir şeydir (her başlangıç temiz), ama veritabanı, yüklenen dosyalar ve günlükler için felakettir. Docker'da kalıcı veri için iki yol vardır:</p>
+<div class="tw"><table>
+<thead>
+<tr>
+<th></th>
+<th>Named volume</th>
+<th>Bind mount</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Yazım</td>
+<td><code>-v siparis-veri:/veri</code></td>
+<td><code>-v /tam/yol:/veri</code> ya da <code>-v "$PWD/klasor:/veri"</code></td>
+</tr>
+<tr>
+<td>Nerede</td>
+<td>Docker'ın yönettiği bir alanda</td>
+<td>Bilgisayarında senin seçtiğin klasörde</td>
+</tr>
+<tr>
+<td>Ne zaman</td>
+<td>Veritabanları, uygulama verisi</td>
+<td>Geliştirirken kodu canlı bağlamak, ayar dosyaları, çıktı almak</td>
+</tr>
+<tr>
+<td>Taşınabilirlik</td>
+<td>Her bilgisayarda aynı çalışır</td>
+<td>Yol bilgisayara özeldir</td>
+</tr>
+</tbody>
+</table></div>
+<p><code>-v</code> solundaki ad <code>/</code> ile başlamıyorsa (ve <code>.</code> ile başlamıyorsa) bir volume adı, <code>/</code> ile başlıyorsa bilgisayardaki bir yol sayılır.</p>
+<h3>2. Uygulama: SQLite ile sipariş kaydı (30 dk)</h3>
+<p>Küçük bir program yazalım: her çalıştığında veritabanına bir sipariş ekleyip toplam kaydı yazsın. Veritabanının yeri <code>VERI_YOLU</code> ortam değişkeninden gelir.</p>
+<pre><code class="language-bash">mkdir -p kayit &amp;&amp; cd kayit
+</code></pre>
+<p><strong>kaydet.py</strong></p>
+<!-- dosya: kaydet.py -->
+
+<pre><code class="language-python">import os
+import sqlite3
+import sys
+
+yol = os.environ.get(&quot;VERI_YOLU&quot;, &quot;/veri/siparis.db&quot;)
+os.makedirs(os.path.dirname(yol), exist_ok=True)
+db = sqlite3.connect(yol)
+db.execute(&quot;CREATE TABLE IF NOT EXISTS siparis (id INTEGER PRIMARY KEY, malzeme TEXT, adet INTEGER)&quot;)
+malzeme = sys.argv[1] if len(sys.argv) &gt; 1 else &quot;Isıcam&quot;
+adet = int(sys.argv[2]) if len(sys.argv) &gt; 2 else 1
+db.execute(&quot;INSERT INTO siparis (malzeme, adet) VALUES (?, ?)&quot;, (malzeme, adet))
+db.commit()
+toplam = db.execute(&quot;SELECT COUNT(*), COALESCE(SUM(adet), 0) FROM siparis&quot;).fetchone()
+print(f&quot;eklendi: {malzeme} x{adet} | kayıt: {toplam[0]}, toplam adet: {toplam[1]}&quot;)
+</code></pre>
+<p><strong>Dockerfile</strong></p>
+<!-- dosya: Dockerfile -->
+
+<pre><code class="language-dockerfile">FROM python:3.12-slim
+WORKDIR /app
+COPY kaydet.py .
+ENTRYPOINT [&quot;python&quot;, &quot;kaydet.py&quot;]
+</code></pre>
+<p>Bu kez <code>CMD</code> yerine <code>ENTRYPOINT</code> kullandık. Fark: <code>docker run imaj Isıcam 40</code> yazınca, <code>CMD</code> ile <code>Isıcam 40</code> komutun <strong>yerine</strong> geçerdi; <code>ENTRYPOINT</code> ile komutun <strong>sonuna argüman olarak</strong> eklenir. Kapsayıcıyı bir komut satırı aracı gibi kullanmak için idealdir.</p>
+<pre><code class="language-bash">docker build -q -t kaydet:1.0 . &gt; /dev/null &amp;&amp; echo hazır
+</code></pre>
+<pre><code class="language-text">hazır
+</code></pre>
+<h3>3. Volume olmadan: veri kaybolur (20 dk)</h3>
+<pre><code class="language-bash">docker run --rm kaydet:1.0 Isıcam 40
+docker run --rm kaydet:1.0 Silikon 20
+</code></pre>
+<pre><code class="language-text">eklendi: Isıcam x40 | kayıt: 1, toplam adet: 40
+eklendi: Silikon x20 | kayıt: 1, toplam adet: 20
+</code></pre>
+<p>İkinci çalıştırma da "kayıt: 1" dedi: her kapsayıcı boş bir veritabanıyla başladı ve iş bitince sildiği yazılabilir katmanla birlikte veritabanı da gitti.</p>
+<h3>4. Named volume (1 saat)</h3>
+<p>Bir volume oluşturup kapsayıcının <code>/veri</code> klasörüne bağlayalım:</p>
+<pre><code class="language-bash">docker volume create siparis-veri
+docker run --rm -v siparis-veri:/veri kaydet:1.0 Isıcam 40
+docker run --rm -v siparis-veri:/veri kaydet:1.0 Silikon 20
+docker run --rm -v siparis-veri:/veri kaydet:1.0 &quot;Ankraj braketi&quot; 96
+</code></pre>
+<pre><code class="language-text">siparis-veri
+eklendi: Isıcam x40 | kayıt: 1, toplam adet: 40
+eklendi: Silikon x20 | kayıt: 2, toplam adet: 60
+eklendi: Ankraj braketi x96 | kayıt: 3, toplam adet: 156
+</code></pre>
+<p>Kapsayıcılar her seferinde silindi, ama veri volume'da kaldı. <code>docker volume create</code> yazmasan da olurdu: <code>-v</code> ile verilen volume yoksa Docker onu kendisi oluşturur.</p>
+<p>Volume'ları yönetmek:</p>
+<pre><code class="language-bash">docker volume ls --format '{{.Name}}'
+docker volume inspect siparis-veri --format '{{.Mountpoint}}'
+</code></pre>
+<pre><code class="language-text">siparis-veri
+/var/lib/docker/volumes/siparis-veri/_data
+</code></pre>
+<p>Volume'un içeriği Docker'ın alanında durur (Docker Desktop'ta bu yol sanal makinenin içindedir; Gezgin'den doğrudan bakılmaz). İçine bakmanın en kolay yolu, volume'u geçici bir kapsayıcıya bağlamaktır:</p>
+<pre><code class="language-bash">docker run --rm -v siparis-veri:/veri python:3.12-slim \
+  python -c &quot;import sqlite3; print(sqlite3.connect('/veri/siparis.db').execute('select malzeme, adet from siparis').fetchall())&quot;
+</code></pre>
+<pre><code class="language-text">[('Isıcam', 40), ('Silikon', 20), ('Ankraj braketi', 96)]
+</code></pre>
+<p>Aynı volume'u birden çok kapsayıcı paylaşabilir. Bir volume'u silmek için <code>docker volume rm ad</code>; hiçbir kapsayıcının kullanmadığı volume'ları silmek için <code>docker volume prune</code> kullanılır. <strong>Dikkat:</strong> volume silinirse içindeki veri geri gelmez.</p>
+<h3>5. Bind mount (45 dk)</h3>
+<p>Bind mount, bilgisayarındaki bir klasörü kapsayıcıya bağlar. Kapsayıcının yazdığı dosyaları hemen bilgisayarında görürsün, bilgisayarında değiştirdiğin dosyaları da kapsayıcı hemen görür.</p>
+<pre><code class="language-bash">mkdir -p yerel-veri
+docker run --rm -v &quot;$PWD/yerel-veri:/veri&quot; kaydet:1.0 &quot;Kompozit panel&quot; 60
+ls yerel-veri
+</code></pre>
+<pre><code class="language-text">eklendi: Kompozit panel x60 | kayıt: 1, toplam adet: 60
+siparis.db
+</code></pre>
+<p>Veritabanı artık doğrudan senin klasöründe; başka programlarla açabilir, yedekleyebilir, silebilirsin. <strong>Linux notu:</strong> Kapsayıcı <code>root</code> olarak çalıştığı için oluşturduğu dosyalar bilgisayarında da <code>root</code>'a ait görünür ve silmek için <code>sudo</code> gerekebilir. Kapsayıcıyı <code>--user "$(id -u):$(id -g)"</code> ile kendi kullanıcınla çalıştırırsan dosyalar sana ait olur; 7. günde imajın içinde root olmayan bir kullanıcı tanımlamayı da göreceğiz. Docker Desktop (Windows, macOS) bu sahiplik işini kendisi çözer.</p>
+<p><strong>Geliştirirken kodu canlı bağlamak.</strong> Bind mount'un en sık kullanımı budur: kodu imaja kopyalamak yerine klasörü bağlarsın; her değişiklikte yeniden build gerekmez.</p>
+<pre><code class="language-bash">docker run --rm -v &quot;$PWD:/app&quot; -v siparis-veri:/veri kaydet:1.0 Dikme 48
+sed -i 's/eklendi:/EKLENDİ:/' kaydet.py
+docker run --rm -v &quot;$PWD:/app&quot; -v siparis-veri:/veri kaydet:1.0 Kayıt 36
+</code></pre>
+<pre><code class="language-text">eklendi: Dikme x48 | kayıt: 4, toplam adet: 204
+EKLENDİ: Kayıt x36 | kayıt: 5, toplam adet: 240
+</code></pre>
+<p>İmajı yeniden build etmeden kodda yaptığın değişiklik ikinci çalıştırmada etkili oldu, çünkü <code>/app</code> klasörü artık bilgisayarındaki klasördür ve imajdaki <code>kaydet.py</code>'nin üstünü örter.</p>
+<p><strong>Salt okunur bağlamak.</strong> Kapsayıcının bir klasöre yazmasını istemiyorsan sonuna <code>:ro</code> ekle: <code>-v "$PWD/ayarlar:/ayarlar:ro"</code>.</p>
+<p><strong>Windows notu:</strong> Docker Desktop'ta <code>C:\Users\...</code> altındaki klasörleri bağlayabilirsin, ama dosya işlemleri WSL'nin kendi dosya sisteminden (<code>\\wsl$\Ubuntu\home\...</code>) daha yavaştır. Projeyi WSL içinde tutmak, özellikle çok dosyalı projelerde belirgin hız kazandırır.</p>
+<h3>6. Yedek ve geri yükleme (45 dk)</h3>
+<figure class="fig"><div class="sc"><svg viewBox="0 0 640 86" role="img" xmlns="http://www.w3.org/2000/svg"><defs><marker id="ah-yedek" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0 0L10 5L0 10z" class="ar"/></marker></defs><rect x="10.0" y="16" width="109.6" height="56" rx="5" class="bx"/><text x="64.8" y="40.0" class="tb" text-anchor="middle">siparis-veri</text><text x="64.8" y="56.0" class="tm" text-anchor="middle">volume</text><rect x="137.6" y="16" width="109.6" height="56" rx="5" class="bx"/><text x="192.39999999999998" y="40.0" class="tb" text-anchor="middle">geçici kapsayıcı</text><text x="192.39999999999998" y="56.0" class="tm" text-anchor="middle">iki bağlama</text><line x1="121.6" y1="44.0" x2="135.6" y2="44.0" class="mu" marker-end="url(#ah-yedek)"/><rect x="265.2" y="16" width="109.6" height="56" rx="5" class="bxa"/><text x="320.0" y="40.0" class="tb" text-anchor="middle">tar -czf</text><text x="320.0" y="56.0" class="tm" text-anchor="middle">arşivle</text><line x1="249.2" y1="44.0" x2="263.2" y2="44.0" class="mu" marker-end="url(#ah-yedek)"/><rect x="392.79999999999995" y="16" width="109.6" height="56" rx="5" class="bx"/><text x="447.59999999999997" y="40.0" class="tb" text-anchor="middle">./yedek</text><text x="447.59999999999997" y="56.0" class="tm" text-anchor="middle">bilgisayarında</text><line x1="376.79999999999995" y1="44.0" x2="390.79999999999995" y2="44.0" class="mu" marker-end="url(#ah-yedek)"/><rect x="520.4" y="16" width="109.6" height="56" rx="5" class="bx"/><text x="575.1999999999999" y="40.0" class="tb" text-anchor="middle">yeni volume</text><text x="575.1999999999999" y="56.0" class="tm" text-anchor="middle">tar -xzf</text><line x1="504.4" y1="44.0" x2="518.4" y2="44.0" class="mu" marker-end="url(#ah-yedek)"/></svg></div><figcaption>Volume yedeği: volume&#x27;u ve bir klasörü aynı geçici kapsayıcıya bağla, tar ile arşivle.</figcaption></figure>
+<p>Volume'u yedeklemek için klasik yöntem, volume'u ve bilgisayardaki bir klasörü aynı geçici kapsayıcıya bağlayıp <code>tar</code> ile arşivlemektir:</p>
+<pre><code class="language-bash">mkdir -p yedek
+docker run --rm -v siparis-veri:/veri:ro -v &quot;$PWD/yedek:/yedek&quot; python:3.12-slim \
+  tar -czf /yedek/siparis-veri.tar.gz -C /veri .
+ls yedek
+</code></pre>
+<pre><code class="language-text">siparis-veri.tar.gz
+</code></pre>
+<p>Felaketi canlandıralım: volume'u silip yedekten yeni bir volume'a geri yükleyelim.</p>
+<pre><code class="language-bash">docker volume rm siparis-veri
+docker run --rm -v siparis-veri-yeni:/veri -v &quot;$PWD/yedek:/yedek:ro&quot; python:3.12-slim \
+  tar -xzf /yedek/siparis-veri.tar.gz -C /veri
+docker run --rm -v siparis-veri-yeni:/veri kaydet:1.0 Silikon 10
+</code></pre>
+<pre><code class="language-text">siparis-veri
+eklendi: Silikon x10 | kayıt: 6, toplam adet: 250
+</code></pre>
+<p>Beş eski kayıt yeni volume'a geldi ve altıncı eklendi. Canlı bir veritabanında (PostgreSQL, MySQL) dosyaları kopyalamak yerine veritabanının kendi yedek aracı (<code>pg_dump</code>, <code>mysqldump</code>) <code>docker exec</code> ile çalıştırılır; dosya kopyası, yazma sürerken tutarsız olabilir.</p>
+<p><strong>Alıştırma:</strong> <code>kaydet.py</code>'ye ikinci bir komut ekle: ilk argüman <code>liste</code> ise kayıt eklemesin, bütün siparişleri yazdırsın. İmajı yeniden build et (ya da bind mount ile dene), <code>siparis-veri-yeni</code> volume'undaki kayıtları listele. Ardından volume'u bir bind mount klasörüne kopyalayıp bilgisayarındaki bir SQLite görüntüleyiciyle (örneğin DB Browser for SQLite) aç.</p>
+<h3>Gün sonu kontrolü (15 dk)</h3>
+<ul class="tasks">
+<li class="task"><label><input type="checkbox" data-id="g4-1"><span>Kapsayıcının yazılabilir katmanının kapsayıcıyla birlikte silindiğini biliyorum.</span></label></li>
+<li class="task"><label><input type="checkbox" data-id="g4-2"><span>Named volume ile bind mount arasındaki farkı ve ne zaman hangisinin kullanılacağını biliyorum.</span></label></li>
+<li class="task"><label><input type="checkbox" data-id="g4-3"><span>-v ad:/yol ile verimi kapsayıcılar arasında kalıcı tutabiliyorum.</span></label></li>
+<li class="task"><label><input type="checkbox" data-id="g4-4"><span>Bind mount ile geliştirirken kodu yeniden build etmeden deneyebiliyorum.</span></label></li>
+<li class="task"><label><input type="checkbox" data-id="g4-5"><span>ENTRYPOINT ile CMD arasındaki farkı biliyorum.</span></label></li>
+<li class="task"><label><input type="checkbox" data-id="g4-6"><span>Bir volume'u tar ile yedekleyip başka bir volume'a geri yükleyebiliyorum.</span></label></li>
+</ul></div>
+  <div class="pn"><a href="#gun3">← 3. gün</a><a href="#gun5">5. gün →</a></div>
+</section>
+<section class="day" id="gun5" data-day="5">
+  <div class="day-head"><span class="dn">GÜN 05</span><h2>Ağlar</h2><span class="meta">~4 saat · <span data-prog="5">0/6</span> kontrol</span></div>
+  <div class="prose"><h3>Hedef</h3>
+<p>Gün sonunda Docker ağlarının nasıl çalıştığını bilecek, kullanıcı tanımlı bir ağ oluşturup kapsayıcıların birbirine <strong>adlarıyla</strong> ulaşmasını sağlayabilecek; port yayınlamak ile ağ üzerinden konuşmak arasındaki farkı anlayacaksın. Bu, yarın Docker Compose ile kuracağımız çok servisli uygulamaların temelidir. Süre yaklaşık 4 saat.</p>
+<h3>1. Kapsayıcılar nasıl konuşur? (30 dk)</h3>
+<figure class="fig"><div class="sc"><svg viewBox="0 0 640 150" role="img" xmlns="http://www.w3.org/2000/svg"><defs><marker id="ah-ag" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0 0L10 5L0 10z" class="ar"/></marker></defs><rect x="10" y="20" width="300" height="120" class="bx"/><text x="160" y="38" class="ta" text-anchor="middle">varsayılan bridge</text><rect x="30" y="60" width="110" height="34" rx="5" class="bx"/><text x="85.0" y="81.0" class="tb" text-anchor="middle">api</text><rect x="170" y="60" width="120" height="34" rx="5" class="bx"/><text x="230.0" y="81.0" class="tb" text-anchor="middle">istemci</text><line x1="168" y1="77" x2="142" y2="77" class="mu" marker-end="url(#ah-ag)"/><text x="160" y="120" class="tm" text-anchor="middle">http://api → bulunamaz</text><rect x="330" y="20" width="300" height="120" class="bxa"/><text x="480" y="38" class="ta" text-anchor="middle">santiye (kullanıcı tanımlı)</text><rect x="350" y="60" width="110" height="34" rx="5" class="bx"/><text x="405.0" y="81.0" class="tb" text-anchor="middle">api</text><rect x="490" y="60" width="120" height="34" rx="5" class="bx"/><text x="550.0" y="81.0" class="tb" text-anchor="middle">istemci</text><line x1="488" y1="77" x2="462" y2="77" class="mu" marker-end="url(#ah-ag)"/><text x="480" y="120" class="tm" text-anchor="middle">http://api:8000 → DNS ile bulunur</text></svg></div><figcaption>Kullanıcı tanımlı ağda Docker DNS sunar; kapsayıcılar birbirine adıyla ulaşır.</figcaption></figure>
+<p>Gerçek uygulamalar tek parça değildir: bir web servisi, bir veritabanı, belki bir önbellek (Redis) ve arka planda iş yapan bir işçi. Docker'da her biri ayrı bir kapsayıcıda çalışır ve birbirleriyle ağ üzerinden konuşur.</p>
+<p>Docker kurulunca üç ağ hazır gelir:</p>
+<pre><code class="language-bash">docker network ls --format '{{.Name}}: {{.Driver}}' | sort
+</code></pre>
+<pre><code class="language-text">bridge: bridge
+host: host
+none: null
+</code></pre>
+<ul>
+<li><strong>bridge:</strong> Varsayılan ağ. <code>--network</code> belirtmezsen kapsayıcı buraya bağlanır. Kapsayıcılar IP adresleriyle konuşabilir ama <strong>adlarıyla birbirini bulamaz</strong>.</li>
+<li><strong>host:</strong> Kapsayıcı, bilgisayarın ağını doğrudan kullanır (sadece Linux'ta tam çalışır).</li>
+<li><strong>none:</strong> Ağ yok; tamamen yalıtılmış.</li>
+</ul>
+<h3>2. Hazırlık: küçük bir servis (20 dk)</h3>
+<p>Bir JSON servisi ve onu çağıran bir istemci kullanacağız. Servis, Python'un yerleşik kütüphaneleriyle yazıldı, bu yüzden ek kurulum gerekmez:</p>
+<pre><code class="language-bash">mkdir -p ag &amp;&amp; cd ag
+</code></pre>
+<!-- dosya: servis.py -->
+
+<pre><code class="language-python">import json
+import os
+import socket
+from http.server import BaseHTTPRequestHandler, HTTPServer
+
+
+class Isleyici(BaseHTTPRequestHandler):
+    def do_GET(self):
+        veri = {&quot;servis&quot;: os.environ.get(&quot;AD&quot;, &quot;servis&quot;), &quot;kapsayici&quot;: socket.gethostname()[:6], &quot;yol&quot;: self.path}
+        govde = json.dumps(veri, ensure_ascii=False).encode()
+        self.send_response(200)
+        self.send_header(&quot;Content-Type&quot;, &quot;application/json; charset=utf-8&quot;)
+        self.end_headers()
+        self.wfile.write(govde)
+
+    def log_message(self, *args):
+        pass
+
+
+HTTPServer((&quot;0.0.0.0&quot;, 8000), Isleyici).serve_forever()
+</code></pre>
+<p><code>socket.gethostname()</code> kapsayıcının kimliğinin ilk harflerini döndürür; birden çok kopya çalıştırdığımızda hangisinin cevap verdiğini görmek için ekledik. <code>log_message</code>'ı boş bırakarak her isteğin günlüğe yazılmasını kapattık.</p>
+<!-- dosya: Dockerfile -->
+
+<pre><code class="language-dockerfile">FROM python:3.12-slim
+WORKDIR /app
+COPY servis.py .
+CMD [&quot;python&quot;, &quot;servis.py&quot;]
+</code></pre>
+<pre><code class="language-bash">docker build -q -t servis:1.0 . &gt; /dev/null &amp;&amp; echo hazır
+</code></pre>
+<pre><code class="language-text">hazır
+</code></pre>
+<h3>3. Varsayılan ağda ad çözülmez (20 dk)</h3>
+<p>Servisi varsayılan ağda başlatıp başka bir kapsayıcıdan adıyla çağırmayı deneyelim:</p>
+<pre><code class="language-bash">docker run -d --name api -e AD=sipariş servis:1.0 &gt; /dev/null
+sleep 1
+docker run --rm python:3.12-slim python -c &quot;
+import urllib.request
+try:
+    print(urllib.request.urlopen('http://api:8000/', timeout=3).read().decode())
+except Exception as e:
+    print('ulaşılamadı:', type(e).__name__)
+&quot;
+docker rm -f api &gt; /dev/null
+</code></pre>
+<pre><code class="language-text">ulaşılamadı: URLError
+</code></pre>
+<p>Varsayılan <code>bridge</code> ağında <code>api</code> adı hiçbir adrese çözülmez. Eskiden bunun için <code>--link</code> kullanılırdı; artık önerilmiyor.</p>
+<h3>4. Kullanıcı tanımlı ağ ve DNS (1 saat)</h3>
+<p>Kendi oluşturduğun bir ağda Docker, kapsayıcılara bir <strong>DNS</strong> sunar: her kapsayıcı, aynı ağdaki diğerlerine <strong>adıyla</strong> ulaşır.</p>
+<pre><code class="language-bash">docker network create santiye &gt; /dev/null
+docker run -d --name api --network santiye -e AD=sipariş servis:1.0 &gt; /dev/null
+sleep 1
+docker run --rm --network santiye python:3.12-slim python -c &quot;
+import json, urllib.request
+cevap = json.load(urllib.request.urlopen('http://api:8000/paneller'))
+print(cevap['servis'], cevap['yol'])
+&quot;
+</code></pre>
+<pre><code class="language-text">sipariş /paneller
+</code></pre>
+<p><code>api</code> adı, aynı ağdaki <code>api</code> kapsayıcısının IP adresine çözüldü. IP adresleri kapsayıcı her yeniden başladığında değişebilir; adlar değişmez. Bu yüzden kapsayıcılar arasında <strong>her zaman ad</strong> kullanılır.</p>
+<p>Ağdaki kapsayıcıları görmek için:</p>
+<pre><code class="language-bash">docker network inspect santiye --format '{{range .Containers}}{{.Name}} {{end}}'
+</code></pre>
+<pre><code class="language-text">api 
+</code></pre>
+<p><strong>Takma ad (alias):</strong> Bir kapsayıcıya ağda ek adlar verebilirsin. Aynı takma adı taşıyan birden çok kapsayıcı varsa DNS bunların hepsini döndürür; basit bir yük dağıtımı olur:</p>
+<pre><code class="language-bash">docker run -d --name api2 --network santiye --network-alias depo -e AD=depo-1 servis:1.0 &gt; /dev/null
+docker run -d --name api3 --network santiye --network-alias depo -e AD=depo-2 servis:1.0 &gt; /dev/null
+sleep 1
+docker run --rm --network santiye python:3.12-slim python -c &quot;
+import socket
+print(sorted({a[4][0] for a in socket.getaddrinfo('depo', 8000)}).__len__(), 'adres')
+&quot;
+</code></pre>
+<pre><code class="language-text">2 adres
+</code></pre>
+<p><code>depo</code> adı iki ayrı kapsayıcının adresine çözüldü. Gerçek yük dengelemesi için Docker Compose'un <code>deploy.replicas</code> ayarı ya da önde bir ters vekil (nginx, Traefik) kullanılır.</p>
+<h3>5. Port yayınlamak ile ağ farkı (45 dk)</h3>
+<figure class="fig"><div class="sc"><svg viewBox="0 0 640 144" role="img" xmlns="http://www.w3.org/2000/svg"><defs><marker id="ah-portag" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0 0L10 5L0 10z" class="ar"/></marker></defs><rect x="200" y="14" width="430" height="120" class="bx"/><text x="415" y="32" class="ta" text-anchor="middle">santiye ağı</text><rect x="230" y="52" width="150" height="40" rx="5" class="bxa"/><text x="305.0" y="68.0" class="tb" text-anchor="middle">web</text><text x="305.0" y="84.0" class="tm" text-anchor="middle">:8000</text><rect x="450" y="52" width="150" height="40" rx="5" class="bx"/><text x="525.0" y="68.0" class="tb" text-anchor="middle">api</text><text x="525.0" y="84.0" class="tm" text-anchor="middle">:8000 (yayınlanmadı)</text><line x1="382" y1="72" x2="448" y2="72" class="mu" marker-end="url(#ah-portag)"/><text x="415" y="110" class="tm" text-anchor="middle">http://api:8000</text><rect x="10" y="52" width="140" height="40" rx="5" class="bx"/><text x="80.0" y="68.0" class="tb" text-anchor="middle">Tarayıcı</text><text x="80.0" y="84.0" class="tm" text-anchor="middle">localhost:8080</text><line x1="152" y1="72" x2="228" y2="72" class="mu" marker-end="url(#ah-portag)"/><text x="176" y="64" class="ta" text-anchor="middle">-p</text></svg></div><figcaption>Sadece web dışarıya yayınlandı; api&#x27;ye yalnızca aynı ağdaki kapsayıcılar ulaşır.</figcaption></figure>
+<p>Bu iki kavram sık karıştırılır:</p>
+<div class="tw"><table>
+<thead>
+<tr>
+<th></th>
+<th>Ağ (<code>--network</code>)</th>
+<th>Port yayınlama (<code>-p</code>)</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Kimin için</td>
+<td>Kapsayıcılar arası</td>
+<td>Bilgisayarın ve dış dünya için</td>
+</tr>
+<tr>
+<td>Adres</td>
+<td><code>http://api:8000</code></td>
+<td><code>http://localhost:8080</code></td>
+</tr>
+<tr>
+<td>Port</td>
+<td>Kapsayıcının kendi portu (8000)</td>
+<td>Bilgisayarda seçtiğin port (8080)</td>
+</tr>
+</tbody>
+</table></div>
+<p>Bir veritabanı kapsayıcısı sadece aynı ağdaki uygulama tarafından kullanılıyorsa <strong>portunu yayınlama</strong>. Yayınlanmayan port dışarıdan görünmez; bu, güvenlik için iyidir. Sadece kullanıcıların ulaşması gereken servisi (web arayüzü, API) yayınla.</p>
+<p>Örnek: <code>api</code> ağda ama yayınlanmamış. Önüne yayınlanmış bir <code>web</code> kapsayıcısı koyalım:</p>
+<pre><code class="language-bash">docker run -d --name web --network santiye -p 8080:8000 -e AD=web servis:1.0 &gt; /dev/null
+sleep 1
+curl -s http://localhost:8080/ana | python3 -c &quot;import json, sys; d = json.load(sys.stdin); print(d['servis'], d['yol'])&quot;
+curl -s -m 2 http://localhost:8000/ &gt; /dev/null || echo &quot;api dışarıdan görünmüyor&quot;
+</code></pre>
+<pre><code class="language-text">web /ana
+api dışarıdan görünmüyor
+</code></pre>
+<p><strong>Bilgisayardaki bir servise kapsayıcıdan ulaşmak.</strong> Bilgisayarında çalışan bir veritabanına (kapsayıcıda değil) kapsayıcının içinden ulaşmak gerekirse Docker Desktop'ta <code>host.docker.internal</code> adı kullanılır. Linux'ta bunun için <code>--add-host=host.docker.internal:host-gateway</code> eklenir.</p>
+<h3>6. Temizlik ve özet (15 dk)</h3>
+<pre><code class="language-bash">docker rm -f api api2 api3 web &gt; /dev/null
+docker network rm santiye
+</code></pre>
+<pre><code class="language-text">santiye
+</code></pre>
+<p>Bir ağı silmek için önce bağlı kapsayıcıları durdurmak gerekir. Kullanılmayan ağların hepsini <code>docker network prune</code> siler.</p>
+<p>Bugün elle yaptığın şeyler (ağ oluştur, kapsayıcıları doğru ağa, doğru adla, doğru ortam değişkenleriyle başlat, sırayla kapat) uygulama büyüdükçe zahmetli olur. Yarın hepsini tek bir dosyada tanımlayıp tek komutla yapacağız: <strong>Docker Compose</strong>.</p>
+<p><strong>Alıştırma:</strong> <code>fabrika</code> adlı bir ağ oluştur. Bu ağda <code>uretim</code> ve <code>kalite</code> adlı iki servis kapsayıcısı başlat (farklı <code>AD</code> değerleriyle). Üçüncü bir kapsayıcıdan ikisini de adıyla çağıran bir Python betiği çalıştır. Sonra sadece <code>kalite</code> servisini 9090 portundan yayınla ve tarayıcıdan aç.</p>
+<h3>Gün sonu kontrolü (15 dk)</h3>
+<ul class="tasks">
+<li class="task"><label><input type="checkbox" data-id="g5-1"><span>Docker'ın bridge, host ve none ağlarını biliyorum.</span></label></li>
+<li class="task"><label><input type="checkbox" data-id="g5-2"><span>Varsayılan ağda kapsayıcıların birbirini adıyla bulamadığını gördüm.</span></label></li>
+<li class="task"><label><input type="checkbox" data-id="g5-3"><span>docker network create ile ağ oluşturup kapsayıcıları adıyla konuşturabiliyorum.</span></label></li>
+<li class="task"><label><input type="checkbox" data-id="g5-4"><span>Ağ üzerinden konuşmak ile port yayınlamak arasındaki farkı biliyorum.</span></label></li>
+<li class="task"><label><input type="checkbox" data-id="g5-5"><span>Sadece dışarıdan ulaşılması gereken servisleri yayınlamam gerektiğini biliyorum.</span></label></li>
+<li class="task"><label><input type="checkbox" data-id="g5-6"><span>Ağları listeleyip inceleyebiliyor ve silebiliyorum.</span></label></li>
+</ul></div>
+  <div class="pn"><a href="#gun4">← 4. gün</a><a href="#gun6">6. gün →</a></div>
+</section>
+<section class="day" id="gun6" data-day="6">
+  <div class="day-head"><span class="dn">GÜN 06</span><h2>Docker Compose</h2><span class="meta">~4 saat · <span data-prog="6">0/6</span> kontrol</span></div>
+  <div class="prose"><h3>Hedef</h3>
+<p>Gün sonunda birden çok servisten oluşan bir uygulamayı tek bir <code>compose.yaml</code> dosyasında tanımlayabilecek; <code>docker compose up</code> ile hepsini ağıyla, volume'larıyla ve ayarlarıyla birlikte tek komutta başlatıp <code>logs</code>, <code>ps</code>, <code>exec</code> ve <code>down</code> ile yönetebileceksin. Sağlık kontrolü ve başlama sırasını da öğreneceksin. Süre yaklaşık 4 saat.</p>
+<h3>1. Neden Compose? (20 dk)</h3>
+<figure class="fig"><div class="sc"><svg viewBox="0 0 640 158" role="img" xmlns="http://www.w3.org/2000/svg"><defs><marker id="ah-compose" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0 0L10 5L0 10z" class="ar"/></marker></defs><text x="160" y="18" class="ta" text-anchor="middle">elle</text><text x="480" y="18" class="ta" text-anchor="middle">Compose ile</text><rect x="10" y="26" width="300" height="122" class="bx"/><rect x="330" y="26" width="300" height="122" class="bxa"/><text x="22" y="46" class="tm" text-anchor="start">docker network create santiye</text><text x="22" y="68" class="tm" text-anchor="start">docker volume create panel-veri</text><text x="22" y="90" class="tm" text-anchor="start">docker build -t api ./api</text><text x="22" y="112" class="tm" text-anchor="start">docker run -d api --network -v -p</text><text x="22" y="134" class="tm" text-anchor="start">docker run -d web --network -p</text><text x="342" y="46" class="tm" text-anchor="start">compose.yaml (bir kez yaz)</text><text x="342" y="68" class="tm" text-anchor="start"></text><text x="342" y="90" class="tm" text-anchor="start">docker compose up -d</text><text x="342" y="112" class="tm" text-anchor="start">docker compose logs -f</text><text x="342" y="134" class="tm" text-anchor="start">docker compose down</text></svg></div><figcaption>Compose: elle sırayla yazılan komutların yerine tek bir bildirim dosyası.</figcaption></figure>
+<p>Dün iki servisli küçük bir düzen için şunları elle yaptık: ağ oluştur, her kapsayıcıyı doğru ad, ağ, port ve ortam değişkeniyle başlat, sonunda hepsini sil. Komutlar uzadıkça hata yapmak kolaylaşır ve ekip arkadaşına "şu yedi komutu sırayla çalıştır" demek gerekir.</p>
+<p><strong>Docker Compose</strong>, bütün servisleri, ağları ve volume'ları bir YAML dosyasında <strong>bildirir</strong>; <code>docker compose up</code> bu dosyayı okuyup her şeyi kurar. Dosya projeyle birlikte Git'e girer; herkes aynı ortamı tek komutla açar. Compose, Docker Desktop'la birlikte gelir; komut <code>docker compose</code> biçimindedir (eski <code>docker-compose</code>, tireli, artık kullanılmıyor).</p>
+<h3>2. Uygulama: panel takip (45 dk)</h3>
+<p>İki servis kuracağız:</p>
+<ul>
+<li><strong>api:</strong> Flask ile yazılmış, panelleri SQLite veritabanında tutan bir servis. Veritabanı bir volume'da.</li>
+<li><strong>web:</strong> Panelleri tabloda gösteren tek sayfalık bir arayüz. Python'un yerleşik sunucusuyla statik dosya olarak sunulur.</li>
+</ul>
+<pre><code class="language-bash">mkdir -p panel-takip/api panel-takip/web &amp;&amp; cd panel-takip
+</code></pre>
+<p><strong>api/app.py</strong></p>
+<!-- dosya: api/app.py -->
+
+<pre><code class="language-python">import os
+import sqlite3
+from flask import Flask, jsonify, request
+
+app = Flask(__name__)
+DB = os.environ.get(&quot;VERI_YOLU&quot;, &quot;/veri/panel.db&quot;)
+
+
+def baglan():
+    db = sqlite3.connect(DB)
+    db.execute(&quot;CREATE TABLE IF NOT EXISTS panel (kod TEXT PRIMARY KEY, kat INTEGER, durum TEXT)&quot;)
+    return db
+
+
+@app.after_request
+def cors(cevap):
+    cevap.headers[&quot;Access-Control-Allow-Origin&quot;] = &quot;*&quot;
+    return cevap
+
+
+@app.get(&quot;/saglik&quot;)
+def saglik():
+    baglan().execute(&quot;SELECT 1&quot;)
+    return {&quot;durum&quot;: &quot;iyi&quot;}
+
+
+@app.get(&quot;/paneller&quot;)
+def liste():
+    satirlar = baglan().execute(&quot;SELECT kod, kat, durum FROM panel ORDER BY kod&quot;).fetchall()
+    return jsonify([{&quot;kod&quot;: k, &quot;kat&quot;: t, &quot;durum&quot;: d} for k, t, d in satirlar])
+
+
+@app.post(&quot;/paneller&quot;)
+def ekle():
+    p = request.get_json()
+    with baglan() as db:
+        db.execute(&quot;INSERT OR REPLACE INTO panel VALUES (?, ?, ?)&quot;, (p[&quot;kod&quot;], p[&quot;kat&quot;], p[&quot;durum&quot;]))
+    return p, 201
+
+
+if __name__ == &quot;__main__&quot;:
+    app.run(host=&quot;0.0.0.0&quot;, port=8000)
+</code></pre>
+<p><code>after_request</code> her cevaba bir CORS başlığı ekler: tarayıcı, 8080 portundaki sayfanın 8000 portundaki API'yi çağırmasına ancak bu başlık varsa izin verir.</p>
+<p><strong>api/requirements.txt</strong> ve <strong>api/Dockerfile</strong></p>
+<!-- dosya: api/requirements.txt -->
+
+<pre><code>flask==3.1.1
+</code></pre>
+<!-- dosya: api/Dockerfile -->
+
+<pre><code class="language-dockerfile">FROM python:3.12-slim
+WORKDIR /app
+COPY requirements.txt .
+RUN pip install --no-cache-dir -r requirements.txt
+COPY app.py .
+CMD [&quot;python&quot;, &quot;app.py&quot;]
+</code></pre>
+<p><strong>web/index.html</strong></p>
+<!-- dosya: web/index.html -->
+
+<pre><code class="language-html">&lt;!doctype html&gt;
+&lt;meta charset=&quot;utf-8&quot;&gt;
+&lt;title&gt;Panel takip&lt;/title&gt;
+&lt;h1&gt;Kule A paneller&lt;/h1&gt;
+&lt;table border=&quot;1&quot; cellpadding=&quot;6&quot;&gt;&lt;thead&gt;&lt;tr&gt;&lt;th&gt;Kod&lt;/th&gt;&lt;th&gt;Kat&lt;/th&gt;&lt;th&gt;Durum&lt;/th&gt;&lt;/tr&gt;&lt;/thead&gt;&lt;tbody id=&quot;t&quot;&gt;&lt;/tbody&gt;&lt;/table&gt;
+&lt;script&gt;
+fetch(&quot;http://localhost:8000/paneller&quot;).then(r =&gt; r.json()).then(liste =&gt; {
+  document.getElementById(&quot;t&quot;).innerHTML = liste.map(p =&gt;
+    `&lt;tr&gt;&lt;td&gt;${p.kod}&lt;/td&gt;&lt;td&gt;${p.kat}&lt;/td&gt;&lt;td&gt;${p.durum}&lt;/td&gt;&lt;/tr&gt;`).join(&quot;&quot;);
+});
+&lt;/script&gt;
+</code></pre>
+<h3>3. compose.yaml (1 saat)</h3>
+<figure class="fig"><div class="sc"><svg viewBox="0 0 640 170" role="img" xmlns="http://www.w3.org/2000/svg"><defs><marker id="ah-yaml" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0 0L10 5L0 10z" class="ar"/></marker></defs><rect x="20" y="14" width="600" height="28" rx="5" class="bxa"/><text x="320.0" y="32.0" class="tb" text-anchor="middle">compose.yaml</text><rect x="20" y="52" width="290" height="92" rx="5" class="bx"/><text x="165.0" y="86.0" class="tb" text-anchor="middle">api</text><text x="165.0" y="102.0" class="tm" text-anchor="middle">build ./api · ports 8000</text><text x="165.0" y="118.0" class="tm" text-anchor="middle">volume · healthcheck</text><rect x="330" y="52" width="290" height="92" rx="5" class="bx"/><text x="475.0" y="86.0" class="tb" text-anchor="middle">web</text><text x="475.0" y="102.0" class="tm" text-anchor="middle">image · ports 8080</text><text x="475.0" y="118.0" class="tm" text-anchor="middle">./web:/site · depends_on</text><line x1="328" y1="98" x2="312" y2="98" class="mu" marker-end="url(#ah-yaml)"/><text x="320" y="160" class="ta" text-anchor="middle">otomatik ağ: panel-takip_default · volume: panel-veri</text></svg></div><figcaption>Bir compose.yaml: iki servis, otomatik ağ ve adlı bir volume.</figcaption></figure>
+<p>Proje klasörünün köküne <code>compose.yaml</code> dosyasını yaz:</p>
+<!-- dosya: compose.yaml -->
+
+<pre><code class="language-yaml">services:
+  api:
+    build: ./api
+    ports:
+      - &quot;8000:8000&quot;
+    environment:
+      VERI_YOLU: /veri/panel.db
+    volumes:
+      - panel-veri:/veri
+    healthcheck:
+      test: [&quot;CMD&quot;, &quot;python&quot;, &quot;-c&quot;, &quot;import urllib.request; urllib.request.urlopen('http://localhost:8000/saglik')&quot;]
+      interval: 5s
+      timeout: 3s
+      retries: 5
+    restart: unless-stopped
+
+  web:
+    image: python:3.12-slim
+    command: python -m http.server 8080 --directory /site
+    ports:
+      - &quot;8080:8080&quot;
+    volumes:
+      - ./web:/site:ro
+    depends_on:
+      api:
+        condition: service_healthy
+
+volumes:
+  panel-veri:
+</code></pre>
+<p>YAML'da girinti anlamlıdır (sekme değil boşluk kullan). Anahtarlar:</p>
+<div class="tw"><table>
+<thead>
+<tr>
+<th>Anahtar</th>
+<th>Karşılığı</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>services:</code></td>
+<td>Her alt başlık bir servis (kapsayıcı) ve adı ağdaki DNS adıdır</td>
+</tr>
+<tr>
+<td><code>build: ./api</code></td>
+<td>Bu klasördeki Dockerfile'dan imaj üret</td>
+</tr>
+<tr>
+<td><code>image:</code></td>
+<td>Hazır imaj kullan</td>
+</tr>
+<tr>
+<td><code>command:</code></td>
+<td>İmajın <code>CMD</code>'sini ez</td>
+</tr>
+<tr>
+<td><code>ports:</code></td>
+<td><code>-p</code></td>
+</tr>
+<tr>
+<td><code>environment:</code></td>
+<td><code>-e</code> (ya da <code>env_file: .env</code>)</td>
+</tr>
+<tr>
+<td><code>volumes:</code></td>
+<td><code>-v</code>; adlı volume'lar en alttaki <code>volumes:</code> bölümünde tanımlanır</td>
+</tr>
+<tr>
+<td><code>healthcheck:</code></td>
+<td>Servisin gerçekten hazır olup olmadığını düzenli denetleyen komut</td>
+</tr>
+<tr>
+<td><code>depends_on:</code></td>
+<td>Başlama sırası; <code>service_healthy</code> ile "sağlıklı olana kadar bekle"</td>
+</tr>
+<tr>
+<td><code>restart:</code></td>
+<td>Kapsayıcı çökerse ya da bilgisayar yeniden başlarsa ne olacağı</td>
+</tr>
+</tbody>
+</table></div>
+<p>Ağ tanımlamadık: Compose her proje için otomatik bir ağ oluşturur ve bütün servisleri ona bağlar. Bu yüzden servisler birbirine adıyla (<code>http://api:8000</code>) ulaşır.</p>
+<p><strong>depends_on ve healthcheck.</strong> <code>depends_on</code> tek başına sadece "önce api kapsayıcısını başlat" der; içindeki programın hazır olmasını beklemez. Veritabanı gibi açılması birkaç saniye süren servislerde bu yetmez. <code>condition: service_healthy</code>, api'nin sağlık kontrolü başarılı olana kadar web'i bekletir.</p>
+<h3>4. Çalıştırmak ve yönetmek (1 saat)</h3>
+<p><code>docker compose up -d</code> gerekirse imajları build eder, ağı ve volume'u oluşturur ve servisleri doğru sırayla başlatır. <code>--wait</code> bütün servisler sağlıklı olana kadar bekler:</p>
+<pre><code class="language-bash">docker compose up -d --wait &gt; /dev/null 2&gt;&amp;1
+docker compose ps --format '{{.Service}}: {{.State}} {{.Health}}'
+</code></pre>
+<pre><code class="language-text">api: running healthy
+web: running 
+</code></pre>
+<p><code>web</code> için sağlık kontrolü tanımlamadığımız için sağlık sütunu boş. Kapsayıcı adları <code>proje-klasörü-servis-numara</code> biçimindedir (<code>panel-takip-api-1</code>). Birkaç panel ekleyip okuyalım:</p>
+<pre><code class="language-bash">for p in '{&quot;kod&quot;:&quot;P-101&quot;,&quot;kat&quot;:3,&quot;durum&quot;:&quot;montaj&quot;}' '{&quot;kod&quot;:&quot;P-102&quot;,&quot;kat&quot;:3,&quot;durum&quot;:&quot;üretim&quot;}' '{&quot;kod&quot;:&quot;P-201&quot;,&quot;kat&quot;:4,&quot;durum&quot;:&quot;tasarım&quot;}'; do
+  curl -s -o /dev/null -w &quot;%{http_code} &quot; -X POST -H &quot;Content-Type: application/json&quot; -d &quot;$p&quot; http://localhost:8000/paneller
+done
+echo
+curl -s http://localhost:8000/paneller
+curl -s http://localhost:8080/ | grep -o &quot;&lt;h1&gt;.*&lt;/h1&gt;&quot;
+</code></pre>
+<pre><code class="language-text">201 201 201 
+[{&quot;durum&quot;:&quot;montaj&quot;,&quot;kat&quot;:3,&quot;kod&quot;:&quot;P-101&quot;},{&quot;durum&quot;:&quot;\u00fcretim&quot;,&quot;kat&quot;:3,&quot;kod&quot;:&quot;P-102&quot;},{&quot;durum&quot;:&quot;tasar\u0131m&quot;,&quot;kat&quot;:4,&quot;kod&quot;:&quot;P-201&quot;}]
+&lt;h1&gt;Kule A paneller&lt;/h1&gt;
+</code></pre>
+<p>Tarayıcıda <code>http://localhost:8080</code> adresini açınca üç panel tabloda görünür. JSON'daki <code>ü</code> gibi kodlar Türkçe karakterlerin kaçışlı yazımıdır; tarayıcı ve JSON okuyan her program bunları doğru gösterir.</p>
+<p>Sık kullanılan komutlar (hepsi <code>compose.yaml</code>'ın bulunduğu klasörde çalıştırılır):</p>
+<div class="tw"><table>
+<thead>
+<tr>
+<th>Komut</th>
+<th>Ne yapar</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>docker compose up -d</code></td>
+<td>Hepsini başlat (değişen servisleri yeniden oluşturur)</td>
+</tr>
+<tr>
+<td><code>docker compose up -d --build</code></td>
+<td>İmajları yeniden build edip başlat</td>
+</tr>
+<tr>
+<td><code>docker compose ps</code></td>
+<td>Servislerin durumu</td>
+</tr>
+<tr>
+<td><code>docker compose logs -f api</code></td>
+<td>Bir servisin günlüğünü izle</td>
+</tr>
+<tr>
+<td><code>docker compose exec api bash</code></td>
+<td>Çalışan servise gir</td>
+</tr>
+<tr>
+<td><code>docker compose restart web</code></td>
+<td>Bir servisi yeniden başlat</td>
+</tr>
+<tr>
+<td><code>docker compose stop</code></td>
+<td>Durdur (kapsayıcılar kalır)</td>
+</tr>
+<tr>
+<td><code>docker compose down</code></td>
+<td>Durdur ve kapsayıcıları, ağı sil (volume kalır)</td>
+</tr>
+<tr>
+<td><code>docker compose down -v</code></td>
+<td>Volume'ları da sil (<strong>veri gider</strong>)</td>
+</tr>
+</tbody>
+</table></div>
+<pre><code class="language-bash">docker compose exec api python -c &quot;import sqlite3; print(sqlite3.connect('/veri/panel.db').execute('select count(*) from panel').fetchone()[0], 'panel')&quot;
+docker compose exec web python -c &quot;import urllib.request, json; print(len(json.load(urllib.request.urlopen('http://api:8000/paneller'))), 'panel (web kapsayıcısından)')&quot;
+</code></pre>
+<pre><code class="language-text">3 panel
+3 panel (web kapsayıcısından)
+</code></pre>
+<p>İkinci komut, <code>web</code> kapsayıcısının <code>api</code>'ye ağ üzerinden adıyla ulaştığını gösteriyor.</p>
+<h3>5. Veri kalıcı mı? (20 dk)</h3>
+<pre><code class="language-bash">docker compose down &gt; /dev/null 2&gt;&amp;1
+docker compose up -d --wait &gt; /dev/null 2&gt;&amp;1
+curl -s http://localhost:8000/paneller | python3 -c &quot;import json, sys; print([p['kod'] for p in json.load(sys.stdin)])&quot;
+</code></pre>
+<pre><code class="language-text">['P-101', 'P-102', 'P-201']
+</code></pre>
+<p>Kapsayıcılar silinip yeniden oluşturuldu ama paneller <code>panel-veri</code> volume'unda kaldı. <code>down -v</code> yazsaydık volume da silinirdi. Denemeyi bitirip her şeyi, volume dahil, temizleyelim:</p>
+<pre><code class="language-bash">docker compose down -v &gt; /dev/null 2&gt;&amp;1 &amp;&amp; echo &quot;temizlendi&quot;
+</code></pre>
+<pre><code class="language-text">temizlendi
+</code></pre>
+<h3>6. Ayarları dışarıda tutmak: .env (30 dk)</h3>
+<p>Compose, aynı klasördeki <code>.env</code> dosyasını otomatik okur ve <code>${AD}</code> ile yazılan yerlere koyar. Port gibi ortama göre değişen değerleri buraya taşıyalım. <code>COMPOSE_PROJECT_NAME</code> ise Compose'un kendi ayarıdır: kapsayıcı, ağ ve volume adlarının önüne klasör adı yerine bu adı koyar.</p>
+<!-- dosya: .env -->
+
+<pre><code>API_PORT=8001
+COMPOSE_PROJECT_NAME=kulea
+</code></pre>
+<p><code>compose.yaml</code>'da <code>ports</code> satırını <code>"${API_PORT:-8000}:8000"</code> yapalım (<code>:-8000</code>: tanımlı değilse varsayılan). <code>docker compose config</code> dosyayı değişkenler yerine konmuş hâliyle gösterir; hata ayıklamak için çok kullanışlıdır:</p>
+<pre><code class="language-bash">sed -i 's/      - &quot;8000:8000&quot;/      - &quot;${API_PORT:-8000}:8000&quot;/' compose.yaml
+docker compose config | grep -A3 &quot;ports:&quot; | head -n 4
+</code></pre>
+<pre><code class="language-text">    ports:
+      - mode: ingress
+        target: 8000
+        published: &quot;8001&quot;
+</code></pre>
+<p><code>.env</code> dosyasında parola gibi gizli değerler olabileceği için <code>.gitignore</code>'a eklenir; ekibe örnek olarak değerleri boş bir <code>.env.example</code> verilir.</p>
+<p><strong>Alıştırma:</strong> <code>compose.yaml</code>'a üçüncü bir servis ekle: <code>sayac</code> adında, <code>python:3.12-slim</code> imajını kullanan, her 10 saniyede bir <code>http://api:8000/paneller</code> adresini çağırıp panel sayısını yazdıran bir betik çalıştırsın (<code>command:</code> ile <code>python -c "..."</code> ya da bir bind mount ile betik dosyası). <code>depends_on</code> ile api sağlıklı olmadan başlamamasını sağla ve <code>docker compose logs -f sayac</code> ile çıktısını izle.</p>
+<h3>Gün sonu kontrolü (15 dk)</h3>
+<ul class="tasks">
+<li class="task"><label><input type="checkbox" data-id="g6-1"><span>Compose'un hangi sorunu çözdüğünü ve compose.yaml'ın yapısını biliyorum.</span></label></li>
+<li class="task"><label><input type="checkbox" data-id="g6-2"><span>build, image, ports, environment, volumes ve command anahtarlarını kullanabiliyorum.</span></label></li>
+<li class="task"><label><input type="checkbox" data-id="g6-3"><span>Servislerin otomatik bir ağda adlarıyla konuştuğunu biliyorum.</span></label></li>
+<li class="task"><label><input type="checkbox" data-id="g6-4"><span>healthcheck ve depends_on condition: service_healthy ile başlama sırasını yönetebiliyorum.</span></label></li>
+<li class="task"><label><input type="checkbox" data-id="g6-5"><span>up, ps, logs, exec, down ve down -v komutlarının farkını biliyorum.</span></label></li>
+<li class="task"><label><input type="checkbox" data-id="g6-6"><span>.env ve docker compose config ile ayarları dışarıda tutabiliyorum.</span></label></li>
+</ul></div>
+  <div class="pn"><a href="#gun5">← 5. gün</a><a href="#gun7">7. gün →</a></div>
+</section>
+<section class="day" id="gun7" data-day="7">
+  <div class="day-head"><span class="dn">GÜN 07</span><h2>İyi uygulamalar ve proje</h2><span class="meta">~4 saat · <span data-prog="7">0/6</span> kontrol</span></div>
+  <div class="prose"><h3>Hedef</h3>
+<p>Gün sonunda imajlarını küçük, hızlı ve güvenli yapan alışkanlıkları (çok aşamalı build, root olmayan kullanıcı, anlamlı etiketler) uygulayabilecek, bir imajı kayda gönderebileceksin. Kurs, öğrendiklerini birleştiren bir projeyle biter: sipariş API'si ve her dakika rapor üreten bir rapor servisinden oluşan, Compose ile tek komutta açılan bir uygulama. Süre yaklaşık 4 saat.</p>
+<h3>1. Küçük imaj (30 dk)</h3>
+<p>Küçük imaj daha hızlı indirilir, daha az disk kaplar ve içinde daha az program olduğu için güvenlik açığı riski de azdır. Temel kurallar:</p>
+<ul>
+<li><strong>İnce temel imaj seç:</strong> <code>python:3.12</code> (Debian, derleme araçlarıyla, yaklaşık 1 GB) yerine <code>python:3.12-slim</code> (yaklaşık 120–150 MB). <code>alpine</code> sürümleri daha da küçüktür ama bazı Python kütüphanelerinin derlenmiş paketleri onlarda çalışmaz; başlangıç için <code>slim</code> en dengeli seçimdir.</li>
+<li><strong>Önbelleği imaja koyma:</strong> <code>pip install --no-cache-dir</code>; apt kullanıyorsan aynı <code>RUN</code> satırında <code>rm -rf /var/lib/apt/lists/*</code>.</li>
+<li><strong>Bir katmanda oluşturup sonrakinde silmek yer kazandırmaz:</strong> silinen dosya önceki katmanda durmaya devam eder. Geçici dosyaları aynı <code>RUN</code> satırında oluşturup sil ya da çok aşamalı build kullan.</li>
+<li><strong>.dockerignore</strong> ile gereksiz dosyaları dışarıda tut.</li>
+</ul>
+<p>İmajın boyutunu <code>docker images</code> ile, hangi katmanın ne kadar tuttuğunu <code>docker history imaj</code> ile görürsün.</p>
+<h3>2. Çok aşamalı build (45 dk)</h3>
+<figure class="fig"><div class="sc"><svg viewBox="0 0 640 160" role="img" xmlns="http://www.w3.org/2000/svg"><defs><marker id="ah-asama" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0 0L10 5L0 10z" class="ar"/></marker></defs><rect x="10" y="14" width="290" height="120" class="bx"/><text x="155" y="32" class="ta" text-anchor="middle">1. aşama: kurulum</text><rect x="30" y="44" width="250" height="26" rx="5" class="bx"/><text x="155.0" y="61.0" class="tb" text-anchor="middle">python:3.12-slim</text><rect x="30" y="74" width="250" height="26" rx="5" class="bx"/><text x="155.0" y="91.0" class="tb" text-anchor="middle">venv + pip install</text><rect x="30" y="104" width="250" height="22" rx="5" class="bx"/><text x="155.0" y="119.0" class="tb" text-anchor="middle">(derleyiciler, önbellek)</text><rect x="340" y="14" width="290" height="120" class="bxa"/><text x="485" y="32" class="ta" text-anchor="middle">2. aşama: çalışma imajı</text><rect x="360" y="44" width="250" height="26" rx="5" class="bx"/><text x="485.0" y="61.0" class="tb" text-anchor="middle">python:3.12-slim</text><rect x="360" y="74" width="250" height="26" rx="5" class="bxa"/><text x="485.0" y="91.0" class="tb" text-anchor="middle">/opt/venv</text><rect x="360" y="104" width="250" height="22" rx="5" class="bx"/><text x="485.0" y="119.0" class="tb" text-anchor="middle">app.py</text><line x1="282" y1="87" x2="358" y2="87" class="mu" marker-end="url(#ah-asama)"/><text x="320" y="150" class="tm" text-anchor="middle">COPY --from=kurulum /opt/venv /opt/venv</text></svg></div><figcaption>Çok aşamalı build: son imaja sadece gereken dosyalar taşınır.</figcaption></figure>
+<p>Bazı işler sadece build sırasında gerekir: derleyiciler, test araçları, bir frontend'i derlemek için Node.js. Bunlar son imaja girmemelidir. <strong>Çok aşamalı build</strong>, bir Dockerfile'da birden çok <code>FROM</code> kullanır; son aşamaya önceki aşamalardan sadece gereken dosyalar <code>COPY --from</code> ile alınır.</p>
+<p>Python için yaygın kalıp: ilk aşamada bir sanal ortam (venv) kurup kütüphaneleri yükle, ikinci aşamaya sadece bu sanal ortamı kopyala.</p>
+<p>Denemek için bir klasör oluşturup 3. gündeki Flask uygulamasının küçük bir sürümünü koyalım:</p>
+<pre><code class="language-bash">mkdir -p asamali &amp;&amp; cd asamali
+printf 'flask==3.1.1\n' &gt; requirements.txt
+printf 'from importlib.metadata import version\nprint(&quot;Flask&quot;, version(&quot;flask&quot;), &quot;hazır&quot;)\n' &gt; app.py
+</code></pre>
+<!-- dosya: Dockerfile -->
+
+<pre><code class="language-dockerfile"># --- 1. aşama: bağımlılıkları kur ---
+FROM python:3.12-slim AS kurulum
+RUN python -m venv /opt/venv
+ENV PATH=&quot;/opt/venv/bin:$PATH&quot;
+COPY requirements.txt .
+RUN pip install --no-cache-dir -r requirements.txt
+
+# --- 2. aşama: çalışma imajı ---
+FROM python:3.12-slim
+COPY --from=kurulum /opt/venv /opt/venv
+ENV PATH=&quot;/opt/venv/bin:$PATH&quot;
+WORKDIR /app
+COPY app.py .
+CMD [&quot;python&quot;, &quot;app.py&quot;]
+</code></pre>
+<pre><code class="language-bash">docker build -q -t asamali:1.0 . &gt; /dev/null &amp;&amp; docker run --rm asamali:1.0
+docker run --rm asamali:1.0 python -c &quot;import sys; print('Python ortamı:', sys.prefix)&quot;
+cd ..
+</code></pre>
+<pre><code class="language-text">Flask 3.1.1 hazır
+Python ortamı: /opt/venv
+</code></pre>
+<p><code>AS kurulum</code> aşamaya ad verir; <code>COPY --from=kurulum</code> o aşamadan dosya alır. Derlemesi gereken bir kütüphane (C eklentisi olan) kurarken <code>gcc</code> gibi araçları sadece ilk aşamaya yüklersin; son imaj temiz kalır. Go, Rust ve Java gibi derlenen dillerde fark çok daha büyüktür: ilk aşamada derlenen tek bir çalıştırılabilir dosya, son aşamada neredeyse boş bir imaja kopyalanır.</p>
+<h3>3. Root olmayan kullanıcı (30 dk)</h3>
+<p>Kapsayıcılar varsayılan olarak <code>root</code> ile çalışır. Kapsayıcının içindeki root yalıtılmış olsa da, programda bir güvenlik açığı bulunursa saldırganın elinde olabildiğince az yetki olması istenir. Kural: <strong>imajı kendi kullanıcısıyla çalıştır.</strong></p>
+<pre><code class="language-dockerfile">RUN useradd --create-home --uid 10001 uygulama
+USER uygulama
+</code></pre>
+<p><code>USER</code> talimatından sonraki <code>RUN</code>, <code>CMD</code> ve <code>ENTRYPOINT</code> komutları bu kullanıcıyla çalışır. Kullanıcının yazması gereken klasörlerin (veri, günlük) sahibini önceden ayarlamayı unutma: <code>RUN mkdir /veri &amp;&amp; chown uygulama /veri</code>. Projede bunu birlikte uygulayacağız.</p>
+<h3>4. Etiketler ve kayda göndermek (30 dk)</h3>
+<figure class="fig"><div class="sc"><svg viewBox="0 0 640 110" role="img" xmlns="http://www.w3.org/2000/svg"><defs><marker id="ah-kayit" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0 0L10 5L0 10z" class="ar"/></marker></defs><rect x="10.0" y="16" width="109.6" height="56" rx="5" class="bx"/><text x="64.8" y="40.0" class="tb" text-anchor="middle">build</text><text x="64.8" y="56.0" class="tm" text-anchor="middle">siparis-api</text><rect x="137.6" y="16" width="109.6" height="56" rx="5" class="bx"/><text x="192.39999999999998" y="40.0" class="tb" text-anchor="middle">tag</text><text x="192.39999999999998" y="56.0" class="tm" text-anchor="middle">kayıt adıyla</text><line x1="121.6" y1="44.0" x2="135.6" y2="44.0" class="mu" marker-end="url(#ah-kayit)"/><rect x="265.2" y="16" width="109.6" height="56" rx="5" class="bx"/><text x="320.0" y="40.0" class="tb" text-anchor="middle">login</text><text x="320.0" y="56.0" class="tm" text-anchor="middle">kayda giriş</text><line x1="249.2" y1="44.0" x2="263.2" y2="44.0" class="mu" marker-end="url(#ah-kayit)"/><rect x="392.79999999999995" y="16" width="109.6" height="56" rx="5" class="bxa"/><text x="447.59999999999997" y="40.0" class="tb" text-anchor="middle">push</text><text x="447.59999999999997" y="56.0" class="tm" text-anchor="middle">gönder</text><line x1="376.79999999999995" y1="44.0" x2="390.79999999999995" y2="44.0" class="mu" marker-end="url(#ah-kayit)"/><rect x="520.4" y="16" width="109.6" height="56" rx="5" class="bx"/><text x="575.1999999999999" y="40.0" class="tb" text-anchor="middle">pull / run</text><text x="575.1999999999999" y="56.0" class="tm" text-anchor="middle">başka yerde</text><line x1="504.4" y1="44.0" x2="518.4" y2="44.0" class="mu" marker-end="url(#ah-kayit)"/><text x="320" y="98" class="ta" text-anchor="middle">latest yerine sürüm etiketi: 1.0, 1.1, git commit kimliği</text></svg></div><figcaption>Bir imajı kayıt üzerinden paylaşmak.</figcaption></figure>
+<p><code>latest</code> etiketi "en son build edilen" demektir ve neyin çalıştığını belirsizleştirir. Canlı ortamda <strong>sürüm etiketleri</strong> kullan: <code>siparis-api:1.4.0</code>, ya da Git commit kimliği <code>siparis-api:3f2a9c1</code>. Bir imaja birden çok etiket verilebilir:</p>
+<!-- yok -->
+
+<pre><code class="language-bash">docker tag siparis-api:1.0 kullaniciadi/siparis-api:1.0
+docker tag siparis-api:1.0 kullaniciadi/siparis-api:latest
+docker login
+docker push kullaniciadi/siparis-api:1.0
+docker push kullaniciadi/siparis-api:latest
+</code></pre>
+<p>Docker Hub'da imaj adı <code>kullanıcıadı/imaj</code> biçimindedir; GitHub Container Registry'de <code>ghcr.io/kullanıcıadı/imaj</code>. Başka bir bilgisayarda <code>docker pull kullaniciadi/siparis-api:1.0</code> (ya da doğrudan <code>docker run</code>) ile indirilir. Şirket içi projeler için kayıtlar özel (private) yapılabilir. Bu örnek bu kurs hazırlanırken Docker Hub'a erişim olmadığı için çalıştırılmadı; komutlar Docker'ın belgelerindeki standart kullanımdır.</p>
+<p><strong>Güvenlik taraması:</strong> <code>docker scout quickview imaj</code> (Docker Desktop'ta hazır) imajdaki bilinen güvenlik açıklarını listeler. Temel imajı düzenli güncellemek (yeniden build etmek) en etkili önlemdir.</p>
+<h3>5. Proje: sipariş API'si ve rapor servisi (1 saat 30 dk)</h3>
+<figure class="fig"><div class="sc"><svg viewBox="0 0 640 170" role="img" xmlns="http://www.w3.org/2000/svg"><defs><marker id="ah-proje" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0 0L10 5L0 10z" class="ar"/></marker></defs><rect x="20" y="50" width="130" height="44" rx="5" class="bx"/><text x="85.0" y="68.0" class="tb" text-anchor="middle">curl / tarayıcı</text><text x="85.0" y="84.0" class="tm" text-anchor="middle">localhost:8000</text><rect x="180" y="10" width="450" height="150" class="bx"/><text x="405" y="28" class="ta" text-anchor="middle">compose: siparis-proje</text><rect x="200" y="50" width="150" height="44" rx="5" class="bxa"/><text x="275.0" y="68.0" class="tb" text-anchor="middle">api</text><text x="275.0" y="84.0" class="tm" text-anchor="middle">uygulama kullanıcısı</text><rect x="460" y="50" width="150" height="44" rx="5" class="bx"/><text x="535.0" y="68.0" class="tb" text-anchor="middle">rapor</text><text x="535.0" y="84.0" class="tm" text-anchor="middle">her N saniyede</text><line x1="152" y1="72" x2="198" y2="72" class="mu" marker-end="url(#ah-proje)"/><line x1="458" y1="72" x2="352" y2="72" class="mu" marker-end="url(#ah-proje)"/><text x="405" y="64" class="tm" text-anchor="middle">GET /siparisler</text><rect x="200" y="112" width="150" height="34" rx="5" class="bx"/><text x="275.0" y="125.0" class="tb" text-anchor="middle">siparis-veri</text><text x="275.0" y="141.0" class="tm" text-anchor="middle">volume</text><line x1="275" y1="96" x2="275" y2="110" class="mu"/><rect x="460" y="112" width="150" height="34" rx="5" class="bx"/><text x="535.0" y="125.0" class="tb" text-anchor="middle">./raporlar</text><text x="535.0" y="141.0" class="tm" text-anchor="middle">bind mount</text><line x1="535" y1="96" x2="535" y2="110" class="mu"/></svg></div><figcaption>Bitiş projesi: sipariş API&#x27;si, rapor servisi, volume ve bind mount.</figcaption></figure>
+<p>İki servisli bir uygulama kuracağız:</p>
+<ul>
+<li><strong>api:</strong> Siparişleri SQLite'ta tutan, ekleme ve listeleme yapan bir web servisi (Python'un yerleşik kütüphaneleri, ek paket yok). Çok aşamasız ama root olmayan kullanıcıyla.</li>
+<li><strong>rapor:</strong> Belirli aralıklarla api'yi çağırıp proje bazında özet çıkaran ve sonucu bilgisayarındaki <code>raporlar</code> klasörüne yazan bir işçi.</li>
+</ul>
+<p>Klasör yapısı:</p>
+<pre><code>siparis-proje/
+├── compose.yaml
+├── .env
+├── api/
+│   ├── Dockerfile
+│   └── api.py
+└── rapor/
+    ├── Dockerfile
+    └── rapor.py
+</code></pre>
+<pre><code class="language-bash">mkdir -p siparis-proje/api siparis-proje/rapor siparis-proje/raporlar &amp;&amp; cd siparis-proje
+</code></pre>
+<p><strong>api/api.py</strong></p>
+<!-- dosya: api/api.py -->
+
+<pre><code class="language-python">import json
+import os
+import sqlite3
+from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
+
+DB = os.environ.get(&quot;VERI_YOLU&quot;, &quot;/veri/siparis.db&quot;)
+
+
+def baglan():
+    db = sqlite3.connect(DB)
+    db.execute(&quot;&quot;&quot;CREATE TABLE IF NOT EXISTS siparis (
+        id INTEGER PRIMARY KEY, proje TEXT NOT NULL, malzeme TEXT NOT NULL,
+        adet INTEGER NOT NULL, birim_fiyat REAL NOT NULL)&quot;&quot;&quot;)
+    return db
+
+
+class Isleyici(BaseHTTPRequestHandler):
+    def cevap(self, kod, veri):
+        govde = json.dumps(veri, ensure_ascii=False).encode()
+        self.send_response(kod)
+        self.send_header(&quot;Content-Type&quot;, &quot;application/json; charset=utf-8&quot;)
+        self.end_headers()
+        self.wfile.write(govde)
+
+    def do_GET(self):
+        if self.path == &quot;/saglik&quot;:
+            baglan().execute(&quot;SELECT 1&quot;)
+            return self.cevap(200, {&quot;durum&quot;: &quot;iyi&quot;})
+        if self.path == &quot;/siparisler&quot;:
+            satirlar = baglan().execute(&quot;SELECT id, proje, malzeme, adet, birim_fiyat FROM siparis&quot;).fetchall()
+            ad = [&quot;id&quot;, &quot;proje&quot;, &quot;malzeme&quot;, &quot;adet&quot;, &quot;birim_fiyat&quot;]
+            return self.cevap(200, [dict(zip(ad, s)) for s in satirlar])
+        self.cevap(404, {&quot;hata&quot;: &quot;bulunamadı&quot;})
+
+    def do_POST(self):
+        if self.path != &quot;/siparisler&quot;:
+            return self.cevap(404, {&quot;hata&quot;: &quot;bulunamadı&quot;})
+        try:
+            s = json.loads(self.rfile.read(int(self.headers[&quot;Content-Length&quot;])))
+            alanlar = (s[&quot;proje&quot;], s[&quot;malzeme&quot;], int(s[&quot;adet&quot;]), float(s[&quot;birim_fiyat&quot;]))
+        except (KeyError, ValueError, TypeError):
+            return self.cevap(400, {&quot;hata&quot;: &quot;proje, malzeme, adet ve birim_fiyat gerekli&quot;})
+        with baglan() as db:
+            yeni = db.execute(&quot;INSERT INTO siparis (proje, malzeme, adet, birim_fiyat) VALUES (?, ?, ?, ?)&quot;, alanlar).lastrowid
+        self.cevap(201, {&quot;id&quot;: yeni})
+
+    def log_message(self, bicim, *args):
+        print(f&quot;{self.command} {self.path} -&gt; {args[1] if len(args) &gt; 1 else ''}&quot;, flush=True)
+
+
+if __name__ == &quot;__main__&quot;:
+    print(&quot;api 8000 portunda&quot;, flush=True)
+    ThreadingHTTPServer((&quot;0.0.0.0&quot;, 8000), Isleyici).serve_forever()
+</code></pre>
+<p><strong>api/Dockerfile</strong></p>
+<!-- dosya: api/Dockerfile -->
+
+<pre><code class="language-dockerfile">FROM python:3.12-slim
+RUN useradd --create-home --uid 10001 uygulama \
+ &amp;&amp; mkdir /veri &amp;&amp; chown uygulama /veri
+WORKDIR /app
+COPY api.py .
+USER uygulama
+EXPOSE 8000
+HEALTHCHECK --interval=5s --timeout=3s --retries=5 \
+  CMD python -c &quot;import urllib.request; urllib.request.urlopen('http://localhost:8000/saglik')&quot;
+CMD [&quot;python&quot;, &quot;api.py&quot;]
+</code></pre>
+<p>Sağlık kontrolünü bu kez <code>compose.yaml</code> yerine Dockerfile'a <code>HEALTHCHECK</code> olarak yazdık; böylece imaj Compose olmadan çalıştırıldığında da sağlığını bildirir.</p>
+<p><strong>rapor/rapor.py</strong></p>
+<!-- dosya: rapor/rapor.py -->
+
+<pre><code class="language-python">import json
+import os
+import time
+import urllib.request
+from collections import defaultdict
+from datetime import datetime
+
+API = os.environ.get(&quot;API_ADRESI&quot;, &quot;http://api:8000&quot;)
+ARALIK = int(os.environ.get(&quot;ARALIK_SN&quot;, &quot;60&quot;))
+KLASOR = &quot;/raporlar&quot;
+
+
+def rapor_uret():
+    siparisler = json.load(urllib.request.urlopen(f&quot;{API}/siparisler&quot;, timeout=5))
+    toplam = defaultdict(float)
+    for s in siparisler:
+        toplam[s[&quot;proje&quot;]] += s[&quot;adet&quot;] * s[&quot;birim_fiyat&quot;]
+    damga = datetime.now().strftime(&quot;%Y%m%d-%H%M%S&quot;)
+    satirlar = [f&quot;Sipariş raporu {damga}&quot;, f&quot;Sipariş sayısı: {len(siparisler)}&quot;, &quot;&quot;]
+    for proje, tutar in sorted(toplam.items(), key=lambda x: -x[1]):
+        satirlar.append(f&quot;{proje:&lt;12} {tutar:&gt;12,.0f} TL&quot;.replace(&quot;,&quot;, &quot;.&quot;))
+    metin = &quot;\n&quot;.join(satirlar) + &quot;\n&quot;
+    with open(os.path.join(KLASOR, &quot;son-rapor.txt&quot;), &quot;w&quot;, encoding=&quot;utf-8&quot;) as f:
+        f.write(metin)
+    print(f&quot;rapor yazıldı: {len(siparisler)} sipariş, {len(toplam)} proje&quot;, flush=True)
+
+
+while True:
+    try:
+        rapor_uret()
+    except Exception as e:
+        print(&quot;hata:&quot;, e, flush=True)
+    time.sleep(ARALIK)
+</code></pre>
+<p><strong>rapor/Dockerfile</strong></p>
+<!-- dosya: rapor/Dockerfile -->
+
+<pre><code class="language-dockerfile">FROM python:3.12-slim
+RUN useradd --create-home --uid 10001 uygulama
+WORKDIR /app
+COPY rapor.py .
+USER uygulama
+CMD [&quot;python&quot;, &quot;rapor.py&quot;]
+</code></pre>
+<p><strong>compose.yaml</strong></p>
+<!-- dosya: compose.yaml -->
+
+<pre><code class="language-yaml">services:
+  api:
+    build: ./api
+    image: siparis-api:1.0
+    ports:
+      - &quot;${API_PORT:-8000}:8000&quot;
+    volumes:
+      - siparis-veri:/veri
+    restart: unless-stopped
+
+  rapor:
+    build: ./rapor
+    image: siparis-rapor:1.0
+    environment:
+      API_ADRESI: http://api:8000
+      ARALIK_SN: ${ARALIK_SN:-60}
+    user: &quot;${KULLANICI_ID:-10001}&quot;
+    volumes:
+      - ./raporlar:/raporlar
+    depends_on:
+      api:
+        condition: service_healthy
+    restart: unless-stopped
+
+volumes:
+  siparis-veri:
+</code></pre>
+<p><code>build</code> ve <code>image</code> birlikte verilince Compose imajı build edip bu adla etiketler. <code>rapor</code> servisindeki <code>user:</code> satırı, kapsayıcıyı bilgisayarındaki kendi kullanıcı numaranla çalıştırır; böylece <code>raporlar</code> klasörüne yazdığı dosyalar sana ait olur (Linux'ta önemlidir; Docker Desktop'ta zararsızdır).</p>
+<p><strong>.env</strong></p>
+<!-- dosya: .env -->
+
+<pre><code>API_PORT=8000
+ARALIK_SN=3
+</code></pre>
+<p>Denemede raporu beklemeden görmek için aralığı 3 saniye yaptık; gerçek kullanımda 60 ya da 3600 olabilir. Linux'ta <code>KULLANICI_ID</code>'yi de vermek için <code>.env</code>'ye <code>KULLANICI_ID=1000</code> gibi kendi numaranı (<code>id -u</code> komutunun çıktısı) ekleyebilirsin; burada komutla veriyoruz. Bash'teki hazır <code>UID</code> değişkeni salt okunur olduğu için ona yeni değer atanamaz; bu yüzden farklı bir ad seçtik.</p>
+<p>Başlatalım:</p>
+<pre><code class="language-bash">KULLANICI_ID=$(id -u) docker compose up -d --build --wait &gt; /dev/null 2&gt;&amp;1
+docker compose ps --format '{{.Service}}: {{.State}} {{.Health}}'
+docker compose exec api whoami
+</code></pre>
+<pre><code class="language-text">api: running healthy
+rapor: running 
+uygulama
+</code></pre>
+<p>API root olmayan <code>uygulama</code> kullanıcısıyla çalışıyor. Sipariş ekleyelim, hatalı bir istek de deneyelim:</p>
+<pre><code class="language-bash">ekle() { curl -s -w &quot; %{http_code}\n&quot; -X POST -H &quot;Content-Type: application/json&quot; -d &quot;$1&quot; http://localhost:8000/siparisler; }
+ekle '{&quot;proje&quot;:&quot;Kule A&quot;,&quot;malzeme&quot;:&quot;Isıcam&quot;,&quot;adet&quot;:120,&quot;birim_fiyat&quot;:2100}'
+ekle '{&quot;proje&quot;:&quot;Kule A&quot;,&quot;malzeme&quot;:&quot;Alüminyum dikme&quot;,&quot;adet&quot;:48,&quot;birim_fiyat&quot;:1250}'
+ekle '{&quot;proje&quot;:&quot;AVM Cephe&quot;,&quot;malzeme&quot;:&quot;Kompozit panel&quot;,&quot;adet&quot;:60,&quot;birim_fiyat&quot;:640}'
+ekle '{&quot;proje&quot;:&quot;Kule B&quot;,&quot;malzeme&quot;:&quot;Silikon&quot;}'
+</code></pre>
+<pre><code class="language-text">{&quot;id&quot;: 1} 201
+{&quot;id&quot;: 2} 201
+{&quot;id&quot;: 3} 201
+{&quot;hata&quot;: &quot;proje, malzeme, adet ve birim_fiyat gerekli&quot;} 400
+</code></pre>
+<p>Rapor servisinin yeni turu bekleyelim ve bilgisayarımızdaki klasöre bakalım:</p>
+<pre><code class="language-bash">sleep 4
+tail -n +2 raporlar/son-rapor.txt
+docker compose logs rapor --no-log-prefix | tail -n 1
+</code></pre>
+<pre><code class="language-text">Sipariş sayısı: 3
+
+Kule A            312.000 TL
+AVM Cephe          38.400 TL
+rapor yazıldı: 3 sipariş, 2 proje
+</code></pre>
+<p>Rapor dosyasının ilk satırında tarih-saat damgası olduğu için <code>tail -n +2</code> ile onu atladık. API'nin günlüğü de her isteği yazıyor:</p>
+<pre><code class="language-bash">docker compose logs api --no-log-prefix | grep -c &quot;POST /siparisler&quot;
+</code></pre>
+<pre><code class="language-text">4
+</code></pre>
+<p><strong>Dayanıklılık denemesi.</strong> API kapsayıcısını zorla öldürelim; <code>restart: unless-stopped</code> onu yeniden başlatmalı ve veri volume'da kalmalı:</p>
+<pre><code class="language-bash">docker compose kill api &gt; /dev/null 2&gt;&amp;1
+KULLANICI_ID=$(id -u) docker compose up -d --wait api &gt; /dev/null 2&gt;&amp;1
+curl -s http://localhost:8000/siparisler | python3 -c &quot;import json, sys; print(len(json.load(sys.stdin)), 'sipariş korunmuş')&quot;
+</code></pre>
+<pre><code class="language-text">3 sipariş korunmuş
+</code></pre>
+<p><code>kill</code> ile durdurulan kapsayıcıyı burada <code>up</code> ile kendimiz başlattık; bir çökme ya da bilgisayarın yeniden başlaması durumunda <code>restart: unless-stopped</code> bunu Docker'a otomatik yaptırır (sadece <code>docker compose stop</code> ya da <code>down</code> ile durdurduğunda yeniden başlatmaz).</p>
+<p>İşin bitince:</p>
+<pre><code class="language-bash">docker compose down &gt; /dev/null 2&gt;&amp;1 &amp;&amp; echo &quot;durduruldu, veri volume'da duruyor&quot;
+</code></pre>
+<pre><code class="language-text">durduruldu, veri volume'da duruyor
+</code></pre>
+<h3>6. Sonraki adımlar (15 dk)</h3>
+<ul>
+<li><strong>Gerçek veritabanı:</strong> SQLite tek bir uygulama için harikadır. Birden çok servis aynı veriye yazacaksa Compose'a bir <code>postgres:17</code> servisi ekle; resmi imaj <code>POSTGRES_PASSWORD</code> ve <code>POSTGRES_DB</code> ortam değişkenleriyle ayarlanır, verisini <code>/var/lib/postgresql/data</code> altına bir volume ile saklarsın. (Bu kursun hazırlandığı ortamda Docker Hub'a erişim olmadığı için PostgreSQL örneği çalıştırılmadı.)</li>
+<li><strong>Ters vekil ve HTTPS:</strong> Birden çok servisi tek bir alan adının altında yayınlamak için önde <code>nginx</code>, <code>Caddy</code> ya da <code>Traefik</code> kullanılır.</li>
+<li><strong>CI/CD:</strong> GitHub Actions ile her <code>git push</code>'ta imajı build edip test eden ve kayda gönderen bir iş akışı kur.</li>
+<li><strong>Kubernetes:</strong> Yüzlerce kapsayıcıyı birden çok sunucuda yönetmek gerektiğinde bir sonraki adımdır; Compose'da öğrendiğin servis, ağ, volume ve sağlık kontrolü kavramları orada da aynen geçerlidir.</li>
+<li><strong>Veri ve ML projeleri:</strong> <a href="../python-veri-analizi/index.html">Python ile veri analizi</a> ve <a href="../makine-ogrenmesi/index.html">Makine öğrenmesine giriş</a> eğitimlerindeki betikleri ve modelleri bu kursta öğrendiğin şekilde imaja koyup her bilgisayarda aynı sonucu alabilirsin.</li>
+</ul>
+<p><strong>Alıştırma:</strong> (1) <code>api/Dockerfile</code>'ı, 2. bölümdeki çok aşamalı kalıba göre yeniden yaz (ek paket olmadığı için ilk aşamada boş bir venv oluşacak; amaç kalıbı denemek). (2) API'ye <code>/ozet</code> adresi ekle: proje bazında toplam tutarı JSON olarak döndürsün; rapor servisi de bu adresi kullansın. (3) İmajları <code>1.1</code> etiketiyle build edip <code>compose.yaml</code>'daki etiketleri güncelle ve <code>docker compose up -d</code> ile sadece değişen servislerin yeniden oluşturulduğunu gözlemle.</p>
+<h3>Gün sonu kontrolü (15 dk)</h3>
+<ul class="tasks">
+<li class="task"><label><input type="checkbox" data-id="g7-1"><span>İnce temel imaj seçmenin ve önbelleği imaja koymamanın önemini biliyorum.</span></label></li>
+<li class="task"><label><input type="checkbox" data-id="g7-2"><span>Çok aşamalı build ile build araçlarını son imajdan dışarıda tutabiliyorum.</span></label></li>
+<li class="task"><label><input type="checkbox" data-id="g7-3"><span>USER ile imajı root olmayan bir kullanıcıyla çalıştırabiliyorum.</span></label></li>
+<li class="task"><label><input type="checkbox" data-id="g7-4"><span>Sürüm etiketleri kullanıyor, bir imajı kayda göndermeyi biliyorum.</span></label></li>
+<li class="task"><label><input type="checkbox" data-id="g7-5"><span>İki servisli projeyi Compose ile çalıştırdım; sağlık kontrolü, volume, bind mount ve yeniden başlatma politikasını birlikte kullandım.</span></label></li>
+<li class="task"><label><input type="checkbox" data-id="g7-6"><span>Bir sonraki adımım için plan yaptım.</span></label></li>
+</ul></div>
+  <div class="pn"><a href="#gun6">← 6. gün</a><a href="../../Tools.html">Araçlara dön →</a></div>
+</section>
+</main>
+
+<footer>
+  <div class="wrap">
+    <span>© 2026 Erdal Üstünol · <a href="/gizlilik.html">Gizlilik</a></span>
+    <a href="../../Tools.html">← Araçlar ve eğitimler</a>
+  </div>
+</footer>
+
+<script>
+(() => {
+  const $ = id => document.getElementById(id);
+  const KEY = 'erdevelop-egitim-docker';
+  const store = { get(k) { try { return localStorage.getItem(k); } catch (e) { return null; } }, set(k, v) { try { localStorage.setItem(k, v); } catch (e) {} } };
+  let mode = (() => { try { const m = localStorage.getItem('erdevelop-mode'), g = localStorage.getItem('erdevelop-mode-gun'), t = new Date(); if (m && g === t.toDateString()) return m; const h = t.getHours(); return h >= 7 && h < 19 ? 'light' : 'dark'; } catch (e) { return 'light'; } })();
+  const applyMode = () => { document.documentElement.dataset.mode = mode; $('modeBtn').textContent = mode === 'dark' ? 'LIGHT' : 'DARK'; };
+  $('modeBtn').addEventListener('click', () => { mode = mode === 'dark' ? 'light' : 'dark'; store.set('erdevelop-mode', mode); store.set('erdevelop-mode-gun', new Date().toDateString()); applyMode(); });
+  applyMode();
+
+  let done = {}; try { done = JSON.parse(store.get(KEY) || '{}') || {}; } catch (e) { done = {}; }
+  const boxes = [...document.querySelectorAll('li.task input')];
+  const prog = () => {
+    document.querySelectorAll('section.day').forEach(sec => {
+      const d = sec.dataset.day, bs = sec.querySelectorAll('li.task input'), c = [...bs].filter(b => b.checked).length;
+      sec.querySelector('[data-prog]').textContent = c + '/' + bs.length;
+      const n = document.querySelector('[data-nav="' + d + '"]'); if (n) n.classList.toggle('done', bs.length > 0 && c === bs.length);
+    });
+  };
+  boxes.forEach(b => { b.checked = !!done[b.dataset.id]; b.addEventListener('change', () => { if (b.checked) done[b.dataset.id] = 1; else delete done[b.dataset.id]; store.set(KEY, JSON.stringify(done)); prog(); }); });
+  $('resetBtn').addEventListener('click', () => { done = {}; store.set(KEY, '{}'); boxes.forEach(b => b.checked = false); prog(); });
+  prog();
+
+  const links = [...document.querySelectorAll('[data-nav]')];
+  const secs = [$('genel'), ...document.querySelectorAll('section.day')];
+  if ('IntersectionObserver' in window) {
+    const io = new IntersectionObserver(es => es.forEach(e => { if (e.isIntersecting) { const i = secs.indexOf(e.target); links.forEach((l, k) => l.classList.toggle('on', k === i)); } }), { rootMargin: '-40% 0px -55% 0px' });
+    secs.forEach(s => io.observe(s));
+  }
+})();
+</script>
+<script src="../ilerleme.js" data-key="erdevelop-egitim-docker"></script>
+<script>if ('serviceWorker' in navigator && location.protocol === 'https:') addEventListener('load', () => navigator.serviceWorker.register('/sw.js').catch(() => { }));</script>
+<script data-goatcounter="https://erdevelop.goatcounter.com/count" async src="//gc.zgo.at/count.js"></script>
+<script src="/uyari.js" data-tur="egitim"></script>
+</body>
+</html>
