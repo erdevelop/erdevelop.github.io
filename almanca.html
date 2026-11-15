@@ -212,6 +212,7 @@ dialog.set input[type=range] { flex: 1 1 160px; accent-color: var(--accent); }
         <div class="lbl muted mono small">🔔 Telefona kelime bildirimi</div>
         <p class="note" style="margin:6px 0">Seçtiğin saatlerde telefonuna bir kelime gelsin; görmek zorunda kal. Bildirime dokununca kelimenin kartı açılır.</p>
         <button class="btn" type="button" id="hOpen">Bildirimleri ayarla</button>
+        <div class="small" id="pMini" style="margin-top:8px"></div>
         <div class="fg2 hbox" id="hBox" hidden>
           <div class="seg full" id="hMode"><button type="button" data-m="push" class="on">🔔 Anlık bildirim</button><button type="button" data-m="cal">📅 Takvim ile</button></div>
           <div class="full pstat push-only" id="pStat"></div>
@@ -224,7 +225,7 @@ dialog.set input[type=range] { flex: 1 1 160px; accent-color: var(--accent); }
           <label class="chk full"><input type="checkbox" id="hMean"> Türkçe anlamı bildirimde görünsün (kapalıysa önce kendin hatırlamaya çalışırsın; dokununca anlamını görürsün)</label>
           <label class="chk full"><input type="checkbox" id="hRep"> Aralıklı tekrar: her kelime 1 ve 3 gün sonra yeniden gelsin</label>
           <div class="full hinfo" id="hInfo"></div>
-          <div class="full ctl push-only"><button class="btn pri" type="button" id="pOn">🔔 Bildirimleri aç</button><button class="btn" type="button" id="pTest">Örnek bildirim göster</button><button class="btn" type="button" id="pOff">Bildirimleri kapat</button></div>
+          <div class="full ctl push-only"><button class="btn pri" type="button" id="pOn">🔔 Bildirimleri aç</button><button class="btn" type="button" id="pTest">Örnek bildirim göster</button><button class="btn" type="button" id="pSrv" hidden>📡 Sunucudan test gönder</button><button class="btn" type="button" id="pOff">Bildirimleri kapat</button></div>
           <div class="full push-only"><div class="lbl muted mono small">Nasıl çalışır</div><ol class="steps2">
             <li><b>iPhone:</b> Önce sayfayı ana ekrana ekle: Safari'de <b>Paylaş</b> → <b>Ana Ekrana Ekle</b>. Ana ekrandaki <b>Almanca</b> simgesinden aç, giriş yap ve <b>Bildirimleri aç</b>'a dokun (iOS 16.4 ve sonrası).</li>
             <li><b>Android ve bilgisayar:</b> Chrome ya da Edge'de doğrudan <b>Bildirimleri aç</b>. Uygulama gibi açmak için üstteki <b>📲 Yükle</b>'ye ya da Chrome menüsünde (⋮) <b>Uygulamayı yükle</b>'ye dokun. Simge ana ekranda çıkmazsa uygulama listesinde <b>Almanca</b>'yı bul, basılı tutup ana ekrana sürükle.</li>
@@ -1521,26 +1522,42 @@ let instEv = null;
 addEventListener('beforeinstallprompt', e => { e.preventDefault(); instEv = e; if (!STANDALONE) $('instBtn').hidden = false; });
 $('instBtn').onclick = async () => { if (!instEv) return; instEv.prompt(); const r = await instEv.userChoice.catch(() => ({})); instEv = null; $('instBtn').hidden = true; if (r.outcome === 'accepted') TM.toast('Yükleniyor… Simge ana ekranda yoksa uygulama listesinde “Almanca”yı ara.'); };
 addEventListener('appinstalled', () => { $('instBtn').hidden = true; });
-let pInfo = null, pT = null;
+let pInfo = null, pT = null, pLocalEp = null;
+/* bu cihazdaki abonelik adresi (sunucudakiyle karşılaştırmak için) ve bildirim servisinin adı */
+async function pLocal() { if (!P_OK) return null; try { const r = await navigator.serviceWorker.getRegistration('/'); const s = r && await r.pushManager.getSubscription(); return s ? s.endpoint : null; } catch (e) { return null; } }
+const pSvc = ep => { try { const h = new URL(ep).hostname; return /fcm|googleapis/.test(h) ? 'bir Android telefona ya da Chrome\'a' : /apple/.test(h) ? 'bir iPhone\'a ya da Mac Safari\'ye' : /mozilla/.test(h) ? 'Firefox\'a' : /windows/.test(h) ? 'bir Windows bilgisayara' : 'başka bir cihaza'; } catch (e) { return 'başka bir cihaza'; } };
+const pTime = v => v ? new Date(v.toDate ? v.toDate() : v).getTime() : 0;
 function hModeSet(m) { S.h.mode = m; save(); document.querySelectorAll('#hMode button').forEach(b => b.classList.toggle('on', b.dataset.m === m));
   document.querySelectorAll('#hBox .cal-only').forEach(e => e.hidden = m !== 'cal'); document.querySelectorAll('#hBox .push-only').forEach(e => e.hidden = m !== 'push');
   if (m === 'push' && P_OK) Cloud.ensure(); hInfo(); pPaint(); }
 $('hMode').onclick = e => { const b = e.target.closest('[data-m]'); if (b) hModeSet(b.dataset.m); };
 function pPaint(msg) {
-  const st = $('pStat'); if (!st || $('hBox').hidden || S.h.mode === 'cal') return; let html = '', cls = 'warn', on = false, can = false;
-  if (!P_OK) html = isIOS && !STANDALONE ? '<b>iPhone için bir adım:</b> Safari\'de <b>Paylaş</b> → <b>Ana Ekrana Ekle</b> ile sayfayı ana ekrana ekle, sonra oradaki <b>Almanca</b> simgesinden aç. iPhone bildirimlere yalnızca ana ekrandan açılan sayfalarda izin veriyor.' : 'Bu tarayıcı anlık bildirimleri desteklemiyor. Chrome, Edge ya da iPhone\'da ana ekrana eklenmiş sayfayı kullan; ya da <b>📅 Takvim ile</b> seçeneğini dene.';
-  else if (Notification.permission === 'denied') html = 'Bildirim izni kapalı. Tarayıcı ya da telefon ayarlarından bu site için bildirimlere izin ver, sonra sayfayı yenile.';
+  const st = $('pStat'), box = st && !$('hBox').hidden && S.h.mode !== 'cal'; let html = '', mini = '', cls = 'warn', on = false, can = false, here = false;
+  if (!P_OK) { html = isIOS && !STANDALONE ? '<b>iPhone için bir adım:</b> Safari\'de <b>Paylaş</b> → <b>Ana Ekrana Ekle</b> ile sayfayı ana ekrana ekle, sonra oradaki <b>Almanca</b> simgesinden aç. iPhone bildirimlere yalnızca ana ekrandan açılan sayfalarda izin veriyor.' : 'Bu tarayıcı anlık bildirimleri desteklemiyor. Chrome, Edge ya da iPhone\'da ana ekrana eklenmiş sayfayı kullan; ya da <b>📅 Takvim ile</b> seçeneğini dene.'; mini = S.pushOn || isIOS ? (isIOS && !STANDALONE ? '⚠️ iPhone: bildirim için sayfayı ana ekrana ekleyip oradan açman gerekiyor.' : '⚠️ Bu tarayıcı anlık bildirimi desteklemiyor.') : ''; }
+  else if (Notification.permission === 'denied') { html = 'Bildirim izni kapalı. Tarayıcı ya da telefon ayarlarından bu site için bildirimlere izin ver, sonra sayfayı yenile.'; mini = '⚠️ Bildirim izni kapalı: telefon ya da tarayıcı ayarlarından izin ver.'; }
   else if (!Cloud.ready) html = Cloud.err ? esc(Cloud.err) : 'Bağlanıyor…';
-  else if (!Cloud.user) html = 'Bildirimler hesabına bağlıdır. <button class="btn sm" type="button" id="pLogin">Giriş yap →</button> (Oyun Bahçesi hesabın geçerli)';
+  else if (!Cloud.user) { html = 'Bildirimler hesabına bağlıdır. <button class="btn sm" type="button" id="pLogin">Giriş yap →</button> (Oyun Bahçesi hesabın geçerli)'; mini = S.pushOn ? '⚠️ Bildirimleri görmek için giriş yap.' : ''; }
   else { can = true; on = !!S.pushOn;
-    if (on) { const t = pInfo && pInfo.sentAt ? new Date(pInfo.sentAt.toDate ? pInfo.sentAt.toDate() : pInfo.sentAt).getTime() : 0; cls = pInfo && pInfo.err ? 'warn' : 'on';
-      html = `<b>Bildirimler açık ✓</b>${t ? ' · son bildirim ' + TM.ago(t) : ' · ilk bildirim sıradaki saatte gelir'}${pInfo && pInfo.err ? '<br>' + esc(pInfo.err) : ''}`; }
+    const srvEp = pInfo && pInfo.sub && pInfo.sub.endpoint; here = !!(srvEp && pLocalEp && srvEp === pLocalEp);
+    if (on && srvEp && !here) {
+      html = `<b>⚠️ Bildirimler bu cihaza gelmiyor.</b> Hesabındaki bildirimler şu an ${pSvc(srvEp)} gidiyor${Notification.permission === 'granted' && !pLocalEp ? ' ya da bu cihazdaki abonelik silinmiş' : ''}. Bu cihazda almak için <b>📲 Bu cihazda al</b>'a dokun (öbür cihaza gitmeyi bırakır).`;
+      mini = '⚠️ Bildirimler bu cihaza değil, başka bir cihaza gidiyor. Düzeltmek için Bildirimleri ayarla\'ya dokun.'; }
+    else if (on) { const t = pTime(pInfo && pInfo.sentAt), tt = pTime(pInfo && pInfo.testAt); cls = pInfo && pInfo.err ? 'warn' : 'on';
+      html = `<b>Bildirimler açık ✓</b> · bu cihaza geliyor${t ? ' · son bildirim ' + TM.ago(t) : ' · ilk bildirim sıradaki saatte gelir'}${pInfo && pInfo.err ? '<br>' + esc(pInfo.err) : ''}`;
+      if (pInfo && pInfo.test) html += '<br>📡 Test isteğin sırada: sunucu en geç 15–20 dakika içinde gönderecek. Bu sayfayı kapatabilirsin.';
+      else if (tt) html += pInfo.testRes >= 200 && pInfo.testRes < 300 ? `<br>📡 Son test ${TM.ago(tt)} sunucudan gönderildi ve telefonun bildirim servisi kabul etti. Gelmediyse sorun telefonda: Odak / Rahatsız Etmeyin modunu, telefon ayarlarında bu uygulamanın bildirimlerini ve (Android'de) pil tasarrufunu kontrol et.` : `<br>📡 Son test ${TM.ago(tt)} gönderilemedi (${esc(String(pInfo.testRes || '?'))}). Bildirimleri kapatıp yeniden aç.`;
+      mini = pInfo && pInfo.err ? '⚠️ ' + esc(pInfo.err) : `🔔 Açık, bu cihaza geliyor${t ? ' · son bildirim ' + TM.ago(t) : ''}`; }
+    else if (pInfo && pInfo.err) { html = '<b>Bildirimler kapandı.</b> ' + esc(pInfo.err); mini = '⚠️ Bildirimler kapandı: ' + esc(pInfo.err); }
     else html = 'Bildirimler kapalı. Ayarları seç ve <b>Bildirimleri aç</b>\'a dokun.'; }
+  const mm = $('pMini'); if (mm) { mm.innerHTML = mini; mm.style.color = /^⚠️/.test(mini) ? 'var(--warn)' : ''; }
+  if (!box) return;
   st.className = 'full pstat push-only ' + cls; st.innerHTML = html + (msg ? `<div style="margin-top:6px">${msg}</div>` : '');
-  $('pOn').hidden = !can || on; $('pOff').hidden = !on; $('pTest').hidden = !P_OK || Notification.permission !== 'granted';
+  const fix = on && !here && can && Notification.permission !== 'denied';
+  $('pOn').hidden = !can || (on && !fix); $('pOn').textContent = fix ? '📲 Bu cihazda al' : '🔔 Bildirimleri aç'; $('pOff').hidden = !on;
+  $('pTest').hidden = !P_OK || Notification.permission !== 'granted'; $('pSrv').hidden = !(on && here) || !!(pInfo && pInfo.test);
   if ($('pLogin')) $('pLogin').onclick = () => setTab('oda');
 }
-async function pushInfo() { if (!Cloud.user) return; try { const d = await pDoc().get(); pInfo = d.exists ? d.data() : null; if (S.pushOn && (!pInfo || pInfo.on === false)) { S.pushOn = false; save(); } } catch (e) { } pPaint(); }
+async function pushInfo() { if (!Cloud.user) return; pLocalEp = await pLocal(); try { const d = await pDoc().get(); pInfo = d.exists ? d.data() : null; if (S.pushOn && (!pInfo || pInfo.on === false)) { S.pushOn = false; save(); } } catch (e) { } pPaint(); }
 function pushQueue() { const n = Math.max(1, hTimes().length), N = n > 20 ? 280 : 150, P = hPlan(Math.min(60, Math.ceil(N / n) + 3));
   return P.plan.flat().slice(0, N).map(([t, w]) => ({ e: w.en, t: w.tr, x: String(w.ex || '').slice(0, 160) })); }
 async function pushSave(sub) {
@@ -1559,11 +1576,16 @@ $('pOn').onclick = async () => {
   $('pOn').disabled = true; pPaint('Açılıyor…');
   try { const reg = await navigator.serviceWorker.register('/sw.js'); await navigator.serviceWorker.ready;
     let sub = await reg.pushManager.getSubscription(); if (!sub) sub = await reg.pushManager.subscribe({ userVisibleOnly: true, applicationServerKey: Uint8Array.from(atob(PUSH_PUB.replace(/-/g, '+').replace(/_/g, '/')), c => c.charCodeAt(0)) });
-    await pushSave(sub); S.pushOn = true; save(); pInfo = { on: true }; TM.toast('Bildirimler açıldı 🔔'); pPaint();
+    await pushSave(sub); S.pushOn = true; save(); pInfo = { on: true, sub: { endpoint: sub.endpoint } }; pLocalEp = sub.endpoint; TM.toast('Bildirimler açıldı 🔔'); pPaint();
   } catch (e) { pPaint('<span class="err">Açılamadı: ' + esc(/permission/i.test(e.code || e.message) ? 'sunucu izin vermedi (bildirim kuralı Firebase\'e eklenmemiş olabilir)' : e.message || e) + '</span>'); }
   $('pOn').disabled = false;
 };
 $('pOff').onclick = async () => { S.pushOn = false; save(); try { await pDoc().set({ on: false }, { merge: true }); } catch (e) { } pInfo = { on: false }; TM.toast('Bildirimler kapatıldı'); pPaint(); };
+$('pSrv').onclick = async () => { $('pSrv').disabled = true;
+  try { await pDoc().set({ test: true, testReq: firebase.firestore.FieldValue.serverTimestamp() }, { merge: true }); pInfo = { ...(pInfo || {}), test: true }; pPaint('Test isteği gönderildi.'); }
+  catch (e) { pPaint('<span class="err">Test isteği kaydedilemedi: ' + esc(e.message || e) + '</span>'); } $('pSrv').disabled = false; };
+/* sayfaya geri dönünce durumu tazele (test sonucu, başka cihaza geçiş) */
+document.addEventListener('visibilitychange', () => { if (!document.hidden && Cloud.user) pushInfo(); });
 $('pTest').onclick = async () => { const w = pushQueue()[0]; if (!w) return; const reg = await navigator.serviceWorker.register('/sw.js'); await navigator.serviceWorker.ready;
   reg.showNotification('📚 ' + w.e + ($('hMean').checked ? ' — ' + w.t : ''), { body: $('hMean').checked ? (w.x || 'Dokun, kartı aç.') : 'Anlamını hatırlıyor musun? Dokun ve kontrol et.', icon: '/icon-192.png', tag: 'eng-kelime', data: { url: location.origin + location.pathname + '?k=' + encodeURIComponent(w.e) + '#kelime' } }); };
 ['hSrc', 'hDays', 'hFrom', 'hTo', 'hStep', 'hMean', 'hRep', 'hDate'].forEach(id => $(id).addEventListener('change', hInfo));
@@ -2106,7 +2128,7 @@ $('sModeBtn').onclick = () => { $('modeBtn').click(); setFill(); };
 $('sRefresh').onclick = hardRefresh;
 $('sInst').onclick = () => { closeSet(); $('instBtn').click(); };
 setTab(qs.has('oda') ? 'oda' : ['kelime', 'kalip', 'dinleme', 'konusma', 'sim', 'telaffuz', 'yarisma', 'oda'].includes(h) ? h : S.tab || 'kelime');
-if (S.room || S.pushOn) Cloud.ensure();
+if (S.room || S.pushOn) Cloud.ensure(); else pPaint();
 
 </script>
 <script data-goatcounter="https://erdevelop.goatcounter.com/count" async src="//gc.zgo.at/count.js"></script>

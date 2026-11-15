@@ -6,7 +6,8 @@
    Gerekli gizli değişkenler (GitHub → Settings → Secrets and variables → Actions):
      FIREBASE_SA    Firebase hizmet hesabı JSON dosyasının tüm içeriği
      VAPID_PRIVATE  VAPID özel anahtarı (base64url, 43 karakter)
-   İsteğe bağlı: FORCE=true → saate bakmadan herkese bir kelime gönderir (deneme için). */
+   İsteğe bağlı: FORCE=true → saate bakmadan herkese bir kelime gönderir (deneme için).
+   Kullanıcı sayfadan "Sunucudan test gönder" derse belgeye test=true yazılır; bir sonraki çalışmada saate bakılmadan yalnız ona gönderilir. */
 import crypto from 'node:crypto';
 import { pathToFileURL } from 'node:url';
 
@@ -116,14 +117,16 @@ export async function main(env = process.env) {
   for (const d of dupes) { await patch(d, { on: false, err: 'Bu telefon başka bir hesapla bildirim alıyor; çift bildirim olmasın diye bu hesapta kapatıldı.' }); console.log('  aynı telefonda ikinci hesap kapatıldı: ' + d._path.split('/').pop().slice(0, 6) + '…'); }
   let sent = 0, skipped = 0, failed = 0;
   for (const d of docs) {
-    const key = force ? 'zorla|' + now.toISOString() : dueSlot(d, now), msg = key && d.sub && d.sub.endpoint ? message(d) : null;
+    const test = d.test === true, key = force ? 'zorla|' + now.toISOString() : test ? 'test|' + now.toISOString() : dueSlot(d, now), msg0 = key && d.sub && d.sub.endpoint ? message(d) : null;
+    const msg = msg0 && test ? { ...msg0, title: '📡 Test · ' + msg0.title } : msg0;
     if (!msg) { skipped++; if (d.sub && d.sub.endpoint) console.log(`  ${d._path.split('/').pop().slice(0, 6)}… ${d.page || 'ingilizce'} · ${svc(d.sub.endpoint)} · sırası gelmedi (${d.from}–${d.to}, ${d.step || 180} dk)`); continue; }
     const upd = {}; let res;
     try { res = await sendPush(d.sub, msg, env.VAPID_PRIVATE); } catch (e) { res = { status: 0, text: String(e.message || e) }; }
-    const kim = `${d._path.split('/').pop().slice(0, 6)}… ${d.page || 'ingilizce'} · ${svc(d.sub.endpoint)}`;
-    if (res.status >= 200 && res.status < 300) { sent++; console.log(`  ${kim} → gönderildi (${res.status}) ${key.split('|').pop()}`); Object.assign(upd, { pos: (d.pos || 0) + 1, last: key, sentAt: now, err: '' }); }
-    else { failed++; console.log(`  ${d._path.split('/').pop().slice(0, 6)}… gönderilemedi: ${res.status} ${res.text}`);
-      Object.assign(upd, res.status === 404 || res.status === 410 ? { on: false, err: 'Telefon aboneliği artık geçerli değil; sayfadan bildirimleri yeniden aç.' } : { last: key, err: 'Gönderim hatası ' + res.status }); }
+    const kim = `${d._path.split('/').pop().slice(0, 6)}… ${d.page || 'ingilizce'} · ${svc(d.sub.endpoint)}${test ? ' · TEST' : ''}`;
+    if (test) Object.assign(upd, { test: false, testAt: now, testRes: res.status });
+    if (res.status >= 200 && res.status < 300) { sent++; console.log(`  ${kim} → gönderildi (${res.status}) ${key.split('|').pop()}`); Object.assign(upd, test ? { pos: (d.pos || 0) + 1, sentAt: now, err: '' } : { pos: (d.pos || 0) + 1, last: key, sentAt: now, err: '' }); }
+    else { failed++; console.log(`  ${kim} → gönderilemedi: ${res.status} ${res.text}`);
+      Object.assign(upd, res.status === 404 || res.status === 410 ? { on: false, err: 'Telefon aboneliği artık geçerli değil; sayfadan bildirimleri yeniden aç.' } : test ? { err: 'Gönderim hatası ' + res.status } : { last: key, err: 'Gönderim hatası ' + res.status }); }
     await patch(d, upd);
   }
   console.log(`${docs.length} açık abonelik · ${sent} gönderildi · ${skipped} sırası gelmedi · ${failed} hata${dupes.length ? ' · ' + dupes.length + ' çift kayıt kapatıldı' : ''}`);

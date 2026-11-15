@@ -13,7 +13,8 @@
   let cat = '', onlyKey = false;
 
   /* kısayolu tuş görünümüne çevir: "CO / CP" → <kbd>CO</kbd> / <kbd>CP</kbd>, "Ctrl+Shift+C" → <kbd>Ctrl</kbd>+<kbd>Shift</kbd>+<kbd>C</kbd> */
-  const keys = s => s ? s.split(/\s*\/\s*/).map(a => a.split('+').map(k => `<kbd>${esc(k.trim())}</kbd>`).join('<i>+</i>')).join('<i>/</i>') : '<span class="none">—</span>';
+  /* "CO / CP" seçenek, "Ctrl+K, Ctrl+S" ardışık tuşlar, "Ctrl+/" ve "Ctrl++" tek tuş olarak */
+  const keys = s => s ? s.split(/\s+\/\s+/).map(a => a.split(/,\s+(?=\S)/).map(c => `<span class="kb">${c.split(/\+(?=.)/).map(k => `<kbd>${esc(k.trim())}</kbd>`).join('<i>+</i>')}</span>`).join('<i>, </i>')).join('<i>/</i>') : '<span class="none">—</span>';
   const mark = (txt, words) => { let h = esc(txt); if (!words.length) return h; const f = fold(txt); const hits = [];
     words.forEach(w => { const x = f.includes(w) ? w : stem(w); let i = -1; while ((i = f.indexOf(x, i + 1)) > -1) hits.push([i, i + x.length]); });
     if (!hits.length) return h; hits.sort((a, b) => a[0] - b[0]); const m = []; hits.forEach(x => { const l = m[m.length - 1]; if (l && x[0] <= l[1]) l[1] = Math.max(l[1], x[1]); else m.push(x.slice()); });
