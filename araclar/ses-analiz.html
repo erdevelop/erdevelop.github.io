@@ -21,6 +21,14 @@
 @media (max-width:640px){.stage.multi{grid-template-columns:1fr}}
 .cvw{position:relative;background:var(--bg);border:1px solid var(--line);border-radius:10px;overflow:hidden}
 .cvw canvas{display:block;width:100%;height:100%}
+.cvw{cursor:zoom-in}
+.cvw .fsb{position:absolute;right:8px;bottom:8px;width:34px;height:34px;border-radius:8px;border:1px solid var(--line);background:color-mix(in srgb,var(--card) 85%,transparent);color:var(--ink);font-size:16px;line-height:1;cursor:pointer;display:flex;align-items:center;justify-content:center;padding:0}
+.cvw.fs,.cvw:fullscreen{position:fixed;inset:0;z-index:300;height:auto!important;width:auto;border:0;border-radius:0;cursor:zoom-out;background:var(--bg)}
+.cvw:fullscreen{width:100%;height:100%!important}
+.cvw.fs .tt,.cvw:fullscreen .tt{font-size:.85rem;top:max(10px,env(safe-area-inset-top));left:max(12px,env(safe-area-inset-left))}
+.cvw.fs .ro,.cvw:fullscreen .ro{font-size:.95rem;top:max(10px,env(safe-area-inset-top));right:56px}
+.cvw.fs .fsb,.cvw:fullscreen .fsb{top:max(8px,env(safe-area-inset-top));bottom:auto;right:max(10px,env(safe-area-inset-right))}
+body.fsopen{overflow:hidden}
 .stage:not(.multi) .cvw{height:min(52vh,440px)}
 .stage.multi .cvw{height:min(30vh,240px)}
 .cvw .tt{position:absolute;left:8px;top:6px;font-size:.72rem;color:var(--muted);font-weight:600;pointer-events:none;text-transform:uppercase;letter-spacing:.05em}
@@ -274,13 +282,28 @@ let view = LS.get('sesan:view') || 'multi';
 const VIEWS = { wave: ['Dalga formu', 'Waveform'], spec: ['Spektrum', 'Spectrum'], sgram: ['Spektrogram', 'Spectrogram'], bands: ['Oktav bantları', 'Octave bands'], tuner: ['Perde / akort', 'Pitch / tuner'], level: ['Seviye geçmişi', 'Level history'], radial: ['Daire', 'Circle'] };
 let cvs = [];
 function buildStage() {
+  if (typeof fsEl !== 'undefined' && fsEl) fsSet(null);
   const list = view === 'multi' ? ['wave', 'spec', 'sgram', 'bands'] : [view], st = byId('stage');
   st.className = 'stage' + (view === 'multi' ? ' multi' : '');
-  st.innerHTML = list.map(v => `<div class="cvw"><canvas data-v="${v}"></canvas><span class="tt">${T(...VIEWS[v])}</span><span class="ro" data-ro="${v}"></span></div>`).join('');
+  st.innerHTML = list.map(v => `<div class="cvw" title="${T('Tam ekran için dokun', 'Tap for full screen')}"><canvas data-v="${v}"></canvas><span class="tt">${T(...VIEWS[v])}</span><span class="ro" data-ro="${v}"></span><button type="button" class="fsb" aria-label="${T('Tam ekran', 'Full screen')}">⛶</button></div>`).join('');
   cvs = [...st.querySelectorAll('canvas')].map(c => ({ c, v: c.dataset.v, g: c.getContext('2d'), ro: st.querySelector(`[data-ro="${c.dataset.v}"]`) }));
   $$('#views [data-v]').forEach(b => b.classList.toggle('on', b.dataset.v === view)); drawAll(true);
 }
-byId('views').onclick = e => { const b = e.target.closest('[data-v]'); if (!b) return; view = b.dataset.v; LS.set('sesan:view', view); buildStage(); };
+byId('views').onclick = e => { const b = e.target.closest('[data-v]'); if (!b) return; if (fsEl) fsSet(null); view = b.dataset.v; LS.set('sesan:view', view); buildStage(); };
+/* grafiğe dokununca tam ekran: destekleyen tarayıcıda Fullscreen API (+ telefonda yatay kilit), iPhone'da sayfayı kaplayan görünüm */
+let fsEl = null;
+function fsSet(el) {
+  if (el && fsEl && fsEl !== el) fsSet(null);
+  if (el) { fsEl = el; el.classList.add('fs'); document.body.classList.add('fsopen'); el.querySelector('.fsb').textContent = '✕';
+    const rq = el.requestFullscreen || el.webkitRequestFullscreen; if (rq) { try { const p = rq.call(el); if (p && p.then) p.then(() => { try { screen.orientation && screen.orientation.lock && screen.orientation.lock('landscape').catch(() => { }); } catch (e) { } }).catch(() => { }); } catch (e) { } } }
+  else if (fsEl) { const o = fsEl; fsEl = null; o.classList.remove('fs'); document.body.classList.remove('fsopen'); o.querySelector('.fsb').textContent = '⛶';
+    try { screen.orientation && screen.orientation.unlock && screen.orientation.unlock(); } catch (e) { } if (document.fullscreenElement || document.webkitFullscreenElement) (document.exitFullscreen || document.webkitExitFullscreen).call(document).catch?.(() => { }); }
+  requestAnimationFrame(() => drawAll(true));
+}
+byId('stage').addEventListener('click', e => { const el = e.target.closest('.cvw'); if (el) fsSet(fsEl === el ? null : el); });
+document.addEventListener('fullscreenchange', () => { if (!document.fullscreenElement && fsEl) fsSet(null); });
+document.addEventListener('webkitfullscreenchange', () => { if (!document.webkitFullscreenElement && fsEl) fsSet(null); });
+document.addEventListener('keydown', e => { if (e.key === 'Escape' && fsEl) fsSet(null); });
 function fit(o) { const r = o.c.getBoundingClientRect(), d = devicePixelRatio || 1, w = Math.max(10, Math.round(r.width * d)), h = Math.max(10, Math.round(r.height * d)); if (o.c.width !== w || o.c.height !== h) { o.c.width = w; o.c.height = h; } return [w, h, d]; }
 
 /* spektrogram arabelleği: her karede bir sütun eklenir */
