@@ -6,7 +6,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover, interactive-widget=resizes-content">
 <meta name="theme-color" content="#0f1412">
 <title>Konsol – Tarayıcıda Terminal: Ping, DNS, Whois, Linux Komutları, Python | erdevelop</title>
-<meta name="description" content="Tarayıcıda çalışan güçlü bir terminal: ping, dig, whois, IP bilgisi, hız testi, curl; ls, cd, cat, grep, sed, sort gibi Linux komutları, pipe ve yönlendirme, dosya düzenleyici, Python ve JavaScript, hesap makinesi, hash, base64, hava durumu ve döviz.">
+<meta name="description" content="Tarayıcıda çalışan güçlü bir terminal: ping, dig, whois, IP bilgisi, hız testi, curl; ls, cd, cat, grep, sed, sort gibi Linux komutları, pipe ve yönlendirme, dosya düzenleyici, öykünücüde gerçek Linux, Python ve JavaScript, hesap makinesi, hash, base64, hava durumu ve döviz.">
 <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Crect width='64' height='64' rx='14' fill='%230f1412'/%3E%3Cpath d='M16 22l10 10-10 10' fill='none' stroke='%236cc0a8' stroke-width='6' stroke-linecap='round' stroke-linejoin='round'/%3E%3Cpath d='M32 44h16' stroke='%236cc0a8' stroke-width='6' stroke-linecap='round'/%3E%3C/svg%3E">
 <link rel="stylesheet" href="ortak.css">
 <style>
@@ -49,6 +49,13 @@ body.k-acik .kbar button{background:#0000000a;border-color:#00000022}
 .drop-on #term{outline:2px dashed var(--ta);outline-offset:-6px}
 .prog{display:inline-block;vertical-align:middle;width:min(220px,50vw);height:8px;border-radius:4px;background:#ffffff1a;overflow:hidden}
 .prog i{display:block;height:100%;background:var(--ta);width:0}
+#vm{position:fixed;inset:0;z-index:35;background:var(--tb);display:flex;flex-direction:column}
+#vm[hidden]{display:none}
+#vm .vh{flex-shrink:0;display:flex;align-items:center;gap:10px;padding:8px 10px;border-bottom:1px solid #ffffff1a;font:500 13px ui-monospace,Menlo,Consolas,monospace;color:var(--tf)}
+#vm .vh b{white-space:nowrap}#vm .vh .st{flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;color:var(--tm)}
+#vmT{flex:1;min-height:0;padding:6px 4px 4px 8px}
+#vmT .xterm{height:100%}#vmT .xterm-viewport{background:transparent!important}
+#vmBar button.on{background:var(--ta);color:var(--tb)}
 </style>
 <!-- paylaşım, arama motoru ve reklam etiketleri -->
 <script>/* dil sürümüne göre canonical: her dil kendi adresini gösterir; dil seçilmemiş adres ziyaretçinin diline göre açılır */(function(){var q=new URLSearchParams(location.search).get("lang"),l=document.createElement("link");l.rel="canonical";l.href="https://erdevelop.github.io/araclar/konsol.html"+(q==="en"||q==="tr"?"?lang="+q:"");document.head.appendChild(l)})();</script>
@@ -64,6 +71,8 @@ body.k-acik .kbar button{background:#0000000a;border-color:#00000022}
 <div class="kbar" id="bar"><button data-k="tab">Tab</button><button data-k="up">↑</button><button data-k="down">↓</button><button data-k="ctrlc">^C</button><button data-k="|">|</button><button data-k="/">/</button><button data-k="-">-</button><button data-k="~">~</button><button data-k=">">&gt;</button><button data-k="&quot;">"</button><button data-k="left">←</button><button data-k="right">→</button><button data-k="clear">clear</button></div>
 <div id="ed" hidden><div class="eh"><b id="edN"></b><div class="hb"><button type="button" id="edS">Kaydet</button><button type="button" id="edX">Kapat</button></div></div><textarea id="edT" spellcheck="false" autocapitalize="off" autocorrect="off"></textarea><div class="ef" id="edF">Ctrl+S kaydet · Esc kapat</div></div>
 <canvas id="mx" hidden></canvas>
+<div id="vm" hidden><div class="vh"><b>🐧 erdevelop Linux</b><span class="st" id="vmS"></span><div class="hb"><button type="button" id="vmSync" title="Dosyaları Konsol'a eşitle">⇅</button><button type="button" id="vmR" title="Yeniden başlat">⟳</button><button type="button" id="vmX" title="Kapat (dosyalar Konsol'a eşitlenir)">✕</button></div></div><div id="vmT"></div>
+<div class="kbar" id="vmBar"><button data-v="esc">Esc</button><button data-v="tab">Tab</button><button data-v="ctrl">Ctrl</button><button data-v="up">↑</button><button data-v="down">↓</button><button data-v="left">←</button><button data-v="right">→</button><button data-v="|">|</button><button data-v="/">/</button><button data-v="-">-</button><button data-v="~">~</button><button data-v=":">:</button><button data-v="ctrlc">^C</button><button data-v="ctrld">^D</button></div></div>
 <script src="ortak.js"></script>
 <script>
 'use strict';
@@ -349,6 +358,7 @@ const HELP = [
     ['curl [-I -X -H -d -o] url', T('web isteği gönder', 'make a web request')], ['wget url', T('dosyayı indirip sanal diske kaydet', 'download to the virtual disk')], ['speedtest', T('indirme / yükleme hızı', 'download / upload speed')],
     ['traceroute / ssh / nmap', T('tarayıcıda mümkün değil (neden olduğunu anlatır)', 'not possible in a browser (explains why)')]]],
   [T('Programlama', 'Programming'), [
+    ['linux', T('gerçek Linux (x86 öykünücüde Linux 6.8 + BusyBox: vi, top, awk, tar…)', 'real Linux (Linux 6.8 + BusyBox in an x86 emulator: vi, top, awk, tar…)')],
     ['python [dosya.py | -c kod]', T('Python 3 (ilk açılışta yüklenir)', 'Python 3 (loaded on first use)')], ['js [dosya.js | ifade]', T('JavaScript', 'JavaScript')],
     ['calc ifade', T('hesap makinesi: sqrt(2)*pi, 2^10, sin(30°)', 'calculator: sqrt(2)*pi, 2^10, sin(30°)')], ['base64 [-d] / urlencode / urldecode', T('kodlama', 'encoding')],
     ['md5sum / sha1sum / sha256sum / sha512sum', T('özet (hash)', 'hashes')], ['uuid / passgen [uzunluk] / rand [a b]', T('kimlik, parola, rastgele sayı', 'ids, passwords, random')], ['jwt token', T('JWT çöz', 'decode a JWT')], ['conv 15 cm in', T('birim çevir', 'convert units')]]],
@@ -361,6 +371,7 @@ const HELP = [
     ['a | b , a > dosya , a >> dosya , a < dosya , a && b , a ; b', T('pipe ve yönlendirme', 'pipes & redirection')], ['cowsay / fortune / matrix', T('eğlence', 'fun')]]]
 ];
 const MAN = {
+  linux: T('linux\n\nTarayıcında gerçek bir 32 bit x86 bilgisayar öykünülür (v86) ve üzerinde Linux 6.8 çekirdeği ile BusyBox açılır. ls, vi, top, ps, awk, sed, tar, gzip, bc gibi 270\'ten fazla komut vardır. İlk açılışta yaklaşık 5 MB indirilir, sonra birkaç saniyede açılır.\n\nKonsol\'daki dosyaların Linux\'ta /mnt/konsol altında görünür; Linux\'ta yaptığın değişiklikler kapatınca (ve 15 saniyede bir) Konsol\'a geri yazılır.\nİnternet bağlantısı yoktur. Kapatmak için poweroff ya da ✕.', 'linux\n\nA real 32-bit x86 computer is emulated in your browser (v86) and boots Linux 6.8 with BusyBox: 270+ commands such as ls, vi, top, ps, awk, sed, tar, gzip, bc. About 5 MB is downloaded the first time; after that it boots in a few seconds.\n\nYour Konsol files appear under /mnt/konsol; changes made in Linux are written back when you close it (and every 15 seconds).\nThere is no network access. Close with poweroff or ✕.'),
   ping: T('ping [-c sayı] [-i saniye] [-t] host|url\n\nTarayıcı gerçek ICMP paketi gönderemez. Bunun yerine hedefe içeriksiz küçük bir HTTPS isteği (HEAD) atılır ve dönüş süresi ölçülür. Bağlantı ölçümden önce kurulur; yine de sunucunun yanıt hazırlama süresi eklendiği için sonuç gerçek ping\'den birkaç ms fazla olabilir.\n-c 4 (varsayılan) kaç kez, -t Ctrl+C\'ye kadar sürekli, -i aralık (saniye).',
     'ping [-c count] [-i seconds] [-t] host|url\n\nBrowsers cannot send real ICMP packets. Instead a tiny HTTPS request (HEAD) is sent and the round-trip time is measured. The connection is set up before measuring; server think-time can still add a few ms over a real ping.\n-c 4 (default) count, -t until Ctrl+C, -i interval in seconds.'),
   dig: T('dig [tip] alanadı [tip]\n\nDNS-over-HTTPS (Google, yedek Cloudflare) ile sorgular. Tip: A, AAAA, MX, TXT, NS, CNAME, SOA, CAA, SRV, PTR, ANY. IP verirsen ters kayıt (PTR) bakar.\nÖrnek: dig mx gmail.com · dig 8.8.8.8 · dig +short erdevelop.github.io',
@@ -646,6 +657,11 @@ const CMDS = {
     PY.runPython('import code as _c, sys\n_kon = _c.InteractiveConsole(locals=globals())');
     MODE = { kind: 'py', ps: '>>> ' }; c.out(`Python ${PY.runPython('import sys; sys.version.split()[0]')} (Pyodide) · ${T('çıkmak için exit() ya da Ctrl+D', 'exit() or Ctrl+D to leave')}`, 'c-m');
   },
+  async linux(c) {
+    if (VM) { byId('vm').hidden = false; VM.term.focus(); return; }
+    c.out(T('Linux açılıyor… (ilk seferde ~5 MB indirilir)', 'Booting Linux… (~5 MB downloaded the first time)'), 'c-m');
+    await startVM(c);
+  },
   async pip(c) { if (c.args[0] !== 'install' || !c.args[1]) { c.err(T('kullanım: pip install paket', 'usage: pip install package')); return 1; } await loadPy(c); await PY.loadPackage('micropip'); const mp = PY.pyimport('micropip'); for (const p of c.args.slice(1)) { c.out(T('yükleniyor: ', 'installing: ') + p, 'c-m'); try { await mp.install(p); c.out(T('tamam: ', 'done: ') + p, 'c-a'); } catch (e) { c.err(String(e.message || e).split('\n').slice(-2).join(' ')); return 1; } } },
 
   /* ---------- bilgi ---------- */
@@ -759,6 +775,74 @@ async function modeLine(line) {
   syncFromPy();
 }
 
+/* ---------------- gerçek Linux (v86 + xterm.js) ---------------- */
+let VM = null;
+const loadJS = src => new Promise((ok, no) => { if (document.querySelector(`script[src="${src}"]`)) return ok(); const s = document.createElement('script'); s.src = src; s.onload = ok; s.onerror = () => no(new Error(src + ' ' + T('yüklenemedi', 'failed to load'))); document.head.appendChild(s); });
+const loadCSS = href => { if (document.querySelector(`link[href="${href}"]`)) return; const l = document.createElement('link'); l.rel = 'stylesheet'; l.href = href; document.head.appendChild(l); };
+function vmTheme() { const cs = getComputedStyle(document.body), v = k => cs.getPropertyValue(k).trim(); return { background: v('--tb'), foreground: v('--tf'), cursor: v('--ta'), selectionBackground: v('--ta') + '55', green: v('--ta'), brightGreen: v('--ta'), blue: v('--tl'), brightBlue: v('--tl'), yellow: v('--tw'), brightYellow: v('--tw'), red: v('--te'), brightRed: v('--te'), magenta: v('--tp'), cyan: v('--tl'), brightBlack: v('--tm') }; }
+function vmTZ() { const o = -new Date().getTimezoneOffset(), h = Math.trunc(Math.abs(o) / 60), m = Math.abs(o) % 60, sgn = o >= 0 ? '+' : '-', name = `<${sgn}${p2(h)}${m ? p2(m) : ''}>`; return name + (o >= 0 ? '-' : '') + h + (m ? ':' + p2(m) : ''); }
+const vmStatus = t => { byId('vmS').textContent = t; };
+async function startVM(c) {
+  loadCSS('lib/xterm/xterm.css');
+  await Promise.all([loadJS('lib/xterm/xterm.js'), loadJS('lib/v86/libv86.js')]); await loadJS('lib/xterm/addon-fit.js');
+  byId('vm').hidden = false; byId('vmT').innerHTML = '';
+  const term = new Terminal({ fontFamily: 'ui-monospace, "IBM Plex Mono", "Cascadia Mono", Menlo, Consolas, monospace', fontSize: ST.fs, theme: vmTheme(), cursorBlink: true, scrollback: 5000, allowProposedApi: false });
+  const fit = new FitAddon.FitAddon(); term.loadAddon(fit); term.open(byId('vmT')); fit.fit();
+  term.write('\x1b[2m' + T('erdevelop Linux başlatılıyor…', 'starting erdevelop Linux…') + '\x1b[0m\r\n');
+  const emu = new V86({
+    wasm_path: 'lib/v86/v86.wasm', bios: { url: 'lib/v86/seabios.bin' }, vga_bios: { url: 'lib/v86/vgabios.bin' }, bzimage: { url: 'lib/v86/erdevelop-linux.bin' },
+    memory_size: 128 * 1024 * 1024, vga_memory_size: 2 * 1024 * 1024, autostart: true, disable_keyboard: true, disable_mouse: true, disable_speaker: true,
+    filesystem: {}, cmdline: `TZ=${vmTZ()} COLS=${term.cols} ROWS=${term.rows}`,
+  });
+  VM = { emu, term, fit, ctrl: false, halted: false, t0: performance.now(), booted: false };
+  vmStatus(T('indiriliyor…', 'downloading…'));
+  emu.add_listener('download-progress', e => { if (e.total) vmStatus(`${T('indiriliyor', 'downloading')} ${e.file_index + 1}/${e.file_count} · ${Math.round(e.loaded / e.total * 100)}%`); });
+  emu.add_listener('emulator-ready', async () => { vmStatus(T('açılıyor…', 'booting…')); try { await vmPush(); } catch (e) { term.write('\r\n[9p] ' + e.message + '\r\n'); } });
+  /* seri porttan gelen baytları toplu yaz (UTF-8 doğru çözülsün) */
+  let q = [], raf = 0, tail = '';
+  emu.add_listener('serial0-output-byte', b => {
+    q.push(b); if (!raf) raf = requestAnimationFrame(() => { const u = Uint8Array.from(q); q = []; raf = 0; term.write(u); const s = String.fromCharCode(...u.slice(-200)); tail = (tail + s).slice(-300);
+      if (!VM.booted && /# $/.test(tail.replace(/\x1b\[[0-9;?]*[a-zA-Z]/g, ''))) { VM.booted = true; vmStatus(T('hazır', 'ready') + ` · ${((performance.now() - VM.t0) / 1000).toFixed(1)} s · Linux 6.8 · 128 MB`); }
+      if (/System halted|reboot: Power down|Power off not available/.test(tail) && !VM.halted) { VM.halted = true; vmStop(true); } });
+  });
+  term.onData(d => { if (!VM) return; if (VM.ctrl && d.length === 1) { const ch = d.toUpperCase().charCodeAt(0); if (ch >= 64 && ch <= 95) d = String.fromCharCode(ch - 64); VM.ctrl = false; byId('vmBar').querySelector('[data-v=ctrl]').classList.remove('on'); } const u = new TextEncoder().encode(d); emu.serial0_send(String.fromCharCode(...u)); });
+  VM.ro = new ResizeObserver(() => { try { fit.fit(); } catch (e) { } }); VM.ro.observe(byId('vmT'));
+  VM.iv = setInterval(() => { if (VM && VM.booted) vmPull().catch(() => { }); }, 15000);
+  term.focus();
+  print(T('Linux penceresi açıldı. Kapatınca dosyaların Konsol\'a eşitlenir.', 'Linux window opened. Your files are synced back to Konsol when you close it.'), 'c-m');
+}
+/* Konsol ev dizini → 9p kökü */
+async function vmPush() {
+  const F = VM.emu.fs9p, home = node(ENV.HOME); if (!F || !home) return;
+  const walk = async (n, p, pid) => { for (const [k, v] of Object.entries(n.c)) { const q = p + '/' + k; if (v.t === 'd') { const id = F.CreateDirectory(k, pid); await walk(v, q, id); } else await VM.emu.create_file(q, v.b ? Uint8Array.from(atob(v.d), ch => ch.charCodeAt(0)) : new TextEncoder().encode(v.d)); } };
+  await walk(home, '', F.SearchPath('/').id);
+}
+/* 9p kökü → Konsol ev dizini (tam ayna; okuma başarısızsa hiçbir şeye dokunmaz) */
+async function vmPull() {
+  const F = VM && VM.emu.fs9p; if (!F) return;
+  const build = async p => { const d = { t: 'd', c: {}, m: Date.now() }; for (const n of F.read_dir(p)) { const q = (p === '/' ? '' : p) + '/' + n, s = F.SearchPath(q); if (s.id < 0) continue; if (F.IsDirectory(s.id)) d.c[n] = await build(q); else { const b = await VM.emu.read_file(q); let t = null; try { t = new TextDecoder('utf-8', { fatal: true }).decode(b); } catch (e) { } d.c[n] = t != null ? { t: 'f', d: t } : { t: 'f', b: 1, d: btoa(Array.from(b, x => String.fromCharCode(x)).join('')) }; } } return d; };
+  const fresh = await build('/');
+  const old = node(ENV.HOME), keepM = (o, n) => { for (const [k, v] of Object.entries(n.c)) { const ov = o && o.c && o.c[k]; if (v.t === 'd') keepM(ov, v); v.m = ov && ov.t === v.t && (v.t === 'd' || ov.d === v.d) ? ov.m : Date.now(); if (v.t === 'd' && ov && ov.m) v.m = ov.m; } };
+  keepM(old, fresh);
+  const { dir, name } = parentOf(ENV.HOME); dir.c[name] = fresh; fsSave();
+}
+async function vmStop(fromGuest) {
+  if (!VM) return; const v = VM; vmStatus(T('dosyalar eşitleniyor…', 'syncing files…'));
+  try { if (v.booted) await vmPull(); } catch (e) { print(T('uyarı: Linux dosyaları Konsol\'a eşitlenemedi', 'warning: could not sync Linux files back'), 'c-w'); }
+  clearInterval(v.iv); v.ro && v.ro.disconnect(); try { v.emu.destroy(); } catch (e) { try { v.emu.stop(); } catch (e2) { } } v.term.dispose(); VM = null;
+  byId('vm').hidden = true; byId('vmT').innerHTML = ''; print(T('Linux kapatıldı; dosyalar Konsol\'a eşitlendi.', 'Linux closed; files synced to Konsol.'), 'c-m'); paintPS(); CMD.focus();
+}
+byId('vmX').onclick = () => vmStop();
+byId('vmSync').onclick = async () => { if (!VM || !VM.booted) return; const s = byId('vmS').textContent; vmStatus(T('eşitleniyor…', 'syncing…')); try { await vmPull(); toast(T('Dosyalar Konsol\'a eşitlendi', 'Files synced to Konsol')); } catch (e) { toast(e.message); } vmStatus(s); VM.term.focus(); };
+byId('vmR').onclick = async () => { if (!VM) return; await vmStop(); await runLine('linux'); };
+byId('vmBar').addEventListener('pointerdown', e => e.preventDefault());
+byId('vmBar').addEventListener('click', e => {
+  const b = e.target.closest('[data-v]'); if (!b || !VM) return; const k = b.dataset.v;
+  const SEQ = { esc: '\x1b', tab: '\t', up: '\x1b[A', down: '\x1b[B', right: '\x1b[C', left: '\x1b[D', ctrlc: '\x03', ctrld: '\x04' };
+  if (k === 'ctrl') { VM.ctrl = !VM.ctrl; b.classList.toggle('on', VM.ctrl); VM.term.focus(); return; }
+  VM.emu.serial0_send(SEQ[k] ?? k); VM.term.focus();
+});
+
 /* ---------------- düzenleyici ---------------- */
 let ED = null;
 function openEditor(path, text) { ED = path; byId('edN').textContent = path; const t = byId('edT'); t.value = text; byId('ed').hidden = false; t.focus(); t.setSelectionRange(0, 0); edInfo(); }
@@ -839,7 +923,7 @@ if (window.visualViewport) visualViewport.addEventListener('resize', () => { doc
 function motd() {
   print('                _                _             ', 'c-a'); print('  ___ _ __ __| | _____   _____| | ___  _ __  ', 'c-a'); print(" / _ \\ '__/ _` |/ _ \\ \\ / / _ \\ |/ _ \\| '_ \\ ", 'c-a'); print('|  __/ | | (_| |  __/\\ V /  __/ | (_) | |_) |', 'c-a'); print(' \\___|_|  \\__,_|\\___| \\_/ \\___|_|\\___/| .__/ ', 'c-a'); print('                                      |_|    ', 'c-a');
   printHTML(`<span class="c-m">ersh 1.0 · ${esc(new Date().toLocaleString(erDil.lang === 'en' ? 'en-GB' : 'tr-TR'))}</span>`);
-  printHTML(T(`Komutlar için <span class="c-a">help</span>, bir komutun ayrıntısı için <span class="c-a">man ping</span> yaz. Başlamak için: <span class="c-a">ls</span>, <span class="c-a">cat beni-oku.txt</span>, <span class="c-a">neofetch</span>, <span class="c-a">ping google.com</span>.`, `Type <span class="c-a">help</span> for commands, <span class="c-a">man ping</span> for details. Try: <span class="c-a">ls</span>, <span class="c-a">cat beni-oku.txt</span>, <span class="c-a">neofetch</span>, <span class="c-a">ping google.com</span>.`));
+  printHTML(T(`Komutlar için <span class="c-a">help</span>, bir komutun ayrıntısı için <span class="c-a">man ping</span> yaz. Başlamak için: <span class="c-a">ls</span>, <span class="c-a">neofetch</span>, <span class="c-a">ping google.com</span>, gerçek Linux için <span class="c-a">linux</span>.`, `Type <span class="c-a">help</span> for commands, <span class="c-a">man ping</span> for details. Try: <span class="c-a">ls</span>, <span class="c-a">neofetch</span>, <span class="c-a">ping google.com</span>, or <span class="c-a">linux</span> for a real Linux.`));
   print('');
 }
 fsInit(); paintPS(); motd();
