@@ -5,7 +5,9 @@ const V = 'erdevelop-v2', PAGES = V + '-sayfa', LIBS = V + '-kutup';
 const CORE = ['/', '/Tools.html', '/404.html', '/favicon.svg', '/kesif/tema.css', '/kesif/tema.js',
   '/kesif/ruzgar.html', '/kesif/cam.html', '/kesif/kar.html', '/kesif/profil.html', '/kesif/genlesme.html', '/kesif/yogusma.html', '/kesif/ucw.html', '/kesif/ral.html', '/kesif/gunes.html',
   '/arac_kutusu.html', '/YakitHesapla.html', '/cam-agirlik.html', '/cephe-bolme.html'];
-const SKIP = [/^\/oyunlar\//, /^\/cephex\/pyodide\//, /^\/_/, /\.(zip|mp4|webm|mov|pdf)$/i];
+const SKIP = [/^\/oyunlar\//, /^\/cephex\/pyodide\//, /^\/_/, /\.(zip|mp4|webm|mov|pdf)$/i, /^\/araclar\/lib\/(reactos|v86\/ubuntu)\//, /\.(wasm|bin|zst)$/i];
+/* sayfa ve kodlar her açılışta sunucuyla doğrulanır (değişmediyse kısa bir 304 yanıtı gelir); böylece yeni sürüm hemen görünür */
+const FRESH = /(\/|\.(html?|js|css|json|txt|xml))$/i;
 const LIB_HOSTS = ['cdnjs.cloudflare.com', 'cdn.jsdelivr.net', 'unpkg.com', 'fonts.googleapis.com', 'fonts.gstatic.com'];
 const MAX = 3e6;
 self.addEventListener('install', e => { e.waitUntil(caches.open(PAGES).then(c => Promise.allSettled(CORE.map(u => c.add(u)))).then(() => self.skipWaiting())); });
@@ -16,7 +18,8 @@ self.addEventListener('fetch', e => {
   const u = new URL(r.url);
   if (u.origin === location.origin) {
     if (SKIP.some(x => x.test(u.pathname))) return;
-    e.respondWith(fetch(r).then(res => { if (small(res) && res.type === 'basic') { const cp = res.clone(); caches.open(PAGES).then(c => c.put(r, cp)); } return res; })
+    const net = r.mode === 'navigate' ? fetch(r.url, { cache: 'no-cache', credentials: 'same-origin' }) : FRESH.test(u.pathname) ? fetch(r, { cache: 'no-cache' }) : fetch(r);
+    e.respondWith(net.then(res => { if (small(res) && res.type === 'basic') { const cp = res.clone(); caches.open(PAGES).then(c => c.put(r, cp)); } return res; })
       .catch(() => caches.match(r, { ignoreSearch: r.mode === 'navigate' }).then(m => m || (r.mode === 'navigate' ? caches.match('/Tools.html') : Response.error()))));
     return;
   }
