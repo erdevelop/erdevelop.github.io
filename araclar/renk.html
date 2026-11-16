@@ -1,0 +1,320 @@
+<!doctype html>
+<html lang="tr">
+<head>
+<meta charset="utf-8">
+<script src="/dil.js"></script>
+<script src="ceviri.js"></script>
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="theme-color" content="#f5f6f4" media="(prefers-color-scheme: light)">
+<meta name="theme-color" content="#151a18" media="(prefers-color-scheme: dark)">
+<title>Kameradan RAL Renk Bulma – Yüzeyin Rengini Ölç | erdevelop</title>
+<meta name="description" content="Telefon kamerasını bir yüzeye tut; rengini ölç ve en yakın RAL Classic kodunu, HEX, RGB ve Lab değerlerini gör. Fotoğraftan ve HEX kodundan da RAL bulur.">
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Crect width='64' height='64' rx='14' fill='%233f8f7a'/%3E%3Ccircle cx='32' cy='32' r='17' fill='none' stroke='white' stroke-width='4'/%3E%3Cpath d='M32 8v10M32 46v10M8 32h10M46 32h10' stroke='white' stroke-width='4'/%3E%3Ccircle cx='32' cy='32' r='6' fill='white'/%3E%3C/svg%3E">
+<link rel="stylesheet" href="ortak.css">
+<style>
+.cam{position:relative;background:#000;border-radius:12px;overflow:hidden;aspect-ratio:4/3;touch-action:manipulation}
+.cam video,.cam canvas{width:100%;height:100%;object-fit:cover;display:block}
+.cam .ret{position:absolute;left:50%;top:50%;border:3px solid #fff;border-radius:50%;transform:translate(-50%,-50%);box-shadow:0 0 0 2px #0008,0 0 0 9999px #0003;pointer-events:none}
+.cam .ret::after{content:"";position:absolute;left:50%;top:50%;width:4px;height:4px;margin:-2px;border-radius:50%;background:#fff}
+.cam .off{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;color:#ccc;font-size:.9rem;padding:20px;text-align:center;background:#000}
+.cam .fz{position:absolute;top:8px;left:8px;background:#000a;color:#fff;font-size:.75rem;padding:3px 8px;border-radius:99px}
+.pic{position:relative;margin-top:12px;border-radius:12px;overflow:hidden;background:var(--bg);cursor:crosshair;touch-action:manipulation}
+.pic canvas{width:100%;height:auto;display:block}
+.pic .ret{position:absolute;border:3px solid #fff;border-radius:50%;transform:translate(-50%,-50%);box-shadow:0 0 0 2px #0008;pointer-events:none}
+.hero{display:flex;border-radius:12px;overflow:hidden;border:1px solid var(--line);min-height:120px}
+.hero>div{flex:1;padding:10px 12px;display:flex;flex-direction:column;justify-content:flex-end;font-size:.78rem;font-weight:600}
+.hero b{font-size:1.05rem}
+.hd{display:flex;align-items:baseline;gap:8px;flex-wrap:wrap;margin-top:12px}
+.hd .big{font-size:1.5rem;font-weight:700}
+.hd .nm{color:var(--muted)}
+.de{display:inline-block;border-radius:99px;padding:3px 10px;font-size:.8rem;font-weight:700;background:var(--acc-soft);color:var(--acc)}
+.de.w{background:#f3e3cf;color:#8a5413}.de.x{background:#f5d9d2;color:#9b3b28}
+@media (prefers-color-scheme:dark){.de.w{background:#3a2e1d;color:#e5b46e}.de.x{background:#3d221c;color:#f09a85}}
+.alts{display:grid;gap:6px;margin-top:8px}
+.alts button{display:flex;align-items:center;gap:10px;border:1px solid var(--line);background:var(--bg);color:var(--ink);border-radius:10px;padding:6px 8px;font:inherit;font-size:.9rem;cursor:pointer;text-align:left}
+.alts button.on{border-color:var(--acc);box-shadow:inset 0 0 0 1px var(--acc)}
+.alts i{width:34px;height:34px;border-radius:7px;flex:none;border:1px solid #0002}
+.alts span{flex:1;min-width:0}
+.alts small{color:var(--muted)}
+.alts em{font-style:normal;font-variant-numeric:tabular-nums;color:var(--muted);font-size:.82rem}
+.hist{display:grid;grid-template-columns:repeat(auto-fill,minmax(120px,1fr));gap:8px;margin-top:8px}
+.hist div{border:1px solid var(--line);border-radius:10px;overflow:hidden;font-size:.78rem;background:var(--bg);position:relative}
+.hist .s{display:flex;height:46px}.hist .s i{flex:1}
+.hist p{margin:0;padding:5px 7px}
+.hist button{position:absolute;top:4px;right:4px;width:22px;height:22px;border-radius:50%;border:0;background:#0006;color:#fff;cursor:pointer;line-height:1}
+.wbst{font-size:.82rem;margin-top:8px;color:var(--muted)}
+.wbst.on{color:var(--acc);font-weight:600}
+.warn{color:var(--warn);font-size:.82rem;margin-top:8px}
+.sw2{display:flex;gap:8px;align-items:end}.sw2>div{flex:1}.sw2 input[type=color]{width:64px;flex:none}
+</style>
+</head>
+<body>
+<header><div class="wrap"><div class="hrow"><a class="back" href="../Tools.html" aria-label="Araçlar">‹</a><h1 data-en="🎨 Colour Finder (RAL)">🎨 Renk Bulucu (RAL)</h1></div>
+  <div class="tabs"><button data-tab="kamera" data-en="Camera">Kamera</button><button data-tab="foto" data-en="Photo">Fotoğraf</button><button data-tab="kod" data-en="HEX / RGB">HEX / RGB</button></div></div></header>
+<main class="wrap">
+
+<section class="pane" data-pane="kamera">
+  <div class="box">
+    <div class="cam" id="cambox"><video id="vd" playsinline muted></video><div class="ret" id="ret"></div><div class="fz" id="fz" hidden data-en="Frozen">Donduruldu</div>
+      <div class="off" id="off" data-en="Start the camera and put the circle on the surface. Hold the phone 10–20 cm away, without casting a shadow.">Kamerayı başlat ve daireyi yüzeyin üstüne getir. Telefonu 10–20 cm uzakta, gölge düşürmeden tut.</div></div>
+    <div class="btns"><button class="btn" id="cam"></button><button class="btn ghost" id="frz" disabled></button><button class="btn ghost" id="torch" hidden>🔦</button></div>
+    <div class="row"><div><label for="sz" data-en="Measuring area">Ölçüm alanı</label><select id="sz" data-keep><option value=".035" data-en="Small">Küçük</option><option value=".07" selected data-en="Medium">Orta</option><option value=".13" data-en="Large">Büyük</option></select></div>
+      <div><label data-en="White balance">Beyaz dengesi</label><div class="btns" style="margin:0"><button class="btn ghost" id="wb" disabled data-en="⚪ Set from white">⚪ Beyazdan ayarla</button><button class="btn ghost sm" id="wbx" hidden aria-label="Sıfırla">↺</button></div></div></div>
+    <p class="wbst" id="wbst"></p>
+  </div>
+</section>
+
+<section class="pane" data-pane="foto">
+  <div class="box">
+    <label class="drop"><b data-en="Choose a photo">Fotoğraf seç</b><span data-en="or drag it here · then tap the point you want to measure">ya da buraya sürükle · sonra ölçmek istediğin noktaya dokun</span><input type="file" id="pf" accept="image/*"></label>
+    <div class="pic" id="picbox" hidden><canvas id="pc"></canvas><div class="ret" id="pret" hidden></div></div>
+    <div class="row"><div><label for="psz" data-en="Measuring area">Ölçüm alanı</label><select id="psz" data-keep><option value=".02" data-en="Small">Küçük</option><option value=".045" selected data-en="Medium">Orta</option><option value=".09" data-en="Large">Büyük</option></select></div>
+      <div><label data-en="White balance">Beyaz dengesi</label><label class="chk" style="margin-top:6px"><input type="checkbox" id="pwbm"> <span data-en="Next tap = white">Sonraki dokunuş = beyaz</span></label></div></div>
+    <p class="hint" data-en="If there is something white in the photo (paper, white wall), tick the box and tap it first; the colours are corrected for the light.">Fotoğrafta beyaz bir şey (kâğıt, beyaz duvar) varsa kutuyu işaretleyip önce ona dokun; renkler ışığa göre düzeltilir.</p>
+  </div>
+</section>
+
+<section class="pane" data-pane="kod">
+  <div class="box">
+    <div class="sw2"><div><label for="hx" data-en="HEX or RGB">HEX ya da RGB</label><input id="hx" class="mono" placeholder="#373F43 · 55, 62, 66" autocomplete="off" spellcheck="false" data-keep></div><input type="color" id="hc" value="#373f43" aria-label="Renk seç"></div>
+    <p class="hint" data-en="Type a colour code from a screen, a PDF or a design file and find the nearest RAL.">Ekrandan, PDF'ten ya da bir tasarım dosyasından aldığın renk kodunu yaz, en yakın RAL'i bul.</p>
+  </div>
+</section>
+
+<div class="box" id="resbox">
+  <div id="res"><p class="ph" data-en="The result appears here after a measurement.">Ölçüm yapınca sonuç burada görünür.</p></div>
+  <label class="chk"><input type="checkbox" id="lw" data-keep> <span data-en="Pay less attention to brightness (if the light is uncertain)">Parlaklık farkını daha az önemse (ışık belirsizse)</span></label>
+</div>
+
+<div class="box">
+  <div class="hrow"><h3 style="flex:1" data-en="Saved">Kaydedilenler</h3><button class="btn sm ghost" id="hclr" data-en="Clear">Temizle</button></div>
+  <div class="hist" id="hist"></div>
+</div>
+
+<p class="hint" style="padding:0 4px" data-en="The camera, the light and the screen change how a colour looks; the result is a guide, not a measurement. Before ordering, always check against a physical RAL fan deck or a sample.">Kamera, ışık ve ekran rengi değiştirir; sonuç ölçüm değil, yol göstericidir. Sipariş öncesi mutlaka fiziksel RAL kartelası ya da numuneyle karşılaştır.</p>
+
+<!-- sayfa açıklaması (AdSense / arama motorları için) -->
+<style>
+.er-about{max-width:860px;margin:40px auto 28px;padding:20px 22px;border:1px solid var(--line,rgba(127,127,127,.3));border-radius:12px;line-height:1.65;font-size:15px;color:inherit;box-sizing:border-box;text-align:left;font-family:inherit}
+.er-about h2{font-size:1.15rem;line-height:1.3;margin:0 0 10px;color:inherit}
+.er-about h3{font-size:1rem;margin:18px 0 6px;color:inherit}
+.er-about p{margin:0 0 10px}.er-about p,.er-about li{opacity:.9}
+.er-about ol,.er-about ul{padding-left:22px;margin:6px 0}.er-about li{margin:4px 0}
+.er-about a{color:inherit;text-decoration:underline}
+@media (max-width:600px){.er-about{margin:28px 12px 20px;padding:16px;font-size:14.5px}}
+</style>
+<section class="er-about" id="hakkinda" data-l="tr" aria-labelledby="hakkinda-b">
+<h2 id="hakkinda-b">Kameradan RAL renk bulma hakkında</h2>
+<p>Telefonun ya da bilgisayarın kamerasını boyalı bir yüzeye, alüminyum profile, kapıya ya da panele tutarak rengini ölçer ve RAL Classic kartelasındaki en yakın renkleri benzerlik sırasıyla gösterir. Her sonuç için HEX, RGB ve CIELAB değerleri ile renk farkı (ΔE 2000) verilir. Fotoğraftan ya da elindeki bir HEX / RGB kodundan da RAL bulabilirsin.</p>
+<p>Eski bir doğramanın, cephe panelinin ya da mobilyanın rengini yaklaşık olarak tanımak, rengi tarif etmek ya da kartelada nereden bakmaya başlayacağını bulmak için kullanılır. Görüntü cihazında işlenir; hiçbir yere gönderilmez.</p>
+<h3>Nasıl kullanılır?</h3><ol><li><b>Kamera</b> sekmesinde kamerayı başlat, daireyi yüzeyin düz ve gölgesiz bir yerine getir.</li><li>Daha doğru sonuç için önce aynı ışıkta beyaz bir kâğıdı ölçüp <b>Beyazdan ayarla</b>'ya bas.</li><li>Sonuç değişmeyi bıraktığında <b>Dondur</b>'a bas, istersen sonucu kaydet.</li><li>Alttaki listeden diğer yakın RAL renklerine dokunarak karşılaştır.</li></ol>
+<h3>Bilmen gerekenler</h3><ul><li>ΔE 1'in altı göze neredeyse aynı, 2–3 arası çok yakın, 5'in üstü belirgin farklıdır.</li><li>Kamera pozlamayı ve beyaz dengesini kendisi ayarlar; gün ışığında, gölgesiz ve yansımasız ölçüm en iyi sonucu verir. Parlak yüzeylerde yansımayı önlemek için hafif açıyla tut.</li><li>Metalik, sedefli ve dokulu boyalar kamerada farklı görünür; kesin seçim için fiziksel kartela ya da numune kullan.</li><li>Renk değerleri RAL Classic için yaygın kullanılan ekran karşılıklarıdır, resmî RAL ölçümleri değildir.</li></ul>
+</section>
+<section class="er-about" data-l="en" hidden aria-labelledby="about-en">
+<h2 id="about-en">About finding a RAL colour with the camera</h2>
+<p>Point your phone or computer camera at a painted surface, an aluminium profile, a door or a panel; the tool measures its colour and lists the nearest RAL Classic colours in order of similarity. Each result shows HEX, RGB and CIELAB values and the colour difference (ΔE 2000). You can also find a RAL from a photo or from a HEX / RGB code.</p>
+<p>Use it to roughly identify the colour of an old window frame, facade panel or piece of furniture, to describe a colour, or to know where to start looking in the fan deck. The image is processed on your device and never sent anywhere.</p>
+<h3>How to use</h3><ol><li>On the <b>Camera</b> tab, start the camera and put the circle on a flat, shadow-free part of the surface.</li><li>For better accuracy, first measure a sheet of white paper under the same light and press <b>Set from white</b>.</li><li>When the result stops changing, press <b>Freeze</b> and save it if you like.</li><li>Tap the other close RAL colours in the list below to compare.</li></ol>
+<h3>Good to know</h3><ul><li>A ΔE below 1 looks practically identical, 2–3 is very close and above 5 is clearly different.</li><li>The camera sets exposure and white balance by itself; daylight without shadows or reflections gives the best result. Hold glossy surfaces at a slight angle to avoid reflections.</li><li>Metallic, pearl and textured finishes look different on camera; use a physical fan deck or a sample for the final choice.</li><li>The colour values are commonly used screen equivalents of RAL Classic, not official RAL measurements.</li></ul>
+</section>
+</main>
+<footer data-en="The camera image is processed on your device and never sent anywhere.">Kamera görüntüsü cihazında işlenir, hiçbir yere gönderilmez.</footer>
+<script src="ortak.js"></script>
+<script>
+/* RAL Classic: [kod, Türkçe ad, İngilizce ad, HEX] — ../kesif/ral.html ile aynı veri */
+const RAL = [["1000","Yeşil bej","Green beige","CDBA88"],["1001","Bej","Beige","D0B084"],["1002","Kum sarısı","Sand yellow","D2AA6D"],["1003","Sinyal sarısı","Signal yellow","F9A800"],["1004","Altın sarısı","Golden yellow","E49E00"],["1005","Bal sarısı","Honey yellow","CB8E00"],["1006","Mısır sarısı","Maize yellow","E29000"],["1007","Nergis sarısı","Daffodil yellow","E88C00"],["1011","Kahverengi bej","Brown beige","AF804F"],["1012","Limon sarısı","Lemon yellow","DDAF27"],["1013","İstiridye beyazı","Oyster white","E3D9C6"],["1014","Fildişi","Ivory","DDC49A"],["1016","Kükürt sarısı","Sulfur yellow","F1DD38"],["1017","Safran sarısı","Saffron yellow","F6A950"],["1018","Çinko sarısı","Zinc yellow","FACA30"],["1019","Gri bej","Grey beige","A48F7A"],["1020","Zeytin sarısı","Olive yellow","A08F65"],["1021","Kolza sarısı","Rape yellow","F6B600"],["1023","Trafik sarısı","Traffic yellow","F7B500"],["1024","Okr sarısı","Ochre yellow","BA8F4C"],["1026","Fosforlu sarı","Luminous yellow","FFFF00"],["1027","Köri","Curry","A77F0E"],["1028","Kavun sarısı","Melon yellow","FF9B00"],["1032","Süpürge otu sarısı","Broom yellow","E2A300"],["1033","Dalya sarısı","Dahlia yellow","F99A1C"],["1034","Pastel sarı","Pastel yellow","EB9C52"],["1035","İnci beji","Pearl beige","908370"],["1036","İnci altın","Pearl gold","80643F"],["1037","Güneş sarısı","Sun yellow","F09200"],["2000","Sarı turuncu","Yellow orange","DD7907"],["2001","Kırmızı turuncu","Red orange","BE4E20"],["2002","Zincifre","Vermillion","C63927"],["2003","Pastel turuncu","Pastel orange","FA842B"],["2004","Saf turuncu","Pure orange","E75B12"],["2005","Fosforlu turuncu","Luminous orange","FF2300"],["2007","Fosforlu parlak turuncu","Luminous bright orange","FFA421"],["2008","Parlak kırmızı turuncu","Bright red orange","F3752C"],["2009","Trafik turuncusu","Traffic orange","E15501"],["2010","Sinyal turuncusu","Signal orange","D4652F"],["2011","Derin turuncu","Deep orange","EC7C25"],["2012","Somon turuncusu","Salmon orange","DB6A50"],["2013","İnci turuncusu","Pearl orange","954527"],["3000","Alev kırmızısı","Flame red","AB2524"],["3001","Sinyal kırmızısı","Signal red","A02128"],["3002","Karmin kırmızısı","Carmine red","A1232B"],["3003","Yakut kırmızısı","Ruby red","8D1D2C"],["3004","Mor kırmızı","Purple red","701F29"],["3005","Şarap kırmızısı","Wine red","5E2028"],["3007","Siyah kırmızı","Black red","402225"],["3009","Oksit kırmızısı","Oxide red","703731"],["3011","Kahverengi kırmızı","Brown red","7E292C"],["3012","Bej kırmızı","Beige red","CB8D73"],["3013","Domates kırmızısı","Tomato red","9C322E"],["3014","Antik pembe","Antique pink","D47479"],["3015","Açık pembe","Light pink","E1A6AD"],["3016","Mercan kırmızısı","Coral red","AC4034"],["3017","Gül","Rose","D3545F"],["3018","Çilek kırmızısı","Strawberry red","D14152"],["3020","Trafik kırmızısı","Traffic red","C1121C"],["3022","Somon pembesi","Salmon pink","D56D56"],["3024","Fosforlu kırmızı","Luminous red","F70000"],["3026","Fosforlu parlak kırmızı","Luminous bright red","FF0000"],["3027","Ahududu kırmızısı","Raspberry red","B42041"],["3028","Saf kırmızı","Pure red","E72512"],["3031","Oryantal kırmızısı","Orient red","AC323B"],["3032","İnci yakut kırmızısı","Pearl ruby red","711521"],["3033","İnci pembesi","Pearl pink","B24C43"],["4001","Kırmızı leylak","Red lilac","8A5A83"],["4002","Kırmızı menekşe","Red violet","933D50"],["4003","Funda menekşesi","Heather violet","D15B8F"],["4004","Bordo menekşesi","Claret violet","691639"],["4005","Mavi leylak","Blue lilac","83639D"],["4006","Trafik moru","Traffic purple","992572"],["4007","Mor menekşe","Purple violet","4A203B"],["4008","Sinyal menekşesi","Signal violet","904684"],["4009","Pastel menekşe","Pastel violet","A38995"],["4010","Telemagenta","Telemagenta","C63678"],["4011","İnci menekşesi","Pearl violet","8773A1"],["4012","İnci böğürtlen","Pearl blackberry","6B6880"],["5000","Menekşe mavi","Violet blue","384C70"],["5001","Yeşil mavi","Green blue","1F4764"],["5002","Ultramarin mavisi","Ultramarine blue","2B2C7C"],["5003","Safir mavisi","Sapphire blue","2A3756"],["5004","Siyah mavi","Black blue","1D1F2A"],["5005","Sinyal mavisi","Signal blue","154889"],["5007","Parlak mavi","Brilliant blue","41678D"],["5008","Gri mavi","Grey blue","313C48"],["5009","Gök mavisi","Azure blue","2E5978"],["5010","Centiyane mavisi","Gentian blue","13447C"],["5011","Çelik mavisi","Steel blue","232C3F"],["5012","Açık mavi","Light blue","3481B8"],["5013","Kobalt mavisi","Cobalt blue","232D53"],["5014","Güvercin mavisi","Pigeon blue","6C7C98"],["5015","Gök mavisi","Sky blue","2874B2"],["5017","Trafik mavisi","Traffic blue","0E518D"],["5018","Turkuaz mavisi","Turquoise blue","21888F"],["5019","Kapri mavisi","Capri blue","1A5784"],["5020","Okyanus mavisi","Ocean blue","0B4151"],["5021","Su mavisi","Water blue","07737A"],["5022","Gece mavisi","Night blue","2F2A5A"],["5023","Uzak mavi","Distant blue","4D668E"],["5024","Pastel mavi","Pastel blue","6A93B0"],["5025","İnci centiyane mavisi","Pearl Gentian blue","296478"],["5026","İnci gece mavisi","Pearl night blue","102C54"],["6000","Patina yeşili","Patina green","327662"],["6001","Zümrüt yeşili","Emerald green","28713E"],["6002","Yaprak yeşili","Leaf green","276235"],["6003","Zeytin yeşili","olive green","4B573E"],["6004","Mavi yeşil","Blue green","0E4243"],["6005","Yosun yeşili","Moss green","0F4336"],["6006","Gri zeytin","Grey olive","40433B"],["6007","Şişe yeşili","Bottle green","283424"],["6008","Kahverengi yeşil","Brown green","35382E"],["6009","Köknar yeşili","Fir green","26392F"],["6010","Çimen yeşili","Grass green","3E753B"],["6011","Reseda yeşili","Reseda green","68825B"],["6012","Siyah yeşil","Black green","31403D"],["6013","Kamış yeşili","Reed green","797C5A"],["6014","Sarı zeytin","Yellow olive","444337"],["6015","Siyah zeytin","Black olive","3D403A"],["6016","Turkuaz yeşili","Turquoise green","026A52"],["6017","Mayıs yeşili","May green","468641"],["6018","Sarı yeşil","Yellow green","48A43F"],["6019","Pastel yeşil","pastel green","B7D9B1"],["6020","Krom yeşili","Chrome green","354733"],["6021","Soluk yeşil","Pale green","86A47C"],["6022","Kahverengi zeytin","Brown olive","3E3C32"],["6024","Trafik yeşili","Traffic green","008754"],["6025","Eğrelti yeşili","Fern green","53753C"],["6026","Opal yeşili","Opal green","005D52"],["6027","Açık yeşil","Light green","81C0BB"],["6028","Çam yeşili","Pine green","2D5546"],["6029","Nane yeşili","Mint green","007243"],["6032","Sinyal yeşili","Signal green","0F8558"],["6033","Nane turkuaz","Mint turquoise","478A84"],["6034","Pastel turkuaz","Pastel turquoise","7FB0B2"],["6035","İnci yeşili","Pearl green","1B542C"],["6036","İnci opal yeşili","Pearl opal green","005D4C"],["6037","Saf yeşil","Pure green","25E712"],["6038","Fosforlu yeşil","Luminous green","00F700"],["7000","Sincap grisi","Squirrel grey","7E8B92"],["7001","Gümüş grisi","Silver grey","8F999F"],["7002","Zeytin grisi","Olive grey","817F68"],["7003","Yosun grisi","Moss grey","7A7B6D"],["7004","Sinyal grisi","Signal grey","9EA0A1"],["7005","Fare grisi","Mouse grey","6B716F"],["7006","Bej gri","Beige grey","756F61"],["7008","Haki grisi","Khaki grey","746643"],["7009","Yeşil gri","Green grey","5B6259"],["7010","Branda grisi","Tarpaulin grey","575D57"],["7011","Demir grisi","Iron grey","555D61"],["7012","Bazalt grisi","Basalt grey","596163"],["7013","Kahverengi gri","Brown grey","555548"],["7015","Arduvaz grisi","Slate grey","51565C"],["7016","Antrasit grisi","Anthracite grey","373F43"],["7021","Siyah gri","Black grey","2E3234"],["7022","Umbra grisi","Umbra grey","4B4D46"],["7023","Beton grisi","Concrete grey","818479"],["7024","Grafit grisi","Graphite grey","474A50"],["7026","Granit grisi","Granite grey","374447"],["7030","Taş grisi","Stone grey","939388"],["7031","Mavi gri","Blue grey","5D6970"],["7032","Çakıl grisi","Pebble grey","B9B9A8"],["7033","Çimento grisi","Cement grey","818979"],["7034","Sarı gri","Yellow grey","939176"],["7035","Açık gri","Light grey","CBD0CC"],["7036","Platin grisi","Platinum grey","9A9697"],["7037","Tozlu gri","Dusty grey","7C7F7E"],["7038","Akik grisi","Agate grey","B4B8B0"],["7039","Kuvars grisi","Quartz grey","6B695F"],["7040","Pencere grisi","Window grey","9DA3A6"],["7042","Trafik grisi A","Traffic grey A","8F9695"],["7043","Trafik grisi B","Traffic grey B","4E5451"],["7044","İpek grisi","Silk grey","BDBDB2"],["7045","Telegri 1","Telegrey 1","91969A"],["7046","Telegri 2","Telegrey 2","82898E"],["7047","Telegri 4","Telegrey 4","CFD0CF"],["7048","İnci fare grisi","Pearl mouse grey","888175"],["8000","Yeşil kahverengi","Green brown","887142"],["8001","Okr kahverengisi","Ochre brown","9C6B30"],["8002","Sinyal kahverengisi","Signal brown","7B5141"],["8003","Kil kahverengisi","Clay brown","80542F"],["8004","Bakır kahverengisi","Copper brown","8F4E35"],["8007","Geyik kahverengisi","Fawn brown","6F4A2F"],["8008","Zeytin kahverengisi","Olive brown","6F4F28"],["8011","Fındık kahverengisi","Nut brown","5A3A29"],["8012","Kırmızı kahverengi","Red brown","673831"],["8014","Sepya kahverengisi","Sepia brown","49392D"],["8015","Kestane kahverengisi","Chestnut brown","633A34"],["8016","Maun kahverengisi","Mahogany brown","4C2F26"],["8017","Çikolata kahverengisi","Chocolate brown","44322D"],["8019","Gri kahverengi","Grey brown","3F3A3A"],["8022","Siyah kahverengi","Black brown","211F20"],["8023","Turuncu kahverengi","Orange brown","A65E2F"],["8024","Bej kahverengi","Beige brown","79553C"],["8025","Soluk kahverengi","Pale brown","755C49"],["8028","Terra kahverengisi","Terra brown","4E3B2B"],["8029","İnci bakır","Pearl copper","773C27"],["9001","Krem","Cream","EFEBDC"],["9002","Gri beyaz","Grey white","DDDED4"],["9003","Sinyal beyazı","Signal white","F4F8F4"],["9004","Sinyal siyahı","Signal black","2E3032"],["9005","Kömür siyahı","Jet black","0A0A0D"],["9006","Beyaz alüminyum","White aluminium","A5A8A6"],["9007","Gri alüminyum","Grey aluminium","8F8F8C"],["9010","Saf beyaz","Pure white","F7F9EF"],["9011","Grafit siyahı","Graphite black","292C2F"],["9016","Trafik beyazı","Traffic white","F7FBF5"],["9017","Trafik siyahı","Traffic black","2A2D2F"],["9018","Papirüs beyazı","Papyrus white","CFD3CD"],["9022","İnci açık gri","Pearl light grey","9C9C9C"],["9023","İnci koyu gri","Pearl dark grey","7E8182"]];
+keepInputs('renk');
+const T = (tr, en) => erDil.t(tr, en);
+/* ---------- renk matematiği (sRGB D65 → CIELAB, ΔE 2000) ---------- */
+const lin = c => (c /= 255) <= .04045 ? c / 12.92 : ((c + .055) / 1.055) ** 2.4;
+const gam = v => { v = Math.max(0, Math.min(1, v)); return Math.round(255 * (v <= .0031308 ? 12.92 * v : 1.055 * v ** (1 / 2.4) - .055)); };
+const hexOf = rgb => '#' + rgb.map(v => v.toString(16).padStart(2, '0')).join('').toUpperCase();
+const rgbOfHex = h => [0, 2, 4].map(i => parseInt(h.replace('#', '').substr(i, 2), 16));
+function labOfLin([r, g, b]) {
+  const X = (.4124564 * r + .3575761 * g + .1804375 * b) / .95047, Y = .2126729 * r + .7151522 * g + .072175 * b, Z = (.0193339 * r + .119192 * g + .9503041 * b) / 1.08883;
+  const f = t => t > 216 / 24389 ? Math.cbrt(t) : (24389 / 27 * t + 16) / 116, fx = f(X), fy = f(Y), fz = f(Z);
+  return [116 * fy - 16, 500 * (fx - fy), 200 * (fy - fz)];
+}
+function dE00([L1, a1, b1], [L2, a2, b2], kL = 1) {
+  const rad = Math.PI / 180, C1 = Math.hypot(a1, b1), C2 = Math.hypot(a2, b2), Cm = (C1 + C2) / 2, G = .5 * (1 - Math.sqrt(Cm ** 7 / (Cm ** 7 + 25 ** 7)));
+  const ap1 = (1 + G) * a1, ap2 = (1 + G) * a2, Cp1 = Math.hypot(ap1, b1), Cp2 = Math.hypot(ap2, b2);
+  const hp = (b, a) => { if (!a && !b) return 0; const h = Math.atan2(b, a) / rad; return h < 0 ? h + 360 : h; }, h1 = hp(b1, ap1), h2 = hp(b2, ap2);
+  const dL = L2 - L1, dC = Cp2 - Cp1; let dh = 0; if (Cp1 * Cp2) { dh = h2 - h1; if (dh > 180) dh -= 360; else if (dh < -180) dh += 360; }
+  const dH = 2 * Math.sqrt(Cp1 * Cp2) * Math.sin(dh * rad / 2), Lm = (L1 + L2) / 2, Cpm = (Cp1 + Cp2) / 2;
+  let hm = h1 + h2; if (Cp1 * Cp2) hm = Math.abs(h1 - h2) <= 180 ? hm / 2 : (hm < 360 ? (hm + 360) / 2 : (hm - 360) / 2);
+  const Tt = 1 - .17 * Math.cos((hm - 30) * rad) + .24 * Math.cos(2 * hm * rad) + .32 * Math.cos((3 * hm + 6) * rad) - .2 * Math.cos((4 * hm - 63) * rad);
+  const dTh = 30 * Math.exp(-(((hm - 275) / 25) ** 2)), RC = 2 * Math.sqrt(Cpm ** 7 / (Cpm ** 7 + 25 ** 7));
+  const SL = 1 + .015 * (Lm - 50) ** 2 / Math.sqrt(20 + (Lm - 50) ** 2), SC = 1 + .045 * Cpm, SH = 1 + .015 * Cpm * Tt, RT = -Math.sin(2 * dTh * rad) * RC;
+  return Math.sqrt((dL / (kL * SL)) ** 2 + (dC / SC) ** 2 + (dH / SH) ** 2 + RT * (dC / SC) * (dH / SH));
+}
+const RL = RAL.map(c => ({ c: c[0], tr: c[1], en: c[2], hex: '#' + c[3].toUpperCase(), lab: labOfLin(rgbOfHex(c[3]).map(lin)) }));
+const nm = r => erDil.lang === 'en' ? r.en : r.tr;
+const ink = h => labOfLin(rgbOfHex(h).map(lin))[0] > 60 ? '#111' : '#fff';
+function grade(d) {
+  if (d < 1) return [T('Neredeyse aynı', 'Practically identical'), ''];
+  if (d < 2.5) return [T('Çok yakın', 'Very close'), ''];
+  if (d < 5) return [T('Yakın', 'Close'), 'w'];
+  if (d < 10) return [T('Benzer', 'Similar'), 'w'];
+  return [T('Uzak · tam karşılığı yok', 'Far · no real match'), 'x'];
+}
+/* ---------- örnekleme: daire içindeki pikseller, en açık ve en koyu %12 atılır (parlama ve gölge) ---------- */
+const work = document.createElement('canvas'), wg = work.getContext('2d', { willReadFrequently: true });
+function sample(src, w, h, cx, cy, rf) {
+  const s = Math.min(1, 480 / Math.max(w, h)), W = Math.max(1, Math.round(w * s)), H = Math.max(1, Math.round(h * s));
+  if (work.width !== W || work.height !== H) { work.width = W; work.height = H; }
+  wg.drawImage(src, 0, 0, W, H);
+  const r = Math.max(2, rf * Math.min(W, H)), x0 = Math.max(0, Math.floor(cx * W - r)), y0 = Math.max(0, Math.floor(cy * H - r)), x1 = Math.min(W, Math.ceil(cx * W + r)), y1 = Math.min(H, Math.ceil(cy * H + r));
+  if (x1 <= x0 || y1 <= y0) return null;
+  const d = wg.getImageData(x0, y0, x1 - x0, y1 - y0).data, px = [];
+  for (let y = y0; y < y1; y++) for (let x = x0; x < x1; x++) { if ((x + .5 - cx * W) ** 2 + (y + .5 - cy * H) ** 2 > r * r) continue; const i = ((y - y0) * (x1 - x0) + (x - x0)) * 4, R = lin(d[i]), G = lin(d[i + 1]), B = lin(d[i + 2]); px.push([R, G, B, .2126 * R + .7152 * G + .0722 * B]); }
+  if (!px.length) return null;
+  px.sort((a, b) => a[3] - b[3]); const k = Math.floor(px.length * .12), use = px.slice(k, px.length - k || px.length);
+  const m = [0, 1, 2].map(j => use.reduce((t, p) => t + p[j], 0) / use.length);
+  const Ls = use.map(p => 116 * Math.cbrt(Math.max(p[3], .008856)) - 16), Lm = Ls.reduce((a, b) => a + b, 0) / Ls.length, sd = Math.sqrt(Ls.reduce((a, b) => a + (b - Lm) ** 2, 0) / Ls.length);
+  const clip = px.filter(p => Math.max(p[0], p[1], p[2]) > .985).length / px.length;
+  return { lin: m, sd, clip };
+}
+/* ---------- beyaz dengesi: beyaz kâğıt ~ L* 94 nötr kabul edilir ---------- */
+const WT = .85;
+let WB = { cam: null, pic: null };
+const applyWB = (m, wb) => wb ? m.map((v, i) => v * wb[i]) : m;
+const gainsFrom = m => m.map(v => WT / Math.max(v, 1e-4));
+/* ---------- sonuç ---------- */
+let cur = null, pick = 0;
+function result(m, src, extra) {
+  const rgb = m.map(gam), lab = labOfLin(rgb.map(lin)), kL = byId('lw').checked ? 2 : 1;
+  const list = RL.map(r => ({ r, d: dE00(lab, r.lab, kL) })).sort((a, b) => a.d - b.d).slice(0, 6);
+  if (!cur || cur.list[0].r.c !== list[0].r.c) pick = 0;
+  cur = { rgb, hex: hexOf(rgb), lab, list, src, extra: extra || {} }; paint();
+}
+function paint() {
+  if (!cur) return;
+  const { hex, rgb, lab, list, extra } = cur, best = list[pick], [gt, gc] = grade(best.d);
+  let warn = '';
+  if (extra.clip > .15) warn = T('Görüntü fazla parlak (yansıma ya da patlama var); telefonu hafif açıyla tut ya da ışığı azalt.', 'The image is too bright (glare or clipping); tilt the phone slightly or reduce the light.');
+  else if (extra.sd > 7) warn = T('Ölçüm alanı düzgün değil (gölge, doku ya da kenar var); daireyi düz bir yere getir ya da alanı küçült.', 'The measuring area is not uniform (shadow, texture or an edge); move the circle to a flat spot or make the area smaller.');
+  else if (lab[0] < 6) warn = T('Görüntü çok karanlık; daha aydınlık bir yerde ölç.', 'The image is too dark; measure in a brighter place.');
+  byId('res').innerHTML = `<div class="hero"><div style="background:${hex};color:${ink(hex)}"><span>${T('Ölçülen', 'Measured')}</span><b>${hex}</b></div><div style="background:${best.r.hex};color:${ink(best.r.hex)}"><span>${esc(nm(best.r))}</span><b>RAL ${best.r.c}</b></div></div>
+  <div class="hd"><span class="big">RAL ${best.r.c}</span><span class="nm">${esc(nm(best.r))}</span><span class="de ${gc}">ΔE ${fmt(best.d, 1)} · ${gt}</span></div>
+  ${warn ? `<p class="warn">⚠️ ${warn}</p>` : ''}
+  <div style="margin-top:8px"><div class="kv"><span>${T('Ölçülen', 'Measured')}</span><b class="mono">${hex} · RGB ${rgb.join(', ')}</b></div><div class="kv"><span>CIELAB</span><b class="mono">L ${fmt(lab[0], 1)} · a ${fmt(lab[1], 1)} · b ${fmt(lab[2], 1)}</b></div><div class="kv"><span>RAL ${best.r.c}</span><b class="mono">${best.r.hex} · RGB ${rgbOfHex(best.r.hex).join(', ')}</b></div></div>
+  <div class="btns"><button class="btn" id="sv">${T('Kaydet', 'Save')}</button><button class="btn ghost" id="cp">${T('Kopyala', 'Copy')}</button><a class="btn ghost" href="../kesif/ral.html?c=${list.slice(0, 3).map(x => x.r.c).join(',')}" target="_blank" rel="noopener">${T('Kartelada aç', 'Open in chart')}</a></div>
+  <label>${T('En yakın RAL renkleri', 'Nearest RAL colours')}</label><div class="alts">${list.map((x, i) => `<button type="button" data-i="${i}" class="${i === pick ? 'on' : ''}"><i style="background:${x.r.hex}"></i><span><b>RAL ${x.r.c}</b> <small>${esc(nm(x.r))}</small></span><em>ΔE ${fmt(x.d, 1)}</em></button>`).join('')}</div>`;
+}
+byId('res').onclick = e => {
+  if (!cur) return; const a = e.target.closest('[data-i]');
+  if (a) { pick = +a.dataset.i; if (stream && !frozen) setFrozen(true); paint(); return; }
+  const best = cur.list[pick];
+  if (e.target.id === 'cp') copy(`RAL ${best.r.c} ${nm(best.r)} (ΔE ${fmt(best.d, 1)}) · ${T('ölçülen', 'measured')} ${cur.hex}`, e.target);
+  if (e.target.id === 'sv') { HIST.unshift({ m: cur.hex, c: best.r.c, d: +best.d.toFixed(1), t: Date.now() }); HIST.splice(40); saveHist(); paintHist(); toast(T('Kaydedildi', 'Saved')); }
+};
+byId('lw').addEventListener('change', () => { if (cur) result(cur.rgb.map(lin), cur.src, cur.extra); });
+/* ---------- kayıtlar ---------- */
+let HIST = []; try { HIST = JSON.parse(LS.get('renk:hist') || '[]'); } catch (e) { }
+const saveHist = () => LS.set('renk:hist', JSON.stringify(HIST));
+function paintHist() {
+  byId('hist').innerHTML = HIST.length ? HIST.map((h, i) => { const r = RL.find(x => x.c === h.c); return r ? `<div><button type="button" data-x="${i}" aria-label="Sil">×</button><span class="s"><i style="background:${h.m}"></i><i style="background:${r.hex}"></i></span><p><b>RAL ${r.c}</b> · ΔE ${fmt(h.d, 1)}<br><small class="mono">${h.m}</small> · <small>${new Date(h.t).toLocaleDateString(erDil.lang === 'en' ? 'en-GB' : 'tr-TR')}</small></p></div>` : ''; }).join('') : `<p class="ph">${T('Henüz kayıt yok.', 'Nothing saved yet.')}</p>`;
+}
+byId('hist').onclick = e => { const x = e.target.closest('[data-x]'); if (x) { HIST.splice(+x.dataset.x, 1); saveHist(); paintHist(); } };
+byId('hclr').onclick = () => { HIST = []; saveHist(); paintHist(); };
+/* ---------- kamera ---------- */
+let stream = null, timer = 0, frozen = false, ema = null, last = null, locked = false;
+const vd = byId('vd');
+function setRet() { const b = byId('cambox'), d = 2 * (+byId('sz').value) * Math.min(b.clientWidth, b.clientHeight); Object.assign(byId('ret').style, { width: d + 'px', height: d + 'px' }); }
+/* video "cover" ile kırpıldığı için dairenin video üzerindeki gerçek yeri ve boyu hesaplanır */
+function camGeom() {
+  const b = byId('cambox'), bw = b.clientWidth, bh = b.clientHeight, w = vd.videoWidth, h = vd.videoHeight, s = Math.max(bw / w, bh / h);
+  return { rf: (+byId('sz').value) * Math.min(bw, bh) / s / Math.min(w, h) };
+}
+function tick() {
+  if (!stream || frozen) return;
+  if (vd.readyState >= 2 && vd.videoWidth) {
+    const r = sample(vd, vd.videoWidth, vd.videoHeight, .5, .5, camGeom().rf);
+    if (r) { ema = ema ? ema.map((v, i) => v * .55 + r.lin[i] * .45) : r.lin; last = { lin: ema, sd: r.sd, clip: r.clip }; result(applyWB(ema, WB.cam), 'cam', last); }
+  }
+  timer = setTimeout(tick, 180);
+}
+function setFrozen(f) { frozen = f; byId('fz').hidden = !f; byId('frz').textContent = f ? T('▶ Devam', '▶ Resume') : T('⏸ Dondur', '⏸ Freeze'); if (f) { clearTimeout(timer); vd.pause(); } else { vd.play().catch(() => { }); ema = null; tick(); } }
+async function lock(on) {
+  const tr = stream && stream.getVideoTracks()[0]; if (!tr || !tr.getCapabilities) return false;
+  const cap = tr.getCapabilities(), c = {};
+  if ((cap.exposureMode || []).includes(on ? 'manual' : 'continuous')) c.exposureMode = on ? 'manual' : 'continuous';
+  if ((cap.whiteBalanceMode || []).includes(on ? 'manual' : 'continuous')) c.whiteBalanceMode = on ? 'manual' : 'continuous';
+  if (!Object.keys(c).length) return false;
+  try { await tr.applyConstraints({ advanced: [c] }); return !!c.exposureMode; } catch (e) { return false; }
+}
+function wbText() {
+  const s = byId('wbst');
+  if (!WB.cam) { s.classList.remove('on'); s.textContent = T('Daha doğru sonuç için: aynı ışıkta beyaz bir A4 kâğıdını daireye getirip “Beyazdan ayarla”ya bas, sonra yüzeyi ölç.', 'For better accuracy: put a sheet of white A4 paper in the circle under the same light and press “Set from white”, then measure the surface.'); return; }
+  s.classList.add('on'); s.textContent = locked ? T('✓ Beyaz ayarlandı · pozlama kilitlendi. Işık değişirse yeniden ayarla.', '✓ White set · exposure locked. Set it again if the light changes.') : T('✓ Beyaz ayarlandı. Bu cihaz pozlamayı kilitlemiyor; ölçerken ışığı ve mesafeyi aynı tut.', '✓ White set. This device cannot lock exposure; keep the light and distance the same while measuring.');
+}
+byId('wb').onclick = async () => {
+  if (!last) return toast(T('Önce kamerayı başlat', 'Start the camera first'));
+  if (last.clip > .3) return toast(T('Beyaz kâğıt fazla parlak görünüyor; biraz uzaklaş ya da ışığı azalt', 'The white paper looks too bright; move back a little or reduce the light'));
+  if (labOfLin(last.lin)[0] < 25) return toast(T('Daireye beyaz bir kâğıt getir', 'Put a sheet of white paper in the circle'));
+  locked = await lock(true); WB.cam = gainsFrom(last.lin); byId('wbx').hidden = false; wbText(); toast(T('Beyaz dengesi ayarlandı', 'White balance set'));
+};
+byId('wbx').onclick = async () => { WB.cam = null; if (locked) await lock(false); locked = false; byId('wbx').hidden = true; wbText(); };
+async function startCam() {
+  if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) return toast(T('Kamera bu tarayıcıda kullanılamıyor (https gerekli)', 'The camera is not available in this browser (https required)'));
+  try { stream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: { ideal: 'environment' }, width: { ideal: 1280 }, height: { ideal: 960 } }, audio: false }); }
+  catch (e) { return toast(e.name === 'NotAllowedError' ? T('Kamera izni verilmedi', 'Camera permission was denied') : T('Kamera açılamadı', 'Could not open the camera')); }
+  vd.srcObject = stream; await vd.play().catch(() => { });
+  byId('off').hidden = true; byId('cam').textContent = T('Durdur', 'Stop'); byId('frz').disabled = byId('wb').disabled = false;
+  const cap = stream.getVideoTracks()[0].getCapabilities ? stream.getVideoTracks()[0].getCapabilities() : {}; byId('torch').hidden = !cap.torch;
+  setRet(); frozen = false; ema = null; tick();
+}
+function stopCam() {
+  clearTimeout(timer); if (stream) stream.getTracks().forEach(t => t.stop()); stream = null; vd.srcObject = null; locked = false; if (WB.cam) wbText();
+  byId('off').hidden = false; byId('fz').hidden = true; byId('cam').textContent = T('Kamerayı başlat', 'Start camera'); byId('frz').disabled = byId('wb').disabled = true; byId('frz').textContent = T('⏸ Dondur', '⏸ Freeze'); byId('torch').hidden = true; frozen = false;
+}
+byId('cam').onclick = () => stream ? stopCam() : startCam();
+byId('frz').onclick = () => stream && setFrozen(!frozen);
+let torchOn = false; byId('torch').onclick = async () => { try { torchOn = !torchOn; await stream.getVideoTracks()[0].applyConstraints({ advanced: [{ torch: torchOn }] }); } catch (e) { toast(T('Fener açılamadı', 'Could not turn on the torch')); } };
+byId('sz').addEventListener('change', () => { setRet(); ema = null; });
+addEventListener('resize', setRet);
+/* ---------- fotoğraf ---------- */
+let img = null, ppt = null;
+const pc = byId('pc');
+dropZone($('[data-pane=foto] .drop'), async fs => {
+  const f = fs.find(x => /^image\//.test(x.type)) || fs[0]; if (!f) return;
+  try { const i = new Image(); i.src = URL.createObjectURL(f); await i.decode(); img = i; }
+  catch (e) { return toast(T('Bu resim açılamadı (HEIC ise JPG olarak kaydet)', 'Could not open this image (if it is HEIC, save it as JPG)')); }
+  const s = Math.min(1, 1600 / Math.max(img.naturalWidth, img.naturalHeight)); pc.width = Math.round(img.naturalWidth * s); pc.height = Math.round(img.naturalHeight * s);
+  pc.getContext('2d').drawImage(img, 0, 0, pc.width, pc.height); byId('picbox').hidden = false; byId('pret').hidden = true; WB.pic = null; ppt = null;
+  toast(T('Ölçmek istediğin noktaya dokun', 'Tap the point you want to measure'));
+});
+function picMeasure() {
+  if (!img || !ppt) return; const rf = +byId('psz').value, r = sample(pc, pc.width, pc.height, ppt[0], ppt[1], rf); if (!r) return;
+  const b = byId('picbox'), d = 2 * rf * Math.min(b.clientWidth, b.clientWidth * pc.height / pc.width);
+  Object.assign(byId('pret').style, { left: ppt[0] * 100 + '%', top: ppt[1] * 100 + '%', width: d + 'px', height: d + 'px' }); byId('pret').hidden = false;
+  if (byId('pwbm').checked) {
+    if (labOfLin(r.lin)[0] < 25) { toast(T('Bu nokta beyaz için fazla koyu', 'This spot is too dark for white')); return; }
+    WB.pic = gainsFrom(r.lin); byId('pwbm').checked = false; ppt = null; byId('pret').hidden = true; toast(T('Beyaz dengesi ayarlandı; şimdi ölçmek istediğin yere dokun', 'White balance set; now tap the spot you want to measure')); return;
+  }
+  result(applyWB(r.lin, WB.pic), 'pic', r);
+}
+pc.addEventListener('click', e => { const b = pc.getBoundingClientRect(); ppt = [(e.clientX - b.left) / b.width, (e.clientY - b.top) / b.height]; picMeasure(); });
+byId('psz').addEventListener('change', picMeasure);
+/* ---------- HEX / RGB ---------- */
+function parseCol(s) {
+  s = s.trim(); let m;
+  if ((m = s.match(/^#?([0-9a-f]{6})$/i))) return rgbOfHex(m[1]);
+  if ((m = s.match(/^#?([0-9a-f]{3})$/i))) return m[1].split('').map(c => parseInt(c + c, 16));
+  if ((m = s.match(/^(?:rgb\s*\()?\s*(\d{1,3})[\s,;]+(\d{1,3})[\s,;]+(\d{1,3})\s*\)?$/i))) { const v = [m[1], m[2], m[3]].map(Number); if (v.every(x => x <= 255)) return v; }
+  return null;
+}
+function fromCode() { const v = parseCol(byId('hx').value); if (!v) { if (byId('hx').value.trim()) toast(T('Kodu anlayamadım; örnek: #373F43 ya da 55, 62, 66', 'Could not read the code; e.g. #373F43 or 55, 62, 66')); return; } byId('hc').value = hexOf(v).toLowerCase(); result(v.map(lin), 'kod'); }
+byId('hx').addEventListener('change', fromCode);
+byId('hx').addEventListener('input', () => { const v = parseCol(byId('hx').value); if (v) { byId('hc').value = hexOf(v).toLowerCase(); result(v.map(lin), 'kod'); } });
+byId('hc').addEventListener('input', () => { byId('hx').value = byId('hc').value.toUpperCase(); result(rgbOfHex(byId('hc').value).map(lin), 'kod'); });
+/* ---------- genel ---------- */
+tabs('renk', t => { if (t !== 'kamera') stopCam(); if (t === 'kod' && parseCol(byId('hx').value)) fromCode(); if (t === 'foto' && ppt) picMeasure(); });
+document.addEventListener('visibilitychange', () => { if (document.hidden) stopCam(); });
+function labels() { byId('cam').textContent = stream ? T('Durdur', 'Stop') : T('Kamerayı başlat', 'Start camera'); byId('frz').textContent = frozen ? T('▶ Devam', '▶ Resume') : T('⏸ Dondur', '⏸ Freeze'); }
+erDil.on(() => { paint(); paintHist(); wbText(); labels(); });
+paintHist(); wbText(); labels();
+</script>
+<script data-goatcounter="https://erdevelop.goatcounter.com/count" async src="//gc.zgo.at/count.js"></script>
+</body>
+</html>
