@@ -1,0 +1,721 @@
+<!doctype html>
+<html lang="tr">
+<head>
+<meta charset="utf-8">
+<script src="/dil.js"></script>
+<script src="ceviri.js"></script>
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="theme-color" content="#f5f6f4" media="(prefers-color-scheme: light)">
+<meta name="theme-color" content="#151a18" media="(prefers-color-scheme: dark)">
+<title>Ses Analizi – Spektrum, Spektrogram, Ses Kaydı ve Ses Tanıma | erdevelop</title>
+<meta name="description" content="Ortamdaki sesi canlı analiz et: dalga formu, spektrum, spektrogram, oktav bantları, akort ve perde, ses seviyesi, tempo. Ses kaydet, dosya analiz et, yapay zekâ ile 521 ses türünü tanı, ton üreteci ve işitme testi.">
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Crect width='64' height='64' rx='14' fill='%233f8f7a'/%3E%3Cpath d='M10 32h6l4-14 6 30 6-24 5 16 4-8h13' fill='none' stroke='white' stroke-width='4' stroke-linejoin='round' stroke-linecap='round'/%3E%3C/svg%3E">
+<link rel="stylesheet" href="ortak.css">
+<style>
+.wrap.wide{max-width:1100px}
+.vbar{display:flex;gap:6px;overflow-x:auto;scrollbar-width:none;margin-top:10px}.vbar::-webkit-scrollbar{display:none}
+.vbar button{flex:none;border:1px solid var(--line);background:var(--bg);color:var(--ink);border-radius:999px;padding:7px 12px;font:inherit;font-size:.85rem;cursor:pointer}
+.vbar button.on{background:var(--acc);border-color:var(--acc);color:var(--acc-ink);font-weight:600}
+.stage{display:grid;gap:8px;margin-top:10px}
+.stage.multi{grid-template-columns:1fr 1fr}
+@media (max-width:640px){.stage.multi{grid-template-columns:1fr}}
+.cvw{position:relative;background:var(--bg);border:1px solid var(--line);border-radius:10px;overflow:hidden}
+.cvw canvas{display:block;width:100%;height:100%}
+.stage:not(.multi) .cvw{height:min(52vh,440px)}
+.stage.multi .cvw{height:min(30vh,240px)}
+.cvw .tt{position:absolute;left:8px;top:6px;font-size:.72rem;color:var(--muted);font-weight:600;pointer-events:none;text-transform:uppercase;letter-spacing:.05em}
+.cvw .ro{position:absolute;right:8px;top:6px;font-size:.75rem;color:var(--ink);font-variant-numeric:tabular-nums;pointer-events:none;background:color-mix(in srgb,var(--card) 80%,transparent);padding:1px 6px;border-radius:6px}
+.rd{display:grid;grid-template-columns:repeat(4,1fr);gap:8px;margin-top:10px}
+@media (max-width:640px){.rd{grid-template-columns:repeat(2,1fr)}}
+.rd div{background:var(--acc-soft);border-radius:10px;padding:8px 10px;min-width:0}
+.rd b{display:block;font-size:1.15rem;color:var(--acc);font-variant-numeric:tabular-nums;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.rd span{font-size:.72rem;color:var(--muted)}
+.rd small{font-size:.75rem;color:var(--ink);display:block;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.recdot{display:inline-block;width:10px;height:10px;border-radius:50%;background:#e0453a;margin-right:6px;animation:bl 1s infinite}
+@keyframes bl{50%{opacity:.3}}
+.btn.rec{background:#e0453a;color:#fff}
+.cls{display:grid;gap:6px;margin-top:8px}
+.cls div{display:grid;grid-template-columns:minmax(0,1fr) 46px;gap:8px;align-items:center;font-size:.9rem}
+.cls i{grid-column:1/3;height:6px;border-radius:9px;background:var(--line);overflow:hidden;margin-top:-4px}
+.cls i b{display:block;height:100%;background:var(--acc);border-radius:9px;transition:width .4s}
+.cls em{font-style:normal;text-align:right;color:var(--muted);font-variant-numeric:tabular-nums;font-size:.82rem}
+.guess{font-size:1.3rem;font-weight:700;margin:4px 0 2px}
+.evlog{max-height:260px;overflow:auto;margin-top:8px;font-size:.88rem}
+.evlog div{display:flex;gap:10px;padding:5px 0;border-bottom:1px dashed var(--line)}
+.evlog time{color:var(--muted);font-variant-numeric:tabular-nums;flex:none}
+.evlog span{flex:1;min-width:0}
+.evlog em{font-style:normal;color:var(--muted)}
+.strip{display:flex;height:16px;border-radius:6px;overflow:hidden;margin-top:8px;background:var(--line)}
+.strip i{flex:1;min-width:1px}
+.rl{display:grid;gap:8px;margin-top:8px}
+.rl .it{border:1px solid var(--line);border-radius:10px;padding:10px;background:var(--bg)}
+.rl .hd{display:flex;gap:8px;align-items:center;flex-wrap:wrap}
+.rl .hd b{flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.rl small{color:var(--muted)}
+.rl .ev{font-size:.8rem;color:var(--muted);margin-top:4px}
+.ov{position:relative;height:110px;border-radius:10px;overflow:hidden;background:var(--bg);border:1px solid var(--line);cursor:pointer;margin-top:10px}
+.ov canvas{width:100%;height:100%;display:block}
+.ov .ph2{position:absolute;top:0;bottom:0;width:2px;background:var(--warn);left:0;pointer-events:none}
+.spimg{width:100%;height:220px;display:block;border-radius:10px;margin-top:8px;image-rendering:auto;background:#000}
+.seg{display:grid;gap:4px;margin-top:8px;font-size:.88rem;max-height:300px;overflow:auto}
+.seg div{display:flex;gap:10px;align-items:center}
+.seg i{width:12px;height:12px;border-radius:3px;flex:none}
+.seg time{color:var(--muted);font-variant-numeric:tabular-nums;flex:none;min-width:92px}
+.gen .big3{font-size:2rem;font-weight:700;text-align:center;font-variant-numeric:tabular-nums;margin:6px 0}
+.pre{display:flex;gap:6px;flex-wrap:wrap;margin-top:8px}
+.pre button{border:1px solid var(--line);background:var(--bg);color:var(--ink);border-radius:8px;padding:6px 10px;font:inherit;font-size:.85rem;cursor:pointer}
+details.set2 summary{cursor:pointer;font-weight:600}
+.warn2{color:var(--warn);font-size:.85rem;margin-top:8px}
+.aibox{border:1px dashed var(--line);border-radius:10px;padding:10px;margin-top:10px}
+</style>
+</head>
+<body>
+<header><div class="wrap wide"><div class="hrow"><a class="back" href="../Tools.html" aria-label="Araçlar">‹</a><h1 data-en="🎛️ Sound Analyzer">🎛️ Ses Analizi</h1></div>
+  <div class="tabs"><button data-tab="canli" data-en="Live">Canlı</button><button data-tab="kayit" data-en="Recordings">Kayıtlar</button><button data-tab="dosya" data-en="Analyse a file">Dosya analizi</button><button data-tab="ton" data-en="Tone generator">Ton üreteci</button></div></div></header>
+<main class="wrap wide">
+
+<!-- ======================= CANLI ======================= -->
+<section class="pane" data-pane="canli">
+  <div class="box">
+    <div class="btns" style="margin-top:0"><button class="btn" id="micBtn"></button><button class="btn ghost" id="recBtn"></button><button class="btn ghost" id="frzBtn" disabled></button><button class="btn ghost sm" id="shotBtn" title="Görüntü al" aria-label="Görüntü al">📷</button></div>
+    <p class="hint" id="srcSt"></p>
+    <div class="vbar" id="views"><button data-v="multi" data-en="▦ All">▦ Hepsi</button><button data-v="wave" data-en="Waveform">Dalga formu</button><button data-v="spec" data-en="Spectrum">Spektrum</button><button data-v="sgram" data-en="Spectrogram">Spektrogram</button><button data-v="bands" data-en="Octave bands">Oktav bantları</button><button data-v="tuner" data-en="Pitch / tuner">Perde / akort</button><button data-v="level" data-en="Level history">Seviye geçmişi</button><button data-v="radial" data-en="Circle">Daire</button></div>
+    <div class="stage" id="stage"></div>
+    <div class="rd">
+      <div><span data-en="Level (approx.)">Seviye (yaklaşık)</span><b id="rLvl">–</b><small id="rLvl2"></small></div>
+      <div><span data-en="Dominant frequency">Baskın frekans</span><b id="rDom">–</b><small id="rDom2"></small></div>
+      <div><span data-en="Pitch">Perde (nota)</span><b id="rPit">–</b><small id="rPit2"></small></div>
+      <div><span data-en="Tempo">Tempo</span><b id="rBpm">–</b><small id="rBpm2"></small></div>
+      <div><span data-en="Brightness (centroid)">Parlaklık (merkez)</span><b id="rCen">–</b><small id="rCen2"></small></div>
+      <div><span data-en="Tone ↔ noise">Ton ↔ gürültü</span><b id="rFlat">–</b><small id="rFlat2"></small></div>
+      <div><span data-en="Peak / crest">Tepe / tepe faktörü</span><b id="rPk">–</b><small id="rPk2"></small></div>
+      <div><span data-en="Clipping">Kırpılma</span><b id="rClip">0</b><small id="rClip2"></small></div>
+    </div>
+  </div>
+
+  <div class="box">
+    <div class="hrow"><h3 style="flex:1" data-en="What is this sound?">Bu ses ne?</h3></div>
+    <div class="row"><div><span class="hint" style="margin:0" data-en="Quick guess (from the signal)">Hızlı tahmin (sinyalden)</span><div class="guess" id="gRule">–</div><p class="hint" style="margin:0" id="gRule2"></p></div>
+      <div><span class="hint" style="margin:0" data-en="AI (YAMNet · 521 sound types)">Yapay zekâ (YAMNet · 521 ses türü)</span><div class="guess" id="gAi">–</div><p class="hint" style="margin:0" id="gAi2"></p></div></div>
+    <div class="aibox" id="aiBox">
+      <p class="hint" style="margin:0" id="aiInfo" data-en="The AI recognises sounds such as speech, dogs, cars, sirens, music, rain, a baby crying, a doorbell or tools. The engine (~25 MB) is downloaded once; the sound stays on your device.">Yapay zekâ konuşma, köpek, araba, siren, müzik, yağmur, bebek ağlaması, kapı zili, matkap gibi sesleri tanır. Motor (~25 MB) bir kez iner; ses cihazından çıkmaz.</p>
+      <div class="btns"><button class="btn" id="aiBtn"></button></div>
+      <div class="cls" id="aiTop"></div>
+      <div class="strip" id="aiStrip" hidden title="Son 60 saniye"></div>
+    </div>
+    <div class="hrow" style="margin-top:14px"><h3 style="flex:1" data-en="Detected sounds">Algılanan sesler</h3><button class="btn sm ghost" id="evCsv" data-en="CSV">CSV</button><button class="btn sm ghost" id="evClr" data-en="Clear">Temizle</button></div>
+    <div class="evlog" id="evLog"></div>
+  </div>
+
+  <div class="box">
+    <details class="set2"><summary data-en="⚙ Settings">⚙ Ayarlar</summary>
+      <div class="row3">
+        <div><label for="sFft" data-en="FFT size (detail)">FFT boyutu (ayrıntı)</label><select id="sFft" data-keep><option>1024</option><option>2048</option><option selected>4096</option><option>8192</option><option>16384</option><option>32768</option></select></div>
+        <div><label for="sSm"><span data-en="Smoothing">Yumuşatma</span> · <b id="sSmV"></b></label><input type="range" id="sSm" min="0" max="0.95" step="0.05" value="0.6" data-keep></div>
+        <div><label for="sScale" data-en="Frequency scale">Frekans ölçeği</label><select id="sScale" data-keep><option value="log" data-en="Logarithmic">Logaritmik</option><option value="lin" data-en="Linear">Doğrusal</option><option value="mel">Mel</option></select></div>
+        <div><label for="sFmin" data-en="Min frequency (Hz)">En düşük frekans (Hz)</label><input id="sFmin" inputmode="numeric" value="20" data-keep></div>
+        <div><label for="sFmax" data-en="Max frequency (Hz)">En yüksek frekans (Hz)</label><input id="sFmax" inputmode="numeric" value="20000" data-keep></div>
+        <div><label for="sPal" data-en="Colour palette">Renk paleti</label><select id="sPal" data-keep><option value="viridis">Viridis</option><option value="magma">Magma</option><option value="fire" data-en="Fire">Ateş</option><option value="ice" data-en="Ice">Buz</option><option value="gray" data-en="Grey">Gri</option></select></div>
+        <div><label for="sDbMin" data-en="dB range: bottom">dB aralığı: alt</label><input id="sDbMin" inputmode="numeric" value="-100" data-keep></div>
+        <div><label for="sDbMax" data-en="dB range: top">dB aralığı: üst</label><input id="sDbMax" inputmode="numeric" value="-20" data-keep></div>
+        <div><label for="sBand" data-en="Bands">Bantlar</label><select id="sBand" data-keep><option value="3">1/3 oktav</option><option value="1" data-en="Octave">Oktav</option></select></div>
+        <div><label for="sGain"><span data-en="Input gain">Giriş kazancı</span> · <b id="sGainV"></b></label><input type="range" id="sGain" min="0" max="24" step="1" value="0" data-keep></div>
+        <div><label for="sCal"><span data-en="Level correction">Seviye düzeltmesi</span> · <b id="sCalV"></b></label><input type="range" id="sCal" min="-20" max="20" step="1" value="0" data-keep></div>
+        <div><label for="sSpd" data-en="Spectrogram speed">Spektrogram hızı</label><select id="sSpd" data-keep><option value="1" data-en="Normal">Normal</option><option value="2" data-en="Slow">Yavaş</option><option value="4" data-en="Very slow">Çok yavaş</option></select></div>
+      </div>
+      <label class="chk"><input type="checkbox" id="sAw" data-keep> <span data-en="A-weighting (closer to how the ear hears)">A-ağırlıklı (kulağın duyduğuna daha yakın)</span></label>
+      <label class="chk"><input type="checkbox" id="sPeak" checked data-keep> <span data-en="Show peak hold on the spectrum">Spektrumda tepe izini göster</span></label>
+      <label class="chk"><input type="checkbox" id="sProc" data-keep> <span data-en="Phone's noise suppression and auto gain on (off is better for measuring)">Telefonun gürültü bastırma ve otomatik kazancı açık (ölçüm için kapalı daha iyi)</span></label>
+      <p class="hint" data-en="Phone microphones are not measuring microphones: the dB value is approximate. If you have a real sound level meter, match them with “Level correction”.">Telefon mikrofonları ölçüm mikrofonu değildir; dB değeri yaklaşıktır. Gerçek bir ses ölçerin varsa “Seviye düzeltmesi” ile eşle.</p>
+    </details>
+  </div>
+</section>
+
+<!-- ======================= KAYITLAR ======================= -->
+<section class="pane" data-pane="kayit">
+  <div class="box">
+    <div class="hrow"><h3 style="flex:1" data-en="Recordings">Kayıtlar</h3><span class="hint" style="margin:0" id="rlInfo"></span></div>
+    <p class="hint" data-en="Recordings are kept in this browser on this device. Press ⏺ on the Live tab to record; sounds the AI detects while recording are saved with the recording.">Kayıtlar bu cihazda, bu tarayıcıda saklanır. Kaydetmek için Canlı sekmesinde ⏺'a bas; kayıt sırasında yapay zekânın algıladığı sesler kayıtla birlikte saklanır.</p>
+    <div class="rl" id="rl"></div>
+  </div>
+</section>
+
+<!-- ======================= DOSYA ======================= -->
+<section class="pane" data-pane="dosya">
+  <div class="box">
+    <label class="drop"><b data-en="Choose an audio or video file">Ses ya da video dosyası seç</b><span data-en="MP3, WAV, M4A, OGG, WebM, MP4… or drag it here">MP3, WAV, M4A, OGG, WebM, MP4… ya da buraya sürükle</span><input type="file" id="fIn" accept="audio/*,video/*"></label>
+    <div id="fRes" hidden>
+      <h3 id="fName" style="margin-top:12px;word-break:break-all"></h3>
+      <div class="stat" id="fStat" style="grid-template-columns:repeat(4,1fr)"></div>
+      <div class="ov" id="fOv"><canvas id="fOvC"></canvas><div class="ph2" id="fPh"></div></div>
+      <div class="btns"><button class="btn" id="fPlay"></button><button class="btn ghost" id="fLive" data-en="Play in live views">Canlı grafiklerde çal</button><button class="btn ghost" id="fWav" data-en="Download WAV">WAV indir</button></div>
+      <label data-en="Spectrogram of the whole file">Dosyanın tamamının spektrogramı</label><canvas class="spimg" id="fSp"></canvas>
+      <label data-en="Average spectrum">Ortalama spektrum</label><canvas class="spimg" id="fAvg" style="height:160px;background:var(--bg)"></canvas>
+      <div class="aibox"><div class="hrow"><b style="flex:1" data-en="Sounds in the file (AI)">Dosyadaki sesler (yapay zekâ)</b><button class="btn sm" id="fAi"></button></div>
+        <div class="strip" id="fStrip" hidden></div><div class="seg" id="fSeg"></div></div>
+    </div>
+  </div>
+</section>
+
+<!-- ======================= TON ÜRETECİ ======================= -->
+<section class="pane" data-pane="ton">
+  <div class="box gen">
+    <h3 data-en="Tone generator">Ton üreteci</h3>
+    <div class="big3" id="gF">440 Hz</div><p class="hint" style="text-align:center;margin:0" id="gN"></p>
+    <input type="range" id="gFr" min="0" max="1000" step="1">
+    <div class="row3"><div><label for="gFi" data-en="Frequency (Hz)">Frekans (Hz)</label><input id="gFi" inputmode="decimal"></div>
+      <div><label for="gW" data-en="Wave">Dalga</label><select id="gW" data-keep><option value="sine" data-en="Sine">Sinüs</option><option value="square" data-en="Square">Kare</option><option value="triangle" data-en="Triangle">Üçgen</option><option value="sawtooth" data-en="Sawtooth">Testere</option><option value="white" data-en="White noise">Beyaz gürültü</option><option value="pink" data-en="Pink noise">Pembe gürültü</option><option value="brown" data-en="Brown noise">Kahverengi gürültü</option></select></div>
+      <div><label for="gV"><span data-en="Volume">Ses</span> · <b id="gVV"></b></label><input type="range" id="gV" min="0" max="100" value="20" data-keep></div></div>
+    <div class="pre" id="gPre"></div>
+    <div class="btns"><button class="btn" id="gGo"></button></div>
+    <label class="chk"><input type="checkbox" id="gAn" checked data-keep> <span data-en="Also send it to the analyser (see it on the Live tab)">Analizöre de gönder (Canlı sekmesinde gör)</span></label>
+    <p class="warn2" data-en="Start with the volume low, especially with headphones. High levels can damage hearing and speakers.">Sesi düşükten başlat, özellikle kulaklıkla. Yüksek seviye kulağa ve hoparlöre zarar verebilir.</p>
+  </div>
+  <div class="box gen">
+    <h3 data-en="Frequency sweep and hearing test">Frekans taraması ve işitme testi</h3>
+    <div class="row3"><div><label for="swA" data-en="From (Hz)">Başlangıç (Hz)</label><input id="swA" inputmode="numeric" value="8000" data-keep></div><div><label for="swB" data-en="To (Hz)">Bitiş (Hz)</label><input id="swB" inputmode="numeric" value="20000" data-keep></div><div><label for="swT" data-en="Duration (s)">Süre (sn)</label><input id="swT" inputmode="numeric" value="30" data-keep></div></div>
+    <div class="big3" id="swF">–</div>
+    <div class="btns"><button class="btn" id="swGo"></button><button class="btn ghost" id="swHit" disabled data-en="I can't hear it any more">Artık duymuyorum</button></div>
+    <p class="hint" id="swRes" data-en="Put on headphones and start with the volume low. Press the button when you stop hearing the sound. Young people hear up to ~17–20 kHz; this limit drops with age.">Kulaklık tak, sesi düşük başlat. Sesi duymadığın anda düğmeye bas. Gençler ~17–20 kHz'e kadar duyar; yaş ilerledikçe bu sınır düşer.</p>
+  </div>
+</section>
+
+<!-- sayfa açıklaması (AdSense / arama motorları için) -->
+<style>
+.er-about{max-width:860px;margin:40px auto 28px;padding:20px 22px;border:1px solid var(--line,rgba(127,127,127,.3));border-radius:12px;line-height:1.65;font-size:15px;color:inherit;box-sizing:border-box;text-align:left;font-family:inherit}
+.er-about h2{font-size:1.15rem;line-height:1.3;margin:0 0 10px;color:inherit}.er-about h3{font-size:1rem;margin:18px 0 6px;color:inherit}
+.er-about p{margin:0 0 10px}.er-about p,.er-about li{opacity:.9}.er-about ol,.er-about ul{padding-left:22px;margin:6px 0}.er-about li{margin:4px 0}
+@media (max-width:600px){.er-about{margin:28px 12px 20px;padding:16px;font-size:14.5px}}
+</style>
+<section class="er-about" id="hakkinda" data-l="tr" aria-labelledby="hakkinda-b">
+<h2 id="hakkinda-b">Ses analizi aracı hakkında</h2>
+<p>Telefonun ya da bilgisayarın mikrofonuyla ortamdaki sesi canlı olarak çözümler: dalga formu, frekans spektrumu, akan spektrogram, 1/3 oktav bantları, perde ve akort göstergesi, seviye geçmişi ve dairesel görselleştirme. Seviye, baskın frekans, nota, tempo, parlaklık, ton/gürültü oranı, tepe faktörü ve kırpılma anlık olarak ölçülür.</p>
+<p>Yapay zekâ (Google'ın YAMNet modeli) konuşma, müzik, köpek havlaması, araç, siren, yağmur, bebek ağlaması, kapı zili, alet sesleri gibi 521 ses türünü tanır ve algılanan sesleri saatle birlikte günlüğe yazar. Ses kaydedebilir, kayıtları WAV olarak indirebilir, ses ve video dosyalarının tamamını spektrogram, ortalama spektrum ve yapay zekâ zaman çizelgesiyle inceleyebilirsin. Ton üreteci ve işitme testi de vardır. Ses cihazında işlenir; hiçbir yere gönderilmez.</p>
+<h3>Nasıl kullanılır?</h3><ol><li><b>Canlı</b> sekmesinde mikrofonu başlat ve bir görünüm seç; “Hepsi” dört grafiği birlikte gösterir.</li><li>Sesi tanımak için <b>Yapay zekâyı başlat</b>'a bas; algılanan sesler altta listelenir.</li><li>Kaydetmek için ⏺'a bas; kayıtlar <b>Kayıtlar</b> sekmesinde çalınır, indirilir ya da analiz edilir.</li><li>Elindeki bir dosyayı <b>Dosya analizi</b> sekmesinde aç.</li></ol>
+<h3>Bilmen gerekenler</h3><ul><li>Telefon mikrofonları ölçüm mikrofonu değildir; dB değerleri yaklaşıktır ve yüksek frekanslarda telefonlar farklı tepki verir.</li><li>Ölçüm için ayarlarda telefonun gürültü bastırmasını kapalı tut (varsayılan).</li><li>Yapay zekâ olasılık verir; benzer sesleri karıştırabilir.</li><li>Kayıtlar yalnızca bu cihazdaki tarayıcıda durur; tarayıcı verilerini silersen kayıtlar da silinir. Önemli kayıtları indir.</li></ul>
+</section>
+<section class="er-about" data-l="en" hidden aria-labelledby="about-en">
+<h2 id="about-en">About the sound analyzer</h2>
+<p>Analyses the sound around you live with your phone or computer microphone: waveform, frequency spectrum, scrolling spectrogram, 1/3-octave bands, pitch and tuner, level history and a circular visualisation. Level, dominant frequency, note, tempo, brightness, tone/noise ratio, crest factor and clipping are measured in real time.</p>
+<p>The AI (Google's YAMNet model) recognises 521 kinds of sound such as speech, music, a dog barking, vehicles, sirens, rain, a baby crying, a doorbell or tools, and logs what it hears with the time. You can record, download recordings as WAV, and inspect whole audio and video files with a spectrogram, average spectrum and an AI timeline. There is also a tone generator and a hearing test. Sound is processed on your device and never sent anywhere.</p>
+<h3>How to use</h3><ol><li>On the <b>Live</b> tab, start the microphone and pick a view; “All” shows four graphs together.</li><li>Press <b>Start AI</b> to recognise sounds; detected sounds are listed below.</li><li>Press ⏺ to record; play, download or analyse recordings on the <b>Recordings</b> tab.</li><li>Open a file you have on the <b>Analyse a file</b> tab.</li></ol>
+<h3>Good to know</h3><ul><li>Phone microphones are not measurement microphones; dB values are approximate and phones respond differently at high frequencies.</li><li>For measuring, keep the phone's noise suppression off in settings (the default).</li><li>The AI gives probabilities and may confuse similar sounds.</li><li>Recordings stay only in this browser on this device; clearing browser data deletes them. Download the ones that matter.</li></ul>
+</section>
+</main>
+<footer data-en="Sound is processed on your device and never sent anywhere.">Ses cihazında işlenir, hiçbir yere gönderilmez.</footer>
+<script src="ortak.js"></script>
+<script>
+keepInputs('sesan');
+const T = (tr, en) => erDil.t(tr, en);
+const clamp = (v, a, b) => Math.max(a, Math.min(b, v));
+const css = n => getComputedStyle(document.body).getPropertyValue(n).trim();
+const NOTES = { tr: ['Do', 'Do#', 'Re', 'Re#', 'Mi', 'Fa', 'Fa#', 'Sol', 'Sol#', 'La', 'La#', 'Si'], en: ['C', 'C#', 'D', 'D#', 'E', 'F', 'F#', 'G', 'G#', 'A', 'A#', 'B'] };
+function noteOf(f) { if (!(f > 0)) return null; const n = 12 * Math.log2(f / 440) + 69, r = Math.round(n), c = Math.round((n - r) * 100); return { name: NOTES[erDil.lang === 'en' ? 'en' : 'tr'][((r % 12) + 12) % 12], oct: Math.floor(r / 12) - 1, cents: c, midi: r }; }
+const fHz = f => f >= 1000 ? fmt(f / 1000, f >= 10000 ? 1 : 2) + ' kHz' : fmt(f, f < 100 ? 1 : 0) + ' Hz';
+const tmm = s => { s = Math.max(0, s); const m = Math.floor(s / 60); return m + ':' + String(Math.floor(s % 60)).padStart(2, '0'); };
+/* A-ağırlık eğrisi (dB) */
+function aW(f) { if (f < 1) return -200; const f2 = f * f, r = (12194 ** 2 * f2 * f2) / ((f2 + 20.6 ** 2) * Math.sqrt((f2 + 107.7 ** 2) * (f2 + 737.9 ** 2)) * (f2 + 12194 ** 2)); return 20 * Math.log10(r) + 2; }
+
+/* ---------- renk paletleri ---------- */
+const PALS = { viridis: ['#440154', '#3b528b', '#21918c', '#5ec962', '#fde725'], magma: ['#000004', '#3b0f70', '#8c2981', '#de4968', '#fe9f6d', '#fcfdbf'], fire: ['#000000', '#5a0000', '#c21a00', '#ff7a00', '#ffd400', '#ffffff'], ice: ['#000010', '#0b2a5b', '#1f6fb2', '#5fc3e4', '#e8fbff'], gray: ['#000000', '#ffffff'] };
+function lut(name) {
+  const st = (PALS[name] || PALS.viridis).map(h => [1, 3, 5].map(i => parseInt(h.substr(i, 2), 16))), L = new Uint8ClampedArray(256 * 3);
+  for (let i = 0; i < 256; i++) { const t = i / 255 * (st.length - 1), k = Math.min(st.length - 2, Math.floor(t)), u = t - k; for (let c = 0; c < 3; c++) L[i * 3 + c] = st[k][c] + (st[k + 1][c] - st[k][c]) * u; }
+  return L;
+}
+let LUT = lut(byId('sPal').value);
+
+/* ---------- ses grafiği ---------- */
+let AC = null, an = null, inGain = null, micStream = null, micSrc = null, frozen = false, procNode = null, ring = null, ringPos = 0;
+function ctx() {
+  if (AC) { if (AC.state === 'suspended') AC.resume(); return AC; }
+  AC = new (window.AudioContext || window.webkitAudioContext)(); inGain = AC.createGain(); an = AC.createAnalyser(); an.minDecibels = -140; an.maxDecibels = 0; inGain.connect(an);
+  applySettings(); bufs(); return AC;
+}
+let fData, tData, prevMag;
+function bufs() { fData = new Float32Array(an.frequencyBinCount); tData = new Float32Array(an.fftSize); prevMag = new Float32Array(an.frequencyBinCount); }
+function applySettings() {
+  byId('sSmV').textContent = byId('sSm').value; byId('sGainV').textContent = '+' + byId('sGain').value + ' dB'; byId('sCalV').textContent = (+byId('sCal').value > 0 ? '+' : '') + byId('sCal').value + ' dB';
+  if (!an) return; const n = +byId('sFft').value; if (an.fftSize !== n) { an.fftSize = n; bufs(); }
+  an.smoothingTimeConstant = +byId('sSm').value; inGain.gain.value = 10 ** (+byId('sGain').value / 20);
+}
+['sFft', 'sSm', 'sGain', 'sCal'].forEach(id => byId(id).addEventListener('input', applySettings));
+byId('sPal').addEventListener('change', () => { LUT = lut(byId('sPal').value); if (typeof sgClear === 'function') sgClear(); });
+const fmin = () => clamp(pnum(byId('sFmin').value) || 20, 1, 20000), fmax = () => clamp(Math.min(pnum(byId('sFmax').value) || 20000, (AC ? AC.sampleRate : 48000) / 2), fmin() + 10, 96000);
+const dbMin = () => isFinite(pnum(byId('sDbMin').value)) ? pnum(byId('sDbMin').value) : -100, dbMax = () => isFinite(pnum(byId('sDbMax').value)) ? pnum(byId('sDbMax').value) : -20;
+/* frekans ↔ eksen (0..1) */
+const mel = f => 2595 * Math.log10(1 + f / 700), imel = m => 700 * (10 ** (m / 2595) - 1);
+function f2x(f) { const a = fmin(), b = fmax(), s = byId('sScale').value; if (s === 'lin') return (f - a) / (b - a); if (s === 'mel') return (mel(f) - mel(a)) / (mel(b) - mel(a)); return Math.log(f / a) / Math.log(b / a); }
+function x2f(x) { const a = fmin(), b = fmax(), s = byId('sScale').value; if (s === 'lin') return a + x * (b - a); if (s === 'mel') return imel(mel(a) + x * (mel(b) - mel(a))); return a * (b / a) ** x; }
+const binHz = () => AC.sampleRate / an.fftSize;
+const dbAt = f => { const i = f / binHz(), i0 = Math.floor(i), u = i - i0; if (i0 < 0 || i0 + 1 >= fData.length) return -200; return fData[i0] * (1 - u) + fData[i0 + 1] * u + (byId('sAw').checked ? aW(f) : 0); };
+/* bant için en büyük değer (geniş bantta ince tepeler kaybolmasın) */
+function dbBand(f1, f2) { const a = Math.max(0, Math.floor(f1 / binHz())), b = Math.min(fData.length - 1, Math.ceil(f2 / binHz())); if (b - a < 2) return dbAt((f1 + f2) / 2); let m = -200; for (let i = a; i <= b; i++) if (fData[i] > m) m = fData[i]; return m + (byId('sAw').checked ? aW((f1 + f2) / 2) : 0); }
+
+/* ---------- mikrofon ---------- */
+async function micStart() {
+  if (micStream) return micStop();
+  if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) return toast(T('Mikrofon bu tarayıcıda kullanılamıyor (https gerekli)', 'The microphone is not available in this browser (https required)'));
+  ctx(); const p = byId('sProc').checked;
+  try { micStream = await navigator.mediaDevices.getUserMedia({ audio: { echoCancellation: p, noiseSuppression: p, autoGainControl: p, channelCount: 1 } }); }
+  catch (e) { return toast(e.name === 'NotAllowedError' ? T('Mikrofon izni verilmedi', 'Microphone permission was denied') : T('Mikrofon açılamadı', 'Could not open the microphone')); }
+  micSrc = AC.createMediaStreamSource(micStream); micSrc.connect(inGain); if (AC.state === 'suspended') await AC.resume();
+  try { if ('wakeLock' in navigator) wl = await navigator.wakeLock.request('screen'); } catch (e) { }
+  labels(); loop();
+}
+let wl = null;
+function micStop() { if (rec) recStop(); if (micSrc) micSrc.disconnect(); micSrc = null; if (micStream) micStream.getTracks().forEach(t => t.stop()); micStream = null; if (wl) { wl.release().catch(() => { }); wl = null; } labels(); }
+byId('micBtn').onclick = micStart;
+byId('frzBtn').onclick = () => { frozen = !frozen; labels(); };
+byId('sProc').addEventListener('change', () => { if (micStream) { micStop(); micStart(); } });
+
+/* ---------- görünümler ---------- */
+let view = LS.get('sesan:view') || 'multi';
+const VIEWS = { wave: ['Dalga formu', 'Waveform'], spec: ['Spektrum', 'Spectrum'], sgram: ['Spektrogram', 'Spectrogram'], bands: ['Oktav bantları', 'Octave bands'], tuner: ['Perde / akort', 'Pitch / tuner'], level: ['Seviye geçmişi', 'Level history'], radial: ['Daire', 'Circle'] };
+let cvs = [];
+function buildStage() {
+  const list = view === 'multi' ? ['wave', 'spec', 'sgram', 'bands'] : [view], st = byId('stage');
+  st.className = 'stage' + (view === 'multi' ? ' multi' : '');
+  st.innerHTML = list.map(v => `<div class="cvw"><canvas data-v="${v}"></canvas><span class="tt">${T(...VIEWS[v])}</span><span class="ro" data-ro="${v}"></span></div>`).join('');
+  cvs = [...st.querySelectorAll('canvas')].map(c => ({ c, v: c.dataset.v, g: c.getContext('2d'), ro: st.querySelector(`[data-ro="${c.dataset.v}"]`) }));
+  $$('#views [data-v]').forEach(b => b.classList.toggle('on', b.dataset.v === view)); drawAll(true);
+}
+byId('views').onclick = e => { const b = e.target.closest('[data-v]'); if (!b) return; view = b.dataset.v; LS.set('sesan:view', view); buildStage(); };
+function fit(o) { const r = o.c.getBoundingClientRect(), d = devicePixelRatio || 1, w = Math.max(10, Math.round(r.width * d)), h = Math.max(10, Math.round(r.height * d)); if (o.c.width !== w || o.c.height !== h) { o.c.width = w; o.c.height = h; } return [w, h, d]; }
+
+/* spektrogram arabelleği: her karede bir sütun eklenir */
+const SG = document.createElement('canvas'); SG.width = 900; SG.height = 300; const sgg = SG.getContext('2d'); let sgTick = 0;
+function sgClear() { sgg.fillStyle = `rgb(${LUT[0]},${LUT[1]},${LUT[2]})`; sgg.fillRect(0, 0, SG.width, SG.height); } sgClear();
+function sgColumn() {
+  const H = SG.height, img = sgg.createImageData(1, H), lo = dbMin(), hi = dbMax();
+  for (let y = 0; y < H; y++) { const f1 = x2f(1 - (y + 1) / H), f2 = x2f(1 - y / H), v = clamp((dbBand(f1, f2) - lo) / (hi - lo), 0, 1), k = Math.round(v * 255) * 3; img.data[y * 4] = LUT[k]; img.data[y * 4 + 1] = LUT[k + 1]; img.data[y * 4 + 2] = LUT[k + 2]; img.data[y * 4 + 3] = 255; }
+  sgg.drawImage(SG, -1, 0); sgg.putImageData(img, SG.width - 1, 0);
+}
+/* ölçümler */
+const M = { rms: -200, peak: -200, dom: 0, pitch: 0, clar: 0, cen: 0, flat: 0, zcr: 0, bpm: 0, bpmC: 0, clip: 0, lvlHist: [], peakHold: null, pitchHist: [], flux: [], fluxT: [], featHist: [] };
+let lastT = 0, pTick = 0;
+function measure(now) {
+  an.getFloatFrequencyData(fData); an.getFloatTimeDomainData(tData);
+  let s = 0, pk = 0, zc = 0; const N = Math.min(tData.length, 8192);
+  for (let i = 0; i < N; i++) { const v = tData[i]; s += v * v; const a = Math.abs(v); if (a > pk) pk = a; if (i && (v >= 0) !== (tData[i - 1] >= 0)) zc++; }
+  const rms = Math.sqrt(s / N); M.rms = 20 * Math.log10(rms + 1e-12); M.peak = 20 * Math.log10(pk + 1e-12); M.zcr = zc / N * AC.sampleRate / 2; if (pk >= .999) M.clip++;
+  /* spektral özellikler */
+  const bw = binHz(), a = Math.max(1, Math.ceil(fmin() / bw)), b = Math.min(fData.length - 2, Math.ceil(fmax() / bw)); let mx = -Infinity, mi = a, ps = 0, pf = 0, lg = 0, n = 0, flux = 0;
+  for (let i = a; i <= b; i++) { const d = fData[i] + (byId('sAw').checked ? aW(i * bw) : 0); if (d > mx) { mx = d; mi = i; } const p = 10 ** (fData[i] / 10); ps += p; pf += p * i * bw; lg += Math.log(p + 1e-20); n++; const m = 10 ** (fData[i] / 20); flux += Math.max(0, m - prevMag[i]); prevMag[i] = m; }
+  const y0 = fData[mi - 1], y1 = fData[mi], y2 = fData[mi + 1], dd = (y0 - y2) / (2 * (y0 - 2 * y1 + y2) || 1);
+  M.dom = mx > -95 ? (mi + clamp(dd, -.5, .5)) * bw : 0; M.cen = ps > 0 ? pf / ps : 0; M.flat = n && ps > 0 ? Math.exp(lg / n) / (ps / n) : 0;
+  /* perde: normalize öz-ilinti (işlemciyi yormamak için 3 karede bir) */
+  if (++pTick % 3 === 0) pitch();
+  /* tempo için başlangıç gücü */
+  M.flux.push(flux); M.fluxT.push(now); while (M.fluxT.length && now - M.fluxT[0] > 8000) { M.flux.shift(); M.fluxT.shift(); }
+  M.lvlHist.push(lvlDb()); if (M.lvlHist.length > 600) M.lvlHist.shift();
+  M.featHist.push({ t: now, rms: M.rms, flat: M.flat, clar: M.clar, pitch: M.pitch, cen: M.cen, crest: M.peak - M.rms, flux }); while (M.featHist.length && now - M.featHist[0].t > 1500) M.featHist.shift();
+}
+const lvlDb = () => Math.max(0, M.rms + 94 + +byId('sCal').value + (byId('sAw').checked ? 0 : 0));
+function pitch() {
+  const sr = AC.sampleRate, W = Math.min(tData.length, sr > 60000 ? 4096 : 2048), maxL = Math.min(W - 2, Math.floor(sr / 50)), minL = Math.floor(sr / 2000); let best = 0, bl = 0;
+  if (M.rms < -60) { M.pitch = 0; M.clar = 0; return; }
+  const nsdf = new Float32Array(maxL + 2);
+  for (let l = minL; l <= maxL + 1; l++) { let ac = 0, e = 0; for (let i = 0; i + l < W; i++) { ac += tData[i] * tData[i + l]; e += tData[i] * tData[i] + tData[i + l] * tData[i + l]; } nsdf[l] = e ? 2 * ac / e : 0; }
+  /* ilk güçlü tepe (oktav hatasını azaltır) */
+  let gmax = 0; for (let l = minL; l <= maxL; l++) if (nsdf[l] > gmax) gmax = nsdf[l];
+  for (let l = minL + 1; l <= maxL; l++) if (nsdf[l] > nsdf[l - 1] && nsdf[l] >= nsdf[l + 1] && nsdf[l] > .9 * gmax) { best = nsdf[l]; bl = l; break; }
+  if (!bl || best < .6) { M.pitch = 0; M.clar = best; return; }
+  const a = nsdf[bl - 1], b = nsdf[bl], c = nsdf[bl + 1], sh = (a - c) / (2 * (a - 2 * b + c) || 1);
+  M.pitch = sr / (bl + clamp(sh, -.5, .5)); M.clar = best;
+}
+let bpmT = 0;
+function tempo(now) {
+  if (now - bpmT < 1000 || M.flux.length < 120) return; bpmT = now;
+  /* başlangıç gücünün öz-ilintisi: en güçlü gecikme, diğerlerinin ortancasından belirgin yüksekse ritim var sayılır (gürültüde yanlış tempo çıkmasın) */
+  const dt = (M.fluxT[M.fluxT.length - 1] - M.fluxT[0]) / (M.flux.length - 1), x = M.flux.slice(), mean = x.reduce((a, b) => a + b, 0) / x.length; const y = x.map(v => v - mean);
+  let best = -1, bl = 0, z = 0; for (const v of y) z += v * v; if (!z) { M.bpm = 0; return; } const R = [];
+  for (let bpm = 60; bpm <= 190; bpm++) { const L = Math.round(60000 / bpm / dt); let s = 0, c = 0; for (let i = 0; i + L < y.length; i++) { s += y[i] * y[i + L]; c++; } const r = c ? s / z * y.length / c : 0; R.push(r); if (r > best) { best = r; bl = bpm; } }
+  const med = R.slice().sort((a, b) => a - b)[R.length >> 1], conf = clamp(best - med, 0, 1);
+  /* yarım tempo tuzağı: neredeyse aynı güçte daha hızlı bir tempo varsa o seçilir */
+  while (bl * 2 <= 190) { const j = bl * 2 - 60, r2 = Math.max(R[j - 2] ?? -1, R[j - 1] ?? -1, R[j], R[j + 1] ?? -1, R[j + 2] ?? -1); if (r2 >= .8 * best) bl *= 2; else break; }
+  const so = x.slice().sort((a, b) => a - b), peaky = so[Math.floor(so.length * .95)] / (so[so.length >> 1] || 1e-9); /* belirgin vuruşlar yoksa (sürekli gürültü) tempo verilmez */
+  M.bpmC = conf; M.bpm = best > .2 && conf > .15 && peaky > 2 && Math.max(0, ...M.lvlHist.slice(-480)) > 40 ? bl : 0;
+}
+/* ---------- çizim ---------- */
+function axisF(g, w, h, d, vertical) {
+  g.fillStyle = css('--muted'); g.strokeStyle = css('--line'); g.font = `${10 * d}px system-ui`; g.lineWidth = 1;
+  const marks = [20, 50, 100, 200, 500, 1000, 2000, 5000, 10000, 20000].filter(f => f >= fmin() && f <= fmax());
+  for (const f of marks) { const p = f2x(f); if (vertical) { const y = h - p * h; g.beginPath(); g.moveTo(0, y); g.lineTo(w, y); g.globalAlpha = .25; g.stroke(); g.globalAlpha = 1; g.fillText(f >= 1000 ? f / 1000 + 'k' : f, 3 * d, y - 2 * d); } else { const x = p * w; g.beginPath(); g.moveTo(x, 0); g.lineTo(x, h); g.globalAlpha = .5; g.stroke(); g.globalAlpha = 1; g.fillText(f >= 1000 ? f / 1000 + 'k' : f, x + 2 * d, h - 3 * d); } }
+}
+const DRAW = {
+  wave(o, g, w, h, d) {
+    g.clearRect(0, 0, w, h); g.strokeStyle = css('--line'); g.beginPath(); g.moveTo(0, h / 2); g.lineTo(w, h / 2); g.stroke();
+    /* tetikleme: yukarı yönlü sıfır geçişinden başla, dalga titremesin */
+    const N = tData.length, span = Math.min(N, Math.max(512, Math.round(AC.sampleRate * .03))); let st = 0;
+    for (let i = 1; i < N - span; i++) if (tData[i - 1] < 0 && tData[i] >= 0) { st = i; break; }
+    let mx = 0; for (let i = 0; i < span; i++) mx = Math.max(mx, Math.abs(tData[st + i])); const k = mx > 0 ? Math.min(1 / mx * .9, 40) : 1;
+    g.strokeStyle = css('--acc'); g.lineWidth = 2 * d; g.beginPath();
+    for (let x = 0; x < w; x++) { const v = tData[st + Math.floor(x / w * span)] * k; const y = h / 2 - v * h / 2; x ? g.lineTo(x, y) : g.moveTo(x, y); } g.stroke();
+    o.ro.textContent = `${fmt(span / AC.sampleRate * 1000, 0)} ms · ×${fmt(k, 1)}`;
+  },
+  spec(o, g, w, h, d) {
+    g.clearRect(0, 0, w, h); axisF(g, w, h, d, false); const lo = dbMin(), hi = dbMax();
+    g.fillStyle = css('--muted'); g.font = `${10 * d}px system-ui`; for (let db = Math.ceil(hi / 20) * 20; db >= lo; db -= 20) { const y = (hi - db) / (hi - lo) * h; g.fillText(db + ' dB', w - 44 * d, y + 10 * d); }
+    const cols = Math.min(w, 600); if (!M.peakHold || M.peakHold.length !== cols) M.peakHold = new Float32Array(cols).fill(-200);
+    g.beginPath(); g.moveTo(0, h); const grad = g.createLinearGradient(0, 0, 0, h); grad.addColorStop(0, css('--acc')); grad.addColorStop(1, 'transparent');
+    for (let i = 0; i < cols; i++) { const x = i / cols * w, f1 = x2f(i / cols), f2 = x2f((i + 1) / cols), db = dbBand(f1, f2), y = clamp((hi - db) / (hi - lo), 0, 1) * h; g.lineTo(x, y); if (db > M.peakHold[i]) M.peakHold[i] = db; else M.peakHold[i] -= .25; }
+    g.lineTo(w, h); g.closePath(); g.fillStyle = grad; g.globalAlpha = .45; g.fill(); g.globalAlpha = 1; g.strokeStyle = css('--acc'); g.lineWidth = 1.5 * d; g.stroke();
+    if (byId('sPeak').checked) { g.strokeStyle = css('--warn'); g.lineWidth = d; g.beginPath(); for (let i = 0; i < cols; i++) { const x = i / cols * w, y = clamp((hi - M.peakHold[i]) / (hi - lo), 0, 1) * h; i ? g.lineTo(x, y) : g.moveTo(x, y); } g.globalAlpha = .7; g.stroke(); g.globalAlpha = 1; }
+    if (M.dom) { const x = f2x(M.dom) * w; g.fillStyle = css('--warn'); g.beginPath(); g.arc(x, 8 * d, 4 * d, 0, 7); g.fill(); }
+    o.ro.textContent = M.dom ? fHz(M.dom) : '';
+  },
+  sgram(o, g, w, h, d) {
+    g.imageSmoothingEnabled = true; g.drawImage(SG, 0, 0, w, h); axisF(g, w, h, d, true);
+    o.ro.textContent = `${byId('sScale').value === 'lin' ? T('doğrusal', 'linear') : byId('sScale').value === 'mel' ? 'mel' : 'log'} · ${fmt(SG.width * +byId('sSpd').value / 60, 0)} sn`;
+  },
+  bands(o, g, w, h, d) {
+    g.clearRect(0, 0, w, h); const third = byId('sBand').value === '3', step = third ? 1 / 3 : 1, C = []; for (let k = -15; k <= 13; k += step) { const f = 1000 * 2 ** k; if (f >= Math.max(16, fmin()) && f <= fmax() * 1.01) C.push(f); }
+    const lo = dbMin(), hi = dbMax(), bw = w / C.length; if (!o.hold || o.hold.length !== C.length) o.hold = new Float32Array(C.length).fill(-200);
+    let mxi = 0, mxv = -999;
+    C.forEach((f, i) => { const r = 2 ** (step / 2), a = f / r, b = f * r, i1 = Math.max(1, Math.floor(a / binHz())), i2 = Math.min(fData.length - 1, Math.ceil(b / binHz())); let p = 0; for (let j = i1; j <= i2; j++) p += 10 ** (fData[j] / 10); let db = 10 * Math.log10(p + 1e-20) + (byId('sAw').checked ? aW(f) : 0);
+      if (db > mxv) { mxv = db; mxi = i; } const v = clamp((db - lo) / (hi - lo), 0, 1), x = i * bw + bw * .12, bh = v * (h - 18 * d);
+      const k = Math.round(v * 255) * 3; g.fillStyle = `rgb(${LUT[k]},${LUT[k + 1]},${LUT[k + 2]})`; g.fillRect(x, h - 18 * d - bh, bw * .76, bh);
+      if (db > o.hold[i]) o.hold[i] = db; else o.hold[i] -= .3; const hy = h - 18 * d - clamp((o.hold[i] - lo) / (hi - lo), 0, 1) * (h - 18 * d); g.fillStyle = css('--ink'); g.fillRect(x, hy - d, bw * .76, 2 * d);
+      if (!third || i % 3 === 1 || C.length < 14) { g.fillStyle = css('--muted'); g.font = `${9 * d}px system-ui`; g.textAlign = 'center'; g.fillText(f >= 1000 ? fmt(f / 1000, f < 10000 ? 1 : 0) + 'k' : Math.round(f), x + bw * .38, h - 5 * d); g.textAlign = 'left'; } });
+    o.ro.textContent = C.length ? T('en güçlü: ', 'strongest: ') + fHz(C[mxi]) : '';
+  },
+  tuner(o, g, w, h, d) {
+    g.clearRect(0, 0, w, h); const nt = noteOf(M.pitch), cx = w / 2, cy = h * .82, R = Math.min(w * .42, h * .7);
+    g.lineWidth = 3 * d; g.strokeStyle = css('--line'); g.beginPath(); g.arc(cx, cy, R, Math.PI * 1.15, Math.PI * 1.85); g.stroke();
+    for (let c = -50; c <= 50; c += 10) { const a = Math.PI * 1.5 + c / 50 * Math.PI * .35; g.strokeStyle = c === 0 ? css('--acc') : css('--muted'); g.lineWidth = (c === 0 ? 3 : 1) * d; g.beginPath(); g.moveTo(cx + Math.cos(a) * R * .9, cy + Math.sin(a) * R * .9); g.lineTo(cx + Math.cos(a) * R, cy + Math.sin(a) * R); g.stroke(); }
+    g.textAlign = 'center'; g.fillStyle = css('--ink');
+    if (nt) { const a = Math.PI * 1.5 + clamp(nt.cents, -50, 50) / 50 * Math.PI * .35, ok = Math.abs(nt.cents) <= 5; g.strokeStyle = ok ? '#3fb06a' : css('--warn'); g.lineWidth = 3 * d; g.beginPath(); g.moveTo(cx, cy); g.lineTo(cx + Math.cos(a) * R * .95, cy + Math.sin(a) * R * .95); g.stroke();
+      g.font = `700 ${Math.min(64, h * .22) * 1}px system-ui`; g.fillText(nt.name + nt.oct, cx, cy - R * .38); g.font = `${13 * d}px system-ui`; g.fillStyle = css('--muted'); g.fillText(`${fmt(M.pitch, 1)} Hz · ${nt.cents > 0 ? '+' : ''}${nt.cents} cent${ok ? ' ✓' : ''}`, cx, cy - R * .38 + 20 * d); }
+    else { g.font = `${14 * d}px system-ui`; g.fillStyle = css('--muted'); g.fillText(T('Net bir perde yok (bir nota çal ya da ıslık çal)', 'No clear pitch (play a note or whistle)'), cx, cy - R * .4); }
+    g.textAlign = 'left';
+    /* perde geçmişi */
+    M.pitchHist.push(M.pitch); if (M.pitchHist.length > 300) M.pitchHist.shift(); g.strokeStyle = css('--acc'); g.lineWidth = 1.5 * d; g.beginPath(); let pen = false;
+    M.pitchHist.forEach((p, i) => { const x = i / 300 * w; if (!p) { pen = false; return; } const y = h * .95 - clamp(Math.log2(p / 50) / Math.log2(2000 / 50), 0, 1) * h * .3; pen ? g.lineTo(x, y) : g.moveTo(x, y); pen = true; }); g.globalAlpha = .6; g.stroke(); g.globalAlpha = 1;
+    o.ro.textContent = M.clar ? T('netlik ', 'clarity ') + Math.round(M.clar * 100) + '%' : '';
+  },
+  level(o, g, w, h, d) {
+    g.clearRect(0, 0, w, h); const lo = 20, hi = 120; g.font = `${10 * d}px system-ui`;
+    for (let db = 30; db <= 110; db += 20) { const y = h - (db - lo) / (hi - lo) * h; g.strokeStyle = css('--line'); g.beginPath(); g.moveTo(0, y); g.lineTo(w, y); g.stroke(); g.fillStyle = css('--muted'); g.fillText(db + ' dB', 3 * d, y - 2 * d); }
+    const H = M.lvlHist; g.strokeStyle = css('--acc'); g.lineWidth = 2 * d; g.beginPath(); H.forEach((v, i) => { const x = w - (H.length - 1 - i) / 600 * w, y = h - clamp((v - lo) / (hi - lo), 0, 1) * h; i ? g.lineTo(x, y) : g.moveTo(x, y); }); g.stroke();
+    const mx = Math.max(...H, 0), avg = H.length ? 10 * Math.log10(H.reduce((a, v) => a + 10 ** (v / 10), 0) / H.length) : 0; o.ro.textContent = H.length ? `${T('ort', 'avg')} ${Math.round(avg)} · ${T('en yüksek', 'max')} ${Math.round(mx)} dB` : '';
+  },
+  radial(o, g, w, h, d) {
+    g.fillStyle = css('--bg'); g.fillRect(0, 0, w, h); const cx = w / 2, cy = h / 2, R0 = Math.min(w, h) * .18, R1 = Math.min(w, h) * .47, n = 128, lo = dbMin(), hi = dbMax();
+    for (let i = 0; i < n; i++) { const f = x2f(i / n), v = clamp((dbBand(f, x2f((i + 1) / n)) - lo) / (hi - lo), 0, 1), a = i / n * Math.PI * 2 - Math.PI / 2, k = Math.round(v * 255) * 3;
+      g.strokeStyle = `rgb(${LUT[k]},${LUT[k + 1]},${LUT[k + 2]})`; g.lineWidth = Math.max(1, 2 * Math.PI * R0 / n * .7); g.beginPath(); g.moveTo(cx + Math.cos(a) * R0, cy + Math.sin(a) * R0); g.lineTo(cx + Math.cos(a) * (R0 + v * (R1 - R0)), cy + Math.sin(a) * (R0 + v * (R1 - R0))); g.stroke(); }
+    g.strokeStyle = css('--acc'); g.lineWidth = 2 * d; g.beginPath(); const N = 256; for (let i = 0; i <= N; i++) { const a = i / N * Math.PI * 2, v = tData[Math.floor(i / N * Math.min(tData.length, 2048)) % tData.length] || 0, r = R0 * (.85 + v * 1.5); const x = cx + Math.cos(a) * r, y = cy + Math.sin(a) * r; i ? g.lineTo(x, y) : g.moveTo(x, y); } g.stroke();
+    o.ro.textContent = '';
+  }
+};
+function drawAll(force) {
+  if (!an || !fData) { cvs.forEach(o => { const [w, h, d] = fit(o); o.g.clearRect(0, 0, w, h); o.g.fillStyle = css('--muted'); o.g.font = `${13 * d}px system-ui`; o.g.textAlign = 'center'; o.g.fillText(T('Mikrofonu başlat ya da bir ses çal', 'Start the microphone or play a sound'), w / 2, h / 2); o.g.textAlign = 'left'; }); return; }
+  cvs.forEach(o => { const [w, h, d] = fit(o); try { DRAW[o.v](o, o.g, w, h, d); } catch (e) { console.error(e); } });
+}
+/* ---------- okumalar ---------- */
+let roT = 0;
+function readouts(now) {
+  if (now - roT < 150) return; roT = now; const L = lvlDb();
+  byId('rLvl').textContent = M.rms > -150 ? Math.round(L) + ' dB' + (byId('sAw').checked ? 'A' : '') : '–'; byId('rLvl2').textContent = M.rms > -150 ? `RMS ${fmt(M.rms, 1)} dBFS` : T('sessiz', 'silent');
+  const nd = noteOf(M.dom); byId('rDom').textContent = M.dom ? fHz(M.dom) : '–'; byId('rDom2').textContent = nd ? nd.name + nd.oct : '';
+  const np = noteOf(M.pitch); byId('rPit').textContent = np ? np.name + np.oct : '–'; byId('rPit2').textContent = np ? `${fmt(M.pitch, 1)} Hz · ${np.cents > 0 ? '+' : ''}${np.cents} cent` : '';
+  byId('rBpm').textContent = M.bpm ? M.bpm + ' BPM' : '–'; byId('rBpm2').textContent = M.bpm ? T('güven ', 'confidence ') + Math.round(M.bpmC * 100) + '%' : T('ritim yok', 'no beat');
+  const on = M.rms > -60; byId('rCen').textContent = on && M.cen ? fHz(M.cen) : '–'; byId('rCen2').textContent = on && M.cen ? (M.cen < 800 ? T('boğuk / bas', 'dull / bassy') : M.cen < 3000 ? T('dengeli', 'balanced') : T('parlak / tiz', 'bright / treble')) : '';
+  byId('rFlat').textContent = M.rms > -60 ? Math.round(M.flat * 100) + '%' : '–'; byId('rFlat2').textContent = M.rms > -60 ? (M.flat < .12 ? T('tonlu (müzik, ıslık)', 'tonal (music, whistle)') : M.flat < .22 ? T('karışık (konuşma)', 'mixed (speech)') : T('gürültü (rüzgâr, fan)', 'noise (wind, fan)')) : '';
+  byId('rPk').textContent = M.peak > -150 ? fmt(M.peak, 1) + ' dBFS' : '–'; byId('rPk2').textContent = on ? T('tepe faktörü ', 'crest ') + fmt(M.peak - M.rms, 1) + ' dB' : '';
+  byId('rClip').textContent = M.clip; byId('rClip2').textContent = M.clip ? T('kazancı düşür', 'lower the gain') : T('temiz', 'clean');
+  ruleGuess();
+}
+/* kaba ses türü tahmini (son ~1,5 sn) */
+function ruleGuess() {
+  const H = M.featHist; if (H.length < 10) return; const avg = k => H.reduce((a, x) => a + x[k], 0) / H.length;
+  const rms = avg('rms'), flat = avg('flat'), crest = avg('crest'), voiced = H.filter(x => x.pitch > 0).length / H.length;
+  const ps = H.filter(x => x.pitch > 0).map(x => Math.log2(x.pitch)), pv = ps.length > 3 ? Math.sqrt(ps.reduce((a, v) => a + (v - ps.reduce((p, q) => p + q, 0) / ps.length) ** 2, 0) / ps.length) : 1;
+  const ev = H.map(x => x.rms), evr = Math.max(...ev) - Math.min(...ev), cen = avg('cen');
+  let g, why;
+  if (M.bpm && voiced < .35) { g = T('🥁 Ritmik vuruşlar', '🥁 Rhythmic beats'); why = M.bpm + ' BPM'; }
+  else if (rms < -62) { g = T('🤫 Sessizlik', '🤫 Silence'); why = T('çok düşük seviye', 'very low level'); }
+  else if (voiced > .7 && pv < .03) { g = T('🎵 Sabit ton (ıslık, alet, uğultu)', '🎵 Steady tone (whistle, instrument, hum)'); why = T('perde sabit', 'stable pitch'); }
+  else if (M.bpm && voiced > .35) { g = T('🎶 Müzik', '🎶 Music'); why = T('ritim + tonlu', 'beat + tonal'); }
+  else if (voiced > .25 && evr > 12 && cen > 300 && cen < 4000) { g = T('🗣️ Konuşma', '🗣️ Speech'); why = T('hece hece değişen, tonlu', 'syllabic, voiced'); }
+  else if (crest > 15 && evr > 18) { g = T('👏 Darbe / vuruş', '👏 Impact / knock'); why = T('ani tepeler', 'sudden peaks'); }
+  else if (flat > .35 || (flat > .18 && voiced < .15 && evr < 10)) { g = cen < 1000 ? T('🌬️ Uğultu, rüzgâr, motor', '🌬️ Rumble, wind, engine') : T('🚿 Hışırtı, su, fan', '🚿 Hiss, water, fan'); why = T('geniş bantlı gürültü', 'broadband noise'); }
+  else if (voiced > .3) { g = T('🎵 Tonlu ses', '🎵 Tonal sound'); why = T('perde var', 'has pitch'); }
+  else { g = T('🔊 Karışık ortam sesi', '🔊 Mixed ambience'); why = ''; }
+  byId('gRule').textContent = g; byId('gRule2').textContent = why + ' · ' + T('kaba tahmin', 'rough guess');
+}
+/* ---------- ana döngü ---------- */
+let raf = 0;
+function loop() {
+  cancelAnimationFrame(raf);
+  const step = now => {
+    raf = requestAnimationFrame(step); if (!an || frozen) return;
+    measure(now); tempo(now); if (++sgTick % +byId('sSpd').value === 0) sgColumn(); readouts(now); drawAll();
+  };
+  raf = requestAnimationFrame(step);
+}
+addEventListener('resize', () => drawAll(true));
+byId('shotBtn').onclick = () => {
+  const list = cvs.map(o => o.c); if (!list.length) return; const cols = view === 'multi' ? 2 : 1, rows = Math.ceil(list.length / cols), W = list[0].width, H = list[0].height, out = document.createElement('canvas');
+  out.width = W * cols; out.height = H * rows; const g = out.getContext('2d'); g.fillStyle = css('--card') || '#fff'; g.fillRect(0, 0, out.width, out.height); list.forEach((c, i) => g.drawImage(c, (i % cols) * W, Math.floor(i / cols) * H));
+  out.toBlob(b => download('ses-analizi-' + stamp() + '.png', b), 'image/png');
+};
+
+/* ======================= YAPAY ZEKÂ (YAMNet) ======================= */
+const MPB = 'https://cdn.jsdelivr.net/npm/@mediapipe/tasks-audio@1.2.3';
+let AI = null, aiLoading = null, aiOn = false, aiTimer = 0, aiEma = {}, aiStrip = [], EV = [];
+const TRN = {
+  'Speech': 'Konuşma', 'Child speech, kid speaking': 'Çocuk konuşması', 'Conversation': 'Sohbet', 'Narration, monologue': 'Anlatım', 'Babbling': 'Bebek agulaması', 'Speech synthesizer': 'Yapay ses', 'Shout': 'Bağırma', 'Yell': 'Haykırma', 'Children shouting': 'Bağıran çocuklar', 'Screaming': 'Çığlık', 'Whispering': 'Fısıltı',
+  'Laughter': 'Gülme', 'Baby laughter': 'Bebek gülüşü', 'Giggle': 'Kıkırdama', 'Crying, sobbing': 'Ağlama', 'Baby cry, infant cry': 'Bebek ağlaması', 'Sigh': 'İç çekme', 'Singing': 'Şarkı söyleme', 'Choir': 'Koro', 'Child singing': 'Çocuk şarkısı', 'Rapping': 'Rap', 'Humming': 'Mırıldanma', 'Whistling': 'Islık',
+  'Breathing': 'Nefes', 'Snoring': 'Horlama', 'Cough': 'Öksürük', 'Throat clearing': 'Boğaz temizleme', 'Sneeze': 'Hapşırma', 'Sniff': 'Burun çekme', 'Walk, footsteps': 'Ayak sesi', 'Chewing, mastication': 'Çiğneme', 'Burping, eructation': 'Geğirme', 'Hiccup': 'Hıçkırık',
+  'Hands': 'El sesi', 'Finger snapping': 'Parmak şıklatma', 'Clapping': 'El çırpma', 'Heart sounds, heartbeat': 'Kalp atışı', 'Cheering': 'Tezahürat', 'Applause': 'Alkış', 'Chatter': 'Gevezelik', 'Crowd': 'Kalabalık', 'Hubbub, speech noise, speech babble': 'Uğultulu konuşmalar', 'Children playing': 'Oynayan çocuklar',
+  'Animal': 'Hayvan', 'Domestic animals, pets': 'Evcil hayvan', 'Dog': 'Köpek', 'Bark': 'Havlama', 'Yip': 'Kesik havlama', 'Howl': 'Uluma', 'Bow-wow': 'Hav hav', 'Growling': 'Hırlama', 'Whimper (dog)': 'Köpek inlemesi', 'Cat': 'Kedi', 'Purr': 'Mırlama', 'Meow': 'Miyavlama', 'Hiss': 'Tıslama',
+  'Livestock, farm animals, working animals': 'Çiftlik hayvanı', 'Horse': 'At', 'Neigh, whinny': 'Kişneme', 'Cattle, bovinae': 'Sığır', 'Moo': 'Böğürme', 'Pig': 'Domuz', 'Goat': 'Keçi', 'Sheep': 'Koyun', 'Bleat': 'Meleme', 'Fowl': 'Kümes hayvanı', 'Chicken, rooster': 'Tavuk, horoz', 'Cluck': 'Gıdaklama', 'Crowing, cock-a-doodle-doo': 'Horoz ötüşü', 'Duck': 'Ördek', 'Quack': 'Vak vak', 'Goose': 'Kaz',
+  'Wild animals': 'Yabani hayvan', 'Bird': 'Kuş', 'Bird vocalization, bird call, bird song': 'Kuş sesi', 'Chirp, tweet': 'Cıvıltı', 'Squawk': 'Ciyaklama', 'Pigeon, dove': 'Güvercin', 'Coo': 'Guruldama', 'Crow': 'Karga', 'Caw': 'Gaklama', 'Owl': 'Baykuş', 'Bird flight, flapping wings': 'Kanat çırpma',
+  'Insect': 'Böcek', 'Cricket': 'Cırcır böceği', 'Mosquito': 'Sivrisinek', 'Fly, housefly': 'Sinek', 'Buzz': 'Vızıltı', 'Bee, wasp, etc.': 'Arı', 'Frog': 'Kurbağa', 'Croak': 'Vıraklama',
+  'Music': 'Müzik', 'Musical instrument': 'Müzik aleti', 'Guitar': 'Gitar', 'Electric guitar': 'Elektro gitar', 'Bass guitar': 'Bas gitar', 'Acoustic guitar': 'Akustik gitar', 'Strum': 'Tıngırdatma', 'Piano': 'Piyano', 'Electric piano': 'Elektrik piyano', 'Organ': 'Org', 'Synthesizer': 'Synthesizer', 'Keyboard (musical)': 'Klavye (müzik)',
+  'Percussion': 'Vurmalı çalgı', 'Drum kit': 'Bateri', 'Drum machine': 'Ritim makinesi', 'Drum': 'Davul', 'Snare drum': 'Trampet', 'Bass drum': 'Bas davul', 'Cymbal': 'Zil (bateri)', 'Hi-hat': 'Hi-hat', 'Tambourine': 'Tef', 'Orchestra': 'Orkestra', 'Brass instrument': 'Bakır nefesli', 'Trumpet': 'Trompet', 'Trombone': 'Trombon',
+  'Bowed string instrument': 'Yaylı çalgı', 'Violin, fiddle': 'Keman', 'Cello': 'Çello', 'Double bass': 'Kontrbas', 'Wind instrument, woodwind instrument': 'Tahta nefesli', 'Flute': 'Flüt', 'Saxophone': 'Saksafon', 'Clarinet': 'Klarnet', 'Harp': 'Arp', 'Bell': 'Çan', 'Church bell': 'Kilise çanı', 'Jingle bell': 'Çıngırak', 'Bicycle bell': 'Bisiklet zili', 'Chime': 'Çınlama', 'Wind chime': 'Rüzgâr çanı', 'Harmonica': 'Mızıka', 'Accordion': 'Akordeon',
+  'Pop music': 'Pop müzik', 'Hip hop music': 'Hip hop', 'Rock music': 'Rock müzik', 'Heavy metal': 'Heavy metal', 'Jazz': 'Caz', 'Classical music': 'Klasik müzik', 'Electronic music': 'Elektronik müzik', 'Dance music': 'Dans müziği', 'Folk music': 'Halk müziği', 'Middle Eastern music': 'Orta Doğu müziği', 'Traditional music': 'Geleneksel müzik', 'Song': 'Şarkı', 'Background music': 'Fon müziği', 'Lullaby': 'Ninni', 'Vocal music': 'Vokal müzik',
+  'Wind': 'Rüzgâr', 'Rustling leaves': 'Yaprak hışırtısı', 'Wind noise (microphone)': 'Mikrofonda rüzgâr', 'Thunderstorm': 'Fırtına', 'Thunder': 'Gök gürültüsü', 'Water': 'Su', 'Rain': 'Yağmur', 'Raindrop': 'Yağmur damlası', 'Rain on surface': 'Yüzeye yağmur', 'Stream': 'Dere', 'Waterfall': 'Şelale', 'Ocean': 'Okyanus', 'Waves, surf': 'Dalgalar', 'Steam': 'Buhar', 'Gurgling': 'Fokurdama', 'Fire': 'Ateş', 'Crackle': 'Çıtırtı',
+  'Vehicle': 'Araç', 'Boat, Water vehicle': 'Tekne', 'Ship': 'Gemi', 'Motor vehicle (road)': 'Motorlu araç', 'Car': 'Otomobil', 'Vehicle horn, car horn, honking': 'Korna', 'Toot': 'Düdük', 'Car alarm': 'Araba alarmı', 'Skidding': 'Patinaj', 'Tire squeal': 'Lastik sesi', 'Car passing by': 'Geçen araba', 'Truck': 'Kamyon', 'Air brake': 'Havalı fren', 'Air horn, truck horn': 'Kamyon kornası', 'Reversing beeps': 'Geri vites uyarısı', 'Bus': 'Otobüs',
+  'Emergency vehicle': 'Acil durum aracı', 'Police car (siren)': 'Polis sireni', 'Ambulance (siren)': 'Ambulans sireni', 'Fire engine, fire truck (siren)': 'İtfaiye sireni', 'Motorcycle': 'Motosiklet', 'Traffic noise, roadway noise': 'Trafik gürültüsü', 'Rail transport': 'Raylı ulaşım', 'Train': 'Tren', 'Train whistle': 'Tren düdüğü', 'Train horn': 'Tren kornası', 'Subway, metro, underground': 'Metro',
+  'Aircraft': 'Hava aracı', 'Aircraft engine': 'Uçak motoru', 'Jet engine': 'Jet motoru', 'Helicopter': 'Helikopter', 'Fixed-wing aircraft, airplane': 'Uçak', 'Bicycle': 'Bisiklet', 'Skateboard': 'Kaykay', 'Engine': 'Motor', 'Light engine (high frequency)': 'Küçük motor', 'Dental drill, dentist\'s drill': 'Dişçi torna', 'Lawn mower': 'Çim biçme makinesi', 'Chainsaw': 'Motorlu testere', 'Medium engine (mid frequency)': 'Orta motor', 'Heavy engine (low frequency)': 'Ağır motor', 'Engine starting': 'Motor çalıştırma', 'Idling': 'Rölanti', 'Accelerating, revving, vroom': 'Gaz verme',
+  'Door': 'Kapı', 'Doorbell': 'Kapı zili', 'Ding-dong': 'Ding-dong', 'Sliding door': 'Sürgülü kapı', 'Slam': 'Kapı çarpması', 'Knock': 'Kapı çalma', 'Tap': 'Tıklama', 'Squeak': 'Gıcırtı', 'Cupboard open or close': 'Dolap kapağı', 'Drawer open or close': 'Çekmece', 'Dishes, pots, and pans': 'Bulaşık, tencere', 'Cutlery, silverware': 'Çatal bıçak', 'Chopping (food)': 'Doğrama', 'Frying (food)': 'Kızartma', 'Microwave oven': 'Mikrodalga', 'Blender': 'Blender',
+  'Water tap, faucet': 'Musluk', 'Sink (filling or washing)': 'Lavabo', 'Bathtub (filling or washing)': 'Küvet', 'Hair dryer': 'Saç kurutma makinesi', 'Toilet flush': 'Sifon', 'Toothbrush': 'Diş fırçası', 'Electric toothbrush': 'Elektrikli diş fırçası', 'Vacuum cleaner': 'Elektrikli süpürge', 'Zipper (clothing)': 'Fermuar', 'Keys jangling': 'Anahtar şıngırtısı', 'Coin (dropping)': 'Bozuk para', 'Scissors': 'Makas', 'Electric shaver, electric razor': 'Tıraş makinesi',
+  'Typing': 'Yazı yazma', 'Typewriter': 'Daktilo', 'Computer keyboard': 'Klavye', 'Writing': 'Kalemle yazma', 'Alarm': 'Alarm', 'Telephone': 'Telefon', 'Telephone bell ringing': 'Telefon zili', 'Ringtone': 'Zil sesi', 'Telephone dialing, DTMF': 'Tuşlama sesi', 'Dial tone': 'Çevir sesi', 'Busy signal': 'Meşgul sesi', 'Alarm clock': 'Çalar saat', 'Siren': 'Siren', 'Civil defense siren': 'Hava saldırısı sireni', 'Buzzer': 'Vızıldayan zil', 'Smoke detector, smoke alarm': 'Duman dedektörü', 'Fire alarm': 'Yangın alarmı', 'Foghorn': 'Sis düdüğü', 'Whistle': 'Düdük', 'Steam whistle': 'Buhar düdüğü',
+  'Mechanisms': 'Mekanizma', 'Ratchet, pawl': 'Cırcır', 'Clock': 'Saat', 'Tick': 'Tik', 'Tick-tock': 'Tik tak', 'Gears': 'Dişliler', 'Sewing machine': 'Dikiş makinesi', 'Mechanical fan': 'Vantilatör', 'Air conditioning': 'Klima', 'Cash register': 'Yazar kasa', 'Printer': 'Yazıcı', 'Camera': 'Fotoğraf makinesi',
+  'Tools': 'Aletler', 'Hammer': 'Çekiç', 'Jackhammer': 'Kırıcı (hilti)', 'Sawing': 'Testere', 'Filing (rasp)': 'Eğe', 'Sanding': 'Zımparalama', 'Power tool': 'Elektrikli alet', 'Drill': 'Matkap', 'Explosion': 'Patlama', 'Gunshot, gunfire': 'Silah sesi', 'Fireworks': 'Havai fişek', 'Firecracker': 'Kestane fişeği', 'Burst, pop': 'Patlama sesi', 'Boom': 'Gümleme',
+  'Wood': 'Tahta', 'Chop': 'Balta', 'Crack': 'Çatırdama', 'Glass': 'Cam', 'Chink, clink': 'Tıngırtı', 'Shatter': 'Kırılma (cam)', 'Liquid': 'Sıvı', 'Splash, splatter': 'Sıçrama', 'Drip': 'Damlama', 'Pour': 'Dökme', 'Trickle, dribble': 'Şırıltı', 'Boiling': 'Kaynama', 'Whoosh, swoosh, swish': 'Vınlama', 'Thump, thud': 'Güm', 'Bang': 'Bam', 'Slap, smack': 'Şaplak', 'Smash, crash': 'Çarpma', 'Breaking': 'Kırılma', 'Bouncing': 'Sekme', 'Scratch': 'Tırmalama', 'Scrape': 'Kazıma', 'Rub': 'Sürtme', 'Crumpling, crinkling': 'Buruşturma', 'Tearing': 'Yırtma',
+  'Beep, bleep': 'Bip', 'Ping': 'Ping', 'Ding': 'Ding', 'Clang': 'Çangırtı', 'Squeal': 'Ciyaklama', 'Creak': 'Gıcırdama', 'Rustle': 'Hışırtı', 'Whir': 'Vızırtı', 'Clatter': 'Takırtı', 'Sizzle': 'Cızırtı', 'Clicking': 'Tıklama', 'Rumble': 'Gürleme', 'Plop': 'Lop', 'Jingle, tinkle': 'Şıngırtı', 'Hum': 'Uğultu', 'Crunch': 'Kıtırtı',
+  'Silence': 'Sessizlik', 'Sine wave': 'Sinüs dalga', 'Harmonic': 'Harmonik', 'Chirp tone': 'Tarama tonu', 'Sound effect': 'Ses efekti', 'Pulse': 'Darbe', 'Inside, small room': 'Küçük oda', 'Inside, large room or hall': 'Büyük salon', 'Inside, public space': 'Kapalı kamusal alan', 'Outside, urban or manmade': 'Dış mekân, şehir', 'Outside, rural or natural': 'Dış mekân, doğa', 'Reverberation': 'Yankılanma', 'Echo': 'Yankı',
+  'Noise': 'Gürültü', 'Environmental noise': 'Çevre gürültüsü', 'Static': 'Cızırtı (parazit)', 'Mains hum': 'Şebeke uğultusu', 'Distortion': 'Bozulma', 'White noise': 'Beyaz gürültü', 'Pink noise': 'Pembe gürültü', 'Vibration': 'Titreşim', 'Television': 'Televizyon', 'Radio': 'Radyo', 'Field recording': 'Saha kaydı'
+};
+const lbl = s => erDil.lang === 'en' ? s : (TRN[s] || s);
+const hue = s => { let h = 0; for (const c of s) h = (h * 31 + c.charCodeAt(0)) % 360; return `hsl(${h} 60% 55%)`; };
+async function aiLoad() {
+  if (AI) return AI; if (aiLoading) return aiLoading;
+  aiLoading = (async () => {
+    byId('aiInfo').textContent = T('Yapay zekâ motoru indiriliyor (~25 MB, bir kez)…', 'Downloading the AI engine (~25 MB, once)…');
+    const m = await import(MPB + '/audio_bundle.mjs'); const fs = await m.FilesetResolver.forAudioTasks(MPB + '/wasm');
+    AI = await m.AudioClassifier.createFromOptions(fs, { baseOptions: { modelAssetPath: new URL('lib/yamnet.tflite', location.href).href }, maxResults: 8, scoreThreshold: 0.05 });
+    byId('aiInfo').textContent = T('Yapay zekâ hazır · YAMNet, 521 ses türü', 'AI ready · YAMNet, 521 sound types'); return AI;
+  })();
+  try { return await aiLoading; } catch (e) { console.error(e); aiLoading = null; byId('aiInfo').textContent = T('Yapay zekâ yüklenemedi; internet bağlantını kontrol edip tekrar dene.', 'Could not load the AI; check your internet connection and try again.'); throw e; }
+}
+/* son 1 saniyenin örnekleri için halka arabellek */
+function tapStart() {
+  if (procNode) return; ring = new Float32Array(Math.round(AC.sampleRate * 1.2)); ringPos = 0;
+  procNode = AC.createScriptProcessor(4096, 1, 1); const mute = AC.createGain(); mute.gain.value = 0;
+  procNode.onaudioprocess = e => { const x = e.inputBuffer.getChannelData(0); for (let i = 0; i < x.length; i++) { ring[ringPos] = x[i]; ringPos = (ringPos + 1) % ring.length; } };
+  an.connect(procNode); procNode.connect(mute); mute.connect(AC.destination);
+}
+function lastSecond() { const n = Math.round(AC.sampleRate * .975), out = new Float32Array(n); let p = (ringPos - n + ring.length) % ring.length; for (let i = 0; i < n; i++) { out[i] = ring[p]; p = (p + 1) % ring.length; } return out; }
+async function aiStart() {
+  if (aiOn) return aiStop();
+  ctx(); if (!micStream && !playSrc && !genOn) { await micStart(); if (!micStream) return; }
+  byId('aiBtn').disabled = true; try { await aiLoad(); } catch (e) { byId('aiBtn').disabled = false; return; } byId('aiBtn').disabled = false;
+  tapStart(); aiOn = true; labels(); byId('aiStrip').hidden = false;
+  const tick = () => {
+    if (!aiOn) return; aiTimer = setTimeout(tick, 1000); if (frozen) return;
+    let cats = []; try { const r = AI.classify(lastSecond(), AC.sampleRate); cats = (r[0] && r[0].classifications[0] && r[0].classifications[0].categories) || []; } catch (e) { console.error(e); return; }
+    const seen = new Set(); cats.forEach(c => { const k = c.categoryName; seen.add(k); aiEma[k] = (aiEma[k] || 0) * .5 + c.score * .5; }); for (const k in aiEma) if (!seen.has(k)) { aiEma[k] *= .5; if (aiEma[k] < .02) delete aiEma[k]; }
+    const top = Object.entries(aiEma).sort((a, b) => b[1] - a[1]).slice(0, 5);
+    byId('aiTop').innerHTML = top.map(([k, v]) => `<div><span>${esc(lbl(k))}</span><em>%${Math.round(v * 100)}</em><i><b style="width:${Math.round(v * 100)}%;background:${hue(k)}"></b></i></div>`).join('');
+    const best = cats[0]; byId('gAi').textContent = best ? lbl(best.categoryName) : '–'; byId('gAi2').textContent = best ? `%${Math.round(best.score * 100)} · ${cats.slice(1, 3).map(c => lbl(c.categoryName)).join(', ')}` : '';
+    aiStrip.push(best && best.score > .25 ? best.categoryName : ''); if (aiStrip.length > 60) aiStrip.shift();
+    byId('aiStrip').innerHTML = aiStrip.map(k => `<i style="background:${k ? hue(k) : 'transparent'}" title="${esc(k ? lbl(k) : '')}"></i>`).join('');
+    if (best && best.score >= .35 && best.categoryName !== 'Silence') logEvent(best.categoryName, best.score);
+  }; tick();
+}
+function aiStop() { aiOn = false; clearTimeout(aiTimer); labels(); }
+byId('aiBtn').onclick = aiStart;
+let lastEv = { k: '', t: 0 };
+function logEvent(k, s) {
+  const now = Date.now(); if (k === lastEv.k && now - lastEv.t < 8000) { lastEv.t = now; const e = EV[0]; if (e && e.k === k) { e.end = now; e.s = Math.max(e.s, s); paintEv(); } return; }
+  lastEv = { k, t: now }; EV.unshift({ k, s, t: now, end: now }); if (EV.length > 300) EV.pop();
+  if (rec) rec.ev.push({ k, s: +s.toFixed(2), at: +((now - rec.t0) / 1000).toFixed(1) }); paintEv();
+}
+function paintEv() {
+  byId('evLog').innerHTML = EV.length ? EV.map(e => `<div><time>${new Date(e.t).toLocaleTimeString(erDil.lang === 'en' ? 'en-GB' : 'tr-TR')}</time><span><i style="display:inline-block;width:9px;height:9px;border-radius:2px;background:${hue(e.k)};margin-right:6px"></i>${esc(lbl(e.k))}</span><em>%${Math.round(e.s * 100)}${e.end - e.t > 1500 ? ' · ' + Math.round((e.end - e.t) / 1000 + 1) + ' sn' : ''}</em></div>`).join('') : `<p class="ph">${T('Yapay zekâyı başlatınca tanınan sesler burada saatiyle listelenir.', 'Start the AI and recognised sounds are listed here with the time.')}</p>`;
+}
+byId('evClr').onclick = () => { EV = []; paintEv(); };
+byId('evCsv').onclick = () => { if (!EV.length) return; const rows = [['zaman', 'ses', 'ses_en', 'olasilik', 'sure_sn'], ...EV.slice().reverse().map(e => [new Date(e.t).toISOString(), TRN[e.k] || e.k, e.k, e.s.toFixed(2), Math.round((e.end - e.t) / 1000 + 1)])]; download('algilanan-sesler-' + stamp() + '.csv', new Blob(['﻿' + rows.map(r => r.map(v => `"${String(v).replace(/"/g, '""')}"`).join(';')).join('\n')], { type: 'text/csv' })); };
+
+/* ======================= KAYIT ======================= */
+const DB = { db: null,
+  open() { return this.db ? Promise.resolve(this.db) : new Promise((ok, no) => { const r = indexedDB.open('erdevelop-ses', 1); r.onupgradeneeded = () => r.result.createObjectStore('kayit', { keyPath: 'id' }); r.onsuccess = () => { this.db = r.result; ok(this.db); }; r.onerror = () => no(r.error); }); },
+  async tx(mode, fn) { const db = await this.open(); return new Promise((ok, no) => { const t = db.transaction('kayit', mode), s = t.objectStore('kayit'), r = fn(s); t.oncomplete = () => ok(r && r.result); t.onerror = () => no(t.error); }); },
+  all() { return this.tx('readonly', s => s.getAll()); }, put(o) { return this.tx('readwrite', s => s.put(o)); }, del(id) { return this.tx('readwrite', s => s.delete(id)); }, get(id) { return this.tx('readonly', s => s.get(id)); } };
+let rec = null;
+function pickMime() { for (const m of ['audio/webm;codecs=opus', 'audio/mp4', 'audio/ogg;codecs=opus', 'audio/webm']) if (window.MediaRecorder && MediaRecorder.isTypeSupported && MediaRecorder.isTypeSupported(m)) return m; return ''; }
+async function recStart() {
+  if (rec) return recStop();
+  if (!window.MediaRecorder) return toast(T('Bu tarayıcı ses kaydını desteklemiyor', 'This browser cannot record audio'));
+  if (!micStream) { await micStart(); if (!micStream) return; }
+  const mime = pickMime(); let mr; try { mr = new MediaRecorder(micStream, mime ? { mimeType: mime } : undefined); } catch (e) { return toast(T('Kayıt başlatılamadı', 'Could not start recording')); }
+  rec = { mr, chunks: [], t0: Date.now(), ev: [] }; mr.ondataavailable = e => { if (e.data && e.data.size) rec.chunks.push(e.data); };
+  mr.onstop = async () => { const r = rec; rec = null; labels(); const blob = new Blob(r.chunks, { type: mr.mimeType || mime || 'audio/webm' }), d = new Date();
+    const o = { id: 'r' + d.getTime(), name: T('Kayıt', 'Recording') + ' ' + d.toLocaleString(erDil.lang === 'en' ? 'en-GB' : 'tr-TR', { day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit', second: '2-digit' }), date: d.getTime(), dur: (Date.now() - r.t0) / 1000, type: blob.type, size: blob.size, blob, ev: r.ev };
+    try { await DB.put(o); toast(T('Kayıt kaydedildi · Kayıtlar sekmesinde', 'Recording saved · see Recordings')); } catch (e) { toast(T('Kayıt saklanamadı; indiriliyor', 'Could not store the recording; downloading it')); download(fileName(o), blob); } paintRecs(); };
+  mr.start(1000); labels(); recClock();
+}
+function recStop() { if (rec && rec.mr.state !== 'inactive') rec.mr.stop(); }
+function recClock() { if (!rec) return; byId('srcSt').innerHTML = `<span class="recdot"></span>${T('Kaydediliyor', 'Recording')} · ${tmm((Date.now() - rec.t0) / 1000)}`; setTimeout(recClock, 500); }
+byId('recBtn').onclick = recStart;
+const extOf = t => /mp4|m4a|aac/.test(t) ? 'm4a' : /ogg/.test(t) ? 'ogg' : /wav/.test(t) ? 'wav' : /mpeg|mp3/.test(t) ? 'mp3' : 'webm';
+const fileName = o => (o.name || 'kayit').replace(/[^\w\-ğüşıöçĞÜŞİÖÇ ]+/g, '-').replace(/\s+/g, '_') + '.' + extOf(o.type || '');
+async function paintRecs() {
+  let L = []; try { L = (await DB.all()).sort((a, b) => b.date - a.date); } catch (e) { byId('rl').innerHTML = `<p class="warn2">${T('Bu tarayıcıda kayıt saklama kullanılamıyor (gizli pencere olabilir).', 'Recording storage is not available in this browser (it may be a private window).')}</p>`; return; }
+  const tot = L.reduce((a, o) => a + (o.size || 0), 0); byId('rlInfo').textContent = L.length ? `${L.length} · ${size(tot)}` : '';
+  byId('rl').innerHTML = L.length ? L.map(o => `<div class="it" data-id="${o.id}"><div class="hd"><b>${esc(o.name)}</b><small>${tmm(o.dur)} · ${size(o.size)}</small></div>
+    ${o.ev && o.ev.length ? `<div class="ev">🔎 ${o.ev.slice(0, 12).map(e => `${tmm(e.at)} ${esc(lbl(e.k))}`).join(' · ')}${o.ev.length > 12 ? ' …' : ''}</div>` : ''}
+    <div class="btns"><button class="btn sm" data-a="play">▶ ${T('Çal', 'Play')}</button><button class="btn sm ghost" data-a="an">📊 ${T('Analiz et', 'Analyse')}</button><button class="btn sm ghost" data-a="dl">⬇ ${extOf(o.type).toUpperCase()}</button><button class="btn sm ghost" data-a="wav">⬇ WAV</button><button class="btn sm ghost" data-a="ren">✏️</button><button class="btn sm ghost" data-a="del">🗑</button></div></div>`).join('')
+    : `<p class="ph">${T('Henüz kayıt yok.', 'No recordings yet.')}</p>`;
+}
+byId('rl').onclick = async e => {
+  const b = e.target.closest('[data-a]'), it = e.target.closest('[data-id]'); if (!b || !it) return; const o = await DB.get(it.dataset.id); if (!o) return;
+  if (b.dataset.a === 'play') { await playBlob(o.blob, o.name, true); }
+  if (b.dataset.a === 'an') { tabGo('dosya'); analyseBlob(o.blob, o.name); }
+  if (b.dataset.a === 'dl') download(fileName(o), o.blob);
+  if (b.dataset.a === 'wav') { try { const ab = await ctx().decodeAudioData(await o.blob.arrayBuffer()); download(fileName(o).replace(/\.\w+$/, '.wav'), wav(ab)); } catch (er) { toast(T('Dönüştürülemedi', 'Could not convert')); } }
+  if (b.dataset.a === 'ren') { const n = prompt(T('Kayıt adı', 'Recording name'), o.name); if (n && n.trim()) { o.name = n.trim().slice(0, 80); await DB.put(o); paintRecs(); } }
+  if (b.dataset.a === 'del' && confirm(T('Kayıt silinsin mi?', 'Delete this recording?'))) { await DB.del(o.id); paintRecs(); }
+};
+function wav(ab) {
+  const ch = Math.min(2, ab.numberOfChannels), n = ab.length, sr = ab.sampleRate, buf = new ArrayBuffer(44 + n * ch * 2), v = new DataView(buf), w = (o, s) => [...s].forEach((c, i) => v.setUint8(o + i, c.charCodeAt(0)));
+  w(0, 'RIFF'); v.setUint32(4, 36 + n * ch * 2, true); w(8, 'WAVE'); w(12, 'fmt '); v.setUint32(16, 16, true); v.setUint16(20, 1, true); v.setUint16(22, ch, true); v.setUint32(24, sr, true); v.setUint32(28, sr * ch * 2, true); v.setUint16(32, ch * 2, true); v.setUint16(34, 16, true); w(36, 'data'); v.setUint32(40, n * ch * 2, true);
+  const D = [...Array(ch)].map((_, c) => ab.getChannelData(c)); let o = 44; for (let i = 0; i < n; i++) for (let c = 0; c < ch; c++) { const s = clamp(D[c][i], -1, 1); v.setInt16(o, s < 0 ? s * 32768 : s * 32767, true); o += 2; }
+  return new Blob([buf], { type: 'audio/wav' });
+}
+
+/* ======================= OYNATMA (canlı analize bağlı) ======================= */
+let playEl = null, playSrc = null;
+async function playBlob(blob, name, live) {
+  ctx(); stopPlay(); playEl = new Audio(); playEl.src = URL.createObjectURL(blob); playEl.crossOrigin = 'anonymous';
+  playSrc = AC.createMediaElementSource(playEl); playSrc.connect(inGain); playSrc.connect(AC.destination);
+  playEl.onended = () => { labels(); if (fPlayEl === playEl) fPh(); }; playEl.onpause = labels; playEl.onplay = labels;
+  if (live) { tabGo('canli'); byId('srcSt').textContent = '▶ ' + name; }
+  await playEl.play().catch(() => { }); loop(); labels(); return playEl;
+}
+function stopPlay() { if (playEl) { playEl.pause(); URL.revokeObjectURL(playEl.src); } if (playSrc) playSrc.disconnect(); playEl = null; playSrc = null; }
+
+/* ======================= DOSYA ANALİZİ ======================= */
+let fBuf = null, fBlob = null, fName = '', fPlayEl = null, fAiRes = null;
+dropZone($('[data-pane=dosya] .drop'), fs => { const f = fs[0]; if (f) analyseBlob(f, f.name); });
+/* basit FFT (radix-2, yerinde) */
+function fft(re, im) { const n = re.length; for (let i = 1, j = 0; i < n; i++) { let b = n >> 1; for (; j & b; b >>= 1) j ^= b; j ^= b; if (i < j) { [re[i], re[j]] = [re[j], re[i]]; [im[i], im[j]] = [im[j], im[i]]; } }
+  for (let len = 2; len <= n; len <<= 1) { const a = -2 * Math.PI / len, wr = Math.cos(a), wi = Math.sin(a); for (let i = 0; i < n; i += len) { let cr = 1, ci = 0; for (let k = 0; k < len / 2; k++) { const ur = re[i + k], ui = im[i + k], vr = re[i + k + len / 2] * cr - im[i + k + len / 2] * ci, vi = re[i + k + len / 2] * ci + im[i + k + len / 2] * cr; re[i + k] = ur + vr; im[i + k] = ui + vi; re[i + k + len / 2] = ur - vr; im[i + k + len / 2] = ui - vi; const t = cr * wr - ci * wi; ci = cr * wi + ci * wr; cr = t; } } } }
+async function analyseBlob(blob, name) {
+  fBlob = blob; fName = name; fAiRes = null; byId('fRes').hidden = false; byId('fName').textContent = name; byId('fStat').innerHTML = `<div><b>…</b><span>${T('çözülüyor', 'decoding')}</span></div>`; byId('fSeg').innerHTML = ''; byId('fStrip').hidden = true;
+  try { fBuf = await ctx().decodeAudioData(await blob.arrayBuffer()); } catch (e) { byId('fStat').innerHTML = `<p class="warn2">${T('Bu dosya çözülemedi. Farklı bir biçim dene (MP3, WAV, M4A).', 'Could not decode this file. Try another format (MP3, WAV, M4A).')}</p>`; return; }
+  const sr = fBuf.sampleRate, n = fBuf.length, mono = new Float32Array(n); for (let c = 0; c < fBuf.numberOfChannels; c++) { const d = fBuf.getChannelData(c); for (let i = 0; i < n; i++) mono[i] += d[i] / fBuf.numberOfChannels; }
+  fBuf.mono = mono; let pk = 0, s = 0, quiet = 0; const blk = Math.round(sr * .05); for (let i = 0; i < n; i++) { const a = Math.abs(mono[i]); if (a > pk) pk = a; s += mono[i] * mono[i]; }
+  for (let i = 0; i + blk <= n; i += blk) { let e = 0; for (let j = 0; j < blk; j++) e += mono[i + j] ** 2; if (10 * Math.log10(e / blk + 1e-20) < -50) quiet++; }
+  const rmsDb = 10 * Math.log10(s / n + 1e-20), pkDb = 20 * Math.log10(pk + 1e-12);
+  /* spektrogram + ortalama spektrum */
+  const N = 2048, cols = Math.min(1200, Math.max(200, Math.floor(n / 512))), hop = Math.max(1, Math.floor((n - N) / cols)), avg = new Float64Array(N / 2), H = 256, img = new ImageData(cols, H), win = new Float32Array(N).map((_, i) => .5 - .5 * Math.cos(2 * Math.PI * i / (N - 1)));
+  const re = new Float32Array(N), im = new Float32Array(N), lo = -110, hi = -20, fa = 30, fb = Math.min(20000, sr / 2), flux = []; let prev = null;
+  for (let c = 0; c < cols; c++) { const st = c * hop; for (let i = 0; i < N; i++) { re[i] = (mono[st + i] || 0) * win[i]; im[i] = 0; } fft(re, im); const mag = new Float32Array(N / 2); for (let k = 0; k < N / 2; k++) { mag[k] = Math.hypot(re[k], im[k]) / N * 4; avg[k] += mag[k] * mag[k]; }
+    let fl = 0; if (prev) for (let k = 0; k < N / 2; k++) fl += Math.max(0, mag[k] - prev[k]); flux.push(fl); prev = mag;
+    for (let y = 0; y < H; y++) { const f1 = fa * (fb / fa) ** (1 - (y + 1) / H), f2 = fa * (fb / fa) ** (1 - y / H), k1 = Math.floor(f1 / sr * N), k2 = Math.max(k1, Math.ceil(f2 / sr * N)); let m = 0; for (let k = k1; k <= k2 && k < N / 2; k++) if (mag[k] > m) m = mag[k];
+      const v = clamp((20 * Math.log10(m + 1e-12) - lo) / (hi - lo), 0, 1), q = Math.round(v * 255) * 3, p = (y * cols + c) * 4; img.data[p] = LUT[q]; img.data[p + 1] = LUT[q + 1]; img.data[p + 2] = LUT[q + 2]; img.data[p + 3] = 255; } }
+  const sp = byId('fSp'); sp.width = cols; sp.height = H; sp.getContext('2d').putImageData(img, 0, 0);
+  let domK = Math.ceil(30 / sr * N); for (let k = domK + 1; k < N / 2; k++) if (avg[k] > avg[domK]) domK = k; const la = Math.log(avg[domK - 1] + 1e-30), lb = Math.log(avg[domK] + 1e-30), lc = Math.log(avg[domK + 1] + 1e-30), dk = clamp((la - lc) / (2 * (la - 2 * lb + lc) || 1), -.5, .5), dom = (domK + dk) / N * sr;
+  /* tempo (dosya geneli) */
+  const dt = hop / sr * 1000, fm = flux.reduce((a, b) => a + b, 0) / flux.length, y = flux.map(v => Math.max(0, v - fm)); let z = 0; y.forEach(v => z += v * v); let bb = 0, bl = 0;
+  if (z && n / sr > 6) for (let bpm = 60; bpm <= 190; bpm++) { const L = Math.round(60000 / bpm / dt); if (L < 1) continue; let s2 = 0; for (let i = 0; i + L < y.length; i++) s2 += y[i] * y[i + L]; if (s2 / z > bb) { bb = s2 / z; bl = bpm; } }
+  const nd = noteOf(dom);
+  byId('fStat').innerHTML = [[tmm(n / sr) + (n / sr < 60 ? ' (' + fmt(n / sr, 1) + ' sn)' : ''), T('süre', 'duration')], [fmt(sr / 1000, 1) + ' kHz · ' + fBuf.numberOfChannels + ' ' + T('kanal', 'ch'), T('örnekleme', 'sample rate')], [fmt(pkDb, 1) + ' dBFS', T('tepe', 'peak')], [fmt(rmsDb, 1) + ' dBFS', T('ortalama (RMS)', 'average (RMS)')],
+    [fHz(dom) + (nd ? ' · ' + nd.name + nd.oct : ''), T('baskın frekans', 'dominant frequency')], [bb > .3 ? bl + ' BPM' : '–', T('tempo', 'tempo')], ['%' + Math.round(quiet / Math.max(1, Math.floor(n / blk)) * 100), T('sessiz kısım', 'silent part')], [size(blob.size), T('dosya boyutu', 'file size')]]
+    .map(([b, s]) => `<div><b style="font-size:1rem">${b}</b><span>${s}</span></div>`).join('');
+  fOverview(); fAvgDraw(avg, sr, N); if (fPlayEl) { fPlayEl.pause(); fPlayEl = null; } labels();
+  if (AI) fAiRun();
+}
+function fOverview() {
+  const c = byId('fOvC'), r = c.getBoundingClientRect(), d = devicePixelRatio || 1, w = Math.round(r.width * d), h = Math.round(r.height * d); c.width = w; c.height = h; const g = c.getContext('2d'), m = fBuf.mono, per = m.length / w;
+  g.fillStyle = css('--acc'); for (let x = 0; x < w; x++) { let a = 1, b = -1; const s = Math.floor(x * per), e = Math.min(m.length, Math.floor((x + 1) * per)); for (let i = s; i < e; i++) { if (m[i] < a) a = m[i]; if (m[i] > b) b = m[i]; } if (b < a) continue; g.fillRect(x, h / 2 - b * h / 2, 1, Math.max(1, (b - a) * h / 2)); }
+  if (fAiRes) { fAiRes.forEach(s => { g.fillStyle = hue(s.k); g.globalAlpha = .35; g.fillRect(s.a / (m.length / fBuf.sampleRate) * w, h - 6 * d, (s.b - s.a) / (m.length / fBuf.sampleRate) * w, 6 * d); }); g.globalAlpha = 1; }
+}
+function fAvgDraw(avg, sr, N) {
+  const c = byId('fAvg'), r = c.getBoundingClientRect(), d = devicePixelRatio || 1, w = Math.round(r.width * d), h = Math.round(r.height * d); c.width = w; c.height = h; const g = c.getContext('2d'), cnt = avg.reduce((a, b) => Math.max(a, b), 0) || 1;
+  const fa = 20, fb = sr / 2, lo = -80; g.strokeStyle = css('--line'); g.fillStyle = css('--muted'); g.font = `${10 * d}px system-ui`;
+  [50, 100, 200, 500, 1000, 2000, 5000, 10000].forEach(f => { const x = Math.log(f / fa) / Math.log(fb / fa) * w; g.beginPath(); g.moveTo(x, 0); g.lineTo(x, h); g.stroke(); g.fillText(f >= 1000 ? f / 1000 + 'k' : f, x + 2 * d, h - 3 * d); });
+  g.strokeStyle = css('--acc'); g.lineWidth = 2 * d; g.beginPath(); for (let x = 0; x < w; x++) { const f = fa * (fb / fa) ** (x / w), k = clamp(Math.round(f / sr * N), 1, N / 2 - 1), db = 10 * Math.log10(avg[k] / cnt + 1e-12), y = clamp(db / lo, 0, 1) * h; x ? g.lineTo(x, y) : g.moveTo(x, y); } g.stroke();
+}
+byId('fOv').onclick = e => { if (!fBuf) return; const r = byId('fOv').getBoundingClientRect(), t = (e.clientX - r.left) / r.width * fBuf.duration; if (fPlayEl) fPlayEl.currentTime = t; else fPlay(t); };
+async function fPlay(at) {
+  if (fPlayEl && !fPlayEl.paused) { fPlayEl.pause(); labels(); return; }
+  if (fPlayEl && fPlayEl === playEl) { await fPlayEl.play(); labels(); fPh(); return; }
+  fPlayEl = await playBlob(fBlob, fName, false); if (at) fPlayEl.currentTime = at; fPh();
+}
+function fPh() { if (!fPlayEl || !fBuf) return; byId('fPh').style.left = (fPlayEl.currentTime / fBuf.duration * 100) + '%'; if (!fPlayEl.paused) requestAnimationFrame(fPh); }
+byId('fPlay').onclick = () => fPlay();
+byId('fLive').onclick = () => { if (fBlob) { fPlayEl = null; playBlob(fBlob, fName, true); } };
+byId('fWav').onclick = () => { if (fBuf) download(fName.replace(/\.\w+$/, '') + '.wav', wav(fBuf)); };
+byId('fAi').onclick = async () => { if (!fBuf) return; byId('fAi').disabled = true; try { await aiLoad(); await fAiRun(); } catch (e) { } byId('fAi').disabled = false; };
+async function fAiRun() {
+  const sr = fBuf.sampleRate, max = Math.min(fBuf.mono.length, sr * 600); byId('fSeg').innerHTML = `<p class="ph">${T('Sesler tanınıyor…', 'Recognising sounds…')}</p>`; await new Promise(r => setTimeout(r, 30));
+  const res = [], step = Math.round(sr * .975); for (let i = 0; i + step <= max; i += step) { const r = AI.classify(fBuf.mono.subarray(i, i + step), sr), c = r[0] && r[0].classifications[0] && r[0].classifications[0].categories[0]; res.push(c ? { k: c.categoryName, s: c.score } : null); if (res.length % 20 === 0) await new Promise(r2 => setTimeout(r2, 0)); }
+  const segs = []; res.forEach((x, i) => { const a = i * .975, b = a + .975; if (!x || x.s < .2) return; const L = segs[segs.length - 1]; if (L && L.k === x.k && a - L.b < 1.1) { L.b = b; L.s = Math.max(L.s, x.s); L.n++; } else segs.push({ k: x.k, a, b, s: x.s, n: 1 }); });
+  fAiRes = segs; byId('fStrip').hidden = false; byId('fStrip').innerHTML = res.map(x => `<i style="background:${x && x.s >= .2 ? hue(x.k) : 'transparent'}" title="${esc(x ? lbl(x.k) : '')}"></i>`).join('');
+  const tot = {}; segs.forEach(s => tot[s.k] = (tot[s.k] || 0) + (s.b - s.a)); const sum = Object.entries(tot).sort((a, b) => b[1] - a[1]).slice(0, 6);
+  byId('fSeg').innerHTML = (sum.length ? `<div style="margin-bottom:6px"><b>${T('En çok', 'Most present')}:</b>&nbsp;${sum.map(([k, v]) => `${esc(lbl(k))} (${tmm(v)})`).join(' · ')}</div>` : '') + segs.map(s => `<div data-t="${s.a}"><i style="background:${hue(s.k)}"></i><time>${tmm(s.a)}–${tmm(s.b)}</time><span>${esc(lbl(s.k))} <span class="hint">%${Math.round(s.s * 100)}</span></span></div>`).join('') + (fBuf.mono.length > max ? `<p class="hint">${T('İlk 10 dakika analiz edildi.', 'The first 10 minutes were analysed.')}</p>` : '') || `<p class="ph">${T('Tanınan belirgin bir ses yok.', 'No clear sound recognised.')}</p>`;
+  fOverview();
+}
+byId('fSeg').onclick = e => { const r = e.target.closest('[data-t]'); if (r) { if (fPlayEl) fPlayEl.currentTime = +r.dataset.t; else fPlay(+r.dataset.t); } };
+
+/* ======================= TON ÜRETECİ ======================= */
+let genOn = false, gOsc = null, gNoise = null, gGain = null, gFreq = +(LS.get('sesan:gf') || 440), sw = null;
+const s2f = v => 20 * 1000 ** (v / 1000), f2s = f => Math.round(Math.log(f / 20) / Math.log(1000) * 1000);
+function gUi() { byId('gF').textContent = fHz(gFreq); const n = noteOf(gFreq); byId('gN').textContent = n ? `${n.name}${n.oct} ${n.cents ? (n.cents > 0 ? '+' : '') + n.cents + ' cent' : ''}` : ''; byId('gFr').value = f2s(gFreq); if (document.activeElement !== byId('gFi')) byId('gFi').value = fmt(gFreq, 1); byId('gVV').textContent = '%' + byId('gV').value; }
+function noiseBuf(type) { const sr = AC.sampleRate, b = AC.createBuffer(1, sr * 4, sr), d = b.getChannelData(0); let b0 = 0, b1 = 0, b2 = 0, b3 = 0, b4 = 0, b5 = 0, b6 = 0, last = 0;
+  for (let i = 0; i < d.length; i++) { const w = Math.random() * 2 - 1; if (type === 'white') d[i] = w * .5; else if (type === 'pink') { b0 = .99886 * b0 + w * .0555179; b1 = .99332 * b1 + w * .0750759; b2 = .969 * b2 + w * .153852; b3 = .8665 * b3 + w * .3104856; b4 = .55 * b4 + w * .5329522; b5 = -.7616 * b5 - w * .016898; d[i] = (b0 + b1 + b2 + b3 + b4 + b5 + b6 + w * .5362) * .11; b6 = w * .115926; } else { last = (last + .02 * w) / 1.02; d[i] = last * 3.5; } } return b; }
+function genStart() {
+  ctx(); genStop(true); const t = byId('gW').value; gGain = AC.createGain(); gGain.gain.value = 0; gGain.gain.setTargetAtTime((+byId('gV').value / 100) ** 2, AC.currentTime, .02); gGain.connect(AC.destination); if (byId('gAn').checked) gGain.connect(inGain);
+  if (/white|pink|brown/.test(t)) { gNoise = AC.createBufferSource(); gNoise.buffer = noiseBuf(t); gNoise.loop = true; gNoise.connect(gGain); gNoise.start(); }
+  else { gOsc = AC.createOscillator(); gOsc.type = t; gOsc.frequency.value = gFreq; gOsc.connect(gGain); gOsc.start(); }
+  genOn = true; loop(); labels();
+}
+function genStop(quiet) { if (gGain) { const g = gGain, o = gOsc, nz = gNoise; g.gain.setTargetAtTime(0, AC.currentTime, .02); setTimeout(() => { try { o && o.stop(); nz && nz.stop(); g.disconnect(); } catch (e) { } }, 120); } gOsc = gNoise = gGain = null; genOn = false; if (sw) swEnd(); if (!quiet) labels(); }
+function setF(f) { gFreq = clamp(f, 1, 22000); LS.set('sesan:gf', gFreq); if (gOsc) gOsc.frequency.setTargetAtTime(gFreq, AC.currentTime, .01); gUi(); }
+byId('gFr').oninput = () => setF(s2f(+byId('gFr').value));
+byId('gFi').onchange = () => { const v = pnum(byId('gFi').value); if (v > 0) setF(v); };
+byId('gV').oninput = () => { gUi(); if (gGain) gGain.gain.setTargetAtTime((+byId('gV').value / 100) ** 2, AC.currentTime, .02); };
+byId('gW').onchange = () => { if (genOn) genStart(); };
+byId('gGo').onclick = () => genOn ? genStop() : genStart();
+byId('gPre').innerHTML = [[50, ''], [100, ''], [261.63, 'Do4'], [440, 'La4'], [1000, ''], [3000, ''], [8000, ''], [15000, '']].map(([f, n]) => `<button type="button" data-f="${f}">${fHz(f)}${n ? ' · ' + n : ''}</button>`).join('');
+byId('gPre').onclick = e => { const b = e.target.closest('[data-f]'); if (b) setF(+b.dataset.f); };
+/* tarama */
+function swGo() {
+  if (sw) return swEnd(); const a = clamp(pnum(byId('swA').value) || 8000, 20, 22000), b = clamp(pnum(byId('swB').value) || 20000, 20, 22000), dur = clamp(pnum(byId('swT').value) || 30, 2, 300);
+  byId('gW').value = 'sine'; setF(a); genStart(); const t0 = AC.currentTime; gOsc.frequency.setValueAtTime(a, t0); gOsc.frequency.exponentialRampToValueAtTime(b, t0 + dur);
+  sw = { a, b, dur, t0 }; byId('swHit').disabled = false; labels();
+  const tick = () => { if (!sw) return; const u = clamp((AC.currentTime - sw.t0) / sw.dur, 0, 1), f = sw.a * (sw.b / sw.a) ** u; sw.f = f; byId('swF').textContent = fHz(f); if (u >= 1) { swEnd(); byId('swRes').textContent = T('Tarama bitti. Sonuna kadar duyduysan üst sınırın ', 'Sweep finished. If you heard it to the end, your upper limit is above ') + fHz(sw ? sw.b : b) + T(' üstünde.', '.'); return; } requestAnimationFrame(tick); }; tick();
+}
+function swEnd() { const s = sw; sw = null; byId('swHit').disabled = true; if (genOn) genStop(true); labels(); return s; }
+byId('swGo').onclick = swGo;
+byId('swHit').onclick = () => { const s = swEnd(); if (!s) return; const f = s.f, age = f > 17000 ? T('genç kulak (yaklaşık 25 yaş altı)', 'young ears (about under 25)') : f > 15000 ? T('yaklaşık 25–40 yaş tipik', 'typical for about 25–40') : f > 12000 ? T('yaklaşık 40–55 yaş tipik', 'typical for about 40–55') : T('55 yaş üstünde yaygın; düşük de olabilir, kulaklık ve ses seviyesini kontrol et', 'common over 55; may also be the headphones or volume');
+  byId('swRes').textContent = T('Duyduğun en yüksek frekans: ', 'Highest frequency you heard: ') + fHz(f) + ' · ' + age + '. ' + T('Bu bir tıbbi test değildir.', 'This is not a medical test.'); };
+
+/* ======================= genel ======================= */
+function labels() {
+  byId('micBtn').textContent = micStream ? T('⏹ Mikrofonu durdur', '⏹ Stop microphone') : T('🎤 Mikrofonu başlat', '🎤 Start microphone');
+  byId('recBtn').textContent = rec ? T('⏹ Kaydı bitir', '⏹ Stop recording') : T('⏺ Kaydet', '⏺ Record'); byId('recBtn').classList.toggle('rec', !!rec);
+  byId('frzBtn').disabled = !an; byId('frzBtn').textContent = frozen ? T('▶ Devam', '▶ Resume') : T('⏸ Dondur', '⏸ Freeze');
+  if (!rec) byId('srcSt').textContent = micStream ? T('🎤 Mikrofon dinleniyor', '🎤 Listening to the microphone') + (AC ? ` · ${fmt(AC.sampleRate / 1000, 1)} kHz` : '') : playEl && !playEl.paused ? T('▶ Çalınıyor', '▶ Playing') : genOn ? T('Ton üreteci çalıyor', 'Tone generator on') : T('Mikrofonu başlatınca ortamdaki ses analiz edilir.', 'Start the microphone to analyse the sound around you.');
+  byId('aiBtn').textContent = aiOn ? T('⏹ Yapay zekâyı durdur', '⏹ Stop AI') : AI ? T('🤖 Yapay zekâyı başlat', '🤖 Start AI') : T('🤖 Yapay zekâyı başlat (ilk seferde iner)', '🤖 Start AI (downloads the first time)');
+  byId('fAi').textContent = fAiRes ? T('Yeniden tanı', 'Recognise again') : T('🤖 Sesleri tanı', '🤖 Recognise sounds');
+  byId('fPlay').textContent = fPlayEl && !fPlayEl.paused ? T('⏸ Duraklat', '⏸ Pause') : T('▶ Çal', '▶ Play');
+  byId('gGo').textContent = genOn && !sw ? T('⏹ Durdur', '⏹ Stop') : T('▶ Başlat', '▶ Start'); byId('swGo').textContent = sw ? T('⏹ Durdur', '⏹ Stop') : T('▶ Taramayı başlat', '▶ Start sweep');
+  gUi();
+}
+let tabGo = () => { };
+tabGo = tabs('sesan', t => { if (t === 'kayit') paintRecs(); if (t === 'canli') requestAnimationFrame(() => drawAll(true)); if (t === 'dosya' && fBuf) requestAnimationFrame(fOverview); });
+document.addEventListener('visibilitychange', () => { if (document.hidden && micStream && !rec && !aiOn) micStop(); });
+erDil.on(() => { buildStage(); labels(); paintEv(); paintRecs(); if (fBuf) analyseBlob(fBlob, fName); });
+buildStage(); labels(); paintEv();
+</script>
+<script data-goatcounter="https://erdevelop.goatcounter.com/count" async src="//gc.zgo.at/count.js"></script>
+</body>
+</html>
