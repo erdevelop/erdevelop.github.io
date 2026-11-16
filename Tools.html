@@ -46,6 +46,11 @@
   .sp { flex: 1; }
   .tb { font: 500 12px var(--f-mono); color: var(--accent); padding: 6px 10px; border: 1px solid var(--line); border-radius: 4px; background: none; cursor: pointer; text-transform: uppercase; text-decoration: none; }
   .tb:hover { border-color: var(--accent); }
+  .tbx { font-size: 15px; padding: 4px 9px; line-height: 1; }
+  .rtoast { position: fixed; left: 50%; bottom: calc(18px + env(safe-area-inset-bottom)); transform: translateX(-50%); background: var(--text, #111); color: var(--bg, #fff); padding: 9px 14px; border-radius: 6px; font: 500 13px var(--f-mono, monospace); z-index: 90; opacity: 0; transition: opacity .2s; pointer-events: none; }
+  .rtoast.on { opacity: 1; }
+    .topbar .tb { white-space: nowrap; }
+  @media (max-width: 420px) { .topbar .wrap { gap: 6px; } .topbar .tb { padding: 6px 7px; } .topbar .tbx { padding: 4px 7px; } .topbar .crumb { display: none; } }
 
   header.head { padding-block: 34px 6px; }
   .head h1 { font: 700 clamp(1.9rem, 5vw, 2.8rem)/1.05 var(--f-display); margin: 0; text-transform: uppercase; letter-spacing: -.5px; }
@@ -158,6 +163,7 @@
     <span class="crumb">/ tools</span>
     <span class="sp"></span>
     <a class="tb" href="./" data-k="home">Ana sayfa</a>
+    <button class="tb tbx" type="button" id="refBtn" title="Yenile (son sürümü yükle)" aria-label="Yenile (son sürümü yükle)">🔄</button>
     <button class="tb" type="button" id="modeBtn">DARK</button>
     <button class="tb" type="button" id="langBtn">EN</button>
   </div>
@@ -656,5 +662,25 @@
 <script>if ('serviceWorker' in navigator && location.protocol === 'https:') addEventListener('load', () => navigator.serviceWorker.register('/sw.js').catch(() => { }));</script>
 <script data-goatcounter="https://erdevelop.goatcounter.com/count" async src="//gc.zgo.at/count.js"></script>
 <script>/* Hakkında sayfası, o an seçili dille açılsın */document.addEventListener('click',e=>{const a=e.target.closest&&e.target.closest('a[href^="hakkinda.html"]');if(a)try{localStorage.setItem('erdevelop-lang',document.documentElement.lang==='en'?'en':'tr')}catch(x){}});</script>
+<script>
+/* 🔄 yenile: service worker'ı günceller, önbellekteki sayfa kopyalarını siler ve sayfayı ağdan yeniden yükler (dil kulüplerindeki düğmeyle aynı) */
+(() => {
+  const btn = document.getElementById('refBtn'); if (!btn) return;
+  const en = () => (document.getElementById('langBtn') || {}).textContent === 'TR';
+  const toast = m => { let t = document.querySelector('.rtoast'); if (!t) { t = document.createElement('div'); t.className = 'rtoast'; t.setAttribute('role', 'status'); document.body.appendChild(t); } t.textContent = m; t.classList.add('on'); clearTimeout(toast.h); toast.h = setTimeout(() => t.classList.remove('on'), 2600); };
+  const stampOf = () => document.lastModified || '';
+  btn.addEventListener('click', async () => {
+    toast(en() ? 'Refreshing…' : 'Yenileniyor…');
+    try { const r = await navigator.serviceWorker?.getRegistration(); if (r) await r.update(); } catch (e) { }
+    try { const ks = await caches.keys(); await Promise.all(ks.filter(k => /sayfa/.test(k)).map(k => caches.delete(k))); } catch (e) { }
+    try { await fetch(location.pathname, { cache: 'reload' }); } catch (e) { }
+    try { sessionStorage.setItem('tools-yenilendi', '1'); } catch (e) { }
+    location.reload();
+  });
+  try { if (sessionStorage.getItem('tools-yenilendi')) { sessionStorage.removeItem('tools-yenilendi'); setTimeout(() => toast(en() ? 'Refreshed · latest version loaded' : 'Yenilendi · son sürüm yüklendi'), 500); } } catch (e) { }
+  /* dil değişince düğmenin ipucu da değişsin */
+  document.getElementById('langBtn')?.addEventListener('click', () => setTimeout(() => { const t = en() ? 'Refresh (load the latest version)' : 'Yenile (son sürümü yükle)'; btn.title = t; btn.setAttribute('aria-label', t); }, 0));
+})();
+</script>
 </body>
 </html>
