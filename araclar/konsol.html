@@ -358,7 +358,8 @@ const HELP = [
     ['curl [-I -X -H -d -o] url', T('web isteği gönder', 'make a web request')], ['wget url', T('dosyayı indirip sanal diske kaydet', 'download to the virtual disk')], ['speedtest', T('indirme / yükleme hızı', 'download / upload speed')],
     ['traceroute / ssh / nmap', T('tarayıcıda mümkün değil (neden olduğunu anlatır)', 'not possible in a browser (explains why)')]]],
   [T('Programlama', 'Programming'), [
-    ['linux', T('gerçek Linux (x86 öykünücüde Linux 6.8 + BusyBox: vi, top, awk, tar…)', 'real Linux (Linux 6.8 + BusyBox in an x86 emulator: vi, top, awk, tar…)')],
+    ['linux', T('gerçek Linux (x86 öykünücüde Linux 6.8 + BusyBox: vi, top, awk, tar…; ~5 sn)', 'real Linux (Linux 6.8 + BusyBox in an x86 emulator: vi, top, awk, tar…; ~5 s)')],
+    ['ubuntu', T('Ubuntu 24.04 (32 bit): python3, gcc, g++, make, bash, vim', 'Ubuntu 24.04 (32-bit): python3, gcc, g++, make, bash, vim')],
     ['python [dosya.py | -c kod]', T('Python 3 (ilk açılışta yüklenir)', 'Python 3 (loaded on first use)')], ['js [dosya.js | ifade]', T('JavaScript', 'JavaScript')],
     ['calc ifade', T('hesap makinesi: sqrt(2)*pi, 2^10, sin(30°)', 'calculator: sqrt(2)*pi, 2^10, sin(30°)')], ['base64 [-d] / urlencode / urldecode', T('kodlama', 'encoding')],
     ['md5sum / sha1sum / sha256sum / sha512sum', T('özet (hash)', 'hashes')], ['uuid / passgen [uzunluk] / rand [a b]', T('kimlik, parola, rastgele sayı', 'ids, passwords, random')], ['jwt token', T('JWT çöz', 'decode a JWT')], ['conv 15 cm in', T('birim çevir', 'convert units')]]],
@@ -371,6 +372,7 @@ const HELP = [
     ['a | b , a > dosya , a >> dosya , a < dosya , a && b , a ; b', T('pipe ve yönlendirme', 'pipes & redirection')], ['cowsay / fortune / matrix', T('eğlence', 'fun')]]]
 ];
 const MAN = {
+  ubuntu: T('ubuntu\n\nlinux komutunun büyük kardeşi: aynı öykünücüde Ubuntu 24.04\'ün 32 bit sürümü açılır. İçinde Python 3.12, gcc/g++ 13, make, bash, vim, less, file, bc ve procps vardır.\nDosyalar ihtiyaç oldukça indirilir: açılış ~9 MB, Python ve gcc ilk kullanımda ~20 MB daha. Açılış yaklaşık 10 saniye sürer.\n\nKonsol dosyaların ~/konsol (/mnt/konsol) altındadır ve geri eşitlenir. Sistemin geri kalanında yaptığın değişiklikler kapatınca silinir. İnternet yoktur.', 'ubuntu\n\nThe big sibling of linux: the 32-bit build of Ubuntu 24.04 boots in the same emulator, with Python 3.12, gcc/g++ 13, make, bash, vim, less, file, bc and procps.\nFiles are downloaded on demand: ~9 MB to boot, Python and gcc another ~20 MB on first use. Booting takes about 10 s.\n\nYour Konsol files are in ~/konsol (/mnt/konsol) and synced back. Other changes are discarded when you close it. No network.'),
   linux: T('linux\n\nTarayıcında gerçek bir 32 bit x86 bilgisayar öykünülür (v86) ve üzerinde Linux 6.8 çekirdeği ile BusyBox açılır. ls, vi, top, ps, awk, sed, tar, gzip, bc gibi 270\'ten fazla komut vardır. İlk açılışta yaklaşık 5 MB indirilir, sonra birkaç saniyede açılır.\n\nKonsol\'daki dosyaların Linux\'ta /mnt/konsol altında görünür; Linux\'ta yaptığın değişiklikler kapatınca (ve 15 saniyede bir) Konsol\'a geri yazılır.\nİnternet bağlantısı yoktur. Kapatmak için poweroff ya da ✕.', 'linux\n\nA real 32-bit x86 computer is emulated in your browser (v86) and boots Linux 6.8 with BusyBox: 270+ commands such as ls, vi, top, ps, awk, sed, tar, gzip, bc. About 5 MB is downloaded the first time; after that it boots in a few seconds.\n\nYour Konsol files appear under /mnt/konsol; changes made in Linux are written back when you close it (and every 15 seconds).\nThere is no network access. Close with poweroff or ✕.'),
   ping: T('ping [-c sayı] [-i saniye] [-t] host|url\n\nTarayıcı gerçek ICMP paketi gönderemez. Bunun yerine hedefe içeriksiz küçük bir HTTPS isteği (HEAD) atılır ve dönüş süresi ölçülür. Bağlantı ölçümden önce kurulur; yine de sunucunun yanıt hazırlama süresi eklendiği için sonuç gerçek ping\'den birkaç ms fazla olabilir.\n-c 4 (varsayılan) kaç kez, -t Ctrl+C\'ye kadar sürekli, -i aralık (saniye).',
     'ping [-c count] [-i seconds] [-t] host|url\n\nBrowsers cannot send real ICMP packets. Instead a tiny HTTPS request (HEAD) is sent and the round-trip time is measured. The connection is set up before measuring; server think-time can still add a few ms over a real ping.\n-c 4 (default) count, -t until Ctrl+C, -i interval in seconds.'),
@@ -658,9 +660,14 @@ const CMDS = {
     MODE = { kind: 'py', ps: '>>> ' }; c.out(`Python ${PY.runPython('import sys; sys.version.split()[0]')} (Pyodide) · ${T('çıkmak için exit() ya da Ctrl+D', 'exit() or Ctrl+D to leave')}`, 'c-m');
   },
   async linux(c) {
-    if (VM) { byId('vm').hidden = false; VM.term.focus(); return; }
+    if (VM) { if (VM.big) { c.err(T('Ubuntu açık; önce onu kapat (✕).', 'Ubuntu is running; close it first (✕).')); return 1; } byId('vm').hidden = false; VM.term.focus(); return; }
     c.out(T('Linux açılıyor… (ilk seferde ~5 MB indirilir)', 'Booting Linux… (~5 MB downloaded the first time)'), 'c-m');
-    await startVM(c);
+    await startVM(c, false);
+  },
+  async ubuntu(c) {
+    if (VM) { if (!VM.big) { c.err(T('Küçük Linux açık; önce onu kapat (✕).', 'The small Linux is running; close it first (✕).')); return 1; } byId('vm').hidden = false; VM.term.focus(); return; }
+    c.out(T('Ubuntu 24.04 açılıyor… (ilk seferde ~9 MB indirilir; Python ve gcc ilk kullanımda ~20 MB daha)', 'Booting Ubuntu 24.04… (~9 MB the first time; Python and gcc another ~20 MB on first use)'), 'c-m');
+    await startVM(c, true);
   },
   async pip(c) { if (c.args[0] !== 'install' || !c.args[1]) { c.err(T('kullanım: pip install paket', 'usage: pip install package')); return 1; } await loadPy(c); await PY.loadPackage('micropip'); const mp = PY.pyimport('micropip'); for (const p of c.args.slice(1)) { c.out(T('yükleniyor: ', 'installing: ') + p, 'c-m'); try { await mp.install(p); c.out(T('tamam: ', 'done: ') + p, 'c-a'); } catch (e) { c.err(String(e.message || e).split('\n').slice(-2).join(' ')); return 1; } } },
 
@@ -782,27 +789,28 @@ const loadCSS = href => { if (document.querySelector(`link[href="${href}"]`)) re
 function vmTheme() { const cs = getComputedStyle(document.body), v = k => cs.getPropertyValue(k).trim(); return { background: v('--tb'), foreground: v('--tf'), cursor: v('--ta'), selectionBackground: v('--ta') + '55', green: v('--ta'), brightGreen: v('--ta'), blue: v('--tl'), brightBlue: v('--tl'), yellow: v('--tw'), brightYellow: v('--tw'), red: v('--te'), brightRed: v('--te'), magenta: v('--tp'), cyan: v('--tl'), brightBlack: v('--tm') }; }
 function vmTZ() { const o = -new Date().getTimezoneOffset(), h = Math.trunc(Math.abs(o) / 60), m = Math.abs(o) % 60, sgn = o >= 0 ? '+' : '-', name = `<${sgn}${p2(h)}${m ? p2(m) : ''}>`; return name + (o >= 0 ? '-' : '') + h + (m ? ':' + p2(m) : ''); }
 const vmStatus = t => { byId('vmS').textContent = t; };
-async function startVM(c) {
+async function startVM(c, big) {
   loadCSS('lib/xterm/xterm.css');
   await Promise.all([loadJS('lib/xterm/xterm.js'), loadJS('lib/v86/libv86.js')]); await loadJS('lib/xterm/addon-fit.js');
   byId('vm').hidden = false; byId('vmT').innerHTML = '';
   const term = new Terminal({ fontFamily: 'ui-monospace, "IBM Plex Mono", "Cascadia Mono", Menlo, Consolas, monospace', fontSize: ST.fs, theme: vmTheme(), cursorBlink: true, scrollback: 5000, allowProposedApi: false });
   const fit = new FitAddon.FitAddon(); term.loadAddon(fit); term.open(byId('vmT')); fit.fit();
-  term.write('\x1b[2m' + T('erdevelop Linux başlatılıyor…', 'starting erdevelop Linux…') + '\x1b[0m\r\n');
+  byId('vm').querySelector('.vh b').textContent = big ? '🐧 Ubuntu 24.04' : '🐧 erdevelop Linux';
+  term.write('\x1b[2m' + (big ? T('Ubuntu 24.04 (32 bit) başlatılıyor… ilk açılış biraz sürebilir', 'starting Ubuntu 24.04 (32-bit)… the first boot may take a while') : T('erdevelop Linux başlatılıyor…', 'starting erdevelop Linux…')) + '\x1b[0m\r\n');
   const emu = new V86({
     wasm_path: 'lib/v86/v86.wasm', bios: { url: 'lib/v86/seabios.bin' }, vga_bios: { url: 'lib/v86/vgabios.bin' }, bzimage: { url: 'lib/v86/erdevelop-linux.bin' },
-    memory_size: 128 * 1024 * 1024, vga_memory_size: 2 * 1024 * 1024, autostart: true, disable_keyboard: true, disable_mouse: true, disable_speaker: true,
-    filesystem: {}, cmdline: `TZ=${vmTZ()} COLS=${term.cols} ROWS=${term.rows}`,
+    memory_size: (big ? 256 : 128) * 1024 * 1024, vga_memory_size: 2 * 1024 * 1024, autostart: true, disable_keyboard: true, disable_mouse: true, disable_speaker: true,
+    filesystem: big ? { basefs: 'lib/v86/ubuntu/fs.json', baseurl: 'lib/v86/ubuntu/base/' } : {}, cmdline: `${big ? 'BUYUK=1 ' : ''}TZ=${vmTZ()} COLS=${term.cols} ROWS=${term.rows}`,
   });
-  VM = { emu, term, fit, ctrl: false, halted: false, t0: performance.now(), booted: false };
+  VM = { emu, term, fit, big, dir: big ? '/mnt/konsol' : '/', ctrl: false, halted: false, t0: performance.now(), booted: false };
   vmStatus(T('indiriliyor…', 'downloading…'));
   emu.add_listener('download-progress', e => { if (e.total) vmStatus(`${T('indiriliyor', 'downloading')} ${e.file_index + 1}/${e.file_count} · ${Math.round(e.loaded / e.total * 100)}%`); });
-  emu.add_listener('emulator-ready', async () => { vmStatus(T('açılıyor…', 'booting…')); try { await vmPush(); } catch (e) { term.write('\r\n[9p] ' + e.message + '\r\n'); } });
+  emu.add_listener('emulator-ready', async () => { vmStatus(T('açılıyor…', 'booting…')); try { const st = emu.fs9p && emu.fs9p.storage; if (st && st.uncache) st.uncache = () => { }; } catch (e) { } /* indirilen dosyalar oturum boyunca bellekte kalsın, tekrar tekrar indirilmesin */ try { await vmPush(); } catch (e) { term.write('\r\n[9p] ' + e.message + '\r\n'); } });
   /* seri porttan gelen baytları toplu yaz (UTF-8 doğru çözülsün) */
   let q = [], raf = 0, tail = '';
   emu.add_listener('serial0-output-byte', b => {
     q.push(b); if (!raf) raf = requestAnimationFrame(() => { const u = Uint8Array.from(q); q = []; raf = 0; term.write(u); const s = String.fromCharCode(...u.slice(-200)); tail = (tail + s).slice(-300);
-      if (!VM.booted && /# $/.test(tail.replace(/\x1b\[[0-9;?]*[a-zA-Z]/g, ''))) { VM.booted = true; vmStatus(T('hazır', 'ready') + ` · ${((performance.now() - VM.t0) / 1000).toFixed(1)} s · Linux 6.8 · 128 MB`); }
+      if (!VM.booted && /# $/.test(tail.replace(/\x1b\[[0-9;?]*[a-zA-Z]/g, ''))) { VM.booted = true; vmStatus(T('hazır', 'ready') + ` · ${((performance.now() - VM.t0) / 1000).toFixed(1)} s · ${VM.big ? 'Ubuntu 24.04 · 256 MB' : 'Linux 6.8 · 128 MB'}`); }
       if (/System halted|reboot: Power down|Power off not available/.test(tail) && !VM.halted) { VM.halted = true; vmStop(true); } });
   });
   term.onData(d => { if (!VM) return; if (VM.ctrl && d.length === 1) { const ch = d.toUpperCase().charCodeAt(0); if (ch >= 64 && ch <= 95) d = String.fromCharCode(ch - 64); VM.ctrl = false; byId('vmBar').querySelector('[data-v=ctrl]').classList.remove('on'); } const u = new TextEncoder().encode(d); emu.serial0_send(String.fromCharCode(...u)); });
@@ -815,13 +823,13 @@ async function startVM(c) {
 async function vmPush() {
   const F = VM.emu.fs9p, home = node(ENV.HOME); if (!F || !home) return;
   const walk = async (n, p, pid) => { for (const [k, v] of Object.entries(n.c)) { const q = p + '/' + k; if (v.t === 'd') { const id = F.CreateDirectory(k, pid); await walk(v, q, id); } else await VM.emu.create_file(q, v.b ? Uint8Array.from(atob(v.d), ch => ch.charCodeAt(0)) : new TextEncoder().encode(v.d)); } };
-  await walk(home, '', F.SearchPath('/').id);
+  const base = VM.dir === '/' ? '' : VM.dir; await walk(home, base, F.SearchPath(VM.dir).id);
 }
 /* 9p kökü → Konsol ev dizini (tam ayna; okuma başarısızsa hiçbir şeye dokunmaz) */
 async function vmPull() {
   const F = VM && VM.emu.fs9p; if (!F) return;
   const build = async p => { const d = { t: 'd', c: {}, m: Date.now() }; for (const n of F.read_dir(p)) { const q = (p === '/' ? '' : p) + '/' + n, s = F.SearchPath(q); if (s.id < 0) continue; if (F.IsDirectory(s.id)) d.c[n] = await build(q); else { const b = await VM.emu.read_file(q); let t = null; try { t = new TextDecoder('utf-8', { fatal: true }).decode(b); } catch (e) { } d.c[n] = t != null ? { t: 'f', d: t } : { t: 'f', b: 1, d: btoa(Array.from(b, x => String.fromCharCode(x)).join('')) }; } } return d; };
-  const fresh = await build('/');
+  const fresh = await build(VM.dir);
   const old = node(ENV.HOME), keepM = (o, n) => { for (const [k, v] of Object.entries(n.c)) { const ov = o && o.c && o.c[k]; if (v.t === 'd') keepM(ov, v); v.m = ov && ov.t === v.t && (v.t === 'd' || ov.d === v.d) ? ov.m : Date.now(); if (v.t === 'd' && ov && ov.m) v.m = ov.m; } };
   keepM(old, fresh);
   const { dir, name } = parentOf(ENV.HOME); dir.c[name] = fresh; fsSave();
@@ -834,7 +842,7 @@ async function vmStop(fromGuest) {
 }
 byId('vmX').onclick = () => vmStop();
 byId('vmSync').onclick = async () => { if (!VM || !VM.booted) return; const s = byId('vmS').textContent; vmStatus(T('eşitleniyor…', 'syncing…')); try { await vmPull(); toast(T('Dosyalar Konsol\'a eşitlendi', 'Files synced to Konsol')); } catch (e) { toast(e.message); } vmStatus(s); VM.term.focus(); };
-byId('vmR').onclick = async () => { if (!VM) return; await vmStop(); await runLine('linux'); };
+byId('vmR').onclick = async () => { if (!VM) return; const big = VM.big; await vmStop(); await runLine(big ? 'ubuntu' : 'linux'); };
 byId('vmBar').addEventListener('pointerdown', e => e.preventDefault());
 byId('vmBar').addEventListener('click', e => {
   const b = e.target.closest('[data-v]'); if (!b || !VM) return; const k = b.dataset.v;
