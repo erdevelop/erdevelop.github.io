@@ -1,0 +1,782 @@
+<!doctype html>
+<html lang="tr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Revit Family Oluşturma · 7 günlük program | erdevelop</title>
+<meta name="description" content="Revit aile (family) oluşturma: 7 günlük, ekran görüntülü ve şemalı program. Şablonlar, referans düzlemleri, parametreler, formlar, formüller, nested aileler, diziler, test ve yükleme.">
+<link rel="icon" href="/favicon.svg" type="image/svg+xml">
+<link rel="icon" href="/favicon.ico" sizes="any">
+<link rel="apple-touch-icon" href="/apple-touch-icon.png">
+<link rel="manifest" href="/manifest.webmanifest">
+<meta name="theme-color" content="#0b1220">
+<meta property="og:title" content="Revit Family Oluşturma · 7 günlük program | erdevelop">
+<meta property="og:description" content="Revit family oluşturma: 7 günde parametrik aileler.">
+<meta property="og:url" content="https://erdevelop.github.io/egitimler/revit-family/">
+<meta property="og:image" content="https://erdevelop.github.io/og.png">
+<meta name="twitter:card" content="summary_large_image">
+<link rel="canonical" href="https://erdevelop.github.io/egitimler/revit-family/">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Chakra+Petch:wght@600;700&family=IBM+Plex+Sans:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500&display=swap">
+<style>
+  :root {
+    --bg: #eef2f6; --panel: #ffffff; --panel-2: #f5f7f9; --grid: #e3e8ed; --line: #cfd8e1;
+    --fg: #1c2833; --text: #45535f; --muted: #74838f; --accent: #2f6fb5; --accent-dim: rgba(47,111,181,.12); --hot: #c8731f; --ok: #2e8b57;
+    --f-display: 'Chakra Petch', 'Segoe UI', sans-serif; --f-body: 'IBM Plex Sans', 'Segoe UI', system-ui, sans-serif; --f-mono: 'IBM Plex Mono', Consolas, monospace;
+    color-scheme: light;
+  }
+  :root[data-mode="dark"] {
+    --bg: #0b1220; --panel: #111a2c; --panel-2: #0e1626; --grid: #182338; --line: #22304a;
+    --fg: #e2e8f2; --text: #a8b6cc; --muted: #73829b; --accent: #f2b33d; --accent-dim: rgba(242,179,61,.14); --hot: #6aa8ff; --ok: #5fc48d;
+    color-scheme: dark;
+  }
+  * { box-sizing: border-box; }
+  html { background: var(--bg); scroll-padding-top: 110px; }
+  body { margin: 0; color: var(--fg); font-family: var(--f-body); font-size: 16px; line-height: 1.65;
+    background-image: linear-gradient(var(--grid) 1px, transparent 1px), linear-gradient(90deg, var(--grid) 1px, transparent 1px); background-size: 80px 80px; background-attachment: fixed; }
+  a { color: var(--accent); }
+  :focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+  .wrap { max-width: 920px; margin: 0 auto; padding-left: max(16px, env(safe-area-inset-left, 0px)); padding-right: max(16px, env(safe-area-inset-right, 0px)); }
+
+  .topbar { position: sticky; top: 0; z-index: 20; background: color-mix(in srgb, var(--bg) 92%, transparent); backdrop-filter: blur(6px); border-bottom: 1px solid var(--line); }
+  .topbar .wrap { display: flex; align-items: center; gap: 12px; padding-block: 10px; max-width: 1160px; }
+  .brand { font: 700 15px var(--f-display); letter-spacing: 1px; text-transform: uppercase; text-decoration: none; color: var(--fg); }
+  .brand span { color: var(--accent); }
+  .crumb { font: 400 12px var(--f-mono); color: var(--muted); }
+  .sp { flex: 1; }
+  .tb { font: 500 12px var(--f-mono); color: var(--accent); padding: 6px 10px; border: 1px solid var(--line); border-radius: 4px; background: none; cursor: pointer; text-transform: uppercase; text-decoration: none; }
+  .tb:hover { border-color: var(--accent); }
+  .daynav { border-top: 1px solid var(--line); }
+  .daynav .wrap { display: flex; gap: 6px; padding-block: 8px; overflow-x: auto; max-width: 1160px; }
+  .daynav a { font: 500 12px var(--f-mono); text-decoration: none; color: var(--text); border: 1px solid var(--line); border-radius: 4px; padding: 4px 10px; white-space: nowrap; background: var(--panel); }
+  .daynav a.on { border-color: var(--accent); color: var(--accent); }
+  .daynav a.done { background: var(--accent-dim); }
+
+  header.head { padding-block: 34px 6px; }
+  .kicker { font: 500 12px var(--f-mono); color: var(--accent); letter-spacing: 1px; }
+  .head h1 { font: 700 clamp(2rem, 6vw, 3rem)/1.05 var(--f-display); margin: 6px 0 0; letter-spacing: -.5px; }
+  .head p.lead { margin: 12px 0 0; color: var(--text); max-width: 64ch; font-size: 1.05rem; }
+  .chips { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 16px; }
+  .chips span { font: 400 12px var(--f-mono); color: var(--muted); border: 1px solid var(--line); border-radius: 4px; padding: 3px 8px; background: var(--panel); }
+
+  .card { background: var(--panel); border: 1px solid var(--line); border-radius: 8px; padding: 22px clamp(16px, 4vw, 30px); margin-top: 28px; }
+  .day-head { display: flex; align-items: baseline; gap: 12px; flex-wrap: wrap; border-bottom: 1px solid var(--line); padding-bottom: 12px; margin-bottom: 6px; }
+  .day-head h2, .card > h2 { font: 700 1.45rem/1.2 var(--f-display); margin: 0; letter-spacing: .2px; }
+  .dn { font: 600 12px var(--f-mono); color: var(--panel); background: var(--accent); border-radius: 3px; padding: 2px 7px; }
+  :root[data-mode="dark"] .dn { color: #1a1204; }
+  .day-head .meta { font: 400 12px var(--f-mono); color: var(--muted); margin-left: auto; }
+  section.day { background: var(--panel); border: 1px solid var(--line); border-radius: 8px; padding: 22px clamp(16px, 4vw, 30px); margin-top: 28px; }
+
+  .prose h3 { font: 700 1.12rem/1.3 var(--f-display); margin: 30px 0 8px; letter-spacing: .2px; }
+  .prose p, .prose li { color: var(--text); }
+  .prose strong { color: var(--fg); font-weight: 600; }
+  .prose ol, .prose ul { padding-left: 1.4em; }
+  .prose li { margin: 4px 0; }
+  .prose li > ul, .prose li > ol { margin: 4px 0; }
+  .prose code { font: 400 .86em var(--f-mono); background: var(--panel-2); border: 1px solid var(--line); border-radius: 3px; padding: 1px 5px; color: var(--fg); overflow-wrap: anywhere; }
+  .tw { overflow-x: auto; margin: 14px 0; border: 1px solid var(--line); border-radius: 6px; }
+  .tw table { border-collapse: collapse; width: 100%; font-size: .9rem; }
+  .tw th, .tw td { text-align: left; padding: 8px 12px; border-bottom: 1px solid var(--line); vertical-align: top; }
+  .tw th { font: 600 12px var(--f-mono); color: var(--muted); background: var(--panel-2); }
+  .card .tw td:first-child, .card .tw td:last-child { white-space: nowrap; }
+  .tw tr:last-child td { border-bottom: 0; }
+  ul.tasks { list-style: none; padding-left: 0; }
+  li.task label { display: flex; gap: 10px; align-items: flex-start; cursor: pointer; padding: 4px 0; }
+  li.task input { width: 18px; height: 18px; margin-top: 4px; accent-color: var(--accent); flex: none; }
+  li.task input:checked + span { color: var(--muted); text-decoration: line-through; }
+  .pn { display: flex; justify-content: space-between; gap: 12px; margin-top: 26px; padding-top: 14px; border-top: 1px solid var(--line); font: 500 13px var(--f-mono); }
+  .pn a { text-decoration: none; }
+  .note { font-size: .9rem; color: var(--muted); }
+  .reset { font: 500 11px var(--f-mono); color: var(--muted); background: none; border: 1px solid var(--line); border-radius: 4px; padding: 3px 8px; cursor: pointer; text-transform: uppercase; }
+  .reset:hover { color: var(--hot); border-color: var(--hot); }
+
+  .fig { margin: 18px 0; padding: 16px 14px 12px; border: 1px solid var(--line); border-radius: 6px; background: var(--panel-2); }
+  .fig .sc { overflow-x: auto; }
+  .fig svg { display: block; width: 100%; min-width: 540px; height: auto; max-width: 720px; margin: 0 auto; overflow: visible; }
+  .fig figcaption { font-size: .85rem; color: var(--muted); margin-top: 10px; text-align: center; max-width: 62ch; margin-inline: auto; }
+  .fig .k { fill: none; stroke: var(--fg); stroke-width: 1.6; } .fig .k1 { fill: none; stroke: var(--fg); stroke-width: 1; }
+  .fig .mu { fill: none; stroke: var(--muted); stroke-width: 1.2; } .fig .mud { fill: none; stroke: var(--muted); stroke-width: 1; stroke-dasharray: 5 4; }
+  .fig .dm { fill: none; stroke: var(--muted); stroke-width: .9; }
+  .fig .rp { fill: none; stroke: var(--hot); stroke-width: 1; stroke-dasharray: 9 4 2 4; }
+  .fig .gd { fill: none; stroke: var(--fg); stroke-width: 1; stroke-dasharray: 16 4 3 4; }
+  .fig .ac { fill: none; stroke: var(--accent); stroke-width: 2; } .fig .acl { fill: none; stroke: var(--accent); stroke-width: 1; }
+  .fig .gl { fill: var(--accent-dim); stroke: var(--fg); stroke-width: .8; }
+  .fig .sp { fill: color-mix(in srgb, var(--fg) 40%, transparent); stroke: var(--fg); stroke-width: .8; }
+  .fig .fr { fill: color-mix(in srgb, var(--fg) 22%, transparent); stroke: none; } .fig .edge { fill: none; stroke: var(--fg); stroke-width: 1.8; }
+  .fig .so { fill: var(--panel); stroke: var(--fg); stroke-width: 1.6; } .fig .hole { fill: var(--panel-2); stroke: var(--fg); stroke-width: 1.2; }
+  .fig .rib { fill: var(--accent-dim); stroke: var(--accent); stroke-width: 1.4; stroke-dasharray: 6 4; }
+  .fig .sel { fill: none; stroke: var(--accent); stroke-width: 3; }
+  .fig .mul { stroke: var(--fg); stroke-width: 4; } .fig .tr { stroke: var(--fg); stroke-width: 3; } .fig .trA { stroke: var(--accent); stroke-width: 3; }
+  .fig .lh { fill: var(--panel); stroke: var(--fg); stroke-width: 1.4; }
+  .fig .dot { fill: var(--accent); } .fig .dotr { fill: var(--accent); stroke: var(--panel); stroke-width: 1; }
+  .fig .pt { fill: var(--accent); stroke: var(--panel); stroke-width: 2; } .fig .tpt { fill: var(--panel); font: 700 12px var(--f-mono); }
+  .fig .bx { fill: var(--panel); stroke: var(--line); stroke-width: 1.3; } .fig .bxa { fill: var(--accent-dim); stroke: var(--accent); stroke-width: 1.3; }
+  .fig .ar { fill: var(--muted); }
+  .fig .acd { fill: none; stroke: var(--accent); stroke-width: 1.6; stroke-dasharray: 6 4; }
+  .fig text { text-transform: none; letter-spacing: 0; } .fig .bg { fill: var(--panel); stroke: none; }
+  .fig .t { fill: var(--text); font: 400 13px var(--f-body); } .fig .tb { fill: var(--fg); font: 600 13px var(--f-body); }
+  .fig .tm { fill: var(--muted); font: 400 11px var(--f-mono); } .fig .ta { fill: var(--accent); font: 600 11px var(--f-mono); }
+  .fig .th { fill: var(--hot); font: 500 11px var(--f-mono); }
+  .fig .swb { fill: none; stroke: #2f7de1; stroke-width: 2; } .fig .swr { fill: none; stroke: #d64545; stroke-width: 2; } .fig .tr2 { fill: #d64545; font: 600 11px var(--f-mono); } .fig .tbl { fill: #2f7de1; font: 600 11px var(--f-mono); }
+  .prose pre { background: var(--panel-2); border: 1px solid var(--line); border-radius: 6px; padding: 12px 14px; overflow-x: auto; }
+  .prose pre code { background: none; border: 0; padding: 0; font: 400 .85rem/1.5 var(--f-mono); color: var(--fg); }
+  footer { margin-top: 56px; border-top: 1px solid var(--line); padding-block: 20px calc(20px + env(safe-area-inset-bottom, 0px)); font: 400 12px var(--f-mono); color: var(--muted); }
+  footer .wrap { display: flex; justify-content: space-between; gap: 12px; flex-wrap: wrap; }
+  footer a { color: inherit; } footer a:hover { color: var(--accent); }
+  @media print { .topbar, .daynav, .pn, footer, .reset { display: none !important; } body { background: #fff; } section.day, .card { break-inside: auto; border: 0; } }
+</style>
+<script async src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-4775308844679394" crossorigin="anonymous"></script>
+</head>
+<body>
+<div class="topbar">
+  <div class="wrap">
+    <a class="brand" href="/">erdevelop<span>_</span></a>
+    <span class="crumb">/ eğitimler / revit-family</span>
+    <span class="sp"></span>
+    <a class="tb" href="../../Tools.html">Araçlar</a>
+    <button class="tb" type="button" id="modeBtn">DARK</button>
+  </div>
+  <nav class="daynav" aria-label="Günler"><div class="wrap"><a href="#genel" data-nav="0">Genel</a><a href="#gun1" data-nav="1">1</a><a href="#gun2" data-nav="2">2</a><a href="#gun3" data-nav="3">3</a><a href="#gun4" data-nav="4">4</a><a href="#gun5" data-nav="5">5</a><a href="#gun6" data-nav="6">6</a><a href="#gun7" data-nav="7">7</a></div></nav>
+</div>
+
+<main class="wrap">
+  <header class="head" id="genel">
+    <div class="kicker">Eğitimler · Revit Family Oluşturma</div>
+    <h1>Revit Family Oluşturma</h1>
+    <p class="lead">Parametrik Revit aileleri yapmayı cephe örnekleriyle 7 günde öğren: iskelet, parametreler, formlar, formüller, iç içe aileler, diziler, panel aileleri ve testten kütüphaneye.</p>
+    <div class="chips"><span>7 gün</span><span>günde ~4 saat</span><span>Türkçe</span><span>Kod örnekleri kopyalanabilir</span></div>
+  </header>
+
+  <div class="card">
+    <h2>Başlamadan önce</h2>
+    <div class="prose">
+      <h3>Kimler için</h3>
+      <p>Revit temellerini bilen ve kendi braket, panel, profil ailelerini yapmak isteyen cephe tasarımcıları ve BIM modelleyiciler.</p>
+      <h3>Gerekenler</h3>
+      <ul>
+        <li>Revit (ekranlar 2027 İngilizce arayüzünden)</li>
+        <li>Revit temel bilgisi (<a href="../revit-adim-adim/">Revit Adım Adım</a>)</li>
+        <li>Bir test projesi (boş)</li>
+      </ul>
+      <h3>Program</h3>
+      <div class="tw"><table><thead><tr><th>Gün</th><th>Konu</th><th>Ne öğrenirsin</th><th>Süre</th></tr></thead><tbody>
+<tr><td><a href="#gun1">1. gün</a></td><td>Aile türleri ve editör</td><td>Sistem, yüklenebilir ve yerinde aileler, şablon seçimi, Family Editor, kategori</td><td>~3,5 saat</td></tr>
+<tr><td><a href="#gun2">2. gün</a></td><td>İskelet</td><td>Referans düzlemleri, ölçü, EQ, etiket, Is Reference, kilitleme, flex testi</td><td>~3,5 saat</td></tr>
+<tr><td><a href="#gun3">3. gün</a></td><td>Parametreler</td><td>Family Types, type ve instance, veri türleri, shared parametreler</td><td>~3,5 saat</td></tr>
+<tr><td><a href="#gun4">4. gün</a></td><td>Formlar</td><td>Extrusion, Blend, Revolve, Sweep, Swept Blend, void, malzeme, görünürlük</td><td>~3,5 saat</td></tr>
+<tr><td><a href="#gun5">5. gün</a></td><td>Formüller</td><td>Kurallar, if/and/or, yuvarlama, Yes/No, lookup tabloları</td><td>~3,5 saat</td></tr>
+<tr><td><a href="#gun6">6. gün</a></td><td>Nested ve diziler</td><td>İç içe aileler, parametre eşleme, parametrik dizi, curtain wall panel</td><td>~3,5 saat</td></tr>
+<tr><td><a href="#gun7">7. gün</a></td><td>Test ve kütüphane</td><td>Test akışı, projeye yükleme, kalite kontrol, IFC, bitiş alıştırması</td><td>~3,5 saat</td></tr>
+      </tbody></table></div>
+      <p class="note">Her günün sonunda bir kontrol listesi var. İşaretledikçe ilerlemen bu tarayıcıda saklanır. Hafta içi sadece akşamları çalışırsan program yaklaşık iki hafta sürer. Ekran görüntüleri Revit 2027 İngilizce arayüzündendir; diğer sürümlerde yerler biraz farklı olabilir. Autodesk screen shots reprinted courtesy of Autodesk, Inc. Autodesk® ve Revit® Autodesk, Inc.'in ticari markalarıdır; bu sayfa Autodesk ile bağlantılı değildir. <button class="reset" type="button" id="resetBtn">ilerlemeyi sıfırla</button></p>
+    </div>
+  </div>
+
+<section class="day" id="gun1" data-day="1">
+  <div class="day-head"><span class="dn">GÜN 01</span><h2>Aile türleri ve editör</h2><span class="meta">~3,5 saat · <span data-prog="1">0/5</span> kontrol</span></div>
+  <div class="prose"><h3>Hedef</h3>
+<p>Gün sonunda Revit'teki aile türlerini, doğru şablonu seçmeyi, Family Editor'ün bölümlerini ve aile kategorisini bileceksin. Süre yaklaşık 3 saat.</p>
+<p><strong>Bu kurs hakkında:</strong> Ekran görüntüleri Revit® 2027 İngilizce arayüzünden alındı; eski sürümlerde yerler biraz farklı olabilir. Revit'e yeni başlıyorsan önce <a href="../revit-adim-adim/">Revit Adım Adım</a> eğitimine bak. Ailelerin cephe projelerinde nasıl kullanıldığını <a href="../revit-30-gun/">Revit 30 Gün</a> anlatır; bu kurs aile yapımına odaklanır.</p>
+<h3>1. Aile türleri (30 dk)</h3>
+<figure class="fig"><div class="sc"><svg viewBox="0 0 660 125" role="img" xmlns="http://www.w3.org/2000/svg"><defs><marker id="ah-turler" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0 0L10 5L0 10z" class="ar"/></marker></defs><rect x="10" y="20" width="200" height="60" rx="5" class="bx"/><text x="110.0" y="46.0" class="tb" text-anchor="middle">Sistem aileleri</text><text x="110.0" y="62.0" class="tm" text-anchor="middle">duvar, döşeme, curtain wall</text><rect x="225" y="20" width="200" height="60" rx="5" class="bxa"/><text x="325.0" y="46.0" class="tb" text-anchor="middle">Yüklenebilir</text><text x="325.0" y="62.0" class="tm" text-anchor="middle">.rfa dosyası</text><rect x="440" y="20" width="200" height="60" rx="5" class="bx"/><text x="540.0" y="46.0" class="tb" text-anchor="middle">Yerinde (In-Place)</text><text x="540.0" y="62.0" class="tm" text-anchor="middle">tek seferlik</text><text x="322" y="110" class="tm" text-anchor="middle">bu kurs: yüklenebilir aileler (.rfa), şablondan (.rft) başlar</text></svg></div><figcaption>Revit&#x27;te üç aile türü.</figcaption></figure>
+<div class="tw"><table>
+<thead>
+<tr>
+<th>Tür</th>
+<th>Nerede</th>
+<th>Örnek</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><strong>Sistem ailesi</strong></td>
+<td>Projenin içinde; dosyası yok, tipi kopyalanarak çoğaltılır</td>
+<td>Duvar, döşeme, curtain wall, çatı</td>
+</tr>
+<tr>
+<td><strong>Yüklenebilir aile</strong></td>
+<td>Ayrı <code>.rfa</code> dosyası; projeye yüklenir</td>
+<td>Kapı, pencere, panel, braket, profil</td>
+</tr>
+<tr>
+<td><strong>Yerinde aile</strong> (In-Place)</td>
+<td>Projenin içinde, tek seferlik</td>
+<td>Özel bir saçak, tek bir heykel</td>
+</tr>
+</tbody>
+</table></div>
+<p>Cephede yüklenebilir aileler çoğunluktadır: curtain wall panelleri, dikme profilleri, ankraj braketleri, menfezler. Yerinde aileyi yalnızca bir kez kullanılacak, tekrar etmeyecek şeyler için kullan; yerinde aileler tablo ve kopyalama açısından zayıftır.</p>
+<h3>2. Yeni aile ve şablon (45 dk)</h3>
+<figure class="fig"><div class="sc"><a href="ekran/f_yeni.png" target="_blank"><img src="ekran/f_yeni.png" alt="File > New > Family (1: File, 2: New, 3: Family)." width="413" height="480" loading="lazy" style="display:block;width:100%;max-width:413px;height:auto;margin:0 auto;border-radius:6px"></a></div><figcaption>File &gt; New &gt; Family (1: File, 2: New, 3: Family).</figcaption></figure>
+<ol>
+<li><strong>File &gt; New &gt; Family.</strong></li>
+<li>Şablon (<code>.rft</code>) seç. Şablon ailenin <strong>kategorisini</strong>, <strong>barındırıcısını</strong> (host) ve başlangıç düzlemlerini belirler.</li>
+</ol>
+<figure class="fig"><div class="sc"><a href="ekran/f_sablon.png" target="_blank"><img src="ekran/f_sablon.png" alt="Şablon seçimi (1: dil klasörü, 2: Curtain Panel Pattern Based, 3: Curtain Wall Panel, 4: dosya adı)." width="1084" height="622" loading="lazy" style="display:block;width:100%;max-width:1084px;height:auto;margin:0 auto;border-radius:6px"></a></div><figcaption>Şablon seçimi (1: dil klasörü, 2: Curtain Panel Pattern Based, 3: Curtain Wall Panel, 4: dosya adı).</figcaption></figure>
+<div class="tw"><table>
+<thead>
+<tr>
+<th>Şablon</th>
+<th>Ne için</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Metric Generic Model</td>
+<td>Genel amaçlı, barındırıcısız aile</td>
+</tr>
+<tr>
+<td>Metric Generic Model face based</td>
+<td>Bir yüzeye yerleşen (braket, ankraj plakası)</td>
+</tr>
+<tr>
+<td>Metric Curtain Wall Panel</td>
+<td>Curtain wall paneli (6. gün)</td>
+</tr>
+<tr>
+<td>Metric Profile-Mullion</td>
+<td>Dikme / kayıt profili</td>
+</tr>
+<tr>
+<td>Metric Curtain Panel Pattern Based</td>
+<td>Desenli panel (kütle yüzeyi üzerinde)</td>
+</tr>
+<tr>
+<td>Metric Detail Item</td>
+<td>2D detay bileşeni</td>
+</tr>
+</tbody>
+</table></div>
+<p>Kural: Şablonu ailenin <strong>ne olduğuna</strong> göre seç; kategori sonradan değiştirilebilir ama barındırıcı (yüzey, duvar, host yok) değiştirilemez.</p>
+<h3>3. Family Editor (1 saat)</h3>
+<figure class="fig"><div class="sc"><a href="ekran/f_editor.png" target="_blank"><img src="ekran/f_editor.png" alt="Family Editor (1: Create sekmesi, 2: Forms, 3: Datum, 4: Family Editor / yükleme, 5: aile kategorisi, 6: aile seçenekleri, 7: görünüşler)." width="1480" height="576" loading="lazy" style="display:block;width:100%;max-width:1480px;height:auto;margin:0 auto;border-radius:6px"></a></div><figcaption>Family Editor (1: Create sekmesi, 2: Forms, 3: Datum, 4: Family Editor / yükleme, 5: aile kategorisi, 6: aile seçenekleri, 7: görünüşler).</figcaption></figure>
+<ol>
+<li><strong>Create</strong> sekmesi: Ailenin geometrisi burada oluşturulur.</li>
+<li><strong>Forms:</strong> Extrusion, Blend, Revolve, Sweep, Swept Blend ve Void (4. gün).</li>
+<li><strong>Datum:</strong> Reference Line ve Reference Plane (2. gün).</li>
+<li><strong>Family Editor</strong> paneli: Load into Project (7. gün).</li>
+<li><strong>Properties:</strong> Ailenin kategorisi (burada Generic Models).</li>
+<li><strong>Aile seçenekleri:</strong> Work Plane-Based, Always vertical, Shared, Cut with Voids When Loaded.</li>
+<li><strong>Project Browser:</strong> Ailenin kendi görünüşleri: Ref. Level planı, 3D, Front/Back/Left/Right.</li>
+</ol>
+<figure class="fig"><div class="sc"><a href="ekran/f_dayanak.png" target="_blank"><img src="ekran/f_dayanak.png" alt="Şablonla gelen iki referans düzlemi; kesiştikleri nokta ailenin yerleştirme noktasıdır." width="573" height="573" loading="lazy" style="display:block;width:100%;max-width:573px;height:auto;margin:0 auto;border-radius:6px"></a></div><figcaption>Şablonla gelen iki referans düzlemi; kesiştikleri nokta ailenin yerleştirme noktasıdır.</figcaption></figure>
+<p>Şablon, birbirine dik iki referans düzlemiyle gelir: Center (Left/Right) ve Center (Front/Back). Kesiştikleri nokta, aile projeye yerleştirildiğinde <strong>imlecin tuttuğu noktadır</strong>. Bu iki düzlemi silme ve taşıma.</p>
+<h3>4. Aile kategorisi ve parametreleri (30 dk)</h3>
+<p><strong>Create &gt; Properties &gt; Family Category and Parameters:</strong></p>
+<ol>
+<li><strong>Kategori:</strong> Generic Models, Curtain Panels, Specialty Equipment... Kategori; tablolarda, görünürlükte (VV), filtrelerde ve IFC'de ailenin nasıl ele alınacağını belirler.</li>
+<li><strong>Work Plane-Based:</strong> Aile bir çalışma düzlemine yerleşir (eğimli yüzeyler için).</li>
+<li><strong>Always vertical:</strong> Eğimli düzlemde bile dik durur.</li>
+<li><strong>Shared:</strong> İç içe kullanıldığında projede ayrı eleman olarak sayılsın mı (6. gün).</li>
+</ol>
+<p>Cephe braketi için tipik seçim: Generic Models (ya da firmanın standardındaki kategori), Work Plane-Based açık.</p>
+<h3>Gün sonu kontrolü (15 dk)</h3>
+<ul class="tasks">
+<li class="task"><label><input type="checkbox" data-id="g1-1"><span>Sistem, yüklenebilir ve yerinde aile farkını biliyorum.</span></label></li>
+<li class="task"><label><input type="checkbox" data-id="g1-2"><span>Bir aile için doğru şablonu seçebiliyorum.</span></label></li>
+<li class="task"><label><input type="checkbox" data-id="g1-3"><span>Family Editor'ün bölümlerini tanıyorum.</span></label></li>
+<li class="task"><label><input type="checkbox" data-id="g1-4"><span>Yerleştirme noktasının nereden geldiğini biliyorum.</span></label></li>
+<li class="task"><label><input type="checkbox" data-id="g1-5"><span>Aile kategorisini ve temel seçenekleri ayarladım.</span></label></li>
+</ul></div>
+  <div class="pn"><a href="#genel">← Genel bakış</a><a href="#gun2">2. gün →</a></div>
+</section>
+<section class="day" id="gun2" data-day="2">
+  <div class="day-head"><span class="dn">GÜN 02</span><h2>İskelet</h2><span class="meta">~3,5 saat · <span data-prog="2">0/5</span> kontrol</span></div>
+  <div class="prose"><h3>Hedef</h3>
+<p>Gün sonunda bir ailenin "iskeletini" kurabileceksin: referans düzlemleri, ölçüler, EQ, etiketli ölçüler, kilitleme ve flex testi. Parametrik ailenin en önemli günü budur. Süre yaklaşık 3,5 saat.</p>
+<h3>1. Önce iskelet, sonra geometri (30 dk)</h3>
+<figure class="fig"><div class="sc"><a href="ekran/f_datum.png" target="_blank"><img src="ekran/f_datum.png" alt="1: Reference Line, 2: Reference Plane, 3: Load into Project, 4: Load into Project and Close." width="656" height="168" loading="lazy" style="display:block;width:100%;max-width:656px;height:auto;margin:0 auto;border-radius:6px"></a></div><figcaption>1: Reference Line, 2: Reference Plane, 3: Load into Project, 4: Load into Project and Close.</figcaption></figure>
+<p>Kural: Ölçüleri <strong>geometriye değil</strong>, <strong>referans düzlemlerine</strong> ver; geometriyi de bu düzlemlere kilitle. Geometri silinip yeniden çizilse bile iskelet ve parametreler kalır.</p>
+<ol>
+<li><strong>Create &gt; Datum &gt; Reference Plane</strong> ile düzlem çiz.</li>
+<li>Her düzleme Properties'te bir <strong>ad</strong> ver (Sol, Sag, Ust, Alt, On, Arka). Adlı düzlemler, çalışma düzlemi seçerken ve hata ararken işi kolaylaştırır.</li>
+<li><strong>Reference Line</strong>, açısal parametreler ve uç noktalarından dönen kollar için kullanılır.</li>
+</ol>
+<h3>2. Ölçü, EQ ve etiket (1 saat)</h3>
+<figure class="fig"><div class="sc"><svg viewBox="0 0 680 280" role="img" xmlns="http://www.w3.org/2000/svg"><defs><marker id="ah-iskelet" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0 0L10 5L0 10z" class="ar"/></marker></defs><rect x="120" y="40" width="360" height="180" class="gl"/><line x1="120" y1="26" x2="120" y2="240" class="dotr"/><line x1="300" y1="26" x2="300" y2="240" class="dotr"/><line x1="480" y1="26" x2="480" y2="240" class="dotr"/><line x1="90" y1="40" x2="520" y2="40" class="dotr"/><line x1="90" y1="220" x2="520" y2="220" class="dotr"/><line x1="120" y1="262" x2="480" y2="262" class="dm"/><line x1="120" y1="257" x2="120" y2="267" class="dm"/><line x1="480" y1="257" x2="480" y2="267" class="dm"/><text x="300.0" y="256" class="tm" text-anchor="middle">Genislik = 1200</text><line x1="120" y1="20" x2="300" y2="20" class="dm"/><line x1="120" y1="15" x2="120" y2="25" class="dm"/><line x1="300" y1="15" x2="300" y2="25" class="dm"/><text x="210.0" y="14" class="tm" text-anchor="middle">EQ</text><line x1="300" y1="20" x2="480" y2="20" class="dm"/><line x1="300" y1="15" x2="300" y2="25" class="dm"/><line x1="480" y1="15" x2="480" y2="25" class="dm"/><text x="390.0" y="14" class="tm" text-anchor="middle">EQ</text><line x1="540" y1="40" x2="540" y2="220" class="dm"/><line x1="535" y1="40" x2="545" y2="40" class="dm"/><line x1="535" y1="220" x2="545" y2="220" class="dm"/><text x="550" y="134.0" class="tm" text-anchor="start">Yukseklik = 600</text><text x="306" y="236" class="tm" text-anchor="start">Center (Left/Right)</text></svg></div><figcaption>İskelet: referans düzlemleri, EQ ve etiketli ölçüler (şematik).</figcaption></figure>
+<ol>
+<li><strong>Annotate &gt; Aligned Dimension</strong> ile iki düzlem arasına ölçü ver.</li>
+<li><strong>EQ:</strong> Üç düzlemi (Sol, Center, Sag) tek ölçü zinciriyle ölç ve EQ simgesine tıkla; ortadaki düzlem hep ortada kalır. Böylece aile <strong>merkezden</strong> simetrik esner.</li>
+<li><strong>Etiket:</strong> Toplam ölçüyü seç → ribbonda <strong>Label Dimension</strong> → <strong>Create Parameter</strong> → ad: <code>Genislik</code>, Type ya da Instance (3. gün).</li>
+<li>Aynısını yükseklik için yap: <code>Yukseklik</code>.</li>
+</ol>
+<p>Not: Yerleştirme noktasının (Center düzlemleri) dışındaki düzlemler esner. Ailenin sol kenarı sabit kalsın istiyorsan sol düzlemi Center (Left/Right) yapabilirsin; bunun için düzlemin <strong>Defines Origin</strong> özelliğini aç.</p>
+<h3>3. Is Reference (30 dk)</h3>
+<figure class="fig"><div class="sc"><svg viewBox="0 0 620 140" role="img" xmlns="http://www.w3.org/2000/svg"><defs><marker id="ah-isref" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0 0L10 5L0 10z" class="ar"/></marker></defs><rect x="10" y="15" width="170" height="24" class="bxa"/><text x="16" y="31" class="tb" text-anchor="start">Is Reference</text><rect x="180" y="15" width="430" height="24" class="bxa"/><text x="186" y="31" class="tb" text-anchor="start">Ne işe yarar</text><rect x="10" y="39" width="170" height="24" class="sel"/><text x="16" y="55" class="tm" text-anchor="start">Left / Right / Center</text><rect x="180" y="39" width="430" height="24" class="sel"/><text x="186" y="55" class="tm" text-anchor="start">Projede ölçü ve hizalama; Center yerleştirme ekseni</text><rect x="10" y="63" width="170" height="24" class="bx"/><text x="16" y="79" class="tm" text-anchor="start">Strong Reference</text><rect x="180" y="63" width="430" height="24" class="bx"/><text x="186" y="79" class="tm" text-anchor="start">Ölçü ve hizalama için öncelikli</text><rect x="10" y="87" width="170" height="24" class="bx"/><text x="16" y="103" class="tm" text-anchor="start">Weak Reference</text><rect x="180" y="87" width="430" height="24" class="bx"/><text x="186" y="103" class="tm" text-anchor="start">Tab ile seçilir</text><rect x="10" y="111" width="170" height="24" class="bx"/><text x="16" y="127" class="tm" text-anchor="start">Not a Reference</text><rect x="180" y="111" width="430" height="24" class="bx"/><text x="186" y="127" class="tm" text-anchor="start">Projede görünmez; yalnızca aile içinde</text></svg></div><figcaption>Referans düzlemi önemi (Is Reference).</figcaption></figure>
+<p>Bir referans düzleminin <strong>Is Reference</strong> özelliği, aile projeye yerleştirildiğinde o düzlemin ölçülendirilebilir ve hizalanabilir olup olmayacağını belirler. Kenar düzlemlerini (Left, Right, Top, Bottom) ve önemli eksenleri işaretle; yardımcı düzlemleri <strong>Not a Reference</strong> yap, projede kullanıcıyı şaşırtmasın.</p>
+<h3>4. Kilitleme (45 dk)</h3>
+<figure class="fig"><div class="sc"><svg viewBox="0 0 650 215" role="img" xmlns="http://www.w3.org/2000/svg"><defs><marker id="ah-kilit" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0 0L10 5L0 10z" class="ar"/></marker></defs><line x1="80" y1="20" x2="80" y2="200" class="dotr"/><line x1="260" y1="20" x2="260" y2="200" class="dotr"/><rect x="80" y="60" width="180" height="100" class="bxa"/><text x="170" y="115" class="tb" text-anchor="middle">Extrusion</text><text x="60" y="20" class="tm" text-anchor="end">RP Sol</text><text x="280" y="20" class="tm" text-anchor="start">RP Sag</text><rect x="73" y="170" width="14" height="12" class="swr"/><path d="M 76 170 v -5 a 4 4 0 0 1 8 0 v 5" class="k1"/><rect x="253" y="170" width="14" height="12" class="swr"/><path d="M 256 170 v -5 a 4 4 0 0 1 8 0 v 5" class="k1"/><line x1="300" y1="110" x2="420" y2="110" class="mu" marker-end="url(#ah-kilit)"/><rect x="422" y="80" width="210" height="60" rx="5" class="sel"/><text x="527.0" y="106.0" class="tb" text-anchor="middle">Align + kilit</text><text x="527.0" y="122.0" class="tm" text-anchor="middle">kenar düzleme bağlandı</text></svg></div><figcaption>Geometri kenarları referans düzlemlerine kilitlenir; ölçüler geometriye değil düzlemlere verilir.</figcaption></figure>
+<ol>
+<li>Geometriyi çiz (4. gün ayrıntılı). Çizim sırasında kenarları düzlemlere yakın çiz.</li>
+<li><strong>Modify &gt; Align (AL):</strong> Önce düzlemi, sonra geometrinin kenarını seç → çıkan <strong>kilidi kapat</strong>.</li>
+<li>Ya da çizim (sketch) modunda çizgiyi düzleme hizalayıp kilitle.</li>
+<li>Geometriye doğrudan ölçü verme; ölçü düzlemler arasında olsun.</li>
+</ol>
+<h3>5. Flex testi (30 dk)</h3>
+<figure class="fig"><div class="sc"><svg viewBox="0 0 660 220" role="img" xmlns="http://www.w3.org/2000/svg"><defs><marker id="ah-flex" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0 0L10 5L0 10z" class="ar"/></marker></defs><rect x="20" y="100" width="120" height="90" class="gl"/><text x="20" y="210" class="tm" text-anchor="start">1200 × 900</text><rect x="240" y="100" width="200" height="90" class="gl"/><text x="240" y="210" class="tm" text-anchor="start">2000 × 900</text><rect x="460" y="30" width="120" height="160" class="gl"/><text x="460" y="210" class="tm" text-anchor="start">1200 × 1600</text><text x="330" y="20" class="tm" text-anchor="middle">değerleri değiştir → geometri düzlemlerle birlikte esnemeli</text></svg></div><figcaption>Flex testi: her yeni ölçüden sonra değerleri değiştirip kontrol et.</figcaption></figure>
+<ol>
+<li><strong>Family Types</strong> penceresini aç (3. gün) ve <code>Genislik</code> değerini 1200, 2000, 300 gibi değerlerle dene; <strong>Apply</strong>.</li>
+<li>Geometri düzlemlerle birlikte esniyor mu? Esnemiyorsa bir kenar kilitlenmemiştir.</li>
+<li>Hata: "Constraints are not satisfied" çıkıyorsa iki kilit birbiriyle çelişiyordur; son eklenen kilidi kaldır.</li>
+<li>Her yeni ölçü ve kilitten sonra flex et. Hatayı en son değişiklikte aramak, 20 değişiklik sonra aramaktan çok kolaydır.</li>
+</ol>
+<h3>Gün sonu kontrolü (15 dk)</h3>
+<ul class="tasks">
+<li class="task"><label><input type="checkbox" data-id="g2-1"><span>Ölçülerin geometriye değil düzlemlere verilmesi gerektiğini biliyorum.</span></label></li>
+<li class="task"><label><input type="checkbox" data-id="g2-2"><span>Adlı referans düzlemleri çizdim.</span></label></li>
+<li class="task"><label><input type="checkbox" data-id="g2-3"><span>EQ ve etiketli ölçüyle simetrik esneyen bir iskelet kurdum.</span></label></li>
+<li class="task"><label><input type="checkbox" data-id="g2-4"><span>Is Reference ayarlarını yaptım.</span></label></li>
+<li class="task"><label><input type="checkbox" data-id="g2-5"><span>Geometriyi düzlemlere kilitledim ve flex testinden geçirdim.</span></label></li>
+</ul></div>
+  <div class="pn"><a href="#gun1">← 1. gün</a><a href="#gun3">3. gün →</a></div>
+</section>
+<section class="day" id="gun3" data-day="3">
+  <div class="day-head"><span class="dn">GÜN 03</span><h2>Parametreler</h2><span class="meta">~3,5 saat · <span data-prog="3">0/5</span> kontrol</span></div>
+  <div class="prose"><h3>Hedef</h3>
+<p>Gün sonunda Family Types penceresini kullanabilecek, type ve instance parametre farkını, parametre türlerini (family, shared), veri türlerini ve gruplamayı bileceksin. Süre yaklaşık 3 saat.</p>
+<h3>1. Family Types penceresi (45 dk)</h3>
+<figure class="fig"><div class="sc"><a href="ekran/f_tipler.png" target="_blank"><img src="ekran/f_tipler.png" alt="Family Types (1: yeni tip, 2: yeni parametre, 3: formül sütunu, 4: kilit, 5: lookup tabloları, 6: IFC parametreleri)." width="745" height="738" loading="lazy" style="display:block;width:100%;max-width:745px;height:auto;margin:0 auto;border-radius:6px"></a></div><figcaption>Family Types (1: yeni tip, 2: yeni parametre, 3: formül sütunu, 4: kilit, 5: lookup tabloları, 6: IFC parametreleri).</figcaption></figure>
+<p><strong>Create &gt; Properties &gt; Family Types</strong> (ya da Modify sekmesinde):</p>
+<ol>
+<li><strong>Yeni tip:</strong> B100, B150 gibi tipler ekle; her tipin kendi değerleri olur.</li>
+<li><strong>Yeni parametre.</strong></li>
+<li><strong>Formula</strong> sütunu: Değer başka parametrelerden hesaplanır (5. gün).</li>
+<li><strong>Lock:</strong> Parametreyi kilitler; projede değiştirilemez.</li>
+<li><strong>Manage Lookup Tables:</strong> Tablodan değer okuma (5. gün).</li>
+<li>Şablondan gelen IFC parametreleri: Ailenin IFC'de hangi sınıfa aktarılacağı (7. gün).</li>
+</ol>
+<h3>2. Type mı, Instance mı? (45 dk)</h3>
+<figure class="fig"><div class="sc"><svg viewBox="0 0 640 160" role="img" xmlns="http://www.w3.org/2000/svg"><defs><marker id="ah-tipins" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0 0L10 5L0 10z" class="ar"/></marker></defs><rect x="20" y="20" width="280" height="120" rx="5" class="bxa"/><text x="160.0" y="68.0" class="tb" text-anchor="middle">Type parametresi</text><text x="160.0" y="84.0" class="tm" text-anchor="middle">tipteki herkes için aynı</text><text x="160.0" y="100.0" class="tm" text-anchor="middle">örnek: Profil Derinliği</text><rect x="340" y="20" width="280" height="120" rx="5" class="bx"/><text x="480.0" y="68.0" class="tb" text-anchor="middle">Instance parametresi</text><text x="480.0" y="84.0" class="tm" text-anchor="middle">her yerleştirmede ayrı</text><text x="480.0" y="100.0" class="tm" text-anchor="middle">örnek: Montaj Kotu</text></svg></div><figcaption>Type ve Instance parametreleri.</figcaption></figure>
+<div class="tw"><table>
+<thead>
+<tr>
+<th>Soru</th>
+<th>Cevap</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Bu değer aynı tipteki <strong>bütün</strong> elemanlarda aynı mı?</td>
+<td>Type</td>
+</tr>
+<tr>
+<td>Her yerleştirmede <strong>farklı</strong> olabilir mi?</td>
+<td>Instance</td>
+</tr>
+<tr>
+<td>Tablo ve sipariş tipe göre mi yapılıyor?</td>
+<td>Type</td>
+</tr>
+<tr>
+<td>Proje içinde sürüklenerek mi değişecek? (ör. uzunluk)</td>
+<td>Instance</td>
+</tr>
+</tbody>
+</table></div>
+<p>Cephe braketinde: Kol boyu, kalınlık, malzeme → <strong>Type</strong> (B100, B150 her biri bir ürün). Montaj kotu, ayar payı → <strong>Instance</strong>.</p>
+<p>Fazla instance parametre, aynı tipte farklı ölçülü elemanlar demektir ve tablolarda karışıklık yaratır. Emin değilsen <strong>Type</strong> seç.</p>
+<h3>3. Parametre özellikleri (45 dk)</h3>
+<figure class="fig"><div class="sc"><a href="ekran/f_paramprop.png" target="_blank"><img src="ekran/f_paramprop.png" alt="Parameter Properties; proje parametresi penceresinden. Aile editöründe 'Family parameter' seçeneği olur ve sağdaki kategori listesi yoktur (1: parametre türü, 2: Type / Instance, 3: ad, 4: disiplin ve veri türü, 5: grup)." width="729" height="522" loading="lazy" style="display:block;width:100%;max-width:729px;height:auto;margin:0 auto;border-radius:6px"></a></div><figcaption>Parameter Properties; proje parametresi penceresinden. Aile editöründe &#x27;Family parameter&#x27; seçeneği olur ve sağdaki kategori listesi yoktur (1: parametre türü, 2: Type / Instance, 3: ad, 4: disiplin ve veri türü, 5: grup).</figcaption></figure>
+<ol>
+<li><strong>Parametre türü:</strong> Aile editöründe <strong>Family parameter</strong> ya da <strong>Shared parameter</strong>.</li>
+<li><strong>Type / Instance.</strong></li>
+<li><strong>Ad:</strong> Kısa, Türkçe karakter ve boşluk içermeyen adlar formüllerde kolaylık sağlar: <code>Kol_Boyu</code>, <code>Kalinlik</code>.</li>
+<li><strong>Discipline ve Data Type:</strong> Length (uzunluk), Number (sayı), Integer (tam sayı), Angle (açı), Yes/No, Material, Text, Area, Mass...</li>
+<li><strong>Group parameter under:</strong> Properties'te hangi başlık altında görüneceği (Dimensions, Materials and Finishes, Identity Data).</li>
+</ol>
+<h3>4. Shared parametreler (30 dk)</h3>
+<figure class="fig"><div class="sc"><svg viewBox="0 0 640 120" role="img" xmlns="http://www.w3.org/2000/svg"><defs><marker id="ah-paramtur" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0 0L10 5L0 10z" class="ar"/></marker></defs><rect x="10" y="15" width="150" height="24" class="bxa"/><text x="16" y="31" class="tb" text-anchor="start">Parametre türü</text><rect x="160" y="15" width="270" height="24" class="bxa"/><text x="166" y="31" class="tb" text-anchor="start">Nerede görünür</text><rect x="430" y="15" width="200" height="24" class="bxa"/><text x="436" y="31" class="tb" text-anchor="start">Ne zaman</text><rect x="10" y="39" width="150" height="24" class="bx"/><text x="16" y="55" class="tm" text-anchor="start">Family parameter</text><rect x="160" y="39" width="270" height="24" class="bx"/><text x="166" y="55" class="tm" text-anchor="start">Proje ve aile; etikette yok</text><rect x="430" y="39" width="200" height="24" class="bx"/><text x="436" y="55" class="tm" text-anchor="start">Yalnızca geometriyi süren</text><rect x="10" y="63" width="150" height="24" class="sel"/><text x="16" y="79" class="tm" text-anchor="start">Shared parameter</text><rect x="160" y="63" width="270" height="24" class="sel"/><text x="166" y="79" class="tm" text-anchor="start">Tablo ve etiket; birçok aile ve proje</text><rect x="430" y="63" width="200" height="24" class="sel"/><text x="436" y="79" class="tm" text-anchor="start">Raporlanacak bilgi</text><rect x="10" y="87" width="150" height="24" class="bx"/><text x="16" y="103" class="tm" text-anchor="start">Built-in</text><rect x="160" y="87" width="270" height="24" class="bx"/><text x="166" y="103" class="tm" text-anchor="start">Hazır (Width, Material, Mark)</text><rect x="430" y="87" width="200" height="24" class="bx"/><text x="436" y="103" class="tm" text-anchor="start">Varsa onu kullan</text></svg></div><figcaption>Hangi parametre türü?</figcaption></figure>
+<figure class="fig"><div class="sc"><a href="ekran/f_shared.png" target="_blank"><img src="ekran/f_shared.png" alt="Edit Shared Parameters (1: dosya seç, 2: yeni parametre, 3: yeni grup)." width="420" height="445" loading="lazy" style="display:block;width:100%;max-width:420px;height:auto;margin:0 auto;border-radius:6px"></a></div><figcaption>Edit Shared Parameters (1: dosya seç, 2: yeni parametre, 3: yeni grup).</figcaption></figure>
+<p>Bir değer <strong>tabloda</strong> ya da <strong>etikette</strong> görünecekse, aile parametresi yetmez; <strong>shared parameter</strong> gerekir. Shared parametreler bir <code>.txt</code> dosyasında tanımlanır; aynı dosya bütün aileler ve projelerde kullanılırsa aynı parametre her yerde aynıdır.</p>
+<ol>
+<li><strong>Manage &gt; Shared Parameters:</strong> Dosyayı seç ya da oluştur, grup ve parametre ekle.</li>
+<li>Aile editöründe yeni parametre → <strong>Shared parameter</strong> → <strong>Select</strong> → listeden seç.</li>
+<li>Firmanın shared parametre dosyasını <strong>tek yerde</strong> tut; kişisel kopyalar aynı adlı ama farklı kimlikli parametreler doğurur ve tablolar birleşmez.</li>
+</ol>
+<p>Ayrıntı: <a href="../revit-30-gun/">Revit 30 Gün</a> shared parametre günü.</p>
+<h3>Gün sonu kontrolü (15 dk)</h3>
+<ul class="tasks">
+<li class="task"><label><input type="checkbox" data-id="g3-1"><span>Family Types penceresinde tip ve parametre ekledim.</span></label></li>
+<li class="task"><label><input type="checkbox" data-id="g3-2"><span>Type ve Instance seçimini gerekçesiyle yapabiliyorum.</span></label></li>
+<li class="task"><label><input type="checkbox" data-id="g3-3"><span>Veri türlerini ve gruplamayı biliyorum.</span></label></li>
+<li class="task"><label><input type="checkbox" data-id="g3-4"><span>Family ve shared parametre farkını biliyorum.</span></label></li>
+<li class="task"><label><input type="checkbox" data-id="g3-5"><span>Shared parametre dosyasından bir parametre ekledim.</span></label></li>
+</ul></div>
+  <div class="pn"><a href="#gun2">← 2. gün</a><a href="#gun4">4. gün →</a></div>
+</section>
+<section class="day" id="gun4" data-day="4">
+  <div class="day-head"><span class="dn">GÜN 04</span><h2>Formlar</h2><span class="meta">~3,5 saat · <span data-prog="4">0/5</span> kontrol</span></div>
+  <div class="prose"><h3>Hedef</h3>
+<p>Gün sonunda beş katı formu ve boşluk formunu kullanabilecek, formları düzlemlere bağlayabilecek, malzeme parametresi ekleyebilecek ve görünürlüğü detay seviyesine göre ayarlayabileceksin. Süre yaklaşık 3,5 saat.</p>
+<h3>1. Formlar (1,5 saat)</h3>
+<figure class="fig"><div class="sc"><a href="ekran/f_formlar.png" target="_blank"><img src="ekran/f_formlar.png" alt="Forms paneli (1: Extrusion, 2: Blend, 3: Revolve, 4: Sweep, 5: Swept Blend, 6: Void Forms)." width="590" height="210" loading="lazy" style="display:block;width:100%;max-width:590px;height:auto;margin:0 auto;border-radius:6px"></a></div><figcaption>Forms paneli (1: Extrusion, 2: Blend, 3: Revolve, 4: Sweep, 5: Swept Blend, 6: Void Forms).</figcaption></figure>
+<figure class="fig"><div class="sc"><svg viewBox="0 0 640 175" role="img" xmlns="http://www.w3.org/2000/svg"><defs><marker id="ah-formlar" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0 0L10 5L0 10z" class="ar"/></marker></defs><polygon points="30,120 100,120 100,60 30,60" class="gl"/><polygon points="30,60 50,40 120,40 100,60" class="bx"/><polygon points="100,60 120,40 120,100 100,120" class="bx"/><text x="75" y="160" class="tb" text-anchor="middle">Extrusion</text><polygon points="150,120 230,120 210,50 170,50" class="gl"/><text x="190" y="160" class="tb" text-anchor="middle">Blend</text><path d="M 270 120 Q 310 40 350 120" class="k"/><path d="M 285 120 Q 310 70 335 120" class="k"/><line x1="270" y1="120" x2="285" y2="120" class="k1"/><line x1="335" y1="120" x2="350" y2="120" class="k1"/><line x1="310" y1="30" x2="310" y2="135" class="dotr"/><text x="310" y="160" class="tb" text-anchor="middle">Revolve</text><path d="M 390 120 L 390 70 Q 390 50 410 50 L 460 50" class="k"/><rect x="380" y="112" width="20" height="14" class="bxa"/><text x="425" y="160" class="tb" text-anchor="middle">Sweep</text><path d="M 500 120 Q 520 50 590 50" class="k"/><rect x="492" y="112" width="18" height="12" class="bxa"/><rect x="586" y="42" width="10" height="16" class="bxa"/><text x="545" y="160" class="tb" text-anchor="middle">Swept Blend</text></svg></div><figcaption>Beş katı form (şematik).</figcaption></figure>
+<div class="tw"><table>
+<thead>
+<tr>
+<th>Form</th>
+<th>Nasıl</th>
+<th>Cephede örnek</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><strong>Extrusion</strong></td>
+<td>Bir kapalı çizimi bir yönde kalınlık vererek uzat</td>
+<td>Braket plakası, panel, cam</td>
+</tr>
+<tr>
+<td><strong>Blend</strong></td>
+<td>Alt ve üst iki farklı çizimi birleştir</td>
+<td>Konik kapak, geçiş parçası</td>
+</tr>
+<tr>
+<td><strong>Revolve</strong></td>
+<td>Bir çizimi eksen etrafında döndür</td>
+<td>Dübel, cıvata başı, yuvarlak menfez</td>
+</tr>
+<tr>
+<td><strong>Sweep</strong></td>
+<td>Bir profili bir yol boyunca süpür</td>
+<td>Kenar profili, damlalık, conta</td>
+</tr>
+<tr>
+<td><strong>Swept Blend</strong></td>
+<td>Yol boyunca iki profil arasında geçiş</td>
+<td>Eğri ve değişken kesitli parça</td>
+</tr>
+</tbody>
+</table></div>
+<p>Her form için:</p>
+<ol>
+<li>Önce <strong>çalışma düzlemini</strong> seç (Work Plane &gt; Set): Ref. Level ya da adlı bir referans düzlemi.</li>
+<li>Çizimde (sketch) çizgileri referans düzlemlerine <strong>hizala ve kilitle</strong> (2. gün).</li>
+<li>Extrusion'ın <strong>Extrusion Start / End</strong> değerlerini düzlemlere kilitle ya da bir parametreye bağla (<code>Kalinlik</code>).</li>
+<li>Bitirince <strong>Finish</strong> (yeşil tik) ve flex testi.</li>
+</ol>
+<h3>2. Boşluk formları (30 dk)</h3>
+<figure class="fig"><div class="sc"><svg viewBox="0 0 640 200" role="img" xmlns="http://www.w3.org/2000/svg"><defs><marker id="ah-void" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0 0L10 5L0 10z" class="ar"/></marker></defs><rect x="40" y="40" width="220" height="120" class="gl"/><rect x="180" y="70" width="120" height="60" class="swr"/><text x="150" y="185" class="tb" text-anchor="middle">Void Form + Cut</text><line x1="320" y1="100" x2="380" y2="100" class="mu" marker-end="url(#ah-void)"/><polygon points="400,40 620,40 620,70 580,70 580,130 620,130 620,160 400,160" class="gl"/><text x="510" y="185" class="tb" text-anchor="middle">sonuç: oyuk</text></svg></div><figcaption>Boşluk formu (void) katı formu keser.</figcaption></figure>
+<p><strong>Void Forms</strong>, katı formdan malzeme çıkarır: delik, oyuk, pah. Void, aynı ailedeki katılarla kesişince kendiliğinden keser; kesmezse <strong>Modify &gt; Cut Geometry</strong> ile seç. Braket delikleri, conta kanalları ve köşe pahları için kullanılır.</p>
+<p>Aile seçeneklerinde <strong>Cut with Voids When Loaded</strong> açıksa, ailenin içindeki void projede başka bir elemanı (ör. bir duvarı) da kesebilir.</p>
+<h3>3. Malzeme (30 dk)</h3>
+<ol>
+<li>Formu seç → Properties &gt; <strong>Materials and Finishes &gt; Material</strong>.</li>
+<li>Satırın sağındaki küçük <strong>Associate Family Parameter</strong> düğmesi → <strong>Add parameter</strong> → <code>Malzeme</code>, Type.</li>
+<li>Projede tip özelliklerinden malzeme seçilir: Alüminyum, Paslanmaz çelik, Galvaniz.</li>
+</ol>
+<p>Malzemeyi doğrudan formda seçmek yerine parametreye bağla; aynı aile farklı malzemelerle kullanılabilsin.</p>
+<h3>4. Görünürlük ve detay seviyesi (45 dk)</h3>
+<figure class="fig"><div class="sc"><svg viewBox="0 0 660 120" role="img" xmlns="http://www.w3.org/2000/svg"><defs><marker id="ah-gorunur" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0 0L10 5L0 10z" class="ar"/></marker></defs><rect x="10" y="15" width="150" height="24" class="bxa"/><text x="16" y="31" class="tb" text-anchor="start">Detay seviyesi</text><rect x="160" y="15" width="300" height="24" class="bxa"/><text x="166" y="31" class="tb" text-anchor="start">Görünen</text><rect x="10" y="39" width="150" height="24" class="bx"/><text x="16" y="55" class="tm" text-anchor="start">Coarse</text><rect x="160" y="39" width="300" height="24" class="bx"/><text x="166" y="55" class="tm" text-anchor="start">Basit kutu (sembolik)</text><rect x="10" y="63" width="150" height="24" class="bx"/><text x="16" y="79" class="tm" text-anchor="start">Medium</text><rect x="160" y="63" width="300" height="24" class="bx"/><text x="166" y="79" class="tm" text-anchor="start">Profil dış hatları</text><rect x="10" y="87" width="150" height="24" class="sel"/><text x="16" y="103" class="tm" text-anchor="start">Fine</text><rect x="160" y="87" width="300" height="24" class="sel"/><text x="166" y="103" class="tm" text-anchor="start">Conta, vida, ayrıntı</text><rect x="480" y="25" width="160" height="70" rx="5" class="sel"/><text x="560.0" y="56.0" class="tb" text-anchor="middle">Visible</text><text x="560.0" y="72.0" class="tm" text-anchor="middle">Yes/No parametresi</text></svg></div><figcaption>Görünürlük: detay seviyesi ve Visible parametresi.</figcaption></figure>
+<ol>
+<li>Formu seç → <strong>Visibility Settings</strong> (Family Element Visibility Settings): Hangi görünüş türlerinde (plan, kesit/görünüş) ve hangi detay seviyelerinde (Coarse, Medium, Fine) görüneceği.</li>
+<li>Ayrıntılı geometriyi (vida, conta, küçük pah) yalnızca <strong>Fine</strong>'da göster; <strong>Coarse</strong>'ta basit bir kutu yeterlidir. Model büyüdükçe performans bundan çok etkilenir.</li>
+<li><strong>Visible</strong> özelliğini bir <strong>Yes/No</strong> parametresine bağla: Ör. <code>Ara_Kayit_Var</code> (5. gün formülle de sürülebilir).</li>
+<li>Planda aile karmaşık görünüyorsa, 3D geometriyi planda gizleyip <strong>Symbolic Lines</strong> ile sade bir sembol çiz.</li>
+</ol>
+<h3>Gün sonu kontrolü (15 dk)</h3>
+<ul class="tasks">
+<li class="task"><label><input type="checkbox" data-id="g4-1"><span>Beş katı formun ne zaman kullanılacağını biliyorum.</span></label></li>
+<li class="task"><label><input type="checkbox" data-id="g4-2"><span>Formu adlı bir çalışma düzleminde çizip düzlemlere kilitledim.</span></label></li>
+<li class="task"><label><input type="checkbox" data-id="g4-3"><span>Bir void ile delik açtım.</span></label></li>
+<li class="task"><label><input type="checkbox" data-id="g4-4"><span>Malzemeyi bir type parametresine bağladım.</span></label></li>
+<li class="task"><label><input type="checkbox" data-id="g4-5"><span>Detay seviyesine göre görünürlüğü ayarladım ve bir Yes/No görünürlük parametresi ekledim.</span></label></li>
+</ul></div>
+  <div class="pn"><a href="#gun3">← 3. gün</a><a href="#gun5">5. gün →</a></div>
+</section>
+<section class="day" id="gun5" data-day="5">
+  <div class="day-head"><span class="dn">GÜN 05</span><h2>Formüller</h2><span class="meta">~3,5 saat · <span data-prog="5">0/5</span> kontrol</span></div>
+  <div class="prose"><h3>Hedef</h3>
+<p>Gün sonunda formüllerle parametreleri birbirine bağlayabilecek, koşullu (if) formüller, Yes/No mantığı, yuvarlama ve lookup tablolarını kullanabileceksin. Süre yaklaşık 3 saat.</p>
+<h3>1. Formül kuralları (45 dk)</h3>
+<p>Family Types penceresinde <strong>Formula</strong> sütununa yazılır.</p>
+<div class="tw"><table>
+<thead>
+<tr>
+<th>Kural</th>
+<th>Örnek</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Parametre adları <strong>büyük/küçük harfe duyarlıdır</strong></td>
+<td><code>Genislik</code> ≠ <code>genislik</code></td>
+</tr>
+<tr>
+<td>Birimler tutarlı olmalı</td>
+<td><code>Genislik / 2</code> ✓; <code>Genislik + 5</code> ✗, <code>Genislik + 5 mm</code> ✓</td>
+</tr>
+<tr>
+<td>Uzunluk / uzunluk = sayı</td>
+<td><code>Genislik / 300 mm</code> → 5</td>
+</tr>
+<tr>
+<td>Formüllü parametre elle değiştirilemez</td>
+<td>Değeri gri görünür</td>
+</tr>
+<tr>
+<td>Döngüsel bağ yasaktır</td>
+<td>A = B, B = A hata verir</td>
+</tr>
+</tbody>
+</table></div>
+<h3>2. Koşullar ve yuvarlama (1 saat)</h3>
+<figure class="fig"><div class="sc"><svg viewBox="0 0 560 175" role="img" xmlns="http://www.w3.org/2000/svg"><defs><marker id="ah-formul" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0 0L10 5L0 10z" class="ar"/></marker></defs><rect x="10" y="15" width="140" height="24" class="bxa"/><text x="16" y="31" class="tb" text-anchor="start">Parametre</text><rect x="150" y="15" width="300" height="24" class="bxa"/><text x="156" y="31" class="tb" text-anchor="start">Formül</text><rect x="450" y="15" width="100" height="24" class="bxa"/><text x="456" y="31" class="tb" text-anchor="start">Sonuç</text><rect x="10" y="39" width="140" height="24" class="bx"/><text x="16" y="55" class="tm" text-anchor="start">Genislik</text><rect x="150" y="39" width="300" height="24" class="bx"/><text x="156" y="55" class="tm" text-anchor="start"></text><rect x="450" y="39" width="100" height="24" class="bx"/><text x="456" y="55" class="tm" text-anchor="start">1500 mm</text><rect x="10" y="63" width="140" height="24" class="sel"/><text x="16" y="79" class="tm" text-anchor="start">Bolme_Sayisi</text><rect x="150" y="63" width="300" height="24" class="sel"/><text x="156" y="79" class="tm" text-anchor="start">if(Genislik &gt; 1200 mm, 3, 2)</text><rect x="450" y="63" width="100" height="24" class="sel"/><text x="456" y="79" class="tm" text-anchor="start">3</text><rect x="10" y="87" width="140" height="24" class="bx"/><text x="16" y="103" class="tm" text-anchor="start">Bolme_Araligi</text><rect x="150" y="87" width="300" height="24" class="bx"/><text x="156" y="103" class="tm" text-anchor="start">Genislik / Bolme_Sayisi</text><rect x="450" y="87" width="100" height="24" class="bx"/><text x="456" y="103" class="tm" text-anchor="start">500 mm</text><rect x="10" y="111" width="140" height="24" class="bx"/><text x="16" y="127" class="tm" text-anchor="start">Vida_Sayisi</text><rect x="150" y="111" width="300" height="24" class="bx"/><text x="156" y="127" class="tm" text-anchor="start">rounddown(Genislik / 300 mm) + 1</text><rect x="450" y="111" width="100" height="24" class="bx"/><text x="456" y="127" class="tm" text-anchor="start">6</text><rect x="10" y="135" width="140" height="24" class="bx"/><text x="16" y="151" class="tm" text-anchor="start">Ara_Kayit</text><rect x="150" y="135" width="300" height="24" class="bx"/><text x="156" y="151" class="tm" text-anchor="start">Genislik &gt; 1200 mm</text><rect x="450" y="135" width="100" height="24" class="bx"/><text x="456" y="151" class="tm" text-anchor="start">evet</text></svg></div><figcaption>Formül örnekleri (Genislik = 1500 mm ile hesaplanmış).</figcaption></figure>
+<div class="tw"><table>
+<thead>
+<tr>
+<th>İşlev</th>
+<th>Yazım</th>
+<th>Örnek</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Koşul</td>
+<td><code>if(koşul, doğruysa, yanlışsa)</code></td>
+<td><code>if(Genislik &gt; 1200 mm, 3, 2)</code></td>
+</tr>
+<tr>
+<td>Ve / veya / değil</td>
+<td><code>and(a, b)</code>, <code>or(a, b)</code>, <code>not(a)</code></td>
+<td><code>and(Genislik &gt; 600 mm, Yukseklik &gt; 600 mm)</code></td>
+</tr>
+<tr>
+<td>Aşağı / yukarı / en yakın</td>
+<td><code>rounddown(x)</code>, <code>roundup(x)</code>, <code>round(x)</code></td>
+<td><code>rounddown(Genislik / 300 mm) + 1</code></td>
+</tr>
+<tr>
+<td>Yes/No formülü</td>
+<td>koşulun kendisi</td>
+<td><code>Ara_Kayit = Genislik &gt; 1200 mm</code></td>
+</tr>
+<tr>
+<td>İç içe if</td>
+<td><code>if(a, x, if(b, y, z))</code></td>
+<td>üç aralıklı seçimler</td>
+</tr>
+</tbody>
+</table></div>
+<p>Tablodaki değerler <code>Genislik = 1500 mm</code> için hesaplandı: 1500 &gt; 1200 olduğundan bölme sayısı 3, aralık 1500 / 3 = 500 mm; vida sayısı rounddown(1500 / 300) + 1 = 5 + 1 = 6.</p>
+<p>Not: <code>if</code> içinde ikinci ve üçüncü değerin birimi aynı olmalıdır (ikisi de uzunluk ya da ikisi de sayı).</p>
+<h3>3. Yes/No ile görünürlük (30 dk)</h3>
+<ol>
+<li><code>Ara_Kayit</code> (Yes/No, formül: <code>Genislik &gt; 1200 mm</code>).</li>
+<li>Ara kayıt formunun <strong>Visible</strong> özelliğini <code>Ara_Kayit</code>'a bağla (4. gün).</li>
+<li>Flex: Genişlik 1000 → ara kayıt kaybolur; 1500 → görünür.</li>
+</ol>
+<h3>4. Lookup tabloları (30 dk)</h3>
+<p>Bir ürün kataloğundaki değerleri (ör. profil kodu → derinlik, ağırlık) aileye <strong>CSV tablosundan</strong> okutmak için:</p>
+<ol>
+<li>CSV'yi Revit'in beklediği başlık biçimiyle hazırla (sütun adı ve birimi: <code>Derinlik##length##millimeters</code>).</li>
+<li>Family Types &gt; <strong>Manage Lookup Tables</strong> &gt; <strong>Import</strong>.</li>
+<li>Formül: <code>size_lookup(TabloAdi, "Derinlik", 50 mm, Profil_Kodu)</code> — tablo, sütun, bulunamazsa varsayılan, aranan değer.</li>
+</ol>
+<p>Lookup tabloları, onlarca tipi tek tek elle girmek yerine bir katalogdan sürmek için idealdir. Çok sayıda tip için alternatif: <strong>type catalog</strong> (aileyle aynı adlı <code>.txt</code>), projeye yüklerken tip seçtirilir.</p>
+<h3>Gün sonu kontrolü (15 dk)</h3>
+<ul class="tasks">
+<li class="task"><label><input type="checkbox" data-id="g5-1"><span>Formül yazım ve birim kurallarını biliyorum.</span></label></li>
+<li class="task"><label><input type="checkbox" data-id="g5-2"><span>if, and, or ve yuvarlama işlevlerini kullandım.</span></label></li>
+<li class="task"><label><input type="checkbox" data-id="g5-3"><span>Formül örneklerini elle hesaplayıp sonucu doğruladım.</span></label></li>
+<li class="task"><label><input type="checkbox" data-id="g5-4"><span>Bir Yes/No parametresiyle görünürlüğü formülden sürdüm.</span></label></li>
+<li class="task"><label><input type="checkbox" data-id="g5-5"><span>Lookup tablosunun ve type catalog'un ne zaman kullanılacağını biliyorum.</span></label></li>
+</ul></div>
+  <div class="pn"><a href="#gun4">← 4. gün</a><a href="#gun6">6. gün →</a></div>
+</section>
+<section class="day" id="gun6" data-day="6">
+  <div class="day-head"><span class="dn">GÜN 06</span><h2>Nested ve diziler</h2><span class="meta">~3,5 saat · <span data-prog="6">0/4</span> kontrol</span></div>
+  <div class="prose"><h3>Hedef</h3>
+<p>Gün sonunda iç içe (nested) aileler kurabilecek, parametreleri ana aileden iç aileye aktarabilecek, parametrik dizi yapabilecek ve bir curtain wall panel ailesi oluşturabileceksin. Süre yaklaşık 3,5 saat.</p>
+<h3>1. İç içe aileler (1 saat)</h3>
+<figure class="fig"><div class="sc"><svg viewBox="0 0 650 195" role="img" xmlns="http://www.w3.org/2000/svg"><defs><marker id="ah-nested" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0 0L10 5L0 10z" class="ar"/></marker></defs><rect x="20" y="20" width="260" height="160" rx="5" class="bx"/><text x="150" y="42" class="tb" text-anchor="middle">Ana aile: Cephe Paneli</text><rect x="40" y="60" width="100" height="50" rx="5" class="bxa"/><text x="90.0" y="81.0" class="tb" text-anchor="middle">Braket</text><text x="90.0" y="97.0" class="tm" text-anchor="middle">nested</text><rect x="160" y="60" width="100" height="50" rx="5" class="bxa"/><text x="210.0" y="81.0" class="tb" text-anchor="middle">Braket</text><text x="210.0" y="97.0" class="tm" text-anchor="middle">nested</text><rect x="40" y="125" width="220" height="40" rx="5" class="sel"/><text x="150.0" y="149.0" class="tb" text-anchor="middle">Cam (form)</text><rect x="360" y="40" width="270" height="120" rx="5" class="bx"/><text x="495.0" y="88.0" class="tb" text-anchor="middle">Associate Family Parameter</text><text x="495.0" y="104.0" class="tm" text-anchor="middle">Kalinlik ← Braket_Kalinlik</text><text x="495.0" y="120.0" class="tm" text-anchor="middle">Shared işaretli → tabloda ayrı sayılır</text><line x1="282" y1="100" x2="358" y2="100" class="mu" marker-end="url(#ah-nested)"/></svg></div><figcaption>İç içe (nested) aile ve parametre eşleme.</figcaption></figure>
+<p>Bir aileyi başka bir ailenin içine yüklemek, tekrar eden parçaları (braket, vida, menfez) bir kez yapıp her yerde kullanmayı sağlar.</p>
+<ol>
+<li>Braket ailesini aç → <strong>Load into Project</strong> ile panel ailesine yükle ve yerleştir; ya da panel ailesinde <strong>Insert &gt; Load Family</strong>.</li>
+<li>İç aileyi düzlemlere hizala ve kilitle.</li>
+<li>İç ailenin bir parametresini ana aileden sürmek için: İç aileyi seç → Properties'te (instance parametresiyse) ya da <strong>Edit Type</strong>'ta (type parametresiyse) satırın sağındaki <strong>Associate Family Parameter</strong> düğmesi → ana ailedeki parametreyi seç ya da yeni oluştur.</li>
+<li>Eşleşen parametrelerin <strong>veri türü aynı</strong> olmalıdır.</li>
+</ol>
+<p><strong>Shared işareti:</strong> İç aile kendi dosyasında <strong>Shared</strong> işaretliyse projede ayrı eleman olarak seçilebilir, tablolarda <strong>ayrıca sayılır</strong> ve etiketlenebilir. Braket sayısını panel tablosundan değil braket tablosundan almak istiyorsan bu ayar gerekir.</p>
+<h3>2. Parametrik dizi (1 saat)</h3>
+<figure class="fig"><div class="sc"><svg viewBox="0 0 640 210" role="img" xmlns="http://www.w3.org/2000/svg"><defs><marker id="ah-dizi" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0 0L10 5L0 10z" class="ar"/></marker></defs><line x1="40" y1="40" x2="600" y2="40" class="dotr"/><line x1="40" y1="160" x2="600" y2="160" class="dotr"/><rect x="50" y="70" width="20" height="60" class="bxa"/><rect x="156" y="70" width="20" height="60" class="bxa"/><rect x="262" y="70" width="20" height="60" class="bxa"/><rect x="368" y="70" width="20" height="60" class="bxa"/><rect x="474" y="70" width="20" height="60" class="bxa"/><rect x="580" y="70" width="20" height="60" class="bxa"/><line x1="60" y1="190" x2="590" y2="190" class="dm"/><line x1="60" y1="185" x2="60" y2="195" class="dm"/><line x1="590" y1="185" x2="590" y2="195" class="dm"/><text x="325.0" y="184" class="tm" text-anchor="middle">Uzunluk = 2650</text><text x="320" y="30" class="tm" text-anchor="middle">Dikme_Sayisi = rounddown(Uzunluk / 500 mm) + 1 = 6  (en az 2)</text></svg></div><figcaption>Parametrik dizi: sayı formülle, ilk ve son eleman düzlemlere kilitli.</figcaption></figure>
+<ol>
+<li>Tekrar eden elemanı (dikme, delik, iç aile) yerleştir; ilk elemanı başlangıç düzlemine kilitle.</li>
+<li><strong>Modify &gt; Array:</strong> <strong>Group and Associate</strong> işaretli, <strong>Move To: Last</strong>; son elemanı bitiş düzlemine götür ve kilitle.</li>
+<li>Dizi sayısı ölçüsünü seç → <strong>Label</strong> → yeni <strong>Integer</strong> parametre: <code>Dikme_Sayisi</code>.</li>
+<li>Formül: <code>Dikme_Sayisi = rounddown(Uzunluk / 500 mm) + 1</code>.</li>
+</ol>
+<p>Dizi en az <strong>2</strong> eleman olmalıdır; sayının 1'e düşebildiği durumlar için formüle sınır koy: <code>if(Uzunluk &lt; 1000 mm, 2, rounddown(Uzunluk / 500 mm) + 1)</code>.</p>
+<p>Şekildeki örnekte Uzunluk = 2650 mm: rounddown(2650 / 500) + 1 = 5 + 1 = 6 dikme.</p>
+<h3>3. Curtain wall panel ailesi (1 saat)</h3>
+<figure class="fig"><div class="sc"><svg viewBox="0 0 730 235" role="img" xmlns="http://www.w3.org/2000/svg"><defs><marker id="ah-panel" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0 0L10 5L0 10z" class="ar"/></marker></defs><rect x="60" y="20" width="260" height="180" class="bx"/><rect x="80" y="40" width="220" height="140" class="gl"/><line x1="60" y1="220" x2="320" y2="220" class="dm"/><line x1="60" y1="215" x2="60" y2="225" class="dm"/><line x1="320" y1="215" x2="320" y2="225" class="dm"/><text x="190.0" y="214" class="tm" text-anchor="middle">Width (grid)</text><line x1="340" y1="20" x2="340" y2="200" class="dm"/><line x1="335" y1="20" x2="345" y2="20" class="dm"/><line x1="335" y1="200" x2="345" y2="200" class="dm"/><text x="350" y="114.0" class="tm" text-anchor="start">Height (grid)</text><rect x="450" y="40" width="270" height="120" rx="5" class="bxa"/><text x="585.0" y="88.0" class="tb" text-anchor="middle">Curtain Wall Panel şablonu</text><text x="585.0" y="104.0" class="tm" text-anchor="middle">Width ve Height grid'den gelir</text><text x="585.0" y="120.0" class="tm" text-anchor="middle">çerçeve, cam, braket buna bağlanır</text></svg></div><figcaption>Curtain wall panel ailesi (şematik).</figcaption></figure>
+<ol>
+<li><strong>Metric Curtain Wall Panel.rft</strong> şablonu.</li>
+<li>Şablondaki <strong>Width</strong> ve <strong>Height</strong> parametreleri, panel projede yerleştirildiğinde curtain wall gridinden gelir; elle değer verilmez.</li>
+<li>Panel çerçevesini, camı ve iç aileleri bu düzlemlere bağla.</li>
+<li>Cam kalınlığı, çerçeve derinliği gibi değerleri <strong>type</strong> parametreleri yap.</li>
+<li>Projede curtain wall'un panel tipini bu aileyle değiştir ve gridleri oynatarak dene.</li>
+</ol>
+<p>Dikme profilleri için ayrı bir yol: <strong>Metric Profile-Mullion.rft</strong> ile profil ailesi çiz, projede dikme tipine profil olarak ata.</p>
+<h3>4. Adaptive aileler hakkında (15 dk)</h3>
+<p>Düzgün olmayan, her paneli farklı (çarpık, üçgen) cepheler için <strong>adaptive component</strong> aileleri kullanılır; noktaları projede kütle yüzeyine ya da serbest noktalara bağlanır. Bu konu Dynamo ve Rhino ile birlikte <a href="../parametrik-modelleme/">Parametrik Modelleme</a> ve <a href="../rhino-inside-revit/">Rhino.Inside.Revit</a> eğitimlerinde işlenir.</p>
+<h3>Gün sonu kontrolü (15 dk)</h3>
+<ul class="tasks">
+<li class="task"><label><input type="checkbox" data-id="g6-1"><span>Bir iç aileyi ana aileye yükleyip parametresini eşledim.</span></label></li>
+<li class="task"><label><input type="checkbox" data-id="g6-2"><span>Shared iç ailenin tablolara etkisini biliyorum.</span></label></li>
+<li class="task"><label><input type="checkbox" data-id="g6-3"><span>Sayısı formülle değişen bir dizi kurdum ve en az 2 sınırını koydum.</span></label></li>
+<li class="task"><label><input type="checkbox" data-id="g6-4"><span>Bir curtain wall panel ailesi yapıp projede denedim.</span></label></li>
+</ul></div>
+  <div class="pn"><a href="#gun5">← 5. gün</a><a href="#gun7">7. gün →</a></div>
+</section>
+<section class="day" id="gun7" data-day="7">
+  <div class="day-head"><span class="dn">GÜN 07</span><h2>Test ve kütüphane</h2><span class="meta">~3,5 saat · <span data-prog="7">0/13</span> kontrol</span></div>
+  <div class="prose"><h3>Hedef</h3>
+<p>Son gün aileyi test edecek, projeye yükleyecek, kalite kontrolünü yapacak, kütüphaneye uygun şekilde kaydedecek ve bitiş alıştırmasını tamamlayacaksın. Süre yaklaşık 4 saat.</p>
+<h3>1. Test akışı (45 dk)</h3>
+<figure class="fig"><div class="sc"><svg viewBox="0 0 690 120" role="img" xmlns="http://www.w3.org/2000/svg"><defs><marker id="ah-test" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0 0L10 5L0 10z" class="ar"/></marker></defs><rect x="10" y="40" width="124" height="56" rx="5" class="bx"/><text x="72.0" y="64.0" class="tb" text-anchor="middle">Flex</text><text x="72.0" y="80.0" class="tm" text-anchor="middle">tüm tipler</text><rect x="146" y="40" width="124" height="56" rx="5" class="bx"/><text x="208.0" y="64.0" class="tb" text-anchor="middle">Yükle</text><text x="208.0" y="80.0" class="tm" text-anchor="middle">test projesi</text><line x1="136" y1="68.0" x2="144" y2="68.0" class="mu" marker-end="url(#ah-test)"/><rect x="282" y="40" width="124" height="56" rx="5" class="bx"/><text x="344.0" y="64.0" class="tb" text-anchor="middle">Yerleştir</text><text x="344.0" y="80.0" class="tm" text-anchor="middle">host, kot</text><line x1="272" y1="68.0" x2="280" y2="68.0" class="mu" marker-end="url(#ah-test)"/><rect x="418" y="40" width="124" height="56" rx="5" class="bx"/><text x="480.0" y="64.0" class="tb" text-anchor="middle">Kontrol</text><text x="480.0" y="80.0" class="tm" text-anchor="middle">tablo, IFC</text><line x1="408" y1="68.0" x2="416" y2="68.0" class="mu" marker-end="url(#ah-test)"/><rect x="554" y="40" width="124" height="56" rx="5" class="bxa"/><text x="616.0" y="64.0" class="tb" text-anchor="middle">Kütüphane</text><text x="616.0" y="80.0" class="tm" text-anchor="middle">ad, sürüm</text><line x1="544" y1="68.0" x2="552" y2="68.0" class="mu" marker-end="url(#ah-test)"/></svg></div><figcaption>Aile test akışı.</figcaption></figure>
+<ol>
+<li><strong>Flex:</strong> Family Types'ta <strong>her tipi</strong> seç, Apply; geometri doğru mu?</li>
+<li>Uç değerler: En küçük ve en büyük ölçüler, dizi sayısının 2 olduğu durum.</li>
+<li><strong>Boş bir test projesine</strong> yükle (gerçek projeye değil).</li>
+<li>Farklı görünüşlerde ve detay seviyelerinde (Coarse / Medium / Fine) bak.</li>
+<li>Tablo oluştur: Shared parametreler görünüyor mu, iç aileler doğru sayılıyor mu?</li>
+<li>IFC'ye aktar ve bir görüntüleyicide aç: Doğru sınıfta mı (7. gün, 4. bölüm)?</li>
+</ol>
+<h3>2. Projeye yükleme (45 dk)</h3>
+<figure class="fig"><div class="sc"><a href="ekran/f_datum.png" target="_blank"><img src="ekran/f_datum.png" alt="1: Reference Line, 2: Reference Plane, 3: Load into Project, 4: Load into Project and Close." width="656" height="168" loading="lazy" style="display:block;width:100%;max-width:656px;height:auto;margin:0 auto;border-radius:6px"></a></div><figcaption>1: Reference Line, 2: Reference Plane, 3: Load into Project, 4: Load into Project and Close.</figcaption></figure>
+<ol>
+<li><strong>Load into Project:</strong> Aile açık olan projeye yüklenir; aile editörü açık kalır.</li>
+<li><strong>Load into Project and Close:</strong> Yükler ve editörü kapatır.</li>
+<li>Aile projede zaten varsa Revit sorar: <strong>Overwrite the existing version</strong> ya da <strong>Overwrite the existing version and its parameter values</strong>. İkincisi, projede tip değerlerinde yapılan değişiklikleri aileninkilerle değiştirir.</li>
+</ol>
+<figure class="fig"><div class="sc"><a href="ekran/f_load.png" target="_blank"><img src="ekran/f_load.png" alt="Projeye aile yükleme: Insert > Load Family (1: konumlar, 2: dosya adı, 3: Open)." width="775" height="478" loading="lazy" style="display:block;width:100%;max-width:775px;height:auto;margin:0 auto;border-radius:6px"></a></div><figcaption>Projeye aile yükleme: Insert &gt; Load Family (1: konumlar, 2: dosya adı, 3: Open).</figcaption></figure>
+<p>Projeden: <strong>Insert &gt; Load Family</strong> ile <code>.rfa</code> dosyasını seç.</p>
+<figure class="fig"><div class="sc"><a href="ekran/f_tipprop.png" target="_blank"><img src="ekran/f_tipprop.png" alt="Projede Type Properties (1: Duplicate, 2-3: aileden gelen tip parametreleri)." width="1032" height="1055" loading="lazy" style="display:block;width:100%;max-width:1032px;height:auto;margin:0 auto;border-radius:6px"></a></div><figcaption>Projede Type Properties (1: Duplicate, 2-3: aileden gelen tip parametreleri).</figcaption></figure>
+<p>Projede tipi seç → <strong>Edit Type</strong>: Aileden gelen type parametreleri burada görünür; <strong>Duplicate</strong> ile projeye özel yeni tip türetilebilir. Ancak firmanın standart tiplerini ailenin içinde tutmak daha düzenlidir.</p>
+<h3>3. Kalite kontrol listesi (45 dk)</h3>
+<div class="tw"><table>
+<thead>
+<tr>
+<th>Kontrol</th>
+<th>Neden</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Kategori doğru</td>
+<td>Tablo, filtre, IFC</td>
+</tr>
+<tr>
+<td>Yerleştirme noktası mantıklı</td>
+<td>Projede hizalama</td>
+</tr>
+<tr>
+<td>Bütün geometri düzlemlere kilitli</td>
+<td>Esneme hatası olmasın</td>
+</tr>
+<tr>
+<td>Gereksiz düzlemler Not a Reference</td>
+<td>Projede kalabalık olmasın</td>
+</tr>
+<tr>
+<td>Coarse'ta sade, Fine'da ayrıntılı</td>
+<td>Performans</td>
+</tr>
+<tr>
+<td>Parametre adları standarda uygun</td>
+<td>Formül ve tablolar</td>
+</tr>
+<tr>
+<td>Shared parametreler firmanın dosyasından</td>
+<td>Tablolar birleşsin</td>
+</tr>
+<tr>
+<td><strong>Purge Unused</strong> (Manage) yapıldı</td>
+<td>Dosya boyutu</td>
+</tr>
+<tr>
+<td>İç aileler de temiz</td>
+<td>Dosya boyutu</td>
+</tr>
+<tr>
+<td>Dosya boyutu makul</td>
+<td>Büyükse içe aktarılmış CAD ya da gereksiz iç aile ara</td>
+</tr>
+</tbody>
+</table></div>
+<p>Ailenin içine <strong>CAD dosyası içe aktarmaktan</strong> (Import CAD) kaçın: Dosya büyür, kategorisi bozulur ve IFC'de sorun çıkar. Profil kesitini CAD'den alacaksan, alt kontur olarak kullanıp üzerinden çizgilerle yeniden çiz, sonra CAD'i sil.</p>
+<h3>4. Ad, sürüm ve IFC (30 dk)</h3>
+<ol>
+<li><strong>Dosya adı:</strong> Firmanın standardı; örnek <code>CPH_Braket_L_Aluminyum.rfa</code>. Tip adları: <code>B100</code>, <code>B150</code>.</li>
+<li>Aileyi kaydederken <strong>sürümü</strong> bil: Revit 2027'de kaydedilen aile eski sürümlerde açılmaz. Kütüphaneyi projenin Revit sürümüne göre tut.</li>
+<li><strong>IFC:</strong> Family Types'taki <strong>Export Type to IFC As</strong> ve <strong>Type IFC Predefined Type</strong> parametreleriyle ailenin IFC sınıfı ayarlanabilir (ör. braket için IfcDiscreteAccessory, önceden tanımlı tip BRACKET; ya da projenin BIM gereksinimlerinde istenen sınıf). Doğru sınıf, BIM teslimatında ailenin doğru tanınmasını sağlar (<a href="../lod-seviyeleri/">LOD Seviyeleri</a>).</li>
+</ol>
+<h3>5. Bitiş alıştırması (1 saat)</h3>
+<figure class="fig"><div class="sc"><svg viewBox="0 0 710 220" role="img" xmlns="http://www.w3.org/2000/svg"><defs><marker id="ah-braket" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0 0L10 5L0 10z" class="ar"/></marker></defs><polygon points="120,40 300,40 300,60 140,60 140,200 120,200" class="bxa"/><rect x="160" y="44" width="30" height="12" class="swr"/><rect x="240" y="44" width="30" height="12" class="swr"/><line x1="120" y1="22" x2="300" y2="22" class="dm"/><line x1="120" y1="17" x2="120" y2="27" class="dm"/><line x1="300" y1="17" x2="300" y2="27" class="dm"/><text x="210.0" y="16" class="tm" text-anchor="middle">Kol_Boyu</text><line x1="100" y1="40" x2="100" y2="200" class="dm"/><line x1="95" y1="40" x2="105" y2="40" class="dm"/><line x1="95" y1="200" x2="105" y2="200" class="dm"/><text x="90" y="124.0" class="tm" text-anchor="end">Yukseklik</text><text x="160" y="150" class="tm" text-anchor="start">Kalinlik</text><rect x="350" y="40" width="340" height="150" rx="5" class="sel"/><text x="520.0" y="87.0" class="tb" text-anchor="middle">Bitiş ailesi: Ankraj Braketi</text><text x="520.0" y="103.0" class="tm" text-anchor="middle">Tipler: B100, B150, B200</text><text x="520.0" y="119.0" class="tm" text-anchor="middle">Delik sayısı = if(Kol_Boyu &gt; 150 mm, 3, 2)</text><text x="520.0" y="135.0" class="tm" text-anchor="middle">Malzeme parametresi, Coarse/Fine</text><text x="520.0" y="151.0" class="tm" text-anchor="middle">Shared: Braket_Kodu, Agirlik</text></svg></div><figcaption>Bitiş alıştırması: parametrik L ankraj braketi (şematik).</figcaption></figure>
+<p>Parametrik bir <strong>L ankraj braketi</strong> ailesi yap:</p>
+<ul class="tasks">
+<li class="task"><label><input type="checkbox" data-id="g7-1"><span>Şablon: Metric Generic Model face based (ya da Work Plane-Based açık Generic Model).</span></label></li>
+<li class="task"><label><input type="checkbox" data-id="g7-2"><span>İskelet: Kol boyu, yükseklik ve kalınlık için adlı düzlemler, etiketli ölçüler, flex.</span></label></li>
+<li class="task"><label><input type="checkbox" data-id="g7-3"><span>Geometri: Bir Extrusion (L kesiti) ve void ile delikler.</span></label></li>
+<li class="task"><label><input type="checkbox" data-id="g7-4"><span>Tipler: B100, B150, B200 (kol boyu 100, 150, 200 mm).</span></label></li>
+<li class="task"><label><input type="checkbox" data-id="g7-5"><span>Formül: <code>Delik_Sayisi = if(Kol_Boyu &gt; 150 mm, 3, 2)</code>; delikler dizi ile.</span></label></li>
+<li class="task"><label><input type="checkbox" data-id="g7-6"><span>Malzeme type parametresi; Coarse'ta delikler gizli.</span></label></li>
+<li class="task"><label><input type="checkbox" data-id="g7-7"><span>Shared parametreler: <code>Braket_Kodu</code>, <code>Agirlik</code>.</span></label></li>
+<li class="task"><label><input type="checkbox" data-id="g7-8"><span>Test projesine yükle, bir yüzeye yerleştir, tablo ve IFC kontrolü.</span></label></li>
+</ul>
+<h3>Gün sonu kontrolü (15 dk)</h3>
+<ul class="tasks">
+<li class="task"><label><input type="checkbox" data-id="g7-9"><span>Test akışını uyguladım.</span></label></li>
+<li class="task"><label><input type="checkbox" data-id="g7-10"><span>Aileyi projeye yükledim ve üzerine yazma seçeneklerini biliyorum.</span></label></li>
+<li class="task"><label><input type="checkbox" data-id="g7-11"><span>Kalite kontrol listesinden geçirdim ve Purge yaptım.</span></label></li>
+<li class="task"><label><input type="checkbox" data-id="g7-12"><span>Ad, sürüm ve IFC ayarlarını yaptım.</span></label></li>
+<li class="task"><label><input type="checkbox" data-id="g7-13"><span>Bitiş alıştırmasını tamamladım.</span></label></li>
+</ul></div>
+  <div class="pn"><a href="#gun6">← 6. gün</a><a href="../../Tools.html">Araçlara dön →</a></div>
+</section>
+</main>
+
+<footer>
+  <div class="wrap">
+    <span>© 2026 Erdal Üstünol · <a href="/gizlilik.html">Gizlilik</a></span>
+    <a href="../../Tools.html">← Araçlar ve eğitimler</a>
+  </div>
+</footer>
+
+<script>
+(() => {
+  const $ = id => document.getElementById(id);
+  const KEY = 'erdevelop-egitim-revit-family';
+  const store = { get(k) { try { return localStorage.getItem(k); } catch (e) { return null; } }, set(k, v) { try { localStorage.setItem(k, v); } catch (e) {} } };
+  let mode = (() => { try { const m = localStorage.getItem('erdevelop-mode'), g = localStorage.getItem('erdevelop-mode-gun'), t = new Date(); if (m && g === t.toDateString()) return m; const h = t.getHours(); return h >= 7 && h < 19 ? 'light' : 'dark'; } catch (e) { return 'light'; } })();
+  const applyMode = () => { document.documentElement.dataset.mode = mode; $('modeBtn').textContent = mode === 'dark' ? 'LIGHT' : 'DARK'; };
+  $('modeBtn').addEventListener('click', () => { mode = mode === 'dark' ? 'light' : 'dark'; store.set('erdevelop-mode', mode); store.set('erdevelop-mode-gun', new Date().toDateString()); applyMode(); });
+  applyMode();
+
+  let done = {}; try { done = JSON.parse(store.get(KEY) || '{}') || {}; } catch (e) { done = {}; }
+  const boxes = [...document.querySelectorAll('li.task input')];
+  const prog = () => {
+    document.querySelectorAll('section.day').forEach(sec => {
+      const d = sec.dataset.day, bs = sec.querySelectorAll('li.task input'), c = [...bs].filter(b => b.checked).length;
+      sec.querySelector('[data-prog]').textContent = c + '/' + bs.length;
+      const n = document.querySelector('[data-nav="' + d + '"]'); if (n) n.classList.toggle('done', bs.length > 0 && c === bs.length);
+    });
+  };
+  boxes.forEach(b => { b.checked = !!done[b.dataset.id]; b.addEventListener('change', () => { if (b.checked) done[b.dataset.id] = 1; else delete done[b.dataset.id]; store.set(KEY, JSON.stringify(done)); prog(); }); });
+  $('resetBtn').addEventListener('click', () => { done = {}; store.set(KEY, '{}'); boxes.forEach(b => b.checked = false); prog(); });
+  prog();
+
+  const links = [...document.querySelectorAll('[data-nav]')];
+  const secs = [$('genel'), ...document.querySelectorAll('section.day')];
+  if ('IntersectionObserver' in window) {
+    const io = new IntersectionObserver(es => es.forEach(e => { if (e.isIntersecting) { const i = secs.indexOf(e.target); links.forEach((l, k) => l.classList.toggle('on', k === i)); } }), { rootMargin: '-40% 0px -55% 0px' });
+    secs.forEach(s => io.observe(s));
+  }
+})();
+</script>
+<script src="../ilerleme.js" data-key="erdevelop-egitim-revit-family"></script>
+<script>if ('serviceWorker' in navigator && location.protocol === 'https:') addEventListener('load', () => navigator.serviceWorker.register('/sw.js').catch(() => { }));</script>
+<script data-goatcounter="https://erdevelop.goatcounter.com/count" async src="//gc.zgo.at/count.js"></script>
+<script src="/uyari.js" data-tur="egitim"></script>
+</body>
+</html>
