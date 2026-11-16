@@ -56,6 +56,17 @@ body.k-acik .kbar button{background:#0000000a;border-color:#00000022}
 #vmT{flex:1;min-height:0;padding:6px 4px 4px 8px}
 #vmT .xterm{height:100%}#vmT .xterm-viewport{background:transparent!important}
 #vmBar button.on{background:var(--ta);color:var(--tb)}
+#oyun{position:fixed;inset:0;z-index:37;background:var(--tb);display:flex;flex-direction:column}
+#oyun[hidden]{display:none}
+#oyun .vh{flex-shrink:0;display:flex;align-items:center;gap:10px;padding:8px 10px;border-bottom:1px solid #ffffff1a;font:500 13px ui-monospace,Menlo,Consolas,monospace;color:var(--tf)}
+#oyun .vh b{white-space:nowrap}#oyun .vh .st{flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;color:var(--tm)}
+#oyAlan{flex:1;min-height:0;display:flex;align-items:center;justify-content:center;overflow:hidden;touch-action:none;user-select:none;-webkit-user-select:none}
+#oyPre{margin:0;font-family:ui-monospace,"IBM Plex Mono","Cascadia Mono",Menlo,Consolas,monospace;line-height:1.12;white-space:pre;color:var(--tf)}
+#oyPre .m{cursor:pointer}
+#oyBar{display:flex;justify-content:center;flex-wrap:wrap;gap:6px;padding:8px 8px calc(8px + env(safe-area-inset-bottom));border-top:1px solid #ffffff14}
+#oyBar button{min-width:52px;height:46px;border-radius:9px;border:1px solid #ffffff22;background:#ffffff0d;color:var(--tf);font:600 17px ui-monospace,Menlo,monospace}
+#oyBar button.on{background:var(--ta);color:var(--tb)}
+body.k-acik #oyBar button{background:#0000000a;border-color:#00000022}
 #win{position:fixed;inset:0;z-index:36;background:#0b0d0c;display:flex;flex-direction:column}
 #win[hidden]{display:none}
 #win .vh{flex-shrink:0;display:flex;align-items:center;gap:10px;padding:8px 10px;border-bottom:1px solid #ffffff1a;font:500 13px ui-monospace,Menlo,Consolas,monospace;color:#d7e2dc;background:#0f1412}
@@ -81,6 +92,7 @@ body.k-acik .kbar button{background:#0000000a;border-color:#00000022}
 <div class="kbar" id="bar"><button data-k="tab">Tab</button><button data-k="up">↑</button><button data-k="down">↓</button><button data-k="ctrlc">^C</button><button data-k="|">|</button><button data-k="/">/</button><button data-k="-">-</button><button data-k="~">~</button><button data-k=">">&gt;</button><button data-k="&quot;">"</button><button data-k="left">←</button><button data-k="right">→</button><button data-k="clear">clear</button></div>
 <div id="ed" hidden><div class="eh"><b id="edN"></b><div class="hb"><button type="button" id="edS">Kaydet</button><button type="button" id="edX">Kapat</button></div></div><textarea id="edT" spellcheck="false" autocapitalize="off" autocorrect="off"></textarea><div class="ef" id="edF">Ctrl+S kaydet · Esc kapat</div></div>
 <canvas id="mx" hidden></canvas>
+<div id="oyun" hidden><div class="vh"><b id="oyAd">🎮</b><span class="st" id="oyS"></span><div class="hb"><button type="button" id="oyP" title="Duraklat (P)">⏸</button><button type="button" id="oyY" title="Yeniden başla (R)">⟳</button><button type="button" id="oyX" title="Kapat (Esc)">✕</button></div></div><div id="oyAlan"><pre id="oyPre"></pre></div><div id="oyBar"></div></div>
 <div id="win" hidden><div class="vh"><b>🪟 ReactOS</b><span class="st" id="winS"></span><div class="hb"><button type="button" id="winKbB" title="Klavye">⌨</button><button type="button" id="winCad" title="Ctrl+Alt+Del">C-A-D</button><button type="button" id="winFs" title="Tam ekran">⛶</button><button type="button" id="winX" title="Kapat">✕</button></div></div>
 <div id="screen_container"><div></div><canvas></canvas><textarea id="winKb" autocapitalize="off" autocorrect="off" spellcheck="false"></textarea><div id="winHint"></div></div></div>
 <div id="vm" hidden><div class="vh"><b>🐧 erdevelop Linux</b><span class="st" id="vmS"></span><div class="hb"><button type="button" id="vmSync" title="Dosyaları Konsol'a eşitle">⇅</button><button type="button" id="vmR" title="Yeniden başlat">⟳</button><button type="button" id="vmX" title="Kapat (dosyalar Konsol'a eşitlenir)">✕</button></div></div><div id="vmT"></div>
@@ -96,7 +108,7 @@ body.k-acik .kbar button{background:#0000000a;border-color:#00000022}
 const T = (tr, en) => window.erDil && erDil.lang === 'en' ? en : tr;
 const OUT = byId('out'), TERM = byId('term'), CMD = byId('cmd'), PS = byId('ps');
 /* öykünücü pencereleri açıkken komut satırı odağı almasın (v86 metin kutusundaki tuşları yok sayar) */
-const focusCmd = o => { const w = document.getElementById('win'); if (w && !w.hidden) return; CMD.focus(o); };
+const focusCmd = o => { const w = document.getElementById('win'), g = document.getElementById('oyun'); if ((w && !w.hidden) || (g && !g.hidden)) return; CMD.focus(o); };
 const sleep = (ms, sig) => new Promise((ok, no) => { const t = setTimeout(ok, ms); if (sig) sig.addEventListener('abort', () => { clearTimeout(t); no(new DOMException('abort', 'AbortError')); }, { once: true }); });
 const T0 = Date.now();
 
@@ -216,7 +228,7 @@ function tokenize(src) {
   while (i < src.length) {
     const ch = src[i];
     if (ch === ' ' || ch === '\t') { push(); i++; continue; }
-    if (ch === '#' && cur === null) break;
+    if (ch === '#' && cur === null && (i + 1 >= src.length || /\s/.test(src[i + 1]))) break; /* #renk gibi sözcükler yorum sayılmaz */
     if (ch === '2' && src[i + 1] === '>' && cur === null) { if (src.slice(i, i + 4) === '2>&1') { push(); out.push({ op: '2>&1' }); i += 4; continue; } push(); out.push({ op: '2>' }); i += 2; continue; }
     if ('|&;<>'.includes(ch)) {
       push(); const two = src.slice(i, i + 2);
@@ -282,7 +294,7 @@ function splitTop(src) {
     if (q) { cur += ch; if (ch === '\\' && q === '"') { cur += src[++i] || ''; } else if (ch === q) q = null; continue; }
     if (ch === "'" || ch === '"') { q = ch; cur += ch; continue; }
     if (ch === '\\') { cur += ch + (src[++i] || ''); continue; }
-    if (ch === '#' && (i === 0 || /\s/.test(src[i - 1]))) break;
+    if (ch === '#' && (i === 0 || /\s/.test(src[i - 1])) && (i + 1 >= src.length || /\s/.test(src[i + 1]))) break;
     const two = src.slice(i, i + 2);
     if (two === '&&' || two === '||') { out.push({ src: cur, conn }); conn = two; cur = ''; i++; continue; }
     if (ch === ';') { out.push({ src: cur, conn }); conn = ';'; cur = ''; continue; }
@@ -379,6 +391,16 @@ const HELP = [
     ['python [dosya.py | -c kod]', T('Python 3 (ilk açılışta yüklenir)', 'Python 3 (loaded on first use)')], ['js [dosya.js | ifade]', T('JavaScript', 'JavaScript')],
     ['calc ifade', T('hesap makinesi: sqrt(2)*pi, 2^10, sin(30°)', 'calculator: sqrt(2)*pi, 2^10, sin(30°)')], ['base64 [-d] / urlencode / urldecode', T('kodlama', 'encoding')],
     ['md5sum / sha1sum / sha256sum / sha512sum', T('özet (hash)', 'hashes')], ['uuid / passgen [uzunluk] / rand [a b]', T('kimlik, parola, rastgele sayı', 'ids, passwords, random')], ['jwt token', T('JWT çöz', 'decode a JWT')], ['conv 15 cm in', T('birim çevir', 'convert units')]]],
+  [T('Cephe ve site araçları', 'Facade & site tools'), [
+    ['ral 7016 | ral antrasit | ral #383e42', T('RAL rengi: koda, ada ya da HEX/RGB\'ye en yakın', 'RAL colour: by code, name or nearest to HEX/RGB')],
+    ['cam 8+16+44.2 [1200x2400] [adet]', T('cam ağırlığı ve ünite kalınlığı (lamine, ısıcam)', 'glass weight and unit thickness')],
+    ['genlesme al 6000 [80] [-20] [15]', T('ısıl genleşme: malzeme/α, boy (mm), Tmax, Tmin, montaj', 'thermal expansion: material/α, length, Tmax, Tmin, install')],
+    ['cig 22 50 [yüzey °C]', T('çiğ noktası ve yoğuşma / küf riski', 'dew point and condensation / mould risk')],
+    ['arac [kelime]', T('sitedeki 170+ aracı listele, ara ve aç (ör. arac rüzgar)', 'list, search and open the site\'s 170+ tools')]]],
+  [T('Oyunlar', 'Games'), [
+    ['tetris', T('Tetris (← → ↓, ↑ döndür, boşluk bırak)', 'Tetris (← → ↓, ↑ rotate, space drop)')],
+    ['yilan', T('yılan oyunu (ok tuşları ya da kaydır)', 'snake (arrow keys or swipe)')],
+    ['mayin [kolay|orta|zor]', T('mayın tarlası (dokun: aç, basılı tut ya da F: bayrak)', 'minesweeper (tap: open, long-press or F: flag)')]]],
   [T('Bilgi', 'Info'), [
     ['weather [şehir]', T('hava durumu (hava)', 'weather')], ['kur [100 usd try]', T('döviz çevir', 'currency conversion')], ['wiki konu', T('Vikipedi özeti', 'Wikipedia summary')],
     ['date / cal / uptime / timer 5m', T('tarih, takvim, süre, zamanlayıcı', 'date, calendar, uptime, timer')], ['neofetch / uname -a / whoami', T('cihaz ve sistem bilgisi', 'device & system info')]]],
@@ -701,6 +723,66 @@ const CMDS = {
     c.out(T('FreeDOS açılıyor… (1,4 MB)', 'Booting FreeDOS… (1.4 MB)'), 'c-m');
     await startWin('dos');
   },
+  /* ---------- cephe ve site araçları ---------- */
+  async ral(c) {
+    const D = await siteRAL(), q = c.args.join(' ').trim();
+    if (!q) { c.out(T(`RAL Classic: ${D.length} renk. Örnek: ral 7016 · ral antrasit · ral #383e42 · ral 56 60 66`, `RAL Classic: ${D.length} colours. e.g. ral 7016 · ral anthracite · ral #383e42`)); return; }
+    const card = r => { const [cd, tr, en, hx] = r, [R0, G, B] = hexRGB(hx); if (c.tty) c.html(`<span style="display:inline-block;width:2.2em;height:1.1em;vertical-align:-.15em;border-radius:3px;border:1px solid #ffffff33;background:#${hx}"></span> <b class="c-a">RAL ${cd}</b>  ${esc(T(tr, en))} <span class="c-m">· ${esc(T(en, tr))} · #${hx} · RGB ${R0},${G},${B}</span>`); else c.out(`RAL ${cd}\t${T(tr, en)}\t#${hx}\t${R0},${G},${B}`); };
+    const code = q.replace(/^ral\s*/i, '').replace(/\s/g, '');
+    if (/^\d{4}$/.test(code)) { const r = D.find(x => x[0] === code); if (!r) { c.err('RAL ' + code + ': ' + T('bulunamadı', 'not found')); return 1; } card(r); return; }
+    let rgb = null; const h = q.match(/^#?([0-9a-f]{6}|[0-9a-f]{3})$/i), n3 = q.match(/^(\d{1,3})[\s,;]+(\d{1,3})[\s,;]+(\d{1,3})$/);
+    if (h) rgb = hexRGB(h[1].length === 3 ? h[1].replace(/./g, '$&$&') : h[1]); else if (n3) rgb = [+n3[1], +n3[2], +n3[3]];
+    if (rgb) { const L0 = lab(rgb); const top = D.map(r => [r, Math.hypot(...lab(hexRGB(r[3])).map((v, i) => v - L0[i]))]).sort((a, b) => a[1] - b[1]).slice(0, 3); c.out(T('En yakın RAL renkleri (ΔE):', 'Nearest RAL colours (ΔE):'), 'c-m'); top.forEach(([r, d]) => { card(r); c.out('   ΔE ' + nf2(+d.toFixed(1)), 'c-m'); }); return; }
+    const nq = trNorm(q), hits = D.filter(r => trNorm(r[1] + ' ' + r[2]).includes(nq));
+    if (!hits.length) { c.err(T('eşleşen RAL rengi yok: ', 'no matching RAL colour: ') + q); return 1; }
+    hits.slice(0, 30).forEach(card); if (hits.length > 30) c.out(`… +${hits.length - 30}`, 'c-m');
+  },
+  cam(c) {
+    const mix = c.args[0]; if (!mix) { c.err(T('kullanım: cam 8+16+44.2 [1200x2400] [adet]   (44.2 = 4+4 cam + 2×0,38 PVB)', 'usage: cam 8+16+44.2 [1200x2400] [count]')); return 1; }
+    let L; try { L = camParse(mix); } catch (e) { c.err('cam: ' + e.message); return 1; }
+    const dim = (c.args[1] || '').match(/^(\d+(?:[.,]\d+)?)[x×*](\d+(?:[.,]\d+)?)$/i), N = Math.max(1, parseInt(c.args[2]) || 1);
+    let g = 0, u = 0, kg = 0;
+    for (const x of L) { if (x.kind === 'gap') { u += x.thk; c.out([C('  ' + T('boşluk', 'gap').padEnd(10), 'c-m'), (x.thk + ' mm').padStart(9)]); continue; } const t = x.panes.reduce((a, b) => a + b, 0), p = x.pvb * 0.38, w = t * 2.5 + p * 1.07; g += t + p; u += t + p; kg += w; c.out([C('  ' + (x.kind === 'lam' ? T('lamine', 'laminated') : T('cam', 'glass')).padEnd(10), 'c-l'), (nf2(t + p) + ' mm').padStart(9), C(`  ${nf2(w)} kg/m²` + (x.kind === 'lam' ? `  (${x.panes.join('+')} + ${x.pvb}×0,38 PVB)` : ''), 'c-m')]); }
+    c.out([C(T('Birim ağırlık  ', 'Weight per m² '), 'c-a'), C(kg.toFixed(1).replace('.', ',') + ' kg/m²', 'c-w c-b'), C(`   ${T('cam', 'glass')} ${nf2(g)} mm · ${T('ünite', 'unit')} ${nf2(u)} mm`, 'c-m')]);
+    if (dim) { const a = pnum(dim[1]) / 1000 * pnum(dim[2]) / 1000; c.out([C(T('Panel          ', 'Panel          '), 'c-a'), `${dim[1]} × ${dim[2]} mm = ${a.toFixed(2).replace('.', ',')} m² → `, C((a * kg).toFixed(1).replace('.', ',') + ' kg', 'c-w c-b')]); if (N > 1) c.out([C(T('Toplam         ', 'Total          '), 'c-a'), `${N} ${T('adet', 'pcs')} · ${(a * N).toFixed(2).replace('.', ',')} m² → `, C((a * kg * N).toFixed(0) + ' kg', 'c-w c-b')]); }
+    c.out(T('Cam 2,5 kg/m² her mm için, PVB 1070 kg/m³; gaz ve çıta ihmal. Ayrıntı: ', 'Glass 2.5 kg/m² per mm, PVB 1070 kg/m³. Details: ') + location.origin + '/cam-agirlik.html', 'c-m');
+  },
+  genlesme(c) {
+    const MAT = [['al', T('Alüminyum', 'Aluminium'), 23], ['st', T('Çelik (karbon)', 'Steel (carbon)'), 12], ['ss', T('Paslanmaz çelik', 'Stainless steel'), 16], ['gl', T('Cam', 'Glass'), 9], ['acp', T('Alüminyum kompozit', 'ACP'), 24], ['cu', T('Bakır', 'Copper'), 17], ['zn', T('Çinko-titan', 'Zinc'), 22], ['pvc', 'PVC', 70], ['gfrc', T('GRC / beton', 'GRC / concrete'), 10], ['stn', T('Doğal taş', 'Natural stone'), 8], ['cer', T('Seramik', 'Ceramic'), 6], ['wd', T('Ahşap (lif yönü)', 'Timber'), 5]];
+    const a0 = c.args[0]; if (!a0) { c.out(T('kullanım: genlesme <malzeme|α> <boy mm> [Tmax=80] [Tmin=-20] [montaj=15]', 'usage: genlesme <material|α> <length mm> [Tmax=80] [Tmin=-20] [install=15]'), 'c-m'); MAT.forEach(m => c.out([C(m[0].padEnd(6), 'c-a'), m[1].padEnd(22), C('α = ' + m[2] + '·10⁻⁶ 1/°C', 'c-m')])); return; }
+    const m = MAT.find(x => x[0] === a0.toLowerCase() || trNorm(x[1]).startsWith(trNorm(a0))), al = m ? m[2] : pnum(a0);
+    const Lm = pnum(c.args[1]), tmax = c.args[2] != null ? pnum(c.args[2]) : 80, tmin = c.args[3] != null ? pnum(c.args[3]) : -20, tm = c.args[4] != null ? pnum(c.args[4]) : 15;
+    if (!isFinite(al) || !(Lm > 0)) { c.err(T('malzeme kodu ya da α sayı olmalı, boy mm olarak verilmeli', 'material code or α number, and length in mm required')); return 1; }
+    const k = al * 1e-6 * Lm, up = k * (tmax - tm), dn = k * (tm - tmin), tot = k * (tmax - tmin);
+    c.out([C((m ? m[1] : 'α = ' + al + '·10⁻⁶') + ` · L = ${Lm} mm`, 'c-a'), C(`  (Tmax ${tmax}°, Tmin ${tmin}°, ${T('montaj', 'install')} ${tm}°)`, 'c-m')]);
+    c.out([T('Uzama (ısınınca)    ', 'Expansion (hot)    '), C('+' + up.toFixed(2).replace('.', ',') + ' mm', 'c-w c-b')]);
+    c.out([T('Kısalma (soğuyunca) ', 'Contraction (cold) '), C('−' + dn.toFixed(2).replace('.', ',') + ' mm', 'c-l c-b')]);
+    c.out([T('Toplam hareket      ', 'Total movement     '), C(tot.toFixed(2).replace('.', ',') + ' mm', 'c-b'), C(`   ${T('%25 hareket kabiliyetli mastik için derz ≥ ', 'joint ≥ ')}${(tot / 0.25).toFixed(1).replace('.', ',')} mm`, 'c-m')]);
+    c.out(T('ΔL = α·L·ΔT. Ayrıntı ve iki malzemeli hareket: ', 'ΔL = α·L·ΔT. Details: ') + location.origin + '/kesif/genlesme.html', 'c-m');
+  },
+  cig(c) {
+    const t = pnum(c.args[0]), rh = pnum(c.args[1]), ts = c.args[2] != null ? pnum(c.args[2]) : null;
+    if (!isFinite(t) || !(rh > 0 && rh <= 100)) { c.err(T('kullanım: cig <iç sıcaklık °C> <bağıl nem %> [yüzey sıcaklığı °C]', 'usage: cig <indoor °C> <RH %> [surface °C]')); return 1; }
+    const ps = x => 610.94 * Math.exp(17.625 * x / (x + 243.04)), g = Math.log(rh / 100) + 17.625 * t / (243.04 + t), td = 243.04 * g / (17.625 - g);
+    const a = Math.log(rh / 100 * ps(t) / 0.8 / 610.94), tm = 243.04 * a / (17.625 - a);
+    c.out([T('Çiğ noktası          ', 'Dew point            '), C(td.toFixed(1).replace('.', ',') + ' °C', 'c-w c-b'), C(T('   (yüzey bunun altına inerse terler)', '   (surfaces below this sweat)'), 'c-m')]);
+    c.out([T('Küf eşiği (%80 nem)  ', 'Mould limit (80% RH) '), C(tm.toFixed(1).replace('.', ',') + ' °C', 'c-l c-b')]);
+    if (ts != null && isFinite(ts)) c.out([T('Yüzey ', 'Surface ') + ts + ' °C → ', ts <= td ? C(T('YOĞUŞMA VAR', 'CONDENSATION'), 'c-e c-b') : ts <= tm ? C(T('yoğuşma yok, küf riski var', 'no condensation, mould risk'), 'c-w c-b') : C(T('güvenli', 'safe'), 'c-a c-b'), C(`  (${T('pay', 'margin')} ${(ts - td).toFixed(1).replace('.', ',')} K)`, 'c-m')]);
+    c.out(T('Magnus formülü, EN ISO 13788. Ayrıntı (fRsi, profil): ', 'Magnus formula, EN ISO 13788. Details: ') + location.origin + '/kesif/yogusma.html', 'c-m');
+  },
+  async arac(c) {
+    const A = await siteTools(), q = c.args.join(' ').trim();
+    if (!q) { let i = 0; for (const g of A.groups) { const it = A.items.filter(x => x.g === g.id); if (!it.length) continue; c.out(''); c.out([C(g.h + ` (${it.length})`, 'c-w c-b')]); it.forEach(x => c.out(['  ', C(String(A.items.indexOf(x) + 1).padStart(3), 'c-m'), '  ', C(x.t, 'c-a')])); } c.out(''); c.out(T('Açmak için: arac <no> ya da arac <kelime>   (ör. arac 12, arac rüzgar)', 'Open with: arac <no> or arac <word>'), 'c-m'); return; }
+    let hits = /^\d+$/.test(q) ? [A.items[+q - 1]].filter(Boolean) : A.items.filter(x => trNorm(x.t + ' ' + x.d).includes(trNorm(q)));
+    const exact = hits.filter(x => trNorm(x.t).includes(trNorm(q))); if (hits.length > 1 && exact.length === 1) hits = exact;
+    if (!hits.length) { c.err(T('araç bulunamadı: ', 'no tool found: ') + q); return 1; }
+    if (hits.length === 1) { const x = hits[0], url = new URL('../' + x.f, location.href).href; c.out([T('Açılıyor: ', 'Opening: '), C(x.t, 'c-a c-b'), ' ', url]); window.open(url, '_blank'); return; }
+    hits.slice(0, 25).forEach(x => c.out([C(String(A.items.indexOf(x) + 1).padStart(3), 'c-m'), '  ', C(x.t, 'c-a'), C(' — ' + x.d.slice(0, 80) + (x.d.length > 80 ? '…' : ''), 'c-m')]));
+    c.out(T(`${hits.length} sonuç. Açmak için: arac <no>`, `${hits.length} results. Open with: arac <no>`), 'c-m');
+  },
+  tetris(c) { oyunBaslat('tetris'); },
+  yilan(c) { oyunBaslat('yilan'); },
+  mayin(c) { const z = trNorm(c.args[0] || 'kolay'); oyunBaslat('mayin', z.startsWith('z') || z.startsWith('h') ? 'zor' : z.startsWith('o') || z.startsWith('m') ? 'orta' : 'kolay'); },
   async pip(c) { if (c.args[0] !== 'install' || !c.args[1]) { c.err(T('kullanım: pip install paket', 'usage: pip install package')); return 1; } await loadPy(c); await PY.loadPackage('micropip'); const mp = PY.pyimport('micropip'); for (const p of c.args.slice(1)) { c.out(T('yükleniyor: ', 'installing: ') + p, 'c-m'); try { await mp.install(p); c.out(T('tamam: ', 'done: ') + p, 'c-a'); } catch (e) { c.err(String(e.message || e).split('\n').slice(-2).join(' ')); return 1; } } },
 
   /* ---------- bilgi ---------- */
@@ -724,9 +806,29 @@ const CMDS = {
   sl(c) { c.out(T('Choo choo! 🚂  (ls demek istedin herhalde)', 'Choo choo! 🚂  (you probably meant ls)')); },
   sudo(c) { c.out(T(`${ENV.USER} sudoers dosyasında yok. Bu olay rapor edilecek. 😄\n(Burada zaten her şeyin sahibi sensin.)`, `${ENV.USER} is not in the sudoers file. This incident will be reported. 😄\n(You already own everything here.)`), 'c-w'); return 1; },
 };
-CMDS.reactos = CMDS.xp = CMDS.windows; CMDS.freedos = CMDS.dos; CMDS.telnet = CMDS.nmap = CMDS.ssh; CMDS.tracert = CMDS.traceroute; CMDS.nslookup = CMDS.dig; CMDS.python3 = CMDS.python; CMDS.pip3 = CMDS.pip; CMDS['?'] = CMDS.help;
+CMDS.reactos = CMDS.xp = CMDS.windows; CMDS['yılan'] = CMDS.snake = CMDS.yilan; CMDS['mayın'] = CMDS.minesweeper = CMDS.mayin; CMDS['genleşme'] = CMDS.genlesme; CMDS['çiğ'] = CMDS.cig; CMDS.yogusma = CMDS['yoğuşma'] = CMDS.cig; CMDS['araç'] = CMDS.arac; CMDS.tools = CMDS.arac; CMDS.freedos = CMDS.dos; CMDS.telnet = CMDS.nmap = CMDS.ssh; CMDS.tracert = CMDS.traceroute; CMDS.nslookup = CMDS.dig; CMDS.python3 = CMDS.python; CMDS.pip3 = CMDS.pip; CMDS['?'] = CMDS.help;
 
 /* ---------------- yardımcılar (komutlar için) ---------------- */
+const nf2 = v => (+v.toFixed(2)).toLocaleString(erDil.lang === 'en' ? 'en-GB' : 'tr-TR');
+const trNorm = s => String(s).toLocaleLowerCase('tr').normalize('NFD').replace(/[̀-ͯ]/g, '').replace(/ı/g, 'i');
+const hexRGB = h => [0, 2, 4].map(i => parseInt(h.slice(i, i + 2), 16));
+function lab([r, g, b]) { const f = v => (v /= 255, v > 0.04045 ? ((v + 0.055) / 1.055) ** 2.4 : v / 12.92), [R, G, B] = [f(r), f(g), f(b)]; let X = (R * 0.4124 + G * 0.3576 + B * 0.1805) / 0.95047, Y = R * 0.2126 + G * 0.7152 + B * 0.0722, Z = (R * 0.0193 + G * 0.1192 + B * 0.9505) / 1.08883; const q = v => v > 0.008856 ? Math.cbrt(v) : 7.787 * v + 16 / 116; X = q(X); Y = q(Y); Z = q(Z); return [116 * Y - 16, 500 * (X - Y), 200 * (Y - Z)]; }
+let _RAL = null, _TOOLS = null;
+async function siteRAL() { if (_RAL) return _RAL; const h = await (await fetch('../kesif/ral.html')).text(); const m = h.match(/const RAL = (\[[\s\S]*?\]);/); if (!m) throw new Error(T('RAL verisi okunamadı', 'could not read RAL data')); return (_RAL = JSON.parse(m[1])); }
+async function siteTools() {
+  if (_TOOLS) return _TOOLS; const h = await (await fetch('../Tools.html')).text(), S = `'((?:[^'\\\\]|\\\\.)*)'`, un = x => x.replace(/\\(.)/g, '$1'), L = erDil.lang === 'en';
+  const groups = [], items = []; let cur = null;
+  const re = new RegExp(`\\{ id: '([a-z]+)', h: \\{ tr: ${S}, en: ${S} \\}|\\{ f: '([^']+)', i: '[^']*', t: \\{ tr: ${S}, en: ${S} \\}, d: \\{ tr: ${S}, en: ${S}`, 'g');
+  for (const m of h.matchAll(re)) { if (m[1]) { cur = m[1]; groups.push({ id: m[1], h: un(L ? m[3] : m[2]) }); } else items.push({ g: cur, f: m[4], t: un(L ? m[6] : m[5]), d: un(L ? m[8] : m[7]) }); }
+  return (_TOOLS = { groups, items });
+}
+function camParse(str) {
+  const s = str.replace(/\s/g, '').replace(/,/g, '.'), L = [];
+  const glass = tok => { if (/^\d+$/.test(tok)) return { kind: 'mono', panes: [+tok], pvb: 0 }; const m = tok.match(/^(\d+)\.(\d)$/); if (!m) return null; const p = m[1]; let panes; if (p.length === 2) panes = [+p[0], +p[1]]; else if (p.length === 4) panes = [+p.slice(0, 2), +p.slice(2)]; else if (p.length === 3) panes = /^1[0-9]/.test(p) && +p.slice(0, 2) <= 19 && +p[2] > 0 ? [+p.slice(0, 2), +p[2]] : [+p[0], +p.slice(1)]; else return null; if (panes.some(x => !x)) return null; return { kind: 'lam', panes, pvb: +m[2] }; };
+  s.split('+').forEach((t, i) => { if (i % 2) { const g = parseFloat(t); if (!(g > 0) || !/^\d+(\.\d+)?$/.test(t)) throw new Error(`"${t}" ${T('anlaşılamadı', 'not understood')}`); L.push({ kind: 'gap', thk: g }); } else { const g = glass(t); if (!g) throw new Error(`"${t}" ${T('anlaşılamadı', 'not understood')}`); L.push(g); } });
+  if (L[L.length - 1].kind === 'gap') throw new Error(T('boşluktan sonra cam gelmeli (ör. 6+16+6)', 'a gap must be followed by glass'));
+  return L;
+}
 function shuffle(a) { a = a.slice(); for (let i = a.length - 1; i > 0; i--) { const j = Math.floor(Math.random() * (i + 1)); [a[i], a[j]] = [a[j], a[i]]; } return a; }
 function hval(s) { const m = String(s).match(/^([\d.]+)\s*([KMGT]?)/i); return m ? +m[1] * ({ '': 1, K: 1e3, M: 1e6, G: 1e9, T: 1e12 }[m[2].toUpperCase()]) : 0; }
 function fmtNum(v, d) { if (typeof v !== 'number' || !isFinite(v)) return String(v); if (d != null) return v.toFixed(d); if (Number.isInteger(v) && Math.abs(v) < 1e21) return String(v); const r = +v.toPrecision(12); return Math.abs(r) >= 1e-6 || r === 0 ? String(r) : r.toExponential(6); }
@@ -959,6 +1061,116 @@ byId('winKb').addEventListener('input', e => {
 byId('winKb').addEventListener('keydown', e => { if (!WIN) return; const m = { Enter: [0x1C, 0x9C], Backspace: [0x0E, 0x8E], Escape: [0x01, 0x81], Tab: [0x0F, 0x8F] }[e.key]; if (m && e.key !== 'Backspace') { e.preventDefault(); WIN.emu.keyboard_send_scancodes(m); } });
 byId('screen_container').addEventListener('click', () => { if (WIN && WIN.booted && WIN.kind !== 'dos' && !matchMedia('(pointer:coarse)').matches && !document.pointerLockElement) { try { WIN.emu.lock_mouse(); } catch (e) { } } });
 addEventListener('resize', winFit);
+
+/* ---------------- oyunlar: tetris, yılan, mayın tarlası ---------------- */
+let OY = null;
+const oyRekor = (k, v) => { const key = 'konsol:rekor:' + k; const r = +(LS.get(key) || 0); if (v != null && v > r) { LS.set(key, String(v)); return v; } return r; };
+const sp = (txt, col, cls) => `<span${cls ? ` class="${cls}"` : ''}${col ? ` style="color:${col}"` : ''}>${txt}</span>`;
+function oyFit() { if (!OY) return; const a = byId('oyAlan'), pre = byId('oyPre'), cols = OY.cols || 40, rows = OY.rows || 22; const fs = Math.max(8, Math.min(a.clientWidth / (cols * 0.61), a.clientHeight / (rows * 1.13), 30)); pre.style.fontSize = fs.toFixed(1) + 'px'; }
+function oyunBaslat(tur, opt) {
+  oyunKapat(true);
+  const G = { tetris: oyTetris, yilan: oyYilan, mayin: oyMayin }[tur]();
+  OY = Object.assign(G, { tur, opt, dur: false, son: false });
+  byId('oyAd').textContent = { tetris: '🧱 Tetris', yilan: '🐍 ' + T('Yılan', 'Snake'), mayin: '💣 ' + T('Mayın tarlası', 'Minesweeper') }[tur];
+  byId('oyBar').innerHTML = OY.tuslar.map(([k, l]) => `<button type="button" data-k="${k}">${l}</button>`).join('');
+  byId('oyun').hidden = false; CMD.blur(); OY.yeni(opt); oyFit(); oyCiz();
+}
+function oyunKapat(sessiz) { if (!OY) return; clearInterval(OY.iv); clearTimeout(OY.to); OY = null; byId('oyun').hidden = true; if (!sessiz) { paintPS(); focusCmd(); } }
+function oyCiz() { if (!OY) return; byId('oyPre').innerHTML = OY.ciz(); byId('oyS').textContent = OY.durum(); byId('oyP').textContent = OY.dur ? '▶' : '⏸'; }
+function oyTus(k) { if (!OY) return; if (k === 'Escape') return oyunKapat(); if (k === 'p' || k === 'P') { if (!OY.son) { OY.dur = !OY.dur; oyCiz(); } return; } if (k === 'r' || k === 'R') { OY.yeni(OY.opt); oyCiz(); return; } if (OY.son && (k === ' ' || k === 'Enter')) { OY.yeni(OY.opt); oyCiz(); return; } if (!OY.dur || OY.tur === 'mayin') OY.tus(k); oyCiz(); }
+document.addEventListener('keydown', e => { if (!OY || byId('oyun').hidden) return; const k = e.key; if (['ArrowLeft', 'ArrowRight', 'ArrowUp', 'ArrowDown', ' ', 'Enter', 'Escape', 'p', 'P', 'r', 'R', 'f', 'F'].includes(k)) { e.preventDefault(); e.stopPropagation(); oyTus(k); } }, true);
+byId('oyX').onclick = () => oyunKapat(); byId('oyY').onclick = () => oyTus('r'); byId('oyP').onclick = () => oyTus('p');
+byId('oyBar').addEventListener('pointerdown', e => { const b = e.target.closest('[data-k]'); if (!b) return; e.preventDefault(); const k = b.dataset.k; if (k === 'bayrak') { OY.bayrakKip = !OY.bayrakKip; b.classList.toggle('on', OY.bayrakKip); return; } oyTus(k); if (/Arrow(Left|Right|Down)/.test(k) && OY && OY.tur === 'tetris') { clearInterval(OY.tekrar); const t0 = setTimeout(() => { OY.tekrar = setInterval(() => oyTus(k), 70); }, 220); const bit = () => { clearTimeout(t0); clearInterval(OY && OY.tekrar); removeEventListener('pointerup', bit); removeEventListener('pointercancel', bit); }; addEventListener('pointerup', bit); addEventListener('pointercancel', bit); } });
+/* kaydırma (yılan ve tetris) */
+(() => { let x0 = 0, y0 = 0, t0 = 0; const a = byId('oyAlan');
+  a.addEventListener('pointerdown', e => { x0 = e.clientX; y0 = e.clientY; t0 = performance.now(); });
+  a.addEventListener('pointerup', e => { if (!OY || OY.tur === 'mayin') return; const dx = e.clientX - x0, dy = e.clientY - y0, ad = Math.max(Math.abs(dx), Math.abs(dy)); if (ad < 24) { if (OY.tur === 'tetris' && performance.now() - t0 < 300) oyTus('ArrowUp'); return; } oyTus(Math.abs(dx) > Math.abs(dy) ? (dx > 0 ? 'ArrowRight' : 'ArrowLeft') : (dy > 0 ? (OY.tur === 'tetris' ? ' ' : 'ArrowDown') : 'ArrowUp')); }); })();
+addEventListener('resize', oyFit);
+
+function oyTetris() {
+  const W = 10, H = 20, RENK = { I: '#4fd1e8', O: '#f2c94c', T: '#b07cf2', S: '#6fcf6f', Z: '#ef6b6b', J: '#5b8def', L: '#f2994a' };
+  const SEK = { I: [[0, 1], [1, 1], [2, 1], [3, 1]], O: [[1, 0], [2, 0], [1, 1], [2, 1]], T: [[1, 0], [0, 1], [1, 1], [2, 1]], S: [[1, 0], [2, 0], [0, 1], [1, 1]], Z: [[0, 0], [1, 0], [1, 1], [2, 1]], J: [[0, 0], [0, 1], [1, 1], [2, 1]], L: [[2, 0], [0, 1], [1, 1], [2, 1]] };
+  const G = { cols: 35, rows: 22, tuslar: [['ArrowLeft', '←'], ['ArrowUp', '⟳'], ['ArrowDown', '↓'], ['ArrowRight', '→'], [' ', '⤓']] };
+  let tah, p, sira, puan, satir, sev, torba = [];
+  const cek = () => { if (!torba.length) torba = shuffle(Object.keys(SEK)); return torba.pop(); };
+  const hucre = (t, r = 0) => SEK[t].map(([x, y]) => { const n = t === 'O' ? 0 : r; let a = x, b = y; const m = t === 'I' ? 3 : 2; for (let i = 0; i < n; i++) [a, b] = [m - b, a]; return [a, b]; });
+  const sigar = (q) => q.h.every(([x, y]) => { const X = q.x + x, Y = q.y + y; return X >= 0 && X < W && Y < H && (Y < 0 || !tah[Y][X]); });
+  const yeniParca = () => { const t = sira; sira = cek(); p = { t, r: 0, x: 3, y: -1, h: hucre(t) }; if (!sigar(p)) { G.son = true; clearInterval(G.iv); oyRekor('tetris', puan); } };
+  const hiz = () => Math.max(70, 800 - (sev - 1) * 75);
+  const zaman = () => { clearInterval(G.iv); G.iv = setInterval(() => { if (!G.dur && !G.son) { asagi(); oyCiz(); } }, hiz()); };
+  const kilitle = () => { p.h.forEach(([x, y]) => { if (p.y + y >= 0) tah[p.y + y][p.x + x] = p.t; }); let n = 0; for (let y = H - 1; y >= 0; y--) if (tah[y].every(Boolean)) { tah.splice(y, 1); tah.unshift(Array(W).fill(0)); n++; y++; } if (n) { puan += [0, 100, 300, 500, 800][n] * sev; satir += n; const s2 = Math.floor(satir / 10) + 1; if (s2 !== sev) { sev = s2; zaman(); } } yeniParca(); };
+  const asagi = () => { const q = { ...p, y: p.y + 1 }; if (sigar(q)) p = q; else kilitle(); };
+  G.yeni = () => { tah = Array.from({ length: H }, () => Array(W).fill(0)); torba = []; sira = cek(); puan = 0; satir = 0; sev = 1; G.son = false; G.dur = false; yeniParca(); zaman(); };
+  G.tus = k => { if (G.son) return; let q;
+    if (k === 'ArrowLeft') q = { ...p, x: p.x - 1 }; else if (k === 'ArrowRight') q = { ...p, x: p.x + 1 };
+    else if (k === 'ArrowDown') { asagi(); puan += 1; return; }
+    else if (k === ' ' || k === 'Enter') { let d = 0; while (sigar({ ...p, y: p.y + 1 })) { p = { ...p, y: p.y + 1 }; d++; } puan += 2 * d; kilitle(); return; }
+    else if (k === 'ArrowUp') { const r = (p.r + 1) % 4, h = hucre(p.t, r); for (const dx of [0, -1, 1, -2, 2]) { const t = { ...p, r, h, x: p.x + dx }; if (sigar(t)) { p = t; break; } } return; }
+    if (q && sigar(q)) p = q; };
+  G.ciz = () => {
+    let gy = p.y; while (sigar({ ...p, y: gy + 1 })) gy++;
+    const izd = new Set(p.h.map(([x, y]) => (gy + y) * W + p.x + x)), par = new Set(p.h.map(([x, y]) => (p.y + y) * W + p.x + x));
+    const sag = [sp(T('SIRADAKİ', 'NEXT'), '', 'c-m'), '', '', '', '', sp(T('PUAN', 'SCORE'), '', 'c-m'), sp(String(puan), '', 'c-w c-b'), '', sp(T('SATIR', 'LINES'), '', 'c-m'), String(satir), '', sp(T('SEVİYE', 'LEVEL'), '', 'c-m'), String(sev), '', sp(T('REKOR', 'BEST'), '', 'c-m'), String(Math.max(oyRekor('tetris'), puan)), '', G.son ? sp(T('OYUN BİTTİ', 'GAME OVER'), '', 'c-e c-b') : G.dur ? sp(T('DURAKLATILDI', 'PAUSED'), '', 'c-w') : '', G.son ? sp(T('boşluk: yeniden', 'space: again'), '', 'c-m') : ''];
+    const sh = hucre(sira); for (let r = 0; r < 2; r++) { let l = ''; for (let c2 = 0; c2 < 4; c2++) l += sh.some(([x, y]) => x === c2 && y === r) ? sp('██', RENK[sira]) : '  '; sag[2 + r] = l; }
+    let o = sp('╔' + '══'.repeat(W) + '╗', '', 'c-m') + '\n';
+    for (let y = 0; y < H; y++) { let l = sp('║', '', 'c-m'); for (let x = 0; x < W; x++) { const i = y * W + x; if (par.has(i) && !G.son) l += sp('██', RENK[p.t]); else if (tah[y][x]) l += sp('██', RENK[tah[y][x]]); else if (izd.has(i) && !G.son) l += sp('░░', RENK[p.t]); else l += sp(' ·', '', 'c-m'); } o += l + sp('║', '', 'c-m') + '  ' + (sag[y] || '') + '\n'; }
+    return o + sp('╚' + '══'.repeat(W) + '╝', '', 'c-m');
+  };
+  G.durum = () => `${T('puan', 'score')} ${puan} · ${T('seviye', 'level')} ${sev} · ← → ↓ · ↑ ${T('döndür', 'rotate')} · ${T('boşluk bırak', 'space drop')} · P · Esc`;
+  return G;
+}
+function oyYilan() {
+  let W = 22, H = 16; const G = { cols: W * 2 + 2, rows: H + 3, tuslar: [['ArrowLeft', '←'], ['ArrowUp', '↑'], ['ArrowDown', '↓'], ['ArrowRight', '→']] };
+  let y, yon, kuyruk, yem, puan;
+  const koy = () => { do yem = [Math.floor(Math.random() * W), Math.floor(Math.random() * H)]; while (y.some(([a, b]) => a === yem[0] && b === yem[1])); };
+  const adim = () => { const d = kuyruk.length ? kuyruk.shift() : yon; yon = d; const [hx, hy] = y[0], n = [hx + d[0], hy + d[1]];
+    if (n[0] < 0 || n[1] < 0 || n[0] >= W || n[1] >= H || y.some(([a, b]) => a === n[0] && b === n[1])) { G.son = true; clearInterval(G.iv); oyRekor('yilan', puan); if ('vibrate' in navigator) navigator.vibrate(120); return; }
+    y.unshift(n); if (n[0] === yem[0] && n[1] === yem[1]) { puan += 10; koy(); zaman(); } else y.pop(); };
+  const zaman = () => { clearInterval(G.iv); G.iv = setInterval(() => { if (!G.dur && !G.son) { adim(); oyCiz(); } }, Math.max(55, 150 - puan / 2)); };
+  G.yeni = () => { const a = byId('oyAlan'), dik = a.clientHeight > a.clientWidth * 1.15; [W, H] = dik ? [14, 22] : [22, 16]; G.cols = W * 2 + 2; G.rows = H + 4; oyFit(); y = [[5, H >> 1], [4, H >> 1], [3, H >> 1]]; yon = [1, 0]; kuyruk = []; puan = 0; G.son = false; G.dur = false; koy(); zaman(); };
+  G.tus = k => { const d = { ArrowLeft: [-1, 0], ArrowRight: [1, 0], ArrowUp: [0, -1], ArrowDown: [0, 1] }[k]; if (!d || G.son) return; const son = kuyruk.length ? kuyruk[kuyruk.length - 1] : yon; if (d[0] === -son[0] && d[1] === -son[1]) return; if (d[0] === son[0] && d[1] === son[1]) return; if (kuyruk.length < 3) kuyruk.push(d); };
+  G.ciz = () => { const govde = new Map(y.map(([a, b], i) => [b * W + a, i]));
+    let o = sp('┌' + '──'.repeat(W) + '┐', '', 'c-m') + '\n';
+    for (let r = 0; r < H; r++) { let l = sp('│', '', 'c-m'); for (let c2 = 0; c2 < W; c2++) { const i = r * W + c2; if (govde.has(i)) l += govde.get(i) === 0 ? sp('██', G.son ? 'var(--te)' : 'var(--tw)') : sp('▓▓', 'var(--ta)'); else if (yem[0] === c2 && yem[1] === r) l += sp('●', 'var(--te)') + ' '; else l += sp(' ·', '', 'c-m'); } o += l + sp('│', '', 'c-m') + '\n'; }
+    o += sp('└' + '──'.repeat(W) + '┘', '', 'c-m') + '\n';
+    return o + (G.son ? sp(` ${T('OYUN BİTTİ', 'GAME OVER')} · ${puan}`, '', 'c-e c-b') + '\n' + sp(` ${T('boşluk / ⟳: yeniden', 'space / ⟳: again')}`, '', 'c-m') : sp(` ${T('puan', 'score')} ${puan}  ${T('rekor', 'best')} ${Math.max(oyRekor('yilan'), puan)}`, '', 'c-w') + '\n' + (G.dur ? sp(' ' + T('DURAKLATILDI', 'PAUSED'), '', 'c-w') : ''));
+  };
+  G.durum = () => `${T('ok tuşları ya da kaydır', 'arrow keys or swipe')} · P · Esc`;
+  return G;
+}
+function oyMayin() {
+  const G = { tuslar: [['ArrowLeft', '←'], ['ArrowUp', '↑'], ['ArrowDown', '↓'], ['ArrowRight', '→'], [' ', T('aç', 'open')], ['f', '🚩'], ['bayrak', T('🚩 kipi', '🚩 mode')]] };
+  let W, H, M, mayin, acik, bayrak, imlec, ilk, t0, kazandi;
+  const RN = ['', '#5b8def', '#6fcf6f', '#ef6b6b', '#b07cf2', '#f2994a', '#4fd1e8', 'var(--tf)', 'var(--tm)'];
+  const komsu = (x, y) => { const r = []; for (let dy = -1; dy <= 1; dy++) for (let dx = -1; dx <= 1; dx++) { const a = x + dx, b = y + dy; if ((dx || dy) && a >= 0 && b >= 0 && a < W && b < H) r.push([a, b]); } return r; };
+  const say = (x, y) => komsu(x, y).filter(([a, b]) => mayin[b * W + a]).length;
+  const dose = (x0, y0) => { mayin = new Uint8Array(W * H); const yasak = new Set([[x0, y0], ...komsu(x0, y0)].map(([a, b]) => b * W + a)); let n = 0; while (n < M) { const i = Math.floor(Math.random() * W * H); if (!mayin[i] && !yasak.has(i)) { mayin[i] = 1; n++; } } };
+  const ac = (x, y) => { if (G.son) return; const i = y * W + x; if (bayrak[i]) return; if (ilk) { dose(x, y); ilk = false; t0 = Date.now(); G.iv = setInterval(() => { if (!G.son) oyCiz(); }, 1000); }
+    if (acik[i]) { const k = komsu(x, y); if (k.filter(([a, b]) => bayrak[b * W + a]).length === say(x, y)) k.forEach(([a, b]) => { if (!acik[b * W + a] && !bayrak[b * W + a]) ac1(a, b); }); }
+    else ac1(x, y); bitti(); };
+  const ac1 = (x, y) => { const st = [[x, y]]; while (st.length) { const [a, b] = st.pop(), i = b * W + a; if (acik[i] || bayrak[i]) continue; acik[i] = 1; if (mayin[i]) { G.son = true; G.patla = i; return; } if (!say(a, b)) komsu(a, b).forEach(q => st.push(q)); } };
+  const bitti = () => { if (G.son) { clearInterval(G.iv); if ('vibrate' in navigator) navigator.vibrate([80, 60, 160]); return; } let k = 0; for (let i = 0; i < W * H; i++) if (!acik[i]) k++; if (k === M) { G.son = true; kazandi = true; clearInterval(G.iv); const sn = Math.round((Date.now() - t0) / 1000), key = 'mayin-' + G.opt, r = +(LS.get('konsol:rekor:' + key) || 0); if (!r || sn < r) LS.set('konsol:rekor:' + key, String(sn)); } };
+  const bayrakla = (x, y) => { const i = y * W + x; if (!acik[i] && !G.son) bayrak[i] = bayrak[i] ? 0 : 1; };
+  G.yeni = (opt) => { G.opt = opt || 'kolay'; [W, H, M] = { kolay: [9, 9, 10], orta: [16, 16, 40], zor: [24, 16, 70] }[G.opt]; G.cols = W * 3 + 2; G.rows = H + 5; acik = new Uint8Array(W * H); bayrak = new Uint8Array(W * H); mayin = new Uint8Array(W * H); imlec = [W >> 1, H >> 1]; ilk = true; kazandi = false; G.son = false; G.patla = -1; clearInterval(G.iv); oyFit(); };
+  G.tus = k => { const d = { ArrowLeft: [-1, 0], ArrowRight: [1, 0], ArrowUp: [0, -1], ArrowDown: [0, 1] }[k]; if (d) { imlec = [(imlec[0] + d[0] + W) % W, (imlec[1] + d[1] + H) % H]; return; } if (k === ' ' || k === 'Enter') { G.bayrakKip ? bayrakla(...imlec) : ac(...imlec); } if (k === 'f' || k === 'F') bayrakla(...imlec); };
+  G.hucre = (x, y, uzun) => { imlec = [x, y]; if (uzun || G.bayrakKip) bayrakla(x, y); else ac(x, y); oyCiz(); };
+  G.ciz = () => { let fl = 0; for (let i = 0; i < W * H; i++) fl += bayrak[i]; const sn = ilk ? 0 : Math.round(((G.son ? G.bitis || (G.bitis = Date.now()) : Date.now()) - t0) / 1000);
+    let o = ' ' + sp(`💣 ${M - fl}`.padEnd(8), '', 'c-w') + sp(`⏱ ${sn} s`, '', 'c-l') + '\n' + sp('┌' + '───'.repeat(W) + '┐', '', 'c-m') + '\n';
+    for (let y = 0; y < H; y++) { let l = sp('│', '', 'c-m'); for (let x = 0; x < W; x++) { const i = y * W + x, cur = imlec[0] === x && imlec[1] === y && !G.son; let c2;
+        if (acik[i] || (G.son && mayin[i])) c2 = mayin[i] ? sp(i === G.patla ? '✹' : '●', i === G.patla ? 'var(--te)' : 'var(--tf)') : (say(x, y) ? sp(String(say(x, y)), RN[say(x, y)], 'c-b') : ' ');
+        else if (bayrak[i]) c2 = sp('⚑', 'var(--te)'); else c2 = sp('■', '', 'c-m');
+        l += `<span class="m" data-x="${x}" data-y="${y}"${cur ? ' style="background:var(--ta);color:var(--tb)"' : ''}> ${c2} </span>`; } o += l + sp('│', '', 'c-m') + '\n'; }
+    o += sp('└' + '───'.repeat(W) + '┘', '', 'c-m') + '\n';
+    return o + (G.son ? (kazandi ? sp(` 🎉 ${T('KAZANDIN', 'YOU WIN')} · ${sn} s`, '', 'c-a c-b') + '\n' + sp(` ${T('rekor', 'best')} ${LS.get('konsol:rekor:mayin-' + G.opt)} s · ⟳`, '', 'c-m') : sp(` 💥 ${T('PATLADI', 'BOOM')}`, '', 'c-e c-b') + '\n' + sp(` ${T('boşluk / ⟳: yeniden', 'space / ⟳: again')}`, '', 'c-m')) : sp(` ${G.opt} · ${W}×${H} · ${M} ${T('mayın', 'mines')}`, '', 'c-m'));
+  };
+  G.durum = () => T('dokun: aç · basılı tut / F / 🚩 kipi: bayrak · açık sayıya dokun: çevresini aç', 'tap: open · long-press / F / 🚩 mode: flag · tap a number: chord');
+  return G;
+}
+/* mayın tarlası: tıklama ve basılı tutma */
+(() => { let lp = null, uzun = false; const pre = byId('oyPre');
+  pre.addEventListener('pointerdown', e => { const h = e.target.closest('.m'); if (!h || !OY || OY.tur !== 'mayin') return; uzun = false; clearTimeout(lp); lp = setTimeout(() => { uzun = true; OY.hucre(+h.dataset.x, +h.dataset.y, true); if ('vibrate' in navigator) navigator.vibrate(30); }, 420); });
+  pre.addEventListener('pointerup', e => { clearTimeout(lp); const h = e.target.closest('.m'); if (!h || !OY || OY.tur !== 'mayin' || uzun) return; OY.hucre(+h.dataset.x, +h.dataset.y, e.button === 2); });
+  pre.addEventListener('pointercancel', () => clearTimeout(lp)); pre.addEventListener('contextmenu', e => { if (OY && OY.tur === 'mayin') e.preventDefault(); }); })();
 
 /* ---------------- düzenleyici ---------------- */
 let ED = null;
