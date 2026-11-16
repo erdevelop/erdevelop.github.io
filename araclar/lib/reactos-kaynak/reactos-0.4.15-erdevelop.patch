@@ -1,0 +1,157 @@
+diff --git a/base/applications/CMakeLists.txt b/base/applications/CMakeLists.txt
+index dccaaa80..d0f985a9 100644
+--- a/base/applications/CMakeLists.txt
++++ b/base/applications/CMakeLists.txt
+@@ -7,7 +7,7 @@ add_subdirectory(clipbrd)
+ add_subdirectory(cmdutils)
+ add_subdirectory(control)
+ add_subdirectory(ctfmon)
+-add_subdirectory(drwtsn32)
++#add_subdirectory(drwtsn32) # erdevelop: gcc 13 C++ başlık çakışması
+ add_subdirectory(dxdiag)
+ add_subdirectory(extrac32)
+ add_subdirectory(findstr)
+diff --git a/base/system/userinit/livecd.c b/base/system/userinit/livecd.c
+index a3b14ec3..e2887f17 100644
+--- a/base/system/userinit/livecd.c
++++ b/base/system/userinit/livecd.c
+@@ -645,6 +645,24 @@ LocaleDlgProc(
+             CreateKeyboardLayoutList(GetDlgItem(hwndDlg, IDC_LAYOUTLIST));
+             if (pState->Unattend->bEnabled)
+             {
++                /* erdevelop: in unattended mode also select the keyboard layout.
++                   Look for the exact layout id first (0000041F = Turkish Q);
++                   matching by language alone may pick another layout (Turkish F). */
++                if (pState->Unattend->LocaleID)
++                {
++                    HWND hLay = GetDlgItem(hwndDlg, IDC_LAYOUTLIST);
++                    INT i, n = (INT)SendMessageW(hLay, CB_GETCOUNT, 0, 0);
++                    for (i = 0; i < n; i++)
++                    {
++                        if ((ULONG)SendMessageW(hLay, CB_GETITEMDATA, i, 0) == (ULONG)pState->Unattend->LocaleID)
++                        {
++                            SendMessageW(hLay, CB_SETCURSEL, i, 0);
++                            break;
++                        }
++                    }
++                    if (i == n)
++                        SelectKeyboardForLanguage(hLay, pState->Unattend->LocaleID);
++                }
+                 // Advance to the next page
+                 PostMessageW(hwndDlg, WM_COMMAND, MAKELONG(IDOK, BN_CLICKED), 0L);
+             }
+diff --git a/boot/bootdata/livecd.ini b/boot/bootdata/livecd.ini
+index f36197c2..97090712 100644
+--- a/boot/bootdata/livecd.ini
++++ b/boot/bootdata/livecd.ini
+@@ -1,6 +1,6 @@
+ [FREELOADER]
+-DefaultOS=LiveCD_Debug
+-TimeOut=5
++DefaultOS=LiveCD
++TimeOut=1
+ 
+ [Display]
+ TitleText=ReactOS LiveCD
+diff --git a/boot/bootdata/livecd/unattend.inf b/boot/bootdata/livecd/unattend.inf
+index 9336b0ff..f2e9c044 100644
+--- a/boot/bootdata/livecd/unattend.inf
++++ b/boot/bootdata/livecd/unattend.inf
+@@ -4,10 +4,10 @@ Signature = "$ReactOS$"
+ ; Set UnattendSetupEnabled to yes in order to boot the livecd immediately to desktop
+ ; yes - unattend setup enabled
+ ; no - unattend setup disabled
+-UnattendSetupEnabled = no
++UnattendSetupEnabled = yes
+ 
+ ; set this option to automatically
+ ; specify language in the language setup
+ ; see hivesys.inf for available languages
+-LocaleID = 409
++LocaleID = 41F
+ 
+diff --git a/dll/shellext/CMakeLists.txt b/dll/shellext/CMakeLists.txt
+index 8d005319..e37b583d 100644
+--- a/dll/shellext/CMakeLists.txt
++++ b/dll/shellext/CMakeLists.txt
+@@ -10,6 +10,6 @@ add_subdirectory(netplwiz)
+ add_subdirectory(netshell)
+ add_subdirectory(ntobjshex)
+ add_subdirectory(sendmail)
+-add_subdirectory(shellbtrfs)
++#add_subdirectory(shellbtrfs) # erdevelop
+ add_subdirectory(stobject)
+ add_subdirectory(zipfldr)
+diff --git a/dll/win32/iernonce/iernonce.h b/dll/win32/iernonce/iernonce.h
+index 2de557e6..250fab7e 100644
+--- a/dll/win32/iernonce/iernonce.h
++++ b/dll/win32/iernonce/iernonce.h
+@@ -7,8 +7,8 @@
+ 
+ #pragma once
+ 
+-#include <cassert>
+-#include <cstdlib>
++#include <assert.h>
++#include <stdlib.h>
+ 
+ #define WIN32_NO_STATUS
+ #define OEMRESOURCE // For OBM_MNARROW
+diff --git a/dll/win32/shdocvw/CMakeLists.txt b/dll/win32/shdocvw/CMakeLists.txt
+index 764663a4..42d42ba9 100644
+--- a/dll/win32/shdocvw/CMakeLists.txt
++++ b/dll/win32/shdocvw/CMakeLists.txt
+@@ -42,3 +42,5 @@ target_link_libraries(shdocvw_sublib PRIVATE atl_classes)
+ target_compile_definitions(shdocvw_sublib PRIVATE $<TARGET_PROPERTY:shdocvw,COMPILE_DEFINITIONS>)
+ target_compile_options(shdocvw_sublib PRIVATE $<TARGET_PROPERTY:shdocvw,COMPILE_OPTIONS>)
+ add_dependencies(shdocvw_sublib psdk)
++
++target_link_options(shdocvw PRIVATE "-Wl,--allow-multiple-definition")
+diff --git a/sdk/cmake/gcc.cmake b/sdk/cmake/gcc.cmake
+index df283873..65e8168c 100644
+--- a/sdk/cmake/gcc.cmake
++++ b/sdk/cmake/gcc.cmake
+@@ -573,7 +573,12 @@ execute_process(COMMAND ${GXX_EXECUTABLE} -print-file-name=libgcc.a OUTPUT_VARIA
+ string(STRIP ${LIBGCC_LOCATION} LIBGCC_LOCATION)
+ set_target_properties(libgcc PROPERTIES IMPORTED_LOCATION ${LIBGCC_LOCATION})
+ # libgcc needs kernel32 imports, winpthread, a CRT and msvcrtex
+-target_link_libraries(libgcc INTERFACE libwinpthread libkernel32 libmsvcrt msvcrtex)
++# erdevelop: Ubuntu MinGW gcc 13'te istisna işleme libgcc_eh.a'dadır; Vista işlevleri gcc13compat'tan gelir
++add_library(libgcc_eh STATIC IMPORTED)
++execute_process(COMMAND ${GXX_EXECUTABLE} -print-file-name=libgcc_eh.a OUTPUT_VARIABLE LIBGCC_EH_LOCATION)
++string(STRIP ${LIBGCC_EH_LOCATION} LIBGCC_EH_LOCATION)
++set_target_properties(libgcc_eh PROPERTIES IMPORTED_LOCATION ${LIBGCC_EH_LOCATION})
++target_link_libraries(libgcc INTERFACE libgcc_eh gcc13compat libwinpthread libkernel32 libmsvcrt msvcrtex)
+ 
+ add_library(libsupc++ STATIC IMPORTED GLOBAL)
+ execute_process(COMMAND ${GXX_EXECUTABLE} -print-file-name=libsupc++.a OUTPUT_VARIABLE LIBSUPCXX_LOCATION)
+diff --git a/sdk/lib/gcc-compat/CMakeLists.txt b/sdk/lib/gcc-compat/CMakeLists.txt
+index ef0f8635..a9d93265 100644
+--- a/sdk/lib/gcc-compat/CMakeLists.txt
++++ b/sdk/lib/gcc-compat/CMakeLists.txt
+@@ -13,3 +13,7 @@ add_dependencies(stdc++compat xdk)
+ target_link_libraries(stdc++compat libmsvcrt)
+ remove_target_compile_option(stdc++compat "$<$<AND:$<COMPILE_LANGUAGE:CXX>,$<NOT:$<IN_LIST:cppstl,$<TARGET_PROPERTY:LINK_LIBRARIES>>>>:-nostdinc>")
+ target_compile_definitions(stdc++compat PRIVATE "$<$<COMPILE_LANGUAGE:CXX>:PAL_STDCPP_COMPAT>")
++
++# erdevelop: GCC 13 (Ubuntu MinGW) ile derleme için Vista işlevleri ve rand_s karşılıkları
++add_library(gcc13compat gcc13_vista_compat.c)
++add_dependencies(gcc13compat psdk)
+diff --git a/sdk/lib/gcc-compat/__throw_out_of_range_fmt.cpp b/sdk/lib/gcc-compat/__throw_out_of_range_fmt.cpp
+index b2c093b7..aaddf1ad 100644
+--- a/sdk/lib/gcc-compat/__throw_out_of_range_fmt.cpp
++++ b/sdk/lib/gcc-compat/__throw_out_of_range_fmt.cpp
+@@ -5,9 +5,10 @@
+  * COPYRIGHT:   Copyright 2024 Timo Kreuzer <timo.kreuzer@reactos.org>
+  */
+ 
+-#include <stdexcept>
+-#include <cstdarg>
+-#include <cstring>
++#include <exception>
++#include <stdarg.h>
++#include <string.h>
++#include <stdio.h>
+ #include <malloc.h>
+ 
+ namespace std {

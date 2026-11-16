@@ -56,6 +56,16 @@ body.k-acik .kbar button{background:#0000000a;border-color:#00000022}
 #vmT{flex:1;min-height:0;padding:6px 4px 4px 8px}
 #vmT .xterm{height:100%}#vmT .xterm-viewport{background:transparent!important}
 #vmBar button.on{background:var(--ta);color:var(--tb)}
+#win{position:fixed;inset:0;z-index:36;background:#0b0d0c;display:flex;flex-direction:column}
+#win[hidden]{display:none}
+#win .vh{flex-shrink:0;display:flex;align-items:center;gap:10px;padding:8px 10px;border-bottom:1px solid #ffffff1a;font:500 13px ui-monospace,Menlo,Consolas,monospace;color:#d7e2dc;background:#0f1412}
+#win .vh b{white-space:nowrap}#win .vh .st{flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;color:#7d8f86}
+#win .hb button{color:#d7e2dc;border-color:#ffffff22}
+#screen_container{flex:1;min-height:0;display:flex;align-items:center;justify-content:center;overflow:hidden;position:relative;touch-action:none;background:#000}
+#screen_container>div{white-space:pre;font:14px/14px monospace;color:#ccc;transform-origin:center}
+#screen_container canvas{display:none;image-rendering:auto}
+#winKb{position:absolute;left:-9999px;top:0;width:1px;height:1px;opacity:0}
+#winHint{position:absolute;left:50%;bottom:10px;transform:translateX(-50%);background:#000c;color:#fff;font:12px ui-monospace,monospace;padding:5px 10px;border-radius:6px;pointer-events:none;transition:opacity .4s}
 </style>
 <!-- paylaşım, arama motoru ve reklam etiketleri -->
 <script>/* dil sürümüne göre canonical: her dil kendi adresini gösterir; dil seçilmemiş adres ziyaretçinin diline göre açılır */(function(){var q=new URLSearchParams(location.search).get("lang"),l=document.createElement("link");l.rel="canonical";l.href="https://erdevelop.github.io/araclar/konsol.html"+(q==="en"||q==="tr"?"?lang="+q:"");document.head.appendChild(l)})();</script>
@@ -71,6 +81,8 @@ body.k-acik .kbar button{background:#0000000a;border-color:#00000022}
 <div class="kbar" id="bar"><button data-k="tab">Tab</button><button data-k="up">↑</button><button data-k="down">↓</button><button data-k="ctrlc">^C</button><button data-k="|">|</button><button data-k="/">/</button><button data-k="-">-</button><button data-k="~">~</button><button data-k=">">&gt;</button><button data-k="&quot;">"</button><button data-k="left">←</button><button data-k="right">→</button><button data-k="clear">clear</button></div>
 <div id="ed" hidden><div class="eh"><b id="edN"></b><div class="hb"><button type="button" id="edS">Kaydet</button><button type="button" id="edX">Kapat</button></div></div><textarea id="edT" spellcheck="false" autocapitalize="off" autocorrect="off"></textarea><div class="ef" id="edF">Ctrl+S kaydet · Esc kapat</div></div>
 <canvas id="mx" hidden></canvas>
+<div id="win" hidden><div class="vh"><b>🪟 ReactOS</b><span class="st" id="winS"></span><div class="hb"><button type="button" id="winKbB" title="Klavye">⌨</button><button type="button" id="winCad" title="Ctrl+Alt+Del">C-A-D</button><button type="button" id="winFs" title="Tam ekran">⛶</button><button type="button" id="winX" title="Kapat">✕</button></div></div>
+<div id="screen_container"><div></div><canvas></canvas><textarea id="winKb" autocapitalize="off" autocorrect="off" spellcheck="false"></textarea><div id="winHint"></div></div></div>
 <div id="vm" hidden><div class="vh"><b>🐧 erdevelop Linux</b><span class="st" id="vmS"></span><div class="hb"><button type="button" id="vmSync" title="Dosyaları Konsol'a eşitle">⇅</button><button type="button" id="vmR" title="Yeniden başlat">⟳</button><button type="button" id="vmX" title="Kapat (dosyalar Konsol'a eşitlenir)">✕</button></div></div><div id="vmT"></div>
 <div class="kbar" id="vmBar"><button data-v="esc">Esc</button><button data-v="tab">Tab</button><button data-v="ctrl">Ctrl</button><button data-v="up">↑</button><button data-v="down">↓</button><button data-v="left">←</button><button data-v="right">→</button><button data-v="|">|</button><button data-v="/">/</button><button data-v="-">-</button><button data-v="~">~</button><button data-v=":">:</button><button data-v="ctrlc">^C</button><button data-v="ctrld">^D</button></div></div>
 <script src="ortak.js"></script>
@@ -83,6 +95,8 @@ body.k-acik .kbar button{background:#0000000a;border-color:#00000022}
    ===================================================================== */
 const T = (tr, en) => window.erDil && erDil.lang === 'en' ? en : tr;
 const OUT = byId('out'), TERM = byId('term'), CMD = byId('cmd'), PS = byId('ps');
+/* öykünücü pencereleri açıkken komut satırı odağı almasın (v86 metin kutusundaki tuşları yok sayar) */
+const focusCmd = o => { const w = document.getElementById('win'); if (w && !w.hidden) return; CMD.focus(o); };
 const sleep = (ms, sig) => new Promise((ok, no) => { const t = setTimeout(ok, ms); if (sig) sig.addEventListener('abort', () => { clearTimeout(t); no(new DOMException('abort', 'AbortError')); }, { once: true }); });
 const T0 = Date.now();
 
@@ -359,6 +373,7 @@ const HELP = [
     ['traceroute / ssh / nmap', T('tarayıcıda mümkün değil (neden olduğunu anlatır)', 'not possible in a browser (explains why)')]]],
   [T('Programlama', 'Programming'), [
     ['linux', T('gerçek Linux (x86 öykünücüde Linux 6.8 + BusyBox: vi, top, awk, tar…; ~5 sn)', 'real Linux (Linux 6.8 + BusyBox in an x86 emulator: vi, top, awk, tar…; ~5 s)')],
+    ['windows', T('ReactOS 0.4.15: Windows benzeri, açık kaynak işletim sistemi (masaüstü, Not Defteri, Paint, Komut İstemi)', 'ReactOS 0.4.15: an open-source Windows-like OS (desktop, Notepad, Paint, Command Prompt)')],
     ['ubuntu', T('Ubuntu 24.04 (32 bit): python3, gcc, g++, make, bash, vim', 'Ubuntu 24.04 (32-bit): python3, gcc, g++, make, bash, vim')],
     ['python [dosya.py | -c kod]', T('Python 3 (ilk açılışta yüklenir)', 'Python 3 (loaded on first use)')], ['js [dosya.js | ifade]', T('JavaScript', 'JavaScript')],
     ['calc ifade', T('hesap makinesi: sqrt(2)*pi, 2^10, sin(30°)', 'calculator: sqrt(2)*pi, 2^10, sin(30°)')], ['base64 [-d] / urlencode / urldecode', T('kodlama', 'encoding')],
@@ -372,6 +387,7 @@ const HELP = [
     ['a | b , a > dosya , a >> dosya , a < dosya , a && b , a ; b', T('pipe ve yönlendirme', 'pipes & redirection')], ['cowsay / fortune / matrix', T('eğlence', 'fun')]]]
 ];
 const MAN = {
+  windows: T('windows  (ya da reactos)\n\nÖykünücüde ReactOS 0.4.15 açılır: Windows XP/2003 ile uyumlu olmayı hedefleyen açık kaynaklı bir işletim sistemi. Türkçe masaüstü, Başlat menüsü, Not Defteri, Paint, Hesap Makinesi, Komut İstemi, Gezgin ve oyunlar vardır. Gerçek Windows değildir; Microsoft\'a ait hiçbir dosya içermez.\n\nAçılış birkaç dakika sürebilir (bilgisayarın hızına bağlı); dosyalar ihtiyaç oldukça indirilir (~45 MB).\nFare: ekrana tıklayınca fare öykünücüye geçer, bırakmak için Esc. Telefonda parmağını kaydır = imleç, dokun = tıkla.\nKlavye: ⌨ düğmesi telefonda klavyeyi açar. C-A-D: Ctrl+Alt+Del.\nİnternet ve Konsol dosyaları burada yoktur; yaptığın değişiklikler kapatınca silinir.', 'windows  (or reactos)\n\nBoots ReactOS 0.4.15 in the emulator: an open-source OS aiming for Windows XP/2003 compatibility, with a desktop, Start menu, Notepad, Paint, Calculator, Command Prompt, Explorer and games. It is not Windows and contains no Microsoft files.\n\nBooting can take a few minutes depending on your device; files are downloaded on demand (~45 MB).\nMouse: click the screen to capture it, Esc to release. On phones drag = move, tap = click.\nKeyboard: ⌨ opens the phone keyboard. C-A-D sends Ctrl+Alt+Del.\nNo network or Konsol files; changes are discarded when closed.'),
   ubuntu: T('ubuntu\n\nlinux komutunun büyük kardeşi: aynı öykünücüde Ubuntu 24.04\'ün 32 bit sürümü açılır. İçinde Python 3.12, gcc/g++ 13, make, bash, vim, less, file, bc ve procps vardır.\nDosyalar ihtiyaç oldukça indirilir: açılış ~9 MB, Python ve gcc ilk kullanımda ~20 MB daha. Açılış yaklaşık 10 saniye sürer.\n\nKonsol dosyaların ~/konsol (/mnt/konsol) altındadır ve geri eşitlenir. Sistemin geri kalanında yaptığın değişiklikler kapatınca silinir. İnternet yoktur.', 'ubuntu\n\nThe big sibling of linux: the 32-bit build of Ubuntu 24.04 boots in the same emulator, with Python 3.12, gcc/g++ 13, make, bash, vim, less, file, bc and procps.\nFiles are downloaded on demand: ~9 MB to boot, Python and gcc another ~20 MB on first use. Booting takes about 10 s.\n\nYour Konsol files are in ~/konsol (/mnt/konsol) and synced back. Other changes are discarded when you close it. No network.'),
   linux: T('linux\n\nTarayıcında gerçek bir 32 bit x86 bilgisayar öykünülür (v86) ve üzerinde Linux 6.8 çekirdeği ile BusyBox açılır. ls, vi, top, ps, awk, sed, tar, gzip, bc gibi 270\'ten fazla komut vardır. İlk açılışta yaklaşık 5 MB indirilir, sonra birkaç saniyede açılır.\n\nKonsol\'daki dosyaların Linux\'ta /mnt/konsol altında görünür; Linux\'ta yaptığın değişiklikler kapatınca (ve 15 saniyede bir) Konsol\'a geri yazılır.\nİnternet bağlantısı yoktur. Kapatmak için poweroff ya da ✕.', 'linux\n\nA real 32-bit x86 computer is emulated in your browser (v86) and boots Linux 6.8 with BusyBox: 270+ commands such as ls, vi, top, ps, awk, sed, tar, gzip, bc. About 5 MB is downloaded the first time; after that it boots in a few seconds.\n\nYour Konsol files appear under /mnt/konsol; changes made in Linux are written back when you close it (and every 15 seconds).\nThere is no network access. Close with poweroff or ✕.'),
   ping: T('ping [-c sayı] [-i saniye] [-t] host|url\n\nTarayıcı gerçek ICMP paketi gönderemez. Bunun yerine hedefe içeriksiz küçük bir HTTPS isteği (HEAD) atılır ve dönüş süresi ölçülür. Bağlantı ölçümden önce kurulur; yine de sunucunun yanıt hazırlama süresi eklendiği için sonuç gerçek ping\'den birkaç ms fazla olabilir.\n-c 4 (varsayılan) kaç kez, -t Ctrl+C\'ye kadar sürekli, -i aralık (saniye).',
@@ -661,13 +677,21 @@ const CMDS = {
   },
   async linux(c) {
     if (VM) { if (VM.big) { c.err(T('Ubuntu açık; önce onu kapat (✕).', 'Ubuntu is running; close it first (✕).')); return 1; } byId('vm').hidden = false; VM.term.focus(); return; }
+    if (WIN) { c.err(T('Önce ReactOS penceresini kapat (✕).', 'Close the ReactOS window first (✕).')); return 1; }
     c.out(T('Linux açılıyor… (ilk seferde ~5 MB indirilir)', 'Booting Linux… (~5 MB downloaded the first time)'), 'c-m');
     await startVM(c, false);
   },
   async ubuntu(c) {
     if (VM) { if (!VM.big) { c.err(T('Küçük Linux açık; önce onu kapat (✕).', 'The small Linux is running; close it first (✕).')); return 1; } byId('vm').hidden = false; VM.term.focus(); return; }
+    if (WIN) { c.err(T('Önce ReactOS penceresini kapat (✕).', 'Close the ReactOS window first (✕).')); return 1; }
     c.out(T('Ubuntu 24.04 açılıyor… (ilk seferde ~9 MB indirilir; Python ve gcc ilk kullanımda ~20 MB daha)', 'Booting Ubuntu 24.04… (~9 MB the first time; Python and gcc another ~20 MB on first use)'), 'c-m');
     await startVM(c, true);
+  },
+  async windows(c) {
+    if (WIN) { byId('win').hidden = false; return; }
+    if (VM) { c.err(T('Önce açık Linux penceresini kapat (✕).', 'Close the running Linux window first (✕).')); return 1; }
+    c.out(T('ReactOS açılıyor… (bilgisayarının hızına göre 1–3 dakika; ilk seferde ~45 MB indirilir)', 'Booting ReactOS… (1–3 minutes depending on your device; ~45 MB the first time)'), 'c-m');
+    await startWin(260046848);
   },
   async pip(c) { if (c.args[0] !== 'install' || !c.args[1]) { c.err(T('kullanım: pip install paket', 'usage: pip install package')); return 1; } await loadPy(c); await PY.loadPackage('micropip'); const mp = PY.pyimport('micropip'); for (const p of c.args.slice(1)) { c.out(T('yükleniyor: ', 'installing: ') + p, 'c-m'); try { await mp.install(p); c.out(T('tamam: ', 'done: ') + p, 'c-a'); } catch (e) { c.err(String(e.message || e).split('\n').slice(-2).join(' ')); return 1; } } },
 
@@ -688,11 +712,11 @@ const CMDS = {
   async timer(c) { const a = c.args[0] || ''; const m = a.match(/^(\d+(?:[.,]\d+)?)(s|sn|m|dk|h|sa)?$/i); if (!m) { c.err(T('kullanım: timer 90s · timer 5m · timer 1h', 'usage: timer 90s · timer 5m · timer 1h')); return 1; } const sec = pnum(m[1]) * ({ m: 60, dk: 60, h: 3600, sa: 3600 }[(m[2] || 's').toLowerCase()] || 1), end = Date.now() + sec * 1000; const el = c.html(''); const fmtT = s => (s >= 3600 ? Math.floor(s / 3600) + ':' : '') + p2(Math.floor(s % 3600 / 60)) + ':' + p2(Math.floor(s % 60)); try { while (Date.now() < end) { const left = Math.ceil((end - Date.now()) / 1000); if (el) el.innerHTML = `<span class="c-w c-b">⏳ ${fmtT(left)}</span> <span class="c-m">(Ctrl+C)</span>`; document.title = '⏳ ' + fmtT(left) + ' · konsol'; await sleep(250, c.signal); } } finally { document.title = 'Konsol | erdevelop'; } if (el) el.innerHTML = `<span class="c-a c-b">⏰ ${T('Süre doldu!', 'Time is up!')}</span>`; beep(); if ('vibrate' in navigator) navigator.vibrate([300, 150, 300]); },
   fortune(c) { const F = T(['Ölçü iki kere, kes bir kere.', 'Önce çalıştır, sonra güzelleştir, sonra hızlandır.', 'En iyi kod, hiç yazılmamış koddur.', 'Bir hata bulduğunda, onun gibi iki tane daha ara.', 'Toleransı olmayan cephe, sonunda sızdırır.', 'Yedeği olmayan dosya, zaten silinmiş sayılır.', 'Damlaya damlaya göl olur; commit commit proje olur.', 'Basit tut; karmaşıklık kendiliğinden gelir.', 'Ne kadar ölçersen o kadar bilirsin.', 'Acele işe şeytan, aceleli koda bug karışır.'], ['Measure twice, cut once.', 'Make it work, make it right, make it fast.', 'The best code is no code at all.', 'When you find a bug, look for two more like it.', 'A facade without tolerance will leak in the end.', 'A file without a backup is already deleted.', 'Keep it simple; complexity arrives on its own.', 'You only know what you measure.']); c.out(F[Math.floor(Math.random() * F.length)]); },
   cowsay(c) { const s = c.args.join(' ') || c.stdin?.trim() || T('Mööö!', 'Moo!'); const L = []; for (let i = 0; i < s.length; i += 38) L.push(s.slice(i, i + 38)); const w = Math.max(...L.map(l => l.length)); c.out(' ' + '_'.repeat(w + 2)); L.forEach((l, i) => c.out((L.length === 1 ? '< ' : i === 0 ? '/ ' : i === L.length - 1 ? '\\ ' : '| ') + l.padEnd(w) + (L.length === 1 ? ' >' : i === 0 ? ' \\' : i === L.length - 1 ? ' /' : ' |'))); c.out(' ' + '-'.repeat(w + 2)); c.out('        \\   ^__^\n         \\  (oo)\\_______\n            (__)\\       )\\/\\\n                ||----w |\n                ||     ||'); },
-  async matrix(c) { const cv = byId('mx'); cv.hidden = false; const x = cv.getContext('2d'); const fit = () => { cv.width = innerWidth * devicePixelRatio; cv.height = innerHeight * devicePixelRatio; }; fit(); const fs = 16 * devicePixelRatio, cols = Math.ceil(cv.width / fs), y = Array(cols).fill(0).map(() => Math.random() * -50); const ch = 'アイウエオカキクケコサシスセソ0123456789ERDEVELOP'; let stop = false; const end = () => stop = true; cv.onclick = end; addEventListener('keydown', end, { once: true }); c.signal.addEventListener('abort', end, { once: true }); while (!stop) { x.fillStyle = 'rgba(0,0,0,.08)'; x.fillRect(0, 0, cv.width, cv.height); x.fillStyle = '#3f6'; x.font = fs + 'px monospace'; y.forEach((v, i) => { x.fillText(ch[Math.random() * ch.length | 0], i * fs, v * fs); y[i] = v * fs > cv.height && Math.random() > 0.975 ? 0 : v + 1; }); await sleep(45); } cv.hidden = true; CMD.focus(); },
+  async matrix(c) { const cv = byId('mx'); cv.hidden = false; const x = cv.getContext('2d'); const fit = () => { cv.width = innerWidth * devicePixelRatio; cv.height = innerHeight * devicePixelRatio; }; fit(); const fs = 16 * devicePixelRatio, cols = Math.ceil(cv.width / fs), y = Array(cols).fill(0).map(() => Math.random() * -50); const ch = 'アイウエオカキクケコサシスセソ0123456789ERDEVELOP'; let stop = false; const end = () => stop = true; cv.onclick = end; addEventListener('keydown', end, { once: true }); c.signal.addEventListener('abort', end, { once: true }); while (!stop) { x.fillStyle = 'rgba(0,0,0,.08)'; x.fillRect(0, 0, cv.width, cv.height); x.fillStyle = '#3f6'; x.font = fs + 'px monospace'; y.forEach((v, i) => { x.fillText(ch[Math.random() * ch.length | 0], i * fs, v * fs); y[i] = v * fs > cv.height && Math.random() > 0.975 ? 0 : v + 1; }); await sleep(45); } cv.hidden = true; focusCmd(); },
   sl(c) { c.out(T('Choo choo! 🚂  (ls demek istedin herhalde)', 'Choo choo! 🚂  (you probably meant ls)')); },
   sudo(c) { c.out(T(`${ENV.USER} sudoers dosyasında yok. Bu olay rapor edilecek. 😄\n(Burada zaten her şeyin sahibi sensin.)`, `${ENV.USER} is not in the sudoers file. This incident will be reported. 😄\n(You already own everything here.)`), 'c-w'); return 1; },
 };
-CMDS.telnet = CMDS.nmap = CMDS.ssh; CMDS.tracert = CMDS.traceroute; CMDS.nslookup = CMDS.dig; CMDS.python3 = CMDS.python; CMDS.pip3 = CMDS.pip; CMDS['?'] = CMDS.help;
+CMDS.reactos = CMDS.xp = CMDS.windows; CMDS.telnet = CMDS.nmap = CMDS.ssh; CMDS.tracert = CMDS.traceroute; CMDS.nslookup = CMDS.dig; CMDS.python3 = CMDS.python; CMDS.pip3 = CMDS.pip; CMDS['?'] = CMDS.help;
 
 /* ---------------- yardımcılar (komutlar için) ---------------- */
 function shuffle(a) { a = a.slice(); for (let i = a.length - 1; i > 0; i--) { const j = Math.floor(Math.random() * (i + 1)); [a[i], a[j]] = [a[j], a[i]]; } return a; }
@@ -838,7 +862,7 @@ async function vmStop(fromGuest) {
   if (!VM) return; const v = VM; vmStatus(T('dosyalar eşitleniyor…', 'syncing files…'));
   try { if (v.booted) await vmPull(); } catch (e) { print(T('uyarı: Linux dosyaları Konsol\'a eşitlenemedi', 'warning: could not sync Linux files back'), 'c-w'); }
   clearInterval(v.iv); v.ro && v.ro.disconnect(); try { v.emu.destroy(); } catch (e) { try { v.emu.stop(); } catch (e2) { } } v.term.dispose(); VM = null;
-  byId('vm').hidden = true; byId('vmT').innerHTML = ''; print(T('Linux kapatıldı; dosyalar Konsol\'a eşitlendi.', 'Linux closed; files synced to Konsol.'), 'c-m'); paintPS(); CMD.focus();
+  byId('vm').hidden = true; byId('vmT').innerHTML = ''; print(T('Linux kapatıldı; dosyalar Konsol\'a eşitlendi.', 'Linux closed; files synced to Konsol.'), 'c-m'); paintPS(); focusCmd();
 }
 byId('vmX').onclick = () => vmStop();
 byId('vmSync').onclick = async () => { if (!VM || !VM.booted) return; const s = byId('vmS').textContent; vmStatus(T('eşitleniyor…', 'syncing…')); try { await vmPull(); toast(T('Dosyalar Konsol\'a eşitlendi', 'Files synced to Konsol')); } catch (e) { toast(e.message); } vmStatus(s); VM.term.focus(); };
@@ -851,12 +875,86 @@ byId('vmBar').addEventListener('click', e => {
   VM.emu.serial0_send(SEQ[k] ?? k); VM.term.focus();
 });
 
+/* ---------------- ReactOS (v86, grafik ekran) ---------------- */
+let WIN = null;
+const winStatus = t => { byId('winS').textContent = t; };
+function winHint(t, ms) { const h = byId('winHint'); h.textContent = t; h.style.opacity = 1; clearTimeout(winHint.t); winHint.t = setTimeout(() => h.style.opacity = 0, ms || 3500); }
+function winFit() {
+  if (!WIN) return; const sc = byId('screen_container'), cv = sc.querySelector('canvas'), tx = sc.querySelector('div'), w = WIN.w || 800, h = WIN.h || 600, s = Math.min(sc.clientWidth / w, sc.clientHeight / h);
+  /* görüntüyü dönüşümle değil CSS boyutuyla ölçekle; böylece taşıp düğmelerin üstüne binmez */
+  cv.style.transform = 'none'; cv.style.width = Math.floor(w * s) + 'px'; cv.style.height = Math.floor(h * s) + 'px';
+  tx.style.transform = `scale(${Math.min(s, 3)})`;
+}
+async function startWin(size) {
+  await loadJS('lib/v86/libv86.js');
+  byId('win').hidden = false; winStatus(T('indiriliyor…', 'downloading…')); CMD.blur(); /* v86 metin kutusundaki tuşları yok sayar; odak komut satırında kalmasın */
+  const touch = matchMedia('(pointer:coarse)').matches;
+  const emu = new V86({
+    wasm_path: 'lib/v86/v86.wasm', bios: { url: 'lib/v86/seabios.bin' }, vga_bios: { url: 'lib/v86/vgabios.bin' },
+    cdrom: { url: 'lib/reactos/livecd.iso.zst', size, async: true, use_parts: true, fixed_chunk_size: 1048576 },
+    memory_size: 256 * 1024 * 1024, vga_memory_size: 16 * 1024 * 1024, acpi: true, autostart: true, boot_order: 0x213,
+    screen_container: byId('screen_container'),
+  });
+  WIN = { emu, t0: performance.now(), w: 720, h: 400, booted: false };
+  emu.add_listener('download-progress', e => { if (!WIN.booted && e.total) winStatus(`${T('indiriliyor', 'downloading')} ${Math.round(e.loaded / 1048576)} MB`); });
+  emu.add_listener('emulator-ready', () => winStatus(T('açılıyor… (ilk açılış birkaç dakika sürebilir)', 'booting… (the first boot can take a few minutes)')));
+  emu.add_listener('screen-set-size', a => { if (Array.isArray(a)) { WIN.w = a[0] > 100 ? a[0] : (a[0] * 9 || 720); WIN.h = a[1] > 100 ? a[1] : (a[1] * 16 || 400); if (a[2] && a[0] >= 640 && !WIN.booted) { WIN.booted = true; const t1 = performance.now(); WIN.tick = setInterval(() => { const s = Math.round((performance.now() - WIN.t0) / 1000); winStatus(`${T('çalışıyor', 'running')} · ${Math.floor(s / 60)}:${p2(s % 60)} · ReactOS 0.4.15 · 256 MB${performance.now() - t1 < 150000 ? T(' · masaüstü yükleniyor…', ' · loading desktop…') : ''}`); }, 1000); winHint(touch ? T('Parmağını kaydır: imleç · dokun: tıkla · ⌨: klavye', 'Drag: move · tap: click · ⌨: keyboard') : T('Ekrana tıkla: fare öykünücüye geçer · bırakmak için Esc', 'Click the screen to capture the mouse · Esc to release'), 6000); } } winFit(); });
+  WIN.ro = new ResizeObserver(winFit); WIN.ro.observe(byId('screen_container')); winFit();
+  print(T('ReactOS penceresi açıldı. Kapatınca içindeki değişiklikler silinir.', 'ReactOS window opened. Changes inside are discarded when closed.'), 'c-m');
+}
+function winStop() {
+  if (!WIN) return; const w = WIN; WIN = null; clearInterval(w.tick); w.ro && w.ro.disconnect(); try { document.exitPointerLock && document.exitPointerLock(); } catch (e) { }
+  try { w.emu.destroy(); } catch (e) { try { w.emu.stop(); } catch (e2) { } }
+  const sc = byId('screen_container'); sc.querySelector('div').innerHTML = ''; const cv = sc.querySelector('canvas'); cv.style.display = 'none'; cv.width = cv.height = 0;
+  byId('win').hidden = true; print(T('ReactOS kapatıldı.', 'ReactOS closed.'), 'c-m'); paintPS(); focusCmd();
+}
+byId('winX').onclick = winStop;
+byId('winFs').onclick = () => { const sc = byId('screen_container'); (sc.requestFullscreen || sc.webkitRequestFullscreen || (() => { })).call(sc); setTimeout(winFit, 300); };
+byId('winCad').onclick = () => { if (WIN) WIN.emu.keyboard_send_scancodes([0x1D, 0x38, 0xE0, 0x53, 0xE0, 0xD3, 0xB8, 0x9D]); };
+/* ReactOS Türkçe Q klavyeyle açılır; telefondan gelen karakterleri bu düzene göre tuş kodlarına çeviririz.
+   [tarama kodu, shift, altgr] */
+const TRQ = (() => {
+  const m = {}, row = (codes, lo, hi) => [...lo].forEach((ch, i) => { m[ch] = [codes[i], 0, 0]; if (hi && hi[i] && hi[i] !== ' ') m[hi[i]] = [codes[i], 1, 0]; });
+  row([0x10, 0x11, 0x12, 0x13, 0x14, 0x15, 0x16, 0x17, 0x18, 0x19, 0x1A, 0x1B], 'qwertyuıopğü', 'QWERTYUIOPĞÜ');
+  row([0x1E, 0x1F, 0x20, 0x21, 0x22, 0x23, 0x24, 0x25, 0x26, 0x27, 0x28, 0x2B], 'asdfghjklşi,', 'ASDFGHJKLŞİ;');
+  row([0x2C, 0x2D, 0x2E, 0x2F, 0x30, 0x31, 0x32, 0x33, 0x34, 0x35], 'zxcvbnmöç.', 'ZXCVBNMÖÇ:');
+  row([0x02, 0x03, 0x04, 0x05, 0x06, 0x07, 0x08, 0x09, 0x0A, 0x0B, 0x0C, 0x0D], '1234567890*-', "!'^+%&/()=?_");
+  m['"'] = [0x29, 0, 0]; m['é'] = [0x29, 1, 0]; m[' '] = [0x39, 0, 0]; m['<'] = [0x56, 0, 0]; m['>'] = [0x56, 1, 0];
+  Object.assign(m, { '@': [0x10, 0, 1], '#': [0x04, 0, 1], '$': [0x05, 0, 1], '{': [0x08, 0, 1], '[': [0x09, 0, 1], ']': [0x0A, 0, 1], '}': [0x0B, 0, 1], '\\': [0x0C, 0, 1], '|': [0x0D, 0, 1], '~': [0x1B, 0, 1], '€': [0x12, 0, 1] });
+  return m;
+})();
+function winType(text) {
+  const sc = [];
+  for (const ch of text) {
+    const k = TRQ[ch]; if (!k) continue;
+    if (k[2]) sc.push(0xE0, 0x38); if (k[1]) sc.push(0x2A);
+    sc.push(k[0], k[0] | 0x80);
+    if (k[1]) sc.push(0xAA); if (k[2]) sc.push(0xE0, 0xB8);
+  }
+  if (sc.length) WIN.emu.keyboard_send_scancodes(sc);
+}
+/* telefon klavyesi: v86 metin kutularındaki tuşları yok saydığı için yazma olaylarını kendimiz iletiriz */
+const KB0 = '··';
+byId('winKbB').onclick = () => { const k = byId('winKb'); k.value = KB0; k.focus(); k.setSelectionRange(2, 2); };
+byId('winKb').addEventListener('input', e => {
+  const k = e.target, t = e.inputType || '';
+  if (WIN) {
+    if (t === 'deleteContentBackward' || k.value.length < KB0.length) WIN.emu.keyboard_send_scancodes([0x0E, 0x8E]);
+    else if (t === 'insertLineBreak' || (e.data || '').includes('\n')) WIN.emu.keyboard_send_scancodes([0x1C, 0x9C]);
+    else { const add = e.data != null ? e.data : k.value.replace(KB0, ''); if (add) winType(add); }
+  }
+  k.value = KB0; k.setSelectionRange(2, 2);
+});
+byId('winKb').addEventListener('keydown', e => { if (!WIN) return; const m = { Enter: [0x1C, 0x9C], Backspace: [0x0E, 0x8E], Escape: [0x01, 0x81], Tab: [0x0F, 0x8F] }[e.key]; if (m && e.key !== 'Backspace') { e.preventDefault(); WIN.emu.keyboard_send_scancodes(m); } });
+byId('screen_container').addEventListener('click', () => { if (WIN && WIN.booted && !matchMedia('(pointer:coarse)').matches && !document.pointerLockElement) { try { WIN.emu.lock_mouse(); } catch (e) { } } });
+addEventListener('resize', winFit);
+
 /* ---------------- düzenleyici ---------------- */
 let ED = null;
 function openEditor(path, text) { ED = path; byId('edN').textContent = path; const t = byId('edT'); t.value = text; byId('ed').hidden = false; t.focus(); t.setSelectionRange(0, 0); edInfo(); }
 function edInfo() { const t = byId('edT'), v = t.value, pos = t.selectionStart, ln = v.slice(0, pos).split('\n').length; byId('edF').textContent = `${T('satır', 'line')} ${ln}/${v.split('\n').length} · ${hsize(new Blob([v]).size)} B · ${T('Ctrl+S kaydet · Esc kapat', 'Ctrl+S save · Esc close')}`; }
 function edSave() { try { const v = byId('edT').value; writeFile(ED, v && !v.endsWith('\n') ? v + '\n' : v); toast(T('Kaydedildi: ', 'Saved: ') + ED); } catch (e) { toast(e.message); } }
-function edClose() { byId('ed').hidden = true; ED = null; CMD.focus(); }
+function edClose() { byId('ed').hidden = true; ED = null; focusCmd(); }
 byId('edS').onclick = edSave; byId('edX').onclick = edClose;
 byId('edT').addEventListener('keydown', e => { if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 's') { e.preventDefault(); edSave(); } else if (e.key === 'Escape') { e.preventDefault(); edClose(); } else if (e.key === 'Tab') { e.preventDefault(); const t = e.target, s = t.selectionStart; t.setRangeText('    ', s, t.selectionEnd, 'end'); } else if ((e.ctrlKey) && e.key.toLowerCase() === 'x') { e.preventDefault(); edSave(); edClose(); } });
 byId('edT').addEventListener('input', edInfo); byId('edT').addEventListener('click', edInfo); byId('edT').addEventListener('keyup', edInfo);
@@ -892,9 +990,9 @@ function complete() {
 let busyQ = Promise.resolve();
 async function submit() {
   const line = CMD.value; CMD.value = '';
-  if (MODE) { CMD.disabled = true; try { await modeLine(line); } finally { CMD.disabled = false; paintPS(); CMD.focus(); } return; }
+  if (MODE) { CMD.disabled = true; try { await modeLine(line); } finally { CMD.disabled = false; paintPS(); focusCmd(); } return; }
   if (RUN) { print(line, 'c-m'); return; }
-  PS.style.visibility = 'hidden'; await runLine(line); PS.style.visibility = ''; paintPS(); CMD.focus(); scrollEnd();
+  PS.style.visibility = 'hidden'; await runLine(line); PS.style.visibility = ''; paintPS(); focusCmd(); scrollEnd();
 }
 function histMove(d) { if (!HIST.length) return; HI = Math.max(0, Math.min(HIST.length, HI + d)); CMD.value = HIST[HI] ?? ''; requestAnimationFrame(() => CMD.setSelectionRange(CMD.value.length, CMD.value.length)); }
 function ctrlC() { if (RUN) { RUN.abort(); return; } if (MODE && MODE.kind === 'py' && MODE.ps === '... ') { try { PY.runPython('_kon.resetbuffer()'); } catch (e) { } MODE.ps = '>>> '; } printHTML(`<span class="ps">${esc(PS.textContent)}</span>${esc(CMD.value)}<span class="c-m">^C</span>`); CMD.value = ''; paintPS(); }
@@ -911,14 +1009,14 @@ CMD.addEventListener('keydown', e => {
   else if (e.ctrlKey && e.key.toLowerCase() === 'e') { e.preventDefault(); CMD.setSelectionRange(CMD.value.length, CMD.value.length); }
 });
 document.addEventListener('keydown', e => { if (e.ctrlKey && e.key.toLowerCase() === 'c' && RUN && document.activeElement !== CMD) { RUN.abort(); } });
-TERM.addEventListener('click', e => { if (e.target.closest('a') || getSelection().toString()) return; CMD.focus({ preventScroll: true }); });
+TERM.addEventListener('click', e => { if (e.target.closest('a') || getSelection().toString()) return; focusCmd({ preventScroll: true }); });
 byId('bar').addEventListener('pointerdown', e => e.preventDefault());
 byId('bar').addEventListener('click', e => {
   const b = e.target.closest('[data-k]'); if (!b) return; const k = b.dataset.k;
   if (k === 'tab') complete(); else if (k === 'up') histMove(-1); else if (k === 'down') histMove(1); else if (k === 'ctrlc') ctrlC(); else if (k === 'clear') OUT.innerHTML = '';
   else if (k === 'left' || k === 'right') { const p = Math.max(0, Math.min(CMD.value.length, CMD.selectionStart + (k === 'left' ? -1 : 1))); CMD.setSelectionRange(p, p); }
   else CMD.setRangeText(k, CMD.selectionStart, CMD.selectionEnd, 'end');
-  CMD.focus();
+  focusCmd();
 });
 byId('bHelp').onclick = () => { CMD.value = 'help'; submit(); };
 byId('bFm').onclick = () => { ST.fs = Math.max(10, ST.fs - 1); applySt(); saveSt(); };
@@ -937,7 +1035,7 @@ function motd() {
 fsInit(); paintPS(); motd();
 /* adres çubuğundan komut: konsol.html?c=ping%20google.com */
 const qc = new URLSearchParams(location.search).get('c'); if (qc) { CMD.value = qc; submit(); }
-if (!matchMedia('(pointer:coarse)').matches) CMD.focus();
+if (!matchMedia('(pointer:coarse)').matches) focusCmd();
 </script>
 </body>
 </html>
