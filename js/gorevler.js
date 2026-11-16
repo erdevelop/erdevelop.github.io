@@ -26,7 +26,10 @@
     { id: 't2', ev: 'telaffuz', n: 2, t: '2 telaffuz cümlesini %80 üstü söyle' },
     { id: 'z3', ev: 'kalip', n: 3, t: '3 kalıp adımı tamamla' },
     { id: 's1', ev: 'toplanti', n: 1, t: '1 toplantı simülasyonunu bitir' },
-    { id: 'q1', ev: 'yarisma', n: 1, t: '1 yarışma oyna' }
+    { id: 'q1', ev: 'yarisma', n: 1, t: '1 yarışma oyna' },
+    { id: 'o1', ev: 'okuma', n: 1, t: '1 okuma metni bitir' },
+    { id: 'gr1', ev: 'gramer', n: 1, t: '1 gramer dersi bitir' },
+    { id: 'y8', ev: 'yazma', n: 8, t: '8 kez yazarak çalış (kelime ya da dikte)' }
   ];
   const WEEKLY = [
     { id: 'wg5', ev: 'gun', n: 5, t: '5 farklı gün çalış' },
@@ -37,18 +40,25 @@
     { id: 'wp10', ev: 'telaffuz', n: 10, t: '10 telaffuz cümlesini %80 üstü söyle' },
     { id: 'wz15', ev: 'kalip', n: 15, t: '15 kalıp adımı tamamla' },
     { id: 'ws2', ev: 'toplanti', n: 2, t: '2 toplantı simülasyonunu bitir' },
-    { id: 'wq', ev: 'haftaYar', n: 1, t: 'Haftanın yarışmasını oyna' }
+    { id: 'wq', ev: 'haftaYar', n: 1, t: 'Haftanın yarışmasını oyna' },
+    { id: 'wo3', ev: 'okuma', n: 3, t: '3 okuma metni bitir' },
+    { id: 'wgr3', ev: 'gramer', n: 3, t: '3 gramer dersi bitir' },
+    { id: 'wy40', ev: 'yazma', n: 40, t: '40 kez yazarak çalış' }
   ];
+  /* okuma, gramer ve yazma görevleri yalnızca bu bölümler olan kulüplerde (js/kulup-ek.js + dil verisi) çıkar */
+  const EK = !!window.KULUP_EK, ok = q => EK || !['okuma', 'gramer', 'yazma'].includes(q.ev);
   const XP_D = 10, XP_ALL = 20, XP_W = 50;
   const qd = id => DAILY.find(q => q.id === id), qw = id => WEEKLY.find(q => q.id === id);
 
   /* aynı olay türünden iki görev aynı gün/hafta çıkmasın */
   function choose(pool, seed, n) {
-    const r = rng(seed), a = pool.slice(); for (let i = a.length - 1; i > 0; i--) { const j = Math.floor(r() * (i + 1)); [a[i], a[j]] = [a[j], a[i]]; }
+    const r = rng(seed), a = pool.filter(ok); for (let i = a.length - 1; i > 0; i--) { const j = Math.floor(r() * (i + 1)); [a[i], a[j]] = [a[j], a[i]]; }
     const out = [], ev = new Set(); for (const q of a) { if (ev.has(q.ev)) continue; ev.add(q.ev); out.push(q.id); if (out.length === n) break; } return out;
   }
   const blank = () => ({ d: '', dq: [], dp: {}, dd: [], all: false, w: '', wq: [], wp: {}, wd: [], days: [], tam: 0, st: 0, last: '', fz: '', open: true, wopen: false, wxp: 0, ts: 0 });
   let G = Object.assign(blank(), S.gv || {});
+  /* telefonda ekran yer kaplamasın: ilk kez bir kez kapalı başlar (başlıkta seri ve ●○○ yine görünür) */
+  if (!G.mob && matchMedia('(max-width: 720px)').matches) { G.open = false; G.mob = 1; }
   const seedRoom = () => S.room || 'genel';
 
   /* gün / hafta değişimi */
@@ -95,7 +105,7 @@
   }
 
   /* addXP sarmalayıcı: sayfadaki XP nedenlerinden olay türü çıkarılır; ayrıca haftalık kişisel XP sayılır (oda hedefi için) */
-  const MAP = { 'konuşma turu': 'konusma', 'dinleme': 'dinleme', 'toplantı bitti': 'toplanti', 'telaffuz': 'telaffuz', 'kalıp': 'kalip', 'kendi cümlen': 'kalip', 'yarışma': 'yarisma' };
+  const MAP = { 'okuma': 'okuma', 'gramer': 'gramer', 'yazma': 'yazma', 'konuşma turu': 'konusma', 'dinleme': 'dinleme', 'toplantı bitti': 'toplanti', 'telaffuz': 'telaffuz', 'kalıp': 'kalip', 'kendi cümlen': 'kalip', 'yarışma': 'yarisma' };
   const orig = addXP;
   addXP = function (n, why) {
     orig(n, why); if (!n) return;
