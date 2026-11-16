@@ -40,23 +40,28 @@
   let DICT = null;
   function dict() {
     if (DICT) return DICT; DICT = new Map();
-    const add = (en, tr) => { const k = String(en).toLowerCase().replace(/^(to|the|a|an)\s+/, '').trim(); if (k && tr && !DICT.has(k)) DICT.set(k, tr); };
-    WORDS.forEach(w => add(w[0], w[1])); (typeof TW !== 'undefined' ? TW : []).forEach(w => add(w.en, w.tr)); (S.my || []).forEach(w => add(w.en, w.tr));
+    const add = (en, tr) => { const k = artSil(String(en).toLowerCase()); if (k && tr && !DICT.has(k)) DICT.set(k, tr); const n = norm(k); if (n && tr && !DICT.has('~' + n)) DICT.set('~' + n, tr); };
+    WORDS.forEach(w => add(w[0], w[1])); (typeof TW !== 'undefined' ? TW : []).forEach(w => add(w.en, w.tr)); (S.my || []).forEach(w => add(w.en, w.tr)); Object.entries(D.SOZLUK || {}).forEach(([k, v]) => add(k, v));
     return DICT;
   }
-  const IRR = { went: 'go', gone: 'go', was: 'be', were: 'be', been: 'be', is: 'be', are: 'be', am: 'be', saw: 'see', seen: 'see', bought: 'buy', took: 'take', taken: 'take', made: 'make', did: 'do', done: 'do', does: 'do', had: 'have', has: 'have', got: 'get', came: 'come', gave: 'give', given: 'give', told: 'tell', thought: 'think', left: 'leave', found: 'find', felt: 'feel', kept: 'keep', met: 'meet', sent: 'send', spent: 'spend', built: 'build', brought: 'bring', children: 'child', people: 'person', men: 'man', women: 'woman', said: 'say', knew: 'know', known: 'know', began: 'begin', wrote: 'write', written: 'write', ran: 'run', sat: 'sit', stood: 'stand', heard: 'hear', held: 'hold', lost: 'lose', paid: 'pay', sold: 'sell', taught: 'teach', understood: 'understand', ate: 'eat', drank: 'drink', drove: 'drive', flew: 'fly', chose: 'choose', fell: 'fall', rang: 'ring', lent: 'lend', better: 'good', best: 'good', worse: 'bad', worst: 'bad', lifted: 'lift', put: 'put', cut: 'cut', set: 'set', led: 'lead', meant: 'mean', became: 'become', grew: 'grow', showed: 'show', shown: 'show' };
+  /* artikel / mastar eki ayıklama (dile göre) */
+  const ART = new RegExp(D.ART || '^(to|the|a|an)\\s+', 'i'), ELI = D.ELIZYON ? new RegExp(D.ELIZYON, 'i') : null;
+  const artSil = x => String(x).trim().replace(ART, '').replace(ART, '').trim();
+  const IRR_EN = { went: 'go', gone: 'go', was: 'be', were: 'be', been: 'be', is: 'be', are: 'be', am: 'be', saw: 'see', seen: 'see', bought: 'buy', took: 'take', taken: 'take', made: 'make', did: 'do', done: 'do', does: 'do', had: 'have', has: 'have', got: 'get', came: 'come', gave: 'give', given: 'give', told: 'tell', thought: 'think', left: 'leave', found: 'find', felt: 'feel', kept: 'keep', met: 'meet', sent: 'send', spent: 'spend', built: 'build', brought: 'bring', children: 'child', people: 'person', men: 'man', women: 'woman', said: 'say', knew: 'know', known: 'know', began: 'begin', wrote: 'write', written: 'write', ran: 'run', sat: 'sit', stood: 'stand', heard: 'hear', held: 'hold', lost: 'lose', paid: 'pay', sold: 'sell', taught: 'teach', understood: 'understand', ate: 'eat', drank: 'drink', drove: 'drive', flew: 'fly', chose: 'choose', fell: 'fall', rang: 'ring', lent: 'lend', better: 'good', best: 'good', worse: 'bad', worst: 'bad', lifted: 'lift', put: 'put', cut: 'cut', set: 'set', led: 'lead', meant: 'mean', became: 'become', grew: 'grow', showed: 'show', shown: 'show' };
+  const IRR = D.DUZENSIZ || IRR_EN;
+  const KOK = D.KOK ? D.KOK.map(([a, b]) => [new RegExp(a, 'i'), b]) : [[/ies$/, 'y'], [/ied$/, 'y'], [/es$/, ''], [/s$/, ''], [/ed$/, ''], [/ed$/, 'e'], [/d$/, ''], [/ing$/, ''], [/ing$/, 'e'], [/(.)\1ing$/, '$1'], [/(.)\1ed$/, '$1'], [/er$/, ''], [/est$/, ''], [/ly$/, ''], [/ily$/, 'y']];
   function lemmas(w) {
-    const x = w.toLowerCase().replace(/[’']s$/, '').replace(/[’']/g, "'"), out = [x];
-    if (IRR[x]) out.push(IRR[x]);
-    const r = (re, s) => { if (re.test(x)) out.push(x.replace(re, s)); };
-    r(/ies$/, 'y'); r(/ied$/, 'y'); r(/es$/, ''); r(/s$/, ''); r(/ed$/, ''); r(/ed$/, 'e'); r(/d$/, ''); r(/ing$/, ''); r(/ing$/, 'e'); r(/(.)\1ing$/, '$1'); r(/(.)\1ed$/, '$1'); r(/er$/, ''); r(/est$/, ''); r(/ly$/, ''); r(/ily$/, 'y');
+    let x = w.toLowerCase().replace(/[’]/g, "'"); if (D.dil === 'en') x = x.replace(/'s$/, ''); if (ELI) x = x.replace(ELI, '');
+    const out = [x]; if (IRR[x]) out.push(IRR[x]);
+    KOK.forEach(([re, s]) => { if (re.test(x)) { const y = x.replace(re, s); if (y.length > 1) out.push(y); } });
     return [...new Set(out)];
   }
   function lookup(words, i) {
     const M = dict();
-    for (const n of [3, 2]) { if (i + n > words.length) continue; for (let s = Math.max(0, i - n + 1); s <= i; s++) { if (s + n > words.length) continue; const ph = words.slice(s, s + n).join(' ').toLowerCase(); if (M.has(ph)) return { en: ph, tr: M.get(ph) }; const ph2 = words.slice(s, s + n - 1).concat(lemmas(words[s + n - 1])[1] || []).join(' ').toLowerCase(); if (M.has(ph2)) return { en: ph2, tr: M.get(ph2) }; } }
-    for (const l of lemmas(words[i])) if (M.has(l)) return { en: l, tr: M.get(l) };
-    return { en: words[i].toLowerCase(), tr: '' };
+    for (const n of [3, 2]) { if (i + n > words.length) continue; for (let s = Math.max(0, i - n + 1); s <= i; s++) { if (s + n > words.length) continue; const ph = words.slice(s, s + n).join(' ').toLowerCase(); if (M.has(ph)) return { en: ph, tr: M.get(ph) }; const lm = lemmas(words[s + n - 1]).slice(1); for (const l2 of lm) { const ph2 = words.slice(s, s + n - 1).concat(l2).join(' ').toLowerCase(); if (M.has(ph2)) return { en: ph2, tr: M.get(ph2) }; } } }
+    const L = lemmas(words[i]); for (const l of L) if (M.has(l)) return { en: l, tr: M.get(l) };
+    for (const l of L) { const n = '~' + norm(l); if (M.has(n)) return { en: l, tr: M.get(n) }; }
+    return { en: L[0], tr: '' };
   }
 
   /* ---------------- hata defteri ---------------- */
@@ -132,7 +137,7 @@ dialog.tanit .hd small{display:block;font-weight:400;color:var(--muted);font-siz
   function okOpen(id) {
     const r = D.OKUMA.find(x => x.id === id); if (!r) return; R = { id, sel: null, ans: {} };
     const toks = r.metin.split(/(\s+)/), words = []; let html = '';
-    toks.forEach(t => { if (/^\s+$/.test(t)) { html += t; return; } const m = t.match(/^([^A-Za-zÀ-ÿ0-9']*)([A-Za-zÀ-ÿ0-9'’\-]+)([^A-Za-zÀ-ÿ0-9]*)$/); if (!m) { html += esc(t); return; } words.push(m[2].replace(/’/g, "'")); html += esc(m[1]) + `<span class="w" data-i="${words.length - 1}">${esc(m[2])}</span>` + esc(m[3]); });
+    toks.forEach(t => { if (/^\s+$/.test(t)) { html += t; return; } const m = t.match(/^([^A-Za-zÀ-ÿœŒ0-9']*)([A-Za-zÀ-ÿœŒ0-9'’\-]+)([^A-Za-zÀ-ÿœŒ0-9]*)$/); if (!m) { html += esc(t); return; } words.push(m[2].replace(/’/g, "'")); html += esc(m[1]) + `<span class="w" data-i="${words.length - 1}">${esc(m[2])}</span>` + esc(m[3]); });
     R.words = words;
     el('p-okuma').innerHTML = `<div class="ctl" style="margin-bottom:8px"><button class="btn" type="button" id="okBack">← Metinler</button><span class="sp"></span><button class="btn" type="button" id="okPlay">🔊 Dinle</button><button class="btn" type="button" id="okSlow">🐢</button><button class="btn" type="button" id="okStop">⏹</button></div>
       <h3><span class="lv">${r.lvl}</span>${esc(r.baslik)}</h3><p class="sub">${esc(r.tr)} · ${words.length} kelime · kelimeye dokun</p>
@@ -165,7 +170,7 @@ dialog.tanit .hd small{display:block;font-weight:400;color:var(--muted);font-siz
   /* ================= ✍️ YAZMA ================= */
   let Y = { mod: 'kelime', w: null, sent: '', kuyruk: [] };
   const lev = (a, b) => { const m = a.length, n = b.length, d = Array.from({ length: m + 1 }, (_, i) => [i]); for (let j = 1; j <= n; j++) d[0][j] = j; for (let i = 1; i <= m; i++) for (let j = 1; j <= n; j++) d[i][j] = Math.min(d[i - 1][j] + 1, d[i][j - 1] + 1, d[i - 1][j - 1] + (a[i - 1] === b[j - 1] ? 0 : 1)); return d[m][n]; };
-  const clean = s => String(s).toLowerCase().replace(/[’']/g, "'").replace(/^(to|the|a|an)\s+/, '').replace(/[^a-z0-9'àâäçéèêëîïôöùûüÿœæßñ\- ]/gi, '').replace(/\s+/g, ' ').trim();
+  const clean = s => artSil(String(s).toLowerCase().replace(/[’']/g, "'")).replace(/[^a-z0-9'àâäçéèêëîïôöùûüÿœæßñ\- ]/gi, '').replace(/\s+/g, ' ').trim();
   function yzWord() {
     if (Y.kuyruk.length) return Y.kuyruk.shift();
     const L = deck().filter(w => w.en && w.tr); if (!L.length) return null;
@@ -192,7 +197,7 @@ dialog.tanit .hd small{display:block;font-weight:400;color:var(--muted);font-siz
     const done = (ok, tip) => { leitUp(w, ok); if (ok) addXP(hint ? 1 : 2, 'yazma'); else hata('yazma', w.tr, w.en, el('yzIn').value.trim());
       el('yzRes').innerHTML = `<div style="font:700 20px var(--f-body);color:${ok ? 'var(--ok,#2e8b57)' : 'var(--warn,#c0392b)'}">${ok ? '✓ ' : '✗ '}${esc(w.en)}</div>${tip ? `<div class="sub">${tip}</div>` : ''}${w.ex ? `<div class="sub">${esc(w.ex)}</div>` : ''}<button class="btn pri" type="button" id="yzNx" style="margin-top:6px">Sonraki →</button>`;
       ['yzOk', 'yzH', 'yzPass'].forEach(i => el(i).disabled = true); el('yzIn').readOnly = true; sayx(w.en, .9); el('yzNx').focus(); el('yzNx').onclick = yzNext; };
-    const chk = () => { const a = clean(el('yzIn').value), b = clean(w.en); if (!a) return; const d = lev(a, b); if (d === 0) done(true); else if (d === 1 && b.length >= 5) done(true, 'Küçük bir yazım farkı var; doğru yazımı aşağıda.'); else done(false, 'Senin yazdığın: ' + esc(el('yzIn').value)); };
+    const chk = () => { const a = clean(el('yzIn').value), b = clean(w.en); if (!a) return; const d = lev(a, b); if (d === 0) done(true); else if (norm(a) === norm(b)) done(true, D.dil === 'de' ? 'Umlaut ya da ß farkı var; doğru yazımı aşağıda.' : 'Aksan farkı var; doğru yazımı aşağıda.'); else if (d === 1 && b.length >= 5) done(true, 'Küçük bir yazım farkı var; doğru yazımı aşağıda.'); else done(false, 'Senin yazdığın: ' + esc(el('yzIn').value)); };
     el('yzOk').onclick = chk; el('yzPass').onclick = () => done(false); el('yzIn').onkeydown = e => { if (e.key === 'Enter') { e.preventDefault(); if (el('yzNx')) el('yzNx').click(); else chk(); } };
   }
   function dkNext() {
@@ -318,7 +323,7 @@ dialog.tanit .hd small{display:block;font-weight:400;color:var(--muted);font-siz
     E.seviye = { lvl, puan, at: Date.now() }; sv(); addXP(10, 'seviye testi'); rozetKontrol();
     const kl = { A1: '1', A2: '2', B1: '3', B2: '4' }[lvl];
     el('p-ilerleme').innerHTML = `<h3>🧭 Sonuç</h3><div class="panel" style="text-align:center"><div class="big">${lvl}</div><p class="sub">${puan} / ${Qs.length} doğru</p>
-      <p>${{ A1: 'Temelden başlıyorsun. Önce en sık kullanılan kelimeler ve geniş zaman.', A2: 'Temelin var. Günlük konuşma kalıpları ve geçmiş zamanla devam.', B1: 'Kendini ifade edebiliyorsun. İş İngilizcesi, okuma ve Present Perfect ile ilerle.', B2: 'İyi seviyedesin. Teknik metinler, toplantı simülasyonu ve ileri gramer sana göre.' }[lvl]}</p>
+      <p>${(D.SONUC || { A1: 'Temelden başlıyorsun. Önce en sık kullanılan kelimeler ve geniş zaman.', A2: 'Temelin var. Günlük konuşma kalıpları ve geçmiş zamanla devam.', B1: 'Kendini ifade edebiliyorsun. İş İngilizcesi, okuma ve Present Perfect ile ilerle.', B2: 'İyi seviyedesin. Teknik metinler, toplantı simülasyonu ve ileri gramer sana göre.' })[lvl]}</p>
       <div class="ctl" style="justify-content:center"><button class="btn pri" type="button" id="tsK">Kelimeleri ${lvl} seviyesine ayarla</button><button class="btn" type="button" id="tsG">Gramer derslerine git</button><button class="btn" type="button" id="tsB">İlerlemeye dön</button></div></div>`;
     el('tsK').onclick = () => { S.lvl = kl; save(); try { $('kLvl').value = kl; srcOpts(); nextCard(); } catch (e) { } TM.toast('Kelime kartları ' + lvl + ' seviyesine ayarlandı'); setTab('kelime'); };
     el('tsG').onclick = () => setTab('gramer'); el('tsB').onclick = ilPaint;
@@ -348,7 +353,7 @@ dialog.tanit .hd small{display:block;font-weight:400;color:var(--muted);font-siz
       const ad = typeof Cloud !== 'undefined' && Cloud.user ? Cloud.name() : '', url = location.origin + location.pathname + '?duello=' + seed + '&skor=' + pts + (ad ? '&ad=' + encodeURIComponent(ad) : '') + '#yarisma';
       const vs = CH && CH.seed === seed ? `<p style="font-size:1.1rem">${pts > CH.skor ? '🏆 Kazandın!' : pts === CH.skor ? '🤝 Berabere!' : '😅 Bu sefer ' + esc(CH.ad) + ' kazandı.'} Sen: <b>${pts}</b> · ${esc(CH.ad)}: <b>${CH.skor}</b></p>` : '';
       duPaint(`<div style="margin-top:10px;text-align:center">${vs}<div class="big">${pts} puan</div><div class="ctl" style="justify-content:center"><button class="btn pri" type="button" id="duSh">📤 Meydan oku (link gönder)</button><button class="btn" type="button" id="duCp">Linki kopyala</button></div></div>`);
-      el('duSh').onclick = async () => { const text = `İngilizce Kulübü'nde 60 saniyede ${pts} puan yaptım. Aynı kelimelerle geçebilir misin? ⚔️`; try { if (navigator.share) { await navigator.share({ title: 'Meydan okuma', text, url }); return; } } catch (e) { return; } window.open('https://wa.me/?text=' + encodeURIComponent(text + ' ' + url), '_blank'); };
+      el('duSh').onclick = async () => { const text = `${D.dilAd} Kulübü'nde 60 saniyede ${pts} puan yaptım. Aynı kelimelerle geçebilir misin? ⚔️`; try { if (navigator.share) { await navigator.share({ title: 'Meydan okuma', text, url }); return; } } catch (e) { return; } window.open('https://wa.me/?text=' + encodeURIComponent(text + ' ' + url), '_blank'); };
       el('duCp').onclick = async () => { try { await navigator.clipboard.writeText(url); TM.toast('Link kopyalandı'); } catch (e) { prompt('Linki kopyala:', url); } };
     };
   }

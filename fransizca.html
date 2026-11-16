@@ -146,6 +146,8 @@ dialog.set input[type=range] { flex: 1 1 160px; accent-color: var(--accent); }
 .empty2 { color: var(--muted); font-size: 14px; padding: 10px 0; }
 .big3 { font: 700 2rem/1 var(--f-display); }
 .hbox { margin-top: 10px; } .hbox[hidden], .hbox [hidden] { display: none !important; }
+details.fold { border-top: 1px solid var(--line); margin-top: 12px; padding-top: 10px; } details.fold > summary { cursor: pointer; list-style: none; display: flex; align-items: center; gap: 6px; } details.fold > summary::-webkit-details-marker { display: none; } details.fold > summary::after { content: '▾'; margin-left: auto; color: var(--accent); transition: transform .15s; } details.fold:not([open]) > summary::after { transform: rotate(-90deg); }
+details.phg { border-bottom: 1px solid var(--line); } details.phg > summary { cursor: pointer; padding: 8px 0; list-style: none; display: flex; gap: 6px; align-items: baseline; } details.phg > summary::-webkit-details-marker { display: none; } details.phg > summary h4 { margin: 0; flex: 1; } details.phg > summary::after { content: '+'; color: var(--accent); font: 600 16px var(--f-mono); } details.phg[open] > summary::after { content: '−'; } details.phg ul { margin-top: 0; }
 .pstat { border-radius: 8px; padding: 10px 12px; background: var(--panel-2); font-size: 14px; color: var(--text); } .pstat b { color: var(--fg); } .pstat.on { box-shadow: inset 3px 0 0 var(--ok); } .pstat.warn { box-shadow: inset 3px 0 0 var(--warn); } .hbox .fd { margin-bottom: 0; } .hbox .chk { display: flex; gap: 8px; align-items: flex-start; font-size: 14px; color: var(--text); }
 .hinfo { font: 500 13px var(--f-mono); color: var(--fg); background: var(--panel-2); border-radius: 6px; padding: 8px 10px; }
 .steps2 { margin: 6px 0 0; padding-left: 18px; font-size: 13px; color: var(--text); } .steps2 li { margin: 3px 0; }
@@ -205,16 +207,14 @@ dialog.set input[type=range] { flex: 1 1 160px; accent-color: var(--accent); }
         <div class="lbl muted mono small">Kutular (Leitner)</div>
         <div class="boxes" id="boxes"></div>
         <p class="note">Bildiğin kelime bir sonraki kutuya geçer ve daha seyrek sorulur (1, 3, 7, 14 gün). Bilmediğin kelime ilk kutuya döner ve hemen tekrar gelir.</p>
-        <hr style="border:0;border-top:1px solid var(--line);margin:12px 0">
-        <div class="lbl muted mono small" style="margin-bottom:8px">Kelime ekle</div>
-        <form class="fg2" id="addF">
+        <details class="fold"><summary class="lbl muted mono small">➕ Kelime ekle</summary>
+        <form class="fg2" id="addF" style="margin-top:8px">
           <div class="fd"><label for="aEn">Fransızca</label><input class="inp" id="aEn" maxlength="60" required autocomplete="off"></div>
           <div class="fd"><label for="aTr">Türkçe</label><input class="inp" id="aTr" maxlength="80" required autocomplete="off"></div>
           <div class="fd full"><label for="aEx">Örnek cümle (isteğe bağlı)</label><input class="inp" id="aEx" maxlength="160" autocomplete="off"></div>
           <div class="full ctl"><button class="btn pri" type="submit" id="aBtn">Ekle</button><span class="small muted" id="aTo">Kendi listene eklenir</span></div>
-        </form>
-        <hr style="border:0;border-top:1px solid var(--line);margin:14px 0">
-        <div class="lbl muted mono small">🔔 Telefona kelime bildirimi</div>
+        </form></details>
+        <details class="fold" id="bildFold"><summary class="lbl muted mono small">🔔 Telefona kelime bildirimi</summary>
         <p class="note" style="margin:6px 0">Seçtiğin saatlerde telefonuna bir kelime gelsin; görmek zorunda kal. Bildirime dokununca kelimenin kartı açılır.</p>
         <button class="btn" type="button" id="hOpen">Bildirimleri ayarla</button>
         <div class="small" id="pMini" style="margin-top:8px"></div>
@@ -243,6 +243,7 @@ dialog.set input[type=range] { flex: 1 1 160px; accent-color: var(--accent); }
             <li><b>İpucu:</b> Önce takvim uygulamasında “Fransızca” adlı yeni bir takvim aç ve kelimeleri ona ekle. Bıkınca o takvimi silmen yeterli; tüm hatırlatmalar gider.</li>
             <li>Önce <b>1 gün (deneme)</b> ile dene; bildirim sesi ve görünümü hoşuna giderse uzun süreli olanı ekle.</li></ol></div>
         </div>
+        </details>
       </div>
     </div>
   </section>
@@ -1729,7 +1730,7 @@ $('cLvl').onchange = () => { S.cLvl = $('cLvl').value; save(); newPrompt(); };
 $('cNext').onclick = newPrompt; $('cSpk').onclick = () => say(C.role ? C.role[4] + ' ' + C.role[5] : $('cQ').textContent);
 $('cPl').oninput = () => { S.players = $('cPl').value; save(); showTurn(); paintRole(); };
 function paintPh() { const own = PHRASES.filter(p => p[0] !== 'genel' && inTrk(p[0])), gen = PHRASES.filter(p => p[0] === 'genel');
-  const g = (L, lab) => L.map(([t, h, l]) => `<h4>${esc(h)}${lab && t !== 'genel' && S.trk === 'hepsi' ? ` <span class="g">· ${esc(TR(t)[2])}</span>` : ''}</h4><ul>${l.map(x => `<li>${esc(x)}</li>`).join('')}</ul>`).join('');
+  const g = (L, lab) => L.map(([t, h, l], i) => `<details class="phg"${i === 0 && lab ? ' open' : ''}><summary><h4>${esc(h)}${lab && t !== 'genel' && S.trk === 'hepsi' ? ` <span class="g">· ${esc(TR(t)[2])}</span>` : ''}</h4><span class="small muted">${l.length}</span></summary><ul>${l.map(x => `<li>${esc(x)}</li>`).join('')}</ul></details>`).join('');
   $('cPh').innerHTML = '<div class="lbl muted mono small">İşe yarayan kalıplar' + (S.trk === 'hepsi' ? '' : ' · ' + esc(TR(S.trk)[2])) + '</div>' + g(own, true) + (gen.length ? '<div class="lbl muted mono small" style="margin-top:14px">Her konuşmada</div>' + g(gen) : ''); }
 
 /* ============ DİNLEME ============ */
@@ -2140,7 +2141,7 @@ document.querySelectorAll('#qMode button').forEach(x => x.classList.toggle('on',
 const h = location.hash.slice(1), qs = new URLSearchParams(location.search);
 if (qs.get('k')) setTimeout(() => { const i = KALIP.findIndex(p => norm(p.f) === norm(qs.get('k'))); if (i >= 0) { S.z.g = 'hepsi'; S.z.mode = 'ogren'; setTab('kalip'); zGroups(); zLoad(i); } else showWord(qs.get('k')); }, 0);
 /* ---------- üst çubuk: 🔄 yenile + ⚙ ayarlar ---------- */
-const VER = '16.11 16:00';
+const VER = '16.11 21:00';
 async function hardRefresh() {
   TM.toast('Yenileniyor…');
   try { const r = await navigator.serviceWorker?.getRegistration(); if (r) await r.update(); } catch (e) { }
@@ -2168,7 +2169,7 @@ $('sVoice').onchange = () => { S.voice = $('sVoice').value; save(); if ($('tVoic
 $('sVTest').onclick = () => say('Bonjour ! Voici ma voix. Enchanté de vous rencontrer.');
 $('sRate').oninput = () => { S.rate = +$('sRate').value; $('sRateV').textContent = '×' + S.rate.toFixed(2); save(); };
 $('sRate').onchange = () => say('Voici ma vitesse de parole.');
-$('sPushGo').onclick = () => { closeSet(); setTab('kelime'); if ($('hBox').hidden) $('hOpen').click(); setTimeout(() => $('hBox').scrollIntoView({ block: 'start', behavior: 'smooth' }), 80); };
+$('sPushGo').onclick = () => { closeSet(); setTab('kelime'); const bf = $('hBox').closest('details'); if (bf) bf.open = true; if ($('hBox').hidden) $('hOpen').click(); setTimeout(() => $('hBox').scrollIntoView({ block: 'start', behavior: 'smooth' }), 80); };
 $('sAccGo').onclick = e => { if (Cloud.user) return; e.preventDefault(); closeSet(); setTab('oda'); };
 $('sModeBtn').onclick = () => { $('modeBtn').click(); setFill(); };
 $('sRefresh').onclick = hardRefresh;
@@ -2177,7 +2178,10 @@ setTab(qs.has('oda') ? 'oda' : ['kelime', 'kalip', 'dinleme', 'konusma', 'sim', 
 if (S.room || S.pushOn) Cloud.ensure(); else pPaint();
 
 </script>
+<script src="js/ek-fr.js"></script>
 <script src="js/gorevler.js"></script>
+<script src="js/kulup-ek.js"></script>
+<script src="js/altmenu.js"></script>
 <script data-goatcounter="https://erdevelop.goatcounter.com/count" async src="//gc.zgo.at/count.js"></script>
 </body>
 </html>
