@@ -290,7 +290,9 @@ async function runPipe(pipe, signal) {
     };
     const fn = CMDS[argv[0]];
     try {
-      if (!fn) { ctx.err(argv[0] + ': ' + T('komut bulunamadı. Liste için help yaz.', 'command not found. Type help for a list.') + suggest(argv[0])); code = 127; }
+      const runF = !fn && /\.(py|js)$/.test(argv[0]) && node(argv[0].replace(/^\.\//, '')) && node(argv[0].replace(/^\.\//, '')).t === 'f';
+      if (runF) { argv = [argv[0].endsWith('.py') ? 'python' : 'js', argv[0].replace(/^\.\//, ''), ...argv.slice(1)]; ctx.argv = argv; ctx.args = argv.slice(1); code = (await CMDS[argv[0]](ctx)) ?? 0; }
+      else if (!fn) { ctx.err(argv[0] + ': ' + T('komut bulunamadı. Liste için help yaz.', 'command not found. Type help for a list.') + suggest(argv[0])); code = 127; }
       else code = (await fn(ctx)) ?? 0;
     } catch (e) {
       if (e.name === 'AbortError' || signal.aborted) { print('^C', 'c-m'); code = 130; }
@@ -359,8 +361,8 @@ const HELP = [
     ['a | b , a > dosya , a >> dosya , a < dosya , a && b , a ; b', T('pipe ve yönlendirme', 'pipes & redirection')], ['cowsay / fortune / matrix', T('eğlence', 'fun')]]]
 ];
 const MAN = {
-  ping: T('ping [-c sayı] [-i saniye] [-t] host|url\n\nTarayıcı gerçek ICMP paketi gönderemez. Bunun yerine hedefe küçük bir HTTPS isteği atılır ve dönüş süresi ölçülür. İlk istek DNS ve TLS kurulumunu da içerdiği için daha uzun sürer.\n-c 4 (varsayılan) kaç kez, -t Ctrl+C\'ye kadar sürekli, -i aralık (saniye).',
-    'ping [-c count] [-i seconds] [-t] host|url\n\nBrowsers cannot send real ICMP packets. Instead a small HTTPS request is sent and the round-trip time is measured. The first request includes DNS and TLS setup, so it is slower.\n-c 4 (default) count, -t until Ctrl+C, -i interval in seconds.'),
+  ping: T('ping [-c sayı] [-i saniye] [-t] host|url\n\nTarayıcı gerçek ICMP paketi gönderemez. Bunun yerine hedefe içeriksiz küçük bir HTTPS isteği (HEAD) atılır ve dönüş süresi ölçülür. Bağlantı ölçümden önce kurulur; yine de sunucunun yanıt hazırlama süresi eklendiği için sonuç gerçek ping\'den birkaç ms fazla olabilir.\n-c 4 (varsayılan) kaç kez, -t Ctrl+C\'ye kadar sürekli, -i aralık (saniye).',
+    'ping [-c count] [-i seconds] [-t] host|url\n\nBrowsers cannot send real ICMP packets. Instead a tiny HTTPS request (HEAD) is sent and the round-trip time is measured. The connection is set up before measuring; server think-time can still add a few ms over a real ping.\n-c 4 (default) count, -t until Ctrl+C, -i interval in seconds.'),
   dig: T('dig [tip] alanadı [tip]\n\nDNS-over-HTTPS (Google, yedek Cloudflare) ile sorgular. Tip: A, AAAA, MX, TXT, NS, CNAME, SOA, CAA, SRV, PTR, ANY. IP verirsen ters kayıt (PTR) bakar.\nÖrnek: dig mx gmail.com · dig 8.8.8.8 · dig +short erdevelop.github.io',
     'dig [type] domain [type]\n\nQueries over DNS-over-HTTPS (Google, Cloudflare fallback). Types: A, AAAA, MX, TXT, NS, CNAME, SOA, CAA, SRV, PTR, ANY. Give an IP for a reverse (PTR) lookup.\nExample: dig mx gmail.com · dig 8.8.8.8 · dig +short erdevelop.github.io'),
   curl: T('curl [-I] [-i] [-s] [-X METOT] [-H "Ad: değer"] [-d veri] [-o dosya] url\n\nTarayıcı güvenliği (CORS) nedeniyle yalnızca izin veren sitelerin yanıtı okunabilir. İzin vermeyen sitelerde yalnızca sitenin ayakta olup olmadığı söylenir.',
@@ -520,19 +522,22 @@ const CMDS = {
   /* ---------- ağ ---------- */
   async ping(c) {
     const o = opts(c.args, 'c:i:W:'); const tgt = o._[0]; if (!tgt) { c.err(T('kullanım: ping [-c sayı] [-t] host', 'usage: ping [-c count] [-t] host')); return 2; }
-    const url = /^https?:\/\//i.test(tgt) ? tgt : 'https://' + tgt + '/', host = hostOf(tgt), cnt = o.t ? Infinity : +(o.c || 4), iv = (+o.i || 1) * 1000;
+    const url = /^https?:\/\//i.test(tgt) ? tgt : 'https://' + tgt + '/favicon.ico', host = hostOf(tgt), cnt = o.t ? Infinity : +(o.c || 4), iv = (+o.i || 1) * 1000;
     let ip = ''; try { const r = await doh(host, 'A', c.signal); ip = ((r.Answer || []).find(a => a.type === 1) || {}).data || ''; } catch (e) { if (c.signal.aborted) throw e; }
     c.out(`PING ${host}${ip ? ' (' + ip + ')' : ''}: ${T('HTTPS üzerinden', 'over HTTPS')}${o.t ? T(' — durdurmak için Ctrl+C', ' — Ctrl+C to stop') : ''}`);
+    const hit = (sig) => fetch(url + (url.includes('?') ? '&' : '?') + '_p=' + Math.random().toString(36).slice(2), { method: 'HEAD', mode: 'no-cors', cache: 'no-store', signal: sig, credentials: 'omit' });
+    /* bağlantıyı önceden kur (DNS + TLS ölçüme girmesin) */
+    try { const w = new AbortController(), wt = setTimeout(() => w.abort(), 6000); await hit(w.signal); clearTimeout(wt); } catch (e) { if (c.signal.aborted) throw e; }
     const rt = []; let sent = 0;
     const stats = () => { const ok = rt.length, loss = sent ? Math.round((sent - ok) / sent * 100) : 0; c.out(''); c.out(`--- ${host} ${T('ping istatistikleri', 'ping statistics')} ---`); c.out(`${sent} ${T('gönderildi', 'sent')}, ${ok} ${T('alındı', 'received')}, %${loss} ${T('kayıp', 'loss')}`); if (ok) { const mn = Math.min(...rt), mx = Math.max(...rt), av = rt.reduce((a, b) => a + b, 0) / ok, md = Math.sqrt(rt.reduce((a, b) => a + (b - av) ** 2, 0) / ok); c.out(`rtt min/avg/max/mdev = ${mn.toFixed(1)}/${av.toFixed(1)}/${mx.toFixed(1)}/${md.toFixed(1)} ms`); } };
     try {
       for (let i = 0; i < cnt; i++) {
         sent++; const ac = new AbortController(), to = setTimeout(() => ac.abort(), (+o.W || 5) * 1000), onAb = () => ac.abort(); c.signal.addEventListener('abort', onAb, { once: true });
         const t0 = performance.now(); let ok = true;
-        try { await fetch(url + (url.includes('?') ? '&' : '?') + '_p=' + Math.random().toString(36).slice(2), { mode: 'no-cors', cache: 'no-store', signal: ac.signal, credentials: 'omit' }); } catch (e) { ok = false; }
+        try { await hit(ac.signal); } catch (e) { ok = false; }
         clearTimeout(to); c.signal.removeEventListener('abort', onAb); if (c.signal.aborted) break;
         const ms = performance.now() - t0;
-        if (ok) { rt.push(ms); c.out([`seq=${i + 1} `, T('süre', 'time') + '=', C(ms.toFixed(1) + ' ms', ms < 60 ? 'c-a' : ms < 150 ? 'c-w' : 'c-e'), i === 0 ? C(T('  (ilk istek: DNS + TLS dahil)', '  (first request: incl. DNS + TLS)'), 'c-m') : '']); }
+        if (ok) { rt.push(ms); c.out([`seq=${i + 1} `, T('süre', 'time') + '=', C(ms.toFixed(1) + ' ms', ms < 60 ? 'c-a' : ms < 150 ? 'c-w' : 'c-e')]); }
         else c.out([`seq=${i + 1} `, C(ac.signal.aborted ? T('zaman aşımı', 'timeout') : T('ulaşılamadı', 'unreachable'), 'c-e')]);
         if (i < cnt - 1) await sleep(iv, c.signal);
       }
@@ -646,7 +651,7 @@ const CMDS = {
   /* ---------- bilgi ---------- */
   async weather(c) {
     let q = c.args.join(' '), lat, lon, name;
-    if (!q) { const j = await jget('https://ipwho.is/', c.signal).catch(() => ({})); if (j.latitude) { lat = j.latitude; lon = j.longitude; name = j.city; } else q = 'İstanbul'; }
+    if (!q) { const j = await jget('https://ipwho.is/', c.signal).catch(() => ({})); q = j.city || 'İstanbul'; }
     if (q) { const g = await jget(`https://geocoding-api.open-meteo.com/v1/search?count=1&language=${erDil.lang === 'en' ? 'en' : 'tr'}&name=${encodeURIComponent(q)}`, c.signal); const r = (g.results || [])[0]; if (!r) { c.err(q + ': ' + T('yer bulunamadı', 'place not found')); return 1; } lat = r.latitude; lon = r.longitude; name = [r.name, r.admin1, r.country].filter(Boolean).filter((x, i, a) => a.indexOf(x) === i).join(', '); }
     const w = await jget(`https://api.open-meteo.com/v1/forecast?latitude=${lat}&longitude=${lon}&current=temperature_2m,apparent_temperature,relative_humidity_2m,wind_speed_10m,wind_direction_10m,weather_code,precipitation&daily=weather_code,temperature_2m_max,temperature_2m_min,precipitation_probability_max,sunrise,sunset&timezone=auto&forecast_days=4`, c.signal);
     const W = wcode, cu = w.current; c.out([C(name, 'c-a c-b')]);
@@ -741,7 +746,9 @@ async function modeLine(line) {
     if (line.trim()) await runJS(ctx, line, true); return;
   }
   /* python */
-  if (/^\s*(exit|quit)\(\)\s*$/.test(line)) { MODE = null; syncFromPy(); return; }
+  if (/^\s*(exit|quit)(\(\))?\s*$/.test(line)) { MODE = null; syncFromPy(); return; }
+  const pf = line.trim().replace(/^python3?\s+/, '').replace(/^\.\//, '');
+  if (/^[\w./-]+\.py$/.test(pf) && node(pf) && node(pf).t === 'f') { print(T('(dosya çalıştırılıyor: ', '(running file: ') + pf + ')', 'c-m'); syncToPy(); await pyRun(ctx, readFile(pf)); syncFromPy(); return; }
   pyStd(ctx);
   try {
     PY.globals.set('_satir', line);
