@@ -141,6 +141,44 @@ html[data-mode=light] #er-ara .bx{background:#fff;color:#1a2233;border-color:rgb
   }
   if (D.readyState === 'loading') D.addEventListener('DOMContentLoaded', dugme); else dugme();
 
+  /* ---------------- durum çubuğu: fare konumu (sadece fareli cihazlarda) ---------------- */
+  (function () {
+    if (window.top !== window || !matchMedia('(hover:hover) and (pointer:fine)').matches) return;
+    let kapali = false; try { kapali = localStorage.getItem('erdevelop-durum') === '0'; } catch (e) { }
+    const st = D.createElement('style');
+    st.textContent = '#er-durum{position:fixed;left:0;right:0;bottom:0;z-index:2147482000;height:22px;display:flex;align-items:center;gap:14px;padding:0 10px;font:500 11px/1 ui-monospace,SFMono-Regular,Consolas,monospace;letter-spacing:.02em;color:#c9d3e0;background:rgba(14,18,26,.82);border-top:1px solid rgba(127,127,127,.28);backdrop-filter:blur(6px);-webkit-backdrop-filter:blur(6px);pointer-events:none;user-select:none;font-variant-numeric:tabular-nums}'
+      + '#er-durum b{color:#fff;font-weight:600;display:inline-block;min-width:4ch}#er-durum .sp{flex:1}#er-durum .bo{opacity:.6}'
+      + '#er-durum button{all:unset;pointer-events:auto;cursor:pointer;padding:0 4px;opacity:.6;font:inherit;color:inherit}#er-durum button:hover{opacity:1}'
+      + '#er-durum-ac{all:unset;position:fixed;right:6px;bottom:6px;z-index:2147482000;cursor:pointer;font:600 10px/1 ui-monospace,Consolas,monospace;padding:4px 6px;border-radius:5px;color:#c9d3e0;background:rgba(14,18,26,.6);opacity:.45}#er-durum-ac:hover{opacity:1}'
+      + 'body.er-durumlu [data-dil-btn][style*="position:fixed"]{bottom:30px!important}@media print{#er-durum,#er-durum-ac{display:none!important}}';
+    let bar = null, ac = null, x = 0, y = 0, px = 0, py = 0, bekliyor = false;
+    const t = (tr, e) => (D.documentElement.lang || '').startsWith('en') ? e : tr;
+    function yaz() {
+      bekliyor = false; if (!bar) return;
+      bar.querySelector('[data-k=x]').textContent = x; bar.querySelector('[data-k=y]').textContent = y;
+      bar.querySelector('[data-k=s]').textContent = px + ', ' + py;
+      bar.querySelector('[data-k=l]').textContent = t('sayfa', 'page');
+      bar.querySelector('[data-k=w]').textContent = innerWidth + '×' + innerHeight;
+    }
+    function goster() {
+      if (ac) { ac.remove(); ac = null; }
+      bar = D.createElement('div'); bar.id = 'er-durum'; bar.setAttribute('aria-hidden', 'true');
+      bar.innerHTML = '<span>x <b data-k="x">–</b></span><span>y <b data-k="y">–</b></span><span class="bo"><span data-k="l"></span> <span data-k="s">–</span></span><span class="sp"></span><span class="bo" data-k="w"></span><button type="button" title="' + t('Durum çubuğunu gizle', 'Hide status bar') + '">×</button>';
+      bar.querySelector('button').onclick = () => { try { localStorage.setItem('erdevelop-durum', '0'); } catch (e) { } kapat(); };
+      D.body.appendChild(bar); D.body.classList.add('er-durumlu'); yaz();
+    }
+    function kapat() {
+      if (bar) { bar.remove(); bar = null; } D.body.classList.remove('er-durumlu');
+      ac = D.createElement('button'); ac.id = 'er-durum-ac'; ac.type = 'button'; ac.textContent = 'x,y'; ac.title = t('Durum çubuğunu göster', 'Show status bar');
+      ac.onclick = () => { try { localStorage.removeItem('erdevelop-durum'); } catch (e) { } goster(); };
+      D.body.appendChild(ac);
+    }
+    addEventListener('mousemove', e => { x = Math.round(e.clientX); y = Math.round(e.clientY); px = Math.round(e.pageX); py = Math.round(e.pageY); if (bar && !bekliyor) { bekliyor = true; requestAnimationFrame(yaz); } }, { passive: true });
+    addEventListener('resize', () => { if (bar && !bekliyor) { bekliyor = true; requestAnimationFrame(yaz); } });
+    const kur = () => { D.head.appendChild(st); kapali ? kapat() : goster(); };
+    if (D.readyState === 'loading') D.addEventListener('DOMContentLoaded', kur); else kur();
+  })();
+
   /* ---------------- cihazlar arası senkron (hesapta açıldıysa) ---------------- */
   let acik = false; try { acik = localStorage.getItem('erdevelop-sync') === '1'; } catch (e) { }
   /* kendi Firebase yüklemesi olan sayfalar: hesap sayfası senkronu kendisi yapar */
