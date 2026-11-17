@@ -1,0 +1,740 @@
+<!doctype html>
+<html lang="tr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>AutoCAD Dinamik Blok, Field ve Parametrik Kısıtlar · 7 günlük program | erdevelop</title>
+<meta name="description" content="AutoCAD dinamik bloklar, alanlar (field) ve parametrik kısıtlar: 7 günlük, cephe örnekli program. Stretch, değer kümeleri, Flip, Visibility, Lookup, Block Table, Parameters Manager, BlockPlaceholder, data extraction.">
+<link rel="icon" href="/favicon.svg" type="image/svg+xml">
+<link rel="icon" href="/favicon.ico" sizes="any">
+<link rel="apple-touch-icon" href="/apple-touch-icon.png">
+<link rel="manifest" href="/manifest.webmanifest">
+<meta name="theme-color" content="#0b1220">
+<meta property="og:title" content="AutoCAD Dinamik Blok, Field ve Parametrik Kısıtlar · 7 günlük program | erdevelop">
+<meta property="og:description" content="AutoCAD dinamik blok, field ve parametrik kısıtlar: 7 günde.">
+<meta property="og:url" content="https://erdevelop.github.io/egitimler/autocad-dinamik-blok/">
+<meta property="og:image" content="https://erdevelop.github.io/og.png">
+<meta name="twitter:card" content="summary_large_image">
+<link rel="canonical" href="https://erdevelop.github.io/egitimler/autocad-dinamik-blok/">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Chakra+Petch:wght@600;700&family=IBM+Plex+Sans:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500&display=swap">
+<style>
+  :root {
+    --bg: #eef2f6; --panel: #ffffff; --panel-2: #f5f7f9; --grid: #e3e8ed; --line: #cfd8e1;
+    --fg: #1c2833; --text: #45535f; --muted: #74838f; --accent: #2f6fb5; --accent-dim: rgba(47,111,181,.12); --hot: #c8731f; --ok: #2e8b57;
+    --f-display: 'Chakra Petch', 'Segoe UI', sans-serif; --f-body: 'IBM Plex Sans', 'Segoe UI', system-ui, sans-serif; --f-mono: 'IBM Plex Mono', Consolas, monospace;
+    color-scheme: light;
+  }
+  :root[data-mode="dark"] {
+    --bg: #0b1220; --panel: #111a2c; --panel-2: #0e1626; --grid: #182338; --line: #22304a;
+    --fg: #e2e8f2; --text: #a8b6cc; --muted: #73829b; --accent: #f2b33d; --accent-dim: rgba(242,179,61,.14); --hot: #6aa8ff; --ok: #5fc48d;
+    color-scheme: dark;
+  }
+  * { box-sizing: border-box; }
+  html { background: var(--bg); scroll-padding-top: 110px; }
+  body { margin: 0; color: var(--fg); font-family: var(--f-body); font-size: 16px; line-height: 1.65;
+    background-image: linear-gradient(var(--grid) 1px, transparent 1px), linear-gradient(90deg, var(--grid) 1px, transparent 1px); background-size: 80px 80px; background-attachment: fixed; }
+  a { color: var(--accent); }
+  :focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+  .wrap { max-width: 920px; margin: 0 auto; padding-left: max(16px, env(safe-area-inset-left, 0px)); padding-right: max(16px, env(safe-area-inset-right, 0px)); }
+
+  .topbar { position: sticky; top: 0; z-index: 20; background: color-mix(in srgb, var(--bg) 92%, transparent); backdrop-filter: blur(6px); border-bottom: 1px solid var(--line); }
+  .topbar .wrap { display: flex; align-items: center; gap: 12px; padding-block: 10px; max-width: 1160px; }
+  .brand { font: 700 15px var(--f-display); letter-spacing: 1px; text-transform: uppercase; text-decoration: none; color: var(--fg); }
+  .brand span { color: var(--accent); }
+  .crumb { font: 400 12px var(--f-mono); color: var(--muted); }
+  .sp { flex: 1; }
+  .tb { font: 500 12px var(--f-mono); color: var(--accent); padding: 6px 10px; border: 1px solid var(--line); border-radius: 4px; background: none; cursor: pointer; text-transform: uppercase; text-decoration: none; }
+  .tb:hover { border-color: var(--accent); }
+  .daynav { border-top: 1px solid var(--line); }
+  .daynav .wrap { display: flex; gap: 6px; padding-block: 8px; overflow-x: auto; max-width: 1160px; }
+  .daynav a { font: 500 12px var(--f-mono); text-decoration: none; color: var(--text); border: 1px solid var(--line); border-radius: 4px; padding: 4px 10px; white-space: nowrap; background: var(--panel); }
+  .daynav a.on { border-color: var(--accent); color: var(--accent); }
+  .daynav a.done { background: var(--accent-dim); }
+
+  header.head { padding-block: 34px 6px; }
+  .kicker { font: 500 12px var(--f-mono); color: var(--accent); letter-spacing: 1px; }
+  .head h1 { font: 700 clamp(2rem, 6vw, 3rem)/1.05 var(--f-display); margin: 6px 0 0; letter-spacing: -.5px; }
+  .head p.lead { margin: 12px 0 0; color: var(--text); max-width: 64ch; font-size: 1.05rem; }
+  .chips { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 16px; }
+  .chips span { font: 400 12px var(--f-mono); color: var(--muted); border: 1px solid var(--line); border-radius: 4px; padding: 3px 8px; background: var(--panel); }
+
+  .card { background: var(--panel); border: 1px solid var(--line); border-radius: 8px; padding: 22px clamp(16px, 4vw, 30px); margin-top: 28px; }
+  .day-head { display: flex; align-items: baseline; gap: 12px; flex-wrap: wrap; border-bottom: 1px solid var(--line); padding-bottom: 12px; margin-bottom: 6px; }
+  .day-head h2, .card > h2 { font: 700 1.45rem/1.2 var(--f-display); margin: 0; letter-spacing: .2px; }
+  .dn { font: 600 12px var(--f-mono); color: var(--panel); background: var(--accent); border-radius: 3px; padding: 2px 7px; }
+  :root[data-mode="dark"] .dn { color: #1a1204; }
+  .day-head .meta { font: 400 12px var(--f-mono); color: var(--muted); margin-left: auto; }
+  section.day { background: var(--panel); border: 1px solid var(--line); border-radius: 8px; padding: 22px clamp(16px, 4vw, 30px); margin-top: 28px; }
+
+  .prose h3 { font: 700 1.12rem/1.3 var(--f-display); margin: 30px 0 8px; letter-spacing: .2px; }
+  .prose p, .prose li { color: var(--text); }
+  .prose strong { color: var(--fg); font-weight: 600; }
+  .prose ol, .prose ul { padding-left: 1.4em; }
+  .prose li { margin: 4px 0; }
+  .prose li > ul, .prose li > ol { margin: 4px 0; }
+  .prose code { font: 400 .86em var(--f-mono); background: var(--panel-2); border: 1px solid var(--line); border-radius: 3px; padding: 1px 5px; color: var(--fg); overflow-wrap: anywhere; }
+  .tw { overflow-x: auto; margin: 14px 0; border: 1px solid var(--line); border-radius: 6px; }
+  .tw table { border-collapse: collapse; width: 100%; font-size: .9rem; }
+  .tw th, .tw td { text-align: left; padding: 8px 12px; border-bottom: 1px solid var(--line); vertical-align: top; }
+  .tw th { font: 600 12px var(--f-mono); color: var(--muted); background: var(--panel-2); }
+  .card .tw td:first-child, .card .tw td:last-child { white-space: nowrap; }
+  .tw tr:last-child td { border-bottom: 0; }
+  ul.tasks { list-style: none; padding-left: 0; }
+  li.task label { display: flex; gap: 10px; align-items: flex-start; cursor: pointer; padding: 4px 0; }
+  li.task input { width: 18px; height: 18px; margin-top: 4px; accent-color: var(--accent); flex: none; }
+  li.task input:checked + span { color: var(--muted); text-decoration: line-through; }
+  .pn { display: flex; justify-content: space-between; gap: 12px; margin-top: 26px; padding-top: 14px; border-top: 1px solid var(--line); font: 500 13px var(--f-mono); }
+  .pn a { text-decoration: none; }
+  .note { font-size: .9rem; color: var(--muted); }
+  .reset { font: 500 11px var(--f-mono); color: var(--muted); background: none; border: 1px solid var(--line); border-radius: 4px; padding: 3px 8px; cursor: pointer; text-transform: uppercase; }
+  .reset:hover { color: var(--hot); border-color: var(--hot); }
+
+  .fig { margin: 18px 0; padding: 16px 14px 12px; border: 1px solid var(--line); border-radius: 6px; background: var(--panel-2); }
+  .fig .sc { overflow-x: auto; }
+  .fig svg { display: block; width: 100%; min-width: 540px; height: auto; max-width: 720px; margin: 0 auto; overflow: visible; }
+  .fig figcaption { font-size: .85rem; color: var(--muted); margin-top: 10px; text-align: center; max-width: 62ch; margin-inline: auto; }
+  .fig .k { fill: none; stroke: var(--fg); stroke-width: 1.6; } .fig .k1 { fill: none; stroke: var(--fg); stroke-width: 1; }
+  .fig .mu { fill: none; stroke: var(--muted); stroke-width: 1.2; } .fig .mud { fill: none; stroke: var(--muted); stroke-width: 1; stroke-dasharray: 5 4; }
+  .fig .dm { fill: none; stroke: var(--muted); stroke-width: .9; }
+  .fig .rp { fill: none; stroke: var(--hot); stroke-width: 1; stroke-dasharray: 9 4 2 4; }
+  .fig .gd { fill: none; stroke: var(--fg); stroke-width: 1; stroke-dasharray: 16 4 3 4; }
+  .fig .ac { fill: none; stroke: var(--accent); stroke-width: 2; } .fig .acl { fill: none; stroke: var(--accent); stroke-width: 1; }
+  .fig .gl { fill: var(--accent-dim); stroke: var(--fg); stroke-width: .8; }
+  .fig .sp { fill: color-mix(in srgb, var(--fg) 40%, transparent); stroke: var(--fg); stroke-width: .8; }
+  .fig .fr { fill: color-mix(in srgb, var(--fg) 22%, transparent); stroke: none; } .fig .edge { fill: none; stroke: var(--fg); stroke-width: 1.8; }
+  .fig .so { fill: var(--panel); stroke: var(--fg); stroke-width: 1.6; } .fig .hole { fill: var(--panel-2); stroke: var(--fg); stroke-width: 1.2; }
+  .fig .rib { fill: var(--accent-dim); stroke: var(--accent); stroke-width: 1.4; stroke-dasharray: 6 4; }
+  .fig .sel { fill: none; stroke: var(--accent); stroke-width: 3; }
+  .fig .mul { stroke: var(--fg); stroke-width: 4; } .fig .tr { stroke: var(--fg); stroke-width: 3; } .fig .trA { stroke: var(--accent); stroke-width: 3; }
+  .fig .lh { fill: var(--panel); stroke: var(--fg); stroke-width: 1.4; }
+  .fig .dot { fill: var(--accent); } .fig .dotr { fill: var(--accent); stroke: var(--panel); stroke-width: 1; }
+  .fig .pt { fill: var(--accent); stroke: var(--panel); stroke-width: 2; } .fig .tpt { fill: var(--panel); font: 700 12px var(--f-mono); }
+  .fig .bx { fill: var(--panel); stroke: var(--line); stroke-width: 1.3; } .fig .bxa { fill: var(--accent-dim); stroke: var(--accent); stroke-width: 1.3; }
+  .fig .ar { fill: var(--muted); }
+  .fig .acd { fill: none; stroke: var(--accent); stroke-width: 1.6; stroke-dasharray: 6 4; }
+  .fig text { text-transform: none; letter-spacing: 0; } .fig .bg { fill: var(--panel); stroke: none; }
+  .fig .t { fill: var(--text); font: 400 13px var(--f-body); } .fig .tb { fill: var(--fg); font: 600 13px var(--f-body); }
+  .fig .tm { fill: var(--muted); font: 400 11px var(--f-mono); } .fig .ta { fill: var(--accent); font: 600 11px var(--f-mono); }
+  .fig .th { fill: var(--hot); font: 500 11px var(--f-mono); }
+  .fig .swb { fill: none; stroke: #2f7de1; stroke-width: 2; } .fig .swr { fill: none; stroke: #d64545; stroke-width: 2; } .fig .tr2 { fill: #d64545; font: 600 11px var(--f-mono); } .fig .tbl { fill: #2f7de1; font: 600 11px var(--f-mono); }
+  .prose pre { background: var(--panel-2); border: 1px solid var(--line); border-radius: 6px; padding: 12px 14px; overflow-x: auto; }
+  .prose pre code { background: none; border: 0; padding: 0; font: 400 .85rem/1.5 var(--f-mono); color: var(--fg); }
+  footer { margin-top: 56px; border-top: 1px solid var(--line); padding-block: 20px calc(20px + env(safe-area-inset-bottom, 0px)); font: 400 12px var(--f-mono); color: var(--muted); }
+  footer .wrap { display: flex; justify-content: space-between; gap: 12px; flex-wrap: wrap; }
+  footer a { color: inherit; } footer a:hover { color: var(--accent); }
+  @media print { .topbar, .daynav, .pn, footer, .reset { display: none !important; } body { background: #fff; } section.day, .card { break-inside: auto; border: 0; } }
+</style>
+<script async src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-4775308844679394" crossorigin="anonymous"></script>
+</head>
+<body>
+<div class="topbar">
+  <div class="wrap">
+    <a class="brand" href="/">erdevelop<span>_</span></a>
+    <span class="crumb">/ eğitimler / autocad-dinamik-blok</span>
+    <span class="sp"></span>
+    <a class="tb" href="../../Tools.html">Araçlar</a>
+    <button class="tb" type="button" id="modeBtn">DARK</button>
+  </div>
+  <nav class="daynav" aria-label="Günler"><div class="wrap"><a href="#genel" data-nav="0">Genel</a><a href="#gun1" data-nav="1">1</a><a href="#gun2" data-nav="2">2</a><a href="#gun3" data-nav="3">3</a><a href="#gun4" data-nav="4">4</a><a href="#gun5" data-nav="5">5</a><a href="#gun6" data-nav="6">6</a><a href="#gun7" data-nav="7">7</a></div></nav>
+</div>
+
+<main class="wrap">
+  <header class="head" id="genel">
+    <div class="kicker">Eğitimler · AutoCAD Dinamik Blok</div>
+    <h1>AutoCAD Dinamik Blok, Field ve Parametrik Kısıtlar</h1>
+    <p class="lead">Tek blokla onlarca ölçü: dinamik bloklar, otomatik güncellenen alanlar ve parametrik kısıtlarla cephe çizimlerini hızlandır; profil kesim parçası, ankraj braketi, panel etiketi ve antet örnekleriyle 7 gün.</p>
+    <div class="chips"><span>7 gün</span><span>günde ~4 saat</span><span>Türkçe</span><span>Kod örnekleri kopyalanabilir</span></div>
+  </header>
+
+  <div class="card">
+    <h2>Başlamadan önce</h2>
+    <div class="prose">
+      <h3>Kimler için</h3>
+      <p>AutoCAD temellerini bilen ve kendi blok kütüphanesini kurmak, metrajı ve antetleri otomatikleştirmek isteyen cephe tasarımcıları ve teknik ressamlar.</p>
+      <h3>Gerekenler</h3>
+      <ul>
+        <li>AutoCAD (tam sürüm; LT'de bazı özellikler yok)</li>
+        <li>AutoCAD temel bilgisi (<a href="../autocad/">AutoCAD</a> eğitimi)</li>
+        <li>5-7. günler için bir cephe paftası örneği</li>
+      </ul>
+      <h3>Program</h3>
+      <div class="tw"><table><thead><tr><th>Gün</th><th>Konu</th><th>Ne öğrenirsin</th><th>Süre</th></tr></thead><tbody>
+<tr><td><a href="#gun1">1. gün</a></td><td>Block Editor</td><td>Dinamik blok mantığı, parametre ve eylem, editör, temel nokta, birim, Test Block</td><td>~3,5 saat</td></tr>
+<tr><td><a href="#gun2">2. gün</a></td><td>Linear ve Stretch</td><td>Gerdirme çerçevesi, değer kümeleri, Move, Scale, Polar, Array, Chain Actions</td><td>~3,5 saat</td></tr>
+<tr><td><a href="#gun3">3. gün</a></td><td>Flip ve Visibility</td><td>Rotation, Flip, Alignment, görünüm durumları</td><td>~3,5 saat</td></tr>
+<tr><td><a href="#gun4">4. gün</a></td><td>Lookup ve Block Table</td><td>Tip listeleri, ters arama, tablo ile sürme</td><td>~3,5 saat</td></tr>
+<tr><td><a href="#gun5">5. gün</a></td><td>Parametrik kısıtlar</td><td>Geometrik ve boyutsal kısıtlar, Parameters Manager, ifadeler, blok içinde kısıtlar</td><td>~3,5 saat</td></tr>
+<tr><td><a href="#gun6">6. gün</a></td><td>Field</td><td>Nesne alanları, m² dönüşümü, FIELDEVAL, antet alanları, BlockPlaceholder, tablo formülleri</td><td>~3,5 saat</td></tr>
+<tr><td><a href="#gun7">7. gün</a></td><td>Veri ve kütüphane</td><td>Data extraction, kütüphane düzeni, LISP ile dinamik özellikler, bitiş alıştırması</td><td>~3,5 saat</td></tr>
+      </tbody></table></div>
+      <p class="note">Her günün sonunda bir kontrol listesi var. İşaretledikçe ilerlemen bu tarayıcıda saklanır. Hafta içi sadece akşamları çalışırsan program yaklaşık iki hafta sürer. Komut adları İngilizce arayüze göredir. Autodesk® ve AutoCAD® Autodesk, Inc.'in ticari markalarıdır; bu sayfa Autodesk ile bağlantılı değildir. <button class="reset" type="button" id="resetBtn">ilerlemeyi sıfırla</button></p>
+    </div>
+  </div>
+
+<section class="day" id="gun1" data-day="1">
+  <div class="day-head"><span class="dn">GÜN 01</span><h2>Block Editor</h2><span class="meta">~3,5 saat · <span data-prog="1">0/5</span> kontrol</span></div>
+  <div class="prose"><h3>Hedef</h3>
+<p>Gün sonunda dinamik bloğun mantığını (parametre + eylem), Block Editor'ü, yazma paletlerini, temel noktayı, blok birimlerini ve test penceresini bileceksin. Süre yaklaşık 3 saat.</p>
+<p><strong>Bu kurs hakkında:</strong> <a href="../autocad/">AutoCAD</a> eğitiminin bloklar gününün devamıdır: dinamik bloklar, alanlar (field) ve parametrik kısıtlar. Örnekler cephe işinden: profil kesim parçası, ankraj braketi, panel etiketi, antet. Kurs tam AutoCAD®'e göre yazıldı; bazı özellikler AutoCAD LT'de yoktur ya da sınırlıdır. Komut adları İngilizce arayüze göredir; Türkçe arayüzde başına <code>_</code> koyarak (ör. <code>_BEDIT</code>) aynı komutlar çalışır.</p>
+<h3>1. Neden dinamik blok? (30 dk)</h3>
+<figure class="fig"><div class="sc"><svg viewBox="0 0 640 180" role="img" xmlns="http://www.w3.org/2000/svg"><defs><marker id="ah-neden" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0 0L10 5L0 10z" class="ar"/></marker></defs><rect x="20" y="20" width="110.00000000000001" height="30" class="bxa"/><line x1="20" y1="28" x2="130.0" y2="28" class="k1"/><line x1="20" y1="42" x2="130.0" y2="42" class="k1"/><text x="138.0" y="40" class="tm" text-anchor="start">BRK_100</text><rect x="20" y="65" width="165.0" height="30" class="bxa"/><line x1="20" y1="73" x2="185.0" y2="73" class="k1"/><line x1="20" y1="87" x2="185.0" y2="87" class="k1"/><text x="193.0" y="85" class="tm" text-anchor="start">BRK_150</text><rect x="20" y="110" width="220.00000000000003" height="30" class="bxa"/><line x1="20" y1="118" x2="240.00000000000003" y2="118" class="k1"/><line x1="20" y1="132" x2="240.00000000000003" y2="132" class="k1"/><text x="248.00000000000003" y="130" class="tm" text-anchor="start">BRK_200</text><text x="130" y="165" class="tb" text-anchor="middle">klasik: 3 blok</text><line x1="300" y1="85" x2="360" y2="85" class="mu" marker-end="url(#ah-neden)"/><rect x="380" y="70" width="165" height="30" class="bxa"/><line x1="380" y1="78" x2="545" y2="78" class="k1"/><line x1="380" y1="92" x2="545" y2="92" class="k1"/><rect x="539" y="79" width="12" height="12" class="swr"/><path d="M 560 85 h 50" class="k1" stroke-dasharray="5 4" marker-end="url(#ah-neden)"/><text x="470" y="125" class="tb" text-anchor="middle">dinamik: 1 blok + tutamaç</text></svg></div><figcaption>Klasik ve dinamik blok.</figcaption></figure>
+<p>Klasik blokta her ölçü için ayrı blok gerekir: 100, 150, 200 mm'lik üç braket = üç blok. Dinamik blokta <strong>tek blok</strong> vardır; ölçüyü, görünümü ya da yönü <strong>tutamaçla</strong> (grip) ya da Properties paletinden değiştirirsin. Kütüphane küçülür, hatalı blok seçme riski azalır.</p>
+<h3>2. Parametre ve eylem (45 dk)</h3>
+<figure class="fig"><div class="sc"><svg viewBox="0 0 650 140" role="img" xmlns="http://www.w3.org/2000/svg"><defs><marker id="ah-paramaksiyon" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0 0L10 5L0 10z" class="ar"/></marker></defs><rect x="20" y="30" width="180" height="70" rx="5" class="bxa"/><text x="110.0" y="61.0" class="tb" text-anchor="middle">Parametre</text><text x="110.0" y="77.0" class="tm" text-anchor="middle">Linear: Uzunluk</text><line x1="202" y1="65" x2="248" y2="65" class="mu" marker-end="url(#ah-paramaksiyon)"/><rect x="250" y="30" width="160" height="70" rx="5" class="sel"/><text x="330.0" y="61.0" class="tb" text-anchor="middle">Eylem</text><text x="330.0" y="77.0" class="tm" text-anchor="middle">Stretch</text><line x1="412" y1="65" x2="458" y2="65" class="mu" marker-end="url(#ah-paramaksiyon)"/><rect x="460" y="30" width="170" height="70" rx="5" class="bx"/><text x="545.0" y="61.0" class="tb" text-anchor="middle">Geometri</text><text x="545.0" y="77.0" class="tm" text-anchor="middle">sağ uç uzar</text><text x="110" y="125" class="tm" text-anchor="middle">tutamaç + özellik (Distance1)</text></svg></div><figcaption>Parametre neyin değiştiğini, eylem ne olacağını tanımlar.</figcaption></figure>
+<p>Dinamik bloğun iki temel parçası vardır:</p>
+<div class="tw"><table>
+<thead>
+<tr>
+<th>Parça</th>
+<th>Görevi</th>
+<th>Örnek</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><strong>Parametre</strong> (parameter)</td>
+<td>Neyin değişebileceğini tanımlar; bir tutamaç ve bir özellik (Distance1, Angle1) üretir</td>
+<td>Linear: "uzunluk"</td>
+</tr>
+<tr>
+<td><strong>Eylem</strong> (action)</td>
+<td>Parametre değişince geometriye ne olacağını tanımlar</td>
+<td>Stretch: sağ ucu uzat</td>
+</tr>
+</tbody>
+</table></div>
+<p>Kural: Eylemsiz parametre bir şey yapmaz; parametresiz eylem olmaz. Bazı parametrelerin (Visibility, Alignment, Basepoint) eyleme ihtiyacı yoktur.</p>
+<h3>3. Block Editor (1 saat)</h3>
+<figure class="fig"><div class="sc"><svg viewBox="0 0 640 245" role="img" xmlns="http://www.w3.org/2000/svg"><defs><marker id="ah-editor" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0 0L10 5L0 10z" class="ar"/></marker></defs><rect x="10" y="10" width="620" height="34" class="bx"/><text x="20" y="32" class="tm" text-anchor="start">Ribbon: Geometric | Dimensional | Visibility | Test Block | Save | Close</text><rect x="10" y="54" width="150" height="180" class="bx"/><text x="85" y="74" class="tb" text-anchor="middle">Authoring</text><rect x="20" y="86" width="130" height="26" class="sel"/><text x="85" y="103" class="tm" text-anchor="middle">Parameters</text><rect x="20" y="120" width="130" height="26" class="sel"/><text x="85" y="137" class="tm" text-anchor="middle">Actions</text><rect x="20" y="154" width="130" height="26" class="gl"/><text x="85" y="171" class="tm" text-anchor="middle">Param. Sets</text><rect x="20" y="188" width="130" height="26" class="gl"/><text x="85" y="205" class="tm" text-anchor="middle">Constraints</text><rect x="170" y="54" width="460" height="180" class="gl"/><rect x="230" y="130" width="300" height="30" class="bxa"/><line x1="230" y1="138" x2="530" y2="138" class="k1"/><line x1="230" y1="152" x2="530" y2="152" class="k1"/><text x="240" y="115" class="tm" text-anchor="start">Uzunluk</text><rect x="524" y="139" width="12" height="12" class="swr"/><rect x="380" y="90" width="180" height="90" class="swr"/><text x="470" y="205" class="tm" text-anchor="middle">gerdirme çerçevesi</text></svg></div><figcaption>Block Editor (şematik): palet, ribbon ve çalışma alanı.</figcaption></figure>
+<ol>
+<li>Bir blok tanımı oluştur (<strong>BLOCK</strong>) ya da var olanı seç → <strong>BEDIT</strong> (çift tıklama da açar).</li>
+<li><strong>Block Authoring Palettes</strong> (BAUTHORPALETTE): <strong>Parameters</strong>, <strong>Actions</strong>, <strong>Parameter Sets</strong> (parametre + hazır eylem), <strong>Constraints</strong> sekmeleri.</li>
+<li>Editörün ribbonu: Geometric ve Dimensional kısıtlar (5. gün), Visibility (3. gün), <strong>Test Block</strong>, <strong>Save Block</strong>, <strong>Close Block Editor</strong>.</li>
+<li>Turuncu ünlem işareti, bir parametrenin eylemle bağlanmadığını ya da eylemin seçim kümesinin boş olduğunu gösterir.</li>
+</ol>
+<h3>4. Temel nokta, birim ve özellikler (30 dk)</h3>
+<ol>
+<li><strong>Temel nokta</strong> (base point): Blok yerleştirilirken imlecin tuttuğu nokta. Profil parçasında sol uç, braketin ankraj deliği gibi <strong>montajda anlamlı</strong> bir nokta seç. Editörde değiştirmek için <strong>Basepoint parametresi</strong> kullanılabilir.</li>
+<li><strong>Block unit:</strong> Blok tanımının birimi (milimetre). Farklı birimli bir çizime eklenince doğru ölçeklenmesini sağlar (INSUNITS).</li>
+<li>Blok özellikleri (editörde boş bir yer seçilince Properties): <strong>Allow exploding</strong>, <strong>Scale uniformly</strong>, <strong>Annotative</strong>.</li>
+</ol>
+<h3>5. Test Block (15 dk)</h3>
+<p><strong>BTESTBLOCK</strong> (ribbonda Test Block), bloğu kaydetmeden geçici bir pencerede dener: tutamaçları çek, Properties'ten değer gir. Hata varsa pencereyi kapat, editörde düzelt. <strong>Her parametre ve eylemden sonra test et</strong> (Revit'teki "flex" alışkanlığı gibi).</p>
+<h3>Gün sonu kontrolü (15 dk)</h3>
+<ul class="tasks">
+<li class="task"><label><input type="checkbox" data-id="g1-1"><span>Dinamik bloğun klasik bloğa göre faydasını açıklayabiliyorum.</span></label></li>
+<li class="task"><label><input type="checkbox" data-id="g1-2"><span>Parametre ve eylem ayrımını biliyorum.</span></label></li>
+<li class="task"><label><input type="checkbox" data-id="g1-3"><span>Block Editor'ü ve yazma paletlerini açtım.</span></label></li>
+<li class="task"><label><input type="checkbox" data-id="g1-4"><span>Temel noktayı ve blok birimini bilinçli seçtim.</span></label></li>
+<li class="task"><label><input type="checkbox" data-id="g1-5"><span>Test Block ile bir bloğu denedim.</span></label></li>
+</ul></div>
+  <div class="pn"><a href="#genel">← Genel bakış</a><a href="#gun2">2. gün →</a></div>
+</section>
+<section class="day" id="gun2" data-day="2">
+  <div class="day-head"><span class="dn">GÜN 02</span><h2>Linear ve Stretch</h2><span class="meta">~3,5 saat · <span data-prog="2">0/5</span> kontrol</span></div>
+  <div class="prose"><h3>Hedef</h3>
+<p>Gün sonunda Linear, Polar, XY ve Point parametrelerini; Stretch, Move, Scale ve Array eylemlerini; değer kümelerini (value set) ve zincirleme eylemleri kullanabileceksin. İlk gerçek bloğun: <strong>profil kesim parçası</strong>. Süre yaklaşık 3,5 saat.</p>
+<h3>1. Linear + Stretch (1 saat)</h3>
+<figure class="fig"><div class="sc"><svg viewBox="0 0 660 150" role="img" xmlns="http://www.w3.org/2000/svg"><defs><marker id="ah-stretch" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0 0L10 5L0 10z" class="ar"/></marker></defs><rect x="40" y="50" width="300" height="30" class="bxa"/><line x1="40" y1="58" x2="340" y2="58" class="k1"/><line x1="40" y1="72" x2="340" y2="72" class="k1"/><circle cx="70" cy="65" r="5" class="bx"/><circle cx="310" cy="65" r="5" class="bx"/><rect x="260" y="30" width="120" height="70" class="swr"/><line x1="40" y1="130" x2="340" y2="130" class="dm"/><line x1="40" y1="125" x2="40" y2="135" class="dm"/><line x1="340" y1="125" x2="340" y2="135" class="dm"/><text x="190.0" y="124" class="tm" text-anchor="middle">Uzunluk = 1000</text><rect x="334" y="59" width="12" height="12" class="swr"/><text x="320" y="22" class="tm" text-anchor="middle">çerçeve</text><line x1="400" y1="65" x2="440" y2="65" class="mu" marker-end="url(#ah-stretch)"/><rect x="460" y="50" width="160" height="30" class="bxa"/><line x1="460" y1="58" x2="620" y2="58" class="k1"/><line x1="460" y1="72" x2="620" y2="72" class="k1"/><circle cx="490" cy="65" r="5" class="bx"/><circle cx="610" cy="65" r="5" class="bx"/><text x="540" y="130" class="tm" text-anchor="middle">uzadı; uçtaki delik taşındı</text></svg></div><figcaption>Linear + Stretch: çerçeve içindeki taşınır, kesen gerilir.</figcaption></figure>
+<p>Örnek: Bir alüminyum profilin yan görünüşü, uzunluğu değişebilen tek blok.</p>
+<ol>
+<li>Profili 1000 mm uzunluğunda çiz, temel nokta sol uç.</li>
+<li><strong>Linear</strong> parametresi: Sol uçtan sağ uca; adı <code>Uzunluk</code> (Properties &gt; Distance Name).</li>
+<li>Parametrenin <strong>Number of Grips</strong> değerini 1 yap: Yalnızca sağ uçta tutamaç olsun.</li>
+<li><strong>Stretch</strong> eylemi: Parametreyi seç → sağ uçtaki parametre noktasını seç → <strong>gerdirme çerçevesi</strong> (stretch frame) çiz: profilin sağ ucunu kapsasın → çerçevenin içinde ve kesiştiği nesneleri seç.</li>
+<li>Test: Sağ tutamacı çek; profil uzar, sol uç sabit kalır.</li>
+</ol>
+<p>Gerdirme çerçevesi kuralı: <strong>Tamamen çerçeve içindeki</strong> nesneler taşınır, <strong>çerçeveyi kesen</strong> nesneler gerilir, dışarıdakiler değişmez. Uçtaki kesim açısı ve delikler çerçevenin içinde kalırsa uzunlukla birlikte taşınır.</p>
+<h3>2. Değer kümesi (45 dk)</h3>
+<figure class="fig"><div class="sc"><svg viewBox="0 0 660 185" role="img" xmlns="http://www.w3.org/2000/svg"><defs><marker id="ah-degerkumesi" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0 0L10 5L0 10z" class="ar"/></marker></defs><line x1="40" y1="60" x2="620" y2="60" class="k"/><line x1="40.0" y1="54" x2="40.0" y2="72" class="k1"/><line x1="59.33" y1="54" x2="59.33" y2="66" class="k1"/><line x1="78.66" y1="54" x2="78.66" y2="66" class="k1"/><line x1="97.99" y1="54" x2="97.99" y2="66" class="k1"/><line x1="117.32" y1="54" x2="117.32" y2="66" class="k1"/><line x1="136.64999999999998" y1="54" x2="136.64999999999998" y2="72" class="k1"/><line x1="155.98" y1="54" x2="155.98" y2="66" class="k1"/><line x1="175.31" y1="54" x2="175.31" y2="66" class="k1"/><line x1="194.64" y1="54" x2="194.64" y2="66" class="k1"/><line x1="213.96999999999997" y1="54" x2="213.96999999999997" y2="66" class="k1"/><line x1="233.29999999999998" y1="54" x2="233.29999999999998" y2="72" class="k1"/><line x1="252.63" y1="54" x2="252.63" y2="66" class="k1"/><line x1="271.96" y1="54" x2="271.96" y2="66" class="k1"/><line x1="291.28999999999996" y1="54" x2="291.28999999999996" y2="66" class="k1"/><line x1="310.62" y1="54" x2="310.62" y2="66" class="k1"/><line x1="329.95" y1="54" x2="329.95" y2="72" class="k1"/><line x1="349.28" y1="54" x2="349.28" y2="66" class="k1"/><line x1="368.60999999999996" y1="54" x2="368.60999999999996" y2="66" class="k1"/><line x1="387.93999999999994" y1="54" x2="387.93999999999994" y2="66" class="k1"/><line x1="407.27" y1="54" x2="407.27" y2="66" class="k1"/><line x1="426.59999999999997" y1="54" x2="426.59999999999997" y2="72" class="k1"/><line x1="445.92999999999995" y1="54" x2="445.92999999999995" y2="66" class="k1"/><line x1="465.26" y1="54" x2="465.26" y2="66" class="k1"/><line x1="484.59" y1="54" x2="484.59" y2="66" class="k1"/><line x1="503.91999999999996" y1="54" x2="503.91999999999996" y2="66" class="k1"/><line x1="523.25" y1="54" x2="523.25" y2="72" class="k1"/><line x1="542.5799999999999" y1="54" x2="542.5799999999999" y2="66" class="k1"/><line x1="561.91" y1="54" x2="561.91" y2="66" class="k1"/><line x1="581.24" y1="54" x2="581.24" y2="66" class="k1"/><line x1="600.5699999999999" y1="54" x2="600.5699999999999" y2="66" class="k1"/><line x1="619.9" y1="54" x2="619.9" y2="72" class="k1"/><text x="40" y="92" class="tm" text-anchor="middle">300</text><text x="620" y="92" class="tm" text-anchor="middle">6500</text><text x="330" y="40" class="tm" text-anchor="middle">Increment: 10 mm adım, en az 300, en çok 6500</text><rect x="60" y="115" width="120" height="32" rx="5" class="bx"/><text x="120.0" y="135.0" class="tb" text-anchor="middle">3000</text><rect x="200" y="115" width="120" height="32" rx="5" class="bx"/><text x="260.0" y="135.0" class="tb" text-anchor="middle">4500</text><rect x="340" y="115" width="120" height="32" rx="5" class="bx"/><text x="400.0" y="135.0" class="tb" text-anchor="middle">6000</text><rect x="480" y="115" width="120" height="32" rx="5" class="bxa"/><text x="540.0" y="135.0" class="tb" text-anchor="middle">6500</text><text x="330" y="172" class="tm" text-anchor="middle">List: stok boyları</text></svg></div><figcaption>Değer kümesi: Increment ve List.</figcaption></figure>
+<p>Parametrenin <strong>Value Set</strong> bölümü, girilebilecek değerleri sınırlar:</p>
+<div class="tw"><table>
+<thead>
+<tr>
+<th>Tür</th>
+<th>Ayar</th>
+<th>Örnek</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><strong>Increment</strong></td>
+<td>Dist increment, Dist minimum, Dist maximum</td>
+<td>10 mm adım, en az 300, en çok 6500 mm</td>
+</tr>
+<tr>
+<td><strong>List</strong></td>
+<td>Değer listesi</td>
+<td>3000, 4500, 6000, 6500 (stok boyları)</td>
+</tr>
+</tbody>
+</table></div>
+<p>Tutamaç çekilirken izin verilen değerlerde küçük çentikler görünür. Profil stok boyu 6500 mm ise maksimum değeri 6500 yap: Çizimde fark edilmeden 6600 mm'lik parça çizilemez.</p>
+<h3>3. Move, Scale, Polar (45 dk)</h3>
+<div class="tw"><table>
+<thead>
+<tr>
+<th>Eylem</th>
+<th>Ne zaman</th>
+<th>Örnek</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><strong>Move</strong></td>
+<td>Bir parçayı bir parametreyle taşı</td>
+<td>Profil üzerindeki delik konumu</td>
+</tr>
+<tr>
+<td><strong>Scale</strong></td>
+<td>Seçimi ölçekle (genelde Linear ya da XY ile)</td>
+<td>Etiket boyutu</td>
+</tr>
+<tr>
+<td><strong>Polar + Polar Stretch</strong></td>
+<td>Açı ve uzunluk birlikte</td>
+<td>Eğik bağlantı kolu</td>
+</tr>
+</tbody>
+</table></div>
+<p>Delik konumu için: İkinci bir Linear parametre <code>Delik_Mesafe</code> + Move eylemi (deliği seç). Değer kümesi List: 25, 50, 75.</p>
+<h3>4. Array ve zincirleme (45 dk)</h3>
+<figure class="fig"><div class="sc"><svg viewBox="0 0 660 145" role="img" xmlns="http://www.w3.org/2000/svg"><defs><marker id="ah-dizi" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0 0L10 5L0 10z" class="ar"/></marker></defs><rect x="30" y="40" width="600" height="30" class="bxa"/><line x1="30" y1="48" x2="630" y2="48" class="k1"/><line x1="30" y1="62" x2="630" y2="62" class="k1"/><circle cx="60" cy="55" r="5" class="bx"/><circle cx="150" cy="55" r="5" class="bx"/><circle cx="240" cy="55" r="5" class="bx"/><circle cx="330" cy="55" r="5" class="bx"/><circle cx="420" cy="55" r="5" class="bx"/><circle cx="510" cy="55" r="5" class="bx"/><circle cx="600" cy="55" r="5" class="bx"/><line x1="60" y1="100" x2="150" y2="100" class="dm"/><line x1="60" y1="95" x2="60" y2="105" class="dm"/><line x1="150" y1="95" x2="150" y2="105" class="dm"/><text x="105.0" y="94" class="tm" text-anchor="middle">300</text><text x="330" y="130" class="tm" text-anchor="middle">Array: sütun aralığı 300 mm, Uzunluk ile çoğalır</text></svg></div><figcaption>Array eylemi: uzunluk arttıkça delik sayısı artar.</figcaption></figure>
+<ol>
+<li>Profile delik ekle; <strong>Array</strong> eylemini <code>Uzunluk</code> parametresine bağla, <strong>Column offset</strong>: 300 mm (delik aralığı). Profil uzadıkça delik sayısı artar.</li>
+<li><strong>Chain Actions:</strong> Bir parametre başka bir eylemin seçim kümesindeyse, o eylem çalışınca bu parametrenin eylemleri de çalışsın mı? <code>Chain Actions = Yes</code> ile "uzunluk değişince ikinci parametrenin bağlı olduğu eylem de tetiklensin" sağlanır.</li>
+<li>Örnek: Sağ uçtaki delik grubu Move ile bir Point parametresine bağlı; Point parametresi Stretch'in seçimindeyse ve Chain Actions = Yes ise, uzunlukla birlikte delik grubu da taşınır.</li>
+</ol>
+<h3>Gün sonu kontrolü (15 dk)</h3>
+<ul class="tasks">
+<li class="task"><label><input type="checkbox" data-id="g2-1"><span>Linear + Stretch ile uzunluğu değişen bir profil bloğu yaptım.</span></label></li>
+<li class="task"><label><input type="checkbox" data-id="g2-2"><span>Gerdirme çerçevesinin üç kuralını biliyorum.</span></label></li>
+<li class="task"><label><input type="checkbox" data-id="g2-3"><span>Increment ve List değer kümelerini kullandım.</span></label></li>
+<li class="task"><label><input type="checkbox" data-id="g2-4"><span>Move eylemiyle delik konumunu parametrik yaptım.</span></label></li>
+<li class="task"><label><input type="checkbox" data-id="g2-5"><span>Array eylemi ve Chain Actions'ı denedim.</span></label></li>
+</ul></div>
+  <div class="pn"><a href="#gun1">← 1. gün</a><a href="#gun3">3. gün →</a></div>
+</section>
+<section class="day" id="gun3" data-day="3">
+  <div class="day-head"><span class="dn">GÜN 03</span><h2>Flip ve Visibility</h2><span class="meta">~3,5 saat · <span data-prog="3">0/5</span> kontrol</span></div>
+  <div class="prose"><h3>Hedef</h3>
+<p>Gün sonunda Rotation, Flip, Alignment ve Visibility parametrelerini kullanabileceksin. Örnek: <strong>ankraj braketi</strong>: sağ/sol, plan/yan görünüş ve üç tip tek blokta. Süre yaklaşık 3 saat.</p>
+<h3>1. Rotation (30 dk)</h3>
+<p><strong>Rotation</strong> parametresi + <strong>Rotate</strong> eylemi: Bloğun bir kısmını bir merkez etrafında döndürür. Değer kümesi List: 0, 90, 180, 270 ya da Increment 15°. Örnek: Kapak parçasının açık/kapalı konumu.</p>
+<h3>2. Flip (30 dk)</h3>
+<figure class="fig"><div class="sc"><svg viewBox="0 0 640 185" role="img" xmlns="http://www.w3.org/2000/svg"><defs><marker id="ah-flip" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0 0L10 5L0 10z" class="ar"/></marker></defs><polygon points="150,30 250,30 250,45 165,45 165,140 150,140" class="bxa"/><line x1="320" y1="20" x2="320" y2="150" class="dotr"/><text x="320" y="170" class="tm" text-anchor="middle">yansıma ekseni</text><polygon points="490,30 390,30 390,45 475,45 475,140 490,140" class="gl"/><rect x="314" y="80" width="12" height="12" class="swr"/><text x="200" y="170" class="tb" text-anchor="middle">sağ</text><text x="440" y="170" class="tb" text-anchor="middle">sol (aynalandı)</text></svg></div><figcaption>Flip: tek blok, iki yön.</figcaption></figure>
+<p><strong>Flip</strong> parametresi bir yansıma ekseni tanımlar; <strong>Flip</strong> eylemi seçimi bu eksene göre aynalar. Bir tutamaca tıklayınca aynalanır.</p>
+<p>Sağ ve sol braketi ayrı blok yapmak yerine tek blok + Flip. Aynalanan blokta yazılar (nitelik ve metin) de aynalanabilir; okunmaz hâle gelen yazıyı Flip seçim kümesine alma ya da yazının yeriyle ayrı oynayan bir Move ekle.</p>
+<h3>3. Alignment (15 dk)</h3>
+<p><strong>Alignment</strong> parametresi, bloğu yerleştirirken ya da tutamaçla, yakınındaki bir nesneye (çizgi, profil kenarı) <strong>kendiliğinden hizalar</strong>. Eylem gerekmez. Örnek: Conta bloğunun profil kenarına paralel oturması.</p>
+<h3>4. Visibility (1,5 saat)</h3>
+<figure class="fig"><div class="sc"><svg viewBox="0 0 640 210" role="img" xmlns="http://www.w3.org/2000/svg"><defs><marker id="ah-gorunurluk" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0 0L10 5L0 10z" class="ar"/></marker></defs><rect x="10" y="15" width="130" height="24" class="bxa"/><text x="16" y="31" class="tb" text-anchor="start">Durum</text><rect x="140" y="15" width="160" height="24" class="bxa"/><text x="146" y="31" class="tb" text-anchor="start">Görünen</text><rect x="10" y="39" width="130" height="24" class="bx"/><text x="16" y="55" class="tm" text-anchor="start">B100_Plan</text><rect x="140" y="39" width="160" height="24" class="bx"/><text x="146" y="55" class="tm" text-anchor="start">plan, kol 100</text><rect x="10" y="63" width="130" height="24" class="bx"/><text x="16" y="79" class="tm" text-anchor="start">B100_Yan</text><rect x="140" y="63" width="160" height="24" class="bx"/><text x="146" y="79" class="tm" text-anchor="start">yan, kol 100</text><rect x="10" y="87" width="130" height="24" class="bx"/><text x="16" y="103" class="tm" text-anchor="start">B150_Plan</text><rect x="140" y="87" width="160" height="24" class="bx"/><text x="146" y="103" class="tm" text-anchor="start">plan, kol 150</text><rect x="10" y="111" width="130" height="24" class="sel"/><text x="16" y="127" class="tm" text-anchor="start">B150_Yan</text><rect x="140" y="111" width="160" height="24" class="sel"/><text x="146" y="127" class="tm" text-anchor="start">yan, kol 150</text><rect x="10" y="135" width="130" height="24" class="bx"/><text x="16" y="151" class="tm" text-anchor="start">B200_Plan</text><rect x="140" y="135" width="160" height="24" class="bx"/><text x="146" y="151" class="tm" text-anchor="start">plan, kol 200</text><rect x="10" y="159" width="130" height="24" class="bx"/><text x="16" y="175" class="tm" text-anchor="start">B200_Yan</text><rect x="140" y="159" width="160" height="24" class="bx"/><text x="146" y="175" class="tm" text-anchor="start">yan, kol 200</text><polygon points="380,40 530,40 530,55 395,55 395,160 380,160" class="bxa"/><text x="460" y="190" class="tb" text-anchor="middle">B150_Yan</text><polygon points="570,175 590,175 580,188" class="bxa"/></svg></div><figcaption>Görünüm durumları ve üçgen tutamaçla seçim.</figcaption></figure>
+<p>Visibility parametresi, aynı bloğun içinde <strong>görünüm durumları</strong> (visibility states) tanımlar; her durumda farklı nesneler görünür.</p>
+<ol>
+<li>Editörde <strong>Visibility</strong> parametresini yerleştir (blok başına bir tane).</li>
+<li>Ribbonda <strong>Visibility States</strong> → yeni durumlar: <code>B100_Plan</code>, <code>B100_Yan</code>, <code>B150_Plan</code>, <code>B150_Yan</code>, <code>B200_Plan</code>, <code>B200_Yan</code>.</li>
+<li>Her durumda: Görünmeyecek nesneleri seç → <strong>Make Invisible</strong> (BVHIDE); görünecekleri <strong>Make Visible</strong> (BVSHOW).</li>
+<li><strong>Visibility Mode</strong> (BVMODE) açıkken gizli nesneler soluk görünür; düzenleme kolaylaşır.</li>
+<li>Test: Bloğu seçip üçgen tutamaçtan listeyi aç; ya da Properties'te <strong>Visibility1</strong>.</li>
+</ol>
+<p>İpucu: Durum adları tabloda ve data extraction'da (7. gün) görünür; anlamlı ve kısa ad ver.</p>
+<p>Dikkat: Visibility ile çok fazla gizli geometri taşıyan bloklar büyür. Yüzlerce durum yerine, ölçü farkı olan tipleri 4. gündeki lookup ya da 5. gündeki kısıt yaklaşımıyla yap.</p>
+<h3>5. Visibility + diğer parametreler (15 dk)</h3>
+<p>Bir eylem, görünmeyen nesneleri de etkiler. Her durumda gerekli tutamaçları göstermek için parametrenin kendisini de görünürlük durumuna göre gizleyebilirsin (parametreyi seç → Make Invisible).</p>
+<h3>Gün sonu kontrolü (15 dk)</h3>
+<ul class="tasks">
+<li class="task"><label><input type="checkbox" data-id="g3-1"><span>Rotation ile bir parçayı döndürdüm.</span></label></li>
+<li class="task"><label><input type="checkbox" data-id="g3-2"><span>Sağ/sol braketi tek blokta Flip ile yaptım.</span></label></li>
+<li class="task"><label><input type="checkbox" data-id="g3-3"><span>Alignment ile bir bloğun nesneye hizalanmasını denedim.</span></label></li>
+<li class="task"><label><input type="checkbox" data-id="g3-4"><span>Altı görünüm durumlu bir braket bloğu yaptım.</span></label></li>
+<li class="task"><label><input type="checkbox" data-id="g3-5"><span>Gizli geometrinin blok boyutuna etkisini biliyorum.</span></label></li>
+</ul></div>
+  <div class="pn"><a href="#gun2">← 2. gün</a><a href="#gun4">4. gün →</a></div>
+</section>
+<section class="day" id="gun4" data-day="4">
+  <div class="day-head"><span class="dn">GÜN 04</span><h2>Lookup ve Block Table</h2><span class="meta">~3,5 saat · <span data-prog="4">0/5</span> kontrol</span></div>
+  <div class="prose"><h3>Hedef</h3>
+<p>Gün sonunda <strong>Lookup</strong> parametresi ve tablosunu, ters aramayı ve <strong>Block Table</strong> (blok özellik tablosu) ile bir bloğu ürün kataloğundan sürmeyi bileceksin. Örnek: tipe göre ölçü alan braket. Süre yaklaşık 3 saat.</p>
+<h3>1. Lookup tablosu (1,5 saat)</h3>
+<figure class="fig"><div class="sc"><svg viewBox="0 0 650 150" role="img" xmlns="http://www.w3.org/2000/svg"><defs><marker id="ah-lookup" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0 0L10 5L0 10z" class="ar"/></marker></defs><rect x="10" y="15" width="80" height="24" class="bxa"/><text x="16" y="31" class="tb" text-anchor="start">Kol</text><rect x="90" y="15" width="100" height="24" class="bxa"/><text x="96" y="31" class="tb" text-anchor="start">Yukseklik</text><rect x="190" y="15" width="190" height="24" class="bxa"/><text x="196" y="31" class="tb" text-anchor="start">Tip (Lookup)</text><rect x="10" y="39" width="80" height="24" class="bx"/><text x="16" y="55" class="tm" text-anchor="start">100</text><rect x="90" y="39" width="100" height="24" class="bx"/><text x="96" y="55" class="tm" text-anchor="start">80</text><rect x="190" y="39" width="190" height="24" class="bx"/><text x="196" y="55" class="tm" text-anchor="start">B100</text><rect x="10" y="63" width="80" height="24" class="sel"/><text x="16" y="79" class="tm" text-anchor="start">150</text><rect x="90" y="63" width="100" height="24" class="sel"/><text x="96" y="79" class="tm" text-anchor="start">100</text><rect x="190" y="63" width="190" height="24" class="sel"/><text x="196" y="79" class="tm" text-anchor="start">B150</text><rect x="10" y="87" width="80" height="24" class="bx"/><text x="16" y="103" class="tm" text-anchor="start">200</text><rect x="90" y="87" width="100" height="24" class="bx"/><text x="96" y="103" class="tm" text-anchor="start">120</text><rect x="190" y="87" width="190" height="24" class="bx"/><text x="196" y="103" class="tm" text-anchor="start">B200</text><rect x="10" y="111" width="80" height="24" class="bx"/><text x="16" y="127" class="tm" text-anchor="start"></text><rect x="90" y="111" width="100" height="24" class="bx"/><text x="96" y="127" class="tm" text-anchor="start"></text><rect x="190" y="111" width="190" height="24" class="bx"/><text x="196" y="127" class="tm" text-anchor="start">Allow reversed lookup</text><line x1="390" y1="70" x2="440" y2="70" class="mu" marker-end="url(#ah-lookup)"/><rect x="442" y="40" width="190" height="60" rx="5" class="sel"/><text x="537.0" y="66.0" class="tb" text-anchor="middle">B150 seçildi</text><text x="537.0" y="82.0" class="tm" text-anchor="middle">Kol 150, Yukseklik 100</text></svg></div><figcaption>Lookup tablosu ve ters arama.</figcaption></figure>
+<p>Lookup, bir <strong>liste seçimini</strong> birden çok parametre değerine bağlar.</p>
+<ol>
+<li>Bloğa iki Linear parametre ekle: <code>Kol</code> (Stretch ile) ve <code>Yukseklik</code> (Stretch ile). Her ikisinin değer kümesi <strong>List</strong> olsun: Kol 100, 150, 200; Yukseklik 80, 100, 120.</li>
+<li><strong>Lookup</strong> parametresi + <strong>Lookup</strong> eylemi.</li>
+<li>Lookup eylemini çift tıkla → <strong>Property Lookup Table:</strong> <strong>Add Properties</strong> ile <code>Kol</code> ve <code>Yukseklik</code>'i giriş (input) olarak ekle.</li>
+<li>Satırları doldur:</li>
+</ol>
+<div class="tw"><table>
+<thead>
+<tr>
+<th>Kol</th>
+<th>Yukseklik</th>
+<th>Tip (Lookup)</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>100</td>
+<td>80</td>
+<td>B100</td>
+</tr>
+<tr>
+<td>150</td>
+<td>100</td>
+<td>B150</td>
+</tr>
+<tr>
+<td>200</td>
+<td>120</td>
+<td>B200</td>
+</tr>
+</tbody>
+</table></div>
+<ol start="5">
+<li>Lookup sütununun altındaki ayarı <strong>Allow reversed lookup</strong> yap: Kullanıcı listeden <code>B150</code> seçince Kol 150 ve Yukseklik 100 olur.</li>
+<li>Test: Bloğun üçgen tutamacından tip seç.</li>
+</ol>
+<p>Giriş değerleri, parametrenin değer kümesinde <strong>olmalıdır</strong>; yoksa tablo hata verir.</p>
+<h3>2. Block Table (1 saat)</h3>
+<figure class="fig"><div class="sc"><svg viewBox="0 0 640 165" role="img" xmlns="http://www.w3.org/2000/svg"><defs><marker id="ah-btable" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0 0L10 5L0 10z" class="ar"/></marker></defs><rect x="10" y="15" width="90" height="24" class="bxa"/><text x="16" y="31" class="tb" text-anchor="start">Tip</text><rect x="100" y="15" width="80" height="24" class="bxa"/><text x="106" y="31" class="tb" text-anchor="start">Kol</text><rect x="180" y="15" width="100" height="24" class="bxa"/><text x="186" y="31" class="tb" text-anchor="start">Yukseklik</text><rect x="280" y="15" width="90" height="24" class="bxa"/><text x="286" y="31" class="tb" text-anchor="start">Kalinlik</text><rect x="10" y="39" width="90" height="24" class="bx"/><text x="16" y="55" class="tm" text-anchor="start">B100</text><rect x="100" y="39" width="80" height="24" class="bx"/><text x="106" y="55" class="tm" text-anchor="start">100</text><rect x="180" y="39" width="100" height="24" class="bx"/><text x="186" y="55" class="tm" text-anchor="start">80</text><rect x="280" y="39" width="90" height="24" class="bx"/><text x="286" y="55" class="tm" text-anchor="start">4</text><rect x="10" y="63" width="90" height="24" class="bx"/><text x="16" y="79" class="tm" text-anchor="start">B150</text><rect x="100" y="63" width="80" height="24" class="bx"/><text x="106" y="79" class="tm" text-anchor="start">150</text><rect x="180" y="63" width="100" height="24" class="bx"/><text x="186" y="79" class="tm" text-anchor="start">100</text><rect x="280" y="63" width="90" height="24" class="bx"/><text x="286" y="79" class="tm" text-anchor="start">5</text><rect x="10" y="87" width="90" height="24" class="sel"/><text x="16" y="103" class="tm" text-anchor="start">B200</text><rect x="100" y="87" width="80" height="24" class="sel"/><text x="106" y="103" class="tm" text-anchor="start">200</text><rect x="180" y="87" width="100" height="24" class="sel"/><text x="186" y="103" class="tm" text-anchor="start">120</text><rect x="280" y="87" width="90" height="24" class="sel"/><text x="286" y="103" class="tm" text-anchor="start">6</text><text x="190" y="150" class="tm" text-anchor="middle">satır = tip; sütun = parametre</text></svg></div><figcaption>Block Table.</figcaption></figure>
+<p><strong>Block Table</strong> (BTABLE), bloğu bir tablodan sürmenin daha yeni ve esnek yoludur; özellikle kısıt parametreleriyle (5. gün) çalışır.</p>
+<ol>
+<li>Editörde <strong>Block Table</strong> düğmesi → bir yerleşim noktası ve tutamaç sayısı seç.</li>
+<li>Tabloya sütun olarak parametreleri ve kullanıcı parametrelerini ekle.</li>
+<li>Her satır bir tiptir; satırlara bir ad sütunu (ör. <code>Tip</code>) ekle.</li>
+<li>Projede blok seçilince tablonun tutamacından satır seçilir; ya da Properties'te listeden.</li>
+<li>Tablo dışı değerlere izin verilmesin istiyorsan <strong>Block properties must match a row in the table</strong> ayarını aç.</li>
+</ol>
+<h3>3. Hangisi ne zaman? (15 dk)</h3>
+<div class="tw"><table>
+<thead>
+<tr>
+<th>Durum</th>
+<th>Öneri</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Eylem tabanlı blok (Stretch, Move), az tip</td>
+<td>Lookup</td>
+</tr>
+<tr>
+<td>Kısıt tabanlı blok, çok parametre</td>
+<td>Block Table</td>
+</tr>
+<tr>
+<td>Tipler bir Excel kataloğundan</td>
+<td>Block Table (satırlar Excel'den yapıştırılabilir)</td>
+</tr>
+</tbody>
+</table></div>
+<h3>4. Uygulama (15 dk)</h3>
+<p>Braket bloğunu Lookup ile üç tipe bağla, 3. gündeki plan/yan görünürlüğünü koru ve test et.</p>
+<h3>Gün sonu kontrolü (15 dk)</h3>
+<ul class="tasks">
+<li class="task"><label><input type="checkbox" data-id="g4-1"><span>Lookup parametresi ve eylemiyle bir tip listesi kurdum.</span></label></li>
+<li class="task"><label><input type="checkbox" data-id="g4-2"><span>Giriş değerlerinin değer kümesinde olması gerektiğini biliyorum.</span></label></li>
+<li class="task"><label><input type="checkbox" data-id="g4-3"><span>Ters aramayı (reversed lookup) açtım.</span></label></li>
+<li class="task"><label><input type="checkbox" data-id="g4-4"><span>Block Table ile bir bloğu satırlardan sürdüm.</span></label></li>
+<li class="task"><label><input type="checkbox" data-id="g4-5"><span>Lookup ve Block Table arasında seçim yapabiliyorum.</span></label></li>
+</ul></div>
+  <div class="pn"><a href="#gun3">← 3. gün</a><a href="#gun5">5. gün →</a></div>
+</section>
+<section class="day" id="gun5" data-day="5">
+  <div class="day-head"><span class="dn">GÜN 05</span><h2>Parametrik kısıtlar</h2><span class="meta">~3,5 saat · <span data-prog="5">0/5</span> kontrol</span></div>
+  <div class="prose"><h3>Hedef</h3>
+<p>Gün sonunda parametrik çizim yapabileceksin: geometrik ve boyutsal kısıtlar, otomatik kısıtlama, Parameters Manager'da ifadeler ve kullanıcı parametreleri; kısıtları blok içinde kullanmak. Süre yaklaşık 3,5 saat.</p>
+<h3>1. Geometrik kısıtlar (1 saat)</h3>
+<figure class="fig"><div class="sc"><svg viewBox="0 0 650 225" role="img" xmlns="http://www.w3.org/2000/svg"><defs><marker id="ah-geom" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0 0L10 5L0 10z" class="ar"/></marker></defs><rect x="60" y="40" width="260" height="140" class="gl"/><text x="190" y="30" class="tm" text-anchor="middle">Horizontal</text><text x="190" y="198" class="tm" text-anchor="middle">Horizontal</text><text x="52" y="112" class="tm" text-anchor="end">Vertical</text><text x="328" y="112" class="tm" text-anchor="start">Vertical</text><circle cx="60" cy="40" r="4" class="swr"/><circle cx="320" cy="40" r="4" class="swr"/><circle cx="60" cy="180" r="4" class="swr"/><circle cx="320" cy="180" r="4" class="swr"/><rect x="54" y="174" width="12" height="12" class="bxa"/><text x="54" y="214" class="tb" text-anchor="start">Fix</text><rect x="430" y="60" width="200" height="100" rx="5" class="sel"/><text x="530.0" y="98.0" class="tb" text-anchor="middle">AUTOCONSTRAIN</text><text x="530.0" y="114.0" class="tm" text-anchor="middle">çakışık, yatay, düşey,</text><text x="530.0" y="130.0" class="tm" text-anchor="middle">dik eklenir</text></svg></div><figcaption>Geometrik kısıtlar: dikdörtgen + bir köşe sabit.</figcaption></figure>
+<p><strong>Parametric</strong> sekmesi &gt; <strong>Geometric</strong> paneli (GEOMCONSTRAINT):</p>
+<div class="tw"><table>
+<thead>
+<tr>
+<th>Kısıt</th>
+<th>Ne yapar</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Coincident</td>
+<td>İki nokta çakışır</td>
+</tr>
+<tr>
+<td>Collinear</td>
+<td>İki çizgi aynı doğru üzerinde</td>
+</tr>
+<tr>
+<td>Concentric</td>
+<td>Daire / yay merkezleri aynı</td>
+</tr>
+<tr>
+<td>Fix</td>
+<td>Nokta ya da nesne sabit</td>
+</tr>
+<tr>
+<td>Parallel / Perpendicular</td>
+<td>Paralel / dik</td>
+</tr>
+<tr>
+<td>Horizontal / Vertical</td>
+<td>Yatay / düşey</td>
+</tr>
+<tr>
+<td>Tangent / Smooth</td>
+<td>Teğet / eğrilik sürekli</td>
+</tr>
+<tr>
+<td>Symmetric</td>
+<td>Bir eksene göre simetrik</td>
+</tr>
+<tr>
+<td>Equal</td>
+<td>Aynı uzunluk ya da yarıçap</td>
+</tr>
+</tbody>
+</table></div>
+<p><strong>AUTOCONSTRAIN</strong>, seçilen geometriye çakışık, yatay, düşey, dik ve teğet kısıtlarını kendiliğinden ekler. Ardından bir köşeye <strong>Fix</strong> koy: Çizim bir yere sabitlensin.</p>
+<p>Kısıt simgeleri: <strong>CONSTRAINTBAR</strong> ile gösterilir/gizlenir. Kısıtları kaldırmak: <strong>DELCON</strong>.</p>
+<h3>2. Boyutsal kısıtlar (45 dk)</h3>
+<figure class="fig"><div class="sc"><svg viewBox="0 0 560 220" role="img" xmlns="http://www.w3.org/2000/svg"><defs><marker id="ah-boyut" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0 0L10 5L0 10z" class="ar"/></marker></defs><rect x="60" y="50" width="300" height="120" class="gl"/><line x1="160" y1="50" x2="160" y2="170" class="k1"/><line x1="260" y1="50" x2="260" y2="170" class="k1"/><line x1="60" y1="200" x2="360" y2="200" class="dm"/><line x1="60" y1="195" x2="60" y2="205" class="dm"/><line x1="360" y1="195" x2="360" y2="205" class="dm"/><text x="210.0" y="194" class="tm" text-anchor="middle">Genislik = 1500</text><line x1="60" y1="30" x2="160" y2="30" class="dm"/><line x1="60" y1="25" x2="60" y2="35" class="dm"/><line x1="160" y1="25" x2="160" y2="35" class="dm"/><text x="110.0" y="24" class="tm" text-anchor="middle">Bolme = 500</text><line x1="390" y1="50" x2="390" y2="170" class="dm"/><line x1="385" y1="50" x2="395" y2="50" class="dm"/><line x1="385" y1="170" x2="395" y2="170" class="dm"/><text x="400" y="114.0" class="tm" text-anchor="start">Yukseklik = 3000</text></svg></div><figcaption>Boyutsal kısıtlar (adlı).</figcaption></figure>
+<p><strong>Parametric &gt; Dimensional</strong> (DIMCONSTRAINT): Linear, Horizontal, Vertical, Aligned, Angular, Radial, Diameter.</p>
+<ol>
+<li>Kısıt verilince bir ad ve değer alır: <code>d1 = 1200</code>. Adı anlamlı yap: <code>Genislik = 1200</code>.</li>
+<li>Değeri değiştir → geometri, geometrik kısıtlara uyarak değişir.</li>
+<li><strong>Dynamic</strong> kısıtlar ekranda görünür, çizdirilmez; <strong>Annotational</strong> kısıtlar ölçü gibi görünür ve çizdirilebilir (CCONSTRAINTFORM).</li>
+</ol>
+<h3>3. Parameters Manager ve ifadeler (1 saat)</h3>
+<figure class="fig"><div class="sc"><svg viewBox="0 0 640 145" role="img" xmlns="http://www.w3.org/2000/svg"><defs><marker id="ah-ifade" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0 0L10 5L0 10z" class="ar"/></marker></defs><rect x="10" y="15" width="120" height="24" class="bxa"/><text x="16" y="31" class="tb" text-anchor="start">Ad</text><rect x="130" y="15" width="200" height="24" class="bxa"/><text x="136" y="31" class="tb" text-anchor="start">İfade</text><rect x="330" y="15" width="90" height="24" class="bxa"/><text x="336" y="31" class="tb" text-anchor="start">Değer</text><rect x="10" y="39" width="120" height="24" class="bx"/><text x="16" y="55" class="tm" text-anchor="start">Genislik</text><rect x="130" y="39" width="200" height="24" class="bx"/><text x="136" y="55" class="tm" text-anchor="start">1500</text><rect x="330" y="39" width="90" height="24" class="bx"/><text x="336" y="55" class="tm" text-anchor="start">1500</text><rect x="10" y="63" width="120" height="24" class="bx"/><text x="16" y="79" class="tm" text-anchor="start">Adet</text><rect x="130" y="63" width="200" height="24" class="bx"/><text x="136" y="79" class="tm" text-anchor="start">3 (kullanıcı)</text><rect x="330" y="63" width="90" height="24" class="bx"/><text x="336" y="79" class="tm" text-anchor="start">3</text><rect x="10" y="87" width="120" height="24" class="sel"/><text x="16" y="103" class="tm" text-anchor="start">Bolme</text><rect x="130" y="87" width="200" height="24" class="sel"/><text x="136" y="103" class="tm" text-anchor="start">Genislik / Adet</text><rect x="330" y="87" width="90" height="24" class="sel"/><text x="336" y="103" class="tm" text-anchor="start">500</text><rect x="10" y="111" width="120" height="24" class="bx"/><text x="16" y="127" class="tm" text-anchor="start">Yukseklik</text><rect x="130" y="111" width="200" height="24" class="bx"/><text x="136" y="127" class="tm" text-anchor="start">2 * Genislik</text><rect x="330" y="111" width="90" height="24" class="bx"/><text x="336" y="127" class="tm" text-anchor="start">3000</text></svg></div><figcaption>Parameters Manager: ifadeler ve kullanıcı parametresi.</figcaption></figure>
+<p><strong>PARAMETERS</strong> komutu (Parametric &gt; Manage &gt; Parameters Manager):</p>
+<ol>
+<li>Bütün boyutsal kısıtlar ve <strong>kullanıcı parametreleri</strong> listelenir.</li>
+<li>Kısıtın ifadesi başka parametrelerden hesaplanabilir: <code>Bolme = Genislik / Adet</code>.</li>
+<li>Kullanıcı parametresi ekle: <code>Adet = 3</code>.</li>
+<li>Kullanılabilen işlevlerden bazıları: <code>sqrt</code>, <code>abs</code>, <code>round</code>, <code>floor</code>, <code>ceil</code>, <code>sin</code>, <code>cos</code>, <code>tan</code>, <code>d2r</code> (dereceyi radyana), <code>r2d</code>, sabit <code>pi</code>.</li>
+</ol>
+<p>Şekildeki örnekte Genislik = 1500, Adet = 3 → Bolme = 500. Genislik 1800 yapılınca Bolme 600 olur.</p>
+<h3>4. Kısıtlar blok içinde (30 dk)</h3>
+<p>Block Editor'de de aynı kısıtlar kullanılabilir; editörde verilen boyutsal kısıtlar <strong>kısıt parametresi</strong> (constraint parameter) olur ve bloğun Properties'inde görünebilir (<strong>Show properties</strong> açıkken). 4. gündeki Block Table ile birleşince tek blok, bir katalogdaki bütün ölçüleri alabilir.</p>
+<p><strong>Dikkat:</strong> Aynı geometride hem eylem tabanlı (Stretch) hem kısıt tabanlı yaklaşımı karıştırmak öngörülmesi zor sonuçlar verebilir. Bir bloğu <strong>ya</strong> eylemlerle <strong>ya</strong> kısıtlarla kur; karıştırman gerekiyorsa çok sık test et.</p>
+<h3>Gün sonu kontrolü (15 dk)</h3>
+<ul class="tasks">
+<li class="task"><label><input type="checkbox" data-id="g5-1"><span>Geometrik kısıtları ve AUTOCONSTRAIN'i kullandım.</span></label></li>
+<li class="task"><label><input type="checkbox" data-id="g5-2"><span>Boyutsal kısıtları adlandırıp değerlerini değiştirdim.</span></label></li>
+<li class="task"><label><input type="checkbox" data-id="g5-3"><span>Parameters Manager'da bir kullanıcı parametresi ve ifade yazdım.</span></label></li>
+<li class="task"><label><input type="checkbox" data-id="g5-4"><span>Dinamik ve annotational kısıt farkını biliyorum.</span></label></li>
+<li class="task"><label><input type="checkbox" data-id="g5-5"><span>Kısıt parametreli bir blok yapıp Block Table ile denedim.</span></label></li>
+</ul></div>
+  <div class="pn"><a href="#gun4">← 4. gün</a><a href="#gun6">6. gün →</a></div>
+</section>
+<section class="day" id="gun6" data-day="6">
+  <div class="day-head"><span class="dn">GÜN 06</span><h2>Field</h2><span class="meta">~3,5 saat · <span data-prog="6">0/5</span> kontrol</span></div>
+  <div class="prose"><h3>Hedef</h3>
+<p>Gün sonunda alanları (field) kullanabileceksin: nesne alanları (alan, uzunluk), birim dönüşümü ve biçim, belge ve çizim alanları (antet), formül alanları, alanların güncellenmesi ve <strong>BlockPlaceholder</strong> ile dinamik bloğun kendi ölçüsünü yazdırması. Süre yaklaşık 3,5 saat.</p>
+<h3>1. Alan nedir? (30 dk)</h3>
+<figure class="fig"><div class="sc"><svg viewBox="0 0 650 120" role="img" xmlns="http://www.w3.org/2000/svg"><defs><marker id="ah-field" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0 0L10 5L0 10z" class="ar"/></marker></defs><rect x="20" y="40" width="200" height="60" rx="5" class="bx"/><text x="120.0" y="66.0" class="tb" text-anchor="middle">Kaynak</text><text x="120.0" y="82.0" class="tm" text-anchor="middle">polyline, dosya, blok</text><line x1="222" y1="70" x2="278" y2="70" class="mu" marker-end="url(#ah-field)"/><rect x="280" y="40" width="140" height="60" rx="5" class="sel"/><text x="350.0" y="66.0" class="tb" text-anchor="middle">Field</text><text x="350.0" y="82.0" class="tm" text-anchor="middle">ifade + biçim</text><line x1="422" y1="70" x2="478" y2="70" class="mu" marker-end="url(#ah-field)"/><rect x="480" y="40" width="150" height="60" rx="5" class="bxa"/><text x="555.0" y="66.0" class="tb" text-anchor="middle">MTEXT</text><text x="555.0" y="82.0" class="tm" text-anchor="middle">A = 4.50 m²</text></svg></div><figcaption>Alan (field): değer kaynaktan gelir, metinde gösterilir.</figcaption></figure>
+<p><strong>Field</strong>, bir metnin içine konan, değeri başka bir yerden <strong>otomatik gelen</strong> parçadır: bir poligonun alanı, dosyanın adı, kaydetme tarihi, bir bloğun niteliği. Değer değişince metin güncellenir; elle yazılan sayıların eskimesi sorunu ortadan kalkar.</p>
+<ol>
+<li><strong>FIELD</strong> komutu ya da MTEXT içinde sağ tık &gt; Insert Field (<strong>Ctrl+F</strong>).</li>
+<li>Alanlar gri arka planla görünür (çizdirilmez); <strong>FIELDDISPLAY</strong> ile kapatılabilir.</li>
+</ol>
+<h3>2. Nesne alanları (1 saat)</h3>
+<figure class="fig"><div class="sc"><svg viewBox="0 0 640 265" role="img" xmlns="http://www.w3.org/2000/svg"><defs><marker id="ah-alan" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0 0L10 5L0 10z" class="ar"/></marker></defs><rect x="60" y="20" width="120" height="200" class="gl"/><line x1="60" y1="240" x2="180" y2="240" class="dm"/><line x1="60" y1="235" x2="60" y2="245" class="dm"/><line x1="180" y1="235" x2="180" y2="245" class="dm"/><text x="120.0" y="234" class="tm" text-anchor="middle">1500</text><line x1="40" y1="20" x2="40" y2="220" class="dm"/><line x1="35" y1="20" x2="45" y2="20" class="dm"/><line x1="35" y1="220" x2="45" y2="220" class="dm"/><text x="30" y="124.0" class="tm" text-anchor="end">3000</text><rect x="85" y="100" width="70" height="40" class="bx"/><text x="120" y="116" class="tb" text-anchor="middle">P-12</text><text x="120" y="132" class="tm" text-anchor="middle">4.50 m²</text><rect x="230" y="40" width="160" height="24" class="bxa"/><text x="236" y="56" class="tb" text-anchor="start">Ayar</text><rect x="390" y="40" width="170" height="24" class="bxa"/><text x="396" y="56" class="tb" text-anchor="start">Değer</text><rect x="230" y="64" width="160" height="24" class="bx"/><text x="236" y="80" class="tm" text-anchor="start">Property</text><rect x="390" y="64" width="170" height="24" class="bx"/><text x="396" y="80" class="tm" text-anchor="start">Area</text><rect x="230" y="88" width="160" height="24" class="bx"/><text x="236" y="104" class="tm" text-anchor="start">Format</text><rect x="390" y="88" width="170" height="24" class="bx"/><text x="396" y="104" class="tm" text-anchor="start">Decimal, 0.00</text><rect x="230" y="112" width="160" height="24" class="sel"/><text x="236" y="128" class="tm" text-anchor="start">Conversion factor</text><rect x="390" y="112" width="170" height="24" class="sel"/><text x="396" y="128" class="tm" text-anchor="start">0.000001</text><rect x="230" y="136" width="160" height="24" class="bx"/><text x="236" y="152" class="tm" text-anchor="start">Suffix</text><rect x="390" y="136" width="170" height="24" class="bx"/><text x="396" y="152" class="tm" text-anchor="start"> m²</text><text x="400" y="200" class="tm" text-anchor="middle">1500 × 3000 = 4 500 000 mm² → 4.50 m²</text></svg></div><figcaption>Nesne alanı: polyline alanı m² olarak.</figcaption></figure>
+<p>Örnek: Panel etiketinde panelin alanı.</p>
+<ol>
+<li>Paneli kapalı bir <strong>polyline</strong> olarak çiz: 1500 × 3000 mm.</li>
+<li>Etiket metninde <strong>Insert Field &gt; Objects &gt; Object</strong> → nesne seç (polyline) → Property: <strong>Area</strong>.</li>
+<li>Biçim: <strong>Decimal</strong>, Precision 0.00; <strong>Additional Format</strong> → <strong>Conversion factor</strong> <code>0.000001</code> (mm² → m²), <strong>Suffix</strong> <code>m²</code>.</li>
+<li>Sonuç: 1500 × 3000 = 4 500 000 mm² × 0,000001 = <strong>4.50 m²</strong>.</li>
+<li>Polyline'ı uzat → <strong>REGEN</strong> ya da <strong>UPDATEFIELD</strong> → etiket güncellenir.</li>
+</ol>
+<p>Aynı yolla bir çizginin <strong>Length</strong> değeri (kesim boyu), bir dairenin <strong>Diameter</strong> değeri ya da bir dinamik bloğun <strong>Distance1</strong> gibi dinamik özellikleri alana yazılabilir.</p>
+<h3>3. Ne zaman güncellenir? (15 dk)</h3>
+<p><strong>FIELDEVAL</strong> sistem değişkeni, alanların hangi olaylarda güncelleneceğini bit kodlarıyla belirler: 1 açılış, 2 kaydetme, 4 çizdirme, 8 eTransmit, 16 regen. Varsayılan <strong>31</strong> (hepsi). Elle güncelleme: <strong>UPDATEFIELD</strong>.</p>
+<h3>4. Antet alanları (45 dk)</h3>
+<figure class="fig"><div class="sc"><svg viewBox="0 0 640 140" role="img" xmlns="http://www.w3.org/2000/svg"><defs><marker id="ah-antet" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0 0L10 5L0 10z" class="ar"/></marker></defs><rect x="10" y="10" width="620" height="120" class="bx"/><line x1="220" y1="10" x2="220" y2="130" class="k1"/><line x1="420" y1="10" x2="420" y2="130" class="k1"/><line x1="10" y1="70" x2="630" y2="70" class="k1"/><text x="15" y="30" class="tm" text-anchor="start">Proje</text><text x="15" y="52" class="tb" text-anchor="start">%&lt;Title&gt;%</text><text x="225" y="30" class="tm" text-anchor="start">Dosya</text><text x="225" y="52" class="tb" text-anchor="start">%&lt;Filename&gt;%</text><text x="425" y="30" class="tm" text-anchor="start">Kayıt</text><text x="425" y="52" class="tb" text-anchor="start">%&lt;SaveDate&gt;%</text><text x="15" y="90" class="tm" text-anchor="start">Çizen</text><text x="15" y="112" class="tb" text-anchor="start">%&lt;Author&gt;%</text><text x="225" y="90" class="tm" text-anchor="start">Ölçek</text><text x="225" y="112" class="tb" text-anchor="start">%&lt;Scale&gt;%</text><text x="425" y="90" class="tm" text-anchor="start">Çizdirme</text><text x="425" y="112" class="tb" text-anchor="start">%&lt;PlotDate&gt;%</text></svg></div><figcaption>Alanlarla dolan antet (şematik; gerçek alan kodları farklı görünür).</figcaption></figure>
+<div class="tw"><table>
+<thead>
+<tr>
+<th>Bilgi</th>
+<th>Alan</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Dosya adı</td>
+<td>Document &gt; Filename (uzantısız)</td>
+</tr>
+<tr>
+<td>Kaydetme tarihi</td>
+<td>Date &amp; Time &gt; SaveDate (biçim: dd.MM.yyyy)</td>
+</tr>
+<tr>
+<td>Çizdirme tarihi</td>
+<td>Plot &gt; PlotDate</td>
+</tr>
+<tr>
+<td>Layout adı</td>
+<td>Other &gt; SystemVariable &gt; CTAB</td>
+</tr>
+<tr>
+<td>Proje adı, çizen</td>
+<td>Document &gt; Title / Author (DWGPROPS'tan)</td>
+</tr>
+<tr>
+<td>Ölçek</td>
+<td>Objects &gt; Object &gt; viewport &gt; Standard scale</td>
+</tr>
+</tbody>
+</table></div>
+<p><strong>DWGPROPS</strong> (Drawing Properties) penceresinde proje adı, müşteri gibi <strong>özel özellikler</strong> (Custom) tanımlanırsa bütün layout'lardaki antetler aynı kaynaktan beslenir. Sheet Set kullanılıyorsa SheetSet alanları da kullanılabilir.</p>
+<h3>5. BlockPlaceholder (45 dk)</h3>
+<figure class="fig"><div class="sc"><svg viewBox="0 0 650 130" role="img" xmlns="http://www.w3.org/2000/svg"><defs><marker id="ah-placeholder" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0 0L10 5L0 10z" class="ar"/></marker></defs><rect x="30" y="40" width="360" height="30" class="bxa"/><line x1="30" y1="48" x2="390" y2="48" class="k1"/><line x1="30" y1="62" x2="390" y2="62" class="k1"/><text x="210" y="30" class="tb" text-anchor="middle">UZUNLUK = 2650</text><rect x="384" y="49" width="12" height="12" class="swr"/><rect x="430" y="20" width="200" height="80" rx="5" class="sel"/><text x="530.0" y="48.0" class="tb" text-anchor="middle">ATTDEF: UZUNLUK</text><text x="530.0" y="64.0" class="tm" text-anchor="middle">Field: BlockPlaceholder</text><text x="530.0" y="80.0" class="tm" text-anchor="middle">&gt; Uzunluk</text><line x1="30" y1="110" x2="390" y2="110" class="dm"/><line x1="30" y1="105" x2="30" y2="115" class="dm"/><line x1="390" y1="105" x2="390" y2="115" class="dm"/><text x="210.0" y="104" class="tm" text-anchor="middle">Linear: Uzunluk</text></svg></div><figcaption>BlockPlaceholder: blok kendi uzunluğunu yazar.</figcaption></figure>
+<p>Dinamik bloğun <strong>kendi</strong> ölçüsünü nitelik olarak yazdırmak için:</p>
+<ol>
+<li>Profil kesim bloğunu (2. gün) <strong>BEDIT</strong> ile aç.</li>
+<li><strong>ATTDEF</strong> ile nitelik tanımla: Tag <code>UZUNLUK</code>.</li>
+<li>Default değer alanında <strong>Insert Field</strong> → <strong>Objects &gt; BlockPlaceholder</strong> → özellik: <code>Uzunluk</code> (Linear parametrenin Distance adı).</li>
+<li>Bloğu kaydet; çizimde blok uzatılınca nitelik değeri <strong>REGEN</strong> ya da UPDATEFIELD ile güncellenir.</li>
+</ol>
+<p>Böylece her profil parçası kendi kesim boyunu üzerinde taşır; 7. gündeki data extraction bu niteliği okuyabilir.</p>
+<h3>6. Formül alanları ve tablolar (15 dk)</h3>
+<p><strong>TABLE</strong> içindeki hücrelere <code>=Sum(B2:B10)</code>, <code>=B2*C2</code> gibi formüller yazılabilir; bunlar da birer alandır. Bir hücreye başka bir nesnenin alanını bağlayıp toplam metraj tablosu kurulabilir.</p>
+<h3>Gün sonu kontrolü (15 dk)</h3>
+<ul class="tasks">
+<li class="task"><label><input type="checkbox" data-id="g6-1"><span>Bir MTEXT içine alan ekledim.</span></label></li>
+<li class="task"><label><input type="checkbox" data-id="g6-2"><span>Polyline alanını m² olarak biçimlendirdim ve sonucu elle doğruladım.</span></label></li>
+<li class="task"><label><input type="checkbox" data-id="g6-3"><span>FIELDEVAL ve UPDATEFIELD'i biliyorum.</span></label></li>
+<li class="task"><label><input type="checkbox" data-id="g6-4"><span>Antette dosya adı, tarih ve DWGPROPS alanlarını kullandım.</span></label></li>
+<li class="task"><label><input type="checkbox" data-id="g6-5"><span>BlockPlaceholder ile kendi uzunluğunu yazan bir dinamik blok yaptım.</span></label></li>
+</ul></div>
+  <div class="pn"><a href="#gun5">← 5. gün</a><a href="#gun7">7. gün →</a></div>
+</section>
+<section class="day" id="gun7" data-day="7">
+  <div class="day-head"><span class="dn">GÜN 07</span><h2>Veri ve kütüphane</h2><span class="meta">~3,5 saat · <span data-prog="7">0/10</span> kontrol</span></div>
+  <div class="prose"><h3>Hedef</h3>
+<p>Son gün dinamik bloklardan veri çekecek (data extraction), kütüphane düzenini kuracak, AutoLISP ile dinamik özelliklere erişimi görecek ve bitiş alıştırmasını yapacaksın. Süre yaklaşık 3,5 saat.</p>
+<h3>1. Data Extraction (1 saat)</h3>
+<figure class="fig"><div class="sc"><svg viewBox="0 0 670 120" role="img" xmlns="http://www.w3.org/2000/svg"><defs><marker id="ah-extract" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0 0L10 5L0 10z" class="ar"/></marker></defs><rect x="10" y="40" width="116" height="56" rx="5" class="bx"/><text x="68.0" y="64.0" class="tb" text-anchor="middle">Kaynak</text><text x="68.0" y="80.0" class="tm" text-anchor="middle">çizim</text><rect x="140" y="40" width="116" height="56" rx="5" class="bx"/><text x="198.0" y="64.0" class="tb" text-anchor="middle">Bloklar</text><text x="198.0" y="80.0" class="tm" text-anchor="middle">seç</text><line x1="128" y1="68.0" x2="138" y2="68.0" class="mu" marker-end="url(#ah-extract)"/><rect x="270" y="40" width="116" height="56" rx="5" class="bx"/><text x="328.0" y="64.0" class="tb" text-anchor="middle">Özellikler</text><text x="328.0" y="80.0" class="tm" text-anchor="middle">Dynamic, Attr.</text><line x1="258" y1="68.0" x2="268" y2="68.0" class="mu" marker-end="url(#ah-extract)"/><rect x="400" y="40" width="116" height="56" rx="5" class="bx"/><text x="458.0" y="64.0" class="tb" text-anchor="middle">Birleştir</text><text x="458.0" y="80.0" class="tm" text-anchor="middle">+ Count</text><line x1="388" y1="68.0" x2="398" y2="68.0" class="mu" marker-end="url(#ah-extract)"/><rect x="530" y="40" width="116" height="56" rx="5" class="bxa"/><text x="588.0" y="64.0" class="tb" text-anchor="middle">Çıktı</text><text x="588.0" y="80.0" class="tm" text-anchor="middle">tablo, Excel</text><line x1="518" y1="68.0" x2="528" y2="68.0" class="mu" marker-end="url(#ah-extract)"/></svg></div><figcaption>Data extraction akışı.</figcaption></figure>
+<p><strong>DATAEXTRACTION</strong> (Insert &gt; Linking &amp; Extraction &gt; Extract Data):</p>
+<ol>
+<li>Yeni çıkarım → kaynak: bu çizim (ya da bir klasördeki çizimler).</li>
+<li>Nesneler: Yalnızca blokları göster → <code>PRF_Kesim</code>, <code>BRK_Ankraj</code> bloklarını seç.</li>
+<li>Özellikler: <strong>Dynamic Block</strong> (Uzunluk, Visibility1, Lookup1) ve <strong>Attribute</strong> (UZUNLUK, KOD) kategorileri.</li>
+<li>Ayrıntıyı düzenle: Aynı değerli satırları <strong>birleştir</strong> ve <strong>Count</strong> sütunu ekle → kesim listesi.</li>
+<li>Çıktı: Çizime <strong>AutoCAD tablosu</strong> ve/veya <strong>Excel/CSV</strong> dosyası.</li>
+<li>Tablo kaynak çizime bağlı kalır; bloklar değişince tabloda güncelleme uyarısı çıkar.</li>
+</ol>
+<p>Örnek çıktı (profil kesim listesi):</p>
+<div class="tw"><table>
+<thead>
+<tr>
+<th>Blok</th>
+<th>Uzunluk</th>
+<th>Adet</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>PRF_Kesim</td>
+<td>2650</td>
+<td>12</td>
+</tr>
+<tr>
+<td>PRF_Kesim</td>
+<td>3000</td>
+<td>8</td>
+</tr>
+<tr>
+<td>PRF_Kesim</td>
+<td>1480</td>
+<td>4</td>
+</tr>
+</tbody>
+</table></div>
+<p>Kesim optimizasyonu bu listeden yapılır (<a href="../excel-ileri/">Excel İleri</a> ve kendi optimizasyon araçların).</p>
+<h3>2. Kütüphane düzeni (45 dk)</h3>
+<ol>
+<li><strong>Her blok bir DWG:</strong> <code>PRF_Kesim.dwg</code>, <code>BRK_Ankraj.dwg</code>; ortak bir ağ klasöründe.</li>
+<li><strong>Ad standardı:</strong> Ön ek kategoriyi göstersin (PRF profil, BRK braket, ETK etiket, ANT antet).</li>
+<li><strong>Tool Palettes</strong> (Ctrl+3) ya da <strong>DesignCenter</strong> (Ctrl+2) ile kullanıcıya sun; <strong>Blocks paleti</strong> (BLOCKSPALETTE) son kullanılanları ve kitaplıkları gösterir.</li>
+<li>Katman: Blok içindeki nesneler <strong>layer 0</strong> ve <strong>ByBlock/ByLayer</strong> renklerle çizilirse, blok yerleştirildiği katmanın özelliklerini alır.</li>
+<li>Niteliği değiştirilmiş bir blok tanımından sonra mevcut bloklara yansıtmak: <strong>ATTSYNC</strong>.</li>
+</ol>
+<h3>3. AutoLISP ile dinamik özellikler (30 dk)</h3>
+<pre><code class="language-lisp">;; Seçilen dinamik bloğun özelliklerini listeler
+(vl-load-com)
+(defun c:DBPROP (/ e o)
+  (setq e (car (entsel &quot;\nDinamik blok seç: &quot;)))
+  (setq o (vlax-ename-&gt;vla-object e))
+  (foreach p (vlax-invoke o 'GetDynamicBlockProperties)
+    (princ (strcat &quot;\n&quot; (vla-get-PropertyName p) &quot; = &quot;
+                   (vl-princ-to-string (vlax-get p 'Value)))))
+  (princ))
+</code></pre>
+<p>Dinamik blokların gerçek adı <code>EffectiveName</code> özelliğindedir; <code>Name</code> anonim bir ad (<code>*U12</code>) dönebilir. Ayrıntı: <a href="../autolisp/">AutoLISP</a>.</p>
+<h3>4. Bitiş alıştırması (1 saat)</h3>
+<figure class="fig"><div class="sc"><svg viewBox="0 0 640 160" role="img" xmlns="http://www.w3.org/2000/svg"><defs><marker id="ah-bitis" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0 0L10 5L0 10z" class="ar"/></marker></defs><rect x="20" y="30" width="260" height="30" class="bxa"/><line x1="20" y1="38" x2="280" y2="38" class="k1"/><line x1="20" y1="52" x2="280" y2="52" class="k1"/><text x="150" y="22" class="tm" text-anchor="middle">PRF_Kesim</text><rect x="274" y="39" width="12" height="12" class="swr"/><polygon points="330,20 420,20 420,32 342,32 342,110 330,110" class="bxa"/><text x="375" y="128" class="tm" text-anchor="middle">BRK_Ankraj</text><rect x="460" y="20" width="80" height="110" class="gl"/><rect x="472" y="60" width="56" height="30" class="bx"/><text x="500" y="80" class="tm" text-anchor="middle">P-12</text><text x="500" y="148" class="tm" text-anchor="middle">ETK_Panel</text><rect x="20" y="100" width="100" height="22" class="bxa"/><text x="26" y="116" class="tb" text-anchor="start">Blok</text><rect x="120" y="100" width="80" height="22" class="bxa"/><text x="126" y="116" class="tb" text-anchor="start">Uzunluk</text><rect x="200" y="100" width="60" height="22" class="bxa"/><text x="206" y="116" class="tb" text-anchor="start">Adet</text><rect x="20" y="122" width="100" height="22" class="bx"/><text x="26" y="138" class="tm" text-anchor="start">PRF_Kesim</text><rect x="120" y="122" width="80" height="22" class="bx"/><text x="126" y="138" class="tm" text-anchor="start">2650</text><rect x="200" y="122" width="60" height="22" class="bx"/><text x="206" y="138" class="tm" text-anchor="start">12</text></svg></div><figcaption>Bitiş alıştırması: üç blok ve kesim listesi.</figcaption></figure>
+<ul class="tasks">
+<li class="task"><label><input type="checkbox" data-id="g7-1"><span><strong>PRF_Kesim:</strong> Linear + Stretch, Increment 10 mm (300-6500), uçta delik dizisi, BlockPlaceholder ile <code>UZUNLUK</code> niteliği.</span></label></li>
+<li class="task"><label><input type="checkbox" data-id="g7-2"><span><strong>BRK_Ankraj:</strong> Flip (sağ/sol), Visibility (plan/yan), Lookup ile B100/B150/B200.</span></label></li>
+<li class="task"><label><input type="checkbox" data-id="g7-3"><span><strong>ETK_Panel:</strong> Panel kodu niteliği + alan field'ı (m², iki ondalık).</span></label></li>
+<li class="task"><label><input type="checkbox" data-id="g7-4"><span><strong>Antet:</strong> Dosya adı, kaydetme tarihi ve DWGPROPS'tan proje adı alanları.</span></label></li>
+<li class="task"><label><input type="checkbox" data-id="g7-5"><span><strong>Kesim listesi:</strong> Data extraction ile çizime tablo + Excel.</span></label></li>
+<li class="task"><label><input type="checkbox" data-id="g7-6"><span>Bir parametrik kısıtlı çizim: Genislik ve Adet'e göre bölünen bir panel çerçevesi.</span></label></li>
+</ul>
+<h3>Gün sonu kontrolü (15 dk)</h3>
+<ul class="tasks">
+<li class="task"><label><input type="checkbox" data-id="g7-7"><span>Data extraction ile dinamik blok özelliklerinden adetli bir liste çıkardım.</span></label></li>
+<li class="task"><label><input type="checkbox" data-id="g7-8"><span>Kütüphane klasörü, ad standardı ve paleti kurdum.</span></label></li>
+<li class="task"><label><input type="checkbox" data-id="g7-9"><span>LISP ile dinamik özellikleri okudum.</span></label></li>
+<li class="task"><label><input type="checkbox" data-id="g7-10"><span>Bitiş alıştırmasını tamamladım.</span></label></li>
+</ul></div>
+  <div class="pn"><a href="#gun6">← 6. gün</a><a href="../../Tools.html">Araçlara dön →</a></div>
+</section>
+</main>
+
+<footer>
+  <div class="wrap">
+    <span>© 2026 Erdal Üstünol · <a href="/gizlilik.html">Gizlilik</a></span>
+    <a href="../../Tools.html">← Araçlar ve eğitimler</a>
+  </div>
+</footer>
+
+<script>
+(() => {
+  const $ = id => document.getElementById(id);
+  const KEY = 'erdevelop-egitim-acdb';
+  const store = { get(k) { try { return localStorage.getItem(k); } catch (e) { return null; } }, set(k, v) { try { localStorage.setItem(k, v); } catch (e) {} } };
+  let mode = (() => { try { const m = localStorage.getItem('erdevelop-mode'), g = localStorage.getItem('erdevelop-mode-gun'), t = new Date(); if (m && g === t.toDateString()) return m; const h = t.getHours(); return h >= 7 && h < 19 ? 'light' : 'dark'; } catch (e) { return 'light'; } })();
+  const applyMode = () => { document.documentElement.dataset.mode = mode; $('modeBtn').textContent = mode === 'dark' ? 'LIGHT' : 'DARK'; };
+  $('modeBtn').addEventListener('click', () => { mode = mode === 'dark' ? 'light' : 'dark'; store.set('erdevelop-mode', mode); store.set('erdevelop-mode-gun', new Date().toDateString()); applyMode(); });
+  applyMode();
+
+  let done = {}; try { done = JSON.parse(store.get(KEY) || '{}') || {}; } catch (e) { done = {}; }
+  const boxes = [...document.querySelectorAll('li.task input')];
+  const prog = () => {
+    document.querySelectorAll('section.day').forEach(sec => {
+      const d = sec.dataset.day, bs = sec.querySelectorAll('li.task input'), c = [...bs].filter(b => b.checked).length;
+      sec.querySelector('[data-prog]').textContent = c + '/' + bs.length;
+      const n = document.querySelector('[data-nav="' + d + '"]'); if (n) n.classList.toggle('done', bs.length > 0 && c === bs.length);
+    });
+  };
+  boxes.forEach(b => { b.checked = !!done[b.dataset.id]; b.addEventListener('change', () => { if (b.checked) done[b.dataset.id] = 1; else delete done[b.dataset.id]; store.set(KEY, JSON.stringify(done)); prog(); }); });
+  $('resetBtn').addEventListener('click', () => { done = {}; store.set(KEY, '{}'); boxes.forEach(b => b.checked = false); prog(); });
+  prog();
+
+  const links = [...document.querySelectorAll('[data-nav]')];
+  const secs = [$('genel'), ...document.querySelectorAll('section.day')];
+  if ('IntersectionObserver' in window) {
+    const io = new IntersectionObserver(es => es.forEach(e => { if (e.isIntersecting) { const i = secs.indexOf(e.target); links.forEach((l, k) => l.classList.toggle('on', k === i)); } }), { rootMargin: '-40% 0px -55% 0px' });
+    secs.forEach(s => io.observe(s));
+  }
+})();
+</script>
+<script src="../ilerleme.js" data-key="erdevelop-egitim-acdb"></script>
+<script>if ('serviceWorker' in navigator && location.protocol === 'https:') addEventListener('load', () => navigator.serviceWorker.register('/sw.js').catch(() => { }));</script>
+<script data-goatcounter="https://erdevelop.goatcounter.com/count" async src="//gc.zgo.at/count.js"></script>
+<script src="/uyari.js" data-tur="egitim"></script>
+</body>
+</html>
