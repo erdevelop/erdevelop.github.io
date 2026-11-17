@@ -63,6 +63,7 @@
 <footer><div class="wrap"><span>Hesaplar Google Firebase ile çalışır · Ayrıntılar: <a href="gizlilik.html">Gizlilik ve Kişisel Veriler</a></span><a href="Tools.html">← tüm araçlar</a></div></footer>
 
 <script src="kesif/tema.js"></script>
+<script src="js/senkron.js"></script>
 <script>
 
 const FB = { apiKey: 'AIzaSyBtNow8j7AZQO2sWCiXb1WbOT261wJUGRU', authDomain: 'oyun-bahcesi-62633.firebaseapp.com', projectId: 'oyun-bahcesi-62633', storageBucket: 'oyun-bahcesi-62633.firebasestorage.app', messagingSenderId: '591926138614', appId: '1:591926138614:web:24101e1be195ebc04c3ed7' };
@@ -140,7 +141,11 @@ function paint() {
       </div>
       <div class="nexts">${nx.join('')}</div>
       <div class="list" id="diller" style="margin-top:14px">${cl.map(c => `<div class="it"><span><b>${c.ad} Kulübü</b> <span class="mono small muted">${c.learned} öğrenildi · ${c.seen} çalışıldı · ${c.my} kendi kelimen · ${c.xp} XP</span></span><a class="btn" href="${c.url}">${c.seen || c.xp ? 'Devam et' : 'Başla'}</a></div>`).join('')}</div>
-      <p class="small muted" style="margin:8px 0 0">Dil kulübü kelime kutuları bu cihazda tutulur; XP odalardaki puanınla birleştirilir.</p></section>`; })()}
+      <p class="small muted" style="margin:8px 0 0">Dil kulübü kelime kutuları bu cihazda tutulur (aşağıdaki senkron açıksa diğer cihazlarına da taşınır); XP odalardaki puanınla birleştirilir.</p></section>`; })()}
+    <section class="card full2" id="senkron"><h2>Cihazlar arası senkron</h2><p class="d">Bu tarayıcıdaki dil kulübü kelime kutuların, Konsol dosyaların, oyun rekorların ve araç ayarların hesabına yedeklenir; telefonla bilgisayar arasında kendiliğinden taşınır. Her cihazda bir kez açman yeterli.</p>
+      <label class="chk" style="margin-bottom:10px"><input type="checkbox" id="syOn"> Bu cihazda otomatik senkron (sayfalar açıldıkça, en çok 5 dakikada bir)</label>
+      <div class="row"><button class="btn pri" type="button" id="syNow">⟳ Şimdi eşitle</button><button class="btn" type="button" id="syDel">Buluttaki kopyayı sil</button></div>
+      <p class="small muted" id="syInfo" style="margin:10px 0 0"></p><div class="msg" id="symsg"></div></section>
     <section class="card"><h2>Adın</h2><p class="d">Odalarda ve skor tablolarında görünen ad.</p>
       <div class="fd"><label for="nm">Görünen ad</label><input class="inp" id="nm" maxlength="24" value="${esc(nm)}"></div><div class="row"><button class="btn pri" type="button" id="nmb">Kaydet</button></div><div class="msg" id="nmmsg"></div></section>
     <section class="card"><h2>Şifre</h2><p class="d">Değiştirmek için mevcut şifren gerekir.</p>
@@ -164,9 +169,33 @@ function paint() {
       <div class="row"><button class="btn bad" type="button" id="db">Hesabımı kalıcı olarak sil</button></div><div class="msg" id="dmsg"></div></section>
   </div>`;
   $('out').onclick = () => A.auth.signOut();
+  senkronKur();
   $('nmb').onclick = saveName; $('pb').onclick = changePass; $('dl').onclick = exportAll; $('db').onclick = delAccount;
   [['poff', '', 'push', 'erdevelop-eng'], ['pofffr', '_fr', 'pushFr', 'erdevelop-fra'], ['poffde', '_de', 'pushDe', 'erdevelop-deu']].forEach(([id, suf, key, lk]) => { if ($(id)) $(id).onclick = async () => { try { await A.db.collection('push').doc(u.uid + suf).set({ on: false }, { merge: true }); localSet(lk, s => { s.pushOn = false; }); A[key].on = false; paint(); TM.toast('Bildirimler kapatıldı'); } catch (x) { msg('pomsg', errTr(x)); } }; });
   app.querySelectorAll('[data-leave]').forEach(b => b.onclick = () => leaveRoom(b.dataset.leave));
+}
+/* ---- cihazlar arası senkron (js/senkron.js) ---- */
+const syAcik = () => { try { return localStorage.getItem('erdevelop-sync') === '1'; } catch (e) { return false; } };
+function syBilgi(r) {
+  const o = erSenkron.ozet(), g = Object.entries(o.gruplar).map(([k, n]) => `${k} ${n}`).join(' · ');
+  $('syInfo').innerHTML = `${o.son ? 'Son eşitleme: ' + esc(new Date(o.son).toLocaleString('tr-TR', { dateStyle: 'medium', timeStyle: 'short' })) : 'Bu cihaz henüz eşitlenmedi.'}<br>Bu cihazda: ${esc(g || 'kayıt yok')} · yaklaşık ${nf(o.boyut / 1024, 0)} KB${o.buyuk ? ` · ${o.buyuk} büyük kayıt (150 KB üstü) eşitlenmez` : ''}`
+    + (r ? `<br>Az önce: ${r.gonderilen} gönderildi, ${r.alinan} alındı, ${r.birlesen} birleştirildi${r.silinen ? ', ' + r.silinen + ' silindi' : ''}${r.atlanan.length ? ', ' + r.atlanan.length + ' sığmadı' : ''}.` : '');
+}
+async function syCalis(sessiz) {
+  const b = $('syNow'); if (!b || !window.erSenkron) return; busy(b, true, '⟳ Eşitleniyor…');
+  try { const r = await erSenkron.calistir(A.db, A.user.uid); syBilgi(r); if (!sessiz) msg('symsg', 'Eşitlendi.', true); if (r.alinan || r.birlesen) { A.info = (await A.db.collection('users').doc(A.user.uid).get()).data() || A.info; setTimeout(paint, 900); } }
+  catch (x) { msg('symsg', /permission/i.test(String(x && (x.code || x.message))) ? 'Sunucu senkron kaydına izin vermedi (Firebase kuralları users belgesinde "senkron" alanına yazmaya izin vermeli).' : errTr(x)); }
+  busy(b, false, '⟳ Şimdi eşitle');
+}
+function senkronKur() {
+  if (!window.erSenkron || !$('syOn')) return;
+  $('syOn').checked = syAcik(); syBilgi();
+  $('syOn').onchange = () => { try { $('syOn').checked ? localStorage.setItem('erdevelop-sync', '1') : localStorage.removeItem('erdevelop-sync'); } catch (e) { }
+    TM.toast($('syOn').checked ? 'Otomatik senkron bu cihazda açık' : 'Otomatik senkron bu cihazda kapalı'); if ($('syOn').checked) syCalis(); };
+  $('syNow').onclick = () => syCalis();
+  $('syDel').onclick = async () => { if (!confirm('Hesabındaki senkron kopyası silinsin mi? Bu cihazdaki ve diğer cihazlardaki veriler silinmez; yalnızca bulut yedeği kalkar.')) return;
+    try { await erSenkron.bulutuSil(A.db, A.user.uid); try { localStorage.removeItem('erdevelop-sync'); } catch (e) { } $('syOn').checked = false; syBilgi(); msg('symsg', 'Buluttaki kopya silindi; bu cihazda otomatik senkron kapatıldı.', true); } catch (x) { msg('symsg', errTr(x)); } };
+  if (syAcik() && !A.syIlk) { A.syIlk = true; syCalis(true); }
 }
 async function reauth(pass) { const c = firebase.auth.EmailAuthProvider.credential(A.user.email, pass); await A.user.reauthenticateWithCredential(c); }
 async function saveName() {
@@ -216,6 +245,7 @@ async function delAccount() {
     try { await A.db.collection('push').doc(uid + '_de').delete(); } catch (e) { }
     await A.db.collection('users').doc(uid).delete();
     const wipeLocal = $('dloc').checked; A.deleted = true; await u.delete();
+    try { ['erdevelop-sync', 'erdevelop-sync-meta', 'erdevelop-sync-son'].forEach(k => localStorage.removeItem(k)); } catch (e) { }
     if (wipeLocal) { try { const keep = localStorage.getItem('erdevelop-key'); localStorage.clear(); if (keep) localStorage.setItem('erdevelop-key', keep); } catch (e) { } }
     app.innerHTML = '<section class="card"><h2>Hesabın silindi</h2><p>Hesabın ve sunucudaki tüm verilerin kalıcı olarak silindi. İstersen siteyi hesapsız kullanmaya devam edebilirsin.</p><a class="btn" href="./">Ana sayfa</a></section>';
   } catch (x) { A.deleted = false; msg('dmsg', errTr(x)); busy(b, false, 'Hesabımı kalıcı olarak sil'); }
@@ -231,5 +261,6 @@ locInfo(); boot();
 
 </script>
 <script data-goatcounter="https://erdevelop.goatcounter.com/count" async src="//gc.zgo.at/count.js"></script>
+<script src="/js/site.js" defer></script>
 </body>
 </html>

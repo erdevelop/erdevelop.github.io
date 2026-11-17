@@ -1,0 +1,43 @@
+# Site arama dizini, Yenilikler listesi ve RSS beslemesi
+# Her push'tan sonra arama.json, yenilikler.json ve feed.xml dosyalarını yeniden üretir; değiştiyse kaydeder.
+# Elle: Actions → "Site dizini ve yenilikler" → Run workflow.
+name: Site dizini ve yenilikler
+
+on:
+  push:
+    branches: [main]
+    paths-ignore:
+      - 'arama.json'
+      - 'yenilikler.json'
+      - 'feed.xml'
+  workflow_dispatch:
+
+concurrency:
+  group: site-indeks
+  cancel-in-progress: true
+
+permissions:
+  contents: write
+
+jobs:
+  uret:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 600
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+      - name: Dizini üret
+        run: node .github/indeks/olustur.mjs
+      - name: Değiştiyse kaydet
+        run: |
+          if git diff --quiet -- arama.json yenilikler.json feed.xml; then echo "Değişiklik yok"; exit 0; fi
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add arama.json yenilikler.json feed.xml
+          git commit -m "Site: arama dizini, yenilikler listesi ve RSS güncellendi"
+          for i in 1 2 3; do git pull --rebase -q origin main && git push -q origin HEAD:main && exit 0; sleep 5; done
+          exit 1

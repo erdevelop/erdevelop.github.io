@@ -1,0 +1,173 @@
+/* erdevelop · tüm sayfalarda ortak: site geneli arama (Ctrl+K ya da /) ve cihazlar arası senkron
+   Sayfaya eklemek için: <script src="/js/site.js" defer></script> */
+(function () {
+  'use strict';
+  if (window.__erSite) return; window.__erSite = 1;
+  const yol = location.pathname, D = document;
+  const KONSOL = /\/araclar\/konsol\.html$/.test(yol), TOOLS = /\/Tools\.html$/i.test(yol);
+  const esc = s => String(s ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+  const TRM = { ı: 'i', i: 'i', ş: 's', ğ: 'g', ü: 'u', ö: 'o', ç: 'c', â: 'a', î: 'i', û: 'u', é: 'e', è: 'e', ê: 'e', à: 'a', ä: 'a', ß: 'ss' };
+  const norm = s => String(s || '').toLocaleLowerCase('tr').replace(/[ışğüöçâîûéèêàäß]/g, c => TRM[c]).normalize('NFD').replace(/[̀-ͯ]/g, '');
+  const en = (D.documentElement.lang || '').startsWith('en');
+
+  /* ---------------- arama ---------------- */
+  let veri = null, yen = null, dlg = null, sec = 0, son = [], tur = '';
+  const getir = async u => { const r = await fetch(u, { cache: 'no-cache' }); if (!r.ok) throw new Error(r.status); return r.json(); };
+  const yukle = () => veri || (veri = getir('/arama.json').then(d => d.s.map(x => Object.assign(x, { _t: norm(x.t), _a: norm(x.a), _k: norm(x.k), _d: norm(x.d), _c: norm(x.c) }))).catch(e => { veri = null; throw e; }));
+  const yeniler = () => yen || (yen = getir('/yenilikler.json').then(d => d.s).catch(() => []));
+  function puan1(x, w) {
+    if (x._t === w) return 120; if (x._t.startsWith(w)) return 70;
+    if (new RegExp('(^|[^a-z0-9])' + w.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')).test(x._t)) return 50; if (x._t.includes(w)) return 35;
+    if (x._a.includes(w)) return 25; if (x._k.includes(w)) return 18; if (x._c.includes(w)) return 14; if (x._d.includes(w)) return 8; return 0;
+  }
+  function puan(x, kel) {
+    let p = 0;
+    for (const w of kel) {
+      /* Türkçe ünsüz yumuşaması ve ekler için: "kulüp" → "kulübü", "kitap" → "kitabı" */
+      let b = puan1(x, w); if (!b && w.length >= 4) b = puan1(x, w.slice(0, -1)) * .8;
+      if (!b) return 0; p += b;
+    }
+    if (yol === x.u || yol === x.u + 'index.html') p -= 30;
+    return p;
+  }
+  /* eşleşen parçaları <mark> ile göster (Türkçe karakterler normalize edilerek) */
+  function isaretle(t, kel) {
+    t = String(t || ''); if (!kel.length) return esc(t);
+    let n = '', ix = []; for (let i = 0; i < t.length; i++) { const c = norm(t[i]); n += c; for (let j = 0; j < c.length; j++) ix.push(i); }
+    const m = new Array(t.length).fill(false);
+    for (let w of kel) { if (n.indexOf(w) < 0 && w.length >= 4) w = w.slice(0, -1); let p = n.indexOf(w); while (p >= 0) { for (let j = p; j < p + w.length; j++) m[ix[j]] = true; p = n.indexOf(w, p + w.length); } }
+    let h = '', ac = false; for (let i = 0; i < t.length; i++) { if (m[i] !== ac) { h += m[i] ? '<mark>' : '</mark>'; ac = m[i]; } h += esc(t[i]); } return h + (ac ? '</mark>' : '');
+  }
+  function stil() {
+    if (D.getElementById('er-ara-css')) return;
+    const s = D.createElement('style'); s.id = 'er-ara-css';
+    s.textContent = `
+#er-ara{position:fixed;inset:0;z-index:2147483600;background:rgba(5,8,14,.55);backdrop-filter:blur(3px);-webkit-backdrop-filter:blur(3px);display:flex;justify-content:center;align-items:flex-start;padding:min(12vh,90px) 12px 12px;font:15px/1.45 system-ui,-apple-system,"Segoe UI",Roboto,sans-serif}
+#er-ara[hidden]{display:none}
+#er-ara .bx{width:min(680px,100%);max-height:min(76vh,640px);display:flex;flex-direction:column;background:#121826;color:#e8ecf3;border:1px solid rgba(255,255,255,.14);border-radius:14px;box-shadow:0 24px 70px rgba(0,0,0,.5);overflow:hidden}
+html[data-mode=light] #er-ara .bx{background:#fff;color:#1a2233;border-color:rgba(0,0,0,.12)}
+#er-ara .hd{display:flex;align-items:center;gap:10px;padding:12px 14px;border-bottom:1px solid rgba(127,127,127,.22)}
+#er-ara .hd svg{flex:0 0 auto;opacity:.6}
+#er-ara input{flex:1;min-width:0;background:none;border:0;outline:0;color:inherit;font:inherit;font-size:17px}
+#er-ara kbd{font:11px ui-monospace,monospace;border:1px solid rgba(127,127,127,.4);border-radius:4px;padding:1px 5px;opacity:.7}
+#er-ara .x{background:none;border:0;color:inherit;font-size:20px;cursor:pointer;opacity:.6;padding:0 4px}
+#er-ara .ch{display:flex;gap:6px;padding:8px 14px;overflow-x:auto;border-bottom:1px solid rgba(127,127,127,.15);scrollbar-width:none}
+#er-ara .ch button{flex:0 0 auto;font:12px system-ui,sans-serif;padding:4px 10px;border-radius:999px;border:1px solid rgba(127,127,127,.35);background:none;color:inherit;cursor:pointer;opacity:.8}
+#er-ara .ch button.on{background:#4f8cff;border-color:#4f8cff;color:#fff;opacity:1}
+#er-ara ul{list-style:none;margin:0;padding:6px;overflow-y:auto}
+#er-ara li a{display:flex;gap:10px;align-items:flex-start;padding:9px 10px;border-radius:9px;color:inherit;text-decoration:none}
+#er-ara li a.on,#er-ara li a:hover{background:rgba(79,140,255,.16)}
+#er-ara li .c{flex:0 0 auto;font:600 10.5px ui-monospace,monospace;text-transform:uppercase;letter-spacing:.4px;padding:3px 6px;border-radius:5px;background:rgba(127,127,127,.16);margin-top:2px;min-width:62px;text-align:center}
+#er-ara li .y{flex:1;min-width:0}
+#er-ara li b{display:block;font-weight:600}
+#er-ara li small{display:block;opacity:.7;font-size:12.5px;overflow:hidden;text-overflow:ellipsis;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical}
+#er-ara mark{background:rgba(255,200,60,.35);color:inherit;border-radius:2px}
+#er-ara .bs{padding:8px 14px 4px;font:600 11px ui-monospace,monospace;text-transform:uppercase;letter-spacing:.6px;opacity:.6}
+#er-ara .ft{display:flex;gap:14px;flex-wrap:wrap;justify-content:space-between;padding:8px 14px;border-top:1px solid rgba(127,127,127,.18);font-size:12px;opacity:.75}
+#er-ara .ft a{color:inherit}
+#er-ara .bos{padding:22px 16px;opacity:.75;text-align:center}
+.er-ara-btn{cursor:pointer}
+@media (max-width:560px){#er-ara{padding:8px}#er-ara .bx{max-height:calc(100vh - 16px)}#er-ara .kb{display:none}}`;
+    D.head.appendChild(s);
+  }
+  const KAT = ['Tümü', 'Cephe', 'Araç', 'Eğitim', 'Hesaplama', 'Komutlar', 'Oyun', 'Dil kulübü'];
+  function kur() {
+    if (dlg) return dlg; stil();
+    dlg = D.createElement('div'); dlg.id = 'er-ara'; dlg.hidden = true; dlg.setAttribute('role', 'dialog'); dlg.setAttribute('aria-modal', 'true'); dlg.setAttribute('aria-label', 'Sitede ara');
+    dlg.innerHTML = `<div class="bx"><div class="hd"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="7"/><path d="m20 20-3.5-3.5"/></svg>
+      <input type="search" id="er-ara-q" placeholder="${en ? 'Search tools, courses, games…' : 'Araç, eğitim, oyun ara…'}" autocomplete="off" spellcheck="false" enterkeyhint="go" aria-controls="er-ara-l"><kbd class="kb">Esc</kbd><button class="x" type="button" aria-label="Kapat">×</button></div>
+      <div class="ch">${KAT.map((k, i) => `<button type="button" data-k="${i ? k : ''}"${i ? '' : ' class="on"'}>${k}</button>`).join('')}</div>
+      <ul id="er-ara-l" role="listbox"></ul>
+      <div class="ft"><span class="kb">↑↓ seç · Enter aç · Ctrl+K</span><span><a href="/yenilikler.html">Yenilikler</a> · <a href="/Tools.html">Tüm araçlar</a> · <a href="/feed.xml">RSS</a></span></div></div>`;
+    D.body.appendChild(dlg);
+    const q = dlg.querySelector('input');
+    dlg.addEventListener('mousedown', e => { if (e.target === dlg) kapat(); });
+    dlg.querySelector('.x').onclick = kapat;
+    dlg.querySelectorAll('.ch button').forEach(b => b.onclick = () => { tur = b.dataset.k; dlg.querySelectorAll('.ch button').forEach(x => x.classList.toggle('on', x === b)); ara(); q.focus(); });
+    q.addEventListener('input', () => { sec = 0; ara(); });
+    q.addEventListener('keydown', e => {
+      if (e.key === 'ArrowDown' || e.key === 'ArrowUp') { e.preventDefault(); const n = son.length; if (n) { sec = (sec + (e.key === 'ArrowDown' ? 1 : -1) + n) % n; isaret(); } }
+      else if (e.key === 'Enter') { e.preventDefault(); const a = dlg.querySelectorAll('li a')[sec]; if (a) git(a.getAttribute('href'), e.ctrlKey || e.metaKey); }
+      else if (e.key === 'Escape') { e.preventDefault(); kapat(); }
+    });
+    return dlg;
+  }
+  const git = (u, yeni) => { if (yeni) window.open(u, '_blank'); else { kapat(); location.href = u; } };
+  function isaret() { const L = dlg.querySelectorAll('li a'); L.forEach((a, i) => a.classList.toggle('on', i === sec)); const a = L[sec]; if (a) a.scrollIntoView({ block: 'nearest' }); }
+  const satir = (x, kel) => `<li><a href="${esc(x.u)}" role="option"><span class="c">${esc(x.c)}</span><span class="y"><b>${isaretle(x.t, kel)}</b>${x.d ? `<small>${esc(x.d)}</small>` : ''}</span></a></li>`;
+  async function ara() {
+    const ul = dlg.querySelector('ul'), ham = dlg.querySelector('input').value, kel = norm(ham).split(/[^a-z0-9+#.]+/).filter(Boolean);
+    let L;
+    try { L = await yukle(); } catch (e) { ul.innerHTML = `<li class="bos">Arama dizini yüklenemedi. İnternet bağlantını kontrol et.</li>`; son = []; return; }
+    if (dlg.querySelector('input').value !== ham) return;
+    if (!kel.length) {
+      const Y = (await yeniler()).slice(0, 7), k = tur ? L.filter(x => x.c === tur).slice(0, 40) : [];
+      son = tur ? k : Y;
+      ul.innerHTML = tur ? `<li class="bs">${esc(tur)} · ${L.filter(x => x.c === tur).length}</li>` + k.map(x => satir(x, [])).join('')
+        : (Y.length ? `<li class="bs">Son eklenenler</li>` + Y.map(y => `<li><a href="${esc(y.u)}"><span class="c">${y.d.slice(8, 10)}.${y.d.slice(5, 7)}</span><span class="y"><b>${esc(y.t)}</b></span></a></li>`).join('') + `<li><a href="/yenilikler.html"><span class="c">→</span><span class="y"><b>Tüm yenilikler</b></span></a></li>` : '<li class="bos">Aramak için yaz.</li>');
+      if (!tur && Y.length) son = Y.concat([{}]);
+      sec = 0; isaret(); return;
+    }
+    son = L.filter(x => !tur || x.c === tur).map(x => [puan(x, kel), x]).filter(a => a[0] > 0).sort((a, b) => b[0] - a[0]).slice(0, 40).map(a => a[1]);
+    ul.innerHTML = son.length ? son.map(x => satir(x, kel)).join('') : `<li class="bos">“${esc(ham)}” için sonuç yok.${tur ? ' Kategori filtresini kaldırmayı dene.' : ''}</li>`;
+    if (sec >= son.length) sec = 0; isaret();
+  }
+  let onceki = null;
+  function ac(q) {
+    kur(); onceki = D.activeElement; dlg.hidden = false; D.documentElement.style.overflow = 'hidden';
+    const i = dlg.querySelector('input'); if (q != null) i.value = q; i.focus(); i.select(); sec = 0; ara();
+  }
+  function kapat() { if (!dlg || dlg.hidden) return; dlg.hidden = true; D.documentElement.style.overflow = ''; try { onceki && onceki.focus && onceki.focus(); } catch (e) { } }
+  window.erArama = { ac, kapat };
+
+  D.addEventListener('keydown', e => {
+    if (dlg && !dlg.hidden) { if (e.key === 'Escape') { e.preventDefault(); kapat(); } return; }
+    if (KONSOL) return;   /* Konsol'da klavye öykünücülere ve kabuğa ait */
+    const t = e.target, alan = t && (/^(INPUT|TEXTAREA|SELECT)$/.test(t.tagName) || t.isContentEditable);
+    if ((e.key === 'k' || e.key === 'K') && (e.ctrlKey || e.metaKey) && !e.altKey && !e.shiftKey) { if (TOOLS) return; e.preventDefault(); ac(); return; }
+    if (e.key === '/' && !alan && !e.ctrlKey && !e.metaKey && !e.altKey && !TOOLS) { e.preventDefault(); ac(); }
+  }, true);
+
+  /* üst çubuğa arama düğmesi */
+  function dugme() {
+    if (D.querySelector('.er-ara-btn')) return;
+    const mb = D.getElementById('modeBtn'), bar = D.querySelector('.topbar');
+    if (!bar) return;
+    const b = D.createElement('button'); b.type = 'button';
+    b.className = (mb ? mb.className : 'tb') + ' er-ara-btn'; b.title = 'Sitede ara (Ctrl+K)'; b.setAttribute('aria-label', 'Sitede ara');
+    b.innerHTML = '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" style="vertical-align:-2px"><circle cx="11" cy="11" r="7"/><path d="m20 20-3.5-3.5"/></svg>';
+    b.onclick = () => ac();
+    if (mb && mb.parentNode && bar.contains(mb)) mb.parentNode.insertBefore(b, mb); else { const w = bar.querySelector('.wrap') || bar; w.appendChild(b); }
+  }
+  if (D.readyState === 'loading') D.addEventListener('DOMContentLoaded', dugme); else dugme();
+
+  /* ---------------- cihazlar arası senkron (hesapta açıldıysa) ---------------- */
+  let acik = false; try { acik = localStorage.getItem('erdevelop-sync') === '1'; } catch (e) { }
+  /* kendi Firebase yüklemesi olan sayfalar: hesap sayfası senkronu kendisi yapar */
+  const KENDI = /\/(hesap\.html|oyunlar\/|sohbet\/|(ingilizce|fransizca|almanca)\.html)/;
+  if (!acik || KENDI.test(yol) || location.protocol !== 'https:' && !/^(localhost|127\.)/.test(location.hostname)) return;
+  const FB = { apiKey: 'AIzaSyBtNow8j7AZQO2sWCiXb1WbOT261wJUGRU', authDomain: 'oyun-bahcesi-62633.firebaseapp.com', projectId: 'oyun-bahcesi-62633', storageBucket: 'oyun-bahcesi-62633.firebasestorage.app', messagingSenderId: '591926138614', appId: '1:591926138614:web:24101e1be195ebc04c3ed7' };
+  const V = 'https://www.gstatic.com/firebasejs/10.12.2/';
+  const yukleJs = src => new Promise((res, rej) => { const s = D.createElement('script'); s.src = src; s.onload = res; s.onerror = rej; D.head.appendChild(s); });
+  const bekle = ms => new Promise(r => setTimeout(r, ms));
+  let hazir = null;
+  async function fb() {
+    if (D.querySelector('script[src*="firebasejs"]') && !(window.firebase && firebase.apps && firebase.apps.length)) { for (let i = 0; i < 40 && !(window.firebase && firebase.apps && firebase.apps.length); i++) await bekle(500); }
+    if (!window.firebase) await yukleJs(V + 'firebase-app-compat.js');
+    for (const n of ['auth', 'firestore']) if (!firebase[n]) await yukleJs(V + `firebase-${n}-compat.js`);
+    if (!firebase.apps.length) firebase.initializeApp(FB);
+    if (!window.erSenkron) await yukleJs('/js/senkron.js');
+    const auth = firebase.auth(); const u = await new Promise(r => { const off = auth.onAuthStateChanged(x => { off(); r(x); }); });
+    return u ? { db: firebase.firestore(), uid: u.uid } : null;
+  }
+  async function esitle(zorla) {
+    let s = 0; try { s = +localStorage.getItem('erdevelop-sync-son') || 0; } catch (e) { }
+    if (!zorla && Date.now() - s < 5 * 60 * 1000) return;
+    try { hazir = hazir || fb(); const h = await hazir; if (!h) return; const r = await erSenkron.calistir(h.db, h.uid); if (r.alinan) console.info('[senkron] diğer cihazdan alınan kayıt:', r.alinan); }
+    catch (e) { hazir = null; console.warn('[senkron]', e && (e.code || e.message) || e); }
+  }
+  const basla = () => setTimeout(() => esitle(false), 4000);
+  if (D.readyState === 'complete') basla(); else addEventListener('load', basla);
+  /* sayfadan ayrılırken, Firebase zaten yüklüyse son değişiklikleri gönder */
+  D.addEventListener('visibilitychange', () => { if (D.visibilityState === 'hidden' && hazir) esitle(true); });
+})();
