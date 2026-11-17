@@ -167,12 +167,14 @@
     const vMatrah = Math.max(0, kar - ihrInd);
     let vergi = 0;
     if (!o.vYok) vergi = o.vt === 'ltd' ? vMatrah * o.kv : gelirV(o.onceki + vMatrah) - gelirV(o.onceki);
+    const vf = m => o.vt === 'ltd' ? m * o.kv : gelirV(o.onceki + m) - gelirV(o.onceki);
+    const vergiTam = ihrInd ? vf(Math.max(0, kar)) : 0;
     const kps = o.vt === 'ltd' && o.kps && !o.vYok ? Math.max(0, kar - vergi) * 0.15 : 0;
     const tahsil = o.matrah + kdv - tev - stopaj;
     const kdvOde = Math.max(0, beyan - gKdv), kdvAlacak = Math.max(0, gKdv - beyan);
     const kalanV = o.vYok ? -stopaj : vergi - stopaj;
     const net = kar - (o.vYok ? 0 : vergi) - kps;
-    return { yd, kdvO, kdv, tev, beyan, gider, gKdv, damga, stopaj, kar, ihrInd, vMatrah, vergi, kps, tahsil, kdvOde, kdvAlacak, kalanV, net, fatura: o.matrah + kdv, marj: o.matrah ? net / o.matrah : NaN, efektif: kar > 0 ? (vergi + kps) / kar : 0 };
+    return { yd, kdvO, kdv, tev, beyan, gider, gKdv, damga, stopaj, kar, ihrInd, vMatrah, vergi, vergiTam, kps, tahsil, kdvOde, kdvAlacak, kalanV, net, fatura: o.matrah + kdv, marj: o.matrah ? net / o.matrah : NaN, efektif: kar > 0 ? (vergi + kps) / kar : 0 };
   }
 
   function oku() {
@@ -237,9 +239,10 @@
     if (!o.vYok) {
       h += kv('Vergiye tabi kazanç', P(r.vMatrah));
       h += kv(st.vt === 'ltd' ? 'Kurumlar vergisi (' + yz(o.kv) + ')' : 'Gelir vergisi (dilim farkı)', eksi(r.vergi), 'neg');
+      if (r.ihrInd) h += `<div class="nt" style="margin:4px 0 2px">Yurt dışı işte kazancın ${yz(Math.min(1, o.ihr))}'i ihracat indirimiyle vergiden düşüldü. İndirim olmasaydı ${st.vt === 'ltd' ? 'kurumlar' : 'gelir'} vergisi <b>${P(r.vergiTam)}</b> olurdu. İndirimi değiştirmek için "İhracat kazanç indirimi (%)" kutusunu kullan.</div>`;
       if (r.kps) h += kv('Kâr payı stopajı (%15)', eksi(r.kps), 'neg');
       if (r.stopaj) h += kv(r.kalanV >= 0 ? 'Stopaj düşüldükten sonra ödenecek' : 'Stopajdan iade / mahsup', P(Math.abs(r.kalanV)));
-    }
+    } else h += kv(st.vt === 'ltd' ? 'Kurumlar vergisi' : 'Gelir vergisi', 'hesaba katılmadı') + '<div class="nt" style="margin:4px 0 2px">"Gelir / kurumlar vergisini hesaba katma" kutusu işaretli; vergiyi görmek için işareti kaldır.</div>';
     h += grp('Nakit özeti');
     h += kv('Tahsilat', P(r.tahsil));
     h += kv('Altyapımcı / gider ödemesi (KDV dahil)', eksi(r.gider + r.gKdv), 'neg');
