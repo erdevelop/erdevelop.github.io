@@ -1519,7 +1519,7 @@ function hPools() {
   return P;
 }
 function hTimes() { const m = v => { const [a, b] = String(v || '').split(':').map(Number); return a * 60 + (b || 0); }; let a = m($('hFrom').value), b = m($('hTo').value), st = +$('hStep').value;
-  if (!(a >= 0) || !(b >= 0)) return []; if (b < a) [a, b] = [b, a]; const out = []; for (let t = a; t <= b && out.length < 96; t += st) out.push(t); return out; }
+  if (!(a >= 0) || !(b >= 0)) return []; if (b < a) b += 1440; /* bitiş başlangıçtan önceyse gece yarısını geçen aralık: 09:00–00:00 gibi */ const out = []; for (let t = a; t <= b && out.length < 96; t += st) out.push(t); return out; }
 function hPlan(daysOv) {
   const pool = (hPools().find(p => p[0] === S.h.src) || hPools()[0])[2], days = daysOv || +$('hDays').value, T = hTimes(), rep = $('hRep').checked;
   const fresh = shuffle(pool).sort((x, y) => { const a = S.leit[hKey(x)], b = S.leit[hKey(y)]; return (a ? a.box : 0) - (b ? b.box : 0); });
@@ -1533,7 +1533,7 @@ function hPlan(daysOv) {
 }
 function hInfo() {
   if (!$('hSrc').options.length) return; S.h = { ...S.h, src: $('hSrc').value, days: $('hDays').value, from: $('hFrom').value, to: $('hTo').value, step: $('hStep').value, mean: $('hMean').checked, rep: $('hRep').checked }; save();
-  const push = S.h.mode !== 'cal', P = hPlan(push ? 30 : 0), f = t => String(Math.floor(t / 60)).padStart(2, '0') + ':' + String(t % 60).padStart(2, '0'), times = `Günde ${P.T.length} bildirim (${P.T.map(f).slice(0, 8).join(', ')}${P.T.length > 8 ? '…' : ''})`;
+  const push = S.h.mode !== 'cal', P = hPlan(push ? 30 : 0), f = t => String(Math.floor(t / 60) % 24).padStart(2, '0') + ':' + String(t % 60).padStart(2, '0'), times = `Günde ${P.T.length} bildirim (${P.T.map(f).slice(0, 8).join(', ')}${P.T.length > 8 ? '…' : ''})`;
   $('hInfo').innerHTML = !P.pool ? 'Bu listede kelime yok.' : push ? `${times}<br>Listede ${P.pool} kelime · ${$('hRep').checked ? 'her kelime 1 ve 3 gün sonra tekrar gelir' : 'tekrarsız'}` : `${times}<br>Toplam ${P.n} bildirim · ${P.uniq} farklı kelime${P.n > 500 ? '<br><span style="color:var(--warn)">Çok fazla etkinlik takvimi yavaşlatabilir; gün sayısını azaltmayı düşün.</span>' : ''}`;
   if (push && S.pushOn) pushQueueSave();
   $('hAdd').disabled = $('hDl').disabled = !P.pool || !P.T.length;

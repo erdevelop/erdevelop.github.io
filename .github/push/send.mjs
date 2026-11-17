@@ -62,12 +62,15 @@ export function localNow(tz, now = new Date()) {
   const g = t => p.find(x => x.type === t).value; return { date: `${g('year')}-${g('month')}-${g('day')}`, min: +g('hour') * 60 + +g('minute') };
 }
 const toMin = s => { const [h, m] = String(s || '').split(':').map(Number); return h * 60 + (m || 0); };
-/* saati gelmiş ve henüz gönderilmemiş en son bildirim anı; yoksa null. win: GitHub zamanlayıcısının gecikme payı (dk) */
+/* saati gelmiş ve henüz gönderilmemiş en son bildirim anı; yoksa null. win: GitHub zamanlayıcısının gecikme payı (dk)
+   Bitiş başlangıçtan önceyse (09:00–00:00, 22:00–02:00) aralık gece yarısını geçer: gece yarısından sonraki anlar bir önceki günün aralığına sayılır. */
 export function dueSlot(d, now = new Date(), win = 50) {
   const { date, min } = localNow(d.tz, now); let a = toMin(d.from), b = toMin(d.to); const st = Math.max(15, +d.step || 180);
-  if (!(a >= 0 && b >= 0)) return null; if (b < a) [a, b] = [b, a];
-  let best = null; for (let s = a; s <= b; s += st) if (s <= min && min - s < win) best = s;
-  if (best == null) return null; const key = date + '|' + best; return key === d.last ? null : key;
+  if (!(a >= 0 && b >= 0)) return null; if (b < a) b += 1440;
+  const yday = localNow(d.tz, new Date(now.getTime() - 864e5)).date;
+  let best = null, day = null;
+  for (const [m, dt] of [[min, date], [min + 1440, yday]]) for (let s = a; s <= b; s += st) if (s <= m && m - s < win && (best == null || m - s < best.diff)) { best = { s, diff: m - s }; day = dt; }
+  if (best == null) return null; const key = day + '|' + best.s; return key === d.last ? null : key;
 }
 export function message(d) {
   const q = d.q || []; if (!q.length) return null; const w = q[(d.pos || 0) % q.length];
