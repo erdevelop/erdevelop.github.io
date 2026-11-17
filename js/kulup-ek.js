@@ -35,13 +35,17 @@
     D.PAKET.forEach(w => { if (!have.has(w[0].toLowerCase())) { WORDS.push(w); have.add(w[0].toLowerCase()); } });
     try { paintTrk(); srcOpts(); nextCard(); } catch (e) { }
   }
+  /* sayfada kapalı bölümler varsa (ileri seviyeye bırakılan içerik) paketlerden gelenleri de ayıkla */
+  const ARS = typeof ARSIV === 'object' ? ARSIV : {};
+  if (typeof kapaliAyir === 'function') { kapaliAyir(); try { paintTrk(); srcOpts(); nextCard(); } catch (e) { } }
+  if (typeof KAPALI === 'object' && Array.isArray(D.OKUMA)) { ARS.OKUMA = D.OKUMA.filter(r => KAPALI.has(r.trk)); D.OKUMA = D.OKUMA.filter(r => !KAPALI.has(r.trk)); }
 
   /* ---------------- sözlük (okumada dokunulan kelime için) ---------------- */
   let DICT = null;
   function dict() {
     if (DICT) return DICT; DICT = new Map();
     const add = (en, tr) => { const k = artSil(String(en).toLowerCase()); if (k && tr && !DICT.has(k)) DICT.set(k, tr); const n = norm(k); if (n && tr && !DICT.has('~' + n)) DICT.set('~' + n, tr); };
-    WORDS.forEach(w => add(w[0], w[1])); (typeof TW !== 'undefined' ? TW : []).forEach(w => add(w.en, w.tr)); (S.my || []).forEach(w => add(w.en, w.tr)); Object.entries(D.SOZLUK || {}).forEach(([k, v]) => add(k, v));
+    WORDS.forEach(w => add(w[0], w[1])); (typeof TW !== 'undefined' ? TW : []).forEach(w => add(w.en, w.tr)); (ARS.WORDS || []).forEach(w => add(w[0], w[1])); (ARS.TW || []).forEach(w => add(w.en, w.tr)); (S.my || []).forEach(w => add(w.en, w.tr)); Object.entries(D.SOZLUK || {}).forEach(([k, v]) => add(k, v));
     return DICT;
   }
   /* artikel / mastar eki ayıklama (dile göre) */
@@ -302,7 +306,7 @@ dialog.tanit .hd small{display:block;font-weight:400;color:var(--muted);font-siz
 
   /* ---------------- seviye testi ---------------- */
   function testStart() {
-    const pool = l => { const tw = (typeof TW !== 'undefined' ? TW : []).filter(w => w.lvl === l && w.tr); const ws = WORDS.filter(w => w[3] === l).map(w => ({ en: w[0], tr: w[1] })); return tw.concat(ws); };
+    const pool = l => { const tw = (typeof TW !== 'undefined' ? TW : []).concat(ARS.TW || []).filter(w => w.lvl === l && w.tr); const ws = WORDS.filter(w => w[3] === l).map(w => ({ en: w[0], tr: w[1] })); return tw.concat(ws); };
     const V = []; [[1, 'A1'], [2, 'A2'], [3, 'B1'], [4, 'B2']].forEach(([l, lab]) => { let P = pool(l); if (P.length < 8) P = pool(l - 1).concat(P); shuffle(P).slice(0, 3).forEach(w => { const c0 = w.tr.split(',')[0].trim(), wr = [...new Set(shuffle(P.map(x => x.tr.split(',')[0].trim()).filter(t => t && t !== c0)))].slice(0, 3); V.push([lab, `“${w.en}” ne demek?`, shuffle([c0, ...wr]), c0]); }); });
     const G = D.SEVIYE.map(q => [q[0], q[1], q[2], q[2][q[3]]]);
     const Qs = []; LVL.forEach(l => { Qs.push(...shuffle(V.filter(q => q[0] === l)), ...shuffle(G.filter(q => q[0] === l))); });

@@ -25,7 +25,7 @@
     { id: 'c1', ev: 'konusma', n: 1, t: '1 konuşma turu tamamla' },
     { id: 't2', ev: 'telaffuz', n: 2, t: '2 telaffuz cümlesini %80 üstü söyle' },
     { id: 'z3', ev: 'kalip', n: 3, t: '3 kalıp adımı tamamla' },
-    { id: 's1', ev: 'toplanti', n: 1, t: '1 toplantı simülasyonunu bitir' },
+    { id: 's1', ev: 'toplanti', n: 1, t: '1 simülasyon bitir' },
     { id: 'q1', ev: 'yarisma', n: 1, t: '1 yarışma oyna' },
     { id: 'o1', ev: 'okuma', n: 1, t: '1 okuma metni bitir' },
     { id: 'gr1', ev: 'gramer', n: 1, t: '1 gramer dersi bitir' },
@@ -39,7 +39,7 @@
     { id: 'wc5', ev: 'konusma', n: 5, t: '5 konuşma turu tamamla' },
     { id: 'wp10', ev: 'telaffuz', n: 10, t: '10 telaffuz cümlesini %80 üstü söyle' },
     { id: 'wz15', ev: 'kalip', n: 15, t: '15 kalıp adımı tamamla' },
-    { id: 'ws2', ev: 'toplanti', n: 2, t: '2 toplantı simülasyonunu bitir' },
+    { id: 'ws2', ev: 'toplanti', n: 2, t: '2 simülasyon bitir' },
     { id: 'wq', ev: 'haftaYar', n: 1, t: 'Haftanın yarışmasını oyna' },
     { id: 'wo3', ev: 'okuma', n: 3, t: '3 okuma metni bitir' },
     { id: 'wgr3', ev: 'gramer', n: 3, t: '3 gramer dersi bitir' },
@@ -105,7 +105,7 @@
   }
 
   /* addXP sarmalayıcı: sayfadaki XP nedenlerinden olay türü çıkarılır; ayrıca haftalık kişisel XP sayılır (oda hedefi için) */
-  const MAP = { 'okuma': 'okuma', 'gramer': 'gramer', 'yazma': 'yazma', 'konuşma turu': 'konusma', 'dinleme': 'dinleme', 'toplantı bitti': 'toplanti', 'telaffuz': 'telaffuz', 'kalıp': 'kalip', 'kendi cümlen': 'kalip', 'yarışma': 'yarisma' };
+  const MAP = { 'okuma': 'okuma', 'gramer': 'gramer', 'yazma': 'yazma', 'konuşma turu': 'konusma', 'dinleme': 'dinleme', 'toplantı bitti': 'toplanti', 'simülasyon bitti': 'toplanti', 'telaffuz': 'telaffuz', 'kalıp': 'kalip', 'kendi cümlen': 'kalip', 'yarışma': 'yarisma' };
   const orig = addXP;
   addXP = function (n, why) {
     orig(n, why); if (!n) return;
