@@ -409,35 +409,39 @@ body:not(.yu) .rate .re{margin-right:5px}
 /* ayar düğmeleri */
 .uisec{display:grid;grid-template-columns:repeat(3,1fr);gap:8px} .uisec button{display:flex;flex-direction:column;align-items:center;gap:4px;padding:10px 6px;border:2px solid var(--line);border-radius:12px;background:var(--panel);color:var(--fg);font:600 13px var(--f-body);cursor:pointer}
 .uisec button i{font-style:normal;font-size:22px} .uisec button small{font-weight:400;font-size:11px;color:var(--muted);text-align:center;line-height:1.3} .uisec button.on{border-color:var(--accent);background:var(--accent-dim)}
-/* ---------- renkli arayüz: büyük kartlar, büyük düğmeler, her bölümün kendi rengi ---------- */
-body.renk{--k-kelime:#fb923c;--k-kalip:#a78bfa;--k-dinleme:#38bdf8;--k-konusma:#34d399;--k-sim:#f472b6;--k-telaffuz:#22d3ee;--k-yarisma:#fbbf24;--k-okuma:#60a5fa;--k-yaz:#fb7185;--k-gramer:#818cf8;--k-ilerleme:#4ade80;--k-oda:#2dd4bf;--on-accent:#14110a;font-size:17px}
-:root:not([data-mode="dark"]) body.renk{--k-kelime:#ea580c;--k-kalip:#7c3aed;--k-dinleme:#0284c7;--k-konusma:#059669;--k-sim:#db2777;--k-telaffuz:#0891b2;--k-yarisma:#d97706;--k-okuma:#2563eb;--k-yaz:#e11d48;--k-gramer:#4f46e5;--k-ilerleme:#16a34a;--k-oda:#0d9488;--on-accent:#fff}
+/* ---------- renkli arayüz: büyük kartlar, büyük düğmeler, her bölümün kendi rengi ----------
+   Renkler canlı ama göz yormasın: doygunluğu kısılmış tonlar, kartta ve düğmelerde düz renk yerine o rengin yumuşak karışımı. */
+body.renk{--k-kelime:#f0a46b;--k-kalip:#b6a3e6;--k-dinleme:#7fc3e6;--k-konusma:#76c9a0;--k-sim:#eba3c2;--k-telaffuz:#73c7cf;--k-yarisma:#e8c26a;--k-okuma:#8fb3ec;--k-yaz:#ec9a95;--k-gramer:#a3aaf0;--k-ilerleme:#88c79a;--k-oda:#6cc7ba;--on-accent:#1b1710;font-size:17px}
+:root:not([data-mode="dark"]) body.renk{--k-kelime:#c8763a;--k-kalip:#7f63c4;--k-dinleme:#3b86b5;--k-konusma:#3a8f66;--k-sim:#b45a83;--k-telaffuz:#2f8d97;--k-yarisma:#a57d1f;--k-okuma:#4a74c2;--k-yaz:#bb5a52;--k-gramer:#5a62c4;--k-ilerleme:#478a5a;--k-oda:#2f8a7e;--on-accent:#fff}
 body.renk{--accent:var(--k-kelime)} body.renk[data-tab="kalip"]{--accent:var(--k-kalip)} body.renk[data-tab="dinleme"]{--accent:var(--k-dinleme)} body.renk[data-tab="konusma"]{--accent:var(--k-konusma)} body.renk[data-tab="sim"]{--accent:var(--k-sim)} body.renk[data-tab="telaffuz"]{--accent:var(--k-telaffuz)} body.renk[data-tab="yarisma"]{--accent:var(--k-yarisma)} body.renk[data-tab="okuma"]{--accent:var(--k-okuma)} body.renk[data-tab="yaz"]{--accent:var(--k-yaz)} body.renk[data-tab="gramer"]{--accent:var(--k-gramer)} body.renk[data-tab="ilerleme"]{--accent:var(--k-ilerleme)} body.renk[data-tab="oda"]{--accent:var(--k-oda)}
-body.renk{--accent-dim:color-mix(in srgb,var(--accent) 16%,transparent)}
-body.renk .bg{background:radial-gradient(520px 380px at -10% -5%,color-mix(in srgb,var(--accent) 26%,transparent),transparent 70%),radial-gradient(480px 420px at 110% 25%,color-mix(in srgb,#a78bfa 20%,transparent),transparent 70%),radial-gradient(520px 420px at 30% 110%,color-mix(in srgb,#38bdf8 16%,transparent),transparent 70%)}
-body.renk .head h1{font-size:clamp(2rem,8vw,2.7rem);background:linear-gradient(90deg,var(--accent),#a78bfa 60%,#38bdf8);-webkit-background-clip:text;background-clip:text;color:transparent}
+body.renk{--accent-dim:color-mix(in srgb,var(--accent) 14%,transparent);--tint:color-mix(in srgb,var(--accent) 22%,var(--panel));--tint2:color-mix(in srgb,var(--accent) 10%,var(--panel))}
+:root:not([data-mode="dark"]) body.renk{--tint:color-mix(in srgb,var(--accent) 16%,#fff);--tint2:color-mix(in srgb,var(--accent) 6%,#fff)}
+body.renk .bg{background:radial-gradient(520px 380px at -10% -5%,color-mix(in srgb,var(--accent) 13%,transparent),transparent 70%),radial-gradient(480px 420px at 110% 25%,color-mix(in srgb,#b6a3e6 9%,transparent),transparent 70%),radial-gradient(520px 420px at 30% 110%,color-mix(in srgb,#7fc3e6 8%,transparent),transparent 70%)}
+body.renk .head h1{font-size:clamp(2rem,8vw,2.7rem);background:linear-gradient(90deg,var(--accent),color-mix(in srgb,var(--accent) 45%,#9d8fd9));-webkit-background-clip:text;background-clip:text;color:transparent}
 body.renk header.head>p,body.renk .trkinfo,body.renk #kInfo,body.renk #p-kelime .panel .note,body.renk #tabs2 .acc{display:none!important}
-body.renk main .panel,body.renk .gv,body.renk details.kayar{border-radius:22px;border-color:color-mix(in srgb,var(--accent) 30%,var(--line));box-shadow:0 6px 22px rgba(0,0,0,.10)}
+body.renk main .panel,body.renk .gv,body.renk details.kayar{border-radius:22px;border-color:color-mix(in srgb,var(--accent) 22%,var(--line));box-shadow:0 4px 16px rgba(0,0,0,.06)}
 body.renk main .btn{border-radius:14px;padding:11px 16px;font-size:15px}
 body.renk main .btn.pri{background:var(--accent);border-color:var(--accent);color:var(--on-accent)}
 body.renk .trk button{padding:9px 14px!important;font-size:15px}
-body.renk .trk button.on{background:var(--accent)!important;border-color:var(--accent)!important;color:var(--on-accent)!important} body.renk .trk button.on b{color:inherit!important}
+body.renk .trk button.on{background:var(--tint)!important;border-color:var(--accent)!important;color:var(--fg)!important}
 body.renk .fcard{height:300px}
-body.renk .fcard .f{background:linear-gradient(145deg,var(--accent) 0%,color-mix(in srgb,var(--accent) 45%,#7c3aed) 100%);border:0;box-shadow:0 14px 34px color-mix(in srgb,var(--accent) 35%,transparent)}
-body.renk .fcard .f .w,body.renk .fcard .f .tag,body.renk .fcard .f .hint,body.renk .fcard .f *{color:#fff!important}
-body.renk .fcard .f .spk{background:rgba(255,255,255,.2);border-color:transparent}
-body.renk .fcard .b{border:3px solid var(--accent)}
+body.renk .fcard .f{background:linear-gradient(150deg,var(--tint) 0%,var(--tint2) 100%);border:2px solid color-mix(in srgb,var(--accent) 45%,transparent);box-shadow:0 8px 24px color-mix(in srgb,var(--accent) 14%,transparent)}
+body.renk .fcard .f .w{color:var(--accent)!important} body.renk .fcard .f .tag{color:var(--muted)!important}
+body.renk .fcard .f .spk{background:var(--panel);border-color:transparent}
+body.renk .fcard .b{border:2px solid color-mix(in srgb,var(--accent) 45%,transparent);background:var(--tint2)}
 body.renk .fcard .w{font-size:clamp(2.6rem,11vw,3.4rem)}
 body.renk .rate{gap:10px;margin-top:14px}
-body.renk .rate .btn{min-height:78px;border:0!important;border-radius:22px;color:#fff!important;font-size:16px;font-weight:800;box-shadow:0 6px 16px rgba(0,0,0,.18)}
-body.renk .rate .re{font-size:32px}
-body.renk .rate .no{background:linear-gradient(160deg,#fb7185,#e11d48)!important} body.renk .rate .mid{background:linear-gradient(160deg,#fcd34d,#f59e0b)!important} body.renk .rate .ok{background:linear-gradient(160deg,#4ade80,#16a34a)!important}
-body.renk .bnav{border-top:0;box-shadow:0 -6px 24px rgba(0,0,0,.12)}
+body.renk .rate .btn{min-height:78px;border-radius:22px;font-size:16px;font-weight:800;border-width:2px!important;box-shadow:0 3px 10px rgba(0,0,0,.06)}
+body.renk .rate .re{font-size:30px}
+body.renk .rate .no{--c:#e88a8a} body.renk .rate .mid{--c:#e3b65a} body.renk .rate .ok{--c:#6fbf8e}
+:root:not([data-mode="dark"]) body.renk .rate .no{--c:#c0504f} :root:not([data-mode="dark"]) body.renk .rate .mid{--c:#a8781a} :root:not([data-mode="dark"]) body.renk .rate .ok{--c:#3a8a5a}
+body.renk .rate .no,body.renk .rate .mid,body.renk .rate .ok{color:var(--c)!important;border-color:color-mix(in srgb,var(--c) 45%,transparent)!important;background:color-mix(in srgb,var(--c) 15%,var(--panel))!important}
+body.renk .bnav{border-top:0;box-shadow:0 -4px 18px rgba(0,0,0,.08)}
 body.renk .bnav .i{font-size:26px}
 body.renk .bnav button.on{color:var(--accent)} body.renk .bnav button.on .i{background:var(--accent-dim);border-radius:14px;padding:2px 12px}
 `;
     document.head.appendChild(st);
-    const B = document.body, UI = [['klasik', '🖥️', 'Klasik', 'İlk görünüm'], ['sade', '🌿', 'Sade', 'Yuvarlak, sakin'], ['renkli', '🎨', 'Renkli', 'Büyük kartlar, bol renk']];
+    const B = document.body, UI = [['klasik', '🖥️', 'Klasik', 'İlk görünüm'], ['sade', '🌿', 'Sade', 'Yuvarlak, sakin'], ['renkli', '🎨', 'Renkli', 'Büyük kartlar, yumuşak renkler']];
     const cur = () => { try { return localStorage.getItem('erdevelop-arayuz') || 'sade'; } catch (e) { return 'sade'; } };
     function uygula(u) { try { localStorage.setItem('erdevelop-arayuz', u); } catch (e) { } B.classList.toggle('yu', u !== 'klasik'); B.classList.toggle('renk', u === 'renkli'); B.dataset.ui = u; boya(); }
     function boya() { const g = el('sUi'); if (g) g.querySelectorAll('button').forEach(b => b.classList.toggle('on', b.dataset.ui === cur())); }
