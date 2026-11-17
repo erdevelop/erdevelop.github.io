@@ -71,7 +71,7 @@
   </div>
 
   <div class="box"><h3>2 · Altyapımcılar ve giderler</h3>
-    <p class="hint" style="margin-top:2px">İşi verdiğin altyapımcının, yazılım lisansının, baskının vb. KDV hariç tutarını ve KDV oranını yaz. Faturasız gider için KDV'yi 0 seç (vergiden düşülemeyebilir).</p>
+    <p class="hint" style="margin-top:2px">Tutarları teklifle aynı para biriminde yaz. İşi verdiğin altyapımcının, yazılım lisansının, baskının vb. KDV hariç tutarını ve KDV oranını yaz. Faturasız gider için KDV'yi 0 seç (vergiden düşülemeyebilir).</p>
     <div id="m-list"></div>
     <div class="btns"><button type="button" class="btn ghost sm" id="m-ekle">+ Satır ekle</button></div>
   </div>
@@ -104,7 +104,7 @@
   </div>
 
   <div class="box" id="hedef"><h3>Ters hesap: elimde ne kalsın?</h3>
-    <label for="h-net">Cebimde kalmasını istediğim net tutar (₺)</label><input id="h-net" inputmode="decimal" placeholder="75.000">
+    <label for="h-net" id="l-hnet">Cebimde kalmasını istediğim net tutar (₺)</label><input id="h-net" inputmode="decimal" placeholder="75.000">
     <div class="res" id="o-hedef" aria-live="polite"></div>
   </div>
 
@@ -144,6 +144,10 @@
   };
   const n0 = v => { const x = pnum(v); return isFinite(x) ? x : 0; };
   const pct = v => n0(v) / 100;
+  let PB = 'TRY', KUR = 1;
+  const SEM = { TRY: '₺', USD: '$', EUR: '€', GBP: '£' };
+  /* tutarlar içeride TL; ekranda seçili para biriminde */
+  const P = x => isFinite(x) ? (x / KUR).toLocaleString('tr-TR', { style: 'currency', currency: PB }) : '—';
   let st = { tip: 'firma', vt: 'smm', mal: [{ ad: 'Altyapımcı', t: '', k: '20' }] };
 
   function gelirV(m) { if (m <= 0) return 0; let v = 0, alt = 0; for (const [ust, o] of GV) { if (m > alt) v += (Math.min(m, ust) - alt) * o; alt = ust; } return v; }
@@ -174,7 +178,7 @@
   function oku() {
     const pb = byId('p-pb').value, kur = pb === 'TRY' ? 1 : n0(byId('p-kur').value);
     return { tip: st.tip, vt: st.vt, pb, kur, tutar: n0(byId('p-tut').value), matrah: n0(byId('p-tut').value) * kur,
-      kdv: pct(byId('p-kdv').value), tev: +byId('p-tev').value, mal: st.mal.map(m => ({ t: n0(m.t), k: pct(m.k) })),
+      kdv: pct(byId('p-kdv').value), tev: +byId('p-tev').value, mal: st.mal.map(m => ({ t: n0(m.t) * kur, k: pct(m.k) })),
       onceki: n0(byId('v-onceki').value), kv: pct(byId('v-kv').value), stp: pct(byId('v-stp').value), ihr: pct(byId('v-ihr').value),
       kps: byId('v-kps').checked, dv: byId('v-dv').checked, vYok: byId('v-yok').checked };
   }
@@ -182,13 +186,13 @@
   const kv = (k, v, c) => `<div class="kv${c ? ' ' + c : ''}"><span>${k}</span><b>${v}</b></div>`;
   const grp = t => `<div class="grp">${t}</div>`;
   const yz = x => '%' + fmt(x * 100, 1);
-  const eksi = x => x > 0.005 ? '− ' + tl(x) : tl(0);
+  const eksi = x => x > 0.005 ? '− ' + P(x) : P(0);
   const doviz = (x, pb) => x.toLocaleString('tr-TR', { style: 'currency', currency: pb });
 
   function cizMal() {
     byId('m-list').innerHTML = st.mal.map((m, i) => `<div class="mal" data-i="${i}">
       <div class="ad">${i ? '' : '<label>Açıklama</label>'}<input data-k="ad" value="${esc(m.ad)}" placeholder="Altyapımcı / gider" aria-label="Açıklama"></div>
-      <div>${i ? '' : '<label>Tutar (KDV hariç, ₺)</label>'}<input data-k="t" inputmode="decimal" value="${esc(m.t)}" placeholder="0" aria-label="Tutar"></div>
+      <div>${i ? '' : '<label class="l-pb">Tutar (KDV hariç, ' + SEM[PB] + ')</label>'}<input data-k="t" inputmode="decimal" value="${esc(m.t)}" placeholder="0" aria-label="Tutar"></div>
       <div>${i ? '' : '<label>KDV %</label>'}<select data-k="k" aria-label="KDV oranı">${['20', '10', '1', '0'].map(v => `<option value="${v}"${v === String(m.k) ? ' selected' : ''}>%${v}</option>`).join('')}</select></div>
       <div>${i ? '' : '<label>&nbsp;</label>'}<button type="button" class="ib" data-sil aria-label="Satırı sil">✕</button></div></div>`).join('');
   }
@@ -197,6 +201,9 @@
     document.querySelectorAll('#m-tip button').forEach(b => b.classList.toggle('on', b.dataset.v === st.tip));
     document.querySelectorAll('#v-tip button').forEach(b => b.classList.toggle('on', b.dataset.v === st.vt));
     const o = oku(), yd = st.tip === 'yd', ltd = st.vt === 'ltd';
+    PB = o.pb; KUR = o.kur || 1;
+    document.querySelectorAll('.l-pb').forEach(l => l.textContent = 'Tutar (KDV hariç, ' + SEM[PB] + ')');
+    byId('l-hnet').textContent = 'Cebimde kalmasını istediğim net tutar (' + SEM[PB] + ')';
     byId('w-kur').hidden = o.pb === 'TRY';
     byId('w-kdv').hidden = yd; byId('w-tev').hidden = st.tip !== 'bel';
     byId('w-onceki').hidden = ltd; byId('w-kv').hidden = !ltd; byId('w-kps').hidden = !ltd;
@@ -205,59 +212,60 @@
     byId('h-tip').textContent = HINT[st.tip];
     try { localStorage.setItem(LSK, JSON.stringify({ st, f: [...document.querySelectorAll('main [id^="p-"],main [id^="v-"],#h-net')].map(e => [e.id, e.type === 'checkbox' ? e.checked : e.value]) })); } catch (e) { }
 
+    if (o.pb !== 'TRY' && !o.kur) { show('o-ana', '', [], 'Para birimi ' + o.pb + ' seçili: hesap için kuru gir (1 ' + o.pb + ' = ? ₺). Gelir vergisi dilimleri TL olduğu için kur gerekli.'); byId('o-cmp').innerHTML = ''; show('o-hedef'); return; }
     if (!o.matrah) { show('o-ana'); byId('o-cmp').innerHTML = '<p class="ph">Teklif tutarını girince karşılaştırma burada görünür.</p>'; show('o-hedef'); return; }
     const r = hesap(o);
-    let h = `<div class="nt">Cebinde kalan (tahmini, vergiler sonrası)</div><div class="big">${tl(r.net)}</div><div class="nt">Satışa göre net marj ${yz(r.marj)}${r.kar > 0 && !o.vYok ? ' · efektif vergi ' + yz(r.efektif) : ''}</div>`;
+    let h = `<div class="nt">Cebinde kalan (tahmini, vergiler sonrası)</div><div class="big">${P(r.net)}</div>${o.pb !== 'TRY' ? '<div class="nt">≈ ' + tl(r.net) + '</div>' : ''}<div class="nt">Satışa göre net marj ${yz(r.marj)}${r.kar > 0 && !o.vYok ? ' · efektif vergi ' + yz(r.efektif) : ''}</div>`;
     h += grp('Fatura ve tahsilat');
-    if (o.pb !== 'TRY') h += kv('Teklif', doviz(o.tutar, o.pb) + ' <span class="alt">× ' + fmt(o.kur, 4) + '</span>');
-    h += kv('Hizmet bedeli (matrah)', tl(o.matrah));
-    h += kv(r.yd ? 'KDV (istisna)' : 'KDV (' + yz(r.kdvO) + ')', tl(r.kdv));
-    h += kv('Fatura toplamı', tl(r.fatura));
+    if (o.pb !== 'TRY') h += kv('Kur', '1 ' + o.pb + ' = ' + fmt(o.kur, 4) + ' ₺');
+    h += kv('Hizmet bedeli (matrah)', P(o.matrah));
+    h += kv(r.yd ? 'KDV (istisna)' : 'KDV (' + yz(r.kdvO) + ')', P(r.kdv));
+    h += kv('Fatura toplamı', P(r.fatura));
     if (r.tev) h += kv('Tevkifat (' + o.tev + '/10, alıcı öder)', eksi(r.tev), 'neg');
     if (r.stopaj) h += kv('Gelir vergisi stopajı (' + yz(o.stp) + ')', eksi(r.stopaj), 'neg');
-    h += kv('Müşteriden hesabına geçen', tl(r.tahsil), 'top');
+    h += kv('Müşteriden hesabına geçen', P(r.tahsil), 'top');
     h += grp('KDV');
-    h += kv('Beyan ettiğin (hesaplanan) KDV', tl(r.beyan));
-    h += kv('İndirilecek KDV (altyapımcı/gider)', tl(r.gKdv));
+    h += kv('Beyan ettiğin (hesaplanan) KDV', P(r.beyan));
+    h += kv('İndirilecek KDV (altyapımcı/gider)', P(r.gKdv));
     if (r.kdvOde) h += kv('Ödeyeceğin KDV', eksi(r.kdvOde), 'neg top');
-    else h += kv(r.yd ? 'KDV iadesi alınabilir' : 'Devreden / iade edilebilir KDV', tl(r.kdvAlacak), 'top');
+    else h += kv(r.yd ? 'KDV iadesi alınabilir' : 'Devreden / iade edilebilir KDV', P(r.kdvAlacak), 'top');
     h += grp('Kâr ve vergi');
     h += kv('Giderler (KDV hariç)', eksi(r.gider), 'neg');
     if (r.damga) h += kv('Damga vergisi', eksi(r.damga), 'neg');
-    h += kv('Brüt kâr', tl(r.kar));
+    h += kv('Brüt kâr', P(r.kar));
     if (r.ihrInd) h += kv('Hizmet ihracatı kazanç indirimi', eksi(r.ihrInd));
     if (!o.vYok) {
-      h += kv('Vergiye tabi kazanç', tl(r.vMatrah));
+      h += kv('Vergiye tabi kazanç', P(r.vMatrah));
       h += kv(st.vt === 'ltd' ? 'Kurumlar vergisi (' + yz(o.kv) + ')' : 'Gelir vergisi (dilim farkı)', eksi(r.vergi), 'neg');
       if (r.kps) h += kv('Kâr payı stopajı (%15)', eksi(r.kps), 'neg');
-      if (r.stopaj) h += kv(r.kalanV >= 0 ? 'Stopaj düşüldükten sonra ödenecek' : 'Stopajdan iade / mahsup', tl(Math.abs(r.kalanV)));
+      if (r.stopaj) h += kv(r.kalanV >= 0 ? 'Stopaj düşüldükten sonra ödenecek' : 'Stopajdan iade / mahsup', P(Math.abs(r.kalanV)));
     }
     h += grp('Nakit özeti');
-    h += kv('Tahsilat', tl(r.tahsil));
+    h += kv('Tahsilat', P(r.tahsil));
     h += kv('Altyapımcı / gider ödemesi (KDV dahil)', eksi(r.gider + r.gKdv), 'neg');
     if (r.kdvOde) h += kv('Vergi dairesine KDV', eksi(r.kdvOde), 'neg');
-    if (r.kdvAlacak) h += kv('KDV alacağı (iade/devir)', '+ ' + tl(r.kdvAlacak));
+    if (r.kdvAlacak) h += kv('KDV alacağı (iade/devir)', '+ ' + P(r.kdvAlacak));
     if (r.damga) h += kv('Damga vergisi', eksi(r.damga), 'neg');
-    if (!o.vYok && r.kalanV) h += kv(r.kalanV > 0 ? 'Kalan gelir/kurumlar vergisi' : 'Stopaj iadesi', r.kalanV > 0 ? eksi(r.kalanV) : '+ ' + tl(-r.kalanV), r.kalanV > 0 ? 'neg' : '');
+    if (!o.vYok && r.kalanV) h += kv(r.kalanV > 0 ? 'Kalan gelir/kurumlar vergisi' : 'Stopaj iadesi', r.kalanV > 0 ? eksi(r.kalanV) : '+ ' + P(-r.kalanV), r.kalanV > 0 ? 'neg' : '');
     if (r.kps) h += kv('Kâr payı stopajı', eksi(r.kps), 'neg');
-    h += kv('Net', tl(r.net), 'top');
+    h += kv('Net', P(r.net), 'top');
     byId('o-ana').innerHTML = h;
 
     const T = Object.keys(TIP), R = T.map(t => hesap({ ...o, tip: t }));
     const sat = (ad, f) => `<tr><td>${ad}</td>${R.map((x, i) => `<td class="${T[i] === st.tip ? 'on' : ''}">${f(x)}</td>`).join('')}</tr>`;
     byId('o-cmp').innerHTML = `<table class="cmp"><thead><tr><th></th>${T.map(t => `<th class="${t === st.tip ? 'on' : ''}">${TIP[t]}</th>`).join('')}</tr></thead><tbody>
-      ${sat('Fatura toplamı', x => tl(x.fatura))}${sat('Hesaba geçen', x => tl(x.tahsil))}${sat('Ödenecek KDV', x => tl(x.kdvOde))}${sat('KDV alacağı', x => tl(x.kdvAlacak))}
-      ${o.vYok ? '' : sat('Vergi', x => tl(x.vergi + x.kps))}<tr class="son"><td>Net</td>${R.map((x, i) => `<td class="${T[i] === st.tip ? 'on' : ''}">${tl(x.net)}</td>`).join('')}</tr></tbody></table>`;
+      ${sat('Fatura toplamı', x => P(x.fatura))}${sat('Hesaba geçen', x => P(x.tahsil))}${sat('Ödenecek KDV', x => P(x.kdvOde))}${sat('KDV alacağı', x => P(x.kdvAlacak))}
+      ${o.vYok ? '' : sat('Vergi', x => P(x.vergi + x.kps))}<tr class="son"><td>Net</td>${R.map((x, i) => `<td class="${T[i] === st.tip ? 'on' : ''}">${P(x.net)}</td>`).join('')}</tr></tbody></table>`;
 
-    const hn = n0(byId('h-net').value);
+    const hn = n0(byId('h-net').value) * o.kur;
     if (hn > 0) {
       let a = 0, b = Math.max(1, hn) * 4;
       while (hesap({ ...o, matrah: b }).net < hn && b < 1e13) b *= 2;
       for (let i = 0; i < 80; i++) { const m = (a + b) / 2; hesap({ ...o, matrah: m }).net < hn ? a = m : b = m; }
       const rr = hesap({ ...o, matrah: b });
-      const rows = [['Fatura toplamı', tl(rr.fatura)], ['Hesaba geçen', tl(rr.tahsil)], ['Mevcut teklife göre fark', (b - o.matrah >= 0 ? '+ ' : '− ') + tl(Math.abs(b - o.matrah))]];
-      if (o.pb !== 'TRY' && o.kur) rows.unshift(['Teklif (' + o.pb + ')', doviz(b / o.kur, o.pb)]);
-      show('o-hedef', tl(b), rows, 'Vermen gereken teklif (KDV hariç, mevcut giderlerle)');
+      const rows = [['Fatura toplamı', P(rr.fatura)], ['Hesaba geçen', P(rr.tahsil)], ['Mevcut teklife göre fark', (b - o.matrah >= 0 ? '+ ' : '− ') + P(Math.abs(b - o.matrah))]];
+      if (o.pb !== 'TRY') rows.push(['TL karşılığı', tl(b)]);
+      show('o-hedef', P(b), rows, 'Vermen gereken teklif (KDV hariç, mevcut giderlerle)');
     } else show('o-hedef');
   }
 
