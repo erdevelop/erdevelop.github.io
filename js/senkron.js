@@ -8,7 +8,7 @@
   if (window.erSenkron) return;
   const META = 'erdevelop-sync-meta', SON = 'erdevelop-sync-son', MAX_TEK = 150 * 1024, MAX_TOP = 700 * 1024;
   /* senkron dışında kalanlar: cihaza özgü, gizli ya da geçici kayıtlar */
-  const HARIC = /^(erdevelop-key|skipgc|erdevelop-mode(-gun)?|erdevelop-sync.*|firebase.*|.*import.*|.*token.*|.*cache.*|mini-gh-clip|erdevelop-pops|goatcounter.*)$/i;
+  const HARIC = /^(erdevelop-key|skipgc|erdevelop-mode(-gun)?|erdevelop-sync.*|firebase.*|.*import.*|.*token.*|.*cache.*|mini-gh-clip|erdevelop-pops|goatcounter.*|erdevelop-z(id|k|ot)|erdevelop-ist.*)$/i;
   const LS = { get: k => { try { return localStorage.getItem(k); } catch (e) { return null; } }, set: (k, v) => { try { localStorage.setItem(k, v); return true; } catch (e) { return false; } }, del: k => { try { localStorage.removeItem(k); } catch (e) { } } };
   const js = (k, d) => { try { return JSON.parse(LS.get(k)) ?? d; } catch (e) { return d; } };
   const hash = s => { let h = 0x811c9dc5; for (let i = 0; i < s.length; i++) { h ^= s.charCodeAt(i); h = Math.imul(h, 16777619); } return (h >>> 0).toString(36) + '.' + s.length; };

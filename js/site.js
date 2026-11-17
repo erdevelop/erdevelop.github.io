@@ -187,6 +187,61 @@ html[data-mode=light] #er-ara .bx{background:#fff;color:#1a2233;border-color:rgb
     if (D.readyState === 'loading') D.addEventListener('DOMContentLoaded', kur); else kur();
   })();
 
+  /* ---------------- site istatistiği: anonim sayfa kaydı (Firestore, kimlik/IP yok) ----------------
+     Her sayfa açılışında bir kayıt (ist_olay): sayfa, nereden gelindiği, cihaz türü, tarayıcı, sistem, dil, saat dilimi,
+     ekran genişliği ve tarayıcıda tutulan rastgele ziyaretçi/oturum kodu. Sayfa görünür kaldıkça kalma süresi güncellenir.
+     Hesabım > "bu tarayıcıyı sayma" (skipgc) açıksa hiçbir şey gönderilmez. Panel: /ozelaraclar/istatistik.html */
+  (function () {
+    if (location.hostname !== 'erdevelop.github.io' || navigator.webdriver || /^\/ozelaraclar\/istatistik/.test(location.pathname)) return;
+    try { if (localStorage.getItem('skipgc') === 't') return; } catch (e) { return; }
+    if (!window.fetch || !window.crypto || !crypto.getRandomValues) return;
+    const PRJ = 'oyun-bahcesi-62633', KEY = 'AIzaSyBtNow8j7AZQO2sWCiXb1WbOT261wJUGRU';
+    const AD = `projects/${PRJ}/databases/(default)/documents/ist_olay/`;
+    const URL_ = `https://firestore.googleapis.com/v1/projects/${PRJ}/databases/(default)/documents:commit?key=${KEY}`;
+    const rid = n => Array.from(crypto.getRandomValues(new Uint8Array(n)), x => 'abcdefghijklmnopqrstuvwxyz0123456789'[x % 36]).join('');
+    let v = '', o = null, k = 1, yeni = false;
+    try {
+      v = localStorage.getItem('erdevelop-zid') || ''; if (!/^[a-z0-9]{12}$/.test(v)) { v = rid(12); localStorage.setItem('erdevelop-zid', v); yeni = true; }
+      k = +localStorage.getItem('erdevelop-zk') || 0;
+      o = JSON.parse(localStorage.getItem('erdevelop-zot') || 'null');
+      if (!o || !o.id || Date.now() - o.son > 30 * 60 * 1000) { o = { id: rid(10), n: 0 }; k++; localStorage.setItem('erdevelop-zk', k); }
+      o.n = (o.n || 0) + 1; o.son = Date.now(); localStorage.setItem('erdevelop-zot', JSON.stringify(o));
+    } catch (e) { return; }
+    const ua = navigator.userAgent, coarse = matchMedia('(pointer:coarse)').matches, sw = screen.width || innerWidth;
+    const b = /Edg\//.test(ua) ? 'Edge' : /OPR\/|Opera/.test(ua) ? 'Opera' : /SamsungBrowser/.test(ua) ? 'Samsung' : /YaBrowser/.test(ua) ? 'Yandex' : /Firefox\/|FxiOS/.test(ua) ? 'Firefox' : /CriOS|Chrome\//.test(ua) ? 'Chrome' : /Safari\//.test(ua) ? 'Safari' : 'Diğer';
+    const os = /Windows/.test(ua) ? 'Windows' : /Android/.test(ua) ? 'Android' : /iPhone|iPod/.test(ua) ? 'iOS' : /iPad/.test(ua) || (/Mac OS X/.test(ua) && navigator.maxTouchPoints > 1) ? 'iPadOS' : /Mac OS X/.test(ua) ? 'macOS' : /CrOS/.test(ua) ? 'ChromeOS' : /Linux/.test(ua) ? 'Linux' : 'Diğer';
+    const d = coarse && Math.min(sw, screen.height || sw) < 600 ? 'telefon' : coarse ? 'tablet' : 'masaüstü';
+    let r = ''; try { const q = new URLSearchParams(location.search); r = q.get('utm_source') || q.get('ref') || ''; if (!r && document.referrer) { const h = new URL(document.referrer).hostname; if (h !== location.hostname) r = h.replace(/^www\./, ''); } } catch (e) { }
+    let p = location.pathname.replace(/\/index\.html$/, '/') || '/';
+    const S = x => ({ stringValue: String(x == null ? '' : x).slice(0, 160) }), I = x => ({ integerValue: String(Math.max(0, Math.round(+x || 0))) });
+    const id = rid(20);
+    const yolla = (yazim, canli) => fetch(URL_, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ writes: [yazim] }), keepalive: !!canli }).then(x => x.ok);
+    let tz = ''; try { tz = Intl.DateTimeFormat().resolvedOptions().timeZone || ''; } catch (e) { }
+    let olustu = null, sn = 0, gonderilen = 0, gorunur = document.visibilityState === 'visible', bas = gorunur ? Date.now() : 0, zaman = 0;
+    const sure = () => sn + (gorunur && bas ? (Date.now() - bas) / 1000 : 0);
+    function olustur() {
+      olustu = yolla({
+        update: { name: AD + id, fields: { v: S(v), s: S(o.id), p: S(p), ti: S((document.title || '').trim()), r: S(r), d: S(d), b: S(b), os: S(os), l: S(navigator.language || ''), tz: S(tz), w: I(sw), k: I(k), n: I(o.n), yeni: { booleanValue: yeni }, sn: I(0) } },
+        currentDocument: { exists: false }, updateTransforms: [{ fieldPath: 't', setToServerValue: 'REQUEST_TIME' }, { fieldPath: 'son', setToServerValue: 'REQUEST_TIME' }]
+      }).catch(() => false);
+      olustu.then(ok => { if (ok) planla(); });
+    }
+    function guncelle(canli) {
+      const x = Math.min(21600, Math.round(sure())); if (!olustu || x - gonderilen < 3) return;
+      olustu.then(ok => { if (!ok) return; gonderilen = x;
+        yolla({ update: { name: AD + id, fields: { sn: I(x) } }, updateMask: { fieldPaths: ['sn'] }, currentDocument: { exists: true }, updateTransforms: [{ fieldPath: 'son', setToServerValue: 'REQUEST_TIME' }] }, canli).catch(() => { });
+      });
+    }
+    /* görünürken 15 sn, 45 sn, sonra dakikada bir; 30 dk'dan sonra durur (ücretsiz kotayı korur) */
+    function planla() { clearTimeout(zaman); if (!gorunur || sure() > 1800) return; const s = sure(); zaman = setTimeout(() => { guncelle(false); planla(); }, (s < 15 ? 15 - s : s < 45 ? 45 - s : 60) * 1000 + 200); }
+    document.addEventListener('visibilitychange', () => {
+      if (document.visibilityState === 'hidden') { if (gorunur && bas) sn += (Date.now() - bas) / 1000; gorunur = false; bas = 0; clearTimeout(zaman); guncelle(true); }
+      else { gorunur = true; bas = Date.now(); try { o.son = Date.now(); localStorage.setItem('erdevelop-zot', JSON.stringify(o)); } catch (e) { } planla(); }
+    });
+    addEventListener('pagehide', () => { if (gorunur && bas) { sn += (Date.now() - bas) / 1000; bas = Date.now(); } guncelle(true); });
+    setTimeout(olustur, 600);
+  })();
+
   /* ---------------- cihazlar arası senkron (hesapta açıldıysa) ---------------- */
   let acik = false; try { acik = localStorage.getItem('erdevelop-sync') === '1'; } catch (e) { }
   /* kendi Firebase yüklemesi olan sayfalar: hesap sayfası senkronu kendisi yapar */
