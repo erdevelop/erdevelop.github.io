@@ -296,7 +296,7 @@ dialog.tanit .hd small{display:block;font-weight:400;color:var(--muted);font-siz
         ${kel ? `<p class="sub" style="margin:6px 0 0">Kartlarda “Bilmedim” dediğin <b>${kel}</b> kelime de tekrar listesinde.</p>` : ''}
         <div class="hl kisa" id="ilHl">${hz.length ? hz.map(h => `<div><small>${{ okuma: '📖 okuma', gramer: '📘 gramer', yazma: '✍️ yazma', dikte: '🎧 dikte', seviye: '🧭 test', duello: '⚔️ meydan okuma' }[h.tur] || h.tur} · ${new Date(h.at).toLocaleDateString('tr-TR')}</small><br>${esc(h.soru)} → <b>${esc(h.dogru)}</b>${h.verilen ? ` <span class="muted">(senin: ${esc(h.verilen)})</span>` : ''}</div>`).join('') + (hz.length > 6 ? '<button class="btn sm" type="button" id="ilHlAll" style="margin-top:8px">Tümünü göster (' + hz.length + ')</button>' : '') : '<p class="sub" style="margin:6px 0 0">Henüz hata yok. Okuma, gramer, yazma ve testlerdeki yanlışların burada toplanır.</p>'}</div></div>
       <div class="panel" style="margin-top:10px"><div class="lbl muted mono small" style="margin-bottom:8px">🏅 Rozetler</div><div class="rz">${ROZET.map(r => `<div class="${E.rozet[r[0]] ? '' : 'off'}" title="${esc(r[3])}"><i>${r[1]}</i><b>${esc(r[2])}</b><small>${esc(r[3])}</small></div>`).join('')}</div></div>
-      <div class="panel" style="margin-top:10px"><div class="lbl muted mono small">🏆 Haftalık lig${M ? ' · ' + esc(Cloud.room.name || '') : ''}</div>
+      <div class="panel" style="margin-top:10px"><div class="lbl muted mono small" style="display:flex;align-items:center">🏆 Haftalık lig${M ? ' · ' + esc(Cloud.room.name || '') : ''}${lig && lig.length ? '<button class="btn sm" type="button" id="skLig" style="margin-left:auto">📤 Paylaş</button>' : ''}</div>
         ${lig ? `<div class="lig">${lig.map((m, i) => `<div class="${m.me ? 'me' : ''}"><span>${['🥇', '🥈', '🥉'][i] || (i + 1) + '.'}</span><b>${esc(m.n)}</b><span class="mono small">${nf(m.x)} XP</span></div>`).join('')}</div><p class="sub" style="margin:6px 0 0">Bu haftanın XP'si; pazartesi sıfırlanır.</p>` : '<p class="sub" style="margin:6px 0 0">Arkadaşlarınla yarışmak için <a href="#oda" id="ilOda">Oda</a> bölümünden bir odaya gir.</p>'}</div>`;
     P.querySelector('#ilHedef').onclick = e => { const b = e.target.closest('[data-h]'); if (b) { E.hedef = +b.dataset.h; sv(); ilPaint(); hedefBar(); } };
     el('ilTest').onclick = testStart;
@@ -306,6 +306,7 @@ dialog.tanit .hd small{display:block;font-weight:400;color:var(--muted);font-siz
       Y.kuyruk = shuffle(ks.map(k => by.get(k)).filter(Boolean)).slice(0, 20); if (!Y.kuyruk.length) return TM.toast('Tekrar edilecek kelime yok'); Y.mod = 'kelime'; setTab('yaz'); };
     if (el('ilHlAll')) el('ilHlAll').onclick = e => { el('ilHl').classList.remove('kisa'); e.target.remove(); };
     if (el('ilOda')) el('ilOda').onclick = e => { e.preventDefault(); setTab('oda'); };
+    if (el('skLig')) el('skLig').onclick = ligSkor;
   }
 
   /* ---------------- seviye testi ---------------- */
@@ -397,6 +398,65 @@ dialog.tanit .hd small{display:block;font-weight:400;color:var(--muted);font-siz
   if (typeof Cloud !== 'undefined' && typeof Cloud.paint === 'function') { const op = Cloud.paint; Cloud.paint = function () { const r = op.apply(this, arguments); if (S.tab === 'ilerleme') try { ilPaint(); } catch (e) { } return r; }; }
   const h0 = location.hash.slice(1); if (PAINT[h0] || PAINT[S.tab]) setTab(PAINT[h0] ? h0 : S.tab);
   rozetKontrol(true);
+
+  /* ================= skor tablosu paylaşımı (Oda · Yarışma · Haftalık lig) =================
+     Tablo 1080×1350 bir görsel olarak çizilir ve telefonun paylaşım menüsü açılır (WhatsApp, Instagram…);
+     paylaşım desteklenmiyorsa görsel indirilir. Menü dokunuşun içinde açılsın diye görsel eşzamanlı üretilir. */
+  function skorGorsel(o) {
+    const W = 1080, H = 1350, P = 90, c = document.createElement('canvas'); c.width = W; c.height = H; const x = c.getContext('2d');
+    const FD = getComputedStyle(document.body).getPropertyValue('--f-display').trim() || 'sans-serif', FB = getComputedStyle(document.body).getPropertyValue('--f-body').trim() || 'sans-serif';
+    const A = '#f2b33d', FG = '#eef2f8', MU = '#9aa8bf';
+    const g = x.createLinearGradient(0, 0, W, H); g.addColorStop(0, '#101a2e'); g.addColorStop(1, '#1d2b48'); x.fillStyle = g; x.fillRect(0, 0, W, H);
+    const halo = (cx, cy, r, col) => { const h = x.createRadialGradient(cx, cy, 0, cx, cy, r); h.addColorStop(0, col); h.addColorStop(1, 'rgba(0,0,0,0)'); x.fillStyle = h; x.fillRect(0, 0, W, H); };
+    halo(120, 80, 520, 'rgba(242,179,61,.16)'); halo(1000, 1200, 560, 'rgba(160,140,230,.14)');
+    x.textBaseline = 'alphabetic'; x.fillStyle = A; x.font = `800 36px ${FB}`; x.fillText(o.ust.toLocaleUpperCase('tr'), P, 150);
+    x.fillStyle = FG; let bs = 88; do { x.font = `800 ${bs}px ${FD}`; bs -= 4; } while (x.measureText(o.baslik).width > W - 2 * P && bs > 40); x.fillText(o.baslik, P, 250);
+    x.fillStyle = MU; x.font = `500 36px ${FB}`; x.fillText(o.alt, P, 310);
+    const rows = o.satir.slice(0, 10), RH = Math.min(150, Math.floor((o.satir.length > rows.length ? 740 : 820) / Math.max(rows.length, 1))), FS = Math.min(62, Math.round(RH * .42)), MS = Math.min(76, Math.round(RH * .55));
+    let y = 390; const fit = (t, w, f) => { x.font = f; let s = String(t); while (x.measureText(s).width > w && s.length > 1) s = s.slice(0, -2) + '…'; return s; };
+    rows.forEach((r, i) => {
+      if (r.ben) { x.fillStyle = 'rgba(242,179,61,.14)'; x.beginPath(); (x.roundRect ? x.roundRect(P - 20, y, W - 2 * P + 40, RH - 10, 22) : x.rect(P - 20, y, W - 2 * P + 40, RH - 10)); x.fill(); }
+      const cy = y + (RH - 10) / 2 + FS * .36;
+      x.textAlign = 'center'; x.font = `700 ${i < 3 ? MS : FS}px ${FB}`; x.fillStyle = i < 3 ? FG : MU; x.fillText(['🥇', '🥈', '🥉'][i] || String(i + 1), P + 40, cy + (i < 3 ? MS * .08 : 0));
+      x.textAlign = 'left'; x.fillStyle = FG; x.fillText(fit(r.ad + (r.ben ? ' (sen)' : ''), W - 2 * P - 400, `700 ${FS}px ${FB}`), P + 110, cy);
+      x.textAlign = 'right'; x.fillStyle = i === 0 ? A : FG; x.font = `800 ${FS}px ${FB}`; x.fillText(r.deger, W - P, cy); x.textAlign = 'left';
+      y += RH;
+    });
+    if (o.satir.length > rows.length) { x.fillStyle = MU; x.font = `500 32px ${FB}`; x.fillText(`+${o.satir.length - rows.length} kişi daha`, P + 110, y + 34); }
+    x.fillStyle = 'rgba(255,255,255,.14)'; x.fillRect(P, H - 150, W - 2 * P, 2);
+    x.font = `800 36px ${FD}`; x.fillStyle = FG; x.fillText(`${D.dilAd} Kulübü`, P, H - 88);
+    x.font = `500 28px ${FB}`; x.fillStyle = MU; x.textAlign = 'right'; x.fillText('erdevelop.github.io' + location.pathname.replace(/\.html$/, ''), W - P, H - 88); x.textAlign = 'left';
+    return c;
+  }
+  function skorPaylas(o) {
+    if (!o.satir.length) return TM.toast('Tabloda henüz kimse yok');
+    const d = skorGorsel(o).toDataURL('image/png'), bin = atob(d.split(',')[1]), u8 = new Uint8Array(bin.length); for (let i = 0; i < bin.length; i++) u8[i] = bin.charCodeAt(i);
+    const file = new File([u8], 'skor-tablosu.png', { type: 'image/png' });
+    if (navigator.canShare && navigator.canShare({ files: [file] })) return navigator.share({ files: [file], text: `${o.baslik} · ${D.dilAd} Kulübü` }).catch(e => { if (e.name !== 'AbortError') navigator.share({ files: [file] }).catch(() => { }); });
+    TM.download(file.name, file); TM.toast('Görsel indirildi; istediğin yerde paylaşabilirsin');
+  }
+  const pBtn = id => `<button class="btn sm" type="button" id="${id}" style="margin-left:auto">📤 Paylaş</button>`;
+  const odaAd = () => (Cloud.room && (Cloud.room.name || Cloud.room.id)) || '';
+  const benMi = m => Cloud.user && m.uid === Cloud.user.uid;
+  /* Oda sekmesi: toplam XP tablosu */
+  function odaSkor() { const M = Cloud.members.slice().sort((a, b) => (b.xp || 0) - (a.xp || 0)), wk = weekKey();
+    skorPaylas({ ust: 'Oda · ' + odaAd(), baslik: '🏆 Skor tablosu', alt: 'Toplam XP · ' + new Date().toLocaleDateString('tr-TR', { day: 'numeric', month: 'long', year: 'numeric' }), satir: M.map(m => ({ ad: m.name || '?', deger: nf(m.xp || 0) + ' XP', ben: benMi(m) })) }); }
+  /* Yarışma sekmesi: haftanın yarışması */
+  function yarSkor() { const wk = weekKey(), L = Cloud.members.filter(m => m.wk === wk && m.wkBest > 0).sort((a, b) => b.wkBest - a.wkBest);
+    skorPaylas({ ust: 'Haftanın yarışması · ' + odaAd(), baslik: '🏆 Bu haftanın sıralaması', alt: '10 soru · her biri 15 saniye · ' + new Date().toLocaleDateString('tr-TR', { day: 'numeric', month: 'long' }), satir: L.map(m => ({ ad: m.name || '?', deger: nf(m.wkBest) + ' puan', ben: benMi(m) })) }); }
+  /* İlerleme: haftalık lig (haftanın XP'si) */
+  function ligSkor() { const wk = weekKey(), L = Cloud.members.map(m => ({ ad: m.name || '?', x: m.gwk === wk ? (m.gxp || 0) : 0, ben: benMi(m) })).sort((a, b) => b.x - a.x);
+    skorPaylas({ ust: 'Haftalık lig · ' + odaAd(), baslik: '🏆 Haftalık lig', alt: 'Bu haftanın XP\'si · pazartesi sıfırlanır', satir: L.map(r => ({ ad: r.ad, deger: nf(r.x) + ' XP', ben: r.ben })) }); }
+  function skorDugmeleri() {
+    if (typeof Cloud === 'undefined' || !Cloud.room) return;
+    const oda = el('p-oda'), t = oda && [...oda.querySelectorAll('.lbl')].find(l => /Skor tablosu/.test(l.textContent));
+    if (t && !el('skOda')) { t.style.display = 'flex'; t.style.alignItems = 'center'; t.insertAdjacentHTML('beforeend', pBtn('skOda')); el('skOda').onclick = odaSkor; }
+    const q = el('qLb'); if (q && q.querySelector('table') && !el('skYar')) { q.insertAdjacentHTML('beforeend', `<div class="ctl" style="justify-content:flex-end;margin-top:6px">${pBtn('skYar')}</div>`); el('skYar').onclick = yarSkor; }
+  }
+  if (typeof Cloud !== 'undefined') {
+    for (const fn of ['paint', 'paintLb']) if (typeof Cloud[fn] === 'function') { const o = Cloud[fn]; Cloud[fn] = function () { const r = o.apply(this, arguments); try { skorDugmeleri(); } catch (e) { } return r; }; }
+  }
+  window.skorPaylas = skorPaylas;
 
   /* ================= arayüz seçimi: Klasik · Sade · Renkli (Ayarlar → 🎨 Arayüz) =================
      Seçim tarayıcıda 'erdevelop-arayuz' anahtarında, üç kulüpte ortak. Sayfa açılırken <body> hemen ardındaki küçük betik uygular. */
