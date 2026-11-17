@@ -92,6 +92,10 @@ const html = `<!doctype html>
 .kart .bar i { display: block; height: 100%; background: #2e8b57; }
 #devam[hidden] { display: none; }
 .bos { color: var(--muted); padding: 20px 0; }
+.gorunum { display: inline-flex; border: 1px solid var(--line); border-radius: 8px; overflow: hidden; margin: 14px 0 4px; }
+.gorunum a { font: 500 13px var(--f-mono); padding: 8px 14px; color: var(--text); text-decoration: none; background: var(--panel); }
+.gorunum a + a { border-left: 1px solid var(--line); }
+.gorunum a.on { background: var(--accent); color: var(--on-accent, #fff); }
 .doc { max-width: 860px; margin-top: 44px; }
 .doc h2 { font: 700 1.2rem/1.3 var(--f-display); color: var(--fg); margin: 0 0 10px; }
 .doc h3 { font: 600 1rem/1.4 var(--f-body); color: var(--fg); margin: 18px 0 6px; }
@@ -108,6 +112,7 @@ const html = `<!doctype html>
 </div></div>
 <main class="wrap">
   <header class="head"><h1>Eğitimler</h1><p>${egitimSay} ücretsiz Türkçe eğitim: cephe tasarımı, CAD ve BIM programları, yazılım ve programlama dilleri; yanında dil kulüpleri. Çoğu 7 günlük programdır, her günün sonunda alıştırma vardır. İlerlemen bu tarayıcıda, giriş yaptıysan hesabında saklanır.</p></header>
+  <nav class="gorunum" aria-label="Görünüm"><a class="on" href="./" aria-current="page">Tüm eğitimler</a><a href="yollar/">Öğrenme yolları</a></nav>
   <div class="ara"><input class="inp" id="q" type="search" placeholder="Eğitim ara… (ör. Revit, cam, Python, statik)" autocomplete="off" aria-label="Eğitim ara"><span class="say" id="say">${toplam} eğitim</span></div>
   <div class="cips" id="cips"><button type="button" class="on" data-g="">Hepsi</button>${gruplar.map(g => `<button type="button" data-g="${g.id}">${esc(KISA[g.id] || g.h.tr)}</button>`).join('')}</div>
   <section class="grup" id="devam" hidden><div class="layer-head"><span class="swatch"></span><h2>Kaldığın yerden devam et</h2><span class="meta" id="devamN"></span></div><div class="izgara" id="devamL"></div></section>
@@ -117,6 +122,7 @@ ${gruplar.map(bolum).join('\n')}
     <h2>Eğitimler hakkında</h2>
     <p>Bu sayfadaki eğitimler, cephe tasarımı ve mühendisliğinde, mimari ve mekanik tasarım programlarında ve yazılımda temel bilgiyi adım adım vermek için hazırlandı. Her eğitim şemalar, örnekler ve alıştırmalarla ilerler; hesap gerektirmez.</p>
     <h3>Nasıl ilerlemeliyim?</h3>
+    <p>Hedefine göre sıralanmış eğitim listeleri için <a href="yollar/">öğrenme yollarına</a> bak: cephe tasarımcısı, cephe mühendisi, BIM koordinatörü, hesaplamalı tasarım, proje ve saha, CAD otomasyonu, yazılım ve yapay zekâ. Kısaca:</p>
     <ul><li>Cepheye yeniyseniz <b>Cephe Tasarımının Temelleri</b> ve <b>Statiğin Temelleri</b> ile başlayın; ardından sistemler ve detay eğitimlerine geçin.</li>
     <li>Çizim programlarında önce <b>Teknik Resim</b>, sonra kullandığınız programın eğitimi (AutoCAD, Revit, Rhino, SolidWorks) iyi bir sıradır.</li>
     <li>Yazılıma yeni başlıyorsanız <b>Programlama Temelleri</b> ve <b>Python</b> en kolay başlangıçtır; tasarım programlarını otomatikleştirmek için AutoLISP, VBA ya da Rhino Python eğitimlerine geçebilirsiniz.</li></ul>
@@ -161,4 +167,5 @@ ${gruplar.map(bolum).join('\n')}
 </html>
 `;
 fs.writeFileSync(path.join(KOK, 'egitimler/index.html'), html);
+await import('./yollar.mjs'); /* öğrenme yolları sayfası */
 console.log(`egitimler/index.html: ${gruplar.length} grup, ${toplam} kart (${egitimSay} eğitim)`);
