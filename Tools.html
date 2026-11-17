@@ -912,19 +912,34 @@
 (() => {
   const btn = document.getElementById('refBtn'); if (!btn) return;
   const en = () => (document.getElementById('langBtn') || {}).textContent === 'TR';
-  const toast = m => { let t = document.querySelector('.rtoast'); if (!t) { t = document.createElement('div'); t.className = 'rtoast'; t.setAttribute('role', 'status'); document.body.appendChild(t); } t.textContent = m; t.classList.add('on'); clearTimeout(toast.h); toast.h = setTimeout(() => t.classList.remove('on'), 2600); };
+  const toast = (m, ms) => { let t = document.querySelector('.rtoast'); if (!t) { t = document.createElement('div'); t.className = 'rtoast'; t.setAttribute('role', 'status'); document.body.appendChild(t); } t.textContent = m; t.classList.add('on'); clearTimeout(toast.h); toast.h = setTimeout(() => t.classList.remove('on'), ms || 2600); };
   const stampOf = () => document.lastModified || '';
+  /* sürüm: her push'tan sonra GitHub Actions'ın yazdığı /surum.json (tarih saat · commit) */
+  const ilkSurum = fetch('/surum.json', { cache: 'no-store' }).then(r => r.ok ? r.json() : null).then(j => j && j.v ? j.v + (j.c ? ' (' + j.c + ')' : '') : '').catch(() => '');
+  ilkSurum.then(v => { if (v) btn.dataset.surum = v; ipucu(); });
+  function ipucu() { const t = (en() ? 'Refresh (load the latest version)' : 'Yenile (son sürümü yükle)') + (btn.dataset.surum ? (en() ? ' · current: ' : ' · şu an: ') + btn.dataset.surum : ''); btn.title = t; btn.setAttribute('aria-label', t); }
   btn.addEventListener('click', async () => {
     toast(en() ? 'Refreshing…' : 'Yenileniyor…');
     try { const r = await navigator.serviceWorker?.getRegistration(); if (r) await r.update(); } catch (e) { }
     try { const ks = await caches.keys(); await Promise.all(ks.filter(k => /sayfa/.test(k)).map(k => caches.delete(k))); } catch (e) { }
     try { await fetch(location.pathname, { cache: 'reload' }); } catch (e) { }
-    try { sessionStorage.setItem('tools-yenilendi', '1'); } catch (e) { }
+    let eski = ''; try { eski = (await ilkSurum) || ''; } catch (e) { }
+    try { sessionStorage.setItem('tools-yenilendi', eski || '1'); } catch (e) { }
     location.reload();
   });
-  try { if (sessionStorage.getItem('tools-yenilendi')) { sessionStorage.removeItem('tools-yenilendi'); setTimeout(() => toast(en() ? 'Refreshed · latest version loaded' : 'Yenilendi · son sürüm yüklendi'), 500); } } catch (e) { }
+  try {
+    const was = sessionStorage.getItem('tools-yenilendi');
+    if (was) {
+      sessionStorage.removeItem('tools-yenilendi');
+      ilkSurum.then(v => setTimeout(() => {
+        const s = v ? (en() ? ' · version ' : ' · sürüm ') + v : '';
+        const ayni = v && was === v;
+        toast((en() ? (ayni ? 'Refreshed · already the latest version' : 'Refreshed · latest version loaded') : (ayni ? 'Yenilendi · zaten son sürüm' : 'Yenilendi · son sürüm yüklendi')) + s, 4500);
+      }, 500));
+    }
+  } catch (e) { }
   /* dil değişince düğmenin ipucu da değişsin */
-  document.getElementById('langBtn')?.addEventListener('click', () => setTimeout(() => { const t = en() ? 'Refresh (load the latest version)' : 'Yenile (son sürümü yükle)'; btn.title = t; btn.setAttribute('aria-label', t); }, 0));
+  document.getElementById('langBtn')?.addEventListener('click', () => setTimeout(ipucu, 0));
 })();
 </script>
 <script src="/js/site.js" defer></script>

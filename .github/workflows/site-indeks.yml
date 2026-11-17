@@ -1,5 +1,5 @@
 # Site arama dizini, Yenilikler listesi ve RSS beslemesi
-# Her push'tan sonra arama.json, yenilikler.json ve feed.xml dosyalarını yeniden üretir; değiştiyse kaydeder.
+# Her push'tan sonra surum.json (tarih saat · commit), arama.json, yenilikler.json ve feed.xml dosyalarını yeniden üretir; değiştiyse kaydeder.
 # Elle: Actions → "Site dizini ve yenilikler" → Run workflow.
 name: Site dizini ve yenilikler
 
@@ -11,6 +11,7 @@ on:
       - 'yenilikler.json'
       - 'feed.xml'
       - 'egitimler/index.html'
+      - 'surum.json'
   workflow_dispatch:
 
 concurrency:
@@ -35,12 +36,17 @@ jobs:
         run: node .github/indeks/olustur.mjs
       - name: Eğitimler sayfasını üret
         run: node .github/indeks/egitimler.mjs
+      - name: Sürüm bilgisini yaz
+        run: |
+          V=$(TZ=Europe/Istanbul git log -1 --date=format-local:'%d.%m.%Y %H:%M' --format=%cd)
+          C=$(git rev-parse --short=7 HEAD)
+          printf '{"v":"%s","c":"%s"}\n' "$V" "$C" > surum.json
       - name: Değiştiyse kaydet
         run: |
-          if git diff --quiet -- arama.json yenilikler.json feed.xml egitimler/index.html; then echo "Değişiklik yok"; exit 0; fi
+          if git diff --quiet -- arama.json yenilikler.json feed.xml egitimler/index.html surum.json; then echo "Değişiklik yok"; exit 0; fi
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git add arama.json yenilikler.json feed.xml egitimler/index.html
-          git commit -m "Site: arama dizini, yenilikler, RSS ve eğitimler sayfası güncellendi"
+          git add arama.json yenilikler.json feed.xml egitimler/index.html surum.json
+          git commit -m "Site: sürüm, arama dizini, yenilikler, RSS ve eğitimler sayfası güncellendi"
           for i in 1 2 3; do git pull --rebase -q origin main && git push -q origin HEAD:main && exit 0; sleep 5; done
           exit 1
