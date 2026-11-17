@@ -1,0 +1,2471 @@
+<!doctype html>
+<html lang="tr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Node.js ve PostgreSQL ile Backend · 7 günlük program | erdevelop</title>
+<meta name="description" content="Bol şemalı 7 günlük backend eğitimi: Node.js, npm ve modüller, async/await, Express ile REST API, PostgreSQL ile tablo, ilişki, JOIN ve transaction, pg ile parametreli sorgular, doğrulama, hata yönetimi, test ve sipariş API&#x27;si projesi. Her komutun ve sorgunun gerçek çıktısı sayfada.">
+<link rel="icon" href="/favicon.svg" type="image/svg+xml">
+<link rel="icon" href="/favicon.ico" sizes="any">
+<link rel="apple-touch-icon" href="/apple-touch-icon.png">
+<link rel="manifest" href="/manifest.webmanifest">
+<meta name="theme-color" content="#0b1220">
+<meta property="og:title" content="Node.js ve PostgreSQL ile Backend · 7 günlük program | erdevelop">
+<meta property="og:description" content="7 günde Node.js, Express ve PostgreSQL ile REST API: sorgular, ilişkiler, transaction, doğrulama, test ve proje. Çıktılarıyla.">
+<meta property="og:url" content="https://erdevelop.github.io/egitimler/nodejs-postgresql/">
+<meta property="og:image" content="https://erdevelop.github.io/og.png">
+<meta name="twitter:card" content="summary_large_image">
+<link rel="canonical" href="https://erdevelop.github.io/egitimler/nodejs-postgresql/">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Chakra+Petch:wght@600;700&family=IBM+Plex+Sans:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500&display=swap">
+<style>
+  :root {
+    --bg: #eef2f6; --panel: #ffffff; --panel-2: #f5f7f9; --grid: #e3e8ed; --line: #cfd8e1;
+    --fg: #1c2833; --text: #45535f; --muted: #74838f; --accent: #2f6fb5; --accent-dim: rgba(47,111,181,.12); --hot: #c8731f; --ok: #2e8b57;
+    --f-display: 'Chakra Petch', 'Segoe UI', sans-serif; --f-body: 'IBM Plex Sans', 'Segoe UI', system-ui, sans-serif; --f-mono: 'IBM Plex Mono', Consolas, monospace;
+    color-scheme: light;
+  }
+  :root[data-mode="dark"] {
+    --bg: #0b1220; --panel: #111a2c; --panel-2: #0e1626; --grid: #182338; --line: #22304a;
+    --fg: #e2e8f2; --text: #a8b6cc; --muted: #73829b; --accent: #f2b33d; --accent-dim: rgba(242,179,61,.14); --hot: #6aa8ff; --ok: #5fc48d;
+    color-scheme: dark;
+  }
+  * { box-sizing: border-box; }
+  html { background: var(--bg); scroll-padding-top: 110px; }
+  body { margin: 0; color: var(--fg); font-family: var(--f-body); font-size: 16px; line-height: 1.65;
+    background-image: linear-gradient(var(--grid) 1px, transparent 1px), linear-gradient(90deg, var(--grid) 1px, transparent 1px); background-size: 80px 80px; background-attachment: fixed; }
+  a { color: var(--accent); }
+  :focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+  .wrap { max-width: 920px; margin: 0 auto; padding-left: max(16px, env(safe-area-inset-left, 0px)); padding-right: max(16px, env(safe-area-inset-right, 0px)); }
+
+  .topbar { position: sticky; top: 0; z-index: 20; background: color-mix(in srgb, var(--bg) 92%, transparent); backdrop-filter: blur(6px); border-bottom: 1px solid var(--line); }
+  .topbar .wrap { display: flex; align-items: center; gap: 12px; padding-block: 10px; max-width: 1160px; }
+  .brand { font: 700 15px var(--f-display); letter-spacing: 1px; text-transform: uppercase; text-decoration: none; color: var(--fg); }
+  .brand span { color: var(--accent); }
+  .crumb { font: 400 12px var(--f-mono); color: var(--muted); }
+  .sp { flex: 1; }
+  .tb { font: 500 12px var(--f-mono); color: var(--accent); padding: 6px 10px; border: 1px solid var(--line); border-radius: 4px; background: none; cursor: pointer; text-transform: uppercase; text-decoration: none; }
+  .tb:hover { border-color: var(--accent); }
+  .daynav { border-top: 1px solid var(--line); }
+  .daynav .wrap { display: flex; gap: 6px; padding-block: 8px; overflow-x: auto; max-width: 1160px; }
+  .daynav a { font: 500 12px var(--f-mono); text-decoration: none; color: var(--text); border: 1px solid var(--line); border-radius: 4px; padding: 4px 10px; white-space: nowrap; background: var(--panel); }
+  .daynav a.on { border-color: var(--accent); color: var(--accent); }
+  .daynav a.done { background: var(--accent-dim); }
+
+  header.head { padding-block: 34px 6px; }
+  .kicker { font: 500 12px var(--f-mono); color: var(--accent); letter-spacing: 1px; }
+  .head h1 { font: 700 clamp(2rem, 6vw, 3rem)/1.05 var(--f-display); margin: 6px 0 0; letter-spacing: -.5px; }
+  .head p.lead { margin: 12px 0 0; color: var(--text); max-width: 64ch; font-size: 1.05rem; }
+  .chips { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 16px; }
+  .chips span { font: 400 12px var(--f-mono); color: var(--muted); border: 1px solid var(--line); border-radius: 4px; padding: 3px 8px; background: var(--panel); }
+
+  .card { background: var(--panel); border: 1px solid var(--line); border-radius: 8px; padding: 22px clamp(16px, 4vw, 30px); margin-top: 28px; }
+  .day-head { display: flex; align-items: baseline; gap: 12px; flex-wrap: wrap; border-bottom: 1px solid var(--line); padding-bottom: 12px; margin-bottom: 6px; }
+  .day-head h2, .card > h2 { font: 700 1.45rem/1.2 var(--f-display); margin: 0; letter-spacing: .2px; }
+  .dn { font: 600 12px var(--f-mono); color: var(--panel); background: var(--accent); border-radius: 3px; padding: 2px 7px; }
+  :root[data-mode="dark"] .dn { color: #1a1204; }
+  .day-head .meta { font: 400 12px var(--f-mono); color: var(--muted); margin-left: auto; }
+  section.day { background: var(--panel); border: 1px solid var(--line); border-radius: 8px; padding: 22px clamp(16px, 4vw, 30px); margin-top: 28px; }
+
+  .prose h3 { font: 700 1.12rem/1.3 var(--f-display); margin: 30px 0 8px; letter-spacing: .2px; }
+  .prose p, .prose li { color: var(--text); }
+  .prose strong { color: var(--fg); font-weight: 600; }
+  .prose ol, .prose ul { padding-left: 1.4em; }
+  .prose li { margin: 4px 0; }
+  .prose li > ul, .prose li > ol { margin: 4px 0; }
+  .prose code { font: 400 .86em var(--f-mono); background: var(--panel-2); border: 1px solid var(--line); border-radius: 3px; padding: 1px 5px; color: var(--fg); overflow-wrap: anywhere; }
+  .tw { overflow-x: auto; margin: 14px 0; border: 1px solid var(--line); border-radius: 6px; }
+  .tw table { border-collapse: collapse; width: 100%; font-size: .9rem; }
+  .tw th, .tw td { text-align: left; padding: 8px 12px; border-bottom: 1px solid var(--line); vertical-align: top; }
+  .tw th { font: 600 12px var(--f-mono); color: var(--muted); background: var(--panel-2); }
+  .card .tw td:first-child, .card .tw td:last-child { white-space: nowrap; }
+  .tw tr:last-child td { border-bottom: 0; }
+  ul.tasks { list-style: none; padding-left: 0; }
+  li.task label { display: flex; gap: 10px; align-items: flex-start; cursor: pointer; padding: 4px 0; }
+  li.task input { width: 18px; height: 18px; margin-top: 4px; accent-color: var(--accent); flex: none; }
+  li.task input:checked + span { color: var(--muted); text-decoration: line-through; }
+  .pn { display: flex; justify-content: space-between; gap: 12px; margin-top: 26px; padding-top: 14px; border-top: 1px solid var(--line); font: 500 13px var(--f-mono); }
+  .pn a { text-decoration: none; }
+  .note { font-size: .9rem; color: var(--muted); }
+  .reset { font: 500 11px var(--f-mono); color: var(--muted); background: none; border: 1px solid var(--line); border-radius: 4px; padding: 3px 8px; cursor: pointer; text-transform: uppercase; }
+  .reset:hover { color: var(--hot); border-color: var(--hot); }
+
+  .fig { margin: 18px 0; padding: 16px 14px 12px; border: 1px solid var(--line); border-radius: 6px; background: var(--panel-2); }
+  .fig .sc { overflow-x: auto; }
+  .fig svg { display: block; width: 100%; min-width: 540px; height: auto; max-width: 720px; margin: 0 auto; overflow: visible; }
+  .fig figcaption { font-size: .85rem; color: var(--muted); margin-top: 10px; text-align: center; max-width: 62ch; margin-inline: auto; }
+  .fig .k { fill: none; stroke: var(--fg); stroke-width: 1.6; } .fig .k1 { fill: none; stroke: var(--fg); stroke-width: 1; }
+  .fig .mu { fill: none; stroke: var(--muted); stroke-width: 1.2; } .fig .mud { fill: none; stroke: var(--muted); stroke-width: 1; stroke-dasharray: 5 4; }
+  .fig .dm { fill: none; stroke: var(--muted); stroke-width: .9; }
+  .fig .rp { fill: none; stroke: var(--hot); stroke-width: 1; stroke-dasharray: 9 4 2 4; }
+  .fig .gd { fill: none; stroke: var(--fg); stroke-width: 1; stroke-dasharray: 16 4 3 4; }
+  .fig .ac { fill: none; stroke: var(--accent); stroke-width: 2; } .fig .acl { fill: none; stroke: var(--accent); stroke-width: 1; }
+  .fig .gl { fill: var(--accent-dim); stroke: var(--fg); stroke-width: .8; }
+  .fig .sp { fill: color-mix(in srgb, var(--fg) 40%, transparent); stroke: var(--fg); stroke-width: .8; }
+  .fig .fr { fill: color-mix(in srgb, var(--fg) 22%, transparent); stroke: none; } .fig .edge { fill: none; stroke: var(--fg); stroke-width: 1.8; }
+  .fig .so { fill: var(--panel); stroke: var(--fg); stroke-width: 1.6; } .fig .hole { fill: var(--panel-2); stroke: var(--fg); stroke-width: 1.2; }
+  .fig .rib { fill: var(--accent-dim); stroke: var(--accent); stroke-width: 1.4; stroke-dasharray: 6 4; }
+  .fig .sel { fill: none; stroke: var(--accent); stroke-width: 3; }
+  .fig .mul { stroke: var(--fg); stroke-width: 4; } .fig .tr { stroke: var(--fg); stroke-width: 3; } .fig .trA { stroke: var(--accent); stroke-width: 3; }
+  .fig .lh { fill: var(--panel); stroke: var(--fg); stroke-width: 1.4; }
+  .fig .dot { fill: var(--accent); } .fig .dotr { fill: var(--accent); stroke: var(--panel); stroke-width: 1; }
+  .fig .pt { fill: var(--accent); stroke: var(--panel); stroke-width: 2; } .fig .tpt { fill: var(--panel); font: 700 12px var(--f-mono); }
+  .fig .bx { fill: var(--panel); stroke: var(--line); stroke-width: 1.3; } .fig .bxa { fill: var(--accent-dim); stroke: var(--accent); stroke-width: 1.3; }
+  .fig .ar { fill: var(--muted); }
+  .fig .acd { fill: none; stroke: var(--accent); stroke-width: 1.6; stroke-dasharray: 6 4; }
+  .fig text { text-transform: none; letter-spacing: 0; } .fig .bg { fill: var(--panel); stroke: none; }
+  .fig .t { fill: var(--text); font: 400 13px var(--f-body); } .fig .tb { fill: var(--fg); font: 600 13px var(--f-body); }
+  .fig .tm { fill: var(--muted); font: 400 11px var(--f-mono); } .fig .ta { fill: var(--accent); font: 600 11px var(--f-mono); }
+  .fig .th { fill: var(--hot); font: 500 11px var(--f-mono); }
+  .fig .swb { fill: none; stroke: #2f7de1; stroke-width: 2; } .fig .swr { fill: none; stroke: #d64545; stroke-width: 2; } .fig .tr2 { fill: #d64545; font: 600 11px var(--f-mono); } .fig .tbl { fill: #2f7de1; font: 600 11px var(--f-mono); }
+  .prose pre { background: var(--panel-2); border: 1px solid var(--line); border-radius: 6px; padding: 12px 14px; overflow-x: auto; }
+  .prose pre code { background: none; border: 0; padding: 0; font: 400 .85rem/1.5 var(--f-mono); color: var(--fg); }
+  footer { margin-top: 56px; border-top: 1px solid var(--line); padding-block: 20px calc(20px + env(safe-area-inset-bottom, 0px)); font: 400 12px var(--f-mono); color: var(--muted); }
+  footer .wrap { display: flex; justify-content: space-between; gap: 12px; flex-wrap: wrap; }
+  footer a { color: inherit; } footer a:hover { color: var(--accent); }
+  @media print { .topbar, .daynav, .pn, footer, .reset { display: none !important; } body { background: #fff; } section.day, .card { break-inside: auto; border: 0; } }
+</style>
+<script async src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-4775308844679394" crossorigin="anonymous"></script>
+</head>
+<body>
+<div class="topbar">
+  <div class="wrap">
+    <a class="brand" href="/">erdevelop<span>_</span></a>
+    <span class="crumb">/ eğitimler / nodejs-postgresql</span>
+    <span class="sp"></span>
+    <a class="tb" href="../../Tools.html">Araçlar</a>
+    <button class="tb" type="button" id="modeBtn">DARK</button>
+  </div>
+  <nav class="daynav" aria-label="Günler"><div class="wrap"><a href="#genel" data-nav="0">Genel</a><a href="#gun1" data-nav="1">1</a><a href="#gun2" data-nav="2">2</a><a href="#gun3" data-nav="3">3</a><a href="#gun4" data-nav="4">4</a><a href="#gun5" data-nav="5">5</a><a href="#gun6" data-nav="6">6</a><a href="#gun7" data-nav="7">7</a></div></nav>
+</div>
+
+<main class="wrap">
+  <header class="head" id="genel">
+    <div class="kicker">Yazılım · Node.js ve PostgreSQL ile Backend</div>
+    <h1>Node.js ve PostgreSQL ile Backend</h1>
+    <p class="lead">Bir web uygulamasının arkasındaki sunucuyu ve veritabanını yazmak için 7 günlük bir program. Node.js ile JavaScript&#x27;i tarayıcının dışında çalıştırır, Express ile bir REST API kurar, PostgreSQL&#x27;de tabloları ve ilişkileri tasarlar, SQL ile sorgular, transaction ile tutarlılığı korursun. API&#x27;yi veritabanına güvenli parametreli sorgularla bağlar, girdileri doğrular, hataları düzgün yönetir ve otomatik testler yazarsın. Sonunda projeler ve siparişlerden oluşan, React ya da başka bir arayüzün kullanabileceği bir sipariş API&#x27;si hazırlarsın.</p>
+    <div class="chips"><span>7 gün</span><span>günde ~4 saat</span><span>Türkçe</span><span>Kod örnekleri kopyalanabilir</span></div>
+  </header>
+
+  <div class="card">
+    <h2>Başlamadan önce</h2>
+    <div class="prose">
+      <h3>Kimler için</h3>
+      <p>JavaScript&#x27;in temellerini bilen ve tarayıcıdaki uygulamalarına bir sunucu ve veritabanı eklemek isteyenler; React eğitimini bitirip arka ucu öğrenmek isteyenler; kendi araçlarının verisini merkezi bir veritabanında tutmak isteyen mühendisler. JavaScript ve TypeScript eğitiminin ilk üç günü yeterli ön bilgidir.</p>
+      <h3>Gerekenler</h3>
+      <ul>
+        <li>Node.js 20 ya da üstü, LTS sürümü (<a href="https://nodejs.org/" target="_blank" rel="noopener">nodejs.org</a>).</li>
+        <li>PostgreSQL 16 ya da üstü (<a href="https://www.postgresql.org/download/" target="_blank" rel="noopener">postgresql.org</a>). Windows kurulumu pgAdmin ve psql ile birlikte gelir.</li>
+        <li>VS Code ve bir terminal. İstersen veritabanını Docker ile de çalıştırabilirsin (Docker eğitimi, 7. gün).</li>
+      </ul>
+      <h3>Program</h3>
+      <div class="tw"><table><thead><tr><th>Gün</th><th>Konu</th><th>Ne öğrenirsin</th><th>Süre</th></tr></thead><tbody>
+<tr><td><a href="#gun1">1. gün</a></td><td>Node.js&#x27;e giriş</td><td>Node.js nedir, kurulum, ilk betik, ES modülleri, npm ve package.json, fs ve path, async/await, ortam değişkenleri</td><td>~4 saat</td></tr>
+<tr><td><a href="#gun2">2. gün</a></td><td>Express ile HTTP API</td><td>HTTP istek ve yanıt, durum kodları, Express, rota ve parametreler, JSON gövde, ara katman, hata işleyici, curl ile denemek</td><td>~4 saat</td></tr>
+<tr><td><a href="#gun3">3. gün</a></td><td>PostgreSQL temelleri</td><td>Kurulum ve psql, veritabanı ve tablo, veri tipleri, kısıtlar, INSERT, SELECT, WHERE, ORDER BY, UPDATE, DELETE</td><td>~4 saat</td></tr>
+<tr><td><a href="#gun4">4. gün</a></td><td>İlişkiler ve ileri sorgular</td><td>Birincil ve yabancı anahtar, JOIN türleri, GROUP BY ve HAVING, alt sorgu, indeks ve EXPLAIN, transaction</td><td>~4 saat</td></tr>
+<tr><td><a href="#gun5">5. gün</a></td><td>Node.js&#x27;ten PostgreSQL</td><td>pg ve bağlantı havuzu, parametreli sorgu ve SQL enjeksiyonu, CRUD API, sayfalama, transaction ile sipariş</td><td>~4 saat</td></tr>
+<tr><td><a href="#gun6">6. gün</a></td><td>Doğrulama, hata ve test</td><td>Girdi doğrulama, hata sınıfları, tutarlı hata yanıtı, kısıt hatalarını çevirmek, node:test ile otomatik test, yapılandırma</td><td>~4 saat</td></tr>
+<tr><td><a href="#gun7">7. gün</a></td><td>Proje: sipariş API&#x27;si</td><td>Şema ve migration, seed, projeler ve siparişler uç noktaları, özet raporu, testler, CORS ve React&#x27;e bağlamak, yayına almak</td><td>~4 saat</td></tr>
+      </tbody></table></div>
+      <p class="note">Her günün sonunda bir kontrol listesi var. İşaretledikçe ilerlemen bu tarayıcıda saklanır. Hafta içi sadece akşamları çalışırsan program yaklaşık iki hafta sürer. Bütün komutlar, SQL sorguları ve JavaScript kodları Node.js 22, Express 5, pg 8 ve PostgreSQL 16 ile Linux üzerinde çalıştırılıp çıktıları kontrol edilmiştir. Örneklerde veritabanına bağlantı adresi DATABASE_URL ortam değişkeninden okunur; kendi bilgisayarında bu adres kullanıcı adı ve parolanla farklı olacaktır (1. ve 3. günlerde anlatılıyor). Tarih ve kimlik numarası içeren çıktılar sende farklı görünebilir. <button class="reset" type="button" id="resetBtn">ilerlemeyi sıfırla</button></p>
+    </div>
+  </div>
+
+<section class="day" id="gun1" data-day="1">
+  <div class="day-head"><span class="dn">GÜN 01</span><h2>Node.js&#x27;e giriş</h2><span class="meta">~4 saat · <span data-prog="1">0/6</span> kontrol</span></div>
+  <div class="prose"><h3>Hedef</h3>
+<p>Gün sonunda Node.js'in ne olduğunu ve tarayıcıdaki JavaScript'ten farkını bilecek, bir proje klasörü kurup npm ile paket yükleyebilecek, ES modülleriyle kodunu dosyalara bölebilecek, dosya okuyup yazabilecek ve <code>async/await</code> ile eşzamansız kodu rahatça yazabileceksin. Süre yaklaşık 4 saat.</p>
+<p><strong>Bu kurs hakkında:</strong> Bir web uygulaması iki parçadan oluşur: kullanıcının gördüğü <strong>ön uç</strong> (frontend, React gibi) ve verinin saklandığı, kuralların işlediği <strong>arka uç</strong> (backend). Bu kursta arka ucu kuracağız: Node.js ile bir sunucu ve PostgreSQL ile bir veritabanı. Örnek veri bir cephe firmasının projeleri ve malzeme siparişleri.</p>
+<h3>1. Node.js nedir? (30 dk)</h3>
+<figure class="fig"><div class="sc"><svg viewBox="0 0 640 142" role="img" xmlns="http://www.w3.org/2000/svg"><defs><marker id="ah-mimari" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0 0L10 5L0 10z" class="ar"/></marker></defs><rect x="20" y="50" width="130" height="50" rx="5" class="bx"/><text x="85.0" y="71.0" class="tb" text-anchor="middle">İstemci</text><text x="85.0" y="87.0" class="tm" text-anchor="middle">tarayıcı · mobil</text><rect x="255" y="50" width="130" height="50" rx="5" class="bxa"/><text x="320.0" y="71.0" class="tb" text-anchor="middle">Node.js API</text><text x="320.0" y="87.0" class="tm" text-anchor="middle">Express</text><rect x="490" y="50" width="130" height="50" rx="5" class="bx"/><text x="555.0" y="71.0" class="tb" text-anchor="middle">PostgreSQL</text><text x="555.0" y="87.0" class="tm" text-anchor="middle">tablolar</text><line x1="150" y1="66" x2="253" y2="66" class="mu" marker-end="url(#ah-mimari)"/><line x1="253" y1="86" x2="150" y2="86" class="mu" marker-end="url(#ah-mimari)"/><line x1="385" y1="66" x2="488" y2="66" class="mu" marker-end="url(#ah-mimari)"/><line x1="488" y1="86" x2="385" y2="86" class="mu" marker-end="url(#ah-mimari)"/><text x="202" y="58" class="tm" text-anchor="middle">HTTP istek</text><text x="202" y="104" class="tm" text-anchor="middle">JSON yanıt</text><text x="437" y="58" class="tm" text-anchor="middle">SQL</text><text x="437" y="104" class="tm" text-anchor="middle">satırlar</text><text x="320" y="132" class="ta" text-anchor="middle">ön yüz (frontend)  ·  arka yüz (backend)  ·  veritabanı</text></svg></div><figcaption>Üç katmanlı web uygulaması: bu eğitim ortadaki ve sağdaki kutuyu kuruyor.</figcaption></figure>
+<p><strong>Node.js</strong>, JavaScript'i tarayıcının dışında, doğrudan bilgisayarda ya da sunucuda çalıştıran bir ortamdır. Chrome'un JavaScript motoru V8'i kullanır ve ona tarayıcıda olmayan yetenekler ekler: dosya okuyup yazmak, ağ bağlantısı açmak, veritabanına bağlanmak, başka programları çalıştırmak.</p>
+<p>Tarayıcıdaki JavaScript ile farkı:</p>
+<div class="tw"><table>
+<thead>
+<tr>
+<th></th>
+<th>Tarayıcı</th>
+<th>Node.js</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Erişebildikleri</td>
+<td>Sayfa (DOM), <code>window</code>, <code>fetch</code></td>
+<td>Dosyalar, ağ, işletim sistemi, <code>process</code></td>
+</tr>
+<tr>
+<td>Erişemedikleri</td>
+<td>Diskteki dosyalar (güvenlik gereği)</td>
+<td>Sayfa, <code>document</code>, <code>window</code></td>
+</tr>
+<tr>
+<td>Modül sistemi</td>
+<td><code>&lt;script type="module"&gt;</code></td>
+<td>ES modülleri (<code>import</code>) ya da eski CommonJS (<code>require</code>)</td>
+</tr>
+<tr>
+<td>Tipik kullanım</td>
+<td>Arayüz</td>
+<td>API sunucusu, komut satırı aracı, derleme araçları</td>
+</tr>
+</tbody>
+</table></div>
+<p>Node.js'in en güçlü yanı <strong>olay döngüsü</strong>dür: tek bir iş parçacığıyla çalışır ama bir dosya okunmasını ya da veritabanı cevabını beklerken durmaz, başka isteklere bakar. Bu yüzden aynı anda binlerce bağlantıyı az kaynakla yönetebilir.</p>
+<h3>2. Kurulum ve ilk betik (30 dk)</h3>
+<p>nodejs.org'dan <strong>LTS</strong> (uzun süreli destek) sürümünü indirip kur. Terminali yeniden açıp kontrol et:</p>
+<pre><code class="language-bash">node --version | cut -d. -f1
+</code></pre>
+<pre><code class="language-text">v22
+</code></pre>
+<p>Sende v20, v22 ya da v24 gibi bir çift sayı görmelisin. Bir klasör oluşturup ilk betiği yazalım:</p>
+<pre><code class="language-bash">mkdir -p siparis-api &amp;&amp; cd siparis-api
+echo 'console.log(&quot;Merhaba Node.js!&quot;, 2 * 21);' &gt; merhaba.js
+node merhaba.js
+</code></pre>
+<pre><code class="language-text">Merhaba Node.js! 42
+</code></pre>
+<p><code>node dosya.js</code> dosyayı çalıştırır. Sadece <code>node</code> yazarsan etkileşimli bir ortam (REPL) açılır; denemeler için kullanışlıdır, <code>.exit</code> ile çıkılır.</p>
+<h3>3. npm ve package.json (45 dk)</h3>
+<figure class="fig"><div class="sc"><svg viewBox="0 0 640 110" role="img" xmlns="http://www.w3.org/2000/svg"><defs><marker id="ah-npm" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0 0L10 5L0 10z" class="ar"/></marker></defs><rect x="10.0" y="16" width="109.6" height="56" rx="5" class="bx"/><text x="64.8" y="40.0" class="tb" text-anchor="middle">npm init</text><text x="64.8" y="56.0" class="tm" text-anchor="middle">package.json</text><rect x="137.6" y="16" width="109.6" height="56" rx="5" class="bxa"/><text x="192.39999999999998" y="40.0" class="tb" text-anchor="middle">npm install</text><text x="192.39999999999998" y="56.0" class="tm" text-anchor="middle">node_modules</text><line x1="121.6" y1="44.0" x2="135.6" y2="44.0" class="mu" marker-end="url(#ah-npm)"/><rect x="265.2" y="16" width="109.6" height="56" rx="5" class="bx"/><text x="320.0" y="40.0" class="tb" text-anchor="middle">import</text><text x="320.0" y="56.0" class="tm" text-anchor="middle">kodda kullan</text><line x1="249.2" y1="44.0" x2="263.2" y2="44.0" class="mu" marker-end="url(#ah-npm)"/><rect x="392.79999999999995" y="16" width="109.6" height="56" rx="5" class="bx"/><text x="447.59999999999997" y="40.0" class="tb" text-anchor="middle">npm run</text><text x="447.59999999999997" y="56.0" class="tm" text-anchor="middle">betikler</text><line x1="376.79999999999995" y1="44.0" x2="390.79999999999995" y2="44.0" class="mu" marker-end="url(#ah-npm)"/><rect x="520.4" y="16" width="109.6" height="56" rx="5" class="bx"/><text x="575.1999999999999" y="40.0" class="tb" text-anchor="middle">.gitignore</text><text x="575.1999999999999" y="56.0" class="tm" text-anchor="middle">modüller hariç</text><line x1="504.4" y1="44.0" x2="518.4" y2="44.0" class="mu" marker-end="url(#ah-npm)"/><text x="320" y="98" class="ta" text-anchor="middle">package-lock.json kesin sürümleri kilitler: onu da Git'e ekle</text></svg></div><figcaption>npm ile bir projenin yaşam döngüsü.</figcaption></figure>
+<p><strong>npm</strong> (Node Package Manager), Node.js ile gelen paket yöneticisidir. npm kayıt deposunda milyonlarca hazır paket vardır: web sunucusu, veritabanı sürücüsü, tarih işlemleri, test araçları…</p>
+<p>Her proje bir <strong>package.json</strong> dosyasıyla başlar: projenin adı, sürümü, bağımlılıkları ve komutları burada durur.</p>
+<pre><code class="language-bash">npm init -y &gt; /dev/null
+npm pkg set type=module
+npm pkg set scripts.start=&quot;node server.js&quot;
+cat package.json
+</code></pre>
+<pre><code class="language-text">{
+  &quot;name&quot;: &quot;siparis-api&quot;,
+  &quot;version&quot;: &quot;1.0.0&quot;,
+  &quot;description&quot;: &quot;&quot;,
+  &quot;main&quot;: &quot;merhaba.js&quot;,
+  &quot;scripts&quot;: {
+    &quot;test&quot;: &quot;echo \&quot;Error: no test specified\&quot; &amp;&amp; exit 1&quot;,
+    &quot;start&quot;: &quot;node server.js&quot;
+  },
+  &quot;keywords&quot;: [],
+  &quot;author&quot;: &quot;&quot;,
+  &quot;license&quot;: &quot;ISC&quot;,
+  &quot;type&quot;: &quot;module&quot;
+}
+</code></pre>
+<ul>
+<li><code>npm init -y</code> varsayılan değerlerle package.json oluşturur.</li>
+<li><code>"type": "module"</code> dosyaları <strong>ES modülü</strong> olarak çalıştırır: <code>import</code> ve <code>export</code> kullanılır. Bu kursta hep bu yazımı kullanacağız.</li>
+<li><code>scripts</code> kısa komutlardır: <code>npm start</code> artık <code>node server.js</code> çalıştırır.</li>
+</ul>
+<p>Paket yüklemek için <code>npm install paket</code> yazılır. Paket <code>node_modules</code> klasörüne iner ve package.json'daki <code>dependencies</code> listesine eklenir:</p>
+<pre><code class="language-bash">npm install express@5 pg@8 &gt; /dev/null 2&gt;&amp;1
+node -e &quot;const p = JSON.parse(require('fs').readFileSync('package.json')); console.log(Object.keys(p.dependencies).join(', '))&quot;
+ls node_modules | grep -c .
+</code></pre>
+<p>İkinci satır <code>express, pg</code> yazar; üçüncüsü <code>node_modules</code>'deki paket sayısını (birkaç düzine) verir, çünkü her paketin kendi bağımlılıkları da iner. Bu yüzden:</p>
+<ul>
+<li><code>node_modules</code> klasörü Git'e eklenmez (<code>.gitignore</code>'a yazılır).</li>
+<li>Projeyi başka bir bilgisayara aldığında <code>npm install</code> yazman yeterlidir; package.json ve <strong>package-lock.json</strong> (kurulan kesin sürümler) her şeyi yeniden kurar.</li>
+<li><code>npm install -D paket</code> sadece geliştirmede gereken paketleri (<code>devDependencies</code>) ekler.</li>
+</ul>
+<h3>4. Modüller: import ve export (45 dk)</h3>
+<p>Kodu dosyalara bölüp birbirinden kullanırız. Hesap fonksiyonlarını ayrı bir dosyaya koyalım:</p>
+<!-- dosya: hesap.js -->
+
+<pre><code class="language-js">export const KDV = 0.20;
+
+export function tutar(adet, birimFiyat) {
+  return adet * birimFiyat;
+}
+
+export function kdvli(t) {
+  return Math.round(t * (1 + KDV) * 100) / 100;
+}
+
+export default function tl(sayi) {
+  return sayi.toLocaleString(&quot;tr-TR&quot;, { minimumFractionDigits: 2, maximumFractionDigits: 2 }) + &quot; TL&quot;;
+}
+</code></pre>
+<!-- dosya: deneme.js -->
+
+<pre><code class="language-js">import tl, { tutar, kdvli, KDV } from &quot;./hesap.js&quot;;
+
+const t = tutar(48, 1250);
+console.log(&quot;tutar:&quot;, tl(t));
+console.log(`KDV %${KDV * 100} dahil:`, tl(kdvli(t)));
+</code></pre>
+<pre><code class="language-bash">node deneme.js
+</code></pre>
+<pre><code class="language-text">tutar: 60.000,00 TL
+KDV %20 dahil: 72.000,00 TL
+</code></pre>
+<p>ES modüllerinde yerel dosyaları içe aktarırken <strong>uzantı zorunludur</strong>: <code>"./hesap.js"</code>. Paketler ise adıyla alınır: <code>import express from "express"</code>. Node'un hazır modülleri <code>node:</code> önekiyle yazılır: <code>import fs from "node:fs/promises"</code>.</p>
+<p>Eski projelerde ve bazı örneklerde <code>const x = require("x")</code> ve <code>module.exports</code> göreceksin; bu <strong>CommonJS</strong> yazımıdır ve aynı işi yapar.</p>
+<h3>5. Dosyalar ve async/await (1 saat)</h3>
+<figure class="fig"><div class="sc"><svg viewBox="0 0 640 186" role="img" xmlns="http://www.w3.org/2000/svg"><defs><marker id="ah-async" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0 0L10 5L0 10z" class="ar"/></marker></defs><text x="20" y="34" class="tm" text-anchor="start">dosya A</text><rect x="90" y="22" width="150" height="18" class="bx"/><text x="20" y="60" class="tm" text-anchor="start">dosya B</text><rect x="240" y="48" width="150" height="18" class="bx"/><text x="20" y="86" class="ta" text-anchor="start">toplam</text><text x="400" y="86" class="ta" text-anchor="start">≈ 600 ms (sırayla await)</text><text x="20" y="124" class="tm" text-anchor="start">dosya A</text><rect x="90" y="112" width="150" height="18" class="bxa"/><text x="20" y="150" class="tm" text-anchor="start">dosya B</text><rect x="90" y="138" width="150" height="18" class="bxa"/><text x="20" y="176" class="ta" text-anchor="start">toplam</text><text x="250" y="176" class="ta" text-anchor="start">≈ 300 ms (Promise.all)</text></svg></div><figcaption>Birbirini beklemeyen işler Promise.all ile aynı anda yürür.</figcaption></figure>
+<p>Dosya okumak, ağdan veri almak, veritabanını sorgulamak <strong>zaman alan</strong> işlerdir. Node.js bunları beklerken durmaz; işlem bitince sonucu bir <strong>Promise</strong> (söz) ile verir. <code>await</code> bir Promise'in sonucunu bekler ve sadece <code>async</code> fonksiyonların içinde (ya da ES modülünün en üst seviyesinde) kullanılır.</p>
+<!-- dosya: dosyalar.js -->
+
+<pre><code class="language-js">import fs from &quot;node:fs/promises&quot;;
+import path from &quot;node:path&quot;;
+
+const klasor = &quot;veri&quot;;
+await fs.mkdir(klasor, { recursive: true });
+
+const siparisler = [
+  { no: &quot;S-1001&quot;, malzeme: &quot;Isıcam&quot;, adet: 120 },
+  { no: &quot;S-1002&quot;, malzeme: &quot;Silikon&quot;, adet: 60 },
+];
+const yol = path.join(klasor, &quot;siparisler.json&quot;);
+await fs.writeFile(yol, JSON.stringify(siparisler, null, 2), &quot;utf-8&quot;);
+
+const okunan = JSON.parse(await fs.readFile(yol, &quot;utf-8&quot;));
+const toplam = okunan.reduce((t, s) =&gt; t + s.adet, 0);
+console.log(`${yol}: ${okunan.length} sipariş, toplam ${toplam} adet`);
+
+const dosyalar = await fs.readdir(klasor);
+console.log(&quot;klasörde:&quot;, dosyalar);
+</code></pre>
+<pre><code class="language-bash">node dosyalar.js
+</code></pre>
+<pre><code class="language-text">veri/siparisler.json: 2 sipariş, toplam 180 adet
+klasörde: [ 'siparisler.json' ]
+</code></pre>
+<ul>
+<li><code>path.join</code> yolu işletim sistemine uygun ayraçla birleştirir (Windows'ta <code>\</code>, Linux'ta <code>/</code>).</li>
+<li><code>JSON.stringify(nesne, null, 2)</code> okunur girintili JSON yazar.</li>
+</ul>
+<p><strong>Paralel bekleme:</strong> Birbirinden bağımsız işleri sırayla değil aynı anda başlatıp <code>Promise.all</code> ile hepsini beklemek çok daha hızlıdır:</p>
+<!-- dosya: paralel.js -->
+
+<pre><code class="language-js">const bekle = (ms, deger) =&gt; new Promise(coz =&gt; setTimeout(() =&gt; coz(deger), ms));
+
+let t0 = Date.now();
+await bekle(300, &quot;a&quot;);
+await bekle(300, &quot;b&quot;);
+console.log(&quot;sırayla:&quot;, Math.round((Date.now() - t0) / 100) * 100, &quot;ms&quot;);
+
+t0 = Date.now();
+const sonuc = await Promise.all([bekle(300, &quot;a&quot;), bekle(300, &quot;b&quot;)]);
+console.log(&quot;paralel:&quot;, Math.round((Date.now() - t0) / 100) * 100, &quot;ms&quot;, sonuc);
+</code></pre>
+<pre><code class="language-bash">node paralel.js
+</code></pre>
+<pre><code class="language-text">sırayla: 600 ms
+paralel: 300 ms [ 'a', 'b' ]
+</code></pre>
+<p><strong>Hata yakalamak:</strong> <code>await</code> edilen bir işlem başarısız olursa hata fırlatır; <code>try/catch</code> ile yakalanır:</p>
+<!-- dosya: hata.js -->
+
+<pre><code class="language-js">import fs from &quot;node:fs/promises&quot;;
+
+try {
+  await fs.readFile(&quot;olmayan.json&quot;, &quot;utf-8&quot;);
+} catch (e) {
+  console.log(&quot;okunamadı:&quot;, e.code);
+}
+</code></pre>
+<pre><code class="language-bash">node hata.js
+</code></pre>
+<pre><code class="language-text">okunamadı: ENOENT
+</code></pre>
+<p><code>ENOENT</code> "böyle bir dosya ya da klasör yok" demektir; Node'un hata kodları bu biçimdedir.</p>
+<h3>6. Ortam değişkenleri ve process (30 dk)</h3>
+<p>Veritabanı adresi, parola ve port gibi ayarlar koda yazılmaz; <strong>ortam değişkenlerinden</strong> okunur. Node.js'te bunlar <code>process.env</code> içindedir:</p>
+<!-- dosya: ayar.js -->
+
+<pre><code class="language-js">const PORT = Number(process.env.PORT ?? 3000);
+const ORTAM = process.env.NODE_ENV ?? &quot;gelistirme&quot;;
+console.log({ PORT, ORTAM, arguman: process.argv.slice(2) });
+</code></pre>
+<pre><code class="language-bash">node ayar.js
+PORT=8080 NODE_ENV=uretim node ayar.js kule-a
+</code></pre>
+<pre><code class="language-text">{ PORT: 3000, ORTAM: 'gelistirme', arguman: [] }
+{ PORT: 8080, ORTAM: 'uretim', arguman: [ 'kule-a' ] }
+</code></pre>
+<p><code>??</code> "solda değer yoksa sağdakini kullan" demektir. <code>process.argv</code> komut satırı argümanlarıdır; ilk ikisi Node'un ve betiğin yoludur, bu yüzden <code>slice(2)</code> ile atladık.</p>
+<p>Windows PowerShell'de ortam değişkeni <code>$env:PORT=8080; node ayar.js</code> biçiminde verilir. Değişkenleri bir dosyada toplamak için Node.js 20.6 ve sonrasında <code>node --env-file=.env server.js</code> kullanılabilir; <code>.env</code> dosyasında her satır <code>AD=değer</code> biçimindedir ve Git'e eklenmez.</p>
+<p><strong>Alıştırma:</strong> <code>veri/siparisler.json</code>'a yeni bir sipariş ekleyen bir <code>ekle.js</code> betiği yaz: malzeme ve adet komut satırından gelsin (<code>node ekle.js Ankraj 96</code>), sipariş numarası mevcut en büyük numaradan bir fazla olsun (<code>S-1003</code>). Dosyayı okuyup, ekleyip geri yaz ve toplam adedi yazdır.</p>
+<h3>Gün sonu kontrolü (15 dk)</h3>
+<ul class="tasks">
+<li class="task"><label><input type="checkbox" data-id="g1-1"><span>Node.js'in tarayıcı JavaScript'inden farkını ve olay döngüsünü anlatabiliyorum.</span></label></li>
+<li class="task"><label><input type="checkbox" data-id="g1-2"><span>npm init ile proje oluşturup npm install ile paket ekleyebiliyorum; package.json'u okuyabiliyorum.</span></label></li>
+<li class="task"><label><input type="checkbox" data-id="g1-3"><span>"type": "module" ile import ve export kullanabiliyorum.</span></label></li>
+<li class="task"><label><input type="checkbox" data-id="g1-4"><span>fs/promises ile dosya okuyup yazabiliyor, JSON'u ayrıştırabiliyorum.</span></label></li>
+<li class="task"><label><input type="checkbox" data-id="g1-5"><span>async/await, Promise.all ve try/catch kullanabiliyorum.</span></label></li>
+<li class="task"><label><input type="checkbox" data-id="g1-6"><span>Ayarları process.env'den okuyorum.</span></label></li>
+</ul></div>
+  <div class="pn"><a href="#genel">← Genel bakış</a><a href="#gun2">2. gün →</a></div>
+</section>
+<section class="day" id="gun2" data-day="2">
+  <div class="day-head"><span class="dn">GÜN 02</span><h2>Express ile HTTP API</h2><span class="meta">~4 saat · <span data-prog="2">0/6</span> kontrol</span></div>
+  <div class="prose"><h3>Hedef</h3>
+<p>Gün sonunda HTTP'nin istek–yanıt mantığını, yöntemleri ve durum kodlarını bilecek; Express ile rotaları, URL parametrelerini ve JSON gövdeyi kullanan küçük bir REST API yazacak, ara katman (middleware) ve merkezi hata işleyici ekleyecek ve API'yi curl ile deneyebileceksin. Süre yaklaşık 4 saat.</p>
+<h3>1. HTTP: istek ve yanıt (45 dk)</h3>
+<figure class="fig"><div class="sc"><svg viewBox="0 0 640 156" role="img" xmlns="http://www.w3.org/2000/svg"><defs><marker id="ah-http" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0 0L10 5L0 10z" class="ar"/></marker></defs><rect x="20" y="20" width="260" height="108" rx="5" class="bx"/><text x="150.0" y="54.0" class="tb" text-anchor="middle">İSTEK</text><text x="150.0" y="70.0" class="tm" text-anchor="middle">POST /siparisler</text><text x="150.0" y="86.0" class="tm" text-anchor="middle">Content-Type: application/json</text><text x="150.0" y="102.0" class="tm" text-anchor="middle">{"malzeme":"Cam","adet":12}</text><rect x="360" y="20" width="260" height="108" rx="5" class="bxa"/><text x="490.0" y="54.0" class="tb" text-anchor="middle">YANIT</text><text x="490.0" y="70.0" class="tm" text-anchor="middle">201 Created</text><text x="490.0" y="86.0" class="tm" text-anchor="middle">Content-Type: application/json</text><text x="490.0" y="102.0" class="tm" text-anchor="middle">{"id":3, ...}</text><line x1="280" y1="60" x2="358" y2="60" class="mu" marker-end="url(#ah-http)"/><line x1="358" y1="96" x2="280" y2="96" class="mu" marker-end="url(#ah-http)"/><text x="30" y="146" class="tm" text-anchor="start">yöntem + yol · başlıklar · gövde</text><text x="370" y="146" class="tm" text-anchor="start">durum kodu · başlıklar · gövde</text></svg></div><figcaption>Bir HTTP isteği ve yanıtının parçaları.</figcaption></figure>
+<p>Tarayıcı, mobil uygulama ya da başka bir program sunucuya bir <strong>istek</strong> (request) gönderir, sunucu bir <strong>yanıt</strong> (response) döner. İsteğin dört parçası vardır:</p>
+<ul>
+<li><strong>Yöntem</strong> (method): ne yapılmak istendiği.</li>
+<li><strong>Yol</strong> (path): hangi kaynak, örneğin <code>/siparisler/12</code>.</li>
+<li><strong>Başlıklar</strong> (headers): ek bilgiler, örneğin <code>Content-Type: application/json</code>.</li>
+<li><strong>Gövde</strong> (body): gönderilen veri (sadece POST, PUT, PATCH'te).</li>
+</ul>
+<div class="tw"><table>
+<thead>
+<tr>
+<th>Yöntem</th>
+<th>Anlamı</th>
+<th>Örnek</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>GET</code></td>
+<td>Oku</td>
+<td><code>GET /siparisler</code></td>
+</tr>
+<tr>
+<td><code>POST</code></td>
+<td>Yeni oluştur</td>
+<td><code>POST /siparisler</code> + gövde</td>
+</tr>
+<tr>
+<td><code>PUT</code> / <code>PATCH</code></td>
+<td>Tamamen / kısmen güncelle</td>
+<td><code>PATCH /siparisler/12</code> + gövde</td>
+</tr>
+<tr>
+<td><code>DELETE</code></td>
+<td>Sil</td>
+<td><code>DELETE /siparisler/12</code></td>
+</tr>
+</tbody>
+</table></div>
+<p>Yanıt bir <strong>durum kodu</strong>yla başlar:</p>
+<div class="tw"><table>
+<thead>
+<tr>
+<th>Kod</th>
+<th>Anlamı</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>200 OK</code></td>
+<td>Başarılı</td>
+</tr>
+<tr>
+<td><code>201 Created</code></td>
+<td>Yeni kayıt oluşturuldu</td>
+</tr>
+<tr>
+<td><code>204 No Content</code></td>
+<td>Başarılı, gövde yok (silme)</td>
+</tr>
+<tr>
+<td><code>400 Bad Request</code></td>
+<td>İstek hatalı (eksik alan, yanlış tip)</td>
+</tr>
+<tr>
+<td><code>404 Not Found</code></td>
+<td>Kaynak yok</td>
+</tr>
+<tr>
+<td><code>409 Conflict</code></td>
+<td>Çakışma (aynı numara zaten var)</td>
+</tr>
+<tr>
+<td><code>500 Internal Server Error</code></td>
+<td>Sunucuda beklenmeyen hata</td>
+</tr>
+</tbody>
+</table></div>
+<p><strong>REST</strong>, bu yöntemleri kaynaklarla (siparişler, projeler) tutarlı biçimde kullanan bir API tasarım tarzıdır.</p>
+<h3>2. Express ile ilk sunucu (45 dk)</h3>
+<p><strong>Express</strong>, Node.js'in en yaygın web çatısıdır. Dünkü klasörde devam ediyoruz; hazırlık:</p>
+<pre><code class="language-bash">mkdir -p siparis-api &amp;&amp; cd siparis-api
+npm init -y &gt; /dev/null &amp;&amp; npm pkg set type=module
+npm install express@5 &gt; /dev/null 2&gt;&amp;1 &amp;&amp; echo hazır
+</code></pre>
+<pre><code class="language-text">hazır
+</code></pre>
+<p><strong>server.js</strong></p>
+<!-- dosya: server.js -->
+
+<pre><code class="language-js">import express from &quot;express&quot;;
+
+const app = express();
+const PORT = Number(process.env.PORT ?? 3000);
+
+app.get(&quot;/&quot;, (req, res) =&gt; {
+  res.json({ ad: &quot;Sipariş API&quot;, surum: &quot;0.1&quot; });
+});
+
+app.listen(PORT, () =&gt; console.log(`http://localhost:${PORT} adresinde çalışıyor`));
+</code></pre>
+<ul>
+<li><code>app.get(yol, işleyici)</code> bir rota tanımlar. İşleyici <code>req</code> (istek) ve <code>res</code> (yanıt) alır.</li>
+<li><code>res.json(nesne)</code> nesneyi JSON'a çevirip <code>Content-Type: application/json</code> başlığıyla gönderir.</li>
+</ul>
+<p>Sunucuyu başlat (terminal açık kalır; durdurmak için Ctrl+C):</p>
+<!-- arka -->
+
+<pre><code class="language-bash">node server.js
+</code></pre>
+<p>İkinci bir terminalde dene. <strong>curl</strong>, komut satırından HTTP isteği gönderir; <code>-i</code> başlıkları da gösterir:</p>
+<pre><code class="language-bash">curl -s http://localhost:3000/
+echo
+curl -s -i http://localhost:3000/ | grep -i -E &quot;^HTTP|^content-type&quot;
+</code></pre>
+<pre><code class="language-text">{&quot;ad&quot;:&quot;Sipariş API&quot;,&quot;surum&quot;:&quot;0.1&quot;}
+HTTP/1.1 200 OK
+Content-Type: application/json; charset=utf-8
+</code></pre>
+<p>Tarayıcıda <code>http://localhost:3000</code> adresini açınca da aynı JSON'u görürsün. Kodu değiştirince sunucuyu yeniden başlatman gerekir; <code>node --watch server.js</code> dosya değişince otomatik yeniden başlatır.</p>
+<pre><code class="language-bash">pkill -f &quot;^node server.js&quot;; echo durduruldu
+</code></pre>
+<pre><code class="language-text">durduruldu
+</code></pre>
+<h3>3. Rotalar, parametreler ve JSON gövde (1 saat)</h3>
+<figure class="fig"><div class="sc"><svg viewBox="0 0 640 160" role="img" xmlns="http://www.w3.org/2000/svg"><defs><marker id="ah-rota" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0 0L10 5L0 10z" class="ar"/></marker></defs><text x="20" y="30" class="ta" text-anchor="start">GET  /siparisler/12?durum=yeni</text><line x1="95" y1="40" x2="95" y2="136" class="mu"/><text x="95" y="152" class="tm" text-anchor="start">app.get("/siparisler/:id")</text><line x1="148" y1="40" x2="148" y2="100" class="mu"/><text x="148" y="116" class="tm" text-anchor="start">req.params.id = "12"</text><line x1="200" y1="40" x2="200" y2="64" class="mu"/><text x="200" y="80" class="tm" text-anchor="start">req.query.durum = "yeni"</text><rect x="420" y="40" width="200" height="90" rx="5" class="bxa"/><text x="520.0" y="73.0" class="tb" text-anchor="middle">POST gövdesi</text><text x="520.0" y="89.0" class="tm" text-anchor="middle">express.json()</text><text x="520.0" y="105.0" class="tm" text-anchor="middle">→ req.body</text></svg></div><figcaption>Bir isteğin parçaları Express&#x27;te nereye düşer.</figcaption></figure>
+<p>Şimdi bellekte tutulan bir sipariş listesiyle tam bir REST kaynağı yazalım (yarından sonra veritabanına taşıyacağız):</p>
+<!-- dosya: server.js -->
+
+<pre><code class="language-js">import express from &quot;express&quot;;
+
+const app = express();
+app.use(express.json());
+
+let siparisler = [
+  { id: 1, malzeme: &quot;Isıcam&quot;, adet: 120, durum: &quot;üretim&quot; },
+  { id: 2, malzeme: &quot;Silikon&quot;, adet: 60, durum: &quot;teslim&quot; },
+];
+let sonId = 2;
+
+app.get(&quot;/siparisler&quot;, (req, res) =&gt; {
+  const { durum } = req.query;
+  res.json(durum ? siparisler.filter(s =&gt; s.durum === durum) : siparisler);
+});
+
+app.get(&quot;/siparisler/:id&quot;, (req, res) =&gt; {
+  const s = siparisler.find(x =&gt; x.id === Number(req.params.id));
+  if (!s) return res.status(404).json({ hata: &quot;Sipariş bulunamadı&quot; });
+  res.json(s);
+});
+
+app.post(&quot;/siparisler&quot;, (req, res) =&gt; {
+  const { malzeme, adet } = req.body ?? {};
+  if (!malzeme || !Number.isInteger(adet) || adet &lt;= 0) {
+    return res.status(400).json({ hata: &quot;malzeme ve pozitif tam sayı adet gerekli&quot; });
+  }
+  const yeni = { id: ++sonId, malzeme, adet, durum: &quot;yeni&quot; };
+  siparisler.push(yeni);
+  res.status(201).json(yeni);
+});
+
+app.patch(&quot;/siparisler/:id&quot;, (req, res) =&gt; {
+  const s = siparisler.find(x =&gt; x.id === Number(req.params.id));
+  if (!s) return res.status(404).json({ hata: &quot;Sipariş bulunamadı&quot; });
+  Object.assign(s, req.body);
+  res.json(s);
+});
+
+app.delete(&quot;/siparisler/:id&quot;, (req, res) =&gt; {
+  const once = siparisler.length;
+  siparisler = siparisler.filter(x =&gt; x.id !== Number(req.params.id));
+  res.status(siparisler.length &lt; once ? 204 : 404).end();
+});
+
+app.listen(3000, () =&gt; console.log(&quot;hazır&quot;));
+</code></pre>
+<ul>
+<li><code>app.use(express.json())</code> gelen JSON gövdeyi ayrıştırıp <code>req.body</code>'ye koyar. Unutulursa <code>req.body</code> boş gelir.</li>
+<li><code>:id</code> yolun değişken parçasıdır, <code>req.params.id</code> ile okunur. <strong>Her zaman metindir</strong>; sayıya çevirmek gerekir.</li>
+<li><code>?durum=üretim</code> gibi sorgu parametreleri <code>req.query</code>'dedir.</li>
+<li><code>res.status(kod)</code> durum kodunu ayarlar; <code>.end()</code> gövdesiz yanıt bitirir.</li>
+</ul>
+<!-- arka -->
+
+<pre><code class="language-bash">node server.js
+</code></pre>
+<pre><code class="language-bash">curl -s http://localhost:3000/siparisler; echo
+curl -s &quot;http://localhost:3000/siparisler?durum=teslim&quot;; echo
+curl -s -X POST http://localhost:3000/siparisler -H &quot;Content-Type: application/json&quot; -d '{&quot;malzeme&quot;:&quot;Ankraj braketi&quot;,&quot;adet&quot;:96}'; echo
+curl -s -X POST http://localhost:3000/siparisler -H &quot;Content-Type: application/json&quot; -d '{&quot;malzeme&quot;:&quot;Cam&quot;}' -w &quot; %{http_code}\n&quot;
+curl -s -X PATCH http://localhost:3000/siparisler/1 -H &quot;Content-Type: application/json&quot; -d '{&quot;durum&quot;:&quot;teslim&quot;}'; echo
+curl -s -X DELETE http://localhost:3000/siparisler/2 -o /dev/null -w &quot;%{http_code}\n&quot;
+curl -s http://localhost:3000/siparisler/2 -w &quot; %{http_code}\n&quot;
+</code></pre>
+<pre><code class="language-text">[{&quot;id&quot;:1,&quot;malzeme&quot;:&quot;Isıcam&quot;,&quot;adet&quot;:120,&quot;durum&quot;:&quot;üretim&quot;},{&quot;id&quot;:2,&quot;malzeme&quot;:&quot;Silikon&quot;,&quot;adet&quot;:60,&quot;durum&quot;:&quot;teslim&quot;}]
+[{&quot;id&quot;:2,&quot;malzeme&quot;:&quot;Silikon&quot;,&quot;adet&quot;:60,&quot;durum&quot;:&quot;teslim&quot;}]
+{&quot;id&quot;:3,&quot;malzeme&quot;:&quot;Ankraj braketi&quot;,&quot;adet&quot;:96,&quot;durum&quot;:&quot;yeni&quot;}
+{&quot;hata&quot;:&quot;malzeme ve pozitif tam sayı adet gerekli&quot;} 400
+{&quot;id&quot;:1,&quot;malzeme&quot;:&quot;Isıcam&quot;,&quot;adet&quot;:120,&quot;durum&quot;:&quot;teslim&quot;}
+204
+{&quot;hata&quot;:&quot;Sipariş bulunamadı&quot;} 404
+</code></pre>
+<p><code>-X</code> yöntemi, <code>-H</code> başlığı, <code>-d</code> gövdeyi verir. Windows PowerShell'de curl yerine <code>Invoke-RestMethod</code> ya da VS Code'un <strong>REST Client</strong> eklentisi daha rahattır; Postman ve Bruno gibi araçlar da aynı işi grafik arayüzle yapar.</p>
+<p>Bu kodda bilerek bırakılmış bir zayıflık var: <code>PATCH</code>, gövdede gelen her alanı (<code>id</code> dahil) olduğu gibi kopyalıyor. 6. günde doğrulama ile kapatacağız.</p>
+<pre><code class="language-bash">pkill -f &quot;^node server.js&quot;; echo durduruldu
+</code></pre>
+<pre><code class="language-text">durduruldu
+</code></pre>
+<h3>4. Ara katman (middleware) (45 dk)</h3>
+<figure class="fig"><div class="sc"><svg viewBox="0 0 640 86" role="img" xmlns="http://www.w3.org/2000/svg"><defs><marker id="ah-ara" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0 0L10 5L0 10z" class="ar"/></marker></defs><rect x="10.0" y="16" width="109.6" height="56" rx="5" class="bx"/><text x="64.8" y="40.0" class="tb" text-anchor="middle">istek</text><text x="64.8" y="56.0" class="tm" text-anchor="middle">GET /x/9</text><rect x="137.6" y="16" width="109.6" height="56" rx="5" class="bx"/><text x="192.39999999999998" y="40.0" class="tb" text-anchor="middle">express.json</text><text x="192.39999999999998" y="56.0" class="tm" text-anchor="middle">gövde → body</text><line x1="121.6" y1="44.0" x2="135.6" y2="44.0" class="mu" marker-end="url(#ah-ara)"/><rect x="265.2" y="16" width="109.6" height="56" rx="5" class="bx"/><text x="320.0" y="40.0" class="tb" text-anchor="middle">günlük</text><text x="320.0" y="56.0" class="tm" text-anchor="middle">next()</text><line x1="249.2" y1="44.0" x2="263.2" y2="44.0" class="mu" marker-end="url(#ah-ara)"/><rect x="392.79999999999995" y="16" width="109.6" height="56" rx="5" class="bx"/><text x="447.59999999999997" y="40.0" class="tb" text-anchor="middle">rota</text><text x="447.59999999999997" y="56.0" class="tm" text-anchor="middle">next(hata)</text><line x1="376.79999999999995" y1="44.0" x2="390.79999999999995" y2="44.0" class="mu" marker-end="url(#ah-ara)"/><rect x="520.4" y="16" width="109.6" height="56" rx="5" class="bxa"/><text x="575.1999999999999" y="40.0" class="tb" text-anchor="middle">hata işleyici</text><text x="575.1999999999999" y="56.0" class="tm" text-anchor="middle">4 argüman</text><line x1="504.4" y1="44.0" x2="518.4" y2="44.0" class="mu" marker-end="url(#ah-ara)"/></svg></div><figcaption>Ara katmanlar sırayla çalışır; hata doğrudan hata işleyiciye atlar.</figcaption></figure>
+<p><strong>Ara katman</strong>, istek rotaya ulaşmadan önce (ya da sonra) çalışan fonksiyondur: <code>(req, res, next) =&gt; { ... }</code>. İşini bitirince <code>next()</code> çağırıp isteği sıradakine iletir. <code>express.json()</code> da bir ara katmandır. Kendi günlük (log) ara katmanımızı yazalım ve rotaları ayrı bir dosyaya, bir <strong>Router</strong>'a taşıyalım:</p>
+<!-- dosya: siparisler.js -->
+
+<pre><code class="language-js">import { Router } from &quot;express&quot;;
+
+const r = Router();
+const liste = [{ id: 1, malzeme: &quot;Isıcam&quot;, adet: 120 }];
+
+r.get(&quot;/&quot;, (req, res) =&gt; res.json(liste));
+r.get(&quot;/:id&quot;, (req, res, next) =&gt; {
+  const s = liste.find(x =&gt; x.id === Number(req.params.id));
+  if (!s) return next({ durum: 404, mesaj: &quot;Sipariş bulunamadı&quot; });
+  res.json(s);
+});
+r.get(&quot;/hata/dene&quot;, () =&gt; {
+  throw new Error(&quot;beklenmeyen bir şey oldu&quot;);
+});
+
+export default r;
+</code></pre>
+<!-- dosya: server.js -->
+
+<pre><code class="language-js">import express from &quot;express&quot;;
+import siparisler from &quot;./siparisler.js&quot;;
+
+const app = express();
+app.use(express.json());
+
+app.use((req, res, next) =&gt; {
+  const t0 = Date.now();
+  res.on(&quot;finish&quot;, () =&gt; console.log(`${req.method} ${req.originalUrl} ${res.statusCode} ${Date.now() - t0 &lt; 50 ? &quot;hızlı&quot; : &quot;yavaş&quot;}`));
+  next();
+});
+
+app.use(&quot;/siparisler&quot;, siparisler);
+
+app.use((req, res) =&gt; res.status(404).json({ hata: `Yol yok: ${req.method} ${req.path}` }));
+
+app.use((err, req, res, next) =&gt; {
+  const durum = err.durum ?? 500;
+  if (durum === 500) console.error(&quot;HATA:&quot;, err.message);
+  res.status(durum).json({ hata: durum === 500 ? &quot;Sunucu hatası&quot; : err.mesaj });
+});
+
+app.listen(3000);
+</code></pre>
+<ul>
+<li><code>app.use("/siparisler", router)</code> router'daki bütün rotaları bu önekin altına bağlar.</li>
+<li>Sıra önemlidir: ara katmanlar tanımlandıkları sırayla çalışır. Hiçbir rotaya uymayan istek en sondaki 404 ara katmanına düşer.</li>
+<li><strong>Hata işleyici</strong> dört argümanlıdır: <code>(err, req, res, next)</code>. Bir rotada hata fırlatılırsa ya da <code>next(hata)</code> çağrılırsa buraya gelir. Express 5, <code>async</code> rotalarda fırlatılan hataları da kendiliğinden buraya iletir.</li>
+<li>500 hatalarında ayrıntıyı (yığın izi, SQL) kullanıcıya göstermeyip günlüğe yazarız: hem güvenlik hem okunabilirlik.</li>
+</ul>
+<!-- arka -->
+
+<pre><code class="language-bash">node server.js &gt; sunucu.log 2&gt;&amp;1
+</code></pre>
+<pre><code class="language-bash">curl -s http://localhost:3000/siparisler/1; echo
+curl -s http://localhost:3000/siparisler/9; echo
+curl -s http://localhost:3000/projeler; echo
+curl -s http://localhost:3000/siparisler/hata/dene; echo
+cat sunucu.log
+</code></pre>
+<pre><code class="language-text">{&quot;id&quot;:1,&quot;malzeme&quot;:&quot;Isıcam&quot;,&quot;adet&quot;:120}
+{&quot;hata&quot;:&quot;Sipariş bulunamadı&quot;}
+{&quot;hata&quot;:&quot;Yol yok: GET /projeler&quot;}
+{&quot;hata&quot;:&quot;Sunucu hatası&quot;}
+GET /siparisler/1 200 hızlı
+GET /siparisler/9 404 hızlı
+GET /projeler 404 hızlı
+HATA: beklenmeyen bir şey oldu
+GET /siparisler/hata/dene 500 hızlı
+</code></pre>
+<pre><code class="language-bash">pkill -f &quot;^node server.js&quot;; echo durduruldu
+</code></pre>
+<pre><code class="language-text">durduruldu
+</code></pre>
+<h3>5. CORS: tarayıcıdan erişim (15 dk)</h3>
+<p>React uygulaman <code>http://localhost:5173</code>'te, API'n <code>http://localhost:3000</code>'de çalışırken tarayıcı farklı <strong>kaynaklar</strong> (origin) arasındaki istekleri varsayılan olarak engeller. Sunucu izin verdiğini <code>Access-Control-Allow-Origin</code> başlığıyla bildirmelidir. En kolay yol <code>cors</code> paketidir: <code>npm install cors</code>, ardından <code>app.use(cors({ origin: "http://localhost:5173" }))</code>. Projede (7. gün) kullanacağız. <code>curl</code> ve sunucudan sunucuya istekler CORS'tan etkilenmez; bu sadece tarayıcının güvenlik kuralıdır.</p>
+<p><strong>Alıştırma:</strong> Bellekteki sipariş API'sine <code>GET /siparisler/ozet</code> rotası ekle: toplam sipariş sayısını ve duruma göre adetleri (<code>{ yeni: 1, üretim: 1 }</code>) döndürsün. Dikkat: bu rota <code>/siparisler/:id</code>'den <strong>önce</strong> tanımlanmalı; yoksa <code>ozet</code> bir id sanılır. Neden olduğunu deneyerek gör.</p>
+<h3>Gün sonu kontrolü (15 dk)</h3>
+<ul class="tasks">
+<li class="task"><label><input type="checkbox" data-id="g2-1"><span>HTTP yöntemlerini ve 200, 201, 204, 400, 404, 500 durum kodlarını biliyorum.</span></label></li>
+<li class="task"><label><input type="checkbox" data-id="g2-2"><span>Express ile rota tanımlayıp JSON yanıt döndürebiliyorum.</span></label></li>
+<li class="task"><label><input type="checkbox" data-id="g2-3"><span>req.params, req.query ve req.body'yi kullanabiliyorum; express.json()'un gerekliliğini biliyorum.</span></label></li>
+<li class="task"><label><input type="checkbox" data-id="g2-4"><span>Router ile rotaları ayrı dosyalara bölebiliyorum.</span></label></li>
+<li class="task"><label><input type="checkbox" data-id="g2-5"><span>Kendi ara katmanımı ve dört argümanlı hata işleyiciyi yazabiliyorum.</span></label></li>
+<li class="task"><label><input type="checkbox" data-id="g2-6"><span>curl ile GET, POST, PATCH ve DELETE istekleri gönderebiliyorum; CORS'un ne olduğunu biliyorum.</span></label></li>
+</ul></div>
+  <div class="pn"><a href="#gun1">← 1. gün</a><a href="#gun3">3. gün →</a></div>
+</section>
+<section class="day" id="gun3" data-day="3">
+  <div class="day-head"><span class="dn">GÜN 03</span><h2>PostgreSQL temelleri</h2><span class="meta">~4 saat · <span data-prog="3">0/7</span> kontrol</span></div>
+  <div class="prose"><h3>Hedef</h3>
+<p>Gün sonunda ilişkisel veritabanının tablo, satır ve sütun mantığını bilecek; PostgreSQL'e psql ile bağlanacak; tablo oluşturup veri tiplerini ve kısıtları (PRIMARY KEY, NOT NULL, CHECK, UNIQUE) seçecek; INSERT, SELECT, UPDATE ve DELETE yazacak; WHERE, ORDER BY, LIMIT ve gruplama ile sorgulayabileceksin. Süre yaklaşık 4 saat.</p>
+<h3>1. Neden veritabanı? (30 dk)</h3>
+<p>Dün siparişleri bir JavaScript dizisinde tuttuk: sunucu kapanınca hepsi kayboldu. Bir JSON dosyasına yazmak da yetmez; iki istek aynı anda yazarsa dosya bozulur, 100.000 kayıt içinde arama yavaşlar, “adedi negatif olamaz” gibi kuralları her yerde elle kontrol etmek gerekir.</p>
+<p><strong>İlişkisel veritabanı</strong> veriyi <strong>tablolarda</strong> tutar: her <strong>satır</strong> bir kayıt (bir sipariş), her <strong>sütun</strong> bir alan (malzeme, adet). Veritabanı aynı anda gelen yazmaları güvenle sıraya koyar, kuralları kendisi uygular, indekslerle hızlı arar. Bu tablolarla <strong>SQL</strong> dilinde konuşulur.</p>
+<p><strong>PostgreSQL</strong> açık kaynaklı, ücretsiz ve çok güçlü bir ilişkisel veritabanıdır; Supabase, Neon ve Render gibi servislerin de altında çalışır.</p>
+<p><strong>Kurulum:</strong></p>
+<ul>
+<li><strong>Windows ve macOS:</strong> postgresql.org/download adresinden yükleyici. Kurulumda <code>postgres</code> kullanıcısı için bir parola belirlersin; bunu unutma. <strong>pgAdmin</strong> de birlikte gelir.</li>
+<li><strong>Linux (Ubuntu):</strong> <code>sudo apt install postgresql</code>, sonra <code>sudo -u postgres createuser -s $USER</code> ile kendine yetki ver.</li>
+<li><strong>Docker:</strong> <code>docker run -d --name pg -e POSTGRES_PASSWORD=gizli -p 5432:5432 postgres:16</code>.</li>
+</ul>
+<p>Grafik bir araç istersen pgAdmin, DBeaver ya da VS Code'un PostgreSQL eklentisi işini görür; bu eğitimde her şeyi komut satırındaki <strong>psql</strong> ile yapacağız ki çıktılar herkeste aynı olsun.</p>
+<h3>2. Veritabanı oluştur ve bağlan (20 dk)</h3>
+<pre><code class="language-bash">dropdb --if-exists santiye 2&gt;/dev/null
+createdb santiye
+psql -d santiye -c &quot;SELECT version();&quot; -t | cut -d, -f1
+</code></pre>
+<pre><code class="language-text"> PostgreSQL 16.15 (Ubuntu 16.15-0ubuntu0.24.04.1) on x86_64-pc-linux-gnu
+</code></pre>
+<ul>
+<li><code>createdb santiye</code> boş bir veritabanı oluşturur. Bir PostgreSQL sunucusunda birçok veritabanı olabilir.</li>
+<li><code>psql -d santiye</code> etkileşimli kabuğu açar. İçeride <code>\dt</code> tabloları, <code>\d tablo</code> bir tablonun yapısını gösterir, <code>\q</code> çıkar.</li>
+<li><code>-c "..."</code> tek komut çalıştırıp çıkar; <code>-t</code> başlıkları gizler.</li>
+</ul>
+<p>Windows'ta parola soruyorsa: <code>psql -U postgres -h localhost -d santiye</code>. Bu eğitim boyunca <code>psql -d santiye</code> yazdığımız yerde kendi bağlantı seçeneklerini kullan.</p>
+<p>Uzun SQL'leri bir dosyaya yazıp <code>psql -d santiye -f dosya.sql</code> ile çalıştırmak en düzenli yoldur. Bugün öyle yapacağız.</p>
+<h3>3. Tablo oluşturmak: tipler ve kısıtlar (1 saat)</h3>
+<figure class="fig"><div class="sc"><svg viewBox="0 0 640 146" role="img" xmlns="http://www.w3.org/2000/svg"><defs><marker id="ah-tablo" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0 0L10 5L0 10z" class="ar"/></marker></defs><rect x="60" y="20" width="40" height="24" class="bxa"/><text x="68" y="37" class="ta" text-anchor="start">id</text><rect x="60" y="44" width="40" height="24" class="bx"/><text x="68" y="61" class="tm" text-anchor="start">1</text><rect x="60" y="68" width="40" height="24" class="bx"/><text x="68" y="85" class="tm" text-anchor="start">2</text><rect x="60" y="92" width="40" height="24" class="bx"/><text x="68" y="109" class="tm" text-anchor="start">3</text><rect x="100" y="20" width="80" height="24" class="bxa"/><text x="108" y="37" class="ta" text-anchor="start">kod</text><rect x="100" y="44" width="80" height="24" class="bx"/><text x="108" y="61" class="tm" text-anchor="start">CAM-01</text><rect x="100" y="68" width="80" height="24" class="bx"/><text x="108" y="85" class="tm" text-anchor="start">SLK-01</text><rect x="100" y="92" width="80" height="24" class="bx"/><text x="108" y="109" class="tm" text-anchor="start">ANK-01</text><rect x="180" y="20" width="160" height="24" class="bxa"/><text x="188" y="37" class="ta" text-anchor="start">ad</text><rect x="180" y="44" width="160" height="24" class="bx"/><text x="188" y="61" class="tm" text-anchor="start">Isıcam 6+16+6</text><rect x="180" y="68" width="160" height="24" class="bx"/><text x="188" y="85" class="tm" text-anchor="start">Yapısal silikon</text><rect x="180" y="92" width="160" height="24" class="bx"/><text x="188" y="109" class="tm" text-anchor="start">Ankraj braketi</text><rect x="340" y="20" width="80" height="24" class="bxa"/><text x="348" y="37" class="ta" text-anchor="start">birim</text><rect x="340" y="44" width="80" height="24" class="bx"/><text x="348" y="61" class="tm" text-anchor="start">m2</text><rect x="340" y="68" width="80" height="24" class="bx"/><text x="348" y="85" class="tm" text-anchor="start">kartuş</text><rect x="340" y="92" width="80" height="24" class="bx"/><text x="348" y="109" class="tm" text-anchor="start">adet</text><rect x="420" y="20" width="110" height="24" class="bxa"/><text x="428" y="37" class="ta" text-anchor="start">birim_fiyat</text><rect x="420" y="44" width="110" height="24" class="bx"/><text x="428" y="61" class="tm" text-anchor="start">1450.00</text><rect x="420" y="68" width="110" height="24" class="bx"/><text x="428" y="85" class="tm" text-anchor="start">310.00</text><rect x="420" y="92" width="110" height="24" class="bx"/><text x="428" y="109" class="tm" text-anchor="start">185.50</text><text x="20" y="37" class="tm" text-anchor="start">sütun →</text><text x="20" y="85" class="tm" text-anchor="start">satır →</text><text x="60" y="136" class="ta" text-anchor="start">PRIMARY KEY</text><text x="140" y="136" class="ta" text-anchor="start">UNIQUE</text><text x="470" y="136" class="ta" text-anchor="start">CHECK (≥ 0)</text></svg></div><figcaption>Tablo: sütunlar tip ve kısıtlarla tanımlanır, her satır bir kayıttır.</figcaption></figure>
+<!-- dosya: tablolar.sql -->
+
+<pre><code class="language-sql">CREATE TABLE malzemeler (
+  id          integer GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
+  kod         text    NOT NULL UNIQUE,
+  ad          text    NOT NULL,
+  birim       text    NOT NULL DEFAULT 'adet',
+  birim_fiyat numeric(10,2) NOT NULL CHECK (birim_fiyat &gt;= 0)
+);
+
+CREATE TABLE siparisler (
+  id         integer GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
+  malzeme_id integer NOT NULL,
+  adet       integer NOT NULL CHECK (adet &gt; 0),
+  durum      text    NOT NULL DEFAULT 'yeni'
+             CHECK (durum IN ('yeni', 'üretim', 'teslim', 'iptal')),
+  olusturma  timestamptz NOT NULL DEFAULT now()
+);
+</code></pre>
+<pre><code class="language-bash">psql -d santiye -q -f tablolar.sql &amp;&amp; psql -d santiye -c &quot;\dt&quot;
+</code></pre>
+<pre><code class="language-text">          List of relations
+ Schema |    Name    | Type  | Owner 
+--------+------------+-------+-------
+ public | malzemeler | table | ayse
+ public | siparisler | table | ayse
+(2 rows)
+</code></pre>
+<p>Sık kullanılan tipler:</p>
+<div class="tw"><table>
+<thead>
+<tr>
+<th>Tip</th>
+<th>Ne için</th>
+<th>Örnek</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>integer</code>, <code>bigint</code></td>
+<td>Tam sayı</td>
+<td>adet, id</td>
+</tr>
+<tr>
+<td><code>numeric(10,2)</code></td>
+<td>Kesin ondalık; <strong>para için her zaman bu</strong></td>
+<td>1450.50</td>
+</tr>
+<tr>
+<td><code>text</code></td>
+<td>Metin (uzunluk sınırı yok)</td>
+<td>malzeme adı</td>
+</tr>
+<tr>
+<td><code>boolean</code></td>
+<td>Doğru/yanlış</td>
+<td>onaylandi</td>
+</tr>
+<tr>
+<td><code>date</code>, <code>timestamptz</code></td>
+<td>Tarih; saat dilimli zaman damgası</td>
+<td>teslim tarihi</td>
+</tr>
+<tr>
+<td><code>jsonb</code></td>
+<td>Esnek JSON alanı</td>
+<td>ek özellikler</td>
+</tr>
+</tbody>
+</table></div>
+<p><code>real</code>/<code>double precision</code> gibi kayan noktalı tipler para için uygun değildir: 0.1 + 0.2 tam 0.3 etmez.</p>
+<p>Kısıtlar veritabanının bekçileridir; kural ihlal edilirse kayıt hiç yazılmaz:</p>
+<ul>
+<li><strong>PRIMARY KEY:</strong> her satırın benzersiz kimliği. <code>GENERATED ALWAYS AS IDENTITY</code> numarayı veritabanının otomatik vermesini sağlar (eski kodlarda <code>serial</code> görürsün; aynı işi yapar).</li>
+<li><strong>NOT NULL:</strong> boş bırakılamaz.</li>
+<li><strong>UNIQUE:</strong> aynı değer iki kez olamaz (malzeme kodu).</li>
+<li><strong>CHECK:</strong> kendi kuralın (adet &gt; 0, durum belirli değerlerden biri).</li>
+<li><strong>DEFAULT:</strong> değer verilmezse kullanılacak varsayılan.</li>
+</ul>
+<h3>4. INSERT: veri eklemek (30 dk)</h3>
+<!-- dosya: veri.sql -->
+
+<pre><code class="language-sql">INSERT INTO malzemeler (kod, ad, birim, birim_fiyat) VALUES
+  ('CAM-01', 'Isıcam 6+16+6',      'm2',   1450.00),
+  ('SLK-01', 'Yapısal silikon',    'kartuş', 310.00),
+  ('ANK-01', 'Ankraj braketi',     'adet', 185.50),
+  ('PRF-01', 'Alüminyum dikme',    'm',    420.00),
+  ('CNT-01', 'EPDM conta',         'm',     28.75);
+
+INSERT INTO siparisler (malzeme_id, adet, durum) VALUES
+  (1, 120, 'üretim'),
+  (2,  60, 'teslim'),
+  (3,  96, 'yeni'),
+  (1,  40, 'yeni'),
+  (4, 310, 'üretim'),
+  (5, 900, 'teslim'),
+  (3,  24, 'iptal');
+</code></pre>
+<pre><code class="language-bash">psql -d santiye -q -f veri.sql &amp;&amp; psql -d santiye -c &quot;SELECT * FROM malzemeler;&quot;
+</code></pre>
+<pre><code class="language-text"> id |  kod   |       ad        | birim  | birim_fiyat 
+----+--------+-----------------+--------+-------------
+  1 | CAM-01 | Isıcam 6+16+6   | m2     |     1450.00
+  2 | SLK-01 | Yapısal silikon | kartuş |      310.00
+  3 | ANK-01 | Ankraj braketi  | adet   |      185.50
+  4 | PRF-01 | Alüminyum dikme | m      |      420.00
+  5 | CNT-01 | EPDM conta      | m      |       28.75
+(5 rows)
+</code></pre>
+<p>Şimdi kısıtları bilerek çiğneyelim:</p>
+<pre><code class="language-bash">psql -d santiye -c &quot;INSERT INTO siparisler (malzeme_id, adet) VALUES (1, -5);&quot; 2&gt;&amp;1 | head -1
+</code></pre>
+<pre><code class="language-text">ERROR:  new row for relation &quot;siparisler&quot; violates check constraint &quot;siparisler_adet_check&quot;
+</code></pre>
+<!-- hata -->
+
+<pre><code class="language-bash">psql -d santiye -c &quot;INSERT INTO malzemeler (kod, ad, birim_fiyat) VALUES ('CAM-01', 'Tekrar', 10);&quot;
+</code></pre>
+<pre><code class="language-text">ERROR:  duplicate key value violates unique constraint &quot;malzemeler_kod_key&quot;
+DETAIL:  Key (kod)=(CAM-01) already exists.
+</code></pre>
+<p>Bu hata mesajlarını yarın Node.js'te yakalayıp kullanıcıya anlaşılır biçimde döndüreceğiz.</p>
+<p><code>RETURNING</code> eklenen satırı geri döndürür; API'de yeni kaydın id'sini öğrenmenin yolu budur. Aşağıda id'nin 8 değil 9 çıktığına dikkat: reddedilen kayıt da bir numara harcadı. Kimlik numaralarında boşluk olması normaldir; id'ye “kaçıncı sipariş” anlamı yükleme.</p>
+<pre><code class="language-bash">psql -d santiye -c &quot;INSERT INTO siparisler (malzeme_id, adet) VALUES (2, 15) RETURNING id, durum;&quot;
+</code></pre>
+<pre><code class="language-text"> id | durum 
+----+-------
+  9 | yeni
+(1 row)
+
+INSERT 0 1
+</code></pre>
+<h3>5. SELECT: sorgulamak (1 saat)</h3>
+<figure class="fig"><div class="sc"><svg viewBox="0 0 640 86" role="img" xmlns="http://www.w3.org/2000/svg"><defs><marker id="ah-select" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0 0L10 5L0 10z" class="ar"/></marker></defs><rect x="10.0" y="16" width="109.6" height="56" rx="5" class="bx"/><text x="64.8" y="40.0" class="tb" text-anchor="middle">SELECT</text><text x="64.8" y="56.0" class="tm" text-anchor="middle">hangi sütunlar</text><rect x="137.6" y="16" width="109.6" height="56" rx="5" class="bx"/><text x="192.39999999999998" y="40.0" class="tb" text-anchor="middle">FROM</text><text x="192.39999999999998" y="56.0" class="tm" text-anchor="middle">hangi tablo</text><line x1="121.6" y1="44.0" x2="135.6" y2="44.0" class="mu" marker-end="url(#ah-select)"/><rect x="265.2" y="16" width="109.6" height="56" rx="5" class="bxa"/><text x="320.0" y="40.0" class="tb" text-anchor="middle">WHERE</text><text x="320.0" y="56.0" class="tm" text-anchor="middle">hangi satırlar</text><line x1="249.2" y1="44.0" x2="263.2" y2="44.0" class="mu" marker-end="url(#ah-select)"/><rect x="392.79999999999995" y="16" width="109.6" height="56" rx="5" class="bx"/><text x="447.59999999999997" y="40.0" class="tb" text-anchor="middle">GROUP BY</text><text x="447.59999999999997" y="56.0" class="tm" text-anchor="middle">+ HAVING</text><line x1="376.79999999999995" y1="44.0" x2="390.79999999999995" y2="44.0" class="mu" marker-end="url(#ah-select)"/><rect x="520.4" y="16" width="109.6" height="56" rx="5" class="bx"/><text x="575.1999999999999" y="40.0" class="tb" text-anchor="middle">ORDER BY</text><text x="575.1999999999999" y="56.0" class="tm" text-anchor="middle">sıra · LIMIT</text><line x1="504.4" y1="44.0" x2="518.4" y2="44.0" class="mu" marker-end="url(#ah-select)"/></svg></div><figcaption>Bir SELECT sorgusunun parçaları, yazıldıkları sırayla.</figcaption></figure>
+<p>Bir SELECT şu sırayla okunur: <strong>hangi sütunlar</strong> (SELECT), <strong>hangi tablodan</strong> (FROM), <strong>hangi satırlar</strong> (WHERE), <strong>hangi sırayla</strong> (ORDER BY), <strong>kaç tane</strong> (LIMIT).</p>
+<!-- dosya: sorgu1.sql -->
+
+<pre><code class="language-sql">SELECT kod, ad, birim_fiyat
+FROM malzemeler
+WHERE birim_fiyat BETWEEN 100 AND 500
+ORDER BY birim_fiyat DESC;
+
+SELECT id, adet, durum
+FROM siparisler
+WHERE durum IN ('yeni', 'üretim') AND adet &gt;= 50
+ORDER BY adet DESC
+LIMIT 3;
+
+SELECT ad FROM malzemeler WHERE ad ILIKE '%si%';
+</code></pre>
+<pre><code class="language-bash">psql -d santiye -f sorgu1.sql
+</code></pre>
+<pre><code class="language-text">  kod   |       ad        | birim_fiyat 
+--------+-----------------+-------------
+ PRF-01 | Alüminyum dikme |      420.00
+ SLK-01 | Yapısal silikon |      310.00
+ ANK-01 | Ankraj braketi  |      185.50
+(3 rows)
+
+ id | adet | durum  
+----+------+--------
+  5 |  310 | üretim
+  1 |  120 | üretim
+  3 |   96 | yeni
+(3 rows)
+
+       ad        
+-----------------
+ Yapısal silikon
+(1 row)
+</code></pre>
+<ul>
+<li><code>ILIKE</code> büyük/küçük harf duyarsız desen arar; <code>%</code> herhangi bir metin demektir. Büyük/küçük harf duyarlı olanı <code>LIKE</code>'tır.</li>
+<li>Metinler <strong>tek tırnakla</strong> yazılır: <code>'yeni'</code>. Çift tırnak tablo ve sütun adları içindir.</li>
+<li>Boş değeri sorgularken <code>= NULL</code> değil <code>IS NULL</code> yazılır.</li>
+</ul>
+<p><strong>Gruplama ve toplama fonksiyonları:</strong> <code>count</code>, <code>sum</code>, <code>avg</code>, <code>min</code>, <code>max</code>. <code>GROUP BY</code> satırları bir sütuna göre gruplar; <code>HAVING</code> gruplar üzerinde filtre uygular (WHERE satırlar üzerinde).</p>
+<!-- dosya: sorgu2.sql -->
+
+<pre><code class="language-sql">SELECT durum, count(*) AS siparis, sum(adet) AS toplam_adet
+FROM siparisler
+GROUP BY durum
+ORDER BY toplam_adet DESC;
+
+SELECT malzeme_id, sum(adet) AS toplam
+FROM siparisler
+WHERE durum &lt;&gt; 'iptal'
+GROUP BY malzeme_id
+HAVING sum(adet) &gt; 100
+ORDER BY malzeme_id;
+</code></pre>
+<pre><code class="language-bash">psql -d santiye -f sorgu2.sql
+</code></pre>
+<pre><code class="language-text"> durum  | siparis | toplam_adet 
+--------+---------+-------------
+ teslim |       2 |         960
+ üretim |       2 |         430
+ yeni   |       3 |         151
+ iptal  |       1 |          24
+(4 rows)
+
+ malzeme_id | toplam 
+------------+--------
+          1 |    160
+          4 |    310
+          5 |    900
+(3 rows)
+</code></pre>
+<p>Sipariş tablosunda sadece <code>malzeme_id</code> var; malzemenin adını ve tutarı görmek için iki tabloyu birleştirmek gerekir. Bu, yarının (JOIN) konusu.</p>
+<h3>6. UPDATE ve DELETE (20 dk)</h3>
+<pre><code class="language-bash">psql -d santiye -c &quot;UPDATE siparisler SET durum = 'üretim' WHERE id = 3 RETURNING id, durum;&quot;
+psql -d santiye -c &quot;DELETE FROM siparisler WHERE durum = 'iptal';&quot;
+psql -d santiye -t -c &quot;SELECT count(*) FROM siparisler;&quot;
+</code></pre>
+<pre><code class="language-text"> id | durum  
+----+--------
+  3 | üretim
+(1 row)
+
+UPDATE 1
+DELETE 1
+     7
+</code></pre>
+<p><strong>WHERE'siz UPDATE ve DELETE bütün tabloyu değiştirir.</strong> Önce aynı WHERE ile bir SELECT çalıştırıp hangi satırların etkileneceğini gör, sonra UPDATE/DELETE'e geç. Önemli değişiklikleri bir işlem (transaction) içinde yap: <code>BEGIN;</code> … kontrol et … <code>COMMIT;</code> ya da vazgeçmek için <code>ROLLBACK;</code>. İşlemleri 4. günde ayrıntılı göreceğiz.</p>
+<p><strong>Alıştırma:</strong> <code>sorgu3.sql</code> dosyasında şunları yaz ve çalıştır:</p>
+<ol>
+<li>Birim fiyatı 300 TL'den yüksek malzemelerin kodu ve adı, ada göre sıralı.</li>
+<li>Teslim edilmemiş (<code>teslim</code> dışındaki, <code>iptal</code> dahil değil) siparişlerin sayısı.</li>
+<li>Her durumdaki en büyük sipariş adedi.</li>
+<li><code>CNT-01</code>'in birim fiyatına %10 zam (RETURNING ile yeni fiyatı gör).</li>
+</ol>
+<h3>Gün sonu kontrolü (15 dk)</h3>
+<ul class="tasks">
+<li class="task"><label><input type="checkbox" data-id="g3-1"><span>Tablo, satır, sütun ve SQL kavramlarını biliyorum.</span></label></li>
+<li class="task"><label><input type="checkbox" data-id="g3-2"><span>createdb ve psql ile veritabanı oluşturup bağlanabiliyorum; .sql dosyasını -f ile çalıştırabiliyorum.</span></label></li>
+<li class="task"><label><input type="checkbox" data-id="g3-3"><span>Doğru veri tiplerini seçebiliyorum; para için numeric kullanıyorum.</span></label></li>
+<li class="task"><label><input type="checkbox" data-id="g3-4"><span>PRIMARY KEY, NOT NULL, UNIQUE, CHECK ve DEFAULT kısıtlarını yazabiliyorum.</span></label></li>
+<li class="task"><label><input type="checkbox" data-id="g3-5"><span>INSERT … RETURNING, SELECT (WHERE, ORDER BY, LIMIT, ILIKE) yazabiliyorum.</span></label></li>
+<li class="task"><label><input type="checkbox" data-id="g3-6"><span>GROUP BY, HAVING ve toplama fonksiyonlarını kullanabiliyorum.</span></label></li>
+<li class="task"><label><input type="checkbox" data-id="g3-7"><span>UPDATE ve DELETE'i WHERE ile güvenli yazıyorum.</span></label></li>
+</ul></div>
+  <div class="pn"><a href="#gun2">← 2. gün</a><a href="#gun4">4. gün →</a></div>
+</section>
+<section class="day" id="gun4" data-day="4">
+  <div class="day-head"><span class="dn">GÜN 04</span><h2>İlişkiler ve ileri sorgular</h2><span class="meta">~4 saat · <span data-prog="4">0/6</span> kontrol</span></div>
+  <div class="prose"><h3>Hedef</h3>
+<p>Gün sonunda tablolar arasında yabancı anahtarla (FOREIGN KEY) ilişki kuracak; bire-çok ilişkiyi tasarlayacak; INNER JOIN ve LEFT JOIN ile birleşik sorgular yazacak; indeksin ne işe yaradığını EXPLAIN ile görecek; işlemlerle (transaction) birden fazla değişikliği “ya hep ya hiç” yapacak ve sık kullanılan sorguyu bir görünüme (view) çevirebileceksin. Süre yaklaşık 4,5 saat.</p>
+<h3>1. İlişkiler ve yabancı anahtar (1 saat)</h3>
+<figure class="fig"><div class="sc"><svg viewBox="0 0 640 170" role="img" xmlns="http://www.w3.org/2000/svg"><defs><marker id="ah-iliski" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0 0L10 5L0 10z" class="ar"/></marker></defs><rect x="20" y="30" width="150" height="60" rx="5" class="bx"/><text x="95.0" y="56.0" class="tb" text-anchor="middle">projeler</text><text x="95.0" y="72.0" class="tm" text-anchor="middle">id · kod · ad</text><rect x="470" y="30" width="150" height="60" rx="5" class="bx"/><text x="545.0" y="56.0" class="tb" text-anchor="middle">malzemeler</text><text x="545.0" y="72.0" class="tm" text-anchor="middle">id · kod · fiyat</text><rect x="235" y="100" width="170" height="60" rx="5" class="bxa"/><text x="320.0" y="126.0" class="tb" text-anchor="middle">siparisler</text><text x="320.0" y="142.0" class="tm" text-anchor="middle">proje_id · malzeme_id</text><line x1="260" y1="100" x2="140" y2="92" class="mu" marker-end="url(#ah-iliski)"/><line x1="380" y1="100" x2="500" y2="92" class="mu" marker-end="url(#ah-iliski)"/><text x="150" y="124" class="tm" text-anchor="middle">çok → bir</text><text x="490" y="124" class="tm" text-anchor="middle">çok → bir</text><text x="320" y="20" class="ta" text-anchor="middle">FOREIGN KEY … REFERENCES</text></svg></div><figcaption>Bire-çok ilişkiler: siparişler iki tabloya yabancı anahtarla bağlanır.</figcaption></figure>
+<p>Dünkü <code>siparisler</code> tablosunda <code>malzeme_id</code> vardı ama veritabanı bunun gerçekten var olan bir malzemeyi gösterip göstermediğini bilmiyordu: <code>malzeme_id = 99</code> yazsak kabul ederdi. <strong>Yabancı anahtar</strong> (FOREIGN KEY) bu bağı veritabanına söyler.</p>
+<p>Bugün şemayı baştan, üç tabloyla kuruyoruz: bir <strong>proje</strong>nin birçok siparişi, bir <strong>malzeme</strong>nin birçok siparişi olabilir. Bu <strong>bire-çok</strong> (one-to-many) ilişkidir; “çok” tarafına (sipariş) “bir” tarafın id'si yazılır.</p>
+<!-- dosya: sema.sql -->
+
+<pre><code class="language-sql">DROP TABLE IF EXISTS siparisler, malzemeler, projeler;
+
+CREATE TABLE projeler (
+  id    integer GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
+  kod   text NOT NULL UNIQUE,
+  ad    text NOT NULL,
+  sehir text NOT NULL
+);
+
+CREATE TABLE malzemeler (
+  id          integer GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
+  kod         text NOT NULL UNIQUE,
+  ad          text NOT NULL,
+  birim       text NOT NULL DEFAULT 'adet',
+  birim_fiyat numeric(10,2) NOT NULL CHECK (birim_fiyat &gt;= 0),
+  stok        integer NOT NULL DEFAULT 0 CHECK (stok &gt;= 0)
+);
+
+CREATE TABLE siparisler (
+  id         integer GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
+  proje_id   integer NOT NULL REFERENCES projeler(id) ON DELETE CASCADE,
+  malzeme_id integer NOT NULL REFERENCES malzemeler(id) ON DELETE RESTRICT,
+  adet       integer NOT NULL CHECK (adet &gt; 0),
+  durum      text NOT NULL DEFAULT 'yeni'
+             CHECK (durum IN ('yeni', 'üretim', 'teslim', 'iptal')),
+  olusturma  timestamptz NOT NULL DEFAULT now()
+);
+</code></pre>
+<!-- dosya: veri.sql -->
+
+<pre><code class="language-sql">INSERT INTO projeler (kod, ad, sehir) VALUES
+  ('P-101', 'Kule A',          'İstanbul'),
+  ('P-102', 'Ofis Bloğu',      'Ankara'),
+  ('P-103', 'Havalimanı Terminal', 'İzmir'),
+  ('P-104', 'Hastane Ek Bina', 'Bursa');
+
+INSERT INTO malzemeler (kod, ad, birim, birim_fiyat, stok) VALUES
+  ('CAM-01', 'Isıcam 6+16+6',   'm2',     1450.00, 200),
+  ('SLK-01', 'Yapısal silikon', 'kartuş',  310.00, 500),
+  ('ANK-01', 'Ankraj braketi',  'adet',    185.50, 150),
+  ('PRF-01', 'Alüminyum dikme', 'm',       420.00, 800),
+  ('CNT-01', 'EPDM conta',      'm',        28.75, 3000);
+
+INSERT INTO siparisler (proje_id, malzeme_id, adet, durum) VALUES
+  (1, 1, 120, 'üretim'),
+  (1, 2,  60, 'teslim'),
+  (1, 3,  96, 'yeni'),
+  (2, 1,  40, 'yeni'),
+  (2, 4, 310, 'üretim'),
+  (3, 5, 900, 'teslim'),
+  (3, 3,  24, 'iptal'),
+  (3, 1,  75, 'teslim');
+</code></pre>
+<pre><code class="language-bash">dropdb --if-exists santiye 2&gt;/dev/null; createdb santiye
+psql -d santiye -q -f sema.sql -f veri.sql 2&gt;&amp;1 | grep -v NOTICE
+psql -d santiye -c &quot;\d siparisler&quot; | grep -A3 &quot;Foreign-key&quot;
+</code></pre>
+<pre><code class="language-text">Foreign-key constraints:
+    &quot;siparisler_malzeme_id_fkey&quot; FOREIGN KEY (malzeme_id) REFERENCES malzemeler(id) ON DELETE RESTRICT
+    &quot;siparisler_proje_id_fkey&quot; FOREIGN KEY (proje_id) REFERENCES projeler(id) ON DELETE CASCADE
+</code></pre>
+<ul>
+<li><code>REFERENCES projeler(id)</code> bu sütundaki her değerin <code>projeler</code> tablosunda karşılığı olmasını şart koşar.</li>
+<li><code>ON DELETE CASCADE</code>: proje silinirse siparişleri de silinir.</li>
+<li><code>ON DELETE RESTRICT</code>: siparişi olan malzeme silinemez. Hangisini seçeceğin iş kuralına bağlıdır.</li>
+</ul>
+<p>Kuralı deneyelim:</p>
+<pre><code class="language-bash">psql -d santiye -c &quot;INSERT INTO siparisler (proje_id, malzeme_id, adet) VALUES (1, 99, 10);&quot; 2&gt;&amp;1 | head -1
+psql -d santiye -c &quot;DELETE FROM malzemeler WHERE kod = 'CAM-01';&quot; 2&gt;&amp;1 | head -1
+</code></pre>
+<pre><code class="language-text">ERROR:  insert or update on table &quot;siparisler&quot; violates foreign key constraint &quot;siparisler_malzeme_id_fkey&quot;
+ERROR:  update or delete on table &quot;malzemeler&quot; violates foreign key constraint &quot;siparisler_malzeme_id_fkey&quot; on table &quot;siparisler&quot;
+</code></pre>
+<p><strong>Çoka-çok</strong> ilişki (bir siparişte birçok malzeme, bir malzeme birçok siparişte) için araya iki yabancı anahtarlı bir <strong>ara tablo</strong> konur, örneğin <code>siparis_kalemleri(siparis_id, malzeme_id, adet)</code>. Bu eğitimde her sipariş tek kalemli kalacak; projede ara tabloyu sen ekleyebilirsin.</p>
+<h3>2. JOIN: tabloları birleştirmek (1 saat 15 dk)</h3>
+<figure class="fig"><div class="sc"><svg viewBox="0 0 640 172" role="img" xmlns="http://www.w3.org/2000/svg"><defs><marker id="ah-join" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0 0L10 5L0 10z" class="ar"/></marker></defs><circle cx="170" cy="80" r="60" class="bx"/><circle cx="250" cy="80" r="60" class="bx"/><path d="M 210 35.3 A 60 60 0 0 1 210 124.7 A 60 60 0 0 1 210 35.3" class="bxa"/><circle cx="170" cy="80" r="60" class="k"/><circle cx="250" cy="80" r="60" class="k"/><text x="140" y="84" class="ta" text-anchor="middle">A</text><text x="280" y="84" class="ta" text-anchor="middle">B</text><text x="210" y="162" class="tm" text-anchor="middle">INNER JOIN: eşleşenler</text><circle cx="510" cy="80" r="60" class="bx"/><circle cx="430" cy="80" r="60" class="bxa"/><circle cx="510" cy="80" r="60" class="k"/><circle cx="430" cy="80" r="60" class="k"/><text x="400" y="84" class="ta" text-anchor="middle">A</text><text x="540" y="84" class="ta" text-anchor="middle">B</text><text x="470" y="162" class="tm" text-anchor="middle">LEFT JOIN: A'nın tamamı</text></svg></div><figcaption>INNER JOIN sadece eşleşenleri, LEFT JOIN soldaki tablonun tüm satırlarını getirir.</figcaption></figure>
+<p><strong>INNER JOIN</strong> iki tablodan sadece eşleşen satırları getirir:</p>
+<!-- dosya: join1.sql -->
+
+<pre><code class="language-sql">SELECT s.id, p.kod AS proje, m.ad AS malzeme, s.adet,
+       s.adet * m.birim_fiyat AS tutar, s.durum
+FROM siparisler s
+JOIN projeler   p ON p.id = s.proje_id
+JOIN malzemeler m ON m.id = s.malzeme_id
+WHERE s.durum &lt;&gt; 'iptal'
+ORDER BY tutar DESC;
+</code></pre>
+<pre><code class="language-bash">psql -d santiye -f join1.sql
+</code></pre>
+<pre><code class="language-text"> id | proje |     malzeme     | adet |   tutar   | durum  
+----+-------+-----------------+------+-----------+--------
+  1 | P-101 | Isıcam 6+16+6   |  120 | 174000.00 | üretim
+  5 | P-102 | Alüminyum dikme |  310 | 130200.00 | üretim
+  8 | P-103 | Isıcam 6+16+6   |   75 | 108750.00 | teslim
+  4 | P-102 | Isıcam 6+16+6   |   40 |  58000.00 | yeni
+  6 | P-103 | EPDM conta      |  900 |  25875.00 | teslim
+  2 | P-101 | Yapısal silikon |   60 |  18600.00 | teslim
+  3 | P-101 | Ankraj braketi  |   96 |  17808.00 | yeni
+(7 rows)
+</code></pre>
+<ul>
+<li><code>siparisler s</code> tabloya kısa bir <strong>takma ad</strong> verir; <code>s.adet</code> “siparisler tablosunun adet sütunu” demektir. İki tabloda aynı adlı sütun (<code>id</code>, <code>ad</code>) olduğunda zorunludur.</li>
+<li><code>ON</code> hangi sütunların eşleşeceğini söyler. Neredeyse her zaman “yabancı anahtar = birincil anahtar”dır.</li>
+<li>Hesaplanmış sütunlar (<code>s.adet * m.birim_fiyat</code>) da seçilebilir.</li>
+</ul>
+<p><strong>LEFT JOIN</strong> soldaki tablonun <strong>bütün</strong> satırlarını getirir; sağda eşleşme yoksa sütunlar <code>NULL</code> olur. “Hiç siparişi olmayan proje” gibi soruların cevabı buradadır:</p>
+<!-- dosya: join2.sql -->
+
+<pre><code class="language-sql">SELECT p.kod, p.ad,
+       count(s.id) AS siparis_sayisi,
+       coalesce(sum(s.adet * m.birim_fiyat), 0) AS toplam_tutar
+FROM projeler p
+LEFT JOIN siparisler s ON s.proje_id = p.id AND s.durum &lt;&gt; 'iptal'
+LEFT JOIN malzemeler m ON m.id = s.malzeme_id
+GROUP BY p.id
+ORDER BY toplam_tutar DESC;
+</code></pre>
+<pre><code class="language-bash">psql -d santiye -f join2.sql
+</code></pre>
+<pre><code class="language-text">  kod  |         ad          | siparis_sayisi | toplam_tutar 
+-------+---------------------+----------------+--------------
+ P-101 | Kule A              |              3 |    210408.00
+ P-102 | Ofis Bloğu          |              2 |    188200.00
+ P-103 | Havalimanı Terminal |              2 |    134625.00
+ P-104 | Hastane Ek Bina     |              0 |            0
+(4 rows)
+</code></pre>
+<ul>
+<li><code>P-104</code> hiç siparişi olmadığı hâlde listede; INNER JOIN kullansaydık kaybolurdu.</li>
+<li><code>count(s.id)</code> sadece NULL olmayanları sayar; <code>count(*)</code> olsaydı P-104 için 1 çıkardı.</li>
+<li><code>coalesce(x, 0)</code> NULL gelirse 0 kullanır.</li>
+<li>İptal filtresi <code>WHERE</code>'e değil <code>ON</code>'a yazıldı: WHERE'e yazılsaydı siparişi olmayan projeler de elenirdi. LEFT JOIN'de en sık yapılan hata budur.</li>
+</ul>
+<h3>3. İndeks ve EXPLAIN (45 dk)</h3>
+<p><strong>İndeks</strong>, kitabın sonundaki dizin gibidir: bir sütunda arama yapınca veritabanı bütün tabloyu okumak yerine indekse bakar. PRIMARY KEY ve UNIQUE sütunlarda indeks kendiliğinden oluşur; <strong>yabancı anahtar sütunlarında oluşmaz</strong>, onları elle eklemek iyi alışkanlıktır.</p>
+<p>Farkı görmek için tabloya 200.000 sahte sipariş ekleyelim (<code>generate_series</code> 1'den N'e sayı üretir):</p>
+<pre><code class="language-bash">psql -d santiye -q -c &quot;INSERT INTO siparisler (proje_id, malzeme_id, adet, durum)
+  SELECT 1 + i % 4, 1 + i % 5, 1 + i % 500, (ARRAY['yeni','üretim','teslim'])[1 + i % 3]
+  FROM generate_series(1, 200000) AS i;&quot;
+psql -d santiye -q -c &quot;ANALYZE siparisler;&quot;
+psql -d santiye -t -c &quot;SELECT count(*) FROM siparisler;&quot;
+</code></pre>
+<pre><code class="language-text"> 200008
+</code></pre>
+<p><strong>EXPLAIN</strong> sorgunun nasıl çalıştırılacağını (planı) gösterir:</p>
+<pre><code class="language-bash">psql -d santiye -t -c &quot;EXPLAIN SELECT * FROM siparisler WHERE proje_id = 4 AND durum = 'yeni';&quot; | head -1 | sed 's/(cost.*//'
+psql -d santiye -q -c &quot;CREATE INDEX siparisler_proje_durum_idx ON siparisler (proje_id, durum);&quot;
+psql -d santiye -t -c &quot;EXPLAIN SELECT * FROM siparisler WHERE proje_id = 4 AND durum = 'yeni';&quot; | head -1 | sed 's/(cost.*//'
+</code></pre>
+<pre><code class="language-text"> Seq Scan on siparisler  
+ Bitmap Heap Scan on siparisler
+</code></pre>
+<ul>
+<li><strong>Seq Scan</strong>: bütün tabloyu baştan sona okur.</li>
+<li><strong>Index Scan</strong> ya da <strong>Bitmap Heap Scan</strong>: indeksten gider (ikincisi önce indeksle eşleşen satırları işaretler, sonra sadece onları okur). Büyük tablolarda fark yüzlerce katı bulabilir.</li>
+<li><code>EXPLAIN ANALYZE</code> sorguyu gerçekten çalıştırıp süreyi de gösterir.</li>
+</ul>
+<p>İndeks bedava değildir: her INSERT ve UPDATE'te güncellenir, yer kaplar. Sık WHERE'de ve JOIN'de kullanılan sütunlara koy; her sütuna değil. Sahte veriyi temizleyelim:</p>
+<pre><code class="language-bash">psql -d santiye -c &quot;DELETE FROM siparisler WHERE id &gt; 8;&quot;
+</code></pre>
+<pre><code class="language-text">DELETE 200000
+</code></pre>
+<h3>4. İşlemler (transaction) (45 dk)</h3>
+<figure class="fig"><div class="sc"><svg viewBox="0 0 640 86" role="img" xmlns="http://www.w3.org/2000/svg"><defs><marker id="ah-islem" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0 0L10 5L0 10z" class="ar"/></marker></defs><rect x="10.0" y="16" width="109.6" height="56" rx="5" class="bx"/><text x="64.8" y="40.0" class="tb" text-anchor="middle">BEGIN</text><text x="64.8" y="56.0" class="tm" text-anchor="middle">işlem başlar</text><rect x="137.6" y="16" width="109.6" height="56" rx="5" class="bx"/><text x="192.39999999999998" y="40.0" class="tb" text-anchor="middle">UPDATE sipariş</text><text x="192.39999999999998" y="56.0" class="tm" text-anchor="middle">durum = teslim</text><line x1="121.6" y1="44.0" x2="135.6" y2="44.0" class="mu" marker-end="url(#ah-islem)"/><rect x="265.2" y="16" width="109.6" height="56" rx="5" class="bx"/><text x="320.0" y="40.0" class="tb" text-anchor="middle">UPDATE stok</text><text x="320.0" y="56.0" class="tm" text-anchor="middle">stok − adet</text><line x1="249.2" y1="44.0" x2="263.2" y2="44.0" class="mu" marker-end="url(#ah-islem)"/><rect x="392.79999999999995" y="16" width="109.6" height="56" rx="5" class="bx"/><text x="447.59999999999997" y="40.0" class="tb" text-anchor="middle">hata?</text><text x="447.59999999999997" y="56.0" class="tm" text-anchor="middle">CHECK ihlali</text><line x1="376.79999999999995" y1="44.0" x2="390.79999999999995" y2="44.0" class="mu" marker-end="url(#ah-islem)"/><rect x="520.4" y="16" width="109.6" height="56" rx="5" class="bxa"/><text x="575.1999999999999" y="40.0" class="tb" text-anchor="middle">COMMIT</text><text x="575.1999999999999" y="56.0" class="tm" text-anchor="middle">ya da ROLLBACK</text><line x1="504.4" y1="44.0" x2="518.4" y2="44.0" class="mu" marker-end="url(#ah-islem)"/></svg></div><figcaption>İşlem: ya bütün adımlar kalıcı olur ya da hiçbiri.</figcaption></figure>
+<p>Bir sipariş “teslim” olduğunda iki şey birlikte olmalı: siparişin durumu değişmeli <strong>ve</strong> malzeme stoktan düşmeli. Biri olup diğeri olmazsa veri tutarsızlaşır. <strong>İşlem</strong> (transaction) birden fazla komutu tek bir bütün yapar: <code>BEGIN</code> ile başlar, <code>COMMIT</code> ile kalıcı olur; arada hata çıkarsa ya da <code>ROLLBACK</code> dersen hiçbiri olmamış sayılır.</p>
+<!-- dosya: teslim.sql -->
+
+<pre><code class="language-sql">\set ON_ERROR_STOP on
+BEGIN;
+UPDATE siparisler SET durum = 'teslim' WHERE id = 1;
+UPDATE malzemeler SET stok = stok - 120 WHERE id = 1;
+COMMIT;
+SELECT s.durum, m.stok FROM siparisler s JOIN malzemeler m ON m.id = s.malzeme_id WHERE s.id = 1;
+</code></pre>
+<pre><code class="language-bash">psql -d santiye -q -f teslim.sql
+</code></pre>
+<pre><code class="language-text"> durum  | stok 
+--------+------
+ teslim |   80
+(1 row)
+</code></pre>
+<p>Şimdi stoğu yetmeyen bir teslim deneyelim. Stokta 80 m² cam kaldı, 4 numaralı sipariş 40, ama biz yanlışlıkla 400 düşüyoruz:</p>
+<!-- dosya: hatali.sql -->
+
+<pre><code class="language-sql">\set ON_ERROR_STOP on
+BEGIN;
+UPDATE siparisler SET durum = 'teslim' WHERE id = 4;
+UPDATE malzemeler SET stok = stok - 400 WHERE id = 1;
+COMMIT;
+</code></pre>
+<pre><code class="language-bash">psql -d santiye -q -f hatali.sql 2&gt;&amp;1 | head -1
+psql -d santiye -t -c &quot;SELECT s.durum, m.stok FROM siparisler s JOIN malzemeler m ON m.id = s.malzeme_id WHERE s.id = 4;&quot;
+</code></pre>
+<pre><code class="language-text">psql:hatali.sql:4: ERROR:  new row for relation &quot;malzemeler&quot; violates check constraint &quot;malzemeler_stok_check&quot;
+ yeni  |   80
+</code></pre>
+<p>İkinci UPDATE <code>CHECK (stok &gt;= 0)</code> kuralına takıldı; işlem bütünüyle geri alındı ve sipariş de <code>yeni</code> olarak kaldı. Yarın aynı şeyi Node.js'te yapacağız.</p>
+<h3>5. Görünüm (view) (20 dk)</h3>
+<p>Sık kullandığın bir JOIN'i her seferinde yazmak yerine <strong>görünüm</strong> olarak kaydedebilirsin; sonra tablo gibi sorgulanır:</p>
+<!-- dosya: gorunum.sql -->
+
+<pre><code class="language-sql">CREATE VIEW siparis_detay AS
+SELECT s.id, p.kod AS proje, m.kod AS malzeme_kod, m.ad AS malzeme,
+       s.adet, m.birim, s.adet * m.birim_fiyat AS tutar, s.durum, s.olusturma
+FROM siparisler s
+JOIN projeler   p ON p.id = s.proje_id
+JOIN malzemeler m ON m.id = s.malzeme_id;
+</code></pre>
+<pre><code class="language-bash">psql -d santiye -q -f gorunum.sql
+psql -d santiye -c &quot;SELECT proje, malzeme, adet, tutar FROM siparis_detay WHERE durum = 'teslim' ORDER BY id;&quot;
+</code></pre>
+<pre><code class="language-text"> proje |     malzeme     | adet |   tutar   
+-------+-----------------+------+-----------
+ P-101 | Isıcam 6+16+6   |  120 | 174000.00
+ P-101 | Yapısal silikon |   60 |  18600.00
+ P-103 | EPDM conta      |  900 |  25875.00
+ P-103 | Isıcam 6+16+6   |   75 | 108750.00
+(4 rows)
+</code></pre>
+<p>Görünüm veriyi kopyalamaz; her sorguda alttaki tablolardan yeniden hesaplanır.</p>
+<p><strong>Alıştırma:</strong></p>
+<ol>
+<li>Her malzeme için toplam sipariş edilen adet (iptaller hariç) ve stok; hiç siparişi olmayan malzeme de görünsün.</li>
+<li>Şehir bazında toplam sipariş tutarı.</li>
+<li><code>ON DELETE CASCADE</code>'i dene: P-103'ü sil, siparişlerin sayısı nasıl değişti? (Sonra <code>sema.sql</code> ve <code>veri.sql</code>'i yeniden çalıştırarak geri dönebilirsin.)</li>
+</ol>
+<h3>Gün sonu kontrolü (15 dk)</h3>
+<ul class="tasks">
+<li class="task"><label><input type="checkbox" data-id="g4-1"><span>Bire-çok ilişkiyi tasarlayıp REFERENCES ile yabancı anahtar tanımlayabiliyorum.</span></label></li>
+<li class="task"><label><input type="checkbox" data-id="g4-2"><span>ON DELETE CASCADE ve RESTRICT farkını biliyorum.</span></label></li>
+<li class="task"><label><input type="checkbox" data-id="g4-3"><span>INNER JOIN ve LEFT JOIN farkını biliyorum; LEFT JOIN'de filtreyi nereye yazacağımı biliyorum.</span></label></li>
+<li class="task"><label><input type="checkbox" data-id="g4-4"><span>İndeks oluşturup EXPLAIN ile Seq Scan / Index Scan farkını görebiliyorum.</span></label></li>
+<li class="task"><label><input type="checkbox" data-id="g4-5"><span>BEGIN, COMMIT ve ROLLBACK ile işlemleri “ya hep ya hiç” yapabiliyorum.</span></label></li>
+<li class="task"><label><input type="checkbox" data-id="g4-6"><span>Sık kullanılan bir sorguyu görünüm olarak kaydedebiliyorum.</span></label></li>
+</ul></div>
+  <div class="pn"><a href="#gun3">← 3. gün</a><a href="#gun5">5. gün →</a></div>
+</section>
+<section class="day" id="gun5" data-day="5">
+  <div class="day-head"><span class="dn">GÜN 05</span><h2>Node.js&#x27;ten PostgreSQL</h2><span class="meta">~4 saat · <span data-prog="5">0/7</span> kontrol</span></div>
+  <div class="prose"><h3>Hedef</h3>
+<p>Gün sonunda Node.js'ten PostgreSQL'e pg paketiyle bağlanacak; bağlantı havuzunu (Pool) ve bağlantı bilgisini ortam değişkeninde tutmayı öğrenecek; SQL enjeksiyonunu görüp parametreli sorgularla önleyecek; veritabanı kodunu bir modülde toplayacak; Node.js'ten işlem (transaction) yürütecek ve dünkü Express API'sini gerçek veritabanına bağlayabileceksin. Süre yaklaşık 4,5 saat.</p>
+<h3>1. Hazırlık ve bağlantı (45 dk)</h3>
+<figure class="fig"><div class="sc"><svg viewBox="0 0 640 160" role="img" xmlns="http://www.w3.org/2000/svg"><defs><marker id="ah-havuz" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0 0L10 5L0 10z" class="ar"/></marker></defs><rect x="20" y="14" width="110" height="28" rx="5" class="bx"/><text x="75.0" y="32.0" class="tb" text-anchor="middle">istek 1</text><line x1="130" y1="28" x2="248" y2="50" class="mu" marker-end="url(#ah-havuz)"/><rect x="20" y="50" width="110" height="28" rx="5" class="bx"/><text x="75.0" y="68.0" class="tb" text-anchor="middle">istek 2</text><line x1="130" y1="64" x2="248" y2="80" class="mu" marker-end="url(#ah-havuz)"/><rect x="20" y="86" width="110" height="28" rx="5" class="bx"/><text x="75.0" y="104.0" class="tb" text-anchor="middle">istek 3</text><line x1="130" y1="100" x2="248" y2="110" class="mu" marker-end="url(#ah-havuz)"/><rect x="20" y="122" width="110" height="28" rx="5" class="bx"/><text x="75.0" y="140.0" class="tb" text-anchor="middle">istek 4</text><line x1="130" y1="136" x2="248" y2="50" class="mu" marker-end="url(#ah-havuz)"/><rect x="250" y="20" width="160" height="120" class="bxa"/><text x="330" y="38" class="ta" text-anchor="middle">Pool (max: 10)</text><rect x="270" y="50" width="120" height="22" class="bx"/><text x="330" y="65" class="tm" text-anchor="middle">bağlantı 1</text><line x1="390" y1="61" x2="490" y2="80" class="mu" marker-end="url(#ah-havuz)"/><rect x="270" y="80" width="120" height="22" class="bx"/><text x="330" y="95" class="tm" text-anchor="middle">bağlantı 2</text><line x1="390" y1="91" x2="490" y2="80" class="mu" marker-end="url(#ah-havuz)"/><rect x="270" y="110" width="120" height="22" class="bx"/><text x="330" y="125" class="tm" text-anchor="middle">bağlantı 3</text><line x1="390" y1="121" x2="490" y2="80" class="mu" marker-end="url(#ah-havuz)"/><rect x="492" y="55" width="130" height="50" rx="5" class="bx"/><text x="557.0" y="84.0" class="tb" text-anchor="middle">PostgreSQL</text></svg></div><figcaption>Havuz açık bağlantıları ödünç verir; her istek yeni bağlantı açmaz.</figcaption></figure>
+<p>Yeni bir klasör aç, 4. günün <code>sema.sql</code> ve <code>veri.sql</code> dosyalarını içine kopyala ve terminali orada aç:</p>
+<!-- veri: sema.sql, veri.sql -->
+
+<pre><code class="language-bash">dropdb --if-exists santiye 2&gt;/dev/null; createdb santiye
+psql -d santiye -q -f sema.sql -f veri.sql 2&gt;&amp;1 | grep -v NOTICE
+npm init -y &gt; /dev/null &amp;&amp; npm pkg set type=module
+npm install express@5 pg@8 &gt; /dev/null 2&gt;&amp;1 &amp;&amp; echo hazır
+</code></pre>
+<pre><code class="language-text">hazır
+</code></pre>
+<p>Bağlantı bilgisi (kullanıcı, parola, sunucu, veritabanı) koda <strong>yazılmaz</strong>: kod GitHub'a gider, parola gitmemeli. Bir <strong>.env</strong> dosyasına koyarız ve bu dosyayı <code>.gitignore</code>'a ekleriz:</p>
+<!-- dosya: .env -->
+
+<pre><code class="language-ini">DATABASE_URL=postgres://postgres:parolan@localhost:5432/santiye
+PORT=3000
+</code></pre>
+<!-- dosya: .gitignore -->
+
+<pre><code class="language-gitignore">node_modules/
+.env
+</code></pre>
+<p>Bağlantı adresinin biçimi: <code>postgres://kullanıcı:parola@sunucu:port/veritabanı</code>. Node 22, .env dosyasını kendisi okuyabilir: <code>node --env-file=.env dosya.js</code>. Bir değişken hem ortamda hem .env'de varsa ortamdaki kazanır; bulut sunucularında DATABASE_URL'yi sağlayıcı ortam değişkeni olarak verir, aynı kod hiç değişmeden çalışır.</p>
+<p><strong>db.js</strong> — bütün uygulamanın kullanacağı tek havuz:</p>
+<!-- dosya: db.js -->
+
+<pre><code class="language-js">import pg from &quot;pg&quot;;
+
+pg.types.setTypeParser(1700, v =&gt; Number(v));   // numeric → sayı
+pg.types.setTypeParser(20, v =&gt; Number(v));     // bigint (count) → sayı
+
+export const pool = new pg.Pool({
+  connectionString: process.env.DATABASE_URL,
+  max: 10,
+});
+</code></pre>
+<ul>
+<li>Her sorgu için yeni bağlantı açmak yavaştır (TCP, kimlik doğrulama). <strong>Havuz</strong> (Pool) birkaç bağlantıyı açık tutar ve gelen sorgulara ödünç verir. <code>max: 10</code> en fazla 10 eşzamanlı bağlantı demektir.</li>
+<li><code>pg</code>, <code>numeric</code> ve <code>bigint</code> sütunlarını varsayılan olarak <strong>metin</strong> döndürür, çünkü JavaScript'in sayı tipi bunları her zaman tam gösteremez. Tutarlarımız küçük olduğu için sayıya çeviriyoruz; banka uygulamasında metin olarak bırakıp ondalık kütüphanesi kullanırdın. 1700 ve 20, PostgreSQL'in bu tiplere verdiği iç numaralardır.</li>
+</ul>
+<!-- dosya: ilk.js -->
+
+<pre><code class="language-js">import { pool } from &quot;./db.js&quot;;
+
+const { rows } = await pool.query(&quot;SELECT kod, ad, birim_fiyat FROM malzemeler ORDER BY id LIMIT 3&quot;);
+console.log(rows);
+console.log(&quot;ilk fiyatın tipi:&quot;, typeof rows[0].birim_fiyat);
+
+const sonuc = await pool.query(&quot;SELECT count(*) AS adet FROM siparisler&quot;);
+console.log(&quot;sipariş sayısı:&quot;, sonuc.rows[0].adet, &quot;| dönen satır:&quot;, sonuc.rowCount);
+
+await pool.end();
+</code></pre>
+<pre><code class="language-bash">node --env-file-if-exists=.env ilk.js
+</code></pre>
+<pre><code class="language-text">[
+  { kod: 'CAM-01', ad: 'Isıcam 6+16+6', birim_fiyat: 1450 },
+  { kod: 'SLK-01', ad: 'Yapısal silikon', birim_fiyat: 310 },
+  { kod: 'ANK-01', ad: 'Ankraj braketi', birim_fiyat: 185.5 }
+]
+ilk fiyatın tipi: number
+sipariş sayısı: 8 | dönen satır: 1
+</code></pre>
+<ul>
+<li><code>pool.query(sql)</code> bir <strong>Promise</strong> döndürür; <code>await</code> ile beklenir. Sonucun <code>rows</code> alanı satırları nesne dizisi olarak verir.</li>
+<li><code>pool.end()</code> havuzu kapatır; yoksa betik bitmez, açık bağlantıları bekler. Sunucuda havuz uygulama boyunca açık kalır, kapatılmaz.</li>
+</ul>
+<h3>2. SQL enjeksiyonu ve parametreli sorgu (45 dk)</h3>
+<figure class="fig"><div class="sc"><svg viewBox="0 0 640 136" role="img" xmlns="http://www.w3.org/2000/svg"><defs><marker id="ah-enjeksiyon" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0 0L10 5L0 10z" class="ar"/></marker></defs><text x="160" y="18" class="ta" text-anchor="middle">tehlikeli: birleştirme</text><text x="480" y="18" class="ta" text-anchor="middle">güvenli: parametre</text><rect x="10" y="26" width="300" height="100" class="bx"/><rect x="330" y="26" width="300" height="100" class="bxa"/><text x="22" y="46" class="tm" text-anchor="start">`... WHERE kod = '${kod}'`</text><text x="22" y="68" class="tm" text-anchor="start">kod = x' OR '1'='1</text><text x="22" y="90" class="tm" text-anchor="start">→ WHERE kod = 'x' OR '1'='1'</text><text x="22" y="112" class="tm" text-anchor="start">→ bütün tablo döner</text><text x="342" y="46" class="tm" text-anchor="start">"... WHERE kod = $1", [kod]</text><text x="342" y="68" class="tm" text-anchor="start">kod = x' OR '1'='1</text><text x="342" y="90" class="tm" text-anchor="start">→ değer olarak aranır</text><text x="342" y="112" class="tm" text-anchor="start">→ 0 satır</text></svg></div><figcaption>Metin birleştirme ile parametreli sorgu.</figcaption></figure>
+<p>Kullanıcıdan gelen bir arama metnini SQL'in içine <strong>metin birleştirerek</strong> koymak, web uygulamalarındaki en eski ve en tehlikeli açıktır:</p>
+<!-- dosya: enjeksiyon.js -->
+
+<pre><code class="language-js">import { pool } from &quot;./db.js&quot;;
+
+async function araKotu(kod) {
+  const sql = `SELECT kod, ad FROM malzemeler WHERE kod = '${kod}'`;
+  return (await pool.query(sql)).rows;
+}
+
+async function araIyi(kod) {
+  return (await pool.query(&quot;SELECT kod, ad FROM malzemeler WHERE kod = $1&quot;, [kod])).rows;
+}
+
+const normal = &quot;CAM-01&quot;;
+const saldiri = &quot;x' OR '1'='1&quot;;
+
+console.log(&quot;kötü, normal :&quot;, (await araKotu(normal)).length, &quot;satır&quot;);
+console.log(&quot;kötü, saldırı:&quot;, (await araKotu(saldiri)).length, &quot;satır&quot;);
+console.log(&quot;iyi,  normal :&quot;, (await araIyi(normal)).length, &quot;satır&quot;);
+console.log(&quot;iyi,  saldırı:&quot;, (await araIyi(saldiri)).length, &quot;satır&quot;);
+
+await pool.end();
+</code></pre>
+<pre><code class="language-bash">node --env-file-if-exists=.env enjeksiyon.js
+</code></pre>
+<pre><code class="language-text">kötü, normal : 1 satır
+kötü, saldırı: 5 satır
+iyi,  normal : 1 satır
+iyi,  saldırı: 0 satır
+</code></pre>
+<p>Saldırı metniyle kötü sürümün ürettiği SQL şudur: <code>WHERE kod = 'x' OR '1'='1'</code>. Koşul her satır için doğru olduğundan bütün tablo döner. Daha kötü niyetli bir metin tabloları silebilir ya da parolaları okuyabilir.</p>
+<p><strong>Parametreli sorguda</strong> SQL ve değerler ayrı ayrı gönderilir: <code>$1</code>, <code>$2</code> … yer tutuculardır, değerler ikinci argümandaki dizidedir. PostgreSQL değeri her zaman <strong>veri</strong> olarak görür, asla kodun parçası olarak çalıştırmaz. Kural basit: <strong>kullanıcıdan gelen hiçbir şeyi SQL metnine birleştirme</strong>. Tablo ya da sütun adı dinamikse (sıralama sütunu gibi) onu bir izin listesiyle (<code>["adet", "olusturma"].includes(x)</code>) kontrol et.</p>
+<h3>3. Veritabanı kodunu bir modülde toplamak (1 saat)</h3>
+<p>Rotaların içine SQL serpiştirmek yerine bütün sipariş sorgularını tek bir modülde toplarız. Böylece SQL bir yerde olur, test etmek ve değiştirmek kolaylaşır:</p>
+<!-- dosya: siparisDepo.js -->
+
+<pre><code class="language-js">import { pool } from &quot;./db.js&quot;;
+
+const SECIM = `
+  SELECT s.id, p.kod AS proje, m.kod AS malzeme, s.adet,
+         s.adet * m.birim_fiyat AS tutar, s.durum
+  FROM siparisler s
+  JOIN projeler p   ON p.id = s.proje_id
+  JOIN malzemeler m ON m.id = s.malzeme_id`;
+
+export async function listele({ durum, proje } = {}) {
+  const kosullar = [], degerler = [];
+  if (durum) { degerler.push(durum); kosullar.push(`s.durum = $${degerler.length}`); }
+  if (proje) { degerler.push(proje); kosullar.push(`p.kod = $${degerler.length}`); }
+  const where = kosullar.length ? &quot; WHERE &quot; + kosullar.join(&quot; AND &quot;) : &quot;&quot;;
+  return (await pool.query(SECIM + where + &quot; ORDER BY s.id&quot;, degerler)).rows;
+}
+
+export async function getir(id) {
+  const { rows } = await pool.query(SECIM + &quot; WHERE s.id = $1&quot;, [id]);
+  return rows[0] ?? null;
+}
+
+export async function ekle({ projeKod, malzemeKod, adet }) {
+  const { rows } = await pool.query(
+    `INSERT INTO siparisler (proje_id, malzeme_id, adet)
+     SELECT p.id, m.id, $3 FROM projeler p, malzemeler m
+     WHERE p.kod = $1 AND m.kod = $2
+     RETURNING id`,
+    [projeKod, malzemeKod, adet]
+  );
+  return rows[0] ? getir(rows[0].id) : null;
+}
+
+export async function teslimEt(id) {
+  const client = await pool.connect();
+  try {
+    await client.query(&quot;BEGIN&quot;);
+    const { rows } = await client.query(
+      &quot;UPDATE siparisler SET durum = 'teslim' WHERE id = $1 AND durum IN ('yeni', 'üretim') RETURNING malzeme_id, adet&quot;,
+      [id]
+    );
+    if (rows.length === 0) throw Object.assign(new Error(&quot;Teslim edilecek sipariş yok&quot;), { durum: 409 });
+    await client.query(&quot;UPDATE malzemeler SET stok = stok - $1 WHERE id = $2&quot;, [rows[0].adet, rows[0].malzeme_id]);
+    await client.query(&quot;COMMIT&quot;);
+    return getir(id);
+  } catch (e) {
+    await client.query(&quot;ROLLBACK&quot;);
+    throw e;
+  } finally {
+    client.release();
+  }
+}
+</code></pre>
+<ul>
+<li><code>listele</code> filtreleri isteğe bağlıdır; koşulları ve değerleri birlikte biriktirip <code>$1</code>, <code>$2</code> numaralarını sırayla üretiyoruz. Değerler yine SQL'e birleştirilmiyor, sadece yer tutucu numaraları.</li>
+<li><code>ekle</code> proje ve malzemeyi <strong>kodla</strong> alıyor; id'leri tek bir <code>INSERT … SELECT</code> ile buluyor. Kod yoksa hiçbir satır eklenmez ve <code>null</code> döner.</li>
+<li><strong>İşlem için havuzdan tek bir bağlantı</strong> (<code>client</code>) almak şarttır: <code>BEGIN</code>, <code>UPDATE</code> ve <code>COMMIT</code> aynı bağlantıda çalışmalı. <code>pool.query</code> her seferinde farklı bir bağlantı kullanabilir.</li>
+<li><code>finally</code> içindeki <code>client.release()</code> bağlantıyı havuza geri verir. Unutulursa havuz bir süre sonra tükenir ve uygulama donar.</li>
+</ul>
+<p>Deneme betiği:</p>
+<!-- dosya: deneme.js -->
+
+<pre><code class="language-js">import { pool } from &quot;./db.js&quot;;
+import * as depo from &quot;./siparisDepo.js&quot;;
+
+console.log(&quot;P-101 siparişleri:&quot;, (await depo.listele({ proje: &quot;P-101&quot; })).map(s =&gt; `${s.id}:${s.malzeme}`).join(&quot; &quot;));
+console.log(&quot;teslim olanlar   :&quot;, (await depo.listele({ durum: &quot;teslim&quot; })).length);
+
+const yeni = await depo.ekle({ projeKod: &quot;P-104&quot;, malzemeKod: &quot;ANK-01&quot;, adet: 48 });
+console.log(&quot;eklendi:&quot;, yeni);
+console.log(&quot;olmayan proje:&quot;, await depo.ekle({ projeKod: &quot;P-999&quot;, malzemeKod: &quot;ANK-01&quot;, adet: 1 }));
+
+console.log(&quot;teslim:&quot;, (await depo.teslimEt(yeni.id)).durum);
+const stok = await pool.query(&quot;SELECT stok FROM malzemeler WHERE kod = 'ANK-01'&quot;);
+console.log(&quot;ANK-01 stok:&quot;, stok.rows[0].stok);
+
+try {
+  await depo.teslimEt(yeni.id);
+} catch (e) {
+  console.log(&quot;ikinci teslim:&quot;, e.durum, e.message);
+}
+await pool.end();
+</code></pre>
+<pre><code class="language-bash">node --env-file-if-exists=.env deneme.js
+</code></pre>
+<pre><code class="language-text">P-101 siparişleri: 1:CAM-01 2:SLK-01 3:ANK-01
+teslim olanlar   : 3
+eklendi: {
+  id: 9,
+  proje: 'P-104',
+  malzeme: 'ANK-01',
+  adet: 48,
+  tutar: 8904,
+  durum: 'yeni'
+}
+olmayan proje: null
+teslim: teslim
+ANK-01 stok: 102
+ikinci teslim: 409 Teslim edilecek sipariş yok
+</code></pre>
+<p>Stok 150'den 102'ye indi (150 − 48). Aynı siparişi ikinci kez teslim etmek istediğimizde <code>UPDATE</code> hiçbir satıra uymadı, hata fırlattık ve işlem geri alındı; stok iki kez düşmedi.</p>
+<h3>4. Express API'yi veritabanına bağlamak (1 saat)</h3>
+<figure class="fig"><div class="sc"><svg viewBox="0 0 640 86" role="img" xmlns="http://www.w3.org/2000/svg"><defs><marker id="ah-katman" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0 0L10 5L0 10z" class="ar"/></marker></defs><rect x="10.0" y="16" width="141.5" height="56" rx="5" class="bx"/><text x="80.75" y="40.0" class="tb" text-anchor="middle">rota</text><text x="80.75" y="56.0" class="tm" text-anchor="middle">server.js</text><rect x="169.5" y="16" width="141.5" height="56" rx="5" class="bxa"/><text x="240.25" y="40.0" class="tb" text-anchor="middle">depo</text><text x="240.25" y="56.0" class="tm" text-anchor="middle">siparisDepo.js</text><line x1="153.5" y1="44.0" x2="167.5" y2="44.0" class="mu" marker-end="url(#ah-katman)"/><rect x="329.0" y="16" width="141.5" height="56" rx="5" class="bx"/><text x="399.75" y="40.0" class="tb" text-anchor="middle">havuz</text><text x="399.75" y="56.0" class="tm" text-anchor="middle">db.js</text><line x1="313.0" y1="44.0" x2="327.0" y2="44.0" class="mu" marker-end="url(#ah-katman)"/><rect x="488.5" y="16" width="141.5" height="56" rx="5" class="bx"/><text x="559.25" y="40.0" class="tb" text-anchor="middle">PostgreSQL</text><text x="559.25" y="56.0" class="tm" text-anchor="middle">tablolar</text><line x1="472.5" y1="44.0" x2="486.5" y2="44.0" class="mu" marker-end="url(#ah-katman)"/></svg></div><figcaption>Katmanlar: rota HTTP&#x27;yi, depo SQL&#x27;i, havuz bağlantıları bilir.</figcaption></figure>
+<!-- dosya: server.js -->
+
+<pre><code class="language-js">import express from &quot;express&quot;;
+import * as depo from &quot;./siparisDepo.js&quot;;
+
+const app = express();
+app.use(express.json());
+
+app.get(&quot;/siparisler&quot;, async (req, res) =&gt; {
+  res.json(await depo.listele({ durum: req.query.durum, proje: req.query.proje }));
+});
+
+app.get(&quot;/siparisler/:id&quot;, async (req, res) =&gt; {
+  const s = await depo.getir(Number(req.params.id));
+  if (!s) return res.status(404).json({ hata: &quot;Sipariş bulunamadı&quot; });
+  res.json(s);
+});
+
+app.post(&quot;/siparisler&quot;, async (req, res) =&gt; {
+  const s = await depo.ekle(req.body);
+  if (!s) return res.status(400).json({ hata: &quot;Proje ya da malzeme kodu bulunamadı&quot; });
+  res.status(201).json(s);
+});
+
+app.post(&quot;/siparisler/:id/teslim&quot;, async (req, res) =&gt; {
+  res.json(await depo.teslimEt(Number(req.params.id)));
+});
+
+app.use((err, req, res, next) =&gt; {
+  const durum = err.durum ?? (err.code === &quot;23514&quot; ? 400 : 500);
+  if (durum === 500) console.error(err);
+  res.status(durum).json({ hata: durum === 500 ? &quot;Sunucu hatası&quot; : err.message });
+});
+
+const PORT = Number(process.env.PORT ?? 3000);
+app.listen(PORT, () =&gt; console.log(`API ${PORT} portunda`));
+</code></pre>
+<ul>
+<li>Rotalar <code>async</code>; Express 5 içlerinde fırlatılan hataları kendiliğinden hata işleyiciye iletir. Express 4'te her rotayı <code>try/catch</code> ile sarman gerekirdi.</li>
+<li>PostgreSQL hataları bir <strong>kod</strong> taşır: <code>23514</code> CHECK ihlali, <code>23505</code> UNIQUE ihlali, <code>23503</code> yabancı anahtar ihlali. Bunları 400/409 gibi anlamlı durumlara çevirmek kullanıcıya doğru mesaj verir.</li>
+<li>Teslim işlemi bir <strong>eylem</strong> olduğundan <code>POST /siparisler/:id/teslim</code> olarak tasarlandı; durumu <code>PATCH</code> ile serbestçe değiştirmeye izin vermek stok kuralını atlatırdı.</li>
+</ul>
+<!-- arka -->
+
+<pre><code class="language-bash">node --env-file-if-exists=.env server.js
+</code></pre>
+<pre><code class="language-bash">curl -s &quot;http://localhost:3000/siparisler?proje=P-102&quot;; echo
+curl -s -X POST localhost:3000/siparisler -H &quot;Content-Type: application/json&quot; -d '{&quot;projeKod&quot;:&quot;P-102&quot;,&quot;malzemeKod&quot;:&quot;CAM-01&quot;,&quot;adet&quot;:30}'; echo
+curl -s -X POST localhost:3000/siparisler -H &quot;Content-Type: application/json&quot; -d '{&quot;projeKod&quot;:&quot;P-102&quot;,&quot;malzemeKod&quot;:&quot;CAM-01&quot;,&quot;adet&quot;:0}' -w &quot; %{http_code}\n&quot;
+curl -s -X POST localhost:3000/siparisler/10/teslim; echo
+curl -s -X POST localhost:3000/siparisler/2/teslim -w &quot; %{http_code}\n&quot;
+curl -s localhost:3000/siparisler/99 -w &quot; %{http_code}\n&quot;
+</code></pre>
+<pre><code class="language-text">[{&quot;id&quot;:4,&quot;proje&quot;:&quot;P-102&quot;,&quot;malzeme&quot;:&quot;CAM-01&quot;,&quot;adet&quot;:40,&quot;tutar&quot;:58000,&quot;durum&quot;:&quot;yeni&quot;},{&quot;id&quot;:5,&quot;proje&quot;:&quot;P-102&quot;,&quot;malzeme&quot;:&quot;PRF-01&quot;,&quot;adet&quot;:310,&quot;tutar&quot;:130200,&quot;durum&quot;:&quot;üretim&quot;}]
+{&quot;id&quot;:10,&quot;proje&quot;:&quot;P-102&quot;,&quot;malzeme&quot;:&quot;CAM-01&quot;,&quot;adet&quot;:30,&quot;tutar&quot;:43500,&quot;durum&quot;:&quot;yeni&quot;}
+{&quot;hata&quot;:&quot;new row for relation \&quot;siparisler\&quot; violates check constraint \&quot;siparisler_adet_check\&quot;&quot;} 400
+{&quot;id&quot;:10,&quot;proje&quot;:&quot;P-102&quot;,&quot;malzeme&quot;:&quot;CAM-01&quot;,&quot;adet&quot;:30,&quot;tutar&quot;:43500,&quot;durum&quot;:&quot;teslim&quot;}
+{&quot;hata&quot;:&quot;Teslim edilecek sipariş yok&quot;} 409
+{&quot;hata&quot;:&quot;Sipariş bulunamadı&quot;} 404
+</code></pre>
+<p>Sıfır adetli sipariş veritabanının <code>CHECK (adet &gt; 0)</code> kuralına takıldı ve 400 olarak döndü. Bu çalışıyor ama mesaj teknik ve İngilizce; yarın veriyi veritabanına gitmeden <strong>doğrulayıp</strong> anlaşılır mesajlar vereceğiz.</p>
+<pre><code class="language-bash">pkill -f &quot;^node --env-file-if-exists=.env server.js&quot;; echo durduruldu
+</code></pre>
+<pre><code class="language-text">durduruldu
+</code></pre>
+<p><strong>Alıştırma:</strong> <code>siparisDepo.js</code>'e <code>iptalEt(id)</code> ekle: sadece <code>yeni</code> durumundaki sipariş iptal edilebilsin, değilse 409 dönsün. Sonra <code>POST /siparisler/:id/iptal</code> rotasını yaz ve curl ile dene.</p>
+<h3>Gün sonu kontrolü (15 dk)</h3>
+<ul class="tasks">
+<li class="task"><label><input type="checkbox" data-id="g5-1"><span>pg ile Pool oluşturup pool.query ile sorgu çalıştırabiliyorum.</span></label></li>
+<li class="task"><label><input type="checkbox" data-id="g5-2"><span>Bağlantı bilgisini .env'de tutuyor, .env'yi .gitignore'a ekliyorum.</span></label></li>
+<li class="task"><label><input type="checkbox" data-id="g5-3"><span>numeric ve bigint'in metin döndüğünü ve nasıl çevrileceğini biliyorum.</span></label></li>
+<li class="task"><label><input type="checkbox" data-id="g5-4"><span>SQL enjeksiyonunun nasıl olduğunu gördüm; her zaman $1, $2 parametreleri kullanıyorum.</span></label></li>
+<li class="task"><label><input type="checkbox" data-id="g5-5"><span>Veritabanı kodunu bir modülde toplayabiliyorum.</span></label></li>
+<li class="task"><label><input type="checkbox" data-id="g5-6"><span>İşlemi tek bir client ile BEGIN/COMMIT/ROLLBACK yapıp finally'de release ediyorum.</span></label></li>
+<li class="task"><label><input type="checkbox" data-id="g5-7"><span>Express rotalarını veritabanına bağlayıp PostgreSQL hata kodlarını HTTP durumlarına çevirebiliyorum.</span></label></li>
+</ul></div>
+  <div class="pn"><a href="#gun4">← 4. gün</a><a href="#gun6">6. gün →</a></div>
+</section>
+<section class="day" id="gun6" data-day="6">
+  <div class="day-head"><span class="dn">GÜN 06</span><h2>Doğrulama, hata ve test</h2><span class="meta">~4 saat · <span data-prog="6">0/7</span> kontrol</span></div>
+  <div class="prose"><h3>Hedef</h3>
+<p>Gün sonunda gelen veriyi zod ile doğrulayıp anlaşılır hata mesajları döndürecek; hataları tek bir yerde ele alıp PostgreSQL hata kodlarını doğru HTTP durumlarına çevirecek; uygulamayı test edilebilir biçimde (app.js / server.js) bölecek; Node.js'in yerleşik test aracıyla (node:test) API'yi otomatik test edecek ve temel güvenlik önlemlerini bileceksin. Süre yaklaşık 4,5 saat.</p>
+<h3>1. Hazırlık (15 dk)</h3>
+<p>Dünkü klasörde devam ediyoruz. Temiz bir başlangıç için veritabanını sıfırla ve <strong>zod</strong>'u kur:</p>
+<!-- veri: sema.sql, veri.sql -->
+
+<pre><code class="language-bash">dropdb --if-exists santiye 2&gt;/dev/null; createdb santiye
+psql -d santiye -q -f sema.sql -f veri.sql 2&gt;&amp;1 | grep -v NOTICE
+npm init -y &gt; /dev/null &amp;&amp; npm pkg set type=module
+npm install express@5 pg@8 zod@4 &gt; /dev/null 2&gt;&amp;1 &amp;&amp; echo hazır
+</code></pre>
+<pre><code class="language-text">hazır
+</code></pre>
+<p>Dünkü <code>db.js</code> aynen kalıyor:</p>
+<!-- dosya: db.js -->
+
+<pre><code class="language-js">import pg from &quot;pg&quot;;
+
+pg.types.setTypeParser(1700, v =&gt; Number(v));
+pg.types.setTypeParser(20, v =&gt; Number(v));
+
+export const pool = new pg.Pool({ connectionString: process.env.DATABASE_URL, max: 10 });
+</code></pre>
+<h3>2. Doğrulama: zod ile şema (1 saat)</h3>
+<figure class="fig"><div class="sc"><svg viewBox="0 0 640 86" role="img" xmlns="http://www.w3.org/2000/svg"><defs><marker id="ah-dogrulama" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0 0L10 5L0 10z" class="ar"/></marker></defs><rect x="10.0" y="16" width="109.6" height="56" rx="5" class="bx"/><text x="64.8" y="40.0" class="tb" text-anchor="middle">req.body</text><text x="64.8" y="56.0" class="tm" text-anchor="middle">dışarıdan gelen</text><rect x="137.6" y="16" width="109.6" height="56" rx="5" class="bxa"/><text x="192.39999999999998" y="40.0" class="tb" text-anchor="middle">zod şeması</text><text x="192.39999999999998" y="56.0" class="tm" text-anchor="middle">safeParse</text><line x1="121.6" y1="44.0" x2="135.6" y2="44.0" class="mu" marker-end="url(#ah-dogrulama)"/><rect x="265.2" y="16" width="109.6" height="56" rx="5" class="bx"/><text x="320.0" y="40.0" class="tb" text-anchor="middle">geçersiz</text><text x="320.0" y="56.0" class="tm" text-anchor="middle">400 + alanlar</text><line x1="249.2" y1="44.0" x2="263.2" y2="44.0" class="mu" marker-end="url(#ah-dogrulama)"/><rect x="392.79999999999995" y="16" width="109.6" height="56" rx="5" class="bx"/><text x="447.59999999999997" y="40.0" class="tb" text-anchor="middle">geçerli</text><text x="447.59999999999997" y="56.0" class="tm" text-anchor="middle">temiz veri</text><line x1="376.79999999999995" y1="44.0" x2="390.79999999999995" y2="44.0" class="mu" marker-end="url(#ah-dogrulama)"/><rect x="520.4" y="16" width="109.6" height="56" rx="5" class="bx"/><text x="575.1999999999999" y="40.0" class="tb" text-anchor="middle">veritabanı</text><text x="575.1999999999999" y="56.0" class="tm" text-anchor="middle">son savunma</text><line x1="504.4" y1="44.0" x2="518.4" y2="44.0" class="mu" marker-end="url(#ah-dogrulama)"/></svg></div><figcaption>Doğrulama veriyi veritabanına ulaşmadan durdurur.</figcaption></figure>
+<p>Dün <code>adet: 0</code> gönderince veritabanı İngilizce bir CHECK hatası döndürdü. Daha kötüsü, <code>adet: "beş"</code> ya da hiç olmayan alanlar da veritabanına kadar gidiyordu. Kural: <strong>dışarıdan gelen her veri, kullanılmadan önce doğrulanır.</strong> Veritabanı kısıtları son savunma hattıdır, ilk değil.</p>
+<p>Elle <code>if (typeof adet !== "number" || ...)</code> yazmak hızla çirkinleşir. <strong>zod</strong>, verinin nasıl görünmesi gerektiğini bir <strong>şema</strong> olarak tanımlamanı sağlar:</p>
+<!-- dosya: semalar.js -->
+
+<pre><code class="language-js">import { z } from &quot;zod&quot;;
+
+export const yeniSiparis = z.object({
+  projeKod: z.string({ error: &quot;projeKod metin olmalı&quot; })
+    .regex(/^P-\d{3}$/, &quot;projeKod P-123 biçiminde olmalı&quot;),
+  malzemeKod: z.string({ error: &quot;malzemeKod metin olmalı&quot; })
+    .regex(/^[A-Z]{3}-\d{2}$/, &quot;malzemeKod ABC-12 biçiminde olmalı&quot;),
+  adet: z.number({ error: &quot;adet sayı olmalı&quot; })
+    .int(&quot;adet tam sayı olmalı&quot;)
+    .positive(&quot;adet 0'dan büyük olmalı&quot;)
+    .max(10000, &quot;adet en fazla 10000 olabilir&quot;),
+});
+
+export const listeSorgusu = z.object({
+  durum: z.enum([&quot;yeni&quot;, &quot;üretim&quot;, &quot;teslim&quot;, &quot;iptal&quot;], { error: &quot;durum geçersiz&quot; }).optional(),
+  proje: z.string().optional(),
+  sayfa: z.coerce.number().int().min(1).default(1),
+});
+</code></pre>
+<ul>
+<li><code>z.object({...})</code> bir nesnenin alanlarını tanımlar. Şemada olmayan alanlar (örneğin kötü niyetle gönderilen <code>id</code> ya da <code>durum</code>) <strong>atılır</strong>; dünkü PATCH'teki “her alanı kopyala” açığı böyle kapanır.</li>
+<li><code>safeParse(veri)</code> hata fırlatmaz: <code>{ success: true, data }</code> ya da <code>{ success: false, error }</code> döner. <code>error.issues</code> her sorunu yoluyla (<code>path</code>) ve mesajıyla listeler.</li>
+<li>Sorgu parametreleri (<code>?sayfa=2</code>) her zaman metindir; <code>z.coerce.number()</code> önce sayıya çevirir, sonra doğrular. <code>.default(1)</code> gelmezse 1 kullanır.</li>
+</ul>
+<!-- dosya: semadeneme.js -->
+
+<pre><code class="language-js">import { yeniSiparis, listeSorgusu } from &quot;./semalar.js&quot;;
+
+const ornekler = [
+  { projeKod: &quot;P-101&quot;, malzemeKod: &quot;CAM-01&quot;, adet: 12, id: 999, durum: &quot;teslim&quot; },
+  { projeKod: &quot;Kule A&quot;, malzemeKod: &quot;CAM-01&quot;, adet: 0 },
+  { malzemeKod: &quot;cam&quot;, adet: &quot;beş&quot; },
+];
+for (const o of ornekler) {
+  const r = yeniSiparis.safeParse(o);
+  console.log(r.success ? r.data : r.error.issues.map(i =&gt; `${i.path.join(&quot;.&quot;)}: ${i.message}`));
+}
+console.log(listeSorgusu.parse({ durum: &quot;yeni&quot;, sayfa: &quot;2&quot; }));
+console.log(listeSorgusu.parse({}));
+</code></pre>
+<pre><code class="language-bash">node semadeneme.js
+</code></pre>
+<pre><code class="language-text">{ projeKod: 'P-101', malzemeKod: 'CAM-01', adet: 12 }
+[
+  'projeKod: projeKod P-123 biçiminde olmalı',
+  &quot;adet: adet 0'dan büyük olmalı&quot;
+]
+[
+  'projeKod: projeKod metin olmalı',
+  'malzemeKod: malzemeKod ABC-12 biçiminde olmalı',
+  'adet: adet sayı olmalı'
+]
+{ durum: 'yeni', sayfa: 2 }
+{ sayfa: 1 }
+</code></pre>
+<p>İlk örnekte <code>id</code> ve <code>durum</code> sessizce atıldı. Diğerlerinde bütün sorunlar tek seferde listelendi; kullanıcı formunu bir kerede düzeltebilir.</p>
+<h3>3. Hata yönetimini toplamak (45 dk)</h3>
+<figure class="fig"><div class="sc"><svg viewBox="0 0 640 158" role="img" xmlns="http://www.w3.org/2000/svg"><defs><marker id="ah-hata" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0 0L10 5L0 10z" class="ar"/></marker></defs><text x="160" y="18" class="ta" text-anchor="middle">hata</text><text x="480" y="18" class="ta" text-anchor="middle">yanıt</text><rect x="10" y="26" width="300" height="122" class="bx"/><rect x="330" y="26" width="300" height="122" class="bxa"/><text x="22" y="46" class="tm" text-anchor="start">ApiHatasi(404, ...)</text><text x="22" y="68" class="tm" text-anchor="start">zod: Geçersiz veri</text><text x="22" y="90" class="tm" text-anchor="start">entity.parse.failed</text><text x="22" y="112" class="tm" text-anchor="start">pg 23505 / 23503 / 23514</text><text x="22" y="134" class="tm" text-anchor="start">diğer her şey</text><text x="342" y="46" class="tm" text-anchor="start">404 + mesaj</text><text x="342" y="68" class="tm" text-anchor="start">400 + ayrıntılar</text><text x="342" y="90" class="tm" text-anchor="start">400 Gövde geçerli JSON değil</text><text x="342" y="112" class="tm" text-anchor="start">409 / 409 / 400</text><text x="342" y="134" class="tm" text-anchor="start">500 Sunucu hatası (+ günlük)</text></svg></div><figcaption>Hata işleyici her hata türünü tek bir yanıt biçimine çevirir.</figcaption></figure>
+<p>Bütün hataların tek bir biçimde dönmesini istiyoruz: <code>{ hata: "mesaj", ayrintilar?: [...] }</code>. Bunun için kendi hata sınıfımızı ve PostgreSQL kodlarını HTTP'ye çeviren bir hata işleyici yazalım:</p>
+<!-- dosya: hatalar.js -->
+
+<pre><code class="language-js">export class ApiHatasi extends Error {
+  constructor(durum, mesaj, ayrintilar) {
+    super(mesaj);
+    this.durum = durum;
+    this.ayrintilar = ayrintilar;
+  }
+}
+
+export function dogrula(sema, veri) {
+  const r = sema.safeParse(veri);
+  if (!r.success) {
+    throw new ApiHatasi(400, &quot;Geçersiz veri&quot;,
+      r.error.issues.map(i =&gt; ({ alan: i.path.join(&quot;.&quot;), mesaj: i.message })));
+  }
+  return r.data;
+}
+
+const PG_KODLARI = {
+  &quot;23505&quot;: [409, &quot;Bu kayıt zaten var&quot;],
+  &quot;23503&quot;: [409, &quot;İlişkili kayıt bulunamadı ya da kullanımda&quot;],
+  &quot;23514&quot;: [400, &quot;Veri bir kuralı ihlal ediyor&quot;],
+  &quot;22P02&quot;: [400, &quot;Geçersiz değer biçimi&quot;],
+};
+
+export function hataIsleyici(err, req, res, next) {
+  if (err instanceof ApiHatasi) {
+    return res.status(err.durum).json({ hata: err.message, ayrintilar: err.ayrintilar });
+  }
+  if (err.type === &quot;entity.parse.failed&quot;) {
+    return res.status(400).json({ hata: &quot;Gövde geçerli JSON değil&quot; });
+  }
+  if (PG_KODLARI[err.code]) {
+    const [durum, mesaj] = PG_KODLARI[err.code];
+    return res.status(durum).json({ hata: mesaj });
+  }
+  console.error(err);
+  res.status(500).json({ hata: &quot;Sunucu hatası&quot; });
+}
+</code></pre>
+<ul>
+<li><code>ApiHatasi</code> bilerek fırlattığımız, kullanıcıya gösterilmesi güvenli hatalardır.</li>
+<li>Bozuk JSON gövdesi (<code>{adet: 5</code> gibi) express.json() tarafından <code>entity.parse.failed</code> türüyle fırlatılır.</li>
+<li>Tanımadığımız her şey 500'dür: ayrıntısı sadece sunucu günlüğüne yazılır.</li>
+</ul>
+<h3>4. app.js ve server.js: test edilebilir yapı (45 dk)</h3>
+<p>Testlerde sunucuyu rastgele bir portta başlatıp kapatabilmek için uygulamayı <strong>oluşturma</strong> (app.js) ve <strong>çalıştırma</strong> (server.js) olarak ikiye bölüyoruz. Depo modülü dünküyle aynı; sadece hatalar <code>ApiHatasi</code> oldu ve sayfalama eklendi:</p>
+<!-- dosya: siparisDepo.js -->
+
+<pre><code class="language-js">import { pool } from &quot;./db.js&quot;;
+import { ApiHatasi } from &quot;./hatalar.js&quot;;
+
+const SECIM = `
+  SELECT s.id, p.kod AS proje, m.kod AS malzeme, s.adet,
+         s.adet * m.birim_fiyat AS tutar, s.durum
+  FROM siparisler s
+  JOIN projeler p   ON p.id = s.proje_id
+  JOIN malzemeler m ON m.id = s.malzeme_id`;
+const SAYFA_BOYU = 20;
+
+export async function listele({ durum, proje, sayfa = 1 } = {}) {
+  const kosullar = [], degerler = [];
+  if (durum) { degerler.push(durum); kosullar.push(`s.durum = $${degerler.length}`); }
+  if (proje) { degerler.push(proje); kosullar.push(`p.kod = $${degerler.length}`); }
+  const where = kosullar.length ? &quot; WHERE &quot; + kosullar.join(&quot; AND &quot;) : &quot;&quot;;
+  degerler.push(SAYFA_BOYU, (sayfa - 1) * SAYFA_BOYU);
+  const sql = `${SECIM}${where} ORDER BY s.id LIMIT $${degerler.length - 1} OFFSET $${degerler.length}`;
+  return (await pool.query(sql, degerler)).rows;
+}
+
+export async function getir(id) {
+  const { rows } = await pool.query(SECIM + &quot; WHERE s.id = $1&quot;, [id]);
+  if (!rows[0]) throw new ApiHatasi(404, &quot;Sipariş bulunamadı&quot;);
+  return rows[0];
+}
+
+export async function ekle({ projeKod, malzemeKod, adet }) {
+  const { rows } = await pool.query(
+    `INSERT INTO siparisler (proje_id, malzeme_id, adet)
+     SELECT p.id, m.id, $3 FROM projeler p, malzemeler m
+     WHERE p.kod = $1 AND m.kod = $2 RETURNING id`,
+    [projeKod, malzemeKod, adet]);
+  if (!rows[0]) throw new ApiHatasi(400, &quot;Proje ya da malzeme kodu bulunamadı&quot;);
+  return getir(rows[0].id);
+}
+
+export async function teslimEt(id) {
+  const client = await pool.connect();
+  try {
+    await client.query(&quot;BEGIN&quot;);
+    const { rows } = await client.query(
+      &quot;UPDATE siparisler SET durum = 'teslim' WHERE id = $1 AND durum IN ('yeni', 'üretim') RETURNING malzeme_id, adet&quot;,
+      [id]);
+    if (!rows[0]) throw new ApiHatasi(409, &quot;Teslim edilecek sipariş yok&quot;);
+    const stok = await client.query(
+      &quot;UPDATE malzemeler SET stok = stok - $1 WHERE id = $2 AND stok &gt;= $1 RETURNING stok&quot;,
+      [rows[0].adet, rows[0].malzeme_id]);
+    if (!stok.rows[0]) throw new ApiHatasi(409, &quot;Stok yetersiz&quot;);
+    await client.query(&quot;COMMIT&quot;);
+    return getir(id);
+  } catch (e) {
+    await client.query(&quot;ROLLBACK&quot;);
+    throw e;
+  } finally {
+    client.release();
+  }
+}
+</code></pre>
+<p>Teslimde stok kontrolünü de ekledik: <code>stok &gt;= $1</code> koşulu tutmazsa UPDATE hiçbir satıra dokunmaz ve “Stok yetersiz” ile işlem geri alınır.</p>
+<!-- dosya: app.js -->
+
+<pre><code class="language-js">import express from &quot;express&quot;;
+import * as depo from &quot;./siparisDepo.js&quot;;
+import { yeniSiparis, listeSorgusu } from &quot;./semalar.js&quot;;
+import { dogrula, hataIsleyici, ApiHatasi } from &quot;./hatalar.js&quot;;
+import { z } from &quot;zod&quot;;
+
+const idSemasi = z.object({
+  id: z.coerce.number({ error: &quot;id sayı olmalı&quot; }).int(&quot;id tam sayı olmalı&quot;).positive(&quot;id pozitif olmalı&quot;),
+});
+
+export function uygulamaOlustur() {
+  const app = express();
+  app.use(express.json({ limit: &quot;100kb&quot; }));
+
+  app.get(&quot;/saglik&quot;, (req, res) =&gt; res.json({ durum: &quot;iyi&quot; }));
+
+  app.get(&quot;/siparisler&quot;, async (req, res) =&gt; {
+    res.json(await depo.listele(dogrula(listeSorgusu, req.query)));
+  });
+  app.get(&quot;/siparisler/:id&quot;, async (req, res) =&gt; {
+    res.json(await depo.getir(dogrula(idSemasi, req.params).id));
+  });
+  app.post(&quot;/siparisler&quot;, async (req, res) =&gt; {
+    res.status(201).json(await depo.ekle(dogrula(yeniSiparis, req.body)));
+  });
+  app.post(&quot;/siparisler/:id/teslim&quot;, async (req, res) =&gt; {
+    res.json(await depo.teslimEt(dogrula(idSemasi, req.params).id));
+  });
+
+  app.use((req, res, next) =&gt; next(new ApiHatasi(404, `Yol yok: ${req.method} ${req.path}`)));
+  app.use(hataIsleyici);
+  return app;
+}
+</code></pre>
+<!-- dosya: server.js -->
+
+<pre><code class="language-js">import { uygulamaOlustur } from &quot;./app.js&quot;;
+
+const PORT = Number(process.env.PORT ?? 3000);
+uygulamaOlustur().listen(PORT, () =&gt; console.log(`API ${PORT} portunda`));
+</code></pre>
+<!-- arka -->
+
+<pre><code class="language-bash">node --env-file-if-exists=.env server.js
+</code></pre>
+<pre><code class="language-bash">curl -s -X POST localhost:3000/siparisler -H &quot;Content-Type: application/json&quot; -d '{&quot;projeKod&quot;:&quot;P-102&quot;,&quot;malzemeKod&quot;:&quot;CAM-01&quot;,&quot;adet&quot;:0}'; echo
+curl -s -X POST localhost:3000/siparisler -H &quot;Content-Type: application/json&quot; -d '{&quot;adet&quot;:5'; echo
+curl -s localhost:3000/siparisler/abc; echo
+curl -s &quot;localhost:3000/siparisler?durum=bitti&quot;; echo
+curl -s -X POST localhost:3000/siparisler -H &quot;Content-Type: application/json&quot; -d '{&quot;projeKod&quot;:&quot;P-104&quot;,&quot;malzemeKod&quot;:&quot;ANK-01&quot;,&quot;adet&quot;:500}'; echo
+curl -s -X POST localhost:3000/siparisler/9/teslim; echo
+</code></pre>
+<pre><code class="language-text">{&quot;hata&quot;:&quot;Geçersiz veri&quot;,&quot;ayrintilar&quot;:[{&quot;alan&quot;:&quot;adet&quot;,&quot;mesaj&quot;:&quot;adet 0'dan büyük olmalı&quot;}]}
+{&quot;hata&quot;:&quot;Gövde geçerli JSON değil&quot;}
+{&quot;hata&quot;:&quot;Geçersiz veri&quot;,&quot;ayrintilar&quot;:[{&quot;alan&quot;:&quot;id&quot;,&quot;mesaj&quot;:&quot;id sayı olmalı&quot;}]}
+{&quot;hata&quot;:&quot;Geçersiz veri&quot;,&quot;ayrintilar&quot;:[{&quot;alan&quot;:&quot;durum&quot;,&quot;mesaj&quot;:&quot;durum geçersiz&quot;}]}
+{&quot;id&quot;:9,&quot;proje&quot;:&quot;P-104&quot;,&quot;malzeme&quot;:&quot;ANK-01&quot;,&quot;adet&quot;:500,&quot;tutar&quot;:92750,&quot;durum&quot;:&quot;yeni&quot;}
+{&quot;hata&quot;:&quot;Stok yetersiz&quot;}
+</code></pre>
+<p>500 adet braket siparişi kabul edildi (sipariş vermek serbest), ama stokta 150 olduğundan teslim 409 ile reddedildi ve hiçbir şey değişmedi.</p>
+<pre><code class="language-bash">pkill -f &quot;^node --env-file-if-exists=.env server.js&quot;; echo durduruldu
+</code></pre>
+<pre><code class="language-text">durduruldu
+</code></pre>
+<h3>5. Otomatik test: node:test (1 saat)</h3>
+<figure class="fig"><div class="sc"><svg viewBox="0 0 640 86" role="img" xmlns="http://www.w3.org/2000/svg"><defs><marker id="ah-test" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0 0L10 5L0 10z" class="ar"/></marker></defs><rect x="10.0" y="16" width="109.6" height="56" rx="5" class="bx"/><text x="64.8" y="40.0" class="tb" text-anchor="middle">before</text><text x="64.8" y="56.0" class="tm" text-anchor="middle">şema + veri</text><rect x="137.6" y="16" width="109.6" height="56" rx="5" class="bx"/><text x="192.39999999999998" y="40.0" class="tb" text-anchor="middle">listen(0)</text><text x="192.39999999999998" y="56.0" class="tm" text-anchor="middle">boş port</text><line x1="121.6" y1="44.0" x2="135.6" y2="44.0" class="mu" marker-end="url(#ah-test)"/><rect x="265.2" y="16" width="109.6" height="56" rx="5" class="bx"/><text x="320.0" y="40.0" class="tb" text-anchor="middle">fetch</text><text x="320.0" y="56.0" class="tm" text-anchor="middle">istek gönder</text><line x1="249.2" y1="44.0" x2="263.2" y2="44.0" class="mu" marker-end="url(#ah-test)"/><rect x="392.79999999999995" y="16" width="109.6" height="56" rx="5" class="bxa"/><text x="447.59999999999997" y="40.0" class="tb" text-anchor="middle">assert</text><text x="447.59999999999997" y="56.0" class="tm" text-anchor="middle">karşılaştır</text><line x1="376.79999999999995" y1="44.0" x2="390.79999999999995" y2="44.0" class="mu" marker-end="url(#ah-test)"/><rect x="520.4" y="16" width="109.6" height="56" rx="5" class="bx"/><text x="575.1999999999999" y="40.0" class="tb" text-anchor="middle">after</text><text x="575.1999999999999" y="56.0" class="tm" text-anchor="middle">kapat</text><line x1="504.4" y1="44.0" x2="518.4" y2="44.0" class="mu" marker-end="url(#ah-test)"/></svg></div><figcaption>node:test ile uçtan uca API testi.</figcaption></figure>
+<p>Her değişiklikten sonra curl komutlarını elle çalıştırmak sürdürülebilir değil. Node.js'in <strong>yerleşik test aracı</strong> <code>node:test</code>, ek paket gerektirmez. Testler gerçek bir veritabanına karşı çalışır; bu yüzden her test dosyası başlamadan önce veritabanını bilinen bir duruma getirir.</p>
+<p>Gerçek projede testler <strong>ayrı bir veritabanında</strong> çalışmalı ki geliştirme verin silinmesin: <code>createdb santiye_test</code>, ardından <code>.env.test</code> dosyasına onun adresini yaz.</p>
+<!-- dosya: .env.test -->
+
+<pre><code class="language-ini">DATABASE_URL=postgres://postgres:parolan@localhost:5432/santiye_test
+</code></pre>
+<!-- dosya: test/api.test.js -->
+
+<pre><code class="language-js">import { test, before, after } from &quot;node:test&quot;;
+import assert from &quot;node:assert/strict&quot;;
+import { readFileSync } from &quot;node:fs&quot;;
+import { pool } from &quot;../db.js&quot;;
+import { uygulamaOlustur } from &quot;../app.js&quot;;
+
+let sunucu, adres;
+
+before(async () =&gt; {
+  await pool.query(&quot;SET client_min_messages = warning&quot;);
+  await pool.query(readFileSync(&quot;sema.sql&quot;, &quot;utf8&quot;) + readFileSync(&quot;veri.sql&quot;, &quot;utf8&quot;));
+  sunucu = uygulamaOlustur().listen(0);
+  adres = `http://localhost:${sunucu.address().port}`;
+});
+
+after(async () =&gt; {
+  sunucu.close();
+  await pool.end();
+});
+
+async function istek(yol, govde) {
+  const r = await fetch(adres + yol, govde === undefined ? {} : {
+    method: &quot;POST&quot;, headers: { &quot;Content-Type&quot;: &quot;application/json&quot; }, body: JSON.stringify(govde),
+  });
+  return { durum: r.status, veri: await r.json() };
+}
+
+test(&quot;siparişler listelenir&quot;, async () =&gt; {
+  const { durum, veri } = await istek(&quot;/siparisler&quot;);
+  assert.equal(durum, 200);
+  assert.equal(veri.length, 8);
+});
+
+test(&quot;proje filtresi çalışır&quot;, async () =&gt; {
+  const { veri } = await istek(&quot;/siparisler?proje=P-101&quot;);
+  assert.deepEqual(veri.map(s =&gt; s.id), [1, 2, 3]);
+});
+
+test(&quot;geçerli sipariş 201 ile eklenir ve tutarı hesaplanır&quot;, async () =&gt; {
+  const { durum, veri } = await istek(&quot;/siparisler&quot;, { projeKod: &quot;P-104&quot;, malzemeKod: &quot;CAM-01&quot;, adet: 10 });
+  assert.equal(durum, 201);
+  assert.equal(veri.tutar, 14500);
+  assert.equal(veri.durum, &quot;yeni&quot;);
+});
+
+test(&quot;geçersiz adet 400 ve alan ayrıntısı döner&quot;, async () =&gt; {
+  const { durum, veri } = await istek(&quot;/siparisler&quot;, { projeKod: &quot;P-104&quot;, malzemeKod: &quot;CAM-01&quot;, adet: -1 });
+  assert.equal(durum, 400);
+  assert.equal(veri.ayrintilar[0].alan, &quot;adet&quot;);
+});
+
+test(&quot;teslim stoğu düşürür, ikinci teslim 409 döner&quot;, async () =&gt; {
+  const ilk = await istek(&quot;/siparisler/3/teslim&quot;, {});
+  assert.equal(ilk.veri.durum, &quot;teslim&quot;);
+  const { rows } = await pool.query(&quot;SELECT stok FROM malzemeler WHERE kod = 'ANK-01'&quot;);
+  assert.equal(rows[0].stok, 150 - 96);
+  const ikinci = await istek(&quot;/siparisler/3/teslim&quot;, {});
+  assert.equal(ikinci.durum, 409);
+});
+
+test(&quot;olmayan sipariş 404 döner&quot;, async () =&gt; {
+  assert.equal((await istek(&quot;/siparisler/12345&quot;)).durum, 404);
+});
+</code></pre>
+<ul>
+<li><code>before</code> bütün testlerden önce bir kez çalışır: şemayı ve veriyi yeniden yükler, sunucuyu <code>listen(0)</code> ile <strong>boş bir portta</strong> başlatır.</li>
+<li><code>pool.query</code> noktalı virgülle ayrılmış birden çok komutu (parametresizse) tek seferde çalıştırabilir.</li>
+<li><code>assert.equal</code> ve <code>assert.deepEqual</code> beklenenle geleni karşılaştırır; tutmazsa test kırmızı yanar ve farkı gösterir.</li>
+<li>Testler dosya içinde sırayla çalışır; “teslim” testi önceki testlerin eklediği kayıtlara bağlı değil, sadece başlangıç verisine dayanıyor. Her test kendi başına anlamlı olmalı.</li>
+</ul>
+<p><code>package.json</code>'a bir test betiği ekle ve çalıştır:</p>
+<pre><code class="language-bash">npm pkg set scripts.test=&quot;node --env-file-if-exists=.env.test --test&quot;
+npm test 2&gt;&amp;1 | grep -E &quot;^# (tests|pass|fail)|^not ok|^ok&quot;
+</code></pre>
+<pre><code class="language-text">ok 1 - siparişler listelenir
+ok 2 - proje filtresi çalışır
+ok 3 - geçerli sipariş 201 ile eklenir ve tutarı hesaplanır
+ok 4 - geçersiz adet 400 ve alan ayrıntısı döner
+ok 5 - teslim stoğu düşürür, ikinci teslim 409 döner
+ok 6 - olmayan sipariş 404 döner
+# tests 6
+# pass 6
+# fail 0
+</code></pre>
+<p><code>node --test</code> klasördeki <code>*.test.js</code> dosyalarını kendisi bulur. Bir testi bilerek bozup (örneğin 14500'ü 14000 yap) kırmızıyı görmeyi dene.</p>
+<h3>6. Temel güvenlik önlemleri (30 dk)</h3>
+<p>Bir API'yi internete açmadan önce şu listeyi gözden geçir:</p>
+<div class="tw"><table>
+<thead>
+<tr>
+<th>Önlem</th>
+<th>Neden</th>
+<th>Nasıl</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Parametreli sorgu</td>
+<td>SQL enjeksiyonu</td>
+<td>Her zaman <code>$1, $2</code></td>
+</tr>
+<tr>
+<td>Girdi doğrulama</td>
+<td>Bozuk ve kötü niyetli veri</td>
+<td>zod şemaları</td>
+</tr>
+<tr>
+<td>Gövde boyut sınırı</td>
+<td>Dev isteklerle sunucuyu boğma</td>
+<td><code>express.json({ limit: "100kb" })</code></td>
+</tr>
+<tr>
+<td>Gizli bilgiler ortamda</td>
+<td>Parolanın GitHub'a sızması</td>
+<td><code>.env</code> + <code>.gitignore</code></td>
+</tr>
+<tr>
+<td>Hata ayrıntısını gizleme</td>
+<td>Şema ve yığın izinin sızması</td>
+<td>500'de genel mesaj</td>
+</tr>
+<tr>
+<td>Güvenlik başlıkları</td>
+<td>Tarayıcı saldırıları</td>
+<td><code>helmet</code> paketi</td>
+</tr>
+<tr>
+<td>İstek sınırlama</td>
+<td>Kaba kuvvet ve kötüye kullanım</td>
+<td><code>express-rate-limit</code> paketi</td>
+</tr>
+<tr>
+<td>CORS</td>
+<td>Sadece kendi ön yüzün erişsin</td>
+<td><code>cors({ origin: "https://..." })</code></td>
+</tr>
+<tr>
+<td>HTTPS</td>
+<td>Trafiğin okunması</td>
+<td>Barındırma servisi sağlar</td>
+</tr>
+<tr>
+<td>Kimlik doğrulama</td>
+<td>Herkesin her şeyi yapabilmesi</td>
+<td>Oturum ya da JWT (eğitim kapsamı dışında)</td>
+</tr>
+</tbody>
+</table></div>
+<p>Veritabanı kullanıcısına da sadece gereken yetkileri ver: uygulama tabloları silebilen süper kullanıcıyla değil, sadece SELECT/INSERT/UPDATE yapabilen ayrı bir kullanıcıyla bağlanmalı.</p>
+<p><strong>Alıştırma:</strong> <code>GET /siparisler?sayfa=0</code> ne döndürüyor? Neden? Sonra dünkü <code>iptalEt</code> işlevini bu yapıya taşı ve iki test yaz: <code>yeni</code> sipariş iptal edilebilir, <code>teslim</code> edilmiş sipariş 409 döner.</p>
+<h3>Gün sonu kontrolü (15 dk)</h3>
+<ul class="tasks">
+<li class="task"><label><input type="checkbox" data-id="g6-1"><span>zod ile şema tanımlayıp safeParse ile doğrulayabiliyorum; bilinmeyen alanların atıldığını biliyorum.</span></label></li>
+<li class="task"><label><input type="checkbox" data-id="g6-2"><span>Sorgu parametrelerini z.coerce ile sayıya çevirebiliyorum.</span></label></li>
+<li class="task"><label><input type="checkbox" data-id="g6-3"><span>Kendi hata sınıfımla tek biçimde hata döndürebiliyorum.</span></label></li>
+<li class="task"><label><input type="checkbox" data-id="g6-4"><span>PostgreSQL hata kodlarını (23505, 23503, 23514) HTTP durumlarına çevirebiliyorum.</span></label></li>
+<li class="task"><label><input type="checkbox" data-id="g6-5"><span>Uygulamayı app.js ve server.js olarak bölebiliyorum.</span></label></li>
+<li class="task"><label><input type="checkbox" data-id="g6-6"><span>node:test ile before/after ve assert kullanarak API testi yazabiliyorum.</span></label></li>
+<li class="task"><label><input type="checkbox" data-id="g6-7"><span>Bir API'yi yayına almadan önceki temel güvenlik listesini biliyorum.</span></label></li>
+</ul></div>
+  <div class="pn"><a href="#gun5">← 5. gün</a><a href="#gun7">7. gün →</a></div>
+</section>
+<section class="day" id="gun7" data-day="7">
+  <div class="day-head"><span class="dn">GÜN 07</span><h2>Proje: sipariş API&#x27;si</h2><span class="meta">~4 saat · <span data-prog="7">0/11</span> kontrol</span></div>
+  <div class="prose"><h3>Hedef</h3>
+<p>Son gün, altı günde öğrendiklerini birleştirip yayına hazır bir <strong>şantiye sipariş API'si</strong> ve onu kullanan küçük bir web sayfası kuracaksın: veritabanı şeması göç (migration) dosyalarıyla yönetilecek, proje özet uç noktaları eklenecek, sayfa API'yi fetch ile kullanacak, testler geçecek ve uygulamayı ücretsiz bir bulut servisine nasıl yayınlayacağını göreceksin. Süre yaklaşık 5 saat.</p>
+<h3>1. Proje tanımı ve yapı (20 dk)</h3>
+<figure class="fig"><div class="sc"><svg viewBox="0 0 640 134" role="img" xmlns="http://www.w3.org/2000/svg"><defs><marker id="ah-proje" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0 0L10 5L0 10z" class="ar"/></marker></defs><rect x="230" y="8" width="180" height="40" rx="5" class="bxa"/><text x="320.0" y="32.0" class="tb" text-anchor="middle">Şantiye sipariş API'si</text><line x1="320" y1="48" x2="67.2" y2="78" class="mu" marker-end="url(#ah-proje)"/><rect x="10.0" y="80" width="114.4" height="44" rx="5" class="bx"/><text x="67.2" y="98.0" class="tb" text-anchor="middle">goc/</text><text x="67.2" y="114.0" class="tm" text-anchor="middle">şema sürümleri</text><line x1="320" y1="48" x2="193.60000000000002" y2="78" class="mu" marker-end="url(#ah-proje)"/><rect x="136.4" y="80" width="114.4" height="44" rx="5" class="bx"/><text x="193.60000000000002" y="98.0" class="tb" text-anchor="middle">depolar</text><text x="193.60000000000002" y="114.0" class="tm" text-anchor="middle">SQL</text><line x1="320" y1="48" x2="320.0" y2="78" class="mu" marker-end="url(#ah-proje)"/><rect x="262.8" y="80" width="114.4" height="44" rx="5" class="bx"/><text x="320.0" y="98.0" class="tb" text-anchor="middle">app.js</text><text x="320.0" y="114.0" class="tm" text-anchor="middle">/api rotaları</text><line x1="320" y1="48" x2="446.40000000000003" y2="78" class="mu" marker-end="url(#ah-proje)"/><rect x="389.20000000000005" y="80" width="114.4" height="44" rx="5" class="bx"/><text x="446.40000000000003" y="98.0" class="tb" text-anchor="middle">public/</text><text x="446.40000000000003" y="114.0" class="tm" text-anchor="middle">HTML + fetch</text><line x1="320" y1="48" x2="572.8000000000001" y2="78" class="mu" marker-end="url(#ah-proje)"/><rect x="515.6" y="80" width="114.4" height="44" rx="5" class="bx"/><text x="572.8000000000001" y="98.0" class="tb" text-anchor="middle">test/</text><text x="572.8000000000001" y="114.0" class="tm" text-anchor="middle">node:test</text></svg></div><figcaption>Projenin parçaları.</figcaption></figure>
+<p><strong>İhtiyaç:</strong> Cephe firmasının satın alma ekibi, projelere giden malzeme siparişlerini takip etmek istiyor. Her projenin toplam sipariş tutarını görmeli, yeni sipariş girebilmeli, teslim alınan siparişi işaretleyebilmeli ve stok eksiye düşmemeli.</p>
+<p>Klasör yapısı:</p>
+<pre><code class="language-text">siparis-api/
+├─ goc/                  ← veritabanı göçleri (sırayla)
+│  ├─ 001_sema.sql
+│  └─ 002_proje_ozet.sql
+├─ public/               ← web sayfası
+│  ├─ index.html
+│  └─ sayfa.js
+├─ test/
+│  └─ api.test.js
+├─ app.js  server.js  db.js  goc.js  tohum.sql
+├─ siparisDepo.js  projeDepo.js  semalar.js  hatalar.js
+├─ .env  .env.test  .gitignore  package.json
+</code></pre>
+<ol start="6">
+<li>günün <code>db.js</code>, <code>hatalar.js</code>, <code>semalar.js</code> ve <code>siparisDepo.js</code> dosyalarını olduğu gibi yeni klasöre kopyala. Gerisini bugün yazıyoruz.</li>
+</ol>
+<!-- veri: db.js, hatalar.js, semalar.js, siparisDepo.js -->
+
+<pre><code class="language-bash">dropdb --if-exists santiye 2&gt;/dev/null; createdb santiye
+npm init -y &gt; /dev/null &amp;&amp; npm pkg set type=module
+npm install express@5 pg@8 zod@4 &gt; /dev/null 2&gt;&amp;1 &amp;&amp; echo hazır
+</code></pre>
+<pre><code class="language-text">hazır
+</code></pre>
+<p><code>.env</code> (6. günle aynı) ve <code>.gitignore</code> dosyalarını da oluştur:</p>
+<!-- dosya: .env -->
+
+<pre><code class="language-ini">DATABASE_URL=postgres://postgres:parolan@localhost:5432/santiye
+</code></pre>
+<!-- dosya: .gitignore -->
+
+<pre><code class="language-gitignore">node_modules/
+.env
+.env.test
+</code></pre>
+<h3>2. Veritabanı göçleri (1 saat)</h3>
+<figure class="fig"><div class="sc"><svg viewBox="0 0 640 134" role="img" xmlns="http://www.w3.org/2000/svg"><defs><marker id="ah-goc" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0 0L10 5L0 10z" class="ar"/></marker></defs><rect x="20" y="30" width="180" height="40" rx="5" class="bxa"/><text x="110.0" y="54.0" class="tb" text-anchor="middle">001_sema.sql</text><rect x="230" y="30" width="180" height="40" rx="5" class="bxa"/><text x="320.0" y="54.0" class="tb" text-anchor="middle">002_proje_ozet.sql</text><line x1="200" y1="50" x2="230" y2="50" class="mu" marker-end="url(#ah-goc)"/><rect x="440" y="30" width="180" height="40" rx="5" class="bx"/><text x="530.0" y="54.0" class="tb" text-anchor="middle">003_teslim_tarihi.sql</text><line x1="410" y1="50" x2="440" y2="50" class="mu" marker-end="url(#ah-goc)"/><text x="110" y="92" class="tm" text-anchor="middle">uygulandı</text><text x="320" y="92" class="tm" text-anchor="middle">uygulandı</text><text x="530" y="92" class="ta" text-anchor="middle">yeni → npm run goc</text><text x="320" y="124" class="tm" text-anchor="middle">goc_kayitlari tablosu hangi dosyaların uygulandığını tutar</text></svg></div><figcaption>Göçler sırayla ve her ortamda bir kez uygulanır.</figcaption></figure>
+<p>Şimdiye kadar şemayı <code>DROP TABLE</code> + <code>CREATE TABLE</code> ile kurduk. Canlı bir veritabanında bu olmaz: tablolar gerçek veriyle doludur. Şema zamanla <strong>ekleyerek</strong> değişir (yeni sütun, yeni tablo, yeni görünüm). Bu değişiklikleri numaralı dosyalar hâlinde tutup her ortamda (senin bilgisayarın, test, sunucu) <strong>aynı sırayla ve bir kez</strong> uygulamaya <strong>göç</strong> (migration) denir.</p>
+<!-- dosya: goc/001_sema.sql -->
+
+<pre><code class="language-sql">CREATE TABLE projeler (
+  id    integer GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
+  kod   text NOT NULL UNIQUE,
+  ad    text NOT NULL,
+  sehir text NOT NULL
+);
+
+CREATE TABLE malzemeler (
+  id          integer GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
+  kod         text NOT NULL UNIQUE,
+  ad          text NOT NULL,
+  birim       text NOT NULL DEFAULT 'adet',
+  birim_fiyat numeric(10,2) NOT NULL CHECK (birim_fiyat &gt;= 0),
+  stok        integer NOT NULL DEFAULT 0 CHECK (stok &gt;= 0)
+);
+
+CREATE TABLE siparisler (
+  id         integer GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
+  proje_id   integer NOT NULL REFERENCES projeler(id) ON DELETE CASCADE,
+  malzeme_id integer NOT NULL REFERENCES malzemeler(id) ON DELETE RESTRICT,
+  adet       integer NOT NULL CHECK (adet &gt; 0),
+  durum      text NOT NULL DEFAULT 'yeni'
+             CHECK (durum IN ('yeni', 'üretim', 'teslim', 'iptal')),
+  olusturma  timestamptz NOT NULL DEFAULT now()
+);
+
+CREATE INDEX siparisler_proje_idx ON siparisler (proje_id);
+CREATE INDEX siparisler_malzeme_idx ON siparisler (malzeme_id);
+</code></pre>
+<!-- dosya: goc/002_proje_ozet.sql -->
+
+<pre><code class="language-sql">CREATE VIEW proje_ozet AS
+SELECT p.kod, p.ad, p.sehir,
+       count(s.id) FILTER (WHERE s.durum &lt;&gt; 'iptal')                  AS siparis,
+       count(s.id) FILTER (WHERE s.durum IN ('yeni', 'üretim'))       AS acik,
+       coalesce(sum(s.adet * m.birim_fiyat) FILTER (WHERE s.durum &lt;&gt; 'iptal'), 0) AS tutar
+FROM projeler p
+LEFT JOIN siparisler s ON s.proje_id = p.id
+LEFT JOIN malzemeler m ON m.id = s.malzeme_id
+GROUP BY p.id;
+</code></pre>
+<p><code>FILTER (WHERE ...)</code> bir toplama fonksiyonunu sadece koşula uyan satırlara uygular; aynı sorguda farklı koşullu sayımlar yapmanın en temiz yoludur.</p>
+<p>Göç betiği, uygulanmış göçleri veritabanındaki bir tabloda kaydeder ve sadece yenileri sırayla, her birini bir işlem içinde çalıştırır:</p>
+<!-- dosya: goc.js -->
+
+<pre><code class="language-js">import { readdirSync, readFileSync } from &quot;node:fs&quot;;
+import { pool } from &quot;./db.js&quot;;
+
+await pool.query(`CREATE TABLE IF NOT EXISTS goc_kayitlari (
+  ad text PRIMARY KEY, uygulama timestamptz NOT NULL DEFAULT now())`);
+
+const yapilan = new Set((await pool.query(&quot;SELECT ad FROM goc_kayitlari&quot;)).rows.map(r =&gt; r.ad));
+const dosyalar = readdirSync(&quot;goc&quot;).filter(f =&gt; f.endsWith(&quot;.sql&quot;)).sort();
+let sayi = 0;
+
+for (const ad of dosyalar) {
+  if (yapilan.has(ad)) continue;
+  const client = await pool.connect();
+  try {
+    await client.query(&quot;BEGIN&quot;);
+    await client.query(readFileSync(`goc/${ad}`, &quot;utf8&quot;));
+    await client.query(&quot;INSERT INTO goc_kayitlari (ad) VALUES ($1)&quot;, [ad]);
+    await client.query(&quot;COMMIT&quot;);
+    console.log(&quot;uygulandı:&quot;, ad);
+    sayi++;
+  } catch (e) {
+    await client.query(&quot;ROLLBACK&quot;);
+    console.error(`HATA ${ad}: ${e.message}`);
+    process.exitCode = 1;
+    break;
+  } finally {
+    client.release();
+  }
+}
+console.log(sayi ? `${sayi} göç uygulandı` : &quot;veritabanı güncel&quot;);
+await pool.end();
+</code></pre>
+<p>Başlangıç verisini (<strong>tohum</strong>) ayrı bir dosyada tutuyoruz; 4. günün <code>veri.sql</code>'inin aynısı:</p>
+<!-- dosya: tohum.sql -->
+
+<pre><code class="language-sql">INSERT INTO projeler (kod, ad, sehir) VALUES
+  ('P-101', 'Kule A', 'İstanbul'), ('P-102', 'Ofis Bloğu', 'Ankara'),
+  ('P-103', 'Havalimanı Terminal', 'İzmir'), ('P-104', 'Hastane Ek Bina', 'Bursa');
+INSERT INTO malzemeler (kod, ad, birim, birim_fiyat, stok) VALUES
+  ('CAM-01', 'Isıcam 6+16+6', 'm2', 1450.00, 200), ('SLK-01', 'Yapısal silikon', 'kartuş', 310.00, 500),
+  ('ANK-01', 'Ankraj braketi', 'adet', 185.50, 150), ('PRF-01', 'Alüminyum dikme', 'm', 420.00, 800),
+  ('CNT-01', 'EPDM conta', 'm', 28.75, 3000);
+INSERT INTO siparisler (proje_id, malzeme_id, adet, durum) VALUES
+  (1, 1, 120, 'üretim'), (1, 2, 60, 'teslim'), (1, 3, 96, 'yeni'), (2, 1, 40, 'yeni'),
+  (2, 4, 310, 'üretim'), (3, 5, 900, 'teslim'), (3, 3, 24, 'iptal'), (3, 1, 75, 'teslim');
+</code></pre>
+<pre><code class="language-bash">npm pkg set scripts.goc=&quot;node --env-file-if-exists=.env goc.js&quot;
+npm run -s goc
+npm run -s goc
+psql -d santiye -q -f tohum.sql
+psql -d santiye -c &quot;SELECT * FROM proje_ozet ORDER BY tutar DESC;&quot;
+</code></pre>
+<pre><code class="language-text">uygulandı: 001_sema.sql
+uygulandı: 002_proje_ozet.sql
+2 göç uygulandı
+veritabanı güncel
+  kod  |         ad          |  sehir   | siparis | acik |   tutar   
+-------+---------------------+----------+---------+------+-----------
+ P-101 | Kule A              | İstanbul |       3 |    2 | 210408.00
+ P-102 | Ofis Bloğu          | Ankara   |       2 |    2 | 188200.00
+ P-103 | Havalimanı Terminal | İzmir    |       2 |    0 | 134625.00
+ P-104 | Hastane Ek Bina     | Bursa    |       0 |    0 |         0
+(4 rows)
+</code></pre>
+<p>İkinci çalıştırmada hiçbir şey yapmadı. Yarın bir sütun eklemen gerekirse (<code>ALTER TABLE siparisler ADD COLUMN teslim_tarihi date;</code>) bunu <code>003_teslim_tarihi.sql</code> olarak yazarsın; ekip arkadaşın ve sunucu da <code>npm run goc</code> ile aynı noktaya gelir. <strong>Uygulanmış bir göç dosyasını asla değiştirme</strong>; düzeltme için yeni bir göç yaz. Büyük projelerde aynı işi node-pg-migrate, Knex, Prisma ya da Drizzle gibi araçlar yapar; mantıkları bu betiğin aynısıdır.</p>
+<h3>3. Proje uç noktaları (45 dk)</h3>
+<!-- dosya: projeDepo.js -->
+
+<pre><code class="language-js">import { pool } from &quot;./db.js&quot;;
+import { ApiHatasi } from &quot;./hatalar.js&quot;;
+
+export async function listele() {
+  return (await pool.query(&quot;SELECT * FROM proje_ozet ORDER BY kod&quot;)).rows;
+}
+
+export async function ozet(kod) {
+  const proje = (await pool.query(&quot;SELECT * FROM proje_ozet WHERE kod = $1&quot;, [kod])).rows[0];
+  if (!proje) throw new ApiHatasi(404, &quot;Proje bulunamadı&quot;);
+  const { rows } = await pool.query(
+    `SELECT m.kod, m.ad, m.birim, sum(s.adet) AS adet, sum(s.adet * m.birim_fiyat) AS tutar
+     FROM siparisler s
+     JOIN projeler p   ON p.id = s.proje_id
+     JOIN malzemeler m ON m.id = s.malzeme_id
+     WHERE p.kod = $1 AND s.durum &lt;&gt; 'iptal'
+     GROUP BY m.id ORDER BY tutar DESC`, [kod]);
+  return { ...proje, malzemeler: rows };
+}
+</code></pre>
+<p>Bu kez <code>sum(s.adet)</code> integer üzerinde toplandığı için PostgreSQL sonucu <code>bigint</code> döndürür; <code>db.js</code>'teki tip çevirici sayesinde JavaScript'e sayı olarak gelir.</p>
+<!-- dosya: app.js -->
+
+<pre><code class="language-js">import express from &quot;express&quot;;
+import { z } from &quot;zod&quot;;
+import * as siparis from &quot;./siparisDepo.js&quot;;
+import * as proje from &quot;./projeDepo.js&quot;;
+import { yeniSiparis, listeSorgusu } from &quot;./semalar.js&quot;;
+import { dogrula, hataIsleyici, ApiHatasi } from &quot;./hatalar.js&quot;;
+
+const idSemasi = z.object({
+  id: z.coerce.number({ error: &quot;id sayı olmalı&quot; }).int(&quot;id tam sayı olmalı&quot;).positive(&quot;id pozitif olmalı&quot;),
+});
+
+export function uygulamaOlustur() {
+  const app = express();
+  app.use(express.json({ limit: &quot;100kb&quot; }));
+  app.use(express.static(&quot;public&quot;));
+
+  const api = express.Router();
+  api.get(&quot;/saglik&quot;, (req, res) =&gt; res.json({ durum: &quot;iyi&quot; }));
+  api.get(&quot;/projeler&quot;, async (req, res) =&gt; res.json(await proje.listele()));
+  api.get(&quot;/projeler/:kod&quot;, async (req, res) =&gt; res.json(await proje.ozet(req.params.kod)));
+  api.get(&quot;/siparisler&quot;, async (req, res) =&gt; res.json(await siparis.listele(dogrula(listeSorgusu, req.query))));
+  api.post(&quot;/siparisler&quot;, async (req, res) =&gt; res.status(201).json(await siparis.ekle(dogrula(yeniSiparis, req.body))));
+  api.post(&quot;/siparisler/:id/teslim&quot;, async (req, res) =&gt; res.json(await siparis.teslimEt(dogrula(idSemasi, req.params).id)));
+  app.use(&quot;/api&quot;, api);
+
+  app.use((req, res, next) =&gt; next(new ApiHatasi(404, `Yol yok: ${req.method} ${req.path}`)));
+  app.use(hataIsleyici);
+  return app;
+}
+</code></pre>
+<!-- dosya: server.js -->
+
+<pre><code class="language-js">import { uygulamaOlustur } from &quot;./app.js&quot;;
+
+const PORT = Number(process.env.PORT ?? 3000);
+uygulamaOlustur().listen(PORT, () =&gt; console.log(`http://localhost:${PORT}`));
+</code></pre>
+<ul>
+<li>Bütün API rotaları <code>/api</code> önekinin altında; kök adres (<code>/</code>) web sayfasına kalıyor.</li>
+<li><code>express.static("public")</code> klasördeki dosyaları olduğu gibi sunar: <code>/</code> isteğine <code>public/index.html</code> döner.</li>
+<li>Sayfa ve API aynı adresten sunulduğu için CORS'a gerek kalmaz.</li>
+</ul>
+<h3>4. Web sayfası (1 saat)</h3>
+<figure class="fig"><div class="sc"><svg viewBox="0 0 640 170" role="img" xmlns="http://www.w3.org/2000/svg"><defs><marker id="ah-sayfa" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0 0L10 5L0 10z" class="ar"/></marker></defs><rect x="20" y="10" width="600" height="150" class="bx"/><text x="36" y="32" class="ta" text-anchor="start">Şantiye Siparişleri</text><line x1="36" y1="62" x2="604" y2="62" class="mu"/><text x="40" y="56" class="tm" text-anchor="start">P-101 Kule A</text><text x="330" y="56" class="tm" text-anchor="start">3</text><text x="500" y="56" class="tm" text-anchor="start">₺210.408,00</text><line x1="36" y1="84" x2="604" y2="84" class="mu"/><text x="40" y="78" class="tm" text-anchor="start">P-102 Ofis Bloğu</text><text x="330" y="78" class="tm" text-anchor="start">2</text><text x="500" y="78" class="tm" text-anchor="start">₺188.200,00</text><line x1="36" y1="106" x2="604" y2="106" class="mu"/><text x="40" y="100" class="tm" text-anchor="start">P-104 Hastane Ek Bina</text><text x="330" y="100" class="tm" text-anchor="start">0</text><text x="500" y="100" class="tm" text-anchor="start">₺0,00</text><rect x="36" y="126" width="150" height="22" class="bx"/><rect x="196" y="126" width="150" height="22" class="bx"/><rect x="356" y="126" width="60" height="22" class="bxa"/><text x="372" y="141" class="ta" text-anchor="start">Ekle</text><text x="44" y="141" class="tm" text-anchor="start">P-104</text><text x="204" y="141" class="tm" text-anchor="start">CNT-01</text></svg></div><figcaption>Sayfa /api/projeler&#x27;i tabloya döker, form /api/siparisler&#x27;e gönderir.</figcaption></figure>
+<p>Çatı (React vb.) kullanmadan, düz HTML ve fetch ile bir yönetim sayfası:</p>
+<!-- dosya: public/index.html -->
+
+<pre><code class="language-html">&lt;!DOCTYPE html&gt;
+&lt;html lang=&quot;tr&quot;&gt;
+&lt;head&gt;
+  &lt;meta charset=&quot;utf-8&quot;&gt;
+  &lt;meta name=&quot;viewport&quot; content=&quot;width=device-width, initial-scale=1&quot;&gt;
+  &lt;title&gt;Şantiye Siparişleri&lt;/title&gt;
+  &lt;style&gt;
+    body { font-family: system-ui, sans-serif; max-width: 860px; margin: 2rem auto; padding: 0 1rem; color: #1f2933; }
+    table { width: 100%; border-collapse: collapse; margin: 1rem 0; }
+    th, td { padding: .45rem .6rem; border-bottom: 1px solid #e4e7eb; text-align: left; }
+    td.sayi { text-align: right; font-variant-numeric: tabular-nums; }
+    form { display: flex; gap: .5rem; flex-wrap: wrap; }
+    input, select, button { padding: .45rem .6rem; font: inherit; }
+    #mesaj { min-height: 1.4em; }
+    .hata { color: #b42318; } .tamam { color: #067647; }
+  &lt;/style&gt;
+&lt;/head&gt;
+&lt;body&gt;
+  &lt;h1&gt;Şantiye Siparişleri&lt;/h1&gt;
+  &lt;table&gt;
+    &lt;thead&gt;&lt;tr&gt;&lt;th&gt;Proje&lt;/th&gt;&lt;th&gt;Şehir&lt;/th&gt;&lt;th&gt;Sipariş&lt;/th&gt;&lt;th&gt;Açık&lt;/th&gt;&lt;th&gt;Tutar&lt;/th&gt;&lt;/tr&gt;&lt;/thead&gt;
+    &lt;tbody id=&quot;projeler&quot;&gt;&lt;/tbody&gt;
+  &lt;/table&gt;
+
+  &lt;h2&gt;Yeni sipariş&lt;/h2&gt;
+  &lt;form id=&quot;form&quot;&gt;
+    &lt;select name=&quot;projeKod&quot; id=&quot;projeSec&quot;&gt;&lt;/select&gt;
+    &lt;input name=&quot;malzemeKod&quot; placeholder=&quot;Malzeme kodu (CAM-01)&quot; required&gt;
+    &lt;input name=&quot;adet&quot; type=&quot;number&quot; min=&quot;1&quot; placeholder=&quot;Adet&quot; required&gt;
+    &lt;button&gt;Ekle&lt;/button&gt;
+  &lt;/form&gt;
+  &lt;p id=&quot;mesaj&quot;&gt;&lt;/p&gt;
+  &lt;script type=&quot;module&quot; src=&quot;sayfa.js&quot;&gt;&lt;/script&gt;
+&lt;/body&gt;
+&lt;/html&gt;
+</code></pre>
+<!-- dosya: public/sayfa.js -->
+
+<pre><code class="language-js">const tl = new Intl.NumberFormat(&quot;tr-TR&quot;, { style: &quot;currency&quot;, currency: &quot;TRY&quot; });
+const $ = id =&gt; document.getElementById(id);
+
+async function api(yol, secenek) {
+  const r = await fetch(&quot;/api&quot; + yol, secenek);
+  const veri = await r.json();
+  if (!r.ok) {
+    const ayrinti = veri.ayrintilar?.map(a =&gt; a.mesaj).join(&quot;, &quot;);
+    throw new Error(ayrinti || veri.hata);
+  }
+  return veri;
+}
+
+async function projeleriYukle() {
+  const projeler = await api(&quot;/projeler&quot;);
+  $(&quot;projeler&quot;).innerHTML = &quot;&quot;;
+  $(&quot;projeSec&quot;).innerHTML = &quot;&quot;;
+  for (const p of projeler) {
+    const tr = document.createElement(&quot;tr&quot;);
+    for (const [deger, sayi] of [[`${p.kod} ${p.ad}`], [p.sehir], [p.siparis, 1], [p.acik, 1], [tl.format(p.tutar), 1]]) {
+      const td = document.createElement(&quot;td&quot;);
+      td.textContent = deger;
+      if (sayi) td.className = &quot;sayi&quot;;
+      tr.append(td);
+    }
+    $(&quot;projeler&quot;).append(tr);
+    $(&quot;projeSec&quot;).append(new Option(`${p.kod} ${p.ad}`, p.kod));
+  }
+}
+
+$(&quot;form&quot;).addEventListener(&quot;submit&quot;, async e =&gt; {
+  e.preventDefault();
+  const f = new FormData(e.target);
+  try {
+    const s = await api(&quot;/siparisler&quot;, {
+      method: &quot;POST&quot;,
+      headers: { &quot;Content-Type&quot;: &quot;application/json&quot; },
+      body: JSON.stringify({ projeKod: f.get(&quot;projeKod&quot;), malzemeKod: f.get(&quot;malzemeKod&quot;).trim().toUpperCase(), adet: Number(f.get(&quot;adet&quot;)) }),
+    });
+    $(&quot;mesaj&quot;).className = &quot;tamam&quot;;
+    $(&quot;mesaj&quot;).textContent = `Sipariş #${s.id} eklendi: ${s.adet} × ${s.malzeme}, ${tl.format(s.tutar)}`;
+    e.target.reset();
+    await projeleriYukle();
+  } catch (hata) {
+    $(&quot;mesaj&quot;).className = &quot;hata&quot;;
+    $(&quot;mesaj&quot;).textContent = hata.message;
+  }
+});
+
+projeleriYukle();
+</code></pre>
+<ul>
+<li>Hücreler <code>innerHTML</code> ile değil <code>textContent</code> ile dolduruluyor: veritabanından gelen bir metin <code>&lt;script&gt;</code> içerse bile kod olarak çalışmaz (XSS önlemi).</li>
+<li>API'nin 400 yanıtındaki <code>ayrintilar</code> doğrudan kullanıcıya gösteriliyor; 6. günde bu yüzden Türkçe ve alan bazlı yazdık.</li>
+<li><code>Intl.NumberFormat("tr-TR", { style: "currency", currency: "TRY" })</code> tutarı <code>₺174.000,00</code> biçiminde yazar.</li>
+</ul>
+<p>Sunucuyu başlat ve sayfanın kullandığı istekleri curl ile dene:</p>
+<!-- arka -->
+
+<pre><code class="language-bash">node --env-file-if-exists=.env server.js
+</code></pre>
+<pre><code class="language-bash">curl -s localhost:3000/ | grep -o &quot;&lt;title&gt;.*&lt;/title&gt;&quot;
+curl -s localhost:3000/api/projeler; echo
+curl -s localhost:3000/api/projeler/P-101; echo
+curl -s -X POST localhost:3000/api/siparisler -H &quot;Content-Type: application/json&quot; -d '{&quot;projeKod&quot;:&quot;P-104&quot;,&quot;malzemeKod&quot;:&quot;PRF-01&quot;,&quot;adet&quot;:120}'; echo
+curl -s localhost:3000/api/projeler/P-104 | grep -o '&quot;tutar&quot;:[0-9.]*' | head -1
+</code></pre>
+<pre><code class="language-text">&lt;title&gt;Şantiye Siparişleri&lt;/title&gt;
+[{&quot;kod&quot;:&quot;P-101&quot;,&quot;ad&quot;:&quot;Kule A&quot;,&quot;sehir&quot;:&quot;İstanbul&quot;,&quot;siparis&quot;:3,&quot;acik&quot;:2,&quot;tutar&quot;:210408},{&quot;kod&quot;:&quot;P-102&quot;,&quot;ad&quot;:&quot;Ofis Bloğu&quot;,&quot;sehir&quot;:&quot;Ankara&quot;,&quot;siparis&quot;:2,&quot;acik&quot;:2,&quot;tutar&quot;:188200},{&quot;kod&quot;:&quot;P-103&quot;,&quot;ad&quot;:&quot;Havalimanı Terminal&quot;,&quot;sehir&quot;:&quot;İzmir&quot;,&quot;siparis&quot;:2,&quot;acik&quot;:0,&quot;tutar&quot;:134625},{&quot;kod&quot;:&quot;P-104&quot;,&quot;ad&quot;:&quot;Hastane Ek Bina&quot;,&quot;sehir&quot;:&quot;Bursa&quot;,&quot;siparis&quot;:0,&quot;acik&quot;:0,&quot;tutar&quot;:0}]
+{&quot;kod&quot;:&quot;P-101&quot;,&quot;ad&quot;:&quot;Kule A&quot;,&quot;sehir&quot;:&quot;İstanbul&quot;,&quot;siparis&quot;:3,&quot;acik&quot;:2,&quot;tutar&quot;:210408,&quot;malzemeler&quot;:[{&quot;kod&quot;:&quot;CAM-01&quot;,&quot;ad&quot;:&quot;Isıcam 6+16+6&quot;,&quot;birim&quot;:&quot;m2&quot;,&quot;adet&quot;:120,&quot;tutar&quot;:174000},{&quot;kod&quot;:&quot;SLK-01&quot;,&quot;ad&quot;:&quot;Yapısal silikon&quot;,&quot;birim&quot;:&quot;kartuş&quot;,&quot;adet&quot;:60,&quot;tutar&quot;:18600},{&quot;kod&quot;:&quot;ANK-01&quot;,&quot;ad&quot;:&quot;Ankraj braketi&quot;,&quot;birim&quot;:&quot;adet&quot;,&quot;adet&quot;:96,&quot;tutar&quot;:17808}]}
+{&quot;id&quot;:9,&quot;proje&quot;:&quot;P-104&quot;,&quot;malzeme&quot;:&quot;PRF-01&quot;,&quot;adet&quot;:120,&quot;tutar&quot;:50400,&quot;durum&quot;:&quot;yeni&quot;}
+&quot;tutar&quot;:50400
+</code></pre>
+<p>Tarayıcıda <code>http://localhost:3000</code> adresini aç: tablo dolu gelir, formdan sipariş ekleyince satır anında güncellenir. <code>malzemeKod</code> alanına <code>cam</code> yazıp dene: sayfa API'nin hata mesajını gösterir.</p>
+<pre><code class="language-bash">pkill -f &quot;^node --env-file-if-exists=.env server.js&quot;; echo durduruldu
+</code></pre>
+<pre><code class="language-text">durduruldu
+</code></pre>
+<h3>5. Testler (45 dk)</h3>
+<p>Testler artık şemayı göçlerden kuruyor; böylece test veritabanı da gerçek şemanın aynısı olur:</p>
+<!-- dosya: test/api.test.js -->
+
+<pre><code class="language-js">import { test, before, after } from &quot;node:test&quot;;
+import assert from &quot;node:assert/strict&quot;;
+import { readFileSync, readdirSync } from &quot;node:fs&quot;;
+import { pool } from &quot;../db.js&quot;;
+import { uygulamaOlustur } from &quot;../app.js&quot;;
+
+let sunucu, adres;
+
+before(async () =&gt; {
+  await pool.query(&quot;SET client_min_messages = warning&quot;);
+  await pool.query(&quot;DROP VIEW IF EXISTS proje_ozet; DROP TABLE IF EXISTS siparisler, malzemeler, projeler, goc_kayitlari&quot;);
+  for (const f of readdirSync(&quot;goc&quot;).sort()) await pool.query(readFileSync(`goc/${f}`, &quot;utf8&quot;));
+  await pool.query(readFileSync(&quot;tohum.sql&quot;, &quot;utf8&quot;));
+  sunucu = uygulamaOlustur().listen(0);
+  adres = `http://localhost:${sunucu.address().port}/api`;
+});
+
+after(async () =&gt; { sunucu.close(); await pool.end(); });
+
+const al = async yol =&gt; (await fetch(adres + yol)).json();
+const gonder = async (yol, govde) =&gt; {
+  const r = await fetch(adres + yol, { method: &quot;POST&quot;, headers: { &quot;Content-Type&quot;: &quot;application/json&quot; }, body: JSON.stringify(govde) });
+  return { durum: r.status, veri: await r.json() };
+};
+
+test(&quot;proje özetleri iptalleri saymaz&quot;, async () =&gt; {
+  const p103 = (await al(&quot;/projeler&quot;)).find(p =&gt; p.kod === &quot;P-103&quot;);
+  assert.equal(p103.siparis, 2);
+  assert.equal(p103.tutar, 900 * 28.75 + 75 * 1450);
+});
+
+test(&quot;siparişi olmayan proje 0 tutarla listelenir&quot;, async () =&gt; {
+  const p104 = (await al(&quot;/projeler&quot;)).find(p =&gt; p.kod === &quot;P-104&quot;);
+  assert.deepEqual([p104.siparis, p104.tutar], [0, 0]);
+});
+
+test(&quot;proje detayı malzemeleri tutara göre sıralar&quot;, async () =&gt; {
+  const d = await al(&quot;/projeler/P-101&quot;);
+  assert.deepEqual(d.malzemeler.map(m =&gt; m.kod), [&quot;CAM-01&quot;, &quot;SLK-01&quot;, &quot;ANK-01&quot;]);
+});
+
+test(&quot;yeni sipariş projenin açık sayısını artırır&quot;, async () =&gt; {
+  const { durum } = await gonder(&quot;/siparisler&quot;, { projeKod: &quot;P-104&quot;, malzemeKod: &quot;CNT-01&quot;, adet: 200 });
+  assert.equal(durum, 201);
+  const p104 = (await al(&quot;/projeler&quot;)).find(p =&gt; p.kod === &quot;P-104&quot;);
+  assert.equal(p104.acik, 1);
+});
+
+test(&quot;stok yetmezse teslim reddedilir ve durum değişmez&quot;, async () =&gt; {
+  const { veri } = await gonder(&quot;/siparisler&quot;, { projeKod: &quot;P-102&quot;, malzemeKod: &quot;ANK-01&quot;, adet: 500 });
+  const t = await gonder(`/siparisler/${veri.id}/teslim`, {});
+  assert.equal(t.durum, 409);
+  const liste = await al(&quot;/siparisler?proje=P-102&amp;durum=yeni&quot;);
+  assert.ok(liste.some(s =&gt; s.id === veri.id));
+});
+
+test(&quot;olmayan proje 404&quot;, async () =&gt; {
+  const r = await fetch(adres + &quot;/projeler/P-999&quot;);
+  assert.equal(r.status, 404);
+});
+</code></pre>
+<pre><code class="language-bash">npm pkg set scripts.test=&quot;node --env-file-if-exists=.env.test --test&quot; scripts.start=&quot;node server.js&quot;
+npm test 2&gt;&amp;1 | grep -E &quot;^# (tests|pass|fail)|^not ok|^ok&quot;
+</code></pre>
+<pre><code class="language-text">ok 1 - proje özetleri iptalleri saymaz
+ok 2 - siparişi olmayan proje 0 tutarla listelenir
+ok 3 - proje detayı malzemeleri tutara göre sıralar
+ok 4 - yeni sipariş projenin açık sayısını artırır
+ok 5 - stok yetmezse teslim reddedilir ve durum değişmez
+ok 6 - olmayan proje 404
+# tests 6
+# pass 6
+# fail 0
+</code></pre>
+<h3>6. Yayına almak (45 dk)</h3>
+<figure class="fig"><div class="sc"><svg viewBox="0 0 640 86" role="img" xmlns="http://www.w3.org/2000/svg"><defs><marker id="ah-yayin" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0 0L10 5L0 10z" class="ar"/></marker></defs><rect x="10.0" y="16" width="109.6" height="56" rx="5" class="bx"/><text x="64.8" y="40.0" class="tb" text-anchor="middle">GitHub</text><text x="64.8" y="56.0" class="tm" text-anchor="middle">kod (.env yok)</text><rect x="137.6" y="16" width="109.6" height="56" rx="5" class="bx"/><text x="192.39999999999998" y="40.0" class="tb" text-anchor="middle">Render</text><text x="192.39999999999998" y="56.0" class="tm" text-anchor="middle">npm start</text><line x1="121.6" y1="44.0" x2="135.6" y2="44.0" class="mu" marker-end="url(#ah-yayin)"/><rect x="265.2" y="16" width="109.6" height="56" rx="5" class="bxa"/><text x="320.0" y="40.0" class="tb" text-anchor="middle">ortam</text><text x="320.0" y="56.0" class="tm" text-anchor="middle">DATABASE_URL</text><line x1="249.2" y1="44.0" x2="263.2" y2="44.0" class="mu" marker-end="url(#ah-yayin)"/><rect x="392.79999999999995" y="16" width="109.6" height="56" rx="5" class="bx"/><text x="447.59999999999997" y="40.0" class="tb" text-anchor="middle">Neon / Supabase</text><text x="447.59999999999997" y="56.0" class="tm" text-anchor="middle">PostgreSQL</text><line x1="376.79999999999995" y1="44.0" x2="390.79999999999995" y2="44.0" class="mu" marker-end="url(#ah-yayin)"/><rect x="520.4" y="16" width="109.6" height="56" rx="5" class="bx"/><text x="575.1999999999999" y="40.0" class="tb" text-anchor="middle">/api/saglik</text><text x="575.1999999999999" y="56.0" class="tm" text-anchor="middle">ayakta mı?</text><line x1="504.4" y1="44.0" x2="518.4" y2="44.0" class="mu" marker-end="url(#ah-yayin)"/></svg></div><figcaption>Yayına alma: kod bir servise, veritabanı başka bir servise.</figcaption></figure>
+<p>Uygulamanın iki parçası var: <strong>Node.js sunucusu</strong> ve <strong>PostgreSQL veritabanı</strong>. İkisi için de ücretsiz başlangıç planı olan servisler var (planlar ve sınırlar sık değişir, kaydolmadan önce güncel koşullara bak):</p>
+<p><strong>Veritabanı (örnek: Neon ya da Supabase)</strong></p>
+<ol>
+<li>Hesap aç, yeni bir proje (veritabanı) oluştur.</li>
+<li>Panelde verilen bağlantı adresini kopyala: <code>postgres://kullanici:parola@...neon.tech/santiye?sslmode=require</code>. Bulut veritabanları genellikle SSL ister; adres sonundaki <code>sslmode=require</code> bunu sağlar.</li>
+<li>Kendi bilgisayarından bir kez göç ve tohum çalıştır: <code>DATABASE_URL="..." npm run goc</code>, ardından <code>psql "..." -f tohum.sql</code>.</li>
+</ol>
+<p><strong>Sunucu (örnek: Render ya da Railway)</strong></p>
+<ol>
+<li>Kodu GitHub'a gönder (<code>.env</code> gitmiyor, <code>.gitignore</code> sayesinde).</li>
+<li>Serviste “New Web Service” → GitHub deposunu seç.</li>
+<li>Build komutu: <code>npm ci</code>. Başlatma komutu: <code>npm start</code>.</li>
+<li>Ortam değişkenleri bölümüne <code>DATABASE_URL</code> ekle. <code>PORT</code>'u servis kendisi verir; kodumuz <code>process.env.PORT</code>'u okuduğu için ek ayar gerekmez.</li>
+<li>Sağlık kontrolü yolu olarak <code>/api/saglik</code> gir: servis uygulamanın ayakta olduğunu buradan anlar.</li>
+</ol>
+<p>Her <code>git push</code>'ta servis yeni sürümü kendiliğinden kurar. Şema değiştiyse önce <code>npm run goc</code>'u canlı veritabanına karşı çalıştır.</p>
+<p>Yayına almadan önce son kontrol:</p>
+<ul class="tasks">
+<li class="task"><label><input type="checkbox" data-id="g7-1"><span><code>npm test</code> yeşil.</span></label></li>
+<li class="task"><label><input type="checkbox" data-id="g7-2"><span><code>.env</code> GitHub'da yok; parolalar sadece servisin ortam değişkenlerinde.</span></label></li>
+<li class="task"><label><input type="checkbox" data-id="g7-3"><span>Hata yanıtlarında yığın izi ya da SQL görünmüyor.</span></label></li>
+<li class="task"><label><input type="checkbox" data-id="g7-4"><span>Veritabanı kullanıcısı süper kullanıcı değil.</span></label></li>
+<li class="task"><label><input type="checkbox" data-id="g7-5"><span><code>package.json</code>'da <code>"engines": { "node": "&gt;=22" }</code> yazıyor (servis doğru sürümü seçsin).</span></label></li>
+</ul>
+<h3>7. Sonraki adımlar (15 dk)</h3>
+<ul>
+<li><strong>Kimlik doğrulama:</strong> Şu an herkes sipariş girebiliyor. Oturum tabanlı giriş (express-session) ya da JWT ile kullanıcı ekle; siparişlere <code>olusturan_id</code> sütunu koy (yeni bir göç!).</li>
+<li><strong>Çok kalemli sipariş:</strong> 4. günde anlatılan <code>siparis_kalemleri</code> ara tablosuyla bir siparişe birden çok malzeme.</li>
+<li><strong>TypeScript:</strong> Aynı kodu tiplerle yazmak hataları çalıştırmadan yakalar; zod şemalarından tipler kendiliğinden çıkar.</li>
+<li><strong>ORM / sorgu kurucu:</strong> Drizzle ya da Prisma, SQL'i JavaScript nesneleriyle yazmayı sağlar. SQL'i bildiğin için arka planda ne olduğunu anlarsın.</li>
+<li><strong>React ön yüz:</strong> “React ile web uygulaması” eğitimindeki bileşenleri bu API'ye bağla.</li>
+</ul>
+<h3>Gün sonu kontrolü (15 dk)</h3>
+<ul class="tasks">
+<li class="task"><label><input type="checkbox" data-id="g7-6"><span>Şemayı numaralı göç dosyalarıyla yönetip göçleri bir kez ve sırayla uygulayabiliyorum.</span></label></li>
+<li class="task"><label><input type="checkbox" data-id="g7-7"><span>FILTER ile koşullu toplamlar içeren bir görünüm yazabiliyorum.</span></label></li>
+<li class="task"><label><input type="checkbox" data-id="g7-8"><span>Rotaları /api önekiyle toplayıp express.static ile sayfa sunabiliyorum.</span></label></li>
+<li class="task"><label><input type="checkbox" data-id="g7-9"><span>Düz JavaScript ve fetch ile API'yi kullanan, hata mesajlarını gösteren bir sayfa yazabiliyorum.</span></label></li>
+<li class="task"><label><input type="checkbox" data-id="g7-10"><span>Test veritabanını göçlerden kurup API'yi uçtan uca test edebiliyorum.</span></label></li>
+<li class="task"><label><input type="checkbox" data-id="g7-11"><span>Uygulamayı bulut veritabanı ve sunucu servisiyle yayına almanın adımlarını biliyorum.</span></label></li>
+</ul></div>
+  <div class="pn"><a href="#gun6">← 6. gün</a><a href="../../Tools.html">Araçlara dön →</a></div>
+</section>
+</main>
+
+<footer>
+  <div class="wrap">
+    <span>© 2026 Erdal Üstünol · <a href="/gizlilik.html">Gizlilik</a></span>
+    <a href="../../Tools.html">← Araçlar ve eğitimler</a>
+  </div>
+</footer>
+
+<script>
+(() => {
+  const $ = id => document.getElementById(id);
+  const KEY = 'erdevelop-egitim-nodejs-postgresql';
+  const store = { get(k) { try { return localStorage.getItem(k); } catch (e) { return null; } }, set(k, v) { try { localStorage.setItem(k, v); } catch (e) {} } };
+  let mode = (() => { try { const m = localStorage.getItem('erdevelop-mode'), g = localStorage.getItem('erdevelop-mode-gun'), t = new Date(); if (m && g === t.toDateString()) return m; const h = t.getHours(); return h >= 7 && h < 19 ? 'light' : 'dark'; } catch (e) { return 'light'; } })();
+  const applyMode = () => { document.documentElement.dataset.mode = mode; $('modeBtn').textContent = mode === 'dark' ? 'LIGHT' : 'DARK'; };
+  $('modeBtn').addEventListener('click', () => { mode = mode === 'dark' ? 'light' : 'dark'; store.set('erdevelop-mode', mode); store.set('erdevelop-mode-gun', new Date().toDateString()); applyMode(); });
+  applyMode();
+
+  let done = {}; try { done = JSON.parse(store.get(KEY) || '{}') || {}; } catch (e) { done = {}; }
+  const boxes = [...document.querySelectorAll('li.task input')];
+  const prog = () => {
+    document.querySelectorAll('section.day').forEach(sec => {
+      const d = sec.dataset.day, bs = sec.querySelectorAll('li.task input'), c = [...bs].filter(b => b.checked).length;
+      sec.querySelector('[data-prog]').textContent = c + '/' + bs.length;
+      const n = document.querySelector('[data-nav="' + d + '"]'); if (n) n.classList.toggle('done', bs.length > 0 && c === bs.length);
+    });
+  };
+  boxes.forEach(b => { b.checked = !!done[b.dataset.id]; b.addEventListener('change', () => { if (b.checked) done[b.dataset.id] = 1; else delete done[b.dataset.id]; store.set(KEY, JSON.stringify(done)); prog(); }); });
+  $('resetBtn').addEventListener('click', () => { done = {}; store.set(KEY, '{}'); boxes.forEach(b => b.checked = false); prog(); });
+  prog();
+
+  const links = [...document.querySelectorAll('[data-nav]')];
+  const secs = [$('genel'), ...document.querySelectorAll('section.day')];
+  if ('IntersectionObserver' in window) {
+    const io = new IntersectionObserver(es => es.forEach(e => { if (e.isIntersecting) { const i = secs.indexOf(e.target); links.forEach((l, k) => l.classList.toggle('on', k === i)); } }), { rootMargin: '-40% 0px -55% 0px' });
+    secs.forEach(s => io.observe(s));
+  }
+})();
+</script>
+<script src="../ilerleme.js" data-key="erdevelop-egitim-nodejs-postgresql"></script>
+<script>if ('serviceWorker' in navigator && location.protocol === 'https:') addEventListener('load', () => navigator.serviceWorker.register('/sw.js').catch(() => { }));</script>
+<script data-goatcounter="https://erdevelop.goatcounter.com/count" async src="//gc.zgo.at/count.js"></script>
+<script src="/uyari.js" data-tur="egitim"></script>
+</body>
+</html>

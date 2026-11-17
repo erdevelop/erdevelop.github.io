@@ -1,0 +1,2462 @@
+<!doctype html>
+<html lang="tr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Revit&#x27;te Python (pyRevit ve Revit API) · 7 günlük program | erdevelop</title>
+<meta name="description" content="Bol şemalı 7 günlük Revit Python eğitimi: pyRevit kurulumu ve kendi düğmen, Revit API nesne modeli, FilteredElementCollector ile eleman toplamak, parametre okuyup yazmak, Transaction, giydirme cephe panellerini numaralandırmak, geometri ve aile yerleştirmek, pyRevit formları ve CSV raporu.">
+<link rel="icon" href="/favicon.svg" type="image/svg+xml">
+<link rel="icon" href="/favicon.ico" sizes="any">
+<link rel="apple-touch-icon" href="/apple-touch-icon.png">
+<link rel="manifest" href="/manifest.webmanifest">
+<meta name="theme-color" content="#0b1220">
+<meta property="og:title" content="Revit&#x27;te Python (pyRevit ve Revit API) · 7 günlük program | erdevelop">
+<meta property="og:description" content="7 günde pyRevit ve Revit API ile Python: eleman toplamak, parametreler, Transaction, cephe paneli numaralandırma ve rapor.">
+<meta property="og:url" content="https://erdevelop.github.io/egitimler/revit-python/">
+<meta property="og:image" content="https://erdevelop.github.io/og.png">
+<meta name="twitter:card" content="summary_large_image">
+<link rel="canonical" href="https://erdevelop.github.io/egitimler/revit-python/">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Chakra+Petch:wght@600;700&family=IBM+Plex+Sans:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500&display=swap">
+<style>
+  :root {
+    --bg: #eef2f6; --panel: #ffffff; --panel-2: #f5f7f9; --grid: #e3e8ed; --line: #cfd8e1;
+    --fg: #1c2833; --text: #45535f; --muted: #74838f; --accent: #2f6fb5; --accent-dim: rgba(47,111,181,.12); --hot: #c8731f; --ok: #2e8b57;
+    --f-display: 'Chakra Petch', 'Segoe UI', sans-serif; --f-body: 'IBM Plex Sans', 'Segoe UI', system-ui, sans-serif; --f-mono: 'IBM Plex Mono', Consolas, monospace;
+    color-scheme: light;
+  }
+  :root[data-mode="dark"] {
+    --bg: #0b1220; --panel: #111a2c; --panel-2: #0e1626; --grid: #182338; --line: #22304a;
+    --fg: #e2e8f2; --text: #a8b6cc; --muted: #73829b; --accent: #f2b33d; --accent-dim: rgba(242,179,61,.14); --hot: #6aa8ff; --ok: #5fc48d;
+    color-scheme: dark;
+  }
+  * { box-sizing: border-box; }
+  html { background: var(--bg); scroll-padding-top: 110px; }
+  body { margin: 0; color: var(--fg); font-family: var(--f-body); font-size: 16px; line-height: 1.65;
+    background-image: linear-gradient(var(--grid) 1px, transparent 1px), linear-gradient(90deg, var(--grid) 1px, transparent 1px); background-size: 80px 80px; background-attachment: fixed; }
+  a { color: var(--accent); }
+  :focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+  .wrap { max-width: 920px; margin: 0 auto; padding-left: max(16px, env(safe-area-inset-left, 0px)); padding-right: max(16px, env(safe-area-inset-right, 0px)); }
+
+  .topbar { position: sticky; top: 0; z-index: 20; background: color-mix(in srgb, var(--bg) 92%, transparent); backdrop-filter: blur(6px); border-bottom: 1px solid var(--line); }
+  .topbar .wrap { display: flex; align-items: center; gap: 12px; padding-block: 10px; max-width: 1160px; }
+  .brand { font: 700 15px var(--f-display); letter-spacing: 1px; text-transform: uppercase; text-decoration: none; color: var(--fg); }
+  .brand span { color: var(--accent); }
+  .crumb { font: 400 12px var(--f-mono); color: var(--muted); }
+  .sp { flex: 1; }
+  .tb { font: 500 12px var(--f-mono); color: var(--accent); padding: 6px 10px; border: 1px solid var(--line); border-radius: 4px; background: none; cursor: pointer; text-transform: uppercase; text-decoration: none; }
+  .tb:hover { border-color: var(--accent); }
+  .daynav { border-top: 1px solid var(--line); }
+  .daynav .wrap { display: flex; gap: 6px; padding-block: 8px; overflow-x: auto; max-width: 1160px; }
+  .daynav a { font: 500 12px var(--f-mono); text-decoration: none; color: var(--text); border: 1px solid var(--line); border-radius: 4px; padding: 4px 10px; white-space: nowrap; background: var(--panel); }
+  .daynav a.on { border-color: var(--accent); color: var(--accent); }
+  .daynav a.done { background: var(--accent-dim); }
+
+  header.head { padding-block: 34px 6px; }
+  .kicker { font: 500 12px var(--f-mono); color: var(--accent); letter-spacing: 1px; }
+  .head h1 { font: 700 clamp(2rem, 6vw, 3rem)/1.05 var(--f-display); margin: 6px 0 0; letter-spacing: -.5px; }
+  .head p.lead { margin: 12px 0 0; color: var(--text); max-width: 64ch; font-size: 1.05rem; }
+  .chips { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 16px; }
+  .chips span { font: 400 12px var(--f-mono); color: var(--muted); border: 1px solid var(--line); border-radius: 4px; padding: 3px 8px; background: var(--panel); }
+
+  .card { background: var(--panel); border: 1px solid var(--line); border-radius: 8px; padding: 22px clamp(16px, 4vw, 30px); margin-top: 28px; }
+  .day-head { display: flex; align-items: baseline; gap: 12px; flex-wrap: wrap; border-bottom: 1px solid var(--line); padding-bottom: 12px; margin-bottom: 6px; }
+  .day-head h2, .card > h2 { font: 700 1.45rem/1.2 var(--f-display); margin: 0; letter-spacing: .2px; }
+  .dn { font: 600 12px var(--f-mono); color: var(--panel); background: var(--accent); border-radius: 3px; padding: 2px 7px; }
+  :root[data-mode="dark"] .dn { color: #1a1204; }
+  .day-head .meta { font: 400 12px var(--f-mono); color: var(--muted); margin-left: auto; }
+  section.day { background: var(--panel); border: 1px solid var(--line); border-radius: 8px; padding: 22px clamp(16px, 4vw, 30px); margin-top: 28px; }
+
+  .prose h3 { font: 700 1.12rem/1.3 var(--f-display); margin: 30px 0 8px; letter-spacing: .2px; }
+  .prose p, .prose li { color: var(--text); }
+  .prose strong { color: var(--fg); font-weight: 600; }
+  .prose ol, .prose ul { padding-left: 1.4em; }
+  .prose li { margin: 4px 0; }
+  .prose li > ul, .prose li > ol { margin: 4px 0; }
+  .prose code { font: 400 .86em var(--f-mono); background: var(--panel-2); border: 1px solid var(--line); border-radius: 3px; padding: 1px 5px; color: var(--fg); overflow-wrap: anywhere; }
+  .tw { overflow-x: auto; margin: 14px 0; border: 1px solid var(--line); border-radius: 6px; }
+  .tw table { border-collapse: collapse; width: 100%; font-size: .9rem; }
+  .tw th, .tw td { text-align: left; padding: 8px 12px; border-bottom: 1px solid var(--line); vertical-align: top; }
+  .tw th { font: 600 12px var(--f-mono); color: var(--muted); background: var(--panel-2); }
+  .card .tw td:first-child, .card .tw td:last-child { white-space: nowrap; }
+  .tw tr:last-child td { border-bottom: 0; }
+  ul.tasks { list-style: none; padding-left: 0; }
+  li.task label { display: flex; gap: 10px; align-items: flex-start; cursor: pointer; padding: 4px 0; }
+  li.task input { width: 18px; height: 18px; margin-top: 4px; accent-color: var(--accent); flex: none; }
+  li.task input:checked + span { color: var(--muted); text-decoration: line-through; }
+  .pn { display: flex; justify-content: space-between; gap: 12px; margin-top: 26px; padding-top: 14px; border-top: 1px solid var(--line); font: 500 13px var(--f-mono); }
+  .pn a { text-decoration: none; }
+  .note { font-size: .9rem; color: var(--muted); }
+  .reset { font: 500 11px var(--f-mono); color: var(--muted); background: none; border: 1px solid var(--line); border-radius: 4px; padding: 3px 8px; cursor: pointer; text-transform: uppercase; }
+  .reset:hover { color: var(--hot); border-color: var(--hot); }
+
+  .fig { margin: 18px 0; padding: 16px 14px 12px; border: 1px solid var(--line); border-radius: 6px; background: var(--panel-2); }
+  .fig .sc { overflow-x: auto; }
+  .fig svg { display: block; width: 100%; min-width: 540px; height: auto; max-width: 720px; margin: 0 auto; overflow: visible; }
+  .fig figcaption { font-size: .85rem; color: var(--muted); margin-top: 10px; text-align: center; max-width: 62ch; margin-inline: auto; }
+  .fig .k { fill: none; stroke: var(--fg); stroke-width: 1.6; } .fig .k1 { fill: none; stroke: var(--fg); stroke-width: 1; }
+  .fig .mu { fill: none; stroke: var(--muted); stroke-width: 1.2; } .fig .mud { fill: none; stroke: var(--muted); stroke-width: 1; stroke-dasharray: 5 4; }
+  .fig .dm { fill: none; stroke: var(--muted); stroke-width: .9; }
+  .fig .rp { fill: none; stroke: var(--hot); stroke-width: 1; stroke-dasharray: 9 4 2 4; }
+  .fig .gd { fill: none; stroke: var(--fg); stroke-width: 1; stroke-dasharray: 16 4 3 4; }
+  .fig .ac { fill: none; stroke: var(--accent); stroke-width: 2; } .fig .acl { fill: none; stroke: var(--accent); stroke-width: 1; }
+  .fig .gl { fill: var(--accent-dim); stroke: var(--fg); stroke-width: .8; }
+  .fig .sp { fill: color-mix(in srgb, var(--fg) 40%, transparent); stroke: var(--fg); stroke-width: .8; }
+  .fig .fr { fill: color-mix(in srgb, var(--fg) 22%, transparent); stroke: none; } .fig .edge { fill: none; stroke: var(--fg); stroke-width: 1.8; }
+  .fig .so { fill: var(--panel); stroke: var(--fg); stroke-width: 1.6; } .fig .hole { fill: var(--panel-2); stroke: var(--fg); stroke-width: 1.2; }
+  .fig .rib { fill: var(--accent-dim); stroke: var(--accent); stroke-width: 1.4; stroke-dasharray: 6 4; }
+  .fig .sel { fill: none; stroke: var(--accent); stroke-width: 3; }
+  .fig .mul { stroke: var(--fg); stroke-width: 4; } .fig .tr { stroke: var(--fg); stroke-width: 3; } .fig .trA { stroke: var(--accent); stroke-width: 3; }
+  .fig .lh { fill: var(--panel); stroke: var(--fg); stroke-width: 1.4; }
+  .fig .dot { fill: var(--accent); } .fig .dotr { fill: var(--accent); stroke: var(--panel); stroke-width: 1; }
+  .fig .pt { fill: var(--accent); stroke: var(--panel); stroke-width: 2; } .fig .tpt { fill: var(--panel); font: 700 12px var(--f-mono); }
+  .fig .bx { fill: var(--panel); stroke: var(--line); stroke-width: 1.3; } .fig .bxa { fill: var(--accent-dim); stroke: var(--accent); stroke-width: 1.3; }
+  .fig .ar { fill: var(--muted); }
+  .fig .acd { fill: none; stroke: var(--accent); stroke-width: 1.6; stroke-dasharray: 6 4; }
+  .fig text { text-transform: none; letter-spacing: 0; } .fig .bg { fill: var(--panel); stroke: none; }
+  .fig .t { fill: var(--text); font: 400 13px var(--f-body); } .fig .tb { fill: var(--fg); font: 600 13px var(--f-body); }
+  .fig .tm { fill: var(--muted); font: 400 11px var(--f-mono); } .fig .ta { fill: var(--accent); font: 600 11px var(--f-mono); }
+  .fig .th { fill: var(--hot); font: 500 11px var(--f-mono); }
+  .fig .swb { fill: none; stroke: #2f7de1; stroke-width: 2; } .fig .swr { fill: none; stroke: #d64545; stroke-width: 2; } .fig .tr2 { fill: #d64545; font: 600 11px var(--f-mono); } .fig .tbl { fill: #2f7de1; font: 600 11px var(--f-mono); }
+  .prose pre { background: var(--panel-2); border: 1px solid var(--line); border-radius: 6px; padding: 12px 14px; overflow-x: auto; }
+  .prose pre code { background: none; border: 0; padding: 0; font: 400 .85rem/1.5 var(--f-mono); color: var(--fg); }
+  footer { margin-top: 56px; border-top: 1px solid var(--line); padding-block: 20px calc(20px + env(safe-area-inset-bottom, 0px)); font: 400 12px var(--f-mono); color: var(--muted); }
+  footer .wrap { display: flex; justify-content: space-between; gap: 12px; flex-wrap: wrap; }
+  footer a { color: inherit; } footer a:hover { color: var(--accent); }
+  @media print { .topbar, .daynav, .pn, footer, .reset { display: none !important; } body { background: #fff; } section.day, .card { break-inside: auto; border: 0; } }
+</style>
+<script async src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-4775308844679394" crossorigin="anonymous"></script>
+</head>
+<body>
+<div class="topbar">
+  <div class="wrap">
+    <a class="brand" href="/">erdevelop<span>_</span></a>
+    <span class="crumb">/ eğitimler / revit-python</span>
+    <span class="sp"></span>
+    <a class="tb" href="../../Tools.html">Araçlar</a>
+    <button class="tb" type="button" id="modeBtn">DARK</button>
+  </div>
+  <nav class="daynav" aria-label="Günler"><div class="wrap"><a href="#genel" data-nav="0">Genel</a><a href="#gun1" data-nav="1">1</a><a href="#gun2" data-nav="2">2</a><a href="#gun3" data-nav="3">3</a><a href="#gun4" data-nav="4">4</a><a href="#gun5" data-nav="5">5</a><a href="#gun6" data-nav="6">6</a><a href="#gun7" data-nav="7">7</a></div></nav>
+</div>
+
+<main class="wrap">
+  <header class="head" id="genel">
+    <div class="kicker">Eğitimler · Revit&#x27;te Python (pyRevit ve Revit API)</div>
+    <h1>Revit&#x27;te Python (pyRevit ve Revit API)</h1>
+    <p class="lead">Revit&#x27;te tekrar eden işleri Python ile otomatikleştirmek için 7 günlük bir program. pyRevit&#x27;i kurar, Revit şeridine kendi düğmeni eklersin. Revit API&#x27;nin belge, eleman, kategori ve parametre yapısını öğrenir; FilteredElementCollector ile istediğin elemanları toplar, parametreleri okuyup Transaction içinde değiştirirsin. Giydirme cephe panellerini konumlarına göre numaralandıran, ölçülerini kontrol eden ve panel listesini CSV&#x27;ye yazan bir araç geliştirir, sonunda bunu ekibinle paylaşabileceğin bir pyRevit eklentisine dönüştürürsün.</p>
+    <div class="chips"><span>7 gün</span><span>günde ~4 saat</span><span>Türkçe</span><span>Kod örnekleri kopyalanabilir</span></div>
+  </header>
+
+  <div class="card">
+    <h2>Başlamadan önce</h2>
+    <div class="prose">
+      <h3>Kimler için</h3>
+      <p>Revit kullanan mimarlar, cephe ve yapı mühendisleri, BIM koordinatörleri; numaralandırma, parametre doldurma, kontrol ve liste çıkarma işlerini düğmeye bağlamak isteyenler. Revit&#x27;i temel düzeyde bilmek yeterlidir. Python bilmiyorsan önce Python ile programlama eğitiminin ilk üç gününe göz at; Rhino&#x27;da Python eğitimini bitirdiysen burada aynı mantığı Revit&#x27;e taşıyacaksın.</p>
+      <h3>Gerekenler</h3>
+      <ul>
+        <li>Revit 2022 ya da üstü (Windows). Örnekler Revit 2024–2026 API belgelerine göre yazıldı; sürüm farkları metinde belirtilir.</li>
+        <li>pyRevit 5 ya da üstü (<a href="https://pyrevitlabs.io/" target="_blank" rel="noopener">pyrevitlabs.io</a>), ücretsiz.</li>
+        <li>VS Code ve Python eklentisi. Revit dışında çalışan saf Python örnekleri için bilgisayarında Python 3.</li>
+        <li>Denemeler için içinde birkaç giydirme cephe (curtain wall) olan bir Revit modeli; ilk günde nasıl hazırlanacağı anlatılıyor.</li>
+      </ul>
+      <h3>Program</h3>
+      <div class="tw"><table><thead><tr><th>Gün</th><th>Konu</th><th>Ne öğrenirsin</th><th>Süre</th></tr></thead><tbody>
+<tr><td><a href="#gun1">1. gün</a></td><td>Revit API ve pyRevit&#x27;e giriş</td><td>Revit API nedir, pyRevit kurulumu, eklenti klasör yapısı, ilk düğme, doc ve uidoc, IronPython 2.7 ile yazmak, çıktı penceresi</td><td>~4 saat</td></tr>
+<tr><td><a href="#gun2">2. gün</a></td><td>Elemanları toplamak</td><td>Revit nesne modeli, Element ve ElementId, kategori ve sınıf, FilteredElementCollector, tip ve örnek, seçim ve seçim filtresi</td><td>~4 saat</td></tr>
+<tr><td><a href="#gun3">3. gün</a></td><td>Parametreler ve birimler</td><td>Parameter, BuiltInParameter, LookupParameter, StorageType, iç birimler (feet), UnitUtils, tip ve örnek parametreleri, parametre raporu</td><td>~4 saat</td></tr>
+<tr><td><a href="#gun4">4. gün</a></td><td>Transaction ile değiştirmek</td><td>Transaction, parametre yazmak, toplu işlem, geri alma, hata yönetimi, giydirme cephe panellerini konuma göre numaralandırmak</td><td>~4 saat</td></tr>
+<tr><td><a href="#gun5">5. gün</a></td><td>Geometri ve eleman oluşturmak</td><td>XYZ, Line, BoundingBox, Location, giydirme cephe ızgarası, paneller ve dikmeler, aile tipi yerleştirmek, duvar oluşturmak</td><td>~4 saat</td></tr>
+<tr><td><a href="#gun6">6. gün</a></td><td>Kullanıcı arayüzü ve rapor</td><td>pyRevit forms: uyarı, listeden seçim, metin girdisi, dosya kaydetme; çıktı penceresinde tablo ve bağlantı, ölçü kontrolü, CSV raporu</td><td>~4 saat</td></tr>
+<tr><td><a href="#gun7">7. gün</a></td><td>Proje: cephe araç çubuğu</td><td>Ortak modül (lib), üç düğmeli panel: numarala, kontrol et, listele; bundle.yaml, simgeler, ayarlar, eklentiyi Git ile ekiple paylaşmak</td><td>~4 saat</td></tr>
+      </tbody></table></div>
+      <p class="note">Her günün sonunda bir kontrol listesi var. İşaretledikçe ilerlemen bu tarayıcıda saklanır. Hafta içi sadece akşamları çalışırsan program yaklaşık iki hafta sürer. Revit'in içinde çalışan kodlar (Revit API, pyRevit) Revit 2024–2026 API belgelerine ve pyRevit 5'e göre yazılmıştır; bu kursun hazırlandığı ortamda Revit bulunmadığı için çalıştırılamamış, sadece Python sözdizimi ve pyRevit'in varsayılan motoru IronPython 2.7 ile uyumluluk (f-string yok, tek argümanlı print) denetlenmiştir; bu blokların altında çıktı gösterilmez. Revit'ten bağımsız saf Python örnekleri (birim çevirme, sıralama ve numaralandırma, kontrol ve CSV) Python 3 ile çalıştırılmış, gösterilen çıktılar gerçek sonuçlardır. Bir API üyesinin davranışı sürümünde farklıysa revitapidocs.com ve Autodesk'in Revit API yardımı esastır. <button class="reset" type="button" id="resetBtn">ilerlemeyi sıfırla</button></p>
+    </div>
+  </div>
+
+<section class="day" id="gun1" data-day="1">
+  <div class="day-head"><span class="dn">GÜN 01</span><h2>Revit API ve pyRevit&#x27;e giriş</h2><span class="meta">~4 saat · <span data-prog="1">0/6</span> kontrol</span></div>
+  <div class="prose"><h3>Hedef</h3>
+<p>Gün sonunda Revit API'nin ne olduğunu ve Python'un Revit'e nasıl bağlandığını bilecek, pyRevit'i kurup Revit şeridine kendi sekmeni, panelini ve düğmeni ekleyecek, ilk betiğinle modeldeki duvarları ve seviyeleri sayacak ve pyRevit'in varsayılan Python'u olan IronPython 2.7 ile yazarken nelere dikkat edeceğini öğreneceksin. Süre yaklaşık 4 saat.</p>
+<p><strong>Bu kurs hakkında:</strong> Kod blokları iki türdür. <strong>Revit'in içinde çalışanlar</strong> (Revit API ve pyRevit kullananlar) bir düğmenin <code>script.py</code> dosyasına yazılır; altlarında çıktı gösterilmez, sonucu Revit'te ve pyRevit'in çıktı penceresinde görürsün. <strong>Saf Python örnekleri</strong> (hesap, sıralama, dosya yazma) Revit'siz de çalışır; altlarındaki çıktılar gerçek çalıştırma sonuçlarıdır. Gerçek araçlarda ikisini birleştireceğiz: mantığı saf Python'da yazıp deneyecek, Revit'e sadece veri alıp verme işini bırakacağız.</p>
+<h3>1. Revit API ve Python (30 dk)</h3>
+<figure class="fig"><div class="sc"><svg viewBox="0 0 640 158" role="img" xmlns="http://www.w3.org/2000/svg"><defs><marker id="ah-katmanlar" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0 0L10 5L0 10z" class="ar"/></marker></defs><rect x="220" y="8" width="200" height="34" rx="5" class="bx"/><text x="320.0" y="29.0" class="tb" text-anchor="middle">Revit</text><rect x="220" y="56" width="200" height="34" rx="5" class="bxa"/><text x="320.0" y="77.0" class="tb" text-anchor="middle">Revit API (.NET)</text><rect x="20" y="108" width="140" height="40" rx="5" class="bxa"/><text x="90.0" y="124.0" class="tb" text-anchor="middle">pyRevit</text><text x="90.0" y="140.0" class="tm" text-anchor="middle">düğmeler</text><line x1="90" y1="106" x2="320" y2="92" class="mu" marker-end="url(#ah-katmanlar)"/><rect x="175" y="108" width="140" height="40" rx="5" class="bx"/><text x="245.0" y="124.0" class="tb" text-anchor="middle">Dynamo</text><text x="245.0" y="140.0" class="tm" text-anchor="middle">Python düğümü</text><line x1="245" y1="106" x2="320" y2="92" class="mu" marker-end="url(#ah-katmanlar)"/><rect x="330" y="108" width="140" height="40" rx="5" class="bx"/><text x="400.0" y="124.0" class="tb" text-anchor="middle">RevitPythonShell</text><text x="400.0" y="140.0" class="tm" text-anchor="middle">konsol</text><line x1="400" y1="106" x2="320" y2="92" class="mu" marker-end="url(#ah-katmanlar)"/><rect x="485" y="108" width="140" height="40" rx="5" class="bx"/><text x="555.0" y="124.0" class="tb" text-anchor="middle">C# eklenti</text><text x="555.0" y="140.0" class="tm" text-anchor="middle">derlenmiş</text><line x1="555" y1="106" x2="320" y2="92" class="mu" marker-end="url(#ah-katmanlar)"/><line x1="320" y1="54" x2="320" y2="44" class="mu" marker-end="url(#ah-katmanlar)"/></svg></div><figcaption>Bütün yollar aynı Revit API&#x27;ye çıkar; bu kurs pyRevit&#x27;i kullanıyor.</figcaption></figure>
+<p>Revit, kendi içindeki bütün nesnelere (duvar, kapı, seviye, görünüş, parametre) programla erişilebilen bir <strong>API</strong> (uygulama programlama arayüzü) sunar. Bu API .NET üzerinde yazılmıştır; doğal dili C#'tır. Python'u Revit'e bağlamanın yolları:</p>
+<div class="tw"><table>
+<thead>
+<tr>
+<th>Araç</th>
+<th>Ne</th>
+<th>Ne zaman</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><strong>pyRevit</strong></td>
+<td>Ücretsiz eklenti; Python betiklerini şeritte düğme yapar</td>
+<td>Kalıcı araçlar, ekip için düğmeler (bu kurs)</td>
+</tr>
+<tr>
+<td><strong>Dynamo</strong></td>
+<td>Görsel programlama; içinde Python düğümü var</td>
+<td>Görsel akış, tek seferlik model işleri</td>
+</tr>
+<tr>
+<td><strong>RevitPythonShell</strong></td>
+<td>Revit içinde etkileşimli Python konsolu</td>
+<td>API'yi deneyerek keşfetmek</td>
+</tr>
+<tr>
+<td><strong>C# eklenti</strong></td>
+<td>Visual Studio ile derlenen eklenti</td>
+<td>Satılacak ürün, en yüksek performans</td>
+</tr>
+</tbody>
+</table></div>
+<p>Hepsinde <strong>aynı Revit API</strong> kullanılır: bu kursta öğrendiğin <code>FilteredElementCollector</code>, <code>Transaction</code> ve <code>Parameter</code> bilgisi Dynamo'nun Python düğümünde de, C#'ta da geçerlidir.</p>
+<p><strong>Neler yapılabilir?</strong> Yüzlerce panele konumuna göre numara vermek, bir parametreyi başka parametrelerden hesaplayıp doldurmak, ölçüsü sınırı aşan elemanları bulmak, eleman listelerini Excel'e aktarmak, görünüş ve pafta oluşturmak, aile yerleştirmek. Bir insanın fareyle yapabildiği hemen her şey.</p>
+<h3>2. pyRevit'i kurmak (30 dk)</h3>
+<ol>
+<li>Revit'i kapat.</li>
+<li>pyrevitlabs.io adresinden (ya da GitHub'daki pyrevitlabs/pyRevit sürümler sayfasından) güncel <strong>pyRevit</strong> yükleyicisini indir. Yönetici yetkin yoksa “Admin” olmayan yükleyiciyi seç.</li>
+<li>Kurulumu tamamla ve Revit'i aç. Şeritte <strong>pyRevit</strong> sekmesi görünmeli. İlk açılışta eklentinin yüklenmesine izin ver.</li>
+</ol>
+<p>pyRevit sekmesinde işine yarayacak birkaç şey:</p>
+<ul>
+<li><strong>Settings:</strong> Ayarlar. Kendi eklenti klasörünü buradan ekleyeceğiz.</li>
+<li><strong>Reload:</strong> Eklentileri yeniden yükler. Yeni bir düğme ya da klasör eklediğinde gerekir; sadece bir <code>script.py</code>'nin içeriğini değiştirdiğinde <strong>gerekmez</strong>, düğmeye her basışta dosya baştan okunur.</li>
+<li>Hazır gelen araçlar (Select, Modify, Analysis…) da Python'la yazılmıştır ve kaynak kodları okunabilir: öğrenmek için çok iyi örnekler.</li>
+</ul>
+<h3>3. Eklenti klasör yapısı ve ilk düğme (1 saat)</h3>
+<figure class="fig"><div class="sc"><svg viewBox="0 0 640 162" role="img" xmlns="http://www.w3.org/2000/svg"><defs><marker id="ah-klasor" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0 0L10 5L0 10z" class="ar"/></marker></defs><rect x="20" y="8" width="190" height="24" rx="5" class="bx"/><text x="115.0" y="24.0" class="tb" text-anchor="middle">ERD.extension</text><text x="360" y="24" class="tm" text-anchor="start">→ eklenti</text><rect x="50" y="38" width="190" height="24" rx="5" class="bx"/><text x="145.0" y="54.0" class="tb" text-anchor="middle">Cephe.tab</text><text x="360" y="54" class="tm" text-anchor="start">→ sekme</text><rect x="80" y="68" width="190" height="24" rx="5" class="bx"/><text x="175.0" y="84.0" class="tb" text-anchor="middle">Model.panel</text><text x="360" y="84" class="tm" text-anchor="start">→ panel</text><rect x="110" y="98" width="190" height="24" rx="5" class="bxa"/><text x="205.0" y="114.0" class="tb" text-anchor="middle">Merhaba.pushbutton</text><text x="360" y="114" class="tm" text-anchor="start">→ düğme</text><rect x="140" y="128" width="190" height="24" rx="5" class="bx"/><text x="235.0" y="144.0" class="tb" text-anchor="middle">script.py</text><text x="360" y="144" class="tm" text-anchor="start">→ kod</text><rect x="450" y="20" width="170" height="110" class="bx"/><text x="462" y="40" class="ta" text-anchor="start">Revit şeridi</text><rect x="462" y="52" width="70" height="18" class="bxa"/><text x="470" y="65" class="tm" text-anchor="start">Cephe</text><rect x="462" y="78" width="146" height="42" class="bx"/><rect x="472" y="84" width="40" height="30" class="bxa"/><text x="540" y="104" class="tm" text-anchor="start">Model</text></svg></div><figcaption>Klasör adları şeridi oluşturur: uzantı ne olduğunu söyler.</figcaption></figure>
+<p>pyRevit, şeritteki her şeyi <strong>klasör adlarından</strong> üretir. Klasör adının sonundaki uzantı ne olduğunu söyler:</p>
+<div class="tw"><table>
+<thead>
+<tr>
+<th>Uzantı</th>
+<th>Şeritte</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>.extension</code></td>
+<td>Bir eklenti (birden çok sekme içerebilir)</td>
+</tr>
+<tr>
+<td><code>.tab</code></td>
+<td>Sekme</td>
+</tr>
+<tr>
+<td><code>.panel</code></td>
+<td>Sekmedeki panel</td>
+</tr>
+<tr>
+<td><code>.pushbutton</code></td>
+<td>Düğme; içinde <code>script.py</code></td>
+</tr>
+<tr>
+<td><code>.pulldown</code> / <code>.stack</code></td>
+<td>Açılır menü / üst üste küçük düğmeler</td>
+</tr>
+</tbody>
+</table></div>
+<p>Örneğin <code>C:\RevitAraclari</code> altında şu klasörleri oluştur:</p>
+<pre><code class="language-text">C:\RevitAraclari\
+└─ ERD.extension\
+   └─ Cephe.tab\
+      └─ Model.panel\
+         └─ Merhaba.pushbutton\
+            ├─ script.py
+            └─ icon.png        (isteğe bağlı, 32×32 ya da 96×96)
+</code></pre>
+<p><code>script.py</code> içine şunu yaz:</p>
+<!-- yok -->
+
+<pre><code class="language-python"># -*- coding: utf-8 -*-
+&quot;&quot;&quot;Modeldeki duvar ve seviye sayısını gösterir.&quot;&quot;&quot;
+from pyrevit import revit, DB
+
+doc = revit.doc
+
+duvarlar = DB.FilteredElementCollector(doc) \
+    .OfCategory(DB.BuiltInCategory.OST_Walls) \
+    .WhereElementIsNotElementType() \
+    .ToElements()
+
+seviyeler = DB.FilteredElementCollector(doc).OfClass(DB.Level).ToElements()
+
+print(&quot;Belge: {}&quot;.format(doc.Title))
+print(&quot;Duvar sayısı: {}&quot;.format(len(duvarlar)))
+print(&quot;Seviye sayısı: {}&quot;.format(len(seviyeler)))
+</code></pre>
+<p>Sonra pyRevit sekmesinde <strong>Settings → Custom Extension Directories</strong> bölümüne <code>C:\RevitAraclari</code> klasörünü ekle, kaydet ve <strong>Reload</strong>'a bas. Şeritte <strong>Cephe</strong> sekmesi ve içinde <strong>Merhaba</strong> düğmesi belirir. Düğmeye bas: pyRevit'in <strong>çıktı penceresi</strong> açılır ve <code>print</code> satırlarını gösterir.</p>
+<ul>
+<li>Dosyanın en üstündeki <strong>docstring</strong> (<code>"""..."""</code>) düğmenin üzerine gelince görünen ipucu olur.</li>
+<li><code>from pyrevit import revit, DB</code>: <code>revit</code> pyRevit'in yardımcılarıdır (<code>revit.doc</code>, <code>revit.uidoc</code>, <code>revit.get_selection()</code>); <code>DB</code>, Revit API'nin <code>Autodesk.Revit.DB</code> ad alanıdır. pyRevit kullanmasaydık <code>from Autodesk.Revit.DB import *</code> yazardık.</li>
+<li>Satır sonundaki <code>\</code> uzun bir ifadeyi alt satırda sürdürmeye yarar. Parantez içindeyse gerekmez.</li>
+</ul>
+<p><strong>Deneme modeli:</strong> Revit'te mimari şablonla yeni bir proje aç. İki seviye (Level 1, Level 2) zaten vardır. <strong>Wall</strong> komutunda tip olarak <strong>Curtain Wall</strong> seç ve 10–15 m uzunluğunda iki giydirme cephe çiz. Tipin özelliklerinde dikey ızgarayı 1500 mm, yatay ızgarayı 1200 mm aralıkla “Fixed Distance” yap ki paneller oluşsun. Birkaç da normal duvar çiz. Bütün kurs boyunca bu modeli kullanacağız.</p>
+<h3>4. doc, uidoc ve uygulama (30 dk)</h3>
+<figure class="fig"><div class="sc"><svg viewBox="0 0 640 180" role="img" xmlns="http://www.w3.org/2000/svg"><defs><marker id="ah-doc" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0 0L10 5L0 10z" class="ar"/></marker></defs><text x="20" y="20" class="tb" text-anchor="start">Ana nesneler</text><rect x="60" y="30" width="150" height="28" rx="5" class="bx"/><text x="135.0" y="48.0" class="tb" text-anchor="middle">__revit__</text><line x1="212" y1="44" x2="278" y2="44" class="mu" marker-end="url(#ah-doc)"/><rect x="280" y="30" width="170" height="28" rx="5" class="bx"/><text x="365.0" y="48.0" class="tb" text-anchor="middle">UIApplication: Revit</text><rect x="60" y="66" width="150" height="28" rx="5" class="bx"/><text x="135.0" y="84.0" class="tb" text-anchor="middle">revit.uidoc</text><line x1="212" y1="80" x2="278" y2="80" class="mu" marker-end="url(#ah-doc)"/><rect x="280" y="66" width="170" height="28" rx="5" class="bx"/><text x="365.0" y="84.0" class="tb" text-anchor="middle">UIDocument: seçim</text><rect x="60" y="102" width="150" height="28" rx="5" class="bxa"/><text x="135.0" y="120.0" class="tb" text-anchor="middle">revit.doc</text><line x1="212" y1="116" x2="278" y2="116" class="mu" marker-end="url(#ah-doc)"/><rect x="280" y="102" width="170" height="28" rx="5" class="bx"/><text x="365.0" y="120.0" class="tb" text-anchor="middle">Document: veri</text><rect x="60" y="138" width="150" height="28" rx="5" class="bx"/><text x="135.0" y="156.0" class="tb" text-anchor="middle">app</text><line x1="212" y1="152" x2="278" y2="152" class="mu" marker-end="url(#ah-doc)"/><rect x="280" y="138" width="170" height="28" rx="5" class="bx"/><text x="365.0" y="156.0" class="tb" text-anchor="middle">Application: sürüm, ayar</text></svg></div><figcaption>Okumak ve değiştirmek için doc, ekrandakiler için uidoc.</figcaption></figure>
+<p>Revit API'de her şey birkaç ana nesneden başlar:</p>
+<div class="tw"><table>
+<thead>
+<tr>
+<th>Nesne</th>
+<th>pyRevit'te</th>
+<th>Ne</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>UIApplication</code></td>
+<td><code>__revit__</code></td>
+<td>Çalışan Revit uygulaması</td>
+</tr>
+<tr>
+<td><code>UIDocument</code></td>
+<td><code>revit.uidoc</code></td>
+<td>Ekranda açık belge: seçim, aktif görünüş</td>
+</tr>
+<tr>
+<td><code>Document</code></td>
+<td><code>revit.doc</code></td>
+<td>Belgenin verisi: elemanlar, parametreler, değişiklik</td>
+</tr>
+<tr>
+<td><code>Application</code></td>
+<td><code>__revit__.Application</code></td>
+<td>Sürüm, dil, ayarlar</td>
+</tr>
+</tbody>
+</table></div>
+<!-- yok -->
+
+<pre><code class="language-python"># -*- coding: utf-8 -*-
+from pyrevit import revit, DB
+
+doc = revit.doc
+uidoc = revit.uidoc
+app = __revit__.Application
+
+print(&quot;Revit sürümü: {} ({})&quot;.format(app.VersionNumber, app.VersionBuild))
+print(&quot;Dosya yolu: {}&quot;.format(doc.PathName or &quot;(kaydedilmemiş)&quot;))
+print(&quot;Aktif görünüş: {}&quot;.format(uidoc.ActiveView.Name))
+print(&quot;Aile belgesi mi? {}&quot;.format(doc.IsFamilyDocument))
+</code></pre>
+<p>Kural basit: <strong>okumak</strong> ve <strong>değiştirmek</strong> için <code>doc</code>, kullanıcının <strong>ekranda ne yaptığını</strong> (seçim, aktif görünüş) bilmek için <code>uidoc</code>.</p>
+<h3>5. IronPython 2.7 ile yazmak (45 dk)</h3>
+<p>pyRevit'in varsayılan Python motoru <strong>IronPython 2.7</strong>'dir: .NET üzerinde çalışan bir Python 2.7. Revit API ile en sorunsuz çalışan motor budur; pyRevit 5 ile deneysel IronPython 3.4 ve CPython 3 motorları da gelir ama bazı araçlarla sorun çıkarabilir. Bu kursta bütün Revit kodunu <strong>hem Python 2.7'de hem Python 3'te çalışacak</strong> biçimde yazıyoruz. Dikkat edilecekler:</p>
+<div class="tw"><table>
+<thead>
+<tr>
+<th>Konu</th>
+<th>Yapma</th>
+<th>Yap</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Biçimli metin</td>
+<td><code>f"Adet: {n}"</code> (2.7'de sözdizimi hatası)</td>
+<td><code>"Adet: {}".format(n)</code></td>
+</tr>
+<tr>
+<td>Birden çok değer yazdırmak</td>
+<td><code>print("Adet:", n)</code> (2.7'de demet yazar)</td>
+<td>Tek metin: <code>print("Adet: {}".format(n))</code></td>
+</tr>
+<tr>
+<td>Türkçe karakter</td>
+<td>İlk satırda kodlama belirtmemek</td>
+<td><code># -*- coding: utf-8 -*-</code></td>
+</tr>
+<tr>
+<td>Tam sayı bölme</td>
+<td><code>7 / 2</code> (2.7'de 3 verir)</td>
+<td><code>7 / 2.0</code> ya da <code>from __future__ import division</code></td>
+</tr>
+<tr>
+<td>Dosya yazmak</td>
+<td><code>open(yol, "w", encoding="utf-8")</code> (2.7'de yok)</td>
+<td><code>codecs.open(yol, "w", "utf-8")</code></td>
+</tr>
+</tbody>
+</table></div>
+<p>Saf Python kısımlarını bilgisayarındaki Python 3 ile deneyip hatasız gördükten sonra Revit'e taşıyacağız. Örneğin, bir duvar uzunluğundan panel sayısını hesaplayan küçük bir fonksiyon:</p>
+<!-- dosya: panelsay.py -->
+
+<pre><code class="language-python"># -*- coding: utf-8 -*-
+from __future__ import division
+import math
+
+
+def panel_sayisi(uzunluk_mm, aks_mm):
+    &quot;&quot;&quot;Verilen uzunluğa aks aralığıyla kaç panel sığar (son panel kısa olabilir).&quot;&quot;&quot;
+    return int(math.ceil(uzunluk_mm / aks_mm))
+
+
+def panel_olculeri(uzunluk_mm, aks_mm):
+    n = panel_sayisi(uzunluk_mm, aks_mm)
+    olculer = [aks_mm] * (n - 1)
+    olculer.append(round(uzunluk_mm - aks_mm * (n - 1), 1))
+    return olculer
+
+
+if __name__ == &quot;__main__&quot;:
+    for uzunluk in (12000, 13250, 1400):
+        o = panel_olculeri(uzunluk, 1500)
+        print(&quot;{} mm -&gt; {} panel, son panel {} mm&quot;.format(uzunluk, len(o), o[-1]))
+</code></pre>
+<pre><code class="language-bash">python3 panelsay.py
+</code></pre>
+<pre><code class="language-text">12000 mm -&gt; 8 panel, son panel 1500 mm
+13250 mm -&gt; 9 panel, son panel 1250 mm
+1400 mm -&gt; 1 panel, son panel 1400 mm
+</code></pre>
+<p><code>if __name__ == "__main__":</code> bloğu dosya doğrudan çalıştırıldığında çalışır, başka bir dosyadan <code>import</code> edildiğinde çalışmaz. Böylece aynı dosya hem deneme betiği hem modül olur. 7. günde bu tür fonksiyonları eklentinin <code>lib</code> klasörüne koyup bütün düğmelerden kullanacağız.</p>
+<h3>6. Çıktı penceresi (30 dk)</h3>
+<p>pyRevit'in çıktı penceresi düz <code>print</code>'ten fazlasını yapabilir:</p>
+<!-- yok -->
+
+<pre><code class="language-python"># -*- coding: utf-8 -*-
+from pyrevit import revit, DB, script
+
+output = script.get_output()
+output.print_md(&quot;# Seviyeler&quot;)
+
+seviyeler = DB.FilteredElementCollector(revit.doc).OfClass(DB.Level).ToElements()
+seviyeler = sorted(seviyeler, key=lambda s: s.Elevation)
+
+for s in seviyeler:
+    kot_mm = DB.UnitUtils.ConvertFromInternalUnits(s.Elevation, DB.UnitTypeId.Millimeters)
+    print(&quot;{} : {} mm  {}&quot;.format(s.Name, round(kot_mm), output.linkify(s.Id)))
+</code></pre>
+<ul>
+<li><code>output.print_md</code> Markdown biçimli başlık ve metin yazar.</li>
+<li><code>output.linkify(eleman_id)</code> tıklanabilir bir bağlantı üretir: tıklayınca Revit o elemanı seçer ve gösterir. Kontrol araçlarında çok işe yarar.</li>
+<li><code>s.Elevation</code> <strong>feet</strong> cinsindendir; Revit API'nin iç birimi her zaman feet'tir. Çevirmeyi 3. günde ayrıntılı göreceğiz. <code>UnitTypeId</code> Revit 2021'den beri vardır; daha eski sürümlerde <code>DisplayUnitType</code> kullanılırdı.</li>
+</ul>
+<p><strong>Alıştırma:</strong> <code>Merhaba.pushbutton</code>'ın yanına <code>Sayac.pushbutton</code> adında ikinci bir düğme ekle (Reload gerekir). Modeldeki kapı (<code>OST_Doors</code>), pencere (<code>OST_Windows</code>) ve giydirme cephe paneli (<code>OST_CurtainWallPanels</code>) sayılarını çıktı penceresine yazsın.</p>
+<h3>Gün sonu kontrolü (15 dk)</h3>
+<ul class="tasks">
+<li class="task"><label><input type="checkbox" data-id="g1-1"><span>Revit API'nin .NET tabanlı olduğunu, pyRevit, Dynamo ve C#'ın aynı API'yi kullandığını biliyorum.</span></label></li>
+<li class="task"><label><input type="checkbox" data-id="g1-2"><span>pyRevit'i kurup kendi eklenti klasörümü Settings'ten ekleyebiliyorum.</span></label></li>
+<li class="task"><label><input type="checkbox" data-id="g1-3"><span>.extension, .tab, .panel ve .pushbutton klasörleriyle şeride düğme ekleyebiliyorum; ne zaman Reload gerektiğini biliyorum.</span></label></li>
+<li class="task"><label><input type="checkbox" data-id="g1-4"><span>doc, uidoc ve <strong>revit</strong> arasındaki farkı biliyorum.</span></label></li>
+<li class="task"><label><input type="checkbox" data-id="g1-5"><span>IronPython 2.7 için .format, tek argümanlı print ve utf-8 başlığı kullanıyorum.</span></label></li>
+<li class="task"><label><input type="checkbox" data-id="g1-6"><span>Çıktı penceresine Markdown ve tıklanabilir eleman bağlantısı yazabiliyorum.</span></label></li>
+</ul></div>
+  <div class="pn"><a href="#genel">← Genel bakış</a><a href="#gun2">2. gün →</a></div>
+</section>
+<section class="day" id="gun2" data-day="2">
+  <div class="day-head"><span class="dn">GÜN 02</span><h2>Elemanları toplamak</h2><span class="meta">~4 saat · <span data-prog="2">0/6</span> kontrol</span></div>
+  <div class="prose"><h3>Hedef</h3>
+<p>Gün sonunda Revit'in nesne modelini (Element, ElementId, Category, tip ve örnek) bilecek; FilteredElementCollector ile kategoriye, sınıfa, seviyeye ve görünüşe göre eleman toplayacak; hızlı ve yavaş filtrelerin farkını anlayacak; kullanıcının seçtiği elemanları okuyacak ve kullanıcıyı sadece belirli elemanları seçmeye zorlayan bir seçim filtresi yazabileceksin. Süre yaklaşık 4 saat.</p>
+<h3>1. Revit'in nesne modeli (45 dk)</h3>
+<figure class="fig"><div class="sc"><svg viewBox="0 0 640 134" role="img" xmlns="http://www.w3.org/2000/svg"><defs><marker id="ah-model" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0 0L10 5L0 10z" class="ar"/></marker></defs><rect x="240" y="8" width="160" height="40" rx="5" class="bxa"/><text x="320.0" y="24.0" class="tb" text-anchor="middle">Element</text><text x="320.0" y="40.0" class="tm" text-anchor="middle">Id · Category</text><line x1="320" y1="48" x2="90" y2="74" class="mu" marker-end="url(#ah-model)"/><rect x="20" y="76" width="140" height="26" rx="5" class="bx"/><text x="90.0" y="93.0" class="tb" text-anchor="middle">Wall</text><text x="90" y="122" class="tm" text-anchor="middle">tip: WallType</text><line x1="320" y1="48" x2="245" y2="74" class="mu" marker-end="url(#ah-model)"/><rect x="175" y="76" width="140" height="26" rx="5" class="bx"/><text x="245.0" y="93.0" class="tb" text-anchor="middle">FamilyInstance</text><text x="245" y="122" class="tm" text-anchor="middle">tip: FamilySymbol</text><line x1="320" y1="48" x2="400" y2="74" class="mu" marker-end="url(#ah-model)"/><rect x="330" y="76" width="140" height="26" rx="5" class="bx"/><text x="400.0" y="93.0" class="tb" text-anchor="middle">Level</text><text x="400" y="122" class="tm" text-anchor="middle">tip: —</text><line x1="320" y1="48" x2="555" y2="74" class="mu" marker-end="url(#ah-model)"/><rect x="485" y="76" width="140" height="26" rx="5" class="bx"/><text x="555.0" y="93.0" class="tb" text-anchor="middle">View</text><text x="555" y="122" class="tm" text-anchor="middle">tip: ViewFamilyType</text></svg></div><figcaption>Her şey bir Element; örneklerin bir de tip elemanı vardır.</figcaption></figure>
+<p>Revit'te modeldeki her şey bir <strong>Element</strong>'tir: duvar, kapı, seviye, görünüş, pafta, malzeme, hatta bir aile tipi. Her elemanın:</p>
+<ul>
+<li>belgede benzersiz bir <strong>ElementId</strong>'si vardır (<code>eleman.Id</code>);</li>
+<li>bir <strong>Category</strong>'si vardır (Walls, Doors, Curtain Panels…); kategori olmayan elemanlar da vardır (bazı iç ayarlar);</li>
+<li><strong>parametreleri</strong> vardır (yarın);</li>
+<li>belirli bir <strong>.NET sınıfı</strong> vardır: <code>Wall</code>, <code>FamilyInstance</code>, <code>Level</code>, <code>View</code>…</li>
+</ul>
+<p><strong>Tip ve örnek (type / instance):</strong> Modele yerleştirdiğin her kapı bir <strong>örnek</strong>tir (<code>FamilyInstance</code>); “Single-Flush 900×2100” ise bir <strong>tip</strong>tir (<code>FamilySymbol</code>). Duvarlarda örnek <code>Wall</code>, tip <code>WallType</code>'tır. Tipler de elemandır ve aynı kategoride durur; eleman toplarken çoğu zaman sadece örnekleri isteriz.</p>
+<p>Bir elemandan diğerlerine geçmek:</p>
+<div class="tw"><table>
+<thead>
+<tr>
+<th>İstediğin</th>
+<th>Kod</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Elemanın tipi</td>
+<td><code>doc.GetElement(eleman.GetTypeId())</code></td>
+</tr>
+<tr>
+<td>Seviyesi</td>
+<td><code>doc.GetElement(eleman.LevelId)</code></td>
+</tr>
+<tr>
+<td>Kategori adı</td>
+<td><code>eleman.Category.Name</code></td>
+</tr>
+<tr>
+<td>Id'den elemana</td>
+<td><code>doc.GetElement(eleman_id)</code></td>
+</tr>
+<tr>
+<td>Kimlik sayısı</td>
+<td><code>eleman.Id.Value</code> (Revit 2024+), eski sürümlerde <code>eleman.Id.IntegerValue</code></td>
+</tr>
+</tbody>
+</table></div>
+<p><code>ElementId</code> Revit 2024'te 64 bitlik sayıya geçti; <code>IntegerValue</code> önce kullanımdan kaldırıldı, sonraki sürümlerde silindi. Birden fazla sürümde çalışacak kod için küçük bir yardımcı yazalım:</p>
+<!-- yok -->
+
+<pre><code class="language-python"># -*- coding: utf-8 -*-
+def id_sayi(eid):
+    &quot;&quot;&quot;ElementId'nin sayı değeri; Revit 2024 öncesi ve sonrası için.&quot;&quot;&quot;
+    return eid.Value if hasattr(eid, &quot;Value&quot;) else eid.IntegerValue
+</code></pre>
+<h3>2. FilteredElementCollector (1 saat 15 dk)</h3>
+<figure class="fig"><div class="sc"><svg viewBox="0 0 640 86" role="img" xmlns="http://www.w3.org/2000/svg"><defs><marker id="ah-collector" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0 0L10 5L0 10z" class="ar"/></marker></defs><rect x="10.0" y="16" width="109.6" height="56" rx="5" class="bx"/><text x="64.8" y="40.0" class="tb" text-anchor="middle">Collector(doc)</text><text x="64.8" y="56.0" class="tm" text-anchor="middle">bütün belge</text><rect x="137.6" y="16" width="109.6" height="56" rx="5" class="bxa"/><text x="192.39999999999998" y="40.0" class="tb" text-anchor="middle">OfCategory</text><text x="192.39999999999998" y="56.0" class="tm" text-anchor="middle">hızlı</text><line x1="121.6" y1="44.0" x2="135.6" y2="44.0" class="mu" marker-end="url(#ah-collector)"/><rect x="265.2" y="16" width="109.6" height="56" rx="5" class="bxa"/><text x="320.0" y="40.0" class="tb" text-anchor="middle">NotElementType</text><text x="320.0" y="56.0" class="tm" text-anchor="middle">hızlı · örnek</text><line x1="249.2" y1="44.0" x2="263.2" y2="44.0" class="mu" marker-end="url(#ah-collector)"/><rect x="392.79999999999995" y="16" width="109.6" height="56" rx="5" class="bx"/><text x="447.59999999999997" y="40.0" class="tb" text-anchor="middle">WherePasses</text><text x="447.59999999999997" y="56.0" class="tm" text-anchor="middle">ek filtre</text><line x1="376.79999999999995" y1="44.0" x2="390.79999999999995" y2="44.0" class="mu" marker-end="url(#ah-collector)"/><rect x="520.4" y="16" width="109.6" height="56" rx="5" class="bx"/><text x="575.1999999999999" y="40.0" class="tb" text-anchor="middle">ToElements</text><text x="575.1999999999999" y="56.0" class="tm" text-anchor="middle">liste</text><line x1="504.4" y1="44.0" x2="518.4" y2="44.0" class="mu" marker-end="url(#ah-collector)"/></svg></div><figcaption>FilteredElementCollector: önce hızlı filtrelerle daralt.</figcaption></figure>
+<p>Belgedeki elemanlara ulaşmanın ana yolu <strong>FilteredElementCollector</strong>'dır. Kalıp hep aynıdır: belgeyi (ya da bir görünüşü) ver, filtreleri zincirle, sonucu al.</p>
+<!-- yok -->
+
+<pre><code class="language-python"># -*- coding: utf-8 -*-
+from pyrevit import revit, DB
+
+doc = revit.doc
+
+# 1) Kategoriye göre, sadece örnekler
+paneller = DB.FilteredElementCollector(doc) \
+    .OfCategory(DB.BuiltInCategory.OST_CurtainWallPanels) \
+    .WhereElementIsNotElementType() \
+    .ToElements()
+
+# 2) Sınıfa göre: bütün duvarlar (Wall sınıfı)
+duvarlar = DB.FilteredElementCollector(doc).OfClass(DB.Wall).ToElements()
+
+# 3) Sadece tipler: projedeki bütün duvar tipleri
+duvar_tipleri = DB.FilteredElementCollector(doc).OfClass(DB.WallType).ToElements()
+
+# 4) Bir görünüşte görünen elemanlar
+gorunuste = DB.FilteredElementCollector(doc, doc.ActiveView.Id) \
+    .WhereElementIsNotElementType() \
+    .GetElementCount()
+
+print(&quot;Panel: {}  Duvar: {}  Duvar tipi: {}&quot;.format(len(paneller), len(duvarlar), len(duvar_tipleri)))
+print(&quot;Aktif görünüşte eleman: {}&quot;.format(gorunuste))
+</code></pre>
+<ul>
+<li><code>OfCategory(BuiltInCategory.OST_...)</code> kategoriye göre süzer. Sık kullanılanlar: <code>OST_Walls</code>, <code>OST_Doors</code>, <code>OST_Windows</code>, <code>OST_Floors</code>, <code>OST_CurtainWallPanels</code>, <code>OST_CurtainWallMullions</code>, <code>OST_GenericModel</code>, <code>OST_StructuralColumns</code>, <code>OST_Levels</code>, <code>OST_Grids</code>.</li>
+<li><code>OfClass(Sınıf)</code> .NET sınıfına göre süzer. <code>OfClass(DB.Wall)</code> giydirme cepheleri de getirir, çünkü onlar da birer <code>Wall</code>'dır.</li>
+<li><code>WhereElementIsNotElementType()</code> tipleri dışarıda bırakır; <code>WhereElementIsElementType()</code> sadece tipleri alır.</li>
+<li>Sonuç: <code>.ToElements()</code> eleman listesi, <code>.ToElementIds()</code> id listesi, <code>.FirstElement()</code> ilki, <code>.GetElementCount()</code> sadece sayı.</li>
+<li>Toplayıcı tek kullanımlıktır; ikinci bir sorgu için yenisini oluştur.</li>
+</ul>
+<p><strong>Duvar mı, giydirme cephe mi?</strong> İkisi de <code>Wall</code> sınıfındadır; farkı tipin <strong>Kind</strong> özelliği söyler:</p>
+<!-- yok -->
+
+<pre><code class="language-python"># -*- coding: utf-8 -*-
+from pyrevit import revit, DB
+
+doc = revit.doc
+cepheler, normal = [], []
+for w in DB.FilteredElementCollector(doc).OfClass(DB.Wall):
+    if w.WallType.Kind == DB.WallKind.Curtain:
+        cepheler.append(w)
+    else:
+        normal.append(w)
+print(&quot;Giydirme cephe: {}  Diğer duvar: {}&quot;.format(len(cepheler), len(normal)))
+</code></pre>
+<p>Toplayıcı doğrudan bir döngüde de kullanılabilir; <code>ToElements()</code> demek şart değil.</p>
+<h3>3. Hızlı ve yavaş filtreler (45 dk)</h3>
+<p>Revit filtreleri ikiye ayırır:</p>
+<ul>
+<li><strong>Hızlı filtreler</strong> (<code>OfCategory</code>, <code>OfClass</code>, <code>WhereElementIsNotElementType</code>, <code>ElementLevelFilter</code>…) elemanı belleğe tam yüklemeden, veritabanının kaydına bakarak eler.</li>
+<li><strong>Yavaş filtreler</strong> (<code>ElementParameterFilter</code>, <code>BoundingBoxIntersectsFilter</code>…) elemanı açıp içine bakmak zorundadır.</li>
+</ul>
+<p>Kural: <strong>önce hızlı filtrelerle daralt, sonra yavaşları ya da Python'daki koşulları uygula.</strong> Büyük bir modelde <code>FilteredElementCollector(doc).WhereElementIsNotElementType()</code> ile yüz binlerce eleman alıp Python'da kategori kontrolü yapmak dakikalar sürebilir.</p>
+<p>Belirli bir seviyedeki paneller:</p>
+<!-- yok -->
+
+<pre><code class="language-python"># -*- coding: utf-8 -*-
+from pyrevit import revit, DB
+
+doc = revit.doc
+seviye = DB.FilteredElementCollector(doc).OfClass(DB.Level) \
+    .WhereElementIsNotElementType().FirstElement()
+
+seviye_filtresi = DB.ElementLevelFilter(seviye.Id)
+duvarlar = DB.FilteredElementCollector(doc) \
+    .OfCategory(DB.BuiltInCategory.OST_Walls) \
+    .WhereElementIsNotElementType() \
+    .WherePasses(seviye_filtresi) \
+    .ToElements()
+print(&quot;{} seviyesindeki duvar: {}&quot;.format(seviye.Name, len(duvarlar)))
+</code></pre>
+<p>Python tarafında ek koşul eklemek de serbesttir; toplayıcıyı daralttıktan sonra liste kavrayışı (list comprehension) en okunur yoldur:</p>
+<!-- yok -->
+
+<pre><code class="language-python">uzun_duvarlar = [w for w in duvarlar
+                 if w.Location and w.Location.Curve.Length &gt; 10.0]   # feet!
+</code></pre>
+<p>Burada 10.0 <strong>feet</strong>'tir (≈3,05 m). Yarın birimleri düzgün çevireceğiz.</p>
+<h3>4. Seçimi okumak (30 dk)</h3>
+<p>Kullanıcının önceden seçtiği elemanlar <code>uidoc.Selection</code> üzerinden okunur:</p>
+<!-- yok -->
+
+<pre><code class="language-python"># -*- coding: utf-8 -*-
+from pyrevit import revit, DB, forms
+
+doc = revit.doc
+secili = [doc.GetElement(i) for i in revit.uidoc.Selection.GetElementIds()]
+if not secili:
+    forms.alert(&quot;Önce eleman seç.&quot;, exitscript=True)
+
+kategoriler = {}
+for e in secili:
+    ad = e.Category.Name if e.Category else &quot;(kategorisiz)&quot;
+    kategoriler[ad] = kategoriler.get(ad, 0) + 1
+
+for ad in sorted(kategoriler):
+    print(&quot;{}: {}&quot;.format(ad, kategoriler[ad]))
+</code></pre>
+<ul>
+<li><code>forms.alert(..., exitscript=True)</code> bir uyarı kutusu gösterip betiği durdurur. Seçim boşsa devam etmek anlamsız.</li>
+<li>pyRevit kısayolu: <code>revit.get_selection()</code> aynı işi yapar ve <code>.elements</code> ile eleman listesini verir.</li>
+</ul>
+<p>Programın kendisi de seçimi değiştirebilir; örneğin bütün panelleri seçili yapmak:</p>
+<!-- yok -->
+
+<pre><code class="language-python">from System.Collections.Generic import List
+
+idler = DB.FilteredElementCollector(doc) \
+    .OfCategory(DB.BuiltInCategory.OST_CurtainWallPanels) \
+    .WhereElementIsNotElementType().ToElementIds()
+revit.uidoc.Selection.SetElementIds(List[DB.ElementId](idler))
+</code></pre>
+<p><code>SetElementIds</code> bir .NET listesi ister; <code>List[DB.ElementId](...)</code> Python listesini ya da toplayıcı sonucunu ona çevirir.</p>
+<h3>5. Kullanıcıya seçtirmek ve seçim filtresi (45 dk)</h3>
+<figure class="fig"><div class="sc"><svg viewBox="0 0 640 86" role="img" xmlns="http://www.w3.org/2000/svg"><defs><marker id="ah-secim" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0 0L10 5L0 10z" class="ar"/></marker></defs><rect x="10.0" y="16" width="109.6" height="56" rx="5" class="bx"/><text x="64.8" y="40.0" class="tb" text-anchor="middle">PickObjects</text><text x="64.8" y="56.0" class="tm" text-anchor="middle">kullanıcıya sor</text><rect x="137.6" y="16" width="109.6" height="56" rx="5" class="bxa"/><text x="192.39999999999998" y="40.0" class="tb" text-anchor="middle">AllowElement</text><text x="192.39999999999998" y="56.0" class="tm" text-anchor="middle">panel mi?</text><line x1="121.6" y1="44.0" x2="135.6" y2="44.0" class="mu" marker-end="url(#ah-secim)"/><rect x="265.2" y="16" width="109.6" height="56" rx="5" class="bx"/><text x="320.0" y="40.0" class="tb" text-anchor="middle">Finish</text><text x="320.0" y="56.0" class="tm" text-anchor="middle">referanslar</text><line x1="249.2" y1="44.0" x2="263.2" y2="44.0" class="mu" marker-end="url(#ah-secim)"/><rect x="392.79999999999995" y="16" width="109.6" height="56" rx="5" class="bx"/><text x="447.59999999999997" y="40.0" class="tb" text-anchor="middle">GetElement</text><text x="447.59999999999997" y="56.0" class="tm" text-anchor="middle">elemanlar</text><line x1="376.79999999999995" y1="44.0" x2="390.79999999999995" y2="44.0" class="mu" marker-end="url(#ah-secim)"/><rect x="520.4" y="16" width="109.6" height="56" rx="5" class="bx"/><text x="575.1999999999999" y="40.0" class="tb" text-anchor="middle">Esc</text><text x="575.1999999999999" y="56.0" class="tm" text-anchor="middle">iptal hatası</text><line x1="504.4" y1="44.0" x2="518.4" y2="44.0" class="mu" marker-end="url(#ah-secim)"/></svg></div><figcaption>Seçim filtresi imleç her elemana geldiğinde sorulur.</figcaption></figure>
+<p>Betik çalışırken kullanıcıdan eleman seçmesini istemek için <code>PickObjects</code> kullanılır. Kullanıcının yanlış şey seçmesini önlemek için bir <strong>seçim filtresi</strong> yazılır: Revit, imleç bir elemanın üzerine geldiğinde filtreye “seçilebilir mi?” diye sorar.</p>
+<!-- yok -->
+
+<pre><code class="language-python"># -*- coding: utf-8 -*-
+from pyrevit import revit, DB, script
+from Autodesk.Revit.UI.Selection import ISelectionFilter, ObjectType
+from Autodesk.Revit.Exceptions import OperationCanceledException
+
+doc = revit.doc
+PANEL = int(DB.BuiltInCategory.OST_CurtainWallPanels)
+
+
+def id_sayi(eid):
+    return eid.Value if hasattr(eid, &quot;Value&quot;) else eid.IntegerValue
+
+
+class PanelFiltresi(ISelectionFilter):
+    def AllowElement(self, eleman):
+        kat = eleman.Category
+        return kat is not None and id_sayi(kat.Id) == PANEL
+
+    def AllowReference(self, referans, nokta):
+        return False
+
+
+try:
+    refs = revit.uidoc.Selection.PickObjects(
+        ObjectType.Element, PanelFiltresi(), &quot;Panelleri seç, bitince Finish'e bas&quot;)
+except OperationCanceledException:
+    script.exit()
+
+paneller = [doc.GetElement(r.ElementId) for r in refs]
+print(&quot;{} panel seçildi.&quot;.format(len(paneller)))
+</code></pre>
+<ul>
+<li><code>int(DB.BuiltInCategory.OST_CurtainWallPanels)</code> kategorinin sayı kimliğidir (negatif bir sayı); kategori kimliğiyle karşılaştırmanın en hızlı yolu.</li>
+<li>Sınıf, Revit'in <code>ISelectionFilter</code> arayüzünü uygular: <code>AllowElement</code> ve <code>AllowReference</code> adları ve imzaları değiştirilemez.</li>
+<li>Kullanıcı Esc'e basarsa Revit <code>OperationCanceledException</code> fırlatır. Yakalamazsan çıktı penceresi kırmızı bir hata gösterir; <code>script.exit()</code> betiği sessizce bitirir.</li>
+<li>Tek eleman için <code>PickObject</code>, bir dikdörtgenle seçim için <code>PickElementsByRectangle</code>, bir nokta için <code>PickPoint</code> vardır.</li>
+<li>Bu kalıp her araçta tekrar edeceği için 7. günde ortak modüle taşıyacağız.</li>
+</ul>
+<p>Seçimi de Revit'ten bağımsız bir problem gibi düşünebiliriz: elimizde (kategori, id) çiftleri olsun ve filtre mantığını Python'da deneyelim:</p>
+<!-- dosya: filtre.py -->
+
+<pre><code class="language-python"># -*- coding: utf-8 -*-
+elemanlar = [
+    (&quot;Curtain Panels&quot;, 412), (&quot;Walls&quot;, 377), (&quot;Curtain Panels&quot;, 413),
+    (&quot;Curtain Wall Mullions&quot;, 501), (&quot;Doors&quot;, 610), (&quot;Curtain Panels&quot;, 414),
+]
+izinli = {&quot;Curtain Panels&quot;}
+
+secilebilir = [i for k, i in elemanlar if k in izinli]
+print(&quot;Seçilebilir: {}&quot;.format(secilebilir))
+
+sayac = {}
+for k, _ in elemanlar:
+    sayac[k] = sayac.get(k, 0) + 1
+for k in sorted(sayac, key=lambda x: -sayac[x]):
+    print(&quot;{:&lt;24}{}&quot;.format(k, sayac[k]))
+</code></pre>
+<pre><code class="language-bash">python3 filtre.py
+</code></pre>
+<pre><code class="language-text">Seçilebilir: [412, 413, 414]
+Curtain Panels          3
+Walls                   1
+Curtain Wall Mullions   1
+Doors                   1
+</code></pre>
+<p><code>"{:&lt;24}"</code> metni 24 karakterlik alanda sola yaslar; çıktı penceresinde ya da konsolda hizalı tablolar için kullanışlıdır.</p>
+<p><strong>Alıştırma:</strong> Kullanıcıya sadece <strong>giydirme cephe duvarlarını</strong> seçtiren bir düğme yaz (filtre: <code>Wall</code> sınıfında ve <code>WallType.Kind == WallKind.Curtain</code>). Seçilen her duvarın id'sini <code>output.linkify</code> ile ve panel sayısını (<code>duvar.CurtainGrid.GetPanelIds().Count</code>) yazdırsın.</p>
+<h3>Gün sonu kontrolü (15 dk)</h3>
+<ul class="tasks">
+<li class="task"><label><input type="checkbox" data-id="g2-1"><span>Element, ElementId, Category ile tip ve örnek kavramlarını biliyorum.</span></label></li>
+<li class="task"><label><input type="checkbox" data-id="g2-2"><span>FilteredElementCollector'ı OfCategory, OfClass ve WhereElementIsNotElementType ile kullanabiliyorum.</span></label></li>
+<li class="task"><label><input type="checkbox" data-id="g2-3"><span>Giydirme cepheyi WallType.Kind ile normal duvardan ayırabiliyorum.</span></label></li>
+<li class="task"><label><input type="checkbox" data-id="g2-4"><span>Hızlı ve yavaş filtre farkını biliyor, önce hızlı filtrelerle daraltıyorum.</span></label></li>
+<li class="task"><label><input type="checkbox" data-id="g2-5"><span>Mevcut seçimi okuyup programla seçimi değiştirebiliyorum.</span></label></li>
+<li class="task"><label><input type="checkbox" data-id="g2-6"><span>ISelectionFilter ile PickObjects'e seçim filtresi yazıp Esc'i yakalayabiliyorum.</span></label></li>
+</ul></div>
+  <div class="pn"><a href="#gun1">← 1. gün</a><a href="#gun3">3. gün →</a></div>
+</section>
+<section class="day" id="gun3" data-day="3">
+  <div class="day-head"><span class="dn">GÜN 03</span><h2>Parametreler ve birimler</h2><span class="meta">~4 saat · <span data-prog="3">0/7</span> kontrol</span></div>
+  <div class="prose"><h3>Hedef</h3>
+<p>Gün sonunda bir elemanın parametrelerini adıyla ya da yerleşik kimliğiyle okuyacak; parametrenin saklama tipine (metin, sayı, tam sayı, eleman) göre doğru yöntemi seçecek; Revit'in iç birimi olan feet'i milimetreye ve metrekareye çevirecek; tip ve örnek parametrelerini ayırt edecek ve seçili elemanların bütün parametrelerini listeleyen bir araç yazabileceksin. Süre yaklaşık 4 saat.</p>
+<h3>1. Parametre nedir? (30 dk)</h3>
+<figure class="fig"><div class="sc"><svg viewBox="0 0 640 160" role="img" xmlns="http://www.w3.org/2000/svg"><defs><marker id="ah-parametre" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0 0L10 5L0 10z" class="ar"/></marker></defs><rect x="20" y="10" width="230" height="140" class="bx"/><text x="32" y="30" class="ta" text-anchor="start">Properties</text><text x="32" y="50" class="tm" text-anchor="start">Mark</text><text x="140" y="50" class="tm" text-anchor="start">P-01-003</text><text x="32" y="70" class="tm" text-anchor="start">Comments</text><text x="140" y="70" class="tm" text-anchor="start"></text><text x="32" y="90" class="tm" text-anchor="start">Width</text><text x="140" y="90" class="tm" text-anchor="start">1500</text><text x="32" y="110" class="tm" text-anchor="start">Height</text><text x="140" y="110" class="tm" text-anchor="start">1200</text><text x="32" y="130" class="tm" text-anchor="start">Level</text><text x="140" y="130" class="tm" text-anchor="start">Level 1</text><line x1="250" y1="80" x2="300" y2="80" class="mu" marker-end="url(#ah-parametre)"/><rect x="302" y="20" width="318" height="120" rx="5" class="bxa"/><text x="461.0" y="52.0" class="tb" text-anchor="middle">Parameter</text><text x="461.0" y="68.0" class="tm" text-anchor="middle">StorageType: String · Double · Integer</text><text x="461.0" y="84.0" class="tm" text-anchor="middle">AsString() · AsDouble() · AsInteger()</text><text x="461.0" y="100.0" class="tm" text-anchor="middle">AsValueString(): ekrandaki metin</text><text x="461.0" y="116.0" class="tm" text-anchor="middle">Set(değer) · IsReadOnly</text></svg></div><figcaption>Properties paletindeki her satır bir Parameter nesnesidir.</figcaption></figure>
+<p>Özellikler (Properties) paletinde gördüğün her satır bir <strong>parametre</strong>dir: Mark, Comments, Width, Area, Level, Type Name… API'de bunlar <code>Parameter</code> nesneleridir. Parametreler dört kaynaktan gelir:</p>
+<div class="tw"><table>
+<thead>
+<tr>
+<th>Tür</th>
+<th>Örnek</th>
+<th>API'de bulmak</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><strong>Yerleşik</strong> (built-in)</td>
+<td>Mark, Comments, Area</td>
+<td><code>eleman.get_Parameter(DB.BuiltInParameter.ALL_MODEL_MARK)</code></td>
+</tr>
+<tr>
+<td><strong>Aile parametresi</strong></td>
+<td>Ailenin içinde tanımlı “Braket_Tipi”</td>
+<td><code>eleman.LookupParameter("Braket_Tipi")</code></td>
+</tr>
+<tr>
+<td><strong>Proje parametresi</strong></td>
+<td>Projeye eklenmiş “Imalat_Durumu”</td>
+<td><code>LookupParameter</code></td>
+</tr>
+<tr>
+<td><strong>Paylaşılan</strong> (shared)</td>
+<td>Bir paylaşılan parametre dosyasından</td>
+<td><code>LookupParameter</code> ya da <code>get_Parameter(Guid)</code></td>
+</tr>
+</tbody>
+</table></div>
+<p><strong>Yerleşik parametreler için her zaman <code>BuiltInParameter</code> kullan.</strong> <code>LookupParameter("Mark")</code> İngilizce Revit'te çalışır, Türkçe ya da Almanca Revit'te parametrenin adı farklı olduğu için <code>None</code> döner. <code>BuiltInParameter</code> dilden bağımsızdır.</p>
+<h3>2. Parametre okumak (1 saat)</h3>
+<p>Her parametrenin bir <strong>saklama tipi</strong> (<code>StorageType</code>) vardır ve değer ona uygun yöntemle okunur:</p>
+<div class="tw"><table>
+<thead>
+<tr>
+<th>StorageType</th>
+<th>Okuma</th>
+<th>Örnek</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>String</code></td>
+<td><code>AsString()</code></td>
+<td>Mark, Comments</td>
+</tr>
+<tr>
+<td><code>Double</code></td>
+<td><code>AsDouble()</code> → iç birimde sayı</td>
+<td>Width, Area</td>
+</tr>
+<tr>
+<td><code>Integer</code></td>
+<td><code>AsInteger()</code></td>
+<td>Evet/Hayır (0/1), sayaçlar</td>
+</tr>
+<tr>
+<td><code>ElementId</code></td>
+<td><code>AsElementId()</code></td>
+<td>Level, Material</td>
+</tr>
+</tbody>
+</table></div>
+<p>Hepsi için ayrıca <code>AsValueString()</code> vardır: değeri Revit'in <strong>ekranda gösterdiği gibi</strong>, proje birimleriyle biçimlenmiş metin olarak verir (<code>"1500"</code> ya da <code>"1.50 m²"</code>). Göstermek için iyidir, hesap için değil.</p>
+<!-- yok -->
+
+<pre><code class="language-python"># -*- coding: utf-8 -*-
+from pyrevit import revit, DB, forms
+
+doc = revit.doc
+secim = revit.get_selection().elements
+if not secim:
+    forms.alert(&quot;Bir panel seç.&quot;, exitscript=True)
+panel = secim[0]
+
+mark = panel.get_Parameter(DB.BuiltInParameter.ALL_MODEL_MARK)
+yorum = panel.get_Parameter(DB.BuiltInParameter.ALL_MODEL_INSTANCE_COMMENTS)
+genislik = panel.get_Parameter(DB.BuiltInParameter.CURTAIN_WALL_PANELS_WIDTH)
+yukseklik = panel.get_Parameter(DB.BuiltInParameter.CURTAIN_WALL_PANELS_HEIGHT)
+alan = panel.get_Parameter(DB.BuiltInParameter.HOST_AREA_COMPUTED)
+
+print(&quot;Mark: {}&quot;.format(mark.AsString()))
+print(&quot;Yorum: {}&quot;.format(yorum.AsString()))
+print(&quot;Genişlik (iç birim): {}&quot;.format(genislik.AsDouble()))
+print(&quot;Genişlik (ekranda): {}&quot;.format(genislik.AsValueString()))
+print(&quot;Yükseklik (ekranda): {}&quot;.format(yukseklik.AsValueString()))
+print(&quot;Alan (ekranda): {}&quot;.format(alan.AsValueString() if alan else &quot;-&quot;))
+</code></pre>
+<ul>
+<li>Bir parametre o elemanda yoksa <code>get_Parameter</code> ve <code>LookupParameter</code> <strong><code>None</code></strong> döner. <code>None.AsString()</code> hata verir; emin değilsen önce kontrol et.</li>
+<li>Boş bir metin parametresi <code>AsString()</code> ile <code>None</code> döndürebilir; <code>(p.AsString() or "")</code> yazmak güvenlidir.</li>
+<li>Genişlik iç birimde, örneğin <code>4.92125984...</code> gibi bir sayıdır: 1500 mm'nin feet karşılığı.</li>
+</ul>
+<p>Bu kalıpları tek bir yardımcıda toplamak her araçta işe yarar:</p>
+<!-- yok -->
+
+<pre><code class="language-python"># -*- coding: utf-8 -*-
+def deger(eleman, parametre):
+    &quot;&quot;&quot;parametre: BuiltInParameter ya da ad (metin). Değeri saklama tipine göre döndürür.&quot;&quot;&quot;
+    if isinstance(parametre, str):
+        p = eleman.LookupParameter(parametre)
+    else:
+        p = eleman.get_Parameter(parametre)
+    if p is None or not p.HasValue:
+        return None
+    st = p.StorageType
+    if st == DB.StorageType.String:
+        return p.AsString()
+    if st == DB.StorageType.Double:
+        return p.AsDouble()
+    if st == DB.StorageType.Integer:
+        return p.AsInteger()
+    return p.AsElementId()
+</code></pre>
+<p>IronPython 2.7'de metinler <code>str</code> ya da <code>unicode</code> olabilir; Türkçe karakterli bir parametre adı <code>unicode</code> gelir. 2.7'de <code>isinstance(parametre, basestring)</code> daha kapsayıcıdır; 7. günde ortak modülde iki sürümü de karşılayacak biçimde yazacağız.</p>
+<h3>3. Birimler: feet ve milimetre (45 dk)</h3>
+<figure class="fig"><div class="sc"><svg viewBox="0 0 640 128" role="img" xmlns="http://www.w3.org/2000/svg"><defs><marker id="ah-birim" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0 0L10 5L0 10z" class="ar"/></marker></defs><rect x="30" y="30" width="170" height="50" rx="5" class="bx"/><text x="115.0" y="51.0" class="tb" text-anchor="middle">ekranda</text><text x="115.0" y="67.0" class="tm" text-anchor="middle">1500 mm</text><rect x="440" y="30" width="170" height="50" rx="5" class="bxa"/><text x="525.0" y="51.0" class="tb" text-anchor="middle">API'de (iç birim)</text><text x="525.0" y="67.0" class="tm" text-anchor="middle">4.92126 ft</text><line x1="200" y1="46" x2="438" y2="46" class="mu" marker-end="url(#ah-birim)"/><line x1="438" y1="66" x2="200" y2="66" class="mu" marker-end="url(#ah-birim)"/><text x="320" y="38" class="tm" text-anchor="middle">ConvertToInternalUnits</text><text x="320" y="84" class="tm" text-anchor="middle">ConvertFromInternalUnits</text><text x="320" y="116" class="ta" text-anchor="middle">1 ft = 304,8 mm · 1 ft² = 0,0929 m² · açı: radyan</text></svg></div><figcaption>API&#x27;de bütün uzunluklar feet&#x27;tir; karşılaştırırken yuvarla.</figcaption></figure>
+<p>Revit ekranda proje birimlerini (mm, m², derece) gösterir ama API'de bütün sayılar <strong>iç birimlerdedir</strong>:</p>
+<div class="tw"><table>
+<thead>
+<tr>
+<th>Büyüklük</th>
+<th>İç birim</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Uzunluk</td>
+<td>feet (1 ft = 304,8 mm)</td>
+</tr>
+<tr>
+<td>Alan</td>
+<td>ft² (1 ft² = 0,09290304 m²)</td>
+</tr>
+<tr>
+<td>Hacim</td>
+<td>ft³</td>
+</tr>
+<tr>
+<td>Açı</td>
+<td>radyan</td>
+</tr>
+</tbody>
+</table></div>
+<p>Revit'in kendi çeviricisi:</p>
+<!-- yok -->
+
+<pre><code class="language-python"># -*- coding: utf-8 -*-
+from pyrevit import DB
+
+def mm(feet):
+    return DB.UnitUtils.ConvertFromInternalUnits(feet, DB.UnitTypeId.Millimeters)
+
+def feet(mm_deger):
+    return DB.UnitUtils.ConvertToInternalUnits(mm_deger, DB.UnitTypeId.Millimeters)
+
+def m2(feet2):
+    return DB.UnitUtils.ConvertFromInternalUnits(feet2, DB.UnitTypeId.SquareMeters)
+</code></pre>
+<p>Bunlar Revit 2021 ve sonrası içindir. Çeviri katsayıları sabit olduğu için saf Python'da da yazılabilir; böylece birim mantığını Revit'siz test edebiliriz:</p>
+<!-- dosya: birim.py -->
+
+<pre><code class="language-python"># -*- coding: utf-8 -*-
+from __future__ import division
+
+FT_MM = 304.8
+FT2_M2 = 0.09290304
+
+
+def mm(feet):
+    return feet * FT_MM
+
+
+def feet(mm_deger):
+    return mm_deger / FT_MM
+
+
+def m2(feet2):
+    return feet2 * FT2_M2
+
+
+if __name__ == &quot;__main__&quot;:
+    g = feet(1500)
+    y = feet(1200)
+    print(&quot;1500 mm = {:.6f} ft&quot;.format(g))
+    print(&quot;geri çevrilince: {:.3f} mm&quot;.format(mm(g)))
+    print(&quot;panel alanı: {:.6f} ft2 = {:.3f} m2&quot;.format(g * y, m2(g * y)))
+    d = mm(feet(1270))
+    print(&quot;1270 mm gidiş-dönüş: {!r}&quot;.format(d))
+    print(&quot;d == 1270 ? {}&quot;.format(d == 1270))
+    print(&quot;yuvarlayınca eşit mi? {}&quot;.format(round(d, 3) == 1270))
+</code></pre>
+<pre><code class="language-bash">python3 birim.py
+</code></pre>
+<pre><code class="language-text">1500 mm = 4.921260 ft
+geri çevrilince: 1500.000 mm
+panel alanı: 19.375039 ft2 = 1.800 m2
+1270 mm gidiş-dönüş: 1269.9999999999998
+d == 1270 ? False
+yuvarlayınca eşit mi? True
+</code></pre>
+<p>1500 mm sorunsuz döndü ama 1270 mm gözle görülmeyecek kadar küçük bir hatayla 1269.9999999999998 olarak döndü: kayan noktalı sayılarda gidiş-dönüş çevirisi her zaman tam aynı sayıyı vermez. Revit'in içinde de durum aynıdır. <strong>Ölçüleri karşılaştırırken her zaman yuvarla ya da bir tolerans kullan</strong> (<code>abs(a - b) &lt; 0.5</code> mm gibi). Panel ölçüsü kontrolünü 6. günde bu kuralla yazacağız.</p>
+<h3>4. Tip ve örnek parametreleri (45 dk)</h3>
+<p>Bir giydirme cephe panelinin genişliği <strong>örnek</strong> parametresidir (her panelde farklı olabilir). Panel tipinin adı, kalınlığı ya da malzemesi ise <strong>tip</strong> parametresidir; aynı tipteki bütün paneller paylaşır. Örnekte aradığın parametreyi bulamıyorsan tipine bak:</p>
+<!-- yok -->
+
+<pre><code class="language-python"># -*- coding: utf-8 -*-
+from pyrevit import revit, DB
+
+doc = revit.doc
+panel = revit.get_selection().elements[0]
+tip = doc.GetElement(panel.GetTypeId())
+
+tip_adi = tip.get_Parameter(DB.BuiltInParameter.SYMBOL_NAME_PARAM).AsString()
+aile_adi = tip.get_Parameter(DB.BuiltInParameter.SYMBOL_FAMILY_NAME_PARAM).AsString()
+print(&quot;Aile: {}  Tip: {}&quot;.format(aile_adi, tip_adi))
+
+kalinlik = tip.LookupParameter(&quot;Thickness&quot;)
+if kalinlik:
+    print(&quot;Kalınlık: {}&quot;.format(kalinlik.AsValueString()))
+</code></pre>
+<p>Bir parametrenin örnek mi tip mi olduğunu ve salt okunur olup olmadığını parametreye sorabilirsin: <code>p.IsReadOnly</code>, <code>p.Definition.Name</code>, <code>p.IsShared</code>. Alan ve hacim gibi hesaplanan parametreler salt okunurdur; Revit onları kendisi günceller.</p>
+<p><strong>Seviye bir ElementId'dir:</strong> <code>LEVEL_PARAM</code> ya da <code>eleman.LevelId</code> bir id döndürür; adını almak için <code>doc.GetElement(id).Name</code>. Giydirme cephe panellerinin kendi seviyesi çoğu zaman boştur (<code>ElementId.InvalidElementId</code>); panelin bağlı olduğu duvara (<code>panel.Host</code>) bakmak gerekir.</p>
+<h3>5. Parametre raporu aracı (45 dk)</h3>
+<p>Seçili elemanın <strong>bütün</strong> parametrelerini listeleyen bir araç, API'yi keşfederken en çok kullanacağın düğme olacak: hangi parametrenin hangi adda ve hangi tipte saklandığını hemen görürsün.</p>
+<!-- yok -->
+
+<pre><code class="language-python"># -*- coding: utf-8 -*-
+&quot;&quot;&quot;Seçili elemanın örnek ve tip parametrelerini tablo olarak listeler.&quot;&quot;&quot;
+from pyrevit import revit, DB, forms, script
+
+doc = revit.doc
+output = script.get_output()
+secim = revit.get_selection().elements
+if not secim:
+    forms.alert(&quot;Bir eleman seç.&quot;, exitscript=True)
+e = secim[0]
+
+
+def satirlar(eleman, kaynak):
+    sonuc = []
+    for p in eleman.Parameters:
+        ad = p.Definition.Name
+        st = str(p.StorageType)
+        if p.StorageType == DB.StorageType.String:
+            ham = p.AsString()
+        elif p.StorageType == DB.StorageType.Double:
+            ham = round(p.AsDouble(), 6)
+        elif p.StorageType == DB.StorageType.Integer:
+            ham = p.AsInteger()
+        else:
+            ham = p.AsValueString()
+        sonuc.append([kaynak, ad, st, ham, p.AsValueString(), &quot;evet&quot; if p.IsReadOnly else &quot;&quot;])
+    return sonuc
+
+
+tablo = satirlar(e, &quot;örnek&quot;)
+tip = doc.GetElement(e.GetTypeId())
+if tip:
+    tablo += satirlar(tip, &quot;tip&quot;)
+tablo.sort(key=lambda r: (r[0], r[1]))
+
+output.print_table(table_data=tablo,
+                   columns=[&quot;Kaynak&quot;, &quot;Ad&quot;, &quot;Tip&quot;, &quot;Ham değer&quot;, &quot;Ekranda&quot;, &quot;Salt okunur&quot;],
+                   title=&quot;{} ({})&quot;.format(e.Name, e.Category.Name))
+</code></pre>
+<p><code>output.print_table</code> listeler listesini başlıklı, düzgün bir tabloya çevirir. Tabloyu çıktı penceresinden kopyalayıp Excel'e yapıştırabilirsin.</p>
+<p>Aynı tablo mantığını Revit'siz deneyelim: elimizde parametre kayıtları olsun, kaynak ve ada göre sıralayıp hizalı yazalım.</p>
+<!-- dosya: rapor.py -->
+
+<pre><code class="language-python"># -*- coding: utf-8 -*-
+from birim import mm
+
+parametreler = [
+    (&quot;örnek&quot;, &quot;Width&quot;, &quot;Double&quot;, 4.921259842519685),
+    (&quot;örnek&quot;, &quot;Mark&quot;, &quot;String&quot;, &quot;P-01-003&quot;),
+    (&quot;tip&quot;, &quot;Thickness&quot;, &quot;Double&quot;, 0.0918635170603675),
+    (&quot;örnek&quot;, &quot;Comments&quot;, &quot;String&quot;, None),
+    (&quot;tip&quot;, &quot;Type Name&quot;, &quot;String&quot;, &quot;Isıcam 6+16+6&quot;),
+    (&quot;örnek&quot;, &quot;Height&quot;, &quot;Double&quot;, 3.937007874015748),
+]
+
+for kaynak, ad, tip, deger in sorted(parametreler):
+    if tip == &quot;Double&quot;:
+        goster = &quot;{:.1f} mm&quot;.format(mm(deger))
+    else:
+        goster = deger if deger is not None else &quot;(boş)&quot;
+    print(&quot;{:&lt;7}{:&lt;11}{:&lt;8}{}&quot;.format(kaynak, ad, tip, goster))
+</code></pre>
+<pre><code class="language-bash">python3 rapor.py
+</code></pre>
+<pre><code class="language-text">tip    Thickness  Double  28.0 mm
+tip    Type Name  String  Isıcam 6+16+6
+örnek  Comments   String  (boş)
+örnek  Height     Double  1200.0 mm
+örnek  Mark       String  P-01-003
+örnek  Width      Double  1500.0 mm
+</code></pre>
+<p>Demetler (tuple) sıralanırken önce ilk alana, eşitse ikinciye bakılır; <code>sorted</code> bu yüzden kaynak, sonra ad sırasına koydu.</p>
+<p><strong>Alıştırma:</strong> Parametre raporu aracını, birden çok eleman seçildiğinde <strong>ortak</strong> parametreleri (her elemanda bulunanları) ve değerleri elemandan elemana <strong>farklı</strong> olanları gösterecek biçimde geliştir. İpucu: her eleman için <code>{ad: değer}</code> sözlüğü oluştur, sonra kümelerle (<code>set</code>) kesişim al.</p>
+<h3>Gün sonu kontrolü (15 dk)</h3>
+<ul class="tasks">
+<li class="task"><label><input type="checkbox" data-id="g3-1"><span>Yerleşik, aile, proje ve paylaşılan parametre farkını biliyorum.</span></label></li>
+<li class="task"><label><input type="checkbox" data-id="g3-2"><span>Yerleşik parametreleri dilden bağımsız olarak BuiltInParameter ile okuyorum.</span></label></li>
+<li class="task"><label><input type="checkbox" data-id="g3-3"><span>StorageType'a göre AsString, AsDouble, AsInteger ve AsElementId kullanabiliyorum; AsValueString'in ne zaman uygun olduğunu biliyorum.</span></label></li>
+<li class="task"><label><input type="checkbox" data-id="g3-4"><span>İç birimin feet olduğunu biliyor, UnitUtils ile çevirebiliyorum.</span></label></li>
+<li class="task"><label><input type="checkbox" data-id="g3-5"><span>Kayan noktalı ölçüleri yuvarlayarak ya da toleransla karşılaştırıyorum.</span></label></li>
+<li class="task"><label><input type="checkbox" data-id="g3-6"><span>Tip parametrelerine GetTypeId ile ulaşabiliyorum.</span></label></li>
+<li class="task"><label><input type="checkbox" data-id="g3-7"><span>print_table ile parametre tablosu gösterebiliyorum.</span></label></li>
+</ul></div>
+  <div class="pn"><a href="#gun2">← 2. gün</a><a href="#gun4">4. gün →</a></div>
+</section>
+<section class="day" id="gun4" data-day="4">
+  <div class="day-head"><span class="dn">GÜN 04</span><h2>Transaction ile değiştirmek</h2><span class="meta">~4 saat · <span data-prog="4">0/7</span> kontrol</span></div>
+  <div class="prose"><h3>Hedef</h3>
+<p>Gün sonunda Revit'te modeli değiştiren her işlemin neden bir Transaction içinde olması gerektiğini bilecek; parametre yazacak; toplu değişiklikleri tek bir geri alma adımında toplayacak; hata olursa değişiklikleri geri alacak ve giydirme cephe panellerini kat kat, soldan sağa numaralandıran ilk gerçek aracını yazacaksın. Süre yaklaşık 4,5 saat.</p>
+<h3>1. Transaction: neden ve nasıl (45 dk)</h3>
+<figure class="fig"><div class="sc"><svg viewBox="0 0 640 86" role="img" xmlns="http://www.w3.org/2000/svg"><defs><marker id="ah-transaction" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0 0L10 5L0 10z" class="ar"/></marker></defs><rect x="10.0" y="16" width="109.6" height="56" rx="5" class="bx"/><text x="64.8" y="40.0" class="tb" text-anchor="middle">girdi al</text><text x="64.8" y="56.0" class="tm" text-anchor="middle">form, seçim</text><rect x="137.6" y="16" width="109.6" height="56" rx="5" class="bx"/><text x="192.39999999999998" y="40.0" class="tb" text-anchor="middle">Start</text><text x="192.39999999999998" y="56.0" class="tm" text-anchor="middle">işlem açılır</text><line x1="121.6" y1="44.0" x2="135.6" y2="44.0" class="mu" marker-end="url(#ah-transaction)"/><rect x="265.2" y="16" width="109.6" height="56" rx="5" class="bx"/><text x="320.0" y="40.0" class="tb" text-anchor="middle">Set · Create</text><text x="320.0" y="56.0" class="tm" text-anchor="middle">döngü içinde</text><line x1="249.2" y1="44.0" x2="263.2" y2="44.0" class="mu" marker-end="url(#ah-transaction)"/><rect x="392.79999999999995" y="16" width="109.6" height="56" rx="5" class="bxa"/><text x="447.59999999999997" y="40.0" class="tb" text-anchor="middle">Commit</text><text x="447.59999999999997" y="56.0" class="tm" text-anchor="middle">tek Undo adımı</text><line x1="376.79999999999995" y1="44.0" x2="390.79999999999995" y2="44.0" class="mu" marker-end="url(#ah-transaction)"/><rect x="520.4" y="16" width="109.6" height="56" rx="5" class="bx"/><text x="575.1999999999999" y="40.0" class="tb" text-anchor="middle">hata?</text><text x="575.1999999999999" y="56.0" class="tm" text-anchor="middle">RollBack</text><line x1="504.4" y1="44.0" x2="518.4" y2="44.0" class="mu" marker-end="url(#ah-transaction)"/></svg></div><figcaption>Girdi önce, değişiklikler tek bir işlemde.</figcaption></figure>
+<p>Revit modeli okurken serbestsin, ama <strong>değiştirmek</strong> için (parametre yazmak, eleman oluşturmak, silmek) bir <strong>Transaction</strong> (işlem) açmak zorundasın. Açmazsan Revit şu hatayı verir: <em>“Attempt to modify the model outside of transaction.”</em></p>
+<p>Transaction'ın üç işi vardır:</p>
+<ul>
+<li>Değişikliklerin hepsini <strong>tek bir geri alma (Undo) adımı</strong> yapar. Kullanıcı Ctrl+Z'ye bir kez basınca betiğin yaptığı 300 değişiklik birden geri gelir.</li>
+<li>Geri alma listesinde görünen <strong>adı</strong> belirler.</li>
+<li>Bir şey ters giderse <strong>hiçbiri olmamış</strong> gibi geri alınabilir (<code>RollBack</code>).</li>
+</ul>
+<p>Revit API'nin kendi yazımı:</p>
+<!-- yok -->
+
+<pre><code class="language-python"># -*- coding: utf-8 -*-
+from pyrevit import revit, DB
+
+doc = revit.doc
+panel = revit.get_selection().elements[0]
+
+t = DB.Transaction(doc, &quot;Panele yorum yaz&quot;)
+t.Start()
+try:
+    p = panel.get_Parameter(DB.BuiltInParameter.ALL_MODEL_INSTANCE_COMMENTS)
+    p.Set(&quot;kontrol edildi&quot;)
+    t.Commit()
+except Exception as hata:
+    t.RollBack()
+    print(&quot;Geri alındı: {}&quot;.format(hata))
+</code></pre>
+<p>pyRevit aynı kalıbı bir <strong>bağlam yöneticisi</strong> (<code>with</code>) olarak sunar; bloktan hata çıkarsa kendisi geri alır:</p>
+<!-- yok -->
+
+<pre><code class="language-python"># -*- coding: utf-8 -*-
+from pyrevit import revit, DB
+
+panel = revit.get_selection().elements[0]
+with revit.Transaction(&quot;Panele yorum yaz&quot;):
+    panel.get_Parameter(DB.BuiltInParameter.ALL_MODEL_INSTANCE_COMMENTS).Set(&quot;kontrol edildi&quot;)
+</code></pre>
+<p>Bu kursta bundan sonra <code>with revit.Transaction(...)</code> kullanacağız. İki kural:</p>
+<ul>
+<li><strong>Transaction'ı döngünün dışına koy.</strong> 300 panel için 300 Transaction açmak hem yavaştır hem geri alma listesini doldurur.</li>
+<li><strong>Transaction içinde kullanıcıya soru sorma</strong> (seçim, form). Önce bütün girdileri al, sonra işlemi aç.</li>
+</ul>
+<h3>2. Parametre yazmak (45 dk)</h3>
+<p><code>Parameter.Set(değer)</code> saklama tipine uygun değer ister:</p>
+<div class="tw"><table>
+<thead>
+<tr>
+<th>StorageType</th>
+<th>Set'e verilen</th>
+<th>Örnek</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>String</code></td>
+<td>metin</td>
+<td><code>p.Set("P-01-003")</code></td>
+</tr>
+<tr>
+<td><code>Double</code></td>
+<td>iç birimde sayı</td>
+<td><code>p.Set(birim.feet(1500))</code></td>
+</tr>
+<tr>
+<td><code>Integer</code></td>
+<td>tam sayı</td>
+<td><code>p.Set(1)</code> (Evet/Hayır parametresinde Evet)</td>
+</tr>
+<tr>
+<td><code>ElementId</code></td>
+<td>ElementId</td>
+<td><code>p.Set(seviye.Id)</code></td>
+</tr>
+</tbody>
+</table></div>
+<p>Yazmadan önce kontrol edilecekler: parametre var mı (<code>None</code> değil mi), salt okunur mu (<code>p.IsReadOnly</code>), tipi doğru mu. Örnek: seçili elemanların <strong>Comments</strong> parametresine kullanıcının yazdığı metni toplu olarak yazmak.</p>
+<!-- yok -->
+
+<pre><code class="language-python"># -*- coding: utf-8 -*-
+&quot;&quot;&quot;Seçili elemanların Comments parametresine aynı metni yazar.&quot;&quot;&quot;
+from pyrevit import revit, DB, forms
+
+secim = revit.get_selection().elements
+if not secim:
+    forms.alert(&quot;Önce eleman seç.&quot;, exitscript=True)
+
+metin = forms.ask_for_string(default=&quot;kontrol edildi&quot;, prompt=&quot;Comments'e yazılacak metin:&quot;, title=&quot;Toplu yorum&quot;)
+if metin is None:
+    forms.alert(&quot;Vazgeçildi.&quot;, exitscript=True)
+
+yazilan, atlanan = 0, 0
+with revit.Transaction(&quot;Toplu yorum: {}&quot;.format(metin)):
+    for e in secim:
+        p = e.get_Parameter(DB.BuiltInParameter.ALL_MODEL_INSTANCE_COMMENTS)
+        if p is None or p.IsReadOnly:
+            atlanan += 1
+            continue
+        p.Set(metin)
+        yazilan += 1
+
+print(&quot;Yazılan: {}  Atlanan: {}&quot;.format(yazilan, atlanan))
+</code></pre>
+<p>Sıralamaya dikkat: girdi (<code>ask_for_string</code>) Transaction'dan <strong>önce</strong>, rapor <strong>sonra</strong>. <code>ask_for_string</code> kullanıcı pencereyi kapatırsa <code>None</code> döner.</p>
+<p><strong>Çalışma paylaşımı (workshared) modellerde</strong> başkasının sahip olduğu (borrowed) bir elemanı değiştiremezsin; Revit Transaction'ı Commit ederken uyarı verir. Büyük ekip modellerinde araçlarını önce kendi yerel kopyanda dene.</p>
+<h3>3. Numaralandırma mantığı: saf Python (1 saat)</h3>
+<figure class="fig"><div class="sc"><svg viewBox="0 0 640 176" role="img" xmlns="http://www.w3.org/2000/svg"><defs><marker id="ah-numara" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0 0L10 5L0 10z" class="ar"/></marker></defs><rect x="40" y="112" width="72" height="40" class="bx"/><text x="76" y="136" class="tm" text-anchor="middle">P-01-001</text><rect x="116" y="112" width="72" height="40" class="bx"/><text x="152" y="136" class="tm" text-anchor="middle">P-01-002</text><rect x="192" y="112" width="72" height="40" class="bxa"/><text x="228" y="136" class="tm" text-anchor="middle">P-01-003</text><rect x="268" y="112" width="72" height="40" class="bx"/><text x="304" y="136" class="tm" text-anchor="middle">P-01-004</text><rect x="344" y="112" width="72" height="40" class="bx"/><text x="380" y="136" class="tm" text-anchor="middle">P-01-005</text><rect x="40" y="68" width="72" height="40" class="bx"/><text x="76" y="92" class="tm" text-anchor="middle">P-02-001</text><rect x="116" y="68" width="72" height="40" class="bx"/><text x="152" y="92" class="tm" text-anchor="middle">P-02-002</text><rect x="192" y="68" width="72" height="40" class="bx"/><text x="228" y="92" class="tm" text-anchor="middle">P-02-003</text><rect x="268" y="68" width="72" height="40" class="bx"/><text x="304" y="92" class="tm" text-anchor="middle">P-02-004</text><rect x="344" y="68" width="72" height="40" class="bx"/><text x="380" y="92" class="tm" text-anchor="middle">P-02-005</text><rect x="40" y="24" width="72" height="40" class="bx"/><text x="76" y="48" class="tm" text-anchor="middle">P-03-001</text><rect x="116" y="24" width="72" height="40" class="bx"/><text x="152" y="48" class="tm" text-anchor="middle">P-03-002</text><rect x="192" y="24" width="72" height="40" class="bx"/><text x="228" y="48" class="tm" text-anchor="middle">P-03-003</text><rect x="268" y="24" width="72" height="40" class="bx"/><text x="304" y="48" class="tm" text-anchor="middle">P-03-004</text><rect x="344" y="24" width="72" height="40" class="bx"/><text x="380" y="48" class="tm" text-anchor="middle">P-03-005</text><line x1="40" y1="164" x2="416" y2="164" class="mu" marker-end="url(#ah-numara)"/><text x="430" y="168" class="ta" text-anchor="start">u: soldan sağa</text><line x1="20" y1="152" x2="20" y2="26" class="mu" marker-end="url(#ah-numara)"/><text x="430" y="40" class="ta" text-anchor="start">z: alttan üste (±50 mm tolerans)</text></svg></div><figcaption>Paneller önce z&#x27;ye göre katlara, sonra u&#x27;ya göre sıraya konur.</figcaption></figure>
+<p>Cephe işinde en sık istenen iş: panellere <strong>kat ve sıra numarası</strong> vermek. İstenen düzen:</p>
+<ul>
+<li>Her yatay panel sırası bir <strong>kat</strong>tır; alttan üste 01, 02, 03…</li>
+<li>Her katta paneller cephe boyunca <strong>soldan sağa</strong> 001, 002…</li>
+<li>Numara biçimi: <code>P-01-003</code> (1. kat, 3. panel).</li>
+</ul>
+<p>Revit tarafını yazmadan önce mantığı saf Python'da kuralım. Her panel için iki sayıya ihtiyacımız var: cephe boyunca yatay konum <strong>u</strong> ve yükseklik <strong>z</strong> (ikisi de mm). Modelde paneller tam aynı z'de olmayabilir (0,0001 mm'lik farklar, eğimli cepheler), bu yüzden z'leri bir <strong>tolerans</strong> içinde aynı kata gruplayacağız:</p>
+<!-- dosya: numara.py -->
+
+<pre><code class="language-python"># -*- coding: utf-8 -*-
+from __future__ import division
+
+
+def katlara_ayir(paneller, tolerans=50.0):
+    &quot;&quot;&quot;paneller: [{'id', 'u', 'z'}]. z'ye göre, tolerans içinde olanları aynı kata koyar.&quot;&quot;&quot;
+    katlar = []
+    for p in sorted(paneller, key=lambda p: p[&quot;z&quot;]):
+        if katlar and abs(p[&quot;z&quot;] - katlar[-1][0][&quot;z&quot;]) &lt;= tolerans:
+            katlar[-1].append(p)
+        else:
+            katlar.append([p])
+    return katlar
+
+
+def numarala(paneller, onek=&quot;P&quot;, tolerans=50.0):
+    &quot;&quot;&quot;{id: numara} sözlüğü döndürür.&quot;&quot;&quot;
+    sonuc = {}
+    for k, kat in enumerate(katlara_ayir(paneller, tolerans), 1):
+        for s, p in enumerate(sorted(kat, key=lambda p: p[&quot;u&quot;]), 1):
+            sonuc[p[&quot;id&quot;]] = &quot;{}-{:02d}-{:03d}&quot;.format(onek, k, s)
+    return sonuc
+
+
+if __name__ == &quot;__main__&quot;:
+    ornek = [
+        {&quot;id&quot;: 901, &quot;u&quot;: 3000.0, &quot;z&quot;: 0.0},
+        {&quot;id&quot;: 902, &quot;u&quot;: 0.0, &quot;z&quot;: 0.0001},
+        {&quot;id&quot;: 903, &quot;u&quot;: 1500.0, &quot;z&quot;: -0.0002},
+        {&quot;id&quot;: 904, &quot;u&quot;: 1500.0, &quot;z&quot;: 1200.0},
+        {&quot;id&quot;: 905, &quot;u&quot;: 0.0, &quot;z&quot;: 1199.9998},
+        {&quot;id&quot;: 906, &quot;u&quot;: 3000.0, &quot;z&quot;: 1200.0},
+        {&quot;id&quot;: 907, &quot;u&quot;: 750.0, &quot;z&quot;: 2400.0},
+    ]
+    numaralar = numarala(ornek)
+    for pid in sorted(numaralar, key=numaralar.get):
+        print(&quot;{} -&gt; {}&quot;.format(pid, numaralar[pid]))
+</code></pre>
+<pre><code class="language-bash">python3 numara.py
+</code></pre>
+<pre><code class="language-text">902 -&gt; P-01-001
+903 -&gt; P-01-002
+901 -&gt; P-01-003
+905 -&gt; P-02-001
+904 -&gt; P-02-002
+906 -&gt; P-02-003
+907 -&gt; P-03-001
+</code></pre>
+<ul>
+<li><code>katlara_ayir</code> panelleri z'ye göre sıralar ve her paneli, bir önceki katın <strong>ilk</strong> paneline 50 mm'den yakınsa o kata ekler, değilse yeni kat açar.</li>
+<li><code>enumerate(liste, 1)</code> saymaya 1'den başlar.</li>
+<li><code>"{:02d}"</code> sayıyı iki haneye sıfırla tamamlar: 1 → 01. Numaralar böylece metin olarak da doğru sıralanır.</li>
+<li><code>sorted(numaralar, key=numaralar.get)</code> sözlüğün anahtarlarını değerlerine göre sıralar.</li>
+</ul>
+<p>Toleransın neden gerektiğini görmek için <code>tolerans=0</code> ile çalıştırmayı dene: 902 ve 903 farklı katlara düşer.</p>
+<h3>4. Revit'ten u ve z'yi almak (45 dk)</h3>
+<figure class="fig"><div class="sc"><svg viewBox="0 0 640 152" role="img" xmlns="http://www.w3.org/2000/svg"><defs><marker id="ah-uz" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0 0L10 5L0 10z" class="ar"/></marker></defs><line x1="40" y1="120" x2="600" y2="120" class="k1"/><circle cx="40" cy="120" r="4" class="pt"/><text x="20" y="140" class="tm" text-anchor="start">bas (GetEndPoint 0)</text><rect x="300" y="40" width="120" height="80" class="bxa"/><circle cx="360" cy="80" r="4" class="pt"/><text x="426" y="80" class="tm" text-anchor="start">merkez = (Min + Max) / 2</text><line x1="360" y1="80" x2="360" y2="120" class="mu"/><line x1="40" y1="100" x2="358" y2="100" class="mu" marker-end="url(#ah-uz)"/><text x="200" y="94" class="ta" text-anchor="middle">u = (merkez − bas) · yön</text><line x1="520" y1="120" x2="600" y2="120" class="mu" marker-end="url(#ah-uz)"/><text x="560" y="140" class="tm" text-anchor="middle">yön</text></svg></div><figcaption>Panel merkezinin cephe boyunca konumu: nokta çarpımı.</figcaption></figure>
+<p>Bir panelin merkezini <strong>BoundingBox</strong>'ından alabiliriz: <code>eleman.get_BoundingBox(None)</code> modeldeki en küçük kutuyu (Min ve Max köşeleri) verir. <strong>u</strong>, merkezin cephe duvarının başlangıç noktasından duvar doğrultusundaki uzaklığıdır: iki vektörün <strong>nokta çarpımı</strong> (dot product).</p>
+<!-- yok -->
+
+<pre><code class="language-python"># -*- coding: utf-8 -*-
+from pyrevit import DB
+
+FT_MM = 304.8
+
+
+def panel_konumu(panel, duvar):
+    &quot;&quot;&quot;Panelin cephe boyunca u ve yükseklik z değerlerini mm olarak döndürür.&quot;&quot;&quot;
+    kutu = panel.get_BoundingBox(None)
+    merkez = (kutu.Min + kutu.Max) / 2.0
+    egri = duvar.Location.Curve
+    bas = egri.GetEndPoint(0)
+    yon = (egri.GetEndPoint(1) - bas).Normalize()
+    u = (merkez - bas).DotProduct(yon)
+    return {&quot;id&quot;: panel.Id, &quot;u&quot;: u * FT_MM, &quot;z&quot;: merkez.Z * FT_MM}
+</code></pre>
+<ul>
+<li><code>XYZ</code> nesneleri toplanır, çıkarılır ve sayıya bölünebilir; <code>Normalize()</code> birim vektör, <code>DotProduct</code> nokta çarpımı verir. Yarın XYZ'yi ayrıntılı göreceğiz.</li>
+<li>Bu yöntem <strong>düz</strong> giydirme cephelerde doğrudur. Eğri cephelerde u için <code>egri.Project(merkez).Parameter</code> kullanılır.</li>
+<li>Panel sınırlarını tam veren yol <code>panel.Transform</code> ve geometridir; numaralandırma için kutu merkezi yeterli ve hızlıdır.</li>
+</ul>
+<h3>5. Araç: panelleri numarala (45 dk)</h3>
+<p>Şimdi parçaları birleştiriyoruz. <code>numara.py</code>'yi düğmenin klasörüne (<code>Numarala.pushbutton\</code>) kopyala; pyRevit betiğin kendi klasörünü Python'un arama yoluna ekler, böylece <code>import numara</code> çalışır.</p>
+<!-- yok -->
+
+<pre><code class="language-python"># -*- coding: utf-8 -*-
+&quot;&quot;&quot;Seçilen giydirme cephelerin panellerini kat ve sıraya göre numaralandırır (Mark).&quot;&quot;&quot;
+from pyrevit import revit, DB, forms, script
+from Autodesk.Revit.UI.Selection import ISelectionFilter, ObjectType
+from Autodesk.Revit.Exceptions import OperationCanceledException
+import numara
+
+doc = revit.doc
+output = script.get_output()
+FT_MM = 304.8
+
+
+class CepheFiltresi(ISelectionFilter):
+    def AllowElement(self, e):
+        return isinstance(e, DB.Wall) and e.WallType.Kind == DB.WallKind.Curtain
+
+    def AllowReference(self, r, p):
+        return False
+
+
+def panel_konumu(panel, duvar):
+    kutu = panel.get_BoundingBox(None)
+    merkez = (kutu.Min + kutu.Max) / 2.0
+    egri = duvar.Location.Curve
+    bas = egri.GetEndPoint(0)
+    yon = (egri.GetEndPoint(1) - bas).Normalize()
+    return {&quot;id&quot;: panel.Id, &quot;u&quot;: (merkez - bas).DotProduct(yon) * FT_MM, &quot;z&quot;: merkez.Z * FT_MM}
+
+
+try:
+    refs = revit.uidoc.Selection.PickObjects(ObjectType.Element, CepheFiltresi(), &quot;Giydirme cepheleri seç&quot;)
+except OperationCanceledException:
+    script.exit()
+
+onek = forms.ask_for_string(default=&quot;P&quot;, prompt=&quot;Numara öneki:&quot;, title=&quot;Panel numaralandır&quot;)
+if not onek:
+    script.exit()
+
+toplam = 0
+with revit.Transaction(&quot;Panel numaralandır&quot;):
+    for c, ref in enumerate(refs, 1):
+        duvar = doc.GetElement(ref.ElementId)
+        paneller = [doc.GetElement(i) for i in duvar.CurtainGrid.GetPanelIds()]
+        konumlar = [panel_konumu(p, duvar) for p in paneller if p.get_BoundingBox(None)]
+        cephe_onek = &quot;{}{}&quot;.format(onek, c) if len(refs) &gt; 1 else onek
+        for pid, no in numara.numarala(konumlar, cephe_onek).items():
+            doc.GetElement(pid).get_Parameter(DB.BuiltInParameter.ALL_MODEL_MARK).Set(no)
+            toplam += 1
+
+output.print_md(&quot;**{}** panel numaralandı.&quot;.format(toplam))
+</code></pre>
+<ul>
+<li>Birden çok cephe seçilirse her cepheye ayrı önek veriliyor (<code>P1-01-001</code>, <code>P2-01-001</code>), aynı numaranın iki cephede tekrar etmesini önlemek için.</li>
+<li><code>numarala</code>'ya id olarak doğrudan <code>panel.Id</code> (ElementId) verdik; saf Python fonksiyonu id'nin ne olduğuyla ilgilenmiyor, sadece sözlük anahtarı olarak kullanıyor. Mantığı Revit'ten ayırmanın faydası bu.</li>
+<li>Revit, Mark'ın tekrar ettiğini fark ederse bir uyarı (“Elements have duplicate Mark values”) gösterebilir; işlem yine de tamamlanır.</li>
+</ul>
+<p>Sonucu görmek için bir görünüşte panelleri <strong>Mark</strong> parametresiyle etiketle (Tag by Category) ya da bir <strong>Curtain Panel Schedule</strong> oluştur. Ctrl+Z ile tek adımda geri alabildiğini de dene.</p>
+<p><strong>Alıştırma:</strong> Numaralandırma yönünü kullanıcıya sor (<code>forms.CommandSwitchWindow.show(["Soldan sağa", "Sağdan sola"], message="Yön")</code>) ve sağdan sola seçilirse <code>numara.numarala</code>'ya u değerlerini eksiyle çarparak ver. Önce saf Python'da <code>numara.py</code> üzerinde dene.</p>
+<h3>Gün sonu kontrolü (15 dk)</h3>
+<ul class="tasks">
+<li class="task"><label><input type="checkbox" data-id="g4-1"><span>Modeli değiştiren her işlemin Transaction gerektirdiğini biliyorum.</span></label></li>
+<li class="task"><label><input type="checkbox" data-id="g4-2"><span>DB.Transaction'ı Start/Commit/RollBack ile ve revit.Transaction'ı with ile kullanabiliyorum.</span></label></li>
+<li class="task"><label><input type="checkbox" data-id="g4-3"><span>Transaction'ı döngünün dışına koyuyor, kullanıcı girdisini işlemden önce alıyorum.</span></label></li>
+<li class="task"><label><input type="checkbox" data-id="g4-4"><span>Parameter.Set'e saklama tipine uygun değer veriyorum; IsReadOnly ve None kontrolü yapıyorum.</span></label></li>
+<li class="task"><label><input type="checkbox" data-id="g4-5"><span>Numaralandırma mantığını saf Python'da toleranslı gruplama ile yazıp test edebiliyorum.</span></label></li>
+<li class="task"><label><input type="checkbox" data-id="g4-6"><span>BoundingBox merkezinden ve nokta çarpımından panelin u ve z konumunu hesaplayabiliyorum.</span></label></li>
+<li class="task"><label><input type="checkbox" data-id="g4-7"><span>Seçilen giydirme cephelerin panellerini numaralandıran aracı çalıştırıp tek adımda geri alabiliyorum.</span></label></li>
+</ul></div>
+  <div class="pn"><a href="#gun3">← 3. gün</a><a href="#gun5">5. gün →</a></div>
+</section>
+<section class="day" id="gun5" data-day="5">
+  <div class="day-head"><span class="dn">GÜN 05</span><h2>Geometri ve eleman oluşturmak</h2><span class="meta">~4 saat · <span data-prog="5">0/6</span> kontrol</span></div>
+  <div class="prose"><h3>Hedef</h3>
+<p>Gün sonunda Revit API'nin geometri sınıflarını (XYZ, Line, Curve, BoundingBoxXYZ, Transform) kullanacak; elemanların konumunu (LocationPoint, LocationCurve) okuyacak; giydirme cephenin ızgara çizgilerine, panellerine ve dikmelerine erişecek; bir aile tipini koda göre bulup etkinleştirecek ve cephe dikmelerinin kat seviyelerine ankraj braketi yerleştiren bir araç yazabileceksin. Süre yaklaşık 4,5 saat.</p>
+<h3>1. XYZ: nokta ve vektör (45 dk)</h3>
+<figure class="fig"><div class="sc"><svg viewBox="0 0 640 152" role="img" xmlns="http://www.w3.org/2000/svg"><defs><marker id="ah-xyz" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0 0L10 5L0 10z" class="ar"/></marker></defs><line x1="60" y1="140" x2="260" y2="140" class="mu" marker-end="url(#ah-xyz)"/><line x1="60" y1="140" x2="60" y2="20" class="mu" marker-end="url(#ah-xyz)"/><line x1="60" y1="140" x2="140" y2="90" class="mu" marker-end="url(#ah-xyz)"/><text x="266" y="144" class="ta" text-anchor="start">X</text><text x="52" y="16" class="ta" text-anchor="start">Z</text><text x="146" y="88" class="ta" text-anchor="start">Y</text><line x1="340" y1="120" x2="520" y2="60" class="mu" marker-end="url(#ah-xyz)"/><text x="300" y="40" class="tm" text-anchor="start">yön = (son − bas).Normalize()</text><line x1="430" y1="90" x2="460" y2="140" class="mu" marker-end="url(#ah-xyz)"/><text x="470" y="134" class="tm" text-anchor="start">Z × yön → cepheye dik</text></svg></div><figcaption>XYZ hem nokta hem vektördür; birim feet.</figcaption></figure>
+<p>Revit'te nokta da vektör de <strong>XYZ</strong>'dir (değerler feet). Sık kullanılan işlemler:</p>
+<div class="tw"><table>
+<thead>
+<tr>
+<th>İşlem</th>
+<th>Kod</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Oluşturmak</td>
+<td><code>DB.XYZ(x, y, z)</code>, <code>DB.XYZ.Zero</code>, <code>DB.XYZ.BasisZ</code></td>
+</tr>
+<tr>
+<td>Toplama, çıkarma</td>
+<td><code>a + b</code>, <code>b - a</code> (a'dan b'ye vektör)</td>
+</tr>
+<tr>
+<td>Ölçekleme</td>
+<td><code>v * 2.0</code>, <code>v / 2.0</code></td>
+</tr>
+<tr>
+<td>Uzunluk, uzaklık</td>
+<td><code>v.GetLength()</code>, <code>a.DistanceTo(b)</code></td>
+</tr>
+<tr>
+<td>Birim vektör</td>
+<td><code>v.Normalize()</code></td>
+</tr>
+<tr>
+<td>Nokta / vektörel çarpım</td>
+<td><code>a.DotProduct(b)</code>, <code>a.CrossProduct(b)</code></td>
+</tr>
+<tr>
+<td>Eşitlik (toleranslı)</td>
+<td><code>a.IsAlmostEqualTo(b)</code></td>
+</tr>
+</tbody>
+</table></div>
+<p>Aynı işlemleri saf Python'da küçük bir sınıfla yazmak, geometri mantığını Revit'siz denemenin en kolay yoludur. Bugün bu sınıfla çalışıp sonucu Revit'e taşıyacağız:</p>
+<!-- dosya: vektor.py -->
+
+<pre><code class="language-python"># -*- coding: utf-8 -*-
+from __future__ import division
+import math
+
+
+class V(object):
+    &quot;&quot;&quot;Revit XYZ'nin küçük bir benzeri (mm ile çalışıyoruz).&quot;&quot;&quot;
+
+    def __init__(self, x, y, z=0.0):
+        self.x, self.y, self.z = x, y, z
+
+    def __add__(self, o):
+        return V(self.x + o.x, self.y + o.y, self.z + o.z)
+
+    def __sub__(self, o):
+        return V(self.x - o.x, self.y - o.y, self.z - o.z)
+
+    def __mul__(self, k):
+        return V(self.x * k, self.y * k, self.z * k)
+
+    def uzunluk(self):
+        return math.sqrt(self.x ** 2 + self.y ** 2 + self.z ** 2)
+
+    def birim(self):
+        u = self.uzunluk()
+        return V(self.x / u, self.y / u, self.z / u)
+
+    def nokta(self, o):
+        return self.x * o.x + self.y * o.y + self.z * o.z
+
+    def capraz(self, o):
+        return V(self.y * o.z - self.z * o.y, self.z * o.x - self.x * o.z, self.x * o.y - self.y * o.x)
+
+    def __repr__(self):
+        return &quot;V({:.1f}, {:.1f}, {:.1f})&quot;.format(self.x, self.y, self.z)
+
+
+if __name__ == &quot;__main__&quot;:
+    bas, son = V(0, 0), V(12000, 5000)
+    yon = (son - bas).birim()
+    print(&quot;uzunluk: {:.1f} mm&quot;.format((son - bas).uzunluk()))
+    print(&quot;yön: {}&quot;.format(yon))
+    print(&quot;4000 mm ilerisi: {}&quot;.format(bas + yon * 4000))
+    disari = yon.capraz(V(0, 0, 1))
+    print(&quot;cepheye dik, yatay: {}&quot;.format(disari))
+    print(&quot;bir noktanın cephe boyunca konumu: {:.1f} mm&quot;.format((V(6000, 2500) - bas).nokta(yon)))
+</code></pre>
+<pre><code class="language-bash">python3 vektor.py
+</code></pre>
+<pre><code class="language-text">uzunluk: 13000.0 mm
+yön: V(0.9, 0.4, 0.0)
+4000 mm ilerisi: V(3692.3, 1538.5, 0.0)
+cepheye dik, yatay: V(0.4, -0.9, 0.0)
+bir noktanın cephe boyunca konumu: 6500.0 mm
+</code></pre>
+<ul>
+<li>Cephe doğrultusu ile yukarı yön (Z) vektörel çarpılınca cepheye <strong>dik</strong>, yatay bir vektör çıkar. Braketleri cepheden dışarı ya da içeri kaydırmak için kullanacağız. Hangi yönün “dışarı” olduğu duvarın çizim yönüne bağlıdır; Revit'te <code>duvar.Orientation</code> bunu doğrudan verir.</li>
+<li><code>__add__</code>, <code>__sub__</code>, <code>__mul__</code> gibi özel metotlar Python'da <code>+</code>, <code>-</code>, <code>*</code> işaretlerini tanımlar. Revit'in XYZ'si de .NET tarafında aynı şeyi yapar.</li>
+</ul>
+<h3>2. Konum ve eğriler (45 dk)</h3>
+<p>Elemanların konumu <code>eleman.Location</code> ile alınır ve iki tür olabilir:</p>
+<ul>
+<li><strong>LocationPoint:</strong> tek noktayla yerleşen elemanlar (kapı, pencere, kolon, çoğu aile). <code>loc.Point</code> ve dönüş açısı <code>loc.Rotation</code>.</li>
+<li><strong>LocationCurve:</strong> bir eğri boyunca uzanan elemanlar (duvar, kiriş, boru). <code>loc.Curve</code>.</li>
+</ul>
+<!-- yok -->
+
+<pre><code class="language-python"># -*- coding: utf-8 -*-
+from pyrevit import revit, DB
+
+FT_MM = 304.8
+for e in revit.get_selection().elements:
+    loc = e.Location
+    if isinstance(loc, DB.LocationPoint):
+        p = loc.Point
+        print(&quot;{}: nokta ({:.0f}, {:.0f}, {:.0f}) mm&quot;.format(e.Name, p.X * FT_MM, p.Y * FT_MM, p.Z * FT_MM))
+    elif isinstance(loc, DB.LocationCurve):
+        c = loc.Curve
+        print(&quot;{}: eğri, uzunluk {:.0f} mm, {} -&gt; {}&quot;.format(
+            e.Name, c.Length * FT_MM, c.GetEndPoint(0), c.GetEndPoint(1)))
+    else:
+        print(&quot;{}: konumsuz&quot;.format(e.Name))
+</code></pre>
+<p>Eğri (<code>Curve</code>) üzerinde sık kullanılanlar: <code>Length</code>, <code>GetEndPoint(0/1)</code>, <code>Evaluate(0.5, True)</code> (orta nokta; <code>True</code> normalleştirilmiş parametre demek), <code>Project(nokta)</code> (eğri üstündeki en yakın nokta) ve <code>ComputeDerivatives(t, True).BasisX</code> (o noktadaki teğet). Yeni bir doğru: <code>DB.Line.CreateBound(a, b)</code>.</p>
+<p><strong>BoundingBoxXYZ</strong> dünden tanıdık: <code>Min</code>, <code>Max</code>. Bir görünüşe göre kutu için <code>get_BoundingBox(gorunus)</code>. Kutunun içindeki elemanları bulmak için hızlı bir filtre vardır: <code>DB.BoundingBoxIntersectsFilter(DB.Outline(min, max))</code>.</p>
+<h3>3. Giydirme cephenin parçaları (45 dk)</h3>
+<figure class="fig"><div class="sc"><svg viewBox="0 0 640 152" role="img" xmlns="http://www.w3.org/2000/svg"><defs><marker id="ah-izgara" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0 0L10 5L0 10z" class="ar"/></marker></defs><rect x="40" y="20" width="400" height="120" class="bx"/><line x1="120" y1="20" x2="120" y2="140" class="k1"/><line x1="200" y1="20" x2="200" y2="140" class="k1"/><line x1="280" y1="20" x2="280" y2="140" class="k1"/><line x1="360" y1="20" x2="360" y2="140" class="k1"/><line x1="40" y1="80" x2="440" y2="80" class="k1"/><rect x="120" y="80" width="80" height="60" class="bxa"/><text x="462" y="40" class="tm" text-anchor="start">GetVGridLineIds → dikey</text><text x="462" y="64" class="tm" text-anchor="start">GetUGridLineIds → yatay</text><text x="462" y="88" class="ta" text-anchor="start">GetPanelIds → paneller</text><text x="462" y="112" class="tm" text-anchor="start">GetMullionIds → dikmeler</text></svg></div><figcaption>CurtainGrid: ızgara çizgileri, paneller ve dikmeler.</figcaption></figure>
+<p>Bir giydirme cephe duvarının <code>CurtainGrid</code>'i ızgarayı ve parçalarını verir:</p>
+<!-- yok -->
+
+<pre><code class="language-python"># -*- coding: utf-8 -*-
+from pyrevit import revit, DB
+
+doc = revit.doc
+duvar = revit.get_selection().elements[0]
+izgara = duvar.CurtainGrid
+
+dikey = [doc.GetElement(i) for i in izgara.GetVGridLineIds()]
+yatay = [doc.GetElement(i) for i in izgara.GetUGridLineIds()]
+paneller = izgara.GetPanelIds()
+dikmeler = [doc.GetElement(i) for i in izgara.GetMullionIds()]
+
+print(&quot;Dikey ızgara çizgisi: {}&quot;.format(len(dikey)))
+print(&quot;Yatay ızgara çizgisi: {}&quot;.format(len(yatay)))
+print(&quot;Panel: {}  Dikme ve kayıt: {}&quot;.format(paneller.Count, len(dikmeler)))
+
+for m in dikmeler[:5]:
+    c = m.LocationCurve
+    print(&quot;{}  uzunluk {:.0f} mm&quot;.format(m.MullionType.get_Parameter(DB.BuiltInParameter.SYMBOL_NAME_PARAM).AsString(), c.Length * 304.8))
+</code></pre>
+<ul>
+<li><strong>V</strong> ızgara çizgileri <strong>dikey</strong>, <strong>U</strong> çizgileri <strong>yatay</strong>dır (U ve V, duvarın kendi yüzey yönleridir). Adları ters gibi gelebilir; çizginin yönüne değil, hangi yönde <strong>sıralandığına</strong> göre adlandırılır. Emin olmak için <code>cizgi.FullCurve</code>'un yönüne bak.</li>
+<li><code>GetPanelIds</code> bir .NET koleksiyonudur: uzunluğu <code>.Count</code> ile alınır (<code>len</code> de çalışır).</li>
+<li>Dikmeler (<code>Mullion</code>) hem dikey hem yatay olabilir; <code>m.LocationCurve</code> dikmenin eksen eğrisidir. Dikey olanları ayırmak için eğrinin yönünün Z bileşenine bak.</li>
+<li>Bir giydirme cephedeki panel, kapı ya da pencere paneli de olabilir; bunlar <code>Panel</code> sınıfında değil <code>FamilyInstance</code>'tır ama kategorileri yine Curtain Panels'tır.</li>
+</ul>
+<h3>4. Braket yerleşimi: saf Python (45 dk)</h3>
+<figure class="fig"><div class="sc"><svg viewBox="0 0 640 152" role="img" xmlns="http://www.w3.org/2000/svg"><defs><marker id="ah-braket" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0 0L10 5L0 10z" class="ar"/></marker></defs><line x1="30" y1="130" x2="470" y2="130" class="mu"/><text x="490" y="134" class="tm" text-anchor="start">kot 0</text><line x1="30" y1="80" x2="470" y2="80" class="mu"/><text x="490" y="84" class="tm" text-anchor="start">kot 3600</text><line x1="30" y1="30" x2="470" y2="30" class="mu"/><text x="490" y="34" class="tm" text-anchor="start">kot 7200</text><line x1="50" y1="20" x2="50" y2="140" class="k1"/><rect x="43" y="123" width="14" height="14" class="bxa"/><rect x="43" y="73" width="14" height="14" class="bxa"/><rect x="43" y="23" width="14" height="14" class="bxa"/><line x1="150" y1="20" x2="150" y2="140" class="k1"/><rect x="143" y="123" width="14" height="14" class="bxa"/><rect x="143" y="73" width="14" height="14" class="bxa"/><rect x="143" y="23" width="14" height="14" class="bxa"/><line x1="250" y1="20" x2="250" y2="140" class="k1"/><rect x="243" y="123" width="14" height="14" class="bxa"/><rect x="243" y="73" width="14" height="14" class="bxa"/><rect x="243" y="23" width="14" height="14" class="bxa"/><line x1="350" y1="20" x2="350" y2="140" class="k1"/><rect x="343" y="123" width="14" height="14" class="bxa"/><rect x="343" y="73" width="14" height="14" class="bxa"/><rect x="343" y="23" width="14" height="14" class="bxa"/><line x1="450" y1="20" x2="450" y2="140" class="k1"/><rect x="443" y="123" width="14" height="14" class="bxa"/><rect x="443" y="73" width="14" height="14" class="bxa"/><rect x="443" y="23" width="14" height="14" class="bxa"/></svg></div><figcaption>Her dikey dikme ile her döşeme kotunun kesişimine bir braket.</figcaption></figure>
+<p><strong>Problem:</strong> Her dikey dikmenin her kat döşemesiyle kesiştiği yere bir ankraj braketi konacak. Braket, cephe yüzünden içeri doğru 120 mm kaydırılacak (döşeme alnına). En alttaki döşemede de braket var; en üst kotun üstündeki seviyeler (çatı parapeti gibi) hariç.</p>
+<p>Girdiler: cephe doğrultusu (başlangıç ve bitiş noktası), dikey dikmelerin cephe boyunca konumları (u) ve döşeme kotları.</p>
+<!-- dosya: braket.py -->
+
+<pre><code class="language-python"># -*- coding: utf-8 -*-
+from __future__ import division
+from vektor import V
+
+
+def braket_noktalari(bas, son, u_listesi, kotlar, iceri=120.0, ust_sinir=None):
+    &quot;&quot;&quot;Her dikme (u) ile her kotun kesişiminde, cephe yüzünden iceri mm kaydırılmış noktalar.&quot;&quot;&quot;
+    yon = (son - bas).birim()
+    ic = V(0, 0, 1).capraz(yon)          # cepheye dik, içeri
+    noktalar = []
+    for z in sorted(kotlar):
+        if ust_sinir is not None and z &gt; ust_sinir:
+            continue
+        for u in sorted(u_listesi):
+            p = bas + yon * u + ic * iceri
+            noktalar.append((u, z, V(p.x, p.y, z)))
+    return noktalar
+
+
+if __name__ == &quot;__main__&quot;:
+    bas, son = V(0, 0), V(6000, 0)
+    dikmeler = [0, 1500, 3000, 4500, 6000]
+    kotlar = [0, 3600, 7200, 10800]
+    sonuc = braket_noktalari(bas, son, dikmeler, kotlar, ust_sinir=7200)
+    print(&quot;{} braket&quot;.format(len(sonuc)))
+    for u, z, p in sonuc[:6]:
+        print(&quot;u={:&gt;5} z={:&gt;5} -&gt; {}&quot;.format(u, z, p))
+</code></pre>
+<pre><code class="language-bash">python3 braket.py
+</code></pre>
+<pre><code class="language-text">15 braket
+u=    0 z=    0 -&gt; V(0.0, 120.0, 0.0)
+u= 1500 z=    0 -&gt; V(1500.0, 120.0, 0.0)
+u= 3000 z=    0 -&gt; V(3000.0, 120.0, 0.0)
+u= 4500 z=    0 -&gt; V(4500.0, 120.0, 0.0)
+u= 6000 z=    0 -&gt; V(6000.0, 120.0, 0.0)
+u=    0 z= 3600 -&gt; V(0.0, 120.0, 3600.0)
+</code></pre>
+<ul>
+<li><code>ust_sinir=7200</code> ile 10800 kotundaki seviye atlandı: 5 dikme × 3 kat = 15 braket.</li>
+<li><code>V(0, 0, 1).capraz(yon)</code> yön X ekseni boyuncayken +Y verir; içerinin hangi taraf olduğu duvarın çizim yönüne bağlıdır. Revit'te bunun yerine <code>duvar.Orientation.Negate()</code> kullanacağız: <code>Orientation</code> duvarın <strong>dış</strong> yüzüne bakan yönü verir.</li>
+<li><code>"{:&gt;5}"</code> sayıyı 5 karakterde sağa yaslar.</li>
+</ul>
+<h3>5. Aile yerleştirmek (1 saat)</h3>
+<p>Modele bir aile örneği koymak için önce <strong>FamilySymbol</strong>'ü (tipi) bulmak gerekir. Tip henüz kullanılmadıysa <strong>etkinleştirilmesi</strong> gerekir; etkinleştirilmemiş bir tiple yerleştirme hata verir.</p>
+<!-- yok -->
+
+<pre><code class="language-python"># -*- coding: utf-8 -*-
+from pyrevit import revit, DB, forms
+
+
+def tip_bul(doc, aile_adi, tip_adi):
+    for s in DB.FilteredElementCollector(doc).OfClass(DB.FamilySymbol):
+        if s.Family.Name == aile_adi and \
+                s.get_Parameter(DB.BuiltInParameter.SYMBOL_NAME_PARAM).AsString() == tip_adi:
+            return s
+    return None
+
+
+doc = revit.doc
+tip = tip_bul(doc, &quot;Ankraj_Braket&quot;, &quot;BR-120&quot;)
+if tip is None:
+    forms.alert(&quot;Ankraj_Braket : BR-120 tipi projede yok. Önce aileyi yükle.&quot;, exitscript=True)
+</code></pre>
+<p>Yerleştirmenin kendisi <code>doc.Create.NewFamilyInstance</code>'tır. Bir <strong>seviyeye bağlı</strong> (level-based) Generic Model ailesi için:</p>
+<!-- yok -->
+
+<pre><code class="language-python"># -*- coding: utf-8 -*-
+seviye = doc.ActiveView.GenLevel
+with revit.Transaction(&quot;Braket yerleştir&quot;):
+    if not tip.IsActive:
+        tip.Activate()
+        doc.Regenerate()
+    nokta = DB.XYZ(0, 0, 0)
+    braket = doc.Create.NewFamilyInstance(nokta, tip, seviye, DB.Structure.StructuralType.NonStructural)
+</code></pre>
+<ul>
+<li><code>doc.Regenerate()</code> modelin yeniden hesaplanmasını sağlar; etkinleştirmeden sonra tipi hemen kullanmak için gerekir.</li>
+<li><code>NewFamilyInstance</code>'ın farklı aile türleri için (yüzeye bağlı, iki noktalı, host'lu) farklı imzaları vardır; ailenin şablonuna uygun olanı seçmek gerekir. Ankraj braketi için en sorunsuz yol <strong>Generic Model, seviyeye bağlı</strong> bir ailedir.</li>
+<li>Nokta, seviyenin kotuna <strong>göre</strong> değil, modelin <strong>mutlak</strong> koordinatındadır; Revit braketi seviyeye bağlar ve aradaki farkı ofset yapar.</li>
+</ul>
+<p>Elemanı yerleştirdikten sonra döndürmek: <code>DB.ElementTransformUtils.RotateElement(doc, braket.Id, eksen, aci_radyan)</code>, eksen <code>DB.Line.CreateBound(nokta, nokta + DB.XYZ.BasisZ)</code>.</p>
+<h3>6. Araç: dikmelere braket koy (30 dk)</h3>
+<p>Hepsi bir arada. <code>vektor.py</code> ve <code>braket.py</code>'yi düğme klasörüne kopyala. Revit'in XYZ'sini saf Python'un <code>V</code> sınıfına çevirip mantığı çalıştırıyor, sonucu tekrar XYZ'ye çeviriyoruz:</p>
+<!-- yok -->
+
+<pre><code class="language-python"># -*- coding: utf-8 -*-
+&quot;&quot;&quot;Seçili giydirme cephenin dikey dikmelerine, kat seviyelerinde ankraj braketi yerleştirir.&quot;&quot;&quot;
+import math
+from pyrevit import revit, DB, forms, script
+from vektor import V
+import braket
+
+doc = revit.doc
+FT_MM = 304.8
+
+secim = revit.get_selection().elements
+duvarlar = [e for e in secim if isinstance(e, DB.Wall) and e.WallType.Kind == DB.WallKind.Curtain]
+if len(duvarlar) != 1:
+    forms.alert(&quot;Tek bir giydirme cephe seç.&quot;, exitscript=True)
+duvar = duvarlar[0]
+
+tip = None
+for s in DB.FilteredElementCollector(doc).OfClass(DB.FamilySymbol):
+    if s.Family.Name == &quot;Ankraj_Braket&quot;:
+        tip = s
+        break
+if tip is None:
+    forms.alert(&quot;Ankraj_Braket ailesi yüklü değil.&quot;, exitscript=True)
+
+egri = duvar.Location.Curve
+a, b = egri.GetEndPoint(0), egri.GetEndPoint(1)
+bas, son = V(a.X * FT_MM, a.Y * FT_MM), V(b.X * FT_MM, b.Y * FT_MM)
+yon = (son - bas).birim()
+
+u_listesi = set()
+for mid in duvar.CurtainGrid.GetMullionIds():
+    c = doc.GetElement(mid).LocationCurve
+    if c is None:
+        continue
+    p0, p1 = c.GetEndPoint(0), c.GetEndPoint(1)
+    if abs(p1.Z - p0.Z) &gt; abs(p1.X - p0.X) + abs(p1.Y - p0.Y):          # dikey dikme
+        u_listesi.add(round((V(p0.X * FT_MM, p0.Y * FT_MM) - bas).nokta(yon), 1))
+
+seviyeler = sorted(DB.FilteredElementCollector(doc).OfClass(DB.Level), key=lambda s: s.Elevation)
+kotlar = {round(s.Elevation * FT_MM, 1): s for s in seviyeler}
+ust = duvar.get_BoundingBox(None).Max.Z * FT_MM          # cephenin üst kotu
+
+noktalar = braket.braket_noktalari(bas, son, list(u_listesi), list(kotlar), iceri=0.0, ust_sinir=ust)
+ic = duvar.Orientation.Negate() * (120.0 / FT_MM)
+
+with revit.Transaction(&quot;Ankraj braketi yerleştir&quot;):
+    if not tip.IsActive:
+        tip.Activate()
+        doc.Regenerate()
+    for u, z, p in noktalar:
+        nokta = DB.XYZ(p.x / FT_MM, p.y / FT_MM, z / FT_MM) + ic
+        e = doc.Create.NewFamilyInstance(nokta, tip, kotlar[z], DB.Structure.StructuralType.NonStructural)
+        eksen = DB.Line.CreateBound(nokta, nokta + DB.XYZ.BasisZ)
+        DB.ElementTransformUtils.RotateElement(doc, e.Id, eksen, math.atan2(yon.y, yon.x))
+
+script.get_output().print_md(&quot;**{}** braket yerleştirildi ({} dikme × {} kat).&quot;.format(
+    len(noktalar), len(u_listesi), len(set(z for _, z, _ in noktalar))))
+</code></pre>
+<ul>
+<li>Dikmenin dikey olup olmadığını uç noktalarının Z farkının yatay farktan büyük olmasıyla anlıyoruz.</li>
+<li><code>u</code> ve kotları 0,1 mm'ye yuvarlayıp kümeye (<code>set</code>) koymak, aynı çizgideki birden çok dikme parçasının aynı braketi iki kez üretmesini önler.</li>
+<li>Kaydırmayı saf Python'da değil Revit'in kendi <code>Orientation</code> vektörüyle yaptık (<code>iceri=0.0</code>, sonra <code>+ ic</code>); böylece duvarın çizim yönü ne olursa olsun braket içeride kalır.</li>
+<li>Braketi cephe doğrultusuna <code>atan2</code> ile döndürdük; ailenin kendi ekseninin cepheye paralel çizildiğini varsayıyoruz.</li>
+</ul>
+<p><strong>Alıştırma:</strong> Braket aracına bir “önce temizle” seçeneği ekle: aynı duvarın önündeki eski <code>Ankraj_Braket</code> örneklerini (cephenin bounding box'ını 300 mm büyütüp <code>BoundingBoxIntersectsFilter</code> ile bul) yeni braketleri koymadan önce sil (<code>doc.Delete(List[DB.ElementId](idler))</code>).</p>
+<h3>Gün sonu kontrolü (15 dk)</h3>
+<ul class="tasks">
+<li class="task"><label><input type="checkbox" data-id="g5-1"><span>XYZ ile toplama, çıkarma, ölçekleme, nokta ve vektörel çarpım yapabiliyorum.</span></label></li>
+<li class="task"><label><input type="checkbox" data-id="g5-2"><span>LocationPoint ve LocationCurve'ü ayırt edip konum okuyabiliyorum.</span></label></li>
+<li class="task"><label><input type="checkbox" data-id="g5-3"><span>Curve üzerinde Length, GetEndPoint, Evaluate ve Project kullanabiliyorum.</span></label></li>
+<li class="task"><label><input type="checkbox" data-id="g5-4"><span>CurtainGrid'den ızgara çizgilerine, panellere ve dikmelere ulaşabiliyorum.</span></label></li>
+<li class="task"><label><input type="checkbox" data-id="g5-5"><span>Geometri mantığını saf Python'da küçük bir vektör sınıfıyla test edebiliyorum.</span></label></li>
+<li class="task"><label><input type="checkbox" data-id="g5-6"><span>FamilySymbol'ü bulup etkinleştirerek NewFamilyInstance ile aile yerleştirebiliyorum.</span></label></li>
+</ul></div>
+  <div class="pn"><a href="#gun4">← 4. gün</a><a href="#gun6">6. gün →</a></div>
+</section>
+<section class="day" id="gun6" data-day="6">
+  <div class="day-head"><span class="dn">GÜN 06</span><h2>Kullanıcı arayüzü ve rapor</h2><span class="meta">~4 saat · <span data-prog="6">0/5</span> kontrol</span></div>
+  <div class="prose"><h3>Hedef</h3>
+<p>Gün sonunda pyRevit'in hazır formlarıyla kullanıcıya uyarı gösterecek, listeden seçim yaptıracak, değer ve dosya yolu soracak; çıktı penceresinde tıklanabilir tablolar ve ilerleme çubuğu kullanacak; panel ölçülerini toleranslı kontrol eden saf Python modülünü yazacak ve panel listesini Excel'in açabileceği bir CSV dosyasına aktarabileceksin. Süre yaklaşık 4,5 saat.</p>
+<h3>1. pyRevit formları (1 saat)</h3>
+<figure class="fig"><div class="sc"><svg viewBox="0 0 640 158" role="img" xmlns="http://www.w3.org/2000/svg"><defs><marker id="ah-formlar" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0 0L10 5L0 10z" class="ar"/></marker></defs><text x="160" y="18" class="ta" text-anchor="middle">fonksiyon</text><text x="480" y="18" class="ta" text-anchor="middle">ne için</text><rect x="10" y="26" width="300" height="122" class="bx"/><rect x="330" y="26" width="300" height="122" class="bxa"/><text x="22" y="46" class="tm" text-anchor="start">forms.alert</text><text x="22" y="68" class="tm" text-anchor="start">SelectFromList.show</text><text x="22" y="90" class="tm" text-anchor="start">CommandSwitchWindow.show</text><text x="22" y="112" class="tm" text-anchor="start">ask_for_string</text><text x="22" y="134" class="tm" text-anchor="start">save_file / pick_file</text><text x="342" y="46" class="tm" text-anchor="start">uyarı · evet/hayır</text><text x="342" y="68" class="tm" text-anchor="start">listeden (çoklu) seçim</text><text x="342" y="90" class="tm" text-anchor="start">birkaç düğmeden biri</text><text x="342" y="112" class="tm" text-anchor="start">metin (sayıyı sen çevir)</text><text x="342" y="134" class="tm" text-anchor="start">dosya yolu</text></svg></div><figcaption>pyRevit formları; vazgeçilirse hepsi None döner.</figcaption></figure>
+<p>Kullanıcıyla konuşmak için Windows formu tasarlamana gerek yok; pyRevit'in <code>forms</code> modülü en sık ihtiyaçları hazır sunar:</p>
+<div class="tw"><table>
+<thead>
+<tr>
+<th>İhtiyaç</th>
+<th>Fonksiyon</th>
+<th>Dönen</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Uyarı / onay</td>
+<td><code>forms.alert(mesaj, yes=True, no=True)</code></td>
+<td><code>True</code> / <code>False</code></td>
+</tr>
+<tr>
+<td>Listeden seçim</td>
+<td><code>forms.SelectFromList.show(liste, multiselect=True)</code></td>
+<td>seçilen(ler) ya da <code>None</code></td>
+</tr>
+<tr>
+<td>Seçenek düğmeleri</td>
+<td><code>forms.CommandSwitchWindow.show(seçenekler, message=...)</code></td>
+<td>seçilen metin ya da <code>None</code></td>
+</tr>
+<tr>
+<td>Metin girdisi</td>
+<td><code>forms.ask_for_string(default=..., prompt=...)</code></td>
+<td>metin ya da <code>None</code></td>
+</tr>
+<tr>
+<td>Kayıt yeri</td>
+<td><code>forms.save_file(file_ext="csv")</code></td>
+<td>yol ya da <code>None</code></td>
+</tr>
+<tr>
+<td>Dosya seçmek</td>
+<td><code>forms.pick_file(file_ext="csv")</code></td>
+<td>yol ya da <code>None</code></td>
+</tr>
+<tr>
+<td>Hazır seçiciler</td>
+<td><code>forms.select_levels()</code>, <code>forms.select_views()</code></td>
+<td>eleman listesi</td>
+</tr>
+</tbody>
+</table></div>
+<p>Kullanıcı her pencereyi kapatıp vazgeçebilir; bu durumda dönen değer <code>None</code>'dır. <strong>Her formdan sonra <code>None</code> kontrolü yap.</strong></p>
+<!-- yok -->
+
+<pre><code class="language-python"># -*- coding: utf-8 -*-
+from pyrevit import revit, DB, forms, script
+
+doc = revit.doc
+
+# 1) Seviye seç (çoklu)
+seviyeler = forms.select_levels(title=&quot;Kontrol edilecek seviyeler&quot;, multiple=True)
+if not seviyeler:
+    script.exit()
+
+# 2) Kendi listenden seçim: panel tipleri
+tipler = DB.FilteredElementCollector(doc) \
+    .OfCategory(DB.BuiltInCategory.OST_CurtainWallPanels) \
+    .WhereElementIsElementType().ToElements()
+adlar = sorted(set(t.get_Parameter(DB.BuiltInParameter.SYMBOL_NAME_PARAM).AsString() for t in tipler))
+secilen = forms.SelectFromList.show(adlar, title=&quot;Panel tipleri&quot;, multiselect=True, button_name=&quot;Seç&quot;)
+if not secilen:
+    script.exit()
+
+# 3) Sayı girdisi: metin olarak gelir, çevirmek gerekir
+girdi = forms.ask_for_string(default=&quot;3000&quot;, prompt=&quot;En büyük panel genişliği (mm):&quot;)
+try:
+    sinir = float(girdi.replace(&quot;,&quot;, &quot;.&quot;))
+except (AttributeError, ValueError):
+    forms.alert(&quot;Geçerli bir sayı girilmedi.&quot;, exitscript=True)
+
+# 4) Onay
+if not forms.alert(&quot;{} seviye, {} tip, sınır {} mm. Devam?&quot;.format(len(seviyeler), len(secilen), sinir),
+                   yes=True, no=True):
+    script.exit()
+</code></pre>
+<ul>
+<li><code>forms.ask_for_string</code> her zaman <strong>metin</strong> döndürür; Türkçe klavyede ondalık virgülle yazılabileceği için <code>replace(",", ".")</code> yapıyoruz.</li>
+<li><code>AttributeError</code>'ı da yakalıyoruz: kullanıcı vazgeçerse <code>girdi</code> <code>None</code> olur ve <code>None.replace</code> bu hatayı verir.</li>
+<li><code>SelectFromList</code> elemanların kendisini de alabilir; listede ne gösterileceğini <code>name_attr="Name"</code> ile söylersin.</li>
+</ul>
+<h3>2. Çıktı penceresi: tablo, bağlantı, ilerleme (45 dk)</h3>
+<!-- yok -->
+
+<pre><code class="language-python"># -*- coding: utf-8 -*-
+from pyrevit import revit, DB, script
+
+doc = revit.doc
+output = script.get_output()
+output.set_title(&quot;Panel listesi&quot;)
+output.print_md(&quot;## Giydirme cephe panelleri&quot;)
+
+paneller = DB.FilteredElementCollector(doc) \
+    .OfCategory(DB.BuiltInCategory.OST_CurtainWallPanels) \
+    .WhereElementIsNotElementType().ToElements()
+
+satirlar = []
+for i, p in enumerate(paneller):
+    output.update_progress(i + 1, len(paneller))
+    mark = p.get_Parameter(DB.BuiltInParameter.ALL_MODEL_MARK).AsString() or &quot;-&quot;
+    g = p.get_Parameter(DB.BuiltInParameter.CURTAIN_WALL_PANELS_WIDTH)
+    y = p.get_Parameter(DB.BuiltInParameter.CURTAIN_WALL_PANELS_HEIGHT)
+    satirlar.append([output.linkify(p.Id, mark),
+                     round(g.AsDouble() * 304.8) if g else &quot;-&quot;,
+                     round(y.AsDouble() * 304.8) if y else &quot;-&quot;])
+
+output.print_table(table_data=satirlar, columns=[&quot;Panel&quot;, &quot;Genişlik&quot;, &quot;Yükseklik&quot;])
+</code></pre>
+<ul>
+<li><code>output.update_progress(şimdi, toplam)</code> pencerenin üstünde bir ilerleme çubuğu gösterir; binlerce elemanda kullanıcı betiğin donmadığını görür.</li>
+<li><code>output.linkify(id, metin)</code> bağlantıya kendi metnini koyar: tabloda id yerine panel numarası görünür, tıklayınca panel seçilir.</li>
+</ul>
+<h3>3. Ölçü kontrolü: saf Python (1 saat)</h3>
+<figure class="fig"><div class="sc"><svg viewBox="0 0 640 86" role="img" xmlns="http://www.w3.org/2000/svg"><defs><marker id="ah-kontrol" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0 0L10 5L0 10z" class="ar"/></marker></defs><rect x="10.0" y="16" width="109.6" height="56" rx="5" class="bx"/><text x="64.8" y="40.0" class="tb" text-anchor="middle">paneller</text><text x="64.8" y="56.0" class="tm" text-anchor="middle">Collector</text><rect x="137.6" y="16" width="109.6" height="56" rx="5" class="bx"/><text x="192.39999999999998" y="40.0" class="tb" text-anchor="middle">ölçü</text><text x="192.39999999999998" y="56.0" class="tm" text-anchor="middle">feet → mm</text><line x1="121.6" y1="44.0" x2="135.6" y2="44.0" class="mu" marker-end="url(#ah-kontrol)"/><rect x="265.2" y="16" width="109.6" height="56" rx="5" class="bxa"/><text x="320.0" y="40.0" class="tb" text-anchor="middle">kontrol.py</text><text x="320.0" y="56.0" class="tm" text-anchor="middle">± 0,5 mm</text><line x1="249.2" y1="44.0" x2="263.2" y2="44.0" class="mu" marker-end="url(#ah-kontrol)"/><rect x="392.79999999999995" y="16" width="109.6" height="56" rx="5" class="bx"/><text x="447.59999999999997" y="40.0" class="tb" text-anchor="middle">tablo</text><text x="447.59999999999997" y="56.0" class="tm" text-anchor="middle">linkify</text><line x1="376.79999999999995" y1="44.0" x2="390.79999999999995" y2="44.0" class="mu" marker-end="url(#ah-kontrol)"/><rect x="520.4" y="16" width="109.6" height="56" rx="5" class="bx"/><text x="575.1999999999999" y="40.0" class="tb" text-anchor="middle">CSV</text><text x="575.1999999999999" y="56.0" class="tm" text-anchor="middle">; · UTF-8 BOM</text><line x1="504.4" y1="44.0" x2="518.4" y2="44.0" class="mu" marker-end="url(#ah-kontrol)"/></svg></div><figcaption>Kontrol aracı: Revit veriyi verir, saf Python karar verir.</figcaption></figure>
+<p>Cephe imalatında her panelin uyması gereken sınırlar vardır: cam üreticisinin en büyük ve en küçük ölçüleri, taşıma sınırı, alan sınırı. Kontrolü saf Python'da, test edilebilir bir modül olarak yazalım:</p>
+<!-- dosya: kontrol.py -->
+
+<pre><code class="language-python"># -*- coding: utf-8 -*-
+from __future__ import division
+
+SINIRLAR = {
+    &quot;gen_min&quot;: 300.0, &quot;gen_max&quot;: 2700.0,
+    &quot;yuk_min&quot;: 300.0, &quot;yuk_max&quot;: 4500.0,
+    &quot;alan_max&quot;: 9.0,        # m2
+}
+TOL = 0.5                   # mm
+
+
+def panel_kontrol(genislik, yukseklik, sinir=SINIRLAR):
+    &quot;&quot;&quot;Bir panelin ölçülerini (mm) kontrol eder; sorunların listesini döndürür.&quot;&quot;&quot;
+    sorunlar = []
+    if genislik &lt; sinir[&quot;gen_min&quot;] - TOL:
+        sorunlar.append(&quot;genişlik {:.0f} &lt; {:.0f}&quot;.format(genislik, sinir[&quot;gen_min&quot;]))
+    if genislik &gt; sinir[&quot;gen_max&quot;] + TOL:
+        sorunlar.append(&quot;genişlik {:.0f} &gt; {:.0f}&quot;.format(genislik, sinir[&quot;gen_max&quot;]))
+    if yukseklik &lt; sinir[&quot;yuk_min&quot;] - TOL:
+        sorunlar.append(&quot;yükseklik {:.0f} &lt; {:.0f}&quot;.format(yukseklik, sinir[&quot;yuk_min&quot;]))
+    if yukseklik &gt; sinir[&quot;yuk_max&quot;] + TOL:
+        sorunlar.append(&quot;yükseklik {:.0f} &gt; {:.0f}&quot;.format(yukseklik, sinir[&quot;yuk_max&quot;]))
+    alan = genislik * yukseklik / 1e6
+    if alan &gt; sinir[&quot;alan_max&quot;]:
+        sorunlar.append(&quot;alan {:.2f} m2 &gt; {:.1f}&quot;.format(alan, sinir[&quot;alan_max&quot;]))
+    return sorunlar
+
+
+def tipe_gore_say(paneller):
+    &quot;&quot;&quot;paneller: [(no, gen, yuk)] -&gt; {(gen, yuk): adet}, ölçüler mm'ye yuvarlanır.&quot;&quot;&quot;
+    sayac = {}
+    for _, g, y in paneller:
+        anahtar = (int(round(g)), int(round(y)))
+        sayac[anahtar] = sayac.get(anahtar, 0) + 1
+    return sayac
+
+
+if __name__ == &quot;__main__&quot;:
+    paneller = [
+        (&quot;P-01-001&quot;, 1500.0, 3600.0), (&quot;P-01-002&quot;, 1500.0000001, 3600.0),
+        (&quot;P-01-003&quot;, 2700.3, 3600.0), (&quot;P-01-004&quot;, 280.0, 3600.0),
+        (&quot;P-02-001&quot;, 1500.0, 3599.9999), (&quot;P-02-002&quot;, 2800.0, 4000.0),
+    ]
+    for no, g, y in paneller:
+        s = panel_kontrol(g, y)
+        print(&quot;{}  {}&quot;.format(no, &quot;uygun&quot; if not s else &quot;; &quot;.join(s)))
+    print(&quot;--- tip listesi&quot;)
+    for (g, y), n in sorted(tipe_gore_say(paneller).items()):
+        print(&quot;{} x {} mm : {} adet&quot;.format(g, y, n))
+</code></pre>
+<pre><code class="language-bash">python3 kontrol.py
+</code></pre>
+<pre><code class="language-text">P-01-001  uygun
+P-01-002  uygun
+P-01-003  alan 9.72 m2 &gt; 9.0
+P-01-004  genişlik 280 &lt; 300
+P-02-001  uygun
+P-02-002  genişlik 2800 &gt; 2700; alan 11.20 m2 &gt; 9.0
+--- tip listesi
+280 x 3600 mm : 1 adet
+1500 x 3600 mm : 3 adet
+2700 x 3600 mm : 1 adet
+2800 x 4000 mm : 1 adet
+</code></pre>
+<ul>
+<li>P-01-003'ün 2700,3 mm genişliği 0,5 mm toleransın içinde kaldığı için genişlik sorunu sayılmadı, ama 2,7 × 3,6 m paneli 9 m² alan sınırını aştı. 2800 mm'lik panelde hem genişlik hem alan sınırı aşıldı.</li>
+<li><code>tipe_gore_say</code> ölçüleri tam milimetreye yuvarlayarak gruplar: 1500,0000001 ile 1500 aynı tip sayılır. Cam siparişi bu tip listesiyle verilir.</li>
+</ul>
+<h3>4. CSV raporu (45 dk)</h3>
+<p><strong>CSV</strong> (virgülle ayrılmış değerler) her tablo programının açabildiği düz metin dosyasıdır. Türkçe Excel, ondalık ayırıcı virgül olduğu için alanları <strong>noktalı virgülle</strong> ayırmayı bekler; Türkçe karakterlerin doğru görünmesi için dosya <strong>UTF-8 BOM</strong> ile yazılmalıdır. IronPython 2.7 ile Python 3'te aynı çalışan yol <code>codecs</code>'tir:</p>
+<!-- dosya: csvyaz.py -->
+
+<pre><code class="language-python"># -*- coding: utf-8 -*-
+from __future__ import division
+import codecs
+
+
+def hucre(deger):
+    &quot;&quot;&quot;Bir değeri Türkçe Excel'in beklediği metne çevirir.&quot;&quot;&quot;
+    if deger is None:
+        return &quot;&quot;
+    if isinstance(deger, float):
+        return (&quot;{:.1f}&quot;.format(deger)).replace(&quot;.&quot;, &quot;,&quot;)
+    metin = u&quot;{}&quot;.format(deger)
+    if &quot;;&quot; in metin or '&quot;' in metin or &quot;\n&quot; in metin:
+        metin = u'&quot;{}&quot;'.format(metin.replace('&quot;', '&quot;&quot;'))
+    return metin
+
+
+def csv_yaz(yol, basliklar, satirlar):
+    with codecs.open(yol, &quot;w&quot;, &quot;utf-8-sig&quot;) as f:
+        f.write(u&quot;;&quot;.join(basliklar) + u&quot;\r\n&quot;)
+        for satir in satirlar:
+            f.write(u&quot;;&quot;.join(hucre(d) for d in satir) + u&quot;\r\n&quot;)
+    return len(satirlar)
+
+
+if __name__ == &quot;__main__&quot;:
+    from kontrol import panel_kontrol
+    paneller = [(&quot;P-01-001&quot;, 1500.0, 3600.0), (&quot;P-01-003&quot;, 2800.0, 4000.0), (&quot;P-02-001&quot;, 750.0, 3600.0)]
+    satirlar = []
+    for no, g, y in paneller:
+        sorun = panel_kontrol(g, y)
+        satirlar.append([no, g, y, g * y / 1e6, &quot;; &quot;.join(sorun) or &quot;uygun&quot;])
+    n = csv_yaz(&quot;paneller.csv&quot;, [u&quot;Panel&quot;, u&quot;Genişlik&quot;, u&quot;Yükseklik&quot;, u&quot;Alan m2&quot;, u&quot;Durum&quot;], satirlar)
+    print(&quot;{} satır yazıldı&quot;.format(n))
+</code></pre>
+<pre><code class="language-bash">python3 csvyaz.py
+head -c 3 paneller.csv | od -An -tx1
+tail -c +4 paneller.csv
+</code></pre>
+<pre><code class="language-text">3 satır yazıldı
+ ef bb bf
+Panel;Genişlik;Yükseklik;Alan m2;Durum
+P-01-001;1500,0;3600,0;5,4;uygun
+P-01-003;2800,0;4000,0;11,2;&quot;genişlik 2800 &gt; 2700; alan 11.20 m2 &gt; 9.0&quot;
+P-02-001;750,0;3600,0;2,7;uygun
+</code></pre>
+<ul>
+<li>İlk üç bayt <code>ef bb bf</code> UTF-8 BOM'dur; Excel dosyayı bunun sayesinde UTF-8 olarak tanır ve “Genişlik” bozulmaz.</li>
+<li>Sorun metninde noktalı virgül olduğu için hücre tırnak içine alındı; Excel onu tek hücre olarak okur.</li>
+<li>Satır sonu <code>\r\n</code> (Windows) yazıldı.</li>
+<li><code>u"..."</code> önekleri Python 3'te etkisizdir, IronPython 2.7'de metnin unicode olmasını sağlar.</li>
+</ul>
+<h3>5. Araç: kontrol et ve CSV'ye aktar (45 dk)</h3>
+<p><code>kontrol.py</code> ve <code>csvyaz.py</code>'yi düğme klasörüne kopyala:</p>
+<!-- yok -->
+
+<pre><code class="language-python"># -*- coding: utf-8 -*-
+&quot;&quot;&quot;Giydirme cephe panellerinin ölçülerini kontrol eder, sorunluları gösterir ve listeyi CSV'ye yazar.&quot;&quot;&quot;
+from pyrevit import revit, DB, forms, script
+import kontrol
+import csvyaz
+
+doc = revit.doc
+output = script.get_output()
+FT_MM = 304.8
+
+paneller = DB.FilteredElementCollector(doc) \
+    .OfCategory(DB.BuiltInCategory.OST_CurtainWallPanels) \
+    .WhereElementIsNotElementType().ToElements()
+if not paneller:
+    forms.alert(&quot;Modelde giydirme cephe paneli yok.&quot;, exitscript=True)
+
+kayitlar, sorunlu = [], []
+for i, p in enumerate(paneller):
+    output.update_progress(i + 1, len(paneller))
+    gp = p.get_Parameter(DB.BuiltInParameter.CURTAIN_WALL_PANELS_WIDTH)
+    yp = p.get_Parameter(DB.BuiltInParameter.CURTAIN_WALL_PANELS_HEIGHT)
+    if gp is None or yp is None:
+        continue                       # kapı/pencere paneli vb.
+    g, y = gp.AsDouble() * FT_MM, yp.AsDouble() * FT_MM
+    no = p.get_Parameter(DB.BuiltInParameter.ALL_MODEL_MARK).AsString() or &quot;&quot;
+    sorun = kontrol.panel_kontrol(g, y)
+    kayitlar.append([no, g, y, g * y / 1e6, &quot;; &quot;.join(sorun) or &quot;uygun&quot;])
+    if sorun:
+        sorunlu.append([output.linkify(p.Id, no or &quot;(numarasız)&quot;), &quot;; &quot;.join(sorun)])
+
+output.print_md(&quot;**{}** panel kontrol edildi, **{}** sorunlu.&quot;.format(len(kayitlar), len(sorunlu)))
+if sorunlu:
+    output.print_table(sorunlu, columns=[&quot;Panel&quot;, &quot;Sorun&quot;])
+
+tipler = kontrol.tipe_gore_say([(k[0], k[1], k[2]) for k in kayitlar])
+output.print_table([[g, y, n] for (g, y), n in sorted(tipler.items())],
+                   columns=[&quot;Genişlik&quot;, &quot;Yükseklik&quot;, &quot;Adet&quot;], title=&quot;Tip listesi&quot;)
+
+yol = forms.save_file(file_ext=&quot;csv&quot;, default_name=&quot;paneller.csv&quot;)
+if yol:
+    kayitlar.sort(key=lambda k: k[0])
+    csvyaz.csv_yaz(yol, [u&quot;Panel&quot;, u&quot;Genişlik&quot;, u&quot;Yükseklik&quot;, u&quot;Alan m2&quot;, u&quot;Durum&quot;], kayitlar)
+    output.print_md(&quot;Liste kaydedildi: `{}`&quot;.format(yol))
+</code></pre>
+<p>Bu araç modeli <strong>değiştirmiyor</strong>, sadece okuyor; bu yüzden Transaction yok.</p>
+<p><strong>Alıştırma:</strong> Sınırları koda gömmek yerine kullanıcıya sor: aracın başında <code>forms.ask_for_string</code> ile en büyük genişliği ve yüksekliği al ve <code>panel_kontrol</code>'a kendi <code>sinir</code> sözlüğünü ver. Yarın bu ayarları kalıcı olarak saklamayı göreceğiz.</p>
+<h3>Gün sonu kontrolü (15 dk)</h3>
+<ul class="tasks">
+<li class="task"><label><input type="checkbox" data-id="g6-1"><span>alert, SelectFromList, CommandSwitchWindow, ask_for_string ve save_file kullanabiliyorum; her birinden sonra None kontrolü yapıyorum.</span></label></li>
+<li class="task"><label><input type="checkbox" data-id="g6-2"><span>Metin olarak gelen sayı girdisini virgül ve hata durumlarını düşünerek çevirebiliyorum.</span></label></li>
+<li class="task"><label><input type="checkbox" data-id="g6-3"><span>Çıktı penceresinde ilerleme çubuğu, tablo ve kendi metniyle tıklanabilir bağlantı gösterebiliyorum.</span></label></li>
+<li class="task"><label><input type="checkbox" data-id="g6-4"><span>Ölçü kontrolünü toleranslı ve test edilebilir bir saf Python modülü olarak yazabiliyorum.</span></label></li>
+<li class="task"><label><input type="checkbox" data-id="g6-5"><span>Türkçe Excel için noktalı virgüllü, UTF-8 BOM'lu CSV yazabiliyorum.</span></label></li>
+</ul></div>
+  <div class="pn"><a href="#gun5">← 5. gün</a><a href="#gun7">7. gün →</a></div>
+</section>
+<section class="day" id="gun7" data-day="7">
+  <div class="day-head"><span class="dn">GÜN 07</span><h2>Proje: cephe araç çubuğu</h2><span class="meta">~4 saat · <span data-prog="7">0/10</span> kontrol</span></div>
+  <div class="prose"><h3>Hedef</h3>
+<p>Son gün, hafta boyunca yazdığın parçaları ekibinin kullanabileceği düzgün bir pyRevit eklentisine dönüştüreceksin: ortak kodu bir <code>lib</code> paketinde toplayacak, saf Python kısmını otomatik testlerle güvenceye alacak, ayarları kalıcı bir dosyada saklayacak, şeritte üç düğmeli bir <strong>Cephe</strong> paneli (Numarala, Kontrol, Liste) kuracak, düğmelere ipucu ve simge ekleyecek ve eklentiyi Git ile ekibe dağıtacaksın. Süre yaklaşık 5 saat.</p>
+<h3>1. Eklentinin yapısı (30 dk)</h3>
+<figure class="fig"><div class="sc"><svg viewBox="0 0 640 134" role="img" xmlns="http://www.w3.org/2000/svg"><defs><marker id="ah-eklenti" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0 0L10 5L0 10z" class="ar"/></marker></defs><rect x="230" y="8" width="180" height="40" rx="5" class="bxa"/><text x="320.0" y="32.0" class="tb" text-anchor="middle">ERD.extension</text><line x1="320" y1="48" x2="67.2" y2="78" class="mu" marker-end="url(#ah-eklenti)"/><rect x="10.0" y="80" width="114.4" height="44" rx="5" class="bx"/><text x="67.2" y="98.0" class="tb" text-anchor="middle">lib/cephe</text><text x="67.2" y="114.0" class="tm" text-anchor="middle">ortak paket</text><line x1="320" y1="48" x2="193.60000000000002" y2="78" class="mu" marker-end="url(#ah-eklenti)"/><rect x="136.4" y="80" width="114.4" height="44" rx="5" class="bx"/><text x="193.60000000000002" y="98.0" class="tb" text-anchor="middle">Numarala</text><text x="193.60000000000002" y="114.0" class="tm" text-anchor="middle">Transaction</text><line x1="320" y1="48" x2="320.0" y2="78" class="mu" marker-end="url(#ah-eklenti)"/><rect x="262.8" y="80" width="114.4" height="44" rx="5" class="bx"/><text x="320.0" y="98.0" class="tb" text-anchor="middle">Kontrol</text><text x="320.0" y="114.0" class="tm" text-anchor="middle">seç + tablo</text><line x1="320" y1="48" x2="446.40000000000003" y2="78" class="mu" marker-end="url(#ah-eklenti)"/><rect x="389.20000000000005" y="80" width="114.4" height="44" rx="5" class="bx"/><text x="446.40000000000003" y="98.0" class="tb" text-anchor="middle">Liste</text><text x="446.40000000000003" y="114.0" class="tm" text-anchor="middle">CSV</text><line x1="320" y1="48" x2="572.8000000000001" y2="78" class="mu" marker-end="url(#ah-eklenti)"/><rect x="515.6" y="80" width="114.4" height="44" rx="5" class="bx"/><text x="572.8000000000001" y="98.0" class="tb" text-anchor="middle">testler.py</text><text x="572.8000000000001" y="114.0" class="tm" text-anchor="middle">unittest</text></svg></div><figcaption>Eklentinin parçaları.</figcaption></figure>
+<pre><code class="language-text">ERD.extension\
+├─ lib\
+│  └─ cephe\                 ← ortak Python paketi
+│     ├─ __init__.py
+│     ├─ numara.py           (4. gün)
+│     ├─ kontrol.py          (6. gün)
+│     ├─ csvyaz.py           (6. gün)
+│     ├─ ayar.py             (bugün)
+│     └─ revitutil.py        (Revit'e bağlı yardımcılar)
+├─ Cephe.tab\
+│  └─ Panel.panel\
+│     ├─ Numarala.pushbutton\  script.py  bundle.yaml  icon.png
+│     ├─ Kontrol.pushbutton\   script.py  bundle.yaml  icon.png
+│     └─ Liste.pushbutton\     script.py  bundle.yaml  icon.png
+├─ testler.py                ← Revit'siz otomatik testler
+└─ README.md
+</code></pre>
+<ul>
+<li>pyRevit, eklentinin <strong><code>lib</code></strong> klasörünü bütün düğmelerin Python arama yoluna ekler. <code>lib\cephe\</code> klasörü bir <strong>paket</strong>tir (içinde <code>__init__.py</code> olduğu için): düğmelerde <code>from cephe import numara</code> yazabilirsin. Aynı dosyayı her düğmeye kopyalamaktan kurtulursun; bir hatayı bir yerde düzeltirsin.</li>
+<li><strong>Saf Python</strong> modüller (numara, kontrol, csvyaz, ayar) Revit'i hiç import etmez; bilgisayarındaki Python ile test edilir.</li>
+<li><strong>revitutil.py</strong> Revit API'ye bağlı tekrar eden kodu (seçim filtresi, parametre okuma, birim) toplar; sadece Revit içinde çalışır.</li>
+</ul>
+<h3>2. Paket ve saf modüller (45 dk)</h3>
+<p>Önceki günlerin modüllerini pakete taşıyoruz. <code>numara.py</code> 4. günün aynısı:</p>
+<!-- dosya: lib/cephe/__init__.py -->
+
+<pre><code class="language-python"># -*- coding: utf-8 -*-
+&quot;&quot;&quot;Cephe araçları ortak paketi.&quot;&quot;&quot;
+SURUM = &quot;1.0.0&quot;
+</code></pre>
+<!-- dosya: lib/cephe/numara.py -->
+
+<pre><code class="language-python"># -*- coding: utf-8 -*-
+from __future__ import division
+
+
+def katlara_ayir(paneller, tolerans=50.0):
+    katlar = []
+    for p in sorted(paneller, key=lambda p: p[&quot;z&quot;]):
+        if katlar and abs(p[&quot;z&quot;] - katlar[-1][0][&quot;z&quot;]) &lt;= tolerans:
+            katlar[-1].append(p)
+        else:
+            katlar.append([p])
+    return katlar
+
+
+def numarala(paneller, onek=&quot;P&quot;, tolerans=50.0, ters=False):
+    &quot;&quot;&quot;{id: numara}. ters=True ise her katta sağdan sola numaralar.&quot;&quot;&quot;
+    sonuc = {}
+    for k, kat in enumerate(katlara_ayir(paneller, tolerans), 1):
+        sirali = sorted(kat, key=lambda p: p[&quot;u&quot;], reverse=ters)
+        for s, p in enumerate(sirali, 1):
+            sonuc[p[&quot;id&quot;]] = &quot;{}-{:02d}-{:03d}&quot;.format(onek, k, s)
+    return sonuc
+</code></pre>
+<!-- dosya: lib/cephe/kontrol.py -->
+
+<pre><code class="language-python"># -*- coding: utf-8 -*-
+from __future__ import division
+
+VARSAYILAN = {&quot;gen_min&quot;: 300.0, &quot;gen_max&quot;: 2700.0, &quot;yuk_min&quot;: 300.0, &quot;yuk_max&quot;: 4500.0, &quot;alan_max&quot;: 9.0}
+TOL = 0.5
+
+
+def panel_kontrol(genislik, yukseklik, sinir=None):
+    s = dict(VARSAYILAN)
+    s.update(sinir or {})
+    sorunlar = []
+    if genislik &lt; s[&quot;gen_min&quot;] - TOL:
+        sorunlar.append(u&quot;genişlik {:.0f} &lt; {:.0f}&quot;.format(genislik, s[&quot;gen_min&quot;]))
+    if genislik &gt; s[&quot;gen_max&quot;] + TOL:
+        sorunlar.append(u&quot;genişlik {:.0f} &gt; {:.0f}&quot;.format(genislik, s[&quot;gen_max&quot;]))
+    if yukseklik &lt; s[&quot;yuk_min&quot;] - TOL:
+        sorunlar.append(u&quot;yükseklik {:.0f} &lt; {:.0f}&quot;.format(yukseklik, s[&quot;yuk_min&quot;]))
+    if yukseklik &gt; s[&quot;yuk_max&quot;] + TOL:
+        sorunlar.append(u&quot;yükseklik {:.0f} &gt; {:.0f}&quot;.format(yukseklik, s[&quot;yuk_max&quot;]))
+    alan = genislik * yukseklik / 1e6
+    if alan &gt; s[&quot;alan_max&quot;]:
+        sorunlar.append(u&quot;alan {:.2f} m2 &gt; {:.1f}&quot;.format(alan, s[&quot;alan_max&quot;]))
+    return sorunlar
+
+
+def tipe_gore_say(paneller):
+    sayac = {}
+    for _, g, y in paneller:
+        anahtar = (int(round(g)), int(round(y)))
+        sayac[anahtar] = sayac.get(anahtar, 0) + 1
+    return sayac
+</code></pre>
+<!-- dosya: lib/cephe/csvyaz.py -->
+
+<pre><code class="language-python"># -*- coding: utf-8 -*-
+import codecs
+
+
+def hucre(deger):
+    if deger is None:
+        return u&quot;&quot;
+    if isinstance(deger, float):
+        return (u&quot;{:.1f}&quot;.format(deger)).replace(u&quot;.&quot;, u&quot;,&quot;)
+    metin = u&quot;{}&quot;.format(deger)
+    if u&quot;;&quot; in metin or u'&quot;' in metin or u&quot;\n&quot; in metin:
+        metin = u'&quot;{}&quot;'.format(metin.replace(u'&quot;', u'&quot;&quot;'))
+    return metin
+
+
+def csv_yaz(yol, basliklar, satirlar):
+    with codecs.open(yol, &quot;w&quot;, &quot;utf-8-sig&quot;) as f:
+        f.write(u&quot;;&quot;.join(basliklar) + u&quot;\r\n&quot;)
+        for satir in satirlar:
+            f.write(u&quot;;&quot;.join(hucre(d) for d in satir) + u&quot;\r\n&quot;)
+    return len(satirlar)
+</code></pre>
+<p><code>panel_kontrol</code> artık sınırların sadece bir kısmını da kabul ediyor: varsayılanların kopyasını alıp (<code>dict(VARSAYILAN)</code>) üzerine verilenleri yazıyor (<code>update</code>).</p>
+<h3>3. Kalıcı ayarlar (45 dk)</h3>
+<figure class="fig"><div class="sc"><svg viewBox="0 0 640 86" role="img" xmlns="http://www.w3.org/2000/svg"><defs><marker id="ah-ayar" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0 0L10 5L0 10z" class="ar"/></marker></defs><rect x="10.0" y="16" width="109.6" height="56" rx="5" class="bx"/><text x="64.8" y="40.0" class="tb" text-anchor="middle">varsayılan</text><text x="64.8" y="56.0" class="tm" text-anchor="middle">kodda</text><rect x="137.6" y="16" width="109.6" height="56" rx="5" class="bx"/><text x="192.39999999999998" y="40.0" class="tb" text-anchor="middle">ayarlar.json</text><text x="192.39999999999998" y="56.0" class="tm" text-anchor="middle">%APPDATA%</text><line x1="121.6" y1="44.0" x2="135.6" y2="44.0" class="mu" marker-end="url(#ah-ayar)"/><rect x="265.2" y="16" width="109.6" height="56" rx="5" class="bxa"/><text x="320.0" y="40.0" class="tb" text-anchor="middle">birleştir</text><text x="320.0" y="56.0" class="tm" text-anchor="middle">eksikler dolar</text><line x1="249.2" y1="44.0" x2="263.2" y2="44.0" class="mu" marker-end="url(#ah-ayar)"/><rect x="392.79999999999995" y="16" width="109.6" height="56" rx="5" class="bx"/><text x="447.59999999999997" y="40.0" class="tb" text-anchor="middle">bozuk?</text><text x="447.59999999999997" y="56.0" class="tm" text-anchor="middle">varsayılan</text><line x1="376.79999999999995" y1="44.0" x2="390.79999999999995" y2="44.0" class="mu" marker-end="url(#ah-ayar)"/><rect x="520.4" y="16" width="109.6" height="56" rx="5" class="bx"/><text x="575.1999999999999" y="40.0" class="tb" text-anchor="middle">Shift + tık</text><text x="575.1999999999999" y="56.0" class="tm" text-anchor="middle">düzenle, yaz</text><line x1="504.4" y1="44.0" x2="518.4" y2="44.0" class="mu" marker-end="url(#ah-ayar)"/></svg></div><figcaption>Ayarlar varsayılanların üzerine birleştirilir.</figcaption></figure>
+<p>Kullanıcı sınırları ve numara önekini bir kez ayarlasın, her açılışta tekrar sorulmasın. Ayarları kullanıcının profil klasöründe bir <strong>JSON</strong> dosyasında saklıyoruz; dosya yoksa ya da bozuksa varsayılanlara dönüyoruz:</p>
+<!-- dosya: lib/cephe/ayar.py -->
+
+<pre><code class="language-python"># -*- coding: utf-8 -*-
+import os
+import json
+import codecs
+
+VARSAYILAN = {
+    &quot;onek&quot;: &quot;P&quot;,
+    &quot;tolerans&quot;: 50.0,
+    &quot;sinir&quot;: {&quot;gen_max&quot;: 2700.0, &quot;yuk_max&quot;: 4500.0, &quot;alan_max&quot;: 9.0},
+}
+
+
+def varsayilan_yol():
+    kok = os.environ.get(&quot;APPDATA&quot;) or os.path.expanduser(&quot;~&quot;)
+    return os.path.join(kok, &quot;ERD-Cephe&quot;, &quot;ayarlar.json&quot;)
+
+
+def oku(yol=None):
+    yol = yol or varsayilan_yol()
+    ayar = json.loads(json.dumps(VARSAYILAN))          # derin kopya
+    try:
+        with codecs.open(yol, &quot;r&quot;, &quot;utf-8&quot;) as f:
+            kayitli = json.load(f)
+    except (IOError, OSError, ValueError):
+        return ayar
+    for k, v in kayitli.items():
+        if isinstance(v, dict) and isinstance(ayar.get(k), dict):
+            ayar[k].update(v)
+        else:
+            ayar[k] = v
+    return ayar
+
+
+def yaz(ayar, yol=None):
+    yol = yol or varsayilan_yol()
+    klasor = os.path.dirname(yol)
+    if not os.path.isdir(klasor):
+        os.makedirs(klasor)
+    with codecs.open(yol, &quot;w&quot;, &quot;utf-8&quot;) as f:
+        f.write(json.dumps(ayar, indent=2, ensure_ascii=False, sort_keys=True))
+    return yol
+</code></pre>
+<ul>
+<li><code>json.loads(json.dumps(...))</code> iç içe sözlüğün <strong>kopyasını</strong> üretir; varsayılanı yanlışlıkla değiştirmemek için.</li>
+<li>Kayıtlı dosyadaki iç sözlükler (<code>sinir</code>) varsayılanın üzerine <strong>birleştirilir</strong>: eski bir ayar dosyasında yeni eklenen bir sınır yoksa varsayılanı kullanılır.</li>
+<li><code>ValueError</code> bozuk JSON'u, <code>IOError</code>/<code>OSError</code> olmayan dosyayı yakalar. IronPython 2.7'de <code>FileNotFoundError</code> yoktur; bu yüzden onu kullanmıyoruz.</li>
+<li>pyRevit'in kendi ayar sistemi de vardır (<code>script.get_config()</code>); kendi dosyamızı kullanmak, aynı ayarı Revit dışındaki bir Python aracıyla da okuyabilmeyi sağlar.</li>
+</ul>
+<h3>4. Testler (45 dk)</h3>
+<p>Saf modüllerin hepsini her değişiklikten sonra tek komutla deneyelim. Python'un yerleşik <code>unittest</code> modülü hem 2.7'de hem 3'te vardır:</p>
+<!-- dosya: testler.py -->
+
+<pre><code class="language-python"># -*- coding: utf-8 -*-
+import os
+import sys
+import codecs
+import tempfile
+import unittest
+
+sys.path.insert(0, os.path.join(os.path.dirname(os.path.abspath(__file__)), &quot;lib&quot;))
+from cephe import numara, kontrol, csvyaz, ayar   # noqa: E402
+
+
+class NumaraTest(unittest.TestCase):
+    def setUp(self):
+        self.p = [{&quot;id&quot;: 1, &quot;u&quot;: 3000, &quot;z&quot;: 0}, {&quot;id&quot;: 2, &quot;u&quot;: 0, &quot;z&quot;: 0.2},
+                  {&quot;id&quot;: 3, &quot;u&quot;: 1500, &quot;z&quot;: 1200}, {&quot;id&quot;: 4, &quot;u&quot;: 0, &quot;z&quot;: 1199.7}]
+
+    def test_kat_ve_sira(self):
+        n = numara.numarala(self.p)
+        self.assertEqual([n[i] for i in (2, 1, 4, 3)], [&quot;P-01-001&quot;, &quot;P-01-002&quot;, &quot;P-02-001&quot;, &quot;P-02-002&quot;])
+
+    def test_ters_yon(self):
+        n = numara.numarala(self.p, onek=&quot;C&quot;, ters=True)
+        self.assertEqual(n[1], &quot;C-01-001&quot;)
+
+    def test_sifir_tolerans_kat_boler(self):
+        self.assertEqual(len(numara.katlara_ayir(self.p, tolerans=0)), 4)
+
+
+class KontrolTest(unittest.TestCase):
+    def test_tolerans_icinde_uygun(self):
+        self.assertEqual(kontrol.panel_kontrol(2700.4, 1000), [])
+
+    def test_kismi_sinir(self):
+        self.assertEqual(len(kontrol.panel_kontrol(2000, 1000, {&quot;gen_max&quot;: 1800})), 1)
+
+    def test_tip_sayimi(self):
+        t = kontrol.tipe_gore_say([(&quot;a&quot;, 1500.0, 3600.0), (&quot;b&quot;, 1500.0000001, 3600.0)])
+        self.assertEqual(t, {(1500, 3600): 2})
+
+
+class CsvVeAyarTest(unittest.TestCase):
+    def test_csv_tirnak_ve_bom(self):
+        yol = os.path.join(tempfile.mkdtemp(), &quot;t.csv&quot;)
+        csvyaz.csv_yaz(yol, [u&quot;Panel&quot;, u&quot;Durum&quot;], [[u&quot;P-1&quot;, u&quot;a; b&quot;]])
+        with open(yol, &quot;rb&quot;) as f:
+            ham = f.read()
+        self.assertTrue(ham.startswith(codecs.BOM_UTF8))
+        self.assertIn(u'&quot;a; b&quot;'.encode(&quot;utf-8&quot;), ham)
+
+    def test_ayar_birlesir(self):
+        yol = os.path.join(tempfile.mkdtemp(), &quot;alt&quot;, &quot;ayar.json&quot;)
+        ayar.yaz({&quot;onek&quot;: &quot;K&quot;, &quot;sinir&quot;: {&quot;gen_max&quot;: 2400.0}}, yol)
+        a = ayar.oku(yol)
+        self.assertEqual((a[&quot;onek&quot;], a[&quot;sinir&quot;][&quot;gen_max&quot;], a[&quot;sinir&quot;][&quot;yuk_max&quot;]), (&quot;K&quot;, 2400.0, 4500.0))
+
+    def test_bozuk_ayar_varsayilana_doner(self):
+        yol = os.path.join(tempfile.mkdtemp(), &quot;bozuk.json&quot;)
+        with open(yol, &quot;w&quot;) as f:
+            f.write(&quot;{bozuk&quot;)
+        self.assertEqual(ayar.oku(yol)[&quot;onek&quot;], &quot;P&quot;)
+
+
+if __name__ == &quot;__main__&quot;:
+    unittest.main()
+</code></pre>
+<pre><code class="language-bash">python3 testler.py -v 2&gt;&amp;1 | grep -E &quot;ok$|FAIL|ERROR|^Ran|^OK&quot; | sed &quot;s/ in [0-9.]*s//&quot;
+</code></pre>
+<pre><code class="language-text">test_ayar_birlesir (__main__.CsvVeAyarTest.test_ayar_birlesir) ... ok
+test_bozuk_ayar_varsayilana_doner (__main__.CsvVeAyarTest.test_bozuk_ayar_varsayilana_doner) ... ok
+test_csv_tirnak_ve_bom (__main__.CsvVeAyarTest.test_csv_tirnak_ve_bom) ... ok
+test_kismi_sinir (__main__.KontrolTest.test_kismi_sinir) ... ok
+test_tip_sayimi (__main__.KontrolTest.test_tip_sayimi) ... ok
+test_tolerans_icinde_uygun (__main__.KontrolTest.test_tolerans_icinde_uygun) ... ok
+test_kat_ve_sira (__main__.NumaraTest.test_kat_ve_sira) ... ok
+test_sifir_tolerans_kat_boler (__main__.NumaraTest.test_sifir_tolerans_kat_boler) ... ok
+test_ters_yon (__main__.NumaraTest.test_ters_yon) ... ok
+Ran 9 tests
+OK
+</code></pre>
+<ul>
+<li>Her <code>test_</code> ile başlayan metot ayrı bir testtir; <code>assertEqual</code>, <code>assertTrue</code>, <code>assertIn</code> beklenenle geleni karşılaştırır.</li>
+<li><code>setUp</code> her testten önce çalışır ve ortak veriyi hazırlar.</li>
+<li><code>tempfile.mkdtemp()</code> geçici bir klasör verir; testler gerçek ayar dosyana dokunmaz.</li>
+<li>Bir şeyi değiştirdiğinde (örneğin numara biçimini) önce testi güncelle, sonra kodu: hangi davranışı istediğin testte yazılı kalır.</li>
+</ul>
+<h3>5. Revit yardımcıları ve düğmeler (1 saat 15 dk)</h3>
+<figure class="fig"><div class="sc"><svg viewBox="0 0 640 134" role="img" xmlns="http://www.w3.org/2000/svg"><defs><marker id="ah-dugmeler" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0 0L10 5L0 10z" class="ar"/></marker></defs><rect x="20" y="14" width="600" height="110" class="bx"/><text x="32" y="34" class="ta" text-anchor="start">Cephe</text><rect x="40" y="46" width="90" height="60" class="bxa"/><text x="85" y="98" class="tm" text-anchor="middle">Numarala</text><rect x="150" y="46" width="90" height="60" class="bxa"/><text x="195" y="98" class="tm" text-anchor="middle">Kontrol</text><rect x="260" y="46" width="90" height="60" class="bxa"/><text x="305" y="98" class="tm" text-anchor="middle">Liste</text><line x1="370" y1="46" x2="370" y2="106" class="mu"/><text x="390" y="64" class="tm" text-anchor="start">düğme: girdi → paket → sonuç</text><text x="390" y="88" class="tm" text-anchor="start">paket: bütün mantık</text></svg></div><figcaption>Şeritteki Panel paneli: üç kısa betik, bir ortak paket.</figcaption></figure>
+<p>Revit'e bağlı tekrar eden kod:</p>
+<!-- dosya: lib/cephe/revitutil.py -->
+
+<pre><code class="language-python"># -*- coding: utf-8 -*-
+&quot;&quot;&quot;Revit API'ye bağlı ortak yardımcılar. Sadece Revit içinde import edilir.&quot;&quot;&quot;
+from pyrevit import revit, DB, script
+from Autodesk.Revit.UI.Selection import ISelectionFilter, ObjectType
+from Autodesk.Revit.Exceptions import OperationCanceledException
+
+FT_MM = 304.8
+
+
+class CepheFiltresi(ISelectionFilter):
+    def AllowElement(self, e):
+        return isinstance(e, DB.Wall) and e.WallType.Kind == DB.WallKind.Curtain
+
+    def AllowReference(self, r, p):
+        return False
+
+
+def cephe_sec(mesaj=&quot;Giydirme cepheleri seç&quot;):
+    &quot;&quot;&quot;Önceden seçili cepheleri ya da kullanıcının yeni seçimini döndürür; Esc'te betiği bitirir.&quot;&quot;&quot;
+    secili = [e for e in revit.get_selection().elements
+              if isinstance(e, DB.Wall) and e.WallType.Kind == DB.WallKind.Curtain]
+    if secili:
+        return secili
+    try:
+        refs = revit.uidoc.Selection.PickObjects(ObjectType.Element, CepheFiltresi(), mesaj)
+    except OperationCanceledException:
+        script.exit()
+    return [revit.doc.GetElement(r.ElementId) for r in refs]
+
+
+def paneller(duvar):
+    doc = revit.doc
+    return [doc.GetElement(i) for i in duvar.CurtainGrid.GetPanelIds()]
+
+
+def panel_olcu(panel):
+    &quot;&quot;&quot;(genişlik, yükseklik) mm; ölçüsüz panelde (kapı vb.) None.&quot;&quot;&quot;
+    g = panel.get_Parameter(DB.BuiltInParameter.CURTAIN_WALL_PANELS_WIDTH)
+    y = panel.get_Parameter(DB.BuiltInParameter.CURTAIN_WALL_PANELS_HEIGHT)
+    if g is None or y is None:
+        return None
+    return g.AsDouble() * FT_MM, y.AsDouble() * FT_MM
+
+
+def panel_konumu(panel, duvar):
+    kutu = panel.get_BoundingBox(None)
+    if kutu is None:
+        return None
+    merkez = (kutu.Min + kutu.Max) / 2.0
+    egri = duvar.Location.Curve
+    bas = egri.GetEndPoint(0)
+    yon = (egri.GetEndPoint(1) - bas).Normalize()
+    return {&quot;id&quot;: panel.Id, &quot;u&quot;: (merkez - bas).DotProduct(yon) * FT_MM, &quot;z&quot;: merkez.Z * FT_MM}
+
+
+def mark(eleman):
+    return eleman.get_Parameter(DB.BuiltInParameter.ALL_MODEL_MARK)
+</code></pre>
+<p><code>cephe_sec</code> küçük bir kullanım kolaylığı da getiriyor: kullanıcı önceden cephe seçtiyse tekrar sormuyor.</p>
+<p><strong>Numarala.pushbutton\script.py</strong> — Shift'le tıklanınca ayarları açar:</p>
+<!-- yok -->
+
+<pre><code class="language-python"># -*- coding: utf-8 -*-
+&quot;&quot;&quot;Giydirme cephe panellerini kat ve sıraya göre numaralandırır.
+Shift + tık: önek ve yön ayarları.&quot;&quot;&quot;
+from pyrevit import revit, forms, script
+from cephe import numara, ayar, revitutil as ru
+
+a = ayar.oku()
+if __shiftclick__:  # noqa: F821  (pyRevit tanımlar)
+    onek = forms.ask_for_string(default=a[&quot;onek&quot;], prompt=&quot;Numara öneki:&quot;)
+    yon = forms.CommandSwitchWindow.show([&quot;Soldan sağa&quot;, &quot;Sağdan sola&quot;], message=&quot;Numaralandırma yönü&quot;)
+    if onek and yon:
+        a[&quot;onek&quot;], a[&quot;ters&quot;] = onek, (yon == &quot;Sağdan sola&quot;)
+        forms.alert(&quot;Kaydedildi: {}&quot;.format(ayar.yaz(a)))
+    script.exit()
+
+cepheler = ru.cephe_sec()
+toplam = 0
+with revit.Transaction(&quot;Panel numaralandır&quot;):
+    for c, duvar in enumerate(cepheler, 1):
+        konumlar = [k for k in (ru.panel_konumu(p, duvar) for p in ru.paneller(duvar)) if k]
+        onek = a[&quot;onek&quot;] if len(cepheler) == 1 else &quot;{}{}&quot;.format(a[&quot;onek&quot;], c)
+        sonuc = numara.numarala(konumlar, onek, a[&quot;tolerans&quot;], a.get(&quot;ters&quot;, False))
+        for pid, no in sonuc.items():
+            ru.mark(revit.doc.GetElement(pid)).Set(no)
+            toplam += 1
+script.get_output().print_md(&quot;**{}** panel numaralandı.&quot;.format(toplam))
+</code></pre>
+<p><strong>Kontrol.pushbutton\script.py</strong>:</p>
+<!-- yok -->
+
+<pre><code class="language-python"># -*- coding: utf-8 -*-
+&quot;&quot;&quot;Panel ölçülerini sınırlara göre kontrol eder; sorunlu panelleri listeler ve seçer.&quot;&quot;&quot;
+from System.Collections.Generic import List
+from pyrevit import revit, DB, script
+from cephe import kontrol, ayar, revitutil as ru
+
+output = script.get_output()
+sinir = ayar.oku()[&quot;sinir&quot;]
+sorunlu_id, satirlar = [], []
+
+for duvar in ru.cephe_sec():
+    for p in ru.paneller(duvar):
+        olcu = ru.panel_olcu(p)
+        if olcu is None:
+            continue
+        sorun = kontrol.panel_kontrol(olcu[0], olcu[1], sinir)
+        if sorun:
+            sorunlu_id.append(p.Id)
+            no = ru.mark(p).AsString() or &quot;(numarasız)&quot;
+            satirlar.append([output.linkify(p.Id, no), round(olcu[0]), round(olcu[1]), &quot;; &quot;.join(sorun)])
+
+if satirlar:
+    output.print_table(satirlar, columns=[&quot;Panel&quot;, &quot;Genişlik&quot;, &quot;Yükseklik&quot;, &quot;Sorun&quot;],
+                       title=&quot;{} sorunlu panel&quot;.format(len(satirlar)))
+    revit.uidoc.Selection.SetElementIds(List[DB.ElementId](sorunlu_id))
+else:
+    output.print_md(&quot;Bütün paneller sınırlar içinde.&quot;)
+</code></pre>
+<p><strong>Liste.pushbutton\script.py</strong>:</p>
+<!-- yok -->
+
+<pre><code class="language-python"># -*- coding: utf-8 -*-
+&quot;&quot;&quot;Seçilen cephelerin panel listesini ve tip özetini CSV olarak kaydeder.&quot;&quot;&quot;
+from pyrevit import forms, script
+from cephe import kontrol, csvyaz, ayar, revitutil as ru
+
+sinir = ayar.oku()[&quot;sinir&quot;]
+kayitlar = []
+for duvar in ru.cephe_sec():
+    for p in ru.paneller(duvar):
+        olcu = ru.panel_olcu(p)
+        if olcu is None:
+            continue
+        g, y = olcu
+        sorun = kontrol.panel_kontrol(g, y, sinir)
+        kayitlar.append([ru.mark(p).AsString() or u&quot;&quot;, g, y, g * y / 1e6, u&quot;; &quot;.join(sorun) or u&quot;uygun&quot;])
+
+yol = forms.save_file(file_ext=&quot;csv&quot;, default_name=&quot;panel_listesi.csv&quot;)
+if not yol:
+    script.exit()
+kayitlar.sort(key=lambda k: k[0])
+csvyaz.csv_yaz(yol, [u&quot;Panel&quot;, u&quot;Genişlik&quot;, u&quot;Yükseklik&quot;, u&quot;Alan m2&quot;, u&quot;Durum&quot;], kayitlar)
+
+tip_yol = yol[:-4] + &quot;_tipler.csv&quot;
+tipler = kontrol.tipe_gore_say([(k[0], k[1], k[2]) for k in kayitlar])
+csvyaz.csv_yaz(tip_yol, [u&quot;Genişlik&quot;, u&quot;Yükseklik&quot;, u&quot;Adet&quot;], [[g, y, n] for (g, y), n in sorted(tipler.items())])
+script.get_output().print_md(&quot;Kaydedildi:\n\n- `{}`\n- `{}`&quot;.format(yol, tip_yol))
+</code></pre>
+<p>Üç betiğin de ne kadar kısaldığına dikkat: asıl iş <code>cephe</code> paketinde, düğmeler sadece “girdi al → paketi çağır → sonucu göster” yapıyor.</p>
+<h3>6. Düğme ayrıntıları: bundle.yaml ve simgeler (20 dk)</h3>
+<p>Her düğme klasörüne bir <code>bundle.yaml</code> koyarak şeritteki adını, ipucunu ve yazarını belirleyebilirsin:</p>
+<!-- dosya: bundle.yaml -->
+
+<pre><code class="language-yaml">title: Numarala
+tooltip: &gt;-
+  Giydirme cephe panellerini kat kat, soldan sağa numaralandırır (P-01-001).
+  Shift + tık ile önek ve yönü ayarla.
+author: Erdal Üstünol
+</code></pre>
+<ul>
+<li><code>title</code> verilmezse düğmenin adı klasör adından gelir (<code>Numarala.pushbutton</code> → Numarala).</li>
+<li><strong>icon.png</strong>: 96×96 piksel, saydam arka planlı PNG. pyRevit açık ve koyu tema için <code>icon.dark.png</code> da kabul eder.</li>
+<li>Bir düğmenin sadece belirli bir durumda (örneğin bir şey seçiliyken) etkin olması gibi ileri ayarlar için pyRevit belgelerindeki “bundle” bölümüne bak.</li>
+</ul>
+<p>Yeni klasörleri ekledikten sonra pyRevit <strong>Reload</strong>. Şeritte <strong>Cephe</strong> sekmesinde <strong>Panel</strong> paneli ve üç düğme görünür.</p>
+<h3>7. Ekiple paylaşmak (30 dk)</h3>
+<figure class="fig"><div class="sc"><svg viewBox="0 0 640 86" role="img" xmlns="http://www.w3.org/2000/svg"><defs><marker id="ah-paylas" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0 0L10 5L0 10z" class="ar"/></marker></defs><rect x="10.0" y="16" width="109.6" height="56" rx="5" class="bx"/><text x="64.8" y="40.0" class="tb" text-anchor="middle">git commit</text><text x="64.8" y="56.0" class="tm" text-anchor="middle">SURUM artır</text><rect x="137.6" y="16" width="109.6" height="56" rx="5" class="bx"/><text x="192.39999999999998" y="40.0" class="tb" text-anchor="middle">git push</text><text x="192.39999999999998" y="56.0" class="tm" text-anchor="middle">şirket deposu</text><line x1="121.6" y1="44.0" x2="135.6" y2="44.0" class="mu" marker-end="url(#ah-paylas)"/><rect x="265.2" y="16" width="109.6" height="56" rx="5" class="bxa"/><text x="320.0" y="40.0" class="tb" text-anchor="middle">git pull</text><text x="320.0" y="56.0" class="tm" text-anchor="middle">ekip</text><line x1="249.2" y1="44.0" x2="263.2" y2="44.0" class="mu" marker-end="url(#ah-paylas)"/><rect x="392.79999999999995" y="16" width="109.6" height="56" rx="5" class="bx"/><text x="447.59999999999997" y="40.0" class="tb" text-anchor="middle">Reload</text><text x="447.59999999999997" y="56.0" class="tm" text-anchor="middle">pyRevit</text><line x1="376.79999999999995" y1="44.0" x2="390.79999999999995" y2="44.0" class="mu" marker-end="url(#ah-paylas)"/><rect x="520.4" y="16" width="109.6" height="56" rx="5" class="bx"/><text x="575.1999999999999" y="40.0" class="tb" text-anchor="middle">kullan</text><text x="575.1999999999999" y="56.0" class="tm" text-anchor="middle">aynı sürüm</text><line x1="504.4" y1="44.0" x2="518.4" y2="44.0" class="mu" marker-end="url(#ah-paylas)"/></svg></div><figcaption>Eklentiyi Git ile dağıtmak.</figcaption></figure>
+<p>Eklenti bir klasörden ibaret olduğu için en sağlam dağıtım yolu <strong>Git</strong>'tir:</p>
+<ol>
+<li><code>ERD.extension</code> klasöründe <code>git init</code>, bir <code>.gitignore</code> (<code>*.pyc</code>, <code>__pycache__/</code>) ve ilk commit.</li>
+<li>Depoyu şirketin GitHub, GitLab ya da Azure DevOps hesabına gönder.</li>
+<li>Her ekip arkadaşı depoyu kendi bilgisayarında aynı yere klonlar (<code>git clone ... C:\RevitAraclari\ERD.extension</code>) ve pyRevit <strong>Settings → Custom Extension Directories</strong>'e <code>C:\RevitAraclari</code>'yı ekler.</li>
+<li>Yeni sürüm: sen değişikliği gönderirsin, onlar <code>git pull</code> yapıp pyRevit'te <strong>Reload</strong>'a basar.</li>
+</ol>
+<p>Değişiklik yapmadan önce kontrol listesi:</p>
+<ul class="tasks">
+<li class="task"><label><input type="checkbox" data-id="g7-1"><span><code>python testler.py</code> yeşil.</span></label></li>
+<li class="task"><label><input type="checkbox" data-id="g7-2"><span>Revit'te deneme modelinde üç düğme de çalışıyor, Ctrl+Z ile tek adımda geri alınıyor.</span></label></li>
+<li class="task"><label><input type="checkbox" data-id="g7-3"><span>Hiçbir betikte f-string ve çok argümanlı <code>print</code> yok (IronPython 2.7).</span></label></li>
+<li class="task"><label><input type="checkbox" data-id="g7-4"><span><code>__init__.py</code>'deki <code>SURUM</code> artırıldı; README'de ne değiştiği yazıyor.</span></label></li>
+</ul>
+<p>Ağ paylaşımındaki bir klasörü doğrudan pyRevit'e göstermek de çalışır ama birisi dosyayı düzenlerken başka biri Reload yaparsa yarım dosya yüklenebilir; Git bu sorunu ortadan kaldırır.</p>
+<h3>8. Sonraki adımlar (15 dk)</h3>
+<ul>
+<li><strong>Pafta ve görünüş otomasyonu:</strong> Her cephe için bir görünüş, kesit ve pafta oluşturan araç (<code>DB.ViewSection.CreateSection</code>, <code>DB.ViewSheet.Create</code>).</li>
+<li><strong>Excel'den Revit'e:</strong> CSV'deki imalat durumunu okuyup panellerin parametrelerine yazan ters yönlü araç.</li>
+<li><strong>Rhino ile köprü:</strong> Rhino'da Python eğitiminde ürettiğin panel listesini (id, ölçü, numara) Revit'teki panellerle eşleştirip karşılaştırmak.</li>
+<li><strong>Dynamo:</strong> Aynı <code>cephe</code> paketini Dynamo'nun Python düğümünde <code>sys.path.append</code> ile kullanmak.</li>
+<li><strong>C#'a geçiş:</strong> Revit API bilgisinin tamamı geçerli; C# eğitimindeki temellerle aynı araçları derlenmiş bir eklentiye çevirebilirsin.</li>
+</ul>
+<h3>Gün sonu kontrolü (15 dk)</h3>
+<ul class="tasks">
+<li class="task"><label><input type="checkbox" data-id="g7-5"><span>Ortak kodu eklentinin lib klasöründe bir pakete koyup düğmelerden import edebiliyorum.</span></label></li>
+<li class="task"><label><input type="checkbox" data-id="g7-6"><span>Saf Python modülleri Revit API'den ayrı tutuyor ve unittest ile test edebiliyorum.</span></label></li>
+<li class="task"><label><input type="checkbox" data-id="g7-7"><span>Ayarları varsayılanlarla birleşen, bozuk dosyaya dayanıklı bir JSON dosyasında saklayabiliyorum.</span></label></li>
+<li class="task"><label><input type="checkbox" data-id="g7-8"><span>Shift + tık ile ayar penceresi açan bir düğme yazabiliyorum.</span></label></li>
+<li class="task"><label><input type="checkbox" data-id="g7-9"><span>bundle.yaml ile düğme başlığı ve ipucu, icon.png ile simge ekleyebiliyorum.</span></label></li>
+<li class="task"><label><input type="checkbox" data-id="g7-10"><span>Eklentiyi Git ile ekibe dağıtıp güncelleme akışını yönetebiliyorum.</span></label></li>
+</ul></div>
+  <div class="pn"><a href="#gun6">← 6. gün</a><a href="../../Tools.html">Araçlara dön →</a></div>
+</section>
+</main>
+
+<footer>
+  <div class="wrap">
+    <span>© 2026 Erdal Üstünol · <a href="/gizlilik.html">Gizlilik</a></span>
+    <a href="../../Tools.html">← Araçlar ve eğitimler</a>
+  </div>
+</footer>
+
+<script>
+(() => {
+  const $ = id => document.getElementById(id);
+  const KEY = 'erdevelop-egitim-revit-python';
+  const store = { get(k) { try { return localStorage.getItem(k); } catch (e) { return null; } }, set(k, v) { try { localStorage.setItem(k, v); } catch (e) {} } };
+  let mode = (() => { try { const m = localStorage.getItem('erdevelop-mode'), g = localStorage.getItem('erdevelop-mode-gun'), t = new Date(); if (m && g === t.toDateString()) return m; const h = t.getHours(); return h >= 7 && h < 19 ? 'light' : 'dark'; } catch (e) { return 'light'; } })();
+  const applyMode = () => { document.documentElement.dataset.mode = mode; $('modeBtn').textContent = mode === 'dark' ? 'LIGHT' : 'DARK'; };
+  $('modeBtn').addEventListener('click', () => { mode = mode === 'dark' ? 'light' : 'dark'; store.set('erdevelop-mode', mode); store.set('erdevelop-mode-gun', new Date().toDateString()); applyMode(); });
+  applyMode();
+
+  let done = {}; try { done = JSON.parse(store.get(KEY) || '{}') || {}; } catch (e) { done = {}; }
+  const boxes = [...document.querySelectorAll('li.task input')];
+  const prog = () => {
+    document.querySelectorAll('section.day').forEach(sec => {
+      const d = sec.dataset.day, bs = sec.querySelectorAll('li.task input'), c = [...bs].filter(b => b.checked).length;
+      sec.querySelector('[data-prog]').textContent = c + '/' + bs.length;
+      const n = document.querySelector('[data-nav="' + d + '"]'); if (n) n.classList.toggle('done', bs.length > 0 && c === bs.length);
+    });
+  };
+  boxes.forEach(b => { b.checked = !!done[b.dataset.id]; b.addEventListener('change', () => { if (b.checked) done[b.dataset.id] = 1; else delete done[b.dataset.id]; store.set(KEY, JSON.stringify(done)); prog(); }); });
+  $('resetBtn').addEventListener('click', () => { done = {}; store.set(KEY, '{}'); boxes.forEach(b => b.checked = false); prog(); });
+  prog();
+
+  const links = [...document.querySelectorAll('[data-nav]')];
+  const secs = [$('genel'), ...document.querySelectorAll('section.day')];
+  if ('IntersectionObserver' in window) {
+    const io = new IntersectionObserver(es => es.forEach(e => { if (e.isIntersecting) { const i = secs.indexOf(e.target); links.forEach((l, k) => l.classList.toggle('on', k === i)); } }), { rootMargin: '-40% 0px -55% 0px' });
+    secs.forEach(s => io.observe(s));
+  }
+})();
+</script>
+<script src="../ilerleme.js" data-key="erdevelop-egitim-revit-python"></script>
+<script>if ('serviceWorker' in navigator && location.protocol === 'https:') addEventListener('load', () => navigator.serviceWorker.register('/sw.js').catch(() => { }));</script>
+<script data-goatcounter="https://erdevelop.goatcounter.com/count" async src="//gc.zgo.at/count.js"></script>
+<script src="/uyari.js" data-tur="egitim"></script>
+</body>
+</html>
