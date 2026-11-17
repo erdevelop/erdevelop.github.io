@@ -266,6 +266,7 @@
       <div class="uses" id="uses"></div>
       <div class="hbtns">
         <button class="tb primary" type="button" id="runBtn" data-k="run">Testi başlat</button>
+        <select class="sel" id="durSel" aria-label="test süresi"><option value="8" data-k="durS">Kısa · 8 sn</option><option value="15" data-k="durN" selected>Normal · 15 sn</option><option value="30" data-k="durL">Uzun · 30 sn</option></select>
         <button class="tb" type="button" id="pingBtn" data-k="pingLive">Sürekli ping</button>
         <button class="tb" type="button" id="cardBtn" data-k="cardBtn">Sonuç kartı</button>
       </div>
@@ -454,6 +455,7 @@
 const $ = id => document.getElementById(id);
 const T = {
   tr: { kicker: 'bağlantı · cihaz · performans', title: 'Ağ analizi', lead: 'Sayfa açılınca internet hızını, gecikmeyi ve bağlantı bilgilerini ölçer. Her şey tarayıcında olur, hiçbir sonuç bir yere kaydedilmez.',
+    durS: 'Kısa · 8 sn', durN: 'Normal · 15 sn', durL: 'Uzun · 30 sn',
     run: 'Testi başlat', again: 'tekrar', rerun: 'Tekrar test et', pingLive: 'Sürekli ping', pingStop: 'Ping\'i durdur', copy: 'Raporu kopyala', copied: 'Rapor panoya kopyalandı', btn: 'EN',
     sPing: 'Ping', sDown: 'İndirme', sUp: 'Yükleme', sJit: 'Jitter', lat: 'gecikme (ms, sağ eksen)',
     phPing: 'gecikme', phDown: 'indirme', phUp: 'yükleme', phDone: 'sonuç', phIdle: 'hazır',
@@ -471,7 +473,7 @@ const T = {
     single: 'İşlemci · tek çekirdek', multi: 'İşlemci · tüm çekirdekler', fps: 'Animasyon akıcılığı', gpuT: 'Grafik (WebGL)', points: 'puan', measuring: 'ölçülüyor…',
     uWeb: 'Web ve mesajlaşma', uHd: 'HD video', u4k: '4K video', uCall: 'Görüntülü görüşme', uGame: 'Online oyun', uCloud: 'Büyük dosya yükleme', noHist: 'Henüz test yok.' },
   en: { kicker: 'connection · device · performance', title: 'Network check', lead: 'Measures your internet speed, latency and connection details as soon as the page opens. Everything runs in your browser; no result is stored anywhere.',
-    run: 'Start test', again: 'again', rerun: 'Run again', pingLive: 'Live ping', pingStop: 'Stop ping', copy: 'Copy report', copied: 'Report copied to clipboard', btn: 'TR',
+    run: 'Start test', again: 'again', rerun: 'Run again', pingLive: 'Live ping', pingStop: 'Stop ping', copy: 'Copy report', copied: 'Report copied to clipboard', durS: 'Short · 8 s', durN: 'Normal · 15 s', durL: 'Long · 30 s', btn: 'TR',
     sPing: 'Ping', sDown: 'Download', sUp: 'Upload', sJit: 'Jitter', lat: 'latency (ms, right axis)',
     phPing: 'latency', phDown: 'download', phUp: 'upload', phDone: 'result', phIdle: 'ready',
     stInfo: 'Reading connection details…', stPing: 'Measuring latency…', stDown: 'Measuring download speed…', stUp: 'Measuring upload speed…', stTargets: 'Pinging servers…', stDone: 'Test complete', stWait: 'The speed test did not start automatically to save mobile data (~30 MB). Start it if you are on Wi-Fi.', stFail: 'Could not reach the speed test server; measured with a site file instead.', stOff: 'No internet connection.',
@@ -570,12 +572,12 @@ async function speed(kind, dur, cap, onLive) {
           if (!r.ok || !r.body) throw new Error('http');
           const rd = r.body.getReader();
           for (;;) { const { done: d, value } = await rd.read(); if (d) break; bytes += value.length; if (stop) { try { rd.cancel(); } catch (e) {} break; } }
-          size = Math.min(size * 2, 50e6);
+          size = Math.min(size * 2, 100e6);
         } else {
           if (src !== 'cf') { stop = true; break; }
           const sz = Math.round(size), r = await fetch(`${CF}/__up`, { method: 'POST', body: body(sz), signal: ctl.signal, cache: 'no-store' });
           if (!r.ok) throw new Error('http'); await r.arrayBuffer().catch(() => {});
-          bytes += sz; size = Math.min(size * 2, 8e6);
+          bytes += sz; size = Math.min(size * 2, 16e6);
         }
       } catch (e) { if (stop) break; if (++fails > 5) { stop = true; break; } await sleep(150); }
     }
@@ -591,7 +593,7 @@ async function speed(kind, dur, cap, onLive) {
   clearInterval(tick); done = true;
   const end = performance.now() - start; samples.push([end, bytes]);
   if (bytes < 50e3) return null;
-  const warm = Math.min(1500, end * 0.25); let k = 0; while (k < samples.length - 1 && samples[k][0] < warm) k++;
+  const warm = Math.min(3000, end * 0.25); let k = 0; while (k < samples.length - 1 && samples[k][0] < warm) k++;
   const b0 = samples[k][1], t0 = samples[k][0];
   return (bytes - b0) * 8 / Math.max(1, end - t0) / 1000;
 }
@@ -797,29 +799,31 @@ function paintHist() {
 
 /* ---------------- run ---------------- */
 function mobileish() { return /Android|iPhone|iPad|iPod/i.test(navigator.userAgent) || navigator.maxTouchPoints > 1 && /Mac/.test(navigator.userAgent); }
+{ const d = $('durSel'), v = store.get('erdevelop-analiz-sure'); if (v && d.querySelector(`option[value="${v}"]`)) d.value = v; d.addEventListener('change', () => store.set('erdevelop-analiz-sure', d.value)); }
 async function runAll(manual) {
-  if (running) return; running = true; $('runBtn').disabled = true;
-  if (!navigator.onLine) { setStatus('stOff', 'err'); running = false; $('runBtn').disabled = false; return; }
+  if (running) return; running = true; $('runBtn').disabled = true; $('durSel').disabled = true;
+  if (!navigator.onLine) { setStatus('stOff', 'err'); running = false; $('runBtn').disabled = false; $('durSel').disabled = false; return; }
   series.down = []; series.up = []; series.lat = []; R.down = R.up = R.loaded = null; ['vDown', 'vUp'].forEach(id => setStat(id, null)); drawChart(); paintUses(); paintBloat();
   const c = navigator.connection || {}, mob = mobileish() || c.type === 'cellular';
-  const capD = mob ? 30e6 : 120e6, capU = mob ? 10e6 : 40e6;
+  /* süre belirleyici; bayt sınırı yalnızca mobil veride kotayı korumak için (hızlı hatlarda testi erken bitirmesin) */
+  const sn = +($('durSel').value || 15), capD = mob ? sn * 8e6 : 5e9, capU = mob ? sn * 3e6 : 2e9;
   // ping
   setStatus('stPing'); markStat('sPing'); gSpinOn = true; gauge(0, 'phPing', 'ms');
   const pings = await idlePing(12);
   R.ping = median(pings); R.jitter = jitterOf(pings); R.idleS = pings.slice(); R.loadS = []; drawDist(); setStat('vPing', R.ping, 0); setStat('vJit', R.jitter, 1); gSpinOn = false;
-  if (!manual && (c.saveData || c.type === 'cellular')) { setStatus('stWait', ''); gauge(0, 'phIdle', 'Mbps'); running = false; $('runBtn').disabled = false; await afterSpeed(); return; }
+  if (!manual && (c.saveData || c.type === 'cellular')) { setStatus('stWait', ''); gauge(0, 'phIdle', 'Mbps'); running = false; $('runBtn').disabled = false; $('durSel').disabled = false; await afterSpeed(); return; }
   // download + loaded latency
   setStatus('stDown'); markStat('sDown'); gauge(0, 'phDown', 'Mbps');
   const loaded = []; let lp = true; const t0 = performance.now();
   (async () => { await sleep(1200); while (lp) { const p = pingURL(), v = await timedFetch(bust(p.u), p.o, 3000); if (v != null && lp) { loaded.push(v); series.lat.push([(performance.now() - t0) / 1000, v]); } await sleep(250); } })();
-  R.down = await speed('down', 9000, capD, (rate, el) => { gauge(rate); setStat('vDown', fmtMbps(rate)); series.down.push([el / 1000, rate]); drawChart(); packetRate = rate; });
+  R.down = await speed('down', sn * 1000, capD, (rate, el) => { gauge(rate); setStat('vDown', fmtMbps(rate)); series.down.push([el / 1000, rate]); drawChart(); packetRate = rate; });
   lp = false; R.loaded = median(loaded); R.loadS = loaded.slice(); drawDist(); R.fallback = cfOK === false;
   setStat('vDown', R.down == null ? null : fmtMbps(R.down)); paintBloat();
   // upload
   if (cfOK !== false) {
     setStatus('stUp'); markStat('sUp'); gauge(0, 'phUp', 'Mbps');
     const off = (series.down.length ? series.down[series.down.length - 1][0] : 0) + 0.3;
-    R.up = await speed('up', 7000, capU, (rate, el) => { gauge(rate); setStat('vUp', fmtMbps(rate)); series.up.push([off + el / 1000, rate]); drawChart(); });
+    R.up = await speed('up', Math.round(sn * 800), capU, (rate, el) => { gauge(rate); setStat('vUp', fmtMbps(rate)); series.up.push([off + el / 1000, rate]); drawChart(); });
     setStat('vUp', R.up == null ? null : fmtMbps(R.up));
   }
   markStat(null); gauge(R.down || 0, 'phDone', 'Mbps'); packetRate = R.down || 20;
@@ -827,7 +831,7 @@ async function runAll(manual) {
   if (R.down != null) { const H = hist(); const yl = (store.get('erdevelop-analiz-yer') || '').trim(); H.push({ t: R.when, d: +(R.down || 0).toFixed(2), u: R.up == null ? null : +R.up.toFixed(2), p: R.ping == null ? null : Math.round(R.ping), j: R.jitter == null ? null : +R.jitter.toFixed(1), ...(yl ? { l: yl } : {}) }); store.set('erdevelop-analiz', JSON.stringify(H.slice(-30))); }
   paintHist(); paintUses(); drawChart(); paintHL(); drawTrend(); paintRooms();
   setStatus(R.fallback ? 'stFail' : 'stDone', R.down == null ? 'err' : R.fallback ? '' : 'ok');
-  $('runBtn').textContent = t().rerun; running = false; $('runBtn').disabled = false;
+  $('runBtn').textContent = t().rerun; running = false; $('runBtn').disabled = false; $('durSel').disabled = false;
   await afterSpeed();
 }
 let afterDone = false;
