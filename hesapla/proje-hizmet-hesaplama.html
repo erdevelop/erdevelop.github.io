@@ -89,6 +89,9 @@
       <div id="w-ihr"><label for="v-ihr">İhracat kazanç indirimi (%)</label><input id="v-ihr" inputmode="decimal" value="100"></div>
     </div>
     <div id="w-hz"><label for="v-hz">Yurt dışı hizmetin türü</label><select id="v-hz"><option value="kap">Mimarlık, mühendislik, tasarım, yazılım (indirim kapsamında)</option><option value="dan">Danışmanlık, aracılık vb. (indirim yok)</option><option value="yok">Bedel Türkiye'ye getirilmeyecek (indirim yok)</option></select></div>
+    <div class="row"><div><label for="v-ek">İlave vergi / kesinti (%)</label><input id="v-ek" inputmode="decimal" placeholder="0"></div>
+      <div><label for="v-ekm">İlave vergi neyin üzerinden?</label><select id="v-ekm"><option value="kar">Brüt kâr</option><option value="ciro">Hizmet bedeli (ciro)</option></select></div></div>
+    <p class="hint" style="margin-top:4px">Emin olmadığın ek vergi ya da kesintiyi (ör. indirime rağmen ödenebilecek vergi, Bağ-Kur, muhasebe payı) buradan ayrı satır olarak ekle. Her senaryoya uygulanır.</p>
     <label class="chk" id="w-ilk3" hidden><input type="checkbox" id="v-ilk3"> Şirket ilk 3 hesap döneminde (asgari kurumlar vergisi yok)</label>
     <label class="chk" id="w-kps" hidden><input type="checkbox" id="v-kps"> Kâr ortağa dağıtılacak (%15 kâr payı stopajı)</label>
     <label class="chk"><input type="checkbox" id="v-dv"> Sözleşme damga vergisi (binde 9,48)</label>
@@ -178,15 +181,16 @@
     const tahsil = o.matrah + kdv - tev - stopaj;
     const kdvOde = Math.max(0, beyan - gKdv), kdvAlacak = Math.max(0, gKdv - beyan);
     const kalanV = o.vYok ? -stopaj : vergi - stopaj;
-    const net = kar - (o.vYok ? 0 : vergi) - kps;
-    return { yd, kdvO, kdv, tev, beyan, gider, gKdv, damga, stopaj, kar, ihrInd, vMatrah, vergi, vergiTam, asgariDevrede, kps, tahsil, kdvOde, kdvAlacak, kalanV, net, fatura: o.matrah + kdv, marj: o.matrah ? net / o.matrah : NaN, efektif: kar > 0 ? (vergi + kps) / kar : 0 };
+    const ek = o.ek > 0 ? (o.ekm === 'ciro' ? o.matrah : Math.max(0, kar)) * o.ek : 0;
+    const net = kar - (o.vYok ? 0 : vergi) - kps - ek;
+    return { yd, kdvO, kdv, tev, beyan, gider, gKdv, damga, stopaj, kar, ihrInd, vMatrah, vergi, vergiTam, asgariDevrede, ek, kps, tahsil, kdvOde, kdvAlacak, kalanV, net, fatura: o.matrah + kdv, marj: o.matrah ? net / o.matrah : NaN, efektif: kar > 0 ? ((o.vYok ? 0 : vergi) + kps + ek) / kar : 0 };
   }
 
   function oku() {
     const pb = byId('p-pb').value, kur = pb === 'TRY' ? 1 : n0(byId('p-kur').value);
     return { tip: st.tip, vt: st.vt, pb, kur, tutar: n0(byId('p-tut').value), matrah: n0(byId('p-tut').value) * kur,
       kdv: pct(byId('p-kdv').value), tev: +byId('p-tev').value, mal: st.mal.map(m => ({ t: n0(m.t) * kur, k: pct(m.k) })),
-      onceki: n0(byId('v-onceki').value), kv: pct(byId('v-kv').value), stp: pct(byId('v-stp').value), ihr: pct(byId('v-ihr').value), hz: byId('v-hz').value, ilk3: byId('v-ilk3').checked,
+      onceki: n0(byId('v-onceki').value), kv: pct(byId('v-kv').value), stp: pct(byId('v-stp').value), ihr: pct(byId('v-ihr').value), hz: byId('v-hz').value, ek: pct(byId('v-ek').value), ekm: byId('v-ekm').value, ilk3: byId('v-ilk3').checked,
       kps: byId('v-kps').checked, dv: byId('v-dv').checked, vYok: byId('v-yok').checked };
   }
 
@@ -251,6 +255,7 @@
       if (r.kps) h += kv('Kâr payı stopajı (%15)', eksi(r.kps), 'neg');
       if (r.stopaj) h += kv(r.kalanV >= 0 ? 'Stopaj düşüldükten sonra ödenecek' : 'Stopajdan iade / mahsup', P(Math.abs(r.kalanV)));
     } else h += kv(st.vt === 'ltd' ? 'Kurumlar vergisi' : 'Gelir vergisi', 'hesaba katılmadı') + '<div class="nt" style="margin:4px 0 2px">"Gelir / kurumlar vergisini hesaba katma" kutusu işaretli; vergiyi görmek için işareti kaldır.</div>';
+    if (r.ek) h += kv('İlave vergi / kesinti (' + yz(o.ek) + ', ' + (o.ekm === 'ciro' ? 'ciro' : 'kâr') + ' üzerinden)', eksi(r.ek), 'neg');
     h += grp('Nakit özeti');
     h += kv('Tahsilat', P(r.tahsil));
     h += kv('Altyapımcı / gider ödemesi (KDV dahil)', eksi(r.gider + r.gKdv), 'neg');
@@ -259,6 +264,7 @@
     if (r.damga) h += kv('Damga vergisi', eksi(r.damga), 'neg');
     if (!o.vYok && r.kalanV) h += kv(r.kalanV > 0 ? 'Kalan gelir/kurumlar vergisi' : 'Stopaj iadesi', r.kalanV > 0 ? eksi(r.kalanV) : '+ ' + P(-r.kalanV), r.kalanV > 0 ? 'neg' : '');
     if (r.kps) h += kv('Kâr payı stopajı', eksi(r.kps), 'neg');
+    if (r.ek) h += kv('İlave vergi / kesinti', eksi(r.ek), 'neg');
     h += kv('Net', P(r.net), 'top');
     byId('o-ana').innerHTML = h;
 
@@ -266,7 +272,7 @@
     const sat = (ad, f) => `<tr><td>${ad}</td>${R.map((x, i) => `<td class="${T[i] === st.tip ? 'on' : ''}">${f(x)}</td>`).join('')}</tr>`;
     byId('o-cmp').innerHTML = `<table class="cmp"><thead><tr><th></th>${T.map(t => `<th class="${t === st.tip ? 'on' : ''}">${TIP[t]}</th>`).join('')}</tr></thead><tbody>
       ${sat('Fatura toplamı', x => P(x.fatura))}${sat('Hesaba geçen', x => P(x.tahsil))}${sat('Ödenecek KDV', x => P(x.kdvOde))}${sat('KDV alacağı', x => P(x.kdvAlacak))}
-      ${o.vYok ? '' : sat('Vergi', x => P(x.vergi + x.kps))}<tr class="son"><td>Net</td>${R.map((x, i) => `<td class="${T[i] === st.tip ? 'on' : ''}">${P(x.net)}</td>`).join('')}</tr></tbody></table>`;
+      ${o.vYok ? '' : sat('Vergi', x => P(x.vergi + x.kps + x.ek))}<tr class="son"><td>Net</td>${R.map((x, i) => `<td class="${T[i] === st.tip ? 'on' : ''}">${P(x.net)}</td>`).join('')}</tr></tbody></table>`;
 
     const hn = n0(byId('h-net').value) * o.kur;
     if (hn > 0) {
