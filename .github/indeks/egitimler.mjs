@@ -44,7 +44,7 @@ const bolum = g => {
   return `<section class="grup" id="${g.id}" data-g="${g.id}"><div class="layer-head"><span class="swatch"></span><h2>${esc(g.h.tr)}</h2><span class="meta">${g.items.length}</span></div>${g.d ? `<p class="gd">${esc(g.d.tr)}</p>` : ''}${ic}</section>`;
 };
 const toplam = gruplar.reduce((a, g) => a + g.items.length, 0);
-const egitimSay = gruplar.reduce((a, g) => a + g.items.filter(it => it.f.startsWith('egitimler/')).length, 0);
+const egitimSay = gruplar.reduce((a, g) => a + g.items.filter(it => it.f.startsWith('egitimler/') && !it.f.startsWith('egitimler/sozluk/')).length, 0);
 const baslik = 'Ücretsiz Eğitimler: Cephe, CAD, BIM, Yazılım ve Programlama | erdevelop';
 const aciklama = `${egitimSay} ücretsiz Türkçe eğitim: cephe tasarımı ve statiği, AutoCAD, Revit, Rhino, Grasshopper, SolidWorks, Dynamo, yazılım ve programlama dilleri. 7 günlük programlar, ilerlemen kaydedilir.`;
 const ld = { '@context': 'https://schema.org', '@type': 'CollectionPage', name: 'Eğitimler', url: SITE + 'egitimler/', inLanguage: 'tr', description: aciklama,
