@@ -72,11 +72,20 @@ export function dueSlot(d, now = new Date(), win = 50) {
   for (const [m, dt] of [[min, date], [min + 1440, yday]]) for (let s = a; s <= b; s += st) if (s <= m && m - s < win && (best == null || m - s < best.diff)) { best = { s, diff: m - s }; day = dt; }
   if (best == null) return null; const key = day + '|' + best.s; return key === d.last ? null : key;
 }
-export function message(d) {
+/* bildirim metni: kelime cümlenin içinde öğrenilsin.
+   Anlamı açıkken: başlık "kelime — anlam", gövde İngilizce cümle + Türkçesi. Kapalıyken: başlık kelime, gövde yalnız İngilizce cümle.
+   Kuyrukta cümlesi olmayan eski kayıtlar için ORN (sitedeki js/ornek-en.js) kullanılır. Sayfadaki "Örnek bildirim" de aynı biçimi kullanır. */
+export function message(d, ORN = {}) {
   const q = d.q || []; if (!q.length) return null; const w = q[(d.pos || 0) % q.length];
-  const P = PAGES[d.page] || PAGES.ingilizce;
-  return { title: P.icon + ' ' + w.e + (d.mean !== false ? ' — ' + w.t : ''), body: d.mean !== false ? (w.x || 'Dokun, kartı aç.') : 'Anlamını hatırlıyor musun? Dokun ve kontrol et.',
+  const P = PAGES[d.page] || PAGES.ingilizce, o = (d.page || 'ingilizce') === 'ingilizce' ? ORN[w.e] : null, mean = d.mean !== false;
+  const x = w.x || (o ? o[0] : ''), y = w.y || (o && o[0] === x ? o[1] : '');
+  return { title: P.icon + ' ' + w.e + (mean ? ' — ' + w.t : ''),
+    body: x ? x + (mean ? (y ? '\n' + y : '') : '\nAnlamı için dokun.') : mean ? 'Dokun, kartı aç.' : 'Anlamını hatırlıyor musun? Dokun ve kontrol et.',
     url: P.url + '?k=' + encodeURIComponent(w.e) + '#kelime', tag: P.tag };
+}
+/* sitedeki örnek cümleler; alınamazsa boş (bildirim cümlesiz gider) */
+export async function loadOrnek(url = 'https://erdevelop.github.io/js/ornek-en.js') {
+  try { const r = await fetch(url); if (!r.ok) return {}; const t = await r.text(); return JSON.parse(t.slice(t.indexOf('{'), t.lastIndexOf('}') + 1)); } catch (e) { return {}; }
 }
 
 /* ---------- Firestore REST ---------- */
@@ -118,9 +127,10 @@ export async function main(env = process.env) {
     const p = await fetch(url + '?' + mask, { method: 'PATCH', headers: { ...auth, 'Content-Type': 'application/json' }, body: JSON.stringify({ fields: Object.fromEntries(Object.entries(upd).map(([k, v]) => [k, toValue(v)])) }) });
     if (!p.ok) console.log('  kayıt güncellenemedi: ' + p.status + ' ' + (await p.text()).slice(0, 200)); return p.ok; };
   for (const d of dupes) { await patch(d, { on: false, err: 'Bu telefon başka bir hesapla bildirim alıyor; çift bildirim olmasın diye bu hesapta kapatıldı.' }); console.log('  aynı telefonda ikinci hesap kapatıldı: ' + d._path.split('/').pop().slice(0, 6) + '…'); }
+  const ORN = env.ORNEK_URL === 'yok' ? {} : await loadOrnek(env.ORNEK_URL); if (!Object.keys(ORN).length) console.log('  örnek cümle dosyası alınamadı; kuyruktaki cümleler kullanılacak');
   let sent = 0, skipped = 0, failed = 0;
   for (const d of docs) {
-    const test = d.test === true, key = force ? 'zorla|' + now.toISOString() : test ? 'test|' + now.toISOString() : dueSlot(d, now), msg0 = key && d.sub && d.sub.endpoint ? message(d) : null;
+    const test = d.test === true, key = force ? 'zorla|' + now.toISOString() : test ? 'test|' + now.toISOString() : dueSlot(d, now), msg0 = key && d.sub && d.sub.endpoint ? message(d, ORN) : null;
     const msg = msg0 && test ? { ...msg0, title: '📡 Test · ' + msg0.title } : msg0;
     if (!msg) { skipped++; if (d.sub && d.sub.endpoint) console.log(`  ${d._path.split('/').pop().slice(0, 6)}… ${d.page || 'ingilizce'} · ${svc(d.sub.endpoint)} · sırası gelmedi (${d.from}–${d.to}, ${d.step || 180} dk)`); continue; }
     const upd = {}; let res;

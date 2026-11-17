@@ -27,17 +27,19 @@
   const HXP = { 5: 20, 10: 40, 20: 80 };
   const goalXp = () => HXP[E.hedef] || 40;
 
+  /* bildirimden gelinmişse (?k=kelime) kartta o kelime kalsın, başka bir karta geçilmesin */
+  function kartYenile() { if (/[?&]k=/.test(location.search) && typeof showWord === 'function') showWord(new URLSearchParams(location.search).get('k')); else nextCard(); }
   /* ---------------- yeni kelime paketleri ---------------- */
   if (D.KONU && typeof TOPIC_TRACK === 'object') Object.assign(TOPIC_TRACK, D.KONU);
   if (D.FREQ && typeof FREQ === 'object') Object.assign(FREQ, D.FREQ);
   if (Array.isArray(D.PAKET) && Array.isArray(WORDS)) {
     const have = new Set(WORDS.map(w => w[0].toLowerCase()));
     D.PAKET.forEach(w => { if (!have.has(w[0].toLowerCase())) { WORDS.push(w); have.add(w[0].toLowerCase()); } });
-    try { paintTrk(); srcOpts(); nextCard(); } catch (e) { }
+    try { paintTrk(); srcOpts(); kartYenile(); } catch (e) { }
   }
   /* sayfada kapalı bölümler varsa (ileri seviyeye bırakılan içerik) paketlerden gelenleri de ayıkla */
   const ARS = typeof ARSIV === 'object' ? ARSIV : {};
-  if (typeof kapaliAyir === 'function') { kapaliAyir(); try { paintTrk(); srcOpts(); nextCard(); } catch (e) { } }
+  if (typeof kapaliAyir === 'function') { kapaliAyir(); try { paintTrk(); srcOpts(); kartYenile(); } catch (e) { } }
   if (typeof KAPALI === 'object' && Array.isArray(D.OKUMA)) { ARS.OKUMA = D.OKUMA.filter(r => KAPALI.has(r.trk)); D.OKUMA = D.OKUMA.filter(r => !KAPALI.has(r.trk)); }
 
   /* ---------------- sözlük (okumada dokunulan kelime için) ---------------- */
@@ -369,7 +371,7 @@ dialog.tanit .hd small{display:block;font-weight:400;color:var(--muted);font-siz
     const star = w => { const f = FREQ[String(w.en).toLowerCase()]; if (f == null) return ''; return f >= 50 ? '★★★ çok yaygın' : f >= 40 ? '★★☆ yaygın' : f >= 30 ? '★☆☆ orta' : '◇ az kullanılan / meslek terimi'; };
     const oNext = nextCard;
     nextCard = function () { const r = oNext.apply(this, arguments); try { if (cur) { const s = star(cur); if (s) { const t = $('fTag'), b = $('bTag'); t.textContent = (cur.tag ? cur.tag + ' · ' : '') + s; if (b) b.textContent = t.textContent; } } } catch (e) { } return r; };
-    try { nextCard(); } catch (e) { }
+    try { kartYenile(); } catch (e) { }
   }
 
   /* ================= günlük hedef çubuğu + XP sayımı ================= */

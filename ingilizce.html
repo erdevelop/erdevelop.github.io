@@ -215,7 +215,7 @@ details.phg { border-bottom: 1px solid var(--line); } details.phg > summary { cu
           <div class="full ctl"><button class="btn pri" type="submit" id="aBtn">Ekle</button><span class="small muted" id="aTo">Kendi listene eklenir</span></div>
         </form></details>
         <details class="fold" id="bildFold"><summary class="lbl muted mono small">🔔 Telefona kelime bildirimi</summary>
-        <p class="note" style="margin:6px 0">Seçtiğin saatlerde telefonuna bir kelime gelsin; görmek zorunda kal. Bildirime dokununca kelimenin kartı açılır.</p>
+        <p class="note" style="margin:6px 0">Seçtiğin saatlerde telefonuna bir kelime, geçtiği kısa bir cümleyle birlikte gelsin; kelimeyi cümlenin içinde öğren. Bildirime dokununca kelimenin kartı açılır.</p>
         <button class="btn" type="button" id="hOpen">Bildirimleri ayarla</button>
         <div class="small" id="pMini" style="margin-top:8px"></div>
         <div class="fg2 hbox" id="hBox" hidden>
@@ -227,7 +227,7 @@ details.phg { border-bottom: 1px solid var(--line); } details.phg > summary { cu
           <div class="fd"><label for="hFrom">İlk bildirim</label><input class="inp" type="time" id="hFrom" step="900"></div>
           <div class="fd"><label for="hTo">Son bildirim</label><input class="inp" type="time" id="hTo" step="900"></div>
           <div class="fd full"><label for="hStep">Ne sıklıkla</label><select class="sel" id="hStep"><option value="15">15 dakikada bir</option><option value="30">30 dakikada bir</option><option value="60">Saatte bir</option><option value="90">1,5 saatte bir</option><option value="120">2 saatte bir</option><option value="180">3 saatte bir</option><option value="240">4 saatte bir</option></select></div>
-          <label class="chk full"><input type="checkbox" id="hMean"> Türkçe anlamı bildirimde görünsün (kapalıysa önce kendin hatırlamaya çalışırsın; dokununca anlamını görürsün)</label>
+          <label class="chk full"><input type="checkbox" id="hMean"> Türkçe anlamı bildirimde görünsün (açıksa kelimenin ve cümlenin Türkçesi de gelir; kapalıysa yalnız İngilizce cümleyi görürsün, önce kendin anlamaya çalışırsın, dokununca anlamı açılır)</label>
           <label class="chk full"><input type="checkbox" id="hRep"> Aralıklı tekrar: her kelime 1 ve 3 gün sonra yeniden gelsin</label>
           <div class="full hinfo" id="hInfo"></div>
           <div class="full ctl push-only"><button class="btn pri" type="button" id="pOn">🔔 Bildirimleri aç</button><button class="btn" type="button" id="pTest">Örnek bildirim göster</button><button class="btn" type="button" id="pSrv" hidden>📡 Sunucudan test gönder</button><button class="btn" type="button" id="pOff">Bildirimleri kapat</button></div>
@@ -366,6 +366,7 @@ details.phg { border-bottom: 1px solid var(--line); } details.phg > summary { cu
 <footer><div class="wrap"><span>Telaffuz için tarayıcının ses tanıma ve seslendirme özelliği kullanılır (Chrome, Edge ve Safari'de çalışır) · Oda ve skorlar: Firebase · Hesaplar Oyun Bahçesi ile ortaktır.</span><a href="Tools.html">← tüm araçlar</a></div></footer>
 
 <script src="kesif/tema.js"></script>
+<script src="js/ornek-en.js"></script>
 <script>
 /* İngilizce Kulübü · içerik */
 /* [ingilizce, türkçe, örnek cümle, seviye 1-3, konu] */
@@ -1392,8 +1393,12 @@ const wTrack = w => TOPIC_TRACK[w[4]] || 'gunluk';
 const inTrk = t => S.trk === 'hepsi' || t === S.trk;
 const trkWords = () => WORDS.filter(w => inTrk(wTrack(w)));
 const CEFR = ['', 'A1', 'A2', 'B1', 'B2'];
+/* örnek cümleler (js/ornek-en.js): kelime → [İngilizce cümle, Türkçesi] */
+const ORN = en => (window.ORNEK_EN && ORNEK_EN[en] ? ORNEK_EN[en][0] : '');
+const ORN_TR = (en, ex) => (window.ORNEK_EN && ORNEK_EN[en] && ex && ORNEK_EN[en][0] === ex ? ORNEK_EN[en][1] : '');
+const exHtml = c => c.ex ? esc(c.ex) + (ORN_TR(c.en, c.ex) ? `<div class="small muted" style="margin-top:4px">${esc(ORN_TR(c.en, c.ex))}</div>` : '') : '';
 const TW = (() => { const ex = new Set(WORDS.map(w => w[0].toLowerCase())), seen = new Set(), out = [];
-  for (const l of [1, 2, 3, 4]) for (const it of TEMEL[l].split(';')) { const i = it.indexOf('='); if (i < 1) continue; const en = it.slice(0, i).trim(), k = en.toLowerCase(); if (ex.has(k) || seen.has(k)) continue; seen.add(k); out.push({ en, tr: it.slice(i + 1).trim(), ex: '', lvl: l, tag: 'temel · ' + CEFR[l] }); }
+  for (const l of [1, 2, 3, 4]) for (const it of TEMEL[l].split(';')) { const i = it.indexOf('='); if (i < 1) continue; const en = it.slice(0, i).trim(), k = en.toLowerCase(); if (ex.has(k) || seen.has(k)) continue; seen.add(k); out.push({ en, tr: it.slice(i + 1).trim(), ex: ORN(en), lvl: l, tag: 'temel · ' + CEFR[l] }); }
   return out; })();
 kapaliAyir();
 function paintTrk() {
@@ -1502,7 +1507,7 @@ function nextCard() {
   else c = pick(notCur(L));
   cur = c; const rev = S.rev; kRoomBtn();
   $('fW').textContent = rev ? c.tr : c.en; $('fTag').textContent = c.tag || ''; $('bTag').textContent = c.tag || '';
-  $('bW').textContent = c.en; $('bM').textContent = c.tr; $('bEx').textContent = c.ex || '';
+  $('bW').textContent = c.en; $('bM').textContent = c.tr; $('bEx').innerHTML = exHtml(c);
   $('fSpk').hidden = rev;
   $('kInfo').textContent = due.length ? `Sırada ${due.length} kelime var · toplam ${L.length}${fresh.length && (S.src === 'hazir' || S.src === 'temel') ? ' · yeni kelimeler en sık kullanılandan başlar' : ''}` : `Bugünlük tekrar bitti 🎉 Listeden rastgele soruluyor (${L.length} kelime).`;
   boxes();
@@ -1627,7 +1632,7 @@ function pPaint(msg) {
 }
 async function pushInfo() { if (!Cloud.user) return; pLocalEp = await pLocal(); try { const d = await pDoc().get(); pInfo = d.exists ? d.data() : null; if (S.pushOn && (!pInfo || pInfo.on === false)) { S.pushOn = false; save(); } } catch (e) { } pPaint(); }
 function pushQueue() { const n = Math.max(1, hTimes().length), N = n > 20 ? 280 : 150, P = hPlan(Math.min(60, Math.ceil(N / n) + 3));
-  return P.plan.flat().slice(0, N).map(([t, w]) => ({ e: w.en, t: w.tr, x: String(w.ex || '').slice(0, 160) })); }
+  return P.plan.flat().slice(0, N).map(([t, w]) => ({ e: w.en, t: w.tr, x: String(w.ex || '').slice(0, 160), y: String(ORN_TR(w.en, w.ex)).slice(0, 160) })); }
 async function pushSave(sub) {
   const j = sub.toJSON(), q = pushQueue(); if (!q.length) throw new Error('Seçili listede kelime yok.');
   await pDoc().set({ on: true, sub: { endpoint: j.endpoint, keys: { p256dh: j.keys.p256dh, auth: j.keys.auth } }, tz: Intl.DateTimeFormat().resolvedOptions().timeZone || 'Europe/Istanbul',
@@ -1655,7 +1660,8 @@ $('pSrv').onclick = async () => { $('pSrv').disabled = true;
 /* sayfaya geri dönünce durumu tazele (test sonucu, başka cihaza geçiş) */
 document.addEventListener('visibilitychange', () => { if (!document.hidden && Cloud.user) pushInfo(); });
 $('pTest').onclick = async () => { const w = pushQueue()[0]; if (!w) return; const reg = await navigator.serviceWorker.register('/sw.js'); await navigator.serviceWorker.ready;
-  reg.showNotification('📚 ' + w.e + ($('hMean').checked ? ' — ' + w.t : ''), { body: $('hMean').checked ? (w.x || 'Dokun, kartı aç.') : 'Anlamını hatırlıyor musun? Dokun ve kontrol et.', icon: '/icon-192.png', tag: 'eng-kelime', data: { url: location.origin + location.pathname + '?k=' + encodeURIComponent(w.e) + '#kelime' } }); };
+  const m = $('hMean').checked; /* sunucudaki message() ile aynı biçim */
+  reg.showNotification('📚 ' + w.e + (m ? ' — ' + w.t : ''), { body: w.x ? w.x + (m ? (w.y ? '\n' + w.y : '') : '\nAnlamı için dokun.') : m ? 'Dokun, kartı aç.' : 'Anlamını hatırlıyor musun? Dokun ve kontrol et.', icon: '/icon-192.png', tag: 'eng-kelime', data: { url: location.origin + location.pathname + '?k=' + encodeURIComponent(w.e) + '#kelime' } }); };
 ['hSrc', 'hDays', 'hFrom', 'hTo', 'hStep', 'hMean', 'hRep', 'hDate'].forEach(id => $(id).addEventListener('change', hInfo));
 $('hDl').onclick = () => { const r = icsText(); TM.download('ingilizce-kelimeler.ics', new Blob([r.text], { type: 'text/calendar;charset=utf-8' })); TM.toast(r.n + ' hatırlatma hazır'); };
 $('hAdd').onclick = () => { const r = icsText(); if (isIOS) { location.href = 'data:text/calendar;charset=utf-8,' + encodeURIComponent(r.text); } else { TM.download('ingilizce-kelimeler.ics', new Blob([r.text], { type: 'text/calendar;charset=utf-8' })); TM.toast('Dosya indi; açıp takvimine ekle'); } };
@@ -1663,7 +1669,7 @@ $('hAdd').onclick = () => { const r = icsText(); if (isIOS) { location.href = 'd
   $('hDays').value = S.h.days || '7'; $('hFrom').value = S.h.from || '09:00'; $('hTo').value = S.h.to || '21:00'; $('hStep').value = S.h.step || '180'; $('hMean').checked = S.h.mean !== false; $('hRep').checked = S.h.rep !== false; })();
 /* bildirimden gelen kelimeyi kartta göster: ?k=kelime */
 function showWord(en) { const k = norm(en), w = [...WORDS.map(x => ({ en: x[0], tr: x[1], ex: x[2], tag: x[4] })), ...TW, ...S.my].find(x => norm(x.en) === k); if (!w) return;
-  cur = w; kRoomBtn(); $('fcard').classList.remove('flip'); $('fW').textContent = w.en; $('fTag').textContent = w.tag || ''; $('bTag').textContent = w.tag || ''; $('bW').textContent = w.en; $('bM').textContent = w.tr; $('bEx').textContent = w.ex || ''; $('fSpk').hidden = false;
+  cur = w; kRoomBtn(); $('fcard').classList.remove('flip'); $('fW').textContent = w.en; $('fTag').textContent = w.tag || ''; $('bTag').textContent = w.tag || ''; $('bW').textContent = w.en; $('bM').textContent = w.tr; $('bEx').innerHTML = exHtml(w); $('fSpk').hidden = false;
   $('kInfo').textContent = 'Hatırlatıcıdan gelen kelime. Biliyorsan ✓, bilmiyorsan ✗ de; sonra normal tekrar devam eder.'; }
 
 /* ============ PAYLAŞ: kartı görsel (PNG) olarak paylaş ============ */
