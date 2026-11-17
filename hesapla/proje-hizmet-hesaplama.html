@@ -88,6 +88,8 @@
       <div id="w-stp"><label for="v-stp">Gelir vergisi stopajı (%)</label><input id="v-stp" inputmode="decimal" value="20"></div>
       <div id="w-ihr"><label for="v-ihr">İhracat kazanç indirimi (%)</label><input id="v-ihr" inputmode="decimal" value="100"></div>
     </div>
+    <div id="w-hz"><label for="v-hz">Yurt dışı hizmetin türü</label><select id="v-hz"><option value="kap">Mimarlık, mühendislik, tasarım, yazılım (indirim kapsamında)</option><option value="dan">Danışmanlık, aracılık vb. (indirim yok)</option><option value="yok">Bedel Türkiye'ye getirilmeyecek (indirim yok)</option></select></div>
+    <label class="chk" id="w-ilk3" hidden><input type="checkbox" id="v-ilk3"> Şirket ilk 3 hesap döneminde (asgari kurumlar vergisi yok)</label>
     <label class="chk" id="w-kps" hidden><input type="checkbox" id="v-kps"> Kâr ortağa dağıtılacak (%15 kâr payı stopajı)</label>
     <label class="chk"><input type="checkbox" id="v-dv"> Sözleşme damga vergisi (binde 9,48)</label>
     <label class="chk"><input type="checkbox" id="v-yok"> Gelir / kurumlar vergisini hesaba katma (yalnızca KDV ve nakit)</label>
@@ -116,7 +118,7 @@
 <li><b>Yurt içi firma:</b> Fiyat + %20 KDV faturalanır. Serbest meslek erbabıysan firma %20 stopajı keser; bu tutar yıllık beyannamede vergine mahsup edilir.</li>
 <li><b>Kamu / büyük firma (belirlenmiş alıcı):</b> Etüt, plan-proje, danışmanlık hizmetlerinde KDV'nin 9/10'u alıcı tarafından ödenir, sana yalnızca 1/10'u gelir. Altyapımcıya ödediğin KDV bu yüzden devredebilir; iade talep edilebilir.</li>
 <li><b>Yurt içi bireysel:</b> KDV'li fatura, stopaj yok.</li>
-<li><b>Yurt dışı (hizmet ihracatı):</b> Müşteri yurt dışındaysa ve hizmetten yurt dışında yararlanılıyorsa KDV istisnası uygulanır. Altyapımcıya ödediğin KDV iade alınabilir. Mimarlık, mühendislik, tasarım, yazılım gibi hizmetlerde bedel Türkiye'ye getirilirse kazancın 2026 için %100'ü vergi matrahından indirilebilir.</li>
+<li><b>Yurt dışı (hizmet ihracatı):</b> Müşteri yurt dışındaysa ve hizmetten yurt dışında yararlanılıyorsa KDV istisnası uygulanır. Altyapımcıya ödediğin KDV iade alınabilir. Mimarlık, mühendislik, tasarım, yazılım gibi hizmetlerde bedel beyanname süresine kadar Türkiye'ye getirilirse kazancın 2026 için %100'ü yıllık beyannamede vergi matrahından indirilebilir (GVK 89/1-13, KVK 10/1-ğ, 11257 sayılı Karar). Danışmanlık ve aracılık bu indirimin dışındadır. Limited/AŞ'de asgari kurumlar vergisi (indirim öncesi kazancın %10'u) yine ödenir; yeni kurulan şirketler ilk 3 hesap döneminde bundan muaftır.</li>
 </ul>
 <h3>Varsayımlar (2026)</h3>
 <p>KDV %20; gelir vergisi tarifesi (ücret dışı): 190.000 ₺'ye kadar %15, 400.000 ₺'ye kadar %20, 1.000.000 ₺'ye kadar %27, 5.300.000 ₺'ye kadar %35, üstü %40. Kurumlar vergisi %25, kâr payı stopajı %15, serbest meslek stopajı %20, hizmet ihracatı kazanç indirimi %100. Gelir vergisi, "bu yıl diğer kazancın" üstüne eklenen dilim farkı olarak hesaplanır. Bağ-Kur primi, geçici vergi zamanlaması, muhasebe ücreti ve kur farkı hesaba katılmaz; oranları kutulardan değiştirebilirsin.</p>
@@ -163,10 +165,13 @@
     const damga = o.dv ? o.matrah * 0.00948 : 0;
     const stopaj = o.vt === 'smm' && (o.tip === 'firma' || o.tip === 'bel') ? o.matrah * o.stp : 0;
     const kar = o.matrah - gider - damga;
-    const ihrInd = yd && kar > 0 ? kar * Math.min(1, Math.max(0, o.ihr)) : 0;
+    const ihrInd = yd && kar > 0 && o.hz === 'kap' ? kar * Math.min(1, Math.max(0, o.ihr)) : 0;
     const vMatrah = Math.max(0, kar - ihrInd);
     let vergi = 0;
-    if (!o.vYok) vergi = o.vt === 'ltd' ? vMatrah * o.kv : gelirV(o.onceki + vMatrah) - gelirV(o.onceki);
+    /* asgari kurumlar vergisi: indirim öncesi kazancın %10'u; hizmet ihracatı indirimi bu matrahtan düşülemez (KVK 32/C) */
+    const asgari = o.vt === 'ltd' && !o.ilk3 ? Math.max(0, kar) * 0.10 : 0;
+    const asgariDevrede = !o.vYok && asgari > vMatrah * o.kv + 0.005;
+    if (!o.vYok) vergi = o.vt === 'ltd' ? Math.max(vMatrah * o.kv, asgari) : gelirV(o.onceki + vMatrah) - gelirV(o.onceki);
     const vf = m => o.vt === 'ltd' ? m * o.kv : gelirV(o.onceki + m) - gelirV(o.onceki);
     const vergiTam = ihrInd ? vf(Math.max(0, kar)) : 0;
     const kps = o.vt === 'ltd' && o.kps && !o.vYok ? Math.max(0, kar - vergi) * 0.15 : 0;
@@ -174,14 +179,14 @@
     const kdvOde = Math.max(0, beyan - gKdv), kdvAlacak = Math.max(0, gKdv - beyan);
     const kalanV = o.vYok ? -stopaj : vergi - stopaj;
     const net = kar - (o.vYok ? 0 : vergi) - kps;
-    return { yd, kdvO, kdv, tev, beyan, gider, gKdv, damga, stopaj, kar, ihrInd, vMatrah, vergi, vergiTam, kps, tahsil, kdvOde, kdvAlacak, kalanV, net, fatura: o.matrah + kdv, marj: o.matrah ? net / o.matrah : NaN, efektif: kar > 0 ? (vergi + kps) / kar : 0 };
+    return { yd, kdvO, kdv, tev, beyan, gider, gKdv, damga, stopaj, kar, ihrInd, vMatrah, vergi, vergiTam, asgariDevrede, kps, tahsil, kdvOde, kdvAlacak, kalanV, net, fatura: o.matrah + kdv, marj: o.matrah ? net / o.matrah : NaN, efektif: kar > 0 ? (vergi + kps) / kar : 0 };
   }
 
   function oku() {
     const pb = byId('p-pb').value, kur = pb === 'TRY' ? 1 : n0(byId('p-kur').value);
     return { tip: st.tip, vt: st.vt, pb, kur, tutar: n0(byId('p-tut').value), matrah: n0(byId('p-tut').value) * kur,
       kdv: pct(byId('p-kdv').value), tev: +byId('p-tev').value, mal: st.mal.map(m => ({ t: n0(m.t) * kur, k: pct(m.k) })),
-      onceki: n0(byId('v-onceki').value), kv: pct(byId('v-kv').value), stp: pct(byId('v-stp').value), ihr: pct(byId('v-ihr').value),
+      onceki: n0(byId('v-onceki').value), kv: pct(byId('v-kv').value), stp: pct(byId('v-stp').value), ihr: pct(byId('v-ihr').value), hz: byId('v-hz').value, ilk3: byId('v-ilk3').checked,
       kps: byId('v-kps').checked, dv: byId('v-dv').checked, vYok: byId('v-yok').checked };
   }
 
@@ -210,7 +215,7 @@
     byId('w-kdv').hidden = yd; byId('w-tev').hidden = st.tip !== 'bel';
     byId('w-onceki').hidden = ltd; byId('w-kv').hidden = !ltd; byId('w-kps').hidden = !ltd;
     byId('w-stp').hidden = st.vt !== 'smm' || !(st.tip === 'firma' || st.tip === 'bel');
-    byId('w-ihr').hidden = !yd;
+    byId('w-ihr').hidden = !yd || byId('v-hz').value !== 'kap'; byId('w-hz').hidden = !yd; byId('w-ilk3').hidden = !ltd;
     byId('h-tip').textContent = HINT[st.tip];
     try { localStorage.setItem(LSK, JSON.stringify({ st, f: [...document.querySelectorAll('main [id^="p-"],main [id^="v-"],#h-net')].map(e => [e.id, e.type === 'checkbox' ? e.checked : e.value]) })); } catch (e) { }
 
@@ -239,7 +244,10 @@
     if (!o.vYok) {
       h += kv('Vergiye tabi kazanç', P(r.vMatrah));
       h += kv(st.vt === 'ltd' ? 'Kurumlar vergisi (' + yz(o.kv) + ')' : 'Gelir vergisi (dilim farkı)', eksi(r.vergi), 'neg');
-      if (r.ihrInd) h += `<div class="nt" style="margin:4px 0 2px">Yurt dışı işte kazancın ${yz(Math.min(1, o.ihr))}'i ihracat indirimiyle vergiden düşüldü. İndirim olmasaydı ${st.vt === 'ltd' ? 'kurumlar' : 'gelir'} vergisi <b>${P(r.vergiTam)}</b> olurdu. İndirimi değiştirmek için "İhracat kazanç indirimi (%)" kutusunu kullan.</div>`;
+      if (r.asgariDevrede) h += `<div class="nt" style="margin:4px 0 2px">Asgari kurumlar vergisi devrede: vergi, indirimden önceki kazancın %10'undan az olamaz ve hizmet ihracatı indirimi bu tabandan düşülemez.</div>`;
+      if (r.ihrInd && st.vt !== 'ltd') h += `<div class="nt" style="margin:4px 0 2px">Gelir vergisi bu iş için ödeniyor ama yıllık beyannamede kazancın ${yz(Math.min(1, o.ihr))}'i hizmet ihracatı indirimiyle matrahtan düşülür (GVK 89/1-13). Şartlar sağlanmazsa vergi <b>${P(r.vergiTam)}</b> olur.</div>`;
+      else if (r.ihrInd) h += `<div class="nt" style="margin:4px 0 2px">İndirim olmasaydı kurumlar vergisi <b>${P(r.vergiTam)}</b> olurdu.</div>`;
+      if (r.yd && o.hz !== 'kap' && r.kar > 0) h += `<div class="nt" style="margin:4px 0 2px">${o.hz === 'dan' ? 'Danışmanlık ve aracılık hizmetleri' : 'Bedeli Türkiye\'ye getirilmeyen kazanç'} hizmet ihracatı indiriminden yararlanamaz; vergi tam hesaplandı.</div>`;
       if (r.kps) h += kv('Kâr payı stopajı (%15)', eksi(r.kps), 'neg');
       if (r.stopaj) h += kv(r.kalanV >= 0 ? 'Stopaj düşüldükten sonra ödenecek' : 'Stopajdan iade / mahsup', P(Math.abs(r.kalanV)));
     } else h += kv(st.vt === 'ltd' ? 'Kurumlar vergisi' : 'Gelir vergisi', 'hesaba katılmadı') + '<div class="nt" style="margin:4px 0 2px">"Gelir / kurumlar vergisini hesaba katma" kutusu işaretli; vergiyi görmek için işareti kaldır.</div>';
