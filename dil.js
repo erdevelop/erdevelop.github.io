@@ -12,7 +12,7 @@
      Çevrilmemesi gereken bir bölüme data-no-tr ver. */
 (function () {
   'use strict';
-  var KEY = 'erdevelop-lang', me = document.currentScript, subs = [], DICT = {}, ready = false, trNodes = new Set(), trEls = new Set(), ATTRS = ['placeholder', 'title', 'aria-label', 'alt'];
+  var KEY = 'erdevelop-lang', me = document.currentScript, subs = [], DICT = {}, KAL = {}, KALX = [], NUM = /[-+−]?\d+(?:[.,]\d+)*/g, ready = false, trNodes = new Set(), trEls = new Set(), ATTRS = ['placeholder', 'title', 'aria-label', 'alt'];
   var norm = function (x) { return String(x).replace(/\s+/g, ' ').trim(); };
   function read() {
     var q = null, s = null;
@@ -34,21 +34,45 @@
     toggle: function () { D.set(D.lang === 'tr' ? 'en' : 'tr'); },
     apply: function () { apply(); },
     dict: function (o) { for (var k in o) DICT[norm(k)] = o[k]; if (ready) apply(); },
+    /* kalıp: sayı içeren metinler. '{n}' herhangi bir sayı, '{x}' herhangi bir metin parçası.
+       İngilizcede {n}/{x} sırayla doldurulur; sıra değişecekse {1}, {2} … kullan. Ör: { 'Hepsi · {n}': 'All · {n}' } */
+    kalip: function (o) {
+      for (var k in o) {
+        var kk = norm(k);
+        if (kk.indexOf('{x}') < 0) KAL[kk] = o[k];
+        else KALX.push([new RegExp('^' + kk.replace(/[.*+?^$()|[\]\\]/g, '\\$&').replace(/\{n\}/g, '([-+−]?\\d+(?:[.,]\\d+)*)').replace(/\{x\}/g, '(.+?)') + '$'), o[k]]);
+      }
+      if (ready) apply();
+    },
     /* sözlükteki karşılığı (İngilizcedeyken), yoksa metnin kendisi */
-    tr: function (x) { if (D.lang !== 'en' || x == null) return x; var e = DICT[norm(x)]; return e != null ? e : x; }
+    tr: function (x) { if (D.lang !== 'en' || x == null) return x; var e = bul(norm(x)); return e != null ? e : x; }
   };
+  function doldur(en, vals) { var i = 0; return en.replace(/\{(n|x|\d+)\}/g, function (m, g) { var v = /\d/.test(g) ? vals[+g - 1] : vals[i++]; return v == null ? m : v; }); }
+  function bul(t) {
+    var e = DICT[t]; if (e != null) return e;
+    if (/\d/.test(t)) { var k = t.replace(NUM, '{n}'); if (KAL[k] != null) return doldur(KAL[k], t.match(NUM)); }
+    for (var i = 0; i < KALX.length; i++) { var m = KALX[i][0].exec(t); if (m) return doldur(KALX[i][1], m.slice(1).map(function (v) { var z = bul(norm(v)); return z != null ? z : v; })); }
+    /* baştaki simge/emoji ayrı: '⛽ Yakıt Hesabı' → '⛽ ' + çeviri */
+    var on = /^([^A-Za-z0-9ÇĞİÖŞÜçğıöşü"“'(]+)(.+)$/.exec(t);
+    if (on) { var e2 = bul(on[2]); if (e2 != null) return on[1] + e2; }
+    /* ' · ' ile ayrılmış parçalar tek tek */
+    if (t.indexOf(' · ') > 0) { var ps = t.split(' · '), ok = 0; ps = ps.map(function (x) { var z = bul(x); if (z != null) { ok++; return z; } return x; }); if (ok) return ps.join(' · '); }
+    return null;
+  }
   /* sözlükle metin düğümü çevirisi */
   function skip(el) { return !el || el.closest('script,style,textarea,[data-no-tr],[data-en]'); }
   function skipA(el) { return !el || el.closest('script,style,[data-no-tr]'); }
   function trText(n) {
     var raw = n.nodeValue; if (raw === n.__en) return;
-    var en = DICT[norm(raw)]; if (en == null) return;
+    var en = bul(norm(raw)); if (en == null) return;
+    /* value özniteliği olmayan <option>'ın değeri metnidir; çevirince değer değişmesin */
+    var pe = n.parentElement; if (pe && pe.tagName === 'OPTION' && !pe.hasAttribute('value')) pe.setAttribute('value', pe.value);
     n.__tr = raw; n.nodeValue = (raw.match(/^\s*/)[0]) + en + (raw.match(/\s*$/)[0]); n.__en = n.nodeValue; trNodes.add(n);
   }
   function trAttr(el) {
     ATTRS.forEach(function (a) {
       var v = el.getAttribute(a); if (v == null || (el.__ena && el.__ena[a] === v)) return;
-      var en = DICT[norm(v)]; if (en == null) return;
+      var en = bul(norm(v)); if (en == null) return;
       (el.__tra = el.__tra || {})[a] = v; (el.__ena = el.__ena || {})[a] = en; el.setAttribute(a, en); trEls.add(el);
     });
   }
@@ -88,10 +112,10 @@
     d.querySelectorAll('[data-en-title]').forEach(function (el) { swap(el, 'title', 'data-en-title', 'data-tr-title'); });
     d.querySelectorAll('[data-l]').forEach(function (el) { el.hidden = el.getAttribute('data-l') !== L; });
     var t = d.querySelector('title[data-en]'); if (t) d.title = t.textContent;
-    if (d.body && Object.keys(DICT).length) {
+    if (d.body && (Object.keys(DICT).length || KALX.length || Object.keys(KAL).length)) {
       if (L === 'en') walk(d.body); else unwalk();
       var tt = d.querySelector('title:not([data-en])');
-      if (tt) { if (tt.__tr == null) tt.__tr = tt.textContent; var te = DICT[norm(tt.__tr)]; d.title = L === 'en' && te ? te : tt.__tr; }
+      if (tt) { if (tt.__tr == null) tt.__tr = tt.textContent; var te = bul(norm(tt.__tr)); d.title = L === 'en' && te ? te : tt.__tr; }
       if (obs && !obs.__on) { obs.observe(d.body, { childList: true, subtree: true, characterData: true, attributes: true, attributeFilter: ATTRS }); obs.__on = 1; }
     }
     d.querySelectorAll('[data-dil-btn]').forEach(function (b) { b.textContent = L === 'tr' ? 'EN' : 'TR'; b.setAttribute('aria-label', L === 'tr' ? 'Switch to English' : 'Türkçeye geç'); });

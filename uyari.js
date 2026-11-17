@@ -12,7 +12,7 @@
   const D = (me && me.dataset) || {};
   const tur = D.tur || 'genel', kapsam = D.kapsam || '';
   const SURUM = 1, bugun = () => new Date().toDateString();
-  const T = {
+  const TR = {
     muhendislik: {
       bas: 'Ön hesap · eğitim amaçlı',
       not: 'Bu araç sadeleştirilmiş bir yöntemle ön boyutlandırma yapar; statik hesap raporu ya da proje onayı yerine geçmez. Uygulamaya esas hesabı yetkili bir mühendise güncel standartlara göre yaptır.',
@@ -33,7 +33,31 @@
     },
     genel: { bas: 'Bilgi amaçlı', not: 'Sonuçlar ön bilgidir; önemli bir kararda ilgili uzmana ya da resmi kaynağa başvur.' }
   }[tur] || null;
-  if (!T) return;
+  const EN = {
+    muhendislik: {
+      bas: 'Preliminary calculation · for education',
+      not: 'This tool does preliminary sizing with a simplified method; it does not replace a structural calculation report or project approval. Have the design calculation done by a qualified engineer to current standards.',
+      onay: ['This tool is <b>for education and preliminary information</b>. It uses simplified methods and does not cover every condition of the standards, national annexes or project-specific cases.',
+        'Results <b>do not replace a structural calculation report, project approval or certificate of conformity</b>. The design calculation must be done and approved by a qualified engineer.',
+        'Using the results is <b>entirely the user\'s responsibility</b>; the site owner cannot be held liable for any damage arising from them.']
+    },
+    mali: {
+      bas: 'For information',
+      not: 'Results use general formulas. Tax, interest and exchange rates change; ask your bank or accountant for the exact amount.',
+      onay: ['The finance calculators are <b>for information only</b> and use general formulas. They are not investment, loan or tax advice.',
+        'Tax and fund rates (VAT, KKDF, BSMV, withholding), interest and exchange rates change; default values in the tools are examples. <b>Ask your bank or accountant for the exact amount.</b>',
+        'Using the results is <b>entirely the user\'s responsibility</b>; the site owner cannot be held liable for any damage arising from them.']
+    },
+    egitim: {
+      bas: 'For education and information',
+      not: 'This content is for self-study; it does not replace professional advice, formal training or certification. In practice, follow current standards, manufacturer documents and qualified expert advice; using the content is your own responsibility.'
+    },
+    genel: { bas: 'For information', not: 'Results are preliminary; for an important decision consult a relevant expert or official source.' }
+  }[tur] || null;
+  if (!TR) return;
+  const en = () => !!(window.erDil && erDil.lang === 'en');
+  let T = en() ? EN : TR;
+  const U = k => ({ sart: ['Kullanım şartları', 'Terms of use'], once: ['Kullanmadan önce', 'Before you use it'], okudum: ['Okudum ve anladım. Bu aracı eğitim ve ön bilgi amacıyla kullanacağımı, sonuçların sorumluluğunun bana ait olduğunu kabul ediyorum.', 'I have read and understood. I accept that I will use this tool for education and preliminary information, and that I am responsible for the results.'], vazgec: ['Vazgeç', 'Cancel'], onayla: ['Onayla ve devam et', 'Agree and continue'], gecerli: ['Onayın bugün gün sonuna kadar geçerli; yarın yeniden sorulur. Ayrıntılar:', 'Your consent is valid until the end of today; you will be asked again tomorrow. Details:'] }[k][en() ? 1 : 0]);
 
   const css = `.er-uyari{display:flex;gap:10px;align-items:flex-start;max-width:860px;margin:14px 0 4px;padding:10px 14px;border:1px solid color-mix(in srgb,var(--hot,#c8731f) 45%,transparent);background:color-mix(in srgb,var(--hot,#c8731f) 8%,transparent);border-radius:8px;font-size:13px;line-height:1.55;color:var(--text,inherit)}
 .er-uyari b{color:var(--fg,inherit);font-weight:600}.er-uyari a{color:inherit;text-decoration:underline;white-space:nowrap}.er-uyari .i{font-size:15px;line-height:1.3}
@@ -54,7 +78,9 @@
 
   /* --- sayfa içi not --- */
   const box = document.createElement('aside'); box.className = 'er-uyari'; box.setAttribute('role', 'note');
-  box.innerHTML = `<span class="i" aria-hidden="true">⚠</span><span><b>${T.bas}.</b> ${D.metin || T.not} <a href="/kullanim.html">Kullanım şartları</a></span>`;
+  box.setAttribute('data-no-tr', '');
+  const boxYaz = () => { T = en() ? EN : TR; box.innerHTML = `<span class="i" aria-hidden="true">⚠</span><span><b>${T.bas}.</b> ${(en() ? D.metinEn : D.metin) || T.not} <a href="/kullanim.html">${U('sart')}</a></span>`; };
+  boxYaz(); if (window.erDil && erDil.on) erDil.on(boxYaz);
   const place = () => {
     if (D.not === 'yok') return;
     const h = document.querySelector('main header.head, header.head, main .lead, .lead');
@@ -66,15 +92,16 @@
   const ok = () => { try { const v = JSON.parse(localStorage.getItem(KEY) || 'null'); return v && v.s === SURUM && v.g === bugun(); } catch (e) { return false; } };
   let open = false;
   function ask(after) {
-    if (!T.onay || ok() || open) { after && after(); return; }
+    if (!TR.onay || ok() || open) { after && after(); return; }
     open = true;
     const prevFocus = document.activeElement;
     const w = document.createElement('div'); w.className = 'er-onay'; w.setAttribute('role', 'dialog'); w.setAttribute('aria-modal', 'true'); w.setAttribute('aria-labelledby', 'er-onay-h');
-    w.innerHTML = `<div class="k"><h2 id="er-onay-h">Kullanmadan önce</h2><p class="s">${esc(document.title.split('|')[0].trim())} · ${T.bas.toLowerCase()}</p>
+    T = en() ? EN : TR; w.setAttribute('data-no-tr', '');
+    w.innerHTML = `<div class="k"><h2 id="er-onay-h">${U('once')}</h2><p class="s">${esc(document.title.split('|')[0].trim())} · ${en() ? T.bas.toLowerCase() : T.bas.toLocaleLowerCase('tr')}</p>
       <ul>${T.onay.map(x => `<li>${x}</li>`).join('')}</ul>
-      <label><input type="checkbox"> <span>Okudum ve anladım. Bu aracı eğitim ve ön bilgi amacıyla kullanacağımı, sonuçların sorumluluğunun bana ait olduğunu kabul ediyorum.</span></label>
-      <div class="b"><a href="/Tools.html">Vazgeç</a><button type="button" disabled>Onayla ve devam et</button></div>
-      <p class="f">Onayın bugün gün sonuna kadar geçerli; yarın yeniden sorulur. Ayrıntılar: <a href="/kullanim.html" target="_blank" rel="noopener">Kullanım şartları</a></p></div>`;
+      <label><input type="checkbox"> <span>${U('okudum')}</span></label>
+      <div class="b"><a href="/Tools.html">${U('vazgec')}</a><button type="button" disabled>${U('onayla')}</button></div>
+      <p class="f">${U('gecerli')} <a href="/kullanim.html" target="_blank" rel="noopener">${U('sart')}</a></p></div>`;
     document.body.appendChild(w);
     const cb = w.querySelector('input'), bt = w.querySelector('button');
     const rest = [...document.body.children].filter(e => e !== w && e.tagName !== 'SCRIPT' && e.tagName !== 'STYLE');
@@ -95,7 +122,7 @@
 
   const start = () => {
     place();
-    if (!T.onay) return;
+    if (!TR.onay) return;
     if (!kapsam) { ask(); return; }
     /* kapsam: yalnızca belirtilen bölümlerle ilk etkileşimde sor */
     const hit = e => { const el = e.target.closest && e.target.closest(kapsam); if (!el || ok() || open) return; e.preventDefault(); e.stopPropagation(); if (e.target.blur) e.target.blur(); ask(() => { const t = e.target; if (t && t.focus) t.focus(); }); };

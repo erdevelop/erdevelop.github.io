@@ -2,7 +2,7 @@
 'use strict';
 const $ = id => document.getElementById(id);
 const esc = s => String(s ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
-const nf = (n, d = 0) => n == null || !isFinite(n) ? '–' : Number(n).toLocaleString('tr-TR', { minimumFractionDigits: d, maximumFractionDigits: d });
+const nf = (n, d = 0) => n == null || !isFinite(n) ? '–' : Number(n).toLocaleString(window.erDil && erDil.lang === 'en' ? 'en-GB' : 'tr-TR', { minimumFractionDigits: d, maximumFractionDigits: d });
 const store = { get(k, d = null) { try { const v = localStorage.getItem(k); return v == null ? d : v; } catch (e) { return d; } }, set(k, v) { try { localStorage.setItem(k, v); } catch (e) { } },
   json(k, d) { try { return JSON.parse(localStorage.getItem(k)) ?? d; } catch (e) { return d; } }, put(k, v) { try { localStorage.setItem(k, JSON.stringify(v)); } catch (e) { } } };
 const TM = {
@@ -43,3 +43,5 @@ TM.apply();
 document.addEventListener('DOMContentLoaded', () => { TM.apply(); const b = $('modeBtn'); if (b) b.addEventListener('click', () => { TM.mode = TM.mode === 'dark' ? 'light' : 'dark'; store.set('erdevelop-mode', TM.mode); store.set('erdevelop-mode-gun', new Date().toDateString()); TM.apply(); }); });
 /* telefona kurulabilen site: service worker (yalnızca yayındaki https sitede) */
 if ('serviceWorker' in navigator && location.protocol === 'https:') addEventListener('load', () => navigator.serviceWorker.register('/sw.js').catch(() => { }));
+/* dil değişince sayılar yeni biçimle yeniden hesaplansın */
+if (window.erDil) erDil.on(() => { try { if (typeof calc === 'function') calc(); else if (typeof run === 'function') run(); } catch (e) { } });
