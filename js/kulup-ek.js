@@ -398,6 +398,56 @@ dialog.tanit .hd small{display:block;font-weight:400;color:var(--muted);font-siz
   const h0 = location.hash.slice(1); if (PAINT[h0] || PAINT[S.tab]) setTab(PAINT[h0] ? h0 : S.tab);
   rozetKontrol(true);
 
+  /* ================= kaydırmalı kısa rehber (başlıktaki "❓ Nasıl kullanılır?") ================= */
+  (function () {
+    const IMG = 'rehber/dil-kulupleri/img/', dil = D.dilAd;
+    const st = document.createElement('style');
+    st.textContent = `dialog.kr{border:1px solid var(--line);border-radius:18px;background:var(--panel);color:var(--fg);width:calc(100% - 20px);max-width:430px;padding:0;overflow:hidden}
+dialog.kr::backdrop{background:rgba(0,0,0,.55)}
+.kr .top{display:flex;align-items:center;gap:8px;padding:10px 12px 0} .kr .top b{flex:1;font:600 12px var(--f-mono);color:var(--muted)} .kr .x{border:0;background:none;color:var(--muted);font-size:20px;cursor:pointer;padding:2px 6px}
+.kr .sl{display:flex;overflow-x:auto;scroll-snap-type:x mandatory;scrollbar-width:none;-webkit-overflow-scrolling:touch} .kr .sl::-webkit-scrollbar{display:none}
+.kr .s{flex:0 0 100%;scroll-snap-align:center;padding:8px 18px 4px;box-sizing:border-box;max-height:min(68vh,600px);overflow-y:auto}
+.kr .ic{font-size:44px;line-height:1;margin:8px 0 6px} .kr h3{margin:0 0 8px;font:700 1.25rem/1.25 var(--f-display);color:var(--fg)}
+.kr p,.kr li{color:var(--text);font-size:14.5px;line-height:1.55;margin:4px 0} .kr ul{padding-left:18px;margin:6px 0} .kr b{color:var(--fg)}
+.kr img{display:block;width:100%;max-height:34vh;object-fit:cover;object-position:50% 13%;border-radius:12px;border:1px solid var(--line);margin:4px 0 10px;background:#0b1220}
+.kr .xp{display:grid;grid-template-columns:1fr auto;gap:2px 12px;font-size:14px;margin:8px 0} .kr .xp span:nth-child(even){font-family:var(--f-mono);color:var(--fg);text-align:right}
+.kr .nav{display:flex;align-items:center;gap:10px;padding:10px 14px 14px} .kr .dots{flex:1;display:flex;gap:6px;justify-content:center} .kr .dots i{width:7px;height:7px;border-radius:50%;background:var(--line);cursor:pointer} .kr .dots i.on{background:var(--accent);width:18px;border-radius:4px}
+.kr .nav button{min-width:44px}`;
+    document.head.appendChild(st);
+    const S_ = [
+      ['👋', `${esc(dil)} Kulübü'ne hoş geldin`, `<p>Her gün <b>10 dakika</b> yeter. Yaptığın her çalışma <b>XP</b> kazandırır; ekranın üstündeki çubuk günlük hedefini gösterir.</p><p>Bu kısa tanıtımda nerede ne var, XP nasıl kazanılır, hepsini 1 dakikada görürsün. <b>Sağa kaydır →</b></p>`],
+      ['📚', 'Kelime kartları', `<img src="${IMG}03-kart-arka.webp" alt="" loading="lazy"><p>Kelimeyi gör, anlamını aklından söyle, karta <b>dokun</b>: arkasında anlamı ve örnek cümle çıkar. Sonra dürüstçe işaretle: <b>✗ Bilmedim · ~ Zor · ✓ Bildim</b>.</p><p>Bildiğin kelime daha seyrek, bilmediğin hemen tekrar gelir.</p>`],
+      ['🧩', 'Kalıplar', `<img src="${IMG}05-kalip.webp" alt="" loading="lazy"><p>Günlük konuşmanın hazır cümle kalıpları. Her kalıp 3 adım: <b>Öğren</b> (dinle), <b>Çevir</b> (🎙 ile söyle ya da yaz), <b>Kendi cümlen</b>.</p><p>Alt menüde <b>Daha → Kalıplar</b>.</p>`],
+      ['🎧', 'Dinle, konuş, söyle', `<ul><li>🎧 <b>Dinleme:</b> kısa diyaloğu dinle, soruları cevapla.</li><li>💬 <b>Konuşma:</b> konuyu al, sayaç bitene kadar konuş.</li><li>🗣 <b>${esc(simAd())}:</b> otelde, tanışmada… sıra sende, cevabını söyle.</li><li>🎙 <b>Telaffuz:</b> cümleyi oku, neyin doğru duyulduğunu gör.</li><li>📖 <b>Okuma</b>, ✍️ <b>Yazma</b>, 📘 <b>Gramer</b> da <b>Daha</b> menüsünde.</li></ul>`],
+      ['🏆', 'Yarışma', `<img src="${IMG}10-yarisma.webp" alt="" loading="lazy"><p><b>Haftanın yarışması:</b> 10 soru, 15'er saniye; bu hafta herkese aynı sorular. Hızlı cevap daha çok puan.</p><p><b>⚔️ Meydan okuma:</b> 60 saniyelik yarış, linkini arkadaşına gönder.</p>`],
+      ['⭐', 'XP nasıl kazanılır?', `<div class="xp"><span>📚 Kart: ✓ Bildim / ~ Zor</span><span>+2 / +1</span><span>🧩 Kalıp adımı</span><span>+2</span><span>💬 Konuşma turu</span><span>+3</span><span>🎙 Telaffuz %80 üstü</span><span>+5</span><span>🎧 Dinleme, her doğru</span><span>+2</span><span>🏆 Yarışma</span><span>puan ÷ 20</span><span>🎯 Günlük görev</span><span>+10</span><span>🎯 Üçü birden</span><span>+20</span><span>🎯 Haftalık görev</span><span>+50</span></div><p>Günlük hedef: 5 dk = 20 XP · 10 dk = 40 XP · 20 dk = 80 XP.</p>`],
+      ['🎯', 'Görevler ve seri', `<img src="${IMG}17-gorevler.webp" alt="" loading="lazy"><p>Her gün <b>3 görev</b> gelir; çalıştıkça kendiliğinden dolar. En az birini bitirdiğin her gün <b>🔥 serin</b> uzar. Bir gün kaçırırsan haftada bir <b>❄️ dondurma</b> serini korur.</p>`],
+      ['👥', 'Oda: arkadaşlarınla', `<p>Giriş yap, <b>Oda</b> sekmesinde <b>Oda aç</b> ve davet linkini WhatsApp'tan gönder.</p><ul><li>Ortak kelime listesi</li><li>Haftalık lig: kim kaç XP topladı 🥇🥈🥉</li><li>Aynı yarışma soruları ve aynı görevler</li><li>Birlikte doldurulan haftalık XP hedefi</li></ul>`],
+      ['🔔', 'Telefona kelime gelsin', `<img src="${IMG}04-bildirim.webp" alt="" loading="lazy"><p><b>Kelimeler</b> bölümünde aşağı in → <b>🔔 Telefona kelime bildirimi</b>. Listeleri ve saatleri seç; kelime, geçtiği bir cümleyle gelir.</p><p><b>iPhone:</b> önce Paylaş → <b>Ana Ekrana Ekle</b>, sonra simgeden aç.</p>`],
+      ['🚀', 'Hepsi bu kadar!', `<p>Bugün için öneri: <b>görevlerine bak</b>, <b>10 kart</b> çalış, bir <b>kalıp</b> dene.</p><p>Bu tanıtıma başlıktaki <b>❓ Nasıl kullanılır?</b> düğmesinden her zaman dönebilirsin.</p><p style="margin-top:12px"><a class="btn" href="rehber/dil-kulupleri/" target="_blank" rel="noopener">📖 Ayrıntılı rehber (ekran görüntülü)</a></p><p style="margin-top:8px"><button class="btn pri" type="button" data-k="bitir">Başlayalım →</button></p>`]
+    ];
+    function ac() {
+      const d = document.createElement('dialog'); d.className = 'kr'; d.setAttribute('aria-label', 'Nasıl kullanılır');
+      d.innerHTML = `<div class="top"><b id="krN">1 / ${S_.length}</b><button class="x" type="button" data-k="bitir" aria-label="Kapat">✕</button></div>
+        <div class="sl" id="krSl">${S_.map(([ic, h, b]) => `<section class="s"><div class="ic">${ic}</div><h3>${h}</h3>${b}</section>`).join('')}</div>
+        <div class="nav"><button class="btn" type="button" data-k="geri" aria-label="Önceki">‹</button><div class="dots">${S_.map((_, i) => `<i data-i="${i}"></i>`).join('')}</div><button class="btn pri" type="button" data-k="ileri" aria-label="Sonraki" autofocus>›</button></div>`;
+      document.body.appendChild(d);
+      const sl = d.querySelector('#krSl'), dots = [...d.querySelectorAll('.dots i')], n = S_.length;
+      const cur = () => Math.round(sl.scrollLeft / Math.max(1, sl.clientWidth)), git = i => sl.scrollTo({ left: Math.max(0, Math.min(n - 1, i)) * sl.clientWidth, behavior: 'smooth' });
+      const boya = () => { const i = cur(); dots.forEach((x, j) => x.classList.toggle('on', j === i)); d.querySelector('#krN').textContent = `${i + 1} / ${n}`; d.querySelector('[data-k="geri"]').disabled = i === 0; d.querySelector('[data-k="ileri"]').disabled = i === n - 1; };
+      sl.addEventListener('scroll', () => requestAnimationFrame(boya), { passive: true });
+      const kapat = () => { try { d.close(); } catch (e) { } d.remove(); };
+      d.onclick = e => { if (e.target === d) return kapat(); const t = e.target.closest('[data-k],[data-i]'); if (!t) return; if (t.dataset.i != null) return git(+t.dataset.i);
+        const k = t.dataset.k; if (k === 'bitir') kapat(); else if (k === 'ileri') git(cur() + 1); else if (k === 'geri') git(cur() - 1); };
+      d.addEventListener('keydown', e => { if (e.key === 'ArrowRight') git(cur() + 1); if (e.key === 'ArrowLeft') git(cur() - 1); });
+      d.addEventListener('close', () => d.remove());
+      if (d.showModal) d.showModal(); else d.setAttribute('open', ''); boya();
+    }
+    window.kulupRehber = ac;
+    document.querySelectorAll('a.rehberL').forEach(a => a.addEventListener('click', e => { e.preventDefault(); ac(); }));
+    if (location.hash === '#rehber') setTimeout(ac, 300);
+  })();
+
   /* ================= ilk giriş: tanıtım + günlük hedef ================= */
   if (E.tanit) document.body.classList.add('tanidik');
   else if (!CH) setTimeout(() => {
