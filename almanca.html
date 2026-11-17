@@ -2128,16 +2128,18 @@ document.querySelectorAll('#qMode button').forEach(x => x.classList.toggle('on',
 const h = location.hash.slice(1), qs = new URLSearchParams(location.search);
 if (qs.get('k')) setTimeout(() => { const i = KALIP.findIndex(p => norm(p.f) === norm(qs.get('k'))); if (i >= 0) { S.z.g = 'hepsi'; S.z.mode = 'ogren'; setTab('kalip'); zGroups(); zLoad(i); } else showWord(qs.get('k')); }, 0);
 /* ---------- üst çubuk: 🔄 yenile + ⚙ ayarlar ---------- */
-const VER = '16.11 21:00';
+/* sürüm: her push'tan sonra GitHub Actions'ın yazdığı /surum.json (tarih saat · commit); okunamazsa sayfadaki yedek değer */
+let VER = '16.11 21:00';
+const verP = fetch('/surum.json', { cache: 'no-store' }).then(r => r.ok ? r.json() : null).then(j => { if (j && j.v) VER = j.v + (j.c ? ' (' + j.c + ')' : ''); return VER; }).catch(() => VER);
 async function hardRefresh() {
   TM.toast('Yenileniyor…');
   try { const r = await navigator.serviceWorker?.getRegistration(); if (r) await r.update(); } catch (e) { }
   try { const ks = await caches.keys(); await Promise.all(ks.filter(k => /sayfa/.test(k)).map(k => caches.delete(k))); } catch (e) { }
   try { await fetch(location.pathname, { cache: 'reload' }); } catch (e) { }
-  try { sessionStorage.setItem('deu-yenilendi', VER); } catch (e) { }
+  try { await verP; sessionStorage.setItem('deu-yenilendi', VER); } catch (e) { }
   location.reload();
 }
-try { const was = sessionStorage.getItem('deu-yenilendi'); if (was) { sessionStorage.removeItem('deu-yenilendi'); setTimeout(() => TM.toast(was === VER ? 'Yenilendi · zaten son sürüm (' + VER + ')' : 'Güncellendi · yeni sürüm ' + VER), 600); } } catch (e) { }
+try { const was = sessionStorage.getItem('deu-yenilendi'); if (was) { sessionStorage.removeItem('deu-yenilendi'); verP.then(() => setTimeout(() => TM.toast(was === VER ? 'Yenilendi · zaten son sürüm · ' + VER : 'Güncellendi · yeni sürüm ' + VER), 600)); } } catch (e) { }
 (function topBtns() { const mb = $('modeBtn'); if (!mb) return;
   const mk = (id, txt, title) => { const b = document.createElement('button'); b.type = 'button'; b.className = 'tb tbx'; b.id = id; b.textContent = txt; b.title = title; b.setAttribute('aria-label', title); mb.before(b); return b; };
   mk('tbRef', '🔄', 'Yenile (son sürümü yükle)').onclick = hardRefresh;
