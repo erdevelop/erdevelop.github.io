@@ -21,6 +21,8 @@
   const p2 = n => String(n).padStart(2, '0');
   const dayKey = (d = new Date()) => d.getFullYear() + '-' + p2(d.getMonth() + 1) + '-' + p2(d.getDate());
   const LVL = ['A1', 'A2', 'B1', 'B2'];
+  /* simülasyon sekmesinin sayfadaki adı (İngilizcede Simülasyon, diğer kulüplerde Toplantı) */
+  const simAd = () => { const b = document.querySelector('#tabs2 [data-t="sim"]'); return b ? b.textContent.trim().replace(/^\S+\s+/, '') : 'Simülasyon'; };
   const sayx = (t, r) => { try { say(t, r); } catch (e) { } };
   const E = S.ek = Object.assign({ hedef: 10, gun: {}, cnt: {}, okuma: {}, gramer: {}, seviye: null, hata: [], rozet: {}, tanit: 0, maxSt: 0, duello: [] }, S.ek || {});
   const sv = () => { S.ek = E; save(); };
@@ -268,7 +270,7 @@ dialog.tanit .hd small{display:block;font-weight:400;color:var(--muted);font-siz
     ['o1', '📖', 'İlk okuma', 'Bir metni bitir', () => Object.keys(E.okuma).length >= 1], ['o5', '📚', 'Okur', '5 metni bitir', () => Object.keys(E.okuma).length >= 5], ['oA', '🦉', 'Kitap kurdu', 'Tüm metinleri bitir', () => Object.keys(E.okuma).length >= D.OKUMA.length],
     ['g1', '📐', 'İlk ders', 'Bir gramer dersini 4/5 ile bitir', () => Object.values(E.gramer).some(v => v >= 4)], ['gA', '🎓', 'Gramerci', 'Tüm dersleri 4/5 ile bitir', () => D.GRAMER.every(g => (E.gramer[g.id] || 0) >= 4)],
     ['test', '🧭', 'Yerini bil', 'Seviye testini yap', () => !!E.seviye], ['duel', '⚔️', 'Meydan okuyan', 'Bir meydan okuma oyna', () => E.duello.length >= 1],
-    ['top', '🗣️', 'Toplantıcı', 'Bir toplantı simülasyonunu bitir', () => (E.cnt['toplantı bitti'] || 0) >= 1], ['tel', '🎙️', 'Net telaffuz', '20 cümleyi %80 üstü söyle', () => (E.cnt['telaffuz'] || 0) >= 20],
+    ['top', '🗣️', 'Sahnede', 'Bir simülasyonu bitir', () => (E.cnt['toplantı bitti'] || 0) + (E.cnt['simülasyon bitti'] || 0) >= 1], ['tel', '🎙️', 'Net telaffuz', '20 cümleyi %80 üstü söyle', () => (E.cnt['telaffuz'] || 0) >= 20],
     ['x500', '⭐', '500 XP', '500 XP topla', () => (S.xp || 0) >= 500], ['x2000', '🌟', '2000 XP', '2000 XP topla', () => (S.xp || 0) >= 2000], ['x5000', '💫', '5000 XP', '5000 XP topla', () => (S.xp || 0) >= 5000],
     ['h7', '🎯', 'Hedefçi', '7 gün günlük hedefe ulaş', () => Object.values(E.gun).filter(v => v >= goalXp()).length >= 7]
   ];
@@ -402,7 +404,7 @@ dialog.tanit .hd small{display:block;font-weight:400;color:var(--muted);font-siz
     const d = document.createElement('dialog'); d.className = 'tanit'; document.body.appendChild(d); let step = 0, hedef = E.hedef || 10;
     const pg = () => {
       const dots = `<div class="dots">${[0, 1, 2].map(i => `<i class="${i === step ? 'on' : ''}"></i>`).join('')}</div>`;
-      if (step === 0) d.innerHTML = `<h3>👋 ${esc(D.dilAd)} Kulübü'ne hoş geldin</h3><p>Arkadaşlarınla birlikte, her gün biraz:</p><ul><li>📚 <b>Kelimeler:</b> en sık kullanılandan başlayan kartlar</li><li>📖 <b>Okuma</b>, 🎧 <b>Dinleme</b>, ✍️ <b>Yazma</b></li><li>💬 <b>Konuşma</b>, 🗣 <b>Toplantı</b>, 🎙 <b>Telaffuz</b></li><li>📘 <b>Gramer</b> mini dersleri</li><li>🏆 <b>Yarışma</b>, ⚔️ meydan okuma, 👥 <b>Oda</b></li></ul><div class="ctl" style="justify-content:flex-end"><button class="btn" type="button" data-a="skip">Geç</button><button class="btn pri" type="button" data-a="next">İleri →</button></div>${dots}`;
+      if (step === 0) d.innerHTML = `<h3>👋 ${esc(D.dilAd)} Kulübü'ne hoş geldin</h3><p>Arkadaşlarınla birlikte, her gün biraz:</p><ul><li>📚 <b>Kelimeler:</b> en sık kullanılandan başlayan kartlar</li><li>📖 <b>Okuma</b>, 🎧 <b>Dinleme</b>, ✍️ <b>Yazma</b></li><li>💬 <b>Konuşma</b>, 🗣 <b>${esc(simAd())}</b>, 🎙 <b>Telaffuz</b></li><li>📘 <b>Gramer</b> mini dersleri</li><li>🏆 <b>Yarışma</b>, ⚔️ meydan okuma, 👥 <b>Oda</b></li></ul><p class="small" style="margin:4px 0 10px">Ayrıntılı anlatım ve XP kuralları: <a href="rehber/dil-kulupleri/" target="_blank" rel="noopener">❓ Nasıl kullanılır?</a></p><div class="ctl" style="justify-content:flex-end"><button class="btn" type="button" data-a="skip">Geç</button><button class="btn pri" type="button" data-a="next">İleri →</button></div>${dots}`;
       if (step === 1) d.innerHTML = `<h3>🎯 Günde ne kadar?</h3><p>Küçük ama düzenli çalışmak en iyisi. Hedefini seç; istediğin zaman İlerleme'den değiştirebilirsin.</p><div class="hd">${[[5, 'rahat'], [10, 'düzenli'], [20, 'iddialı']].map(([h, t]) => `<button type="button" data-h="${h}" class="${hedef === h ? 'on' : ''}">${h} dk<small>${t} · ${HXP[h]} XP</small></button>`).join('')}</div><div class="ctl" style="justify-content:flex-end"><button class="btn" type="button" data-a="back">← Geri</button><button class="btn pri" type="button" data-a="next">İleri →</button></div>${dots}`;
       if (step === 2) d.innerHTML = `<h3>🧭 Seviyeni bilelim mi?</h3><p>4 dakikalık seviye testi, kelime kartlarını ve dersleri sana göre ayarlar. İstersen sonra İlerleme bölümünden de yapabilirsin.</p><div class="ctl" style="justify-content:flex-end"><button class="btn" type="button" data-a="end">Şimdilik geç</button><button class="btn pri" type="button" data-a="test">Teste başla</button></div>${dots}`;
     };
