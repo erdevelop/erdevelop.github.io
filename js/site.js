@@ -145,11 +145,18 @@ html[data-mode=light] #er-ara .bx{background:#fff;color:#1a2233;border-color:rgb
   (function () {
     if (window.top !== window || !matchMedia('(hover:hover) and (pointer:fine)').matches) return;
     let kapali = false; try { kapali = localStorage.getItem('erdevelop-durum') === '0'; } catch (e) { }
+    /* artı imleç (AutoCAD gibi): varsayılan açık; bağlantı, düğme ve yazı kutularında normal imleç kalır */
+    let arti = true; try { arti = localStorage.getItem('erdevelop-arti') !== '0'; } catch (e) { }
+    const artiUygula = () => { D.documentElement.classList.toggle('er-arti', arti); const b = bar && bar.querySelector('[data-arti]'); if (b) { b.classList.toggle('on', arti); b.title = arti ? t('Artı imleci kapat', 'Turn off crosshair cursor') : t('Artı imleci aç', 'Turn on crosshair cursor'); } };
     const st = D.createElement('style');
     st.textContent = '#er-durum{position:fixed;left:0;right:0;bottom:0;z-index:2147482000;height:22px;display:flex;align-items:center;gap:14px;padding:0 10px;font:500 11px/1 ui-monospace,SFMono-Regular,Consolas,monospace;letter-spacing:.02em;color:#c9d3e0;background:rgba(14,18,26,.82);border-top:1px solid rgba(127,127,127,.28);backdrop-filter:blur(6px);-webkit-backdrop-filter:blur(6px);pointer-events:none;user-select:none;font-variant-numeric:tabular-nums}'
       + '#er-durum b{color:#fff;font-weight:600;display:inline-block;min-width:4ch}#er-durum .sp{flex:1}#er-durum .bo{opacity:.6}'
       + '#er-durum button{all:unset;pointer-events:auto;cursor:pointer;padding:0 4px;opacity:.6;font:inherit;color:inherit}#er-durum button:hover{opacity:1}'
       + '#er-durum-ac{all:unset;position:fixed;right:6px;bottom:6px;z-index:2147482000;cursor:pointer;font:600 10px/1 ui-monospace,Consolas,monospace;padding:4px 6px;border-radius:5px;color:#c9d3e0;background:rgba(14,18,26,.6);opacity:.45}#er-durum-ac:hover{opacity:1}'
+      + 'html.er-arti,html.er-arti body{cursor:url("data:image/svg+xml,<svg xmlns=\'http://www.w3.org/2000/svg\' width=\'23\' height=\'23\'><g fill=\'none\' stroke-linecap=\'square\'><path d=\'M11.5 1.5v20M1.5 11.5h20M9 9h5v5H9z\' stroke=\'%23fff\' stroke-width=\'3\'/><path d=\'M11.5 1.5v8M11.5 13.5v8M1.5 11.5h8M13.5 11.5h8M9.5 9.5h4v4h-4z\' stroke=\'%23e0115f\' stroke-width=\'1\'/></g></svg>") 11 11, crosshair}'
+      + ':where(html.er-arti) :where(a[href],button,select,summary,label[for],[role=button],[role=tab],[onclick],input[type=button],input[type=submit],input[type=checkbox],input[type=radio],input[type=range],input[type=color],input[type=file]){cursor:pointer}'
+      + ':where(html.er-arti) :where(input:not([type]),input[type=text],input[type=search],input[type=number],input[type=email],input[type=url],input[type=password],input[type=tel],textarea,[contenteditable=""],[contenteditable=true]){cursor:text}'
+      + '#er-durum button.on{opacity:1;color:#ff5c8a}'
       + 'body.er-durumlu [data-dil-btn][style*="position:fixed"]{bottom:30px!important}@media print{#er-durum,#er-durum-ac{display:none!important}}';
     let bar = null, ac = null, x = 0, y = 0, px = 0, py = 0, bekliyor = false;
     const t = (tr, e) => (D.documentElement.lang || '').startsWith('en') ? e : tr;
@@ -163,9 +170,10 @@ html[data-mode=light] #er-ara .bx{background:#fff;color:#1a2233;border-color:rgb
     function goster() {
       if (ac) { ac.remove(); ac = null; }
       bar = D.createElement('div'); bar.id = 'er-durum'; bar.setAttribute('aria-hidden', 'true');
-      bar.innerHTML = '<span>x <b data-k="x">–</b></span><span>y <b data-k="y">–</b></span><span class="bo"><span data-k="l"></span> <span data-k="s">–</span></span><span class="sp"></span><span class="bo" data-k="w"></span><button type="button" title="' + t('Durum çubuğunu gizle', 'Hide status bar') + '">×</button>';
-      bar.querySelector('button').onclick = () => { try { localStorage.setItem('erdevelop-durum', '0'); } catch (e) { } kapat(); };
-      D.body.appendChild(bar); D.body.classList.add('er-durumlu'); yaz();
+      bar.innerHTML = '<span>x <b data-k="x">–</b></span><span>y <b data-k="y">–</b></span><span class="bo"><span data-k="l"></span> <span data-k="s">–</span></span><span class="sp"></span><span class="bo" data-k="w"></span><button type="button" data-arti>+</button><button type="button" data-kapat title="' + t('Durum çubuğunu gizle', 'Hide status bar') + '">×</button>';
+      bar.querySelector('[data-arti]').onclick = () => { arti = !arti; try { localStorage.setItem('erdevelop-arti', arti ? '1' : '0'); } catch (e) { } artiUygula(); };
+      bar.querySelector('[data-kapat]').onclick = () => { try { localStorage.setItem('erdevelop-durum', '0'); } catch (e) { } kapat(); };
+      D.body.appendChild(bar); D.body.classList.add('er-durumlu'); yaz(); artiUygula();
     }
     function kapat() {
       if (bar) { bar.remove(); bar = null; } D.body.classList.remove('er-durumlu');
@@ -175,7 +183,7 @@ html[data-mode=light] #er-ara .bx{background:#fff;color:#1a2233;border-color:rgb
     }
     addEventListener('mousemove', e => { x = Math.round(e.clientX); y = Math.round(e.clientY); px = Math.round(e.pageX); py = Math.round(e.pageY); if (bar && !bekliyor) { bekliyor = true; requestAnimationFrame(yaz); } }, { passive: true });
     addEventListener('resize', () => { if (bar && !bekliyor) { bekliyor = true; requestAnimationFrame(yaz); } });
-    const kur = () => { D.head.appendChild(st); kapali ? kapat() : goster(); };
+    const kur = () => { D.head.appendChild(st); kapali ? kapat() : goster(); artiUygula(); };
     if (D.readyState === 'loading') D.addEventListener('DOMContentLoaded', kur); else kur();
   })();
 
