@@ -40,8 +40,9 @@
       for (var k in o) {
         var kk = norm(k);
         if (kk.indexOf('{x}') < 0) KAL[kk] = o[k];
-        else KALX.push([new RegExp('^' + kk.replace(/[.*+?^$()|[\]\\]/g, '\\$&').replace(/\{n\}/g, '([-+−]?\\d+(?:[.,]\\d+)*)').replace(/\{x\}/g, '(.+?)') + '$'), o[k]]);
+        else KALX.push([new RegExp('^' + kk.replace(/[.*+?^$()|[\]\\]/g, '\\$&').replace(/\{n\}/g, '([-+−]?\\d+(?:[.,]\\d+)*)').replace(/\{x\}/g, '(.+?)') + '$'), o[k], kk.replace(/\{[nx]\}/g, '').length]);
       }
+      KALX.sort(function (a, b) { return b[2] - a[2]; });
       if (ready) apply();
     },
     /* sözlükteki karşılığı (İngilizcedeyken), yoksa metnin kendisi */
@@ -56,6 +57,8 @@
     var on = /^([^A-Za-z0-9ÇĞİÖŞÜçğıöşü"“'(]+)(.+)$/.exec(t);
     if (on) { var e2 = bul(on[2]); if (e2 != null) return on[1] + e2; }
     /* ' · ' ile ayrılmış parçalar tek tek */
+    /* ', ' ile ayrılmış liste: hepsi çevrilebiliyorsa ('Mızrakçı, Okçu') */
+    if (t.indexOf(', ') > 0) { var ls = t.split(', '), lt = ls.map(function (x) { return bul(x); }); if (lt.every(function (x) { return x != null; })) return lt.join(', '); }
     if (t.indexOf(' · ') > 0) { var ps = t.split(' · '), ok = 0; ps = ps.map(function (x) { var z = bul(x); if (z != null) { ok++; return z; } return x; }); if (ok) return ps.join(' · '); }
     return null;
   }

@@ -2,6 +2,8 @@
 <html lang="tr">
 <head>
 <meta charset="utf-8">
+<script src="/dil.js" data-btn="sabit"></script>
+<script src="/dil/kucuk-krallik.js"></script>
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <title>Küçük Krallık – Tarayıcıda Köy ve Strateji Oyunu | erdevelop</title>
 <meta name="description" content="Küçük Krallık: tarayıcıda oynanan sade bir köy ve strateji oyunu. Bina kur, ordu topla, bölgeleri fethet, günlük görevleri tamamla.">
@@ -57,10 +59,10 @@ svg.scene{display:block;width:100%;height:auto;border-radius:20px;margin-bottom:
 @keyframes rise{0%{transform:translate(0,0) scale(.6);opacity:.7}100%{transform:translate(6px,-18px) scale(1.4);opacity:0}}
 .busy{animation:pulse 1.1s ease-in-out infinite alternate}
 @keyframes pulse{from{opacity:.62}to{opacity:1}}
-.ghost{opacity:.3}.hide{display:none!important}
+.ghost{opacity:.3}.hide{display:none!important}.kbt{display:flex;gap:8px;margin:0 0 8px}.kbt button{flex:1}.kch{display:flex;gap:8px;align-items:center;font-size:14px;margin-top:8px;color:var(--mute)}
 #list,#list2,#list3,#list4,#quests,#army{display:grid;gap:10px}
-#tabs{display:flex;gap:6px;margin:0 0 6px;overflow-x:auto}
-.tab{flex:1 0 auto;padding:9px 12px;background:var(--card);color:var(--mute);font-weight:700}
+#tabs{display:flex;flex-wrap:wrap;gap:6px;margin:0 0 6px}
+.tab{flex:1 0 auto;min-width:calc(33.333% - 4px);padding:9px 12px;background:var(--card);color:var(--mute);font-weight:700}
 .tab.on{background:var(--acc);color:#fff}
 .tab:hover:not(:disabled):not(.on){background:var(--line)}
 button.sm.g{background:var(--line);color:var(--ink)}
@@ -184,6 +186,12 @@ svg.scene g[id^="g-"]{filter:drop-shadow(0 1.5px 1px rgba(40,60,50,.22))}
 <h2>Skor tablosu</h2><article class="card"><p class="eff" id="lbn" style="margin:0 0 6px"></p><div class="rt"><table id="lb"></table></div><p class="eff" id="lbr" style="margin:8px 0 0"></p></article>
 <h2>Başarımlar</h2><article class="card"><div class="rt"><table id="ach"></table></div></article>
 <h2>Oyun istatistikleri</h2><article class="card"><div class="rt"><table id="lst"></table></div></article></div>
+<h2>Kayıt ve bildirim</h2><article class="card kyt"><p class="eff" id="kyd" style="margin:0 0 10px">İlerlemen bu tarayıcıda otomatik kaydediliyor. Telefon değiştirirsen ya da tarayıcı verisini silersen kaybolmaması için dosyaya ya da hesabına yedekle.</p>
+<div class="kbt"><button id="kDos">Dosyaya kaydet</button><button id="kYuk">Dosyadan yükle</button><input type="file" id="kFile" accept=".json,application/json" hidden></div>
+<div class="kbt"><button id="kBul">Buluta kaydet</button><button id="kBulY">Buluttan yükle</button></div>
+<p class="eff" id="kBd" style="margin:8px 0 0"></p>
+<label class="kch"><input type="checkbox" id="kOto"> Hesabıma otomatik kaydet (2 dakikada bir)</label>
+<label class="kch"><input type="checkbox" id="kBil"> İnşaat ve eğitim bitince bildirim gönder</label></article>
 <button class="reset" id="rst">Baştan başla</button>
 
 <!-- sayfa açıklaması (AdSense / arama motorları için) -->
@@ -269,7 +277,8 @@ const stg=L=>L.main>=10?4:L.main>=6?3:L.main>=3?2:1;
 const cost=(k,l)=>({i:Math.round((D[k].c.i||0)*Math.pow(1.5,l)),g:Math.round((D[k].c.g||0)*Math.pow(1.5,l)),w:Math.round((D[k].c.w||0)*Math.pow(1.5,l)),s:Math.round((D[k].c.s||0)*Math.pow(1.5,l))});
 const T=l=>Math.round(6*Math.pow(1.45,l)*(S.lv.main>=9?.7:S.lv.main>=5?.8:S.lv.main>=2?.9:1)*Math.pow(.96,S.lv.rbuild)*Math.pow(.97,S.sk.spd));
 const $=id=>document.getElementById(id);
-const fmt=n=>Math.floor(n).toLocaleString('tr');
+const EN=()=>!!(window.erDil&&erDil.lang==='en');
+const fmt=n=>Math.floor(n).toLocaleString(EN()?'en-GB':'tr');
 const tm=s=>{s=Math.ceil(s);return s>=60?Math.floor(s/60)+':'+String(s%60).padStart(2,'0'):s+' sn'};
 
 function ST0(){return{w:0,s:0,i:0,f:0,a:0,ef:0,ea:0,g:0,tn:0,dead:0,kill:0,bw:0,bl:0,bu:0,rc:0,xf:0,tc:0}}
@@ -277,7 +286,7 @@ function fresh(){return{t0:Date.now(),val:0,i:0,st:ST0(),t:Date.now(),cr:0,sk:{e
 function load(){try{const j=JSON.parse(localStorage.getItem(KEY));if(j&&j.lv){j.lv={main:1,wood:1,stone:1,store:1,saw:0,mason:0,wall:0,tower:0,...j.lv};j.q=j.q||[];j.f=j.f??40;j.a=j.a??40;j.ar=j.ar||{};j.tr=j.tr||{};j.wave=j.wave||1;j.lr=j.lr||'';j.g=j.g||0;j.ex=j.ex||[];j.rl=j.rl||{};j.xc=j.xc||0;j.i=j.i||0;j.val=j.val||0;j.cr=j.cr||0;j.sk=j.sk||{eco:0,war:0,mer:0,spd:0};j.ms=j.ms||0;j.rs=j.rs||0;j.ter=j.ter||{};j.evT=j.evT||Date.now()+120000;j.rel=j.rel||0;j.bk=j.bk||{};j.ach=j.ach||{};j.dq=j.dq||{d:'',b:{},c:{}};j.lb=j.lb||[];j.t0=j.t0||Date.now();j.st={...ST0(),...(j.st||{})};for(const r of ['w','s','i','f','a','g','val'])if(!isFinite(j[r]))j[r]=0;for(const r in j.st)if(!isFinite(j.st[r]))j.st[r]=0;delete j.ar.cat;delete j.tr.cat;if(j.rep&&JSON.stringify(j.rep).includes('cat'))delete j.rep;j.lv={wInf:0,aInf:0,wSpear:0,aSpear:0,wArch:0,aArch:0,wCav:0,aCav:0,iron:0,farm:0,well:0,inf:0,spear:0,arch:0,cav:0,cat:0,trader:0,univ:0,tatk:0,tdef:0,rwood:0,rstone:0,rfarm:0,rbuild:0,rstore:0,rtrade:0,rtrain:0,rgold:0,...j.lv};return j}}catch(e){}
  return fresh()}
 function save(){try{localStorage.setItem(KEY,JSON.stringify(S))}catch(e){}}
-let S=load(),lastStage=stg(S.lv),tt,pend=[];
+let bitti=[];let S=load(),lastStage=stg(S.lv),tt,pend=[];
 
 function advance(to){
  let g=0;
@@ -289,8 +298,8 @@ function advance(to){
   const dt=(nt-S.t)/1000,p=prod(S.lv),c=cap(S.lv),u=upk();S.st.w+=p.w*dt;S.st.s+=p.s*dt;S.st.f+=p.f*dt;S.st.a+=p.a*dt;S.st.i+=p.i*dt;S.st.ef+=u.f*dt;S.st.ea+=u.a*dt;
   S.w=Math.min(c,S.w+p.w*dt);S.s=Math.min(c,S.s+p.s*dt);S.i=Math.min(c,S.i+p.i*dt);S.g+=tb('g')*dt;S.st.g+=tb('g')*dt;
   S.f=Math.max(0,Math.min(c,S.f+(p.f-u.f)*dt));S.a=Math.max(0,Math.min(c,S.a+(p.a-u.a)*dt));S.t=nt;
-  if(tk){const q=S.tr[tk];S.ar[tk]=(S.ar[tk]||0)+1;S.st.tn++;q.n--;if(q.n>0)q.e+=utime(tk)*1000;else delete S.tr[tk]}
-  else if(nk){S.lv[nk]++;delete S.up[nk];if(D[nk].req||nk==='tatk'||nk==='tdef')S.st.rc++;else S.st.bu++;if(nk==='main'&&PERK[S.lv.main])pend.push('Ana bina Sv '+S.lv.main+': '+PERK[S.lv.main])}
+  if(tk){const q=S.tr[tk];S.ar[tk]=(S.ar[tk]||0)+1;S.st.tn++;q.n--;if(q.n>0)q.e+=utime(tk)*1000;else{delete S.tr[tk];bitti.push((U[tk]||SC).n+' eğitimi tamamlandı')}}
+  else if(nk){S.lv[nk]++;delete S.up[nk];bitti.push(D[nk].n+' Sv '+S.lv[nk]+' tamamlandı');if(D[nk].req||nk==='tatk'||nk==='tdef')S.st.rc++;else S.st.bu++;if(nk==='main'&&PERK[S.lv.main])pend.push('Ana bina Sv '+S.lv.main+': '+PERK[S.lv.main])}
  }
 }
 function toast(m){const e=$('toast');e.textContent=m;e.classList.add('on');clearTimeout(tt);tt=setTimeout(()=>e.classList.remove('on'),3200)}
@@ -569,7 +578,7 @@ function renderStats(){
 }
 
 // saat
-function clk(){const d=new Date();$('cd').textContent=d.toLocaleDateString('tr-TR',{day:'numeric',month:'long',year:'numeric',weekday:'long'});$('ct').textContent=d.toLocaleTimeString('tr-TR')}
+function clk(){const d=new Date(),lc=EN()?'en-GB':'tr-TR';$('cd').textContent=d.toLocaleDateString(lc,{day:'numeric',month:'long',year:'numeric',weekday:'long'});$('ct').textContent=d.toLocaleTimeString(lc)}
 clk();setInterval(clk,1000);
 
 // manzara: yol, çim, çiçek, orman
@@ -691,10 +700,10 @@ function renderAch(){
 }
 
 // günlük görevler
-const DQ=[['Savaş kazan','bw',3,20],['Asker eğit','tn',50,15],['Bina yükselt','bu',3,15],['Takas yap','tc',2,10],['Başarılı keşif','xc',5,20],['Altın kazan','g',200,25],['Düşman öldür','kill',100,20],['Odun üret','w',5000,20],['Araştırma ya da eğitim yükselt','rc',1,20]];
+const DQ=[['Savaş kazan','bw',3,20],['Asker eğit','tn',50,15],['Bina yükselt','bu',3,15],['Takas yap','tc',2,10],['Başarılı keşif','xc',5,20],['Altın kazan','g',200,25],['Düşman öldür','kill',100,20],['Odun üret','w',5000,20],['Araştırma ya da eğitim yükselt','rc',1,20],['Taş üret','s',3000,20]];
 $('dq').innerHTML=[0,1,2].map(j=>`<article class="card q" id="dc-${j}"><p><span id="dn-${j}"></span><br><small id="dp-${j}"></small></p><button data-d="${j}" id="db-${j}"></button></article>`).join('');
 function dqKey(){const d=new Date();return d.getFullYear()+'-'+(d.getMonth()+1)+'-'+d.getDate()}
-function dqPick(){const d=new Date(),s=d.getFullYear()*372+d.getMonth()*31+d.getDate(),ok=stg(S.lv)>=2?DQ.map((q,i)=>i):DQ.map((q,i)=>i).filter(i=>['bu','w'].includes(DQ[i][1]));return ok.map(i=>[rnd(s*7+i+1),i]).sort((a,b)=>a[0]-b[0]).slice(0,3).map(x=>x[1])}
+function dqPick(){const d=new Date(),s=d.getFullYear()*372+d.getMonth()*31+d.getDate(),ok=stg(S.lv)>=2?DQ.map((q,i)=>i):DQ.map((q,i)=>i).filter(i=>i===2||i===7||i===9);return ok.map(i=>[rnd(s*7+i+1),i]).sort((a,b)=>a[0]-b[0]).slice(0,3).map(x=>x[1])}
 const dqScale=()=>1+Math.floor((S.ms||0)/2000);
 function dqRoll(){const k=dqKey();if(S.dq.d!==k)S.dq={d:k,b:{...S.st,xc:S.xc||0},c:{},p:dqPick()};else if((S.dq.p||[]).length<3){const p=S.dq.p||[],yeni=dqPick().filter(i=>!p.includes(i));while(p.length<3&&yeni.length){const i=yeni.shift();p.push(i);S.dq.b[DQ[i][1]]=DQ[i][1]==='xc'?(S.xc||0):(S.st[DQ[i][1]]||0)}S.dq.p=p}}
 const dqVal=f=>Math.max(0,(f==='xc'?(S.xc||0):(S.st[f]||0))-(S.dq.b[f]||0));
@@ -752,10 +761,53 @@ function renderLb(){
  if(gap>60000){const dw=S.w-w0,ds=S.s-s0;if(dw>=1||ds>=1)setTimeout(()=>toast(`Sen yokken: +${fmt(dw)} odun, +${fmt(ds)} taş`),500)}
  lastStage=stg(S.lv);resolveEx();render();save();
 })();
-setInterval(()=>{advance(Date.now());resolveEx();render()},250);
+// ilk açılışta, sen yokken bitenlerin özeti
+{advance(Date.now());if(bitti.length){const m='Sen yokken: '+(bitti.length>2?bitti.length+' iş tamamlandı':bitti.join(', '));setTimeout(()=>toast(m),900)}bitti=[]}
+let rozet=0;const T0=document.title;
+function bitenler(){if(!bitti.length)return;const m=bitti.splice(0).map(x=>window.erDil?erDil.tr(x):x);if(!document.hidden){toast(m.join(' · '));return}
+ rozet+=m.length;document.title='('+rozet+') '+T0;
+ if(kAyar.bil&&'Notification' in window&&Notification.permission==='granted'){try{navigator.serviceWorker&&navigator.serviceWorker.getRegistration?navigator.serviceWorker.getRegistration().then(r=>r?r.showNotification((EN()?'Little Kingdom':'Küçük Krallık'),{body:m.join(' · '),tag:'krallik',icon:'/favicon.svg'}):new Notification((EN()?'Little Kingdom':'Küçük Krallık'),{body:m.join(' · '),tag:'krallik'})).catch(()=>{}):new Notification((EN()?'Little Kingdom':'Küçük Krallık'),{body:m.join(' · '),tag:'krallik'})}catch(e){}}}
+document.addEventListener('visibilitychange',()=>{if(!document.hidden&&rozet){rozet=0;document.title=T0}});
+setInterval(()=>{advance(Date.now());resolveEx();render();bitenler()},250);
 setInterval(save,5000);
 addEventListener('pagehide',save);
 document.addEventListener('visibilitychange',()=>{if(document.hidden)save();else{advance(Date.now());resolveEx();render()}});
+
+// ---- kayıt: dosya, bulut (hesap), ayarlar ----
+const KAY='kucuk-krallik-ayar';let kAyar={oto:false,bil:false};try{kAyar={...kAyar,...JSON.parse(localStorage.getItem(KAY)||'{}')}}catch(e){}
+const kSak=()=>{try{localStorage.setItem(KAY,JSON.stringify(kAyar))}catch(e){}};
+$('kOto').checked=kAyar.oto;$('kBil').checked=kAyar.bil;
+const ozet=x=>'Ana bina Sv '+x.lv.main+' · '+fmt(x.g||0)+' altın · '+Object.keys(x.ter||{}).length+' bölge';
+function kAc(j,kaynak){if(!j||!j.lv||!j.st)return toast('Kayıt okunamadı');try{localStorage.setItem(KEY,JSON.stringify(j))}catch(e){}S=load();lastStage=stg(S.lv);bitti=[];advance(Date.now());bitti=[];render();save();toast(kaynak+' yüklendi: '+ozet(S))}
+$('kDos').onclick=()=>{save();const a=document.createElement('a');a.href=URL.createObjectURL(new Blob([JSON.stringify({oyun:'kucuk-krallik',surum:1,t:Date.now(),S})],{type:'application/json'}));a.download='kucuk-krallik-'+new Date().toISOString().slice(0,10)+'.json';a.click();setTimeout(()=>URL.revokeObjectURL(a.href),3000);toast('Kayıt dosyası indirildi')};
+let kOnay=0;
+$('kYuk').onclick=()=>$('kFile').click();
+$('kFile').onchange=async e=>{const f=e.target.files[0];e.target.value='';if(!f)return;try{const j=JSON.parse(await f.text()),x=j.S||j;if(!confirm(EN()?'Load this save? It replaces your current progress.\n\nFile: '+erDil.tr(ozet(x))+'\nNow: '+erDil.tr(ozet(S)):'Bu kayıt yüklensin mi? Şu anki ilerlemenin yerine geçer.\n\nDosya: '+ozet(x)+'\nŞu an: '+ozet(S)))return;kAc(x,'Dosya')}catch(x){toast('Dosya okunamadı')}};
+const FBC={apiKey:'AIzaSyBtNow8j7AZQO2sWCiXb1WbOT261wJUGRU',authDomain:'oyun-bahcesi-62633.firebaseapp.com',projectId:'oyun-bahcesi-62633',storageBucket:'oyun-bahcesi-62633.firebasestorage.app',messagingSenderId:'591926138614',appId:'1:591926138614:web:24101e1be195ebc04c3ed7'};
+const yJs=src=>new Promise((r,j)=>{const s=document.createElement('script');s.src=src;s.onload=r;s.onerror=j;document.head.appendChild(s)});
+let fbH=null;
+function bulut(){if(fbH)return fbH;fbH=(async()=>{const V='https://www.gstatic.com/firebasejs/10.12.2/';
+ if(document.querySelector('script[src*="firebasejs"]'))for(let i=0;i<40&&!(window.firebase&&firebase.apps&&firebase.apps.length);i++)await new Promise(r=>setTimeout(r,250));
+ if(!window.firebase)await yJs(V+'firebase-app-compat.js');for(const n of['auth','firestore'])if(!firebase[n])await yJs(V+'firebase-'+n+'-compat.js');
+ if(!firebase.apps.length)firebase.initializeApp(FBC);
+ const u=await new Promise(r=>{const off=firebase.auth().onAuthStateChanged(x=>{off();r(x)})});
+ return u?{ref:firebase.firestore().collection('users').doc(u.uid),ad:u.email||''}:null})();
+ fbH.catch(()=>{fbH=null});return fbH}
+const girisYok=()=>{$('kBd').innerHTML='Buluta kaydetmek için <a href="/hesap.html">Hesabım</a> sayfasından giriş yap, sonra bu sayfaya dön.';toast('Önce hesabına giriş yap')};
+async function bulutaKaydet(sessiz){try{const h=await bulut();if(!h){if(!sessiz)girisYok();return}save();const t=Date.now();
+ await h.ref.set({krallik:{v:JSON.stringify(S),t,oz:ozet(S)}},{merge:true});kAyar.son=t;kSak();
+ $('kBd').textContent='Bulut: '+new Date(t).toLocaleString('tr-TR',{day:'2-digit',month:'2-digit',hour:'2-digit',minute:'2-digit'})+' · '+ozet(S)+(h.ad?' · '+h.ad:'');if(!sessiz)toast('Buluta kaydedildi')}
+ catch(e){if(!sessiz)toast('Buluta kaydedilemedi: '+(e&&(e.code||e.message)||'bağlantı kurulamadı'))}}
+$('kBul').onclick=()=>bulutaKaydet(false);
+$('kBulY').onclick=async()=>{try{const h=await bulut();if(!h)return girisYok();const d=await h.ref.get(),k=d.exists&&d.data().krallik;if(!k||!k.v){$('kBd').textContent='Hesabında kayıtlı oyun yok.';return toast('Bulutta kayıt yok')}
+ const x=JSON.parse(k.v);if(!confirm(EN()?'Load the cloud save? It replaces your current progress.\n\nCloud ('+new Date(k.t).toLocaleString('en-GB')+'): '+erDil.tr(ozet(x))+'\nNow: '+erDil.tr(ozet(S)):'Buluttaki kayıt yüklensin mi? Şu anki ilerlemenin yerine geçer.\n\nBulut ('+new Date(k.t).toLocaleString('tr-TR')+'): '+ozet(x)+'\nŞu an: '+ozet(S)))return;kAc(x,'Bulut kaydı')}
+ catch(e){toast('Buluttan alınamadı: '+(e&&(e.code||e.message)||'bağlantı kurulamadı'))}};
+$('kOto').onchange=()=>{kAyar.oto=$('kOto').checked;kSak();if(kAyar.oto)bulutaKaydet(false)};
+$('kBil').onchange=async()=>{kAyar.bil=$('kBil').checked;kSak();if(kAyar.bil&&'Notification' in window&&Notification.permission==='default'){try{const r=await Notification.requestPermission();if(r!=='granted'){toast('Bildirim izni verilmedi; sekme başlığında sayaç görünecek')}}catch(e){}}
+ if(kAyar.bil&&!('Notification' in window))toast('Bu tarayıcı bildirim desteklemiyor; sekme başlığında sayaç görünecek')};
+if(kAyar.son)$('kBd').textContent='Son bulut kaydı: '+new Date(kAyar.son).toLocaleString('tr-TR',{day:'2-digit',month:'2-digit',hour:'2-digit',minute:'2-digit'});
+setInterval(()=>{if(kAyar.oto)bulutaKaydet(true)},120000);
+document.addEventListener('visibilitychange',()=>{if(document.hidden&&kAyar.oto&&fbH)bulutaKaydet(true)});
 
 let armed=false;
 $('rst').addEventListener('click',e=>{
