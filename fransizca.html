@@ -1442,12 +1442,26 @@ function stopSpeak() { DP.tok++; if (SM.busy) { SM.tok++; SM.busy = false; simPa
 /* tek seferlik ses tanıma (simülasyon) */
 function listenOnce(btn, onText, onErr) {
   if (!SR) return onErr('Bu tarayıcı ses tanımayı desteklemiyor; cevabını yaz.');
-  if (listenOnce.r) { listenOnce.r.stop(); return; }
-  const r = new SR(); listenOnce.r = r; r.lang = 'fr-FR'; r.interimResults = true; let txt = '';
-  r.onresult = e => { txt = ''; for (const x of e.results) txt += x[0].transcript + ' '; onText(txt.trim(), false); };
-  r.onerror = e => onErr(e.error === 'not-allowed' ? 'Mikrofon izni verilmedi. Adres çubuğundaki simgeden izin ver ya da cevabını yaz.' : e.error === 'no-speech' ? 'Ses duyulmadı, tekrar dene.' : 'Ses tanıma hatası: ' + e.error);
-  r.onend = () => { listenOnce.r = null; btn.classList.remove('rec'); if (txt.trim()) onText(txt.trim(), true); };
-  try { if (TTS) speechSynthesis.cancel(); r.start(); btn.classList.add('rec'); } catch (e) { listenOnce.r = null; }
+  const old = listenOnce.r;
+  if (old) {
+    if (listenOnce.btn === btn) { try { old.stop(); } catch (e) { } return; } /* aynı düğme: dinlemeyi bitir */
+    /* önceki cümleden kalan oturum: sonucu artık yeni cümleye karışmasın, kapat */
+    old.onresult = old.onerror = old.onend = null; try { old.abort(); } catch (e) { }
+    if (listenOnce.btn) listenOnce.btn.classList.remove('rec'); listenOnce.r = listenOnce.btn = null;
+  }
+  const r = new SR(); listenOnce.r = r; listenOnce.btn = btn; r.lang = 'fr-FR'; r.interimResults = true; let txt = '';
+  const mine = () => listenOnce.r === r;
+  r.onresult = e => { if (!mine()) return; txt = ''; for (const x of e.results) txt += x[0].transcript + ' '; onText(txt.trim(), false); };
+  r.onerror = e => { if (!mine() || e.error === 'aborted') return;
+    onErr(e.error === 'not-allowed' || e.error === 'service-not-allowed' ? 'Mikrofon izni verilmedi. Adres çubuğundaki simgeden (iPhone\'da Ayarlar → Safari → Mikrofon) izin ver ya da cevabını yaz.'
+      : e.error === 'no-speech' ? 'Ses duyulmadı, tekrar dene.'
+      : e.error === 'audio-capture' ? 'Mikrofona ulaşılamadı. Seslendirme bitmemiş ya da başka bir uygulama mikrofonu kullanıyor olabilir; birkaç saniye sonra tekrar dene.'
+      : e.error === 'network' ? 'Ses tanıma için internet bağlantısı gerekiyor; bağlantını kontrol edip tekrar dene.'
+      : 'Ses tanıma hatası: ' + e.error); };
+  r.onend = () => { if (!mine()) return; listenOnce.r = listenOnce.btn = null; btn.classList.remove('rec'); if (txt.trim() && btn.isConnected) onText(txt.trim(), true); };
+  const go = () => { if (!mine()) return; try { r.start(); btn.classList.add('rec'); } catch (e) { listenOnce.r = listenOnce.btn = null; onErr('Mikrofon başlatılamadı, tekrar dene.'); } };
+  /* seslendirme sürüyorsa önce sustur, mikrofon serbest kalsın diye kısa bekle */
+  if (TTS && (speechSynthesis.speaking || speechSynthesis.pending)) { speechSynthesis.cancel(); setTimeout(go, 350); } else go();
 }
 /* ---- XP ---- */
 function addXP(n, why) { if (!n) return; S.xp = (S.xp || 0) + n; save(); Cloud.xp(n); accLabel(); if (why) TM.toast(`+${n} XP · ${why}`, 1400); }
