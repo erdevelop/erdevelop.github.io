@@ -1,0 +1,953 @@
+<!doctype html>
+<html lang="tr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Power BI ve Power Query · 7 günlük program | erdevelop</title>
+<meta name="description" content="Bol şemalı 7 günlük Power BI ve Power Query eğitimi: Power BI Desktop ve Excel&#x27;de veri alma, Power Query ile temizlik (tür ve bölge ayarı, kırpma, boş satır, büyük-küçük harf), birleştirme ve ekleme, gruplama ve özet kaldırma, M dili, yıldız şema ve ilişkiler, tarih tablosu, DAX ölçüleri (CALCULATE, DIVIDE, filtre bağlamı, zaman zekâsı), görseller ve dilimleyiciler, yayınlama ve yenileme. Bitiş projesi: cephe montaj performans panosu.">
+<link rel="icon" href="/favicon.svg" type="image/svg+xml">
+<link rel="icon" href="/favicon.ico" sizes="any">
+<link rel="apple-touch-icon" href="/apple-touch-icon.png">
+<link rel="manifest" href="/manifest.webmanifest">
+<meta name="theme-color" content="#0b1220">
+<meta property="og:title" content="Power BI ve Power Query · 7 günlük program | erdevelop">
+<meta property="og:description" content="7 günde Power BI ve Power Query: veri temizliği, birleştirme, M dili, veri modeli, DAX ölçüleri, görselleştirme ve yayın. Örnek veriyle cephe montaj panosu.">
+<meta property="og:url" content="https://erdevelop.github.io/egitimler/power-bi/">
+<meta property="og:image" content="https://erdevelop.github.io/og/egitimler-power-bi.jpg">
+<meta name="twitter:card" content="summary_large_image">
+<link rel="canonical" href="https://erdevelop.github.io/egitimler/power-bi/">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Chakra+Petch:wght@600;700&family=IBM+Plex+Sans:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500&display=swap">
+<style>
+  :root {
+    --bg: #eef2f6; --panel: #ffffff; --panel-2: #f5f7f9; --grid: #e3e8ed; --line: #cfd8e1;
+    --fg: #1c2833; --text: #45535f; --muted: #74838f; --accent: #2f6fb5; --accent-dim: rgba(47,111,181,.12); --hot: #c8731f; --ok: #2e8b57;
+    --f-display: 'Chakra Petch', 'Segoe UI', sans-serif; --f-body: 'IBM Plex Sans', 'Segoe UI', system-ui, sans-serif; --f-mono: 'IBM Plex Mono', Consolas, monospace;
+    color-scheme: light;
+  }
+  :root[data-mode="dark"] {
+    --bg: #0b1220; --panel: #111a2c; --panel-2: #0e1626; --grid: #182338; --line: #22304a;
+    --fg: #e2e8f2; --text: #a8b6cc; --muted: #73829b; --accent: #f2b33d; --accent-dim: rgba(242,179,61,.14); --hot: #6aa8ff; --ok: #5fc48d;
+    color-scheme: dark;
+  }
+  * { box-sizing: border-box; }
+  html { background: var(--bg); scroll-padding-top: 110px; }
+  body { margin: 0; color: var(--fg); font-family: var(--f-body); font-size: 16px; line-height: 1.65;
+    background-image: linear-gradient(var(--grid) 1px, transparent 1px), linear-gradient(90deg, var(--grid) 1px, transparent 1px); background-size: 80px 80px; background-attachment: fixed; }
+  a { color: var(--accent); }
+  :focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+  .wrap { max-width: 920px; margin: 0 auto; padding-left: max(16px, env(safe-area-inset-left, 0px)); padding-right: max(16px, env(safe-area-inset-right, 0px)); }
+
+  .topbar { position: sticky; top: 0; z-index: 20; background: color-mix(in srgb, var(--bg) 92%, transparent); backdrop-filter: blur(6px); border-bottom: 1px solid var(--line); }
+  .topbar .wrap { display: flex; align-items: center; gap: 12px; padding-block: 10px; max-width: 1160px; }
+  .brand { font: 700 15px var(--f-display); letter-spacing: 1px; text-transform: uppercase; text-decoration: none; color: var(--fg); }
+  .brand span { color: var(--accent); }
+  .crumb { font: 400 12px var(--f-mono); color: var(--muted); }
+  .sp { flex: 1; }
+  .tb { font: 500 12px var(--f-mono); color: var(--accent); padding: 6px 10px; border: 1px solid var(--line); border-radius: 4px; background: none; cursor: pointer; text-transform: uppercase; text-decoration: none; }
+  .tb:hover { border-color: var(--accent); }
+  .daynav { border-top: 1px solid var(--line); }
+  .daynav .wrap { display: flex; gap: 6px; padding-block: 8px; overflow-x: auto; max-width: 1160px; }
+  .daynav a { font: 500 12px var(--f-mono); text-decoration: none; color: var(--text); border: 1px solid var(--line); border-radius: 4px; padding: 4px 10px; white-space: nowrap; background: var(--panel); }
+  .daynav a.on { border-color: var(--accent); color: var(--accent); }
+  .daynav a.done { background: var(--accent-dim); }
+
+  header.head { padding-block: 34px 6px; }
+  .kicker { font: 500 12px var(--f-mono); color: var(--accent); letter-spacing: 1px; }
+  .head h1 { font: 700 clamp(2rem, 6vw, 3rem)/1.05 var(--f-display); margin: 6px 0 0; letter-spacing: -.5px; }
+  .head p.lead { margin: 12px 0 0; color: var(--text); max-width: 64ch; font-size: 1.05rem; }
+  .chips { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 16px; }
+  .chips span { font: 400 12px var(--f-mono); color: var(--muted); border: 1px solid var(--line); border-radius: 4px; padding: 3px 8px; background: var(--panel); }
+
+  .card { background: var(--panel); border: 1px solid var(--line); border-radius: 8px; padding: 22px clamp(16px, 4vw, 30px); margin-top: 28px; }
+  .day-head { display: flex; align-items: baseline; gap: 12px; flex-wrap: wrap; border-bottom: 1px solid var(--line); padding-bottom: 12px; margin-bottom: 6px; }
+  .day-head h2, .card > h2 { font: 700 1.45rem/1.2 var(--f-display); margin: 0; letter-spacing: .2px; }
+  .dn { font: 600 12px var(--f-mono); color: var(--panel); background: var(--accent); border-radius: 3px; padding: 2px 7px; }
+  :root[data-mode="dark"] .dn { color: #1a1204; }
+  .day-head .meta { font: 400 12px var(--f-mono); color: var(--muted); margin-left: auto; }
+  section.day { background: var(--panel); border: 1px solid var(--line); border-radius: 8px; padding: 22px clamp(16px, 4vw, 30px); margin-top: 28px; }
+
+  .prose h3 { font: 700 1.12rem/1.3 var(--f-display); margin: 30px 0 8px; letter-spacing: .2px; }
+  .prose p, .prose li { color: var(--text); }
+  .prose strong { color: var(--fg); font-weight: 600; }
+  .prose ol, .prose ul { padding-left: 1.4em; }
+  .prose li { margin: 4px 0; }
+  .prose li > ul, .prose li > ol { margin: 4px 0; }
+  .prose code { font: 400 .86em var(--f-mono); background: var(--panel-2); border: 1px solid var(--line); border-radius: 3px; padding: 1px 5px; color: var(--fg); overflow-wrap: anywhere; }
+  .tw { overflow-x: auto; margin: 14px 0; border: 1px solid var(--line); border-radius: 6px; }
+  .tw table { border-collapse: collapse; width: 100%; font-size: .9rem; }
+  .tw th, .tw td { text-align: left; padding: 8px 12px; border-bottom: 1px solid var(--line); vertical-align: top; }
+  .tw th { font: 600 12px var(--f-mono); color: var(--muted); background: var(--panel-2); }
+  .card .tw td:first-child, .card .tw td:last-child { white-space: nowrap; }
+  .tw tr:last-child td { border-bottom: 0; }
+  ul.tasks { list-style: none; padding-left: 0; }
+  li.task label { display: flex; gap: 10px; align-items: flex-start; cursor: pointer; padding: 4px 0; }
+  li.task input { width: 18px; height: 18px; margin-top: 4px; accent-color: var(--accent); flex: none; }
+  li.task input:checked + span { color: var(--muted); text-decoration: line-through; }
+  .pn { display: flex; justify-content: space-between; gap: 12px; margin-top: 26px; padding-top: 14px; border-top: 1px solid var(--line); font: 500 13px var(--f-mono); }
+  .pn a { text-decoration: none; }
+  .note { font-size: .9rem; color: var(--muted); }
+  .reset { font: 500 11px var(--f-mono); color: var(--muted); background: none; border: 1px solid var(--line); border-radius: 4px; padding: 3px 8px; cursor: pointer; text-transform: uppercase; }
+  .reset:hover { color: var(--hot); border-color: var(--hot); }
+
+  .fig { margin: 18px 0; padding: 16px 14px 12px; border: 1px solid var(--line); border-radius: 6px; background: var(--panel-2); }
+  .fig .sc { overflow-x: auto; }
+  .fig svg { display: block; width: 100%; min-width: 540px; height: auto; max-width: 720px; margin: 0 auto; overflow: visible; }
+  .fig figcaption { font-size: .85rem; color: var(--muted); margin-top: 10px; text-align: center; max-width: 62ch; margin-inline: auto; }
+  .fig .k { fill: none; stroke: var(--fg); stroke-width: 1.6; } .fig .k1 { fill: none; stroke: var(--fg); stroke-width: 1; }
+  .fig .mu { fill: none; stroke: var(--muted); stroke-width: 1.2; } .fig .mud { fill: none; stroke: var(--muted); stroke-width: 1; stroke-dasharray: 5 4; }
+  .fig .dm { fill: none; stroke: var(--muted); stroke-width: .9; }
+  .fig .rp { fill: none; stroke: var(--hot); stroke-width: 1; stroke-dasharray: 9 4 2 4; }
+  .fig .gd { fill: none; stroke: var(--fg); stroke-width: 1; stroke-dasharray: 16 4 3 4; }
+  .fig .ac { fill: none; stroke: var(--accent); stroke-width: 2; } .fig .acl { fill: none; stroke: var(--accent); stroke-width: 1; }
+  .fig .gl { fill: var(--accent-dim); stroke: var(--fg); stroke-width: .8; }
+  .fig .sp { fill: color-mix(in srgb, var(--fg) 40%, transparent); stroke: var(--fg); stroke-width: .8; }
+  .fig .fr { fill: color-mix(in srgb, var(--fg) 22%, transparent); stroke: none; } .fig .edge { fill: none; stroke: var(--fg); stroke-width: 1.8; }
+  .fig .so { fill: var(--panel); stroke: var(--fg); stroke-width: 1.6; } .fig .hole { fill: var(--panel-2); stroke: var(--fg); stroke-width: 1.2; }
+  .fig .rib { fill: var(--accent-dim); stroke: var(--accent); stroke-width: 1.4; stroke-dasharray: 6 4; }
+  .fig .sel { fill: none; stroke: var(--accent); stroke-width: 3; }
+  .fig .mul { stroke: var(--fg); stroke-width: 4; } .fig .tr { stroke: var(--fg); stroke-width: 3; } .fig .trA { stroke: var(--accent); stroke-width: 3; }
+  .fig .lh { fill: var(--panel); stroke: var(--fg); stroke-width: 1.4; }
+  .fig .dot { fill: var(--accent); } .fig .dotr { fill: var(--accent); stroke: var(--panel); stroke-width: 1; }
+  .fig .pt { fill: var(--accent); stroke: var(--panel); stroke-width: 2; } .fig .tpt { fill: var(--panel); font: 700 12px var(--f-mono); }
+  .fig .bx { fill: var(--panel); stroke: var(--line); stroke-width: 1.3; } .fig .bxa { fill: var(--accent-dim); stroke: var(--accent); stroke-width: 1.3; }
+  .fig .ar { fill: var(--muted); }
+  .fig .acd { fill: none; stroke: var(--accent); stroke-width: 1.6; stroke-dasharray: 6 4; }
+  .fig text { text-transform: none; letter-spacing: 0; } .fig .bg { fill: var(--panel); stroke: none; }
+  .fig .t { fill: var(--text); font: 400 13px var(--f-body); } .fig .tb { fill: var(--fg); font: 600 13px var(--f-body); }
+  .fig .tm { fill: var(--muted); font: 400 11px var(--f-mono); } .fig .ta { fill: var(--accent); font: 600 11px var(--f-mono); }
+  .fig .th { fill: var(--hot); font: 500 11px var(--f-mono); }
+  .fig .swb { fill: none; stroke: #2f7de1; stroke-width: 2; } .fig .swr { fill: none; stroke: #d64545; stroke-width: 2; } .fig .tr2 { fill: #d64545; font: 600 11px var(--f-mono); } .fig .tbl { fill: #2f7de1; font: 600 11px var(--f-mono); }
+  .prose pre { background: var(--panel-2); border: 1px solid var(--line); border-radius: 6px; padding: 12px 14px; overflow-x: auto; }
+  .prose pre code { background: none; border: 0; padding: 0; font: 400 .85rem/1.5 var(--f-mono); color: var(--fg); }
+  footer { margin-top: 56px; border-top: 1px solid var(--line); padding-block: 20px calc(20px + env(safe-area-inset-bottom, 0px)); font: 400 12px var(--f-mono); color: var(--muted); }
+  footer .wrap { display: flex; justify-content: space-between; gap: 12px; flex-wrap: wrap; }
+  footer a { color: inherit; } footer a:hover { color: var(--accent); }
+  @media print { .topbar, .daynav, .pn, footer, .reset { display: none !important; } body { background: #fff; } section.day, .card { break-inside: auto; border: 0; } }
+</style>
+<script async src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-4775308844679394" crossorigin="anonymous"></script>
+</head>
+<body>
+<div class="topbar">
+  <div class="wrap">
+    <a class="brand" href="/">erdevelop<span>_</span></a>
+    <span class="crumb">/ eğitimler / power-bi</span>
+    <span class="sp"></span>
+    <a class="tb" href="../../Tools.html">Araçlar</a>
+    <button class="tb" type="button" id="modeBtn">DARK</button>
+  </div>
+  <nav class="daynav" aria-label="Günler"><div class="wrap"><a href="#genel" data-nav="0">Genel</a><a href="#gun1" data-nav="1">1</a><a href="#gun2" data-nav="2">2</a><a href="#gun3" data-nav="3">3</a><a href="#gun4" data-nav="4">4</a><a href="#gun5" data-nav="5">5</a><a href="#gun6" data-nav="6">6</a><a href="#gun7" data-nav="7">7</a></div></nav>
+</div>
+
+<main class="wrap">
+  <header class="head" id="genel">
+    <div class="kicker">Eğitimler · Power BI ve Power Query</div>
+    <h1>Power BI ve Power Query</h1>
+    <p class="lead">Dağınık Excel ve CSV dosyalarından, kendiliğinden güncellenen bir rapora ulaşmak için 7 günlük bir program. Power Query ile tarihleri ve ondalık virgülleri doğru okumayı, ekip adlarındaki tutarsızlıkları temizlemeyi, tabloları birleştirip hedef tablosunu uzun biçime çevirmeyi öğrenirsin. Ardından tabloları bir yıldız şemada ilişkilendirir, DAX ile ölçüler yazar ve dilimleyicili, detaya inilebilen bir rapor tasarlarsın. Hafta sonunda dört projenin altı aylık montaj verisinden hedef-gerçekleşme ve ekip verimliliği gösteren bir pano hazırlayıp yayınlarsın.</p>
+    <div class="chips"><span>7 gün</span><span>günde ~4 saat</span><span>Türkçe</span><span>Kod örnekleri kopyalanabilir</span></div>
+  </header>
+
+  <div class="card">
+    <h2>Başlamadan önce</h2>
+    <div class="prose">
+      <h3>Kimler için</h3>
+      <p>Excel&#x27;de düzenli rapor hazırlayan ve bunu her ay elle tekrarlamaktan sıkılan herkes; proje, üretim ve maliyet takibi yapan mühendisler, planlama ve satın alma ekipleri. Excel&#x27;de tablo ve pivot tablo kullanabiliyor olman yeterli.</p>
+      <h3>Gerekenler</h3>
+      <ul>
+        <li>Power BI Desktop (Windows, ücretsiz; Microsoft Store ya da <a href="https://powerbi.microsoft.com/desktop" target="_blank" rel="noopener">powerbi.microsoft.com</a>). Mac kullanıyorsan Power Query günleri Excel'de de yapılabilir.</li>
+        <li>Örnek veri: <a href="veri/montaj.csv" download>montaj.csv</a>, <a href="veri/projeler.csv" download>projeler.csv</a>, <a href="veri/hedef.csv" download>hedef.csv</a>, 7. gün için <a href="veri/montaj_2026_07.csv" download>montaj_2026_07.csv</a> (noktalı virgülle ayrılmış, UTF-8).</li>
+        <li>Excel'de pivot tablo bilgisi; gerekirse sitedeki <a href="../excel-ileri/index.html">İleri Excel</a> eğitimi.</li>
+      </ul>
+      <h3>Program</h3>
+      <div class="tw"><table><thead><tr><th>Gün</th><th>Konu</th><th>Ne öğrenirsin</th><th>Süre</th></tr></thead><tbody>
+<tr><td><a href="#gun1">1. gün</a></td><td>Power BI ve Power Query&#x27;ye giriş</td><td>Power BI Desktop ve Excel, rapor, veri ve model görünümü, CSV&#x27;den veri almak, Power Query düzenleyicisi, uygulanan adımlar, bölge ayarı</td><td>~4 saat</td></tr>
+<tr><td><a href="#gun2">2. gün</a></td><td>Power Query ile temizlik</td><td>Veri türü ve yerel ayar, kırpma ve temizleme, büyük-küçük harf, boş satırları kaldırmak, sütun adları, değer değiştirmek, hatalar, gelişmiş düzenleyici ve M</td><td>~4 saat</td></tr>
+<tr><td><a href="#gun3">3. gün</a></td><td>Birleştirme ve şekillendirme</td><td>Sorguları birleştir (merge), sorgu ekle (append), klasörden veri, gruplandır, özet sütunu kaldır (unpivot), özel sütun, M dilinde if ve fonksiyonlar</td><td>~4 saat</td></tr>
+<tr><td><a href="#gun4">4. gün</a></td><td>Veri modeli</td><td>Olgu ve boyut tabloları, yıldız şema, ilişkiler ve kardinalite, filtre yönü, tarih tablosu, model görünümü, sık yapılan model hataları</td><td>~4 saat</td></tr>
+<tr><td><a href="#gun5">5. gün</a></td><td>DAX ölçüleri</td><td>Hesaplanmış sütun ve ölçü farkı, SUM, COUNTROWS, DISTINCTCOUNT, DIVIDE, CALCULATE ve filtre bağlamı, ALL, VAR ve RETURN, TOTALYTD, hedef-gerçekleşme</td><td>~4 saat</td></tr>
+<tr><td><a href="#gun6">6. gün</a></td><td>Görselleştirme ve rapor</td><td>Doğru görseli seçmek, kart, çubuk, çizgi, matris, dilimleyici, koşullu biçimlendirme, detaya inme, araç ipuçları, sayfa düzeni ve renk</td><td>~4 saat</td></tr>
+<tr><td><a href="#gun7">7. gün</a></td><td>Proje: montaj performans panosu</td><td>Uçtan uca: sorgular, model, ölçüler, pano sayfaları, yeni ay verisiyle yenileme, yayınlama, paylaşım ve zamanlanmış yenileme</td><td>~5 saat</td></tr>
+      </tbody></table></div>
+      <p class="note">Her günün sonunda bir kontrol listesi var. İşaretledikçe ilerlemen bu tarayıcıda saklanır. Hafta içi sadece akşamları çalışırsan program yaklaşık iki hafta sürer. Örnek veri tamamen kurgusaldır. Metindeki tüm sonuç sayıları (toplamlar, oranlar, verimlilikler) aynı veri Python pandas ile ayrıca işlenerek kontrol edilmiştir. Power Query (M) ve DAX kodları bu eğitim hazırlanırken Power BI çalışma ortamında çalıştırılamadığı için denetimden geçmemiştir; menü adları Power BI Desktop'ın Türkçe arayüzüne göre verilmiştir ve sürümle değişebilir. Lisans ve paylaşım koşulları için Microsoft'un güncel belgelerine bak. <button class="reset" type="button" id="resetBtn">ilerlemeyi sıfırla</button></p>
+    </div>
+  </div>
+
+<section class="day" id="gun1" data-day="1">
+  <div class="day-head"><span class="dn">GÜN 01</span><h2>Power BI ve Power Query&#x27;ye giriş</h2><span class="meta">~4 saat · <span data-prog="1">0/5</span> kontrol</span></div>
+  <div class="prose"><h3>Hedef</h3>
+<p>Gün sonunda Power BI'ın parçalarını (Power Query, veri modeli, DAX, rapor) ve Excel ile ilişkisini bilecek; Power BI Desktop'ta rapor, tablo ve model görünümlerini tanıyacak; noktalı virgülle ayrılmış bir CSV'yi doğru kodlama ve ayraçla alacak; Power Query düzenleyicisinde uygulanan adımları okuyabilecek ve Türkçe tarih ve ondalık virgül için bölge ayarının neden önemli olduğunu açıklayabileceksin. Süre yaklaşık 4 saat.</p>
+<h3>1. Power BI'ın parçaları (45 dk)</h3>
+<figure class="fig"><div class="sc"><svg viewBox="0 0 640 86" role="img" xmlns="http://www.w3.org/2000/svg"><defs><marker id="ah-parcalar" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0 0L10 5L0 10z" class="ar"/></marker></defs><rect x="10.0" y="16" width="109.6" height="56" rx="5" class="bx"/><text x="64.8" y="40.0" class="tb" text-anchor="middle">Kaynak</text><text x="64.8" y="56.0" class="tm" text-anchor="middle">CSV, Excel, SQL</text><rect x="137.6" y="16" width="109.6" height="56" rx="5" class="bxa"/><text x="192.39999999999998" y="40.0" class="tb" text-anchor="middle">Power Query</text><text x="192.39999999999998" y="56.0" class="tm" text-anchor="middle">al, temizle (M)</text><line x1="121.6" y1="44.0" x2="135.6" y2="44.0" class="mu" marker-end="url(#ah-parcalar)"/><rect x="265.2" y="16" width="109.6" height="56" rx="5" class="bx"/><text x="320.0" y="40.0" class="tb" text-anchor="middle">Veri modeli</text><text x="320.0" y="56.0" class="tm" text-anchor="middle">tablolar, ilişki</text><line x1="249.2" y1="44.0" x2="263.2" y2="44.0" class="mu" marker-end="url(#ah-parcalar)"/><rect x="392.79999999999995" y="16" width="109.6" height="56" rx="5" class="bx"/><text x="447.59999999999997" y="40.0" class="tb" text-anchor="middle">DAX</text><text x="447.59999999999997" y="56.0" class="tm" text-anchor="middle">ölçüler</text><line x1="376.79999999999995" y1="44.0" x2="390.79999999999995" y2="44.0" class="mu" marker-end="url(#ah-parcalar)"/><rect x="520.4" y="16" width="109.6" height="56" rx="5" class="bx"/><text x="575.1999999999999" y="40.0" class="tb" text-anchor="middle">Rapor</text><text x="575.1999999999999" y="56.0" class="tm" text-anchor="middle">görseller</text><line x1="504.4" y1="44.0" x2="518.4" y2="44.0" class="mu" marker-end="url(#ah-parcalar)"/></svg></div><figcaption>Power BI&#x27;ın katmanları: Power Query ve model Excel&#x27;de de vardır.</figcaption></figure>
+<p>Power BI dört katmandan oluşur:</p>
+<ol>
+<li><strong>Power Query:</strong> Veriyi kaynaktan alır, temizler ve şekillendirir. Her adım kaydedilir; yeni veri geldiğinde aynı adımlar otomatik tekrarlanır. Arka planda <strong>M</strong> diliyle çalışır.</li>
+<li><strong>Veri modeli:</strong> Temizlenmiş tablolar ve aralarındaki <strong>ilişkiler</strong>. Veriler sıkıştırılmış bir bellek içi veritabanında tutulur; milyonlarca satır hızla hesaplanır.</li>
+<li><strong>DAX:</strong> Model üzerinde <strong>ölçüler</strong> (toplam alan, gerçekleşme oranı) yazmak için formül dili.</li>
+<li><strong>Rapor:</strong> Görseller, dilimleyiciler ve sayfalar; tıklayınca birbirini süzer.</li>
+</ol>
+<p>Aynı Power Query ve veri modeli <strong>Excel</strong>'de de vardır (Veri → Veri Al ve Power Pivot). Excel'de öğrendiğin Power Query adımları Power BI'da birebir aynıdır. Fark: Power BI raporu etkileşimli ve yayınlanabilir, Excel ise hücre tabanlı hesap ve dağıtım için daha esnek.</p>
+<h3>2. Power BI Desktop arayüzü (45 dk)</h3>
+<p>Sol kenarda üç (bazı sürümlerde dört) görünüm vardır:</p>
+<div class="tw"><table>
+<thead>
+<tr>
+<th>Görünüm</th>
+<th>Ne için</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><strong>Rapor</strong></td>
+<td>Görselleri yerleştirmek ve biçimlendirmek</td>
+</tr>
+<tr>
+<td><strong>Tablo</strong> (Veri)</td>
+<td>Yüklenmiş tabloların satırlarını görmek, hesaplanmış sütun eklemek</td>
+</tr>
+<tr>
+<td><strong>Model</strong></td>
+<td>Tabloları ve ilişkilerini diyagram olarak görmek</td>
+</tr>
+</tbody>
+</table></div>
+<p>Sağda <strong>Görselleştirmeler</strong> ve <strong>Veri</strong> (alanlar) bölmeleri, üstte şerit menü vardır. Power Query ayrı bir pencerede açılır: Giriş → <strong>Verileri dönüştür</strong>.</p>
+<h3>3. Örnek veri (30 dk)</h3>
+<p>Bu eğitim boyunca kurgusal bir cephe firmasının dört projesindeki altı aylık (Ocak–Haziran 2026) montaj kayıtlarını kullanacağız. Dosyaları “Ne gerekli?” bölümündeki bağlantılardan indir:</p>
+<div class="tw"><table>
+<thead>
+<tr>
+<th>Dosya</th>
+<th>İçerik</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>montaj.csv</code></td>
+<td>Her satır bir günlük montaj kaydı: Tarih, Proje, Ekip, Panel tipi, Adet, Alan (m2)</td>
+</tr>
+<tr>
+<td><code>projeler.csv</code></td>
+<td>Proje kodu, adı ve şehri</td>
+</tr>
+<tr>
+<td><code>hedef.csv</code></td>
+<td>Her proje için aylık montaj hedefi (m²); aylar <strong>sütunlarda</strong></td>
+</tr>
+</tbody>
+</table></div>
+<p>Dosyalar gerçek hayattaki gibi biraz dağınıktır: tarih <code>05.01.2026</code> biçiminde, ondalık ayraç virgül, bazı ekip adları farklı yazılmış (<code>ekip a</code>, <code>EKIP B</code>) ve araya boş satırlar karışmış. Yarın bunları temizleyeceğiz.</p>
+<h3>4. CSV'yi almak (1 saat)</h3>
+<figure class="fig"><div class="sc"><svg viewBox="0 0 640 166" role="img" xmlns="http://www.w3.org/2000/svg"><defs><marker id="ah-verial" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0 0L10 5L0 10z" class="ar"/></marker></defs><rect x="20" y="20" width="280" height="22" class="bx"/><text x="160.0" y="35" class="ta" text-anchor="middle">montaj.csv (ham)</text><rect x="20" y="42" width="280" height="80" class="bx"/><text x="28" y="60" class="tm" text-anchor="start">05.01.2026;P02; ekip a ;…;7,1</text><text x="28" y="78" class="tm" text-anchor="start">06.01.2026;P01;Ekip A;…;18,6</text><text x="28" y="96" class="tm" text-anchor="start">;;;;;</text><text x="28" y="114" class="tm" text-anchor="start">…;EKIP B;…</text><line x1="310" y1="70" x2="360" y2="70" class="ac" marker-end="url(#ah-verial)"/><rect x="370" y="30" width="250" height="80" rx="5" class="bxa"/><text x="495.0" y="58.0" class="tb" text-anchor="middle">Veri al → Metin/CSV</text><text x="495.0" y="74.0" class="tm" text-anchor="middle">UTF-8, sınırlayıcı ; </text><text x="495.0" y="90.0" class="tm" text-anchor="middle">→ Verileri dönüştür</text><text x="320" y="150" class="ta" text-anchor="middle">tarih ve ondalık virgül için yerel ayar: Türkçe (Türkiye)</text></svg></div><figcaption>CSV&#x27;yi almak: kodlama, sınırlayıcı ve bölge ayarı.</figcaption></figure>
+<ol>
+<li>Giriş → <strong>Veri al</strong> → <strong>Metin/CSV</strong> → <code>montaj.csv</code>.</li>
+<li>Önizleme penceresinde kontrol et:
+   - <strong>Dosya kaynağı:</strong> <code>65001: Unicode (UTF-8)</code>. Türkçe karakterler (Ünite, Şub) bozuk görünüyorsa kodlama yanlıştır.
+   - <strong>Sınırlayıcı:</strong> Noktalı virgül.
+   - <strong>Veri türü algılama:</strong> İlk 200 satıra göre.</li>
+<li><strong>Yükle</strong> yerine <strong>Verileri dönüştür</strong>'e bas: veri önce Power Query'de açılır. Doğrudan yüklemek, temizlenmemiş veriyi modele alır.</li>
+</ol>
+<p>Power Query penceresinde:</p>
+<ul>
+<li>Ortada verinin önizlemesi,</li>
+<li>Solda <strong>Sorgular</strong> listesi,</li>
+<li>Sağda <strong>Sorgu ayarları</strong>: sorgu adı ve <strong>Uygulanan adımlar</strong> (Kaynak, Yükseltilen üst bilgiler, Değiştirilen tür...).</li>
+</ul>
+<p>Her adıma tıklayınca verinin o adımdaki halini görürsün. Bir adımı silmek ya da araya adım eklemek mümkündür. Sorgunun adını <code>Montaj</code> yap.</p>
+<h3>5. Bölge ayarı: Türkçe tarih ve ondalık (45 dk)</h3>
+<p>Power Query, metni sayıya ve tarihe çevirirken bir <strong>yerel ayar</strong> (bölge) kullanır. Bilgisayarın bölgesi İngilizce (ABD) ise <code>05.01.2026</code> tarihi tanınmaz ya da yanlış (5 Ocak yerine 1 Mayıs) okunur; <code>7,1</code> sayısı <strong>71</strong> olur. Bu, raporu sessizce bozan en yaygın hatadır.</p>
+<p>İki çözüm:</p>
+<ul>
+<li><strong>Dosya düzeyinde:</strong> Dosya → Seçenekler ve ayarlar → Seçenekler → <strong>Bölgesel ayarlar</strong> (bu dosya için) → Türkçe (Türkiye).</li>
+<li><strong>Sütun düzeyinde (önerilen):</strong> Sütun başlığına sağ tıkla → <strong>Türü değiştir → Yerel ayarı kullanarak...</strong> → veri türü (Tarih ya da Ondalık sayı) ve yerel ayar <strong>Türkçe (Türkiye)</strong>. Bu, dosya başka bir bilgisayarda açıldığında da doğru çalışır.</li>
+</ul>
+<p>Şimdilik Power Query'nin kendi eklediği “Değiştirilen tür” adımını sil; türleri yarın yerel ayarla birlikte biz vereceğiz.</p>
+<p><strong>Alıştırma:</strong> <code>projeler.csv</code> ve <code>hedef.csv</code> dosyalarını da aynı şekilde Power Query'ye al, sorgu adlarını <code>Projeler</code> ve <code>Hedef</code> yap. <code>Hedef</code> tablosunda kaç satır ve kaç sütun var? (Yanıt: 4 satır, 7 sütun: proje_kodu ve altı ay.)</p>
+<h3>Gün sonu kontrolü (15 dk)</h3>
+<ul class="tasks">
+<li class="task"><label><input type="checkbox" data-id="g1-1"><span>Power Query, veri modeli, DAX ve rapor katmanlarını açıklayabiliyorum.</span></label></li>
+<li class="task"><label><input type="checkbox" data-id="g1-2"><span>Rapor, tablo ve model görünümlerini tanıyorum.</span></label></li>
+<li class="task"><label><input type="checkbox" data-id="g1-3"><span>CSV'yi doğru kodlama ve sınırlayıcıyla alıp Power Query'de açabiliyorum.</span></label></li>
+<li class="task"><label><input type="checkbox" data-id="g1-4"><span>Uygulanan adımları okuyup düzenleyebiliyorum.</span></label></li>
+<li class="task"><label><input type="checkbox" data-id="g1-5"><span>Türkçe tarih ve ondalık virgül için yerel ayarın önemini biliyorum.</span></label></li>
+</ul></div>
+  <div class="pn"><a href="#genel">← Genel bakış</a><a href="#gun2">2. gün →</a></div>
+</section>
+<section class="day" id="gun2" data-day="2">
+  <div class="day-head"><span class="dn">GÜN 02</span><h2>Power Query ile temizlik</h2><span class="meta">~4 saat · <span data-prog="2">0/5</span> kontrol</span></div>
+  <div class="prose"><h3>Hedef</h3>
+<p>Gün sonunda Power Query'de boş satırları kaldıracak, metinleri kırpıp büyük-küçük harfi düzeltecek, sütunları yeniden adlandıracak, tarih ve ondalık sayıları Türkçe yerel ayarla doğru türe çevirecek, hatalı satırları bulacak, gelişmiş düzenleyicide oluşan M kodunu okuyup küçük değişiklikler yapabileceksin. Sonunda <code>Montaj</code> sorgusu 298 temiz satır ve 3 ekip adı içerecek. Süre yaklaşık 4 saat.</p>
+<h3>1. Boş satırlar ve sütun adları (30 dk)</h3>
+<p><code>Montaj</code> sorgusunda:</p>
+<ol>
+<li>Giriş → <strong>Satırları kaldır → Boş satırları kaldır.</strong> Dosyadaki iki boş satır gider.</li>
+<li>Sütun adlarını rapora uygun hale getir (başlığa çift tıkla): <code>Panel tipi</code> → <code>PanelTipi</code>, <code>Alan (m2)</code> → <code>Alan</code>. Boşluksuz ve parantezsiz adlar DAX'ta yazmayı kolaylaştırır.</li>
+</ol>
+<h3>2. Metni temizlemek (1 saat)</h3>
+<figure class="fig"><div class="sc"><svg viewBox="0 0 640 140" role="img" xmlns="http://www.w3.org/2000/svg"><defs><marker id="ah-temizlik" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0 0L10 5L0 10z" class="ar"/></marker></defs><rect x="20" y="20" width="150" height="22" class="bx"/><text x="95.0" y="35" class="ta" text-anchor="middle">Ekip (önce)</text><rect x="20" y="42" width="150" height="80" class="bx"/><text x="28" y="60" class="tm" text-anchor="start">Ekip A</text><text x="28" y="78" class="tm" text-anchor="start"> ekip a </text><text x="28" y="96" class="tm" text-anchor="start">EKIP B</text><text x="28" y="114" class="tm" text-anchor="start">Ekip C</text><line x1="180" y1="60" x2="240" y2="60" class="ac" marker-end="url(#ah-temizlik)"/><text x="210" y="52" class="tm" text-anchor="middle">Kırp</text><rect x="250" y="20" width="120" height="22" class="bx"/><text x="310.0" y="35" class="ta" text-anchor="middle"></text><rect x="250" y="42" width="120" height="80" class="bx"/><text x="258" y="60" class="tm" text-anchor="start">Ekip A</text><text x="258" y="78" class="tm" text-anchor="start">ekip a</text><text x="258" y="96" class="tm" text-anchor="start">EKIP B</text><text x="258" y="114" class="tm" text-anchor="start">Ekip C</text><line x1="380" y1="60" x2="440" y2="60" class="ac" marker-end="url(#ah-temizlik)"/><text x="410" y="52" class="tm" text-anchor="middle">Baş harf</text><rect x="450" y="20" width="150" height="22" class="bxa"/><text x="525.0" y="35" class="ta" text-anchor="middle">Ekip (sonra)</text><rect x="450" y="42" width="150" height="80" class="bx"/><text x="458" y="60" class="tm" text-anchor="start">Ekip A</text><text x="458" y="78" class="tm" text-anchor="start">Ekip A</text><text x="458" y="96" class="tm" text-anchor="start">Ekip B</text><text x="458" y="114" class="tm" text-anchor="start">Ekip C</text></svg></div><figcaption>Metin temizliği: aynı ekip üç farklı yazımdan tek ada iner.</figcaption></figure>
+<p><code>Ekip</code> sütununda aynı ekip farklı yazılmış: <code>Ekip A</code>, <code>ekip a</code>, <code>EKIP A</code>. Raporda bunlar üç ayrı ekip gibi görünür.</p>
+<ol>
+<li><code>Ekip</code> sütununu seç → Dönüştür → <strong>Biçim → Kırp</strong> (baştaki ve sondaki boşlukları siler).</li>
+<li><strong>Biçim → Her Sözcüğün Baş Harfini Büyük Yap.</strong></li>
+</ol>
+<p>Şimdi sütun başlığındaki açılır oka bas: sadece <strong>Ekip A, Ekip B, Ekip C</strong> kalmalı.</p>
+<p><strong>Türkçe karakter uyarısı:</strong> “Her sözcüğün baş harfini büyük yap” ve “küçük harf” işlemleri İngilizce kurallarla çalışabilir: <code>İSTANBUL</code> küçük harfe <code>i̇stanbul</code> ya da <code>istanbul</code> olarak, <code>ıspanak</code> büyük harfe <code>ISPANAK</code> olarak dönebilir. Türkçe karakter içeren alanlarda sonucu kontrol et; gerekirse <strong>Değerleri değiştir</strong> ile düzelt. Daha iyisi, anahtar olarak kullanılacak sütunlarda (proje kodu gibi) Türkçe karakter kullanmamaktır.</p>
+<h3>3. Türleri yerel ayarla vermek (1 saat)</h3>
+<div class="tw"><table>
+<thead>
+<tr>
+<th>Sütun</th>
+<th>Tür</th>
+<th>Nasıl</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Tarih</td>
+<td>Tarih</td>
+<td>Sağ tık → Türü değiştir → <strong>Yerel ayarı kullanarak</strong> → Tarih, Türkçe (Türkiye)</td>
+</tr>
+<tr>
+<td>Proje, Ekip, PanelTipi</td>
+<td>Metin</td>
+<td>Başlıktaki <strong>ABC</strong> simgesi</td>
+</tr>
+<tr>
+<td>Adet</td>
+<td>Tam sayı</td>
+<td><strong>123</strong> simgesi</td>
+</tr>
+<tr>
+<td>Alan</td>
+<td>Ondalık sayı</td>
+<td>Yerel ayarı kullanarak → Ondalık sayı, Türkçe (Türkiye)</td>
+</tr>
+</tbody>
+</table></div>
+<p>Kontrol: <code>Alan</code> sütununda ilk değer <strong>7,1</strong> olmalı (71 değil); <code>Tarih</code> sütununda ilk satır <strong>5 Ocak 2026</strong>.</p>
+<p>Power BI'da tür seçimi önemlidir: metin olarak kalan bir sayı toplanamaz, metin olarak kalan bir tarih zaman eksenine konamaz.</p>
+<h3>4. Hatalar ve sütun profili (30 dk)</h3>
+<p>Görünüm → <strong>Sütun kalitesi</strong>, <strong>Sütun dağılımı</strong> ve <strong>Sütun profili</strong> seçeneklerini aç. Her sütunun üstünde geçerli, hata ve boş oranları görünür. Not: bu bilgiler varsayılan olarak ilk 1000 satıra göre hesaplanır; alt çubuktan “Tüm veri kümesine göre sütun profili oluşturma” seçilebilir.</p>
+<p>Hata varsa (örneğin bir hücrede <code>12,5 m2</code> yazıyorsa ondalık sayıya çevrilemez): Giriş → <strong>Satırları tut → Hataları tut</strong> ile hatalı satırları gör, sebebini kaynakta düzelt. Kaynağı düzeltemiyorsan <strong>Değerleri değiştir</strong> ya da <strong>Hataları kaldır</strong> (bilerek!) kullanılır.</p>
+<h3>5. Gelişmiş düzenleyici ve M (1 saat)</h3>
+<figure class="fig"><div class="sc"><svg viewBox="0 0 640 86" role="img" xmlns="http://www.w3.org/2000/svg"><defs><marker id="ah-mdili" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0 0L10 5L0 10z" class="ar"/></marker></defs><rect x="10.0" y="16" width="109.6" height="56" rx="5" class="bx"/><text x="64.8" y="40.0" class="tb" text-anchor="middle">Kaynak</text><text x="64.8" y="56.0" class="tm" text-anchor="middle">Csv.Document</text><rect x="137.6" y="16" width="109.6" height="56" rx="5" class="bx"/><text x="192.39999999999998" y="40.0" class="tb" text-anchor="middle">Başlıklar</text><text x="192.39999999999998" y="56.0" class="tm" text-anchor="middle">PromoteHeaders</text><line x1="121.6" y1="44.0" x2="135.6" y2="44.0" class="mu" marker-end="url(#ah-mdili)"/><rect x="265.2" y="16" width="109.6" height="56" rx="5" class="bx"/><text x="320.0" y="40.0" class="tb" text-anchor="middle">Boş satır</text><text x="320.0" y="56.0" class="tm" text-anchor="middle">SelectRows</text><line x1="249.2" y1="44.0" x2="263.2" y2="44.0" class="mu" marker-end="url(#ah-mdili)"/><rect x="392.79999999999995" y="16" width="109.6" height="56" rx="5" class="bx"/><text x="447.59999999999997" y="40.0" class="tb" text-anchor="middle">Kırp</text><text x="447.59999999999997" y="56.0" class="tm" text-anchor="middle">TransformColumns</text><line x1="376.79999999999995" y1="44.0" x2="390.79999999999995" y2="44.0" class="mu" marker-end="url(#ah-mdili)"/><rect x="520.4" y="16" width="109.6" height="56" rx="5" class="bxa"/><text x="575.1999999999999" y="40.0" class="tb" text-anchor="middle">Türler</text><text x="575.1999999999999" y="56.0" class="tm" text-anchor="middle">"tr-TR"</text><line x1="504.4" y1="44.0" x2="518.4" y2="44.0" class="mu" marker-end="url(#ah-mdili)"/></svg></div><figcaption>M: her uygulanan adım, bir öncekine başvuran bir satırdır (let … in).</figcaption></figure>
+<p>Giriş → <strong>Gelişmiş düzenleyici</strong> sorgunun M kodunu gösterir. Bugünkü adımlar yaklaşık şöyle görünür:</p>
+<pre><code class="language-text">let
+    Kaynak = Csv.Document(File.Contents(&quot;C:\Veri\montaj.csv&quot;),
+        [Delimiter=&quot;;&quot;, Columns=6, Encoding=65001, QuoteStyle=QuoteStyle.None]),
+    Basliklar = Table.PromoteHeaders(Kaynak, [PromoteAllScalars=true]),
+    BosSatirsiz = Table.SelectRows(Basliklar, each not List.IsEmpty(
+        List.RemoveMatchingItems(Record.FieldValues(_), {&quot;&quot;, null}))),
+    Adlandirilan = Table.RenameColumns(BosSatirsiz,
+        {{&quot;Panel tipi&quot;, &quot;PanelTipi&quot;}, {&quot;Alan (m2)&quot;, &quot;Alan&quot;}}),
+    Kirpilan = Table.TransformColumns(Adlandirilan, {{&quot;Ekip&quot;, Text.Trim, type text}}),
+    BuyukHarf = Table.TransformColumns(Kirpilan, {{&quot;Ekip&quot;, Text.Proper, type text}}),
+    Turler = Table.TransformColumnTypes(BuyukHarf,
+        {{&quot;Tarih&quot;, type date}, {&quot;Alan&quot;, type number}}, &quot;tr-TR&quot;),
+    Turler2 = Table.TransformColumnTypes(Turler,
+        {{&quot;Proje&quot;, type text}, {&quot;PanelTipi&quot;, type text}, {&quot;Adet&quot;, Int64.Type}})
+in
+    Turler2
+</code></pre>
+<p>M'nin temel yapısı:</p>
+<ul>
+<li><code>let ... in</code>: her satır bir <strong>adım</strong>; her adım bir öncekinin adını kullanır; <code>in</code>'den sonraki adım sonuçtur.</li>
+<li><code>each</code>: “her satır için” anlamına gelen kısa fonksiyon; <code>_</code> o anki satırdır.</li>
+<li><code>"tr-TR"</code>: tür dönüşümünde Türkçe yerel ayar.</li>
+<li>Fonksiyonlar <code>Table.</code>, <code>Text.</code>, <code>List.</code>, <code>Date.</code> gibi ailelere ayrılır; büyük-küçük harfe duyarlıdır.</li>
+</ul>
+<p>Arayüzün ürettiği adımlar (adlar İngilizce olabilir, örneğin <code>#"Changed Type"</code>) farklı görünebilir; mantık aynıdır. M kodunu elle yazmak zorunda değilsin, ama okuyabilmek, bir adımı kopyalamak ya da dosya yolunu değiştirmek için çok işe yarar.</p>
+<p><strong>Dosya yolunu parametre yapmak:</strong> Giriş → <strong>Parametreleri yönet → Yeni</strong>: <code>VeriKlasoru</code> = <code>C:\Veri\</code>. M'de <code>File.Contents(VeriKlasoru &amp; "montaj.csv")</code>. Dosyalar başka klasöre taşındığında sadece parametre değişir.</p>
+<p><strong>Alıştırma:</strong> (1) Temizlenmiş <code>Montaj</code> sorgusunu Kapat ve Uygula ile yükle. Tablo görünümünde satır sayısını kontrol et. (2) Rapor görünümüne bir kart görseli koyup <code>Alan</code> toplamını göster. (Yanıtlar: 298 satır; 3 346,1 m².)</p>
+<h3>Gün sonu kontrolü (15 dk)</h3>
+<ul class="tasks">
+<li class="task"><label><input type="checkbox" data-id="g2-1"><span>Boş satırları kaldırıp sütunları yeniden adlandırabiliyorum.</span></label></li>
+<li class="task"><label><input type="checkbox" data-id="g2-2"><span>Kırpma ve büyük-küçük harf dönüşümüyle metni temizleyebiliyor, Türkçe karakter tuzağını biliyorum.</span></label></li>
+<li class="task"><label><input type="checkbox" data-id="g2-3"><span>Tarih ve ondalık sayıyı Türkçe yerel ayarla doğru türe çevirebiliyorum.</span></label></li>
+<li class="task"><label><input type="checkbox" data-id="g2-4"><span>Sütun kalitesi ve profiliyle hataları bulabiliyorum.</span></label></li>
+<li class="task"><label><input type="checkbox" data-id="g2-5"><span>Gelişmiş düzenleyicide M kodunu okuyup dosya yolunu parametreye bağlayabiliyorum.</span></label></li>
+</ul></div>
+  <div class="pn"><a href="#gun1">← 1. gün</a><a href="#gun3">3. gün →</a></div>
+</section>
+<section class="day" id="gun3" data-day="3">
+  <div class="day-head"><span class="dn">GÜN 03</span><h2>Birleştirme ve şekillendirme</h2><span class="meta">~4 saat · <span data-prog="3">0/5</span> kontrol</span></div>
+  <div class="prose"><h3>Hedef</h3>
+<p>Gün sonunda iki tabloyu ortak bir sütunla birleştirecek (merge), aynı yapıdaki tabloları alt alta ekleyecek (append) ve bir klasördeki tüm dosyaları tek sorguda toplayacak; gruplandırma ile özet tablo üretecek; aylarının sütunlarda olduğu hedef tablosunu özet sütun kaldırma (unpivot) ile uzun biçime çevirecek ve M ile özel sütun yazabileceksin. Süre yaklaşık 4 saat.</p>
+<h3>1. Sorguları birleştirmek (merge) (1 saat)</h3>
+<figure class="fig"><div class="sc"><svg viewBox="0 0 640 220" role="img" xmlns="http://www.w3.org/2000/svg"><defs><marker id="ah-merge" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0 0L10 5L0 10z" class="ar"/></marker></defs><rect x="20" y="20" width="150" height="22" class="bx"/><text x="95.0" y="35" class="ta" text-anchor="middle">Montaj</text><rect x="20" y="42" width="150" height="62" class="bx"/><text x="28" y="60" class="tm" text-anchor="start">P02  7,1</text><text x="28" y="78" class="tm" text-anchor="start">P03  3,8</text><text x="28" y="96" class="tm" text-anchor="start">P01 18,6</text><rect x="20" y="120" width="150" height="22" class="bx"/><text x="95.0" y="135" class="ta" text-anchor="middle">Projeler</text><rect x="20" y="142" width="150" height="62" class="bx"/><text x="28" y="160" class="tm" text-anchor="start">P01 Kule A</text><text x="28" y="178" class="tm" text-anchor="start">P02 Ofis Park</text><text x="28" y="196" class="tm" text-anchor="start">P03 Otel Marina</text><line x1="180" y1="80" x2="260" y2="80" class="ac" marker-end="url(#ah-merge)"/><text x="220" y="72" class="ta" text-anchor="middle">sol dış</text><rect x="270" y="40" width="220" height="22" class="bxa"/><text x="380.0" y="55" class="ta" text-anchor="middle">Montaj + proje adı</text><rect x="270" y="62" width="220" height="62" class="bx"/><text x="278" y="80" class="tm" text-anchor="start">P02  7,1  Ofis Park</text><text x="278" y="98" class="tm" text-anchor="start">P03  3,8  Otel Marina</text><text x="278" y="116" class="tm" text-anchor="start">P01 18,6  Kule A</text><text x="510" y="120" class="tm" text-anchor="start">≈ DÜŞEYARA</text></svg></div><figcaption>Sorguları birleştirmek: ortak sütunla sütun getirir.</figcaption></figure>
+<p>Excel'deki DÜŞEYARA'nın Power Query karşılığı <strong>birleştirme</strong>dir. <code>Montaj</code> tablosuna proje adını ve şehri getirelim:</p>
+<ol>
+<li><code>Montaj</code> sorgusu seçiliyken Giriş → <strong>Sorguları birleştir</strong>.</li>
+<li>Alttaki tablo: <code>Projeler</code>. Üst tabloda <code>Proje</code>, alt tabloda <code>proje_kodu</code> sütununu seç.</li>
+<li><strong>Birleştirme türü:</strong> Sol dış (birinciden tümü, ikinciden eşleşenler). Pencerenin altında “298 satırın 298'i eşleşti” gibi bir bilgi görünür: eşleşmeyen satır varsa kod yazımını kontrol et.</li>
+<li>Yeni sütunun başlığındaki genişlet simgesine bas, <code>proje_adi</code> ve <code>sehir</code>'i seç, “Özgün sütun adını ön ek olarak kullan” işaretini kaldır.</li>
+</ol>
+<p>Birleştirme türleri: <strong>sol dış</strong> (en sık), <strong>iç</strong> (sadece iki tarafta da olanlar), <strong>sol karşıt</strong> (sadece solda olup sağda eşleşmeyenler: eksik kodları bulmak için çok kullanışlı), <strong>tam dış</strong>.</p>
+<p>Not: Bu birleştirme şart değildir; 4. günde aynı işi <strong>model ilişkisi</strong> ile yapacağız ve bu genellikle daha iyi bir yöntemdir. Birleştirme, veriyi tek tabloya düzleştirmek gerektiğinde (örneğin Excel'e tek tablo vermek) kullanılır.</p>
+<h3>2. Ekleme ve klasörden veri (45 dk)</h3>
+<p>Her ay yeni bir <code>montaj_2026_07.csv</code> geldiğini düşün. İki yol:</p>
+<ul>
+<li><strong>Sorgu ekle (append):</strong> Giriş → Sorguları ekle → iki ya da daha fazla tabloyu alt alta koyar. Sütun adları aynı olmalıdır; farklı adlı sütunlar ayrı sütun olarak eklenir ve boş değerler oluşur.</li>
+<li><strong>Klasörden (önerilen):</strong> Veri al → <strong>Klasör</strong> → tüm aylık dosyaların durduğu klasör → <strong>Birleştir ve dönüştür</strong>. Power Query bir örnek dosya üzerinden temizlik adımlarını tanımlar ve <strong>klasördeki tüm dosyalara</strong> uygular. Yeni ay dosyası klasöre kopyalanıp <strong>Yenile</strong>'ye basıldığında rapor kendiliğinden güncellenir.</li>
+</ul>
+<p>Klasörden birleştirmede kaynak dosya adı (<code>Source.Name</code>) bir sütun olarak gelir; hangi satırın hangi dosyadan geldiğini izlemek için tutmak faydalıdır.</p>
+<h3>3. Gruplandırma (45 dk)</h3>
+<p><code>Montaj</code> sorgusunun bir kopyasını oluştur (sağ tık → <strong>Başvuru</strong>; başvuru, orijinal sorgunun sonucunu kaynak alır ve orijinal değiştikçe güncellenir). Yeni sorguda:</p>
+<ol>
+<li>Sütun ekle → Tarih → <strong>Ay → Ayın başlangıcı</strong> (her tarihi ayın ilk gününe çevirir).</li>
+<li>Giriş → <strong>Gruplandırma ölçütü</strong> → Gelişmiş: gruplama <code>Proje</code> ve <code>AyBaslangic</code>; yeni sütunlar <code>ToplamAlan</code> = Alan'ın <strong>toplamı</strong>, <code>KayitSayisi</code> = <strong>satırları say</strong>.</li>
+</ol>
+<p>Sonuç, proje başına aylık toplamları veren 22 satırlık bir tablodur (P04 Mart'ta başladığı için 4 × 6 − 2). Örnek: P01, Ocak 2026 → <strong>149,2 m²</strong>.</p>
+<p>Gruplandırma, büyük veriyi özetleyip küçültmek için kullanılır. Ama rapordaki toplamları genellikle Power Query'de değil, <strong>DAX ölçüleriyle</strong> (5. gün) hesaplarız: böylece aynı veri her filtre ve kırılımda doğru toplanır.</p>
+<h3>4. Özet sütunu kaldırma (unpivot) (1 saat)</h3>
+<figure class="fig"><div class="sc"><svg viewBox="0 0 640 130" role="img" xmlns="http://www.w3.org/2000/svg"><defs><marker id="ah-unpivot" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0 0L10 5L0 10z" class="ar"/></marker></defs><rect x="20" y="20" width="230" height="22" class="bx"/><text x="135.0" y="35" class="ta" text-anchor="middle">Hedef (geniş)</text><rect x="20" y="42" width="230" height="62" class="bx"/><text x="28" y="60" class="tm" text-anchor="start">proje  Oca  Şub  Mar …</text><text x="28" y="78" class="tm" text-anchor="start">P01    160  180  200</text><text x="28" y="96" class="tm" text-anchor="start">P04      0    0  200</text><line x1="260" y1="60" x2="320" y2="60" class="ac" marker-end="url(#ah-unpivot)"/><text x="290" y="50" class="ta" text-anchor="middle">unpivot</text><rect x="330" y="20" width="200" height="22" class="bxa"/><text x="430.0" y="35" class="ta" text-anchor="middle">Hedef (uzun)</text><rect x="330" y="42" width="200" height="80" class="bx"/><text x="338" y="60" class="tm" text-anchor="start">P01  Oca  160</text><text x="338" y="78" class="tm" text-anchor="start">P01  Şub  180</text><text x="338" y="96" class="tm" text-anchor="start">P01  Mar  200</text><text x="338" y="114" class="tm" text-anchor="start">…  (24 satır)</text></svg></div><figcaption>Diğer sütunların özetini kaldır: aylar satıra iner, yeni aylar kendiliğinden gelir.</figcaption></figure>
+<p><code>Hedef</code> tablosu “geniş” biçimdedir: her ay bir sütun. Bu, Excel'de okumak için rahat ama analiz için kötüdür: Temmuz geldiğinde yeni bir sütun eklenir ve tüm hesaplar değişir. Analiz için <strong>uzun</strong> biçim gerekir: her satır bir proje-ay-hedef.</p>
+<ol>
+<li><code>Hedef</code> sorgusunda <code>proje_kodu</code> sütununu seç.</li>
+<li>Dönüştür → <strong>Özet sütunu kaldır → Diğer sütunların özetini kaldır.</strong></li>
+<li>Oluşan <code>Öznitelik</code> ve <code>Değer</code> sütunlarının adını <code>Ay</code> ve <code>HedefM2</code> yap.</li>
+</ol>
+<p>Sonuç: 4 proje × 6 ay = <strong>24 satır</strong>. “Diğer sütunlar” seçeneği önemlidir: yeni ay sütunları eklendiğinde de otomatik dahil edilir.</p>
+<h3>5. Özel sütun ve M (30 dk)</h3>
+<p><code>Ay</code> sütununda “Oca”, “Şub” gibi metinler var; modelde tarih tablosuyla ilişki kurmak için gerçek bir tarihe çevirelim. Sütun ekle → <strong>Özel sütun</strong>, adı <code>AyBaslangic</code>:</p>
+<pre><code class="language-text">#date(2026,
+    List.PositionOf({&quot;Oca&quot;,&quot;Şub&quot;,&quot;Mar&quot;,&quot;Nis&quot;,&quot;May&quot;,&quot;Haz&quot;,&quot;Tem&quot;,&quot;Ağu&quot;,&quot;Eyl&quot;,&quot;Eki&quot;,&quot;Kas&quot;,&quot;Ara&quot;}, [Ay]) + 1,
+    1)
+</code></pre>
+<ul>
+<li><code>[Ay]</code> o satırdaki Ay sütununun değeridir.</li>
+<li><code>List.PositionOf</code> listedeki sırayı verir (0'dan başlar), +1 ay numarasıdır.</li>
+<li><code>#date(yıl, ay, gün)</code> bir tarih oluşturur.</li>
+</ul>
+<p>Sütunun türünü <strong>Tarih</strong> yap, <code>Ay</code> sütununu kaldır. (Gerçek projede yıl da bir sütun ya da parametre olur.)</p>
+<p>Koşullu sütun örneği (Sütun ekle → Koşullu sütun ya da özel sütunla):</p>
+<pre><code class="language-text">if [Adet] &gt;= 8 then &quot;Yoğun gün&quot; else if [Adet] &gt;= 4 then &quot;Normal&quot; else &quot;Az&quot;
+</code></pre>
+<p><strong>Alıştırma:</strong> (1) <code>Montaj</code> ile <code>Projeler</code>'i birleştirip şehre göre gruplandır: hangi şehirde en çok alan monte edilmiş? (2) Sol karşıt birleştirme ile <code>Montaj</code>'da olup <code>Projeler</code>'de olmayan proje kodu var mı kontrol et. (Yanıtlar: İstanbul 1 020,6 m²; Ankara 892,4; İzmir 872,3; Bursa 560,8. Eşleşmeyen kod yok, sonuç 0 satır.)</p>
+<h3>Gün sonu kontrolü (15 dk)</h3>
+<ul class="tasks">
+<li class="task"><label><input type="checkbox" data-id="g3-1"><span>Sorguları birleştirip sütun genişletebiliyor, birleştirme türlerini ve sol karşıt kullanımını biliyorum.</span></label></li>
+<li class="task"><label><input type="checkbox" data-id="g3-2"><span>Sorgu ekleme ve klasörden birleştirme ile aylık dosyaları otomatik toplayabiliyorum.</span></label></li>
+<li class="task"><label><input type="checkbox" data-id="g3-3"><span>Gruplandırma ile özet tablo üretebiliyorum; toplamların çoğunu DAX'a bırakmam gerektiğini biliyorum.</span></label></li>
+<li class="task"><label><input type="checkbox" data-id="g3-4"><span>Geniş tabloyu “diğer sütunların özetini kaldır” ile uzun biçime çevirebiliyorum.</span></label></li>
+<li class="task"><label><input type="checkbox" data-id="g3-5"><span>M ile özel sütun ve koşullu sütun yazabiliyorum.</span></label></li>
+</ul></div>
+  <div class="pn"><a href="#gun2">← 2. gün</a><a href="#gun4">4. gün →</a></div>
+</section>
+<section class="day" id="gun4" data-day="4">
+  <div class="day-head"><span class="dn">GÜN 04</span><h2>Veri modeli</h2><span class="meta">~4 saat · <span data-prog="4">0/5</span> kontrol</span></div>
+  <div class="prose"><h3>Hedef</h3>
+<p>Gün sonunda olgu ve boyut tablolarını ayırt edecek; montaj verisi için bir yıldız şema kuracak; tablolar arasında bire-çok ilişkiler oluşturup filtre yönünü ayarlayacak; DAX ya da Power Query ile bir tarih tablosu yapıp “tarih tablosu olarak işaretleyecek” ve sık görülen model hatalarını (çift yönlü filtre, çoka-çok, eksik anahtar) tanıyabileceksin. Süre yaklaşık 4 saat.</p>
+<h3>1. Olgu ve boyut (45 dk)</h3>
+<figure class="fig"><div class="sc"><svg viewBox="0 0 640 236" role="img" xmlns="http://www.w3.org/2000/svg"><defs><marker id="ah-yildiz" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0 0L10 5L0 10z" class="ar"/></marker></defs><rect x="250" y="70" width="140" height="50" rx="5" class="bxa"/><text x="320.0" y="91.0" class="tb" text-anchor="middle">Montaj</text><text x="320.0" y="107.0" class="tm" text-anchor="middle">olgu</text><rect x="250" y="170" width="140" height="50" rx="5" class="bxa"/><text x="320.0" y="191.0" class="tb" text-anchor="middle">Hedef</text><text x="320.0" y="207.0" class="tm" text-anchor="middle">olgu</text><rect x="40" y="120" width="140" height="50" rx="5" class="bx"/><text x="110.0" y="141.0" class="tb" text-anchor="middle">Projeler</text><text x="110.0" y="157.0" class="tm" text-anchor="middle">boyut</text><rect x="460" y="120" width="140" height="50" rx="5" class="bx"/><text x="530.0" y="141.0" class="tb" text-anchor="middle">Takvim</text><text x="530.0" y="157.0" class="tm" text-anchor="middle">boyut</text><line x1="180" y1="140" x2="250" y2="95" class="mu" marker-end="url(#ah-yildiz)"/><line x1="180" y1="150" x2="250" y2="195" class="mu" marker-end="url(#ah-yildiz)"/><line x1="460" y1="140" x2="390" y2="95" class="mu" marker-end="url(#ah-yildiz)"/><line x1="460" y1="150" x2="390" y2="195" class="mu" marker-end="url(#ah-yildiz)"/><text x="215" y="106" class="ta" text-anchor="start">1</text><text x="240" y="92" class="ta" text-anchor="start">*</text><text x="320" y="30" class="tm" text-anchor="middle">filtre: boyut (1) → olgu (*)</text></svg></div><figcaption>Yıldız şema: iki olgu tablosu ortak boyutlar üzerinden birlikte süzülür.</figcaption></figure>
+<ul>
+<li><strong>Olgu (fact) tablosu:</strong> Olayları kaydeder, çok satırlıdır, sayısal değerler içerir: <code>Montaj</code> (her gün, her kayıt: adet, alan), <code>Hedef</code> (her proje-ay: hedef m²).</li>
+<li><strong>Boyut (dimension) tablosu:</strong> Olayları <strong>tanımlar</strong>, az satırlıdır, metin özellikler içerir: <code>Projeler</code> (ad, şehir), <code>Takvim</code> (yıl, ay, hafta), ekip ve panel tipi.</li>
+</ul>
+<p><strong>Yıldız şema:</strong> Ortada olgu tabloları, çevresinde boyut tabloları; her boyut olgu tablosuna <strong>bire-çok</strong> bir ilişkiyle bağlanır. Power BI bu yapıda en hızlı ve en doğru çalışır. Her şeyi tek dev tabloya birleştirmek (3. gündeki gibi) küçük veride çalışır ama iki olgu tablosunu (montaj ve hedef) birlikte analiz etmek gerektiğinde tıkanır.</p>
+<p>Bizim modelimiz:</p>
+<div class="tw"><table>
+<thead>
+<tr>
+<th>Tablo</th>
+<th>Tür</th>
+<th>Anahtar</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Montaj</td>
+<td>Olgu</td>
+<td>Proje, Tarih</td>
+</tr>
+<tr>
+<td>Hedef</td>
+<td>Olgu</td>
+<td>proje_kodu, AyBaslangic</td>
+</tr>
+<tr>
+<td>Projeler</td>
+<td>Boyut</td>
+<td>proje_kodu</td>
+</tr>
+<tr>
+<td>Takvim</td>
+<td>Boyut</td>
+<td>Tarih</td>
+</tr>
+</tbody>
+</table></div>
+<p>Ekip ve panel tipi için ayrı boyut tablosu da yapılabilir; burada <code>Montaj</code> içinde bırakıyoruz.</p>
+<h3>2. İlişkiler (1 saat)</h3>
+<p>Model görünümünde <code>Projeler[proje_kodu]</code> alanını <code>Montaj[Proje]</code> üzerine sürükle. Power BI ilişkiyi oluşturur ve şunları gösterir:</p>
+<ul>
+<li><strong>Kardinalite:</strong> Bire çok (1 : *). <code>1</code> tarafı Projeler (her kod bir kez), <code>*</code> tarafı Montaj (her kod çok kez).</li>
+<li><strong>Çapraz filtre yönü:</strong> Tek. Filtre <strong>1 tarafından * tarafına</strong> akar: bir proje seçilince o projenin montajları süzülür.</li>
+</ul>
+<p>Aynı şekilde <code>Projeler[proje_kodu] → Hedef[proje_kodu]</code>.</p>
+<p>Artık bir dilimleyicide <code>Projeler[sehir]</code> seçildiğinde hem montaj hem hedef süzülür: iki olgu tablosu <strong>ortak boyut</strong> üzerinden birlikte analiz edilir. Bu, yıldız şemanın asıl gücüdür.</p>
+<h3>3. Tarih tablosu (1 saat)</h3>
+<figure class="fig"><div class="sc"><svg viewBox="0 0 640 140" role="img" xmlns="http://www.w3.org/2000/svg"><defs><marker id="ah-takvim" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0 0L10 5L0 10z" class="ar"/></marker></defs><rect x="20" y="20" width="240" height="22" class="bxa"/><text x="140.0" y="35" class="ta" text-anchor="middle">Takvim</text><rect x="20" y="42" width="240" height="80" class="bx"/><text x="28" y="60" class="tm" text-anchor="start">Date        AyNo  Ay</text><text x="28" y="78" class="tm" text-anchor="start">01.01.2026  1     Oca</text><text x="28" y="96" class="tm" text-anchor="start">02.01.2026  1     Oca</text><text x="28" y="114" class="tm" text-anchor="start">…  (365 satır)</text><rect x="300" y="30" width="320" height="90" rx="5" class="bx"/><text x="460.0" y="63.0" class="tb" text-anchor="middle">CALENDAR + ADDCOLUMNS</text><text x="460.0" y="79.0" class="tm" text-anchor="middle">Tarih tablosu olarak işaretle</text><text x="460.0" y="95.0" class="tm" text-anchor="middle">Ay → AyNo'ya göre sırala</text></svg></div><figcaption>Tarih tablosu: kesintisiz günler, zaman zekâsının ön şartı.</figcaption></figure>
+<p>Zaman analizi (aylık toplam, yılbaşından bu yana, geçen yılla karşılaştırma) için kesintisiz bir <strong>tarih tablosu</strong> gerekir: verinin olmadığı günler de dahil, her gün bir satır.</p>
+<p>DAX ile (Modelleme → <strong>Yeni tablo</strong>):</p>
+<pre><code class="language-text">Takvim =
+ADDCOLUMNS (
+    CALENDAR ( DATE ( 2026, 1, 1 ), DATE ( 2026, 12, 31 ) ),
+    &quot;Yil&quot;, YEAR ( [Date] ),
+    &quot;AyNo&quot;, MONTH ( [Date] ),
+    &quot;Ay&quot;, FORMAT ( [Date], &quot;MMM&quot;, &quot;tr-TR&quot; ),
+    &quot;AyBaslangic&quot;, DATE ( YEAR ( [Date] ), MONTH ( [Date] ), 1 ),
+    &quot;HaftaNo&quot;, WEEKNUM ( [Date], 2 )
+)
+</code></pre>
+<p>Ardından:</p>
+<ol>
+<li>Tabloyu seç → <strong>Tarih tablosu olarak işaretle</strong> → tarih sütunu <code>Date</code>.</li>
+<li><code>Ay</code> sütununu seç → <strong>Sütuna göre sırala</strong> → <code>AyNo</code> (aksi halde aylar alfabetik sıralanır: Ağu, Ara, Eki...).</li>
+<li>İlişkiler: <code>Takvim[Date] → Montaj[Tarih]</code> (bire çok). Hedef tablosu ay düzeyinde olduğu için <code>Takvim[Date] → Hedef[AyBaslangic]</code> ilişkisi de kurulabilir: her ayın ilk günü hem takvimde hem hedefte var.</li>
+</ol>
+<p>Seçenekler'de <strong>Otomatik tarih/saat</strong> özelliğini kapatmak iyi bir alışkanlıktır: Power BI her tarih sütunu için gizli tablolar üretir, model şişer.</p>
+<h3>4. Sık model hataları (45 dk)</h3>
+<ul>
+<li><strong>Çift yönlü filtre:</strong> Kolay çözüm gibi görünür ama belirsiz filtre yollarına ve yavaşlığa yol açar. Varsayılan tek yön kalsın; gerçekten gerekirse DAX'ta <code>CROSSFILTER</code> ile ölçü içinde açılır.</li>
+<li><strong>Çoka-çok ilişki:</strong> İki tarafta da tekrar eden değerler varsa (örneğin Hedef ile Montaj'ı doğrudan proje koduyla bağlamak) Power BI uyarır. Çözüm: ortak bir boyut tablosu (Projeler) koymak.</li>
+<li><strong>Eşleşmeyen anahtar:</strong> Olgu tablosunda boyutta olmayan bir kod varsa raporda “(Boş)” satırı görünür. 3. gündeki sol karşıt birleştirme ile bul.</li>
+<li><strong>Metin olarak sayı ya da tarih:</strong> İlişki kurulmaz ya da sıralama bozulur; türleri Power Query'de düzelt.</li>
+<li><strong>Gereksiz sütunlar:</strong> Kullanılmayan sütunları Power Query'de kaldır; model küçülür ve hızlanır.</li>
+</ul>
+<p><strong>Alıştırma:</strong> Model görünümünde dört tabloyu ve üç-dört ilişkiyi kur. Bir tablo görseline <code>Projeler[sehir]</code> ve <code>Montaj[Alan]</code> koy; ardından <code>Takvim[Ay]</code> ekleyip sıralamanın Oca, Şub, Mar... olduğunu kontrol et. Toplam satırında 3 346,1 m² görmelisin.</p>
+<h3>Gün sonu kontrolü (15 dk)</h3>
+<ul class="tasks">
+<li class="task"><label><input type="checkbox" data-id="g4-1"><span>Olgu ve boyut tablolarını ayırt edebiliyorum.</span></label></li>
+<li class="task"><label><input type="checkbox" data-id="g4-2"><span>Yıldız şemanın ve ortak boyutun iki olgu tablosunu birlikte analiz etmeyi nasıl sağladığını açıklayabiliyorum.</span></label></li>
+<li class="task"><label><input type="checkbox" data-id="g4-3"><span>Bire-çok ilişki kurup kardinalite ve filtre yönünü okuyabiliyorum.</span></label></li>
+<li class="task"><label><input type="checkbox" data-id="g4-4"><span>DAX ile tarih tablosu oluşturup işaretleyebiliyor ve ay adlarını numaraya göre sıralayabiliyorum.</span></label></li>
+<li class="task"><label><input type="checkbox" data-id="g4-5"><span>Çift yönlü filtre, çoka-çok ilişki ve eşleşmeyen anahtar hatalarını tanıyorum.</span></label></li>
+</ul></div>
+  <div class="pn"><a href="#gun3">← 3. gün</a><a href="#gun5">5. gün →</a></div>
+</section>
+<section class="day" id="gun5" data-day="5">
+  <div class="day-head"><span class="dn">GÜN 05</span><h2>DAX ölçüleri</h2><span class="meta">~4 saat · <span data-prog="5">0/5</span> kontrol</span></div>
+  <div class="prose"><h3>Hedef</h3>
+<p>Gün sonunda hesaplanmış sütun ile ölçü arasındaki farkı bilecek; SUM, COUNTROWS, DISTINCTCOUNT ve DIVIDE ile temel ölçüler yazacak; CALCULATE ile filtre bağlamını değiştirecek, ALL ile toplam içindeki payı hesaplayacak, VAR ve RETURN ile okunur ölçüler yazacak, TOTALYTD ile yılbaşından bu yana toplamı bulacak ve hedef-gerçekleşme oranını aylık ve proje bazında gösterebileceksin. Süre yaklaşık 4 saat.</p>
+<h3>1. Hesaplanmış sütun ve ölçü (30 dk)</h3>
+<figure class="fig"><div class="sc"><svg viewBox="0 0 640 160" role="img" xmlns="http://www.w3.org/2000/svg"><defs><marker id="ah-baglam" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0 0L10 5L0 10z" class="ar"/></marker></defs><rect x="20" y="20" width="250" height="22" class="bx"/><text x="145.0" y="35" class="ta" text-anchor="middle">Matris</text><rect x="20" y="42" width="250" height="62" class="bx"/><text x="28" y="60" class="tm" text-anchor="start">        Oca    Şub    …</text><text x="28" y="78" class="tm" text-anchor="start">Kule A  149,2  138,0</text><text x="28" y="96" class="tm" text-anchor="start">Ofis P. 142,3  114,1</text><rect x="300" y="20" width="320" height="56" rx="5" class="bxa"/><text x="460.0" y="44.0" class="tb" text-anchor="middle">her hücre = aynı ölçü,</text><text x="460.0" y="60.0" class="tm" text-anchor="middle">farklı filtre bağlamı</text><rect x="300" y="90" width="320" height="56" rx="5" class="bx"/><text x="460.0" y="114.0" class="tb" text-anchor="middle">CALCULATE: bağlamı değiştirir</text><text x="460.0" y="130.0" class="tm" text-anchor="middle">ALL: bir filtreyi kaldırır</text></svg></div><figcaption>Filtre bağlamı: satır ve sütun başlıkları ölçüyü süzer.</figcaption></figure>
+<ul>
+<li><strong>Hesaplanmış sütun:</strong> Tablonun <strong>her satırı</strong> için bir kez hesaplanır ve saklanır. Satır düzeyinde bir özellik gerektiğinde kullanılır: <code>Montaj[PanelBasinaAlan] = DIVIDE(Montaj[Alan], Montaj[Adet])</code>.</li>
+<li><strong>Ölçü:</strong> Saklanmaz; görselin o anki <strong>filtre bağlamında</strong> (hangi proje, hangi ay, hangi dilimleyici seçili) her seferinde hesaplanır. Toplamlar, oranlar, karşılaştırmalar hep ölçüdür.</li>
+</ul>
+<p>Kural: “Bu değer bir satırın özelliği mi, yoksa bir grubun özeti mi?” Özetse ölçü yaz. Ölçüleri tek bir yerde toplamak için boş bir tablo (Giriş → Veri gir → <code>_Olculer</code>) oluşturup ölçüleri ona koymak iyi bir düzendir.</p>
+<h3>2. Temel ölçüler (1 saat)</h3>
+<pre><code class="language-text">Toplam Alan = SUM ( Montaj[Alan] )
+Toplam Adet = SUM ( Montaj[Adet] )
+Kayıt Sayısı = COUNTROWS ( Montaj )
+Çalışılan Gün = DISTINCTCOUNT ( Montaj[Tarih] )
+Ort Panel Alanı = DIVIDE ( [Toplam Alan], [Toplam Adet] )
+Hedef Alan = SUM ( Hedef[HedefM2] )
+Gerçekleşme % = DIVIDE ( [Toplam Alan], [Hedef Alan] )
+</code></pre>
+<p>Tüm veri için sonuçlar (filtre yokken):</p>
+<div class="tw"><table>
+<thead>
+<tr>
+<th>Ölçü</th>
+<th>Değer</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Toplam Alan</td>
+<td>3 346,1 m²</td>
+</tr>
+<tr>
+<td>Toplam Adet</td>
+<td>1 630</td>
+</tr>
+<tr>
+<td>Kayıt Sayısı</td>
+<td>298</td>
+</tr>
+<tr>
+<td>Ort Panel Alanı</td>
+<td>2,05 m²</td>
+</tr>
+<tr>
+<td>Hedef Alan</td>
+<td>3 980 m²</td>
+</tr>
+<tr>
+<td>Gerçekleşme %</td>
+<td>%84,1</td>
+</tr>
+</tbody>
+</table></div>
+<p><code>DIVIDE</code> sıfıra bölmede hata yerine boş döndürür; bölme için her zaman <code>/</code> yerine <code>DIVIDE</code> kullan. Ölçüye biçim ver: Ölçü araçları → Biçim → Yüzde ya da ondalık basamak.</p>
+<h3>3. Filtre bağlamı ve CALCULATE (1 saat)</h3>
+<p>Aynı <code>[Toplam Alan]</code> ölçüsü, bir matriste proje satırına konunca o projenin, ay sütununa konunca o ayın değerini verir: satır ve sütun başlıkları <strong>filtre bağlamını</strong> oluşturur.</p>
+<p><code>CALCULATE</code>, bir ölçüyü <strong>değiştirilmiş bir filtre bağlamında</strong> hesaplar:</p>
+<pre><code class="language-text">Ünite Alanı = CALCULATE ( [Toplam Alan], Montaj[PanelTipi] = &quot;Ünite cephe&quot; )
+
+Ünite Payı = DIVIDE ( [Ünite Alanı], [Toplam Alan] )
+</code></pre>
+<p>Tüm veride Ünite Alanı <strong>1 629,7 m²</strong>, payı <strong>%48,7</strong>.</p>
+<p><strong>Toplam içindeki pay</strong> için mevcut filtreyi kaldırmak gerekir; <code>ALL</code> bunu yapar:</p>
+<pre><code class="language-text">Proje Payı =
+DIVIDE (
+    [Toplam Alan],
+    CALCULATE ( [Toplam Alan], ALL ( Projeler ) )
+)
+</code></pre>
+<p>Bir tabloda proje satırına konduğunda P01 için <strong>%30,5</strong> verir (1 020,6 / 3 346,1). <code>ALL(Projeler)</code> sadece proje filtresini kaldırır; ay ya da ekip dilimleyicisi seçiliyse o filtre kalır. Bu yüzden pay, o anki ay ya da ekip içindeki paydır.</p>
+<h3>4. VAR ve RETURN (30 dk)</h3>
+<p>Uzun ölçüleri okunur yapmak ve aynı hesabı iki kez yapmamak için:</p>
+<pre><code class="language-text">Ekip m2/gün =
+VAR alan = [Toplam Alan]
+VAR gun = [Çalışılan Gün]
+RETURN
+    DIVIDE ( alan, gun )
+</code></pre>
+<p>Ekip satırlarıyla bir tabloda:</p>
+<div class="tw"><table>
+<thead>
+<tr>
+<th>Ekip</th>
+<th>Toplam Alan</th>
+<th>Çalışılan Gün</th>
+<th>m²/gün</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Ekip A</td>
+<td>1 029,8</td>
+<td>81</td>
+<td>12,7</td>
+</tr>
+<tr>
+<td>Ekip B</td>
+<td>1 120,6</td>
+<td>78</td>
+<td>14,4</td>
+</tr>
+<tr>
+<td>Ekip C</td>
+<td>1 195,7</td>
+<td>72</td>
+<td>16,6</td>
+</tr>
+</tbody>
+</table></div>
+<p>Ekip C, daha az günde daha fazla alan monte etmiş. (Panel tipi dağılımı farklıysa bu karşılaştırma yanıltıcı olabilir: ünite cephe paneli büyük, kaset küçüktür. Raporda panel tipi dilimleyicisiyle kontrol edilmeli.)</p>
+<h3>5. Zaman zekâsı ve hedef-gerçekleşme (45 dk)</h3>
+<figure class="fig"><div class="sc"><svg viewBox="0 0 640 196" role="img" xmlns="http://www.w3.org/2000/svg"><defs><marker id="ah-hedef" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0 0L10 5L0 10z" class="ar"/></marker></defs><text x="70" y="29" class="tm" text-anchor="end">Oca</text><rect x="80" y="14" width="394.0" height="20" class="bxa"/><text x="488" y="29" class="ta" text-anchor="start">98,5 %</text><text x="70" y="57" class="tm" text-anchor="end">Şub</text><rect x="80" y="42" width="266.0" height="20" class="bx"/><text x="488" y="57" class="ta" text-anchor="start">66,5 %</text><text x="70" y="85" class="tm" text-anchor="end">Mar</text><rect x="80" y="70" width="333.2" height="20" class="bx"/><text x="488" y="85" class="ta" text-anchor="start">83,3 %</text><text x="70" y="113" class="tm" text-anchor="end">Nis</text><rect x="80" y="98" width="336.4" height="20" class="bx"/><text x="488" y="113" class="ta" text-anchor="start">84,1 %</text><text x="70" y="141" class="tm" text-anchor="end">May</text><rect x="80" y="126" width="363.6" height="20" class="bxa"/><text x="488" y="141" class="ta" text-anchor="start">90,9 %</text><text x="70" y="169" class="tm" text-anchor="end">Haz</text><rect x="80" y="154" width="327.6" height="20" class="bx"/><text x="488" y="169" class="ta" text-anchor="start">81,9 %</text><line x1="420" y1="6" x2="420" y2="188" class="acd"/></svg></div><figcaption>Aylık gerçekleşme (%): kesikli çizgi %85.</figcaption></figure>
+<p>Tarih tablosu işaretlendiyse zaman fonksiyonları çalışır:</p>
+<pre><code class="language-text">YBB Alan = TOTALYTD ( [Toplam Alan], Takvim[Date] )
+</code></pre>
+<p>Mart sonunda YBB (yılbaşından bu yana) alan <strong>1 498,8 m²</strong>, Haziran sonunda <strong>3 346,1 m²</strong>. Benzer fonksiyonlar: <code>DATESMTD</code>, <code>SAMEPERIODLASTYEAR</code> (geçen yılın aynı dönemi), <code>DATEADD</code>.</p>
+<p>Aylık hedef-gerçekleşme (bir matriste <code>Takvim[Ay]</code> satırlarıyla):</p>
+<div class="tw"><table>
+<thead>
+<tr>
+<th>Ay</th>
+<th>Gerçekleşen</th>
+<th>Hedef</th>
+<th>Gerçekleşme</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Oca</td>
+<td>473,0</td>
+<td>480</td>
+<td>%98,5</td>
+</tr>
+<tr>
+<td>Şub</td>
+<td>359,2</td>
+<td>540</td>
+<td>%66,5</td>
+</tr>
+<tr>
+<td>Mar</td>
+<td>666,6</td>
+<td>800</td>
+<td>%83,3</td>
+</tr>
+<tr>
+<td>Nis</td>
+<td>538,0</td>
+<td>640</td>
+<td>%84,1</td>
+</tr>
+<tr>
+<td>May</td>
+<td>654,2</td>
+<td>720</td>
+<td>%90,9</td>
+</tr>
+<tr>
+<td>Haz</td>
+<td>655,1</td>
+<td>800</td>
+<td>%81,9</td>
+</tr>
+</tbody>
+</table></div>
+<p>Hedef tablosu <code>Takvim</code>'e <code>AyBaslangic</code> üzerinden bağlı olduğu için aynı matriste iki olgu tablosu birlikte doğru çalışır. Proje bazında: P01 %94,5, P02 %82,6, P03 %80,8, P04 %75,8.</p>
+<p>Durum metni için:</p>
+<pre><code class="language-text">Durum =
+VAR o = [Gerçekleşme %]
+RETURN
+    SWITCH ( TRUE (), ISBLANK ( o ), BLANK (), o &gt;= 0.95, &quot;Hedefte&quot;, o &gt;= 0.85, &quot;Yakın&quot;, &quot;Geride&quot; )
+</code></pre>
+<p><strong>Alıştırma:</strong> (1) <code>Spandrel Adedi</code> ölçüsünü CALCULATE ile yaz. (2) Her ekibin toplam alan içindeki payını veren <code>Ekip Payı</code> ölçüsünü <code>ALL(Montaj[Ekip])</code> ile yaz. Ekip C'nin payı nedir? (Yanıtlar: 598; 1 195,7 / 3 346,1 ≈ %35,7.)</p>
+<h3>Gün sonu kontrolü (15 dk)</h3>
+<ul class="tasks">
+<li class="task"><label><input type="checkbox" data-id="g5-1"><span>Hesaplanmış sütun ile ölçü farkını ve ne zaman hangisinin kullanılacağını biliyorum.</span></label></li>
+<li class="task"><label><input type="checkbox" data-id="g5-2"><span>SUM, COUNTROWS, DISTINCTCOUNT ve DIVIDE ile temel ölçüler yazabiliyorum.</span></label></li>
+<li class="task"><label><input type="checkbox" data-id="g5-3"><span>Filtre bağlamını ve CALCULATE ile ALL'un etkisini açıklayabiliyorum.</span></label></li>
+<li class="task"><label><input type="checkbox" data-id="g5-4"><span>VAR ve RETURN ile okunur ölçüler yazabiliyorum.</span></label></li>
+<li class="task"><label><input type="checkbox" data-id="g5-5"><span>TOTALYTD ve hedef-gerçekleşme ölçüleriyle zaman ve hedef analizi yapabiliyorum.</span></label></li>
+</ul></div>
+  <div class="pn"><a href="#gun4">← 4. gün</a><a href="#gun6">6. gün →</a></div>
+</section>
+<section class="day" id="gun6" data-day="6">
+  <div class="day-head"><span class="dn">GÜN 06</span><h2>Görselleştirme ve rapor</h2><span class="meta">~4 saat · <span data-prog="6">0/5</span> kontrol</span></div>
+  <div class="prose"><h3>Hedef</h3>
+<p>Gün sonunda soruya göre doğru görseli seçecek; kart, çubuk, çizgi, birleşik ve matris görsellerini ölçülerle kuracak; dilimleyiciler ve görseller arası etkileşimi ayarlayacak; koşullu biçimlendirmeyle hedefin gerisindeki değerleri vurgulayacak; detaya inme ve araç ipucu sayfaları ekleyecek ve okunaklı bir sayfa düzeni ile renk kullanabileceksin. Süre yaklaşık 4 saat.</p>
+<h3>1. Soruya göre görsel (45 dk)</h3>
+<figure class="fig"><div class="sc"><svg viewBox="0 0 640 122" role="img" xmlns="http://www.w3.org/2000/svg"><defs><marker id="ah-gorseller" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0 0L10 5L0 10z" class="ar"/></marker></defs><rect x="10.0" y="10" width="200.0" height="48" rx="5" class="bx"/><text x="110.0" y="30.0" class="tb" text-anchor="middle">Kart</text><text x="110.0" y="46.0" class="tm" text-anchor="middle">tek sayı</text><rect x="220.0" y="10" width="200.0" height="48" rx="5" class="bx"/><text x="320.0" y="30.0" class="tb" text-anchor="middle">Yatay çubuk</text><text x="320.0" y="46.0" class="tm" text-anchor="middle">sıralama</text><rect x="430.0" y="10" width="200.0" height="48" rx="5" class="bx"/><text x="530.0" y="30.0" class="tb" text-anchor="middle">Çizgi</text><text x="530.0" y="46.0" class="tm" text-anchor="middle">zaman</text><rect x="10.0" y="66" width="200.0" height="48" rx="5" class="bxa"/><text x="110.0" y="86.0" class="tb" text-anchor="middle">Birleşik</text><text x="110.0" y="102.0" class="tm" text-anchor="middle">gerçekleşen + hedef</text><rect x="220.0" y="66" width="200.0" height="48" rx="5" class="bx"/><text x="320.0" y="86.0" class="tb" text-anchor="middle">Matris</text><text x="320.0" y="102.0" class="tm" text-anchor="middle">iki boyut</text><rect x="430.0" y="66" width="200.0" height="48" rx="5" class="bx"/><text x="530.0" y="86.0" class="tb" text-anchor="middle">Dilimleyici</text><text x="530.0" y="102.0" class="tm" text-anchor="middle">süzme</text></svg></div><figcaption>Soruya göre görsel.</figcaption></figure>
+<div class="tw"><table>
+<thead>
+<tr>
+<th>Soru</th>
+<th>Görsel</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Tek bir sayı ne? (toplam alan, gerçekleşme)</td>
+<td><strong>Kart</strong></td>
+</tr>
+<tr>
+<td>Kategoriler nasıl sıralanıyor? (proje, ekip)</td>
+<td><strong>Yatay çubuk</strong>, büyükten küçüğe</td>
+</tr>
+<tr>
+<td>Zamanla nasıl değişiyor? (aylık alan)</td>
+<td><strong>Çizgi</strong> ya da sütun</td>
+</tr>
+<tr>
+<td>Gerçekleşen hedefe göre nerede?</td>
+<td><strong>Birleşik</strong> (sütun + çizgi) ya da madde grafiği</td>
+</tr>
+<tr>
+<td>Ayrıntılı sayılar, iki boyut (proje × ay)</td>
+<td><strong>Matris</strong></td>
+</tr>
+<tr>
+<td>Bütünün parçaları (panel tipi payı)</td>
+<td>Yığılmış çubuk; az kategoriyle halka</td>
+</tr>
+</tbody>
+</table></div>
+<p>Pasta ve halka grafikleri 3–4 dilimden fazlasında okunmaz; 3B grafikler ve gereksiz efektlerden kaçın. Bir görsel tek bir soruyu yanıtlamalı.</p>
+<h3>2. Görselleri kurmak (1 saat)</h3>
+<p>Rapor sayfasına:</p>
+<ol>
+<li><strong>Dört kart</strong> (üst şerit): Toplam Alan, Toplam Adet, Gerçekleşme %, Ekip m²/gün.</li>
+<li><strong>Birleşik grafik</strong> (Çizgi ve kümelenmiş sütun): X ekseni <code>Takvim[Ay]</code>, sütun <code>Toplam Alan</code>, çizgi <code>Hedef Alan</code>. Şubat'taki düşüş hemen görünür.</li>
+<li><strong>Yatay çubuk:</strong> Y ekseni <code>Projeler[proje_adi]</code>, X ekseni <code>Gerçekleşme %</code>, büyükten küçüğe sıralı.</li>
+<li><strong>Matris:</strong> Satırlar <code>Projeler[proje_adi]</code>, sütunlar <code>Takvim[Ay]</code>, değerler <code>Toplam Alan</code>; satır ve sütun toplamları açık.</li>
+</ol>
+<p>Görsel başlıklarını soru biçiminde yaz: “Aylık montaj hedefe göre nerede?”. Eksen başlıkları ve birimleri (m²) eksik olmasın.</p>
+<h3>3. Dilimleyiciler ve etkileşim (45 dk)</h3>
+<ul>
+<li><strong>Dilimleyiciler:</strong> <code>Projeler[sehir]</code>, <code>Montaj[Ekip]</code>, <code>Montaj[PanelTipi]</code> ve tarih aralığı için <code>Takvim[Date]</code> (aralık kaydırıcısı). Dilimleyicileri sayfanın solunda ya da üstünde bir şeritte topla.</li>
+<li><strong>Görseller arası etkileşim:</strong> Bir görselde bir çubuğa tıklamak diğerlerini süzer ya da vurgular. Biçim → <strong>Etkileşimleri düzenle</strong> ile hangi görselin hangisini etkileyeceğini ayarla (örneğin kartların ekip seçiminden etkilenmesini istiyorsan açık bırak).</li>
+<li><strong>Dilimleyicileri eşitle:</strong> Görünüm → Dilimleyicileri eşitle ile aynı dilimleyici birden çok sayfada ortak çalışır.</li>
+</ul>
+<h3>4. Koşullu biçimlendirme (45 dk)</h3>
+<figure class="fig"><div class="sc"><svg viewBox="0 0 640 140" role="img" xmlns="http://www.w3.org/2000/svg"><defs><marker id="ah-kosullu" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0 0L10 5L0 10z" class="ar"/></marker></defs><text x="150" y="29" class="tm" text-anchor="end">Kule A</text><rect x="160" y="14" width="378.0" height="20" class="bxa"/><text x="568" y="29" class="ta" text-anchor="start">94,5 %</text><text x="150" y="57" class="tm" text-anchor="end">Ofis Park</text><rect x="160" y="42" width="330.4" height="20" class="bx"/><text x="568" y="57" class="ta" text-anchor="start">82,6 %</text><text x="150" y="85" class="tm" text-anchor="end">Otel Marina</text><rect x="160" y="70" width="323.2" height="20" class="bx"/><text x="568" y="85" class="ta" text-anchor="start">80,8 %</text><text x="150" y="113" class="tm" text-anchor="end">Hastane C</text><rect x="160" y="98" width="303.2" height="20" class="bx"/><text x="568" y="113" class="ta" text-anchor="start">75,8 %</text><line x1="500" y1="6" x2="500" y2="132" class="acd"/></svg></div><figcaption>Proje gerçekleşmesi (%): renk ölçüye göre, yanında durum metni olmalı.</figcaption></figure>
+<p>Matriste <code>Toplam Alan</code> değerlerine:</p>
+<ul>
+<li><strong>Veri çubukları:</strong> Hücre içinde küçük çubuklar; büyüklükler bir bakışta görülür.</li>
+<li><strong>Arka plan rengi → Kurallar</strong> ya da <strong>Alan değeri:</strong> Gerçekleşme ölçüsüne göre renk. Bir renk ölçüsü yazmak en esnek yoldur:</li>
+</ul>
+<pre><code class="language-text">Durum Rengi =
+VAR o = [Gerçekleşme %]
+RETURN
+    SWITCH ( TRUE (), ISBLANK ( o ), BLANK (), o &gt;= 0.95, &quot;#2E7D32&quot;, o &gt;= 0.85, &quot;#F9A825&quot;, &quot;#C62828&quot; )
+</code></pre>
+<p>Biçim → Hücre öğeleri → Arka plan rengi → Biçim stili: <strong>Alan değeri</strong> → <code>Durum Rengi</code>. Renk tek başına bilgi taşımamalı (renk körlüğü): yanına <code>Durum</code> metni ya da simge koy.</p>
+<h3>5. Detaya inme ve araç ipucu (45 dk)</h3>
+<ul>
+<li><strong>Hiyerarşi:</strong> Takvim'de Yıl → Ay → Gün hiyerarşisi kurulursa grafikte aşağı ok ile aydan güne inilir.</li>
+<li><strong>Detay sayfası (drill-through):</strong> Yeni bir sayfa “Proje detayı”, <strong>Detaya git</strong> alanına <code>Projeler[proje_adi]</code> konur. Ana sayfada bir projeye sağ tıklayıp <strong>Detaya git</strong> denince o projenin ekip, panel tipi ve günlük dağılımı açılır.</li>
+<li><strong>Araç ipucu sayfası:</strong> Küçük bir sayfa (Sayfa bilgisi → Araç ipucu olarak kullan) bir görselin üstüne gelindiğinde açılır; örneğin proje çubuğunun üstünde o projenin aylık mini grafiği.</li>
+</ul>
+<p><strong>Sayfa düzeni:</strong> Önemli bilgi sol üstte (kartlar), ayrıntı aşağıda. Kenar boşlukları eşit, görseller hizalı (Biçim → Hizala). Az ve tutarlı renk: tek vurgu rengi, nötr griler. Raporun bir <strong>tema</strong>sı olsun (Görünüm → Temalar) ki sayfalar arasında tutarlı kalsın.</p>
+<p><strong>Alıştırma:</strong> Ana sayfaya ekip dilimleyicisi ekle, “Ekip B”yi seç. Kartlarda Toplam Alan ve Ekip m²/gün ne gösterir? (Yanıt: 1 120,6 m² ve 14,4 m²/gün.)</p>
+<h3>Gün sonu kontrolü (15 dk)</h3>
+<ul class="tasks">
+<li class="task"><label><input type="checkbox" data-id="g6-1"><span>Soruya göre kart, çubuk, çizgi, birleşik ve matris görselinden doğrusunu seçebiliyorum.</span></label></li>
+<li class="task"><label><input type="checkbox" data-id="g6-2"><span>Ölçülerle görsel kurup başlıkları soru biçiminde yazabiliyorum.</span></label></li>
+<li class="task"><label><input type="checkbox" data-id="g6-3"><span>Dilimleyiciler, görsel etkileşimleri ve dilimleyici eşitlemeyi ayarlayabiliyorum.</span></label></li>
+<li class="task"><label><input type="checkbox" data-id="g6-4"><span>Veri çubukları ve ölçü tabanlı renkle koşullu biçimlendirme yapabiliyorum.</span></label></li>
+<li class="task"><label><input type="checkbox" data-id="g6-5"><span>Detaya inme, detay sayfası ve araç ipucu sayfası ekleyebiliyorum.</span></label></li>
+</ul></div>
+  <div class="pn"><a href="#gun5">← 5. gün</a><a href="#gun7">7. gün →</a></div>
+</section>
+<section class="day" id="gun7" data-day="7">
+  <div class="day-head"><span class="dn">GÜN 07</span><h2>Proje: montaj performans panosu</h2><span class="meta">~5 saat · <span data-prog="7">0/5</span> kontrol</span></div>
+  <div class="prose"><h3>Hedef</h3>
+<p>Bu son gün, öğrendiklerini bir raporda birleştireceksin: dört projenin montaj verisinden yönetim için bir <strong>montaj performans panosu</strong>. Aylık dosyaları klasörden okuyan sorguları kuracak, modeli ve ölçüleri tamamlayacak, üç sayfalık bir rapor tasarlayacak, Temmuz verisini ekleyip tek tuşla yenileyecek ve raporu yayınlama, paylaşma ve zamanlanmış yenileme seçeneklerini değerlendirebileceksin. Süre yaklaşık 5 saat.</p>
+<h3>1. Gereksinimler (30 dk)</h3>
+<figure class="fig"><div class="sc"><svg viewBox="0 0 640 134" role="img" xmlns="http://www.w3.org/2000/svg"><defs><marker id="ah-proje" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0 0L10 5L0 10z" class="ar"/></marker></defs><rect x="230" y="8" width="180" height="40" rx="5" class="bxa"/><text x="320.0" y="32.0" class="tb" text-anchor="middle">montaj performans panosu</text><line x1="320" y1="48" x2="56.666666666666664" y2="78" class="mu" marker-end="url(#ah-proje)"/><rect x="10.0" y="80" width="93.33333333333333" height="44" rx="5" class="bx"/><text x="56.666666666666664" y="98.0" class="tb" text-anchor="middle">Sorgular</text><text x="56.666666666666664" y="114.0" class="tm" text-anchor="middle">klasörden</text><line x1="320" y1="48" x2="162.0" y2="78" class="mu" marker-end="url(#ah-proje)"/><rect x="115.33333333333333" y="80" width="93.33333333333333" height="44" rx="5" class="bx"/><text x="162.0" y="98.0" class="tb" text-anchor="middle">Model</text><text x="162.0" y="114.0" class="tm" text-anchor="middle">yıldız şema</text><line x1="320" y1="48" x2="267.3333333333333" y2="78" class="mu" marker-end="url(#ah-proje)"/><rect x="220.66666666666666" y="80" width="93.33333333333333" height="44" rx="5" class="bx"/><text x="267.3333333333333" y="98.0" class="tb" text-anchor="middle">Ölçüler</text><text x="267.3333333333333" y="114.0" class="tm" text-anchor="middle">_Olculer</text><line x1="320" y1="48" x2="372.6666666666667" y2="78" class="mu" marker-end="url(#ah-proje)"/><rect x="326.0" y="80" width="93.33333333333333" height="44" rx="5" class="bx"/><text x="372.6666666666667" y="98.0" class="tb" text-anchor="middle">Özet</text><text x="372.6666666666667" y="114.0" class="tm" text-anchor="middle">kart, hedef</text><line x1="320" y1="48" x2="478.0" y2="78" class="mu" marker-end="url(#ah-proje)"/><rect x="431.3333333333333" y="80" width="93.33333333333333" height="44" rx="5" class="bx"/><text x="478.0" y="98.0" class="tb" text-anchor="middle">Ekipler</text><text x="478.0" y="114.0" class="tm" text-anchor="middle">verimlilik</text><line x1="320" y1="48" x2="583.3333333333333" y2="78" class="mu" marker-end="url(#ah-proje)"/><rect x="536.6666666666666" y="80" width="93.33333333333333" height="44" rx="5" class="bx"/><text x="583.3333333333333" y="98.0" class="tb" text-anchor="middle">Detay</text><text x="583.3333333333333" y="114.0" class="tm" text-anchor="middle">detaya git</text></svg></div><figcaption>Bitiş projesi: yönetim için montaj panosu.</figcaption></figure>
+<p>Yönetimin soruları:</p>
+<ol>
+<li>Projeler hedefe göre nerede? Hangisi geride?</li>
+<li>Aylık montaj hızı artıyor mu?</li>
+<li>Ekiplerin verimliliği nasıl? Panel tipi farkı hesaba katıldığında?</li>
+<li>Her ay yeni veri geldiğinde rapor kendiliğinden güncellensin.</li>
+</ol>
+<h3>2. Sorgular (1 saat)</h3>
+<ol>
+<li>Bir <code>Veri</code> klasörü oluştur, içine <code>montaj.csv</code>'yi koy. <code>VeriKlasoru</code> parametresi bu klasörü göstersin.</li>
+<li><code>Montaj</code> sorgusunu <strong>Klasörden</strong> birleştirme ile yeniden kur: Veri al → Klasör → Birleştir ve dönüştür. Örnek dosya üzerinde 2. günün temizlik adımlarını uygula (boş satır, kırpma, büyük harf, yerel ayarla türler). Dosya adını gösteren sütunu <code>Dosya</code> adıyla tut.</li>
+<li>Yalnızca montaj dosyalarını almak için klasör sorgusunda ad süz: <code>Text.StartsWith([Name], "montaj")</code>.</li>
+<li><code>Projeler</code> ve <code>Hedef</code> sorgularını (unpivot ve <code>AyBaslangic</code> ile) 3. gündeki gibi bırak.</li>
+<li>Gereksiz sütunları kaldır; tüm türleri kontrol et.</li>
+</ol>
+<h3>3. Model ve ölçüler (1 saat)</h3>
+<ul>
+<li>Yıldız şema: <code>Montaj</code> ve <code>Hedef</code> olgu; <code>Projeler</code> ve <code>Takvim</code> boyut (4. gün).</li>
+<li><code>_Olculer</code> tablosunda: Toplam Alan, Toplam Adet, Çalışılan Gün, Ort Panel Alanı, Hedef Alan, Gerçekleşme %, Durum, Durum Rengi, Ekip m²/gün, YBB Alan, Proje Payı (5. ve 6. gün).</li>
+<li>Ek ölçü, <strong>adet başına normalize verimlilik</strong> (panel tipi farkını azaltmak için):</li>
+</ul>
+<pre><code class="language-text">Ekip Adet/gün = DIVIDE ( [Toplam Adet], [Çalışılan Gün] )
+</code></pre>
+<h3>4. Rapor sayfaları (1,5 saat)</h3>
+<p><strong>Sayfa 1 — Özet:</strong> Dört kart (Toplam Alan, Gerçekleşme %, YBB Alan, Ekip m²/gün), aylık birleşik grafik (gerçekleşen ve hedef), proje gerçekleşme çubuğu (koşullu renkli), dilimleyiciler (şehir, tarih aralığı).</p>
+<p><strong>Sayfa 2 — Ekipler:</strong> Ekip × panel tipi matrisi (alan ve adet), ekip m²/gün ve adet/gün çubukları, panel tipi dilimleyicisi. Panel tipi “Ünite cephe” seçildiğinde ekip sıralamasının değişip değişmediğine bak.</p>
+<p><strong>Sayfa 3 — Proje detayı (detaya git):</strong> Seçilen projenin günlük alan çizgisi, ekip dağılımı, aylık hedef tablosu.</p>
+<p>Haziran sonu durumu (veri yalnızca <code>montaj.csv</code> iken):</p>
+<div class="tw"><table>
+<thead>
+<tr>
+<th>Proje</th>
+<th>Gerçekleşen</th>
+<th>Hedef</th>
+<th>Gerçekleşme</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Kule A (P01)</td>
+<td>1 020,6</td>
+<td>1 080</td>
+<td>%94,5</td>
+</tr>
+<tr>
+<td>Ofis Park (P02)</td>
+<td>892,4</td>
+<td>1 080</td>
+<td>%82,6</td>
+</tr>
+<tr>
+<td>Otel Marina (P03)</td>
+<td>872,3</td>
+<td>1 080</td>
+<td>%80,8</td>
+</tr>
+<tr>
+<td>Hastane Blok C (P04)</td>
+<td>560,8</td>
+<td>740</td>
+<td>%75,8</td>
+</tr>
+<tr>
+<td><strong>Toplam</strong></td>
+<td><strong>3 346,1</strong></td>
+<td><strong>3 980</strong></td>
+<td><strong>%84,1</strong></td>
+</tr>
+</tbody>
+</table></div>
+<h3>5. Yeni ay: yenileme (30 dk)</h3>
+<figure class="fig"><div class="sc"><svg viewBox="0 0 640 86" role="img" xmlns="http://www.w3.org/2000/svg"><defs><marker id="ah-yenileme" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0 0L10 5L0 10z" class="ar"/></marker></defs><rect x="10.0" y="16" width="141.5" height="56" rx="5" class="bx"/><text x="80.75" y="40.0" class="tb" text-anchor="middle">Yeni dosya</text><text x="80.75" y="56.0" class="tm" text-anchor="middle">montaj_2026_07</text><rect x="169.5" y="16" width="141.5" height="56" rx="5" class="bx"/><text x="240.25" y="40.0" class="tb" text-anchor="middle">Hedef</text><text x="240.25" y="56.0" class="tm" text-anchor="middle">+ Tem sütunu</text><line x1="153.5" y1="44.0" x2="167.5" y2="44.0" class="mu" marker-end="url(#ah-yenileme)"/><rect x="329.0" y="16" width="141.5" height="56" rx="5" class="bx"/><text x="399.75" y="40.0" class="tb" text-anchor="middle">Yenile</text><text x="399.75" y="56.0" class="tm" text-anchor="middle">tek tuş</text><line x1="313.0" y1="44.0" x2="327.0" y2="44.0" class="mu" marker-end="url(#ah-yenileme)"/><rect x="488.5" y="16" width="141.5" height="56" rx="5" class="bxa"/><text x="559.25" y="40.0" class="tb" text-anchor="middle">Sonuç</text><text x="559.25" y="56.0" class="tm" text-anchor="middle">4 053,9 m², %84,8</text><line x1="472.5" y1="44.0" x2="486.5" y2="44.0" class="mu" marker-end="url(#ah-yenileme)"/></svg></div><figcaption>Yeni ay: sorgu, ölçü ya da görsel değişmeden rapor güncellenir.</figcaption></figure>
+<ol>
+<li><code>montaj_2026_07.csv</code> dosyasını (“Ne gerekli?” bölümündeki bağlantıyla aynı klasörde) indir ve <code>Veri</code> klasörüne kopyala.</li>
+<li><code>hedef.csv</code>'ye bir <code>Tem</code> sütunu ekle ve her proje için <strong>200</strong> yaz.</li>
+<li>Power BI'da Giriş → <strong>Yenile</strong>.</li>
+</ol>
+<p>Hiçbir sorgu, ölçü ya da görsel değiştirilmedi; klasörden okuma yeni dosyayı, “diğer sütunların özetini kaldır” yeni ay sütununu kendiliğinden aldı. Sonuç:</p>
+<ul>
+<li>Temmuz'da 56 kayıt, <strong>707,8 m²</strong>; Temmuz hedefi 800 m², gerçekleşme <strong>%88,5</strong>.</li>
+<li>Toplam alan <strong>4 053,9 m²</strong>, toplam hedef 4 780 m², genel gerçekleşme <strong>%84,8</strong>.</li>
+</ul>
+<p>Takvim tablosu 2026'nın tamamını kapsadığı için Temmuz ayı ekseninde kendiliğinden göründü. Yıl değiştiğinde takvim aralığını <code>MIN</code> ve <code>MAX</code> tarihlerle dinamik yapmak iyi bir geliştirmedir.</p>
+<h3>6. Yayınlama ve paylaşım (45 dk)</h3>
+<ul>
+<li><strong>Yayımla:</strong> Giriş → Yayımla → bir <strong>çalışma alanı</strong> seç. Rapor Power BI hizmetinde (app.powerbi.com) açılır; tarayıcıda ve mobil uygulamada görüntülenir.</li>
+<li><strong>Paylaşım:</strong> Raporu başkalarıyla paylaşmak, kurumun lisans düzenine bağlıdır (genellikle paylaşan ve görüntüleyenin uygun lisansı ya da kapasite gerekir). Kurum dışına “web'de yayımla” seçeneği raporu <strong>herkese açık</strong> yapar; gizli veriyle asla kullanılmaz.</li>
+<li><strong>Zamanlanmış yenileme:</strong> Veri bulut kaynağındaysa (SharePoint, OneDrive) hizmette doğrudan; yerel bir klasördeyse <strong>şirket içi veri ağ geçidi</strong> (gateway) gerekir. Pratik çözüm: <code>Veri</code> klasörünü SharePoint ya da OneDrive'da tutmak ve klasör sorgusunu oraya bağlamak.</li>
+<li><strong>Excel alternatifi:</strong> Aynı Power Query ve model Excel'de de kurulabilir; pivot tablolar ve grafiklerle “yenile”ye basılan bir Excel raporu, Power BI lisansı olmayan ekipler için iyi bir başlangıçtır.</li>
+</ul>
+<p><strong>Son alıştırma:</strong> Panoya “Bu ay hedefin ne kadar gerisindeyiz (m²)?” kartı ekle: <code>Fark = [Hedef Alan] - [Toplam Alan]</code>. Tarih dilimleyicisinde Temmuz seçiliyken kaç m² gösterir? (Yanıt: 800 − 707,8 = 92,2 m².)</p>
+<h3>Gün sonu kontrolü (15 dk)</h3>
+<ul class="tasks">
+<li class="task"><label><input type="checkbox" data-id="g7-1"><span>Yönetimin sorularından rapor gereksinimlerini çıkardım.</span></label></li>
+<li class="task"><label><input type="checkbox" data-id="g7-2"><span>Klasörden okuyan, temizleyen ve parametreli sorgular kurdum.</span></label></li>
+<li class="task"><label><input type="checkbox" data-id="g7-3"><span>Yıldız şema modeli ve ölçü tablosunu tamamladım.</span></label></li>
+<li class="task"><label><input type="checkbox" data-id="g7-4"><span>Özet, ekip ve proje detayı sayfalarını tasarladım.</span></label></li>
+<li class="task"><label><input type="checkbox" data-id="g7-5"><span>Yeni ay verisini ekleyip tek tuşla yeniledim; yayınlama, paylaşım ve zamanlanmış yenileme seçeneklerini biliyorum.</span></label></li>
+</ul>
+<p>Bu eğitimi bitirdin. Dağınık dosyalardan temiz sorgulara, yıldız şemadan DAX ölçülerine ve etkileşimli panoya kadar her ay kendiliğinden güncellenen bir raporu uçtan uca kurabilecek durumdasın.</p></div>
+  <div class="pn"><a href="#gun6">← 6. gün</a><a href="../../Tools.html">Araçlara dön →</a></div>
+</section>
+</main>
+
+<footer>
+  <div class="wrap">
+    <span>© 2026 Erdal Üstünol · <a href="/gizlilik.html">Gizlilik</a></span>
+    <a href="../../Tools.html">← Araçlar ve eğitimler</a>
+  </div>
+</footer>
+
+<script>
+(() => {
+  const $ = id => document.getElementById(id);
+  const KEY = 'erdevelop-egitim-power-bi';
+  const store = { get(k) { try { return localStorage.getItem(k); } catch (e) { return null; } }, set(k, v) { try { localStorage.setItem(k, v); } catch (e) {} } };
+  let mode = (() => { try { const m = localStorage.getItem('erdevelop-mode'), g = localStorage.getItem('erdevelop-mode-gun'), t = new Date(); if (m && g === t.toDateString()) return m; const h = t.getHours(); return h >= 7 && h < 19 ? 'light' : 'dark'; } catch (e) { return 'light'; } })();
+  const applyMode = () => { document.documentElement.dataset.mode = mode; $('modeBtn').textContent = mode === 'dark' ? 'LIGHT' : 'DARK'; };
+  $('modeBtn').addEventListener('click', () => { mode = mode === 'dark' ? 'light' : 'dark'; store.set('erdevelop-mode', mode); store.set('erdevelop-mode-gun', new Date().toDateString()); applyMode(); });
+  applyMode();
+
+  let done = {}; try { done = JSON.parse(store.get(KEY) || '{}') || {}; } catch (e) { done = {}; }
+  const boxes = [...document.querySelectorAll('li.task input')];
+  const prog = () => {
+    document.querySelectorAll('section.day').forEach(sec => {
+      const d = sec.dataset.day, bs = sec.querySelectorAll('li.task input'), c = [...bs].filter(b => b.checked).length;
+      sec.querySelector('[data-prog]').textContent = c + '/' + bs.length;
+      const n = document.querySelector('[data-nav="' + d + '"]'); if (n) n.classList.toggle('done', bs.length > 0 && c === bs.length);
+    });
+  };
+  boxes.forEach(b => { b.checked = !!done[b.dataset.id]; b.addEventListener('change', () => { if (b.checked) done[b.dataset.id] = 1; else delete done[b.dataset.id]; store.set(KEY, JSON.stringify(done)); prog(); }); });
+  $('resetBtn').addEventListener('click', () => { done = {}; store.set(KEY, '{}'); boxes.forEach(b => b.checked = false); prog(); });
+  prog();
+
+  const links = [...document.querySelectorAll('[data-nav]')];
+  const secs = [$('genel'), ...document.querySelectorAll('section.day')];
+  if ('IntersectionObserver' in window) {
+    const io = new IntersectionObserver(es => es.forEach(e => { if (e.isIntersecting) { const i = secs.indexOf(e.target); links.forEach((l, k) => l.classList.toggle('on', k === i)); } }), { rootMargin: '-40% 0px -55% 0px' });
+    secs.forEach(s => io.observe(s));
+  }
+})();
+</script>
+<script src="../ilerleme.js" data-key="erdevelop-egitim-power-bi"></script>
+<script>if ('serviceWorker' in navigator && location.protocol === 'https:') addEventListener('load', () => navigator.serviceWorker.register('/sw.js').catch(() => { }));</script>
+<script data-goatcounter="https://erdevelop.goatcounter.com/count" async src="//gc.zgo.at/count.js"></script>
+<script src="/uyari.js" data-tur="egitim"></script>
+</body>
+</html>
