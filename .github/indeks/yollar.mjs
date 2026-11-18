@@ -282,7 +282,7 @@ const html = `<!doctype html>
 </div></div>
 <main class="wrap">
   <header class="head"><h1>Öğrenme yolları</h1><p>Eğitimlere iki yoldan bakabilirsin: hepsini konularına göre listeleyen <a href="../">tüm eğitimler</a> sayfası ya da burada, bir hedefe göre <b>sıralanmış</b> yollar. Bir yol seç, numaralı sırayla ilerle; "seçmeli" olanlar isteğe bağlı. İşaretlediğin eğitimler tamamlandıkça yol da ilerler.</p>
-  <nav class="gorunum" aria-label="Görünüm"><a href="../">Tüm eğitimler</a><a class="on" href="./" aria-current="page">Öğrenme yolları</a><a href="../../yapay-zeka/">Yapay zekâ bölümü</a></nav>
+  <nav class="gorunum" aria-label="Görünüm"><a href="../">Tüm eğitimler</a><a class="on" href="./" aria-current="page">Öğrenme yolları</a><a href="../panom/">Panom</a><a href="../../yapay-zeka/">Yapay zekâ bölümü</a></nav>
   </header>
   <div class="secim" id="secim">${yollar.map(y => `<a href="#${y.id}" data-id="${y.id}"><b>${esc(y.ad)}</b><span>${y.adim.filter(a => !a.x).length} eğitim <em class="pc"></em></span></a>`).join('')}</div>
 ${yollar.map(yolHtml).join('\n')}
@@ -324,3 +324,118 @@ ${yollar.map(yolHtml).join('\n')}
 fs.mkdirSync(path.join(KOK, 'egitimler/yollar'), { recursive: true });
 fs.writeFileSync(path.join(KOK, 'egitimler/yollar/index.html'), html);
 console.log(`egitimler/yollar/index.html: ${yollar.length} yol`);
+
+/* ---------- Panom: kişisel ilerleme sayfası (egitimler/panom/) ---------- */
+const TUM = {};
+G.forEach(g => g.items.forEach(it => { const m = /^egitimler\/([^/]+)\/index\.html$/.exec(it.f);
+  if (m && m[1] !== 'sozluk' && m[1] !== 'yollar') TUM[m[1]] = { ad: it.t.tr, ic: ICON[it.i] || '', gun: gun(it) }; }));
+const PVERI = { e: TUM, y: yollar.map(y => ({ id: y.id, ad: y.ad, a: y.adim.map(a => a.x ? '+' + a.s : a.s) })) };
+const pBaslik = 'Panom: Eğitim İlerlemem | erdevelop';
+const pAciklama = 'Devam ettiğin eğitimler, öğrenme yollarındaki ilerlemen ve sıradaki önerilen eğitim tek ekranda. İlerleme tarayıcında saklanır.';
+const panom = `<!doctype html>
+<html lang="tr" data-mode="dark">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<!-- Bu sayfa otomatik üretilir (.github/indeks/yollar.mjs). Elle değiştirme. -->
+<title>${esc(pBaslik)}</title>
+<meta name="description" content="${esc(pAciklama)}">
+<meta name="robots" content="noindex">
+<link rel="canonical" href="${SITE}egitimler/panom/">
+<link rel="manifest" href="/manifest.webmanifest"><meta name="theme-color" content="#0b1220"><link rel="icon" href="/favicon.svg" type="image/svg+xml"><link rel="icon" href="/favicon.ico" sizes="any">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Chakra+Petch:wght@600;700&family=IBM+Plex+Sans:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500&display=swap">
+<link rel="stylesheet" href="../../kesif/tema.css">
+<style>
+.gorunum { display: inline-flex; flex-wrap: wrap; border: 1px solid var(--line); border-radius: 8px; overflow: hidden; margin: 14px 0 4px; }
+.gorunum a { font: 500 13px var(--f-mono); padding: 8px 14px; color: var(--text); text-decoration: none; background: var(--panel); }
+.gorunum a + a { border-left: 1px solid var(--line); }
+.gorunum a.on { background: var(--accent); color: var(--on-accent, #fff); }
+.sayilar { display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 10px; margin: 20px 0 6px; }
+.sayilar div { border: 1px solid var(--line); border-radius: 8px; background: var(--panel); padding: 12px 14px; }
+.sayilar b { display: block; font: 700 1.6rem var(--f-display); color: var(--fg); }
+.sayilar span { font: 400 12px var(--f-mono); color: var(--muted); }
+.bolum { margin-top: 34px; }
+.bolum > h2 { font: 700 1.1rem var(--f-display); text-transform: uppercase; letter-spacing: .5px; margin: 0 0 12px; border-bottom: 1px solid var(--line); padding-bottom: 8px; }
+.oneri { display: grid; grid-template-columns: 48px 1fr auto; gap: 14px; align-items: center; border: 1px solid var(--accent); border-radius: 10px; background: var(--panel); padding: 14px 16px; text-decoration: none; color: var(--fg); }
+.oneri small { display: block; font: 400 12px var(--f-mono); color: var(--muted); }
+.oneri b { font: 600 16px var(--f-body); }
+.oneri .git { font: 600 13px var(--f-body); color: var(--on-accent, #fff); background: var(--accent); padding: 8px 14px; border-radius: 6px; }
+.ico { width: 44px; height: 44px; border-radius: 8px; background: var(--panel-2); border: 1px solid var(--line); color: var(--accent); display: grid; place-items: center; }
+.ico svg { width: 26px; height: 26px; fill: none; stroke: currentColor; stroke-width: 1.4; stroke-linecap: round; stroke-linejoin: round; }
+.liste { display: grid; grid-template-columns: repeat(auto-fill, minmax(290px, 1fr)); gap: 10px; }
+.kart { display: grid; grid-template-columns: 44px 1fr; gap: 12px; align-items: center; padding: 12px; border: 1px solid var(--line); border-radius: 8px; background: var(--panel); text-decoration: none; color: var(--fg); }
+.kart:hover { border-color: var(--accent); }
+.kart b { font: 600 14px var(--f-body); display: block; }
+.kart small { font: 400 11px var(--f-mono); color: var(--muted); }
+.cubuk { height: 6px; border-radius: 6px; background: var(--line); overflow: hidden; margin-top: 6px; }
+.cubuk i { display: block; height: 100%; background: #2e8b57; }
+.yollar { display: grid; gap: 10px; }
+.yol { display: grid; grid-template-columns: 1fr 200px auto; gap: 14px; align-items: center; padding: 12px 14px; border: 1px solid var(--line); border-radius: 8px; background: var(--panel); }
+.yol b { font: 600 15px var(--f-body); }
+.yol small { display: block; font: 400 12px var(--f-mono); color: var(--muted); margin-top: 2px; }
+.yol a { font: 500 13px var(--f-mono); color: var(--accent); text-decoration: none; white-space: nowrap; }
+@media (max-width: 640px) { .yol { grid-template-columns: 1fr; } .oneri { grid-template-columns: 44px 1fr; } .oneri .git { grid-column: 1 / -1; text-align: center; } }
+.bos { border: 1px dashed var(--line); border-radius: 10px; padding: 18px; color: var(--text); line-height: 1.6; }
+.not { font: 400 12px var(--f-mono); color: var(--muted); margin-top: 34px; line-height: 1.6; }
+.not button { font: 500 12px var(--f-mono); color: var(--muted); background: none; border: 1px solid var(--line); border-radius: 6px; padding: 5px 10px; cursor: pointer; margin-left: 6px; }
+</style>
+<script async src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-4775308844679394" crossorigin="anonymous"></script>
+</head>
+<body>
+<div class="bg" aria-hidden="true"></div>
+<div class="topbar"><div class="wrap">
+  <a class="brand" href="../../">erdevelop<span>_</span></a><span class="crumb">/ <a href="../">eğitimler</a> / panom</span><span class="sp"></span>
+  <a class="tb" href="../sozluk/">Sözlük</a><a class="tb" href="../../Tools.html">Araçlar</a><button class="tb" type="button" id="modeBtn">LIGHT</button>
+</div></div>
+<main class="wrap">
+  <header class="head"><h1>Panom</h1><p>Devam ettiğin eğitimler, öğrenme yollarındaki ilerlemen ve sıradaki önerimiz. İlerleme bu tarayıcıda saklanır; Hesapla giriş yaptıysan diğer cihazlarınla da eşitlenir.</p>
+  <nav class="gorunum" aria-label="Görünüm"><a href="../">Tüm eğitimler</a><a href="../yollar/">Öğrenme yolları</a><a class="on" href="./" aria-current="page">Panom</a><a href="../../yapay-zeka/">Yapay zekâ bölümü</a></nav>
+  </header>
+  <div id="panel"></div>
+  <p class="not">İpucu: bir eğitimde gün sonu kontrol listesini işaretledikçe ilerlemen burada görünür. <button type="button" id="sil">Panodaki kayıtları temizle</button></p>
+</main>
+<footer><div class="wrap"><span><a href="../../hakkinda.html">Hakkında</a> · <a href="../../gizlilik.html">Gizlilik</a> · <a href="../../kullanim.html">Kullanım şartları</a></span><a href="../">← tüm eğitimler</a></div></footer>
+<script src="../../kesif/tema.js"></script>
+<script>
+(() => {
+  const V = ${JSON.stringify(PVERI)};
+  const esc = s => String(s).replace(/[&<>"]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
+  let O = {}; try { O = JSON.parse(localStorage.getItem('erdevelop-egitim-ozet') || '{}') || {}; } catch (e) { }
+  /* İngilizce sürümün ilerlemesi de aynı eğitime sayılır */
+  const P = {};
+  for (const [k, e] of Object.entries(O)) { const m = /^\\/egitimler\\/([^/]+)\\/(en\\/)?$/.exec(k); if (!m || !V.e[m[1]] || !e) continue;
+    const s = m[1], p = Math.min(100, +e.p || 0); if (!P[s] || p > P[s].p) P[s] = { p, t: Math.max(+e.t || 0, P[s] ? P[s].t : 0) }; }
+  const pc = s => (P[s] ? P[s].p : 0);
+  const kart = (s, alt) => '<a class="kart" href="../' + s + '/"><span class="ico"><svg viewBox="0 0 32 32" aria-hidden="true">' + V.e[s].ic + '</svg></span><span><b>' + esc(V.e[s].ad) + '</b><small>' + alt + '</small><div class="cubuk"><i style="width:' + pc(s) + '%"></i></div></span></a>';
+  const devam = Object.keys(P).filter(s => P[s].p > 0 && P[s].p < 100).sort((a, b) => P[b].t - P[a].t);
+  const bitti = Object.keys(P).filter(s => P[s].p >= 100).sort((a, b) => P[b].t - P[a].t);
+  const yollar = V.y.map(y => { const temel = y.a.filter(a => a[0] !== '+'); const tam = temel.filter(s => pc(s) >= 100).length;
+    const dok = y.a.some(a => pc(a.replace('+', '')) > 0); const sira = temel.find(s => pc(s) < 100);
+    return { ...y, temel, tam, dok, sira, yuzde: Math.round(tam / temel.length * 100) }; });
+  const aktif = yollar.filter(y => y.dok).sort((a, b) => b.yuzde - a.yuzde || b.tam - a.tam);
+  /* öneri: önce yarım kalan son eğitim, sonra en ilerideki yolun sıradaki adımı */
+  let oneri = null;
+  if (devam.length) oneri = { s: devam[0], neden: 'Kaldığın yerden devam et · %' + pc(devam[0]) };
+  else { const y = aktif.find(y => y.sira); if (y) oneri = { s: y.sira, neden: y.ad + ' yolunda sıradaki adım (' + (y.tam + 1) + '/' + y.temel.length + ')' }; }
+  const h = [];
+  h.push('<div class="sayilar"><div><b>' + devam.length + '</b><span>devam eden eğitim</span></div><div><b>' + bitti.length + '</b><span>tamamlanan eğitim</span></div><div><b>' + aktif.length + '</b><span>başladığın yol</span></div><div><b>' + yollar.filter(y => y.dok && !y.sira).length + '</b><span>tamamlanan yol</span></div></div>');
+  if (oneri) h.push('<section class="bolum"><h2>Sıradaki önerimiz</h2><a class="oneri" href="../' + oneri.s + '/"><span class="ico"><svg viewBox="0 0 32 32" aria-hidden="true">' + V.e[oneri.s].ic + '</svg></span><span><small>' + esc(oneri.neden) + '</small><b>' + esc(V.e[oneri.s].ad) + '</b></span><span class="git">' + (pc(oneri.s) ? 'Devam et →' : 'Başla →') + '</span></a></section>');
+  else h.push('<section class="bolum"><h2>Nereden başlamalı?</h2><div class="bos">Henüz bir eğitime başlamadın. Hedefine uygun bir <a href="../yollar/">öğrenme yolu</a> seç ya da <a href="../">bütün eğitimlere</a> göz at. Bir eğitimde gün sonu kontrol listesini işaretlediğinde ilerlemen burada görünür.</div>'
+    + '<div class="yollar" style="margin-top:12px">' + V.y.slice(0, 4).map(y => '<div class="yol"><span><b>' + esc(y.ad) + '</b><small>' + y.a.filter(a => a[0] !== '+').length + ' temel eğitim</small></span><span></span><a href="../yollar/#' + y.id + '">Yola bak →</a></div>').join('') + '</div></section>');
+  if (devam.length) h.push('<section class="bolum"><h2>Devam eden eğitimler</h2><div class="liste">' + devam.map(s => kart(s, '%' + pc(s) + ' · son çalışma ' + new Date(P[s].t || Date.now()).toLocaleDateString('tr-TR'))).join('') + '</div></section>');
+  if (aktif.length) h.push('<section class="bolum"><h2>Öğrenme yollarım</h2><div class="yollar">' + aktif.map(y => '<div class="yol"><span><b>' + esc(y.ad) + '</b><small>' + y.tam + '/' + y.temel.length + ' temel eğitim tamam' + (y.sira ? ' · sıradaki: ' + esc(V.e[y.sira].ad) : ' · yol tamamlandı ★') + '</small></span><div class="cubuk"><i style="width:' + y.yuzde + '%"></i></div><a href="../yollar/#' + y.id + '">%' + y.yuzde + ' · yola git →</a></div>').join('') + '</div></section>');
+  if (bitti.length) h.push('<section class="bolum"><h2>Tamamlananlar ★</h2><div class="liste">' + bitti.map(s => kart(s, 'tamamlandı · ' + new Date(P[s].t || Date.now()).toLocaleDateString('tr-TR') + ' · belgen eğitim sayfasında')).join('') + '</div></section>');
+  document.getElementById('panel').innerHTML = h.join('');
+  document.getElementById('sil').onclick = () => { if (confirm('Panodaki özet kayıtları silinsin mi? Eğitim sayfalarındaki işaretlerin silinmez; bir eğitimi açtığında özet yeniden oluşur.')) { localStorage.removeItem('erdevelop-egitim-ozet'); location.reload(); } };
+})();
+</script>
+<script>if ('serviceWorker' in navigator && location.protocol === 'https:') addEventListener('load', () => navigator.serviceWorker.register('/sw.js').catch(() => { }));</script>
+<script data-goatcounter="https://erdevelop.goatcounter.com/count" async src="//gc.zgo.at/count.js"></script>
+<script src="/js/site.js" defer></script>
+</body>
+</html>
+`;
+fs.mkdirSync(path.join(KOK, 'egitimler/panom'), { recursive: true });
+fs.writeFileSync(path.join(KOK, 'egitimler/panom/index.html'), panom);
+console.log(`egitimler/panom/index.html: ${Object.keys(TUM).length} eğitim`);

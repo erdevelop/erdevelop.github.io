@@ -44,7 +44,7 @@ const bolum = g => {
   return `<section class="grup" id="${g.id}" data-g="${g.id}"><div class="layer-head"><span class="swatch"></span><h2>${esc(g.h.tr)}</h2><span class="meta">${g.items.length}</span></div>${g.d ? `<p class="gd">${esc(g.d.tr)}</p>` : ''}${ic}</section>`;
 };
 const toplam = gruplar.reduce((a, g) => a + g.items.length, 0);
-const egitimSay = gruplar.reduce((a, g) => a + g.items.filter(it => it.f.startsWith('egitimler/') && !it.f.startsWith('egitimler/sozluk/') && !it.f.startsWith('egitimler/yollar/')).length, 0);
+const egitimSay = gruplar.reduce((a, g) => a + g.items.filter(it => it.f.startsWith('egitimler/') && !it.f.startsWith('egitimler/sozluk/') && !it.f.startsWith('egitimler/yollar/') && !it.f.startsWith('egitimler/panom/')).length, 0);
 const baslik = 'Ücretsiz Eğitimler: Cephe, CAD, BIM, Yapay Zekâ, Yazılım ve Programlama | erdevelop';
 const aciklama = `${egitimSay} ücretsiz Türkçe eğitim: cephe tasarımı ve statiği, AutoCAD, Revit, Rhino, Grasshopper, SolidWorks, Dynamo, yapay zekâ, yazılım ve programlama dilleri. 7 günlük programlar, ilerlemen kaydedilir.`;
 const ld = { '@context': 'https://schema.org', '@type': 'CollectionPage', name: 'Eğitimler', url: SITE + 'egitimler/', inLanguage: 'tr', description: aciklama,
@@ -112,7 +112,7 @@ const html = `<!doctype html>
 </div></div>
 <main class="wrap">
   <header class="head"><h1>Eğitimler</h1><p>${egitimSay} ücretsiz Türkçe eğitim: cephe tasarımı, CAD ve BIM programları, yapay zekâ, yazılım ve programlama dilleri; yanında dil kulüpleri. Çoğu 7 günlük programdır, her günün sonunda alıştırma vardır. İlerlemen bu tarayıcıda, giriş yaptıysan hesabında saklanır.</p></header>
-  <nav class="gorunum" aria-label="Görünüm"><a class="on" href="./" aria-current="page">Tüm eğitimler</a><a href="yollar/">Öğrenme yolları</a><a href="../yapay-zeka/">Yapay zekâ bölümü</a></nav>
+  <nav class="gorunum" aria-label="Görünüm"><a class="on" href="./" aria-current="page">Tüm eğitimler</a><a href="yollar/">Öğrenme yolları</a><a href="panom/">Panom</a><a href="../yapay-zeka/">Yapay zekâ bölümü</a></nav>
   <div class="ara"><input class="inp" id="q" type="search" placeholder="Eğitim ara… (ör. Revit, cam, Python, statik)" autocomplete="off" aria-label="Eğitim ara"><span class="say" id="say">${toplam} eğitim</span></div>
   <div class="cips" id="cips"><button type="button" class="on" data-g="">Hepsi</button>${gruplar.map(g => `<button type="button" data-g="${g.id}">${esc(KISA[g.id] || g.h.tr)}</button>`).join('')}</div>
   <section class="grup" id="devam" hidden><div class="layer-head"><span class="swatch"></span><h2>Kaldığın yerden devam et</h2><span class="meta" id="devamN"></span></div><div class="izgara" id="devamL"></div></section>
