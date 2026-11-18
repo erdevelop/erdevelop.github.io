@@ -23,7 +23,7 @@
         b.dosyalar[m.dosya] = [m.yuklenen || 0, m.toplam || 0];
         let y = 0, t = 0; for (const k in b.dosyalar) { y += b.dosyalar[k][0]; t += b.dosyalar[k][1]; }
         b.cb.ilerleme && b.cb.ilerleme(y / 1048576, t / 1048576);
-      } else if (m.tip === 'adim') b.cb.adim && b.cb.adim(m.yapilan, m.toplam);
+      } else if (m.tip === 'adim') b.cb.adim && b.cb.adim(m.yapilan, m.toplam, m.son);
       else { delete bekleyen[m.id]; m.tip === 'hata' ? b.no(new Error(m.mesaj)) : b.ok(m.sonuc); }
     };
     W.onerror = e => { e.preventDefault && e.preventDefault(); const err = new Error(e.message || 'Yapay zekâ çalışma motoru açılamadı'); for (const k in bekleyen) { bekleyen[k].no(err); delete bekleyen[k]; } W = null; };

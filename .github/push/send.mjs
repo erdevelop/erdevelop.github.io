@@ -92,6 +92,77 @@ export function message(d, ORN = {}, now = new Date()) {
 export function zekiDue(L, now = new Date()) { const t = now.getTime(); return (L || []).filter(h => +h.z <= t + 60e3 && +h.z > t - 6 * 3600e3); }
 export function zekiMessage(h) { return { title: '⏰ Zeki hatırlatıyor', body: String(h.m || 'Hatırlatma zamanı!').slice(0, 160), url: PAGES.zeki.url, tag: 'zeki-' + h.z }; }
 
+/* Yapay Zeki uyarıları (hj listesinde t alanı olan kayıtlar):
+   { t:'h', i, k:'ruzgar'|'yagmur'|'kar'|'don'|'sicak', e:eşik, y:yer, la, lo, s:'19:00', g:'YYYY-AA-GG' (tek gün; yoksa her akşam), son }
+     → akşam s saatinde ertesi günün tahminine bakar; koşul tutarsa bildirir.
+   { t:'k', i, c:'USD', y:'>'|'<', e:eşik, son }  → kur eşiği geçince bir kez bildirir, sonra silinir.
+   { t:'s', i, s:'08:00', y, la, lo, son }          → her sabah s saatinde hava, kur ve günün hatırlatmaları. */
+const gunEkle = (d, n) => { const x = new Date(d + 'T12:00:00Z'); x.setUTCDate(x.getUTCDate() + n); return x.toISOString().slice(0, 10); };
+const sayiTR = (n, k = 1) => Number(n).toLocaleString('tr-TR', { maximumFractionDigits: k });
+const KUR_AD = { USD: 'Dolar', EUR: 'Avro', GBP: 'Sterlin', CHF: 'İsviçre frangı' };
+export const HAVA_KOS = {
+  ruzgar: { ad: 'rüzgâr', ikon: '🌬️', bak: g => g.ruzgar, birim: 'km/s', tut: (v, e) => v >= e },
+  yagmur: { ad: 'yağış olasılığı', ikon: '🌧️', bak: g => g.yo, birim: '%', tut: (v, e, g) => v >= e || g.yag >= 5 },
+  kar: { ad: 'kar', ikon: '🌨️', bak: g => g.kar, birim: 'cm', tut: v => v > 0 },
+  don: { ad: 'en düşük sıcaklık', ikon: '🥶', bak: g => g.min, birim: '°C', tut: (v, e) => v <= e },
+  sicak: { ad: 'en yüksek sıcaklık', ikon: '🥵', bak: g => g.max, birim: '°C', tut: (v, e) => v >= e },
+};
+/* Open-Meteo günlük tahmini → { 'YYYY-AA-GG': { max, min, ruzgar, hamle, yo, yag, kar, kod } } */
+export function havaGunleri(j) {
+  const d = (j && j.daily) || {}, out = {};
+  (d.time || []).forEach((t, i) => { out[t] = { max: d.temperature_2m_max[i], min: d.temperature_2m_min[i], ruzgar: d.wind_speed_10m_max[i], hamle: d.wind_gusts_10m_max[i], yo: d.precipitation_probability_max[i], yag: d.precipitation_sum[i], kar: d.snowfall_sum[i], kod: d.weather_code[i] }; });
+  return out;
+}
+export async function havaGetir(la, lo) {
+  const u = `https://api.open-meteo.com/v1/forecast?latitude=${(+la).toFixed(3)}&longitude=${(+lo).toFixed(3)}&daily=temperature_2m_max,temperature_2m_min,wind_speed_10m_max,wind_gusts_10m_max,precipitation_probability_max,precipitation_sum,snowfall_sum,weather_code&timezone=auto&forecast_days=3`;
+  const r = await fetch(u); if (!r.ok) throw new Error('hava ' + r.status); return havaGunleri(await r.json());
+}
+export async function kurGetir() {
+  const r = await fetch('https://api.frankfurter.dev/v1/latest?base=TRY&symbols=USD,EUR,GBP,CHF'); if (!r.ok) throw new Error('kur ' + r.status);
+  const j = await r.json(); return Object.fromEntries(Object.entries(j.rates || {}).map(([k, v]) => [k, 1 / v]));
+}
+const havaCumle = g => `${sayiTR(g.min, 0)}–${sayiTR(g.max, 0)}°C, rüzgâr ${sayiTR(g.ruzgar, 0)} km/s${g.yo != null ? `, yağış olasılığı %${g.yo}` : ''}`;
+/* L: hj listesi; tz: kullanıcının saat dilimi; al: { hava(la,lo), kur() } (testte sahte verilebilir)
+   → { mesajlar: [{ msg, kayit }], liste: güncel hj } ; hatırlatmalar (z alanı) burada işlenmez */
+export async function zekiUyarilar(L, now = new Date(), tz = 'Europe/Istanbul', al = { hava: havaGetir, kur: kurGetir }) {
+  const { date, min } = localNow(tz, now), mesajlar = [], liste = [];
+  const onbellek = {}, hava = (la, lo) => { const k = (+la).toFixed(2) + ',' + (+lo).toFixed(2); return onbellek[k] || (onbellek[k] = al.hava(la, lo)); };
+  let kurP = null; const kur = () => kurP || (kurP = al.kur());
+  for (const u of L || []) {
+    if (!u || !u.t) { liste.push(u); continue; }
+    try {
+      if (u.t === 'h') {
+        const K = HAVA_KOS[u.k]; if (!K) continue;
+        const hedef = u.g || gunEkle(date, 1);
+        if (u.g && date > u.g) continue;                              /* tek günlük uyarının günü geçti */
+        const zamani = (date === gunEkle(hedef, -1) && min >= toMin(u.s || '19:00')) || (u.g && date === u.g);
+        if (!zamani || u.son === date) { liste.push(u); continue; }
+        const G = (await hava(u.la, u.lo))[hedef];
+        if (!G) { liste.push(u); continue; }
+        const v = K.bak(G), tut = v != null && K.tut(v, +u.e, G), gun = hedef === gunEkle(date, 1) ? 'Yarın' : 'Bugün';
+        if (tut) mesajlar.push({ kayit: u, msg: { title: `${K.ikon} ${gun} ${u.y || ''}: ${K.ad} ${sayiTR(v, 0)} ${K.birim}`.replace(/\s+/g, ' '), body: (u.k === 'ruzgar' && G.hamle ? `Hamlelerde ${sayiTR(G.hamle, 0)} km/s'ye çıkabilir. ` : '') + `Eşiğin ${sayiTR(u.e, 0)} ${K.birim}. ${havaCumle(G)}.`, url: PAGES.zeki.url, tag: 'zeki-h-' + u.i } });
+        if (!u.g) liste.push({ ...u, son: date });                    /* her akşam: kalsın */
+      } else if (u.t === 'k') {
+        const R = await kur(), v = R[u.c]; if (!v) { liste.push(u); continue; }
+        const tut = u.y === '<' ? v <= +u.e : v >= +u.e;
+        if (tut) mesajlar.push({ kayit: u, msg: { title: `💱 ${KUR_AD[u.c] || u.c} ${sayiTR(v, 4)} ₺`, body: `Belirlediğin ${sayiTR(u.e, 2)} ₺ eşiği ${u.y === '<' ? 'altına inildi' : 'geçildi'}. (Avrupa Merkez Bankası günlük kuru)`, url: PAGES.zeki.url, tag: 'zeki-k-' + u.i } });
+        else liste.push(u);
+      } else if (u.t === 's') {
+        const s = toMin(u.s || '08:00');
+        if (u.son === date || min < s || min - s > 180) { liste.push(u); continue; }
+        const sat = [];
+        if (u.la != null) { const G = (await hava(u.la, u.lo).catch(() => ({})))[date]; if (G) sat.push(`🌤 ${u.y || 'Hava'}: ${havaCumle(G)}`); }
+        const R = await kur().catch(() => null); if (R && R.USD) sat.push(`💱 Dolar ${sayiTR(R.USD, 2)} · Avro ${sayiTR(R.EUR, 2)} ₺`);
+        const bugun = (L || []).filter(h => h && h.z && localNow(tz, new Date(+h.z)).date === date && +h.z > now.getTime());
+        if (bugun.length) sat.push(`⏰ Bugün ${bugun.length} hatırlatman var: ` + bugun.slice(0, 3).map(h => String(h.m).slice(0, 40)).join(', '));
+        mesajlar.push({ kayit: u, msg: { title: '☀️ Günaydın! Zeki\'nin sabah özeti', body: sat.join('\n') || 'Güzel bir gün geçirmeni dilerim.', url: PAGES.zeki.url + '?ozet=1', tag: 'zeki-sabah' } });
+        liste.push({ ...u, son: date });
+      } else liste.push(u);
+    } catch (e) { console.log('  zeki uyarısı denetlenemedi: ' + (e.message || e)); liste.push(u); }
+  }
+  return { mesajlar, liste };
+}
+
 /* sitedeki örnek cümleler; alınamazsa boş (bildirim cümlesiz gider) */
 export async function loadOrnek(url = 'https://erdevelop.github.io/js/ornek-en.js') {
   try { const r = await fetch(url); if (!r.ok) return {}; const t = await r.text(); return JSON.parse(t.slice(t.indexOf('{'), t.lastIndexOf('}') + 1)); } catch (e) { return {}; }
@@ -142,11 +213,14 @@ export async function main(env = process.env) {
     /* Yapay Zeki hatırlatmaları: hj = [{ z: zaman (ms), m: metin }]; zamanı gelenler gönderilir, kalanlar saklanır */
     if (d.page === 'zeki') {
       let L = []; try { L = JSON.parse(d.hj || '[]'); } catch (e) { }
-      const due = zekiDue(L, now), kalan = L.filter(h => !due.includes(h) && +h.z > now.getTime() - 6 * 3600e3);
-      if (!due.length || !d.sub || !d.sub.endpoint) { skipped++; continue; }
+      const H = L.filter(h => h && !h.t), U = await zekiUyarilar(L.filter(h => h && h.t), now, d.tz, env.ZEKI_AL || undefined);
+      const due = zekiDue(H, now), kalan = H.filter(h => !due.includes(h) && +h.z > now.getTime() - 6 * 3600e3).concat(U.liste);
+      const giden = due.map(zekiMessage).concat(U.mesajlar.map(x => x.msg));
+      const degisti = JSON.stringify(kalan) !== JSON.stringify(L);
+      if (!d.sub || !d.sub.endpoint || (!giden.length && !degisti)) { skipped++; continue; }
       let ok = true;
-      for (const h of due) {
-        let res; try { res = await sendPush(d.sub, zekiMessage(h), env.VAPID_PRIVATE); } catch (e) { res = { status: 0, text: String(e.message || e) }; }
+      for (const msg of giden) {
+        let res; try { res = await sendPush(d.sub, msg, env.VAPID_PRIVATE); } catch (e) { res = { status: 0, text: String(e.message || e) }; }
         console.log(`  ${d._path.split('/').pop().slice(0, 6)}… zeki · ${svc(d.sub.endpoint)} → ${res.status}`);
         if (res.status >= 200 && res.status < 300) sent++; else { failed++; ok = false; if (res.status === 404 || res.status === 410) { await patch(d, { on: false, err: 'Telefon aboneliği artık geçerli değil; Zeki\'de hatırlatmayı yeniden kur.' }); break; } }
       }

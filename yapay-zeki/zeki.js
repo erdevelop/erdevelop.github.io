@@ -266,6 +266,8 @@
   let isleniyor = false;
   async function isle(m, yazili) {
     m = m.trim(); if (!m || isleniyor) return;
+    /* toplantı notu alınırken söylenenler komut sayılmaz; yalnızca "notu bitir" dinlenir */
+    if (window.ZEKI_NOT && !yazili) { if (/not(?:u|ları)?\s*(?:bitir|durdur|kapat|tamam)|kaydı\s*(?:bitir|durdur)|toplantı bitti/i.test(m)) { window.ZEKI_NOT.bitir(); } else altyazi(m, true, true); return; }
     /* sürekli dinlemede yalnızca "Zeki" diye seslenilince ya da sohbet sürerken cevap ver */
     if (!yazili && !hitapMi(m) && !aktifMi()) { altyazi(m, true, true); if (S.durum === 'dinliyor') durum('bekliyor'); S.merak = 1; return; }
     isleniyor = true; sonEtkilesim = performance.now(); aktifSohbetBitis = performance.now() + 25000;
@@ -312,7 +314,7 @@
     if (kim === 'zeki') { $('cevap').innerHTML = esc(m) + (link ? ` <a href="${esc(link)}" target="_blank" rel="noopener">${kaynak ? esc(kaynak) : 'ayrıntı'} ↗</a>` : '') ; $('cevap').classList.remove('sistem'); }
     else if (kim === 'sistem') { $('cevap').textContent = m; $('cevap').classList.add('sistem'); }
     else altyazi(m);
-    if (kim !== 'sistem') { GECMIS.push({ kim, m, link }); if (GECMIS.length > 60) GECMIS.shift(); $('gecmisL').innerHTML = GECMIS.map(x => `<div class="g-${x.kim}"><b>${x.kim === 'sen' ? 'Sen' : 'Zeki'}</b> ${esc(x.m)}${x.link ? ` <a href="${esc(x.link)}" target="_blank" rel="noopener">↗</a>` : ''}</div>`).join(''); $('gecmisL').scrollTop = 1e9; }
+    if (kim !== 'sistem') { GECMIS.push({ kim, m, link, t: Date.now() }); if (GECMIS.length > 300) GECMIS.shift(); $('gecmisL').innerHTML = GECMIS.map(x => `<div class="g-${x.kim}"><b>${x.kim === 'sen' ? 'Sen' : 'Zeki'}</b> ${esc(x.m)}${x.link ? ` <a href="${esc(x.link)}" target="_blank" rel="noopener">↗</a>` : ''}</div>`).join(''); $('gecmisL').scrollTop = 1e9; }
   }
   /* işaretçiyi takip */
   addEventListener('pointermove', e => { if (!yz) return; const r = $('sahne').getBoundingClientRect(), d = Math.min(2, devicePixelRatio || 1); S.bakX = clamp((e.clientX - r.left - yz.cx / d) / (r.width * .4), -1, 1); S.bakY = clamp((e.clientY - r.top - yz.cy / d) / (r.height * .4), -1, 1); sonIsaretci = performance.now(); });
@@ -424,6 +426,7 @@
     const mik = yazili ? false : await mikAc();
     if (mik && AYAR.surekli) dinlemeBaslat();
     if (mik && AYAR.sesTani) sinifAc();
+    if (/[?&]ozet=1/.test(location.search)) { try { history.replaceState(null, '', location.pathname); } catch (e) { } return isle('sabah özeti', true); }
     const ad = Beyin.HAFIZA.ad, h = new Date().getHours(), z = h < 11 ? 'Günaydın' : h < 18 ? 'Merhaba' : 'İyi akşamlar';
     if (!ad) { bekle = 'ad'; aktifSohbetBitis = performance.now() + 40000; }
     await konus(ad ? `${z} ${ad}! Seni tekrar görmek ne güzel. Bugün ne yapalım?` : `${z}! Ben Yapay Zeki. Benimle konuşabilir ya da yazabilirsin. ${mik ? (AYAR.surekli ? 'Seslenirken başına "Zeki" demen yeter.' : 'Konuşmak için mikrofona dokun.') : ''} Bu arada, senin adın ne?`, 'mutlu');
@@ -441,5 +444,5 @@
   $('kapakYaz').onclick = e => { e.stopPropagation(); uyandir(true); $('yaz').focus(); };
   ayarlariKur(); durum('uyuyor');
   requestAnimationFrame(dongu);
-  window.Zeki = { S, SES, isle, konus, AYAR, zamanlayici, zamanlayiciSil, efekt, durum, duygu, balon, ayarKaydet, uyandi: () => uyandi, gorunumSec, GORUNUM, sonEtkilesimYenile: () => { sonEtkilesim = performance.now(); }, mikAc, AC: () => AC };
+  window.Zeki = { S, SES, isle, konus, AYAR, zamanlayici, zamanlayiciSil, efekt, durum, duygu, balon, ayarKaydet, uyandi: () => uyandi, gorunumSec, GORUNUM, sonEtkilesimYenile: () => { sonEtkilesim = performance.now(); }, mikAc, AC: () => AC, GECMIS, dinlemeBaslat, dinlemeDurdur, Kart: () => Kart };
 })();

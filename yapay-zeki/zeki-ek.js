@@ -219,7 +219,7 @@
     const s = sayilastir(m), simdi = new Date();
     let x = s.match(/(\d+(?:[.,]\d+)?)\s*(dakika|saat|gün)\s*sonra/);
     if (x) { const n = sayiOku(x[1]), ms = n * (x[2] === 'dakika' ? 6e4 : x[2] === 'saat' ? 36e5 : 864e5); return new Date(simdi.getTime() + ms); }
-    x = s.match(/(?:(bugün|yarın|öbür gün|pazartesi|salı|çarşamba|perşembe|cuma|cumartesi|pazar)\s*)?(?:(sabah|öğle(?:den sonra)?|akşam|gece)\s*)?saat\s*(\d{1,2})(?:[.:\s](\d{2}))?|(?:(bugün|yarın|öbür gün)\s*)?(sabah|öğleden sonra|akşam)\s*(\d{1,2})(?:[.:](\d{2}))?['’]?[dt][ae]/);
+    x = s.match(/(?:(bugün|yarın|öbür gün|pazartesi|salı|çarşamba|perşembe|cuma|cumartesi|pazar)\s*)?(?:(sabah|öğle(?:den sonra)?|akşam|gece)\s*)?saat\s*(\d{1,2})(?:[.:\s](\d{2}))?|(?:(bugün|yarın|öbür gün|pazartesi|salı|çarşamba|perşembe|cuma|cumartesi|pazar)\s*)?(sabah|öğleden sonra|akşam|gece)\s*(\d{1,2})(?:[.:](\d{2}))?['’]?[dt][ae]/);
     if (!x) return null;
     const gun = x[1] || x[5], dil = x[2] || x[6]; let sa = +(x[3] || x[7]), dk = +(x[4] || x[8] || 0);
     if (/akşam|gece|öğleden sonra/.test(dil || '') && sa < 12) sa += 12;
@@ -231,36 +231,122 @@
     return t;
   }
   const hatirlatmalar = () => { try { return JSON.parse(LS.get('zeki:hatirlat') || '[]').filter(h => h.z > Date.now() - 6e4); } catch (e) { return []; } };
-  async function buluta(liste) {
+  /* uyarılar (hava, kur, sabah özeti): sunucu bunları her 15 dakikada denetler. p=1: henüz sunucuya yazılmadı */
+  const uyarilar = () => { try { return JSON.parse(LS.get('zeki:uyari') || '[]'); } catch (e) { return []; } };
+  const uyariYaz = L => LS.set('zeki:uyari', JSON.stringify(L));
+  const sunucuKaydi = u => { const o = Object.assign({}, u); delete o.p; return o; };
+  /* sunucudaki listeyle eşitle: sunucunun sildiği (tetiklenmiş tek seferlik) uyarılar yerelde de silinir */
+  async function uyariEsitle(u) {
+    try {
+      const s = await firebase.firestore().collection('push').doc(u.uid + '_zeki').get(); if (!s.exists) return;
+      const S = JSON.parse(s.data().hj || '[]').filter(x => x && x.t), ids = new Map(S.map(x => [x.i, x]));
+      uyariYaz(uyarilar().filter(x => x.p || ids.has(x.i)).map(x => ids.has(x.i) ? Object.assign({}, x, { son: ids.get(x.i).son }) : x));
+    } catch (e) { }
+  }
+  async function buluta() {
     const u = await fbYukle(); if (!u) throw new Error('GIRIS');
     if (!('PushManager' in window) || !('serviceWorker' in navigator)) throw new Error('PUSH_YOK');
     if (Notification.permission !== 'granted' && (await Notification.requestPermission()) !== 'granted') throw new Error('IZIN');
     const reg = await navigator.serviceWorker.register('/sw.js'); await navigator.serviceWorker.ready;
     let sub = await reg.pushManager.getSubscription(); if (!sub) sub = await reg.pushManager.subscribe({ userVisibleOnly: true, applicationServerKey: Uint8Array.from(atob(PUSH_PUB.replace(/-/g, '+').replace(/_/g, '/')), c => c.charCodeAt(0)) });
     const j = sub.toJSON();
-    await firebase.firestore().collection('push').doc(u.uid + '_zeki').set({ on: liste.length > 0, page: 'zeki', sub: { endpoint: j.endpoint, keys: j.keys }, tz: Intl.DateTimeFormat().resolvedOptions().timeZone, hj: JSON.stringify(liste.map(h => ({ z: h.z, m: h.m.slice(0, 140) }))), err: '', upd: firebase.firestore.FieldValue.serverTimestamp() }, { merge: true });
+    await uyariEsitle(u);
+    const liste = hatirlatmalar().map(h => ({ z: h.z, m: String(h.m).slice(0, 140) })).concat(uyarilar().map(sunucuKaydi));
+    await firebase.firestore().collection('push').doc(u.uid + '_zeki').set({ on: liste.length > 0, page: 'zeki', sub: { endpoint: j.endpoint, keys: j.keys }, tz: Intl.DateTimeFormat().resolvedOptions().timeZone, hj: JSON.stringify(liste), err: '', upd: firebase.firestore.FieldValue.serverTimestamp() }, { merge: true });
+    uyariYaz(uyarilar().map(x => { delete x.p; return x; }));
+  }
+  const bulutHata = e => e.message === 'GIRIS' ? ' Sayfa kapalıyken de bildirim gelmesi için sitede giriş yapmış olman gerekiyor.' : e.message === 'IZIN' ? ' Bildirim izni verilmediği için telefona gönderemiyorum.' : e.message === 'PUSH_YOK' ? ' Bu tarayıcı arka plan bildirimini desteklemiyor; iPhone\'da siteyi ana ekrana ekleyince çalışır.' : /permission|izin/i.test(e.message) ? ' Sunucu kaydı kabul etmedi; Firebase kuralına Zeki için izin eklenmesi gerekiyor.' : ' Bildirim sunucusuna ulaşamadım.';
+
+  /* yer adı: "Kurtköy'de", "İzmir'in", yoksa hatırlanan şehir */
+  async function yerBul(m) {
+    const x = m.match(new RegExp(`([${HARF}]+(?:\\s[${HARF}]+)?)['’](?:da|de|ta|te|nda|nde|ın|in|un|ün|a|e|ya|ye)(?![${HARF}])`));
+    let ad = x ? x[1].replace(/^(?:yarın|bugün|her|akşam|sabah)\s+/, '') : B.HAFIZA.sehir;
+    if (!ad) return null;
+    const g = await fetch('https://geocoding-api.open-meteo.com/v1/search?count=1&language=tr&name=' + encodeURIComponent(ad)).then(r => r.json()).catch(() => null);
+    const y = g && g.results && g.results[0]; if (!y) return { hata: ad };
+    return { y: y.name, la: +y.latitude.toFixed(3), lo: +y.longitude.toFixed(3) };
+  }
+  const KUR_KOD = [[/dolar|usd/, 'USD', 'Dolar'], [/avro|euro|öro|yuro|eur/, 'EUR', 'Avro'], [/sterlin|pound|gbp/, 'GBP', 'Sterlin'], [/frank|chf/, 'CHF', 'İsviçre frangı']];
+  const HAVA_K = [[/fırtına|rüzgar|rüzgâr|rüzgarı|esinti/, 'ruzgar', 'rüzgâr', 40, 'km/s'], [/kar(?:\s|$|ı|a)|kar yağ/, 'kar', 'kar', 0, 'cm'], [/don|ayaz|eksi|sıfırın altı|buzlanma/, 'don', 'don', 0, '°C'], [/sıcak|sıcaklık\s*\d+\D*(?:geç|üst)/, 'sicak', 'sıcaklık', 35, '°C'], [/yağmur|yağış|sağanak/, 'yagmur', 'yağış olasılığı', 60, '%']];
+  const uyariAd = u => u.t === 'h' ? `${u.y}: ${(HAVA_K.find(x => x[1] === u.k) || [])[2]}${u.k === 'kar' ? '' : (u.k === 'don' ? ' ≤ ' : ' ≥ ') + u.e + ' ' + (HAVA_K.find(x => x[1] === u.k) || [])[4]} · ${u.g ? new Date(u.g + 'T12:00').toLocaleDateString('tr-TR', { weekday: 'long' }) : 'her akşam ' + (u.s || '19:00')}`
+    : u.t === 'k' ? `${(KUR_KOD.find(x => x[1] === u.c) || [])[2] || u.c} ${u.y === '<' ? '≤' : '≥'} ${sayi(u.e)} ₺` : `Sabah özeti · her gün ${u.s}${u.y ? ' · ' + u.y : ''}`;
+  async function uyariKaydet(yeni, cumle) {
+    const L = uyarilar().filter(x => !(yeni.t === 's' && x.t === 's')); yeni.i = Date.now() % 1e9; yeni.p = 1; L.push(yeni); uyariYaz(L);
+    let ek = '', ok = false;
+    try { await buluta(); ok = true; ek = ' Sayfa kapalı olsa da telefonuna bildirim gelecek.'; } catch (e) { ek = bulutHata(e) + ' Uyarıyı kaydettim; giriş yapıp bana "uyarıları gönder" dersen sunucuya iletirim.'; }
+    return { metin: cumle + ek, duygu: 'heyecanli', beceri: 'uyari', kart: { tip: 'liste', baslik: '🔔 Yeni uyarı', satirlar: [[uyariAd(yeni), ok ? '📱 telefona' : 'kaydedildi']] }, link: ok ? null : '/oyunlar/', kaynak: ok ? null : 'Giriş yap' };
+  }
+  async function uyari(m) {
+    if (/^(?:uyarılarım|uyarıları (?:göster|oku|listele)|hangi uyarılar(?: var)?|kurulu uyarılar)/.test(m)) {
+      try { const u = window.firebase && firebase.auth && firebase.auth().currentUser; if (u) await uyariEsitle(u); } catch (e) { }
+      const L = uyarilar(); if (!L.length) return { metin: 'Kurulu uyarın yok. Mesela "yarın rüzgâr 40\'ı geçerse haber ver" ya da "avro 50 lirayı geçince haber ver" diyebilirsin.', duygu: 'notr' };
+      return { metin: L.length + ' uyarın var: ' + L.map(uyariAd).join('; ') + '.', duygu: 'dusunceli', kart: { tip: 'liste', baslik: '🔔 Uyarılar', satirlar: L.map(u => [uyariAd(u), u.p ? 'sunucuya iletilmedi' : '📱']) } };
+    }
+    if (/^uyarıları (?:gönder|ilet|yükle|eşitle)/.test(m)) { try { await buluta(); return { metin: 'Uyarıları ve hatırlatmaları bildirim sunucusuna ilettim.', duygu: 'mutlu' }; } catch (e) { return { metin: bulutHata(e).trim(), duygu: 'uzgun' }; } }
+    if (/(?:uyarıları|uyarılarımı|bütün uyarıları) (?:sil|kapat|temizle|iptal)/.test(m) || /(?:sabah (?:özeti|bildirimi)(?:ni)?|kur uyarı(?:sı|larını)|hava uyarı(?:sı|larını)) (?:kapat|sil|iptal)/.test(m)) {
+      const tur = /sabah/.test(m) ? 's' : /kur/.test(m) ? 'k' : /hava/.test(m) ? 'h' : null;
+      uyariYaz(tur ? uyarilar().filter(x => x.t !== tur) : []);
+      try { const u = window.firebase && firebase.auth && firebase.auth().currentUser; if (u) await buluta(); } catch (e) { }
+      return { metin: tur === 's' ? 'Sabah özeti bildirimini kapattım.' : tur ? 'O uyarıları sildim.' : 'Bütün uyarıları sildim.', duygu: 'notr' };
+    }
+    const ister = /haber ver|uyar|bildir|haberim olsun|söyle bana|mesaj at/.test(m);
+    /* sabah özeti bildirimi */
+    if (/(?:her sabah|sabahları|her gün sabah).*(?:özet|bildirim|gönder|haber)|sabah özetini (?:telefonuma|bildirim)|sabah bildirimi(?: aç| kur)?$/.test(m)) {
+      const s = sayilastir(m).match(/saat\s*(\d{1,2})(?:[.:\s](\d{2}))?|(\d{1,2})(?:[.:](\d{2}))?['’]?(?:de|da|te|ta)\b/);
+      const sa = s ? Math.min(11, Math.max(5, +(s[1] || s[3]))) : 8, dk = s ? +(s[2] || s[4] || 0) : 0, hm = String(sa).padStart(2, '0') + ':' + String(dk).padStart(2, '0');
+      const yer = await yerBul(m).catch(() => null);
+      return uyariKaydet(Object.assign({ t: 's', s: hm }, yer && !yer.hata ? yer : {}), `Tamam, her sabah ${hm}'de sana hava, döviz ve günün hatırlatmalarını göndereceğim${yer && !yer.hata ? ' (' + yer.y + ')' : ''}.`);
+    }
+    if (!ister) return null;
+    /* kur eşiği */
+    const kk = KUR_KOD.find(x => x[0].test(m));
+    if (kk && /geç|üst|aş|çık|alt|düş|in(?:er|ince|erse)/.test(m)) {
+      const n = sayilastir(m).match(/(\d+(?:[.,]\d+)?)/); if (!n) return { metin: `${kk[2]} kaç lirayı geçince haber vereyim?`, duygu: 'saskin' };
+      const e = sayiOku(n[1]), yon = /alt|düş|in(?:er|ince|erse)/.test(m) ? '<' : '>';
+      return uyariKaydet({ t: 'k', c: kk[1], y: yon, e }, `Tamam, ${kk[2].toLowerCase()} ${sayi(e)} liranın ${yon === '<' ? 'altına inince' : 'üstüne çıkınca'} haber vereceğim. Kur, Avrupa Merkez Bankası'nın günlük kuruyla denetleniyor.`);
+    }
+    /* hava eşiği */
+    const hk = HAVA_K.find(x => x[0].test(m));
+    if (hk) {
+      const yer = await yerBul(m).catch(() => null);
+      if (!yer) return { metin: 'Hangi yer için bakayım? Mesela "yarın Kurtköy\'de rüzgâr 40\'ı geçerse haber ver" diyebilirsin.', duygu: 'saskin' };
+      if (yer.hata) return { metin: `${yer.hata} diye bir yer bulamadım.`, duygu: 'saskin' };
+      const n = sayilastir(m).replace(/(\d+)\s*(?:km|kilometre)/, '$1').match(/(-?\d+(?:[.,]\d+)?)/);
+      let e = n ? sayiOku(n[1]) : hk[3]; if (hk[1] === 'don' && /eksi\s*(\d+)/.test(sayilastir(m))) e = -sayiOku(sayilastir(m).match(/eksi\s*(\d+)/)[1]);
+      const her = /her (?:akşam|gün)|her zaman|sürekli|ne zaman/.test(m);
+      const d = new Date(); if (/bugün/.test(m)) d.setDate(d.getDate()); else d.setDate(d.getDate() + 1);
+      const g = her ? null : d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0') + '-' + String(d.getDate()).padStart(2, '0');
+      const ne = hk[1] === 'kar' ? 'kar yağışı bekleniyorsa' : hk[1] === 'don' ? `sıcaklık ${e} dereceye ya da altına düşecekse` : `${hk[2]} ${sayi(e)} ${hk[4]} ya da üstüne çıkacaksa`;
+      return uyariKaydet(Object.assign({ t: 'h', k: hk[1], e, s: '19:00', g }, yer), her ? `Tamam, her akşam saat 19'da ertesi günün tahminine bakacağım; ${yer.y} için ${ne} haber vereceğim.` : `Tamam, ${/bugün/.test(m) ? 'bugün' : 'yarın'} ${yer.y} için ${ne} haber vereceğim. Tahmine ${/bugün/.test(m) ? 'hemen' : 'bu akşam 19\'da'} bakarım.`);
+    }
+    return null;
   }
   async function hatirlat(m) {
     if (/hatırlatmalarım|hatırlatmaları (?:oku|söyle|göster)|neyi hatırlatacaksın/.test(m)) {
       const L = hatirlatmalar(); if (!L.length) return { metin: 'Kurulu hatırlatman yok.', duygu: 'notr' };
       return { metin: L.length + ' hatırlatman var: ' + L.slice(0, 5).map(h => new Date(h.z).toLocaleString('tr-TR', { weekday: 'long', hour: '2-digit', minute: '2-digit' }) + ', ' + h.m).join('; ') + '.', duygu: 'dusunceli',
-        kart: { tip: 'liste', baslik: 'Hatırlatmalar', satirlar: L.map(h => [new Date(h.z).toLocaleString('tr-TR', { weekday: 'short', day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' }), h.m + (h.b ? ' · 📱' : '')]) } };
+        kart: { tip: 'is', baslik: 'Hatırlatmalar', satirlar: L.map(h => [new Date(h.z).toLocaleString('tr-TR', { weekday: 'short', day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' }), h.m + (h.b ? ' · 📱' : '')]), dugmeler: [{ ad: '📅 Hepsini takvime ekle (.ics)', fn: () => B.is && B.is.ics(L) }] } };
     }
-    if (/hatırlatmaları (?:sil|temizle|iptal)/.test(m)) { LS.set('zeki:hatirlat', '[]'); try { if (window.firebase && firebase.auth && firebase.auth().currentUser) await buluta([]); } catch (e) { } return { metin: 'Bütün hatırlatmaları sildim.', duygu: 'notr' }; }
+    if (/hatırlatmaları (?:sil|temizle|iptal)/.test(m)) { LS.set('zeki:hatirlat', '[]'); try { if (window.firebase && firebase.auth && firebase.auth().currentUser) await buluta(); } catch (e) { } return { metin: 'Bütün hatırlatmaları sildim.', duygu: 'notr' }; }
     if (!/hatırlat|haber ver|uyar|bildirim gönder/.test(m)) return null;
     const t = zamanCoz(m); if (!t) return null;
     const kisaSure = t - Date.now() < 30 * 6e4 && !/telefon|bildirim/.test(m);
     if (kisaSure && /(\d+|[a-zçğıöşü]+)\s*(saniye|dakika)\s*sonra/.test(m)) return null; /* sayfa açıkken kısa zamanlayıcı yeterli (beyin.js) */
-    const ne = (m.match(/(?:hatırlat|haber ver|uyar)\w*\s*[:,]?\s*(.+)$/) || m.match(/^(.+?)\s+(?:diye|için)\s/) || [])[1] || '';
+    let ne = (m.match(/(?:hatırlat|haber ver|uyar)\w*\s*[:,]?\s*(.+)$/) || m.match(/^(.+?)\s+(?:diye|için)\s/) || [])[1] || '';
+    /* "yarın saat 9'da mockup toplantısını hatırlat": konu fiilden önce; zaman ifadesi metinden çıkarılır */
+    if (!ne.replace(/^(?:bana|beni)\s+/, '').trim()) ne = sayilastir(m).replace(/\s*(?:bana\s+|beni\s+)?(?:hatırlat|haber ver|uyar)\w*.*$/, '');
+    ne = sayilastir(ne).replace(/\d+(?:[.,]\d+)?\s*(?:dakika|saat|gün)\s*sonra/, '')
+      .replace(/(?:(?:bugün|yarın|öbür gün|pazartesi|salı|çarşamba|perşembe|cuma|cumartesi|pazar)\s*)?(?:(?:sabah|öğle(?:den sonra)?|akşam|gece)\s*)?(?:saat\s*)?\d{1,2}(?:[.:\s]\d{2})?['’]?(?:de|da|te|ta)?(?![\d])/, '')
+      .replace(/^\s*(?:bugün|yarın|öbür gün)\s+/, '').replace(/(s[ıiuü])n[ıiuü]$/, '$1').replace(/\s+(?:diye|için)$/, '').replace(/\s{2,}/g, ' ').trim();
     const metinH = (ne.replace(/^(?:bana|beni)\s+/, '').trim() || 'Zeki\'nin hatırlatması').slice(0, 140);
     const L = hatirlatmalar(); const h = { z: t.getTime(), m: metinH, b: false }; L.push(h); L.sort((a, b) => a.z - b.z);
     const zs = t.toLocaleString('tr-TR', { weekday: 'long', day: 'numeric', month: 'long', hour: '2-digit', minute: '2-digit' });
     Z().zamanlayici(Math.max(1, (t - Date.now()) / 1000), metinH);
     let ek = '';
-    try { await buluta(L); h.b = true; ek = ' Sayfa kapalı olsa da telefonuna bildirim gelecek; bildirimler yaklaşık 15 dakikalık aralıklarla gönderildiği için birkaç dakika gecikebilir.'; }
-    catch (e) { ek = e.message === 'GIRIS' ? ' Sayfa kapalıyken de bildirim gelmesi için sitede giriş yapmış olman gerekiyor; şimdilik yalnızca bu sayfa açıkken hatırlatabilirim.' : e.message === 'IZIN' ? ' Bildirim izni verilmediği için yalnızca sayfa açıkken hatırlatabilirim.' : e.message === 'PUSH_YOK' ? ' Bu tarayıcı arka plan bildirimini desteklemiyor; iPhone\'da siteyi ana ekrana ekleyince çalışır.' : /permission|izin/i.test(e.message) ? ' Sunucu kaydı kabul etmedi; Firebase kuralına Zeki için izin eklenmesi gerekiyor.' : ' Bildirim sunucusuna ulaşamadım; yalnızca sayfa açıkken hatırlatabilirim.'; }
     LS.set('zeki:hatirlat', JSON.stringify(L));
-    return { metin: `Tamam, ${zs} için hatırlatma kurdum: ${metinH}.${ek}`, duygu: 'heyecanli', beceri: 'hatirlat', ek, kart: { tip: 'liste', baslik: '⏰ Hatırlatma', satirlar: [[zs, metinH + (h.b ? ' · 📱 telefona da' : '')]] }, link: h.b ? null : (/GIRIS|giriş/.test(ek) ? '/oyunlar/' : null), kaynak: h.b ? null : 'Giriş yap' };
+    try { await buluta(); h.b = true; LS.set('zeki:hatirlat', JSON.stringify(L)); ek = ' Sayfa kapalı olsa da telefonuna bildirim gelecek; bildirimler yaklaşık 15 dakikalık aralıklarla gönderildiği için birkaç dakika gecikebilir.'; }
+    catch (e) { ek = bulutHata(e) + ' Şimdilik yalnızca bu sayfa açıkken hatırlatabilirim.'; }
+    return { metin: `Tamam, ${zs} için hatırlatma kurdum: ${metinH}.${ek}`, duygu: 'heyecanli', beceri: 'hatirlat', ek, kart: { tip: 'is', baslik: '⏰ Hatırlatma', satirlar: [[zs, metinH + (h.b ? ' · 📱 telefona da' : '')]], dugmeler: [{ ad: '📅 Takvime ekle (.ics)', fn: () => B.is && B.is.ics([{ z: h.z, m: metinH }]) }] }, link: h.b ? null : (/GIRIS|giriş/.test(ek) ? '/oyunlar/' : null), kaynak: h.b ? null : 'Giriş yap' };
   }
 
   /* ===================== OYUNLAR ===================== */
@@ -423,17 +509,17 @@
   B.ek.unshift(async (m, ops, ham) => {
     /* çok adımlı kip (oyun, dil pratiği) */
     if (KIP.aktif) {
-      if (BITIR.test(m.trim())) { const a = KIP.aktif.ad; KIP.aktif = null; return { metin: a === 'dil' ? 'Türkçeye döndüm. Güzel pratik oldu!' : 'Oyunu bitirdim. Yine oynarız!', duygu: 'mutlu', dil: 'tr-TR' }; }
+      if (BITIR.test(m.trim())) { const a = KIP.aktif.ad, c = KIP.aktif.cikis; KIP.aktif = null; return { metin: c ? c : a === 'dil' ? 'Türkçeye döndüm. Güzel pratik oldu!' : 'Oyunu bitirdim. Yine oynarız!', duygu: 'mutlu', dil: 'tr-TR' }; }
       const r = await KIP.aktif.isle(m, ham); if (r) return Object.assign({ beceri: 'kip' }, r);
     }
     const s = m;
     for (const f of [cevir, projeSorgu, pomodoro, cocuk]) { const r = f(s); if (r) return kisilikUygula(r); }
-    for (const f of [oyun, dilKipi, hatirlat, sesliHesap]) { const r = await f(s); if (r) return kisilikUygula(r); }
+    for (const f of [oyun, dilKipi, uyari, hatirlat, sesliHesap]) { const r = await f(s); if (r) return kisilikUygula(r); }
     if (/^(?:günaydın(?: zeki)?|sabah özeti|günün özeti|bugün neler var|güne başlayalım|günü özetle)$/.test(s) && (s !== 'günaydın' || LS.get('zeki:ozetGun') !== String(gunNo()))) return sabahOzeti();
     if (/^(?:sabah özeti|günün özeti|özet ver)/.test(s)) return sabahOzeti();
     return null;
   });
   B.sonIsle = kisilikUygula;
   B.KIP = KIP; B.KISILIK = KISILIK; B.DILLER = DILLER;
-  B.ozel = { cevir, sesliHesap, projeSorgu, sabahOzeti, zamanCoz, hatirlatmalar, olcuculer, HESAP };
+  B.ozel = { cevir, sesliHesap, projeSorgu, sabahOzeti, zamanCoz, hatirlatmalar, uyarilar, uyari, olcuculer, HESAP, fbYukle };
 })();

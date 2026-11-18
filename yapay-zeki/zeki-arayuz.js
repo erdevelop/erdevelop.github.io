@@ -32,19 +32,25 @@
         h = `<header><b>🧮 ${esc(k.baslik)}</b></header><p class="ozet">${esc(k.alt || '')}</p><table>${k.satirlar.map(([a, b]) => `<tr><th>${esc(a)}</th><td>${esc(b)}</td></tr>`).join('')}</table><div class="dugmeler"><a href="${esc(k.link)}" target="_blank" rel="noopener">Hesabı aç ↗</a></div>`;
       } else if (k.tip === 'liste') {
         h = `<header><b>${esc(k.baslik)}</b>${k.alt ? `<span>${esc(k.alt)}</span>` : ''}</header><table>${k.satirlar.map(([a, b, u]) => `<tr><th>${u ? `<a href="${esc(u)}" target="_blank" rel="noopener">${esc(a)}</a>` : esc(a)}</th><td>${esc(b || '')}</td></tr>`).join('')}</table>`;
+      } else if (k.tip === 'is') {
+        /* iş kartı: metin kutusu, tablo ve işlevli düğmeler; kendiliğinden kapanmaz */
+        this.cb = (k.dugmeler || []).map(d => d.fn || null);
+        h = `<header><b>${esc(k.baslik || '')}</b>${k.alt ? `<span>${esc(k.alt)}</span>` : ''}</header>${k.ilerleme != null ? `<div class="ilerleme"><i style="width:${Math.max(2, Math.min(100, k.ilerleme))}%"></i></div>` : ''}${k.metin ? `<div class="metin">${esc(k.metin).replace(/\n/g, '<br>')}</div>` : ''}${(k.satirlar || []).length ? `<table>${k.satirlar.map(([a, b, u]) => `<tr><th>${u ? `<a href="${esc(u)}" target="_blank" rel="noopener">${esc(a)}</a>` : esc(a)}</th><td>${esc(b == null ? '' : b)}</td></tr>`).join('')}</table>` : ''}${(k.dugmeler || []).length ? `<div class="dugmeler">${k.dugmeler.map((d, i) => d.href ? `<a href="${esc(d.href)}" target="_blank" rel="noopener">${esc(d.ad)}</a>` : `<button type="button" data-cb="${i}"${d.ana ? ' class="ana"' : ''}>${esc(d.ad)}</button>`).join('')}</div>` : ''}${k.not ? `<footer>${esc(k.not)}</footer>` : ''}`;
       } else if (k.tip === 'secenek') {
         h = `<header><b>${esc(k.baslik)}</b></header><div class="dugmeler">${k.secenekler.map(s => `<button type="button" data-soyle="${esc(s)}">${esc(s)}</button>`).join('')}</div>`;
       } else {
         h = `<header><b>${esc(k.baslik || '')}</b></header>${(k.satirlar || []).length ? `<table>${k.satirlar.map(([a, b]) => `<tr><th>${esc(a)}</th><td>${esc(b)}</td></tr>`).join('')}</table>` : ''}`;
       }
       el.innerHTML = `<button class="kapat" type="button" aria-label="Kartı kapat">×</button>` + h; el.hidden = false; el.classList.remove('git'); void el.offsetWidth; el.classList.add('gel');
-      clearTimeout(this.t); this.t = setTimeout(() => this.gizle(), k.tip === 'secenek' ? 60000 : 40000);
+      el.classList.toggle('genis', k.tip === 'is');
+      clearTimeout(this.t); if (k.tip !== 'is') this.t = setTimeout(() => this.gizle(), k.tip === 'secenek' ? 60000 : 40000);
     },
     gizle() { const el = $('kart'); if (!el || el.hidden) return; el.classList.add('git'); clearTimeout(this.t); setTimeout(() => { el.hidden = true; el.classList.remove('git'); }, 250); },
   };
   document.addEventListener('click', e => {
     if (e.target.closest('#kart .kapat')) return Kart.gizle();
     const b = e.target.closest('#kart [data-soyle]'); if (b && window.Zeki) { window.Zeki.isle(b.dataset.soyle, true); }
+    const c = e.target.closest('#kart [data-cb]'); if (c) { const f = Kart.cb && Kart.cb[+c.dataset.cb]; if (f) try { f(c); } catch (x) { console.error(x); } }
   });
 
   /* ===================== SES EFEKTLERİ ===================== */

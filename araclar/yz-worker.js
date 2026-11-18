@@ -1,6 +1,6 @@
 /* erdevelop · tarayıcıda yapay zekâ işçisi (Transformers.js)
    Sayfalar bunu  new Worker('yz-worker.js', { type: 'module' })  ile açar.
-   Mesajlar: { id, tip: 'yukle'|'asr'|'gom'|'tok', ... }  →  { id, tip: 'ilerleme'|'bitti'|'hata', ... }
+   Mesajlar: { id, tip: 'yukle'|'asr'|'gom'|'tok'|'cevir', ... }  →  { id, tip: 'ilerleme'|'bitti'|'hata', ... }
    Modeller tarayıcının önbelleğine bir kez iner; ses, metin ve belgeler cihazdan çıkmaz. */
 import { pipeline, AutoTokenizer, env } from 'https://cdn.jsdelivr.net/npm/@huggingface/transformers@3.0.2';
 
@@ -42,6 +42,16 @@ self.onmessage = async ({ data: m }) => {
         const d = t.dims[1], v = t.data;
         for (let j = 0; j < t.dims[0]; j++) out.push(Array.from(v.subarray(j * d, (j + 1) * d)));
         postMessage({ id, tip: 'adim', yapilan: Math.min(N, i + B), toplam: N });
+      }
+      postMessage({ id, tip: 'bitti', sonuc: out });
+    } else if (m.tip === 'cevir') {
+      /* m.metinler: cümle listesi; boş dize paragraf arasıdır, olduğu gibi döner */
+      const tr = await yukle(id, 'translation', m.model), out = [], N = m.metinler.length;
+      for (let i = 0; i < N; i++) {
+        const s = m.metinler[i];
+        if (!s || !/\p{L}/u.test(s)) out.push(s);
+        else { const r = await tr(s, { src_lang: m.kaynak, tgt_lang: m.hedef, max_new_tokens: Math.min(512, 24 + s.length) }); out.push(r[0].translation_text); }
+        postMessage({ id, tip: 'adim', yapilan: i + 1, toplam: N, son: out[i] });
       }
       postMessage({ id, tip: 'bitti', sonuc: out });
     } else if (m.tip === 'tok') {
