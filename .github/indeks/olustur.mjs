@@ -27,6 +27,7 @@ const kisa = t => t.replace(/\s*[|·]\s*erdevelop.*$/i, '').replace(/\s+[–—-
 const urlOf = p => '/' + p.replace(/(^|\/)index\.html$/, '$1');
 
 function tur(p) {
+  if (/^rehber\//.test(p)) return 'Rehber';
   if (/^egitimler\//.test(p)) return 'Eğitim';
   if (/^kesif\//.test(p)) return 'Cephe';
   if (/^komutlar\//.test(p)) return 'Komutlar';
@@ -50,7 +51,8 @@ for (const p of dosyalar.sort()) {
   let d = meta(h, 'description'); if (d.length > 220) d = d.slice(0, 217).replace(/\s+\S*$/, '') + '…';
   const k = meta(h, 'keywords');
   const lang = (h.match(/<html[^>]+lang=["']([a-z-]+)/i) || [])[1] || 'tr';
-  const r = { t: h1 && h1.length < 60 && h1.length > 2 ? h1 : t.split(/\s[–—]\s/)[0], d, u: urlOf(p), c: tur(p) };
+  const h1t = h1.replace(/^[^\p{L}\p{N}]+/u, '').trim();
+  const r = { t: h1t && h1t.length < 60 && h1t.length > 2 ? h1t : t.split(/\s[–—]\s/)[0], d, u: urlOf(p), c: tur(p) };
   if (r.t.toLocaleLowerCase('tr') !== t.toLocaleLowerCase('tr')) r.a = t;          /* sayfa başlığı farklıysa onu da ara */
   if (k) r.k = k.slice(0, 200);
   if (lang !== 'tr') r.l = lang;
@@ -63,6 +65,16 @@ try {
     const s = readFileSync(join(ROOT, 'oyunlar/games', n), 'utf8');
     for (const m of s.matchAll(/id:'([a-z0-9]+)',\s*title:'([^']+)'(?:,\s*category:'([^']*)')?(?:,\s*tags:'([^']*)')?/g))
       kayitlar.push({ t: m[2], d: 'Oyun Bahçesi' + (m[3] ? ' · ' + m[3] : '') + ' — tarayıcıda oynanır.', u: '/oyunlar/#o/' + m[1], c: 'Oyun', k: m[4] || '' });
+  }
+} catch (e) { }
+
+/* Cephe ve BIM sözlüğü: her terim ayrı kayıt (terim, İngilizcesi, Almancası, tanım) */
+try {
+  const s = readFileSync(join(ROOT, 'egitimler/sozluk/index.html'), 'utf8');
+  for (const m of s.matchAll(/<article class="terim" id="([^"]+)"[^>]*>([\s\S]*?)<\/article>/g)) {
+    const b = m[2], g = rx => tagsiz((b.match(rx) || [])[1]);
+    const tr = g(/class="cp"[^>]*>([\s\S]*?)<\/a>/), en = g(/<p class="en">([\s\S]*?)<\/p>/), de = g(/<p class="de"[^>]*>(?:<span>DE<\/span>)?([\s\S]*?)<\/p>/), tn = g(/<p class="tn">([\s\S]*?)<\/p>/);
+    if (tr) kayitlar.push({ t: tr, d: (en ? en + ' — ' : '') + tn, u: '/egitimler/sozluk/#' + m[1], c: 'Terim', k: [en, de].filter(Boolean).join(' ') });
   }
 } catch (e) { }
 
