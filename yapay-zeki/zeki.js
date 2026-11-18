@@ -400,12 +400,15 @@
     if (MOBIL || COKTU && !beyinZorla) return beyinDurum();
     if (AZ_BELLEK && !confirm('Bu cihazın belleği az görünüyor; model yüklenirken sayfa kapanabilir. Yine de denensin mi?')) return;
     LS.set('zeki:beyinDeneme', String(Date.now()));
-    beyinDurum(); $('beyinBilgi').textContent = 'Hazırlanıyor…'; durum('dusunuyor');
+    /* model daha önce indirildiyse tarayıcı önbelleğinden açılır; tarayıcının bu kaydı kendiliğinden silmemesi için kalıcı depolama istenir */
+    let kayitli = false; try { const c = await caches.open('transformers-cache'); kayitli = (await c.keys()).some(r => r.url.includes('/' + LLM_MODEL + '/') && /onnx_data|\.onnx/.test(r.url)); } catch (e) { }
+    try { if (navigator.storage && navigator.storage.persist) await navigator.storage.persist(); } catch (e) { }
+    beyinDurum(); $('beyinBilgi').textContent = kayitli ? 'Kayıtlı modelden açılıyor (indirme yok)…' : 'Hazırlanıyor…'; durum('dusunuyor');
     try {
-      const promise = Beyin.llmYukle(LLM_MODEL, p => { const y = p.yuklenen / 1048576, t = Math.max(p.toplam, p.yuklenen) / 1048576; $('beyinBilgi').textContent = `İndiriliyor: ${Math.round(y)} / ${Math.round(t)} MB`; $('beyinBar').style.width = (t ? y / t * 100 : 2) + '%'; });
+      const promise = Beyin.llmYukle(LLM_MODEL, p => { const y = p.yuklenen / 1048576, t = Math.max(p.toplam, p.yuklenen) / 1048576; $('beyinBilgi').textContent = kayitli ? `Kayıtlı modelden açılıyor: ${Math.round(y)} / ${Math.round(t)} MB (indirme yok)` : `İndiriliyor: ${Math.round(y)} / ${Math.round(t)} MB (bir kez)`; $('beyinBar').style.width = (t ? y / t * 100 : 2) + '%'; });
       beyinDurum(); await promise;
       LS.set('zeki:beyinDeneme', ''); LS.set('zeki:beyinCoktu', ''); COKTU = false;
-      AYAR.beyin = true; ayarKaydet(); $('beyinBilgi').textContent = 'Gelişmiş beyin hazır: Gemma 3 1B, ekran kartında çalışıyor.'; $('beyinBar').style.width = '100%';
+      AYAR.beyin = true; ayarKaydet(); $('beyinBilgi').textContent = 'Gelişmiş beyin hazır: Gemma 3 1B, ekran kartında çalışıyor. Model bu tarayıcıda kayıtlı; bir sonraki açılışta yeniden indirilmez.'; $('beyinBar').style.width = '100%';
       durum('bekliyor'); konus('Gelişmiş beynim açıldı! Artık aklına gelen her şeyi konuşabiliriz. Ama küçük bir modelim; önemli bilgileri yine de kontrol et.', 'heyecanli');
     } catch (e) { LS.set('zeki:beyinDeneme', ''); $('beyinBilgi').textContent = 'Yüklenemedi: ' + (e.message === 'WEBGPU_YOK' ? 'WebGPU bulunamadı.' : e.message); durum('bekliyor'); }
     beyinDurum();
