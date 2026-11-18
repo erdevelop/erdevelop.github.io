@@ -27,7 +27,7 @@ const kisa = t => t.replace(/\s*[|·]\s*erdevelop.*$/i, '').replace(/\s+[–—-
 const urlOf = p => '/' + p.replace(/(^|\/)index\.html$/, '$1');
 
 function tur(p) {
-  if (/^yapay-zeka\/|^egitimler\/(yapay-zeka|makine-ogrenmesi)|^ogrenme_labaratuvari\/|^araclar\/(arka-plan-silme|ses-yazi|ocr|belge-ara|kisisel-veri-maskele|token-sayaci)\./.test(p)) return 'Yapay zekâ';
+  if (/^yapay-zek[ai]\/|^egitimler\/(yapay-zeka|makine-ogrenmesi)|^ogrenme_labaratuvari\/|^araclar\/(arka-plan-silme|ses-yazi|ocr|belge-ara|kisisel-veri-maskele|token-sayaci)\./.test(p)) return 'Yapay zekâ';
   if (/^rehber\//.test(p)) return 'Rehber';
   if (/^egitimler\//.test(p)) return 'Eğitim';
   if (/^kesif\//.test(p)) return 'Cephe';
