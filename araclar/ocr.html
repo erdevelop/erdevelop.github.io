@@ -183,6 +183,7 @@ async function isci() {
   ilerle(T('OCR motoru yükleniyor…', 'Loading the OCR engine…'), .02);
   await loadScript(TESS);
   W = await Tesseract.createWorker(d.split('+'), 1, { logger: m => { const x = DURUM[m.status]; if (x) ilerle(etiket + T(x[0], x[1]) + ' · %' + Math.round((m.progress || 0) * 100), m.progress); } });
+  await W.setParameters({ tessedit_pageseg_mode: '3', preserve_interword_spaces: '1' });
   wDil = d; return W;
 }
 async function oku(sayfalar) {
@@ -193,7 +194,11 @@ async function oku(sayfalar) {
     for (const i of sayfalar) {
       etiket = sayfalar.length > 1 ? T(`Sayfa ${i + 1}/${SAYFALAR.length} · `, `Page ${i + 1}/${SAYFALAR.length} · `) : '';
       const img = i === aktif ? cv : await islenmis(i);
-      const { data } = await w.recognize(img, secim && i === aktif && sayfalar.length === 1 ? { rectangle: secim } : {});
+      const ops = secim && i === aktif && sayfalar.length === 1 ? { rectangle: secim } : {};
+      let { data } = await w.recognize(img, ops);
+      /* otomatik düzen bir şey bulamazsa (çerçeveli antet, etiket) dağınık metin kipini dene */
+      for (const psm of ['11', '6']) { if (data.text.trim()) break; await w.setParameters({ tessedit_pageseg_mode: psm }); ({ data } = await w.recognize(img, ops)); }
+      await w.setParameters({ tessedit_pageseg_mode: '3' });
       parcalar.push((sayfalar.length > 1 ? `— ${T('Sayfa', 'Page')} ${i + 1} —\n` : '') + data.text.trim()); guv.push(data.confidence);
     }
     byId('sonuc').value = parcalar.join('\n\n'); byId('sonK').hidden = false;
