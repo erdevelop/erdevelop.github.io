@@ -82,7 +82,7 @@
     }
     return enP >= 50 ? en : null;
   }
-  const ilkCumleler = (s, n = 2, max = 320) => { const c = (s.match(/[^.!?]+[.!?]+/g) || [s]).slice(0, n).join(' ').trim(); return c.length > max ? c.slice(0, max).replace(/\s+\S*$/, '') + '…' : c; };
+  const ilkCumleler = (s, n = 2, max = 320) => { const P = String(s).split(/(?<=[a-zçğıöşü0-9)”"']{2}[.!?])\s+(?=[A-ZÇĞİÖŞÜ"“])/); const c = P.slice(0, n).join(' ').trim(); return c.length > max ? c.slice(0, max).replace(/\s+\S*$/, '') + '…' : c; };
 
   /* ---------------- Vikipedi ---------------- */
   async function vikipedi(konu) {
@@ -114,8 +114,8 @@
     let kaynak = PARA[bul[0]] || 'USD', hedef = 'TRY'; if (bul.length > 1 && PARA[bul[1]] !== kaynak) hedef = PARA[bul[1]]; if (kaynak === 'TRY' && hedef === 'TRY') kaynak = 'USD';
     if (kaynak === 'TRY') { kaynak = hedef === 'TRY' ? 'USD' : hedef; hedef = 'TRY'; }
     const miktar = parseFloat((sozcuktenSayi(m).match(/\d+(?:[.,]\d+)?/) || ['1'])[0].replace(',', '.')) || 1;
-    const r = await fetchJ(`https://api.frankfurter.app/latest?from=${kaynak}&to=${hedef}&amount=${miktar}`);
-    const v = r && r.rates && r.rates[hedef]; if (v == null) return null;
+    const r = await fetchJ(`https://api.frankfurter.dev/v1/latest?base=${kaynak}&symbols=${hedef}`);
+    const kur = r && r.rates && r.rates[hedef]; if (kur == null) return null; const v = kur * miktar;
     return { metin: `${sayi(miktar)} ${PARA_AD[kaynak]} yaklaşık ${sayi(v, 2)} ${PARA_AD[hedef]} ediyor. Bu, Avrupa Merkez Bankası'nın ${r.date.split('-').reverse().join('.')} tarihli kuru; bankaların alış satış fiyatı farklı olabilir.`, duygu: 'notr', kaynak: 'Frankfurter (ECB)' };
   }
 
