@@ -161,6 +161,8 @@
 @keyframes salla{25%{transform:translateX(-4px)}75%{transform:translateX(4px)}}
 .ek .bd{font:600 19px/1.6 var(--f-body);text-align:center;padding:6px 4px} .ek .bd .bosluk{display:inline-block;min-width:70px;border-bottom:3px solid var(--accent);color:var(--accent);padding:0 4px} .ek .bd .bosluk.ok{color:#2e9e5b;border-color:#2e9e5b} .ek .bd .bosluk.no{color:#d04a3a;border-color:#d04a3a}
 .ek .bdo{display:grid;grid-template-columns:1fr 1fr;gap:8px} .ek .bdo button{min-height:46px;text-align:center}
+.ek .svr{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-top:8px} .ek .svr>div{display:flex;flex-direction:column;align-items:center;gap:2px;padding:10px 4px;border:1px solid var(--line);border-radius:14px;font:600 12px var(--f-body);color:var(--muted)} .ek .svr>div.on{border-color:var(--accent);box-shadow:0 0 0 2px color-mix(in srgb,var(--accent) 22%,transparent)} .ek .svr>div.tam{border-color:color-mix(in srgb,#2e9e5b 55%,var(--line))}
+.ek .sv-r{--p:0;width:74px;height:74px;border-radius:50%;display:grid;place-items:center;align-content:center;margin-bottom:6px;background:radial-gradient(closest-side,var(--panel) 78%,transparent 80% 100%),conic-gradient(var(--accent) calc(var(--p)*1%),color-mix(in srgb,var(--fg) 10%,transparent) 0)} .ek .sv-r b{font:800 20px var(--f-display);color:var(--fg);line-height:1} .ek .sv-r small{font:700 12px var(--f-body);color:var(--accent)} .ek .svr>div.tam .sv-r{background:radial-gradient(closest-side,var(--panel) 78%,transparent 80% 100%),conic-gradient(#2e9e5b calc(var(--p)*1%),transparent 0)}
 .ek .seg2{display:flex;gap:6px;flex-wrap:wrap;margin-bottom:10px} .ek .seg2 button{padding:7px 12px;border:1px solid var(--line);border-radius:8px;background:var(--panel);color:var(--text);font:600 13px var(--f-body);cursor:pointer} .ek .seg2 button.on{background:var(--accent);border-color:var(--accent);color:var(--on-accent,#fff)}
 .ek .ring{display:flex;align-items:center;gap:12px} .ek .ring svg{width:64px;height:64px;flex:none}
 .ek .tmr{font:700 2.2rem var(--f-mono);text-align:center;color:var(--fg)}
@@ -448,6 +450,7 @@ dialog.tanit .hd small{display:block;font-weight:400;color:var(--muted);font-siz
     if (rzBusy) return; rzBusy = true; let yeni = [];
     try { E.maxSt = Math.max(E.maxSt || 0, (S.gv && S.gv.st) || 0); ROZET.forEach(r => { if (!E.rozet[r[0]] && r[4]()) { E.rozet[r[0]] = Date.now(); yeni.push(r); } }); if (yeni.length) sv(); } finally { rzBusy = false; }
     if (!sessiz) yeni.forEach((r, i) => setTimeout(() => TM.toast(`${r[1]} Yeni rozet: ${r[2]}`, 2600), 1200 + i * 2700));
+    if (!sessiz) svKontrol();
   }
   function ring(v, max) { const f = Math.min(1, v / max), R = 26, C = 2 * Math.PI * R; return `<svg viewBox="0 0 64 64"><circle cx="32" cy="32" r="${R}" fill="none" stroke="var(--line)" stroke-width="7"/><circle cx="32" cy="32" r="${R}" fill="none" stroke="${f >= 1 ? 'var(--ok,#2e8b57)' : 'var(--accent)'}" stroke-width="7" stroke-linecap="round" stroke-dasharray="${C * f} ${C}" transform="rotate(-90 32 32)"/><text x="32" y="37" text-anchor="middle" font-size="14" font-weight="700" fill="var(--fg)">${Math.round(f * 100)}%</text></svg>`; }
   function ilPaint() {
@@ -459,7 +462,7 @@ dialog.tanit .hd small{display:block;font-weight:400;color:var(--muted);font-siz
       <div class="panel"><div class="ring">${ring(todayXp(), gx)}<div><b>Bugün ${todayXp()} / ${gx} XP</b><div class="sub" style="margin:2px 0 6px">Günlük hedef: ${E.hedef} dakika</div><div class="seg2" id="ilHedef" style="margin:0">${[5, 10, 20].map(h => `<button type="button" data-h="${h}" class="${E.hedef === h ? 'on' : ''}">${h} dk</button>`).join('')}</div></div></div></div>
       <div class="stats" style="margin-top:10px"><div><b>${nf(S.xp || 0)}</b><span>toplam XP</span></div><div><b>🔥 ${streak()}</b><span>gün seri</span></div><div><b>${learned()}</b><span>öğrenilen kelime</span></div><div><b>${seen()}</b><span>görülen kelime</span></div>
         <div><b>${Object.keys(E.okuma).length}/${D.OKUMA.length}</b><span>okunan metin</span></div><div><b>${Object.values(E.gramer).filter(v => v >= 4).length}/${D.GRAMER.length}</b><span>gramer dersi</span></div><div><b>${estLevel()}</b><span>${E.seviye ? 'seviye (testten)' : 'tahmini seviye'}</span></div><div><b>${Object.keys(E.rozet).length}/${ROZET.length}</b><span>rozet</span></div></div>
-      <div class="panel" style="margin-top:10px"><div class="lbl muted mono small">Son 14 gün · XP</div><div class="bars">${days.map(d => { const v = E.gun[d] || 0; return `<i class="${v >= gx ? 'hit' : ''} ${d === dayKey() ? 'today' : ''}" style="height:${Math.max(2, v / mx * 100)}%" title="${d}: ${v} XP"></i>`; }).join('')}</div><div class="bl">${days.map((d, i) => `<span>${i % 2 ? '' : +d.slice(8)}</span>`).join('')}</div></div>
+      ${svPanel()}<div class="panel" style="margin-top:10px"><div class="lbl muted mono small">Son 14 gün · XP</div><div class="bars">${days.map(d => { const v = E.gun[d] || 0; return `<i class="${v >= gx ? 'hit' : ''} ${d === dayKey() ? 'today' : ''}" style="height:${Math.max(2, v / mx * 100)}%" title="${d}: ${v} XP"></i>`; }).join('')}</div><div class="bl">${days.map((d, i) => `<span>${i % 2 ? '' : +d.slice(8)}</span>`).join('')}</div></div>
       <div class="panel" style="margin-top:10px"><div class="ctl"><div><div class="lbl muted mono small">🧭 Seviye testi</div><div class="sub" style="margin:4px 0 0">${E.seviye ? `Son sonuç: <b>${E.seviye.lvl}</b> (${E.seviye.puan}/24 · ${new Date(E.seviye.at).toLocaleDateString('tr-TR')})` : '24 soru, yaklaşık 4 dakika. Kelime ve gramer; sonunda seviyeni ve nereden başlaman gerektiğini söyler.'}</div></div><span class="sp"></span><button class="btn pri" type="button" id="ilTest">${E.seviye ? 'Yeniden yap' : 'Teste başla'}</button></div></div>
       <div class="panel" style="margin-top:10px"><div class="ctl"><div class="lbl muted mono small" style="flex:1">❗ Hatalarım (${E.hata.length})</div>${hz.some(h => h.tur === 'yazma') || kel ? '<button class="btn sm" type="button" id="ilTekrar">Kelimeleri yazarak tekrar et</button>' : ''}${E.hata.length ? '<button class="btn sm" type="button" id="ilTemiz">Temizle</button>' : ''}</div>
         ${kel ? `<p class="sub" style="margin:6px 0 0">Kartlarda “Bilmedim” dediğin <b>${kel}</b> kelime de tekrar listesinde.</p>` : ''}
@@ -469,6 +472,7 @@ dialog.tanit .hd small{display:block;font-weight:400;color:var(--muted);font-siz
         ${lig ? `<div class="lig">${lig.map((m, i) => `<div class="${m.me ? 'me' : ''}"><span>${['🥇', '🥈', '🥉'][i] || (i + 1) + '.'}</span><b>${esc(m.n)}</b><span class="mono small">${nf(m.x)} XP</span></div>`).join('')}</div><p class="sub" style="margin:6px 0 0">Bu haftanın XP'si; pazartesi sıfırlanır.</p>` : '<p class="sub" style="margin:6px 0 0">Arkadaşlarınla yarışmak için <a href="#oda" id="ilOda">Oda</a> bölümünden bir odaya gir.</p>'}</div>`;
     P.querySelector('#ilHedef').onclick = e => { const b = e.target.closest('[data-h]'); if (b) { E.hedef = +b.dataset.h; sv(); ilPaint(); hedefBar(); } };
     el('ilTest').onclick = testStart;
+    if (el('svPay')) el('svPay').onclick = svPaylas;
     if (el('ilTemiz')) el('ilTemiz').onclick = () => { if (confirm('Hata listesi temizlensin mi?')) { E.hata = []; sv(); ilPaint(); } };
     if (el('ilTekrar')) el('ilTekrar').onclick = () => { const by = new Map([...WORDS.map(w => ({ en: w[0], tr: w[1], ex: w[2] })), ...(typeof TW !== 'undefined' ? TW : []), ...(S.my || [])].map(w => [keyOf(w), w]));
       const ks = [...new Set([...E.hata.filter(h => h.tur === 'yazma').map(h => keyOf({ en: h.dogru })), ...Object.entries(S.leit || {}).filter(([k, v]) => v.box <= 1 && v.r === 0).map(([k]) => k)])];
@@ -571,6 +575,83 @@ dialog.tanit .hd small{display:block;font-weight:400;color:var(--muted);font-siz
   /* ================= skor tablosu paylaşımı (Oda · Yarışma · Haftalık lig) =================
      Tablo 1080×1350 bir görsel olarak çizilir ve telefonun paylaşım menüsü açılır (WhatsApp, Instagram…);
      paylaşım desteklenmiyorsa görsel indirilir. Menü dokunuşun içinde açılsın diye görsel eşzamanlı üretilir. */
+  /* ================= 🎖️ SEVİYE ROZETİ: A1 / A2 / B1 ne kadar tamam (kelime %70 · gramer %15 · okuma %15) ================= */
+  function svDurum() {
+    const kel = new Map(); (typeof TW !== 'undefined' ? TW : []).forEach(w => { if (w.lvl <= 3) kel.set(keyOf(w), w.lvl); });
+    WORDS.forEach(w => { const l = +w[3]; if (l >= 1 && l <= 3) { const k = keyOf({ en: w[0] }); if (!kel.has(k)) kel.set(k, l); } });
+    return ['A1', 'A2', 'B1'].map((L, i) => {
+      const ks = [...kel].filter(([, l]) => l === i + 1).map(([k]) => k), kb = ks.filter(k => S.leit[k] && S.leit[k].box >= 2).length;
+      const G = D.GRAMER.filter(g => g.lvl === L), gb = G.filter(g => (E.gramer[g.id] || 0) >= 4).length, O = D.OKUMA.filter(r => r.lvl === L), ob = O.filter(r => E.okuma[r.id] != null).length;
+      const parca = [[kb, ks.length, .7], [gb, G.length, .15], [ob, O.length, .15]].filter(x => x[1]), tw = parca.reduce((t, x) => t + x[2], 0) || 1;
+      const pct = Math.floor(100 * parca.reduce((t, [a, b, w]) => t + a / b * w, 0) / tw);
+      return { L, pct, kel: [kb, ks.length], gr: [gb, G.length], ok: [ob, O.length] };
+    });
+  }
+  const svSimdi = V => V.find(v => v.pct < 100) || V[V.length - 1];
+  function svPanel() {
+    const V = svDurum(), c = svSimdi(V);
+    return `<div class="panel" style="margin-top:10px"><div class="lbl muted mono small" style="display:flex;align-items:center">🎖️ Seviye rozeti<button class="btn sm" type="button" id="svPay" style="margin-left:auto">📤 Paylaş</button></div>
+      <div class="svr">${V.map(v => `<div class="${v === c ? 'on' : ''} ${v.pct >= 100 ? 'tam' : ''}"><div class="sv-r" style="--p:${v.pct}"><b>${v.L}</b><small>%${v.pct}</small></div>
+        <span>📚 ${v.kel[0]}/${v.kel[1]}</span><span>📘 ${v.gr[0]}/${v.gr[1]}</span><span>📖 ${v.ok[0]}/${v.ok[1]}</span></div>`).join('')}</div>
+      <p class="sub" style="margin:6px 0 0">Kelime: kartlarda en az iki kez “Bildim” (%70) · gramer dersi 4/5 ve üstü (%15) · okuma metni bitti (%15).</p></div>`;
+  }
+  function svGorsel() {
+    const V = svDurum(), c = svSimdi(V), W = 1080, H = 1350, P = 90, cv = document.createElement('canvas'); cv.width = W; cv.height = H; const x = cv.getContext('2d');
+    const FD = getComputedStyle(document.body).getPropertyValue('--f-display').trim() || 'sans-serif', FB = getComputedStyle(document.body).getPropertyValue('--f-body').trim() || 'sans-serif';
+    const A = '#f2b33d', FG = '#eef2f8', MU = '#9aa8bf', OK = '#5fd39a';
+    const g = x.createLinearGradient(0, 0, W, H); g.addColorStop(0, '#101a2e'); g.addColorStop(1, '#1d2b48'); x.fillStyle = g; x.fillRect(0, 0, W, H);
+    const halo = (cx, cy, r, col) => { const h = x.createRadialGradient(cx, cy, 0, cx, cy, r); h.addColorStop(0, col); h.addColorStop(1, 'rgba(0,0,0,0)'); x.fillStyle = h; x.fillRect(0, 0, W, H); };
+    halo(540, 470, 560, 'rgba(242,179,61,.18)'); halo(1000, 1250, 520, 'rgba(160,140,230,.14)');
+    x.fillStyle = A; x.font = `800 36px ${FB}`; x.fillText((D.dilAd + ' · seviye rozeti').toLocaleUpperCase('tr'), P, 150);
+    const ad = (typeof Cloud !== 'undefined' && Cloud.user && Cloud.name) ? Cloud.name() : ''; if (ad) { x.fillStyle = FG; x.font = `700 46px ${FB}`; x.fillText(ad, P, 215); }
+    /* büyük halka */
+    const cx = W / 2, cy = 520, R = 230; x.lineCap = 'round';
+    x.strokeStyle = 'rgba(255,255,255,.10)'; x.lineWidth = 46; x.beginPath(); x.arc(cx, cy, R, 0, Math.PI * 2); x.stroke();
+    x.strokeStyle = c.pct >= 100 ? OK : A; x.beginPath(); x.arc(cx, cy, R, -Math.PI / 2, -Math.PI / 2 + Math.PI * 2 * Math.max(.01, c.pct / 100)); x.stroke();
+    x.textAlign = 'center'; x.fillStyle = FG; x.font = `800 170px ${FD}`; x.fillText(c.L, cx, cy + 30); x.fillStyle = c.pct >= 100 ? OK : A; x.font = `800 72px ${FB}`; x.fillText('%' + c.pct, cx, cy + 120);
+    x.fillStyle = MU; x.font = `500 36px ${FB}`; x.fillText(c.pct >= 100 ? 'seviye tamamlandı 🎉' : 'seviyesinin bu kadarı tamam', cx, cy + R + 95); x.textAlign = 'left';
+    /* alt satırlar: üç seviye */
+    let y = 960; V.forEach(v => { x.fillStyle = v === c ? FG : MU; x.font = `800 44px ${FB}`; x.fillText(v.L, P, y + 14);
+      const bx = P + 110, bw = W - 2 * P - 260; x.fillStyle = 'rgba(255,255,255,.10)'; x.beginPath(); (x.roundRect ? x.roundRect(bx, y - 16, bw, 32, 16) : x.rect(bx, y - 16, bw, 32)); x.fill();
+      x.fillStyle = v.pct >= 100 ? OK : v === c ? A : 'rgba(242,179,61,.55)'; x.beginPath(); (x.roundRect ? x.roundRect(bx, y - 16, Math.max(32, bw * v.pct / 100), 32, 16) : x.rect(bx, y - 16, bw * v.pct / 100, 32)); x.fill();
+      x.textAlign = 'right'; x.fillStyle = FG; x.font = `800 42px ${FB}`; x.fillText('%' + v.pct, W - P, y + 14); x.textAlign = 'left'; y += 80; });
+    x.fillStyle = 'rgba(255,255,255,.14)'; x.fillRect(P, H - 150, W - 2 * P, 2);
+    x.font = `800 36px ${FD}`; x.fillStyle = FG; x.fillText(`${D.dilAd} Kulübü`, P, H - 88);
+    x.font = `500 28px ${FB}`; x.fillStyle = MU; x.textAlign = 'right'; x.fillText('erdevelop.github.io' + location.pathname.replace(/\.html$/, ''), W - P, H - 88); x.textAlign = 'left';
+    return { cv, c };
+  }
+  function svPaylas() {
+    const { cv, c } = svGorsel(), d = cv.toDataURL('image/png'), bin = atob(d.split(',')[1]), u8 = new Uint8Array(bin.length); for (let i = 0; i < bin.length; i++) u8[i] = bin.charCodeAt(i);
+    const file = new File([u8], `seviye-${c.L}.png`, { type: 'image/png' }), txt = `${D.dilAd} Kulübü: ${c.L} seviyesinin %${c.pct}'i tamam! 🎖️`;
+    if (navigator.canShare && navigator.canShare({ files: [file] })) return navigator.share({ files: [file], text: txt }).catch(e => { if (e.name !== 'AbortError') navigator.share({ files: [file] }).catch(() => { }); });
+    TM.download(file.name, file); TM.toast('Görsel indirildi; istediğin yerde paylaşabilirsin');
+  }
+  /* %25, %50, %75, %100'e ulaşınca haber ver */
+  function svKontrol() { try { const V = svDurum(); E.svm = E.svm || {}; let yeni = null; V.forEach(v => { const m = Math.floor(v.pct / 25) * 25; if (m > (E.svm[v.L] || 0)) { if (E.svm[v.L] != null || m >= 25) yeni = yeni || [v.L, m]; E.svm[v.L] = m; } });
+    if (yeni) { sv(); setTimeout(() => TM.toast(`🎖️ ${yeni[0]} seviyesinin %${yeni[1]}'i tamam! İlerleme'den paylaşabilirsin.`, 3400), 1500); } } catch (e) { } }
+  window.KulupSeviye = { svDurum, svGorsel, svKontrol };
+
+  /* ================= 👏 ODADA ALKIŞ: herkes kendi üye kaydına “bugün kimi alkışladım” yazar; sayım ondan çıkar ================= */
+  (function () {
+    if (typeof Cloud === 'undefined' || !window.Gorev || !Gorev.badge) return;
+    const bugun = () => dayKey(), kim = uid => (Cloud.members || []).filter(m => m.alk && m.alk[uid] === bugun() && m.uid !== uid);
+    const oB = Gorev.badge;
+    Gorev.badge = function (m) { const r = oB.apply(this, arguments); if (!m || !Cloud.user) return r; const n = kim(m.uid).length, ben = m.uid === Cloud.user.uid;
+      const me = (Cloud.members || []).find(x => x.uid === Cloud.user.uid), yaptim = !!(me && me.alk && me.alk[m.uid] === bugun());
+      if (ben) return r + (n ? ` <span class="alk0" title="Bugün seni alkışlayanlar: ${esc(kim(m.uid).map(x => x.name || '?').join(', '))}">👏 ${n}</span>` : '');
+      return r + ` <button type="button" class="alk ${yaptim ? 'on' : ''}" data-alk="${esc(m.uid)}" title="${yaptim ? 'Bugün alkışladın' : 'Alkışla'}">👏${n ? ' ' + n : ''}</button>`; };
+    document.addEventListener('click', async e => { const b = e.target.closest('[data-alk]'); if (!b || !Cloud.user || !Cloud.room) return; e.preventDefault();
+      const uid = b.dataset.alk, me = (Cloud.members || []).find(x => x.uid === Cloud.user.uid); if (me && me.alk && me.alk[uid] === bugun()) return TM.toast('Bugün zaten alkışladın 👏');
+      if (me) me.alk = Object.assign({}, me.alk, { [uid]: bugun() }); try { Cloud.paint(); } catch (er) { }
+      const hedef = (Cloud.members || []).find(x => x.uid === uid); TM.toast(`👏 ${hedef ? hedef.name || 'Arkadaşın' : 'Arkadaşın'} alkışlandı`);
+      try { await Cloud.db.collection('rooms').doc(Cloud.room.id).collection('members').doc(Cloud.user.uid).set({ alk: { [uid]: bugun() } }, { merge: true }); } catch (er) { TM.toast('Alkış gönderilemedi'); } });
+    /* bana gelen yeni alkışları bildir */
+    const oP = Cloud.paint;
+    Cloud.paint = function () { const r = oP.apply(this, arguments); try { if (this.user && this.room) { const g = kim(this.user.uid), k = 'alk|' + this.room.id + '|' + bugun(), eski = (E.alkGor && E.alkGor.k === k) ? E.alkGor.u : [];
+      const yeni = g.filter(m => !eski.includes(m.uid)); if (yeni.length) { E.alkGor = { k, u: g.map(m => m.uid) }; sv(); if (eski.length || !E.alkIlk || E.alkIlk !== k) TM.toast(`👏 ${yeni.map(m => m.name || '?').join(', ')} seni alkışladı!`, 3200); E.alkIlk = k; } } } catch (er) { } return r; };
+    const css = document.createElement('style'); css.textContent = `button.alk{border:1px solid var(--line);background:var(--panel);border-radius:999px;padding:1px 8px;margin-left:6px;font:600 12px var(--f-body);cursor:pointer;color:var(--fg);vertical-align:middle}button.alk.on{background:color-mix(in srgb,var(--accent) 16%,var(--panel));border-color:var(--accent)}button.alk:active{transform:scale(1.15)}.alk0{font:600 12px var(--f-body);margin-left:6px;white-space:nowrap}`; document.head.appendChild(css);
+  })();
+
   function skorGorsel(o) {
     const W = 1080, H = 1350, P = 90, c = document.createElement('canvas'); c.width = W; c.height = H; const x = c.getContext('2d');
     const FD = getComputedStyle(document.body).getPropertyValue('--f-display').trim() || 'sans-serif', FB = getComputedStyle(document.body).getPropertyValue('--f-body').trim() || 'sans-serif';

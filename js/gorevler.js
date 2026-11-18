@@ -201,7 +201,7 @@
     const sum = M.reduce((a, m) => a + (m.gwk === wk ? (m.gxp || 0) : 0), 0), pct = Math.min(100, Math.round(100 * sum / target));
     const act = M.filter(m => m.gwk === wk && m.gxp > 0).length;
     const h = `<div class="rgoal ${sum >= target ? 'ok' : ''}"><div class="ctl"><b>🤝 Odanın haftalık hedefi</b><span class="sp"></span><span class="mono small">${nf(sum)} / ${nf(target)} XP</span></div><div class="bar"><b style="width:${pct}%"></b></div>
-      <p class="small muted" style="margin:6px 0 0">${sum >= target ? '🎉 Hedef tamam! Bu hafta oda olarak harika gidiyorsunuz.' : `Bu hafta ${act} kişi katkı verdi · ${daysLeft()} gün kaldı. Hedef üye sayısına göre büyür (kişi başı 300 XP).`} Adların yanında: 🔥 seri, ●●○ bugünkü görevler.</p></div>`;
+      <p class="small muted" style="margin:6px 0 0">${sum >= target ? '🎉 Hedef tamam! Bu hafta oda olarak harika gidiyorsunuz.' : `Bu hafta ${act} kişi katkı verdi · ${daysLeft()} gün kaldı. Hedef üye sayısına göre büyür (kişi başı 300 XP).`} Adların yanında: 🔥 seri, ●●○ bugünkü görevler, 👏 bugün aldığı alkış (sen de dokunup alkışlayabilirsin).</p></div>`;
     const lbl = lb.previousElementSibling; (lbl || lb).insertAdjacentHTML('beforebegin', h);
   }
   if (typeof Cloud !== 'undefined' && typeof Cloud.paint === 'function') {
