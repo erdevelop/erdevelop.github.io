@@ -188,7 +188,7 @@ const html = `<!doctype html>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Chakra+Petch:wght@600;700&family=IBM+Plex+Sans:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500&display=swap">
 <link rel="stylesheet" href="../../kesif/tema.css">
 <style>
-.gorunum { display: inline-flex; border: 1px solid var(--line); border-radius: 8px; overflow: hidden; margin: 14px 0 4px; }
+.gorunum { display: inline-flex; flex-wrap: wrap; border: 1px solid var(--line); border-radius: 8px; overflow: hidden; margin: 14px 0 4px; }
 .gorunum a { font: 500 13px var(--f-mono); padding: 8px 14px; color: var(--text); text-decoration: none; background: var(--panel); }
 .gorunum a + a { border-left: 1px solid var(--line); }
 .gorunum a.on { background: var(--accent); color: var(--on-accent, #fff); }
@@ -243,7 +243,7 @@ const html = `<!doctype html>
 </div></div>
 <main class="wrap">
   <header class="head"><h1>Öğrenme yolları</h1><p>Eğitimlere iki yoldan bakabilirsin: hepsini konularına göre listeleyen <a href="../">tüm eğitimler</a> sayfası ya da burada, bir hedefe göre <b>sıralanmış</b> yollar. Bir yol seç, numaralı sırayla ilerle; "seçmeli" olanlar isteğe bağlı. İşaretlediğin eğitimler tamamlandıkça yol da ilerler.</p>
-  <nav class="gorunum" aria-label="Görünüm"><a href="../">Tüm eğitimler</a><a class="on" href="./" aria-current="page">Öğrenme yolları</a></nav>
+  <nav class="gorunum" aria-label="Görünüm"><a href="../">Tüm eğitimler</a><a class="on" href="./" aria-current="page">Öğrenme yolları</a><a href="../../yapay-zeka/">Yapay zekâ bölümü</a></nav>
   </header>
   <div class="secim" id="secim">${yollar.map(y => `<a href="#${y.id}" data-id="${y.id}"><b>${esc(y.ad)}</b><span>${y.adim.filter(a => !a.x).length} eğitim <em class="pc"></em></span></a>`).join('')}</div>
 ${yollar.map(yolHtml).join('\n')}

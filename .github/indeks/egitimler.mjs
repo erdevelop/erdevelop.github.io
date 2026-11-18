@@ -8,8 +8,8 @@ import { fileURLToPath } from 'node:url';
 
 const KOK = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '../..');
 const SITE = 'https://erdevelop.github.io/';
-const GRUPLAR = ['facadeedu', 'edu', 'code', 'plang', 'lang'];
-const KISA = { facadeedu: 'Cephe', edu: 'CAD ve BIM', code: 'Yazılım', plang: 'Programlama dilleri', lang: 'Dil öğrenme' };
+const GRUPLAR = ['facadeedu', 'edu', 'ai', 'code', 'plang', 'lang'];
+const KISA = { facadeedu: 'Cephe', edu: 'CAD ve BIM', ai: 'Yapay zekâ', code: 'Yazılım', plang: 'Programlama dilleri', lang: 'Dil öğrenme' };
 
 const tools = fs.readFileSync(path.join(KOK, 'Tools.html'), 'utf8');
 /* Tools.html'deki betikten ICON ve G dizisini çıkar */
@@ -45,8 +45,8 @@ const bolum = g => {
 };
 const toplam = gruplar.reduce((a, g) => a + g.items.length, 0);
 const egitimSay = gruplar.reduce((a, g) => a + g.items.filter(it => it.f.startsWith('egitimler/') && !it.f.startsWith('egitimler/sozluk/')).length, 0);
-const baslik = 'Ücretsiz Eğitimler: Cephe, CAD, BIM, Yazılım ve Programlama | erdevelop';
-const aciklama = `${egitimSay} ücretsiz Türkçe eğitim: cephe tasarımı ve statiği, AutoCAD, Revit, Rhino, Grasshopper, SolidWorks, Dynamo, yazılım ve programlama dilleri. 7 günlük programlar, ilerlemen kaydedilir.`;
+const baslik = 'Ücretsiz Eğitimler: Cephe, CAD, BIM, Yapay Zekâ, Yazılım ve Programlama | erdevelop';
+const aciklama = `${egitimSay} ücretsiz Türkçe eğitim: cephe tasarımı ve statiği, AutoCAD, Revit, Rhino, Grasshopper, SolidWorks, Dynamo, yapay zekâ, yazılım ve programlama dilleri. 7 günlük programlar, ilerlemen kaydedilir.`;
 const ld = { '@context': 'https://schema.org', '@type': 'CollectionPage', name: 'Eğitimler', url: SITE + 'egitimler/', inLanguage: 'tr', description: aciklama,
   mainEntity: { '@type': 'ItemList', numberOfItems: toplam, itemListElement: gruplar.flatMap(g => g.items).map((it, i) => ({ '@type': 'ListItem', position: i + 1, name: it.t.tr, url: SITE + it.f.replace(/index\.html$/, '') })) } };
 
@@ -92,7 +92,7 @@ const html = `<!doctype html>
 .kart .bar i { display: block; height: 100%; background: #2e8b57; }
 #devam[hidden] { display: none; }
 .bos { color: var(--muted); padding: 20px 0; }
-.gorunum { display: inline-flex; border: 1px solid var(--line); border-radius: 8px; overflow: hidden; margin: 14px 0 4px; }
+.gorunum { display: inline-flex; flex-wrap: wrap; border: 1px solid var(--line); border-radius: 8px; overflow: hidden; margin: 14px 0 4px; }
 .gorunum a { font: 500 13px var(--f-mono); padding: 8px 14px; color: var(--text); text-decoration: none; background: var(--panel); }
 .gorunum a + a { border-left: 1px solid var(--line); }
 .gorunum a.on { background: var(--accent); color: var(--on-accent, #fff); }
@@ -111,8 +111,8 @@ const html = `<!doctype html>
   <a class="tb" href="../Tools.html">Araçlar</a><button class="tb" type="button" id="modeBtn">LIGHT</button>
 </div></div>
 <main class="wrap">
-  <header class="head"><h1>Eğitimler</h1><p>${egitimSay} ücretsiz Türkçe eğitim: cephe tasarımı, CAD ve BIM programları, yazılım ve programlama dilleri; yanında dil kulüpleri. Çoğu 7 günlük programdır, her günün sonunda alıştırma vardır. İlerlemen bu tarayıcıda, giriş yaptıysan hesabında saklanır.</p></header>
-  <nav class="gorunum" aria-label="Görünüm"><a class="on" href="./" aria-current="page">Tüm eğitimler</a><a href="yollar/">Öğrenme yolları</a></nav>
+  <header class="head"><h1>Eğitimler</h1><p>${egitimSay} ücretsiz Türkçe eğitim: cephe tasarımı, CAD ve BIM programları, yapay zekâ, yazılım ve programlama dilleri; yanında dil kulüpleri. Çoğu 7 günlük programdır, her günün sonunda alıştırma vardır. İlerlemen bu tarayıcıda, giriş yaptıysan hesabında saklanır.</p></header>
+  <nav class="gorunum" aria-label="Görünüm"><a class="on" href="./" aria-current="page">Tüm eğitimler</a><a href="yollar/">Öğrenme yolları</a><a href="../yapay-zeka/">Yapay zekâ bölümü</a></nav>
   <div class="ara"><input class="inp" id="q" type="search" placeholder="Eğitim ara… (ör. Revit, cam, Python, statik)" autocomplete="off" aria-label="Eğitim ara"><span class="say" id="say">${toplam} eğitim</span></div>
   <div class="cips" id="cips"><button type="button" class="on" data-g="">Hepsi</button>${gruplar.map(g => `<button type="button" data-g="${g.id}">${esc(KISA[g.id] || g.h.tr)}</button>`).join('')}</div>
   <section class="grup" id="devam" hidden><div class="layer-head"><span class="swatch"></span><h2>Kaldığın yerden devam et</h2><span class="meta" id="devamN"></span></div><div class="izgara" id="devamL"></div></section>
@@ -168,4 +168,5 @@ ${gruplar.map(bolum).join('\n')}
 `;
 fs.writeFileSync(path.join(KOK, 'egitimler/index.html'), html);
 await import('./yollar.mjs'); /* öğrenme yolları sayfası */
+await import('./yapay-zeka.mjs'); /* yapay zekâ bölümü sayfası */
 console.log(`egitimler/index.html: ${gruplar.length} grup, ${toplam} kart (${egitimSay} eğitim)`);

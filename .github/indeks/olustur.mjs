@@ -27,6 +27,7 @@ const kisa = t => t.replace(/\s*[|·]\s*erdevelop.*$/i, '').replace(/\s+[–—-
 const urlOf = p => '/' + p.replace(/(^|\/)index\.html$/, '$1');
 
 function tur(p) {
+  if (/^yapay-zeka\/|^egitimler\/(yapay-zeka|makine-ogrenmesi)|^ogrenme_labaratuvari\/|^araclar\/arka-plan-silme/.test(p)) return 'Yapay zekâ';
   if (/^rehber\//.test(p)) return 'Rehber';
   if (/^egitimler\//.test(p)) return 'Eğitim';
   if (/^kesif\//.test(p)) return 'Cephe';
@@ -75,6 +76,15 @@ try {
     const b = m[2], g = rx => tagsiz((b.match(rx) || [])[1]);
     const tr = g(/class="cp"[^>]*>([\s\S]*?)<\/a>/), en = g(/<p class="en">([\s\S]*?)<\/p>/), de = g(/<p class="de"[^>]*>(?:<span>DE<\/span>)?([\s\S]*?)<\/p>/), tn = g(/<p class="tn">([\s\S]*?)<\/p>/);
     if (tr) kayitlar.push({ t: tr, d: (en ? en + ' — ' : '') + tn, u: '/egitimler/sozluk/#' + m[1], c: 'Terim', k: [en, de].filter(Boolean).join(' ') });
+  }
+} catch (e) { }
+
+/* Yapay zekâ terimleri (yapay-zeka/index.html) */
+try {
+  const s = readFileSync(join(ROOT, 'yapay-zeka/index.html'), 'utf8');
+  for (const m of s.matchAll(/<div class="terim" id="([^"]+)"><dt>([\s\S]*?)<i>([\s\S]*?)<\/i><\/dt><dd>([\s\S]*?)<\/dd><\/div>/g)) {
+    const tr = tagsiz(m[2]), en = tagsiz(m[3]);
+    kayitlar.push({ t: tr, d: en + ' — ' + tagsiz(m[4]), u: '/yapay-zeka/#' + m[1], c: 'Yapay zekâ', k: en + ' yapay zeka ai' });
   }
 } catch (e) { }
 

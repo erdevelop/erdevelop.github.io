@@ -70,7 +70,7 @@ html[data-mode=light] #er-ara .bx{background:#fff;color:#1a2233;border-color:rgb
 @media (max-width:560px){#er-ara{padding:8px}#er-ara .bx{max-height:calc(100vh - 16px)}#er-ara .kb{display:none}}`;
     D.head.appendChild(s);
   }
-  const KAT = ['Tümü', 'Cephe', 'Hesaplama', 'Rehber', 'Terim', 'Araç', 'Eğitim', 'Komutlar', 'Oyun', 'Dil kulübü'];
+  const KAT = ['Tümü', 'Cephe', 'Hesaplama', 'Rehber', 'Terim', 'Araç', 'Eğitim', 'Yapay zekâ', 'Komutlar', 'Oyun', 'Dil kulübü'];
   function kur() {
     if (dlg) return dlg; stil();
     dlg = D.createElement('div'); dlg.id = 'er-ara'; dlg.hidden = true; dlg.setAttribute('role', 'dialog'); dlg.setAttribute('aria-modal', 'true'); dlg.setAttribute('aria-label', 'Sitede ara');
