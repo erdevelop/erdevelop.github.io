@@ -3049,5 +3049,1405 @@ window.ORNEK_DE = {
 "die Heizung": [
 "Die Heizung funktioniert nicht.",
 "Kalorifer çalışmıyor."
+],
+"behandeln": [
+"Der Arzt behandelt den Patienten.",
+"Doktor hastayı tedavi ediyor."
+],
+"sich anpassen": [
+"Die Kinder passen sich schnell an.",
+"Çocuklar çabuk uyum sağlıyor."
+],
+"zugeben": [
+"Ich gebe zu, ich hatte Angst.",
+"Korktuğumu itiraf ediyorum."
+],
+"bewundern": [
+"Ich bewundere deinen Mut.",
+"Cesaretine hayranım."
+],
+"behaupten": [
+"Er behauptet, dass er nichts weiß.",
+"Hiçbir şey bilmediğini iddia ediyor."
+],
+"handeln": [
+"Wir müssen jetzt handeln.",
+"Şimdi harekete geçmeliyiz."
+],
+"es handelt sich um": [
+"Es handelt sich um ein kleines Problem.",
+"Söz konusu olan küçük bir sorun."
+],
+"einrichten": [
+"Wir richten die neue Wohnung ein.",
+"Yeni daireyi döşüyoruz."
+],
+"verbessern": [
+"Ich möchte mein Deutsch verbessern.",
+"Almancamı geliştirmek istiyorum."
+],
+"analysieren": [
+"Wir analysieren die Ergebnisse.",
+"Sonuçları analiz ediyoruz."
+],
+"bemerken": [
+"Hast du etwas bemerkt?",
+"Bir şey fark ettin mi?"
+],
+"erscheinen": [
+"Das Buch erscheint im Mai.",
+"Kitap mayısta çıkıyor."
+],
+"gehören": [
+"Die Tasche gehört meiner Schwester.",
+"Çanta kız kardeşime ait."
+],
+"klatschen": [
+"Das Publikum klatscht laut.",
+"Seyirciler yüksek sesle alkışlıyor."
+],
+"schätzen": [
+"Ich schätze deine Hilfe sehr.",
+"Yardımını çok takdir ediyorum."
+],
+"genehmigen": [
+"Der Chef hat den Urlaub genehmigt.",
+"Şef izni onayladı."
+],
+"sich stützen auf": [
+"Er stützt sich auf den Stock.",
+"Bastona dayanıyor."
+],
+"vereinbaren": [
+"Wir haben einen Termin vereinbart.",
+"Bir randevu kararlaştırdık."
+],
+"versichern": [
+"Das Auto ist gut versichert.",
+"Araba iyi sigortalı."
+],
+"anziehen": [
+"Zieh dir eine Jacke an.",
+"Bir ceket giy."
+],
+"erhöhen": [
+"Die Firma erhöht die Preise.",
+"Şirket fiyatları artırıyor."
+],
+"erlauben": [
+"Rauchen ist hier nicht erlaubt.",
+"Burada sigara içmeye izin yok."
+],
+"vorankommen": [
+"Mit dem Projekt kommen wir gut voran.",
+"Projede iyi ilerliyoruz."
+],
+"warnen": [
+"Ich warne dich, die Straße ist glatt.",
+"Seni uyarıyorum, yol kaygan."
+],
+"senken": [
+"Der Laden senkt die Preise.",
+"Dükkân fiyatları indiriyor."
+],
+"kämpfen": [
+"Er kämpft gegen die Krankheit.",
+"Hastalıkla mücadele ediyor."
+],
+"sich bewegen": [
+"Du musst dich mehr bewegen.",
+"Daha çok hareket etmelisin."
+],
+"glänzen": [
+"Die Sterne glänzen am Himmel.",
+"Yıldızlar gökyüzünde parlıyor."
+],
+"verstecken": [
+"Die Kinder verstecken sich im Garten.",
+"Çocuklar bahçede saklanıyor."
+],
+"berechnen": [
+"Ich berechne die Kosten.",
+"Masrafları hesaplıyorum."
+],
+"kaputt machen": [
+"Wer hat das Glas kaputt gemacht?",
+"Bardağı kim kırdı?"
+],
+"verursachen": [
+"Der Schnee verursacht Verspätungen.",
+"Kar gecikmelere neden oluyor."
+],
+"feiern": [
+"Wir feiern heute seinen Geburtstag.",
+"Bugün doğum gününü kutluyoruz."
+],
+"laden": [
+"Ich muss mein Handy laden.",
+"Telefonumu şarj etmem lazım."
+],
+"zitieren": [
+"Er zitiert oft seinen Großvater.",
+"Sık sık dedesinden alıntı yapar."
+],
+"ordnen": [
+"Ich ordne die Dokumente nach Datum.",
+"Belgeleri tarihe göre sıralıyorum."
+],
+"zusammenarbeiten": [
+"Wir arbeiten mit einem türkischen Team zusammen.",
+"Bir Türk ekibiyle iş birliği yapıyoruz."
+],
+"bestellen": [
+"Wollen wir eine Pizza bestellen?",
+"Pizza sipariş edelim mi?"
+],
+"vergleichen": [
+"Ich vergleiche die Preise.",
+"Fiyatları karşılaştırıyorum."
+],
+"sich verhalten": [
+"Die Kinder haben sich gut verhalten.",
+"Çocuklar iyi davrandı."
+],
+"bestehen aus": [
+"Das Menü besteht aus drei Gängen.",
+"Menü üç tabaktan oluşuyor."
+],
+"betreffen": [
+"Die Regel betrifft alle.",
+"Kural herkesi ilgilendiriyor."
+],
+"abschließen": [
+"Vergiss nicht, die Tür abzuschließen.",
+"Kapıyı kilitlemeyi unutma."
+],
+"anvertrauen": [
+"Ich vertraue dir meinen Schlüssel an.",
+"Anahtarımı sana emanet ediyorum."
+],
+"bestätigen": [
+"Bitte bestätigen Sie die Reservierung.",
+"Lütfen rezervasyonu teyit edin."
+],
+"widmen": [
+"Sie widmet ihre Freizeit der Musik.",
+"Boş zamanını müziğe ayırıyor."
+],
+"raten": [
+"Rate mal, wen ich getroffen habe!",
+"Kiminle karşılaştığımı tahmin et!"
+],
+"betrachten": [
+"Wir betrachten das Bild genau.",
+"Resmi dikkatle inceliyoruz."
+],
+"bauen": [
+"Sie bauen ein neues Haus.",
+"Yeni bir ev inşa ediyorlar."
+],
+"beraten": [
+"Die Verkäuferin hat mich gut beraten.",
+"Satış görevlisi bana iyi danışmanlık yaptı."
+],
+"enthalten": [
+"Das Getränk enthält viel Zucker.",
+"İçecek çok şeker içeriyor."
+],
+"beitragen": [
+"Jeder trägt etwas zum Essen bei.",
+"Herkes yemeğe bir şeyle katkıda bulunuyor."
+],
+"kontrollieren": [
+"Der Schaffner kontrolliert die Fahrkarten.",
+"Kondüktör biletleri kontrol ediyor."
+],
+"überzeugen": [
+"Du hast mich überzeugt.",
+"Beni ikna ettin."
+],
+"entsprechen": [
+"Das Zimmer entspricht nicht dem Foto.",
+"Oda fotoğrafa uymuyor."
+],
+"korrigieren": [
+"Die Lehrerin korrigiert die Tests.",
+"Öğretmen sınavları düzeltiyor."
+],
+"decken": [
+"Kannst du bitte den Tisch decken?",
+"Sofrayı kurabilir misin, lütfen?"
+],
+"fürchten": [
+"Ich fürchte, wir kommen zu spät.",
+"Korkarım geç kalacağız."
+],
+"kritisieren": [
+"Er kritisiert immer alles.",
+"Hep her şeyi eleştirir."
+],
+"pflücken": [
+"Wir pflücken Äpfel im Garten.",
+"Bahçede elma topluyoruz."
+],
+"loswerden": [
+"Ich werde diese Erkältung nicht los.",
+"Bu soğuk algınlığından bir türlü kurtulamıyorum."
+],
+"enttäuschen": [
+"Der Film hat mich enttäuscht.",
+"Film beni hayal kırıklığına uğrattı."
+],
+"entdecken": [
+"Wir haben ein tolles Café entdeckt.",
+"Harika bir kafe keşfettik."
+],
+"verteidigen": [
+"Er verteidigt immer seine Freunde.",
+"Arkadaşlarını her zaman savunur."
+],
+"verbieten": [
+"Hier ist Parken verboten.",
+"Burada park etmek yasak."
+],
+"beweisen": [
+"Kannst du das beweisen?",
+"Bunu kanıtlayabilir misin?"
+],
+"überholen": [
+"Hier darf man nicht überholen.",
+"Burada sollamak yasak."
+],
+"abhängen von": [
+"Das hängt vom Wetter ab.",
+"Bu havaya bağlı."
+],
+"ausgeben": [
+"Ich habe zu viel Geld ausgegeben.",
+"Çok fazla para harcadım."
+],
+"abgeben": [
+"Ich muss die Hausaufgabe morgen abgeben.",
+"Ödevi yarın teslim etmem gerekiyor."
+],
+"stören": [
+"Entschuldigung, darf ich kurz stören?",
+"Affedersiniz, kısa bir süre rahatsız edebilir miyim?"
+],
+"wünschen": [
+"Ich wünsche dir alles Gute!",
+"Sana her şeyin en iyisini dilerim!"
+],
+"zeichnen": [
+"Mein Sohn zeichnet gern Tiere.",
+"Oğlum hayvan çizmeyi sever."
+],
+"vermuten": [
+"Ich vermute, er ist krank.",
+"Sanırım hasta."
+],
+"sinken": [
+"Die Temperaturen sinken.",
+"Sıcaklıklar düşüyor."
+],
+"verschwinden": [
+"Meine Brille ist verschwunden.",
+"Gözlüğüm kayboldu."
+],
+"unterscheiden": [
+"Ich kann die Zwillinge nicht unterscheiden.",
+"İkizleri ayırt edemiyorum."
+],
+"verteilen": [
+"Der Lehrer verteilt die Bücher.",
+"Öğretmen kitapları dağıtıyor."
+],
+"zweifeln": [
+"Ich zweifle nicht daran.",
+"Bundan şüphem yok."
+],
+"austauschen": [
+"Wir tauschen unsere Telefonnummern aus.",
+"Telefon numaralarımızı değiş tokuş ediyoruz."
+],
+"fliehen": [
+"Die Katze flieht vor dem Hund.",
+"Kedi köpekten kaçıyor."
+],
+"beleuchten": [
+"Die Straße ist gut beleuchtet.",
+"Sokak iyi aydınlatılmış."
+],
+"sparen": [
+"Ich spare für ein neues Auto.",
+"Yeni bir araba için para biriktiriyorum."
+],
+"zerdrücken": [
+"Zerdrück die Kartoffeln mit der Gabel.",
+"Patatesleri çatalla ez."
+],
+"durchführen": [
+"Wir führen eine Umfrage durch.",
+"Bir anket gerçekleştiriyoruz."
+],
+"erziehen": [
+"Sie erziehen ihre Kinder zweisprachig.",
+"Çocuklarını iki dilli yetiştiriyorlar."
+],
+"entfernen": [
+"Bitte entfernen Sie den Fleck.",
+"Lütfen lekeyi çıkarın."
+],
+"umarmen": [
+"Sie umarmt ihre Mutter.",
+"Annesine sarılıyor."
+],
+"mitnehmen": [
+"Nimm einen Regenschirm mit!",
+"Yanına bir şemsiye al!"
+],
+"verhindern": [
+"Wir wollen einen Unfall verhindern.",
+"Bir kazayı önlemek istiyoruz."
+],
+"beschäftigen": [
+"Die Firma beschäftigt hundert Leute.",
+"Şirket yüz kişi çalıştırıyor."
+],
+"ermutigen": [
+"Meine Eltern ermutigen mich immer.",
+"Annemle babam beni hep cesaretlendirir."
+],
+"sich langweilen": [
+"Die Kinder langweilen sich zu Hause.",
+"Çocuklar evde sıkılıyor."
+],
+"aufnehmen": [
+"Ich nehme das Konzert mit dem Handy auf.",
+"Konseri telefonla kaydediyorum."
+],
+"unterrichten": [
+"Sie unterrichtet Deutsch an einer Schule.",
+"Bir okulda Almanca öğretiyor."
+],
+"umgeben": [
+"Das Haus ist von Bäumen umgeben.",
+"Ev ağaçlarla çevrili."
+],
+"trainieren": [
+"Er trainiert dreimal pro Woche.",
+"Haftada üç kez antrenman yapıyor."
+],
+"pflegen": [
+"Sie pflegt ihre kranke Mutter.",
+"Hasta annesine bakıyor."
+],
+"in Betracht ziehen": [
+"Wir ziehen einen Umzug in Betracht.",
+"Taşınmayı dikkate alıyoruz."
+],
+"schicken": [
+"Ich schicke dir die Fotos per E-Mail.",
+"Fotoğrafları sana e-postayla gönderiyorum."
+],
+"hoffen": [
+"Ich hoffe, es geht dir besser.",
+"Umarım daha iyisindir."
+],
+"festlegen": [
+"Wir legen einen Termin fest.",
+"Bir tarih belirliyoruz."
+],
+"studieren": [
+"Meine Tochter studiert Medizin.",
+"Kızım tıp okuyor."
+],
+"vermeiden": [
+"Ich vermeide die Innenstadt am Samstag.",
+"Cumartesi günleri şehir merkezinden kaçınırım."
+],
+"sich entwickeln": [
+"Die Stadt hat sich stark entwickelt.",
+"Şehir çok gelişti."
+],
+"übertreiben": [
+"Du übertreibst ein bisschen!",
+"Biraz abartıyorsun!"
+],
+"untersuchen": [
+"Der Arzt untersucht das Kind.",
+"Doktor çocuğu muayene ediyor."
+],
+"verlangen": [
+"Der Kunde verlangt sein Geld zurück.",
+"Müşteri parasını geri istiyor."
+],
+"existieren": [
+"Dieses Geschäft existiert nicht mehr.",
+"Bu dükkân artık yok."
+],
+"ausdrücken": [
+"Es ist schwer, Gefühle auszudrücken.",
+"Duyguları ifade etmek zor."
+],
+"sich ärgern": [
+"Ärger dich nicht, das ist nicht so schlimm.",
+"Kızma, o kadar kötü değil."
+],
+"gratulieren": [
+"Ich gratuliere dir zum Geburtstag!",
+"Doğum gününü kutlarım!"
+],
+"befestigen": [
+"Wir befestigen das Regal an der Wand.",
+"Rafı duvara sabitliyoruz."
+],
+"bilden": [
+"Bildet bitte Gruppen von drei Personen.",
+"Lütfen üç kişilik gruplar oluşturun."
+],
+"liefern": [
+"Wir liefern morgen früh.",
+"Yarın sabah teslim ediyoruz."
+],
+"klopfen": [
+"Jemand klopft an die Tür.",
+"Biri kapıyı çalıyor."
+],
+"verschwenden": [
+"Wir verschwenden zu viel Zeit.",
+"Çok fazla vakit israf ediyoruz."
+],
+"garantieren": [
+"Ich garantiere dir, das klappt.",
+"Sana garanti ederim, bu işe yarar."
+],
+"verwalten": [
+"Sie verwaltet ein kleines Hotel.",
+"Küçük bir otel işletiyor."
+],
+"rutschen": [
+"Vorsicht, hier rutscht man leicht!",
+"Dikkat, burada insan kolayca kayar!"
+],
+"probieren": [
+"Probier mal die Suppe!",
+"Çorbanın tadına bir bak!"
+],
+"wachsen": [
+"Dein Sohn ist aber gewachsen!",
+"Oğlun ne kadar büyümüş!"
+],
+"zunehmen": [
+"Im Urlaub habe ich zugenommen.",
+"Tatilde kilo aldım."
+],
+"heilen": [
+"Die Wunde heilt gut.",
+"Yara iyi iyileşiyor."
+],
+"zögern": [
+"Zögere nicht, mich anzurufen.",
+"Beni aramaktan çekinme."
+],
+"ignorieren": [
+"Er ignoriert meine Nachrichten.",
+"Mesajlarımı görmezden geliyor."
+],
+"durchsetzen": [
+"Sie hat ihre Idee durchgesetzt.",
+"Fikrini kabul ettirdi."
+],
+"drucken": [
+"Ich muss die Fahrkarte drucken.",
+"Bileti yazdırmam gerekiyor."
+],
+"angeben": [
+"Bitte geben Sie Ihre Adresse an.",
+"Lütfen adresinizi belirtin."
+],
+"informieren": [
+"Wir informieren Sie per E-Mail.",
+"Sizi e-postayla bilgilendireceğiz."
+],
+"sich anmelden": [
+"Ich habe mich für einen Tanzkurs angemeldet.",
+"Bir dans kursuna kaydoldum."
+],
+"bestehen auf": [
+"Ich bestehe darauf, ich bezahle!",
+"Israr ediyorum, ben ödüyorum!"
+],
+"installieren": [
+"Ich installiere eine neue App.",
+"Yeni bir uygulama yüklüyorum."
+],
+"unterbrechen": [
+"Unterbrich mich bitte nicht.",
+"Lütfen sözümü kesme."
+],
+"erfinden": [
+"Er erfindet immer Ausreden.",
+"Hep bahane uyduruyor."
+],
+"verbinden": [
+"Die Brücke verbindet die zwei Städte.",
+"Köprü iki şehri birbirine bağlıyor."
+],
+"urteilen": [
+"Man sollte nicht zu schnell urteilen.",
+"Çok çabuk yargılamamak gerekir."
+],
+"schwören": [
+"Ich schwöre, das ist wahr!",
+"Yemin ederim, bu doğru!"
+],
+"starten": [
+"Das Rennen startet um zehn Uhr.",
+"Yarış saat onda başlıyor."
+],
+"abnehmen": [
+"Er hat fünf Kilo abgenommen.",
+"Beş kilo verdi."
+],
+"fehlen": [
+"Mir fehlt noch ein Euro.",
+"Bir avrom eksik."
+],
+"vermissen": [
+"Ich vermisse dich sehr.",
+"Seni çok özlüyorum."
+],
+"markieren": [
+"Markiere die neuen Wörter.",
+"Yeni kelimeleri işaretle."
+],
+"mischen": [
+"Misch den Zucker mit dem Mehl.",
+"Şekeri unla karıştır."
+],
+"drohen": [
+"Es droht ein Gewitter.",
+"Fırtına tehlikesi var."
+],
+"führen": [
+"Der Weg führt zum See.",
+"Yol göle çıkıyor."
+],
+"verdienen": [
+"Du hast Urlaub verdient.",
+"Tatili hak ettin."
+],
+"messen": [
+"Die Krankenschwester misst das Fieber.",
+"Hemşire ateşi ölçüyor."
+],
+"misstrauen": [
+"Ich misstraue diesem Angebot.",
+"Bu teklife güvenmiyorum."
+],
+"sich lustig machen über": [
+"Mach dich nicht über ihn lustig!",
+"Onunla alay etme!"
+],
+"motivieren": [
+"Das Projekt motiviert mich sehr.",
+"Proje beni çok motive ediyor."
+],
+"notieren": [
+"Ich notiere deine Nummer.",
+"Numaranı not alıyorum."
+],
+"ernähren": [
+"Sie ernährt sich sehr gesund.",
+"Çok sağlıklı besleniyor."
+],
+"gehorchen": [
+"Der Hund gehorcht nicht.",
+"Köpek söz dinlemiyor."
+],
+"verpflichten": [
+"Niemand verpflichtet dich zu kommen.",
+"Kimse seni gelmeye zorlamıyor."
+],
+"beobachten": [
+"Wir beobachten die Vögel am See.",
+"Gölde kuşları gözlemliyoruz."
+],
+"erhalten": [
+"Ich habe Ihren Brief erhalten.",
+"Mektubunuzu aldım."
+],
+"besetzen": [
+"Ist der Platz besetzt?",
+"Bu yer dolu mu?"
+],
+"widersprechen": [
+"Da muss ich dir widersprechen.",
+"Burada sana itiraz etmem gerekiyor."
+],
+"anordnen": [
+"Der Arzt hat Bettruhe angeordnet.",
+"Doktor yatak istirahati emretti."
+],
+"scheinen": [
+"Heute scheint die Sonne.",
+"Bugün güneş parlıyor."
+],
+"verzeihen": [
+"Verzeih mir, bitte!",
+"Beni affet, lütfen!"
+],
+"wetten": [
+"Ich wette, er kommt zu spät.",
+"Bahse girerim geç kalacak."
+],
+"teilnehmen": [
+"Ich nehme an einem Kurs teil.",
+"Bir kursa katılıyorum."
+],
+"streichen": [
+"Wir streichen das Zimmer blau.",
+"Odayı maviye boyuyoruz."
+],
+"sich beugen": [
+"Beug dich nicht aus dem Fenster!",
+"Pencereden sarkma!"
+],
+"wiegen": [
+"Das Paket wiegt zwei Kilo.",
+"Paket iki kilo geliyor."
+],
+"platzieren": [
+"Platzieren Sie die Stühle im Kreis.",
+"Sandalyeleri daire şeklinde yerleştirin."
+],
+"sich beschweren": [
+"Er beschwert sich über den Lärm.",
+"Gürültüden şikâyet ediyor."
+],
+"falten": [
+"Falte bitte die Wäsche.",
+"Çamaşırları katla, lütfen."
+],
+"vorbereiten": [
+"Ich bereite das Abendessen vor.",
+"Akşam yemeğini hazırlıyorum."
+],
+"präsentieren": [
+"Sie präsentiert ihr Projekt.",
+"Projesini sunuyor."
+],
+"vorgeben": [
+"Er gibt vor, krank zu sein.",
+"Hastaymış gibi yapıyor."
+],
+"vorhersehen": [
+"Niemand kann die Zukunft vorhersehen.",
+"Kimse geleceği öngöremez."
+],
+"beten": [
+"Meine Großmutter betet jeden Abend.",
+"Ninem her akşam dua eder."
+],
+"produzieren": [
+"Die Fabrik produziert Autos.",
+"Fabrika araba üretiyor."
+],
+"profitieren": [
+"Wir profitieren vom guten Wetter.",
+"Güzel havadan yararlanıyoruz."
+],
+"Fortschritte machen": [
+"Du machst gute Fortschritte!",
+"İyi ilerleme kaydediyorsun!"
+],
+"schützen": [
+"Die Creme schützt vor der Sonne.",
+"Krem güneşten korur."
+],
+"veröffentlichen": [
+"Sie hat ihr erstes Buch veröffentlicht.",
+"İlk kitabını yayımladı."
+],
+"bestrafen": [
+"Man sollte Kinder nicht zu hart bestrafen.",
+"Çocukları çok sert cezalandırmamak gerekir."
+],
+"bremsen": [
+"Bremsen Sie, da ist ein Kind!",
+"Fren yapın, orada bir çocuk var!"
+],
+"aufheben": [
+"Heb bitte das Papier auf.",
+"Kâğıdı yerden al, lütfen."
+],
+"erinnern": [
+"Erinnere mich bitte an den Termin.",
+"Bana randevuyu hatırlat, lütfen."
+],
+"zurückbringen": [
+"Ich bringe dir das Buch morgen zurück.",
+"Kitabı sana yarın geri getiririm."
+],
+"beruhigen": [
+"Beruhige dich, alles ist gut.",
+"Sakin ol, her şey yolunda."
+],
+"verpassen": [
+"Ich habe den Bus verpasst.",
+"Otobüsü kaçırdım."
+],
+"reagieren": [
+"Wie hat er reagiert?",
+"Nasıl tepki verdi?"
+],
+"empfehlen": [
+"Ich empfehle dir dieses Restaurant.",
+"Sana bu restoranı tavsiye ederim."
+],
+"wieder anfangen": [
+"Nach der Pause fangen wir wieder an.",
+"Moladan sonra yeniden başlıyoruz."
+],
+"zurückbekommen": [
+"Ich habe mein Geld zurückbekommen.",
+"Paramı geri aldım."
+],
+"reduzieren": [
+"Wir müssen die Kosten reduzieren.",
+"Masrafları azaltmamız lazım."
+],
+"nachdenken": [
+"Ich denke darüber nach.",
+"Bunun üzerine düşüneceğim."
+],
+"bereuen": [
+"Ich bereue nichts.",
+"Hiçbir şeye pişman değilim."
+],
+"ersetzen": [
+"Ich ersetze diese Woche meinen Kollegen.",
+"Bu hafta iş arkadaşımın yerine bakıyorum."
+],
+"zurückgeben": [
+"Gib mir bitte mein Handy zurück.",
+"Telefonumu geri ver, lütfen."
+],
+"verzichten": [
+"Ich verzichte heute auf den Nachtisch.",
+"Bugün tatlıdan vazgeçiyorum."
+],
+"umwerfen": [
+"Der Hund hat die Vase umgeworfen.",
+"Köpek vazoyu devirdi."
+],
+"verbreiten": [
+"Die Nachricht hat sich schnell verbreitet.",
+"Haber hızla yayıldı."
+],
+"vertreten": [
+"Sie vertritt ihre Firma auf der Messe.",
+"Fuarda şirketini temsil ediyor."
+],
+"widerstehen": [
+"Ich kann Schokolade nicht widerstehen.",
+"Çikolataya dayanamıyorum."
+],
+"lösen": [
+"Wir lösen das Problem zusammen.",
+"Sorunu birlikte çözüyoruz."
+],
+"respektieren": [
+"Man muss die Regeln respektieren.",
+"Kurallara uymak gerekir."
+],
+"atmen": [
+"Atme tief ein!",
+"Derin nefes al!"
+],
+"ähneln": [
+"Du ähnelst deinem Vater.",
+"Babana benziyorsun."
+],
+"zurückhalten": [
+"Ich konnte mein Lachen nicht zurückhalten.",
+"Gülmemi tutamadım."
+],
+"zurückziehen": [
+"Er hat seine Bewerbung zurückgezogen.",
+"Başvurusunu geri çekti."
+],
+"zurückkehren": [
+"Im Sommer kehre ich in die Türkei zurück.",
+"Yazın Türkiye'ye geri dönüyorum."
+],
+"wiederfinden": [
+"Ich habe meine Schlüssel wiedergefunden!",
+"Anahtarlarımı yeniden buldum!"
+],
+"vereinigen": [
+"Das Fest vereinigt die ganze Familie.",
+"Bayram bütün aileyi bir araya getirir."
+],
+"enthüllen": [
+"Er hat sein Geheimnis enthüllt.",
+"Sırrını açığa çıkardı."
+],
+"träumen": [
+"Ich träume von einer Reise nach Japan.",
+"Japonya'ya bir yolculuğun hayalini kuruyorum."
+],
+"riskieren": [
+"Du riskierst, den Zug zu verpassen.",
+"Treni kaçırma riskin var."
+],
+"brechen": [
+"Er hat sich das Bein gebrochen.",
+"Bacağını kırdı."
+],
+"ergreifen": [
+"Du musst die Chance ergreifen.",
+"Fırsatı yakalaman lazım."
+],
+"grüßen": [
+"Grüß deine Eltern von mir!",
+"Annene babana benden selam söyle!"
+],
+"befriedigen": [
+"Das Ergebnis befriedigt mich nicht.",
+"Sonuç beni tatmin etmiyor."
+],
+"retten": [
+"Der Arzt hat ihm das Leben gerettet.",
+"Doktor onun hayatını kurtardı."
+],
+"schütteln": [
+"Vor dem Öffnen gut schütteln.",
+"Açmadan önce iyice çalkalayın."
+],
+"trennen": [
+"Wir trennen den Müll.",
+"Çöpleri ayırıyoruz."
+],
+"melden": [
+"Bitte melden Sie den Schaden.",
+"Lütfen hasarı bildirin."
+],
+"bedeuten": [
+"Was bedeutet dieses Wort?",
+"Bu kelime ne anlama geliyor?"
+],
+"leiden": [
+"Er leidet unter Rückenschmerzen.",
+"Sırt ağrısı çekiyor."
+],
+"unterstützen": [
+"Meine Freunde unterstützen mich.",
+"Arkadaşlarım beni destekliyor."
+],
+"sich spezialisieren": [
+"Sie hat sich auf Kinderheilkunde spezialisiert.",
+"Çocuk hastalıklarında uzmanlaştı."
+],
+"ertragen": [
+"Ich kann den Lärm nicht ertragen.",
+"Gürültüye katlanamıyorum."
+],
+"voraussetzen": [
+"Der Kurs setzt Grundkenntnisse voraus.",
+"Kurs temel bilgi gerektiriyor."
+],
+"löschen": [
+"Ich habe die Nachricht aus Versehen gelöscht.",
+"Mesajı yanlışlıkla sildim."
+],
+"überraschen": [
+"Seine Antwort hat mich überrascht.",
+"Cevabı beni şaşırttı."
+],
+"überwachen": [
+"Kameras überwachen den Eingang.",
+"Kameralar girişi denetliyor."
+],
+"überleben": [
+"Die Pflanzen haben den Winter überlebt.",
+"Bitkiler kıştan sağ çıktı."
+],
+"schweigen": [
+"Er schweigt die ganze Zeit.",
+"Bütün zaman susuyor."
+],
+"telefonieren": [
+"Ich telefoniere jeden Abend mit meiner Mutter.",
+"Her akşam annemle telefonda konuşurum."
+],
+"bezeugen": [
+"Sie kann den Unfall bezeugen.",
+"Kazaya tanıklık edebilir."
+],
+"berühren": [
+"Bitte nicht berühren!",
+"Lütfen dokunmayın!"
+],
+"verwandeln": [
+"Sie haben die Garage in ein Büro verwandelt.",
+"Garajı ofise dönüştürdüler."
+],
+"übertragen": [
+"Das Spiel wird live übertragen.",
+"Maç canlı yayınlanıyor."
+],
+"transportieren": [
+"Der Lastwagen transportiert Obst.",
+"Kamyon meyve taşıyor."
+],
+"täuschen": [
+"Der Schein kann täuschen.",
+"Görünüş aldatıcı olabilir."
+],
+"töten": [
+"Die Katze hat eine Maus getötet.",
+"Kedi bir fare öldürdü."
+],
+"gelten": [
+"Das Ticket gilt einen Monat.",
+"Bilet bir ay geçerli."
+],
+"überprüfen": [
+"Bitte überprüfen Sie Ihre Daten.",
+"Lütfen bilgilerinizi kontrol edin."
+],
+"altern": [
+"Meine Eltern altern.",
+"Annemle babam yaşlanıyor."
+],
+"zielen": [
+"Er zielt auf das Tor.",
+"Kaleye nişan alıyor."
+],
+"abstimmen": [
+"Wir stimmen über den Vorschlag ab.",
+"Öneriyi oyluyoruz."
+],
+"siezen": [
+"Ältere Menschen siezt man.",
+"Yaşlılara “siz” diye hitap edilir."
+],
+"duzen": [
+"Wollen wir uns duzen?",
+"Birbirimize “sen” diyelim mi?"
+],
+"der Empfang": [
+"Fragen Sie bitte am Empfang.",
+"Lütfen resepsiyona sorun."
+],
+"der Einkauf": [
+"Der Einkauf war teuer.",
+"Alışveriş pahalıydı."
+],
+"der Schauspieler": [
+"Der Schauspieler spielt sehr gut.",
+"Oyuncu çok iyi oynuyor."
+],
+"die Aktivität": [
+"Das Hotel bietet viele Aktivitäten.",
+"Otel birçok etkinlik sunuyor."
+],
+"die Nachrichten": [
+"Ich sehe abends die Nachrichten.",
+"Akşamları haberleri izlerim."
+],
+"die Verwaltung": [
+"Die Verwaltung schließt um sechzehn Uhr.",
+"İdare saat on altıda kapanıyor."
+],
+"der Erwachsene": [
+"Erwachsene zahlen zehn Euro.",
+"Yetişkinler on avro ödüyor."
+],
+"die Angelegenheit": [
+"Das ist eine private Angelegenheit.",
+"Bu özel bir mesele."
+],
+"das Plakat": [
+"Ich habe das Plakat vom Konzert gesehen.",
+"Konserin afişini gördüm."
+],
+"die Agentur": [
+"Wir haben über eine Agentur gebucht.",
+"Bir ajans üzerinden rezervasyon yaptık."
+],
+"der Beamte": [
+"Der Beamte prüft meinen Pass.",
+"Memur pasaportumu kontrol ediyor."
+],
+"die Landwirtschaft": [
+"In der Region ist die Landwirtschaft wichtig.",
+"Bölgede tarım önemli."
+],
+"die Hilfe": [
+"Danke für deine Hilfe!",
+"Yardımın için teşekkürler!"
+],
+"die Luft": [
+"Ich brauche frische Luft.",
+"Temiz havaya ihtiyacım var."
+],
+"die Ernährung": [
+"Eine gesunde Ernährung ist wichtig.",
+"Sağlıklı beslenme önemlidir."
+],
+"die Stimmung": [
+"Die Stimmung auf der Party war super.",
+"Partideki hava harikaydı."
+],
+"die Verbesserung": [
+"Man sieht eine klare Verbesserung.",
+"Belirgin bir iyileşme görülüyor."
+],
+"die Anzeige": [
+"Ich habe die Anzeige in der Zeitung gelesen.",
+"İlanı gazetede okudum."
+],
+"das Gerät": [
+"Das Gerät funktioniert nicht mehr.",
+"Cihaz artık çalışmıyor."
+],
+"der Anruf": [
+"Ich warte auf einen wichtigen Anruf.",
+"Önemli bir arama bekliyorum."
+],
+"der Architekt": [
+"Der Architekt hat das Haus geplant.",
+"Evi mimar tasarladı."
+],
+"die Architektur": [
+"Die Architektur der Stadt ist beeindruckend.",
+"Şehrin mimarisi etkileyici."
+],
+"das Argument": [
+"Das ist ein gutes Argument.",
+"Bu iyi bir gerekçe."
+],
+"die Armee": [
+"Sein Bruder ist bei der Armee.",
+"Erkek kardeşi orduda."
+],
+"der Artikel": [
+"Ich habe einen interessanten Artikel gelesen.",
+"İlginç bir makale okudum."
+],
+"der Künstler": [
+"Der Künstler stellt seine Bilder aus.",
+"Sanatçı resimlerini sergiliyor."
+],
+"der Aspekt": [
+"Das ist ein wichtiger Aspekt.",
+"Bu önemli bir yön."
+],
+"die Versicherung": [
+"Die Versicherung bezahlt den Schaden.",
+"Hasarı sigorta ödüyor."
+],
+"die Werkstatt": [
+"Das Auto ist in der Werkstatt.",
+"Araba tamirhanede."
+],
+"die Aufmerksamkeit": [
+"Danke für Ihre Aufmerksamkeit.",
+"İlginiz için teşekkürler."
+],
+"die Einstellung": [
+"Er hat eine positive Einstellung.",
+"Olumlu bir tutumu var."
+],
+"der Autor": [
+"Wer ist der Autor des Buches?",
+"Kitabın yazarı kim?"
+],
+"die Genehmigung": [
+"Dafür braucht man eine Genehmigung.",
+"Bunun için izin gerekiyor."
+],
+"der Vorteil": [
+"Der große Vorteil ist der Preis.",
+"En büyük avantajı fiyatı."
+],
+"die Zukunft": [
+"Niemand kennt die Zukunft.",
+"Kimse geleceği bilmez."
+],
+"das Abenteuer": [
+"Die Reise war ein echtes Abenteuer.",
+"Yolculuk gerçek bir maceraydı."
+],
+"die Meinung": [
+"Was ist deine Meinung?",
+"Senin görüşün ne?"
+],
+"der Rechtsanwalt": [
+"Er braucht einen Rechtsanwalt.",
+"Bir avukata ihtiyacı var."
+],
+"die Grundlage": [
+"Grammatik ist die Grundlage.",
+"Dilbilgisi temeldir."
+],
+"das Gebäude": [
+"Das Büro ist in diesem Gebäude.",
+"Ofis bu binada."
+],
+"die Batterie": [
+"Die Batterie ist leer.",
+"Pil bitti."
+],
+"der Gewinn": [
+"Die Firma hat einen Gewinn gemacht.",
+"Şirket kâr etti."
+],
+"der Ehrenamtliche": [
+"Viele Ehrenamtliche helfen beim Fest.",
+"Şenlikte birçok gönüllü yardım ediyor."
+],
+"die Wunde": [
+"Die Wunde ist nicht schlimm.",
+"Yara kötü değil."
+],
+"das Holz": [
+"Der Tisch ist aus Holz.",
+"Masa ahşaptan."
+],
+"die Kerze": [
+"Auf dem Kuchen sind zehn Kerzen.",
+"Pastanın üstünde on mum var."
+],
+"der Knopf": [
+"Drücken Sie den grünen Knopf.",
+"Yeşil düğmeye basın."
+],
+"der Ast": [
+"Ein Vogel sitzt auf dem Ast.",
+"Dalda bir kuş oturuyor."
+],
+"der Ziegel": [
+"Das Haus ist aus roten Ziegeln.",
+"Ev kırmızı tuğladan."
+],
+"der Nebel": [
+"Heute Morgen gibt es Nebel.",
+"Bu sabah sis var."
+],
+"die Kabine": [
+"Die Umkleidekabinen sind hinten.",
+"Deneme kabinleri arkada."
+],
+"die Praxis": [
+"Die Praxis ist im ersten Stock.",
+"Muayenehane birinci katta."
+],
+"die Ruhe": [
+"Ich brauche ein bisschen Ruhe.",
+"Biraz sakinliğe ihtiyacım var."
+],
+"der Lastwagen": [
+"Ein Lastwagen blockiert die Straße.",
+"Bir kamyon yolu kapatıyor."
+],
+"der Kandidat": [
+"Es gibt drei Kandidaten für die Stelle.",
+"Pozisyon için üç aday var."
+],
+"der Charakter": [
+"Sie hat einen starken Charakter.",
+"Güçlü bir karakteri var."
+],
+"die Karriere": [
+"Er hat Karriere bei einer Bank gemacht.",
+"Bir bankada kariyer yaptı."
+],
+"der Karton": [
+"Pack die Bücher in einen Karton.",
+"Kitapları bir kartona koy."
+],
+"der Fall": [
+"Im Fall eines Problems ruf mich an.",
+"Bir sorun olursa beni ara."
+],
+"die Katastrophe": [
+"Das Essen war eine Katastrophe!",
+"Yemek tam bir felaketti!"
+],
+"die Kategorie": [
+"In welcher Kategorie ist der Film?",
+"Film hangi kategoride?"
+],
+"der Sicherheitsgurt": [
+"Bitte legen Sie den Sicherheitsgurt an.",
+"Lütfen emniyet kemerinizi takın."
+],
+"das Zentrum": [
+"Das Hotel liegt im Zentrum.",
+"Otel merkezde."
+],
+"der Kreis": [
+"Setzt euch bitte in einen Kreis.",
+"Lütfen daire şeklinde oturun."
+],
+"die Feier": [
+"Die Feier beginnt um elf Uhr.",
+"Tören saat on birde başlıyor."
+],
+"das Zertifikat": [
+"Nach dem Kurs bekommt man ein Zertifikat.",
+"Kurstan sonra sertifika alınıyor."
+],
+"die Kette": [
+"Sie trägt eine goldene Kette.",
+"Altın bir kolye takıyor."
+],
+"der Meister": [
+"Er ist ein Meister in seinem Beruf.",
+"Mesleğinde bir usta."
+],
+"die Veränderung": [
+"Es gibt eine Veränderung im Fahrplan.",
+"Sefer tarifesinde bir değişiklik var."
+],
+"das Kapitel": [
+"Ich habe das erste Kapitel gelesen.",
+"İlk bölümü okudum."
+],
+"die Ladung": [
+"Der Lastwagen hat eine schwere Ladung.",
+"Kamyonun ağır bir yükü var."
+],
+"der Fahrer": [
+"Der Busfahrer ist sehr nett.",
+"Otobüs şoförü çok nazik."
+],
+"die Eisenbahn": [
+"Die Eisenbahn fährt durch das Tal.",
+"Demiryolu vadiden geçiyor."
+],
+"die Zahl": [
+"Schreib die Zahl in Worten.",
+"Sayıyı yazıyla yaz."
+],
+"die Arbeitslosigkeit": [
+"Die Arbeitslosigkeit ist gesunken.",
+"İşsizlik azaldı."
+],
+"der Bürger": [
+"Jeder Bürger darf wählen.",
+"Her vatandaş oy kullanabilir."
+],
+"die Zivilisation": [
+"Wir lernen über alte Zivilisationen.",
+"Eski medeniyetleri öğreniyoruz."
+],
+"das Klima": [
+"Das Klima ist hier mild.",
+"Burada iklim ılıman."
+],
+"der Verein": [
+"Ich bin Mitglied in einem Sportverein.",
+"Bir spor kulübüne üyeyim."
+],
+"die Ecke": [
+"Die Bäckerei ist an der Ecke.",
+"Fırın köşede."
+],
+"der Hügel": [
+"Das Haus steht auf einem Hügel.",
+"Ev bir tepenin üstünde."
+],
+"die Bestellung": [
+"Ihre Bestellung ist fertig.",
+"Siparişiniz hazır."
+],
+"der Handel": [
+"Er arbeitet im Handel.",
+"Ticarette çalışıyor."
+],
+"die Gemeinde": [
+"Die Gemeinde hat einen neuen Park gebaut.",
+"Belediye yeni bir park yaptı."
+],
+"die Kommunikation": [
+"Kommunikation ist in einer Beziehung wichtig.",
+"Bir ilişkide iletişim önemlidir."
+],
+"der Vergleich": [
+"Der Vergleich ist nicht fair.",
+"Karşılaştırma adil değil."
+],
+"der Wettbewerb": [
+"Sie hat den Wettbewerb gewonnen.",
+"Yarışmayı kazandı."
+],
+"das Verhalten": [
+"Sein Verhalten ist seltsam.",
+"Davranışı tuhaf."
+],
+"das Verständnis": [
+"Danke für Ihr Verständnis.",
+"Anlayışınız için teşekkürler."
+],
+"das Konto": [
+"Ich habe ein Konto bei dieser Bank.",
+"Bu bankada bir hesabım var."
+],
+"die Bedingung": [
+"Ich komme unter einer Bedingung.",
+"Bir şartla gelirim."
+],
+"die Konferenz": [
+"Die Konferenz dauert zwei Tage.",
+"Konferans iki gün sürüyor."
+],
+"das Vertrauen": [
+"Ich habe Vertrauen zu dir.",
+"Sana güveniyorum."
+],
+"der Komfort": [
+"Das Hotel bietet viel Komfort.",
+"Otel çok konfor sunuyor."
+],
+"die Kenntnis": [
+"Sie hat gute Deutschkenntnisse.",
+"İyi Almanca bilgisi var."
+],
+"das Bewusstsein": [
+"Er hat das Bewusstsein verloren.",
+"Bilincini kaybetti."
+],
+"die Folge": [
+"Das hat schlimme Folgen.",
+"Bunun kötü sonuçları var."
+],
+"der Bau": [
+"Der Bau der Brücke dauert zwei Jahre.",
+"Köprünün inşaatı iki yıl sürüyor."
+],
+"der Inhalt": [
+"Der Inhalt des Kurses ist interessant.",
+"Kursun içeriği ilginç."
+],
+"der Zusammenhang": [
+"In diesem Zusammenhang ist das wichtig.",
+"Bu bağlamda bu önemli."
+],
+"der Kontinent": [
+"Afrika ist ein großer Kontinent.",
+"Afrika büyük bir kıta."
+],
+"das Gegenteil": [
+"Das ist genau das Gegenteil.",
+"Bu tam tersi."
+],
+"die Kontrolle": [
+"An der Grenze gibt es eine Kontrolle.",
+"Sınırda kontrol var."
 ]
 };
