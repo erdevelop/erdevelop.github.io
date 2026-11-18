@@ -224,6 +224,22 @@
   /* =====================================================================
      3) HALKALI GÖSTERGE (HUD)
      ===================================================================== */
+  /* kayan spektrogram: A.sg ekran dışı tuval, her karede bir sütun eklenir */
+  function spektrogram(A, SES, R) {
+    if (!A.sg) { A.sg = document.createElement('canvas'); A.sg.width = 300; A.sg.height = 96; A.sgx = A.sg.getContext('2d'); A.sgx.fillStyle = '#05060c'; A.sgx.fillRect(0, 0, 300, 96); A.sgd = A.sgx.createImageData(1, 96); }
+    const c = A.sgx, w = A.sg.width, h = A.sg.height, sp = SES.spektrum;
+    c.drawImage(A.sg, 1, 0, w - 1, h, 0, 0, w - 1, h);
+    const d = A.sgd.data;
+    for (let y = 0; y < h; y++) {
+      /* alttan üste logaritmik frekans: spektrum dizisi zaten karesel ölçekli */
+      let v = 0; if (sp) { const u = 1 - y / (h - 1), k = Math.min(sp.length - 1, Math.floor(u * sp.length * .92)); v = sp[k]; }
+      v = Math.pow(clamp(v, 0, 1), 1.4);
+      /* renk: koyu → tema rengi → beyaz */
+      const r = v < .6 ? 5 + R[0] * v / .6 : R[0] + (255 - R[0]) * (v - .6) / .4, gg = v < .6 ? 6 + R[1] * v / .6 : R[1] + (255 - R[1]) * (v - .6) / .4, b = v < .6 ? 12 + R[2] * v / .6 : R[2] + (255 - R[2]) * (v - .6) / .4;
+      const o = y * 4; d[o] = r; d[o + 1] = gg; d[o + 2] = b; d[o + 3] = 255;
+    }
+    c.putImageData(A.sgd, w - 1, 0);
+  }
   function hud(cv) {
     const g = cv.getContext('2d'), A = { t: 0, bakX: 0, bakY: 0, seviye: 0, enerji: .7, irkil: 0, zarf: 0, dus: 0, din: 0, vurus: 0, renk: [90, 200, 255], gecmis: new Float32Array(240), gi: 0, olay: [], radar: 0 };
     const mono = (px, D, w = 400) => `${w} ${px * D}px ui-monospace,Consolas,"Courier New",monospace`;
@@ -275,16 +291,28 @@
       g.fillText('SES ' + Math.round(Math.max(0, (SES.db || -100) + 100)) + ' dB', cx, cy + R0 * .9);
       /* yan paneller */
       const d = new Date(), sa = String(d.getHours()).padStart(2, '0') + ':' + String(d.getMinutes()).padStart(2, '0');
-      if (genis) {
-        const px = W * .06, py = H * .16, pw = W * .2;
-        g.textAlign = 'left'; g.strokeStyle = rgba(R, .35); g.lineWidth = D; g.strokeRect(px, py, pw, H * .5);
+      if (genis && Math.min(W * .2, (W - 700 * D) / 2 - W * .06 - 8 * D) >= 170 * D) {
+        const px = W * .06, py = H * .16, pw = Math.min(W * .2, (W - 700 * D) / 2 - px - 8 * D), ph = H * .67;
+        g.textAlign = 'left'; g.strokeStyle = rgba(R, .35); g.lineWidth = D; g.strokeRect(px, py, pw, ph);
         g.fillStyle = rgba(R, .7); g.font = mono(10, D, 600); g.fillText('SİSTEM', px + 12 * D, py + 20 * D);
         g.fillStyle = 'rgba(235,245,255,.95)'; g.font = `200 ${Math.round(46 * D)}px system-ui,sans-serif`; g.fillText(sa, px + 12 * D, py + 70 * D);
         g.font = mono(11, D); g.fillStyle = rgba(R, .8); g.fillText(d.toLocaleDateString('tr-TR', { weekday: 'long', day: 'numeric', month: 'long' }).toLocaleUpperCase('tr'), px + 12 * D, py + 92 * D);
         const satirlar = [['SES SEVİYESİ', Math.round(A.seviye * 100), '%'], ['RİTİM', S.dans ? Math.round(S.bpm || 0) : 0, 'BPM'], ['ENERJİ', Math.round(A.enerji * 100), '%'], ['DİKKAT', Math.round(Math.max(A.din, A.dus, A.zarf) * 100), '%']];
         satirlar.forEach(([ad, v, b], i) => { const y = py + 130 * D + i * 40 * D; g.fillStyle = rgba(R, .7); g.font = mono(10, D); g.fillText(ad, px + 12 * D, y); g.textAlign = 'right'; g.fillStyle = 'rgba(235,245,255,.9)'; g.fillText(v + ' ' + b, px + pw - 12 * D, y); g.textAlign = 'left'; g.fillStyle = rgba(R, .15); g.fillRect(px + 12 * D, y + 8 * D, pw - 24 * D, 4 * D); g.fillStyle = rgba(R, .85); g.fillRect(px + 12 * D, y + 8 * D, (pw - 24 * D) * clamp(v / (b === 'BPM' ? 180 : 100), 0, 1), 4 * D); });
+        /* spektrogram: zaman soldan sağa akar, alçak frekanslar altta */
+        const sx = px + 12 * D, sy = py + 292 * D, sw = pw - 24 * D, sh = py + ph - 14 * D - sy;
+        if (sh > 40 * D) {
+          g.fillStyle = rgba(R, .7); g.font = mono(10, D); g.fillText('SPEKTROGRAM', sx, sy - 8 * D);
+          g.textAlign = 'right'; g.fillStyle = rgba(R, .45); g.fillText(SES.spektrum ? 'ZAMAN →' : 'MİKROFON KAPALI', sx + sw, sy - 8 * D); g.textAlign = 'left';
+          spektrogram(A, SES, R);
+          g.globalCompositeOperation = 'source-over'; g.imageSmoothingEnabled = true;
+          g.drawImage(A.sg, 0, 0, A.sg.width, A.sg.height, sx, sy, sw, sh);
+          g.globalCompositeOperation = 'lighter';
+          g.strokeStyle = rgba(R, .25); g.lineWidth = D; g.strokeRect(sx, sy, sw, sh);
+          g.fillStyle = rgba(R, .45); g.font = mono(8, D); ['10k', '4,5k', '1k', '0'].forEach((f, i) => g.fillText(f, sx + 3 * D, sy + 10 * D + i * (sh - 14 * D) / 3));
+        }
         /* sağ panel: radar ve geçmiş */
-        const qx = W - W * .06 - pw, qy = py; g.strokeStyle = rgba(R, .35); g.strokeRect(qx, qy, pw, H * .5);
+        const qx = W - W * .06 - pw, qy = py; g.strokeStyle = rgba(R, .35); g.strokeRect(qx, qy, pw, ph);
         g.fillStyle = rgba(R, .7); g.font = mono(10, D, 600); g.fillText('ÇEVRE TARAMASI', qx + 12 * D, qy + 20 * D);
         const rx = qx + pw / 2, ry = qy + H * .19, rr = Math.min(pw * .38, H * .13);
         A.radar += dt * 1.6;
@@ -297,6 +325,36 @@
         /* seviye geçmişi */
         g.strokeStyle = rgba(R, .8); g.lineWidth = 1.5 * D; g.beginPath(); const gy = qy + H * .47, gw = pw - 24 * D, N = A.gecmis.length;
         for (let i = 0; i < N; i++) { const v = A.gecmis[(A.gi + 1 + i) % N], x = qx + 12 * D + i / (N - 1) * gw, y = gy - v * H * .06; i ? g.lineTo(x, y) : g.moveTo(x, y); } g.stroke();
+        /* frekans spektrumu ve dalga formu */
+        const fx = qx + 12 * D, fw = pw - 24 * D, kalan = qy + ph - 14 * D - (gy + 26 * D);
+        if (kalan > 70 * D) {
+          const fy = gy + 26 * D, fh = kalan * .5, wy = fy + fh + 24 * D, wh = qy + ph - 14 * D - wy, sp = SES.spektrum;
+          g.fillStyle = rgba(R, .7); g.font = mono(10, D); g.fillText('SPEKTRUM', fx, fy + 4 * D);
+          g.textAlign = 'right'; g.fillStyle = rgba(R, .45); g.font = mono(8, D); g.fillText('0 – 12 kHz', fx + fw, fy + 4 * D); g.textAlign = 'left';
+          const by = fy + 12 * D, bh = fh - 12 * D, nb = 48, bw = fw / nb;
+          if (!A.tepe) A.tepe = new Float32Array(nb);
+          for (let i = 0; i < nb; i++) {
+            let v = 0; if (sp) { const a0 = Math.floor(i / nb * sp.length), a1 = Math.max(a0 + 1, Math.floor((i + 1) / nb * sp.length)); for (let k = a0; k < a1; k++) v = Math.max(v, sp[k]); }
+            A.tepe[i] = Math.max(v, A.tepe[i] - dt * .35);
+            const h = Math.max(1.5 * D, v * bh), x = fx + i * bw;
+            const gr = g.createLinearGradient(0, by + bh, 0, by); gr.addColorStop(0, rgba(R, .35)); gr.addColorStop(1, rgba(R, .95));
+            g.fillStyle = gr; g.fillRect(x + bw * .15, by + bh - h, bw * .7, h);
+            g.fillStyle = rgba([235, 245, 255], .8); g.fillRect(x + bw * .15, by + bh - A.tepe[i] * bh - 1.5 * D, bw * .7, 1.5 * D);
+          }
+          g.strokeStyle = rgba(R, .2); g.lineWidth = D; g.beginPath(); g.moveTo(fx, by + bh + .5); g.lineTo(fx + fw, by + bh + .5); g.stroke();
+          if (wh > 16 * D) {
+            g.fillStyle = rgba(R, .7); g.font = mono(10, D); g.fillText('DALGA FORMU', fx, wy - 8 * D);
+            const my = wy + wh / 2, dl = SES.dalga;
+            g.strokeStyle = rgba(R, .2); g.beginPath(); g.moveTo(fx, my); g.lineTo(fx + fw, my); g.stroke();
+            g.strokeStyle = rgba(R, .25); g.strokeRect(fx, wy, fw, wh);
+            /* dolgu + çizgi; sıfır geçişine hizalanır ki dalga titremesin */
+            let bas = 0; if (dl) for (let i = 1; i < dl.length / 2; i++) if (dl[i - 1] <= 0 && dl[i] > 0) { bas = i; break; }
+            const n = dl ? Math.min(dl.length - bas, 120) : 120;
+            g.beginPath();
+            for (let i = 0; i < n; i++) { const v = dl ? clamp(dl[bas + i], -1, 1) : 0, x = fx + i / (n - 1) * fw, y = my - v * wh * .46; i ? g.lineTo(x, y) : g.moveTo(x, y); }
+            g.strokeStyle = rgba([80, 240, 160], .95); g.lineWidth = 1.6 * D; g.shadowColor = rgba([80, 240, 160], .8); g.shadowBlur = 6 * D; g.stroke(); g.shadowBlur = 0;
+          }
+        }
       } else {
         g.textAlign = 'center'; g.fillStyle = 'rgba(235,245,255,.85)'; g.font = `200 ${Math.round(28 * D)}px system-ui,sans-serif`; g.fillText(sa, cx, cy - R0 * 1.62);
       }
