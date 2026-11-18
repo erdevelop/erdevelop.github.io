@@ -242,13 +242,13 @@
   }
   const monoF = (px, D, w = 400) => `${w} ${px * D}px ui-monospace,Consolas,"Courier New",monospace`;
   /* ortak ses grafikleri (HUD ve diğer görünümlerin yan panelleri) */
-  function spektrogramKutu(g, A, SES, R, D, sx, sy, sw, sh) {
+  function spektrogramKutu(g, A, SES, R, D, sx, sy, sw, sh, etiket = true) {
     spektrogram(A, SES, R);
     const op = g.globalCompositeOperation; g.globalCompositeOperation = 'source-over'; g.imageSmoothingEnabled = true;
     g.drawImage(A.sg, 0, 0, A.sg.width, A.sg.height, sx, sy, sw, sh);
     g.globalCompositeOperation = op;
     g.strokeStyle = rgba(R, .25); g.lineWidth = D; g.strokeRect(sx, sy, sw, sh);
-    g.textAlign = 'left'; g.fillStyle = rgba(R, .5); g.font = monoF(8, D); ['10k', '4,5k', '1k', '0'].forEach((f, i) => g.fillText(f, sx + 3 * D, sy + 10 * D + i * (sh - 14 * D) / 3));
+    if (etiket) g.textAlign = 'left', g.fillStyle = rgba(R, .5), g.font = monoF(8, D), ['10k', '4,5k', '1k', '0'].forEach((f, i) => g.fillText(f, sx + 3 * D, sy + 10 * D + i * (sh - 14 * D) / 3));
   }
   function spektrumCubuk(g, A, SES, R, D, dt, fx, by, fw, bh) {
     const sp = SES.spektrum, nb = 48, bw = fw / nb;
@@ -276,6 +276,22 @@
   }
   /* HUD dışındaki görünümler için yan ses panelleri: sahnenin üstüne çizilir */
   const PANEL = { renk: [86, 214, 255] };
+  /* dar ekran (telefon): öneri düğmelerinin üstünde ince şerit — solda spektrogram, sağda dalga formu */
+  const SERIT = { renk: [86, 214, 255] };
+  function mobilSerit(cv, S, SES, dt) {
+    const D = Math.min(2, window.devicePixelRatio || 1), w = Math.round(cv.clientWidth * D), h = Math.round(cv.clientHeight * D);
+    if (!w || !h) return; if (cv.width !== w || cv.height !== h) { cv.width = w; cv.height = h; }
+    const g = cv.getContext('2d'), R = SERIT.renk; renkYay(R, durumRengi(S, window.ZEKI_TEMA || [86, 214, 255]), dt);
+    g.setTransform(1, 0, 0, 1, 0, 0); g.clearRect(0, 0, w, h);
+    g.fillStyle = 'rgba(6,10,18,.62)'; g.strokeStyle = rgba(R, .3); g.lineWidth = D; g.beginPath(); g.roundRect ? g.roundRect(.5 * D, .5 * D, w - D, h - D, 10 * D) : g.rect(0, 0, w, h); g.fill(); g.stroke();
+    const ic = 7 * D, ust = 15 * D, ayir = Math.round(w * .58), ih = h - ust - ic;
+    g.textBaseline = 'alphabetic'; g.textAlign = 'left'; g.fillStyle = rgba(R, .75); g.font = monoF(8, D, 600);
+    g.fillText('SPEKTROGRAM', ic, ic + 5 * D); g.fillText('DALGA FORMU', ayir + ic * .5, ic + 5 * D);
+    g.textAlign = 'right'; g.fillStyle = rgba(R, .45); g.font = monoF(8, D);
+    g.fillText(SES.spektrum ? Math.round(Math.max(0, (SES.db || -100) + 100)) + ' dB' : 'MİKROFON KAPALI', w - ic, ic + 5 * D);
+    spektrogramKutu(g, SERIT, SES, R, D, ic, ust, ayir - ic * 1.5, ih, false);
+    dalgaFormu(g, SES, R, D, ayir + ic * .5, ust, w - ayir - ic * 1.5, ih);
+  }
   function sesPanelleri(cv, S, SES, dt) {
     const g = cv.getContext('2d'), D = Math.min(2, window.devicePixelRatio || 1), W = cv.width, H = cv.height;
     const px = W * .04, pw = Math.min(W * .19, (W - 700 * D) / 2 - px - 8 * D);
@@ -295,6 +311,7 @@
     const wy = ust + fh + 30 * D; bas('DALGA FORMU', qx + ic, wy - 8 * D, Math.round(Math.max(0, (SES.db || -100) + 100)) + ' dB');
     dalgaFormu(g, SES, R, D, qx + ic, wy, pw - 2 * ic, py + ph - ic - wy);
     g.restore();
+    window.ZEKI_PANEL = true;
     return true;
   }
   function hud(cv) {
@@ -372,7 +389,7 @@
       /* yan paneller */
       const d = new Date(), sa = String(d.getHours()).padStart(2, '0') + ':' + String(d.getMinutes()).padStart(2, '0');
       if (genis && Math.min(W * .2, (W - 700 * D) / 2 - W * .06 - 8 * D) >= 170 * D) {
-        const px = W * .06, py = H * .16, pw = Math.min(W * .2, (W - 700 * D) / 2 - px - 8 * D), ph = H * .67;
+        const px = W * .06, py = H * .16, pw = Math.min(W * .2, (W - 700 * D) / 2 - px - 8 * D), ph = H * .67; window.ZEKI_PANEL = true;
         g.textAlign = 'left'; g.strokeStyle = rgba(R, .35); g.lineWidth = D; g.strokeRect(px, py, pw, ph);
         g.fillStyle = rgba(R, .7); g.font = mono(10, D, 600); g.fillText('SİSTEM', px + 12 * D, py + 20 * D);
         g.fillStyle = 'rgba(235,245,255,.95)'; g.font = `200 ${Math.round(46 * D)}px system-ui,sans-serif`; g.fillText(sa, px + 12 * D, py + 70 * D);
@@ -542,5 +559,5 @@
     return { ciz };
   }
 
-  window.Gorunumler = { bulut, kure, hud, dalgaYuz, galaksi, yuzum: cv => bulut(cv, true), sesPanelleri };
+  window.Gorunumler = { bulut, kure, hud, dalgaYuz, galaksi, yuzum: cv => bulut(cv, true), sesPanelleri, mobilSerit };
 })();

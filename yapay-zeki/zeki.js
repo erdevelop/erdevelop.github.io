@@ -31,8 +31,12 @@
   function dongu(now) {
     const dt = Math.min(.05, (now - son) / 1000); son = now;
     sesOku(dt); davranis(now, dt);
+    window.ZEKI_PANEL = false;
     yz = yuz.ciz(S, SES, dt);
     if (AYAR.sesPanel && AYAR.gorunum !== 'hud' && window.Gorunumler && Gorunumler.sesPanelleri) Gorunumler.sesPanelleri($('sahne'), S, SES, dt);
+    /* geniş paneller çizilemediyse (telefon, dar pencere) alttaki şerit */
+    const ser = $('sesSerit'), serAc = AYAR.sesPanel && !window.ZEKI_PANEL && S.durum !== 'uyuyor';
+    if (ser) { if (ser.hidden === serAc) ser.hidden = !serAc; if (serAc && window.Gorunumler) Gorunumler.mobilSerit(ser, S, SES, dt); }
     requestAnimationFrame(dongu);
   }
   /* kendiliğinden davranışlar */
