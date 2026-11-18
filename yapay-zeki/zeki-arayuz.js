@@ -104,5 +104,48 @@
   setInterval(saatCiz, 1000);
 
   window.Kart = Kart; window.efekt = efekt;
+  /* ===================== KAYAN ÖNERİLER ===================== */
+  /* alttaki öneri düğmeleri yavaşça kayar; ekrandan çıkan düğmenin yerine havuzdan yakın zamanda gösterilmemiş yeni bir öneri gelir */
+  const HAVUZ = ['Günaydın Zeki', 'Neler yapabilirsin?', '3,5 metre dikme, aks 1,5 metre, rüzgâr 1,2 kN, sehim hesapla', '3 metre dikme, aks 1,2 metre, rüzgâr 0,8 kN, sehim hesapla', '12 inç kaç milimetre', '2,5 metre kaç inç?', '100 kilonewton kaç ton?', '1 kilovatsaat kaç joule?',
+    'Projelerim', '25 dakika çalışalım', 'Bir oyun oynayalım', 'Bilmece sor', 'Sayı tahmin oyunu oynayalım', 'Kelime zinciri oynayalım', 'Matematik oyunu oynayalım', 'Cephe terimi sor', 'İngilizce konuşalım', 'Almanca konuşalım', 'Fransızca konuşalım', 'Bir hikâye anlat', 'Bir fıkra anlat', 'Bana ilginç bir bilgi ver', 'Dans et', 'Görünümünü değiştir',
+    'Saat kaç?', 'Bugün günlerden ne?', 'İstanbul\'da hava nasıl?', 'Yarın hava nasıl olacak?', 'Ankara\'da hava nasıl?', 'Dolar kaç TL?', 'Avro kaç lira?', 'Sterlin kaç lira?', '125 çarpı 48 kaç eder?', '1250\'nin yüzde 18\'i kaç?', 'Karekök 144 kaç?',
+    'Sehim nedir?', 'Ucw nedir?', 'Yapısal silikon nedir?', 'Ankraj nedir?', 'Giydirme cephe nedir?', 'Token nedir?', 'Halüsinasyon nedir?', 'Mimar Sinan kimdir?',
+    'Şartnameyle konuş', 'Toplantı notu al', 'Paftayı oku', 'Ekrandaki yazıyı oku', 'Yarın İstanbul\'da rüzgâr 40\'ı geçerse haber ver', 'Avro 50 lirayı geçince haber ver', 'Her sabah 8\'de özet gönder', 'Uyarılarım', 'Hatırlatmalarım', 'Sabah özeti', '5 dakika sonra hatırlat: çay demlendi', 'Yarın saat 9\'da toplantıyı hatırlat',
+    'Token sayacını aç', 'Çevirmeni aç', 'Oyunları aç', 'Eğitimleri aç', 'Dikme hesabını aç'];
+  function seritKur() {
+    const kap = $('ipuclari'); if (!kap || kap.dataset.serit) return; kap.dataset.serit = '1';
+    const serit = document.createElement('div'); serit.className = 'serit'; kap.textContent = ''; kap.appendChild(serit);
+    const son = [], gorunen = () => new Set([...serit.children].map(b => b.textContent));
+    const sabah = () => new Date().getHours() < 11;
+    function yeni() {
+      const g = gorunen(); let aday = HAVUZ.filter(x => !g.has(x) && !son.includes(x) && (x !== 'Günaydın Zeki' || sabah()));
+      if (!aday.length) aday = HAVUZ.filter(x => !g.has(x));
+      const x = aday[Math.floor(Math.random() * aday.length)]; son.push(x); if (son.length > 24) son.shift();
+      const b = document.createElement('button'); b.type = 'button'; b.textContent = x; return b;
+    }
+    const doldur = () => { let n = 0; while (serit.scrollWidth < kap.clientWidth * 2 + 200 && n++ < 40) serit.appendChild(yeni()); };
+    doldur();
+    let x = 0, dur = false, sonT = performance.now(), dokunT = 0;
+    const azHareket = matchMedia('(prefers-reduced-motion: reduce)').matches;
+    kap.addEventListener('pointerenter', () => dur = true); kap.addEventListener('pointerleave', () => dur = false);
+    kap.addEventListener('touchstart', () => { dokunT = performance.now() + 4000; }, { passive: true });
+    kap.addEventListener('focusin', () => dur = true); kap.addEventListener('focusout', () => dur = false);
+    function kare(t) {
+      const dt = Math.min(.1, (t - sonT) / 1000); sonT = t;
+      if (!dur && t > dokunT && !document.hidden && !azHareket) {
+        x -= 22 * dt;
+        const ilk = serit.firstElementChild, gen = ilk ? ilk.offsetWidth + 6 : 0;
+        if (ilk && -x > gen) { x += gen; ilk.remove(); serit.appendChild(yeni()); }
+        if (serit.scrollWidth + x < kap.clientWidth + 100) serit.appendChild(yeni());
+        serit.style.transform = `translateX(${x}px)`;
+      }
+      requestAnimationFrame(kare);
+    }
+    requestAnimationFrame(kare);
+    /* hareket azaltılmışsa: 20 saniyede bir yeni öneriler */
+    if (azHareket) setInterval(() => { if (dur) return; serit.textContent = ''; doldur(); }, 20000);
+  }
+  if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', seritKur); else seritKur();
+
   window.ZekiArayuz = { TEMA, TEMA_AD, temaUygula, uyanikTut, tamEkran, saatCiz };
 })();

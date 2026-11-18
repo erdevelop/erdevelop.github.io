@@ -61,7 +61,10 @@
 
   /* ---------------- ses algısı (mikrofon) ---------------- */
   let AC = null, AN = null, mikAkis = null, fBuf = null, tBuf = null, sonVurus = 0, vurusAra = [], akiDb = -100, gurultuBaslangic = 0, konusmaSesiT = 0;
+  /* mikrofonu tamamen kapatma (kalıcı): akış durur, tarayıcının mikrofon göstergesi söner */
+  let MIK_KAPALI = LS.get('zeki:mikKapali') === '1';
   async function mikAc() {
+    if (MIK_KAPALI) return false;
     if (mikAkis) return true;
     try {
       mikAkis = await navigator.mediaDevices.getUserMedia({ audio: { echoCancellation: true, noiseSuppression: true, autoGainControl: true } });
@@ -176,7 +179,7 @@
         const q = konusmaKuyrugu.shift(), u = new SpeechSynthesisUtterance(q.c), v = sesSec(q.dil);
         if (v) { u.voice = v; u.lang = v.lang; } else u.lang = q.dil || 'tr-TR';
         u.pitch = AYAR.perde; u.rate = q.dil && !q.dil.startsWith('tr') ? Math.min(AYAR.hiz, .95) : AYAR.hiz; konusmaSoz = u;
-        u.onboundary = () => { S.konusmaZarf = 1; zarfT = performance.now(); };
+        u.onboundary = () => { ZARF.kelime = true; zarfT = performance.now(); };
         u.onend = sonraki; u.onerror = e => { if (e.error === 'interrupted' || e.error === 'canceled') { S.konusmaZarf = 0; return; } sonraki(); };
         SS.speak(u);
       };
@@ -184,7 +187,15 @@
     });
   }
   /* sesin genliğini okuyamadığımız için ağzı hece ritmine benzer bir zarfla oynatıyoruz */
-  setInterval(() => { if (S.durum !== 'konusuyor') return; const t = performance.now() / 1000; const r = .55 + .45 * Math.abs(Math.sin(t * 9.5)) * (.7 + .3 * Math.sin(t * 3.1)); S.konusmaZarf = performance.now() - zarfT < 260 ? 1 : r; }, 40);
+  /* hece üreteci: rastgele uzunlukta heceler, kelime sınırlarında (onboundary) kısa duraklama, cümle sonunda iniş */
+  const ZARF = { bas: 0, son: 0, tepe: 0, kelime: false };
+  setInterval(() => {
+    if (S.durum !== 'konusuyor') { S.konusmaZarf = 0; ZARF.son = 0; return; }
+    const t = performance.now();
+    if (t >= ZARF.son) { const ara = ZARF.kelime ? 60 + Math.random() * 110 : 8 + Math.random() * 30; ZARF.kelime = false; ZARF.bas = t + ara; ZARF.son = ZARF.bas + 95 + Math.random() * 185; ZARF.tepe = .4 + Math.random() * .6; }
+    const u = (t - ZARF.bas) / (ZARF.son - ZARF.bas);
+    S.konusmaZarf = u < 0 ? .03 : ZARF.tepe * Math.pow(Math.sin(Math.PI * Math.min(1, u)), .55);
+  }, 30);
   function zarfAnim(ms) { const b = performance.now() + ms; const f = () => { if (performance.now() < b && S.durum === 'konusuyor') requestAnimationFrame(f); }; f(); }
   function sustur() { if (SS) SS.cancel(); konusmaKuyrugu = []; S.konusmaZarf = 0; if (S.durum === 'konusuyor') durum('bekliyor'); dinlemeyiSurdur(); }
 
@@ -349,8 +360,24 @@
   addEventListener('pointermove', e => { if (!yz) return; const r = $('sahne').getBoundingClientRect(), d = Math.min(2, devicePixelRatio || 1); S.bakX = clamp((e.clientX - r.left - yz.cx / d) / (r.width * .4), -1, 1); S.bakY = clamp((e.clientY - r.top - yz.cy / d) / (r.height * .4), -1, 1); sonIsaretci = performance.now(); });
   $('sahne').addEventListener('click', () => { if (!uyandi) return uyandir(); sonEtkilesim = performance.now(); if (S.durum === 'uyuyor') { durum('bekliyor'); duygu('mutlu', 2); S.zipla = .6; konus(sec(['Ooo, uyandım! Buyur.', 'Günaydın! Ne yapalım?'])); return; } if (S.durum === 'konusuyor') return sustur(); S.zipla = .5; S.kirp = 1; duygu(sec(['mutlu', 'utangac', 'saskin']), 2); if (Math.random() < .35) yorumYap(sec(['Hihi, gıdıklanıyorum!', 'Efendim?', 'Buradayım!', 'Dokununca ekranım ışıldıyor.']), 'utangac'); });
   /* mikrofon düğmesi: bas-konuş */
+  function mikDugme() { const b = $('mikKapat'); if (!b) return; b.classList.toggle('kapali', MIK_KAPALI); b.textContent = MIK_KAPALI ? '🔇' : '🎤'; b.title = MIK_KAPALI ? 'Mikrofon kapalı: açmak için dokun (M)' : 'Mikrofonu kapat: Zeki dinlemesin (M)'; b.setAttribute('aria-label', b.title); b.setAttribute('aria-pressed', MIK_KAPALI); $('mik').classList.toggle('pasif', MIK_KAPALI); }
+  function mikKapat() {
+    MIK_KAPALI = true; LS.set('zeki:mikKapali', '1'); tekSefer = false; dinlemeDurdur();
+    clearInterval(sinifT); if (islem) try { islem.disconnect(); } catch (e) { } islem = null; SINIF = null;
+    if (mikAkis) mikAkis.getTracks().forEach(t => t.stop()); mikAkis = null; AN = null; SES.spektrum = null; SES.dalga = null; SES.seviye = 0;
+    if (S.durum === 'dinliyor') durum('bekliyor'); mikDugme(); balon('Mikrofon kapalı. Zeki seni duymaz; yazarak konuşabilirsin.', 'sistem');
+  }
+  async function mikAcKullanici() {
+    MIK_KAPALI = false; LS.set('zeki:mikKapali', ''); mikDugme();
+    if (!(await mikAc())) return false;
+    if (AYAR.surekli) dinlemeBaslat(); if (AYAR.sesTani) sinifAc();
+    balon('Mikrofon açık.', 'sistem'); return true;
+  }
+  $('mikKapat').onclick = () => { if (MIK_KAPALI) mikAcKullanici(); else mikKapat(); };
+  mikDugme();
   $('mik').onclick = async () => {
     if (!uyandi) return uyandir();
+    if (MIK_KAPALI && !(await mikAcKullanici())) return;
     if (S.durum === 'konusuyor') { sustur(); }
     if (S.durum === 'dinliyor') { dinlemeyiDuraklat(); durum('bekliyor'); return; }
     if (!(await mikAc())) return;
@@ -359,7 +386,7 @@
   };
   $('form').onsubmit = e => { e.preventDefault(); const v = $('yaz').value.trim(); if (!v) return; $('yaz').value = ''; if (!uyandi) uyandir(true); if (S.durum === 'konusuyor') sustur(); isle(v, true); };
   $('ipuclari').addEventListener('click', e => { const b = e.target.closest('button'); if (!b) return; if (!uyandi) uyandir(true); if (S.durum === 'konusuyor') sustur(); isle(b.textContent, true); });
-  addEventListener('keydown', e => { if (e.code === 'Space' && document.activeElement === document.body) { e.preventDefault(); $('mik').click(); } if (e.key === 'Escape') sustur(); });
+  addEventListener('keydown', e => { if (e.code === 'Space' && document.activeElement === document.body) { e.preventDefault(); $('mik').click(); } if (e.key === 'Escape') sustur(); if ((e.key === 'm' || e.key === 'M') && document.activeElement === document.body && !e.ctrlKey && !e.metaKey) $('mikKapat').click(); });
   document.addEventListener('visibilitychange', () => { if (document.hidden && SS) SS.cancel(); });
 
   /* ---------------- ayarlar ---------------- */

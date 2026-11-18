@@ -298,7 +298,7 @@
     return true;
   }
   function hud(cv) {
-    const g = cv.getContext('2d'), A = { t: 0, bakX: 0, bakY: 0, seviye: 0, enerji: .7, irkil: 0, zarf: 0, dus: 0, din: 0, vurus: 0, renk: [90, 200, 255], gecmis: new Float32Array(240), gi: 0, olay: [], radar: 0 };
+    const g = cv.getContext('2d'), A = { t: 0, bakX: 0, bakY: 0, seviye: 0, enerji: .7, irkil: 0, zarf: 0, dus: 0, din: 0, vurus: 0, renk: [90, 200, 255], gecmis: new Float32Array(240), gi: 0, olay: [], radar: 0, r0: 0, r1: 0, r2: 0, akt: 0, ksp: new Float32Array(60), F: [.1, .28, .5], Fh: [.1, .28, .5], hece: 0 };
     const mono = (px, D, w = 400) => `${w} ${px * D}px ui-monospace,Consolas,"Courier New",monospace`;
     function yay(cx, cy, r, a0, a1, w) { g.lineWidth = w; g.beginPath(); g.arc(cx, cy, r, a0, a1); g.stroke(); }
     function ciz(S, SES, dt) {
@@ -311,20 +311,35 @@
       A.gecmis[A.gi = (A.gi + 1) % A.gecmis.length] = A.seviye;
       if (SES.vurus || A.irkil > .6) { A.olay.push({ a: Math.random() * TAU, r: .3 + Math.random() * .6, yas: 0 }); if (A.olay.length > 12) A.olay.shift(); }
       g.globalCompositeOperation = 'lighter';
+      /* etkinlik: beklerken neredeyse durgun; konuşma, dinleme, düşünme ve gürültüde canlanır */
+      const kap = clamp(Math.max(A.zarf * 1.2, A.dus, A.din * .7, (A.seviye - .06) * 1.5, A.vurus * .6, A.irkil), 0, 1);
+      A.akt = mix(A.akt, kap, 1 - Math.exp(-(kap > A.akt ? 6 : 1.5) * dt));
+      A.r0 += dt * (.006 + .05 * A.akt); A.r1 -= dt * (.01 + .32 * A.akt); A.r2 += dt * (.008 + .16 * A.akt + .9 * A.dus);
+      /* konuşma tayfı: Zeki'nin sesi ölçülemediği için hece zarfından formant benzeri tayf üretilir */
+      const kon = S.durum === 'konusuyor';
+      if (kon && A.zarf > .2 && A.hece < .2) { A.F = [.06 + Math.random() * .1, .2 + Math.random() * .16, .42 + Math.random() * .2]; }
+      A.hece = A.zarf;
+      for (let i = 0; i < 3; i++) A.Fh[i] = mix(A.Fh[i], A.F[i], 1 - Math.exp(-14 * dt));
+      for (let i = 0; i < A.ksp.length; i++) {
+        const u = i / A.ksp.length; let h = 0;
+        if (kon) { h = (Math.exp(-Math.pow((u - A.Fh[0]) / .05, 2)) + .75 * Math.exp(-Math.pow((u - A.Fh[1]) / .07, 2)) + .5 * Math.exp(-Math.pow((u - A.Fh[2]) / .09, 2))) * (1 - u * .45) * A.zarf; h += A.zarf * .12 * Math.random(); }
+        A.ksp[i] = mix(A.ksp[i], clamp(h, 0, 1), 1 - Math.exp(-(h > A.ksp[i] ? 30 : 9) * dt));
+      }
       /* dış ölçek halkası */
-      g.save(); g.translate(cx, cy); g.rotate(t * .05);
+      g.save(); g.translate(cx, cy); g.rotate(A.r0);
       for (let i = 0; i < 180; i++) { const a = i / 180 * TAU, uz = i % 15 === 0 ? 12 : i % 5 === 0 ? 7 : 3; g.strokeStyle = rgba(R, i % 15 === 0 ? .7 : .3); g.lineWidth = D; g.beginPath(); g.moveTo(Math.cos(a) * R0 * 1.42, Math.sin(a) * R0 * 1.42); g.lineTo(Math.cos(a) * (R0 * 1.42 - uz * D), Math.sin(a) * (R0 * 1.42 - uz * D)); g.stroke(); }
       g.restore();
       g.strokeStyle = rgba(R, .45); yay(cx, cy, R0 * 1.48, 0, TAU, D);
       /* dönen kesik yaylar */
       g.strokeStyle = rgba(R, .55);
-      for (let i = 0; i < 6; i++) { const a = -t * .3 + i * TAU / 6; yay(cx, cy, R0 * 1.3, a, a + .55, 3 * D); }
+      for (let i = 0; i < 6; i++) { const a = A.r1 + i * TAU / 6; yay(cx, cy, R0 * 1.3, a, a + .55 + .12 * A.zarf, 3 * D); }
       g.strokeStyle = rgba(R, .35);
-      for (let i = 0; i < 24; i++) { const a = t * .18 * (1 + A.dus * 4) + i * TAU / 24; yay(cx, cy, R0 * 1.18, a, a + .16, 6 * D); }
+      for (let i = 0; i < 24; i++) { const a = A.r2 + i * TAU / 24; g.strokeStyle = rgba(R, .25 + .3 * A.akt * (kon ? A.ksp[(i * 5) % 60] * 2 : 1)); yay(cx, cy, R0 * 1.18, a, a + .16, 6 * D); }
       /* spektrum çubukları (içe doğru) */
       const sp = SES.spektrum, nb = 120;
       for (let i = 0; i < nb; i++) {
-        const a = i / nb * TAU - Math.PI / 2, v = sp ? bant(SES, (i < nb / 2 ? i : nb - i) / (nb / 2)) : 0, L = (4 + v * R0 * .32) * (.5 + A.enerji * .5);
+        const ay = (i < nb / 2 ? i : nb - i) / (nb / 2), kapi = clamp((A.seviye - .05) * 5, 0, 1);
+        const v = kon ? A.ksp[Math.min(59, Math.floor(ay * 59))] : (sp ? bant(SES, ay) * (.15 + .85 * kapi) : 0), a = i / nb * TAU - Math.PI / 2, L = (3 * D + v * R0 * .32) * (.5 + A.enerji * .5);
         g.strokeStyle = rgba(R, .25 + v * .7); g.lineWidth = 2 * D; g.beginPath(); g.moveTo(cx + Math.cos(a) * R0 * 1.08, cy + Math.sin(a) * R0 * 1.08); g.lineTo(cx + Math.cos(a) * (R0 * 1.08 - L), cy + Math.sin(a) * (R0 * 1.08 - L)); g.stroke();
       }
       /* seviye yayı */
@@ -333,7 +348,7 @@
       /* iç bölmeli halka */
       for (let i = 0; i < 12; i++) { const a = i * TAU / 12 + (A.dus > .1 ? t * 3 : 0), yan = A.dus > .1 ? ((i + Math.floor(t * 8)) % 12 < 4) : (S.durum === 'konusuyor' ? A.zarf > i / 12 : i / 12 < A.enerji); g.strokeStyle = rgba(R, yan ? .85 : .18); yay(cx, cy, R0 * .58, a + .04, a + TAU / 12 - .04, 5 * D); }
       /* çekirdek */
-      const kr = R0 * (.42 + A.zarf * .05 + A.vurus * .03 + A.irkil * .08);
+      const kr = R0 * (.42 + A.zarf * .05 + A.vurus * .03 + A.irkil * .08 + .006 * Math.sin(t * .9));
       const cg = g.createRadialGradient(cx, cy, 0, cx, cy, kr * 1.2); cg.addColorStop(0, rgba([255, 255, 255], .5 * A.enerji)); cg.addColorStop(.4, rgba(R, .35 * A.enerji)); cg.addColorStop(1, rgba(R, 0));
       g.fillStyle = cg; g.beginPath(); g.arc(cx, cy, kr * 1.2, 0, TAU); g.fill();
       g.strokeStyle = rgba(R, .8); yay(cx, cy, kr, 0, TAU, 2 * D);
@@ -341,7 +356,15 @@
       g.globalCompositeOperation = 'source-over';
       /* dinlerken dalga, değilse yazı */
       g.textAlign = 'center';
-      if (A.din > .3 && SES.dalga) { g.strokeStyle = rgba([80, 240, 160], .9); g.lineWidth = 2 * D; g.beginPath(); for (let i = 0; i < 80; i++) { const x = cx - kr * .8 + i / 79 * kr * 1.6, v = SES.dalga[i * 2] || 0; i ? g.lineTo(x, cy + v * kr * .9) : g.moveTo(x, cy + v * kr * .9); } g.stroke(); }
+      if (kon) {
+        /* konuşurken: ortadan simetrik ses çubukları (hece zarfı + formant tayfı) */
+        const n = 27, gw = kr * 1.55, bw = gw / n;
+        for (let i = 0; i < n; i++) {
+          const k = Math.abs(i - (n - 1) / 2) / ((n - 1) / 2), v = A.ksp[Math.floor(k * 40)] * (1 - k * .35), h = Math.max(2.5 * D, v * kr * 1.3);
+          g.fillStyle = rgba(i === (n - 1) / 2 ? [235, 245, 255] : R, .55 + v * .45);
+          const x = cx - gw / 2 + i * bw + bw * .2; g.beginPath(); g.roundRect ? g.roundRect(x, cy - h / 2 - kr * .05, bw * .6, h, bw * .3) : g.rect(x, cy - h / 2 - kr * .05, bw * .6, h); g.fill();
+        }
+      } else if (A.din > .3 && SES.dalga) { g.strokeStyle = rgba([80, 240, 160], .9); g.lineWidth = 2 * D; g.beginPath(); for (let i = 0; i < 80; i++) { const x = cx - kr * .8 + i / 79 * kr * 1.6, v = SES.dalga[i * 2] || 0; i ? g.lineTo(x, cy + v * kr * .9) : g.moveTo(x, cy + v * kr * .9); } g.stroke(); }
       else { g.fillStyle = rgba([235, 245, 255], .92); g.font = `700 ${Math.round(kr * .36)}px system-ui,sans-serif`; g.fillText('ZEKİ', cx, cy + kr * .1); }
       g.fillStyle = rgba(R, .85); g.font = mono(11, D, 600);
       g.fillText(({ bekliyor: 'BEKLEMEDE', dinliyor: 'DİNLİYOR', dusunuyor: 'İŞLENİYOR', konusuyor: 'YANITLIYOR', uyuyor: 'UYKU MODU' }[S.durum] || '') + (S.dans ? ' · RİTİM' : ''), cx, cy + kr * .45);
@@ -354,10 +377,12 @@
         g.fillStyle = rgba(R, .7); g.font = mono(10, D, 600); g.fillText('SİSTEM', px + 12 * D, py + 20 * D);
         g.fillStyle = 'rgba(235,245,255,.95)'; g.font = `200 ${Math.round(46 * D)}px system-ui,sans-serif`; g.fillText(sa, px + 12 * D, py + 70 * D);
         g.font = mono(11, D); g.fillStyle = rgba(R, .8); g.fillText(d.toLocaleDateString('tr-TR', { weekday: 'long', day: 'numeric', month: 'long' }).toLocaleUpperCase('tr'), px + 12 * D, py + 92 * D);
-        const satirlar = [['SES SEVİYESİ', Math.round(A.seviye * 100), '%'], ['RİTİM', S.dans ? Math.round(S.bpm || 0) : 0, 'BPM'], ['ENERJİ', Math.round(A.enerji * 100), '%'], ['DİKKAT', Math.round(Math.max(A.din, A.dus, A.zarf) * 100), '%']];
-        satirlar.forEach(([ad, v, b], i) => { const y = py + 130 * D + i * 40 * D; g.fillStyle = rgba(R, .7); g.font = mono(10, D); g.fillText(ad, px + 12 * D, y); g.textAlign = 'right'; g.fillStyle = 'rgba(235,245,255,.9)'; g.fillText(v + ' ' + b, px + pw - 12 * D, y); g.textAlign = 'left'; g.fillStyle = rgba(R, .15); g.fillRect(px + 12 * D, y + 8 * D, pw - 24 * D, 4 * D); g.fillStyle = rgba(R, .85); g.fillRect(px + 12 * D, y + 8 * D, (pw - 24 * D) * clamp(v / (b === 'BPM' ? 180 : 100), 0, 1), 4 * D); });
+        /* alt satır: dört küçük gösterge */
+        const gos = [['SES', Math.round(A.seviye * 100), '%', 100], ['RİTİM', S.dans ? Math.round(S.bpm || 0) : 0, '', 180], ['ENERJİ', Math.round(A.enerji * 100), '%', 100], ['DİKKAT', Math.round(Math.max(A.din, A.dus, A.zarf) * 100), '%', 100]];
+        const gy0 = py + ph - 34 * D, gk = (pw - 24 * D) / 4;
+        gos.forEach(([ad, v, b, mx], i) => { const x = px + 12 * D + i * gk; g.textAlign = 'left'; g.fillStyle = rgba(R, .6); g.font = mono(8, D); g.fillText(ad, x, gy0); g.fillStyle = 'rgba(235,245,255,.9)'; g.font = mono(11, D, 600); g.fillText(v + b, x, gy0 + 14 * D); g.fillStyle = rgba(R, .15); g.fillRect(x, gy0 + 19 * D, gk - 8 * D, 3 * D); g.fillStyle = rgba(R, .85); g.fillRect(x, gy0 + 19 * D, (gk - 8 * D) * clamp(v / mx, 0, 1), 3 * D); });
         /* spektrogram: zaman soldan sağa akar, alçak frekanslar altta */
-        const sx = px + 12 * D, sy = py + 292 * D, sw = pw - 24 * D, sh = py + ph - 14 * D - sy;
+        const sx = px + 12 * D, sy = py + 122 * D, sw = pw - 24 * D, sh = py + ph - 50 * D - sy;
         if (sh > 40 * D) {
           g.fillStyle = rgba(R, .7); g.font = mono(10, D); g.fillText('SPEKTROGRAM', sx, sy - 8 * D);
           g.textAlign = 'right'; g.fillStyle = rgba(R, .45); g.fillText(SES.spektrum ? 'ZAMAN →' : 'MİKROFON KAPALI', sx + sw, sy - 8 * D); g.textAlign = 'left';
