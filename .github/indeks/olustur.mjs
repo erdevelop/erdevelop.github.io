@@ -86,6 +86,7 @@ const gor = new Set(), yen = [];
 const bul = f => sayfalar[f] || null;
 for (const c of commits) {
   if (/^Merge|arama dizini|yenilikler listesi/i.test(c.s)) continue;
+  if (/^Programlarım sayfası/i.test(c.s)) continue; /* kaldırılan sayfa */
   const iyi = c.s.length >= 22 && !KOT.test(c.s);
   /* yeni sayfalar: eğitim klasörü bir kez */
   const yeniler = [...new Set(c.ekl.map(f => /^egitimler\/[^/]+\//.test(f) ? f.replace(/^(egitimler\/[^/]+)\/.*$/, '$1/index.html') : f))].map(bul).filter(Boolean);
