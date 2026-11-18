@@ -1593,6 +1593,9 @@ const wTrack = w => TOPIC_TRACK[w[4]] || 'gunluk';
 const inTrk = t => S.trk === 'hepsi' || t === S.trk;
 const trkWords = () => WORDS.filter(w => inTrk(wTrack(w)));
 const CEFR = ['', 'A1', 'A2', 'B1', 'B2'];
+/* örnek cümlenin Türkçesi (konu paketleri ve js/kulup-ek.js → window.ORN_EX) */
+const ORN_TR = (en, ex) => (ex && window.ORN_EX && ORN_EX[ex]) || '';
+const exHtml = c => c.ex ? esc(c.ex) + (ORN_TR(c.en, c.ex) ? `<div class="small muted" style="margin-top:4px">${esc(ORN_TR(c.en, c.ex))}</div>` : '') : '';
 const TW = (() => { const ex = new Set(WORDS.map(w => w[0].toLowerCase())), seen = new Set(), out = [];
   for (const l of [1, 2, 3, 4]) for (const it of TEMEL[l].split(';')) { const i = it.indexOf('='); if (i < 1) continue; const en = it.slice(0, i).trim(), k = en.toLowerCase(); if (ex.has(k) || seen.has(k)) continue; seen.add(k); out.push({ en, tr: it.slice(i + 1).trim(), ex: '', lvl: l, tag: 'temel · ' + CEFR[l] }); }
   return out; })();
@@ -1703,7 +1706,7 @@ function nextCard() {
   else c = pick(notCur(L));
   cur = c; const rev = S.rev; kRoomBtn();
   $('fW').textContent = rev ? c.tr : c.en; $('fTag').textContent = c.tag || ''; $('bTag').textContent = c.tag || '';
-  $('bW').textContent = c.en; $('bM').textContent = c.tr; $('bEx').textContent = c.ex || '';
+  $('bW').textContent = c.en; $('bM').textContent = c.tr; $('bEx').innerHTML = exHtml(c);
   $('fSpk').hidden = rev;
   $('kInfo').textContent = due.length ? `Sırada ${due.length} kelime var · toplam ${L.length}${fresh.length && (S.src === 'hazir' || S.src === 'temel') ? ' · yeni kelimeler en sık kullanılandan başlar' : ''}` : `Bugünlük tekrar bitti 🎉 Listeden rastgele soruluyor (${L.length} kelime).`;
   boxes();
@@ -1844,7 +1847,7 @@ function pPaint(msg) {
 }
 async function pushInfo() { if (!Cloud.user) return; pLocalEp = await pLocal(); try { const d = await pDoc().get(); pInfo = d.exists ? d.data() : null; if (S.pushOn && (!pInfo || pInfo.on === false)) { S.pushOn = false; save(); } } catch (e) { } pPaint(); }
 function pushQueue() { const n = Math.max(1, hTimes().length), N = n > 20 ? 280 : 150, P = hPlan(Math.min(60, Math.ceil(N / n) + 3));
-  return P.plan.flat().slice(0, N).map(([t, w]) => ({ e: w.en, t: w.tr, x: String(w.ex || '').slice(0, 160) })); }
+  return P.plan.flat().slice(0, N).map(([t, w]) => ({ e: w.en, t: w.tr, x: String(w.ex || '').slice(0, 160), y: String(ORN_TR(w.en, w.ex)).slice(0, 160) })); }
 async function pushSave(sub) {
   const j = sub.toJSON(), q = pushQueue(); if (!q.length) throw new Error('Seçili listede kelime yok.');
   await pDoc().set({ on: true, sub: { endpoint: j.endpoint, keys: { p256dh: j.keys.p256dh, auth: j.keys.auth } }, tz: Intl.DateTimeFormat().resolvedOptions().timeZone || 'Europe/Istanbul',
@@ -1880,7 +1883,7 @@ $('hAdd').onclick = () => { const r = icsText(); if (isIOS) { location.href = 'd
   $('hDays').value = S.h.days || '7'; $('hFrom').value = S.h.from || '09:00'; $('hTo').value = S.h.to || '21:00'; $('hStep').value = S.h.step || '180'; $('hMean').checked = S.h.mean !== false; $('hRep').checked = S.h.rep !== false; })();
 /* bildirimden gelen kelimeyi kartta göster: ?k=kelime */
 function showWord(en) { const k = norm(en), w = [...WORDS.map(x => ({ en: x[0], tr: x[1], ex: x[2], tag: x[4] })), ...TW, ...S.my].find(x => norm(x.en) === k); if (!w) return;
-  cur = w; kRoomBtn(); $('fcard').classList.remove('flip'); $('fW').textContent = w.en; $('fTag').textContent = w.tag || ''; $('bTag').textContent = w.tag || ''; $('bW').textContent = w.en; $('bM').textContent = w.tr; $('bEx').textContent = w.ex || ''; $('fSpk').hidden = false;
+  cur = w; kRoomBtn(); $('fcard').classList.remove('flip'); $('fW').textContent = w.en; $('fTag').textContent = w.tag || ''; $('bTag').textContent = w.tag || ''; $('bW').textContent = w.en; $('bM').textContent = w.tr; $('bEx').innerHTML = exHtml(w); $('fSpk').hidden = false;
   $('kInfo').textContent = 'Hatırlatıcıdan gelen kelime. Biliyorsan ✓, bilmiyorsan ✗ de; sonra normal tekrar devam eder.'; }
 
 /* ============ PAYLAŞ: kartı görsel (PNG) olarak paylaş ============ */

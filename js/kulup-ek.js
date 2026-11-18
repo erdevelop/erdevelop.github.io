@@ -44,6 +44,32 @@
   if (typeof kapaliAyir === 'function') { kapaliAyir(); try { paintTrk(); srcOpts(); kartYenile(); } catch (e) { } }
   if (typeof KAPALI === 'object' && Array.isArray(D.OKUMA)) { ARS.OKUMA = D.OKUMA.filter(r => KAPALI.has(r.trk)); D.OKUMA = D.OKUMA.filter(r => !KAPALI.has(r.trk)); }
 
+  /* ---------------- konu paketleri: hazır liste içinde konu seçimi (yemek, ev, alışveriş…) ----------------
+     Paket kelimeleri tekrar ayıklamasına (aynı Türkçe karşılık) girmez; konu seçiliyken kartlar yalnız o konudan gelir. */
+  const KONULAR = Array.isArray(D.KONULAR) ? D.KONULAR : [], KONU_W = Array.isArray(D.KONU_W) ? D.KONU_W : [];
+  window.ORN_EX = window.ORN_EX || {};
+  const konuW = k => KONU_W.filter(w => w[6] === k).map(w => ({ en: w[0], tr: w[1], ex: w[2], lvl: w[3], tag: w[4] }));
+  const konuAd = k => { const x = KONULAR.find(y => y[0] === k); return x ? x[1] + ' ' + x[2] : ''; };
+  const konuOk = () => S.src === 'hazir' && S.konu && KONULAR.some(k => k[0] === S.konu);
+  if (KONU_W.length && Array.isArray(WORDS)) {
+    const have = new Set(WORDS.map(w => String(w[0]).toLowerCase()));
+    KONU_W.forEach(w => { if (typeof TOPIC_TRACK === 'object' && !TOPIC_TRACK[w[4]]) TOPIC_TRACK[w[4]] = w[6] === 'ulasim' ? 'seyahat' : 'gunluk';
+      if (w[2] && w[5]) window.ORN_EX[w[2]] = w[5]; if (!have.has(w[0].toLowerCase())) { WORDS.push(w.slice(0, 5)); have.add(w[0].toLowerCase()); } });
+  }
+  if (KONULAR.length && typeof deck === 'function') {
+    const oDeck = deck; deck = function () { return konuOk() ? konuW(S.konu) : oDeck.apply(this, arguments); };
+    const kl = el('kLvl');
+    if (kl && !el('kKonu')) { const k = document.createElement('select'); k.className = 'sel'; k.id = 'kKonu'; k.setAttribute('aria-label', 'Konu'); kl.after(k);
+      k.onchange = () => { S.konu = k.value; save(); konuSel(); nextCard(); kAyarOz(); }; }
+    window.konuSel = function () { const k = el('kKonu'); if (!k) return; const on = S.src === 'hazir';
+      k.innerHTML = `<option value="">Tüm konular</option>` + KONULAR.map(x => `<option value="${x[0]}">${x[1]} ${esc(x[2])} (${konuW(x[0]).length})</option>`).join('');
+      k.value = KONULAR.some(x => x[0] === S.konu) ? S.konu : ''; k.hidden = !on; if (kl) kl.hidden = on && !!k.value; };
+    const oSrc = srcOpts; srcOpts = function () { const r = oSrc.apply(this, arguments); konuSel(); return r; };
+    if (typeof kAyarOz === 'function') { const oOz = kAyarOz; kAyarOz = function () { const r = oOz.apply(this, arguments); const o = el('kAyarOz'); if (o && konuOk()) o.textContent = 'Hazır liste · ' + konuAd(S.konu); return r; }; }
+    if (typeof hPools === 'function') { const oP = hPools; hPools = function () { const P = oP.apply(this, arguments); P.splice(1, 0, ...KONULAR.map(x => ['kn-' + x[0], 'Konu · ' + x[1] + ' ' + x[2], konuW(x[0]).map(w => ({ en: w.en, tr: w.tr, ex: w.ex }))])); return P; }; }
+  }
+  if (KONU_W.length) { try { paintTrk(); srcOpts(); kAyarOz(); kartYenile(); } catch (e) { } }
+
   /* ---------------- sözlük (okumada dokunulan kelime için) ---------------- */
   let DICT = null;
   function dict() {
