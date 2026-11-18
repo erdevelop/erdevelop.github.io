@@ -2161,13 +2161,31 @@ function compare(target, heard) {
   return { score: Math.round(100 * ok / Math.max(1, n)), html: words.map((w, k) => `<span class="${hit[k] ? 'hit' : 'miss'}">${esc(w)}</span>`).join(' ') };
 }
 function micStart() {
-  if (!SR) return; if (rec) { rec.stop(); return; }
-  rec = new SR(); rec.lang = 'fr-FR'; rec.interimResults = true; rec.maxAlternatives = 3; let finalT = '';
-  rec.onresult = e => { let t = ''; for (const r of e.results) t += r[0].transcript + ' '; finalT = t; $('tDiff').innerHTML = `<span class="muted">${esc(t)}</span>`;
-    if (e.results[e.results.length - 1].isFinal) { let best = null; for (const r of e.results) for (const alt of r) { const c = compare(tCur.s, alt.transcript); if (!best || c.score > best.score) best = c; } const full = compare(tCur.s, finalT); if (full.score > best.score) best = full; done(best, finalT); } };
-  rec.onerror = e => { $('tWarn').textContent = e.error === 'not-allowed' ? 'Mikrofon izni verilmedi. Adres çubuğundaki simgeden izin ver.' : e.error === 'no-speech' ? 'Ses duyulmadı, tekrar dene.' : 'Ses tanıma hatası: ' + e.error; };
-  rec.onend = () => { rec = null; $('tMic').classList.remove('rec'); };
-  try { rec.start(); $('tMic').classList.add('rec'); $('tWarn').textContent = ''; } catch (e) { rec = null; }
+  if (!SR) return;
+  if (rec) { micStart.dur = true; try { rec.stop(); } catch (e) { } return; } /* ikinci dokunuş: dinlemeyi bitir */
+  micStart.dur = false;
+  const r = new SR(); rec = r; r.lang = 'fr-FR'; r.interimResults = true; r.maxAlternatives = 3;
+  let finalT = '', alts = [], bitti = false, uyari = false; const t0 = Date.now();
+  const mine = () => rec === r, warn = m => { uyari = true; $('tWarn').textContent = m; };
+  /* iPhone bazen "kesin sonuç" göndermeden bitiriyor: o zaman eldeki metinle puanla */
+  const bitir = () => { if (bitti || !finalT.trim()) return; bitti = true; let best = compare(tCur.s, finalT);
+    for (const a of alts) { const c = compare(tCur.s, a); if (c.score > best.score) best = c; } done(best, finalT); };
+  r.onresult = e => { if (!mine()) return; let t = ''; alts = []; for (const x of e.results) { t += x[0].transcript + ' '; for (const a of x) alts.push(a.transcript); }
+    finalT = t; $('tDiff').innerHTML = `<span class="muted">${esc(t)}</span>`; if (e.results[e.results.length - 1].isFinal) bitir(); };
+  r.onerror = e => { if (!mine()) return;
+    if (e.error === 'aborted') { /* iPhone: önceki oturum kapanmadan açıldı; kullanıcı durdurmadıysa bir kez kendiliğinden yeniden dene */
+      if (!finalT.trim() && !micStart.dur && Date.now() - t0 < 1500 && !micStart.tekrar) { micStart.tekrar = true; rec = null; $('tMic').classList.remove('rec'); setTimeout(micStart, 450); }
+      return; }
+    if (e.error === 'no-speech' && finalT.trim()) return;
+    warn(e.error === 'not-allowed' || e.error === 'service-not-allowed' ? 'Mikrofon izni verilmedi. Adres çubuğundaki simgeden (iPhone\'da Ayarlar → Safari → Mikrofon) izin ver.'
+      : e.error === 'no-speech' ? 'Ses duyulmadı, mikrofona basıp tekrar oku.'
+      : e.error === 'audio-capture' ? 'Mikrofona ulaşılamadı; seslendirme bitmemiş olabilir. Birkaç saniye sonra tekrar dene.'
+      : e.error === 'network' ? 'Ses tanıma için internet gerekiyor; bağlantını kontrol et.' : 'Ses tanıma hatası: ' + e.error + '. Tekrar dene.'); };
+  r.onend = () => { if (!mine()) return; rec = null; micStart.tekrar = false; $('tMic').classList.remove('rec'); bitir();
+    if (!finalT.trim() && !uyari && !micStart.dur) warn('Ses duyulmadı, mikrofona basıp tekrar oku.'); };
+  const go = () => { if (!mine()) return; try { r.start(); $('tMic').classList.add('rec'); $('tWarn').textContent = ''; } catch (e) { rec = null; warn('Mikrofon başlatılamadı; birkaç saniye sonra tekrar dene.'); } };
+  /* seslendirme sürüyorsa önce sustur, mikrofon serbest kalsın diye kısa bekle */
+  if (TTS && (speechSynthesis.speaking || speechSynthesis.pending)) { speechSynthesis.cancel(); setTimeout(go, 350); } else go();
 }
 function done(r, heard) { $('tDiff').innerHTML = r.html + `<div class="small muted" style="margin-top:6px">Duyulan: “${esc(heard.trim())}”</div>`; $('tScore').textContent = r.score;
   $('tScore').style.color = r.score >= 80 ? 'var(--ok)' : r.score >= 50 ? 'var(--warn)' : 'var(--bad)';
