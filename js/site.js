@@ -143,6 +143,44 @@ html[data-mode=light] #er-ara .bx{background:#fff;color:#1a2233;border-color:rgb
   }
   if (D.readyState === 'loading') D.addEventListener('DOMContentLoaded', dugme); else dugme();
 
+  /* ---------------- eğitim ↔ araç bağlantıları (js/baglanti.js, .github/indeks/baglanti.mjs üretir) ---------------- */
+  (function () {
+    const m = yol.match(/^\/egitimler\/([a-z0-9-]+)\/(en\/)?(index\.html)?$/);
+    const sade = yol.replace(/\/index\.html$/, '/');
+    if (!m && (TOOLS || sade === '/' || /^\/egitimler\/$/.test(sade))) return;
+    const ciz = () => {
+      const B = window.ER_BAG; if (!B) return;
+      let baslik, liste;
+      if (m) {
+        const x = B.e[m[1]]; if (!x || !x.length) return;
+        baslik = en ? 'Tools for this topic' : 'Bu konunun araçları';
+        const gor = new Set();
+        liste = x.filter(a => { const k = en ? a[2] : a[1]; if (gor.has(k)) return false; gor.add(k); return true; })
+          .map(a => ({ u: '/' + a[0], t: en ? a[2] : a[1] }));
+      } else {
+        const x = B.a[yol] || B.a[yol.replace(/\/$/, '/index.html')]; if (!x || !x.length) return;
+        baslik = en ? 'Learn this topic' : 'Bu konuyu öğren';
+        liste = x.slice(0, 6).map(a => ({ u: '/egitimler/' + a[0] + '/', t: en ? a[2] : a[1] }));
+      }
+      if (D.getElementById('er-bag')) return;
+      const st = D.createElement('style');
+      st.textContent = '#er-bag{margin:28px 0 8px;padding:14px 16px;border:1px solid var(--line,#d8dde3);border-radius:8px;background:var(--panel,transparent);font:400 14px/1.4 var(--f-body,system-ui,sans-serif)}'
+        + '#er-bag h2{font:600 12px/1.3 var(--f-mono,ui-monospace,monospace);letter-spacing:.08em;text-transform:uppercase;color:var(--muted,#6b7280);margin:0 0 10px}'
+        + '#er-bag div{display:flex;flex-wrap:wrap;gap:8px}'
+        + '#er-bag a{display:inline-block;padding:6px 12px;border:1px solid var(--line,#d8dde3);border-radius:16px;color:var(--accent,#2563eb);text-decoration:none;font-weight:500}'
+        + '#er-bag a:hover{border-color:var(--accent,#2563eb)}'
+        + 'body>#er-bag{max-width:1040px;margin:28px auto 8px}';
+      D.head.appendChild(st);
+      const k = D.createElement('aside'); k.id = 'er-bag';
+      k.innerHTML = '<h2>' + esc(baslik) + '</h2><div>' + liste.map(a => '<a href="' + esc(a.u) + '">' + esc(a.t) + ' →</a>').join('') + '</div>';
+      const mn = D.querySelector('main');
+      if (mn) mn.appendChild(k);
+      else { const f = D.querySelector('body > footer') || D.querySelector('footer'); if (f) f.parentNode.insertBefore(k, f); else D.body.appendChild(k); }
+    };
+    const yukle = () => { if (window.ER_BAG) return ciz(); const sc = D.createElement('script'); sc.src = '/js/baglanti.js'; sc.onload = ciz; D.head.appendChild(sc); };
+    if (D.readyState === 'loading') D.addEventListener('DOMContentLoaded', yukle); else yukle();
+  })();
+
   /* ---------------- durum çubuğu: fare konumu (sadece fareli cihazlarda) ---------------- */
   (function () {
     if (window.top !== window || !matchMedia('(hover:hover) and (pointer:fine)').matches) return;
