@@ -16,7 +16,7 @@
   function durum(d) { S.durum = d; $('durum').dataset.d = d; $('durumT').textContent = { uyuyor: 'Uyuyor', bekliyor: 'Seni bekliyor', dinliyor: 'Dinliyor…', dusunuyor: 'Düşünüyor…', konusuyor: 'Konuşuyor' }[d] || d; $('mik').classList.toggle('acik', d === 'dinliyor'); }
 
   /* ---------------- çizim döngüsü ---------------- */
-  const GORUNUM = { robot: ['Robot', '🤖', c => Yuz.kur(c)], bulut: ['Nokta bulutu', '👤', c => Gorunumler.bulut(c)], kure: ['Enerji küresi', '🔆', c => Gorunumler.kure(c)], hud: ['Halkalı arayüz', '🎯', c => Gorunumler.hud(c)] };
+  const GORUNUM = { robot: ['Robot', '🤖', c => Yuz.kur(c)], bulut: ['Nokta bulutu', '👤', c => Gorunumler.bulut(c)], kure: ['Enerji küresi', '🔆', c => Gorunumler.kure(c)], hud: ['Halkalı arayüz', '🎯', c => Gorunumler.hud(c)], dalga: ['Ses dalgası yüz', '〰️', c => Gorunumler.dalgaYuz(c)], galaksi: ['Galaksi', '🌌', c => Gorunumler.galaksi(c)] };
   if (!GORUNUM[AYAR.gorunum]) AYAR.gorunum = 'robot';
   let yuz = GORUNUM[AYAR.gorunum][2]($('sahne'));
   function gorunumSec(ad, sessiz) {
@@ -335,12 +335,26 @@
     $('ayarAc').onclick = () => { $('ayarlar').hidden = !$('ayarlar').hidden; $('gecmis').hidden = true; };
     $('gecmisAc').onclick = () => { $('gecmis').hidden = !$('gecmis').hidden; $('ayarlar').hidden = true; };
     document.querySelectorAll('.panel .kapat').forEach(b => b.onclick = () => b.closest('.panel').hidden = true);
-    $('beyinBtn').onclick = beyinAc; beyinDurum();
+    $('beyinBtn').onclick = beyinAc; $('beyinZorla').onclick = e => { e.preventDefault(); beyinZorla = true; COKTU = false; LS.set('zeki:beyinCoktu', ''); beyinDurum(); beyinAc(); }; beyinDurum();
     $('unut').onclick = () => { if (!confirm('Zeki adını, şehrini ve notlarını unutsun mu?')) return; Beyin.HAFIZA.ad = ''; Beyin.HAFIZA.sehir = ''; Beyin.HAFIZA.notlar = []; Beyin.kaydet(); konus('Tamam, her şeyi unuttum. Yeniden tanışalım mı?', 'uzgun'); };
   }
   const LLM_MODEL = 'onnx-community/gemma-3-1b-it-ONNX-GQA';
+  let beyinZorla = false;
+  /* telefonlarda tarayıcı sekmeye ~1 GB'lık model için yeterli bellek vermez; sekme kapanıp yeniden açılır */
+  const MOBIL = /iPhone|iPad|iPod|Android/i.test(navigator.userAgent) || (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
+  const AZ_BELLEK = navigator.deviceMemory && navigator.deviceMemory < 8;
+  let COKTU = false;
+  try { const d = +LS.get('zeki:beyinDeneme'); if (d && Date.now() - d < 15 * 60000) { COKTU = true; LS.set('zeki:beyinCoktu', '1'); AYAR.beyin = false; ayarKaydet(); } LS.set('zeki:beyinDeneme', ''); } catch (e) { }
+  if (LS.get('zeki:beyinCoktu')) COKTU = true;
   function beyinDurum() {
     const d = Beyin.LLM.durum; $('beyinBtn').disabled = d === 'yukleniyor';
+    if ((MOBIL || COKTU) && d !== 'hazir') {
+      $('beyinBtn').textContent = MOBIL ? 'Gelişmiş beyin bu cihazda çalışmaz' : 'Gelişmiş beyin bu cihazda yüklenemedi';
+      $('beyinBtn').disabled = true; $('beyinZorla').hidden = MOBIL;
+      $('beyinBilgi').textContent = MOBIL ? 'Telefon ve tabletlerde tarayıcı, bir sekmeye bu boyutta (≈ 800 MB) bir model için yeterli bellek vermiyor; yükleme sonunda sekme kapanıp sayfa yeniden açılıyor. Gelişmiş beyni bilgisayarda Chrome ya da Edge ile kullanabilirsin. Telefonda Zeki temel becerileriyle (hesap, hava, döviz, terimler, Vikipedi, zamanlayıcı) çalışmaya devam eder.' : 'Son denemede model yüklenirken sayfa kapandı; bu cihazın belleği yetmiyor olabilir. Diğer uygulamaları kapatıp yeniden deneyebilirsin.';
+      $('beyinPil').hidden = true; return;
+    }
+    $('beyinZorla').hidden = true;
     $('beyinBtn').textContent = d === 'hazir' ? 'Gelişmiş beyni kapat' : d === 'yukleniyor' ? 'Yükleniyor…' : 'Gelişmiş beyni aç (≈ 800 MB, bir kez)';
     $('beyinPil').hidden = d !== 'hazir';
   }
@@ -348,13 +362,17 @@
     if (Beyin.LLM.durum === 'hazir') { Beyin.llmKapat(); AYAR.beyin = false; ayarKaydet(); beyinDurum(); konus('Gelişmiş beynimi kapattım; basit becerilerimle devam ediyorum.', 'notr'); return; }
     let gpu = false; try { gpu = !!(navigator.gpu && await navigator.gpu.requestAdapter()); } catch (e) { }
     if (!gpu) { $('beyinBilgi').textContent = 'Bu tarayıcıda WebGPU yok; gelişmiş beyin için güncel Chrome ya da Edge gerekiyor.'; return; }
+    if (MOBIL || COKTU && !beyinZorla) return beyinDurum();
+    if (AZ_BELLEK && !confirm('Bu cihazın belleği az görünüyor; model yüklenirken sayfa kapanabilir. Yine de denensin mi?')) return;
+    LS.set('zeki:beyinDeneme', String(Date.now()));
     beyinDurum(); $('beyinBilgi').textContent = 'Hazırlanıyor…'; durum('dusunuyor');
     try {
       const promise = Beyin.llmYukle(LLM_MODEL, p => { const y = p.yuklenen / 1048576, t = Math.max(p.toplam, p.yuklenen) / 1048576; $('beyinBilgi').textContent = `İndiriliyor: ${Math.round(y)} / ${Math.round(t)} MB`; $('beyinBar').style.width = (t ? y / t * 100 : 2) + '%'; });
       beyinDurum(); await promise;
+      LS.set('zeki:beyinDeneme', ''); LS.set('zeki:beyinCoktu', ''); COKTU = false;
       AYAR.beyin = true; ayarKaydet(); $('beyinBilgi').textContent = 'Gelişmiş beyin hazır: Gemma 3 1B, ekran kartında çalışıyor.'; $('beyinBar').style.width = '100%';
       durum('bekliyor'); konus('Gelişmiş beynim açıldı! Artık aklına gelen her şeyi konuşabiliriz. Ama küçük bir modelim; önemli bilgileri yine de kontrol et.', 'heyecanli');
-    } catch (e) { $('beyinBilgi').textContent = 'Yüklenemedi: ' + (e.message === 'WEBGPU_YOK' ? 'WebGPU bulunamadı.' : e.message); durum('bekliyor'); }
+    } catch (e) { LS.set('zeki:beyinDeneme', ''); $('beyinBilgi').textContent = 'Yüklenemedi: ' + (e.message === 'WEBGPU_YOK' ? 'WebGPU bulunamadı.' : e.message); durum('bekliyor'); }
     beyinDurum();
   }
 
@@ -369,7 +387,8 @@
     const ad = Beyin.HAFIZA.ad, h = new Date().getHours(), z = h < 11 ? 'Günaydın' : h < 18 ? 'Merhaba' : 'İyi akşamlar';
     await konus(ad ? `${z} ${ad}! Seni tekrar görmek ne güzel. Bugün ne yapalım?` : `${z}! Ben Yapay Zeki. Benimle konuşabilir ya da yazabilirsin. ${mik ? (AYAR.surekli ? 'Seslenirken başına "Zeki" demen yeter.' : 'Konuşmak için mikrofona dokun.') : ''} Bu arada, senin adın ne?`, 'mutlu');
     if (!ad) { bekle = 'ad'; aktifSohbetBitis = performance.now() + 30000; }
-    if (AYAR.beyin && Beyin.LLM.durum === 'yok') { try { if (navigator.gpu && await navigator.gpu.requestAdapter()) beyinAc(); } catch (e) { } }
+    if (COKTU && !MOBIL) balon('Gelişmiş beyin son denemede yüklenirken sayfa kapandı; bu cihazın belleği yetmiyor olabilir. Ayarlar\'dan yeniden deneyebilirsin.', 'sistem');
+    if (AYAR.beyin && !MOBIL && !COKTU && Beyin.LLM.durum === 'yok') { try { if (navigator.gpu && await navigator.gpu.requestAdapter()) beyinAc(); } catch (e) { } }
   }
   /* "adın ne" sorusuna tek kelimelik cevap */
   const asilYanitla = Beyin.yanitla;

@@ -1,6 +1,6 @@
 /* Yapay Zeki · seçilebilir görünümler
    Her görünüm Yuz.kur ile aynı arayüzü sunar: kur(canvas) → { ciz(S, SES, dt) → { cx, cy } }
-   bulut: nokta bulutundan insan büstü · kure: enerji küresi · hud: halkalı gösterge arayüzü */
+   bulut: nokta bulutundan insan büstü · kure: enerji küresi · hud: halkalı gösterge arayüzü · dalgaYuz: çizgilerden yüz · galaksi: sarmal parçacıklar */
 (function () {
   'use strict';
   const TAU = Math.PI * 2, clamp = (v, a, b) => Math.max(a, Math.min(b, v)), mix = (a, b, t) => a + (b - a) * t;
@@ -293,5 +293,122 @@
     return { ciz };
   }
 
-  window.Gorunumler = { bulut, kure, hud };
+
+  /* =====================================================================
+     4) SES DALGASI YÜZ · yatay çizgilerden kabartma yüz
+     ===================================================================== */
+  function dalgaYuz(cv) {
+    const g = cv.getContext('2d'), A = { t: 0, bakX: 0, bakY: 0, seviye: 0, enerji: .7, irkil: 0, zarf: 0, dus: 0, din: 0, vurus: 0, kirp: 0, kirpT: 3, renk: [120, 220, 255] };
+    const gauss = (x, y, cx, cy, sx, sy) => Math.exp(-((x - cx) * (x - cx)) / (2 * sx * sx) - ((y - cy) * (y - cy)) / (2 * sy * sy));
+    /* yüz kabartması: x -1..1, y -1 (alın) .. 1 (çene) */
+    function kabartma(x, y, yaw, zarf) {
+      x += yaw * .25 * (1 - y * y * .3);
+      const maske = clamp(1 - (x * x) / (.62 * .62) - Math.pow((y - .05) / 1.02, 2), 0, 1);
+      if (maske <= 0) return [0, 0];
+      let h = Math.sqrt(maske) * .55;
+      h += gauss(x, y, 0, .1, .07, .32) * .32;           /* burun */
+      h += gauss(x, y, 0, -.42, .45, .1) * .1;           /* kaş kemeri */
+      h -= gauss(x, y, -.24, -.22, .12, .07) * .22 + gauss(x, y, .24, -.22, .12, .07) * .22; /* göz çukurları */
+      h += gauss(x, y, -.3, .18, .14, .14) * .1 + gauss(x, y, .3, .18, .14, .14) * .1;     /* elmacık */
+      h += gauss(x, y, 0, .5, .2, .045) * .1 - gauss(x, y, 0, .56, .2, .02 + zarf * .05) * (.08 + zarf * .25); /* dudaklar, ağız */
+      h += gauss(x, y, 0, .82, .2, .1) * .1;             /* çene */
+      return [h, maske];
+    }
+    function ciz(S, SES, dt) {
+      const [W, H, D] = boyutla(cv); ortak(A, S, SES, dt); const t = A.t;
+      renkYay(A.renk, durumRengi(S, [120, 220, 255]), dt);
+      g.globalCompositeOperation = 'source-over'; g.fillStyle = '#030509'; g.fillRect(0, 0, W, H);
+      const cx = W / 2, cy = H * (W / H < .8 ? .35 : .4), olcY = Math.min(H * .3, W * .55), olcX = olcY * .82;
+      A.kirpT -= dt; if (A.kirpT < 0) { A.kirp = 1; A.kirpT = 2 + Math.random() * 4; } A.kirp = Math.max(0, A.kirp - dt * 6);
+      const yaw = A.bakX * .6 + Math.sin(t * .4) * .12 + (S.dans ? Math.sin(t * (S.bpm || 110) / 60 * Math.PI) * .3 : 0);
+      const satir = 46, nokta = 120, dl = SES.dalga;
+      /* arkadan öne: her çizginin altı siyahla doldurulur, böylece önündeki çizgi arkasını örter */
+      for (let j = 0; j < satir; j++) {
+        const y = -1.15 + j / (satir - 1) * 2.3, u = j / (satir - 1), b = bant(SES, 1 - u);
+        const pts = [];
+        for (let i = 0; i < nokta; i++) {
+          const x = -1.1 + i / (nokta - 1) * 2.2, [h, m] = kabartma(x, y + A.bakY * .05, yaw, A.zarf);
+          const ses = (dl ? (dl[(i + j * 7) % dl.length] || 0) : 0) * (.25 + b * 1.2) * A.enerji * (m > 0 ? .6 : 1) + Math.sin(i * .35 + t * 3 + j) * .006 * A.enerji;
+          const sacilma = A.irkil * Math.sin(i * 1.7 + j * 2.3) * .08;
+          pts.push([cx + x * olcX, cy + y * olcY - (h * (1 + A.zarf * .05) + ses + sacilma) * olcY * .55]);
+        }
+        g.beginPath(); g.moveTo(pts[0][0], pts[0][1]); for (const p of pts) g.lineTo(p[0], p[1]); g.lineTo(pts[nokta - 1][0], H); g.lineTo(pts[0][0], H); g.closePath();
+        g.fillStyle = '#030509'; g.fill();
+        g.beginPath(); g.moveTo(pts[0][0], pts[0][1]); for (const p of pts) g.lineTo(p[0], p[1]);
+        const dalga = A.din > .05 ? Math.max(0, 1 - Math.abs(u - ((t * .7) % 1)) * 8) * A.din : 0;
+        g.strokeStyle = rgba(A.renk, clamp(.5 + b * .5 + dalga * .6, 0, 1) * (.45 + .55 * A.enerji)); g.lineWidth = (1.2 + b * 1.5) * D; g.stroke();
+      }
+      /* gözler: parlayan noktalar */
+      g.globalCompositeOperation = 'lighter';
+      const ac = S.durum === 'uyuyor' ? .1 : 1 - (A.kirp > .5 ? (1 - A.kirp) * 2 : A.kirp * 2);
+      for (const sx of [-.24, .24]) {
+        const ex = cx + (sx + yaw * .25) * olcX, ey = cy + (-.22 + A.bakY * .05) * olcY - .12 * olcY;
+        const gr = g.createRadialGradient(ex, ey, 0, ex, ey, olcX * .1); gr.addColorStop(0, rgba([255, 255, 255], .9 * ac)); gr.addColorStop(.3, rgba(A.renk, .7 * ac)); gr.addColorStop(1, rgba(A.renk, 0));
+        g.fillStyle = gr; g.beginPath(); g.ellipse(ex, ey, olcX * .1, olcX * .1 * Math.max(.08, ac), 0, 0, TAU); g.fill();
+      }
+      g.globalCompositeOperation = 'source-over';
+      return { cx, cy, S0: olcY };
+    }
+    return { ciz };
+  }
+
+  /* =====================================================================
+     5) GALAKSİ · sarmal kollu parçacık bulutu
+     ===================================================================== */
+  function galaksi(cv) {
+    const g = cv.getContext('2d'), A = { t: 0, bakX: 0, bakY: 0, seviye: 0, enerji: .7, irkil: 0, zarf: 0, dus: 0, din: 0, vurus: 0, don: 0, dalgalar: [], renk: [170, 140, 255] };
+    const r = rng(42), N = 5200, P = new Float32Array(N * 5); /* yarıçap, açı, yükseklik, renk karışımı, parlaklık */
+    for (let i = 0; i < N; i++) {
+      const kol = i % 3, dagik = r() < .1, rr = Math.pow(r(), dagik ? 1 : 1.5) * 1.15, sap = (r() - .5) * (.45 + rr * .5) * (r() < .6 ? .45 : 1);
+      P[i * 5] = rr + (r() - .5) * .06; P[i * 5 + 1] = dagik ? r() * TAU : kol * TAU / 3 + rr * 4.2 + sap; P[i * 5 + 2] = (r() - .5) * .08 * (1.2 - rr); P[i * 5 + 3] = r(); P[i * 5 + 4] = .3 + r() * .7;
+    }
+    const YIL = Array.from({ length: 220 }, () => [r() * 2 - 1, r() * 2 - 1, r()]);
+    const kova = Array.from({ length: 6 }, () => []), X = new Float32Array(N), Y = new Float32Array(N), Z = new Float32Array(N);
+    function ciz(S, SES, dt) {
+      const [W, H, D] = boyutla(cv); ortak(A, S, SES, dt); const t = A.t;
+      renkYay(A.renk, durumRengi(S, [170, 140, 255]), dt);
+      g.globalCompositeOperation = 'source-over'; g.fillStyle = '#020309'; g.fillRect(0, 0, W, H);
+      /* uzak yıldızlar */
+      for (const y of YIL) { g.fillStyle = `rgba(220,230,255,${.15 + .35 * Math.abs(Math.sin(t * .7 + y[2] * 20))})`; g.fillRect((y[0] * .5 + .5) * W, (y[1] * .5 + .5) * H, 1.2 * D, 1.2 * D); }
+      const cx = W / 2, cy = H * (W / H < .8 ? .36 : .4), R0 = Math.min(W * .4, H * .34);
+      A.don += dt * (.08 + A.seviye * .35 + A.dus * .8 + (S.dans ? .4 : 0)) * (S.durum === 'uyuyor' ? .4 : 1);
+      if (SES.vurus || (S.zipla && S.zipla > .5)) A.dalgalar.push(0);
+      A.dalgalar = A.dalgalar.map(v => v + dt * .9).filter(v => v < 1.4);
+      const egim = 1.05 + A.bakY * .25, cE = Math.cos(egim), sE = Math.sin(egim), yaw = A.bakX * .4, cY = Math.cos(yaw), sY = Math.sin(yaw);
+      for (const k of kova) k.length = 0;
+      const ice = A.din * dt * .0;
+      for (let i = 0; i < N; i++) {
+        let rr = P[i * 5]; const b = bant(SES, clamp(rr / 1.15, 0, 1));
+        rr *= 1 + b * .12 * A.enerji + A.irkil * .25 + A.zarf * .05 * (1 - rr);
+        for (const d of A.dalgalar) rr += Math.exp(-Math.pow((P[i * 5] - d) * 9, 2)) * .05;
+        const a = P[i * 5 + 1] + A.don * (1.4 - P[i * 5] * .6);
+        let x = Math.cos(a) * rr, z = Math.sin(a) * rr, y = P[i * 5 + 2] * (1 + b * 2);
+        const x2 = x * cY + z * sY; z = -x * sY + z * cY; x = x2;
+        const y2 = y * cE - z * sE, z2 = y * sE + z * cE, f = 3 / (3 - z2);
+        X[i] = cx + x * R0 * f; Y[i] = cy - y2 * R0 * f * .9; Z[i] = f;
+        const al = (P[i * 5 + 4] * (.35 + .65 * A.enerji) + b * .6) * (1.25 - P[i * 5] * .5);
+        kova[clamp(Math.floor(al * 5), 0, 5)].push(i);
+      }
+      g.globalCompositeOperation = 'lighter';
+      /* çekirdek */
+      const kr = R0 * (.28 + A.seviye * .12 + A.zarf * .08);
+      const cg = g.createRadialGradient(cx, cy, 0, cx, cy, kr); cg.addColorStop(0, rgba([255, 245, 230], .9 * A.enerji)); cg.addColorStop(.3, rgba(A.renk, .45 * A.enerji)); cg.addColorStop(1, rgba(A.renk, 0));
+      g.fillStyle = cg; g.beginPath(); g.ellipse(cx, cy, kr, kr * .75, 0, 0, TAU); g.fill();
+      const ikinci = [255, 140, 200];
+      for (let k = 0; k < 6; k++) {
+        const a = (k + 1) / 7;
+        for (const ton of [0, 1]) {
+          g.fillStyle = rgba(ton ? ikinci : A.renk, a);
+          for (const i of kova[k]) { if ((P[i * 5 + 3] > .72) !== !!ton) continue; const s = (1 + Z[i] * .8) * D; g.fillRect(X[i] - s / 2, Y[i] - s / 2, s, s); }
+        }
+      }
+      /* dinlerken: merkeze akan halka */
+      if (A.din > .05) { g.strokeStyle = rgba([80, 240, 160], .5 * A.din); g.lineWidth = 1.5 * D; const q = 1 - ((t * .8) % 1); g.beginPath(); g.ellipse(cx, cy, R0 * q * 1.2, R0 * q * 1.2 * Math.abs(Math.cos(egim)) + 2, 0, 0, TAU); g.stroke(); }
+      g.globalCompositeOperation = 'source-over';
+      return { cx, cy, S0: R0 };
+    }
+    return { ciz };
+  }
+
+  window.Gorunumler = { bulut, kure, hud, dalgaYuz, galaksi };
 })();
