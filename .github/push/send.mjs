@@ -16,7 +16,8 @@ const SUBJECT = process.env.VAPID_SUBJECT || 'https://erdevelop.github.io';
 const SITE = 'https://erdevelop.github.io/ingilizce.html';
 /* hangi kulübün sayfası: push belgesindeki page alanı (yoksa İngilizce) */
 const PAGES = { ingilizce: { url: SITE, icon: '📚', tag: 'eng-kelime' }, fransizca: { url: 'https://erdevelop.github.io/fransizca.html', icon: '🇫🇷', tag: 'fra-kelime' },
-  almanca: { url: 'https://erdevelop.github.io/almanca.html', icon: '🇩🇪', tag: 'deu-kelime' } };
+  almanca: { url: 'https://erdevelop.github.io/almanca.html', icon: '🇩🇪', tag: 'deu-kelime' },
+  seri: { url: 'https://erdevelop.github.io/oyunlar/', icon: '🔥', tag: 'ob-seri' } };
 const b64u = b => Buffer.from(b).toString('base64url');
 const unb64u = s => Buffer.from(String(s), 'base64url');
 const hmac = (key, data) => crypto.createHmac('sha256', key).update(data).digest();
@@ -75,7 +76,10 @@ export function dueSlot(d, now = new Date(), win = 50) {
 /* bildirim metni: kelime cümlenin içinde öğrenilsin.
    Anlamı açıkken: başlık "kelime — anlam", gövde İngilizce cümle + Türkçesi. Kapalıyken: başlık kelime, gövde yalnız İngilizce cümle.
    Kuyrukta cümlesi olmayan eski kayıtlar için ORN (sitedeki js/ornek-en.js) kullanılır. Sayfadaki "Örnek bildirim" de aynı biçimi kullanır. */
-export function message(d, ORN = {}) {
+export function message(d, ORN = {}, now = new Date()) {
+  /* Oyun Bahçesi seri hatırlatıcısı: o gün bir günlük bulmaca çözüldüyse gönderilmez */
+  if (d.page === 'seri') { if (d.done && d.done === localNow(d.tz, now).date) return null; const s = +d.seri || 0;
+    return { title: '🔥 ' + (s > 1 ? s + ' günlük serin bozulmasın' : 'Bugünün bulmacaları hazır'), body: s > 1 ? 'Bugün henüz bir günlük bulmaca çözmedin. Günlük Kelime, Bir İşlem, Sudoku ya da Günün Cephe Terimi.' : 'Günlük Kelime, Bir İşlem, Sudoku ve Günün Cephe Terimi seni bekliyor.', url: PAGES.seri.url, tag: PAGES.seri.tag }; }
   const q = d.q || []; if (!q.length) return null; const w = q[(d.pos || 0) % q.length];
   const P = PAGES[d.page] || PAGES.ingilizce, o = (d.page || 'ingilizce') === 'ingilizce' ? ORN[w.e] : null, mean = d.mean !== false;
   const x = w.x || (o ? o[0] : ''), y = w.y || (o && o[0] === x ? o[1] : '');
@@ -130,7 +134,7 @@ export async function main(env = process.env) {
   const ORN = env.ORNEK_URL === 'yok' ? {} : await loadOrnek(env.ORNEK_URL); if (!Object.keys(ORN).length) console.log('  örnek cümle dosyası alınamadı; kuyruktaki cümleler kullanılacak');
   let sent = 0, skipped = 0, failed = 0;
   for (const d of docs) {
-    const test = d.test === true, key = force ? 'zorla|' + now.toISOString() : test ? 'test|' + now.toISOString() : dueSlot(d, now), msg0 = key && d.sub && d.sub.endpoint ? message(d, ORN) : null;
+    const test = d.test === true, key = force ? 'zorla|' + now.toISOString() : test ? 'test|' + now.toISOString() : dueSlot(d, now), msg0 = key && d.sub && d.sub.endpoint ? message(d, ORN, now) : null;
     const msg = msg0 && test ? { ...msg0, title: '📡 Test · ' + msg0.title } : msg0;
     if (!msg) { skipped++; if (d.sub && d.sub.endpoint) console.log(`  ${d._path.split('/').pop().slice(0, 6)}… ${d.page || 'ingilizce'} · ${svc(d.sub.endpoint)} · sırası gelmedi (${d.from}–${d.to}, ${d.step || 180} dk)`); continue; }
     const upd = {}; let res;

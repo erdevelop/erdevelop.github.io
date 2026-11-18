@@ -75,7 +75,7 @@
     });
     $('#emptyState').hidden = list.length>0;
     function seriRozet(g){ if(g.category!=='Günlük'||!window.Seri) return '';
-      const z=[g.id].concat(g.id==='gunlukkelime'?['gunlukkelime-en']:[]).map(id=>Seri.ozet(id));
+      const z=[g.id].concat(g.id==='gunlukkelime'?['gunlukkelime-en','gunlukkelime-fr','gunlukkelime-de']:[]).map(id=>Seri.ozet(id));
       const seri=Math.max(...z.map(x=>x.seri)), bugun=z.some(x=>x.bugun);
       if(bugun) return seri? '<span class="card-seri">🔥 '+seri+'</span>':'';
       return '<span class="card-seri bekle">'+(seri?'🔥 '+seri+' · ':'')+'bugün çöz</span>'; }

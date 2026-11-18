@@ -44,3 +44,10 @@
 - Oyun kartlarında 🔥 seri rozeti; bugün oynanmadıysa "bugün çöz"
 - Günlük Kelime: İngilizce mod (İngilizce Kulübü listelerinden 198 kelime), 3. denemeden sonra Türkçe anlam ipucu, bitince anlam, örnek cümle, dinleme ve kulübe bağlantı; ?kelime=en ile doğrudan açılır
 - Dar ekranda üst çubuk taşması giderildi; sw.js ob-v5
+
+## Fransızca/Almanca kelime, Günün Cephe Terimi, seri hatırlatıcısı (18.11.2026)
+- Günlük Kelime: Français ve Deutsch modları (kulüp listelerinden 183 / 150 kelime); ?kelime=fr|de
+- Yeni oyun: Günün Cephe Terimi (sözlükten her gün 3 soru; seri, istatistik, sözlük/rehber/hesap bağlantıları)
+- Seri bulutta: girişli kullanıcıda users/{uid}.seri; cihazlar birleştirilir
+- Akşam seri hatırlatıcısı: push/{uid}_seri belgesi, .github/push/send.mjs page=seri
+- sw.js ob-v6
