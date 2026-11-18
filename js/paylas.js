@@ -65,6 +65,32 @@
   }
   function toast(m) { const t = D.createElement('div'); t.textContent = m; t.style.cssText = 'position:fixed;left:50%;bottom:24px;transform:translateX(-50%);background:#222;color:#fff;padding:9px 16px;border-radius:10px;font:14px system-ui;z-index:99999;box-shadow:0 6px 20px rgba(0,0,0,.3)'; D.body.appendChild(t); setTimeout(() => t.remove(), 1800); }
 
+  /* projeler: bu cihazda (localStorage) isimli projeler altında hesap bağlantıları */
+  const PK = 'erdevelop-projeler';
+  const pOku = () => { try { return JSON.parse(localStorage.getItem(PK)) || { p: {} }; } catch (e) { return { p: {} }; } };
+  const pYaz = o => { try { localStorage.setItem(PK, JSON.stringify(o)); return true; } catch (e) { return false; } };
+  function ozet() { for (const s of ['main .big > b', 'main .res .big', 'main .verdict2 b', 'main .stat > b', 'main .big']) { const e = D.querySelector(s); if (e && e.textContent.trim()) return e.textContent.replace(/\s+/g, ' ').trim().slice(0, 60); } return ''; }
+  function projePanel(kutu, btn) {
+    let pn = D.getElementById('er-proje'); if (pn) { pn.remove(); return; }
+    const o = pOku(), adlar = Object.keys(o.p).sort((a, b) => (o.p[b].t || 0) - (o.p[a].t || 0));
+    pn = D.createElement('div'); pn.id = 'er-proje'; pn.className = 'row';
+    pn.innerHTML = '<select aria-label="Proje"></select><input aria-label="Yeni proje adı" maxlength="60" style="flex:1 1 140px;min-width:0;padding:8px 10px;border-radius:10px;border:1px solid var(--line,rgba(127,127,127,.35));background:transparent;color:inherit;font:inherit"><input aria-label="Not" maxlength="80" style="flex:1 1 140px;min-width:0;padding:8px 10px;border-radius:10px;border:1px solid var(--line,rgba(127,127,127,.35));background:transparent;color:inherit;font:inherit"><button type="button">✓ ' + T('Kaydet', 'Save') + '</button><a href="/hesapla/projelerim.html">' + T('Projelerim', 'My projects') + ' →</a>';
+    const [sel, ad, not, ok] = pn.querySelectorAll('select, input, input, button');
+    sel.style.cssText = 'padding:8px 10px;border-radius:10px;border:1px solid var(--line,rgba(127,127,127,.35));background:transparent;color:inherit;font:inherit;max-width:100%';
+    sel.innerHTML = adlar.map(a => `<option>${a.replace(/[<&>"]/g, '')}</option>`).join('') + '<option value="">+ ' + T('Yeni proje', 'New project') + '</option>';
+    if (o.son && adlar.includes(o.son)) sel.value = o.son;
+    ad.placeholder = T('Yeni proje adı', 'New project name'); not.placeholder = T('Not (ör. A blok köşe camı)', 'Note (e.g. block A corner glass)');
+    const gor = () => { ad.style.display = sel.value ? 'none' : ''; }; sel.onchange = gor; gor();
+    ok.onclick = () => {
+      const isim = (sel.value || ad.value).trim(); if (!isim) { ad.focus(); return; }
+      const x = pOku(), pr = x.p[isim] || (x.p[isim] = { h: [], o: Date.now() });
+      const h1 = (D.querySelector('h1') || {}).textContent || D.title;
+      pr.h.push({ s: P, b: h1.replace(/\s+/g, ' ').trim().slice(0, 80), u: baglanti().replace(location.origin, ''), n: not.value.trim(), z: ozet(), t: Date.now() }); pr.t = Date.now(); x.son = isim;
+      if (pYaz(x)) { toast(T('Kaydedildi: ', 'Saved: ') + isim); pn.remove(); } else toast(T('Kaydedilemedi', 'Could not save'));
+    };
+    kutu.appendChild(pn); (sel.value ? not : ad).focus();
+  }
+
   function kur() {
     uygula();
     const yer = $('hakkinda') || D.querySelector('section.about, section.er-about'); if (!yer) return;
@@ -75,6 +101,7 @@
     if (!KISISEL.test(P) && !$('share')) { const b = D.createElement('button'); b.type = 'button'; b.textContent = '🔗 ' + T('Bu hesabın bağlantısını kopyala', 'Copy link to this calculation');
       b.onclick = async () => { const u = baglanti(); try { await navigator.clipboard.writeText(u); toast(T('Bağlantı kopyalandı', 'Link copied')); } catch (e) { prompt(T('Bağlantı:', 'Link:'), u); } }; satir1.appendChild(b); }
     if (!$('pdf') && !$('b-yaz') && !$('q-yaz')) { const b = D.createElement('button'); b.type = 'button'; b.textContent = '🖨️ ' + T('Yazdır / PDF', 'Print / PDF'); b.onclick = () => print(); satir1.appendChild(b); }
+    if (!KISISEL.test(P) && !/projelerim/.test(P)) { const b = D.createElement('button'); b.type = 'button'; b.textContent = '💾 ' + T('Projeye kaydet', 'Save to project'); b.onclick = () => projePanel(kutu, b); satir1.appendChild(b); }
     if (satir1.children.length) kutu.appendChild(satir1);
     const A = AKIS[P];
     if (A) { const s2 = D.createElement('div'); s2.className = 'row'; const t = D.createElement('b'); t.textContent = T('Sonraki hesap', 'Next step'); s2.appendChild(t);
