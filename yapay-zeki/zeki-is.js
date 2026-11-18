@@ -131,7 +131,15 @@
         cevap = await B.llmUret([{ role: 'user', content: `Aşağıdaki şartname parçalarına dayanarak soruyu Türkçe, en fazla iki cümleyle yanıtla. Parçalarda cevap yoksa yalnızca "Şartnamede bulamadım." yaz. Sayfa numarasını belirt.\n\n${P.map((p, i) => `[${i + 1}${p.sayfa ? ', sayfa ' + p.sayfa : ''}] ${kisalt(p.metin, 600)}`).join('\n\n')}\n\nSoru: ${temiz}` }], 160);
       } catch (e) { cevap = null; }
     }
-    const ilk = P[0], ozet = kisalt((O() ? O().ozetle(ilk.metin, { n: 2 }).cumleler.join(' ') : ilk.metin), 260);
+    /* sesli cevap için en ilgili cümle: ilk üç parçanın cümleleri soruyla ayrıca karşılaştırılır */
+    let ilk = P[0], ozet = '';
+    try {
+      const C = []; P.forEach(p => (O() ? O().cumleler(p.metin) : [p.metin]).forEach(c => { const t = c.replace(/^\d+(?:\.\d+)*\s+(?=\S)/, '').trim(); if (t.length > 12) C.push({ c: t, p }); }));
+      const V = await gom(C.slice(0, 40).map(x => 'passage: ' + x.c));
+      const en = V.map((v, i) => { let d = 0; for (let j = 0; j < q.length; j++) d += q[j] * v[j]; const f = fold(C[i].c); return { i, s: d + .08 * (ws.length ? ws.filter(w => f.includes(w)).length / ws.length : 0) }; }).sort((a, b) => b.s - a.s)[0];
+      if (en) { ilk = C[en.i].p; ozet = kisalt(C[en.i].c, 260); }
+    } catch (e) { }
+    if (!ozet) ozet = kisalt((O() ? O().ozetle(ilk.metin, { n: 2 }).cumleler.join(' ') : ilk.metin), 260);
     const metin = cevap ? cevap : `${ilk.sayfa ? ilk.sayfa + '. sayfada' : 'Belgede'} şöyle geçiyor: ${ozet}`;
     return { metin, duygu: 'dusunceli', beceri: 'belge', kart: { tip: 'is', baslik: '📄 ' + BELGE.ad, alt: 'en ilgili ' + P.length + ' parça', metin: P.map(p => `${sayfa(p) ? '【' + sayfa(p) + '】 ' : ''}${kisalt(p.metin, 420)}`).join('\n\n'), dugmeler: [{ ad: '📋 Kopyala', fn: el => kopyala(P.map(p => (p.sayfa ? `[s.${p.sayfa}] ` : '') + p.metin).join('\n\n'), el) }, { ad: '📎 Başka belge', fn: belgeEkle }], not: cevap ? 'Cevabı cihazdaki dil modeli bu parçalardan yazdı; asıl metinden kontrol et.' : 'Gelişmiş beyni açarsan cevabı bu parçalardan cümle olarak kurarım.' } };
   }
