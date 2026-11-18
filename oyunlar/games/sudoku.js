@@ -28,7 +28,10 @@ registerGame({
     const tahta = E('div', { style: { display: 'grid', gridTemplateColumns: 'repeat(9,1fr)', width: 'min(400px,100%)', margin: '0 auto', border: '2px solid var(--ink)', borderRadius: '6px', overflow: 'hidden', userSelect: 'none' } });
     const pad = E('div', { style: { display: 'grid', gridTemplateColumns: 'repeat(5,1fr)', gap: '6px', width: 'min(400px,100%)', margin: '10px auto 0' } });
     const msg = E('div', { class: 'g-msg' });
-    root.append(tahta, pad, msg);
+    const ist = E('div');
+    root.append(tahta, pad, msg, ist);
+    function istCiz() { ist.innerHTML = ''; if (window.Seri) ist.append(Seri.panel('sudoku', { baslik: 'Günlük Sudoku · istatistik', etiketler: ['Kolay', 'Orta', 'Zor'], dagBaslik: 'Günün en zor çözdüğü', xEtiket: null, api })); }
+    if (window.Seri) { const o = Seri.ozet('sudoku'); if (o.bugun) istCiz(); else { const b = E('button', { class: 'g-btn ghost', style: { display: 'block', margin: '12px auto 0' } }, '📊 İstatistik ve seri' + (o.seri ? ' · 🔥 ' + o.seri : '')); b.onclick = () => istCiz(); ist.append(b); } }
     for (let v = 1; v <= 9; v++) { const b = E('button', { class: 'g-btn ghost', style: { fontSize: '20px', fontWeight: '800', padding: '10px 0' } }, String(v)); b.onclick = () => gir(v); pad.append(b); }
     const sil = E('button', { class: 'g-btn ghost', style: { fontSize: '18px' } }, '⌫'); sil.onclick = () => gir(0); pad.append(sil);
     function kur() {
@@ -38,7 +41,8 @@ registerGame({
         const k = (api.loadState && api.loadState()) || {}; const kay = k['s' + N + '_' + z];
         g = kay && kay.g ? kay.g : P.g.slice(); hata = kay ? kay.h || 0 : 0; bitti = !!(kay && kay.b); sec = -1; bas = Date.now() - (kay ? kay.t || 0 : 0);
         hud.set('zor', ZOR[z][0]); hud.set('hata', hata); clearInterval(tm); tm = setInterval(() => { if (!bitti) hud.set('sure', ((Date.now() - bas) / 1000) | 0); }, 1000);
-        msg.textContent = bitti ? 'Bu zorluğu bugün bitirdin. Yarın yeni bulmaca!' : 'Bir kareye dokun, sonra sayıyı seç. Klavye de çalışır.'; ciz(); }, 20);
+        msg.textContent = bitti ? 'Bu zorluğu bugün bitirdin. Yarın yeni bulmaca!' : 'Bir kareye dokun, sonra sayıyı seç. Klavye de çalışır.'; ciz();
+        if (bitti && window.Seri) { Seri.kaydet('sudoku', N, { ok: true, b: z, max: true }); istCiz(); } }, 20);
     }
     function sakla() { if (!api.saveState) return; const k = api.loadState() || {}; for (const key in k) if (!key.startsWith('s' + N + '_')) delete k[key]; k['s' + N + '_' + z] = { g, h: hata, t: Date.now() - bas, b: bitti }; api.saveState(k); }
     function ciz() {
@@ -53,7 +57,8 @@ registerGame({
       if (bitti || sec < 0 || P.g[sec]) return;
       g[sec] = v; if (v && v !== P.cozum[sec]) { hata++; hud.set('hata', hata); if (api.sound) api.sound('lose'); } else if (api.sound) api.sound('tap');
       if (g.every((x, i) => x === P.cozum[i])) { bitti = true; const sn = ((Date.now() - bas) / 1000) | 0, skor = Math.round(Math.max(100, 2000 - sn * 2 - hata * 100) * ZOR[z][2]);
-        msg.textContent = 'Tamamlandı! 🎉 ' + Math.floor(sn / 60) + ' dk ' + sn % 60 + ' sn · ' + hata + ' hata · ' + skor + ' puan'; if (api.sound) api.sound('win'); api.submitScore(skor); }
+        msg.textContent = 'Tamamlandı! 🎉 ' + Math.floor(sn / 60) + ' dk ' + sn % 60 + ' sn · ' + hata + ' hata · ' + skor + ' puan'; if (api.sound) api.sound('win'); api.submitScore(skor);
+        if (window.Seri) { Seri.kaydet('sudoku', N, { ok: true, b: z, max: true }); istCiz(); } }
       sakla(); ciz();
     }
     const kl = e => { if (e.key >= '1' && e.key <= '9') gir(+e.key); else if (e.key === 'Backspace' || e.key === 'Delete' || e.key === '0') gir(0);

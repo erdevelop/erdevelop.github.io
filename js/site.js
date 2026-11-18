@@ -139,7 +139,7 @@ html[data-mode=light] #er-ara .bx{background:#fff;color:#1a2233;border-color:rgb
     b.className = (mb ? mb.className : 'tb') + ' er-ara-btn'; b.title = 'Sitede ara (Ctrl+K)'; b.setAttribute('aria-label', 'Sitede ara');
     b.innerHTML = '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" style="vertical-align:-2px"><circle cx="11" cy="11" r="7"/><path d="m20 20-3.5-3.5"/></svg>';
     b.onclick = () => ac();
-    if (mb && mb.parentNode && bar.contains(mb)) mb.parentNode.insertBefore(b, mb); else { const w = bar.querySelector('.wrap') || bar; w.appendChild(b); }
+    if (mb && mb.parentNode && bar.contains(mb)) mb.parentNode.insertBefore(b, mb); else { const w = bar.querySelector('.top-actions') || bar.querySelector('.wrap') || bar; w.appendChild(b); }
   }
   if (D.readyState === 'loading') D.addEventListener('DOMContentLoaded', dugme); else dugme();
 

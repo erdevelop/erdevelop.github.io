@@ -61,12 +61,16 @@ registerGame({
       const skor = tam ? Math.max(200, 1000 - sn * 3) : fark <= 9 ? Math.max(50, 500 - fark * 50) : 0;
       msg.textContent = tam ? 'Tam isabet! 🎯 ' + sn + ' sn · ' + skor + ' puan' : 'En yakın: ' + en + ' (fark ' + fark + ') · ' + skor + ' puan';
       if (api.sound) api.sound(tam ? 'win' : 'tap'); if (skor) api.submitScore(skor);
+      if (window.Seri) { Seri.kaydet('birislem', N, { ok: tam, b: tam ? (sn < 60 ? 0 : sn < 180 ? 1 : sn < 600 ? 2 : 3) : 'x', min: true }); istCiz(); }
       const c = E('div', { style: { marginTop: '8px', textAlign: 'center', fontSize: '14px', color: 'var(--muted)' } }, 'Örnek çözüm: ' + P.cozum.join(' · ')); msg.after(c);
     }
     const geri = E('button', { class: 'g-btn ghost' }, '↶ Geri al'); geri.onclick = () => { if (bitti || !gecmis.length) return; kartlar = gecmis.pop().onceki; sec = null; op = null; ciz(); };
     const sif = E('button', { class: 'g-btn ghost' }, '↺ Baştan'); sif.onclick = () => { if (!bitti) yeni(); };
     const pes = E('button', { class: 'g-btn ghost' }, 'Bitir / çözümü gör'); pes.onclick = () => { if (!bitti) { yakin(); bitir(false); } };
     alt.append(geri, sif, pes);
+    const ist = E('div'); root.append(ist);
+    function istCiz() { ist.innerHTML = ''; if (window.Seri) ist.append(Seri.panel('birislem', { baslik: 'Bir İşlem · istatistik', etiketler: ['< 1 dk', '1–3 dk', '3–10 dk', '10+ dk'], dagBaslik: 'Tam isabet süresi', xEtiket: 'Ulaşamadı', api })); }
+    if (window.Seri) { const o = Seri.ozet('birislem'); if (o.bugun) istCiz(); else { const b = E('button', { class: 'g-btn ghost', style: { display: 'block', margin: '12px auto 0' } }, '📊 İstatistik ve seri' + (o.seri ? ' · 🔥 ' + o.seri : '')); b.onclick = () => istCiz(); ist.append(b); } }
     msg.textContent = 'Bir sayı seç, işlem seç, ikinci sayıyı seç. Sonuç yeni kart olur. Her sayı bir kez kullanılır.';
     yeni();
   }

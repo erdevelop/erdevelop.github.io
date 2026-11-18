@@ -74,6 +74,11 @@
       return okCat && okQ;
     });
     $('#emptyState').hidden = list.length>0;
+    function seriRozet(g){ if(g.category!=='Günlük'||!window.Seri) return '';
+      const z=[g.id].concat(g.id==='gunlukkelime'?['gunlukkelime-en']:[]).map(id=>Seri.ozet(id));
+      const seri=Math.max(...z.map(x=>x.seri)), bugun=z.some(x=>x.bugun);
+      if(bugun) return seri? '<span class="card-seri">🔥 '+seri+'</span>':'';
+      return '<span class="card-seri bekle">'+(seri?'🔥 '+seri+' · ':'')+'bugün çöz</span>'; }
     list.forEach((g,i)=>{
       const card = document.createElement('button');
       card.className='card card-in';
@@ -83,7 +88,7 @@
         '<div class="card-icon">'+iconMarkup(g)+'</div>'+
         '<div><div class="card-title">'+g.title+'</div>'+
         '<div class="card-cat">'+g.category+'</div></div>'+
-        (best? '<span class="card-best">★ '+best+'</span>':'');
+        (best? '<span class="card-best">★ '+best+'</span>':'')+seriRozet(g);
       card.onclick = ()=> openGame(g);
       grid.append(card);
     });

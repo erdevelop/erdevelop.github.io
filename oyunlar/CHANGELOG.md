@@ -38,3 +38,9 @@
 - +1 oyun: Sıralı Dokun (Schulte tablosu — dikkat/hız)
 - Toplam 23 oyun; duman testi 23/23 hatasız
 - Güncel paket (oyun-bahcesi.zip) teslim edildi
+
+## Günlük seri ve İngilizce kelime (18.11.2026)
+- Günlük Kelime, Bir İşlem ve Günlük Sudoku için seri ve istatistik (assets/seri.js): oynanan gün, çözme oranı, güncel ve en uzun seri, son 14 gün şeridi, dağılım grafiği, yeni bulmacaya geri sayım
+- Oyun kartlarında 🔥 seri rozeti; bugün oynanmadıysa "bugün çöz"
+- Günlük Kelime: İngilizce mod (İngilizce Kulübü listelerinden 198 kelime), 3. denemeden sonra Türkçe anlam ipucu, bitince anlam, örnek cümle, dinleme ve kulübe bağlantı; ?kelime=en ile doğrudan açılır
+- Dar ekranda üst çubuk taşması giderildi; sw.js ob-v5
