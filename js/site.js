@@ -134,7 +134,7 @@ html[data-mode=light] #er-ara .bx{background:#fff;color:#1a2233;border-color:rgb
     const mb = D.getElementById('modeBtn'), bar = D.querySelector('.topbar');
     if (!bar) return;
     /* dar ekranda üst çubuk taşmasın: yol bilgisi kısalır, düğmeler sığar */
-    if (!D.getElementById('er-ust-css')) { const st = D.createElement('style'); st.id = 'er-ust-css'; st.textContent = '.topbar .crumb{min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;flex:0 1 auto}.topbar .brand{flex-shrink:0}.topbar .tb{flex-shrink:0}@media (max-width:420px){.topbar .wrap{gap:8px}.topbar .tb{padding-left:8px;padding-right:8px}}'; D.head.appendChild(st); }
+    if (!D.getElementById('er-ust-css')) { const st = D.createElement('style'); st.id = 'er-ust-css'; st.textContent = '.topbar .crumb{min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;flex:0 1 auto}.topbar .brand{flex-shrink:0}.topbar .tb{flex-shrink:0}@media (max-width:420px){.topbar .wrap{gap:6px}.topbar .crumb{display:none}.topbar .tb{padding-left:7px;padding-right:7px}.topbar .brand~.sp~a.tb[href="./"],.topbar .brand~.sp~a.tb[href="/"],.topbar .brand~.sp~a.tb[href="../"]{display:none}}'; D.head.appendChild(st); }
     const b = D.createElement('button'); b.type = 'button';
     b.className = (mb ? mb.className : 'tb') + ' er-ara-btn'; b.title = 'Sitede ara (Ctrl+K)'; b.setAttribute('aria-label', 'Sitede ara');
     b.innerHTML = '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" style="vertical-align:-2px"><circle cx="11" cy="11" r="7"/><path d="m20 20-3.5-3.5"/></svg>';
