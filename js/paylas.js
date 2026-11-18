@@ -39,7 +39,13 @@
       ['Çelik takviye profili bul', 'Find a steel reinforcement', () => { const q = n('p-q') * n('p-b') / 1000, L = n('p-l'), Ia = n('p-i') || 0, req = 5 * q * Math.pow(L, 4) / (384 * 70000 * lim(L)) / 1e4; return '/hesapla/celik-kutu-profil-tablosu.html' + qs({ 't-imin': isFinite(req) ? Math.max(0, Math.ceil((req - Ia) / 3)) : '' }); }]],
     '/hesapla/civata-dubel-kapasite.html': [['Köşe kaynağı', 'Fillet weld', () => 'kaynak-dikisi-hesaplama.html']],
     '/hesapla/sac-profil-agirlik.html': [['Boya sarfiyatı', 'Paint consumption', () => 'boya-sarfiyat-hesaplama.html']],
-    '/hesapla/cephe-performans-siniflari.html': [['Rüzgâr yükünü hesapla', 'Calculate wind load', () => '/kesif/ruzgar.html']]
+    '/hesapla/cephe-performans-siniflari.html': [['Rüzgâr yükünü hesapla', 'Calculate wind load', () => '/kesif/ruzgar.html']],
+    '/hesapla/kayit-transom-hesaplama.html': [
+      ['Dikme sehimi', 'Mullion deflection', () => '/kesif/sehim.html' + qs({ b: n('k-l'), w: n('k-w') })],
+      ['Cam ağırlığı', 'Glass weight', () => '/cam-agirlik.html']],
+    '/hesapla/korkuluk-cami-hesaplama.html': [['Cıvata ve dübel kapasitesi', 'Bolt & anchor capacity', () => 'civata-dubel-kapasite.html'], ['Eğik cam ve kanopi', 'Sloped glass & canopy', () => 'egik-cam-kanopi-hesaplama.html']],
+    '/hesapla/egik-cam-kanopi-hesaplama.html': [['Kar yükü', 'Snow load', () => '/kesif/kar.html'], ['Cam ağırlığı', 'Glass weight', () => '/cam-agirlik.html']],
+    '/hesapla/kat-otelenmesi-cephe-hesaplama.html': [['Derz ve mastik', 'Joint & sealant', () => '/kesif/derz.html'], ['Braket ve dübel', 'Brackets & anchors', () => '/kesif/ankraj.html']]
   };
 
   function uygula() { /* hesapla sayfaları: adresteki değerleri girişlere yaz */
