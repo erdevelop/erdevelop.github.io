@@ -240,6 +240,63 @@
     }
     c.putImageData(A.sgd, w - 1, 0);
   }
+  const monoF = (px, D, w = 400) => `${w} ${px * D}px ui-monospace,Consolas,"Courier New",monospace`;
+  /* ortak ses grafikleri (HUD ve diğer görünümlerin yan panelleri) */
+  function spektrogramKutu(g, A, SES, R, D, sx, sy, sw, sh) {
+    spektrogram(A, SES, R);
+    const op = g.globalCompositeOperation; g.globalCompositeOperation = 'source-over'; g.imageSmoothingEnabled = true;
+    g.drawImage(A.sg, 0, 0, A.sg.width, A.sg.height, sx, sy, sw, sh);
+    g.globalCompositeOperation = op;
+    g.strokeStyle = rgba(R, .25); g.lineWidth = D; g.strokeRect(sx, sy, sw, sh);
+    g.textAlign = 'left'; g.fillStyle = rgba(R, .5); g.font = monoF(8, D); ['10k', '4,5k', '1k', '0'].forEach((f, i) => g.fillText(f, sx + 3 * D, sy + 10 * D + i * (sh - 14 * D) / 3));
+  }
+  function spektrumCubuk(g, A, SES, R, D, dt, fx, by, fw, bh) {
+    const sp = SES.spektrum, nb = 48, bw = fw / nb;
+    if (!A.tepe) A.tepe = new Float32Array(nb);
+    for (let i = 0; i < nb; i++) {
+      let v = 0; if (sp) { const a0 = Math.floor(i / nb * sp.length), a1 = Math.max(a0 + 1, Math.floor((i + 1) / nb * sp.length)); for (let k = a0; k < a1; k++) v = Math.max(v, sp[k]); }
+      A.tepe[i] = Math.max(v, A.tepe[i] - dt * .35);
+      const h = Math.max(1.5 * D, v * bh), x = fx + i * bw;
+      const gr = g.createLinearGradient(0, by + bh, 0, by); gr.addColorStop(0, rgba(R, .35)); gr.addColorStop(1, rgba(R, .95));
+      g.fillStyle = gr; g.fillRect(x + bw * .15, by + bh - h, bw * .7, h);
+      g.fillStyle = rgba([235, 245, 255], .8); g.fillRect(x + bw * .15, by + bh - A.tepe[i] * bh - 1.5 * D, bw * .7, 1.5 * D);
+    }
+    g.strokeStyle = rgba(R, .2); g.lineWidth = D; g.beginPath(); g.moveTo(fx, by + bh + .5); g.lineTo(fx + fw, by + bh + .5); g.stroke();
+  }
+  function dalgaFormu(g, SES, R, D, fx, wy, fw, wh) {
+    const my = wy + wh / 2, dl = SES.dalga;
+    g.strokeStyle = rgba(R, .2); g.lineWidth = D; g.beginPath(); g.moveTo(fx, my); g.lineTo(fx + fw, my); g.stroke();
+    g.strokeStyle = rgba(R, .25); g.strokeRect(fx, wy, fw, wh);
+    /* sıfır geçişine hizalanır ki dalga titremesin */
+    let bas = 0; if (dl) for (let i = 1; i < dl.length / 2; i++) if (dl[i - 1] <= 0 && dl[i] > 0) { bas = i; break; }
+    const n = dl ? Math.min(dl.length - bas, 120) : 120;
+    g.beginPath();
+    for (let i = 0; i < n; i++) { const v = dl ? clamp(dl[bas + i], -1, 1) : 0, x = fx + i / (n - 1) * fw, y = my - v * wh * .46; i ? g.lineTo(x, y) : g.moveTo(x, y); }
+    g.strokeStyle = rgba([80, 240, 160], .95); g.lineWidth = 1.6 * D; g.shadowColor = rgba([80, 240, 160], .8); g.shadowBlur = 6 * D; g.stroke(); g.shadowBlur = 0;
+  }
+  /* HUD dışındaki görünümler için yan ses panelleri: sahnenin üstüne çizilir */
+  const PANEL = { renk: [86, 214, 255] };
+  function sesPanelleri(cv, S, SES, dt) {
+    const g = cv.getContext('2d'), D = Math.min(2, window.devicePixelRatio || 1), W = cv.width, H = cv.height;
+    const px = W * .04, pw = Math.min(W * .19, (W - 700 * D) / 2 - px - 8 * D);
+    if (W / D < 900 || pw < 170 * D || H / D < 480) return false;
+    const R = PANEL.renk; renkYay(R, durumRengi(S, window.ZEKI_TEMA || [86, 214, 255]), dt);
+    const py = H * .16, ph = H * .62, qx = W - px - pw, A = PANEL;
+    g.save(); g.setTransform(1, 0, 0, 1, 0, 0); g.globalAlpha = 1; g.shadowBlur = 0; g.globalCompositeOperation = 'source-over'; g.textBaseline = 'alphabetic';
+    for (const x of [px, qx]) { g.fillStyle = 'rgba(6,10,18,.55)'; g.strokeStyle = rgba(R, .3); g.lineWidth = D; g.beginPath(); g.roundRect ? g.roundRect(x, py, pw, ph, 12 * D) : g.rect(x, py, pw, ph); g.fill(); g.stroke(); }
+    const ic = 12 * D, bas = (t, x, y, sag) => { g.textAlign = 'left'; g.fillStyle = rgba(R, .8); g.font = monoF(10, D, 600); g.fillText(t, x, y); if (sag) { g.textAlign = 'right'; g.fillStyle = rgba(R, .45); g.font = monoF(8, D); g.fillText(sag, x + pw - 2 * ic, y); g.textAlign = 'left'; } };
+    /* sol: spektrogram */
+    bas('SPEKTROGRAM', px + ic, py + 22 * D, SES.spektrum ? 'ZAMAN →' : 'MİKROFON KAPALI');
+    spektrogramKutu(g, A, SES, R, D, px + ic, py + 32 * D, pw - 2 * ic, ph - 32 * D - ic);
+    /* sağ: spektrum + dalga formu */
+    const ust = py + 32 * D, ic2 = ph - 32 * D - ic, fh = ic2 * .56;
+    bas('SPEKTRUM', qx + ic, py + 22 * D, '0 – 12 kHz');
+    spektrumCubuk(g, A, SES, R, D, dt, qx + ic, ust, pw - 2 * ic, fh);
+    const wy = ust + fh + 30 * D; bas('DALGA FORMU', qx + ic, wy - 8 * D, Math.round(Math.max(0, (SES.db || -100) + 100)) + ' dB');
+    dalgaFormu(g, SES, R, D, qx + ic, wy, pw - 2 * ic, py + ph - ic - wy);
+    g.restore();
+    return true;
+  }
   function hud(cv) {
     const g = cv.getContext('2d'), A = { t: 0, bakX: 0, bakY: 0, seviye: 0, enerji: .7, irkil: 0, zarf: 0, dus: 0, din: 0, vurus: 0, renk: [90, 200, 255], gecmis: new Float32Array(240), gi: 0, olay: [], radar: 0 };
     const mono = (px, D, w = 400) => `${w} ${px * D}px ui-monospace,Consolas,"Courier New",monospace`;
@@ -304,12 +361,7 @@
         if (sh > 40 * D) {
           g.fillStyle = rgba(R, .7); g.font = mono(10, D); g.fillText('SPEKTROGRAM', sx, sy - 8 * D);
           g.textAlign = 'right'; g.fillStyle = rgba(R, .45); g.fillText(SES.spektrum ? 'ZAMAN →' : 'MİKROFON KAPALI', sx + sw, sy - 8 * D); g.textAlign = 'left';
-          spektrogram(A, SES, R);
-          g.globalCompositeOperation = 'source-over'; g.imageSmoothingEnabled = true;
-          g.drawImage(A.sg, 0, 0, A.sg.width, A.sg.height, sx, sy, sw, sh);
-          g.globalCompositeOperation = 'lighter';
-          g.strokeStyle = rgba(R, .25); g.lineWidth = D; g.strokeRect(sx, sy, sw, sh);
-          g.fillStyle = rgba(R, .45); g.font = mono(8, D); ['10k', '4,5k', '1k', '0'].forEach((f, i) => g.fillText(f, sx + 3 * D, sy + 10 * D + i * (sh - 14 * D) / 3));
+          spektrogramKutu(g, A, SES, R, D, sx, sy, sw, sh);
         }
         /* sağ panel: radar ve geçmiş */
         const qx = W - W * .06 - pw, qy = py; g.strokeStyle = rgba(R, .35); g.strokeRect(qx, qy, pw, ph);
@@ -331,28 +383,10 @@
           const fy = gy + 26 * D, fh = kalan * .5, wy = fy + fh + 24 * D, wh = qy + ph - 14 * D - wy, sp = SES.spektrum;
           g.fillStyle = rgba(R, .7); g.font = mono(10, D); g.fillText('SPEKTRUM', fx, fy + 4 * D);
           g.textAlign = 'right'; g.fillStyle = rgba(R, .45); g.font = mono(8, D); g.fillText('0 – 12 kHz', fx + fw, fy + 4 * D); g.textAlign = 'left';
-          const by = fy + 12 * D, bh = fh - 12 * D, nb = 48, bw = fw / nb;
-          if (!A.tepe) A.tepe = new Float32Array(nb);
-          for (let i = 0; i < nb; i++) {
-            let v = 0; if (sp) { const a0 = Math.floor(i / nb * sp.length), a1 = Math.max(a0 + 1, Math.floor((i + 1) / nb * sp.length)); for (let k = a0; k < a1; k++) v = Math.max(v, sp[k]); }
-            A.tepe[i] = Math.max(v, A.tepe[i] - dt * .35);
-            const h = Math.max(1.5 * D, v * bh), x = fx + i * bw;
-            const gr = g.createLinearGradient(0, by + bh, 0, by); gr.addColorStop(0, rgba(R, .35)); gr.addColorStop(1, rgba(R, .95));
-            g.fillStyle = gr; g.fillRect(x + bw * .15, by + bh - h, bw * .7, h);
-            g.fillStyle = rgba([235, 245, 255], .8); g.fillRect(x + bw * .15, by + bh - A.tepe[i] * bh - 1.5 * D, bw * .7, 1.5 * D);
-          }
-          g.strokeStyle = rgba(R, .2); g.lineWidth = D; g.beginPath(); g.moveTo(fx, by + bh + .5); g.lineTo(fx + fw, by + bh + .5); g.stroke();
+          spektrumCubuk(g, A, SES, R, D, dt, fx, fy + 12 * D, fw, fh - 12 * D);
           if (wh > 16 * D) {
             g.fillStyle = rgba(R, .7); g.font = mono(10, D); g.fillText('DALGA FORMU', fx, wy - 8 * D);
-            const my = wy + wh / 2, dl = SES.dalga;
-            g.strokeStyle = rgba(R, .2); g.beginPath(); g.moveTo(fx, my); g.lineTo(fx + fw, my); g.stroke();
-            g.strokeStyle = rgba(R, .25); g.strokeRect(fx, wy, fw, wh);
-            /* dolgu + çizgi; sıfır geçişine hizalanır ki dalga titremesin */
-            let bas = 0; if (dl) for (let i = 1; i < dl.length / 2; i++) if (dl[i - 1] <= 0 && dl[i] > 0) { bas = i; break; }
-            const n = dl ? Math.min(dl.length - bas, 120) : 120;
-            g.beginPath();
-            for (let i = 0; i < n; i++) { const v = dl ? clamp(dl[bas + i], -1, 1) : 0, x = fx + i / (n - 1) * fw, y = my - v * wh * .46; i ? g.lineTo(x, y) : g.moveTo(x, y); }
-            g.strokeStyle = rgba([80, 240, 160], .95); g.lineWidth = 1.6 * D; g.shadowColor = rgba([80, 240, 160], .8); g.shadowBlur = 6 * D; g.stroke(); g.shadowBlur = 0;
+            dalgaFormu(g, SES, R, D, fx, wy, fw, wh);
           }
         }
       } else {
@@ -483,5 +517,5 @@
     return { ciz };
   }
 
-  window.Gorunumler = { bulut, kure, hud, dalgaYuz, galaksi, yuzum: cv => bulut(cv, true) };
+  window.Gorunumler = { bulut, kure, hud, dalgaYuz, galaksi, yuzum: cv => bulut(cv, true), sesPanelleri };
 })();

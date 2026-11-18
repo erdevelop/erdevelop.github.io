@@ -5,7 +5,7 @@
   const LS = { get: k => { try { return localStorage.getItem(k); } catch (e) { return null; } }, set: (k, v) => { try { localStorage.setItem(k, v); } catch (e) { } } };
   const clamp = (v, a, b) => Math.max(a, Math.min(b, v)), sec = a => a[Math.floor(Math.random() * a.length)];
   const esc = s => String(s).replace(/[&<>"]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
-  const AYAR = Object.assign({ tanima: 'otomatik', whisper: 'Xenova/whisper-small', surekli: true, sesTani: false, yorum: true, ses: '', perde: 1.15, hiz: 1.05, beyin: false, sessiz: false, gorunum: 'robot', kisilik: 'neseli', tema: 'otomatik', efekt: true, esle: false, kamera: false, saat: false, uyanik: false }, JSON.parse(LS.get('zeki:ayar') || '{}'));
+  const AYAR = Object.assign({ tanima: 'otomatik', whisper: 'Xenova/whisper-small', surekli: true, sesTani: false, yorum: true, ses: '', perde: 1.15, hiz: 1.05, beyin: false, sessiz: false, gorunum: 'robot', kisilik: 'neseli', tema: 'otomatik', efekt: true, esle: false, kamera: false, saat: false, uyanik: false, sesPanel: true }, JSON.parse(LS.get('zeki:ayar') || '{}'));
   const ayarKaydet = () => LS.set('zeki:ayar', JSON.stringify(AYAR));
 
   /* ---------------- durum ---------------- */
@@ -29,6 +29,7 @@
     const dt = Math.min(.05, (now - son) / 1000); son = now;
     sesOku(dt); davranis(now, dt);
     yz = yuz.ciz(S, SES, dt);
+    if (AYAR.sesPanel && AYAR.gorunum !== 'hud' && window.Gorunumler && Gorunumler.sesPanelleri) Gorunumler.sesPanelleri($('sahne'), S, SES, dt);
     requestAnimationFrame(dongu);
   }
   /* kendiliğinden davranışlar */
@@ -362,6 +363,7 @@
     $('aEfekt').checked = AYAR.efekt; $('aEfekt').onchange = () => { AYAR.efekt = $('aEfekt').checked; ayarKaydet(); efekt('bipbop'); };
     $('aEsle').checked = AYAR.esle; $('aEsle').onchange = () => { AYAR.esle = $('aEsle').checked; ayarKaydet(); };
     $('aSaat').checked = AYAR.saat; $('saat').hidden = !AYAR.saat; ZekiArayuz.saatCiz(); $('aSaat').onchange = () => { AYAR.saat = $('aSaat').checked; ayarKaydet(); $('saat').hidden = !AYAR.saat; ZekiArayuz.saatCiz(); };
+    $('aSesPanel').checked = AYAR.sesPanel; $('aSesPanel').onchange = () => { AYAR.sesPanel = $('aSesPanel').checked; ayarKaydet(); };
     $('aUyanik').checked = AYAR.uyanik; $('aUyanik').onchange = () => { AYAR.uyanik = $('aUyanik').checked; ayarKaydet(); ZekiArayuz.uyanikTut(AYAR.uyanik); };
     $('tamEkran').onclick = () => ZekiArayuz.tamEkran();
     const kb = t => $('kamBilgi').textContent = t;
