@@ -76,7 +76,7 @@ erDil.kalip({
 "Tasarım ×{n}": "Design ×{n}",
 "Yöntem: TS EN {n}{n}{n} (Eurocode {n}, Kısım {n}{n}) önerilen değerleri · TS {n} karşılaştırması · Ön boyutlandırma içindir, statik hesabın yerini tutmaz.": "Method: TS EN {n}{n}{n} (Eurocode {n}, Part {n}{n}) recommended values · comparison with TS {n} · For preliminary sizing; does not replace the structural calculation.",
 "bina tepesi {n} m": "building top {n} m",
-"kullanılır (TS {n}’deki {n} kN/m² temel basınca karşılık gelir). Proje şartnamesinde başka bir değer varsa onu gir.": "is used (corresponds to the {n} kN/m² basic pressure in TS {n}). If the project specification gives another value, enter it.",
+"kullanılır (TS {n}’deki {n} kN/m² temel basınca karşılık gelir). Proje şartnamesinde başka bir değer varsa onu gir.": "is used (corresponds to the {2} kN/m² basic pressure in TS {1}). If the project specification gives another value, enter it.",
 "m/s · {n} km/sa": "m/s · {n} km/h",
 "tasarım ×{n} = +{x} · {x} kg/m²": "design ×{n} = +{x} · {x} kg/m²",
 "tasarım ×{n} = {n} kN/m² · {n} kg/m²": "design ×{n} = {n} kN/m² · {n} kg/m²",
