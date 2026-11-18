@@ -122,6 +122,7 @@ svg.scene g[id^="g-"]{filter:drop-shadow(0 1.5px 1px rgba(40,60,50,.22))}
 <div id="sea" class="eff" style="margin:-2px 2px 10px"></div>
 <div id="strk" class="eff" style="margin:-2px 2px 10px;display:none;color:var(--acc2);font-weight:700"></div>
 <div id="evt" class="card hide" style="margin-bottom:10px"></div>
+<div id="draidc" class="card hide" style="margin-bottom:10px;box-shadow:inset 0 0 0 2px var(--lack)"></div>
 <div class="stage"><b id="stn">Köy</b><div class="bar"><i id="stb"></i></div><small id="sth"></small></div>
 <div class="res">
  <div class="chip"><b><i class="ic w"></i><span id="rw">0</span></b><small id="rwc"></small><em id="rwr"></em></div>
@@ -178,7 +179,7 @@ svg.scene g[id^="g-"]{filter:drop-shadow(0 1.5px 1px rgba(40,60,50,.22))}
 <div class="pane" id="p-b"><h2>Günlük görevler <small id="dqt" style="font-weight:500;color:var(--mute);font-size:12px"></small></h2><section id="dq"></section><h2>Görevler</h2><section id="quests"></section>
 <h2>Binalar</h2><section id="list"></section></div>
 <div class="pane hide" id="p-o"><h2>Ordu</h2><p class="eff" id="ast"></p><div class="btns wrapb" id="am-a" style="margin-bottom:10px"></div><section id="army"></section><div id="scout" class="hide"><h2>Keşif ve harabeler</h2><section id="scl"></section></div><h2>Askeri eğitim</h2><section id="list3"></section><h2>Teçhizat</h2><section id="list5"></section><h2>Kışlalar</h2><section id="list2"></section></div>
-<div class="pane hide" id="p-s"><h2>Savaş</h2><section id="war"></section><div id="rep" class="card hide" style="margin-top:10px"></div><h2>Dünya haritası</h2><p class="eff">Bölgeleri sırayla fethet. Savaştaki asker seçimin kullanılır. Fethedilen bölge kalıcı kaynak üretir.</p><div id="wmap"></div><section id="terr"></section></div>
+<div class="pane hide" id="p-s"><h2>Savaş</h2><section id="war"></section><div id="rep" class="card hide" style="margin-top:10px"></div><h2>Savunma</h2><article class="card"><p class="eff" id="defi"></p></article><div id="drep" class="card hide" style="margin-top:10px"></div><h2>Dünya haritası</h2><p class="eff">Bölgeleri sırayla fethet. Savaştaki asker seçimin kullanılır. Fethedilen bölge kalıcı kaynak üretir.</p><div id="wmap"></div><section id="terr"></section></div>
 <div class="pane hide" id="p-t"><h2>Tüccar</h2><section id="trade"></section><h2>Hazine</h2><article class="card"><p class="eff" id="bnk" style="margin:0 0 8px"></p><div class="btns wrapb" id="bnkv"><button class="sm g" data-bd=".25">%25 yatır</button><button class="sm g" data-bd=".5">%50 yatır</button><button class="sm g" data-bd="1">Hepsini yatır</button><button class="sm" data-bw="1">Çek</button></div></article></div>
 <div class="pane hide" id="p-r"><h2>Üniversite</h2><p class="eff" id="rn"></p><section id="list4"></section></div>
 <div class="pane hide" id="p-l"><h2>Lord gücü</h2><article class="card"><div class="top"><h3 id="lt"></h3><span class="lv" id="ls"></span></div><div class="prog"><i id="lg"></i></div><p class="eff" id="ln" style="margin-top:8px"></p><div class="rt"><table id="lr"></table></div></article>
@@ -352,7 +353,7 @@ function effText(k,l){
 }
 function render(){
  const L=S.lv,p=prod(L),c=cap(L),st=stg(L),now=Date.now();
- $('m4').classList.toggle('hide',L.main<4);$('m7').classList.toggle('hide',L.main<7);$('m10').classList.toggle('hide',L.main<10);renderQ();renderMil();renderWar();renderTrade();renderScout();renderLord();renderStats();renderWorkers();renderTerr();renderSkills();renderEvt();renderDq();renderAch();renderLb();renderSea();renderPop();renderBank();renderWonders();renderChart();
+ $('m4').classList.toggle('hide',L.main<4);$('m7').classList.toggle('hide',L.main<7);$('m10').classList.toggle('hide',L.main<10);renderQ();renderMil();renderWar();renderTrade();renderScout();renderLord();renderStats();renderWorkers();renderTerr();renderSkills();renderEvt();renderDq();renderAch();renderLb();renderSea();renderPop();renderBank();renderWonders();renderChart();renderRaidAlert();renderDefense();
  $('rw').textContent=fmt(S.w);$('rs').textContent=fmt(S.s);
  $('rwc').textContent='/ '+fmt(c);$('rsc').textContent='/ '+fmt(c);
  $('rwr').textContent='+'+p.w.toFixed(1)+' /sn';$('rsr').textContent='+'+p.s.toFixed(1)+' /sn';
@@ -768,10 +769,54 @@ function renderLb(){
  $('lbr').textContent=lb.length?'Tur rekorların: '+lb.map(x=>fmt(x.s)+' (+'+x.cr+' taç)').join(' · '):'Henüz tamamlanmış tur yok.';
 }
 
+// ---- Savunma savaşları: düşman baskınları ----
+var RAIDN=['Haydut çetesi','Kuzey akıncıları','Dağ barbarları','Kızıl haydutlar','Gezgin yağmacılar','Kurt sürüsü klanı'];
+function raidName(){return RAIDN[(Math.random()*RAIDN.length)|0]}
+function raidActive(){return stg(S.lv)>=2&&((S.lv.inf||0)||(S.lv.spear||0)||(S.lv.arch||0)||(S.lv.cav||0))}
+function raidInterval(){return (7+Math.random()*6)*60000}
+function raidThreat(){return Math.max(1,Math.round((S.wave||1)*0.6+(S.lv.main||1)*0.5+Object.keys(S.ter||{}).length))}
+function raidForce(){const P=Object.keys(U).reduce((a,k)=>a+(S.ar[k]||0),0),w=raidThreat(),base=enemy(w),bt=tot(base)||1;
+ const target=Math.max(4,Math.round((P*0.7+w*3)*(0.8+Math.random()*0.4))),scale=target/bt,E={};
+ for(const k in base)E[k]=Math.max(1,Math.round(base[k]*scale));return E}
+function defend(E,auto){
+ const A={};for(const k in U){const n=S.ar[k]||0;if(n>0)A[k]=n}
+ const tv=Math.min(.4,(S.lv.tower||0)*0.05),E2={};for(const k in E)E2[k]=E[k]*(1-tv);
+ const cm=(1+.02*(S.cr||0))*(1+.04*S.sk.war)*(1+.02*(S.rel||0))*(1+(S.won&&S.won.zafer?.1:0));
+ mA=(1+.08*S.lv.tatk)*(1+vb())*cm;hA=(1+.08*S.lv.tdef)*(1+vb())*cm*(1+(S.lv.wall||0)*0.12);
+ const w=raidThreat();mB=hB=(1+.04*(w-1));
+ const lg={},fr=fight(Object.assign({},A),Object.assign({},E2),lg),a=fr[0],b=fr[1],win=tot(b)<.5;
+ const A1={},lost=[];let dd=0;for(const k in U){const n=A[k]||0,m=n?(a[k]>=.5?Math.round(a[k]):0):0;if(n>m){lost.push((n-m)+' '+U[k].n);dd+=n-m}S.ar[k]=(S.ar[k]||0)-n+m;if(n)A1[k]=m}
+ const E1={};let esurv=0;for(const k in E){E1[k]=b[k]>=.5?Math.round(b[k]):0;esurv+=E1[k]}
+ S.st.dead+=dd;S.val+=dd;S.st.kill+=Math.max(0,tot(E)-esurv);
+ let t,plunder=null,gg=0;
+ if(win){gg=Math.round(6+w*3);S.g+=gg;S.st.g+=gg;S.st.rd=(S.st.rd||0)+1;t='Baskın püskürtüldü! +'+fmt(gg)+' altın'+(lost.length?'. Kayıp: '+lost.join(', '):'')}
+ else{const pct=Math.max(5,25-(S.lv.wall||0)*4)/100,st=[];['w','s','g'].forEach(r=>{const amt=Math.floor((S[r]||0)*pct);if(amt>0){S[r]-=amt;st.push(fmt(amt)+' '+({w:'odun',s:'taş',g:'altın'}[r]))}});S.st.rl=(S.st.rl||0)+1;plunder=st;t='Köy yağmalandı! Kaybettiğin: '+(st.join(', ')||'yok')+(lost.length?'. Asker kaybı: '+lost.join(', '):'')+'. Surları ve orduyu güçlendir.'}
+ S.draidRep={id:Date.now(),w:w,nm:raidName(),win:win,A0:A,E0:E,A1:A1,E1:E1,rounds:lg.rounds,mx:lg.mx,loot:win?[0,0,0,gg]:null,def:true,plunder:plunder};
+ S.lr2=t;S.draid=null;S.raidT=Date.now()+raidInterval();
+ if(!auto){toast(win?'Baskın püskürtüldü!':'Köy yağmalandı!');if(typeof sfx==='function')sfx(win?'win':'lose');save();render()}
+ return win}
+function raidTick(){const now=Date.now();
+ if(!raidActive()){S.raidT=now+raidInterval();return}
+ if(!S.raidT){S.raidT=now+raidInterval();return}
+ if(S.draid){if(now>=S.draid.dl)defend(S.draid.E,false);return}
+ if(now>=S.raidT){S.raidT=now;const warn=60000+(S.lv.tower||0)*15000;S.draid={E:raidForce(),dl:now+warn,id:now}}}
+var lastRaid=0;
+function renderRaidAlert(){const el=$('draidc');if(!el)return;const R=S.draid;el.classList.toggle('hide',!R);if(!R){lastRaid=0;return}
+ const E=R.E,now=Date.now(),rem=Math.max(0,(R.dl-now)/1000);
+ if(lastRaid!==R.id){el.innerHTML='<div class="top"><h3>⚔️ Baskın geliyor!</h3><span class="lv" id="draidr"></span></div><p class="eff" id="draide"></p><div class="foot"><span class="eff" id="draidd"></span><button id="draidb">Şimdi savun</button></div>';lastRaid=R.id;$('draidb').onclick=()=>{if(S.draid)defend(S.draid.E,false)}}
+ $('draidr').textContent=tm(rem);
+ $('draide').textContent='Düşman: '+Object.entries(E).map(([k,n])=>Math.round(n)+' '+U[k].n).join(', ')+'. Ordun ve surların köyü savunacak.';
+ $('draidd').textContent='Hazırlan: asker eğit, surları yükselt. Süre bitince otomatik savunulur.';}
+function renderDefense(){const el=$('defi');if(!el)return;const P=Object.keys(U).reduce((a,k)=>a+(S.ar[k]||0),0);
+ const wallB=Math.round((S.lv.wall||0)*12),towerB=Math.round(Math.min(.4,(S.lv.tower||0)*0.05)*100),plun=Math.max(5,25-(S.lv.wall||0)*4);
+ const nx=raidActive()?(S.raidT?Math.max(0,(S.raidT-Date.now())/1000):0):null;
+ el.innerHTML='Garnizon: <b>'+P+'</b> asker · Surlar: savunan cana <b>+%'+wallB+'</b>, yağma <b>%'+plun+'</b>a iner · Gözcü kulesi: ilk ok yağmuru <b>-%'+towerB+'</b> düşman + erken uyarı.'+(nx!=null?'<br>Sonraki baskın: '+(nx>0?'~'+tm(nx):'yakında'):'<br>Bir kışla kurup asker eğitince baskınlar başlar.')+(S.lr2?'<br>Son: '+S.lr2:'');
+ const dr=$('drep');if(dr){if(S.draidRep){dr.classList.remove('hide');if(dr.dataset.k!==String(S.draidRep.id)){dr.dataset.k=String(S.draidRep.id);dr.innerHTML=(S.draidRep.plunder&&S.draidRep.plunder.length?'<p class="eff" style="color:var(--lack);font-weight:700;margin:0 0 6px">Yağma: '+S.draidRep.plunder.join(', ')+'</p>':'')+repHTML(S.draidRep)}}else dr.classList.add('hide')}}
 // açılış: çevrimdışı ilerleme
 (function(){
  const w0=S.w,s0=S.s,now=Date.now(),gap=now-S.t;
  advance(Math.min(now,S.t+Math.min(72,8+2*S.lv.tower)*36e5));S.t=now;
+ if(raidActive()&&S.raidT&&S.raidT<now){const missed=Math.min(3,1+Math.floor((now-S.raidT)/6e5));let rc=0,rw=0;for(let i=0;i<missed;i++){if(defend(raidForce(),true))rw++;rc++}S.raidT=now+raidInterval();if(rc)setTimeout(()=>toast('Sen yokken '+rc+' baskın: '+rw+' püskürtüldü, '+(rc-rw)+' yağma'),1300)}
  if(gap>60000){const dw=S.w-w0,ds=S.s-s0;if(dw>=1||ds>=1)setTimeout(()=>toast(`Sen yokken: +${fmt(dw)} odun, +${fmt(ds)} taş`),500)}
  lastStage=stg(S.lv);resolveEx();render();save();
 })();
@@ -782,7 +827,7 @@ function bitenler(){if(!bitti.length)return;const m=bitti.splice(0).map(x=>windo
  rozet+=m.length;document.title='('+rozet+') '+T0;
  if(kAyar.bil&&'Notification' in window&&Notification.permission==='granted'){try{navigator.serviceWorker&&navigator.serviceWorker.getRegistration?navigator.serviceWorker.getRegistration().then(r=>r?r.showNotification((EN()?'Little Kingdom':'Küçük Krallık'),{body:m.join(' · '),tag:'krallik',icon:'/favicon.svg'}):new Notification((EN()?'Little Kingdom':'Küçük Krallık'),{body:m.join(' · '),tag:'krallik'})).catch(()=>{}):new Notification((EN()?'Little Kingdom':'Küçük Krallık'),{body:m.join(' · '),tag:'krallik'})}catch(e){}}}
 document.addEventListener('visibilitychange',()=>{if(!document.hidden&&rozet){rozet=0;document.title=T0}});
-setInterval(()=>{advance(Date.now());resolveEx();render();bitenler()},250);
+setInterval(()=>{advance(Date.now());resolveEx();raidTick();render();bitenler()},250);
 setInterval(save,5000);
 addEventListener('pagehide',save);
 document.addEventListener('visibilitychange',()=>{if(document.hidden)save();else{advance(Date.now());resolveEx();render()}});
