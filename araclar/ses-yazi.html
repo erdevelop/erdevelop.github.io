@@ -47,12 +47,13 @@ audio{width:100%;margin-top:10px}
         <div><label for="model" style="margin-top:0" data-en="Model">Model</label><select id="model" data-keep>
           <option value="Xenova/whisper-tiny" data-mb="41" data-en="Fast · tiny (≈ 40 MB)">Hızlı · tiny (≈ 40 MB)</option>
           <option value="Xenova/whisper-base" data-mb="80" selected data-en="Balanced · base (≈ 80 MB)">Dengeli · base (≈ 80 MB)</option>
-          <option value="Xenova/whisper-small" data-mb="250" data-en="Most accurate · small (≈ 250 MB)">En doğru · small (≈ 250 MB)</option></select></div>
+          <option value="Xenova/whisper-small" data-mb="250" data-en="Accurate · small (≈ 250 MB)">Doğru · small (≈ 250 MB)</option>
+          <option value="onnx-community/whisper-large-v3-turbo" data-mb="1400" data-gpu="1" id="turboSec" data-en="Best · large-v3 turbo (≈ 1.4 GB, graphics card)">En iyi · large-v3 turbo (≈ 1,4 GB, ekran kartı)</option></select></div>
         <div><label for="dil" style="margin-top:0" data-en="Spoken language">Konuşma dili</label><select id="dil" data-keep>
           <option value="turkish" data-en="Turkish">Türkçe</option><option value="english" data-en="English">İngilizce</option><option value="german" data-en="German">Almanca</option><option value="french" data-en="French">Fransızca</option><option value="" data-en="Detect automatically">Otomatik bul</option></select></div>
       </div>
       <label class="chk"><input type="checkbox" id="cevir" data-keep> <span data-en="Translate the result into English">Sonucu İngilizceye çevir</span></label>
-      <p class="hint" data-en="For Turkish, &lt;b&gt;small&lt;/b&gt; gives clearly better results; &lt;b&gt;tiny&lt;/b&gt; is mostly suitable for English. On a computer one minute of audio takes roughly 10–60 seconds depending on the model; it is slower on phones.">Türkçe için <b>small</b> belirgin biçimde daha iyi sonuç verir; <b>tiny</b> daha çok İngilizceye uygundur. Bilgisayarda bir dakikalık ses, modele göre kabaca 10–60 saniyede çevrilir; telefonda daha yavaştır.</p>
+      <p class="hint" data-en="For Turkish, &lt;b&gt;small&lt;/b&gt; gives clearly better results; &lt;b&gt;tiny&lt;/b&gt; is mostly suitable for English. For recordings with music, noise or overlapping speech &lt;b&gt;large-v3 turbo&lt;/b&gt; is best (only in browsers with WebGPU; it runs on the graphics card). On a computer one minute of audio takes roughly 10–60 seconds depending on the model; it is slower on phones.">Türkçe için <b>small</b> belirgin biçimde daha iyi sonuç verir; <b>tiny</b> daha çok İngilizceye uygundur. Müzikli, gürültülü ya da üst üste konuşulan kayıtlarda en iyi sonucu <b>large-v3 turbo</b> verir (yalnızca WebGPU destekleyen tarayıcılarda, ekran kartında çalışır). Bilgisayarda bir dakikalık ses, modele göre kabaca 10–60 saniyede çevrilir; telefonda daha yavaştır.</p>
     </div>
     <div class="box" id="yz"></div>
     <div class="box">
@@ -70,6 +71,7 @@ audio{width:100%;margin-top:10px}
     <div class="box" id="sonK" hidden>
       <div style="display:flex;align-items:center;gap:8px"><h3 style="flex:1" data-en="Text">Metin</h3><span class="ph" id="sonBilgi"></span></div>
       <textarea id="sonuc" style="min-height:180px"></textarea>
+      <p class="hint" id="bosUyari" hidden data-en="The model heard this audio as non-speech (music, noise or overlapping voices). Try: the &lt;b&gt;small&lt;/b&gt; or &lt;b&gt;large-v3 turbo&lt;/b&gt; model; setting the spoken language instead of “Detect automatically”; a cleaner source (open the video file itself instead of recording it from the speakers).">Model bu sesi konuşma dışı (müzik, gürültü ya da üst üste sesler) olarak duydu. Şunları dene: <b>small</b> ya da <b>large-v3 turbo</b> modeli; “Otomatik bul” yerine konuşma dilini seçmek; daha temiz bir kaynak (videoyu hoparlörden kaydetmek yerine video dosyasının kendisini açmak).</p>
       <div class="btns"><button class="btn sm" type="button" id="kopya" data-en="Copy">Kopyala</button><button class="btn ghost sm" type="button" id="txt" data-en="Download .txt">.txt indir</button><button class="btn ghost sm" type="button" id="srt" data-en="Download subtitles (.srt)">Altyazı indir (.srt)</button><a class="btn ghost sm" href="kisisel-veri-maskele.html" data-en="Mask personal data →">Kişisel bilgileri maskele →</a></div>
       <h3 style="margin-top:14px" data-en="With timestamps">Zaman damgalı</h3>
       <div class="parcalar" id="parcalar"></div>
@@ -119,22 +121,33 @@ audio{width:100%;margin-top:10px}
 <script src="ortak.js"></script>
 <script src="yz.js"></script>
 <script>
+if (!navigator.gpu) byId('turboSec').remove();
 keepInputs('sesyazi');
 const T = (a, b) => erDil.t(a, b);
 const secili = () => byId('model').value, mbSec = () => +byId('model').selectedOptions[0].dataset.mb;
-const panel = YZ.panel(byId('yz'), { model: secili, mb: mbSec, gorev: 'automatic-speech-recognition', hazir: hazirla });
+const gpuMu = () => !!byId('model').selectedOptions[0].dataset.gpu, cihazSec = () => gpuMu() ? 'webgpu' : undefined;
+const panel = YZ.panel(byId('yz'), { model: secili, mb: mbSec, cihaz: cihazSec, gorev: 'automatic-speech-recognition', hazir: hazirla });
 byId('model').addEventListener('change', () => panel.sifirla());
 let SES = null, KAYNAK = null, SONUC = null;
 const zaman = (s, srt) => { s = Math.max(0, s || 0); const h = Math.floor(s / 3600), m = Math.floor(s / 60) % 60, x = Math.floor(s % 60), ms = Math.round((s % 1) * 1000); return srt ? `${p2(h)}:${p2(m)}:${p2(x)},${String(ms).padStart(3, '0')}` : (h ? h + ':' : '') + p2(m) + ':' + p2(x); };
 function hazirla() { byId('cozumle').disabled = !SES || !panel.hazirMi(); }
 
 /* ---- ses çözme: 16 kHz tek kanal ---- */
+/* ses seviyesi: DC kaymasını al, kısık kayıtları yükselt (konuşma tanıma kısık seste "konuşma yok" sanabiliyor) */
+function duzelt(x) {
+  let ort = 0; for (let i = 0; i < x.length; i++) ort += x[i]; ort /= x.length || 1;
+  let tepe = 0, kare = 0; for (let i = 0; i < x.length; i++) { const v = x[i] - ort; x[i] = v; const a = Math.abs(v); if (a > tepe) tepe = a; kare += v * v; }
+  const rms = Math.sqrt(kare / (x.length || 1)); if (!tepe || rms < 1e-5) return x;
+  const k = Math.min(0.95 / tepe, 0.1 / rms, 30); /* hedef ≈ −20 dBFS, tepe kırpılmaz */
+  if (k > 1.05) for (let i = 0; i < x.length; i++) x[i] *= k;
+  return x;
+}
 async function coz(blob) {
   const ctx = new (window.AudioContext || window.webkitAudioContext)();
   let buf; try { buf = await ctx.decodeAudioData(await blob.arrayBuffer()); } finally { ctx.close && ctx.close(); }
   const off = new OfflineAudioContext(1, Math.max(1, Math.ceil(buf.duration * 16000)), 16000), src = off.createBufferSource();
   src.buffer = buf; src.connect(off.destination); src.start();
-  return { veri: (await off.startRendering()).getChannelData(0), sure: buf.duration };
+  return { veri: duzelt((await off.startRendering()).getChannelData(0)), sure: buf.duration };
 }
 async function yukle(blob, ad) {
   try {
@@ -152,7 +165,7 @@ dropZone(byId('drop'), fs => yukle(fs[0], fs[0].name));
 let MR = null, parca = [], t0 = 0, tik = 0, akis = null, analiz = null;
 byId('kaydet').onclick = async () => {
   if (MR) { MR.stop(); return; }
-  try { akis = await navigator.mediaDevices.getUserMedia({ audio: { echoCancellation: true, noiseSuppression: true } }); }
+  try { akis = await navigator.mediaDevices.getUserMedia({ audio: { echoCancellation: false, noiseSuppression: false, autoGainControl: true } }); }
   catch (e) { toast(T('Mikrofon izni verilmedi', 'Microphone permission was denied')); return; }
   parca = []; MR = new MediaRecorder(akis); MR.ondataavailable = e => e.data.size && parca.push(e.data);
   MR.onstop = () => { clearInterval(tik); akis.getTracks().forEach(t => t.stop()); if (analiz) { analiz.ctx.close(); analiz = null; } byId('nokta').hidden = true; byId('seviye').style.width = '0';
@@ -162,6 +175,15 @@ byId('kaydet').onclick = async () => {
   tik = setInterval(() => { byId('sure').textContent = zaman((Date.now() - t0) / 1000); if (analiz) { analiz.an.getByteTimeDomainData(analiz.d); let m = 0; for (const v of analiz.d) m = Math.max(m, Math.abs(v - 128)); byId('seviye').style.width = Math.min(100, m / 128 * 220) + '%'; } }, 100);
 };
 
+/* Whisper, konuşmayı seçemediği seste "(Konuşma sesleri)", "(Müzik)", "Altyazı M.K." gibi kalıplar uydurur; bunları at */
+const UYDURMA = /^\s*[\[(（][^\])）]*[\])）]\s*$|^\s*(altyazı\s*m\.?\s*k\.?|[iİ]zlediğiniz için teşekkür(ler| ederim)\.?|abone olmayı unutmayın\.?|thanks? (you )?for watching[.!]?|subtitles? by .*)\s*$/i;
+function temizle(r) {
+  const C = (r.chunks || []).filter(c => c.text && c.text.trim() && !UYDURMA.test(c.text));
+  const tekrarsiz = C.filter((c, i) => !(i > 1 && c.text.trim() === C[i - 1].text.trim() && c.text.trim() === C[i - 2].text.trim()));
+  const text = r.chunks && r.chunks.length ? tekrarsiz.map(c => c.text.trim()).join(' ') : (UYDURMA.test(r.text || '') ? '' : (r.text || ''));
+  return Object.assign({}, r, { text, chunks: tekrarsiz });
+}
+
 /* ---- çeviri ---- */
 byId('cozumle').onclick = async () => {
   if (!SES || !panel.hazirMi()) return;
@@ -169,8 +191,9 @@ byId('cozumle').onclick = async () => {
   const sayac = setInterval(() => { byId('ilTxt').textContent = T(`Yazıya çevriliyor… ${zaman((Date.now() - bas) / 1000)} (kayıt ${zaman(KAYNAK.sure)})`, `Converting… ${zaman((Date.now() - bas) / 1000)} (audio ${zaman(KAYNAK.sure)})`); }, 500);
   try {
     const kopya = new Float32Array(SES);
-    SONUC = await YZ.cagir({ tip: 'asr', model: secili(), ses: kopya, dil: byId('dil').value || null, gorev: byId('cevir').checked ? 'translate' : 'transcribe' });
-    byId('sonuc').value = SONUC.text.trim(); byId('sonK').hidden = false;
+    SONUC = temizle(await YZ.cagir({ tip: 'asr', model: secili(), cihaz: cihazSec(), ses: kopya, dil: byId('dil').value || null, gorev: byId('cevir').checked ? 'translate' : 'transcribe' }));
+    byId('sonuc').value = SONUC.text.trim() || T('Konuşma algılanamadı.', 'No speech was detected.'); byId('sonK').hidden = false;
+    byId('bosUyari').hidden = !!SONUC.text.trim();
     byId('sonBilgi').textContent = T(`${zaman(KAYNAK.sure)} ses · ${fmt(SONUC.sure, 0)} sn'de çevrildi`, `${zaman(KAYNAK.sure)} audio · converted in ${fmt(SONUC.sure, 0)} s`);
     byId('parcalar').innerHTML = (SONUC.chunks || []).map((c, i) => `<div data-t="${c.timestamp[0] || 0}"><time>${zaman(c.timestamp[0])}</time><span>${esc(c.text.trim())}</span></div>`).join('');
     byId('ilK').hidden = true; byId('sonK').scrollIntoView({ behavior: 'smooth', block: 'start' });

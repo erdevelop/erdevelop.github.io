@@ -1,7 +1,7 @@
 /* erdevelop · yapay zekâ araçları için ortak istemci (yz-worker.js ile konuşur)
    YZ.cagir({ tip, ... }, { ilerleme(mb, toplamMb), adim(yapilan, toplam) }) → Promise(sonuc)
    YZ.kayitli(model) → önbellekte var mı;  YZ.sil(model) → önbellekten siler
-   YZ.panel(el, { model, gorev, mb, ad, hazir() }) → "modeli indir" kutusunu kurar */
+   YZ.panel(el, { model, gorev, mb, ad, hazir(), cihaz }) → "modeli indir" kutusunu kurar */
 (function () {
   'use strict';
   const CACHE = 'transformers-cache';
@@ -39,7 +39,7 @@
 
   /* model kutusu: el içine kurar. o: { model, gorev, mb, ad, hazir(), mesajHazir } ; model değişebilir (o.model() fonksiyon olabilir) */
   function panel(el, o) {
-    const md = () => typeof o.model === 'function' ? o.model() : o.model, mb = () => typeof o.mb === 'function' ? o.mb() : o.mb;
+    const md = () => typeof o.model === 'function' ? o.model() : o.model, cz = () => typeof o.cihaz === 'function' ? o.cihaz() : o.cihaz, mb = () => typeof o.mb === 'function' ? o.mb() : o.mb;
     el.innerHTML = `<h3>${T('Yapay zekâ modeli', 'AI model')}</h3><p class="ph yz-msg" style="margin:6px 0 0"></p>
       <div class="yz-uyari" hidden><div class="stat"><div><b class="yz-mb"></b><span>${T('bir kez indirilir', 'downloaded once')}</span></div><div><b>${T('cihazında', 'on device')}</b><span>${T('çalışır', 'runs')}</span></div><div><b>0</b><span>${T('veri gönderilir', 'data uploaded')}</span></div></div>
       <p class="hint">${T('Model tarayıcının önbelleğinde saklanır; sonraki açılışlarda yeniden indirilmez. Mobil veride isen Wi-Fi öneririm.', 'The model is kept in the browser cache and not downloaded again next time. Wi-Fi is recommended on mobile data.')}</p>
@@ -59,7 +59,7 @@
       q('.yz-uyari').hidden = true; q('.yz-ilerleme').hidden = false;
       const bar = q('.bar i'), txt = q('.yz-txt'); txt.textContent = T('Çalışma motoru yükleniyor…', 'Loading the runtime…'); bar.style.width = '2%';
       try {
-        await cagir({ tip: 'yukle', gorev: o.gorev, model: md() }, { ilerleme: (y, t) => { const tt = Math.max(t, y); bar.style.width = (tt ? Math.min(100, y / tt * 100) : 5) + '%'; txt.textContent = T('Model indiriliyor: ', 'Downloading model: ') + f1(y) + (tt ? ' / ' + f1(tt) : '') + ' MB'; } });
+        await cagir({ tip: 'yukle', gorev: o.gorev, model: md(), cihaz: cz() }, { ilerleme: (y, t) => { const tt = Math.max(t, y); bar.style.width = (tt ? Math.min(100, y / tt * 100) : 5) + '%'; txt.textContent = T('Model indiriliyor: ', 'Downloading model: ') + f1(y) + (tt ? ' / ' + f1(tt) : '') + ' MB'; } });
         hazir = true; q('.yz-ilerleme').hidden = true; o.hazir && o.hazir();
       } catch (e) {
         q('.yz-ilerleme').hidden = true; q('.yz-uyari').hidden = false;
