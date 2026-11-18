@@ -59,7 +59,7 @@ svg.scene{display:block;width:100%;height:auto;border-radius:20px;margin-bottom:
 @keyframes rise{0%{transform:translate(0,0) scale(.6);opacity:.7}100%{transform:translate(6px,-18px) scale(1.4);opacity:0}}
 .busy{animation:pulse 1.1s ease-in-out infinite alternate}
 @keyframes pulse{from{opacity:.62}to{opacity:1}}
-.ghost{opacity:.3}.hide{display:none!important}.mini{min-width:0;padding:4px 7px;background:var(--card);color:var(--ink);font-size:15px;line-height:1;border-radius:9px}.mini:hover:not(:disabled){background:var(--line)}.hdr{display:flex;gap:6px;align-items:center}.kbt{display:flex;gap:8px;margin:0 0 8px}.kbt button{flex:1}.kch{display:flex;gap:8px;align-items:center;font-size:14px;margin-top:8px;color:var(--mute)}
+.ghost{opacity:.3}.hide{display:none!important}.mini{min-width:0;padding:4px 7px;background:var(--card);color:var(--ink);font-size:15px;line-height:1;border-radius:9px}.mini:hover:not(:disabled){background:var(--line)}.hdr{display:flex;gap:6px;align-items:center}@keyframes qflash{0%{box-shadow:0 0 0 3px var(--acc)}100%{box-shadow:0 0 0 0 transparent}}.flash{animation:qflash 1.4s ease-out}article.card.q{cursor:pointer}.kbt{display:flex;gap:8px;margin:0 0 8px}.kbt button{flex:1}.kch{display:flex;gap:8px;align-items:center;font-size:14px;margin-top:8px;color:var(--mute)}
 #list,#list2,#list3,#list4,#quests,#army{display:grid;gap:10px}
 #tabs{display:flex;flex-wrap:wrap;gap:6px;margin:0 0 6px}
 .tab{flex:1 0 auto;min-width:calc(33.333% - 4px);padding:9px 12px;background:var(--card);color:var(--mute);font-weight:700}
@@ -549,7 +549,7 @@ function renderQ(){
  for(let i=0;i<Q.length+40;i++){const q=qget(i);if(S.q.includes(i))continue;const d=D[q[0]];
   if(d?((d.lock&&st<d.lock)||(d.req&&!S.lv[d.req])):SQ[q[0]]>st)continue;av.push({q,i})}
  av.sort((a,b)=>(qval(b.q[0])>=b.q[1])-(qval(a.q[0])>=a.q[1]));
- const h=av.slice(0,4).map(({q,i})=>{const [k,n,w,s,g]=q,v=qval(k),ok=v>=n,rw=[w&&`<i class="ic w"></i>${w}`,s&&`<i class="ic s"></i>${s}`,g&&`<i class="ic g"></i>${g}`].filter(Boolean).join(' ');return `<article class="card q"><p>${qlabel(k,n)}<br><small>${Math.min(v,n)}/${n} · ${rw}</small></p><button data-q="${i}"${ok?'':' disabled'}>${ok?'Al':'Sürüyor'}</button></article>`}).join('')||'<article class="card"><small>Tüm görevler tamamlandı, yenileri yolda.</small></article>';
+ const h=av.slice(0,4).map(({q,i})=>{const [k,n,w,s,g]=q,v=qval(k),ok=v>=n,rw=[w&&`<i class="ic w"></i>${w}`,s&&`<i class="ic s"></i>${s}`,g&&`<i class="ic g"></i>${g}`].filter(Boolean).join(' ');return `<article class="card q" data-k="${k}"><p>${qlabel(k,n)}<br><small>${Math.min(v,n)}/${n} · ${rw}</small></p><button data-q="${i}"${ok?'':' disabled'}>${ok?'Al':'Sürüyor'}</button></article>`}).join('')||'<article class="card"><small>Tüm görevler tamamlandı, yenileri yolda.</small></article>';
  if(h!==lastQ){$('quests').innerHTML=h;lastQ=h}
 }
 $('quests').addEventListener('click',e=>{const b=e.target.closest('button');if(!b||b.disabled)return;const i=+b.dataset.q,[k,n,w,s,g]=qget(i);if(qval(k)<n||S.q.includes(i))return;S.q.push(i);const c=cap(S.lv);S.w=Math.min(c,S.w+(w||0));S.s=Math.min(c,S.s+(s||0));S.g+=(g||0);S.st.g+=(g||0);toast('Görev ödülü alındı');save();render()});
@@ -724,7 +724,7 @@ const dqVal=f=>Math.max(0,(f==='xc'?(S.xc||0):(S.st[f]||0))-(S.dq.b[f]||0));
 function renderDq(){
  dqRoll();const p=S.dq.p||[],sc=dqScale();
  [0,1,2].forEach(j=>{const card=$('dc-'+j);card.classList.toggle('hide',j>=p.length);if(j>=p.length)return;
-  const [nm,f,n,g]=DQ[p[j]],tn=n*sc,tg=g*sc,v=dqVal(f),ok=v>=tn,done=S.dq.c[j];
+  const [nm,f,n,g]=DQ[p[j]],tn=n*sc,tg=g*sc,v=dqVal(f),ok=v>=tn,done=S.dq.c[j];card.dataset.k=f;
   $('dn-'+j).textContent=nm+' ('+fmt(tn)+')';$('dp-'+j).textContent=fmt(Math.min(v,tn))+' / '+fmt(tn)+' · ödül '+fmt(tg)+' altın';
   const b=$('db-'+j);b.textContent=done?'Alındı':ok?'Al':'Sürüyor';b.disabled=!!done||!ok});
  const d=new Date(),rem=new Date(d.getFullYear(),d.getMonth(),d.getDate()+1)-d;$('dqt').textContent='yenilenmesine '+dur(rem);
@@ -927,6 +927,16 @@ function muIcon(){const b=$('muBtn');if(!b)return;b.textContent='🎵';b.style.o
 $('muBtn').onclick=()=>{kAyar.muzik=!kAyar.muzik;kSak();muIcon();if(kAyar.muzik)musStart();else musStop()};muIcon();
 addEventListener('pointerdown',()=>{if(kAyar.muzik&&!musTimer)musStart()},{passive:true});
 document.addEventListener('visibilitychange',()=>{if(document.hidden)musStop();else if(kAyar.muzik)musStart()});
+// ---- göreve tıklayınca ilgili yere git ----
+function gitGorev(k){if(!k)return;
+ const ozel={wave:['s',null],army:['o',null],xc:['o','scout'],score:['l',null],bw:['s',null],kill:['s',null],tn:['o',null],bu:['b',null],tc:['t',null],g:['s',null],rc:['r',null],w:['b','c-wood'],s:['b','c-stone']};
+ let tab='b',elid=null;
+ if(typeof D!=='undefined'&&D[k]){const el=$('c-'+k),pane=el&&el.closest('.pane');tab=pane?pane.id.replace('p-',''):'b';elid='c-'+k}
+ else if(ozel[k]){tab=ozel[k][0];elid=ozel[k][1]}
+ const tb=document.querySelector('.tab[data-t="'+tab+'"]');if(tb)tb.click();
+ setTimeout(()=>{const el=elid?$(elid):null;if(el){el.scrollIntoView({behavior:'smooth',block:'center'});el.classList.remove('flash');void el.offsetWidth;el.classList.add('flash')}else{window.scrollTo({top:0,behavior:'smooth'})}},70)}
+$('quests').addEventListener('click',e=>{const b=e.target.closest('button');if(b&&!b.disabled)return;const c=e.target.closest('article[data-k]');if(c)gitGorev(c.dataset.k)});
+$('dq').addEventListener('click',e=>{const b=e.target.closest('button');if(b&&!b.disabled)return;const c=e.target.closest('article[data-k]');if(c)gitGorev(c.dataset.k)});
 let armed=false;
 $('rst').addEventListener('click',e=>{
  if(!armed){armed=true;e.target.textContent='Emin misin? Tekrar dokun';setTimeout(()=>{armed=false;e.target.textContent='Baştan başla'},3000);return}
