@@ -234,6 +234,7 @@
 
   const EK = [];
   const llmUret = async (mesajlar, enCok = 140) => sadelestir(await llmCagir({ tip: 'uret', mesajlar, enCok }));
+  const llmHam = async (mesajlar, enCok = 300) => String(await llmCagir({ tip: 'uret', mesajlar, enCok }) || '').replace(/<think>[\s\S]*?<\/think>/g, '').trim();
   /* ---------------- ana giriş ---------------- */
   async function yanitla(girdi, ops = {}) {
     const m = temiz(girdi).replace(/^(?:hey |hey,? )?(?:yapay )?zeki\s*[,!]?\s*/, '').replace(/\s*[.!?]+$/, '').trim();
@@ -309,5 +310,5 @@
   }
   function llmKapat() { if (LLM.isci) { LLM.isci.terminate(); LLM.isci = null; } LLM.durum = 'yok'; LLM.gecmis = []; }
 
-  window.Beyin = { yanitla, llmYukle, llmKapat, llmUret, LLM, HAFIZA, hesapla, sozluk, sozBul, fold, kaydet, hava, doviz, vikipedi, ek: EK };
+  window.Beyin = { yanitla, llmYukle, llmKapat, llmUret, llmHam, LLM, HAFIZA, hesapla, sozluk, sozBul, fold, kaydet, hava, doviz, vikipedi, ek: EK };
 })();

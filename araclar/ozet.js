@@ -10,7 +10,7 @@
   const fold = s => String(s).toLocaleLowerCase('tr').replace(/[âà]/g, 'a').replace(/[îı]/g, 'i').replace(/û/g, 'u').replace(/ğ/g, 'g').replace(/ş/g, 's').replace(/ç/g, 'c').replace(/ö/g, 'o').replace(/ü/g, 'u');
   const BOS = new Set(('ve veya ile bir bu şu o da de ki mi mı mu mü ne nasıl için gibi kadar olan olarak daha en çok her ama fakat ancak çünkü yani hem ise eğer diye sonra önce şey şimdi zaten yine bile artık sadece yalnızca tüm bütün bazı birçok değil var yok olur oldu olacak olan oluyor ben sen biz siz onlar bunu şunu onu bunun onun bizim sizin benim bana sana ona bize size buna şuna burada orada nasıl neden niye hangi kim nerede evet hayır tamam peki işte efendim hani belki galiba aslında gerçekten ayrıca bugün bugünkü yarın gelecek sonraki tarihinde konuşuldu edildi yapıldı yapılması '
     + 'the a an of to in on for and or but is are was were be been it this that these those with as at by from have has had not no yes we you they he she i our your their its can will would should could do does did so if then than there here what which who how when').split(' ').map(fold));
-  const KISALT = /(?:\b(?:vb|vs|dr|prof|doç|sn|no|nr|st|mr|mrs|ms|etc|e\.g|i\.e|örn|bkz|yy|cad|sok|mah|tel|fig|ref|max|min|yak|bl)|\b[A-ZÇĞİÖŞÜ])\.$/i;
+  const KISALT = /(?:(?<![\p{L}])(?:vb|vs|dr|prof|doç|sn|no|nr|st|mr|mrs|ms|etc|e\.g|i\.e|örn|bkz|yy|cad|sok|mah|tel|fig|ref|max|min|yak|bl|Vb|Vs|Dr|Prof|Doç|Sn|No|Nr|Örn|Bkz|Mr|Mrs|Ms|Fig|Ref)|(?<![\p{L}])\p{Lu})\.$/u;
 
   function cumleler(metin) {
     const out = [];

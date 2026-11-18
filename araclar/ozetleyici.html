@@ -91,7 +91,7 @@
 <footer data-en="Your text is processed on your device and never uploaded.">Metnin cihazında işlenir, hiçbir yere yüklenmez.</footer>
 <script src="ortak.js"></script>
 <script src="yz.js"></script>
-<script src="ozet.js"></script>
+<script src="ozet.js?v=2"></script>
 <script>
 keepInputs('ozetleyici');
 const T = (a, b) => erDil.t(a, b), E5 = 'Xenova/multilingual-e5-small', LLM_MODEL = 'onnx-community/gemma-3-1b-it-ONNX-GQA';
@@ -143,7 +143,12 @@ byId('llmBtn').onclick = async () => {
     await llmCagir({ tip: 'yukle', model: LLM_MODEL }, { il: d => { bar.firstElementChild.style.width = (d.toplam ? d.yuklenen / d.toplam * 100 : 5) + '%'; out.textContent = T('Model indiriliyor (bir kez): ', 'Downloading model (once): ') + fmt(d.yuklenen / 1048576, 0) + ' / ' + fmt(Math.max(d.toplam, d.yuklenen) / 1048576, 0) + ' MB'; } });
     bar.hidden = true; out.textContent = '';
     const tr = !/[a-z]{3,}\s(?:the|and|of)\s/i.test(SEC.join(' '));
-    await llmCagir({ tip: 'uret', enCok: 320, mesajlar: [{ role: 'user', content: (tr ? 'Aşağıdaki cümleleri anlamı bozmadan, yeni bilgi eklemeden Türkçe olarak 3-5 maddelik akıcı bir özete dönüştür. Her madde "- " ile başlasın.' : 'Turn the sentences below into a fluent 3-5 bullet summary without adding information. Start each bullet with "- ".') + '\n\n' + SEC.join('\n') }] }, { parca: t => { out.textContent += t; } });
+    const P = tr ? 'Aşağıdaki cümlelerden kısa bir özet çıkar.\nKurallar: 3-5 madde yaz. Her madde "- " ile başlayan tam bir cümle olsun. Tarih, isim, sayı ve teknik terimleri aynen koru. Yeni bilgi ekleme. Başlık, giriş ya da kapanış cümlesi yazma.\n\nÖrnek girdi:\nTedarikçi profilleri pazartesi teslim edecek. Montaj ekibi iki kişi eksik çalışıyor. Ekip tamamlanmazsa iş bir hafta gecikebilir.\nÖrnek çıktı:\n- Profiller pazartesi teslim edilecek.\n- Montaj ekibinde iki kişi eksik; tamamlanmazsa iş bir hafta gecikebilir.\n\nGirdi:\n'
+      : 'Summarise the sentences below.\nRules: write 3-5 bullets, each a full sentence starting with "- ". Keep dates, names, numbers and technical terms. Add nothing new. No title, intro or closing line.\n\nInput:\n';
+    let ham = '';
+    await llmCagir({ tip: 'uret', enCok: 320, mesajlar: [{ role: 'user', content: P + SEC.join('\n') + (tr ? '\nÇıktı:' : '\nOutput:') }] }, { parca: t => { ham += t; out.textContent = ham; } });
+    const maddeler = ham.split('\n').map(x => x.trim()).filter(x => /^[-•*]\s+\S/.test(x)).map(x => '• ' + x.replace(/^[-•*]\s+/, ''));
+    if (maddeler.length) out.textContent = maddeler.join('\n');
   } catch (e) { out.textContent = e.message === 'WEBGPU_YOK' ? T('Bu tarayıcıda WebGPU yok; yapay zekâ özeti için Chrome ya da Edge\'in güncel sürümünü kullan.', 'WebGPU is not available; use a recent Chrome or Edge.') : T('Dil modeli çalışmadı: ', 'Language model failed: ') + e.message; }
   bar.hidden = true; byId('llmBtn').disabled = false;
 };

@@ -208,9 +208,9 @@
     const Oz = O(), C = Oz.cumleler(n.metin), oz = Oz.ozetle(n.metin, { cumleler: C }).cumleler, yap = Oz.yapilacaklar(n.metin, C), ana = Oz.anahtar(n.metin, 6).map(x => x[0]);
     let llm = null;
     if (yeni && B.LLM && B.LLM.durum === 'hazir' && n.metin.length < 6000) {
-      try { llm = await B.llmUret([{ role: 'user', content: `Aşağıdaki toplantı dökümünü Türkçe olarak en fazla 4 madde halinde özetle; ardından "Yapılacaklar:" başlığıyla kimin neyi ne zamana yapacağını madde madde yaz. Dökümde olmayan bilgi ekleme.\n\n${n.metin}` }], 260); } catch (e) { llm = null; }
+      try { llm = await (B.llmHam || B.llmUret)([{ role: 'user', content: `Aşağıdaki toplantı dökümünü özetle.\nKurallar: En fazla 4 madde yaz, her madde "- " ile başlayan tam bir cümle olsun. Sonra "Yapılacaklar:" satırının altına kimin neyi ne zamana yapacağını "- " ile yaz. Tarih, isim ve sayıları aynen koru; dökümde olmayan bilgi ekleme; giriş ya da kapanış cümlesi yazma.\n\nDöküm:\n${n.metin}\n\nÇıktı:` }], 260); } catch (e) { llm = null; }
     }
-    if (llm) llm = llm.replace(/\s*(Yapılacaklar:)\s*/i, '\n\n$1\n').replace(/\s(\d+[.)])\s/g, '\n$1 ');
+    if (llm) { const S = llm.split('\n').map(x => x.trim()).filter(x => /^[-•*]\s+\S/.test(x) || /^yapılacaklar\s*:?$/i.test(x.replace(/[*#]/g, ''))).map(x => /^[-•*]/.test(x) ? '• ' + x.replace(/^[-•*]\s+/, '').replace(/\*\*/g, '') : '\nYapılacaklar:'); llm = S.length ? S.join('\n').trim() : llm; }
     if (yeni) { n.oz = llm || null; const L = notlar(); L.unshift({ t: n.t, sure: n.sure, metin: n.metin.slice(0, 30000), oz: n.oz }); while (L.length && !LS.set('zeki:toplantiNotlari', JSON.stringify(L.slice(0, 10)))) L.pop(); }
     const tarih = new Date(n.t).toLocaleString('tr-TR', { day: 'numeric', month: 'long', hour: '2-digit', minute: '2-digit' });
     const govde = (n.oz ? n.oz + '\n\n— Otomatik özet —\n' : 'Özet:\n') + oz.map(c => '• ' + c).join('\n') + (yap.length && !n.oz ? '\n\nYapılacaklar:\n' + yap.map(y => '☐ ' + y.metin).join('\n') : '') + (ana.length ? '\n\nAnahtar kelimeler: ' + ana.join(', ') : '');
