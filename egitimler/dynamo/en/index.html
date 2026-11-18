@@ -291,9 +291,9 @@ p = Point.ByCoordinates(x, 0, 0);
 <li>With a Code Block generate vertical lines every 1500 mm, 4000 mm high:</li>
 </ol>
 <pre><code class="language-text">x = 0..6000..1500;
-alt = Point.ByCoordinates(x, 0, 0);
-ust = Point.ByCoordinates(x, 0, 4000);
-cizgi = Line.ByStartPointEndPoint(alt, ust);
+bottom = Point.ByCoordinates(x, 0, 0);
+top = Point.ByCoordinates(x, 0, 4000);
+cizgi = Line.ByStartPointEndPoint(bottom, top);
 </code></pre>
 <ol start="3">
 <li>Connect the <code>cizgi</code> (line) output to a <strong>ModelCurve.ByCurve</strong> node and press <strong>Run</strong>. 5 model lines are created in Revit.</li>
@@ -362,7 +362,7 @@ cizgi = Line.ByStartPointEndPoint(alt, ust);
 <td>Last item</td>
 </tr>
 <tr>
-<td><code>x &gt; 3 ? "A" : "B"</code></td>
+<td><code>x &gt; 3 ? &quot;A&quot; : &quot;B&quot;</code></td>
 <td>Condition</td>
 </tr>
 </tbody>
@@ -444,8 +444,8 @@ cizgi = Line.ByStartPointEndPoint(alt, ust);
 </ol>
 <pre><code class="language-text">x = 0..6000..1500;
 z = 0..8000..4000;
-n = List.Count(x) - 1;   // sütun aralığı sayısı: 4
-m = List.Count(z) - 1;   // kat aralığı sayısı: 2
+n = List.Count(x) - 1;   // number of column bays: 4
+m = List.Count(z) - 1;   // number of floor bays: 2
 k1 = Point.ByCoordinates(x[0..n-1]&lt;1&gt;, 0, z[0..m-1]&lt;2&gt;);
 k2 = Point.ByCoordinates(x[1..n]&lt;1&gt;,   0, z[0..m-1]&lt;2&gt;);
 k3 = Point.ByCoordinates(x[1..n]&lt;1&gt;,   0, z[1..m]&lt;2&gt;);
@@ -521,8 +521,8 @@ panel = Polygon.ByPoints(kose);
 <h3>2. Reading parameters (1 hour)</h3>
 <figure class="fig"><div class="sc"><a href="../../revit-ekran/dy_revit_oku.webp" target="_blank"><img src="../../revit-ekran/dy_revit_oku.webp" alt="Reading from Revit: 1: Categories = Curtain Panels, 2: All Elements of Category (152 panels), 3: Element.GetParameterValueByName (Mark and Width), 4: panel numbers P-01-001… in Watch (in a Code Block it is written with the full name Revit.Elements.Element)." width="1568" height="647" loading="lazy" style="display:block;width:100%;max-width:1568px;height:auto;margin:0 auto;border-radius:6px"></a></div><figcaption>Reading from Revit: 1: Categories = Curtain Panels, 2: All Elements of Category (152 panels), 3: Element.GetParameterValueByName (Mark and Width), 4: panel numbers P-01-001… in Watch (in a Code Block it is written with the full name Revit.Elements.Element).</figcaption></figure>
 <ol>
-<li><strong>Element.GetParameterValueByName</strong>: element = panels, parameterName = <code>"Width"</code>. The widths of all panels arrive.</li>
-<li>Do the same for <code>"Height"</code>, <code>"Area"</code>, <code>"Panel_ID"</code>, <code>"Cam_Kodu"</code>. The parameter name must be written exactly as it appears in Revit, including case.</li>
+<li><strong>Element.GetParameterValueByName</strong>: element = panels, parameterName = <code>&quot;Width&quot;</code>. The widths of all panels arrive.</li>
+<li>Do the same for <code>&quot;Height&quot;</code>, <code>&quot;Area&quot;</code>, <code>&quot;Panel_ID&quot;</code>, <code>&quot;Cam_Kodu&quot;</code>. The parameter name must be written exactly as it appears in Revit, including case.</li>
 <li>If a parameter is not found the node warns and returns <code>null</code>. See in Watch which elements came back empty.</li>
 <li>List all parameter names of an element with <strong>Element.Parameters</strong>; copy the correct name from there.</li>
 <li>Units: although Revit's internal unit is feet, Dynamo returns values in project units. Check in Watch that you get mm.</li>
@@ -532,7 +532,7 @@ panel = Polygon.ByPoints(kose);
 <ol>
 <li>Set up one row per panel: Element ID, Panel_ID, Width, Height, Area, Cam_Kodu.</li>
 <li>Combine the lists with a Code Block: <code>[id, pid, w, h, a, ck];</code> then make them row by row with <strong>List.Transpose</strong>.</li>
-<li>Add the header row: with <strong>List.AddItemToFront</strong> <code>["ElementId", "Panel_ID", "Genislik", "Yukseklik", "Alan", "Cam_Kodu"]</code> (width, height, area).</li>
+<li>Add the header row: with <strong>List.AddItemToFront</strong> <code>[&quot;ElementId&quot;, &quot;Panel_ID&quot;, &quot;Genislik&quot;, &quot;Yukseklik&quot;, &quot;Alan&quot;, &quot;Cam_Kodu&quot;]</code> (width, height, area).</li>
 <li><strong>Data.OpenXMLExportExcel</strong> (works even without Excel installed) or <strong>Data.ExportExcel</strong>: file path, sheet name <code>Paneller</code>, start row and column 0, data.</li>
 <li><strong>Run</strong>. Open the Excel file and check.</li>
 </ol>
@@ -544,7 +544,7 @@ panel = Polygon.ByPoints(kose);
 <li>Drop the header row with <strong>List.RestOfItems</strong>. Turn into columns with <strong>List.Transpose</strong>.</li>
 <li>Get the panels from the model again (All Elements of Category) and list their IDs with <strong>Element.Id</strong>. Convert the ID column from Excel to numbers with <strong>String.ToNumber</strong> (it may arrive as text).</li>
 <li>Find the model counterpart of each Excel row: <strong>List.IndexOf</strong> (list = model IDs, item = Excel IDs), then order the panels in Excel order with <strong>List.GetItemAtIndex</strong>.</li>
-<li><strong>Element.SetParameterByName</strong>: element = the panels in this order, parameterName = <code>"Cam_Kodu"</code>, value = the Cam_Kodu column from Excel.</li>
+<li><strong>Element.SetParameterByName</strong>: element = the panels in this order, parameterName = <code>&quot;Cam_Kodu&quot;</code>, value = the Cam_Kodu column from Excel.</li>
 <li>Run mode <strong>Manual</strong>. <strong>Run</strong>. Select a panel in Revit and check that Cam_Kodu has changed.</li>
 </ol>
 <p><strong>Caution</strong></p>
@@ -586,17 +586,17 @@ panel = Polygon.ByPoints(kose);
 <li>Sort key: <code>anahtar = kat * 1000000 + x;</code> (floor first, then X within the floor).</li>
 <li><strong>List.SortByKey</strong>: panels, keys. Sorted panels.</li>
 <li>Numbers: <code>n = 1..List.Count(siraliPaneller);</code></li>
-<li>Text: <code>"P-" + String.PadLeft(String.FromObject(n), 3, "0");</code> → P-001, P-002…</li>
-<li><strong>Element.SetParameterByName</strong>: sorted panels, <code>"Panel_ID"</code>, numbers. <strong>Run</strong>.</li>
+<li>Text: <code>&quot;P-&quot; + String.PadLeft(String.FromObject(n), 3, &quot;0&quot;);</code> → P-001, P-002…</li>
+<li><strong>Element.SetParameterByName</strong>: sorted panels, <code>&quot;Panel_ID&quot;</code>, numbers. <strong>Run</strong>.</li>
 <li>In Revit place panel tags in an elevation with <strong>Tag by Category</strong> and check that the order is correct.</li>
 </ol>
 <h3>3. Type and glass code (1 hour)</h3>
 <ol>
 <li>Read width and height (day 3). Round to 10 mm.</li>
-<li>Type key: <code>Genislik + "x" + Yukseklik</code> → <code>1500x4000</code>.</li>
-<li>Find unique types with <strong>List.UniqueItems</strong>, each panel's type index with <strong>List.IndexOf</strong>, and make the type code with <code>"T" + (i + 1)</code>.</li>
-<li>Glass code rule: spandrel panels <code>S01</code>, others by size: <code>w &gt; 1400 ? "G01" : "G02"</code>. To identify spandrels, read the panel type's name (<strong>Element.ElementType</strong> + <strong>Element.Name</strong>).</li>
-<li>Write two parameters at once: give <strong>Element.SetParameterByName</strong> the parameter names as a list (<code>["Panel_Tip", "Cam_Kodu"]</code>) and the values as matching lists; watch the lacing.</li>
+<li>Type key: <code>Genislik + &quot;x&quot; + Yukseklik</code> → <code>1500x4000</code>.</li>
+<li>Find unique types with <strong>List.UniqueItems</strong>, each panel's type index with <strong>List.IndexOf</strong>, and make the type code with <code>&quot;T&quot; + (i + 1)</code>.</li>
+<li>Glass code rule: spandrel panels <code>S01</code>, others by size: <code>w &gt; 1400 ? &quot;G01&quot; : &quot;G02&quot;</code>. To identify spandrels, read the panel type's name (<strong>Element.ElementType</strong> + <strong>Element.Name</strong>).</li>
+<li>Write two parameters at once: give <strong>Element.SetParameterByName</strong> the parameter names as a list (<code>[&quot;Panel_Tip&quot;, &quot;Cam_Kodu&quot;]</code>) and the values as matching lists; watch the lacing.</li>
 </ol>
 <h3>4. Dynamo Player (1 hour)</h3>
 <p>Dynamo Player runs a graph with one button without opening it. Your colleagues can use it without seeing inside the graph.</p>
@@ -666,8 +666,8 @@ kose = List.Transpose([List.Flatten(k1), List.Flatten(k2), List.Flatten(k3), Lis
 <li>Plane through the first three points of each panel: <strong>Plane.ByThreePoints</strong> (k1, k2, k3).</li>
 <li>Distance of the fourth point to the plane: <strong>Geometry.DistanceTo</strong> (k4, plane).</li>
 <li>Threshold slider: <code>Warp_Tol</code> = 3 mm.</li>
-<li>Glass code rule: <code>ck = d &lt; Warp_Tol ? "G01" : "G02";</code></li>
-<li>Panel number: <code>"P-" + String.PadLeft(String.FromObject(1..List.Count(kose)), 3, "0");</code></li>
+<li>Glass code rule: <code>ck = d &lt; Warp_Tol ? &quot;G01&quot; : &quot;G02&quot;;</code></li>
+<li>Panel number: <code>&quot;P-&quot; + String.PadLeft(String.FromObject(1..List.Count(kose)), 3, &quot;0&quot;);</code></li>
 <li>Write <code>Panel_ID</code> and <code>Cam_Kodu</code> to the placed adaptive panels with <strong>Element.SetParameterByName</strong>.</li>
 <li>Check the results in Revit with a Generic Models schedule.</li>
 </ol>
@@ -746,12 +746,12 @@ kose = List.Transpose([List.Flatten(k1), List.Flatten(k2), List.Flatten(k3), Lis
 <ol>
 <li>Choose the CSV with a <strong>File Path</strong> node. <strong>Data.ImportCSV</strong>: a list of rows arrives. If the separator is a semicolon, split it yourself with <strong>File.ReadText</strong> + <strong>String.Split</strong>:</li>
 </ol>
-<pre><code class="language-text">temiz = String.Replace(metin, &quot;\r&quot;, &quot;&quot;);     // Windows satır sonlarını temizle
-satirlar = String.Split(temiz, &quot;\n&quot;);
-veri = List.RestOfItems(satirlar);           // başlığı at
-veri2 = List.FilterByBoolMask(veri, String.Length(veri) &gt; 0)[&quot;in&quot;];  // boş satırları at
-alan = String.Split(veri2, &quot;;&quot;);
-sutun = List.Transpose(alan);
+<pre><code class="language-text">clean = String.Replace(text, &quot;\r&quot;, &quot;&quot;);     // remove Windows line endings
+lines = String.Split(clean, &quot;\n&quot;);
+data = List.RestOfItems(lines);           // drop the header
+data2 = List.FilterByBoolMask(data, String.Length(data) &gt; 0)[&quot;in&quot;];  // drop empty lines
+fields = String.Split(data2, &quot;;&quot;);
+columns = List.Transpose(fields);
 </code></pre>
 <ol start="2">
 <li>Convert numeric columns to numbers with <strong>String.ToNumber</strong>.</li>
@@ -829,22 +829,22 @@ from RevitServices.Persistence import DocumentManager
 from RevitServices.Transactions import TransactionManager
 
 doc = DocumentManager.Instance.CurrentDBDocument
-paneller = UnwrapElement(IN[0])     # Dynamo elemanını Revit elemanına çevir
-onek = IN[1]                        # ör. &quot;TMP-&quot;
+paneller = UnwrapElement(IN[0])     # convert Dynamo elements to Revit elements
+onek = IN[1]                        # e.g. &quot;TMP-&quot;
 
-bos = []
+filled = []
 TransactionManager.Instance.EnsureInTransaction(doc)
 for i, p in enumerate(paneller):
     prm = p.LookupParameter(&quot;Panel_ID&quot;)
     if prm and not prm.AsString():
         prm.Set(&quot;{}{:03d}&quot;.format(onek, i + 1))
-        bos.append(p.Id.ToString())
+        filled.append(p.Id.ToString())
 TransactionManager.Instance.TransactionTaskDone()
 
-OUT = bos
+OUT = filled
 </code></pre>
 <ol start="4">
-<li>Add two inputs to the node (+ sign): <code>IN[0]</code> = All Elements of Category (Curtain Panels), <code>IN[1]</code> = <code>"TMP-"</code>.</li>
+<li>Add two inputs to the node (+ sign): <code>IN[0]</code> = All Elements of Category (Curtain Panels), <code>IN[1]</code> = <code>&quot;TMP-&quot;</code>.</li>
 <li><strong>Run</strong>. The output is the IDs of the panels a value was written to.</li>
 </ol>
 <p><strong>Important rules</strong></p>
@@ -856,11 +856,7 @@ OUT = bos
 <h3>2. Custom node (1 hour)</h3>
 <figure class="fig"><div class="sc"><svg viewBox="0 0 660 212" role="img" xmlns="http://www.w3.org/2000/svg"><defs><marker id="ah-custom" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0 0L10 5L0 10z" class="ar"/></marker></defs><rect x="20" y="30" width="300" height="150" rx="8" class="mud"/><rect x="40" y="50" width="120" height="30" rx="5" class="bx"/><text x="100.0" y="69.0" class="tb" text-anchor="middle">SortByKey</text><rect x="180" y="50" width="120" height="30" rx="5" class="bx"/><text x="240.0" y="69.0" class="tb" text-anchor="middle">Code Block</text><rect x="40" y="110" width="120" height="30" rx="5" class="bx"/><text x="100.0" y="129.0" class="tb" text-anchor="middle">PadLeft</text><rect x="180" y="110" width="120" height="30" rx="5" class="bx"/><text x="240.0" y="129.0" class="tb" text-anchor="middle">Concat</text><text x="170" y="200" class="tm" text-anchor="middle">numbering nodes from day 4</text><line x1="335" y1="105" x2="395" y2="105" class="ac" marker-end="url(#ah-custom)"/><text x="365" y="95" class="ta" text-anchor="middle">Custom Node</text><rect x="470" y="60" width="160" height="88" rx="3" class="bx"/><rect x="470" y="60" width="160" height="24" rx="3" class="bxa"/><text x="478" y="77" class="tb" text-anchor="start">Panel.Numarala (number panels)</text><text x="478" y="104" class="tm" text-anchor="start">paneller (panels)</text><rect x="466" y="96" width="8" height="8" class="dotr"/><text x="478" y="122" class="tm" text-anchor="start">onek (prefix)</text><rect x="466" y="114" width="8" height="8" class="dotr"/><text x="478" y="140" class="tm" text-anchor="start">baslangic (start)</text><rect x="466" y="132" width="8" height="8" class="dotr"/><text x="622" y="104" class="tm" text-anchor="end">numaralar (numbers)</text><rect x="626" y="96" width="8" height="8" class="dotr"/><text x="550" y="180" class="tm" text-anchor="middle">In the Cephe (façade) category · .dyf</text></svg></div><figcaption>Custom node: a group of nodes becomes a single node with named inputs and outputs and is used in other graphs from the library.</figcaption></figure>
 <ol>
-<li>
-<ol start="4">
 <li>Select the numbering nodes from day 4 (sort key, sorting, number text).</li>
-</ol>
-</li>
 <li>Right-click &gt; <strong>Create Custom Node</strong>. Name: <code>Panel.Numarala</code>, category: <code>Cephe</code>.</li>
 <li>The custom node opens in a separate <code>.dyf</code> file. Name the <strong>Input</strong> nodes (<code>paneller</code>, <code>onek</code>, <code>baslangic</code>) and the <strong>Output</strong> node (<code>numaralar</code>).</li>
 <li>Save. Your own node appears in the <code>Cephe</code> category of the Library and can be used in other graphs.</li>
