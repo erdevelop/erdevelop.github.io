@@ -187,7 +187,7 @@
   /* ---------------- dinleme ---------------- */
   const SR = window.SpeechRecognition || window.webkitSpeechRecognition;
   let DIL = 'tr-TR'; const WDIL = { tr: 'turkish', en: 'english', fr: 'french', de: 'german' };
-  function dilAyarla(d) { if (!d || d === DIL) return; DIL = d; if (tanimaYolu === 'tarayici' && TAN && tanAcik) { tanDurdur = true; try { TAN.abort(); } catch (e) { } tanAcik = false; setTimeout(() => { if (AYAR.surekli || tekSefer) tarayiciBaslat(); }, 300); } $('dilPil').hidden = DIL === 'tr-TR'; $('dilPil').textContent = { 'en-US': '🇬🇧 English', 'fr-FR': '🇫🇷 Français', 'de-DE': '🇩🇪 Deutsch' }[DIL] || DIL; }
+  function dilAyarla(d) { if (!d || d === DIL) return; DIL = d; if (tanimaYolu === 'tarayici' && TAN && tanAcik && !konusuyorMu()) { tanDurdur = true; try { TAN.abort(); } catch (e) { } tanAcik = false; setTimeout(() => { if (AYAR.surekli || tekSefer) tarayiciBaslat(); }, 300); } $('dilPil').hidden = DIL === 'tr-TR'; $('dilPil').textContent = { 'en-US': '🇬🇧 English', 'fr-FR': '🇫🇷 Français', 'de-DE': '🇩🇪 Deutsch' }[DIL] || DIL; }
   let tanimaYolu = null, TAN = null, tanAcik = false, tanDurdur = false, tekSefer = false;
   function yolSec() {
     if (AYAR.tanima === 'cihaz' || !SR) return 'cihaz';
@@ -279,9 +279,8 @@
     if (r.eylem) eylem(r.eylem);
     if (r.kart) Kart.goster(r.kart); else if (!(Beyin.KIP && Beyin.KIP.aktif)) Kart.gizle();
     isleniyor = false; efekt(r.anlamadi ? 'hata' : 'anladi');
-    const sonDil = r.dil; if (sonDil && sonDil.startsWith('tr')) dilAyarla('tr-TR');
+    const sonDil = r.dil; if (sonDil) dilAyarla(sonDil);
     await konus(r.metin, r.duygu, { link: r.link, kaynak: r.kaynak, parcalar: r.parcalar, ekran: r.ekran, dil: sonDil && !sonDil.startsWith('tr') && !r.parcalar ? sonDil : null });
-    if (sonDil) dilAyarla(sonDil);
     if (r.gul) { S.kalp = 1; }
     if (r.eylem && r.eylem.tip === 'ac') setTimeout(() => window.open(r.eylem.url, '_blank', 'noopener'), 200);
   }

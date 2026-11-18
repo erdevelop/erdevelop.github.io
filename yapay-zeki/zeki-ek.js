@@ -366,7 +366,7 @@
           gecmis.push({ role: 'assistant', content: r });
           return { metin: r, parcalar: [{ m: r, dil: D.kod }], duygu: 'mutlu', dil: D.kod };
         } };
-      return { metin: `${D.ad} konuşma kipi açıldı. Seni ${D.ad.toLocaleLowerCase('tr')} dinleyeceğim; Türkçeye dönmek için "Türkçeye dön" de.`, parcalar: [{ m: `${D.ad} konuşma kipi açıldı; Türkçeye dönmek için "Türkçeye dön" de.` }, { m: D.sel, dil: D.kod }], duygu: 'heyecanli', dil: D.kod };
+      return { metin: `${D.ad} konuşma kipi açıldı; Türkçeye dönmek için "Türkçeye dön" de. ${D.sel}`, parcalar: [{ m: `${D.ad} konuşma kipi açıldı; Türkçeye dönmek için "Türkçeye dön" de.` }, { m: D.sel, dil: D.kod }], duygu: 'heyecanli', dil: D.kod };
     }
     if (!anahtar.length) return { metin: `${D.ad} kelime listesine ulaşamadım.`, duygu: 'uzgun' };
     /* dil modeli yoksa: kelime ve cümle pratiği */
