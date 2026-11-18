@@ -12,11 +12,13 @@ const ilerleme = id => p => {
   if (p && p.status === 'progress') postMessage({ id, tip: 'ilerleme', dosya: p.file, yuklenen: p.loaded, toplam: p.total });
 };
 
-async function yukle(id, gorev, model) {
-  const k = gorev + '|' + model;
+/* cihaz 'webgpu': konuşma tanıma ekran kartında (Whisper: kodlayıcı fp16, çözücü q4 — işlemcideki q8'den 5-10 kat hızlı) */
+async function yukle(id, gorev, model, cihaz) {
+  const gpu = cihaz === 'webgpu', k = gorev + '|' + model + (gpu ? '|gpu' : '');
   if (!HAZIR[k]) HAZIR[k] = (gorev === 'tokenizer'
     ? AutoTokenizer.from_pretrained(model, { progress_callback: ilerleme(id) })
-    : pipeline(gorev, model, { dtype: 'q8', device: 'wasm', progress_callback: ilerleme(id) })
+    : gpu ? pipeline(gorev, model, { device: 'webgpu', dtype: { encoder_model: 'fp16', decoder_model_merged: 'q4' }, progress_callback: ilerleme(id) })
+      : pipeline(gorev, model, { dtype: 'q8', device: 'wasm', progress_callback: ilerleme(id) })
   ).catch(e => { delete HAZIR[k]; throw e; });
   return HAZIR[k];
 }
@@ -25,12 +27,16 @@ self.onmessage = async ({ data: m }) => {
   const { id } = m;
   try {
     if (m.tip === 'yukle') {
-      await yukle(id, m.gorev, m.model);
+      const p = await yukle(id, m.gorev, m.model, m.cihaz);
+      /* ısınma: ekran kartında ilk çalıştırma gölgelendiricileri derler; konuşmadan önce yapılsın */
+      if (m.isit && m.gorev === 'automatic-speech-recognition') { try { await p(new Float32Array(16000), { language: m.dil || 'turkish' }); } catch (e) { } }
       postMessage({ id, tip: 'bitti' });
     } else if (m.tip === 'asr') {
-      const asr = await yukle(id, 'automatic-speech-recognition', m.model);
+      const asr = await yukle(id, 'automatic-speech-recognition', m.model, m.cihaz);
       const t0 = performance.now();
-      const ops = { task: m.gorev || 'transcribe', chunk_length_s: 30, stride_length_s: 5, return_timestamps: true };
+      /* kısa komutlarda (<28 sn) parçalama ve zaman damgası gereksiz; hem yavaşlatır hem uydurmayı artırır */
+      const kisa = m.kisa && m.ses.length < 16000 * 28; /* yalnızca Zeki komutları; Ses↔Yazı aracı altyazı için zaman damgası ister */
+      const ops = kisa ? { task: m.gorev || 'transcribe' } : { task: m.gorev || 'transcribe', chunk_length_s: 30, stride_length_s: 5, return_timestamps: true };
       if (m.dil) ops.language = m.dil;
       const r = await asr(m.ses, ops);
       postMessage({ id, tip: 'bitti', sonuc: { text: r.text, chunks: r.chunks || [], sure: (performance.now() - t0) / 1000 } });

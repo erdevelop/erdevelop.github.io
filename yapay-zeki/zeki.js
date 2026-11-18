@@ -5,7 +5,10 @@
   const LS = { get: k => { try { return localStorage.getItem(k); } catch (e) { return null; } }, set: (k, v) => { try { localStorage.setItem(k, v); } catch (e) { } } };
   const clamp = (v, a, b) => Math.max(a, Math.min(b, v)), sec = a => a[Math.floor(Math.random() * a.length)];
   const esc = s => String(s).replace(/[&<>"]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
-  const AYAR = Object.assign({ tanima: 'otomatik', whisper: 'Xenova/whisper-small', surekli: true, sesTani: false, yorum: true, ses: '', perde: 1.15, hiz: 1.05, beyin: false, sessiz: false, gorunum: 'robot', kisilik: 'neseli', tema: 'otomatik', efekt: true, esle: false, kamera: false, saat: false, uyanik: false, sesPanel: true }, JSON.parse(LS.get('zeki:ayar') || '{}'));
+  const AYAR = Object.assign({ tanima: 'otomatik', whisper: 'otomatik', surekli: true, sesTani: false, yorum: true, ses: '', perde: 1.15, hiz: 1.05, beyin: false, sessiz: false, gorunum: 'robot', kisilik: 'neseli', tema: 'otomatik', efekt: true, esle: false, kamera: false, saat: false, uyanik: false, sesPanel: true }, JSON.parse(LS.get('zeki:ayar') || '{}'));
+  const MOBIL = /iPhone|iPad|iPod|Android/i.test(navigator.userAgent) || (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
+  /* 2026-11: eski varsayılan (işlemcide whisper-small) çok yavaştı; otomatiğe geçir */
+  if (!AYAR.asr2) { if (AYAR.whisper === 'Xenova/whisper-small') AYAR.whisper = 'otomatik'; AYAR.asr2 = 1; }
   const ayarKaydet = () => LS.set('zeki:ayar', JSON.stringify(AYAR));
 
   /* ---------------- durum ---------------- */
@@ -193,7 +196,8 @@
   function yolSec() {
     if (AYAR.tanima === 'cihaz' || !SR) return 'cihaz';
     if (AYAR.tanima === 'tarayici') return 'tarayici';
-    return LS.get('zeki:srBozuk') ? 'cihaz' : 'tarayici';
+    const b = +LS.get('zeki:srBozuk') || 0; /* tarayıcı tanıması bozulduysa bir gün cihazda kal, sonra yeniden dene */
+    return b && Date.now() - b < 864e5 ? 'cihaz' : 'tarayici';
   }
   /* --- tarayıcının konuşma tanıması --- */
   function tarayiciBaslat() {
@@ -208,7 +212,7 @@
     };
     TAN.onerror = e => {
       if (e.error === 'not-allowed' || e.error === 'service-not-allowed' || e.error === 'network' || e.error === 'audio-capture') {
-        if (e.error !== 'not-allowed') LS.set('zeki:srBozuk', '1'); tanDurdur = true; tanimaYolu = 'cihaz';
+        if (e.error !== 'not-allowed') LS.set('zeki:srBozuk', String(Date.now())); tanDurdur = true; tanimaYolu = 'cihaz';
         balon(e.error === 'not-allowed' ? 'Mikrofon izni verilmedi.' : 'Tarayıcının konuşma tanıması bu ortamda çalışmıyor; cihazda çalışan modele geçiyorum.', 'sistem');
         if (e.error !== 'not-allowed') setTimeout(() => dinlemeBaslat(), 300);
       }
@@ -216,10 +220,30 @@
     TAN.onend = () => { tanAcik = false; if (!tanDurdur && !tekSefer && AYAR.surekli && tanimaYolu === 'tarayici') setTimeout(() => { try { if (!tanAcik && !konusuyorMu()) { TAN.start(); tanAcik = true; } } catch (e) { } }, 250); else if (S.durum === 'dinliyor') durum('bekliyor'); };
     try { TAN.start(); tanAcik = true; } catch (e) { }
   }
+  /* --- konuşma tanıma modeli: ekran kartı varsa Whisper large-v3-turbo (WebGPU), yoksa işlemcide base --- */
+  let GPU = null;
+  const gpuVar = async () => { if (GPU != null) return GPU; GPU = false; try { if (!MOBIL && navigator.gpu) { const a = await navigator.gpu.requestAdapter(); GPU = !!a; } } catch (e) { } return GPU; };
+  const TURBO = 'onnx-community/whisper-large-v3-turbo';
+  async function asrSec() {
+    const w = AYAR.whisper;
+    if (w === 'otomatik' || w === TURBO) return (await gpuVar()) ? { model: TURBO, cihaz: 'webgpu', ad: 'Whisper large-v3-turbo · ekran kartı' } : { model: 'Xenova/whisper-base', cihaz: 'wasm', ad: 'Whisper base · işlemci' };
+    return { model: w, cihaz: 'wasm', ad: 'Whisper ' + w.split('-').pop() + ' · işlemci' };
+  }
+  let asrHazir = null;
+  function asrOnYukle() {
+    if (asrHazir) return asrHazir;
+    asrHazir = (async () => {
+      const a = await asrSec(); $('whisperIl').hidden = false; $('whisperIl').textContent = 'Konuşma tanıma modeli hazırlanıyor…';
+      await YZ.cagir({ tip: 'yukle', gorev: 'automatic-speech-recognition', model: a.model, cihaz: a.cihaz, isit: true, dil: WDIL[DIL.slice(0, 2)] || 'turkish' }, { ilerleme: (y, t) => { $('whisperIl').hidden = false; $('whisperIl').textContent = `Konuşma tanıma modeli indiriliyor: ${Math.round(y)} / ${Math.round(Math.max(t, y))} MB (bir kez; sonra bilgisayarında kayıtlı kalır)`; } });
+      $('whisperIl').hidden = true; return a;
+    })().catch(e => { asrHazir = null; $('whisperIl').textContent = 'Konuşma tanıma modeli yüklenemedi: ' + e.message; throw e; });
+    return asrHazir;
+  }
   /* --- cihazda Whisper: ses etkinliği algılayıp parça parça çevir --- */
   let VAD = { acik: false, kayit: false, parcalar: [], sessizT: 0, konusT: 0, isl: null, kaynak: null, cevriliyor: false };
   async function cihazBaslat() {
     if (VAD.acik) return; if (!(await mikAc())) return;
+    asrOnYukle().catch(() => { });
     VAD.acik = true; VAD.isl = AC.createScriptProcessor(4096, 1, 1); const sus = AC.createGain(); sus.gain.value = 0;
     VAD.kaynak = AC.createMediaStreamSource(mikAkis); VAD.kaynak.connect(VAD.isl); VAD.isl.connect(sus); sus.connect(AC.destination);
     const onTampon = []; /* konuşma başlamadan önceki 0,5 sn */
@@ -234,7 +258,7 @@
       } else {
         VAD.parcalar.push(x); VAD.sessizT = konusma ? 0 : VAD.sessizT + dt;
         const sure = VAD.parcalar.length * dt;
-        if (VAD.sessizT > .9 || sure > 15) { VAD.kayit = false; VAD.konusT = 0; const p = VAD.parcalar; VAD.parcalar = []; if (sure - VAD.sessizT > .45) cevir(p, AC.sampleRate); else if (S.durum === 'dinliyor') durum('bekliyor'); }
+        if (VAD.sessizT > .75 || sure > 20) { VAD.kayit = false; VAD.konusT = 0; const p = VAD.parcalar; VAD.parcalar = []; if (sure - VAD.sessizT > .45) cevir(p, AC.sampleRate); else if (S.durum === 'dinliyor') durum('bekliyor'); }
       }
     };
   }
@@ -244,8 +268,9 @@
       const n = parcalar.reduce((a, p) => a + p.length, 0), tum = new Float32Array(n); let o = 0; for (const p of parcalar) { tum.set(p, o); o += p.length; }
       const off = new OfflineAudioContext(1, Math.ceil(n / hz * 16000), 16000), b = off.createBuffer(1, n, hz); b.copyToChannel(tum, 0);
       const s = off.createBufferSource(); s.buffer = b; s.connect(off.destination); s.start(); const r16 = (await off.startRendering()).getChannelData(0);
-      const sonuc = await YZ.cagir({ tip: 'asr', model: AYAR.whisper, ses: new Float32Array(r16), dil: WDIL[DIL.slice(0, 2)] || 'turkish' }, { ilerleme: (y, t) => { $('whisperIl').hidden = false; $('whisperIl').textContent = `Konuşma tanıma modeli indiriliyor: ${Math.round(y)} / ${Math.round(Math.max(t, y))} MB (bir kez)`; } });
-      $('whisperIl').hidden = true;
+      const a = await asrOnYukle(), t0 = performance.now();
+      const sonuc = await YZ.cagir({ tip: 'asr', model: a.model, cihaz: a.cihaz, kisa: true, ses: new Float32Array(r16), dil: WDIL[DIL.slice(0, 2)] || 'turkish' });
+      $('aYol').textContent = `Cihazda çalışan ${a.ad} (ses cihazından çıkmaz) · son tanıma ${((performance.now() - t0) / 1000).toFixed(1).replace('.', ',')} sn`;
       const m = (sonuc.text || '').trim();
       VAD.cevriliyor = false;
       if (!m || /^\[.*\]$|^\(.*\)$|altyazı|izlediğiniz için teşekkür|abone ol/i.test(m)) { durum('bekliyor'); return; }
@@ -254,19 +279,21 @@
     if (tekSefer) { tekSefer = false; if (!AYAR.surekli) dinlemeDurdur(); }
   }
   function dinlemeBaslat() {
-    tanimaYolu = yolSec(); $('aYol').textContent = tanimaYolu === 'tarayici' ? 'Tarayıcının konuşma tanıması (ses, tarayıcı şirketinin sunucusunda çevrilir)' : 'Cihazda çalışan Whisper (ses cihazından çıkmaz)';
+    tanimaYolu = yolSec(); $('aYol').textContent = tanimaYolu === 'tarayici' ? 'Şu an: tarayıcının konuşma tanıması (ses, tarayıcı şirketinin sunucusunda çevrilir)' : 'Şu an: cihazda çalışan Whisper (ses cihazından çıkmaz)'; if (tanimaYolu !== 'tarayici') asrSec().then(a => { $('aYol').textContent = 'Şu an: cihazda çalışan ' + a.ad + ' (ses cihazından çıkmaz)'; });
     if (tanimaYolu === 'tarayici') tarayiciBaslat(); else cihazBaslat();
   }
   function dinlemeDurdur() { tanDurdur = true; if (TAN) try { TAN.stop(); } catch (e) { } tanAcik = false; VAD.acik = false; VAD.kayit = false; if (VAD.isl) try { VAD.isl.disconnect(); VAD.kaynak.disconnect(); } catch (e) { } if (S.durum === 'dinliyor') durum('bekliyor'); }
   function dinlemeyiDuraklat() { if (tanimaYolu === 'tarayici' && TAN && tanAcik) { tanDurdur = true; try { TAN.abort(); } catch (e) { } tanAcik = false; } }
   function dinlemeyiSurdur() { if (tanimaYolu === 'tarayici' && (AYAR.surekli || tekSefer) && !tanAcik) { setTimeout(() => { if (!konusuyorMu()) tarayiciBaslat(); }, 350); } }
-  const hitapMi = m => /\bzeki\b|\bzekiy|\bzekâ\b|\bzeke\b|\bzekii/i.test(m);
+  /* "Zeki" çoğu zaman Zeke, Seki, Zekiye, Zekiğim gibi duyulur */
+  const hitapMi = m => /(?:^|[^a-zçğıöşü])(?:hey\s+)?(?:zek[iîıeâ][a-zçğıöşü']*|zeyki|seki|zekki|zecki|zaki)(?![a-zçğıöşü])/i.test(m.toLocaleLowerCase('tr'));
   const aktifMi = () => performance.now() < aktifSohbetBitis || tekSefer || !!(Beyin.KIP && Beyin.KIP.aktif);
 
   /* ---------------- işleme ---------------- */
-  let isleniyor = false;
+  let isleniyor = false, bekleyenGirdi = null;
   async function isle(m, yazili) {
-    m = m.trim(); if (!m || isleniyor) return;
+    m = m.trim(); if (!m) return;
+    if (isleniyor) { bekleyenGirdi = [m, yazili]; return; } /* işlerken söylenen cümle kaybolmasın: bitince sırayla işlenir */
     /* toplantı notu alınırken söylenenler komut sayılmaz; yalnızca "notu bitir" dinlenir */
     if (window.ZEKI_NOT && !yazili) { if (/not(?:u|ları)?\s*(?:bitir|durdur|kapat|tamam)|kaydı\s*(?:bitir|durdur)|toplantı bitti/i.test(m)) { window.ZEKI_NOT.bitir(); } else altyazi(m, true, true); return; }
     /* sürekli dinlemede yalnızca "Zeki" diye seslenilince ya da sohbet sürerken cevap ver */
@@ -286,6 +313,7 @@
     await konus(r.metin, r.duygu, { link: r.link, kaynak: r.kaynak, parcalar: r.parcalar, ekran: r.ekran, dil: sonDil && !sonDil.startsWith('tr') && !r.parcalar ? sonDil : null });
     if (r.gul) { S.kalp = 1; }
     if (r.eylem && r.eylem.tip === 'ac') setTimeout(() => window.open(r.eylem.url, '_blank', 'noopener'), 200);
+    if (bekleyenGirdi) { const [b, y] = bekleyenGirdi; bekleyenGirdi = null; isle(b, y); }
   }
   function eylem(e) {
     if (e.tip === 'dans') { S.dans = true; sonVurus = performance.now(); S.bpm = 112; setTimeout(() => { if (performance.now() - sonVurus > 5000) S.dans = false; }, 8000); }
@@ -339,7 +367,7 @@
     $('aTanima').value = AYAR.tanima; $('aWhisper').value = AYAR.whisper; $('aSurekli').checked = AYAR.surekli; $('aSesTani').checked = AYAR.sesTani; $('aYorum').checked = AYAR.yorum; $('aSessiz').checked = AYAR.sessiz;
     $('aPerde').value = AYAR.perde; $('aHiz').value = AYAR.hiz;
     $('aTanima').onchange = () => { AYAR.tanima = $('aTanima').value; if (AYAR.tanima === 'tarayici') LS.set('zeki:srBozuk', ''); ayarKaydet(); dinlemeDurdur(); if (AYAR.surekli) dinlemeBaslat(); };
-    $('aWhisper').onchange = () => { AYAR.whisper = $('aWhisper').value; ayarKaydet(); };
+    $('aWhisper').onchange = () => { AYAR.whisper = $('aWhisper').value; ayarKaydet(); asrHazir = null; if (tanimaYolu === 'cihaz' && VAD.acik) asrOnYukle().catch(() => { }); asrSec().then(a => { if (tanimaYolu !== 'tarayici') $('aYol').textContent = 'Şu an: cihazda çalışan ' + a.ad; }); };
     $('aSurekli').onchange = () => { AYAR.surekli = $('aSurekli').checked; ayarKaydet(); AYAR.surekli ? dinlemeBaslat() : dinlemeDurdur(); };
     $('aSesTani').onchange = () => { AYAR.sesTani = $('aSesTani').checked; ayarKaydet(); if (AYAR.sesTani) sinifAc(); else $('duyulan').textContent = ''; };
     $('aYorum').onchange = () => { AYAR.yorum = $('aYorum').checked; ayarKaydet(); };
@@ -380,7 +408,6 @@
   const LLM_MODEL = 'onnx-community/gemma-3-1b-it-ONNX-GQA';
   let beyinZorla = false;
   /* telefonlarda tarayıcı sekmeye ~1 GB'lık model için yeterli bellek vermez; sekme kapanıp yeniden açılır */
-  const MOBIL = /iPhone|iPad|iPod|Android/i.test(navigator.userAgent) || (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
   const AZ_BELLEK = navigator.deviceMemory && navigator.deviceMemory < 8;
   let COKTU = false;
   try { const d = +LS.get('zeki:beyinDeneme'); if (d && Date.now() - d < 15 * 60000) { COKTU = true; LS.set('zeki:beyinCoktu', '1'); AYAR.beyin = false; ayarKaydet(); } LS.set('zeki:beyinDeneme', ''); } catch (e) { }
