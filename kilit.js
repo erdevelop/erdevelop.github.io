@@ -55,7 +55,7 @@
     var tools = document.currentScript.getAttribute('data-gate') || 'Tools.html';
     var show = function () {
       var d = document.createElement('div'); d.id = 'er-lock';
-      d.innerHTML = '<form autocomplete="off"><h1>erdevelop<span>_</span> ' + (en ? 'private' : 'özel') + '</h1><p>' + (en ? 'This tool is password protected.' : 'Bu araç şifreyle korunuyor.') + '</p>' +
+      d.innerHTML = '<form autocomplete="off"><h1><span>er</span>develop<span>_</span> ' + (en ? 'private' : 'özel') + '</h1><p>' + (en ? 'This tool is password protected.' : 'Bu araç şifreyle korunuyor.') + '</p>' +
         '<input type="password" aria-label="' + (en ? 'Password' : 'Şifre') + '" placeholder="' + (en ? 'password' : 'şifre') + '" autofocus>' +
         '<div class="err"></div><div class="row"><a href="' + tools + '">' + (en ? '← Tools' : '← Araçlar') + '</a><button type="submit">' + (en ? 'Unlock' : 'Aç') + '</button></div></form>';
       document.body.appendChild(d);
