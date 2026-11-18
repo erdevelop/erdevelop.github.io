@@ -1537,5 +1537,1493 @@ window.ORNEK_FR = {
 "la classe": [
 "La classe est au premier étage.",
 "Sınıf birinci katta."
+],
+"accepter": [
+"J'accepte ton invitation avec plaisir.",
+"Davetini memnuniyetle kabul ediyorum."
+],
+"ajouter": [
+"Ajoute un peu de sel dans la soupe.",
+"Çorbaya biraz tuz ekle."
+],
+"allumer": [
+"Tu peux allumer la lumière ?",
+"Işığı açabilir misin?"
+],
+"annuler": [
+"Le vol est annulé à cause de la neige.",
+"Kar yüzünden uçuş iptal edildi."
+],
+"apporter": [
+"J'apporte un dessert ce soir.",
+"Bu akşam bir tatlı getiriyorum."
+],
+"arrêter": [
+"Il a arrêté de fumer.",
+"Sigarayı bıraktı."
+],
+"s'asseoir": [
+"Asseyez-vous, s'il vous plaît.",
+"Oturun, lütfen."
+],
+"atteindre": [
+"On atteint le sommet en deux heures.",
+"Zirveye iki saatte ulaşılıyor."
+],
+"changer": [
+"Je dois changer de train à Lyon.",
+"Lyon'da tren değiştirmem gerekiyor."
+],
+"choisir": [
+"Tu as choisi un plat ?",
+"Bir yemek seçtin mi?"
+],
+"compter": [
+"Mon fils sait compter jusqu'à cent.",
+"Oğlum yüze kadar sayabiliyor."
+],
+"continuer": [
+"Continuez tout droit jusqu'au feu.",
+"Trafik ışığına kadar düz devam edin."
+],
+"coûter": [
+"Combien coûte ce pull ?",
+"Bu kazak ne kadar?"
+],
+"couper": [
+"Coupe le pain, s'il te plaît.",
+"Ekmeği kes, lütfen."
+],
+"décider": [
+"Nous avons décidé de partir en Italie.",
+"İtalya'ya gitmeye karar verdik."
+],
+"décrire": [
+"Décrivez votre maison idéale.",
+"Hayalinizdeki evi tarif edin."
+],
+"descendre": [
+"Je descends au prochain arrêt.",
+"Bir sonraki durakta iniyorum."
+],
+"devenir": [
+"Elle veut devenir médecin.",
+"Doktor olmak istiyor."
+],
+"discuter": [
+"On a discuté toute la soirée.",
+"Bütün akşam sohbet ettik."
+],
+"durer": [
+"Le film dure deux heures.",
+"Film iki saat sürüyor."
+],
+"éteindre": [
+"Éteins la télé, on mange.",
+"Televizyonu kapat, yemek yiyoruz."
+],
+"essayer": [
+"Je peux essayer cette veste ?",
+"Bu ceketi deneyebilir miyim?"
+],
+"expliquer": [
+"Le professeur explique bien.",
+"Öğretmen iyi açıklıyor."
+],
+"gagner": [
+"Notre équipe a gagné le match.",
+"Takımımız maçı kazandı."
+],
+"inviter": [
+"Je t'invite à dîner samedi.",
+"Seni cumartesi akşam yemeğine davet ediyorum."
+],
+"jeter": [
+"Ne jette pas le pain !",
+"Ekmeği atma!"
+],
+"laisser": [
+"Laisse ton manteau ici.",
+"Paltonu burada bırak."
+],
+"se laver": [
+"Je me lave les mains.",
+"Ellerimi yıkıyorum."
+],
+"se lever": [
+"Je me lève à sept heures.",
+"Saat yedide kalkarım."
+],
+"louer": [
+"Nous louons une voiture pour les vacances.",
+"Tatil için araba kiralıyoruz."
+],
+"mentir": [
+"Il ne ment jamais.",
+"Asla yalan söylemez."
+],
+"monter": [
+"Montez dans le bus par l'avant.",
+"Otobüse ön kapıdan binin."
+],
+"mourir": [
+"Les plantes vont mourir sans eau.",
+"Bitkiler susuz ölecek."
+],
+"naître": [
+"Je suis né à Izmir.",
+"İzmir'de doğdum."
+],
+"nettoyer": [
+"Je nettoie la cuisine après le dîner.",
+"Akşam yemeğinden sonra mutfağı temizlerim."
+],
+"offrir": [
+"Je vais offrir des fleurs à ma mère.",
+"Anneme çiçek hediye edeceğim."
+],
+"organiser": [
+"On organise une fête pour son anniversaire.",
+"Doğum günü için bir parti düzenliyoruz."
+],
+"oser": [
+"Je n'ose pas lui demander.",
+"Ona sormaya cesaret edemiyorum."
+],
+"partager": [
+"On partage une pizza ?",
+"Bir pizzayı paylaşalım mı?"
+],
+"perdre": [
+"J'ai perdu mon portefeuille.",
+"Cüzdanımı kaybettim."
+],
+"plaire": [
+"Ce film me plaît beaucoup.",
+"Bu film çok hoşuma gidiyor."
+],
+"pleuvoir": [
+"Il pleut depuis ce matin.",
+"Sabahtan beri yağmur yağıyor."
+],
+"poser": [
+"Je peux vous poser une question ?",
+"Size bir soru sorabilir miyim?"
+],
+"pousser": [
+"Poussez la porte pour entrer.",
+"Girmek için kapıyı itin."
+],
+"prévenir": [
+"Préviens-moi si tu es en retard.",
+"Geç kalırsan bana haber ver."
+],
+"promettre": [
+"Je te promets de venir.",
+"Geleceğime söz veriyorum."
+],
+"proposer": [
+"Je propose d'aller au parc.",
+"Parka gitmeyi öneriyorum."
+],
+"quitter": [
+"Il a quitté son travail.",
+"İşinden ayrıldı."
+],
+"raconter": [
+"Raconte-moi ton voyage !",
+"Bana yolculuğunu anlat!"
+],
+"recevoir": [
+"J'ai reçu ton message.",
+"Mesajını aldım."
+],
+"reconnaître": [
+"Je ne t'ai pas reconnu !",
+"Seni tanımadım!"
+],
+"refuser": [
+"Il a refusé mon aide.",
+"Yardımımı reddetti."
+],
+"remercier": [
+"Je vous remercie pour tout.",
+"Her şey için size teşekkür ederim."
+],
+"remplir": [
+"Remplissez ce formulaire, s'il vous plaît.",
+"Bu formu doldurun, lütfen."
+],
+"rencontrer": [
+"J'ai rencontré ma femme à l'université.",
+"Eşimle üniversitede tanıştım."
+],
+"réparer": [
+"Il répare le vélo de son fils.",
+"Oğlunun bisikletini tamir ediyor."
+],
+"repasser": [
+"Je dois repasser ma chemise.",
+"Gömleğimi ütülemem gerekiyor."
+],
+"réserver": [
+"J'ai réservé une table pour huit heures.",
+"Saat sekiz için masa ayırttım."
+],
+"réussir": [
+"Elle a réussi son examen.",
+"Sınavını geçti."
+],
+"réveiller": [
+"Ne réveille pas le bébé !",
+"Bebeği uyandırma!"
+],
+"rire": [
+"On a beaucoup ri pendant le film.",
+"Film boyunca çok güldük."
+],
+"rouler": [
+"La voiture roule trop vite.",
+"Araba çok hızlı gidiyor."
+],
+"sauter": [
+"Les enfants sautent dans l'eau.",
+"Çocuklar suya atlıyor."
+],
+"sentir": [
+"Ça sent bon dans la cuisine !",
+"Mutfakta güzel kokuyor!"
+],
+"servir": [
+"Le petit-déjeuner est servi à sept heures.",
+"Kahvaltı saat yedide servis ediliyor."
+],
+"signer": [
+"Signez ici, s'il vous plaît.",
+"Buraya imzalayın, lütfen."
+],
+"sonner": [
+"Le téléphone sonne.",
+"Telefon çalıyor."
+],
+"sourire": [
+"Elle sourit toujours.",
+"Hep gülümser."
+],
+"se souvenir": [
+"Tu te souviens de notre premier voyage ?",
+"İlk yolculuğumuzu hatırlıyor musun?"
+],
+"suivre": [
+"Suivez-moi, s'il vous plaît.",
+"Beni takip edin, lütfen."
+],
+"tenir": [
+"Tiens la porte, s'il te plaît.",
+"Kapıyı tut, lütfen."
+],
+"tirer": [
+"Tirez la porte pour sortir.",
+"Çıkmak için kapıyı çekin."
+],
+"tomber": [
+"Attention, tu vas tomber !",
+"Dikkat, düşeceksin!"
+],
+"tourner": [
+"Tournez à gauche après la banque.",
+"Bankadan sonra sola dönün."
+],
+"traduire": [
+"Tu peux traduire cette phrase ?",
+"Bu cümleyi çevirebilir misin?"
+],
+"traverser": [
+"On traverse la rue au feu vert.",
+"Caddeden yeşil ışıkta karşıya geçilir."
+],
+"trier": [
+"On trie les déchets à la maison.",
+"Evde çöpleri ayırıyoruz."
+],
+"vivre": [
+"Mes grands-parents vivent à la campagne.",
+"Büyükannemle büyükbabam kırsalda yaşıyor."
+],
+"voler": [
+"On m'a volé mon vélo.",
+"Bisikletimi çaldılar."
+],
+"se promener": [
+"On se promène au bord de la mer.",
+"Deniz kenarında yürüyüşe çıkıyoruz."
+],
+"s'habiller": [
+"Je m'habille vite le matin.",
+"Sabahları çabucak giyinirim."
+],
+"se dépêcher": [
+"Dépêche-toi, le bus arrive !",
+"Acele et, otobüs geliyor!"
+],
+"se reposer": [
+"Le dimanche, je me repose.",
+"Pazar günleri dinlenirim."
+],
+"s'amuser": [
+"Les enfants s'amusent bien.",
+"Çocuklar çok eğleniyor."
+],
+"s'occuper de": [
+"Je m'occupe des enfants ce soir.",
+"Bu akşam çocuklarla ben ilgileniyorum."
+],
+"se marier": [
+"Ils se marient en juin.",
+"Haziranda evleniyorlar."
+],
+"se sentir": [
+"Je ne me sens pas bien.",
+"Kendimi iyi hissetmiyorum."
+],
+"s'inquiéter": [
+"Ne t'inquiète pas, tout va bien.",
+"Merak etme, her şey yolunda."
+],
+"l'adresse": [
+"Quelle est ton adresse ?",
+"Adresin ne?"
+],
+"l'ascenseur": [
+"L'ascenseur est en panne.",
+"Asansör bozuk."
+],
+"la boîte": [
+"Mets les biscuits dans la boîte.",
+"Bisküvileri kutuya koy."
+],
+"la bouteille": [
+"Une bouteille d'eau, s'il vous plaît.",
+"Bir şişe su, lütfen."
+],
+"le verre": [
+"Je bois un verre de jus.",
+"Bir bardak meyve suyu içiyorum."
+],
+"l'assiette": [
+"Mets les assiettes sur la table.",
+"Tabakları masaya koy."
+],
+"la tasse": [
+"Tu veux une tasse de café ?",
+"Bir fincan kahve ister misin?"
+],
+"la fourchette": [
+"Il me manque une fourchette.",
+"Bir çatalım eksik."
+],
+"le couteau": [
+"Ce couteau ne coupe pas.",
+"Bu bıçak kesmiyor."
+],
+"la cuillère": [
+"Il faut une cuillère pour la soupe.",
+"Çorba için kaşık lazım."
+],
+"le frigo": [
+"Le lait est dans le frigo.",
+"Süt buzdolabında."
+],
+"la machine à laver": [
+"La machine à laver est en panne.",
+"Çamaşır makinesi bozuk."
+],
+"le canapé": [
+"Le chat dort sur le canapé.",
+"Kedi kanepede uyuyor."
+],
+"l'armoire": [
+"Mes vêtements sont dans l'armoire.",
+"Giysilerim dolapta."
+],
+"le miroir": [
+"Il se regarde dans le miroir.",
+"Aynada kendine bakıyor."
+],
+"la lampe": [
+"Allume la lampe, il fait sombre.",
+"Lambayı yak, hava karanlık."
+],
+"le mur": [
+"Il y a des photos sur le mur.",
+"Duvarda fotoğraflar var."
+],
+"le plafond": [
+"Le plafond est très haut.",
+"Tavan çok yüksek."
+],
+"le sol": [
+"Ne mets pas ton sac sur le sol.",
+"Çantanı yere koyma."
+],
+"le toit": [
+"Il y a un chat sur le toit.",
+"Çatıda bir kedi var."
+],
+"l'étage": [
+"J'habite au deuxième étage.",
+"İkinci katta oturuyorum."
+],
+"le balcon": [
+"On prend le café sur le balcon.",
+"Kahvemizi balkonda içiyoruz."
+],
+"l'immeuble": [
+"Notre immeuble a six étages.",
+"Apartmanımız altı katlı."
+],
+"le centre-ville": [
+"Je travaille dans le centre-ville.",
+"Şehir merkezinde çalışıyorum."
+],
+"le pont": [
+"On traverse le pont à pied.",
+"Köprüden yürüyerek geçiyoruz."
+],
+"le chemin": [
+"Vous pouvez m'indiquer le chemin ?",
+"Bana yolu tarif edebilir misiniz?"
+],
+"la route": [
+"La route est longue jusqu'à la mer.",
+"Denize kadar yol uzun."
+],
+"l'autoroute": [
+"Il y a des bouchons sur l'autoroute.",
+"Otoyolda trafik sıkışıklığı var."
+],
+"le carrefour": [
+"Tournez à droite au carrefour.",
+"Kavşakta sağa dönün."
+],
+"le feu": [
+"Arrêtez-vous au feu rouge.",
+"Kırmızı ışıkta durun."
+],
+"le trottoir": [
+"Les enfants marchent sur le trottoir.",
+"Çocuklar kaldırımda yürüyor."
+],
+"le parking": [
+"Le parking est gratuit le dimanche.",
+"Otopark pazar günü ücretsiz."
+],
+"la station": [
+"Je descends à la prochaine station.",
+"Bir sonraki istasyonda iniyorum."
+],
+"l'arrêt": [
+"L'arrêt de bus est en face.",
+"Otobüs durağı karşıda."
+],
+"le quai": [
+"Le train part du quai numéro deux.",
+"Tren iki numaralı perondan kalkıyor."
+],
+"le port": [
+"Les bateaux sont dans le port.",
+"Tekneler limanda."
+],
+"le musée": [
+"Le musée est gratuit le dimanche.",
+"Müze pazar günü ücretsiz."
+],
+"l'église": [
+"L'église est très ancienne.",
+"Kilise çok eski."
+],
+"la mosquée": [
+"La mosquée est près du marché.",
+"Cami pazarın yakınında."
+],
+"le château": [
+"On a visité un château magnifique.",
+"Muhteşem bir şato gezdik."
+],
+"la bibliothèque": [
+"J'étudie à la bibliothèque.",
+"Kütüphanede ders çalışıyorum."
+],
+"la piscine": [
+"Je vais à la piscine le mardi.",
+"Salı günleri yüzme havuzuna giderim."
+],
+"le stade": [
+"Le stade est plein ce soir.",
+"Stadyum bu akşam dolu."
+],
+"le théâtre": [
+"On va au théâtre samedi.",
+"Cumartesi tiyatroya gidiyoruz."
+],
+"le supermarché": [
+"Le supermarché ferme à vingt et une heures.",
+"Süpermarket saat yirmi birde kapanıyor."
+],
+"la librairie": [
+"J'ai acheté ce livre à la librairie.",
+"Bu kitabı kitapçıdan aldım."
+],
+"la poste": [
+"Je vais à la poste envoyer un colis.",
+"Paket göndermek için postaneye gidiyorum."
+],
+"le commissariat": [
+"Le commissariat est au bout de la rue.",
+"Karakol sokağın sonunda."
+],
+"la mairie": [
+"Ils se marient à la mairie.",
+"Belediyede evleniyorlar."
+],
+"l'entreprise": [
+"Elle travaille dans une grande entreprise.",
+"Büyük bir şirkette çalışıyor."
+],
+"l'usine": [
+"Mon oncle travaille dans une usine.",
+"Amcam bir fabrikada çalışıyor."
+],
+"le collègue": [
+"Mon collègue est très sympa.",
+"İş arkadaşım çok cana yakın."
+],
+"le patron": [
+"Le patron est en réunion.",
+"Patron toplantıda."
+],
+"le client": [
+"Le client attend à l'accueil.",
+"Müşteri resepsiyonda bekliyor."
+],
+"le métier": [
+"Quel est ton métier ?",
+"Mesleğin ne?"
+],
+"l'emploi": [
+"Il cherche un emploi.",
+"İş arıyor."
+],
+"le salaire": [
+"Son salaire n'est pas très élevé.",
+"Maaşı çok yüksek değil."
+],
+"la réunion": [
+"La réunion commence à dix heures.",
+"Toplantı saat onda başlıyor."
+],
+"le projet": [
+"On a un nouveau projet.",
+"Yeni bir projemiz var."
+],
+"le courrier": [
+"Le courrier arrive le matin.",
+"Posta sabah geliyor."
+],
+"le message": [
+"Laisse-moi un message.",
+"Bana bir mesaj bırak."
+],
+"l'e-mail": [
+"Je t'envoie un e-mail ce soir.",
+"Bu akşam sana bir e-posta gönderiyorum."
+],
+"l'écran": [
+"L'écran de mon téléphone est cassé.",
+"Telefonumun ekranı kırık."
+],
+"le clavier": [
+"Ce clavier est très pratique.",
+"Bu klavye çok kullanışlı."
+],
+"la souris": [
+"Ma souris ne marche plus.",
+"Farem artık çalışmıyor."
+],
+"le site": [
+"Tu peux réserver sur le site.",
+"Web sitesinden rezervasyon yapabilirsin."
+],
+"la santé": [
+"La santé, c'est important.",
+"Sağlık önemlidir."
+],
+"la douleur": [
+"J'ai une douleur au genou.",
+"Dizimde bir ağrı var."
+],
+"la fièvre": [
+"L'enfant a de la fièvre.",
+"Çocuğun ateşi var."
+],
+"le rhume": [
+"J'ai un gros rhume.",
+"Kötü bir nezlem var."
+],
+"le médicament": [
+"Prends ce médicament après le repas.",
+"Bu ilacı yemekten sonra al."
+],
+"l'ordonnance": [
+"Le médecin m'a donné une ordonnance.",
+"Doktor bana bir reçete verdi."
+],
+"le dentiste": [
+"J'ai rendez-vous chez le dentiste.",
+"Diş hekiminden randevum var."
+],
+"l'infirmière": [
+"L'infirmière est très gentille.",
+"Hemşire çok nazik."
+],
+"l'accident": [
+"Il y a eu un accident sur la route.",
+"Yolda bir kaza oldu."
+],
+"l'urgence": [
+"En cas d'urgence, appelez le 112.",
+"Acil durumda 112'yi arayın."
+],
+"la viande hachée": [
+"J'achète de la viande hachée pour les boulettes.",
+"Köfte için kıyma alıyorum."
+],
+"le jambon": [
+"Un sandwich jambon-fromage, s'il vous plaît.",
+"Jambonlu peynirli bir sandviç, lütfen."
+],
+"le saucisson": [
+"On mange du saucisson à l'apéritif.",
+"Aperatif olarak salam yiyoruz."
+],
+"les fruits de mer": [
+"J'adore les fruits de mer.",
+"Deniz ürünlerine bayılırım."
+],
+"la crème": [
+"Tu mets de la crème dans les pâtes ?",
+"Makarnaya krema koyuyor musun?"
+],
+"le yaourt": [
+"Je mange un yaourt avec du miel.",
+"Ballı yoğurt yerim."
+],
+"l'huile": [
+"Mets un peu d'huile dans la poêle.",
+"Tavaya biraz yağ koy."
+],
+"le poivre": [
+"Tu peux me passer le poivre ?",
+"Karabiberi uzatabilir misin?"
+],
+"la farine": [
+"Il faut de la farine pour le gâteau.",
+"Pasta için un lazım."
+],
+"le miel": [
+"Je mets du miel dans mon thé.",
+"Çayıma bal koyuyorum."
+],
+"la confiture": [
+"J'aime le pain avec de la confiture.",
+"Reçelli ekmeği severim."
+],
+"la carotte": [
+"Les lapins aiment les carottes.",
+"Tavşanlar havucu sever."
+],
+"l'oignon": [
+"Coupe l'oignon en petits morceaux.",
+"Soğanı küçük parçalara doğra."
+],
+"l'ail": [
+"Cette sauce a trop d'ail.",
+"Bu sosta çok sarımsak var."
+],
+"le citron": [
+"Un thé au citron, s'il vous plaît.",
+"Limonlu bir çay, lütfen."
+],
+"la fraise": [
+"Les fraises sont très sucrées.",
+"Çilekler çok tatlı."
+],
+"la cerise": [
+"En juin, on mange des cerises.",
+"Haziranda kiraz yeriz."
+],
+"le raisin": [
+"Je prends un kilo de raisin.",
+"Bir kilo üzüm alıyorum."
+],
+"la pêche": [
+"Cette pêche est bien mûre.",
+"Bu şeftali iyice olgun."
+],
+"la poire": [
+"Je fais une tarte aux poires.",
+"Armutlu turta yapıyorum."
+],
+"le dessert": [
+"Qu'est-ce que tu prends comme dessert ?",
+"Tatlı olarak ne alıyorsun?"
+],
+"la glace": [
+"Une glace à la vanille, s'il vous plaît.",
+"Bir vanilyalı dondurma, lütfen."
+],
+"le sandwich": [
+"Je mange un sandwich à midi.",
+"Öğlen bir sandviç yerim."
+],
+"la tarte": [
+"Ma grand-mère fait une tarte aux pommes.",
+"Ninem elmalı turta yapıyor."
+],
+"le croissant": [
+"Un café et un croissant, s'il vous plaît.",
+"Bir kahve ve bir kruvasan, lütfen."
+],
+"le plat": [
+"Le plat du jour est le poisson.",
+"Günün yemeği balık."
+],
+"l'entrée": [
+"Comme entrée, je prends une soupe.",
+"Başlangıç olarak çorba alıyorum."
+],
+"la boisson": [
+"Les boissons sont comprises.",
+"İçecekler dahil."
+],
+"le pourboire": [
+"On laisse un pourboire au serveur.",
+"Garsona bahşiş bırakıyoruz."
+],
+"le serveur": [
+"Le serveur apporte la carte.",
+"Garson menüyü getiriyor."
+],
+"la valise": [
+"Ma valise est trop lourde.",
+"Bavulum çok ağır."
+],
+"le passeport": [
+"N'oublie pas ton passeport !",
+"Pasaportunu unutma!"
+],
+"le voyage": [
+"Bon voyage !",
+"İyi yolculuklar!"
+],
+"le vol": [
+"Le vol dure trois heures.",
+"Uçuş üç saat sürüyor."
+],
+"l'hôtel": [
+"L'hôtel est près de la plage.",
+"Otel plajın yakınında."
+],
+"la réservation": [
+"J'ai une réservation au nom de Yılmaz.",
+"Yılmaz adına bir rezervasyonum var."
+],
+"le guide": [
+"Le guide parle français et anglais.",
+"Rehber Fransızca ve İngilizce konuşuyor."
+],
+"la carte postale": [
+"J'envoie une carte postale à mes parents.",
+"Annemle babama kartpostal gönderiyorum."
+],
+"la frontière": [
+"On a passé la frontière en voiture.",
+"Sınırı arabayla geçtik."
+],
+"l'étranger": [
+"Il travaille à l'étranger.",
+"Yurt dışında çalışıyor."
+],
+"le touriste": [
+"Il y a beaucoup de touristes en été.",
+"Yazın çok turist var."
+],
+"le plan": [
+"Vous avez un plan de la ville ?",
+"Şehir haritanız var mı?"
+],
+"la visite": [
+"La visite du musée dure une heure.",
+"Müze gezisi bir saat sürüyor."
+],
+"le séjour": [
+"Bon séjour à Paris !",
+"Paris'te iyi vakit geçirin!"
+],
+"l'excursion": [
+"On fait une excursion en bateau.",
+"Tekneyle bir geziye çıkıyoruz."
+],
+"le sac à dos": [
+"Mon sac à dos est prêt.",
+"Sırt çantam hazır."
+],
+"le parapluie": [
+"Prends un parapluie, il va pleuvoir.",
+"Şemsiye al, yağmur yağacak."
+],
+"les lunettes": [
+"Je ne trouve pas mes lunettes.",
+"Gözlüğümü bulamıyorum."
+],
+"le chapeau": [
+"Mets un chapeau, il y a du soleil.",
+"Şapka tak, güneş var."
+],
+"la jupe": [
+"Cette jupe est trop courte.",
+"Bu etek çok kısa."
+],
+"le pull": [
+"J'ai mis un pull chaud.",
+"Kalın bir kazak giydim."
+],
+"la veste": [
+"Ta veste est très belle.",
+"Ceketin çok güzel."
+],
+"les chaussettes": [
+"Mes chaussettes sont mouillées.",
+"Çoraplarım ıslak."
+],
+"la ceinture": [
+"Attachez votre ceinture.",
+"Kemerinizi bağlayın."
+],
+"la montre": [
+"Ma montre est en retard.",
+"Saatim geri kalıyor."
+],
+"le bijou": [
+"Elle porte un joli bijou.",
+"Hoş bir mücevher takıyor."
+],
+"la taille": [
+"Quelle est votre taille ?",
+"Bedeniniz kaç?"
+],
+"la couleur": [
+"Quelle est ta couleur préférée ?",
+"En sevdiğin renk ne?"
+],
+"le ciel": [
+"Le ciel est plein d'étoiles.",
+"Gökyüzü yıldızlarla dolu."
+],
+"le nuage": [
+"Il n'y a pas un nuage.",
+"Tek bir bulut yok."
+],
+"l'orage": [
+"Il y a eu un gros orage cette nuit.",
+"Bu gece büyük bir fırtına oldu."
+],
+"la température": [
+"La température va baisser demain.",
+"Yarın sıcaklık düşecek."
+],
+"la forêt": [
+"On se promène dans la forêt.",
+"Ormanda yürüyüş yapıyoruz."
+],
+"la rivière": [
+"Les enfants jouent près de la rivière.",
+"Çocuklar derenin yanında oynuyor."
+],
+"le lac": [
+"On fait du bateau sur le lac.",
+"Gölde tekne geziyoruz."
+],
+"l'île": [
+"Nous passons une semaine sur une île.",
+"Bir adada bir hafta geçiriyoruz."
+],
+"la campagne": [
+"J'aime le calme de la campagne.",
+"Kırsalın sessizliğini severim."
+],
+"le champ": [
+"Les vaches sont dans le champ.",
+"İnekler tarlada."
+],
+"l'animal": [
+"Tu as un animal à la maison ?",
+"Evde hayvanın var mı?"
+],
+"le cheval": [
+"Ma fille fait du cheval.",
+"Kızım ata biniyor."
+],
+"la vache": [
+"La vache donne du lait.",
+"İnek süt verir."
+],
+"le mouton": [
+"Il y a des moutons dans la montagne.",
+"Dağda koyunlar var."
+],
+"le cochon": [
+"Le petit cochon est tout rose.",
+"Küçük domuz pespembe."
+],
+"la poule": [
+"Les poules sont dans le jardin.",
+"Tavuklar bahçede."
+],
+"le lapin": [
+"Les enfants ont un lapin blanc.",
+"Çocukların beyaz bir tavşanı var."
+],
+"le poisson rouge": [
+"Mon fils a un poisson rouge.",
+"Oğlumun bir japon balığı var."
+],
+"l'insecte": [
+"Il y a beaucoup d'insectes en été.",
+"Yazın çok böcek olur."
+],
+"le chiot": [
+"Le chiot dort dans son panier.",
+"Köpek yavrusu sepetinde uyuyor."
+],
+"l'histoire": [
+"Raconte-moi une histoire, papa !",
+"Bana bir hikâye anlat, baba!"
+],
+"la géographie": [
+"J'aime la géographie à l'école.",
+"Okulda coğrafyayı severim."
+],
+"les mathématiques": [
+"Il est fort en mathématiques.",
+"Matematikte iyidir."
+],
+"les sciences": [
+"On a un cours de sciences cet après-midi.",
+"Bu öğleden sonra fen dersimiz var."
+],
+"l'examen": [
+"Demain, j'ai un examen de français.",
+"Yarın Fransızca sınavım var."
+],
+"la note": [
+"J'ai eu une bonne note.",
+"İyi bir not aldım."
+],
+"le cours": [
+"Le cours de français commence à neuf heures.",
+"Fransızca dersi saat dokuzda başlıyor."
+],
+"la leçon": [
+"On apprend la leçon trois aujourd'hui.",
+"Bugün üçüncü dersi öğreniyoruz."
+],
+"le devoir": [
+"J'ai fini mes devoirs.",
+"Ödevlerimi bitirdim."
+],
+"le diplôme": [
+"Elle a eu son diplôme cette année.",
+"Bu yıl diplomasını aldı."
+],
+"l'université": [
+"Mon frère étudie à l'université.",
+"Erkek kardeşim üniversitede okuyor."
+],
+"le lycée": [
+"Ma fille entre au lycée en septembre.",
+"Kızım eylülde liseye başlıyor."
+],
+"le collège": [
+"Le collège est à côté de chez nous.",
+"Ortaokul evimizin yanında."
+],
+"l'enseignant": [
+"L'enseignant corrige les examens.",
+"Öğretmen sınavları okuyor."
+],
+"le dictionnaire": [
+"Je cherche le mot dans le dictionnaire.",
+"Kelimeyi sözlükte arıyorum."
+],
+"la phrase": [
+"Lis la phrase à voix haute.",
+"Cümleyi yüksek sesle oku."
+],
+"la page": [
+"Ouvrez le livre à la page dix.",
+"Kitabı onuncu sayfada açın."
+],
+"l'exercice": [
+"Faites l'exercice numéro trois.",
+"Üç numaralı alıştırmayı yapın."
+],
+"l'erreur": [
+"Tout le monde fait des erreurs.",
+"Herkes hata yapar."
+],
+"l'exemple": [
+"Tu peux me donner un exemple ?",
+"Bana bir örnek verebilir misin?"
+],
+"la radio": [
+"J'écoute la radio dans la voiture.",
+"Arabada radyo dinlerim."
+],
+"la télévision": [
+"Il n'y a rien à la télévision ce soir.",
+"Bu akşam televizyonda bir şey yok."
+],
+"le journal": [
+"Mon père lit le journal le matin.",
+"Babam sabahları gazete okur."
+],
+"le magazine": [
+"J'achète un magazine à la gare.",
+"Garda bir dergi alıyorum."
+],
+"la chanson": [
+"C'est ma chanson préférée.",
+"Bu en sevdiğim şarkı."
+],
+"le concert": [
+"On va au concert vendredi.",
+"Cuma günü konsere gidiyoruz."
+],
+"le jeu": [
+"On joue à un jeu de cartes.",
+"Bir kart oyunu oynuyoruz."
+],
+"le loisir": [
+"Quel est ton loisir préféré ?",
+"En sevdiğin hobi ne?"
+],
+"la promenade": [
+"On fait une promenade après le dîner.",
+"Akşam yemeğinden sonra yürüyüşe çıkıyoruz."
+],
+"le roman": [
+"Je lis un roman policier.",
+"Bir polisiye roman okuyorum."
+],
+"l'idée": [
+"C'est une excellente idée !",
+"Bu harika bir fikir!"
+],
+"le problème": [
+"Il n'y a pas de problème.",
+"Sorun yok."
+],
+"la solution": [
+"On va trouver une solution.",
+"Bir çözüm bulacağız."
+],
+"la raison": [
+"Tu as raison.",
+"Haklısın."
+],
+"le besoin": [
+"J'ai besoin d'aide.",
+"Yardıma ihtiyacım var."
+],
+"le choix": [
+"Il y a beaucoup de choix dans ce magasin.",
+"Bu dükkânda çok seçenek var."
+],
+"le conseil": [
+"Je te donne un conseil : repose-toi.",
+"Sana bir tavsiye: dinlen."
+],
+"la vérité": [
+"Dis-moi la vérité.",
+"Bana gerçeği söyle."
+],
+"le mensonge": [
+"C'est un mensonge !",
+"Bu bir yalan!"
+],
+"la chance": [
+"Bonne chance pour ton examen !",
+"Sınavında bol şans!"
+],
+"la peur": [
+"J'ai peur des chiens.",
+"Köpeklerden korkarım."
+],
+"la joie": [
+"Elle saute de joie.",
+"Sevinçten zıplıyor."
+],
+"la colère": [
+"Il est en colère contre son frère.",
+"Erkek kardeşine kızgın."
+],
+"l'amour": [
+"L'amour, c'est important.",
+"Sevgi önemlidir."
+],
+"l'amitié": [
+"Notre amitié dure depuis vingt ans.",
+"Arkadaşlığımız yirmi yıldır sürüyor."
+],
+"le rêve": [
+"Mon rêve, c'est de voir le Japon.",
+"Hayalim Japonya'yı görmek."
+],
+"le souvenir": [
+"J'ai de bons souvenirs de cette ville.",
+"Bu şehirle ilgili güzel anılarım var."
+],
+"la surprise": [
+"Quelle bonne surprise !",
+"Ne güzel bir sürpriz!"
+],
+"la nouvelle": [
+"J'ai une bonne nouvelle !",
+"İyi bir haberim var!"
+],
+"le bruit": [
+"Il y a trop de bruit ici.",
+"Burada çok fazla gürültü var."
+],
+"ancien": [
+"C'est mon ancien professeur.",
+"O benim eski öğretmenim."
+],
+"prochain": [
+"On se voit la semaine prochaine.",
+"Gelecek hafta görüşürüz."
+],
+"dernier": [
+"Le mois dernier, j'étais à Rome.",
+"Geçen ay Roma'daydım."
+],
+"seul": [
+"Il habite seul.",
+"Yalnız yaşıyor."
+],
+"prêt": [
+"Tu es prêt ? On part !",
+"Hazır mısın? Gidiyoruz!"
+],
+"libre": [
+"Cette place est libre ?",
+"Bu yer boş mu?"
+],
+"occupé": [
+"Je suis très occupé cette semaine.",
+"Bu hafta çok meşgulüm."
+],
+"important": [
+"C'est très important pour moi.",
+"Bu benim için çok önemli."
+],
+"possible": [
+"C'est possible de payer par carte ?",
+"Kartla ödemek mümkün mü?"
+],
+"impossible": [
+"C'est impossible de dormir avec ce bruit.",
+"Bu gürültüyle uyumak imkânsız."
+],
+"nécessaire": [
+"Ce n'est pas nécessaire de réserver.",
+"Rezervasyon yapmak gerekli değil."
+],
+"simple": [
+"La recette est très simple.",
+"Tarif çok basit."
+],
+"pratique": [
+"Ce sac est très pratique.",
+"Bu çanta çok kullanışlı."
+],
+"calme": [
+"Le quartier est calme.",
+"Mahalle sakin."
+],
+"drôle": [
+"Ton histoire est très drôle.",
+"Hikâyen çok komik."
+],
+"sérieux": [
+"C'est un élève sérieux.",
+"Ciddi bir öğrenci."
+],
+"timide": [
+"Ma fille est un peu timide.",
+"Kızım biraz utangaç."
+],
+"poli": [
+"Il faut être poli avec les gens.",
+"İnsanlara karşı kibar olmak lazım."
+],
+"méchant": [
+"Attention, le chien est méchant.",
+"Dikkat, köpek tehlikeli."
+],
+"intelligent": [
+"C'est un enfant très intelligent.",
+"Çok zeki bir çocuk."
+],
+"bête": [
+"Ce n'est pas une question bête.",
+"Bu aptalca bir soru değil."
+],
+"riche": [
+"Il n'est pas riche, mais il est heureux.",
+"Zengin değil ama mutlu."
+],
+"pauvre": [
+"C'est un pays pauvre.",
+"Bu fakir bir ülke."
+],
+"fort": [
+"Il est très fort au tennis.",
+"Teniste çok iyi."
+],
+"faible": [
+"Je me sens faible après la grippe.",
+"Gripten sonra kendimi halsiz hissediyorum."
+],
+"lourd": [
+"Ce sac est trop lourd pour toi.",
+"Bu çanta sana çok ağır."
+],
+"léger": [
+"Prends un repas léger le soir.",
+"Akşamları hafif bir yemek ye."
+],
+"mince": [
+"Elle est grande et mince.",
+"Uzun boylu ve ince."
+],
+"gros": [
+"C'est un gros chien.",
+"İri bir köpek."
+],
+"haut": [
+"La tour est très haute.",
+"Kule çok yüksek."
+],
+"bas": [
+"Parle à voix basse, le bébé dort.",
+"Alçak sesle konuş, bebek uyuyor."
+],
+"large": [
+"La rue est large.",
+"Cadde geniş."
+],
+"étroit": [
+"Ce pantalon est trop étroit.",
+"Bu pantolon çok dar."
+],
+"profond": [
+"Le lac est très profond.",
+"Göl çok derin."
+],
+"doux": [
+"Ce pull est très doux.",
+"Bu kazak çok yumuşak."
+],
+"dur": [
+"Le pain est dur.",
+"Ekmek sert."
+],
+"mouillé": [
+"Mes cheveux sont encore mouillés.",
+"Saçlarım hâlâ ıslak."
+],
+"sec": [
+"Le linge est sec.",
+"Çamaşırlar kuru."
+],
+"sucré": [
+"Ce gâteau est trop sucré.",
+"Bu pasta çok şekerli."
+],
+"salé": [
+"La soupe est un peu salée.",
+"Çorba biraz tuzlu."
+],
+"épicé": [
+"J'aime la cuisine épicée.",
+"Baharatlı yemekleri severim."
+],
+"frais": [
+"Le poisson est frais.",
+"Balık taze."
+],
+"célèbre": [
+"C'est un acteur très célèbre.",
+"Çok ünlü bir oyuncu."
+],
+"dangereux": [
+"Cette route est dangereuse.",
+"Bu yol tehlikeli."
+],
+"bruyant": [
+"Mes voisins sont bruyants.",
+"Komşularım gürültücü."
+],
+"perdu": [
+"Je suis perdu, vous pouvez m'aider ?",
+"Kayboldum, bana yardım edebilir misiniz?"
+],
+"enfin": [
+"Enfin, le bus arrive !",
+"Sonunda otobüs geliyor!"
+],
+"bientôt": [
+"À bientôt !",
+"Yakında görüşürüz!"
+],
+"tard": [
+"Il est tard, je rentre.",
+"Geç oldu, eve dönüyorum."
+],
+"tôt": [
+"Je me lève tôt le lundi.",
+"Pazartesi günleri erken kalkarım."
+],
+"longtemps": [
+"J'ai attendu longtemps.",
+"Uzun süre bekledim."
+],
+"pendant": [
+"J'ai dormi pendant le film.",
+"Film sırasında uyudum."
+],
+"depuis": [
+"J'habite ici depuis cinq ans.",
+"Beş yıldır burada oturuyorum."
+],
+"avant": [
+"Lave-toi les mains avant le repas.",
+"Yemekten önce ellerini yıka."
+],
+"après": [
+"On se voit après le travail.",
+"İşten sonra görüşürüz."
+],
+"vers": [
+"J'arrive vers huit heures.",
+"Saat sekize doğru geliyorum."
+],
+"jusqu'à": [
+"Le magasin est ouvert jusqu'à vingt heures.",
+"Dükkân saat yirmiye kadar açık."
+],
+"contre": [
+"Je suis contre cette idée.",
+"Bu fikre karşıyım."
+],
+"selon": [
+"Selon la météo, il va faire beau.",
+"Hava durumuna göre hava güzel olacak."
+],
+"environ": [
+"Le trajet dure environ une heure.",
+"Yolculuk yaklaşık bir saat sürüyor."
+],
+"presque": [
+"J'ai presque fini.",
+"Neredeyse bitirdim."
+],
+"seulement": [
+"J'ai seulement dix euros.",
+"Sadece on avrom var."
+],
+"ensemble": [
+"On dîne ensemble ce soir ?",
+"Bu akşam birlikte yemek yiyelim mi?"
+],
+"partout": [
+"J'ai cherché mes clés partout.",
+"Anahtarlarımı her yerde aradım."
+],
+"ailleurs": [
+"On va manger ailleurs.",
+"Başka bir yerde yiyelim."
+],
+"dehors": [
+"Les enfants jouent dehors.",
+"Çocuklar dışarıda oynuyor."
+],
+"dedans": [
+"Il fait froid, restons dedans.",
+"Hava soğuk, içeride kalalım."
+],
+"en haut": [
+"La chambre est en haut.",
+"Yatak odası yukarıda."
+],
+"en bas": [
+"Je t'attends en bas.",
+"Seni aşağıda bekliyorum."
+],
+"à gauche": [
+"La pharmacie est à gauche.",
+"Eczane solda."
+],
+"à droite": [
+"Tournez à droite au carrefour.",
+"Kavşakta sağa dönün."
+],
+"peut-être": [
+"Peut-être qu'il viendra demain.",
+"Belki yarın gelir."
+],
+"vraiment": [
+"C'est vraiment délicieux !",
+"Bu gerçekten çok lezzetli!"
+],
+"surtout": [
+"J'aime les fruits, surtout les fraises.",
+"Meyveyi severim, özellikle çileği."
+],
+"plutôt": [
+"Je préfère plutôt le thé.",
+"Daha çok çayı tercih ederim."
+],
+"sûrement": [
+"Il va sûrement pleuvoir.",
+"Kesinlikle yağmur yağacak."
+],
+"d'habitude": [
+"D'habitude, je prends le métro.",
+"Genellikle metroya binerim."
+],
+"tout à coup": [
+"Tout à coup, il a commencé à pleuvoir.",
+"Birdenbire yağmur yağmaya başladı."
+],
+"tout de suite": [
+"J'arrive tout de suite !",
+"Hemen geliyorum!"
+],
+"à l'heure": [
+"Le train est à l'heure.",
+"Tren zamanında."
 ]
 };
