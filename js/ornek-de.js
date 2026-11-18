@@ -4449,5 +4449,1405 @@ window.ORNEK_DE = {
 "die Kontrolle": [
 "An der Grenze gibt es eine Kontrolle.",
 "Sınırda kontrol var."
+],
+"das Gespräch": [
+"Wir hatten ein langes Gespräch.",
+"Uzun bir konuşma yaptık."
+],
+"der Körper": [
+"Sport ist gut für den Körper.",
+"Spor vücuda iyi gelir."
+],
+"die Küste": [
+"Wir fahren an der Küste entlang.",
+"Kıyı boyunca gidiyoruz."
+],
+"die Baumwolle": [
+"Das Hemd ist aus Baumwolle.",
+"Gömlek pamuklu."
+],
+"der Flur": [
+"Die Toilette ist am Ende des Flurs.",
+"Tuvalet koridorun sonunda."
+],
+"der Schlag": [
+"Er hat einen Schlag auf den Kopf bekommen.",
+"Kafasına bir darbe aldı."
+],
+"der Hof": [
+"Die Kinder spielen im Hof.",
+"Çocuklar avluda oynuyor."
+],
+"der Mut": [
+"Nur Mut, du schaffst das!",
+"Cesaret, sen bunu başarırsın!"
+],
+"das Rennen": [
+"Er hat das Rennen gewonnen.",
+"Yarışı kazandı."
+],
+"die Kosten": [
+"Die Kosten sind zu hoch.",
+"Maliyet çok yüksek."
+],
+"die Sitte": [
+"Das ist eine alte Sitte.",
+"Bu eski bir gelenek."
+],
+"die Krise": [
+"Das Land ist in einer Krise.",
+"Ülke bir kriz içinde."
+],
+"das Wachstum": [
+"Das Wachstum der Stadt ist schnell.",
+"Şehrin büyümesi hızlı."
+],
+"die Kultur": [
+"Ich interessiere mich für die deutsche Kultur.",
+"Alman kültürüyle ilgileniyorum."
+],
+"die Gefahr": [
+"Achtung, Gefahr!",
+"Dikkat, tehlike!"
+],
+"das Datum": [
+"Welches Datum ist heute?",
+"Bugün ayın kaçı?"
+],
+"die Debatte": [
+"Im Fernsehen läuft eine Debatte.",
+"Televizyonda bir tartışma programı var."
+],
+"der Anfang": [
+"Am Anfang war es schwer.",
+"Başlangıçta zordu."
+],
+"die Entscheidung": [
+"Das ist eine schwierige Entscheidung.",
+"Bu zor bir karar."
+],
+"die Entdeckung": [
+"Das Restaurant ist eine tolle Entdeckung.",
+"Bu restoran harika bir keşif."
+],
+"der Nachteil": [
+"Der einzige Nachteil ist der Lärm.",
+"Tek dezavantajı gürültü."
+],
+"die Herausforderung": [
+"Eine neue Sprache ist eine Herausforderung.",
+"Yeni bir dil zorlu bir iştir."
+],
+"der Grad": [
+"Es sind heute dreißig Grad.",
+"Bugün hava otuz derece."
+],
+"die Nachfrage": [
+"Die Nachfrage ist sehr groß.",
+"Talep çok büyük."
+],
+"die Demokratie": [
+"Demokratie ist wichtig.",
+"Demokrasi önemlidir."
+],
+"die Abteilung": [
+"Sie arbeitet in der Marketingabteilung.",
+"Pazarlama bölümünde çalışıyor."
+],
+"die Ausgabe": [
+"Ich schreibe alle Ausgaben auf.",
+"Bütün harcamaları yazıyorum."
+],
+"die Wüste": [
+"In der Wüste ist es sehr heiß.",
+"Çölde hava çok sıcak."
+],
+"der Wunsch": [
+"Hast du einen Wunsch zum Geburtstag?",
+"Doğum günün için bir dileğin var mı?"
+],
+"die Zeichnung": [
+"Mein Sohn hat mir eine Zeichnung gemacht.",
+"Oğlum bana bir resim çizdi."
+],
+"das Schicksal": [
+"Das war Schicksal.",
+"Bu kaderdi."
+],
+"die Entwicklung": [
+"Die Entwicklung der Technik ist schnell.",
+"Teknolojinin gelişimi hızlı."
+],
+"der Unterschied": [
+"Was ist der Unterschied?",
+"Fark ne?"
+],
+"die Schwierigkeit": [
+"Ich habe Schwierigkeiten mit der Grammatik.",
+"Dilbilgisinde zorlanıyorum."
+],
+"der Direktor": [
+"Der Direktor möchte dich sprechen.",
+"Müdür seninle konuşmak istiyor."
+],
+"die Entfernung": [
+"Die Entfernung bis Berlin ist groß.",
+"Berlin'e mesafe büyük."
+],
+"das Dokument": [
+"Bitte schicken Sie mir das Dokument.",
+"Lütfen belgeyi bana gönderin."
+],
+"der Bereich": [
+"Er arbeitet im Bereich Gesundheit.",
+"Sağlık alanında çalışıyor."
+],
+"der Schaden": [
+"Der Schaden ist nicht groß.",
+"Hasar büyük değil."
+],
+"die Spende": [
+"Wir sammeln Spenden für die Schule.",
+"Okul için bağış topluyoruz."
+],
+"die Akte": [
+"Die Akte liegt auf meinem Schreibtisch.",
+"Dosya masamın üstünde."
+],
+"der Zweifel": [
+"Ohne Zweifel!",
+"Hiç şüphesiz!"
+],
+"die Fahne": [
+"Die Fahne weht im Wind.",
+"Bayrak rüzgârda dalgalanıyor."
+],
+"das Recht": [
+"Du hast das Recht, Nein zu sagen.",
+"Hayır deme hakkın var."
+],
+"die Dauer": [
+"Die Dauer des Kurses ist drei Monate.",
+"Kursun süresi üç ay."
+],
+"das Trinkwasser": [
+"Das ist kein Trinkwasser.",
+"Bu içme suyu değil."
+],
+"der Misserfolg": [
+"Ein Misserfolg ist nicht das Ende.",
+"Bir başarısızlık son değildir."
+],
+"die Wirtschaft": [
+"Die Wirtschaft wächst wieder.",
+"Ekonomi yeniden büyüyor."
+],
+"die Bildung": [
+"Bildung ist sehr wichtig.",
+"Eğitim çok önemli."
+],
+"die Wirkung": [
+"Das Medikament zeigt Wirkung.",
+"İlaç etkisini gösteriyor."
+],
+"die Anstrengung": [
+"Das war eine große Anstrengung.",
+"Bu büyük bir çabaydı."
+],
+"die Gleichheit": [
+"Sie kämpfen für Gleichheit.",
+"Eşitlik için mücadele ediyorlar."
+],
+"der Strom": [
+"Wir haben keinen Strom.",
+"Elektriğimiz yok."
+],
+"das Element": [
+"Das ist ein wichtiges Element.",
+"Bu önemli bir öğe."
+],
+"die Verpackung": [
+"Wirf die Verpackung in den gelben Sack.",
+"Ambalajı sarı torbaya at."
+],
+"die Sendung": [
+"Ich sehe eine Sendung über Tiere.",
+"Hayvanlarla ilgili bir program izliyorum."
+],
+"der Stundenplan": [
+"Mein Stundenplan ist sehr voll.",
+"Ders programım çok dolu."
+],
+"der Angestellte": [
+"Der Angestellte ist sehr freundlich.",
+"Çalışan çok güler yüzlü."
+],
+"die Energie": [
+"Ich habe keine Energie mehr.",
+"Hiç enerjim kalmadı."
+],
+"die Kindheit": [
+"Ich habe meine Kindheit auf dem Land verbracht.",
+"Çocukluğumu kırsalda geçirdim."
+],
+"der Feind": [
+"Stress ist der Feind des Schlafs.",
+"Stres uykunun düşmanıdır."
+],
+"die Langeweile": [
+"Die Kinder sterben vor Langeweile.",
+"Çocuklar can sıkıntısından patlıyor."
+],
+"die Umfrage": [
+"Laut Umfrage gewinnt er die Wahl.",
+"Ankete göre seçimi kazanıyor."
+],
+"das Training": [
+"Das Training ist am Dienstag.",
+"Antrenman salı günü."
+],
+"die Umwelt": [
+"Wir müssen die Umwelt schützen.",
+"Çevreyi korumalıyız."
+],
+"die Lust": [
+"Ich habe Lust auf ein Eis.",
+"Canım dondurma çekiyor."
+],
+"die Epoche": [
+"In dieser Epoche gab es kein Internet.",
+"O dönemde internet yoktu."
+],
+"die Mannschaft": [
+"Unsere Mannschaft hat gewonnen.",
+"Takımımız kazandı."
+],
+"die Ausrüstung": [
+"Die Skiausrüstung ist teuer.",
+"Kayak ekipmanı pahalı."
+],
+"der Raum": [
+"Der Raum ist zu klein für uns.",
+"Oda bizim için çok küçük."
+],
+"die Hoffnung": [
+"Wir dürfen die Hoffnung nicht verlieren.",
+"Umudu kaybetmemeliyiz."
+],
+"der Geist": [
+"Sport hält Körper und Geist fit.",
+"Spor bedeni ve zihni zinde tutar."
+],
+"das Benzin": [
+"Das Benzin ist gerade teuer.",
+"Benzin şu sıralar pahalı."
+],
+"der Osten": [
+"Die Sonne geht im Osten auf.",
+"Güneş doğudan doğar."
+],
+"die Etappe": [
+"Die erste Etappe ist leicht.",
+"İlk aşama kolay."
+],
+"der Zustand": [
+"Das Auto ist in gutem Zustand.",
+"Araba iyi durumda."
+],
+"der Staat": [
+"Der Staat bezahlt die Schule.",
+"Okul masraflarını devlet karşılıyor."
+],
+"der Stern": [
+"Auf dem Land sieht man viele Sterne.",
+"Kırsalda çok yıldız görünür."
+],
+"das Ereignis": [
+"Das ist ein großes Ereignis für die Stadt.",
+"Bu şehir için büyük bir olay."
+],
+"die Erfahrung": [
+"Er hat viel Erfahrung.",
+"Çok deneyimi var."
+],
+"die Erklärung": [
+"Danke für die Erklärung.",
+"Açıklama için teşekkürler."
+],
+"die Ausstellung": [
+"Wir besuchen eine Fotoausstellung.",
+"Bir fotoğraf sergisini geziyoruz."
+],
+"der Ausdruck": [
+"Das ist ein typisch deutscher Ausdruck.",
+"Bu tipik bir Almanca ifade."
+],
+"die Art": [
+"Ich mag seine Art zu sprechen.",
+"Konuşma şeklini seviyorum."
+],
+"der Hunger": [
+"Ich habe großen Hunger.",
+"Çok açım."
+],
+"die Schuld": [
+"Das ist nicht deine Schuld.",
+"Bu senin suçun değil."
+],
+"der Gefallen": [
+"Kannst du mir einen Gefallen tun?",
+"Bana bir iyilik yapabilir misin?"
+],
+"das Eisen": [
+"Die Brücke ist aus Eisen.",
+"Köprü demirden."
+],
+"der Bauernhof": [
+"Die Kinder besuchen einen Bauernhof.",
+"Çocuklar bir çiftliği ziyaret ediyor."
+],
+"das Ende": [
+"Am Ende des Films weinen alle.",
+"Filmin sonunda herkes ağlıyor."
+],
+"das Finale": [
+"Das Finale ist am Sonntag.",
+"Final pazar günü."
+],
+"das Mal": [
+"Ich war schon dreimal hier.",
+"Buraya zaten üç kez geldim."
+],
+"der Hintergrund": [
+"Im Hintergrund sieht man die Berge.",
+"Arka planda dağlar görünüyor."
+],
+"der Brunnen": [
+"Auf dem Platz steht ein Brunnen.",
+"Meydanda bir çeşme var."
+],
+"die Kraft": [
+"Ich habe keine Kraft mehr.",
+"Hiç gücüm kalmadı."
+],
+"die Form": [
+"Ich bin gut in Form.",
+"Formum iyi."
+],
+"die Ausbildung": [
+"Er macht eine Ausbildung als Koch.",
+"Aşçılık eğitimi alıyor."
+],
+"das Vermögen": [
+"Das Haus hat ein Vermögen gekostet.",
+"Ev bir servete mal oldu."
+],
+"der Rauch": [
+"In der Küche ist Rauch.",
+"Mutfakta duman var."
+],
+"das Gas": [
+"Der Herd funktioniert mit Gas.",
+"Ocak gazla çalışıyor."
+],
+"das Geschlecht": [
+"Bitte geben Sie Ihr Geschlecht an.",
+"Lütfen cinsiyetinizi belirtin."
+],
+"die Geste": [
+"Das ist eine nette Geste.",
+"Bu güzel bir jest."
+],
+"die Leitung": [
+"Sie hat die Leitung des Projekts.",
+"Projenin yönetimi onda."
+],
+"der Geschmack": [
+"Die Suppe hat einen komischen Geschmack.",
+"Çorbanın tadı tuhaf."
+],
+"die Regierung": [
+"Die Regierung plant neue Gesetze.",
+"Hükümet yeni yasalar planlıyor."
+],
+"der Streik": [
+"Wegen des Streiks fahren keine Züge.",
+"Grev yüzünden trenler çalışmıyor."
+],
+"die Gruppe": [
+"Wir reisen in einer Gruppe.",
+"Grup halinde seyahat ediyoruz."
+],
+"der Krieg": [
+"Mein Großvater hat den Krieg erlebt.",
+"Dedem savaşı yaşadı."
+],
+"der Einwohner": [
+"Die Stadt hat zwei Millionen Einwohner.",
+"Şehrin iki milyon sakini var."
+],
+"die Gewohnheit": [
+"Das ist eine schlechte Gewohnheit.",
+"Bu kötü bir alışkanlık."
+],
+"der Zufall": [
+"Wir haben uns durch Zufall getroffen.",
+"Tesadüfen karşılaştık."
+],
+"der Anstieg": [
+"Es gibt einen Anstieg der Preise.",
+"Fiyatlarda bir artış var."
+],
+"der Held": [
+"Der Held des Films ist ein Kind.",
+"Filmin kahramanı bir çocuk."
+],
+"die Laune": [
+"Er hat heute gute Laune.",
+"Bugün keyfi yerinde."
+],
+"der Humor": [
+"Sie hat viel Humor.",
+"Çok espri anlayışı var."
+],
+"das Bild": [
+"Das Bild hängt im Wohnzimmer.",
+"Resim oturma odasında asılı."
+],
+"der Eindruck": [
+"Ich habe den Eindruck, dass er müde ist.",
+"Yorgun olduğu izlenimine kapılıyorum."
+],
+"die Steuer": [
+"Wir müssen Steuern bezahlen.",
+"Vergi ödememiz gerekiyor."
+],
+"der Brand": [
+"Die Feuerwehr hat den Brand gelöscht.",
+"İtfaiye yangını söndürdü."
+],
+"die Industrie": [
+"Er arbeitet in der Autoindustrie.",
+"Otomotiv sanayisinde çalışıyor."
+],
+"die Sorge": [
+"Ich verstehe deine Sorge.",
+"Endişeni anlıyorum."
+],
+"der Augenblick": [
+"Einen Augenblick, bitte.",
+"Bir saniye, lütfen."
+],
+"das Interesse": [
+"Ich lese das Buch mit Interesse.",
+"Kitabı ilgiyle okuyorum."
+],
+"das Innere": [
+"Das Innere des Hauses ist modern.",
+"Evin içi modern."
+],
+"das Computerspiel": [
+"Mein Sohn spielt zu viele Computerspiele.",
+"Oğlum çok fazla bilgisayar oyunu oynuyor."
+],
+"die Jugend": [
+"In meiner Jugend bin ich viel gereist.",
+"Gençliğimde çok seyahat ettim."
+],
+"der Journalist": [
+"Der Journalist stellt viele Fragen.",
+"Gazeteci çok soru soruyor."
+],
+"der Richter": [
+"Der Richter hat entschieden.",
+"Hakim karar verdi."
+],
+"die Gerechtigkeit": [
+"Er glaubt an Gerechtigkeit.",
+"Adalete inanıyor."
+],
+"das Labor": [
+"Die Blutprobe geht ins Labor.",
+"Kan örneği laboratuvara gidiyor."
+],
+"die Verbindung": [
+"Die Internetverbindung ist schlecht.",
+"İnternet bağlantısı kötü."
+],
+"die Linie": [
+"Nehmen Sie die Linie drei.",
+"Üç numaralı hatta binin."
+],
+"die Liste": [
+"Ich schreibe eine Einkaufsliste.",
+"Bir alışveriş listesi yazıyorum."
+],
+"das Gesetz": [
+"Das ist gegen das Gesetz.",
+"Bu yasaya aykırı."
+],
+"die Länge": [
+"Die Länge des Tisches ist zwei Meter.",
+"Masanın uzunluğu iki metre."
+],
+"das Licht": [
+"Mach bitte das Licht aus.",
+"Işığı kapat, lütfen."
+],
+"der Luxus": [
+"Ein Taxi ist für mich Luxus.",
+"Taksi benim için lüks."
+],
+"die Maschine": [
+"Die Kaffeemaschine ist kaputt.",
+"Kahve makinesi bozuk."
+],
+"der Bürgermeister": [
+"Der Bürgermeister hat das Fest eröffnet.",
+"Belediye başkanı şenliği açtı."
+],
+"die Krankheit": [
+"Das ist eine schwere Krankheit.",
+"Bu ağır bir hastalık."
+],
+"die Demonstration": [
+"In der Innenstadt gibt es eine Demonstration.",
+"Şehir merkezinde bir gösteri var."
+],
+"die Ware": [
+"Die Ware kommt morgen.",
+"Mal yarın geliyor."
+],
+"die Marke": [
+"Welche Marke ist dein Handy?",
+"Telefonun hangi marka?"
+],
+"das Material": [
+"Aus welchem Material ist die Tasche?",
+"Çanta hangi malzemeden?"
+],
+"das Mitglied": [
+"Ich bin Mitglied im Verein.",
+"Derneğin üyesiyim."
+],
+"das Gedächtnis": [
+"Ich habe ein schlechtes Gedächtnis für Namen.",
+"İsimler konusunda hafızam kötü."
+],
+"die Drohung": [
+"Das ist eine leere Drohung.",
+"Bu boş bir tehdit."
+],
+"die Methode": [
+"Welche Methode benutzt du zum Lernen?",
+"Öğrenmek için hangi yöntemi kullanıyorsun?"
+],
+"das Möbel": [
+"Wir haben neue Möbel gekauft.",
+"Yeni mobilyalar aldık."
+],
+"die Mitte": [
+"Der Brunnen steht in der Mitte des Platzes.",
+"Çeşme meydanın ortasında."
+],
+"der Minister": [
+"Der Minister hat im Fernsehen gesprochen.",
+"Bakan televizyonda konuştu."
+],
+"die Mode": [
+"Diese Farbe ist jetzt in Mode.",
+"Bu renk şu an moda."
+],
+"das Modell": [
+"Gibt es das Modell auch in Schwarz?",
+"Bu modelin siyahı da var mı?"
+],
+"das Kleingeld": [
+"Haben Sie Kleingeld?",
+"Bozuk paranız var mı?"
+],
+"der Tod": [
+"Der Tod seines Hundes hat ihn traurig gemacht.",
+"Köpeğinin ölümü onu üzdü."
+],
+"der Motor": [
+"Der Motor macht ein komisches Geräusch.",
+"Motor tuhaf bir ses çıkarıyor."
+],
+"das Mittel": [
+"Das Fahrrad ist ein gutes Verkehrsmittel.",
+"Bisiklet iyi bir ulaşım aracıdır."
+],
+"das Niveau": [
+"Welches Niveau hat der Kurs?",
+"Kurs hangi seviyede?"
+],
+"die Nahrung": [
+"Gesunde Nahrung ist wichtig.",
+"Sağlıklı besin önemlidir."
+],
+"der Gegenstand": [
+"Ich habe einen wertvollen Gegenstand verloren.",
+"Değerli bir eşya kaybettim."
+],
+"die Pflicht": [
+"Das ist deine Pflicht.",
+"Bu senin görevin."
+],
+"die Gelegenheit": [
+"Das ist eine gute Gelegenheit zum Üben.",
+"Bu pratik yapmak için iyi bir fırsat."
+],
+"der Geruch": [
+"Ich mag den Geruch von frischem Brot.",
+"Taze ekmeğin kokusunu severim."
+],
+"das Werk": [
+"Das Museum zeigt Werke von Picasso.",
+"Müze Picasso'nun eserlerini sergiliyor."
+],
+"die Organisation": [
+"Die Organisation war perfekt.",
+"Organizasyon mükemmeldi."
+],
+"der Ursprung": [
+"Was ist der Ursprung des Wortes?",
+"Kelimenin kökeni ne?"
+],
+"das Werkzeug": [
+"Gib mir bitte das Werkzeug.",
+"Bana aleti ver, lütfen."
+],
+"die Eröffnung": [
+"Die Eröffnung ist am Montag.",
+"Açılış pazartesi günü."
+],
+"der Frieden": [
+"Alle Menschen wünschen sich Frieden.",
+"Bütün insanlar barış ister."
+],
+"das Schild": [
+"Schau auf das Schild!",
+"Tabelaya bak!"
+],
+"das Papier": [
+"Hast du ein Blatt Papier?",
+"Bir yaprak kâğıdın var mı?"
+],
+"die Strecke": [
+"Die Strecke ist zehn Kilometer lang.",
+"Güzergâh on kilometre."
+],
+"die Faulheit": [
+"Das ist reine Faulheit!",
+"Bu düpedüz tembellik!"
+],
+"der Anteil": [
+"Jeder bezahlt seinen Anteil.",
+"Herkes kendi payını ödüyor."
+],
+"der Partner": [
+"Er ist mein Tennispartner.",
+"O benim tenis partnerim."
+],
+"die Partei": [
+"Welche Partei hat gewonnen?",
+"Hangi parti kazandı?"
+],
+"der Durchgang": [
+"Der Durchgang ist hier gesperrt.",
+"Geçit burada kapalı."
+],
+"der Fahrgast": [
+"Die Fahrgäste steigen in den Bus ein.",
+"Yolcular otobüse biniyor."
+],
+"die Vergangenheit": [
+"Das ist Vergangenheit, vergiss es.",
+"Bu geçmişte kaldı, unut gitsin."
+],
+"die Leidenschaft": [
+"Kochen ist ihre Leidenschaft.",
+"Yemek yapmak onun tutkusu."
+],
+"die Geduld": [
+"Man braucht viel Geduld mit Kindern.",
+"Çocuklarla çok sabır gerekir."
+],
+"das Erbe": [
+"Die Altstadt ist ein Kulturerbe.",
+"Eski şehir bir kültürel miras."
+],
+"die Pause": [
+"Machen wir eine kurze Pause.",
+"Kısa bir mola verelim."
+],
+"die Strafe": [
+"Er musste eine Strafe zahlen.",
+"Para cezası ödemek zorunda kaldı."
+],
+"der Gedanke": [
+"Das ist ein guter Gedanke.",
+"Bu iyi bir düşünce."
+],
+"die Steigung": [
+"Die Steigung ist sehr steil.",
+"Yokuş çok dik."
+],
+"der Führerschein": [
+"Ich habe meinen Führerschein gemacht.",
+"Ehliyetimi aldım."
+],
+"die Figur": [
+"Die Hauptfigur ist eine junge Frau.",
+"Ana karakter genç bir kadın."
+],
+"das Personal": [
+"Das Personal im Hotel ist sehr nett.",
+"Oteldeki personel çok nazik."
+],
+"das Phänomen": [
+"Das ist ein natürliches Phänomen.",
+"Bu doğal bir olay."
+],
+"das Stück": [
+"Möchtest du ein Stück Kuchen?",
+"Bir dilim pasta ister misin?"
+],
+"der Stein": [
+"Das Haus ist aus Stein.",
+"Ev taştan."
+],
+"der Pilot": [
+"Der Pilot spricht mit den Passagieren.",
+"Pilot yolcularla konuşuyor."
+],
+"der Planet": [
+"Wir müssen unseren Planeten schützen.",
+"Gezegenimizi korumalıyız."
+],
+"die Pflanze": [
+"Vergiss nicht, die Pflanzen zu gießen.",
+"Bitkileri sulamayı unutma."
+],
+"das Vergnügen": [
+"Mit Vergnügen!",
+"Memnuniyetle!"
+],
+"das Gewicht": [
+"Wie schwer ist das Gewicht des Koffers?",
+"Bavulun ağırlığı ne kadar?"
+],
+"der Punkt": [
+"Das ist ein wichtiger Punkt.",
+"Bu önemli bir nokta."
+],
+"die Politik": [
+"Er spricht nie über Politik.",
+"Asla politikadan konuşmaz."
+],
+"die Bevölkerung": [
+"Die Bevölkerung der Stadt wächst.",
+"Şehrin nüfusu artıyor."
+],
+"die Lage": [
+"Die Lage des Hotels ist perfekt.",
+"Otelin konumu mükemmel."
+],
+"die Möglichkeit": [
+"Es gibt noch eine andere Möglichkeit.",
+"Bir olasılık daha var."
+],
+"der Posten": [
+"Er hat einen neuen Posten in der Firma.",
+"Şirkette yeni bir görevi var."
+],
+"der Mülleimer": [
+"Wirf das in den Mülleimer.",
+"Bunu çöp kutusuna at."
+],
+"der Staub": [
+"Auf den Möbeln liegt Staub.",
+"Mobilyaların üstünde toz var."
+],
+"die Macht": [
+"Macht verändert Menschen.",
+"Güç insanları değiştirir."
+],
+"die Genauigkeit": [
+"Er arbeitet mit großer Genauigkeit.",
+"Büyük bir titizlikle çalışıyor."
+],
+"der Beweis": [
+"Hast du einen Beweis?",
+"Kanıtın var mı?"
+],
+"das Prinzip": [
+"Im Prinzip ist das richtig.",
+"Prensipte bu doğru."
+],
+"das Gefängnis": [
+"Der Dieb ist im Gefängnis.",
+"Hırsız hapiste."
+],
+"die Produktion": [
+"Die Produktion beginnt im Januar.",
+"Üretim ocakta başlıyor."
+],
+"das Produkt": [
+"Das Produkt kommt aus Deutschland.",
+"Ürün Almanya'dan geliyor."
+],
+"das Programm": [
+"Was ist das Programm für morgen?",
+"Yarının programı ne?"
+],
+"der Fortschritt": [
+"Das ist ein großer Fortschritt.",
+"Bu büyük bir ilerleme."
+],
+"das Versprechen": [
+"Er hat sein Versprechen gehalten.",
+"Sözünü tuttu."
+],
+"das Eigentum": [
+"Das ist Privateigentum.",
+"Burası özel mülk."
+],
+"der Schutz": [
+"Die Creme bietet Schutz vor der Sonne.",
+"Krem güneşe karşı koruma sağlar."
+],
+"das Publikum": [
+"Das Publikum hat lange geklatscht.",
+"Seyirciler uzun süre alkışladı."
+],
+"die Werbung": [
+"Im Fernsehen gibt es zu viel Werbung.",
+"Televizyonda çok fazla reklam var."
+],
+"die Qualität": [
+"Die Qualität ist sehr gut.",
+"Kalite çok iyi."
+],
+"die Menge": [
+"Die Menge reicht für vier Personen.",
+"Miktar dört kişiye yetiyor."
+],
+"der Alltag": [
+"Sport gehört zu meinem Alltag.",
+"Spor gündelik hayatımın bir parçası."
+],
+"die Rasse": [
+"Welche Rasse ist dein Hund?",
+"Köpeğin hangi cins?"
+],
+"die Wanderung": [
+"Wir machen eine Wanderung in den Bergen.",
+"Dağlarda doğa yürüyüşü yapıyoruz."
+],
+"der Bericht": [
+"Ich muss den Bericht bis Freitag schreiben.",
+"Raporu cumaya kadar yazmam gerekiyor."
+],
+"die Beziehung": [
+"Sie haben eine gute Beziehung.",
+"İyi bir ilişkileri var."
+],
+"die Reaktion": [
+"Seine Reaktion hat mich überrascht.",
+"Tepkisi beni şaşırttı."
+],
+"die Wirklichkeit": [
+"Die Wirklichkeit ist anders.",
+"Gerçek farklı."
+],
+"die Forschung": [
+"Sie arbeitet in der Forschung.",
+"Araştırma alanında çalışıyor."
+],
+"die Belohnung": [
+"Als Belohnung gibt es ein Eis.",
+"Ödül olarak dondurma var."
+],
+"die Ermäßigung": [
+"Studenten bekommen eine Ermäßigung.",
+"Öğrenciler indirim alıyor."
+],
+"die Region": [
+"Die Region ist sehr schön.",
+"Bölge çok güzel."
+],
+"die Regel": [
+"Kennst du die Spielregeln?",
+"Oyunun kurallarını biliyor musun?"
+],
+"das Bedauern": [
+"Zu meinem Bedauern kann ich nicht kommen.",
+"Ne yazık ki gelemiyorum."
+],
+"die Religion": [
+"Wir respektieren alle Religionen.",
+"Bütün dinlere saygı duyuyoruz."
+],
+"die Bemerkung": [
+"Ich habe eine kleine Bemerkung.",
+"Küçük bir notum var."
+],
+"die Erstattung": [
+"Ich möchte eine Erstattung.",
+"Para iadesi istiyorum."
+],
+"das Heilmittel": [
+"Tee mit Honig ist ein gutes Heilmittel.",
+"Ballı çay iyi bir çaredir."
+],
+"die Auskunft": [
+"Ich möchte eine Auskunft, bitte.",
+"Bir bilgi almak istiyorum, lütfen."
+],
+"die Erholung": [
+"Sie brauchen ein bisschen Erholung.",
+"Biraz dinlenmeye ihtiyacınız var."
+],
+"die Reportage": [
+"Ich habe eine Reportage über Afrika gesehen.",
+"Afrika hakkında bir röportaj izledim."
+],
+"der Vorwurf": [
+"Ich mache dir keinen Vorwurf.",
+"Sana sitem etmiyorum."
+],
+"die Republik": [
+"Deutschland ist eine Bundesrepublik.",
+"Almanya bir federal cumhuriyettir."
+],
+"der Ruf": [
+"Das Restaurant hat einen guten Ruf.",
+"Restoranın iyi bir itibarı var."
+],
+"das Netz": [
+"Hier gibt es kein Netz.",
+"Burada çekmiyor."
+],
+"die Verantwortung": [
+"Das ist deine Verantwortung.",
+"Bu senin sorumluluğun."
+],
+"die Ressource": [
+"Wasser ist eine wertvolle Ressource.",
+"Su değerli bir kaynaktır."
+],
+"die Rente": [
+"Mein Vater bekommt eine kleine Rente.",
+"Babam az bir emekli maaşı alıyor."
+],
+"der Erfolg": [
+"Viel Erfolg!",
+"Bol başarılar!"
+],
+"die Revolution": [
+"Das Internet war eine Revolution.",
+"İnternet bir devrimdi."
+],
+"der Reichtum": [
+"Gesundheit ist der größte Reichtum.",
+"Sağlık en büyük zenginliktir."
+],
+"das Risiko": [
+"Das Risiko ist zu groß.",
+"Risk çok büyük."
+],
+"die Rolle": [
+"Er spielt die Rolle des Vaters.",
+"Babayı oynuyor."
+],
+"der Rhythmus": [
+"Ich mag den Rhythmus des Liedes.",
+"Şarkının ritmini seviyorum."
+],
+"der Sand": [
+"Die Kinder spielen im Sand.",
+"Çocuklar kumda oynuyor."
+],
+"die Jahreszeit": [
+"Herbst ist meine Lieblingsjahreszeit.",
+"Sonbahar en sevdiğim mevsim."
+],
+"der Saal": [
+"Der Saal ist voll.",
+"Salon dolu."
+],
+"die Soße": [
+"Die Soße ist ein bisschen scharf.",
+"Sos biraz acı."
+],
+"die Wissenschaft": [
+"Sie interessiert sich für Wissenschaft.",
+"Bilimle ilgileniyor."
+],
+"das Geheimnis": [
+"Das ist ein Geheimnis!",
+"Bu bir sır!"
+],
+"der Sektor": [
+"Er arbeitet im Tourismussektor.",
+"Turizm sektöründe çalışıyor."
+],
+"der Sinn": [
+"Das macht keinen Sinn.",
+"Bunun bir anlamı yok."
+],
+"das Gefühl": [
+"Ich habe ein gutes Gefühl.",
+"İçimde iyi bir his var."
+],
+"die Serie": [
+"Abends schaue ich eine Serie.",
+"Akşamları bir dizi izliyorum."
+],
+"der Dienst": [
+"Der Arzt hat heute Nacht Dienst.",
+"Doktor bu gece nöbetçi."
+],
+"das Jahrhundert": [
+"Die Kirche ist aus dem zwölften Jahrhundert.",
+"Kilise on ikinci yüzyıldan kalma."
+],
+"das Zeichen": [
+"Das ist ein gutes Zeichen.",
+"Bu iyiye işaret."
+],
+"die Stille": [
+"Ich genieße die Stille am Morgen.",
+"Sabahın sessizliğinin tadını çıkarıyorum."
+],
+"die Gesellschaft": [
+"Er arbeitet für eine große Gesellschaft.",
+"Büyük bir şirket için çalışıyor."
+],
+"der Durst": [
+"Ich habe Durst.",
+"Susadım."
+],
+"die Pflege": [
+"Die Pflanze braucht wenig Pflege.",
+"Bitki az bakım istiyor."
+],
+"die Summe": [
+"Das ist eine große Summe.",
+"Bu büyük bir meblağ."
+],
+"der Schlaf": [
+"Schlaf ist wichtig für die Gesundheit.",
+"Uyku sağlık için önemlidir."
+],
+"der Ausgang": [
+"Wo ist der Ausgang?",
+"Çıkış nerede?"
+],
+"der Eingang": [
+"Der Eingang ist auf der rechten Seite.",
+"Giriş sağ tarafta."
+],
+"die Vorstellung": [
+"Die Vorstellung beginnt um acht.",
+"Gösteri saat sekizde başlıyor."
+],
+"der Zuschauer": [
+"Die Zuschauer warten auf den Anpfiff.",
+"Seyirciler başlama düdüğünü bekliyor."
+],
+"das Praktikum": [
+"Sie macht ein Praktikum bei einer Bank.",
+"Bir bankada staj yapıyor."
+],
+"der Stil": [
+"Ich mag deinen Stil.",
+"Tarzını seviyorum."
+],
+"der Süden": [
+"Sie wohnen im Süden von Deutschland.",
+"Almanya'nın güneyinde oturuyorlar."
+],
+"der Norden": [
+"Im Norden ist es kälter.",
+"Kuzeyde hava daha soğuk."
+],
+"der Westen": [
+"Die Sonne geht im Westen unter.",
+"Güneş batıdan batar."
+],
+"das Thema": [
+"Wechseln wir das Thema.",
+"Konuyu değiştirelim."
+],
+"die Oberfläche": [
+"Die Oberfläche ist glatt.",
+"Yüzey pürüzsüz."
+],
+"das Symbol": [
+"Die Taube ist ein Symbol für Frieden.",
+"Güvercin barışın sembolüdür."
+],
+"die Gewerkschaft": [
+"Er ist Mitglied einer Gewerkschaft.",
+"Bir sendikanın üyesi."
+],
+"das System": [
+"Das System funktioniert nicht.",
+"Sistem çalışmıyor."
+],
+"das Talent": [
+"Sie hat viel Talent.",
+"Çok yetenekli."
+],
+"der Tarif": [
+"Gibt es einen Tarif für Kinder?",
+"Çocuklar için bir tarife var mı?"
+],
+"die Technik": [
+"Er hat eine gute Technik.",
+"İyi bir tekniği var."
+],
+"die Technologie": [
+"Die Technologie ändert sich schnell.",
+"Teknoloji hızla değişiyor."
+],
+"der Zeuge": [
+"Er war Zeuge des Unfalls.",
+"Kazanın tanığıydı."
+],
+"der Sturm": [
+"Der Sturm hat Bäume umgeworfen.",
+"Fırtına ağaçları devirdi."
+],
+"die Tendenz": [
+"Die Preise haben eine steigende Tendenz.",
+"Fiyatlarda yükselme eğilimi var."
+],
+"die Spannung": [
+"Der Film ist voller Spannung.",
+"Film gerilim dolu."
+],
+"der Versuch": [
+"Das war mein erster Versuch.",
+"Bu benim ilk denememdi."
+],
+"das Gelände": [
+"Das Gelände ist sehr groß.",
+"Arazi çok büyük."
+],
+"die Erde": [
+"Die Erde ist rund.",
+"Dünya yuvarlaktır."
+],
+"die Theorie": [
+"In der Theorie ist das einfach.",
+"Teoride bu basit."
+],
+"der Titel": [
+"Wie ist der Titel des Buches?",
+"Kitabın adı ne?"
+],
+"die Runde": [
+"Wir gehen eine Runde um den See.",
+"Gölün etrafında bir tur atıyoruz."
+],
+"der Tourismus": [
+"Der Tourismus ist wichtig für die Insel.",
+"Turizm ada için önemli."
+],
+"das Turnier": [
+"Er hat das Turnier gewonnen.",
+"Turnuvayı kazandı."
+],
+"die Behandlung": [
+"Die Behandlung dauert zwei Wochen.",
+"Tedavi iki hafta sürüyor."
+],
+"das Verkehrsmittel": [
+"Ich benutze öffentliche Verkehrsmittel.",
+"Toplu taşıma araçlarını kullanırım."
+],
+"der Schatz": [
+"Die Kinder suchen einen Schatz.",
+"Çocuklar hazine arıyor."
+],
+"das Loch": [
+"In meiner Socke ist ein Loch.",
+"Çorabımda bir delik var."
+],
+"die Herde": [
+"Eine Herde Schafe läuft über die Straße.",
+"Bir koyun sürüsü yoldan geçiyor."
+],
+"die Einheit": [
+"Der Preis ist zwei Euro pro Einheit.",
+"Fiyat birim başına iki avro."
+],
+"der Gebrauch": [
+"Vor Gebrauch gut schütteln.",
+"Kullanmadan önce iyice çalkalayın."
+],
+"der Nutzer": [
+"Die App hat viele Nutzer.",
+"Uygulamanın çok kullanıcısı var."
+],
+"die Welle": [
+"Die Wellen sind heute hoch.",
+"Bugün dalgalar yüksek."
+],
+"der Wert": [
+"Der Ring hat einen großen Wert.",
+"Yüzüğün değeri büyük."
+],
+"das Tal": [
+"Das Dorf liegt im Tal.",
+"Köy vadide."
+],
+"der Dampf": [
+"Ich koche das Gemüse mit Dampf.",
+"Sebzeleri buharda pişiriyorum."
+],
+"die Vielfalt": [
+"Es gibt eine große Vielfalt an Brot.",
+"Çok çeşit ekmek var."
+],
+"der Star": [
+"Er ist ein Star im Fernsehen.",
+"O bir televizyon yıldızı."
+],
+"das Fahrzeug": [
+"Fahrzeuge dürfen hier nicht parken.",
+"Araçlar buraya park edemez."
+],
+"der Verkauf": [
+"Das Haus steht zum Verkauf.",
+"Ev satılık."
+],
+"die Version": [
+"Ich habe die neue Version der App.",
+"Uygulamanın yeni sürümü bende."
+],
+"das Opfer": [
+"Das Opfer ist im Krankenhaus.",
+"Kazazede hastanede."
+],
+"der Sieg": [
+"Herzlichen Glückwunsch zum Sieg!",
+"Zafer için tebrikler!"
+],
+"das Leben": [
+"So ist das Leben!",
+"Hayat böyle!"
+],
+"die Geschwindigkeit": [
+"Bitte reduzieren Sie die Geschwindigkeit.",
+"Lütfen hızınızı azaltın."
+],
+"das Schaufenster": [
+"Im Schaufenster liegt ein schönes Kleid.",
+"Vitrinde güzel bir elbise var."
+],
+"die Stimme": [
+"Sie hat eine schöne Stimme.",
+"Güzel bir sesi var."
+],
+"die Lautstärke": [
+"Mach die Lautstärke leiser, bitte.",
+"Sesi kıs, lütfen."
+],
+"die Aussicht": [
+"Das Zimmer hat eine schöne Aussicht.",
+"Odanın güzel bir manzarası var."
+],
+"die Null": [
+"Die Temperatur liegt bei null Grad.",
+"Sıcaklık sıfır derece."
+],
+"das Abonnement": [
+"Ich habe ein Abonnement für die Zeitung.",
+"Gazeteye aboneliğim var."
+],
+"die Vereinbarung": [
+"Wir haben eine Vereinbarung getroffen.",
+"Bir anlaşma yaptık."
+],
+"der Terminkalender": [
+"Ich schreibe den Termin in meinen Terminkalender.",
+"Randevuyu ajandama yazıyorum."
+],
+"die Glühbirne": [
+"Die Glühbirne ist kaputt.",
+"Ampul patlamış."
+],
+"beschädigt": [
+"Das Paket ist beschädigt.",
+"Paket hasarlı."
+],
+"abwesend": [
+"Der Lehrer ist heute abwesend.",
+"Öğretmen bugün yok."
+],
+"abstrakt": [
+"Ich mag keine abstrakte Kunst.",
+"Soyut sanatı sevmem."
+],
+"zugänglich": [
+"Das Museum ist für Rollstühle zugänglich.",
+"Müze tekerlekli sandalyeyle erişilebilir."
+],
+"aktiv": [
+"Mein Opa ist noch sehr aktiv.",
+"Dedem hâlâ çok aktif."
+],
+"aktuell": [
+"Was ist der aktuelle Preis?",
+"Güncel fiyat ne?"
+],
+"passend": [
+"Ich suche ein passendes Geschenk.",
+"Uygun bir hediye arıyorum."
+],
+"angenehm": [
+"Das Wetter ist heute angenehm.",
+"Bugün hava hoş."
+],
+"aggressiv": [
+"Der Hund ist aggressiv.",
+"Köpek saldırgan."
+],
+"liebenswürdig": [
+"Sie ist eine liebenswürdige Frau.",
+"Sevimli bir kadın."
+],
+"bitter": [
+"Der Kaffee ist zu bitter.",
+"Kahve çok acı."
+],
+"freundschaftlich": [
+"Wir haben eine freundschaftliche Beziehung.",
+"Dostça bir ilişkimiz var."
+],
+"verliebt": [
+"Er ist in seine Nachbarin verliebt.",
+"Komşusuna âşık."
+],
+"unterhaltsam": [
+"Der Abend war sehr unterhaltsam.",
+"Akşam çok eğlenceliydi."
+],
+"lebhaft": [
+"Das Viertel ist abends sehr lebhaft.",
+"Semt akşamları çok hareketli."
+],
+"ängstlich": [
+"Das Kind ist ein bisschen ängstlich.",
+"Çocuk biraz ürkek."
+],
+"fleißig": [
+"Sie ist eine fleißige Schülerin.",
+"Çalışkan bir öğrenci."
 ]
 };
