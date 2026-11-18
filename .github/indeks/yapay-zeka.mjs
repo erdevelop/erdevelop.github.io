@@ -11,7 +11,8 @@ const SITE = 'https://erdevelop.github.io/';
 
 /* alt başlıkların kısa açıklaması (sıra Tools.html'deki subs sırasıdır) */
 const ADIM = {
-  anla: 'Bir yapay sinir ağının veriden nasıl öğrendiğini canlı izle; yapay zekâ kullanan araçları tarayıcıda dene.',
+  anla: 'Bir yapay sinir ağının veriden nasıl öğrendiğini canlı izle.',
+  arac: 'Konuşmayı yazıya dök, fotoğraftaki yazıyı oku, belgede anlamına göre ara, kişisel bilgiyi maskele, token say. Hepsi cihazında çalışır; ses, resim ve belgeler hiçbir yere gönderilmez.',
   kul: 'Dil modelleri nasıl çalışır, iyi komut nasıl yazılır, cevap nasıl doğrulanır, hangi veri paylaşılmaz.',
   is: 'Excel ve ofis işleri, sunum ve konsept görselleri, İngilizce pratiği: yapay zekâyı somut işlere uygula.',
   gel: 'Kod yazdırıp çalıştırmak, ajan ve otomasyon kurmak, makine öğrenmesinin temelleri.',

@@ -1,0 +1,203 @@
+<!doctype html>
+<html lang="tr">
+<head>
+<meta charset="utf-8">
+<script src="/dil.js"></script>
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="theme-color" content="#f5f6f4" media="(prefers-color-scheme: light)">
+<meta name="theme-color" content="#151a18" media="(prefers-color-scheme: dark)">
+<title>Token Sayacı – Metin Kaç Token? Bağlam Penceresi ve Maliyet Hesabı | erdevelop</title>
+<meta name="description" content="Metni ya da belgeyi (PDF, Word, TXT) yapıştır; yapay zekâ modellerinin kaç token saydığını, metnin nasıl parçalandığını, bağlam penceresine sığıp sığmadığını ve girdiğin fiyatla maliyetini gör. Metin cihazından çıkmaz.">
+<meta property="og:type" content="website"><meta property="og:site_name" content="erdevelop"><meta property="og:title" content="Token Sayacı – Metin Kaç Token?"><meta property="og:description" content="Token sayısı, tokenlerin görünümü, bağlam penceresi ve maliyet tahmini. Metin cihazından çıkmaz."><meta property="og:url" content="https://erdevelop.github.io/araclar/token-sayaci.html"><meta property="og:image" content="https://erdevelop.github.io/og/araclar-token-sayaci.jpg"><meta property="og:image:width" content="1200"><meta property="og:image:height" content="630"><meta property="og:locale" content="tr_TR"><meta name="twitter:card" content="summary_large_image">
+<link rel="canonical" href="https://erdevelop.github.io/araclar/token-sayaci.html">
+<link rel="icon" href="/favicon.svg" type="image/svg+xml">
+<link rel="stylesheet" href="ortak.css">
+<style>
+.wrap{max-width:900px}
+.stat.s4{grid-template-columns:repeat(4,1fr)}
+@media (max-width:560px){.stat.s4{grid-template-columns:repeat(2,1fr)}}
+.tokler{white-space:pre-wrap;word-break:break-word;background:var(--bg);border:1px solid var(--line);border-radius:10px;padding:12px;max-height:360px;overflow:auto;font-size:.95rem;line-height:1.75}
+.tokler span{border-radius:3px;padding:1px 0}
+.tokler span:nth-child(5n+1){background:rgba(63,143,122,.22)}
+.tokler span:nth-child(5n+2){background:rgba(214,158,46,.25)}
+.tokler span:nth-child(5n+3){background:rgba(88,120,214,.22)}
+.tokler span:nth-child(5n+4){background:rgba(200,90,120,.2)}
+.tokler span:nth-child(5n){background:rgba(120,160,60,.25)}
+.tokler span.cok{outline:1px dashed var(--muted)}
+.dolu{height:14px;border-radius:99px;background:var(--line);overflow:hidden;margin-top:8px;display:flex}
+.dolu i{display:block;height:100%}
+.dolu .g{background:var(--acc)}.dolu .c{background:#d69e2e}
+.dolu.tas .g{background:var(--warn)}
+.lej{display:flex;gap:14px;flex-wrap:wrap;font-size:.8rem;color:var(--muted);margin-top:6px}
+.lej b{display:inline-block;width:10px;height:10px;border-radius:2px;margin-right:4px;vertical-align:middle}
+.about{background:var(--card);border:1px solid var(--line);border-radius:var(--r);padding:16px 18px;margin-top:18px;line-height:1.65}
+.about h2{font-size:1.1rem;margin:0 0 8px}.about h3{font-size:1rem;margin:16px 0 6px}.about p{margin:0 0 10px}
+.faq details{border-top:1px dashed var(--line);padding:8px 0}.faq summary{cursor:pointer;font-weight:600}.faq p{margin:6px 0 0;color:var(--muted)}
+</style>
+<script type="application/ld+json">{"@context":"https://schema.org","@type":"WebApplication","name":"Token Sayacı","url":"https://erdevelop.github.io/araclar/token-sayaci.html","applicationCategory":"DeveloperApplication","operatingSystem":"Tarayıcı","inLanguage":"tr","offers":{"@type":"Offer","price":"0","priceCurrency":"TRY"}}</script>
+<script async src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-4775308844679394" crossorigin="anonymous"></script>
+</head>
+<body>
+<header><div class="wrap"><div class="hrow"><a class="back" href="/yapay-zeka/" aria-label="Yapay zekâ">‹</a><h1 data-en="🔢 Token Counter">🔢 Token Sayacı</h1></div></div></header>
+<main class="wrap">
+  <p class="ph" style="margin:2px 0 12px" data-en="Language models read text as tokens; limits and prices are counted in tokens. Paste a text or open a document to see how many tokens it is, how it is split, whether it fits a context window and what it would cost.">Dil modelleri metni token denen parçalar hâlinde okur; sınırlar ve ücretler token ile ölçülür. Metni yapıştır ya da belge aç: kaç token olduğunu, nasıl bölündüğünü, bağlam penceresine sığıp sığmadığını ve maliyetini gör.</p>
+
+  <div class="box">
+    <label for="metin" style="margin-top:0" data-en="Text">Metin</label>
+    <textarea id="metin" style="min-height:170px" placeholder="Metni buraya yapıştır…" data-en-ph="Paste your text here…"></textarea>
+    <label class="drop" id="drop" style="margin-top:10px;padding:14px"><input type="file" accept=".txt,.md,.csv,.json,.html,.xml,.pdf,.docx,text/*,application/pdf"><b data-en="…or open a document">…ya da belge aç</b><span data-en="PDF, Word (.docx), TXT, Markdown, CSV, JSON">PDF, Word (.docx), TXT, Markdown, CSV, JSON</span></label>
+    <div class="btns"><button class="btn ghost sm" type="button" id="ornekTr" data-en="Turkish example">Türkçe örnek</button><button class="btn ghost sm" type="button" id="ornekEn" data-en="English example">İngilizce örnek</button><button class="btn ghost sm" type="button" id="temizle" data-en="Clear">Temizle</button></div>
+    <div class="stat s4">
+      <div><b id="sTok">0</b><span id="sTokE" data-en="tokens (estimate)">token (tahmin)</span></div>
+      <div><b id="sKar">0</b><span data-en="characters">karakter</span></div>
+      <div><b id="sKel">0</b><span data-en="words">kelime</span></div>
+      <div><b id="sOran">—</b><span data-en="tokens per word">token / kelime</span></div>
+    </div>
+    <p class="hint" id="durum"></p>
+  </div>
+
+  <div class="box" id="yz"></div>
+
+  <div class="box" id="gorK" hidden>
+    <h3 data-en="How the text is split">Metin nasıl bölünüyor?</h3>
+    <p class="hint" style="margin-top:2px" id="gorBilgi" data-en="Each coloured piece is one token. Dashed pieces are a single letter split across several tokens.">Her renkli parça bir token. Kesik çizgili parçalar birden çok tokene bölünmüş tek bir harftir.</p>
+    <div class="tokler" id="tokler"></div>
+  </div>
+
+  <div class="box">
+    <h3 data-en="Does it fit the context window?">Bağlam penceresine sığar mı?</h3>
+    <div class="row">
+      <div><label for="pencere" data-en="Context window">Bağlam penceresi</label><select id="pencere" data-keep><option value="8000" data-en="8k tokens">8 bin token</option><option value="32000" data-en="32k tokens">32 bin token</option><option value="128000" selected data-en="128k tokens">128 bin token</option><option value="200000" data-en="200k tokens">200 bin token</option><option value="1000000" data-en="1 million tokens">1 milyon token</option><option value="0" data-en="Custom">Özel</option></select></div>
+      <div><label for="cikti" data-en="Space reserved for the answer (tokens)">Cevaba ayrılan yer (token)</label><input id="cikti" inputmode="numeric" value="4000" data-keep></div>
+    </div>
+    <div id="ozelK" hidden><label for="ozel" data-en="Custom window (tokens)">Özel pencere (token)</label><input id="ozel" inputmode="numeric" value="64000" data-keep></div>
+    <div class="dolu" id="dolu"><i class="g" id="dG"></i><i class="c" id="dC"></i></div>
+    <div class="lej"><span><b style="background:var(--acc)"></b><span data-en="your text">metnin</span></span><span><b style="background:#d69e2e"></b><span data-en="answer">cevap</span></span><span><b style="background:var(--line)"></b><span data-en="free">boş</span></span></div>
+    <p id="sigar" style="margin:10px 0 0;font-weight:600"></p>
+    <p class="hint" data-en="Model context windows differ and change over time; check the window of the model you use in its documentation. The conversation history, system prompt and attached files share the same window.">Modellerin pencere boyutları farklıdır ve zamanla değişir; kullandığın modelinkini kendi belgelerinden kontrol et. Sohbet geçmişi, sistem komutu ve eklenen dosyalar da aynı pencereyi paylaşır.</p>
+  </div>
+
+  <div class="box">
+    <h3 data-en="Cost estimate">Maliyet tahmini</h3>
+    <p class="hint" style="margin-top:2px" data-en="Enter the prices from your provider's pricing page (per 1 million tokens). Prices are saved only in this browser.">Fiyatları kullandığın hizmetin fiyat sayfasından yaz (1 milyon token başına). Fiyatlar yalnızca bu tarayıcıda saklanır.</p>
+    <div class="row3">
+      <div><label for="fGir" data-en="Input price / 1M">Girdi fiyatı / 1M</label><input id="fGir" inputmode="decimal" placeholder="—" data-keep></div>
+      <div><label for="fCik" data-en="Output price / 1M">Çıktı fiyatı / 1M</label><input id="fCik" inputmode="decimal" placeholder="—" data-keep></div>
+      <div><label for="para" data-en="Currency">Para birimi</label><select id="para" data-keep><option>$</option><option>€</option><option>₺</option></select></div>
+    </div>
+    <div class="row">
+      <div><label for="cikT" data-en="Expected answer length (tokens)">Beklenen cevap uzunluğu (token)</label><input id="cikT" inputmode="numeric" value="800" data-keep></div>
+      <div><label for="adet" data-en="Number of requests">İstek sayısı</label><input id="adet" inputmode="numeric" value="1" data-keep></div>
+    </div>
+    <div class="res"><div class="nt" data-en="Estimated cost">Tahmini maliyet</div><div class="big" id="maliyet">—</div><div class="nt" id="maliyetA" style="margin-top:4px"></div></div>
+  </div>
+
+  <section class="about">
+    <h2 data-en="What is a token?">Token nedir?</h2>
+    <div data-l="tr">
+    <p>Dil modelleri metni harf harf ya da kelime kelime değil, sık geçen harf dizilerinden oluşan parçalar hâlinde işler. Bu parçalara <b>token</b> denir. İngilizcede sık kelimelerin çoğu tek tokendir; Türkçe gibi eklemeli dillerde bir kelime kök ve eklerine göre birkaç tokene bölünür. Bu yüzden aynı anlamdaki Türkçe metin, İngilizcesinden genellikle daha çok token tutar.</p>
+    <p>Token sayısı üç şeyi belirler: modelin bir seferde ne kadar metni dikkate alabileceğini (<b>bağlam penceresi</b>), cevabın ne kadar uzun olabileceğini ve API kullanımında ödenecek ücreti.</p>
+    <h3>Sayı ne kadar doğru?</h3>
+    <p>Model indirilince sayım, yaygın kullanılan bir tokenleştiriciyle (o200k_base) kesin yapılır. Her yapay zekâ şirketinin tokenleştiricisi farklıdır; aynı metin başka bir modelde birkaç on yüzde daha az ya da daha çok token tutabilir. Bu sayıyı yaklaşık kabul edip sınırlara pay bırak. Model indirilmeden gösterilen değer, karakter sayısının dörtte biri olan kaba bir tahmindir; Türkçe metinlerde gerçek sayı bunun üstünde çıkar.</p>
+    </div>
+    <div data-l="en" hidden>
+    <p>Language models do not process text letter by letter or word by word, but as pieces made of frequent character sequences, called <b>tokens</b>. Most common English words are a single token; in agglutinative languages such as Turkish a word is split into several tokens. The same content in Turkish therefore usually takes more tokens than in English.</p>
+    <p>Token counts decide how much text a model can consider at once (the <b>context window</b>), how long the answer can be and what API usage costs.</p>
+    <h3>How accurate is the count?</h3>
+    <p>Once the model is downloaded, the count is exact for a widely used tokenizer (o200k_base). Every AI company uses its own tokenizer, so other models may count noticeably more or fewer tokens; treat the number as approximate and leave a margin. Before the download the page shows a rough estimate of characters ÷ 4.</p>
+    </div>
+    <h3 data-en="FAQ">Sık sorulan sorular</h3>
+    <div class="faq" data-l="tr">
+      <details><summary>Metnim bir yere gönderiliyor mu?</summary><p>Hayır. Tokenleştirici tarayıcına bir kez indirilir; sayım cihazında yapılır, metin ve belgeler hiçbir yere gönderilmez.</p></details>
+      <details><summary>Neden fiyatlar hazır gelmiyor?</summary><p>Model fiyatları sık değişir ve hizmete göre farklıdır. Yanlış bir rakam göstermemek için fiyatı senin girmen isteniyor; girdiğin değerler bu tarayıcıda hatırlanır.</p></details>
+      <details><summary>Taranmış PDF'lerde neden sayı sıfır çıkıyor?</summary><p>Taranmış sayfalar metin değil resimdir. Önce <a href="ocr.html">Fotoğraftan Yazı (OCR)</a> aracıyla metne çevir.</p></details>
+    </div>
+    <div class="faq" data-l="en" hidden>
+      <details><summary>Is my text sent anywhere?</summary><p>No. The tokenizer is downloaded to your browser once; counting happens on your device.</p></details>
+      <details><summary>Why are prices not filled in?</summary><p>Model prices change often and differ between services, so you enter them yourself; they are remembered in this browser.</p></details>
+    </div>
+    <p class="hint" style="margin-top:12px" data-en="Tokenizer: Xenova/gpt-4o (o200k_base) via Transformers.js (Apache-2.0). See the &lt;a href=&quot;/yapay-zeka/&quot;&gt;AI section&lt;/a&gt;.">Tokenleştirici: Xenova/gpt-4o (o200k_base), Transformers.js (Apache-2.0). Diğer araçlar için <a href="/yapay-zeka/">Yapay zekâ bölümü</a>.</p>
+  </section>
+</main>
+<footer data-en="Your text is processed on your device and never uploaded.">Metnin cihazında işlenir, hiçbir yere yüklenmez.</footer>
+<script src="ortak.js"></script>
+<script src="yz.js"></script>
+<script>
+keepInputs('token');
+const T = (a, b) => erDil.t(a, b), MODEL = 'Xenova/gpt-4o', GOSTER = 3000;
+let kesin = null, sayiyor = false, bekliyor = false;
+const panel = YZ.panel(byId('yz'), { model: MODEL, gorev: 'tokenizer', mb: 8, mesajHazir: T('Tokenleştirici hazır; sayım kesin.', 'Tokenizer ready; counts are exact.'), hazir: say });
+const kelimeSay = s => (s.match(/[\p{L}\p{N}]+(?:['’.-][\p{L}\p{N}]+)*/gu) || []).length;
+const tam = n => Math.round(n).toLocaleString(erDil.lang === 'en' ? 'en-GB' : 'tr-TR');
+const kisa = n => n >= 1e6 ? fmt(n / 1e6, 2) + ' M' : n >= 1e4 ? fmt(n / 1e3, 1) + T(' bin', ' k') : tam(n);
+function tokSayisi() { const m = byId('metin').value; return kesin != null ? kesin : Math.ceil(m.length / 4); }
+async function say() {
+  const m = byId('metin').value;
+  byId('sKar').textContent = tam(m.length); byId('sKel').textContent = tam(kelimeSay(m));
+  if (!panel.hazirMi()) { kesin = null; guncelle(); return; }
+  if (sayiyor) { bekliyor = true; return; } sayiyor = true;
+  try {
+    const r = await YZ.cagir({ tip: 'tok', model: MODEL, metin: m, parca: GOSTER });
+    kesin = r.sayi; ciz(r.parcalar || [], r.sayi);
+  } catch (e) { byId('durum').textContent = T('Sayılamadı: ', 'Could not count: ') + e.message; }
+  sayiyor = false; guncelle();
+  if (bekliyor) { bekliyor = false; say(); }
+}
+function ciz(P, n) {
+  byId('gorK').hidden = !P.length;
+  byId('tokler').innerHTML = P.map(([s, k]) => `<span${k > 1 ? ' class="cok" title="' + k + ' token"' : ''}>${esc(s)}</span>`).join('');
+  byId('gorBilgi').textContent = (n > GOSTER ? T(`İlk ${tam(GOSTER)} token gösteriliyor. `, `Showing the first ${tam(GOSTER)} tokens. `) : '') + T('Her renkli parça bir token. Kesik çizgili parçalar birden çok tokene bölünmüş tek bir harftir.', 'Each coloured piece is one token. Dashed pieces are a single letter split across several tokens.');
+}
+function guncelle() {
+  const m = byId('metin').value, n = tokSayisi(), k = kelimeSay(m);
+  byId('sTok').textContent = tam(n); byId('sTokE').textContent = kesin != null ? T('token (o200k)', 'tokens (o200k)') : T('token (kaba tahmin)', 'tokens (rough estimate)');
+  byId('sOran').textContent = k && n ? fmt(n / k, 2) : '—';
+  if (kesin == null) byId('gorK').hidden = true;
+  byId('durum').textContent = kesin == null && m ? T('Kesin sayı ve tokenlerin görünümü için aşağıdan tokenleştiriciyi indir.', 'Download the tokenizer below for an exact count and to see the tokens.') : '';
+  /* pencere */
+  const sel = byId('pencere').value; byId('ozelK').hidden = sel !== '0';
+  const W = sel === '0' ? Math.max(1, pnum(byId('ozel').value) || 0) : +sel, C = Math.max(0, pnum(byId('cikti').value) || 0);
+  const gp = Math.min(100, n / W * 100), cp = Math.max(0, Math.min(100 - gp, C / W * 100));
+  byId('dG').style.width = gp + '%'; byId('dC').style.width = cp + '%';
+  const tas = n + C > W; byId('dolu').classList.toggle('tas', tas);
+  byId('sigar').style.color = tas ? 'var(--warn)' : 'var(--acc)';
+  byId('sigar').textContent = !m ? '' : tas ? T(`Sığmıyor: ${tam(n + C - W)} token fazla. Metni bölmeyi ya da özetletmeyi düşün.`, `Does not fit: ${tam(n + C - W)} tokens over. Consider splitting or summarising the text.`)
+    : T(`Sığar: pencerenin %${fmt(gp, 1)}'i dolu, ${kisa(W - n - C)} token boş kalır.`, `Fits: ${fmt(gp, 1)}% of the window used, ${kisa(W - n - C)} tokens left.`);
+  /* maliyet */
+  const fg = pnum(byId('fGir').value), fc = pnum(byId('fCik').value), ct = Math.max(0, pnum(byId('cikT').value) || 0), ad = Math.max(1, pnum(byId('adet').value) || 1), pb = byId('para').value;
+  if (isFinite(fg) || isFinite(fc)) {
+    const g = (isFinite(fg) ? fg : 0) * n / 1e6, c = (isFinite(fc) ? fc : 0) * ct / 1e6, top = (g + c) * ad;
+    const p = v => pb + ' ' + (v < 0.01 && v > 0 ? v.toLocaleString(erDil.lang === 'en' ? 'en-GB' : 'tr-TR', { maximumSignificantDigits: 3 }) : fmt(v, 4));
+    byId('maliyet').textContent = p(top);
+    byId('maliyetA').textContent = T(`Girdi ${p(g)} + çıktı ${p(c)} = ${p(g + c)} / istek`, `Input ${p(g)} + output ${p(c)} = ${p(g + c)} per request`) + (ad > 1 ? T(` · ${tam(ad)} istek`, ` · ${tam(ad)} requests`) : '');
+  } else { byId('maliyet').textContent = '—'; byId('maliyetA').textContent = T('Fiyat girince hesaplanır.', 'Enter a price to calculate.'); }
+}
+let zt = 0; byId('metin').addEventListener('input', () => { kesin = null; guncelle(); clearTimeout(zt); zt = setTimeout(say, 350); });
+['pencere', 'cikti', 'ozel', 'fGir', 'fCik', 'para', 'cikT', 'adet'].forEach(id => byId(id).addEventListener('input', guncelle));
+byId('pencere').addEventListener('change', guncelle);
+byId('temizle').onclick = () => { byId('metin').value = ''; kesin = null; say(); };
+const ORN_TR = 'Giydirme cephe sistemlerinde dikmeler, rüzgâr yükünü döşemelere aktaran ana taşıyıcılardır. Dikme kesiti seçilirken hem gerilme hem de sehim kontrol edilir; sehim sınırı genellikle açıklığın 1/200\'ü ile 15 mm\'den küçük olanıdır. Isıcam ünitelerinin kenar contaları bu sınır aşılırsa zarar görebilir.';
+const ORN_EN = 'In curtain wall systems, mullions are the main members that carry wind load to the floor slabs. When a mullion section is chosen, both stress and deflection are checked; the deflection limit is usually the smaller of span/200 and 15 mm. The edge seals of insulating glass units can be damaged if this limit is exceeded.';
+byId('ornekTr').onclick = () => { byId('metin').value = ORN_TR; kesin = null; say(); };
+byId('ornekEn').onclick = () => { byId('metin').value = ORN_EN; kesin = null; say(); };
+/* belgeler */
+async function belgeMetni(f) {
+  const ad = f.name.toLowerCase();
+  if (ad.endsWith('.pdf')) {
+    await loadScript('lib/pdf.min.js'); pdfjsLib.GlobalWorkerOptions.workerSrc = 'lib/pdf.worker.min.js';
+    const pdf = await pdfjsLib.getDocument({ data: await f.arrayBuffer() }).promise; let out = '';
+    for (let i = 1; i <= pdf.numPages; i++) { const tc = await (await pdf.getPage(i)).getTextContent(); out += tc.items.map(x => x.str + (x.hasEOL ? '\n' : '')).join('') + '\n\n'; byId('durum').textContent = T(`PDF okunuyor: ${i}/${pdf.numPages}`, `Reading PDF: ${i}/${pdf.numPages}`); }
+    return out;
+  }
+  if (ad.endsWith('.docx')) { await loadScript('lib/mammoth.browser.min.js'); return (await mammoth.extractRawText({ arrayBuffer: await f.arrayBuffer() })).value; }
+  return await f.text();
+}
+dropZone(byId('drop'), async fs => { const f = fs[0]; try { byId('durum').textContent = T('Belge okunuyor…', 'Reading the document…'); byId('metin').value = await belgeMetni(f); kesin = null; await say(); toast(f.name); } catch (e) { byId('durum').textContent = T('Belge okunamadı: ', 'Could not read the document: ') + (e.message || e); } });
+erDil.on(() => guncelle());
+say();
+</script>
+<script>if ('serviceWorker' in navigator && location.protocol === 'https:') addEventListener('load', () => navigator.serviceWorker.register('/sw.js').catch(() => { }));</script>
+<script data-goatcounter="https://erdevelop.goatcounter.com/count" async src="//gc.zgo.at/count.js"></script>
+<script src="/js/site.js" defer></script>
+</body>
+</html>
