@@ -5,7 +5,7 @@
   const LS = { get: k => { try { return localStorage.getItem(k); } catch (e) { return null; } }, set: (k, v) => { try { localStorage.setItem(k, v); } catch (e) { } } };
   const clamp = (v, a, b) => Math.max(a, Math.min(b, v)), sec = a => a[Math.floor(Math.random() * a.length)];
   const esc = s => String(s).replace(/[&<>"]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
-  const AYAR = Object.assign({ tanima: 'otomatik', whisper: 'Xenova/whisper-small', surekli: true, sesTani: false, yorum: true, ses: '', perde: 1.15, hiz: 1.05, beyin: false, sessiz: false }, JSON.parse(LS.get('zeki:ayar') || '{}'));
+  const AYAR = Object.assign({ tanima: 'otomatik', whisper: 'Xenova/whisper-small', surekli: true, sesTani: false, yorum: true, ses: '', perde: 1.15, hiz: 1.05, beyin: false, sessiz: false, gorunum: 'robot' }, JSON.parse(LS.get('zeki:ayar') || '{}'));
   const ayarKaydet = () => LS.set('zeki:ayar', JSON.stringify(AYAR));
 
   /* ---------------- durum ---------------- */
@@ -16,7 +16,14 @@
   function durum(d) { S.durum = d; $('durum').dataset.d = d; $('durumT').textContent = { uyuyor: 'Uyuyor', bekliyor: 'Seni bekliyor', dinliyor: 'Dinliyor…', dusunuyor: 'Düşünüyor…', konusuyor: 'Konuşuyor' }[d] || d; $('mik').classList.toggle('acik', d === 'dinliyor'); }
 
   /* ---------------- çizim döngüsü ---------------- */
-  const yuz = Yuz.kur($('sahne'));
+  const GORUNUM = { robot: ['Robot', '🤖', c => Yuz.kur(c)], bulut: ['Nokta bulutu', '👤', c => Gorunumler.bulut(c)], kure: ['Enerji küresi', '🔆', c => Gorunumler.kure(c)], hud: ['Halkalı arayüz', '🎯', c => Gorunumler.hud(c)] };
+  if (!GORUNUM[AYAR.gorunum]) AYAR.gorunum = 'robot';
+  let yuz = GORUNUM[AYAR.gorunum][2]($('sahne'));
+  function gorunumSec(ad, sessiz) {
+    if (!GORUNUM[ad]) return; AYAR.gorunum = ad; ayarKaydet(); yuz = GORUNUM[ad][2]($('sahne'));
+    document.querySelectorAll('#gorSec button').forEach(b => b.classList.toggle('on', b.dataset.g === ad)); $('gorAc').textContent = GORUNUM[ad][1];
+    if (!sessiz) { const el = $('gorBilgi'); el.textContent = GORUNUM[ad][0]; el.classList.add('gor'); clearTimeout(el._t); el._t = setTimeout(() => el.classList.remove('gor'), 1400); }
+  }
   let son = performance.now(), gozT = 2, bakT = 1, yz = null;
   function dongu(now) {
     const dt = Math.min(.05, (now - son) / 1000); son = now;
@@ -125,7 +132,7 @@
     const n = halka.length, out = new Float32Array(n); for (let i = 0; i < n; i++) out[i] = halka[(halkaPos + i) % n];
     let c = []; try { const r = SINIF.classify(out, AC.sampleRate); c = (r[0] && r[0].classifications[0].categories) || []; } catch (e) { return; }
     const bul = c.find(k => TEPKI[k.categoryName] && k.score > .45); const muzik = c.find(k => /Music/.test(k.categoryName) && k.score > .5);
-    $('duyulan').textContent = c.length ? '👂 ' + c.slice(0, 2).map(k => k.categoryName).join(', ') : '';
+    $('duyulan').textContent = c.length ? '👂 ' + c.slice(0, 2).map(k => k.categoryName).join(', ') : ''; S.duyulan = c.length ? c[0].categoryName : '';
     if (muzik && !S.dans && S.durum !== 'uyuyor') { S.dans = true; sonVurus = performance.now(); }
     if (!bul) return; const k = bul.categoryName, simdi = Date.now();
     if (sonYorum[k] && simdi - sonYorum[k] < 60000) return; sonYorum[k] = simdi;
@@ -271,6 +278,7 @@
     else if (e.tip === 'gozkirp') S.gozKirp = 1;
     else if (e.tip === 'sus') sustur();
     else if (e.tip === 'zamanlayici') zamanlayici(e.sn, e.ad);
+    else if (e.tip === 'gorunum') { const L = Object.keys(GORUNUM); gorunumSec(e.ad === 'sonraki' ? L[(L.indexOf(AYAR.gorunum) + 1) % L.length] : e.ad); }
   }
   const ZAMAN = [];
   function zamanlayici(sn, ad) {
@@ -320,6 +328,10 @@
     $('aPerde').oninput = () => { AYAR.perde = +$('aPerde').value; ayarKaydet(); };
     $('aHiz').oninput = () => { AYAR.hiz = +$('aHiz').value; ayarKaydet(); };
     $('aPerde').onchange = $('aHiz').onchange = () => konus('Bu ses nasıl?', 'mutlu');
+    $('gorSec').innerHTML = Object.entries(GORUNUM).map(([k, v]) => `<button type="button" data-g="${k}">${v[1]}<span>${v[0]}</span></button>`).join('');
+    $('gorSec').onclick = e => { const b = e.target.closest('[data-g]'); if (b) gorunumSec(b.dataset.g); };
+    $('gorAc').onclick = () => { const L = Object.keys(GORUNUM); gorunumSec(L[(L.indexOf(AYAR.gorunum) + 1) % L.length]); };
+    gorunumSec(AYAR.gorunum, true);
     $('ayarAc').onclick = () => { $('ayarlar').hidden = !$('ayarlar').hidden; $('gecmis').hidden = true; };
     $('gecmisAc').onclick = () => { $('gecmis').hidden = !$('gecmis').hidden; $('ayarlar').hidden = true; };
     document.querySelectorAll('.panel .kapat').forEach(b => b.onclick = () => b.closest('.panel').hidden = true);
