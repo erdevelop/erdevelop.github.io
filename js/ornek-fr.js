@@ -6625,5 +6625,1201 @@ window.ORNEK_FR = {
 "fini": [
 "Le travail est fini.",
 "İş bitti."
+],
+"fixe": [
+"Il n'a pas de travail fixe.",
+"Sabit bir işi yok."
+],
+"fou": [
+"Tu es fou de conduire si vite !",
+"Bu kadar hızlı sürmek delilik!"
+],
+"fragile": [
+"Attention, c'est fragile.",
+"Dikkat, kırılgan."
+],
+"franc": [
+"Pour être franc, je n'aime pas ça.",
+"Açık konuşmak gerekirse bunu sevmiyorum."
+],
+"fréquent": [
+"Les pannes sont fréquentes.",
+"Arızalar sık oluyor."
+],
+"furieux": [
+"Il est furieux contre son fils.",
+"Oğluna çok öfkeli."
+],
+"général": [
+"En général, je me lève tôt.",
+"Genelde erken kalkarım."
+],
+"généreux": [
+"Ma tante est très généreuse.",
+"Teyzem çok cömert."
+],
+"génial": [
+"C'est génial !",
+"Bu harika!"
+],
+"grave": [
+"Ce n'est pas grave.",
+"Önemli değil."
+],
+"gratuit": [
+"L'entrée est gratuite.",
+"Giriş ücretsiz."
+],
+"habile": [
+"Il est très habile de ses mains.",
+"Eli çok becerikli."
+],
+"habituel": [
+"On se retrouve au café habituel ?",
+"Her zamanki kafede buluşalım mı?"
+],
+"honnête": [
+"C'est un homme honnête.",
+"Dürüst bir adam."
+],
+"horrible": [
+"Il fait un temps horrible.",
+"Hava berbat."
+],
+"humain": [
+"C'est une erreur humaine.",
+"Bu insani bir hata."
+],
+"humide": [
+"L'air est très humide ici.",
+"Burada hava çok nemli."
+],
+"idéal": [
+"C'est l'endroit idéal pour un pique-nique.",
+"Burası piknik için ideal bir yer."
+],
+"identique": [
+"Les deux sacs sont identiques.",
+"İki çanta aynı."
+],
+"illégal": [
+"C'est illégal de stationner ici.",
+"Buraya park etmek yasadışı."
+],
+"immense": [
+"La forêt est immense.",
+"Orman uçsuz bucaksız."
+],
+"impatient": [
+"Je suis impatient de te voir.",
+"Seni görmek için sabırsızlanıyorum."
+],
+"impoli": [
+"Ce n'est pas poli, c'est impoli.",
+"Bu kibarlık değil, kabalık."
+],
+"incroyable": [
+"C'est incroyable !",
+"İnanılmaz!"
+],
+"indépendant": [
+"Elle est très indépendante.",
+"Çok bağımsız biri."
+],
+"indispensable": [
+"Le passeport est indispensable.",
+"Pasaport şart."
+],
+"individuel": [
+"Les cours sont individuels.",
+"Dersler bireysel."
+],
+"industriel": [
+"C'est une ville industrielle.",
+"Bu bir sanayi şehri."
+],
+"inutile": [
+"C'est inutile d'attendre.",
+"Beklemek gereksiz."
+],
+"injuste": [
+"C'est injuste !",
+"Bu adaletsizlik!"
+],
+"innocent": [
+"Il dit qu'il est innocent.",
+"Masum olduğunu söylüyor."
+],
+"inquiétant": [
+"La situation est inquiétante.",
+"Durum endişe verici."
+],
+"intéressant": [
+"C'est un livre très intéressant.",
+"Çok ilginç bir kitap."
+],
+"international": [
+"C'est une école internationale.",
+"Bu uluslararası bir okul."
+],
+"intime": [
+"C'est une fête intime, en famille.",
+"Aile içinde samimi bir kutlama."
+],
+"inverse": [
+"Fais l'inverse !",
+"Tersini yap!"
+],
+"jaloux": [
+"Il est jaloux de son frère.",
+"Erkek kardeşini kıskanıyor."
+],
+"joyeux": [
+"Joyeux Noël !",
+"Mutlu Noeller!"
+],
+"juste": [
+"Ce n'est pas juste !",
+"Bu adil değil!"
+],
+"légal": [
+"C'est tout à fait légal.",
+"Bu tamamen yasal."
+],
+"libéral": [
+"Il exerce une profession libérale.",
+"Serbest meslek sahibi."
+],
+"local": [
+"J'achète des produits locaux.",
+"Yerel ürünler alıyorum."
+],
+"logique": [
+"C'est logique !",
+"Bu mantıklı!"
+],
+"lointain": [
+"Il rêve de pays lointains.",
+"Uzak ülkelerin hayalini kuruyor."
+],
+"lumineux": [
+"L'appartement est très lumineux.",
+"Daire çok aydınlık."
+],
+"magnifique": [
+"La vue est magnifique.",
+"Manzara muhteşem."
+],
+"maladroit": [
+"Je suis maladroit, j'ai cassé un verre.",
+"Beceriksizim, bir bardak kırdım."
+],
+"malheureux": [
+"Il a l'air malheureux.",
+"Mutsuz görünüyor."
+],
+"malin": [
+"Ce renard est malin.",
+"Bu tilki kurnaz."
+],
+"marié": [
+"Ils sont mariés depuis dix ans.",
+"On yıldır evliler."
+],
+"matériel": [
+"L'accident a causé des dégâts matériels.",
+"Kaza maddi hasara yol açtı."
+],
+"mécontent": [
+"Le client est mécontent.",
+"Müşteri memnun değil."
+],
+"médical": [
+"J'ai un rendez-vous médical.",
+"Bir doktor randevum var."
+],
+"meilleur": [
+"C'est le meilleur café de la ville.",
+"Bu, şehrin en iyi kahvesi."
+],
+"militaire": [
+"Son père est militaire.",
+"Babası asker."
+],
+"minuscule": [
+"La chambre est minuscule.",
+"Oda minicik."
+],
+"moderne": [
+"La cuisine est très moderne.",
+"Mutfak çok modern."
+],
+"modeste": [
+"Il est très modeste.",
+"Çok alçakgönüllü."
+],
+"moral": [
+"Il a le moral aujourd'hui.",
+"Bugün morali yerinde."
+],
+"mort": [
+"La plante est morte.",
+"Bitki öldü."
+],
+"moyen": [
+"Il est de taille moyenne.",
+"Orta boylu."
+],
+"musical": [
+"On va voir une comédie musicale.",
+"Bir müzikal izlemeye gidiyoruz."
+],
+"mystérieux": [
+"C'est un homme mystérieux.",
+"Gizemli bir adam."
+],
+"naïf": [
+"Tu es trop naïf.",
+"Çok safsın."
+],
+"national": [
+"Le 14 juillet est la fête nationale.",
+"14 Temmuz ulusal bayram."
+],
+"naturel": [
+"Ce jus est cent pour cent naturel.",
+"Bu meyve suyu yüzde yüz doğal."
+],
+"négatif": [
+"Le test est négatif.",
+"Test negatif."
+],
+"nerveux": [
+"Je suis nerveux avant l'entretien.",
+"Görüşmeden önce gerginim."
+],
+"net": [
+"Le prix net est de cinquante euros.",
+"Net fiyat elli avro."
+],
+"neutre": [
+"Je reste neutre dans cette dispute.",
+"Bu tartışmada tarafsız kalıyorum."
+],
+"nombreux": [
+"Nous sommes nombreux ce soir.",
+"Bu akşam kalabalığız."
+],
+"normal": [
+"C'est normal d'être fatigué.",
+"Yorgun olmak normal."
+],
+"nul": [
+"Ce film est nul !",
+"Bu film berbat!"
+],
+"obligatoire": [
+"Le casque est obligatoire.",
+"Kask zorunlu."
+],
+"obscur": [
+"La rue est obscure la nuit.",
+"Sokak geceleri karanlık."
+],
+"officiel": [
+"C'est la langue officielle du pays.",
+"Bu, ülkenin resmi dili."
+],
+"optimiste": [
+"Je suis optimiste pour l'avenir.",
+"Gelecek konusunda iyimserim."
+],
+"ordinaire": [
+"C'était une journée ordinaire.",
+"Sıradan bir gündü."
+],
+"original": [
+"C'est une idée originale.",
+"Bu özgün bir fikir."
+],
+"particulier": [
+"Il n'y a rien de particulier.",
+"Özel bir şey yok."
+],
+"passionnant": [
+"Le match était passionnant.",
+"Maç çok heyecanlıydı."
+],
+"patient": [
+"Sois patient, il arrive.",
+"Sabırlı ol, geliyor."
+],
+"pessimiste": [
+"Ne sois pas si pessimiste.",
+"Bu kadar kötümser olma."
+],
+"physique": [
+"Ce travail est très physique.",
+"Bu iş bedenen çok yorucu."
+],
+"plat": [
+"La région est très plate.",
+"Bölge çok düz."
+],
+"populaire": [
+"Ce chanteur est très populaire.",
+"Bu şarkıcı çok popüler."
+],
+"positif": [
+"Il faut rester positif.",
+"Olumlu kalmak gerekiyor."
+],
+"précieux": [
+"Ton aide est précieuse.",
+"Yardımın çok değerli."
+],
+"précis": [
+"Tu peux être plus précis ?",
+"Daha net olabilir misin?"
+],
+"principal": [
+"La rue principale est fermée.",
+"Ana cadde kapalı."
+],
+"probable": [
+"Il est probable qu'il pleuve.",
+"Yağmur yağması muhtemel."
+],
+"prudent": [
+"Sois prudent sur la route.",
+"Yolda dikkatli ol."
+],
+"public": [
+"C'est un jardin public.",
+"Bu bir kamu bahçesi."
+],
+"rare": [
+"C'est une plante rare.",
+"Bu nadir bir bitki."
+],
+"ravi": [
+"Je suis ravi de vous voir.",
+"Sizi gördüğüme çok sevindim."
+],
+"régulier": [
+"Il fait du sport de façon régulière.",
+"Düzenli olarak spor yapıyor."
+],
+"religieux": [
+"C'est une fête religieuse.",
+"Bu dini bir bayram."
+],
+"remarquable": [
+"Son travail est remarquable.",
+"İşi dikkat çekici."
+],
+"responsable": [
+"Qui est responsable de ce projet ?",
+"Bu projeden kim sorumlu?"
+],
+"ridicule": [
+"Ce chapeau est ridicule !",
+"Bu şapka gülünç!"
+],
+"rond": [
+"La table est ronde.",
+"Masa yuvarlak."
+],
+"satisfait": [
+"Êtes-vous satisfait du service ?",
+"Hizmetten memnun musunuz?"
+],
+"sauvage": [
+"Il y a des animaux sauvages dans la forêt.",
+"Ormanda vahşi hayvanlar var."
+],
+"scientifique": [
+"C'est une étude scientifique.",
+"Bu bilimsel bir çalışma."
+],
+"secret": [
+"Le code est secret.",
+"Şifre gizli."
+],
+"sensible": [
+"Elle est très sensible.",
+"Çok hassas biri."
+],
+"sévère": [
+"Ce professeur est sévère.",
+"Bu öğretmen serttir."
+],
+"sincère": [
+"Mes sincères félicitations !",
+"İçten tebriklerimi sunarım!"
+],
+"social": [
+"Il travaille dans le secteur social.",
+"Sosyal hizmetler alanında çalışıyor."
+],
+"solide": [
+"Cette table est solide.",
+"Bu masa sağlam."
+],
+"souple": [
+"Les horaires sont souples.",
+"Çalışma saatleri esnek."
+],
+"spectaculaire": [
+"Le feu d'artifice était spectaculaire.",
+"Havai fişek gösterisi muhteşemdi."
+],
+"sportif": [
+"Mon frère est très sportif.",
+"Erkek kardeşim çok sporcu."
+],
+"stressé": [
+"Je suis stressé par le travail.",
+"İş yüzünden stresliyim."
+],
+"strict": [
+"Les règles sont strictes.",
+"Kurallar katı."
+],
+"suffisant": [
+"Le temps n'est pas suffisant.",
+"Zaman yeterli değil."
+],
+"suivant": [
+"Au suivant, s'il vous plaît !",
+"Sıradaki, lütfen!"
+],
+"supérieur": [
+"Le bureau est à l'étage supérieur.",
+"Ofis üst katta."
+],
+"sûr": [
+"Tu es sûr ?",
+"Emin misin?"
+],
+"surpris": [
+"Je suis surpris de te voir ici.",
+"Seni burada görmek beni şaşırttı."
+],
+"sympathique": [
+"Ta sœur est très sympathique.",
+"Kız kardeşin çok sempatik."
+],
+"têtu": [
+"Il est têtu comme une mule.",
+"Katır gibi inatçı."
+],
+"tiède": [
+"Le café est tiède.",
+"Kahve ılık."
+],
+"traditionnel": [
+"C'est un plat traditionnel.",
+"Bu geleneksel bir yemek."
+],
+"travailleur": [
+"C'est un garçon très travailleur.",
+"Çok çalışkan bir çocuk."
+],
+"typique": [
+"C'est un village typique de Provence.",
+"Bu tipik bir Provence köyü."
+],
+"unique": [
+"C'est une occasion unique.",
+"Bu eşsiz bir fırsat."
+],
+"urbain": [
+"La vie urbaine est stressante.",
+"Şehir hayatı stresli."
+],
+"urgent": [
+"C'est urgent, appelle-moi !",
+"Acil, beni ara!"
+],
+"utile": [
+"Ce dictionnaire est très utile.",
+"Bu sözlük çok yararlı."
+],
+"vague": [
+"Sa réponse était vague.",
+"Cevabı belirsizdi."
+],
+"valable": [
+"Ce billet est valable un mois.",
+"Bu bilet bir ay geçerli."
+],
+"vif": [
+"Elle a l'esprit vif.",
+"Zihni çok canlı."
+],
+"violent": [
+"Il y a eu un orage violent.",
+"Şiddetli bir fırtına oldu."
+],
+"visible": [
+"La tour est visible de loin.",
+"Kule uzaktan görülüyor."
+],
+"vrai": [
+"C'est vrai ?",
+"Gerçekten mi?"
+],
+"vulnérable": [
+"Les personnes âgées sont vulnérables.",
+"Yaşlılar savunmasızdır."
+],
+"actuellement": [
+"Actuellement, je travaille à Lyon.",
+"Şu anda Lyon'da çalışıyorum."
+],
+"ainsi": [
+"C'est ainsi que je l'ai rencontré.",
+"Onunla böyle tanıştım."
+],
+"alors": [
+"Alors, on y va ?",
+"O zaman gidelim mi?"
+],
+"apparemment": [
+"Apparemment, il est malade.",
+"Görünüşe göre hasta."
+],
+"à peine": [
+"Je le connais à peine.",
+"Onu pek tanımıyorum."
+],
+"à part": [
+"Tout le monde est venu, à part Paul.",
+"Paul dışında herkes geldi."
+],
+"à temps": [
+"On est arrivés à temps.",
+"Vaktinde vardık."
+],
+"au contraire": [
+"Je ne suis pas fatigué, au contraire !",
+"Yorgun değilim, aksine!"
+],
+"au lieu de": [
+"Prends le métro au lieu du bus.",
+"Otobüs yerine metroya bin."
+],
+"au moins": [
+"Il y a au moins cent personnes.",
+"En azından yüz kişi var."
+],
+"autant": [
+"Je n'ai jamais autant ri.",
+"Hiç bu kadar gülmemiştim."
+],
+"autour": [
+"Il y a un jardin autour de la maison.",
+"Evin etrafında bir bahçe var."
+],
+"autrefois": [
+"Autrefois, il y avait un marché ici.",
+"Eskiden burada bir pazar vardı."
+],
+"autrement": [
+"Dépêche-toi, autrement on va rater le train.",
+"Acele et, yoksa treni kaçıracağız."
+],
+"à travers": [
+"On a marché à travers la forêt.",
+"Ormanın içinden yürüdük."
+],
+"bien sûr": [
+"Bien sûr, je viens avec toi !",
+"Elbette seninle geliyorum!"
+],
+"c'est pourquoi": [
+"Il pleut, c'est pourquoi je reste ici.",
+"Yağmur yağıyor, bu yüzden burada kalıyorum."
+],
+"complètement": [
+"J'ai complètement oublié !",
+"Tamamen unuttum!"
+],
+"constamment": [
+"Il regarde constamment son téléphone.",
+"Sürekli telefonuna bakıyor."
+],
+"davantage": [
+"Je voudrais en savoir davantage.",
+"Daha fazlasını öğrenmek istiyorum."
+],
+"de plus": [
+"C'est cher, et de plus, c'est loin.",
+"Pahalı, üstelik uzak."
+],
+"de temps en temps": [
+"Je vais au cinéma de temps en temps.",
+"Zaman zaman sinemaya giderim."
+],
+"désormais": [
+"Désormais, je prends le vélo.",
+"Bundan böyle bisiklete biniyorum."
+],
+"dorénavant": [
+"Dorénavant, le magasin ferme à dix-neuf heures.",
+"Bundan sonra dükkân saat on dokuzda kapanıyor."
+],
+"doucement": [
+"Parle doucement, le bébé dort.",
+"Yavaş konuş, bebek uyuyor."
+],
+"également": [
+"Je parle également anglais.",
+"İngilizce de konuşuyorum."
+],
+"en effet": [
+"En effet, tu as raison.",
+"Gerçekten de haklısın."
+],
+"en face": [
+"La banque est en face.",
+"Banka karşıda."
+],
+"en outre": [
+"L'hôtel est central ; en outre, il est bon marché.",
+"Otel merkezi, ayrıca ucuz."
+],
+"en tout cas": [
+"En tout cas, merci beaucoup.",
+"Her halükârda çok teşekkürler."
+],
+"évidemment": [
+"Évidemment, il est encore en retard.",
+"Tabii ki yine geç kaldı."
+],
+"exactement": [
+"C'est exactement ce que je voulais.",
+"Bu tam olarak istediğim şey."
+],
+"extrêmement": [
+"Il fait extrêmement chaud.",
+"Hava son derece sıcak."
+],
+"facilement": [
+"On trouve facilement l'hôtel.",
+"Otel kolayca bulunuyor."
+],
+"forcément": [
+"Ce n'est pas forcément vrai.",
+"Bu her zaman doğru değildir."
+],
+"franchement": [
+"Franchement, je préfère rester ici.",
+"Açıkçası burada kalmayı tercih ederim."
+],
+"grâce à": [
+"J'ai trouvé ce travail grâce à toi.",
+"Bu işi senin sayende buldum."
+],
+"heureusement": [
+"Heureusement, personne n'est blessé.",
+"Neyse ki kimse yaralanmadı."
+],
+"justement": [
+"Je pensais justement à toi.",
+"Ben de tam seni düşünüyordum."
+],
+"largement": [
+"On a largement le temps.",
+"Bol bol vaktimiz var."
+],
+"malgré": [
+"On est sortis malgré la pluie.",
+"Yağmura rağmen dışarı çıktık."
+],
+"malheureusement": [
+"Malheureusement, je ne peux pas venir.",
+"Maalesef gelemiyorum."
+],
+"même si": [
+"Je viens, même si je suis fatigué.",
+"Yorgun olsam bile geliyorum."
+],
+"naturellement": [
+"Naturellement, tu es invité.",
+"Doğal olarak sen de davetlisin."
+],
+"néanmoins": [
+"C'est difficile, néanmoins possible.",
+"Zor ama yine de mümkün."
+],
+"normalement": [
+"Normalement, il arrive à huit heures.",
+"Normalde saat sekizde gelir."
+],
+"nulle part": [
+"Je ne trouve mes lunettes nulle part.",
+"Gözlüğümü hiçbir yerde bulamıyorum."
+],
+"par conséquent": [
+"Il est malade ; par conséquent, il reste chez lui.",
+"Hasta, sonuç olarak evde kalıyor."
+],
+"par contre": [
+"Le menu est bon, par contre le service est lent.",
+"Menü iyi ama buna karşın servis yavaş."
+],
+"par exemple": [
+"J'aime les fruits, par exemple les pommes.",
+"Meyveleri severim, örneğin elmayı."
+],
+"parfaitement": [
+"Je comprends parfaitement.",
+"Gayet iyi anlıyorum."
+],
+"plus tard": [
+"On en parle plus tard.",
+"Bunu daha sonra konuşuruz."
+],
+"plusieurs": [
+"J'ai visité plusieurs pays.",
+"Birkaç ülke gezdim."
+],
+"probablement": [
+"Il va probablement pleuvoir.",
+"Muhtemelen yağmur yağacak."
+],
+"quelque part": [
+"J'ai laissé mes clés quelque part.",
+"Anahtarlarımı bir yerde bıraktım."
+],
+"rapidement": [
+"Le temps passe rapidement.",
+"Zaman hızla geçiyor."
+],
+"récemment": [
+"J'ai récemment déménagé.",
+"Son zamanlarda taşındım."
+],
+"sauf": [
+"Le magasin est ouvert tous les jours sauf le dimanche.",
+"Dükkân pazar hariç her gün açık."
+],
+"soudain": [
+"Soudain, la lumière s'est éteinte.",
+"Aniden ışık söndü."
+],
+"tandis que": [
+"Il lit tandis que je cuisine.",
+"Ben yemek yaparken o okuyor."
+],
+"tant que": [
+"Tant que tu es là, je suis content.",
+"Sen burada olduğun sürece mutluyum."
+],
+"à cause de": [
+"Le match est annulé à cause de la pluie.",
+"Maç yağmur yüzünden iptal edildi."
+],
+"à condition que": [
+"Je viens, à condition que tu conduises.",
+"Sen arabayı kullanman şartıyla gelirim."
+],
+"afin de": [
+"Je me lève tôt afin de faire du sport.",
+"Spor yapmak için erken kalkıyorum."
+],
+"au cas où": [
+"Prends un parapluie au cas où.",
+"Olur da lazım olursa diye şemsiye al."
+],
+"dès que": [
+"Appelle-moi dès que tu arrives.",
+"Varır varmaz beni ara."
+],
+"de sorte que": [
+"Parle fort, de sorte que tout le monde entende.",
+"Herkes duysun diye yüksek sesle konuş."
+],
+"lorsque": [
+"Lorsque j'étais petit, j'avais un chien.",
+"Küçükken bir köpeğim vardı."
+],
+"pour que": [
+"Je t'explique pour que tu comprennes.",
+"Anlayasın diye açıklıyorum."
+],
+"sinon": [
+"Dépêche-toi, sinon on part sans toi.",
+"Acele et, yoksa sensiz gideriz."
+],
+"tant mieux": [
+"Tu as trouvé un travail ? Tant mieux !",
+"İş mi buldun? Ne iyi!"
+],
+"d'une part": [
+"D'une part c'est cher, d'autre part c'est loin.",
+"Bir yandan pahalı, öte yandan uzak."
+],
+"avoir lieu": [
+"Le concert a lieu samedi.",
+"Konser cumartesi yapılıyor."
+],
+"avoir raison": [
+"Tu as raison, c'est mieux.",
+"Haklısın, böylesi daha iyi."
+],
+"avoir tort": [
+"J'avais tort, excuse-moi.",
+"Haksızdım, kusura bakma."
+],
+"avoir honte": [
+"Il a honte de son erreur.",
+"Hatasından utanıyor."
+],
+"avoir mal": [
+"J'ai mal aux dents.",
+"Dişlerim ağrıyor."
+],
+"avoir l'air": [
+"Tu as l'air fatigué.",
+"Yorgun görünüyorsun."
+],
+"avoir de la chance": [
+"Tu as de la chance !",
+"Şanslısın!"
+],
+"faire le plein": [
+"Il faut faire le plein avant de partir.",
+"Yola çıkmadan önce depoyu doldurmak lazım."
+],
+"faire partie de": [
+"Il fait partie de l'équipe.",
+"Takımın bir parçası."
+],
+"faire semblant": [
+"Il fait semblant de dormir.",
+"Uyuyormuş gibi yapıyor."
+],
+"faire exprès": [
+"Je ne l'ai pas fait exprès.",
+"Bilerek yapmadım."
+],
+"mettre en place": [
+"On met en place un nouveau système.",
+"Yeni bir sistem uygulamaya koyuyoruz."
+],
+"prendre soin": [
+"Prends soin de ta santé.",
+"Sağlığına özen göster."
+],
+"prendre rendez-vous": [
+"Je dois prendre rendez-vous chez le dentiste.",
+"Diş hekiminden randevu almam lazım."
+],
+"donner rendez-vous": [
+"Il m'a donné rendez-vous devant le musée.",
+"Benimle müzenin önünde buluşma ayarladı."
+],
+"tenir compte de": [
+"Il faut tenir compte du temps.",
+"Havayı hesaba katmak gerekiyor."
+],
+"tomber amoureux": [
+"Il est tombé amoureux à Paris.",
+"Paris'te âşık oldu."
+],
+"tomber en panne": [
+"La voiture est tombée en panne.",
+"Araba arızalandı."
+],
+"rendre visite": [
+"Je rends visite à ma grand-mère.",
+"Büyükannemi ziyaret ediyorum."
+],
+"il vaut mieux": [
+"Il vaut mieux partir tôt.",
+"Erken çıkmak daha iyi."
+],
+"se mettre à": [
+"Il s'est mis à pleuvoir.",
+"Yağmur yağmaya başladı."
+],
+"le citoyen européen": [
+"Un citoyen européen peut travailler en France.",
+"Bir Avrupa vatandaşı Fransa'da çalışabilir."
+],
+"la carte bancaire": [
+"J'ai perdu ma carte bancaire.",
+"Banka kartımı kaybettim."
+],
+"le distributeur": [
+"Il y a un distributeur près de la gare.",
+"Garın yakınında bir bankamatik var."
+],
+"le compte bancaire": [
+"Il faut un compte bancaire pour le salaire.",
+"Maaş için bir banka hesabı gerekiyor."
+],
+"le virement": [
+"Je vous fais un virement demain.",
+"Yarın size havale yapıyorum."
+],
+"le prêt": [
+"Ils ont fait un prêt pour la maison.",
+"Ev için kredi çektiler."
+],
+"l'épargne": [
+"Il a un peu d'épargne.",
+"Biraz birikimi var."
+],
+"la caution": [
+"La caution est d'un mois de loyer.",
+"Depozito bir aylık kira."
+],
+"le propriétaire": [
+"Le propriétaire passe demain.",
+"Ev sahibi yarın uğruyor."
+],
+"le locataire": [
+"Le nouveau locataire est très calme.",
+"Yeni kiracı çok sessiz."
+],
+"le déménagement": [
+"Le déménagement est samedi.",
+"Taşınma cumartesi."
+],
+"le chauffage central": [
+"L'immeuble a le chauffage central.",
+"Apartmanda kalorifer var."
+],
+"la facture d'électricité": [
+"La facture d'électricité est élevée cet hiver.",
+"Bu kış elektrik faturası yüksek."
+],
+"le gaz naturel": [
+"On cuisine au gaz naturel.",
+"Doğalgazla yemek pişiriyoruz."
+],
+"la réparation": [
+"La réparation coûte cent euros.",
+"Onarım yüz avro tutuyor."
+],
+"le plombier": [
+"Il faut appeler un plombier.",
+"Bir tesisatçı çağırmak lazım."
+],
+"l'électricien": [
+"L'électricien vient réparer la lumière.",
+"Elektrikçi ışığı tamir etmeye geliyor."
+],
+"le menuisier": [
+"Le menuisier fait une nouvelle porte.",
+"Marangoz yeni bir kapı yapıyor."
+],
+"le peintre": [
+"Le peintre a fini la cuisine.",
+"Boyacı mutfağı bitirdi."
+],
+"le mécanicien": [
+"Le mécanicien répare ma voiture.",
+"Tamirci arabamı tamir ediyor."
+],
+"le pompier": [
+"Les pompiers sont arrivés vite.",
+"İtfaiyeciler çabuk geldi."
+],
+"le policier": [
+"Le policier nous a aidés.",
+"Polis memuru bize yardım etti."
+],
+"l'avocate": [
+"Ma sœur est avocate.",
+"Kız kardeşim avukat."
+],
+"le comptable": [
+"Le comptable prépare les factures.",
+"Muhasebeci faturaları hazırlıyor."
+],
+"l'ingénieur": [
+"Mon mari est ingénieur.",
+"Kocam mühendis."
+],
+"le vendeur": [
+"Le vendeur m'a bien conseillé.",
+"Satıcı bana iyi tavsiyede bulundu."
+],
+"le caissier": [
+"Le caissier rend la monnaie.",
+"Kasiyer para üstünü veriyor."
+],
+"le boulanger": [
+"Le boulanger se lève à quatre heures.",
+"Fırıncı saat dörtte kalkıyor."
+],
+"le boucher": [
+"J'achète la viande chez le boucher.",
+"Eti kasaptan alıyorum."
+],
+"le coiffeur": [
+"Je vais chez le coiffeur samedi.",
+"Cumartesi kuaföre gidiyorum."
+],
+"le facteur": [
+"Le facteur passe à dix heures.",
+"Postacı saat onda geçiyor."
+],
+"l'agriculteur": [
+"L'agriculteur travaille dans les champs.",
+"Çiftçi tarlada çalışıyor."
+],
+"le cuisinier": [
+"Le cuisinier prépare le plat du jour.",
+"Aşçı günün yemeğini hazırlıyor."
+],
+"le journalisme": [
+"Elle étudie le journalisme.",
+"Gazetecilik okuyor."
+],
+"le chercheur": [
+"Il est chercheur en biologie.",
+"Biyoloji alanında araştırmacı."
+],
+"le traducteur": [
+"Le traducteur parle cinq langues.",
+"Çevirmen beş dil konuşuyor."
+],
+"l'informaticien": [
+"L'informaticien répare mon ordinateur.",
+"Bilgisayarcı bilgisayarımı tamir ediyor."
+],
+"le fonctionnaire": [
+"Son père est fonctionnaire.",
+"Babası memur."
+],
+"le retraité": [
+"Les retraités se promènent le matin.",
+"Emekliler sabahları yürüyüş yapıyor."
+],
+"le CV": [
+"J'envoie mon CV à plusieurs entreprises.",
+"Özgeçmişimi birkaç şirkete gönderiyorum."
+],
+"la lettre de motivation": [
+"J'écris une lettre de motivation.",
+"Bir niyet mektubu yazıyorum."
+],
+"l'offre d'emploi": [
+"J'ai vu une offre d'emploi intéressante.",
+"İlginç bir iş ilanı gördüm."
+],
+"le recrutement": [
+"Le recrutement commence en janvier.",
+"İşe alım ocakta başlıyor."
+],
+"l'embauche": [
+"L'embauche est prévue pour mars.",
+"İşe alım mart ayına planlandı."
+],
+"le licenciement": [
+"Il y a eu des licenciements dans l'usine.",
+"Fabrikada işten çıkarmalar oldu."
+],
+"la démission": [
+"Il a donné sa démission.",
+"İstifasını verdi."
+],
+"le contrat à durée indéterminée": [
+"Elle a un contrat à durée indéterminée.",
+"Süresiz bir sözleşmesi var."
+],
+"l'intérim": [
+"Il travaille en intérim.",
+"Geçici işlerde çalışıyor."
+],
+"les congés payés": [
+"J'ai cinq semaines de congés payés.",
+"Beş haftalık ücretli iznim var."
+],
+"le rhume des foins": [
+"Au printemps, j'ai le rhume des foins.",
+"İlkbaharda saman nezlem oluyor."
+],
+"la grippe": [
+"Toute la famille a la grippe.",
+"Bütün aile grip."
+],
+"la toux": [
+"Ce sirop calme la toux.",
+"Bu şurup öksürüğü yatıştırır."
+],
+"le mal de tête": [
+"J'ai un terrible mal de tête.",
+"Çok kötü bir baş ağrım var."
+],
+"la blessure grave": [
+"Heureusement, il n'a pas de blessure grave.",
+"Neyse ki ağır bir yarası yok."
+],
+"le pansement": [
+"Mets un pansement sur ta main.",
+"Eline bir sargı koy."
+],
+"la piqûre": [
+"L'infirmière me fait une piqûre.",
+"Hemşire bana iğne yapıyor."
+],
+"la radiographie": [
+"Le médecin demande une radiographie.",
+"Doktor bir röntgen istiyor."
+],
+"l'opération": [
+"L'opération s'est bien passée.",
+"Ameliyat iyi geçti."
+],
+"le régime": [
+"Je suis au régime.",
+"Diyetteyim."
+],
+"la vitamine": [
+"Les oranges contiennent de la vitamine C.",
+"Portakallar C vitamini içerir."
+],
+"le sommeil léger": [
+"J'ai le sommeil léger.",
+"Uykum hafiftir."
+],
+"la forme physique": [
+"Il est en bonne forme physique.",
+"Kondisyonu iyi."
+],
+"le stress": [
+"Le sport aide contre le stress.",
+"Spor strese karşı yardımcı olur."
+],
+"la fatigue": [
+"Je sens la fatigue en fin de journée.",
+"Gün sonunda yorgunluğu hissediyorum."
+],
+"la guérison": [
+"Je te souhaite une bonne guérison.",
+"Sana acil şifalar dilerim."
+],
+"le symptôme": [
+"Quels sont vos symptômes ?",
+"Belirtileriniz neler?"
+],
+"l'allergie": [
+"J'ai une allergie aux chats.",
+"Kedilere alerjim var."
+],
+"l'assurance maladie": [
+"L'assurance maladie rembourse le médecin.",
+"Sağlık sigortası doktor masrafını karşılıyor."
+],
+"la mutuelle": [
+"La mutuelle paie le reste.",
+"Kalanını tamamlayıcı sigorta ödüyor."
 ]
 };
