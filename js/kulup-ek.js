@@ -578,6 +578,72 @@ dialog.kr::backdrop{background:rgba(0,0,0,.55)}
     pg(); if (d.showModal) d.showModal(); else d.setAttribute('open', '');
   }, 900);
 
+  /* ================= 📘 BUGÜNÜN DERSİ: tek düğmeyle sıralı kısa ders ================= */
+  (function () {
+    const ADIM = [
+      { k: 'kart', n: 10, i: '📚', ad: 'Kelime kartları', kisa: 'Kartlar', tab: 'kelime', ip: '10 karta bak ve “Bildim / Zorlandım / Bilmedim” ile puanla.' },
+      { k: 'kalip', n: 1, i: '🧩', ad: 'Bir kalıp', kisa: 'Kalıp', tab: 'kalip', ip: 'Bir kalıp seç ve bir adımını tamamla (dinle, söyle ya da yaz).' },
+      { k: 'dinleme', n: 1, i: '🎧', ad: 'Bir dinleme', kisa: 'Dinleme', tab: 'dinleme', ip: 'Bir diyaloğu dinle ve sorularını cevapla.' },
+      { k: 'telaffuz', n: 1, i: '🗣️', ad: 'Telaffuz', kisa: 'Telaffuz', tab: 'telaffuz', ip: 'Bir cümleyi mikrofona söyle; %80 ve üstü sayılır.' }
+    ];
+    const BONUS = 15;
+    const st = () => { if (!E.ders || E.ders.d !== dayKey()) E.ders = { d: dayKey(), p: {}, on: 0, ok: 0 }; return E.ders; };
+    const sira = D => ADIM.findIndex(a => (D.p[a.k] || 0) < a.n);
+    const css = document.createElement('style'); css.textContent = `
+.ders{margin:0 0 10px;padding:12px 14px;border:1px solid var(--line);border-radius:16px;background:var(--panel)}
+.ders .dh{display:flex;align-items:center;gap:10px;flex-wrap:wrap}
+.ders .dh b{font-size:16px}.ders .dh small{color:var(--muted)}.ders .dh .sp{flex:1}
+.ders .bt{border:0;border-radius:999px;padding:9px 16px;font:700 14px inherit;font-family:inherit;background:var(--accent);color:#fff;cursor:pointer}
+.ders .bt.ghost{background:none;color:var(--muted);border:1px solid var(--line);padding:7px 12px;font-weight:600}
+.ders .ad{display:grid;grid-template-columns:repeat(4,1fr);gap:6px;margin-top:10px}
+.ders .ad button{border:1px solid var(--line);border-radius:12px;background:none;padding:7px 4px;font:600 12px inherit;font-family:inherit;color:var(--text,inherit);cursor:pointer;display:flex;flex-direction:column;align-items:center;gap:2px}
+.ders .ad button i{font-style:normal;font-size:18px}.ders .ad button small{color:var(--muted);font-weight:600}
+.ders .ad button.on{border-color:var(--accent);box-shadow:0 0 0 2px color-mix(in srgb,var(--accent) 25%,transparent)}
+.ders .ad button.ok{background:color-mix(in srgb,#2e9e5b 12%,transparent);border-color:color-mix(in srgb,#2e9e5b 45%,var(--line))}
+.ders .ip{margin:9px 0 0;color:var(--muted);font-size:14px}
+.ders.bitti{background:color-mix(in srgb,#2e9e5b 9%,var(--panel))}
+body.renk .ders{border-radius:22px;background:linear-gradient(135deg,color-mix(in srgb,var(--accent) 10%,var(--panel)),var(--panel))}
+#dersPill{position:fixed;left:50%;transform:translateX(-50%);bottom:calc(132px + env(safe-area-inset-bottom));z-index:58;border:0;border-radius:999px;padding:8px 14px;font:700 13px inherit;font-family:inherit;background:var(--accent);color:#fff;box-shadow:0 6px 18px rgba(0,0,0,.18);cursor:pointer;white-space:nowrap}
+@media (min-width:721px){#dersPill{bottom:18px}}`;
+    document.head.appendChild(css);
+    const box = document.createElement('div'); box.className = 'ders'; box.id = 'dersBox';
+    const gv = el('gvBox'), tb = el('tabs2'); if (gv) gv.before(box); else if (tb) tb.before(box); else return;
+    const pill = document.createElement('button'); pill.type = 'button'; pill.id = 'dersPill'; pill.hidden = true; document.body.appendChild(pill);
+    pill.onclick = () => box.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    function git(a) { setTab(a.tab); setTimeout(() => { const p = el('p-' + a.tab); if (p) scrollTo({ top: p.getBoundingClientRect().top + scrollY - 70, behavior: 'smooth' }); }, 60); }
+    function ciz() {
+      const D = st(), i = sira(D), a = ADIM[i];
+      box.classList.toggle('bitti', !!D.ok);
+      const chips = `<div class="ad">${ADIM.map((x, j) => { const v = Math.min(D.p[x.k] || 0, x.n), ok = v >= x.n; return `<button type="button" data-j="${j}" class="${ok ? 'ok' : j === i && D.on ? 'on' : ''}"><i>${ok ? '✅' : x.i}</i>${x.kisa}<small>${v}/${x.n}</small></button>`; }).join('')}</div>`;
+      if (D.ok) box.innerHTML = `<div class="dh"><b>📘 Bugünün dersi bitti 🎉</b><span class="sp"></span><small>+${BONUS} XP bonus alındı · yarın yeni ders</small></div>${chips}`;
+      else if (!D.on) box.innerHTML = `<div class="dh"><b>📘 Bugünün dersi</b><small>4 adım · ~10 dk</small><span class="sp"></span><button type="button" class="bt" data-a="basla">${Object.keys(D.p).length ? '▶ Devam et' : '▶ Başla'}</button></div><p class="ip">Ne çalışacağını düşünme: 10 kart, 1 kalıp, 1 dinleme, 1 telaffuz. Bitince +${BONUS} XP.</p>`;
+      else box.innerHTML = `<div class="dh"><b>📘 Adım ${i + 1}/4 · ${a.i} ${a.ad}</b><span class="sp"></span><button type="button" class="bt" data-a="git">Bu adıma git</button><button type="button" class="bt ghost" data-a="ara">Ara ver</button></div>${chips}<p class="ip">${a.ip}</p>`;
+      pill.hidden = !(D.on && !D.ok);
+      if (!pill.hidden) pill.textContent = `📘 Ders ${i + 1}/4 · ${a.i} ${a.ad} ${Math.min(D.p[a.k] || 0, a.n)}/${a.n}`;
+    }
+    box.onclick = e => {
+      const D = st(), b = e.target.closest('[data-a],[data-j]'); if (!b) return;
+      if (b.dataset.j != null) { if (D.on || D.ok) git(ADIM[+b.dataset.j]); return; }
+      const A = b.dataset.a;
+      if (A === 'basla') { D.on = 1; sv(); ciz(); git(ADIM[sira(D)]); }
+      else if (A === 'git') git(ADIM[sira(D)]);
+      else if (A === 'ara') { D.on = 0; sv(); ciz(); TM.toast('Ders duraklatıldı. İlerlemen kayıtlı.'); }
+    };
+    function olay(k) {
+      const D = st(); if (!D.on || D.ok) return; const a = ADIM.find(x => x.k === k); if (!a) return;
+      const once = sira(D); if ((D.p[k] || 0) >= a.n) return; D.p[k] = (D.p[k] || 0) + 1;
+      const sonra = sira(D);
+      if (sonra < 0) { D.ok = 1; D.on = 0; sv(); ciz(); addXP(BONUS, 'günün dersi'); setTimeout(() => TM.toast('📘 Bugünün dersi bitti! +' + BONUS + ' XP 🎉', 3200), 700); return; }
+      sv(); ciz();
+      if (sonra !== once && once === ADIM.indexOf(a)) { const n = ADIM[sonra]; setTimeout(() => { TM.toast(`✅ ${a.ad} tamam · sıradaki: ${n.i} ${n.ad}`, 2600); git(n); }, 900); }
+    }
+    const MAPD = { 'kalıp': 'kalip', 'dinleme': 'dinleme', 'telaffuz': 'telaffuz' };
+    const oX = addXP; addXP = function (n, why) { const r = oX.apply(this, arguments); if (n && MAPD[why]) olay(MAPD[why]); return r; };
+    if (window.Gorev && Gorev.ev) { const oE = Gorev.ev; Gorev.ev = function (t) { const r = oE.apply(this, arguments); if (t === 'kart') olay('kart'); return r; }; }
+    ciz();
+    window.KulupDers = { ciz, olay };
+  })();
+
   /* görev sistemine yeni olaylar */
   window.KulupEk = { okList, grList, ilPaint, testStart, hata };
 })();
