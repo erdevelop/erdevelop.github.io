@@ -109,6 +109,10 @@
 .ek .rz div.off{opacity:.38;filter:grayscale(1)}
 .ek .lig div{display:flex;gap:10px;align-items:center;padding:8px 4px;border-bottom:1px solid var(--line)} .ek .lig b{flex:1;color:var(--fg)} .ek .lig .me{background:var(--accent-dim);border-radius:6px}
 .ek .hl div{padding:7px 0;border-bottom:1px dashed var(--line);font-size:14px} .ek .hl small{color:var(--muted);font:400 11px var(--f-mono)}
+.ek .esl{display:grid;grid-template-columns:1fr 1fr;gap:8px} .ek .esl>div{display:flex;flex-direction:column;gap:8px} .ek .esl button{min-height:48px;padding:8px 10px;border:1px solid var(--line);border-radius:12px;background:var(--panel);color:var(--fg);font:600 15px var(--f-body);cursor:pointer;transition:background .15s,opacity .3s,transform .15s} .ek .esl button.sec{border-color:var(--accent);box-shadow:0 0 0 2px color-mix(in srgb,var(--accent) 30%,transparent);transform:scale(1.02)} .ek .esl button.tamam{background:color-mix(in srgb,#2e9e5b 14%,var(--panel));border-color:color-mix(in srgb,#2e9e5b 50%,var(--line));opacity:.55;cursor:default} .ek .esl button.yanlis2{background:color-mix(in srgb,#d04a3a 18%,var(--panel));border-color:#d04a3a} .ek .esl button.salla{animation:salla .35s}
+@keyframes salla{25%{transform:translateX(-4px)}75%{transform:translateX(4px)}}
+.ek .bd{font:600 19px/1.6 var(--f-body);text-align:center;padding:6px 4px} .ek .bd .bosluk{display:inline-block;min-width:70px;border-bottom:3px solid var(--accent);color:var(--accent);padding:0 4px} .ek .bd .bosluk.ok{color:#2e9e5b;border-color:#2e9e5b} .ek .bd .bosluk.no{color:#d04a3a;border-color:#d04a3a}
+.ek .bdo{display:grid;grid-template-columns:1fr 1fr;gap:8px} .ek .bdo button{min-height:46px;text-align:center}
 .ek .seg2{display:flex;gap:6px;flex-wrap:wrap;margin-bottom:10px} .ek .seg2 button{padding:7px 12px;border:1px solid var(--line);border-radius:8px;background:var(--panel);color:var(--text);font:600 13px var(--f-body);cursor:pointer} .ek .seg2 button.on{background:var(--accent);border-color:var(--accent);color:var(--on-accent,#fff)}
 .ek .ring{display:flex;align-items:center;gap:12px} .ek .ring svg{width:64px;height:64px;flex:none}
 .ek .tmr{font:700 2.2rem var(--f-mono);text-align:center;color:var(--fg)}
@@ -191,9 +195,9 @@ dialog.tanit .hd small{display:block;font-weight:400;color:var(--muted);font-siz
   function yzPaint() {
     const P = el('p-yaz');
     P.innerHTML = `<h3>✍️ Yazma</h3><p class="sub">Kelimeyi hatırlamak yetmez; yazınca kalıcı olur. Kelimeler Kelimeler bölümünde seçili listeden gelir.</p>
-      <div class="seg2" id="yzMod"><button type="button" data-m="kelime" class="${Y.mod === 'kelime' ? 'on' : ''}">🔤 Türkçesine bakıp yaz</button><button type="button" data-m="dikte" class="${Y.mod === 'dikte' ? 'on' : ''}">🎧 Dikte</button></div><div class="panel" id="yzBox"></div>`;
+      <div class="seg2" id="yzMod"><button type="button" data-m="kelime" class="${Y.mod === 'kelime' ? 'on' : ''}">🔤 Türkçesine bakıp yaz</button><button type="button" data-m="dikte" class="${Y.mod === 'dikte' ? 'on' : ''}">🎧 Dikte</button><button type="button" data-m="esles" class="${Y.mod === 'esles' ? 'on' : ''}">🧩 Eşleştir</button><button type="button" data-m="bosluk" class="${Y.mod === 'bosluk' ? 'on' : ''}">✏️ Boşluk doldur</button></div><div class="panel" id="yzBox"></div>`;
     el('yzMod').onclick = e => { const b = e.target.closest('[data-m]'); if (!b) return; Y.mod = b.dataset.m; yzPaint(); };
-    Y.mod === 'kelime' ? yzNext() : dkNext();
+    ({ kelime: yzNext, dikte: dkNext, esles: esNext, bosluk: bdNext }[Y.mod] || yzNext)();
   }
   function yzNext() {
     const w = Y.w = yzWord(), B = el('yzBox'); if (!w) { B.innerHTML = '<p class="sub">Bu listede kelime yok.</p>'; return; }
@@ -229,6 +233,76 @@ dialog.tanit .hd small{display:block;font-weight:400;color:var(--muted);font-siz
       el('dkRes').innerHTML = `<div class="panel"><b>%${pct}</b> doğru${pct === 100 ? ' 🎉' : ''}<div class="diff" style="margin-top:8px;line-height:2">${out}</div><div class="sub" style="margin-top:6px">Yeşil: doğru · kırmızı arka plan: eksik kelime · üstü çizili: fazla ya da yanlış yazılan</div></div>`;
       el('dkOk').disabled = true;
     };
+  }
+
+  /* ================= 🧩 EŞLEŞTİRME ================= */
+  function esHavuz() {
+    const seen = new Set(), ok = w => { if (!w || !w.en || !w.tr) return false; const k = norm(w.tr); if (seen.has(k) || seen.has('e' + norm(w.en))) return false; seen.add(k); seen.add('e' + norm(w.en)); return true; };
+    let L = deck().filter(w => w.en && w.tr && w.en.length < 26 && w.tr.length < 30);
+    if (L.length < 6) L = WORDS.map(w => ({ en: w[0], tr: w[1], ex: w[2] }));
+    const now = Date.now(), zayif = shuffle(L.filter(w => { const s = S.leit[keyOf(w)]; return s && s.box <= 2 && s.due <= now; })), yeni = L.filter(w => !S.leit[keyOf(w)]).sort((a, b) => (FREQ[b.en.toLowerCase()] || 0) - (FREQ[a.en.toLowerCase()] || 0)).slice(0, 14);
+    const out = []; for (const w of [...zayif.slice(0, 3), ...shuffle(yeni), ...shuffle(L.slice())]) { if (out.length >= 6) break; if (ok(w)) out.push(w); }
+    return out;
+  }
+  function esNext() {
+    const B = el('yzBox'), W = esHavuz(); if (W.length < 4) { B.innerHTML = '<p class="sub">Bu listede yeterli kelime yok.</p>'; return; }
+    const sol = shuffle(W.map((w, i) => i)), sag = shuffle(W.map((w, i) => i)); let secS = null, hataN = 0, bitti = 0; const t0 = Date.now(), yanlis = new Set();
+    B.innerHTML = `<p class="sub" style="text-align:center;margin-top:0">Soldan bir kelimeye, sağdan anlamına dokun. ${W.length} çifti eşleştir.</p>
+      <div class="esl"><div>${sol.map(i => `<button type="button" data-s="${i}">${esc(W[i].en)}</button>`).join('')}</div><div>${sag.map(i => `<button type="button" data-g="${i}">${esc(W[i].tr)}</button>`).join('')}</div></div>
+      <div id="esRes" style="margin-top:10px;text-align:center"></div>`;
+    const kutu = B.querySelector('.esl');
+    kutu.onclick = e => {
+      const s = e.target.closest('[data-s]'), g = e.target.closest('[data-g]');
+      if (s && !s.disabled) { kutu.querySelectorAll('[data-s].sec').forEach(x => x.classList.remove('sec')); s.classList.add('sec'); secS = +s.dataset.s; sayx(W[secS].en, .9); return; }
+      if (!g || g.disabled) return; if (secS == null) { g.classList.add('salla'); setTimeout(() => g.classList.remove('salla'), 400); return TM.toast('Önce soldan bir kelime seç'); }
+      const sb = kutu.querySelector(`[data-s="${secS}"]`);
+      if (+g.dataset.g === secS) { [sb, g].forEach(x => { x.classList.remove('sec'); x.classList.add('tamam'); x.disabled = true; }); bitti++; secS = null;
+        if (bitti === W.length) { const sn = Math.round((Date.now() - t0) / 1000), xp = Math.max(2, W.length - hataN);
+          W.forEach((w, i) => { if (yanlis.has(i)) leitUp(w, false); });
+          addXP(xp, 'eşleştirme'); el('esRes').innerHTML = `<div style="font:700 18px var(--f-body)">${hataN ? '✓ Bitti' : '🎉 Hatasız!'} · ${sn} sn · ${hataN} hata</div><div class="ctl" style="justify-content:center;margin-top:8px"><button class="btn pri" type="button" id="esNx">Yeni tur →</button></div>`; el('esNx').onclick = esNext; } }
+      else { hataN++; yanlis.add(secS); yanlis.add(+g.dataset.g); [sb, g].forEach(x => { x.classList.add('yanlis2'); setTimeout(() => x.classList.remove('yanlis2'), 500); }); hata('eşleştirme', W[secS].en, W[secS].tr, W[+g.dataset.g].tr); }
+    };
+  }
+
+  /* ================= ✏️ BOŞLUK DOLDURMA ================= */
+  const tokAyir = t => { const m = t.match(/^([^\p{L}\p{N}']*)([\p{L}\p{N}'’\-]+)([^\p{L}\p{N}]*)$/u); return m ? [m[1], m[2], m[3]] : null; };
+  function bosYer(w) {
+    if (!w.ex) return null; const ham = artSil(String(w.en).replace(/\s*\(.*?\)\s*/g, ' ').trim()); if (!ham || /[\/,]/.test(ham)) return null;
+    const ex = String(w.ex).replace(/\s*\(.*\)\s*$/, '').trim(), T = ex.split(/(\s+)/);
+    const bn = norm(ham), parca = bn.split(' ');
+    if (parca.length > 1) { /* çok kelimeli: art arda eşleşme */
+      const idx = []; T.forEach((t, i) => { if (!/^\s+$/.test(t)) idx.push(i); });
+      for (let a = 0; a + parca.length <= idx.length; a++) { const ok = parca.every((p, j) => { const x = tokAyir(T[idx[a + j]]); return x && norm(x[1]) === p; }); if (ok) { const ilk = tokAyir(T[idx[a]]), son = tokAyir(T[idx[a + parca.length - 1]]);
+        const cevap = idx.slice(a, a + parca.length).map((k, j) => { const x = tokAyir(T[k]); return x[1]; }).join(' ');
+        return { once: T.slice(0, idx[a]).join('') + ilk[0], cevap, sonra: son[2] + T.slice(idx[a + parca.length - 1] + 1).join('') }; } }
+      return null;
+    }
+    const kok = bn.length >= 5 ? bn.slice(0, Math.max(4, bn.length - 3)) : bn;
+    let bul = -1, tam = false;
+    T.forEach((t, i) => { if (bul >= 0 && tam) return; const x = !/^\s+$/.test(t) && tokAyir(t); if (!x) return; const n = norm(x[1]);
+      if (n === bn) { bul = i; tam = true; } else if (bul < 0 && kok.length >= 4 && n.startsWith(kok) && n.length <= bn.length + 4) bul = i; });
+    if (bul < 0) return null; const x = tokAyir(T[bul]);
+    return { once: T.slice(0, bul).join('') + x[0], cevap: x[1], sonra: x[2] + T.slice(bul + 1).join('') };
+  }
+  function bdNext() {
+    const B = el('yzBox');
+    let L = deck().filter(w => w.ex), H = L.map(w => [w, bosYer(w)]).filter(x => x[1]);
+    if (H.length < 8) { L = WORDS.map(w => ({ en: w[0], tr: w[1], ex: w[2] })); H = L.map(w => [w, bosYer(w)]).filter(x => x[1]); }
+    if (H.length < 4) { B.innerHTML = '<p class="sub">Bu listede örnek cümle yok; Kelimeler bölümünde “Hazır liste”yi seç.</p>'; return; }
+    const now = Date.now(), zayif = H.filter(([w]) => { const s = S.leit[keyOf(w)]; return s && s.box <= 1 && s.due <= now; });
+    const [w, b] = zayif.length && Math.random() < .4 ? pick(zayif) : pick(H);
+    const cv = norm(b.cevap), diger = shuffle(H.filter(([v, c]) => norm(c.cevap) !== cv && norm(v.tr) !== norm(w.tr))).slice(0, 3).map(([v, c]) => c.cevap.toLowerCase() === c.cevap ? c.cevap : (b.cevap[0] === b.cevap[0].toUpperCase() ? c.cevap : c.cevap.toLowerCase()));
+    const sec = shuffle([b.cevap, ...diger]); const trc = typeof ORN_TR === 'function' ? ORN_TR(w.en, w.ex) : '';
+    B.innerHTML = `<p class="sub" style="text-align:center;margin-top:0">Cümledeki boşluğa hangi kelime gelir?</p>
+      <div class="bd">${esc(b.once)}<span class="bosluk" id="bdB">______</span>${esc(b.sonra)}</div>
+      <p class="sub" style="text-align:center">${trc ? esc(trc) : '💡 Anlamı: ' + esc(w.tr)}</p>
+      <div class="opts bdo">${sec.map((o, j) => `<button type="button" data-o="${j}">${esc(o)}</button>`).join('')}</div><div id="bdRes" style="margin-top:10px;text-align:center"></div>`;
+    B.querySelector('.bdo').onclick = e => { const k = e.target.closest('[data-o]'); if (!k || k.disabled) return; const sc = sec[+k.dataset.o], ok = norm(sc) === cv;
+      B.querySelectorAll('.bdo button').forEach(x => { x.disabled = true; if (norm(x.textContent) === cv) x.classList.add('dogru'); else if (x === k) x.classList.add('yanlis'); });
+      el('bdB').textContent = b.cevap; el('bdB').classList.add(ok ? 'ok' : 'no'); leitUp(w, ok);
+      if (ok) addXP(2, 'boşluk doldurma'); else hata('boşluk', b.once + '___' + b.sonra, b.cevap, sc);
+      sayx(b.once + b.cevap + b.sonra, .9);
+      el('bdRes').innerHTML = `<div class="sub">${esc(w.en)} = ${esc(w.tr)}</div><div class="ctl" style="justify-content:center;margin-top:8px"><button class="btn pri" type="button" id="bdNx">Sonraki →</button></div>`; el('bdNx').onclick = bdNext; el('bdNx').focus(); };
   }
 
   /* ================= 📘 GRAMER ================= */
