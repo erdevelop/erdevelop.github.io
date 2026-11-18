@@ -854,7 +854,7 @@ function bulut(){if(fbH)return fbH;fbH=(async()=>{const V='https://www.gstatic.c
  fbH.catch(()=>{fbH=null});return fbH}
 const girisYok=()=>{$('kBd').innerHTML='Buluta kaydetmek için <a href="/hesap.html">Hesabım</a> sayfasından giriş yap, sonra bu sayfaya dön.';toast('Önce hesabına giriş yap')};
 async function bulutaKaydet(sessiz){try{const h=await bulut();if(!h){if(!sessiz)girisYok();return}save();const t=Date.now();
- await h.ref.set({krallik:{v:JSON.stringify(S),t,oz:ozet(S)}},{merge:true});try{await h.kref.set(kVeri(h.ad))}catch(e){}kAyar.son=t;kSak();
+ await h.ref.set({krallik:{v:JSON.stringify(S),t,oz:ozet(S)}},{merge:true});try{await kYaz(h)}catch(e){}kAyar.son=t;kSak();
  $('kBd').textContent='Bulut: '+new Date(t).toLocaleString('tr-TR',{day:'2-digit',month:'2-digit',hour:'2-digit',minute:'2-digit'})+' · '+ozet(S)+(h.ad?' · '+h.ad:'');if(!sessiz)toast('Buluta kaydedildi')}
  catch(e){if(!sessiz)toast('Buluta kaydedilemedi: '+(e&&(e.code||e.message)||'bağlantı kurulamadı'))}}
 $('kBul').onclick=()=>bulutaKaydet(false);
@@ -888,23 +888,28 @@ function streakCheck(){const k=kAyar.strk||{d:0,n:0},td=dayNo();if(k.d===td){kAy
 function renderStreak(){const el=$('strk');if(!el)return;const n=(kAyar.strk&&kAyar.strk.n)||0;if(n<1){el.style.display='none';return}el.style.display='';el.textContent='🔥 Giriş serisi: '+n+' gün'+(n>=7?' · en yüksek bonus':' · yarın gir, bonus büyür')}
 streakCheck();renderStreak();
 // ---- Arena: online skor tablosu, rakip lordlar, sparring ----
+function sezonNo(){const d=new Date();return d.getFullYear()*12+d.getMonth()}
+var LIGLER=[[0,'Bronz','🥉'],[200,'Gümüş','🥈'],[500,'Altın','🥇'],[1000,'Platin','💠'],[2000,'Elmas','💎']];
+function lig(kupa){let L=LIGLER[0];for(const x of LIGLER)if((kupa||0)>=x[0])L=x;return L}
+function sezonCheck(){const sz=sezonNo();if(!S.sezon){S.sezon=sz;return}if(S.sezon===sz)return;const peak=Math.round(S.kupaBest||S.kupa||0),L=lig(peak),odul=Math.round(50+peak*0.5);S.g+=odul;S.st.g+=odul;S.sezonSon={lig:L[2]+' '+L[1],kupa:peak,odul:odul};S.kupa=Math.max(0,Math.round((S.kupa||0)*0.35));S.kupaBest=S.kupa;S.sezon=sz;pend.push('🏆 Yeni sezon! Geçen sezon zirven: '+L[2]+' '+L[1]+' ('+fmt(peak)+' kupa). Ödül +'+fmt(odul)+' altın');save()}
+async function kYaz(h){const d=kVeri(h.ad);try{await h.kref.set(d)}catch(e){const d2=Object.assign({},d);delete d2.kupa;await h.kref.set(d2)}}
 const esc=x=>String(x==null?'':x).replace(/[<>&]/g,c=>({'<':'&lt;','>':'&gt;','&':'&amp;'}[c]));
 function benimAd(email){return (kAyar.ad&&kAyar.ad.trim())||(email?String(email).split('@')[0]:'')||'Lord'}
 function benimOrdu(){const o={};for(const k in U){const n=S.ar[k]||0;if(n>0)o[k]=n}return o}
-function kVeri(email){return{ad:benimAd(email).slice(0,24),skor:Math.round(score().t),ordu:benimOrdu(),sv:S.lv.main,t:Date.now(),val:Math.round(S.val||0)}}
+function kVeri(email){return{ad:benimAd(email).slice(0,24),skor:Math.round(score().t),ordu:benimOrdu(),sv:S.lv.main,t:Date.now(),val:Math.round(S.val||0),kupa:Math.round(S.kupa||0)}}
 const ordText=o=>Object.keys(o||{}).filter(k=>U[k]).map(k=>o[k]+' '+U[k].n).join(', ')||'ordu yok';
 let arenaInit=false,arenaRivals=[],arenaRep=null;
-async function yayinla(sessiz){try{const h=await bulut();if(!h){if(!sessiz)girisYok();return null}await h.kref.set(kVeri(h.ad));kAyar.ad=benimAd(h.ad);kSak();
+async function yayinla(sessiz){try{const h=await bulut();if(!h){if(!sessiz)girisYok();return null}await kYaz(h);kAyar.ad=benimAd(h.ad);kSak();
  if(!sessiz){toast('Krallığın yayınlandı');$('aBd').textContent='Yayında: '+benimAd(h.ad)+' · '+fmt(Math.round(score().t))+' puan'}return h}
  catch(e){if(!sessiz)toast('Yayınlanamadı: '+(e&&(e.code||e.message)||'bağlantı'));return null}}
 async function arenaYenile(){const h=await bulut();if(!h){$('albn').innerHTML='Online özellikler için <a href="/hesap.html">Hesabım</a> sayfasından giriş yap.';return}
  $('albn').textContent='Yükleniyor…';
  try{const snap=await h.db.collection('kingdoms').orderBy('skor','desc').limit(25).get();const rows=[];snap.forEach(d=>rows.push(Object.assign({id:d.id},d.data())));
-  const me=rows.findIndex(r=>r.id===h.uid);
-  $('albo').innerHTML=rows.length?rows.map((r,i)=>'<tr'+(r.id===h.uid?' style="font-weight:800;color:var(--acc2)"':'')+'><td>'+(i+1)+'.</td><td>'+esc(r.ad||'Lord')+'</td><td>Sv '+(r.sv||1)+'</td><td>'+fmt(r.skor||0)+'</td></tr>').join(''):'<tr><td>Henüz kimse yok</td></tr>';
-  $('albn').textContent=me>=0?('Sıran: '+(me+1)+' / '+rows.length):'Listeye girmek için krallığını yayınla.';
+  rows.sort((a,b)=>((b.kupa||0)-(a.kupa||0))||((b.skor||0)-(a.skor||0)));const me=rows.findIndex(r=>r.id===h.uid);const myL=lig(S.kupa||0);
+  $('albo').innerHTML=rows.length?rows.map((r,i)=>{const L=lig(r.kupa||0);return '<tr'+(r.id===h.uid?' style="font-weight:800;color:var(--acc2)"':'')+'><td>'+(i+1)+'.</td><td>'+L[2]+' '+esc(r.ad||'Lord')+'</td><td>Sv '+(r.sv||1)+'</td><td>'+fmt(r.kupa||0)+' 🏆</td></tr>'}).join(''):'<tr><td>Henüz kimse yok</td></tr>';
+  $('albn').innerHTML='Ligin: '+myL[2]+' <b>'+myL[1]+'</b> · '+fmt(Math.round(S.kupa||0))+' kupa'+(me>=0?' · Sıra '+(me+1)+'/'+rows.length:' · listeye girmek için yayınla')+(S.sezonSon?'<br><small>Geçen sezon: '+S.sezonSon.lig+' ('+fmt(S.sezonSon.kupa)+' kupa · +'+fmt(S.sezonSon.odul)+' altın)</small>':'');
   arenaRivals=rows.filter(r=>r.id!==h.uid&&r.ordu&&Object.keys(r.ordu).length);
-  $('arv').innerHTML=arenaRivals.length?arenaRivals.map((r,i)=>'<article class="card"><div class="top"><h3>'+esc(r.ad||'Lord')+'</h3><span class="lv">Sv '+(r.sv||1)+' · '+fmt(r.skor||0)+' puan</span></div><p class="eff">Ordu: '+esc(ordText(r.ordu))+'</p><div class="foot"><span></span><button data-sp="'+i+'">Sparring</button></div></article>').join(''):'<article class="card"><small>Henüz başka krallık yok. Krallığını yayınla; arkadaşların da oynayınca rakipler burada belirir.</small></article>';
+  $('arv').innerHTML=arenaRivals.length?arenaRivals.map((r,i)=>{const L=lig(r.kupa||0);return '<article class="card"><div class="top"><h3>'+L[2]+' '+esc(r.ad||'Lord')+'</h3><span class="lv">Sv '+(r.sv||1)+' · '+fmt(r.kupa||0)+' 🏆</span></div><p class="eff">Ordu: '+esc(ordText(r.ordu))+'</p><div class="foot"><span></span><button data-sp="'+i+'">Sparring (ranked)</button></div></article>'}).join(''):'<article class="card"><small>Henüz başka krallık yok. Krallığını yayınla; arkadaşların da oynayınca rakipler burada belirir.</small></article>';
  }catch(e){$('albn').textContent='Liste alınamadı: '+(e&&(e.code||e.message)||'bağlantı')}}
 function zayifIpucu(opp,A){const o=opp.ordu||{};let dom=null,mx=0;for(const k in o)if(U[k]&&o[k]>mx){mx=o[k];dom=k}if(!dom)return '';
  const counter={inf:'cav',spear:'arch',arch:'inf',cav:'spear'}[dom];if(!counter)return '';const have=A[counter]||0;
@@ -918,15 +923,15 @@ function spar(opp){if(!opp)return;const A={};for(const k in U){const n=S.ar[k]||
  const lg={},fr=fight(Object.assign({},A),Object.assign({},B),lg),a=fr[0],b=fr[1],win=tot(b)<.5&&tot(a)>=.5;
  const A1={},E1={};for(const k in U){A1[k]=a[k]>=.5?Math.round(a[k]):0;E1[k]=b[k]>=.5?Math.round(b[k]):0}
  arenaRep={id:Date.now(),w:opp.sv||1,nm:'Lord '+(opp.ad||''),win:win,A0:A,E0:B,A1:A1,E1:E1,rounds:lg.rounds,mx:lg.mx,loot:null,ipucu:zayifIpucu(opp,A)};
- let msg;if(win){const g=Math.round(15+(opp.skor||0)*.002);S.g+=g;S.st.g+=g;S.st.aw=(S.st.aw||0)+1;msg='Zafer! +'+fmt(g)+' altın (sparring ordunu yormadı)';sfx('win')}else{S.st.al=(S.st.al||0)+1;msg='Yenildin — rapora bak, eksiğini gör';sfx('lose')}
- renderArenaRep();toast(msg);save()}
-function arenaAc(){if(!arenaInit){arenaInit=true;$('aAd').value=kAyar.ad||'';
+ const myK=S.kupa||0,opK=opp.kupa||0,exp=1/(1+Math.pow(10,(opK-myK)/400));let dk,msg;if(win){dk=Math.max(5,Math.round(24*(1-exp)));const g=Math.round(15+(opp.skor||0)*.002);S.g+=g;S.st.g+=g;S.st.aw=(S.st.aw||0)+1;msg='Zafer! +'+fmt(g)+' altın · 🏆 +'+dk+' kupa (ordun yorulmadı)';sfx('win')}else{dk=-Math.max(1,Math.round(12*exp));S.st.al=(S.st.al||0)+1;msg='Yenildin · 🏆 '+dk+' kupa — rapora bak';sfx('lose')}
+ S.kupa=Math.max(0,Math.round(myK+dk));S.kupaBest=Math.max(S.kupaBest||0,S.kupa);renderArenaRep();toast(msg);save();try{yayinla(true)}catch(e){}}
+function arenaAc(){sezonCheck();if(!arenaInit){arenaInit=true;$('aAd').value=kAyar.ad||'';
  $('aYayin').onclick=()=>{kAyar.ad=$('aAd').value.trim();kSak();yayinla(false).then(h=>{if(h)arenaYenile()})};
  $('aYeni').onclick=arenaYenile;
  $('arv').addEventListener('click',e=>{const b=e.target.closest('button[data-sp]');if(b)spar(arenaRivals[+b.dataset.sp])})}
  arenaYenile()}
 // ---- Parti 2: nüfus/mutluluk, hazine, harikalar, ilerleme grafiği ----
-S.bank=S.bank||{g:0};S.won=S.won||{};S.hist=S.hist||[];
+S.bank=S.bank||{g:0};S.won=S.won||{};S.hist=S.hist||[];S.kupa=S.kupa||0;S.kupaBest=S.kupaBest||0;sezonCheck();
 function renderPop(){const el=$('pop');if(!el)return;const hp=happy(),pop=armyPop(),cp=popCap();
  const face=hp>=75?'😄':hp>=55?'🙂':hp>=35?'😐':'☹️';
  el.innerHTML=face+' Mutluluk: <b>%'+hp+'</b> · 👥 Nüfus: <b>'+pop+'/'+cp+'</b>'+(pop>cp?' <span style="color:var(--lack)">(kalabalık → mutluluk düşer)</span>':'');}
