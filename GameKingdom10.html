@@ -38,7 +38,7 @@ main{max-width:520px;margin:0 auto;padding:14px 14px 40px}
 .ic.w{background:var(--wood)}.ic.s{background:var(--stone)}.ic.f{background:#E3C16F}.ic.g{background:#D9A93A}.ic.i{background:#8794A8}
 #wmap{display:grid;grid-template-columns:repeat(4,1fr);gap:8px;margin-bottom:10px}
 .tile{border-radius:14px;padding:8px 4px;text-align:center;font-size:12px;font-weight:700;background:var(--line);color:var(--mute);min-height:52px;display:flex;flex-direction:column;justify-content:center;gap:2px}
-.tile.own{background:var(--g1);color:var(--ink)}.tile.open{background:var(--cream);color:#6b5a3a;box-shadow:inset 0 0 0 2px var(--acc)}.tile b{font-size:15px}
+.tile.bio-w{background:linear-gradient(rgba(90,160,90,.22),rgba(90,160,90,.22)),var(--line)}.tile.bio-s{background:linear-gradient(rgba(150,150,165,.22),rgba(150,150,165,.22)),var(--line)}.tile.bio-i{background:linear-gradient(rgba(120,110,100,.24),rgba(120,110,100,.24)),var(--line)}.tile.bio-f{background:linear-gradient(rgba(220,180,80,.22),rgba(220,180,80,.22)),var(--line)}.tile.bio-a{background:linear-gradient(rgba(90,150,200,.22),rgba(90,150,200,.22)),var(--line)}.tile.bio-g{background:linear-gradient(rgba(220,190,70,.24),rgba(220,190,70,.24)),var(--line)}.tile.own{background:var(--g1);color:var(--ink)}.tile.open{background:var(--cream);color:#6b5a3a;box-shadow:inset 0 0 0 2px var(--acc)}.tile b{font-size:15px}
 .sr{display:flex;align-items:center;justify-content:space-between;gap:10px;margin:6px 0}.sr p{margin:0}.sr small{color:var(--mute);font-size:12px}
 svg.scene.s3 #forest,svg.scene.s3 #decor{filter:hue-rotate(-62deg) saturate(1.35)}
 svg.scene.s0 #forest,svg.scene.s0 #decor{filter:saturate(.25) brightness(1.35)}
@@ -644,11 +644,12 @@ function resolveEx(){
 
 // dünya haritası
 const TR=[{n:'Çam Vadisi',lv:3,r:'w'},{n:'Taş Yaylası',lv:5,r:'s'},{n:'Demir Dağı',lv:7,r:'i'},{n:'Bereket Ovası',lv:9,r:'f'},{n:'Kristal Göl',lv:12,r:'a'},{n:'Altın Vadisi',lv:15,r:'g'},{n:'Kuzey Ormanı',lv:19,r:'w'},{n:'Kızıl Kanyon',lv:23,r:'s'},{n:'Kara Maden',lv:27,r:'i'},{n:'Güneş Tarlası',lv:31,r:'f'},{n:'Mavi Kaynak',lv:36,r:'a'},{n:'Eski Kale',lv:42,r:'g'}];
+const BIO={w:'\ud83c\udf32',s:'\u26f0\ufe0f',i:'\u26cf\ufe0f',f:'\ud83c\udf3e',a:'\ud83d\udca7',g:'\ud83e\ude99'};
 (function(){const a1=['Uzak','Kayıp','Gölgeli','Fırtına','Buzul','Zümrüt','Karanlık','Yüce','Sisli','Ejder','Antik','Vahşi','Kutsal','Alev'],a2=['Diyar','Ovası','Geçidi','Sırtı','Çölü','Vadisi','Kıyısı','Tepesi','Platosu','Ormanı','Mağarası','Krallığı'];for(let i=12;i<40;i++){const r=['w','s','i','f','a','g'][i%6];TR.push({n:a1[(i*5)%a1.length]+' '+a2[(i*3)%a2.length],lv:42+(i-11)*7,r:r})}})();
 TR.forEach(t=>t.y=t.r==='g'?t.lv/60:.4+.08*t.lv);
 const RNN={w:'odun',s:'taş',i:'demir',f:'yemek',a:'su',g:'altın'};
 const tb=r=>{let s=0;if(S.ter)for(const i in S.ter)if(TR[i]&&TR[i].r===r)s+=TR[i].y;return s};
-$('wmap').innerHTML=TR.map((t,i)=>`<div class="tile" id="tl-${i}"><b>${i+1}</b><span>${RNN[t.r]}</span></div>`).join('');
+$('wmap').innerHTML=TR.map((t,i)=>`<div class="tile bio-${t.r}" id="tl-${i}"><b>${i+1}</b><span>${BIO[t.r]||''} ${RNN[t.r]}</span></div>`).join('');
 $('terr').innerHTML=TR.map((t,i)=>{const E=enemy(t.lv);return `<article class="card" id="tc-${i}"><div class="top"><h3>${i+1}. ${t.n}</h3><span class="lv">Seviye ${t.lv}</span></div><p class="eff">Düşman: ${Object.entries(E).map(([k,n])=>n+' '+U[k].n).join(', ')}<br>Ganimet: ${60*t.lv} odun, ${40*t.lv} taş, ${30*t.lv} yemek, ${8+4*t.lv} altın<br>Fethedince kalıcı: +${t.y.toFixed(2)} ${RNN[t.r]}/sn</p><div class="foot"><span></span><button data-t="${i}" id="tb-${i}">Fethet</button></div></article>`}).join('');
 $('terr').addEventListener('click',e=>{const b=e.target.closest('button');if(b&&!b.disabled)attack(+b.dataset.t)});
 $('lordv').addEventListener('click',e=>{const b=e.target.closest('button[data-lord]');if(b)lordSavas(b.dataset.lord)});
@@ -656,7 +657,7 @@ $('komv').addEventListener('click',e=>{const b=e.target.closest('button[data-kom
 $('rehber').addEventListener('click',e=>{const h=e.target.closest('#rbhide');if(h){S.rehber=S.rehber||{d:{}};S.rehber.hide=true;save();render();return;}const row=e.target.closest('[data-rb]');if(row){const t=REHBER[+row.dataset.rb][2],tb=document.querySelector('#tabs button[data-t="'+t+'"]');if(tb)tb.click();}});
 function renderTerr(){
  const mine=Object.keys(U).reduce((s,k)=>s+Math.min(sel[k]||0,S.ar[k]||0),0);
- TR.forEach((t,i)=>{const own=S.ter[i],open=!own&&(i===0||S.ter[i-1]);$('tl-'+i).className='tile'+(own?' own':open?' open':'');const b=$('tb-'+i);b.textContent=own?'Fethedildi':open?(mine<1?'Asker seç':'Fethet'):'Kilitli';b.disabled=!open||mine<1});
+ TR.forEach((t,i)=>{const own=S.ter[i],open=!own&&(i===0||S.ter[i-1]);$('tl-'+i).className='tile'+(t.r?' bio-'+t.r:'')+(own?' own':open?' open':'');const b=$('tb-'+i);b.textContent=own?'Fethedildi':open?(mine<1?'Asker seç':'Fethet'):'Kilitli';b.disabled=!open||mine<1});
  const gr=tb('g');$('chg').querySelector('small').textContent=gr>0?'altın · +'+gr.toFixed(2)+' /sn':'altın';
 }
 
