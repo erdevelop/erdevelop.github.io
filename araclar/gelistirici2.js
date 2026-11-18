@@ -5,6 +5,7 @@
   const e2 = s => String(s).replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
   const kopya = async (t, b) => { try { await navigator.clipboard.writeText(t); if (b) { const o = b.textContent; b.textContent = 'Kopyalandı ✓'; setTimeout(() => b.textContent = o, 1200); } } catch (e) { } };
   const indir = (ad, veri, tip = 'text/plain') => { const u = URL.createObjectURL(veri instanceof Blob ? veri : new Blob([veri], { type: tip })), a = document.createElement('a'); a.href = u; a.download = ad; a.click(); setTimeout(() => URL.revokeObjectURL(u), 2000); };
+  const T = (a, b) => window.erDil ? erDil.t(a, b) : a, LOC = () => window.erDil && erDil.lang === 'en' ? 'en-GB' : 'tr-TR';
   const kv = (k, v) => `<div class="kv"><span>${k}</span><b>${v}</b></div>`;
 
   /* ---------- şifre ---------- */
@@ -20,8 +21,8 @@
       let p = g.map(s => s[rnd(s.length)]); while (p.length < L) p.push(all[rnd(all.length)]); p = p.slice(0, L);
       for (let i = p.length - 1; i > 0; i--) { const j = rnd(i + 1); [p[i], p[j]] = [p[j], p[i]]; } out.push(p.join(''));
     }
-    const sev = bit >= 100 ? 'çok güçlü' : bit >= 80 ? 'güçlü' : bit >= 60 ? 'orta' : 'zayıf';
-    $('pwRes').innerHTML = out.map(p => `<div class="kv"><span class="mono" style="word-break:break-all">${e2(p)}</span><b><button class="btn ghost sm" type="button" data-pw="${e2(p)}">Kopyala</button></b></div>`).join('') + `<div class="hint" style="margin-top:6px">Entropi ≈ ${Math.round(bit)} bit · ${sev} · ${all.length} karakterlik havuz</div>`;
+    const sev = bit >= 100 ? T('çok güçlü', 'very strong') : bit >= 80 ? T('güçlü', 'strong') : bit >= 60 ? T('orta', 'medium') : T('zayıf', 'weak');
+    $('pwRes').innerHTML = out.map(p => `<div class="kv"><span class="mono" style="word-break:break-all">${e2(p)}</span><b><button class="btn ghost sm" type="button" data-pw="${e2(p)}">Kopyala</button></b></div>`).join('') + `<div class="hint" style="margin-top:6px">${T('Entropi', 'Entropy')} ≈ ${Math.round(bit)} bit · ${sev} · ${all.length} ${T('karakterlik havuz', 'character pool')}</div>`;
   }
   $('pwRes').addEventListener('click', e => { const b = e.target.closest('[data-pw]'); if (b) kopya(b.dataset.pw, b); });
   ['pwLen', 'pwAdet', 'pwU', 'pwL', 'pwD', 'pwS', 'pwA'].forEach(id => $(id).addEventListener('input', sifre)); $('pwGo').onclick = sifre; sifre();
@@ -39,7 +40,7 @@
 
   /* ---------- JWT ---------- */
   const b64u = s => { s = s.replace(/-/g, '+').replace(/_/g, '/'); while (s.length % 4) s += '='; return Uint8Array.from(atob(s), c => c.charCodeAt(0)); };
-  const tarih = v => typeof v === 'number' ? ' <span class="hint">(' + new Date(v * 1000).toLocaleString('tr-TR') + ')</span>' : '';
+  const tarih = v => typeof v === 'number' ? ' <span class="hint">(' + new Date(v * 1000).toLocaleString(LOC()) + ')</span>' : '';
   async function jwt() {
     const t = $('jwIn').value.trim(), p = t.split('.'); $('jwSig').innerHTML = '';
     if (!t) { $('jwRes').innerHTML = '<span class="ph">Token yapıştır.</span>'; return; }
@@ -110,7 +111,7 @@
   $('fCp').onclick = e => kopya($('fOut').value, e.target);
 
   /* ---------- cron ---------- */
-  const GUNLER = ['Pazar', 'Pazartesi', 'Salı', 'Çarşamba', 'Perşembe', 'Cuma', 'Cumartesi'], AYLAR = ['Ocak', 'Şubat', 'Mart', 'Nisan', 'Mayıs', 'Haziran', 'Temmuz', 'Ağustos', 'Eylül', 'Ekim', 'Kasım', 'Aralık'];
+  const GUN = i => new Date(2024, 0, 7 + i).toLocaleDateString(LOC(), { weekday: 'long' }), AY = i => new Date(2024, i, 1).toLocaleDateString(LOC(), { month: 'long' });
   const ADL = { jan: 1, feb: 2, mar: 3, apr: 4, may: 5, jun: 6, jul: 7, aug: 8, sep: 9, oct: 10, nov: 11, dec: 12, sun: 0, mon: 1, tue: 2, wed: 3, thu: 4, fri: 5, sat: 6 };
   function alan(f, lo, hi) {
     const set = new Set(); f = f.toLowerCase().replace(/[a-z]{3}/g, m => ADL[m] ?? m);
@@ -123,27 +124,27 @@
   const liste = (set, lo, hi, ad) => set.size === hi - lo + 1 ? null : [...set].sort((a, b) => a - b).map(ad || String).join(', ');
   function cron() {
     const s = $('crIn').value.trim(), m = { '@hourly': '0 * * * *', '@daily': '0 0 * * *', '@weekly': '0 0 * * 0', '@monthly': '0 0 1 * *', '@yearly': '0 0 1 1 *' }[s] || s, p = m.split(/\s+/);
-    if (p.length !== 5) { $('crRes').innerHTML = '<b style="color:var(--warn)">5 alan gerekir: dakika saat gün ay haftagünü</b>'; return; }
+    if (p.length !== 5) { $('crRes').innerHTML = '<b style="color:var(--warn)">' + T('5 alan gerekir: dakika saat gün ay haftagünü', '5 fields required: minute hour day month weekday') + '</b>'; return; }
     try {
       const [mi, sa, gu, ay, hg] = [alan(p[0], 0, 59), alan(p[1], 0, 23), alan(p[2], 1, 31), alan(p[3], 1, 12), alan(p[4], 0, 7)];
       const gunHer = p[2] === '*' || p[2] === '?', hgHer = p[4] === '*' || p[4] === '?';
       const parca = [];
       const lm = liste(mi, 0, 59), ls = liste(sa, 0, 23);
-      if (mi.size === 1 && sa.size === 1) parca.push('saat ' + String([...sa][0]).padStart(2, '0') + ':' + String([...mi][0]).padStart(2, '0'));
-      else { parca.push(lm ? (p[0].startsWith('*/') ? 'her ' + p[0].slice(2) + ' dakikada bir' : 'dakika ' + lm) : 'her dakika'); if (ls) parca.push(p[1].startsWith('*/') ? 'her ' + p[1].slice(2) + ' saatte bir' : 'saat ' + ls); }
-      if (!gunHer) parca.push('ayın ' + liste(gu, 1, 31) + '. günü');
-      if (!hgHer) parca.push(liste(hg, 0, 7, i => GUNLER[i]) || 'her gün');
-      const la = liste(ay, 1, 12, i => AYLAR[i - 1]); if (la) parca.push(la);
+      if (mi.size === 1 && sa.size === 1) parca.push(T('saat ', 'at ') + String([...sa][0]).padStart(2, '0') + ':' + String([...mi][0]).padStart(2, '0'));
+      else { parca.push(lm ? (p[0].startsWith('*/') ? T('her ' + p[0].slice(2) + ' dakikada bir', 'every ' + p[0].slice(2) + ' minutes') : T('dakika ', 'minute ') + lm) : T('her dakika', 'every minute')); if (ls) parca.push(p[1].startsWith('*/') ? T('her ' + p[1].slice(2) + ' saatte bir', 'every ' + p[1].slice(2) + ' hours') : T('saat ', 'hour ') + ls); }
+      if (!gunHer) parca.push(T('ayın ' + liste(gu, 1, 31) + '. günü', 'day ' + liste(gu, 1, 31) + ' of the month'));
+      if (!hgHer) parca.push(liste(hg, 0, 7, GUN) || T('her gün', 'every day'));
+      const la = liste(ay, 1, 12, i => AY(i - 1)); if (la) parca.push(la);
       const sonra = [], d = new Date(); d.setSeconds(0, 0); d.setMinutes(d.getMinutes() + 1);
       for (let i = 0; i < 527040 && sonra.length < 6; i++) {
         const gOk = gunHer && hgHer ? true : gunHer ? hg.has(d.getDay()) : hgHer ? gu.has(d.getDate()) : gu.has(d.getDate()) || hg.has(d.getDay());
         if (mi.has(d.getMinutes()) && sa.has(d.getHours()) && ay.has(d.getMonth() + 1) && gOk) sonra.push(new Date(d));
         d.setMinutes(d.getMinutes() + 1);
       }
-      $('crRes').innerHTML = `<div class="big" style="font-size:1.1rem">${e2(parca.join(', '))}</div><div class="hint" style="margin:6px 0 2px">Sonraki çalışmalar</div>` + sonra.map(t => kv(t.toLocaleDateString('tr-TR', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' }), t.toLocaleTimeString('tr-TR', { hour: '2-digit', minute: '2-digit' }))).join('');
+      $('crRes').innerHTML = `<div class="big" style="font-size:1.1rem">${e2(parca.join(', '))}</div><div class="hint" style="margin:6px 0 2px">Sonraki çalışmalar</div>` + sonra.map(t => kv(t.toLocaleDateString(LOC(), { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' }), t.toLocaleTimeString(LOC(), { hour: '2-digit', minute: '2-digit' }))).join('');
     } catch (e) { $('crRes').innerHTML = '<b style="color:var(--warn)">Geçersiz alan: ' + e2(e.message) + '</b>'; }
   }
-  $('crIn').addEventListener('input', cron); $('crOrn').addEventListener('click', e => { const b = e.target.closest('[data-cr]'); if (b) { $('crIn').value = b.dataset.cr; cron(); } }); cron();
+  $('crIn').addEventListener('input', cron); if (window.erDil) erDil.on(() => { cron(); sifre(); }); $('crOrn').addEventListener('click', e => { const b = e.target.closest('[data-cr]'); if (b) { $('crIn').value = b.dataset.cr; cron(); } }); cron();
 
   /* ---------- Markdown ---------- */
   function satirIci(s) {
