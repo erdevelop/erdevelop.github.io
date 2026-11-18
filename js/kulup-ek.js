@@ -70,6 +70,28 @@
   }
   if (KONU_W.length) { try { paintTrk(); srcOpts(); kAyarOz(); kartYenile(); } catch (e) { } }
 
+  /* ---------------- gramer derslerini seviyeye göre sırala; telaffuza sayı/saat/alfabe cümleleri ---------------- */
+  if (Array.isArray(D.GRAMER)) D.GRAMER.sort((a, b) => LVL.indexOf(a.lvl) - LVL.indexOf(b.lvl));
+  if (Array.isArray(D.TELAFFUZ) && typeof SENTENCES === 'object') { const v = new Set(SENTENCES.map(x => x[0])); D.TELAFFUZ.forEach(([c, o]) => { if (!v.has(c)) SENTENCES.push([c, o, 'gunluk']); }); }
+
+  /* ---------------- SAYI KELİMELERİ: 0–99 (ses tanıma rakam döndürünce cümleyle karşılaştırabilmek ve dinle-yaz için) ---------------- */
+  const SAYI = (() => {
+    const L = D.dil || 'en';
+    if (L === 'fr') { const b = ['zéro', 'un', 'deux', 'trois', 'quatre', 'cinq', 'six', 'sept', 'huit', 'neuf', 'dix', 'onze', 'douze', 'treize', 'quatorze', 'quinze', 'seize'], t = { 2: 'vingt', 3: 'trente', 4: 'quarante', 5: 'cinquante', 6: 'soixante' };
+      const f = n => n < 17 ? b[n] : n < 20 ? 'dix-' + b[n - 10] : n < 70 ? t[Math.floor(n / 10)] + (n % 10 === 1 ? ' et un' : n % 10 ? '-' + b[n % 10] : '') : n < 80 ? 'soixante' + (n === 71 ? ' et onze' : '-' + f(n - 60)) : n === 80 ? 'quatre-vingts' : 'quatre-vingt-' + f(n - 80);
+      return f; }
+    if (L === 'de') { const b = ['null', 'eins', 'zwei', 'drei', 'vier', 'fünf', 'sechs', 'sieben', 'acht', 'neun', 'zehn', 'elf', 'zwölf', 'dreizehn', 'vierzehn', 'fünfzehn', 'sechzehn', 'siebzehn', 'achtzehn', 'neunzehn'], t = ['', '', 'zwanzig', 'dreißig', 'vierzig', 'fünfzig', 'sechzig', 'siebzig', 'achtzig', 'neunzig'];
+      return n => n < 20 ? b[n] : (n % 10 ? (n % 10 === 1 ? 'ein' : b[n % 10]) + 'und' : '') + t[Math.floor(n / 10)]; }
+    const b = ['zero', 'one', 'two', 'three', 'four', 'five', 'six', 'seven', 'eight', 'nine', 'ten', 'eleven', 'twelve', 'thirteen', 'fourteen', 'fifteen', 'sixteen', 'seventeen', 'eighteen', 'nineteen'], t = ['', '', 'twenty', 'thirty', 'forty', 'fifty', 'sixty', 'seventy', 'eighty', 'ninety'];
+    return n => n < 20 ? b[n] : t[Math.floor(n / 10)] + (n % 10 ? '-' + b[n % 10] : '');
+  })();
+  if (typeof NUMW === 'object' && typeof norm === 'function') {
+    for (let n = 0; n < 100; n++) if (!NUMW[n]) NUMW[n] = norm(SAYI(n));
+    if ((D.dil || 'en') === 'en') { const o = { one: 'first', two: 'second', three: 'third', five: 'fifth', eight: 'eighth', nine: 'ninth', twelve: 'twelfth' };
+      for (let n = 11; n < 32; n++) { const w = SAYI(n), p = w.split('-'), son = p.pop(), sira = o[son] || (/y$/.test(son) ? son.replace(/y$/, 'ieth') : son + 'th'), suf = n % 10 === 1 && n !== 11 ? 'st' : n % 10 === 2 && n !== 12 ? 'nd' : n % 10 === 3 && n !== 13 ? 'rd' : 'th';
+        if (!NUMW[n + suf]) NUMW[n + suf] = norm(p.concat(sira).join('-')); } }
+  }
+
   /* ---------------- sözlük (okumada dokunulan kelime için) ---------------- */
   let DICT = null;
   function dict() {
@@ -221,9 +243,9 @@ dialog.tanit .hd small{display:block;font-weight:400;color:var(--muted);font-siz
   function yzPaint() {
     const P = el('p-yaz');
     P.innerHTML = `<h3>✍️ Yazma</h3><p class="sub">Kelimeyi hatırlamak yetmez; yazınca kalıcı olur. Kelimeler Kelimeler bölümünde seçili listeden gelir.</p>
-      <div class="seg2" id="yzMod"><button type="button" data-m="kelime" class="${Y.mod === 'kelime' ? 'on' : ''}">🔤 Türkçesine bakıp yaz</button><button type="button" data-m="dikte" class="${Y.mod === 'dikte' ? 'on' : ''}">🎧 Dikte</button><button type="button" data-m="esles" class="${Y.mod === 'esles' ? 'on' : ''}">🧩 Eşleştir</button><button type="button" data-m="bosluk" class="${Y.mod === 'bosluk' ? 'on' : ''}">✏️ Boşluk doldur</button></div><div class="panel" id="yzBox"></div>`;
+      <div class="seg2" id="yzMod"><button type="button" data-m="kelime" class="${Y.mod === 'kelime' ? 'on' : ''}">🔤 Türkçesine bakıp yaz</button><button type="button" data-m="dikte" class="${Y.mod === 'dikte' ? 'on' : ''}">🎧 Dikte</button><button type="button" data-m="esles" class="${Y.mod === 'esles' ? 'on' : ''}">🧩 Eşleştir</button><button type="button" data-m="bosluk" class="${Y.mod === 'bosluk' ? 'on' : ''}">✏️ Boşluk doldur</button><button type="button" data-m="sayi" class="${Y.mod === 'sayi' ? 'on' : ''}">🔢 Sayı & saat</button></div><div class="panel" id="yzBox"></div>`;
     el('yzMod').onclick = e => { const b = e.target.closest('[data-m]'); if (!b) return; Y.mod = b.dataset.m; yzPaint(); };
-    ({ kelime: yzNext, dikte: dkNext, esles: esNext, bosluk: bdNext }[Y.mod] || yzNext)();
+    ({ kelime: yzNext, dikte: dkNext, esles: esNext, bosluk: bdNext, sayi: syNext }[Y.mod] || yzNext)();
   }
   function yzNext() {
     const w = Y.w = yzWord(), B = el('yzBox'); if (!w) { B.innerHTML = '<p class="sub">Bu listede kelime yok.</p>'; return; }
@@ -329,6 +351,53 @@ dialog.tanit .hd small{display:block;font-weight:400;color:var(--muted);font-siz
       if (ok) addXP(2, 'boşluk doldurma'); else hata('boşluk', b.once + '___' + b.sonra, b.cevap, sc);
       sayx(b.once + b.cevap + b.sonra, .9);
       el('bdRes').innerHTML = `<div class="sub">${esc(w.en)} = ${esc(w.tr)}</div><div class="ctl" style="justify-content:center;margin-top:8px"><button class="btn pri" type="button" id="bdNx">Sonraki →</button></div>`; el('bdNx').onclick = bdNext; el('bdNx').focus(); };
+  }
+
+  /* ================= 🔢 SAYI & SAAT: dinle, rakamla yaz ================= */
+  const SY = { tur: 'karisik' };
+  const saatMetin = (h, m) => { /* h 1–12 */ const L = D.dil || 'en', nx = h % 12 + 1, w = SAYI;
+    if (L === 'fr') { const H = x => x === 1 ? 'une heure' : w(x) + ' heures';
+      return m === 0 ? 'Il est ' + H(h) + '.' : m === 15 ? 'Il est ' + H(h) + ' et quart.' : m === 30 ? 'Il est ' + H(h) + ' et demie.' : m === 45 ? 'Il est ' + H(nx) + ' moins le quart.' : m < 30 ? 'Il est ' + H(h) + ' ' + w(m) + '.' : 'Il est ' + H(nx) + ' moins ' + w(60 - m) + '.'; }
+    if (L === 'de') { const Hs = x => x === 1 ? 'eins' : w(x);
+      return 'Es ist ' + (m === 0 ? (h === 1 ? 'ein' : w(h)) + ' Uhr' : m === 15 ? 'Viertel nach ' + Hs(h) : m === 30 ? 'halb ' + Hs(nx) : m === 45 ? 'Viertel vor ' + Hs(nx) : m === 25 ? 'fünf vor halb ' + Hs(nx) : m === 35 ? 'fünf nach halb ' + Hs(nx) : m < 30 ? w(m) + ' nach ' + Hs(h) : w(60 - m) + ' vor ' + Hs(nx)) + '.'; }
+    return "It's " + (m === 0 ? w(h) + " o'clock" : m === 15 ? 'quarter past ' + w(h) : m === 30 ? 'half past ' + w(h) : m === 45 ? 'quarter to ' + w(nx) : m < 30 ? w(m) + ' past ' + w(h) : w(60 - m) + ' to ' + w(nx)) + '.';
+  };
+  const SY_ACK = { sayi: 'Duyduğun sayıyı rakamla yaz.', saat: 'Saati yaz (ör. 7:30).', fiyat: 'Fiyatı yaz (ör. 12,50).', harf: 'Harf harf söylenen kelimeyi yaz.' };
+  function syYeni(tur) {
+    const L = D.dil || 'en', r = (a, b) => a + Math.floor(Math.random() * (b - a + 1));
+    if (tur === 'saat') { const h = r(1, 12), m = pick([0, 5, 10, 15, 20, 25, 30, 35, 40, 45, 50, 55]), t = saatMetin(h, m); return { tur, ses: t, yaz: t, cevap: h * 60 + m, goster: h + ':' + String(m).padStart(2, '0') }; }
+    if (tur === 'fiyat') { const e = r(1, 99), c = pick([0, 0, 50, 99, 20, 75, 95]), cur = L === 'en' ? '£' : '€', v = e + c / 100;
+      const ses = L === 'en' ? `${e} pounds${c ? ' ' + c : ''}` : L === 'fr' ? `${e} euros${c ? ' ' + c : ''}` : `${e} Euro${c ? ' ' + c : ''}`;
+      return { tur, ses, yaz: L === 'en' ? cur + v.toFixed(2) : v.toFixed(2).replace('.', ',') + ' ' + cur, cevap: v, goster: v.toFixed(2).replace('.', L === 'en' ? '.' : ',') }; }
+    if (tur === 'harf') { const W = [...WORDS.map(w => w[0]), ...(typeof TW !== 'undefined' ? TW.map(w => w.en) : [])].map(x => artSil(String(x))).filter(x => /^[a-z]{3,7}$/i.test(x));
+      const w = (pick(W) || 'hello').toLowerCase(); return { tur, ses: w.toUpperCase().split('').join(', '), yaz: w.toUpperCase().split('').join(' – '), cevap: w, goster: w }; }
+    const k = Math.random(), n = k < .35 ? r(0, 20) : k < .75 ? r(21, 99) : k < .9 ? r(100, 999) : r(1950, 2030);
+    return { tur: 'sayi', ses: String(n), yaz: n < 100 ? SAYI(n) : String(n), cevap: n, goster: String(n) };
+  }
+  function syKontrol(q, v) {
+    const t = String(v).trim().toLowerCase(); if (!t) return null;
+    if (q.tur === 'harf') return t.replace(/[^a-zà-ÿß]/g, '') === q.cevap;
+    if (q.tur === 'saat') { const m = t.match(/^(\d{1,2})(?:\s*[:.h]\s*(\d{2}))?/); if (!m) return false; const dk = (+m[1] % 12 || 12) * 60 + (+(m[2] || 0)); return dk % 720 === q.cevap % 720; }
+    if (q.tur === 'fiyat') { const x = parseFloat(t.replace(/[^\d,.]/g, '').replace(',', '.')); return Math.abs(x - q.cevap) < .001; }
+    return t.replace(/[^\d]/g, '') === String(q.cevap);
+  }
+  function syNext() {
+    const B = el('yzBox'), tur = SY.tur === 'karisik' ? pick(['sayi', 'sayi', 'saat', 'saat', 'fiyat', 'harf']) : SY.tur, q = SY.q = syYeni(tur);
+    B.innerHTML = `<div class="seg2" id="syTur" style="justify-content:center">${[['karisik', 'Karışık'], ['sayi', 'Sayı'], ['saat', 'Saat'], ['fiyat', 'Fiyat'], ['harf', 'Harf harf']].map(([k, n]) => `<button type="button" data-t="${k}" class="${SY.tur === k ? 'on' : ''}">${n}</button>`).join('')}</div>
+      <p class="sub" style="text-align:center">${SY_ACK[q.tur]}</p>
+      <div class="ctl" style="justify-content:center"><button class="btn pri" type="button" id="syP">🔊 Dinle</button><button class="btn" type="button" id="syS">🐢 Yavaş</button></div>
+      <input class="inp2" id="syIn" style="margin-top:10px;text-align:center;font-size:22px" autocomplete="off" autocapitalize="off" spellcheck="false" inputmode="${q.tur === 'harf' ? 'text' : 'decimal'}" placeholder="${q.tur === 'saat' ? '7:30' : q.tur === 'fiyat' ? '12,50' : q.tur === 'harf' ? 'kelime' : '47'}">
+      <div class="ctl" style="justify-content:center;margin-top:10px"><button class="btn pri" type="button" id="syOk">Kontrol et</button><button class="btn" type="button" id="syPass">Bilmiyorum</button></div><div id="syRes" style="margin-top:10px;text-align:center"></div>`;
+    el('syTur').onclick = e => { const b = e.target.closest('[data-t]'); if (!b) return; SY.tur = b.dataset.t; syNext(); };
+    const hiz = q.tur === 'harf' ? .7 : .9; el('syP').onclick = () => sayx(q.ses, hiz); el('syS').onclick = () => sayx(q.ses, .6); setTimeout(() => sayx(q.ses, hiz), 250);
+    const bitir = ok => { ['syOk', 'syPass'].forEach(i => el(i).disabled = true); el('syIn').readOnly = true;
+      if (ok) addXP(2, 'yazma'); else hata('sayı', q.yaz, q.goster, el('syIn').value.trim());
+      el('syRes').innerHTML = `<div style="font:700 22px var(--f-body);color:${ok ? 'var(--ok,#2e8b57)' : 'var(--warn,#c0392b)'}">${ok ? '✓ ' : '✗ '}${esc(q.goster)}</div><div class="sub">${esc(q.yaz)}</div><div class="ctl" style="justify-content:center;margin-top:8px"><button class="btn pri" type="button" id="syNx">Sonraki →</button></div>`;
+      el('syNx').onclick = syNext; el('syNx').focus(); };
+    el('syOk').onclick = () => { const r = syKontrol(q, el('syIn').value); if (r == null) return; bitir(r); };
+    el('syPass').onclick = () => bitir(false);
+    el('syIn').onkeydown = e => { if (e.key === 'Enter') { e.preventDefault(); if (el('syNx')) el('syNx').click(); else el('syOk').click(); } };
+    if (matchMedia('(pointer:fine)').matches) el('syIn').focus();
   }
 
   /* ================= 📘 GRAMER ================= */
