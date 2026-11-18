@@ -5,7 +5,7 @@
   const LS = { get: k => { try { return localStorage.getItem(k); } catch (e) { return null; } }, set: (k, v) => { try { localStorage.setItem(k, v); } catch (e) { } } };
   const clamp = (v, a, b) => Math.max(a, Math.min(b, v)), sec = a => a[Math.floor(Math.random() * a.length)];
   const esc = s => String(s).replace(/[&<>"]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
-  const AYAR = Object.assign({ tanima: 'otomatik', whisper: 'Xenova/whisper-small', surekli: true, sesTani: false, yorum: true, ses: '', perde: 1.15, hiz: 1.05, beyin: false, sessiz: false, gorunum: 'robot' }, JSON.parse(LS.get('zeki:ayar') || '{}'));
+  const AYAR = Object.assign({ tanima: 'otomatik', whisper: 'Xenova/whisper-small', surekli: true, sesTani: false, yorum: true, ses: '', perde: 1.15, hiz: 1.05, beyin: false, sessiz: false, gorunum: 'robot', kisilik: 'neseli', tema: 'otomatik', efekt: true, esle: false, kamera: false, saat: false, uyanik: false }, JSON.parse(LS.get('zeki:ayar') || '{}'));
   const ayarKaydet = () => LS.set('zeki:ayar', JSON.stringify(AYAR));
 
   /* ---------------- durum ---------------- */
@@ -16,11 +16,11 @@
   function durum(d) { S.durum = d; $('durum').dataset.d = d; $('durumT').textContent = { uyuyor: 'Uyuyor', bekliyor: 'Seni bekliyor', dinliyor: 'Dinliyor…', dusunuyor: 'Düşünüyor…', konusuyor: 'Konuşuyor' }[d] || d; $('mik').classList.toggle('acik', d === 'dinliyor'); }
 
   /* ---------------- çizim döngüsü ---------------- */
-  const GORUNUM = { robot: ['Robot', '🤖', c => Yuz.kur(c)], bulut: ['Nokta bulutu', '👤', c => Gorunumler.bulut(c)], kure: ['Enerji küresi', '🔆', c => Gorunumler.kure(c)], hud: ['Halkalı arayüz', '🎯', c => Gorunumler.hud(c)], dalga: ['Ses dalgası yüz', '〰️', c => Gorunumler.dalgaYuz(c)], galaksi: ['Galaksi', '🌌', c => Gorunumler.galaksi(c)] };
-  if (!GORUNUM[AYAR.gorunum]) AYAR.gorunum = 'robot';
+  const GORUNUM = { robot: ['Robot', '🤖', c => Yuz.kur(c)], bulut: ['Nokta bulutu', '👤', c => Gorunumler.bulut(c)], kure: ['Enerji küresi', '🔆', c => Gorunumler.kure(c)], hud: ['Halkalı arayüz', '🎯', c => Gorunumler.hud(c)], dalga: ['Ses dalgası yüz', '〰️', c => Gorunumler.dalgaYuz(c)], galaksi: ['Galaksi', '🌌', c => Gorunumler.galaksi(c)], yuzum: ['Benim yüzüm', '🧑', c => Gorunumler.yuzum(c)] };
+  if (!GORUNUM[AYAR.gorunum] || AYAR.gorunum === 'yuzum' && !window.ZEKI_YUZUM) AYAR.gorunum = 'robot';
   let yuz = GORUNUM[AYAR.gorunum][2]($('sahne'));
   function gorunumSec(ad, sessiz) {
-    if (!GORUNUM[ad]) return; AYAR.gorunum = ad; ayarKaydet(); yuz = GORUNUM[ad][2]($('sahne'));
+    if (!GORUNUM[ad]) return; if (ad === 'yuzum' && !window.ZEKI_YUZUM) { $('ayarlar').hidden = false; $('kamBilgi').textContent = 'Önce yüzünü tara ya da bir fotoğraf yükle.'; $('kamBilgi').scrollIntoView({ block: 'center' }); return; } AYAR.gorunum = ad; ayarKaydet(); yuz = GORUNUM[ad][2]($('sahne'));
     document.querySelectorAll('#gorSec button').forEach(b => b.classList.toggle('on', b.dataset.g === ad)); $('gorAc').textContent = GORUNUM[ad][1];
     if (!sessiz) { const el = $('gorBilgi'); el.textContent = GORUNUM[ad][0]; el.classList.add('gor'); clearTimeout(el._t); el._t = setTimeout(() => el.classList.remove('gor'), 1400); }
   }
@@ -37,7 +37,7 @@
     S.irkil = Math.max(0, S.irkil - dt * 1.8); S.merak = Math.max(0, S.merak - dt * .5);
     if (S.durum === 'uyuyor') { S.bakX *= .98; S.bakY = .3; return; }
     gozT -= dt; if (gozT <= 0) { S.kirp = 1; gozT = Math.random() < .2 ? .25 : 2 + Math.random() * 4; }
-    if (now - sonIsaretci > 2500) {
+    if (now - sonIsaretci > 2500 && !(window.ZEKI_YUZ_T && now - window.ZEKI_YUZ_T < 600)) {
       bakT -= dt;
       if (bakT <= 0) {
         if (S.durum === 'dinliyor' || S.durum === 'konusuyor') { S.bakX = (Math.random() - .5) * .3; S.bakY = (Math.random() - .5) * .2; }
@@ -84,7 +84,8 @@
     /* bas bandı enerjisiyle vuruş tespiti (müzik) */
     let bas = 0; for (let k = 1; k < 12; k++) bas += Math.pow(10, fBuf[k] / 10); bas = 10 * Math.log10(bas + 1e-12);
     const simdi = performance.now();
-    if (bandOnce != null && bas - bandOnce > 6 && ust > 12 && simdi - sonVurus > 260) {
+    const efektVar = simdi < (window.ZEKI_EFEKT_T || 0);
+    if (!efektVar && bandOnce != null && bas - bandOnce > 6 && ust > 12 && simdi - sonVurus > 260) {
       SES.vurus = true; if (sonVurus) { vurusAra.push(simdi - sonVurus); if (vurusAra.length > 8) vurusAra.shift(); } sonVurus = simdi;
       const ara = vurusAra.slice().sort((a, b) => a - b)[vurusAra.length >> 1];
       const duzenli = vurusAra.length >= 6 && vurusAra.every(v => Math.abs(v - ara) / ara < .25);
@@ -93,7 +94,7 @@
     }
     bandOnce = bas;
     /* ani yüksek ses: ırkilme */
-    if (db - akiDb > 22 && ust > 28 && S.durum !== 'konusuyor') {
+    if (!efektVar && db - akiDb > 22 && ust > 28 && S.durum !== 'konusuyor') {
       S.irkil = 1; S.zipla = 1; S.kirp = 1; sonEtkilesim = simdi;
       if (S.durum === 'uyuyor' && uyandi) { durum('bekliyor'); duygu('saskin', 2); if (AYAR.yorum && !S.dans) yorumYap(sec(['Ay! Uyandım!', 'Oha, ne oldu?']), 'saskin'); }
       else if (Math.random() < .25 && AYAR.yorum && !S.dans) yorumYap(sec(['Vay! Ne oldu?', 'Hop!', 'Ödüm koptu!']), 'saskin');
@@ -127,12 +128,17 @@
       clearInterval(sinifT); sinifT = setInterval(sinifla, 1000);
     } catch (e) { console.warn(e); balon('Ses tanıma modeli yüklenemedi.', 'sistem'); }
   }
+  const klavye = { bas: 0, son: 0, oneri: 0 };
   function sinifla() {
     if (!SINIF || !AYAR.sesTani || konusuyorMu() || S.durum === 'dinliyor' || S.durum === 'dusunuyor') return;
     const n = halka.length, out = new Float32Array(n); for (let i = 0; i < n; i++) out[i] = halka[(halkaPos + i) % n];
     let c = []; try { const r = SINIF.classify(out, AC.sampleRate); c = (r[0] && r[0].classifications[0].categories) || []; } catch (e) { return; }
     const bul = c.find(k => TEPKI[k.categoryName] && k.score > .45); const muzik = c.find(k => /Music/.test(k.categoryName) && k.score > .5);
     $('duyulan').textContent = c.length ? '👂 ' + c.slice(0, 2).map(k => k.categoryName).join(', ') : ''; S.duyulan = c.length ? c[0].categoryName : '';
+    /* uzun süre klavye sesi: mola öner (pomodoro açıksa onu bekle) */
+    const yaziyor = c.some(k => /Typing|Computer keyboard/.test(k.categoryName) && k.score > .3), sim = Date.now();
+    if (yaziyor) { if (!klavye.bas || sim - klavye.son > 5 * 60000) klavye.bas = sim; klavye.son = sim; }
+    if (klavye.bas && sim - klavye.bas > 50 * 60000 && sim - klavye.oneri > 60 * 60000 && !ZAMAN.some(z => z.tip === 'pomodoro') && S.durum !== 'uyuyor') { klavye.oneri = sim; klavye.bas = 0; yorumYap('Yaklaşık bir saattir klavye sesi duyuyorum. Kısa bir mola vermeye ne dersin? Kalk, biraz su iç, gözlerini dinlendir.', 'dusunceli'); }
     if (muzik && !S.dans && S.durum !== 'uyuyor') { S.dans = true; sonVurus = performance.now(); }
     if (!bul) return; const k = bul.categoryName, simdi = Date.now();
     if (sonYorum[k] && simdi - sonYorum[k] < 60000) return; sonYorum[k] = simdi;
@@ -152,18 +158,20 @@
   }
   if (SS) { sesListe(); SS.onvoiceschanged = sesListe; }
   function cumlelere(m) { return (m.match(/[^.!?…]+[.!?…]*["”']?\s*/g) || [m]).map(s => s.trim()).filter(Boolean); }
+  const sesSec = dil => { const sec1 = sesler.find(x => x.name === ($('aSes').value || AYAR.ses)); if (!dil || dil.startsWith('tr')) return sec1 || sesler.find(v => /^tr/i.test(v.lang)); const k = dil.slice(0, 2); return sesler.find(v => v.lang.replace('_', '-') === dil) || sesler.find(v => v.lang.toLowerCase().startsWith(k)); };
   function konus(metin, d, o = {}) {
     return new Promise(bitti => {
       if (d) duygu(d, Math.max(3, metin.length / 14));
-      balon(metin, 'zeki', o.link, o.kaynak);
+      balon(o.ekran || metin, 'zeki', o.link, o.kaynak);
       if (!SS || AYAR.sessiz) { durum('konusuyor'); const sure = Math.min(8000, 600 + metin.length * 55); zarfAnim(sure); setTimeout(() => { durum('bekliyor'); bitti(); }, sure); return; }
-      SS.cancel(); konusmaKuyrugu = cumlelere(metin.replace(/[\u{1F300}-\u{1FAFF}\u{2600}-\u{27BF}]/gu, ''));
+      const temizle = t => t.replace(/[\u{1F300}-\u{1FAFF}\u{2600}-\u{27BF}]/gu, '');
+      SS.cancel(); konusmaKuyrugu = o.parcalar ? o.parcalar.flatMap(p => cumlelere(temizle(p.m)).map(c => ({ c, dil: p.dil }))) : cumlelere(temizle(metin)).map(c => ({ c, dil: o.dil }));
       durum('konusuyor'); dinlemeyiDuraklat();
       const sonraki = () => {
         if (!konusmaKuyrugu.length) { sonCevap = Date.now(); konusmaSoz = null; S.konusmaZarf = 0; durum('bekliyor'); dinlemeyiSurdur(); aktifSohbetBitis = performance.now() + 20000; bitti(); return; }
-        const c = konusmaKuyrugu.shift(), u = new SpeechSynthesisUtterance(c), v = sesler.find(x => x.name === ($('aSes').value || AYAR.ses));
-        if (v) { u.voice = v; u.lang = v.lang; } else u.lang = 'tr-TR';
-        u.pitch = AYAR.perde; u.rate = AYAR.hiz; konusmaSoz = u;
+        const q = konusmaKuyrugu.shift(), u = new SpeechSynthesisUtterance(q.c), v = sesSec(q.dil);
+        if (v) { u.voice = v; u.lang = v.lang; } else u.lang = q.dil || 'tr-TR';
+        u.pitch = AYAR.perde; u.rate = q.dil && !q.dil.startsWith('tr') ? Math.min(AYAR.hiz, .95) : AYAR.hiz; konusmaSoz = u;
         u.onboundary = () => { S.konusmaZarf = 1; zarfT = performance.now(); };
         u.onend = sonraki; u.onerror = e => { if (e.error === 'interrupted' || e.error === 'canceled') { S.konusmaZarf = 0; return; } sonraki(); };
         SS.speak(u);
@@ -178,6 +186,8 @@
 
   /* ---------------- dinleme ---------------- */
   const SR = window.SpeechRecognition || window.webkitSpeechRecognition;
+  let DIL = 'tr-TR'; const WDIL = { tr: 'turkish', en: 'english', fr: 'french', de: 'german' };
+  function dilAyarla(d) { if (!d || d === DIL) return; DIL = d; if (tanimaYolu === 'tarayici' && TAN && tanAcik) { tanDurdur = true; try { TAN.abort(); } catch (e) { } tanAcik = false; setTimeout(() => { if (AYAR.surekli || tekSefer) tarayiciBaslat(); }, 300); } $('dilPil').hidden = DIL === 'tr-TR'; $('dilPil').textContent = { 'en-US': '🇬🇧 English', 'fr-FR': '🇫🇷 Français', 'de-DE': '🇩🇪 Deutsch' }[DIL] || DIL; }
   let tanimaYolu = null, TAN = null, tanAcik = false, tanDurdur = false, tekSefer = false;
   function yolSec() {
     if (AYAR.tanima === 'cihaz' || !SR) return 'cihaz';
@@ -187,7 +197,7 @@
   /* --- tarayıcının konuşma tanıması --- */
   function tarayiciBaslat() {
     if (tanAcik) return; tanDurdur = false;
-    TAN = new SR(); TAN.lang = 'tr-TR'; TAN.continuous = true; TAN.interimResults = true; TAN.maxAlternatives = 1;
+    TAN = new SR(); TAN.lang = DIL; TAN.continuous = true; TAN.interimResults = true; TAN.maxAlternatives = 1;
     let parca = '';
     TAN.onresult = e => {
       let ara = '', son = '';
@@ -233,7 +243,7 @@
       const n = parcalar.reduce((a, p) => a + p.length, 0), tum = new Float32Array(n); let o = 0; for (const p of parcalar) { tum.set(p, o); o += p.length; }
       const off = new OfflineAudioContext(1, Math.ceil(n / hz * 16000), 16000), b = off.createBuffer(1, n, hz); b.copyToChannel(tum, 0);
       const s = off.createBufferSource(); s.buffer = b; s.connect(off.destination); s.start(); const r16 = (await off.startRendering()).getChannelData(0);
-      const sonuc = await YZ.cagir({ tip: 'asr', model: AYAR.whisper, ses: new Float32Array(r16), dil: 'turkish' }, { ilerleme: (y, t) => { $('whisperIl').hidden = false; $('whisperIl').textContent = `Konuşma tanıma modeli indiriliyor: ${Math.round(y)} / ${Math.round(Math.max(t, y))} MB (bir kez)`; } });
+      const sonuc = await YZ.cagir({ tip: 'asr', model: AYAR.whisper, ses: new Float32Array(r16), dil: WDIL[DIL.slice(0, 2)] || 'turkish' }, { ilerleme: (y, t) => { $('whisperIl').hidden = false; $('whisperIl').textContent = `Konuşma tanıma modeli indiriliyor: ${Math.round(y)} / ${Math.round(Math.max(t, y))} MB (bir kez)`; } });
       $('whisperIl').hidden = true;
       const m = (sonuc.text || '').trim();
       VAD.cevriliyor = false;
@@ -250,7 +260,7 @@
   function dinlemeyiDuraklat() { if (tanimaYolu === 'tarayici' && TAN && tanAcik) { tanDurdur = true; try { TAN.abort(); } catch (e) { } tanAcik = false; } }
   function dinlemeyiSurdur() { if (tanimaYolu === 'tarayici' && (AYAR.surekli || tekSefer) && !tanAcik) { setTimeout(() => { if (!konusuyorMu()) tarayiciBaslat(); }, 350); } }
   const hitapMi = m => /\bzeki\b|\bzekiy|\bzekâ\b|\bzeke\b|\bzekii/i.test(m);
-  const aktifMi = () => performance.now() < aktifSohbetBitis || tekSefer;
+  const aktifMi = () => performance.now() < aktifSohbetBitis || tekSefer || !!(Beyin.KIP && Beyin.KIP.aktif);
 
   /* ---------------- işleme ---------------- */
   let isleniyor = false;
@@ -261,13 +271,17 @@
     isleniyor = true; sonEtkilesim = performance.now(); aktifSohbetBitis = performance.now() + 25000;
     if (S.durum === 'uyuyor') { S.uykulu = 0; }
     S.dans = /dans/.test(m) ? S.dans : false;
-    balon(m, 'sen'); durum('dusunuyor'); S.bakX = .2; S.bakY = -.4;
+    balon(m, 'sen'); durum('dusunuyor'); S.bakX = .2; S.bakY = -.4; efekt('dusun');
     let akis = '', akisCumle = 0;
-    const r = await Beyin.yanitla(m, { bekle, parca: p => { akis += p; } }).catch(e => ({ metin: 'Bir şeyler ters gitti: ' + e.message, duygu: 'uzgun' }));
+    let r = await Beyin.yanitla(m, { bekle, parca: p => { akis += p; } }).catch(e => ({ metin: 'Bir şeyler ters gitti: ' + e.message, duygu: 'uzgun' }));
+    if (Beyin.sonIsle) r = Beyin.sonIsle(r) || r;
     bekle = r.bekle || null;
     if (r.eylem) eylem(r.eylem);
-    isleniyor = false;
-    await konus(r.metin, r.duygu, { link: r.link, kaynak: r.kaynak });
+    if (r.kart) Kart.goster(r.kart); else if (!(Beyin.KIP && Beyin.KIP.aktif)) Kart.gizle();
+    isleniyor = false; efekt(r.anlamadi ? 'hata' : 'anladi');
+    const sonDil = r.dil; if (sonDil && sonDil.startsWith('tr')) dilAyarla('tr-TR');
+    await konus(r.metin, r.duygu, { link: r.link, kaynak: r.kaynak, parcalar: r.parcalar, ekran: r.ekran, dil: sonDil && !sonDil.startsWith('tr') && !r.parcalar ? sonDil : null });
+    if (sonDil) dilAyarla(sonDil);
     if (r.gul) { S.kalp = 1; }
     if (r.eylem && r.eylem.tip === 'ac') setTimeout(() => window.open(r.eylem.url, '_blank', 'noopener'), 200);
   }
@@ -281,11 +295,15 @@
     else if (e.tip === 'gorunum') { const L = Object.keys(GORUNUM); gorunumSec(e.ad === 'sonraki' ? L[(L.indexOf(AYAR.gorunum) + 1) % L.length] : e.ad); }
   }
   const ZAMAN = [];
-  function zamanlayici(sn, ad) {
-    const z = { bitis: Date.now() + sn * 1000, ad }; ZAMAN.push(z); zamanCiz();
-    z.t = setTimeout(() => { ZAMAN.splice(ZAMAN.indexOf(z), 1); zamanCiz(); if (S.durum === 'uyuyor') durum('bekliyor'); S.zipla = 1; konus(ad ? `Hatırlatma: ${ad}` : 'Süre doldu!', 'heyecanli'); try { navigator.vibrate && navigator.vibrate([200, 100, 200]); } catch (e) { } }, sn * 1000);
+  function zamanlayici(sn, ad, cb, tip) {
+    const z = { bitis: Date.now() + sn * 1000, ad, tip: tip || 'sure' }; ZAMAN.push(z); zamanCiz();
+    z.t = setTimeout(() => { ZAMAN.splice(ZAMAN.indexOf(z), 1); zamanCiz(); if (S.durum === 'uyuyor') durum('bekliyor'); S.zipla = 1; efekt('bitti'); try { navigator.vibrate && navigator.vibrate([200, 100, 200]); } catch (e) { }
+      if (cb) cb(); else konus(ad ? `Hatırlatma: ${ad}` : 'Süre doldu!', 'heyecanli'); }, sn * 1000);
+    return z;
   }
-  function zamanCiz() { $('zamanlar').innerHTML = ZAMAN.map(z => { const k = Math.max(0, Math.round((z.bitis - Date.now()) / 1000)); return `<span>⏱ ${Math.floor(k / 60)}:${String(k % 60).padStart(2, '0')}${z.ad ? ' · ' + esc(z.ad) : ''}</span>`; }).join(''); }
+  function zamanlayiciSil(tip) { for (let i = ZAMAN.length - 1; i >= 0; i--) if (!tip || ZAMAN[i].tip === tip) { clearTimeout(ZAMAN[i].t); ZAMAN.splice(i, 1); } zamanCiz(); }
+  function zamanCiz() { $('zamanlar').innerHTML = ZAMAN.map((z, i) => { const k = Math.max(0, Math.round((z.bitis - Date.now()) / 1000)), h = Math.floor(k / 3600); return `<span data-i="${i}" title="İptal etmek için dokun">${z.tip === 'pomodoro' ? '' : z.tip === 'mola' ? '' : '⏱ '}${h ? h + ':' + String(Math.floor(k / 60) % 60).padStart(2, '0') : Math.floor(k / 60)}:${String(k % 60).padStart(2, '0')}${z.ad ? ' · ' + esc(z.ad) : ''} ✕</span>`; }).join(''); }
+  $('zamanlar').addEventListener('click', e => { const b = e.target.closest('[data-i]'); if (!b) return; const z = ZAMAN[+b.dataset.i]; if (!z || !confirm('"' + (z.ad || 'Zamanlayıcı') + '" iptal edilsin mi?')) return; clearTimeout(z.t); ZAMAN.splice(+b.dataset.i, 1); zamanCiz(); });
   setInterval(() => { if (ZAMAN.length) zamanCiz(); }, 1000);
 
   /* ---------------- arayüz ---------------- */
@@ -306,7 +324,7 @@
     if (S.durum === 'konusuyor') { sustur(); }
     if (S.durum === 'dinliyor') { dinlemeyiDuraklat(); durum('bekliyor'); return; }
     if (!(await mikAc())) return;
-    tekSefer = true; aktifSohbetBitis = performance.now() + 20000; durum('dinliyor'); S.merak = 1;
+    tekSefer = true; aktifSohbetBitis = performance.now() + 20000; durum('dinliyor'); S.merak = 1; efekt('dinle');
     if (yolSec() === 'tarayici') { tanimaYolu = 'tarayici'; if (!tanAcik) tarayiciBaslat(); } else { tanimaYolu = 'cihaz'; await cihazBaslat(); }
   };
   $('form').onsubmit = e => { e.preventDefault(); const v = $('yaz').value.trim(); if (!v) return; $('yaz').value = ''; if (!uyandi) uyandir(true); if (S.durum === 'konusuyor') sustur(); isle(v, true); };
@@ -335,6 +353,24 @@
     $('ayarAc').onclick = () => { $('ayarlar').hidden = !$('ayarlar').hidden; $('gecmis').hidden = true; };
     $('gecmisAc').onclick = () => { $('gecmis').hidden = !$('gecmis').hidden; $('ayarlar').hidden = true; };
     document.querySelectorAll('.panel .kapat').forEach(b => b.onclick = () => b.closest('.panel').hidden = true);
+    /* kişilik, tema, efekt, ekran, kamera */
+    $('aKisilik').innerHTML = Object.entries(Beyin.KISILIK).map(([k, v]) => `<option value="${k}">${v.ad}</option>`).join(''); $('aKisilik').value = AYAR.kisilik;
+    $('aKisilik').onchange = () => { AYAR.kisilik = $('aKisilik').value; AYAR.perde = Beyin.KISILIK[AYAR.kisilik].perde; $('aPerde').value = AYAR.perde; ayarKaydet(); konus({ neseli: 'Neşeli halime döndüm!', ciddi: 'Ciddi asistan kipindeyim. Nasıl yardımcı olabilirim?', esprili: 'Esprili kipteyim; şakalarım bit kadar ama bayt bayt!', cocuk: 'Merhaba küçük dostum! Hikâye dinlemek ister misin?' }[AYAR.kisilik], 'mutlu'); };
+    $('aTema').innerHTML = Object.entries(ZekiArayuz.TEMA_AD).map(([k, v]) => `<option value="${k}">${v}</option>`).join(''); $('aTema').value = AYAR.tema; ZekiArayuz.temaUygula(AYAR.tema);
+    $('aTema').onchange = () => { AYAR.tema = $('aTema').value; ayarKaydet(); ZekiArayuz.temaUygula(AYAR.tema); };
+    $('aEfekt').checked = AYAR.efekt; $('aEfekt').onchange = () => { AYAR.efekt = $('aEfekt').checked; ayarKaydet(); efekt('bipbop'); };
+    $('aEsle').checked = AYAR.esle; $('aEsle').onchange = () => { AYAR.esle = $('aEsle').checked; ayarKaydet(); };
+    $('aSaat').checked = AYAR.saat; $('saat').hidden = !AYAR.saat; ZekiArayuz.saatCiz(); $('aSaat').onchange = () => { AYAR.saat = $('aSaat').checked; ayarKaydet(); $('saat').hidden = !AYAR.saat; ZekiArayuz.saatCiz(); };
+    $('aUyanik').checked = AYAR.uyanik; $('aUyanik').onchange = () => { AYAR.uyanik = $('aUyanik').checked; ayarKaydet(); ZekiArayuz.uyanikTut(AYAR.uyanik); };
+    $('tamEkran').onclick = () => ZekiArayuz.tamEkran();
+    const kb = t => $('kamBilgi').textContent = t;
+    $('aKamera').checked = AYAR.kamera; $('aKamera').onchange = async () => { AYAR.kamera = $('aKamera').checked; ayarKaydet(); if (AYAR.kamera) { if (!(await ZekiKamera.ac(kb))) { AYAR.kamera = false; $('aKamera').checked = false; ayarKaydet(); } } else { ZekiKamera.kapat(); kb('Kamera kapalı.'); } };
+    $('aKamOnizle').checked = !!AYAR.kamOnizle; $('aKamOnizle').onchange = () => { AYAR.kamOnizle = $('aKamOnizle').checked; ayarKaydet(); $('kamKutu').hidden = !(AYAR.kamOnizle && ZekiKamera.acikMi()); };
+    $('aKamUyandir').checked = AYAR.kamUyandir !== false; AYAR.kamUyandir = AYAR.kamUyandir !== false; $('aKamUyandir').onchange = () => { AYAR.kamUyandir = $('aKamUyandir').checked; ayarKaydet(); };
+    const yuzHazir = v => { if (!v) return; GORUNUM.yuzum && gorunumSec('yuzum'); $('yuzSil').hidden = false; };
+    $('yuzTara').onclick = async () => { const v = await ZekiKamera.yuzTara(kb); if (!ZekiKamera.acikMi() || !AYAR.kamera) { if (!AYAR.kamera) ZekiKamera.kapat(); } yuzHazir(v); };
+    $('yuzFoto').onchange = async e => { const f = e.target.files[0]; e.target.value = ''; if (f) yuzHazir(await ZekiKamera.fotodanTara(f, kb)); };
+    $('yuzSil').hidden = !window.ZEKI_YUZUM; $('yuzSil').onclick = () => { if (!confirm('Kayıtlı yüz silinsin mi?')) return; LS.set('zeki:yuzum', ''); window.ZEKI_YUZUM = null; $('yuzSil').hidden = true; if (AYAR.gorunum === 'yuzum') gorunumSec('bulut'); kb('Kayıtlı yüz silindi.'); };
     $('beyinBtn').onclick = beyinAc; $('beyinZorla').onclick = e => { e.preventDefault(); beyinZorla = true; COKTU = false; LS.set('zeki:beyinCoktu', ''); beyinDurum(); beyinAc(); }; beyinDurum();
     $('unut').onclick = () => { if (!confirm('Zeki adını, şehrini ve notlarını unutsun mu?')) return; Beyin.HAFIZA.ad = ''; Beyin.HAFIZA.sehir = ''; Beyin.HAFIZA.notlar = []; Beyin.kaydet(); konus('Tamam, her şeyi unuttum. Yeniden tanışalım mı?', 'uzgun'); };
   }
@@ -378,15 +414,18 @@
 
   /* ---------------- uyandırma ---------------- */
   async function uyandir(yazili) {
-    if (uyandi) return; uyandi = true; $('kapak').classList.add('gizli'); setTimeout(() => $('kapak').hidden = true, 600);
+    if (uyandi) return; uyandi = true; $('kapak').classList.add('gizli'); setTimeout(() => $('kapak').hidden = true, 600); efekt('uyan');
+    if (AYAR.uyanik) ZekiArayuz.uyanikTut(true);
+    if (AYAR.kamera && !yazili) setTimeout(() => ZekiKamera.ac(t => $('kamBilgi').textContent = t), 2500);
     if (SS) { try { SS.speak(new SpeechSynthesisUtterance('')); } catch (e) { } }
     durum('bekliyor'); S.zipla = 1; S.kirp = 1; duygu('heyecanli', 3); sonEtkilesim = performance.now();
     const mik = yazili ? false : await mikAc();
     if (mik && AYAR.surekli) dinlemeBaslat();
     if (mik && AYAR.sesTani) sinifAc();
     const ad = Beyin.HAFIZA.ad, h = new Date().getHours(), z = h < 11 ? 'Günaydın' : h < 18 ? 'Merhaba' : 'İyi akşamlar';
+    if (!ad) { bekle = 'ad'; aktifSohbetBitis = performance.now() + 40000; }
     await konus(ad ? `${z} ${ad}! Seni tekrar görmek ne güzel. Bugün ne yapalım?` : `${z}! Ben Yapay Zeki. Benimle konuşabilir ya da yazabilirsin. ${mik ? (AYAR.surekli ? 'Seslenirken başına "Zeki" demen yeter.' : 'Konuşmak için mikrofona dokun.') : ''} Bu arada, senin adın ne?`, 'mutlu');
-    if (!ad) { bekle = 'ad'; aktifSohbetBitis = performance.now() + 30000; }
+
     if (COKTU && !MOBIL) balon('Gelişmiş beyin son denemede yüklenirken sayfa kapandı; bu cihazın belleği yetmiyor olabilir. Ayarlar\'dan yeniden deneyebilirsin.', 'sistem');
     if (AYAR.beyin && !MOBIL && !COKTU && Beyin.LLM.durum === 'yok') { try { if (navigator.gpu && await navigator.gpu.requestAdapter()) beyinAc(); } catch (e) { } }
   }
@@ -400,5 +439,5 @@
   $('kapakYaz').onclick = e => { e.stopPropagation(); uyandir(true); $('yaz').focus(); };
   ayarlariKur(); durum('uyuyor');
   requestAnimationFrame(dongu);
-  window.Zeki = { S, SES, isle, konus, AYAR };
+  window.Zeki = { S, SES, isle, konus, AYAR, zamanlayici, zamanlayiciSil, efekt, durum, duygu, balon, ayarKaydet, uyandi: () => uyandi, gorunumSec, GORUNUM, sonEtkilesimYenile: () => { sonEtkilesim = performance.now(); }, mikAc, AC: () => AC };
 })();

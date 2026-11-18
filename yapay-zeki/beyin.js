@@ -62,11 +62,11 @@
     if (SOZ) return SOZ; SOZ = [];
     try { /* yapay zekâ terimleri */
       const h = await (await fetch('/yapay-zeka/')).text(), d = new DOMParser().parseFromString(h, 'text/html');
-      d.querySelectorAll('.terim').forEach(t => SOZ.push({ tr: t.querySelector('dt').firstChild.textContent.trim(), en: (t.querySelector('dt i') || {}).textContent || '', d: t.querySelector('dd').textContent.trim(), u: '/yapay-zeka/#' + t.id }));
+      d.querySelectorAll('.terim').forEach(t => SOZ.push({ tr: t.querySelector('dt').firstChild.textContent.trim(), en: (t.querySelector('dt i') || {}).textContent || '', d: t.querySelector('dd').textContent.trim(), u: '/yapay-zeka/#' + t.id, kat: 'Yapay zekâ' }));
     } catch (e) { }
     try { /* cephe terimleri */
       if (!window.CEPHE_TERIM) await new Promise((ok, no) => { const s = document.createElement('script'); s.src = '/oyunlar/games/terimler-veri.js'; s.onload = ok; s.onerror = no; document.head.appendChild(s); });
-      (window.CEPHE_TERIM || []).forEach(x => SOZ.push({ tr: x[2], en: x[3], d: x[4], u: '/egitimler/sozluk/#' + x[0] }));
+      (window.CEPHE_TERIM || []).forEach(x => SOZ.push({ tr: x[2], en: x[3], d: x[4], u: '/egitimler/sozluk/#' + x[0], kat: (window.CEPHE_KAT || {})[x[1]] || 'Cephe', ek: [...(x[5] || []).map(([a, u]) => ['📖 ' + a, u]), ...(x[6] || []).map(([a, u]) => ['🧮 ' + a, u])] }));
     } catch (e) { }
     return SOZ;
   }
@@ -99,11 +99,12 @@
   async function hava(sehir, yarin) {
     const g = await fetchJ('https://geocoding-api.open-meteo.com/v1/search?count=1&language=tr&name=' + encodeURIComponent(sehir));
     const y = g && g.results && g.results[0]; if (!y) return { metin: `${sehir} diye bir yer bulamadım. Şehir adını bir daha söyler misin?`, duygu: 'saskin' };
-    const h = await fetchJ(`https://api.open-meteo.com/v1/forecast?latitude=${y.latitude}&longitude=${y.longitude}&current=temperature_2m,apparent_temperature,weather_code,wind_speed_10m,relative_humidity_2m&daily=temperature_2m_max,temperature_2m_min,weather_code,precipitation_probability_max&timezone=auto&forecast_days=2`);
-    if (yarin) { const d = h.daily, i = 1; return { metin: `Yarın ${y.name} ${HAVA[d.weather_code[i]] || ''} görünüyor; en yüksek ${Math.round(d.temperature_2m_max[i])}, en düşük ${Math.round(d.temperature_2m_min[i])} derece${d.precipitation_probability_max[i] != null ? `, yağış ihtimali yüzde ${d.precipitation_probability_max[i]}` : ''}.`, duygu: d.precipitation_probability_max[i] > 50 ? 'dusunceli' : 'mutlu' }; }
+    const h = await fetchJ(`https://api.open-meteo.com/v1/forecast?latitude=${y.latitude}&longitude=${y.longitude}&current=temperature_2m,apparent_temperature,weather_code,wind_speed_10m,relative_humidity_2m&daily=temperature_2m_max,temperature_2m_min,weather_code,precipitation_probability_max&timezone=auto&forecast_days=5`);
+    const kart = { tip: 'hava', yer: y.name, simdi: h.current ? Math.round(h.current.temperature_2m) : null, kod: h.current ? h.current.weather_code : null, gunler: h.daily.time.map((t, i) => ({ t, kod: h.daily.weather_code[i], max: Math.round(h.daily.temperature_2m_max[i]), min: Math.round(h.daily.temperature_2m_min[i]), yg: h.daily.precipitation_probability_max[i], ad: HAVA[h.daily.weather_code[i]] || '' })) };
+    if (yarin) { const d = h.daily, i = 1; return { metin: `Yarın ${y.name} ${HAVA[d.weather_code[i]] || ''} görünüyor; en yüksek ${Math.round(d.temperature_2m_max[i])}, en düşük ${Math.round(d.temperature_2m_min[i])} derece${d.precipitation_probability_max[i] != null ? `, yağış ihtimali yüzde ${d.precipitation_probability_max[i]}` : ''}.`, duygu: d.precipitation_probability_max[i] > 50 ? 'dusunceli' : 'mutlu', kart, kaynak: 'Open-Meteo' }; }
     const c = h.current, d = h.daily;
     const sem = d.precipitation_probability_max[0] > 50 ? ' Şemsiyeni unutma!' : c.temperature_2m < 5 ? ' Sıkı giyin!' : c.temperature_2m > 30 ? ' Bol su içmeyi unutma.' : '';
-    return { metin: `${y.name} şu an ${HAVA[c.weather_code] || ''}, ${Math.round(c.temperature_2m)} derece; hissedilen ${Math.round(c.apparent_temperature)}. Rüzgâr saatte ${Math.round(c.wind_speed_10m)} kilometre. Bugün en yüksek ${Math.round(d.temperature_2m_max[0])} derece.${sem}`, duygu: c.temperature_2m > 15 ? 'mutlu' : 'notr', kaynak: 'Open-Meteo' };
+    return { metin: `${y.name} şu an ${HAVA[c.weather_code] || ''}, ${Math.round(c.temperature_2m)} derece; hissedilen ${Math.round(c.apparent_temperature)}. Rüzgâr saatte ${Math.round(c.wind_speed_10m)} kilometre. Bugün en yüksek ${Math.round(d.temperature_2m_max[0])} derece.${sem}`, duygu: c.temperature_2m > 15 ? 'mutlu' : 'notr', kaynak: 'Open-Meteo', kart };
   }
 
   /* ---------------- döviz ---------------- */
@@ -116,7 +117,9 @@
     const miktar = parseFloat((sozcuktenSayi(m).match(/\d+(?:[.,]\d+)?/) || ['1'])[0].replace(',', '.')) || 1;
     const r = await fetchJ(`https://api.frankfurter.dev/v1/latest?base=${kaynak}&symbols=${hedef}`);
     const kur = r && r.rates && r.rates[hedef]; if (kur == null) return null; const v = kur * miktar;
-    return { metin: `${sayi(miktar)} ${PARA_AD[kaynak]} yaklaşık ${sayi(v, 2)} ${PARA_AD[hedef]} ediyor. Bu, Avrupa Merkez Bankası'nın ${r.date.split('-').reverse().join('.')} tarihli kuru; bankaların alış satış fiyatı farklı olabilir.`, duygu: 'notr', kaynak: 'Frankfurter (ECB)' };
+    let seri = null; try { const b = new Date(Date.now() - 31 * 864e5).toISOString().slice(0, 10); const z = await fetchJ(`https://api.frankfurter.dev/v1/${b}..?base=${kaynak}&symbols=${hedef}`); seri = Object.entries(z.rates || {}).map(([t, o]) => [t, o[hedef]]); } catch (e) { }
+    const kart = { tip: 'doviz', kaynak, hedef, ad: PARA_AD[kaynak], kur, tarih: r.date, seri };
+    return { kart, metin: `${sayi(miktar)} ${PARA_AD[kaynak]} yaklaşık ${sayi(v, 2)} ${PARA_AD[hedef]} ediyor. Bu, Avrupa Merkez Bankası'nın ${r.date.split('-').reverse().join('.')} tarihli kuru; bankaların alış satış fiyatı farklı olabilir.`, duygu: 'notr', kaynak: 'Frankfurter (ECB)' };
   }
 
   /* ---------------- site içinde gezinme ---------------- */
@@ -218,7 +221,7 @@
 
   /* ---------------- dil modeli (isteğe bağlı) ---------------- */
   const LLM = { durum: 'yok', isci: null, bekleyen: {}, sira: 0, model: null, gecmis: [] };
-  const SISTEM = () => `Sen "Yapay Zeki" adında, erdevelop.github.io sitesinde yaşayan sevimli ve yardımsever bir robot arkadaşsın. Kullanıcıyla sesli konuşuyorsun; bu yüzden cevapların Türkçe, kısa (en çok 2-3 cümle), samimi ve doğal olsun. Madde işareti, başlık, emoji ya da kod kullanma. Emin olmadığın bilgiyi uydurma; bilmiyorsan "bundan emin değilim" de. Bugün ${new Date().toLocaleDateString('tr-TR', { day: 'numeric', month: 'long', year: 'numeric' })}.${HAFIZA.ad ? ' Kullanıcının adı ' + HAFIZA.ad + '.' : ''}`;
+  const SISTEM = () => `Sen "Yapay Zeki" adında, erdevelop.github.io sitesinde yaşayan sevimli ve yardımsever bir robot arkadaşsın. Kullanıcıyla sesli konuşuyorsun; bu yüzden cevapların Türkçe, kısa (en çok 2-3 cümle), samimi ve doğal olsun. Madde işareti, başlık, emoji ya da kod kullanma. Emin olmadığın bilgiyi uydurma; bilmiyorsan "bundan emin değilim" de. Bugün ${new Date().toLocaleDateString('tr-TR', { day: 'numeric', month: 'long', year: 'numeric' })}.${HAFIZA.ad ? ' Kullanıcının adı ' + HAFIZA.ad + '.' : ''}${window.Beyin && Beyin.kisilikIstem ? ' ' + Beyin.kisilikIstem() : ''}`;
   function llmIsci() {
     if (LLM.isci) return LLM.isci;
     LLM.isci = new Worker(new URL('llm-worker.js', KAYNAK), { type: 'module' });
@@ -228,10 +231,14 @@
   }
   const llmCagir = (msg, cb = {}) => new Promise((ok, no) => { const id = ++LLM.sira; LLM.bekleyen[id] = Object.assign({ ok, no }, cb); llmIsci().postMessage(Object.assign({ id }, msg)); });
 
+  const EK = [];
+  const llmUret = async (mesajlar, enCok = 140) => sadelestir(await llmCagir({ tip: 'uret', mesajlar, enCok }));
   /* ---------------- ana giriş ---------------- */
   async function yanitla(girdi, ops = {}) {
     const m = temiz(girdi).replace(/^(?:hey |hey,? )?(?:yapay )?zeki\s*[,!]?\s*/, '').replace(/\s*[.!?]+$/, '').trim();
     if (!m) return { metin: adla(sec(['Efendim {ad}?', 'Buyur, dinliyorum.', 'Evet?'])), duygu: 'heyecanli' };
+    /* 0. eklenti becerileri (zeki-ek.js) */
+    for (const f of EK) { const r = await f(m, ops, girdi); if (r) return r; }
     /* 1. sabit beceriler */
     for (const b of BECERI) { const x = b.re(m); if (x) { const r = b.f(m, x); if (r) return Object.assign({ beceri: b.ad }, r); } }
     /* 2. hesap */
@@ -263,7 +270,7 @@
     if (x) {
       const konu = x[1].replace(/^(?:bir|bu|şu)\s+/, '').trim();
       await sozluk(); const s = sozBul(konu) || sozBul(eksiz(konu));
-      if (s) return { metin: `${s.tr}: ${ilkCumleler(s.d, 2)}`, duygu: 'dusunceli', beceri: 'sozluk', link: s.u };
+      if (s) return { metin: `${s.tr}: ${ilkCumleler(s.d, 2)}`, duygu: 'dusunceli', beceri: 'sozluk', link: s.u, kart: { tip: 'terim', tr: s.tr, en: s.en, d: s.d, u: s.u, kat: s.kat, ek: s.ek } };
       if (!/kimdir/.test(m) && LLM.durum === 'hazir' && ops.oncelikLLM) { /* dil modeli */ }
       else try { const v = await vikipedi(konu); if (v) return { metin: v.metin, duygu: 'dusunceli', beceri: 'vikipedi', link: v.url, kaynak: 'Vikipedi' }; } catch (e) { }
     }
@@ -301,5 +308,5 @@
   }
   function llmKapat() { if (LLM.isci) { LLM.isci.terminate(); LLM.isci = null; } LLM.durum = 'yok'; LLM.gecmis = []; }
 
-  window.Beyin = { yanitla, llmYukle, llmKapat, LLM, HAFIZA, hesapla, sozluk, fold, kaydet };
+  window.Beyin = { yanitla, llmYukle, llmKapat, llmUret, LLM, HAFIZA, hesapla, sozluk, sozBul, fold, kaydet, hava, doviz, vikipedi, ek: EK };
 })();

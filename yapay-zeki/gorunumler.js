@@ -7,6 +7,7 @@
   function boyutla(cv) { const r = cv.getBoundingClientRect(), D = Math.min(2, window.devicePixelRatio || 1); const w = Math.round(r.width * D), h = Math.round(r.height * D); if (cv.width !== w || cv.height !== h) { cv.width = w; cv.height = h; } return [w, h, D]; }
   /* duruma göre renk; taban renk görünüme göre değişir */
   function durumRengi(S, taban) {
+    taban = window.ZEKI_TEMA || taban;
     if (S.dans) return [255, 110, 210];
     if (S.duygu === 'saskin' || S.irkil > .3) return [255, 196, 80];
     if (S.duygu === 'kizgin') return [255, 100, 80];
@@ -80,9 +81,23 @@
     }
     return { P: new Float32Array(P), N: new Float32Array(NR), T: new Uint8Array(T), n: P.length / 3 };
   }
-  function bulut(cv) {
+  /* kayıtlı yüz hatlarından (478 nokta) yoğun bir yüz bulutu: her noktayı en yakın komşularına bağlayan çizgiler boyunca örnekler */
+  function yuzumNoktalari(V, govde) {
+    const L = V.p, w = V.w, h = V.h, px = i => [L[i][0] * w, L[i][1] * h, L[i][2] * w];
+    const a = px(234), b = px(454), c = px(168), s = .8 / Math.hypot(a[0] - b[0], a[1] - b[1]);
+    const Q = L.map((_, i) => { const p = px(i); return [-(p[0] - c[0]) * s, -(p[1] - c[1]) * s + .2, -(p[2] - c[2]) * s + .42]; });
+    const P = [], NR = [], T = [], r = rng(7), ekle = q => { const n0 = q[0], n1 = q[1] - .15, n2 = q[2] + .15, l = Math.hypot(n0, n1, n2) || 1; P.push(q[0], q[1], q[2]); NR.push(n0 / l, n1 / l, n2 / l); T.push(q[2] > .1 && q[1] < -.06 && q[1] > -.45 && Math.abs(q[0]) < .3 ? 1 : 0); };
+    for (let i = 0; i < Q.length; i++) {
+      ekle(Q[i]);
+      const kom = Q.map((q, j) => [j, (q[0] - Q[i][0]) ** 2 + (q[1] - Q[i][1]) ** 2 + (q[2] - Q[i][2]) ** 2]).filter(x => x[0] !== i).sort((x, y) => x[1] - y[1]).slice(0, 5);
+      for (const [j] of kom) { if (j < i) continue; for (let k = 1; k <= 3; k++) { const t = k / 4 + (r() - .5) * .1; ekle([0, 1, 2].map(d => Q[i][d] + (Q[j][d] - Q[i][d]) * t + (r() - .5) * .006)); } }
+    }
+    for (let i = 0; i < govde.n; i++) if (govde.P[i * 3 + 1] < -.48) { P.push(govde.P[i * 3], govde.P[i * 3 + 1], govde.P[i * 3 + 2]); NR.push(govde.N[i * 3], govde.N[i * 3 + 1], govde.N[i * 3 + 2]); T.push(0); }
+    return { P: new Float32Array(P), N: new Float32Array(NR), T: new Uint8Array(T), n: P.length / 3 };
+  }
+  function bulut(cv, ozel) {
     const g = cv.getContext('2d'), A = { t: 0, bakX: 0, bakY: 0, seviye: 0, enerji: .7, irkil: 0, zarf: 0, dus: 0, din: 0, vurus: 0, yaw: 0, renk: [80, 210, 255] };
-    const B = bulutNoktalari(), n = B.n, sx = new Float32Array(n), sy = new Float32Array(n), sa = new Float32Array(n), ss = new Float32Array(n);
+    const B = ozel && window.ZEKI_YUZUM ? yuzumNoktalari(window.ZEKI_YUZUM, bulutNoktalari()) : bulutNoktalari(), n = B.n, sx = new Float32Array(n), sy = new Float32Array(n), sa = new Float32Array(n), ss = new Float32Array(n);
     const toz = Array.from({ length: 160 }, (_, i) => { const r = rng(i * 7 + 3); return [(r() - .5) * 4, -1.6 + r() * 3.2, (r() - .5) * 3, r()]; });
     const kova = Array.from({ length: 8 }, () => []);
     function ciz(S, SES, dt) {
@@ -410,5 +425,5 @@
     return { ciz };
   }
 
-  window.Gorunumler = { bulut, kure, hud, dalgaYuz, galaksi };
+  window.Gorunumler = { bulut, kure, hud, dalgaYuz, galaksi, yuzum: cv => bulut(cv, true) };
 })();

@@ -35,7 +35,8 @@
       boyut(); A.t += dt; const t = A.t;
       /* ---- hedefler ---- */
       const duygu = S.duygu || 'notr', durum = S.durum || 'bekliyor';
-      const hedefRenk = RENK[S.dans ? 'dans' : duygu === 'saskin' ? 'saskin' : duygu === 'kizgin' ? 'kizgin' : durum] || RENK.bekliyor;
+      const anahtar = S.dans ? 'dans' : duygu === 'saskin' ? 'saskin' : duygu === 'kizgin' ? 'kizgin' : durum;
+      const hedefRenk = window.ZEKI_TEMA && (anahtar === 'bekliyor' || anahtar === 'konusuyor') ? window.ZEKI_TEMA : window.ZEKI_TEMA && anahtar === 'uyuyor' ? window.ZEKI_TEMA.map(v => v * .5) : RENK[anahtar] || RENK.bekliyor;
       for (let i = 0; i < 3; i++) A.renk[i] = mix(A.renk[i], hedefRenk[i], 1 - Math.exp(-4 * dt));
       const uyku = durum === 'uyuyor' ? 1 : 0;
       yay(A, 'uykulu', Math.max(uyku, S.uykulu || 0), 3, dt);

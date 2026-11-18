@@ -17,7 +17,8 @@ const SITE = 'https://erdevelop.github.io/ingilizce.html';
 /* hangi kulübün sayfası: push belgesindeki page alanı (yoksa İngilizce) */
 const PAGES = { ingilizce: { url: SITE, icon: '📚', tag: 'eng-kelime' }, fransizca: { url: 'https://erdevelop.github.io/fransizca.html', icon: '🇫🇷', tag: 'fra-kelime' },
   almanca: { url: 'https://erdevelop.github.io/almanca.html', icon: '🇩🇪', tag: 'deu-kelime' },
-  seri: { url: 'https://erdevelop.github.io/oyunlar/', icon: '🔥', tag: 'ob-seri' } };
+  seri: { url: 'https://erdevelop.github.io/oyunlar/', icon: '🔥', tag: 'ob-seri' },
+  zeki: { url: 'https://erdevelop.github.io/yapay-zeki/', icon: '⏰', tag: 'zeki-hatirlat' } };
 const b64u = b => Buffer.from(b).toString('base64url');
 const unb64u = s => Buffer.from(String(s), 'base64url');
 const hmac = (key, data) => crypto.createHmac('sha256', key).update(data).digest();
@@ -87,6 +88,10 @@ export function message(d, ORN = {}, now = new Date()) {
     body: x ? x + (mean ? (y ? '\n' + y : '') : '\nAnlamı için dokun.') : mean ? 'Dokun, kartı aç.' : 'Anlamını hatırlıyor musun? Dokun ve kontrol et.',
     url: P.url + '?k=' + encodeURIComponent(w.e) + '#kelime', tag: P.tag };
 }
+/* Yapay Zeki: zamanı gelmiş (en çok 6 saat gecikmiş) hatırlatmalar */
+export function zekiDue(L, now = new Date()) { const t = now.getTime(); return (L || []).filter(h => +h.z <= t + 60e3 && +h.z > t - 6 * 3600e3); }
+export function zekiMessage(h) { return { title: '⏰ Zeki hatırlatıyor', body: String(h.m || 'Hatırlatma zamanı!').slice(0, 160), url: PAGES.zeki.url, tag: 'zeki-' + h.z }; }
+
 /* sitedeki örnek cümleler; alınamazsa boş (bildirim cümlesiz gider) */
 export async function loadOrnek(url = 'https://erdevelop.github.io/js/ornek-en.js') {
   try { const r = await fetch(url); if (!r.ok) return {}; const t = await r.text(); return JSON.parse(t.slice(t.indexOf('{'), t.lastIndexOf('}') + 1)); } catch (e) { return {}; }
@@ -134,6 +139,20 @@ export async function main(env = process.env) {
   const ORN = env.ORNEK_URL === 'yok' ? {} : await loadOrnek(env.ORNEK_URL); if (!Object.keys(ORN).length) console.log('  örnek cümle dosyası alınamadı; kuyruktaki cümleler kullanılacak');
   let sent = 0, skipped = 0, failed = 0;
   for (const d of docs) {
+    /* Yapay Zeki hatırlatmaları: hj = [{ z: zaman (ms), m: metin }]; zamanı gelenler gönderilir, kalanlar saklanır */
+    if (d.page === 'zeki') {
+      let L = []; try { L = JSON.parse(d.hj || '[]'); } catch (e) { }
+      const due = zekiDue(L, now), kalan = L.filter(h => !due.includes(h) && +h.z > now.getTime() - 6 * 3600e3);
+      if (!due.length || !d.sub || !d.sub.endpoint) { skipped++; continue; }
+      let ok = true;
+      for (const h of due) {
+        let res; try { res = await sendPush(d.sub, zekiMessage(h), env.VAPID_PRIVATE); } catch (e) { res = { status: 0, text: String(e.message || e) }; }
+        console.log(`  ${d._path.split('/').pop().slice(0, 6)}… zeki · ${svc(d.sub.endpoint)} → ${res.status}`);
+        if (res.status >= 200 && res.status < 300) sent++; else { failed++; ok = false; if (res.status === 404 || res.status === 410) { await patch(d, { on: false, err: 'Telefon aboneliği artık geçerli değil; Zeki\'de hatırlatmayı yeniden kur.' }); break; } }
+      }
+      if (ok) await patch(d, { hj: JSON.stringify(kalan), on: kalan.length > 0, sentAt: now, err: '' });
+      continue;
+    }
     const test = d.test === true, key = force ? 'zorla|' + now.toISOString() : test ? 'test|' + now.toISOString() : dueSlot(d, now), msg0 = key && d.sub && d.sub.endpoint ? message(d, ORN, now) : null;
     const msg = msg0 && test ? { ...msg0, title: '📡 Test · ' + msg0.title } : msg0;
     if (!msg) { skipped++; if (d.sub && d.sub.endpoint) console.log(`  ${d._path.split('/').pop().slice(0, 6)}… ${d.page || 'ingilizce'} · ${svc(d.sub.endpoint)} · sırası gelmedi (${d.from}–${d.to}, ${d.step || 180} dk)`); continue; }
