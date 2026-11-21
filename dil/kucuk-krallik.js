@@ -549,3 +549,5 @@ erDil.dict({"🗺️ Büyük haritayı aç":"🗺️ Open big map","🗺️ Hari
 /* Parti W ekleri */
 erDil.dict({"🚩 Seferler":"🚩 Marches","⛺ Haydut kampı":"⛺ Bandit camp","Haydut kampı":"Bandit camp","Kaynak noktası":"Resource node","Sefer gönder":"Send march","Toplamaya gönder":"Send to gather","Asker seç":"Select troops","Önce Savaş kadrosunda asker seç":"Select troops in the War line-up first","Bu hedefe zaten sefer var":"A march is already heading there","Bu bölge zaten senin":"This region is already yours","Önce önceki bölgeyi fethet":"Conquer the previous region first","Haydut kampı saldırını püskürttü":"The bandit camp repelled your attack","Hedef artık yok":"Target is gone"});
 erDil.kalip({"Dalga {n}":"Wave {n}","Kamp Sv {n}":"Camp Lv {n}","Sefer yola çıktı · varış {x}":"March set off · arrives in {x}","Aynı anda en fazla {n} sefer":"At most {n} marches at once","Birlik döndü: {x}":"Troops returned: {x}"});
+/* Parti X ekleri */
+erDil.dict({"Kereste alanı":"Lumber camp","Taş ocağı":"Quarry","Demir madeni":"Iron mine","Altın madeni":"Gold mine","Toplamaya gönder":"Send to gather"});
