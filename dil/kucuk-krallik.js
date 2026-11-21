@@ -542,3 +542,5 @@ erDil.kalip({"Komuta ({n} altın)": "Command ({n} gold)","Hazinedar ({n} altın)
 /* Parti T ekleri */
 erDil.dict({"Asker gücü":"Unit power","Birlik":"Unit","Adet":"Count","Vuruş":"Attack","Can":"HP","Kuşatma":"Siege","yenildi":"defeated","kırıldı":"broken","Kalen":"Your castle","Hesap":"Account","Giriş yap":"Sign in","Kayıt ol":"Sign up","Çıkış yap":"Sign out"});
 erDil.kalip({"%{n} sur":"{n}% wall"});
+/* Parti U ekleri */
+erDil.dict({"Harita":"Map","Kalelere ve bölgelere dokun. Lordlara saldır, bölgeleri sırayla fethet; fethedilen bölge kalıcı kaynak üretir. Savaş kadrosu seçimin kullanılır.":"Tap castles and regions. Attack lords and conquer regions in order; a conquered region produces resources permanently. Your War line-up is used."});
