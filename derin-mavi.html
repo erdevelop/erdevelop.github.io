@@ -60,6 +60,7 @@ a{color:var(--mavi)}
 .dugmeler button:disabled{opacity:.45}
 .dugmeler button .rozet,.rozet{position:absolute;top:-5px;right:-4px;min-width:18px;height:18px;padding:0 5px;border-radius:9px;background:var(--kirmizi);color:#fff;font-size:11px;font-weight:900;display:flex;align-items:center;justify-content:center}
 #secimBtn{display:block;width:100%;margin-top:9px;padding:10px;border-radius:14px;border:0;background:linear-gradient(90deg,#7FF0D0,#5FC8E8);color:#06283A;font-weight:900;animation:nabiz 1.6s infinite}
+#secimBtn[data-is=acil]{background:linear-gradient(90deg,#FFB09F,#FF6F61);color:#3A0A05}
 @keyframes nabiz{50%{box-shadow:0 0 0 6px rgba(127,240,208,.18)}}
 /* katmanlar */
 .perde{position:fixed;inset:0;z-index:20;overflow-y:auto;display:flex;justify-content:center;align-items:flex-start;padding:calc(56px + env(safe-area-inset-top,0px)) 12px 40px;background:radial-gradient(ellipse at 50% 30%,rgba(4,30,45,.35),rgba(2,14,22,.75))}
@@ -232,7 +233,7 @@ body.er-durumlu #panel{bottom:32px}
           <li><b>Yem at:</b> yem hakların zamanla dolar. Balığın tokken yemez.</li>
           <li><b>Plankton avı</b> (🎮 Oyunlar düğmesinde): günde 3 kez, 20 saniyelik bir av. Topladığın plankton kadar büyürsün; denizanalarından uzak dur.</li>
           <li><b>Seçimler:</b> yavruyken yaşam alanını (mercan resifi, açık deniz, derin su), gençken türünü seçersin. Her türün bir özelliği var.</li>
-          <li><b>Balığın ölmez.</b> Uzun süre beslemezsen solgunlaşır ve büyümesi durur; beslediğinde toparlanır.</li>
+          <li><b>Açlık:</b> balığın zamanla acıkır; sen onu yüzdürdükçe, atıldıkça ve beceri kullandıkça daha çabuk acıkır. Aç kalınca solgunlaşır ve büyümesi durur. <b>7 gün hiç yemek yemezse</b> yumurtalarını bırakıp ölür; yavrusuyla devam edersin. Ölmeden önce oyunda ve bildirimle uyarılırsın.</li>
           <li><b>Ortak akvaryum:</b> en fazla 30 balıklık bir akvaryuma yerleşirsin. Başka balıklara dokun: selam ver, günde bir kez besle. Arkadaşına "balığımı besle" bağlantısı gönder.</li>
           <li><b>Ortak hedef:</b> akvaryumdaki herkesin attığı yemler haftalık hedefe sayılır; hedefler akvaryuma batık gemi, hazine sandığı gibi süsler açar.</li>
           <li><b>Seri:</b> her gün gel, serini uzat. 7 günlük seri altın rengi açar.</li>
@@ -258,7 +259,7 @@ body.er-durumlu #panel{bottom:32px}
           <li><b>Feed:</b> your food refills over time. A full fish won't eat.</li>
           <li><b>Plankton hunt</b> (under 🎮 Games): three 20-second hunts a day. You grow by what you catch; avoid the jellyfish.</li>
           <li><b>Choices:</b> as a fry you pick a habitat (coral reef, open sea, deep water); as a juvenile you pick a species. Each species has a perk.</li>
-          <li><b>Your fish never dies.</b> If you don't feed it for a long time it turns pale and stops growing; feeding brings it back.</li>
+          <li><b>Hunger:</b> your fish gets hungry over time, and faster when you swim it around, dash or use skills. A hungry fish turns pale and stops growing. <b>After 7 days without any food</b> it lays its eggs and dies; you carry on with its young. You get warnings in the game and by notification first.</li>
           <li><b>Shared aquarium:</b> you move into an aquarium of up to 30 fish. Tap other fish to wave or feed them once a day. Send a friend a "feed my fish" link.</li>
           <li><b>Shared goal:</b> every feed in the aquarium counts toward a weekly goal that unlocks decorations such as a shipwreck and a treasure chest.</li>
           <li><b>Streak:</b> come every day to extend your streak. A 7-day streak unlocks the gold colour.</li>
@@ -308,7 +309,9 @@ const ESIK = [0, 40, 160, 420, 900];     // aşamaya geçiş için toplam büyü
 const YUMURTA_XP = 1250;                 // bilge balığın yumurta bırakması için
 const ASAMA = [['Larva', 'Larva'], ['Yavru', 'Fry'], ['Genç', 'Juvenile'], ['Yetişkin', 'Adult'], ['Bilge', 'Elder']];
 const YEM_MAX = 6, YEM_MS = 80 * 60e3, AV_GUN = 3, AKV_KAP = 30, GUN_SINIR = 90, REKLAM_GUN = 2;
-const TOK_HIZ = 4;                       // saatte kaç puan acıkır
+const TOK_HIZ = 4;
+const OLUM_GUN = 7;                      // hiç yemek yemeden geçen bu kadar günden sonra balık yumurta bırakıp ölür
+const HAREKET_ACLIK = 0.0002;            // senin yüzdürdüğün her piksel için tokluk kaybı                       // saatte kaç puan acıkır
 
 const ALANLAR = {
   resif: { ad: ['Mercan resifi', 'Coral reef'], d: ['Renkli, kalabalık, sıcak sular', 'Colourful, busy, warm water'], su: ['#4CC9E0', '#0F6E93', '#08415E'], kum: '#EAD7A2', y: [0.45, 0.92] },
@@ -440,7 +443,9 @@ function gunVeri() {
 function ilerlet() {
   if (!S) return;
   const n = simdi(), saat = Math.max(0, (n - S.son) / 3.6e6);
-  S.tok = Math.max(0, S.tok - saat * TOK_HIZ * (has('tok') ? 0.65 : 1));
+  const tokOnce = S.tok, hiz = TOK_HIZ * (has('tok') ? 0.65 : 1);
+  S.tok = Math.max(0, S.tok - saat * hiz);
+  if (S.tok <= 0) { if (!S.acSifir) S.acSifir = Math.round(S.son + (tokOnce > 0 ? tokOnce / hiz * 3.6e6 : 0)); } else S.acSifir = null;
   const mx = yemMax();
   if (S.yem >= mx) S.yemT = n;
   else { const k = Math.floor((n - S.yemT) / YEM_MS); if (k > 0) { S.yem = Math.min(mx, S.yem + k); S.yemT += k * YEM_MS; if (S.yem >= mx) S.yemT = n; } }
@@ -464,7 +469,7 @@ function kazan(m, o = {}) {
   asamaKontrol();
   return ger;
 }
-function tokEkle(v) { S.tok = Math.min(100, S.tok + v); const g = gunVeri(); g.tokMax = Math.max(g.tokMax || 0, Math.round(S.tok)); }
+function tokEkle(v) { S.tok = Math.min(100, S.tok + v); if (S.tok > 0) S.acSifir = null; const g = gunVeri(); g.tokMax = Math.max(g.tokMax || 0, Math.round(S.tok)); }
 function asamaKontrol() {
   let degisti = false;
   for (;;) {
@@ -938,7 +943,9 @@ function balikGuncelle(b, dt) {
   const dx = b.tx - b.x, dy = b.ty - b.y, d = Math.hypot(dx, dy) || 1;
   const yav = Math.min(1, d / 60);
   b.vx += (dx / d * hiz * yav - b.vx) * Math.min(1, dt * 1.6); b.vy += (dy / d * hiz * yav * 0.7 - b.vy) * Math.min(1, dt * 1.6);
+  const ox = b.x, oy = b.y;
   b.x = kis(b.x + b.vx * dt, A.x1, A.x2); b.y = kis(b.y + b.vy * dt, A.y1, A.y2);
+  if (b.ben && S && (KUMANDA.aktif > 0 || KUMANDA.atil > 0 || ESLIK)) hareketAcik(Math.hypot(b.x - ox, b.y - oy) / OL * (KUMANDA.atil > 0 ? 2.5 : 1));
   if (Math.abs(b.vx) > 3) b.yonH = Math.sign(b.vx);
   b.yon += (b.yonH - b.yon) * Math.min(1, dt * 4);
   b.faz += dt * (3 + Math.hypot(b.vx, b.vy) / 9);
@@ -1050,7 +1057,9 @@ function uiGuncelle() {
   $('avBtn').disabled = oyunK <= 0;
   const gv = gunlukGorevler(); $('gorevS').textContent = `${gv.ok.length}/${gv.l.length}`;
   const bk = bekleyenSecim(), sb = $('secimBtn'); sb.hidden = false;
-  if (bk) { sb.textContent = bk === 'alan' ? T('✨ Yaşam alanını seç', '✨ Choose your habitat') : T('✨ Türünü seç', '✨ Choose your species'); sb.dataset.is = 'secim'; }
+  const ok_ = olumKalan();
+  if (ok_ != null && ok_ > 0) { const gn = Math.ceil(ok_ / 864e5); sb.textContent = T(`⚠️ ${S.ad} hiç yemek yiyemiyor! ${gn} gün içinde beslemezsen ölecek`, `⚠️ ${S.ad} is starving! Feed it within ${gn} day${gn > 1 ? 's' : ''} or it will die`); sb.dataset.is = 'acil'; }
+  else if (bk) { sb.textContent = bk === 'alan' ? T('✨ Yaşam alanını seç', '✨ Choose your habitat') : T('✨ Türünü seç', '✨ Choose your species'); sb.dataset.is = 'secim'; }
   else if (TEMIZ) { sb.textContent = T('🧽 Lekeleri sil…', '🧽 Wipe the smudges…'); sb.dataset.is = ''; }
   else if (S.hasta) { sb.textContent = T('💊 Balığın hasta: iyileştir', '💊 Your fish is sick: heal it'); sb.dataset.is = 'hasta'; }
   else if (S.su < 50 && !ziyaretModu()) { sb.textContent = T(`🧽 Su bulanık (%${Math.round(S.su)}): temizle`, `🧽 Murky water (${Math.round(S.su)}%): clean it`); sb.dataset.is = 'su'; }
@@ -1450,7 +1459,7 @@ function rekorAc() {
   });
 }
 function sohretAc() {
-  const ic = modal(`<h2>🖼️ ${T('Şöhret Duvarı', 'Hall of Fame')}</h2><p class="alt">${T('Yumurta bırakan atalarının anısı', 'In memory of your ancestors')}</p>${S.ata.length ? `<div class="liste">${S.ata.map(a => `<div class="satir"><canvas width="108" height="72"></canvas><div class="orta"><b>${esc(a.ad)}</b><small>${a.tr && TURLER[a.tr] ? esc(L2(TURLER[a.tr].ad)) : ''} · ${a.b} cm · ${a.gun} ${T('gün', 'days')} · ${a.ng}. ${T('nesil', 'gen.')}</small></div></div>`).join('')}</div>` : `<p class="kucuk">${T('Balığın bilge olup yumurta bıraktığında burada yer alacak.', 'When your fish becomes an elder and lays eggs, it will appear here.')}</p>`}`);
+  const ic = modal(`<h2>🖼️ ${T('Şöhret Duvarı', 'Hall of Fame')}</h2><p class="alt">${T('Yumurta bırakan atalarının anısı', 'In memory of your ancestors')}</p>${S.ata.length ? `<div class="liste">${S.ata.map(a => `<div class="satir"><canvas width="108" height="72"></canvas><div class="orta"><b>${a.olum ? '🕯️ ' : ''}${esc(a.ad)}</b><small>${a.tr && TURLER[a.tr] ? esc(L2(TURLER[a.tr].ad)) : ''} · ${a.b} cm · ${a.gun} ${T('gün', 'days')} · ${a.ng}. ${T('nesil', 'gen.')}</small></div></div>`).join('')}</div>` : `<p class="kucuk">${T('Balığın bilge olup yumurta bıraktığında burada yer alacak.', 'When your fish becomes an elder and lays eggs, it will appear here.')}</p>`}`);
   ic.querySelectorAll('.satir canvas').forEach((c, i) => { const a = S.ata[i]; onizlemeEkle(c, { a: 4, tr: a.tr, al: a.al, r: a.r }, { seffaf: 1 }); });
 }
 function nasilAc() { modal(`<h2>❔ ${T('Nasıl oynanır?', 'How to play')}</h2>${document.querySelector('#giris [data-l="' + (EN() ? 'en' : 'tr') + '"]').innerHTML}`); }
@@ -1667,7 +1676,7 @@ $('beceriBtn').onclick = beceriKullan;
 $('rehberAtla').onclick = () => { S.rehber = 99; kaydet(false); rehberGuncelle(); duyur(T('Rehberi menüden tekrar açabilirsin 🎓', 'You can replay the tutorial from the menu 🎓')); };
 $('fotoCek').onclick = fotoCek; $('fotoKapat').onclick = fotoKapat; $('fotoEtiket').onclick = () => { FOTO.etiket = !FOTO.etiket; $('fotoEtiket').style.opacity = FOTO.etiket ? 1 : 0.45; };
 $('gorevBtn').onclick = gorevAc;
-$('secimBtn').onclick = () => { const k = $('secimBtn').dataset.is; if (k === 'hasta') iyilestir(); else if (k === 'su') temizBasla(); else if (k === 'secim') secimAc(); };
+$('secimBtn').onclick = () => { const k = $('secimBtn').dataset.is; if (k === 'acil') yemAt(); else if (k === 'hasta') iyilestir(); else if (k === 'su') temizBasla(); else if (k === 'secim') secimAc(); };
 $('olayCip').onclick = gunlukAc;
 $('sohbetBtn').onclick = () => { const k = $('sohbetKutu'); if (k.hidden) { sohbetKur(); const r = $('sohbetBtn').getBoundingClientRect(); k.style.right = '14px'; k.style.bottom = (innerHeight - r.top + 8) + 'px'; } k.hidden = !k.hidden; };
 $('pUst').onclick = detayAc;
@@ -1675,7 +1684,7 @@ $('menuBtn').onclick = menuAc;
 $('hedefCip').onclick = hedefAc;
 $('akvCip').onclick = akvListeAc;
 addEventListener('resize', () => { boyut(); yerliKur(); ekCanliKur(); });
-document.addEventListener('visibilitychange', () => { if (!document.hidden && S) { ilerlet(); gorevKontrol(); uiGuncelle(); uyeYaz(false); } else if (document.hidden && S) bildirimGuncelle(true); });
+document.addEventListener('visibilitychange', () => { if (!document.hidden && S) { ilerlet(); gorevKontrol(); uiGuncelle(); uyeYaz(false); olumKontrol(); } else if (document.hidden && S) bildirimGuncelle(true); });
 if (window.erDil && erDil.on) erDil.on(() => { uiGuncelle(); });
 
 /* ---------- balığı yönlendirme ve akvaryumdaki planktonlar ---------- */
@@ -2147,7 +2156,7 @@ function siteFb() {
 const yerelTarih = () => { const d = new Date(simdi()); return d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0') + '-' + String(d.getDate()).padStart(2, '0'); };
 function bildirimVeri() {
   const saat = Math.max(0, S.tok - 30) / (TOK_HIZ * (has('tok') ? 0.65 : 1));
-  return { ad: S.ad, ac: Math.round(simdi() + saat * 3.6e6), seri: S.seri.n || 0, done: S.seri.g === bugun() ? yerelTarih() : '', saat: S.bildirim.saat || '20:30', dil: EN() ? 'en' : 'tr', sefer: S.sefer ? S.sefer.bit : 0, upd: new Date().toISOString() };
+  return { ad: S.ad, ac: Math.round(simdi() + saat * 3.6e6), seri: S.seri.n || 0, done: S.seri.g === bugun() ? yerelTarih() : '', saat: S.bildirim.saat || '20:30', dil: EN() ? 'en' : 'tr', sefer: S.sefer ? S.sefer.bit : 0, olum: S.acSifir ? S.acSifir + OLUM_GUN * 864e5 : 0, upd: new Date().toISOString() };
 }
 let bildirimSon = 0;
 async function bildirimGuncelle(zorla) {
@@ -2204,7 +2213,7 @@ function atil(x, y) {
   if (!S || atilBekle > 0) return false;
   const b = BAL.get('ben'); if (!b) return false;
   if (x != null) { KUMANDA.x = x; KUMANDA.y = y; } else { KUMANDA.x = b.x + Math.sign(b.yon || 1) * 140; KUMANDA.y = b.y; }
-  KUMANDA.aktif = 1.2; KUMANDA.atil = 0.45; atilBekle = 1.2; S.rb.atil = 1;
+  KUMANDA.aktif = 1.2; KUMANDA.atil = 0.45; atilBekle = 1.2; S.rb.atil = 1; hareketAcik(400);
   SES.carp && SES.kabarcik(0.02); for (let i = 0; i < 8; i++) PARC.push({ x: b.x, y: b.y, vx: rnd(-40, 40), vy: rnd(-40, 10), t: 0.8, r: rnd(1.5, 3.5), kab: 1 });
   return true;
 }
@@ -2469,6 +2478,33 @@ function etkilesimKare(dt) {
    köpekbalığı ziyareti, mevsimler, okullar, hediyeleşme, fotoğraf modu,
    ansiklopedi, unvanlar
    ===================================================================== */
+/* hareketle acıkma ve açlıktan ölüm */
+function hareketAcik(px) {
+  if (!S || px <= 0) return; const once = S.tok;
+  S.tok = Math.max(0, S.tok - px * HAREKET_ACLIK * (has('tok') ? 0.65 : 1));
+  if (S.tok <= 0 && once > 0 && !S.acSifir) S.acSifir = simdi();
+}
+const olumKalan = () => S && S.acSifir ? OLUM_GUN * 864e5 - (simdi() - S.acSifir) : null;
+function olumKontrol() {
+  if (!S || girisAcik || ogModu) return false; const k = olumKalan();
+  if (k == null || k > 0) return false;
+  const eski = S, gun = yasGun(eski), boy = boyHesap(eski);
+  const ic = modal(`<h2>🕯️ ${esc(eski.ad)}</h2><canvas class="onz" id="olOnz" width="900" height="300"></canvas>
+    <p>${T(`<b>${esc(eski.ad)}</b> ${OLUM_GUN} gündür hiç yemek yiyemedi ve dayanamadı. Son gücüyle yumurtalarını bıraktı. ${gun} gün yaşadı, ${boy} cm oldu; anısı Şöhret Duvarı'nda.`, `<b>${esc(eski.ad)}</b> went ${OLUM_GUN} days without any food and couldn’t hold on. With its last strength it laid its eggs. It lived ${gun} days and grew to ${boy} cm; it is remembered in the Hall of Fame.`)}</p>
+    <p class="kucuk">${T('İncilerin, renklerin, süslerin, arkadaşların ve akvaryumdaki yerin seninle kalır.', 'Your pearls, colours, decor, friends and aquarium spot stay with you.')}</p>
+    <label for="olAd">${T('YAVRUNUN ADI', 'NAME FOR THE YOUNG ONE')}</label><input type="text" id="olAd" maxlength="16" value="${esc(eski.ad)}">
+    <button class="ana" type="button" id="olTamam">${T('Yumurtayı çatlat 🥚', 'Hatch the egg 🥚')}</button>`, { kapat: false });
+  onizlemeEkle(ic.querySelector('#olOnz'), null, { ciz: (c, w, h, f) => { for (let i = 0; i < 5; i++) { const x = w * (0.38 + 0.06 * i), y = h * 0.6 + Math.sin(i * 1.7) * 18, r = h * 0.1; const g = c.createRadialGradient(x - r * 0.3, y - r * 0.3, 1, x, y, r); g.addColorStop(0, 'rgba(255,250,230,.95)'); g.addColorStop(1, 'rgba(255,210,140,.55)'); c.fillStyle = g; c.beginPath(); c.arc(x, y + Math.sin(f * 0.6 + i) * 3, r, 0, TAU); c.fill(); } balikCiz(c, benVeri(), w * 0.5, h * 0.28, h * 0.5, f * 0.3, 1, { alfa: 0.35, solgun: true, uyku: true }); } });
+  ic.querySelector('#olTamam').onclick = () => {
+    const ad = adTemizle(ic.querySelector('#olAd').value) || eski.ad;
+    eski.ata.unshift({ ad: eski.ad, tr: eski.tur, al: eski.alan, r: eski.renk, b: boy, gun, ng: eski.nesil, t: simdi(), olum: 1 }); eski.ata = eski.ata.slice(0, 30);
+    S = yeniKayit(ad, eski); S.nesil = eski.nesil + 1; S.renk = 0; S.melez = null; S.acSifir = null;
+    tamamla2(S); tamamla3(S); S.rehber = 99; S.gun = eski.gun; ilerlet(); kaydet(); uyeYaz(true); NET.rekorYaz(rekorVeri());
+    modalKapat(); BAL.delete('ben'); SES.dogum(); duyur(T(`🥚 ${ad} yumurtadan çıktı. Bu sefer onu aç bırakma 💙`, `🥚 ${ad} has hatched. Don’t let it go hungry this time 💙`), 1); uiGuncelle();
+  };
+  return true;
+}
+
 function tamamla3(s) {
   const d = { rehber: 0, rb: {}, sefer: null, seferGun: { g: '', n: 0 }, okul: null, unvan: '', hediyeGun: { g: '', n: 0 } };
   for (const k of Object.keys(d)) if (s[k] === undefined) s[k] = d[k];
@@ -2588,7 +2624,7 @@ const beceri = () => BECERI[S && S.asama >= 2 && S.tur ? S.tur : '_'];
 function beceriKullan() {
   if (!S || beceriBekle > 0 || AV) return; const b = BAL.get('ben'); if (!b) return;
   const id = S.asama >= 2 && S.tur ? S.tur : '_'; beceriBekle = id === '_' ? 8 : 20;
-  const g = gunVeri(); g.beceri = (g.beceri || 0) + 1; istArt('beceri'); mutluEkle(1); gorevKontrol();
+  const g = gunVeri(); g.beceri = (g.beceri || 0) + 1; istArt('beceri'); mutluEkle(1); hareketAcik(1500); gorevKontrol();
   switch (id) {
     case 'palyaco': KALKAN = 10; SES.basari(); break;
     case 'cerrah': for (const s of YERLI.suru) { const dx = s.x - b.x, dy = s.y - b.y, d = Math.hypot(dx, dy) || 1; s.vx += dx / d * 600; s.vy += dy / d * 600; } { const dx = TOP.x - b.x, dy = TOP.y - b.y, d = Math.hypot(dx, dy) || 1; if (d < 250) { TOP.vx += dx / d * 300; TOP.vy += dy / d * 300; } } SES.carp(); break;
@@ -2853,7 +2889,7 @@ function kare(ts) {
   if (S && !girisAcik) panelResim(dt);
   uiZ -= dt; if (uiZ <= 0) { uiZ = 1; if (S && !girisAcik) { balikSenk(); uiGuncelle(); } }
   albumZ -= dt; if (albumZ <= 0) { albumZ = 5; if (S && !girisAcik && !ogModu) albumTara(); }
-  kayitZ -= dt; if (kayitZ <= 0) { kayitZ = 30; if (S && !girisAcik) { ilerlet(); gorevKontrol(); kaydet(false); } }
+  kayitZ -= dt; if (kayitZ <= 0) { kayitZ = 30; if (S && !girisAcik) { ilerlet(); gorevKontrol(); kaydet(false); if ($('modal').hidden) olumKontrol(); } }
   requestAnimationFrame(kare);
 }
 
@@ -2861,7 +2897,7 @@ function kare(ts) {
 boyut();
 if (ogModu) { demoKur(); $('ust').hidden = true; S = null; balikSenk(); yerliKur(); }
 else if (!S) { girisGoster(); yerliKur(); }
-else { ilerlet(); gunlukGorevler(); gorevKontrol(); basarimKontrol(); kaydet(false); panelAc(); if (bekleyenSecim()) setTimeout(secimAc, 700); else if (!S.kumandaOgrendi) setTimeout(() => duyur(T('👆 Yeni: suya dokun, balığın oraya yüzsün. Parlayan planktonları ye!', '👆 New: tap the water and your fish swims there. Eat the glowing plankton!'), 1), 1200); }
+else { ilerlet(); gunlukGorevler(); gorevKontrol(); basarimKontrol(); kaydet(false); panelAc(); if (olumKontrol()) { } else if (bekleyenSecim()) setTimeout(secimAc, 700); else if (!S.kumandaOgrendi) setTimeout(() => duyur(T('👆 Yeni: suya dokun, balığın oraya yüzsün. Parlayan planktonları ye!', '👆 New: tap the water and your fish swims there. Eat the glowing plankton!'), 1), 1200); }
 NET.baslat().then(() => { if (S && !girisAcik) agKur(); else uiGuncelle(); });
 requestAnimationFrame(kare);
 window.DM = { durum: () => ({ S, BAL, NET, AV, ALAN, PLK, YIR }), kazan: m => { kazan(m, { sinirsiz: true, tokBagimsiz: true }); kaydet(); uiGuncelle(); }, avBitir, sifirla: () => { localStorage.removeItem(KEY); location.reload(); } };

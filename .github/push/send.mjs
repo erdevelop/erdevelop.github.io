@@ -94,6 +94,9 @@ export function message(d, ORN = {}, now = new Date()) {
 export function balikMesaj(d, now = new Date()) {
   const { date, min } = localNow(d.tz, now); if (min < 540 || min > 1320) return null;
   const en = d.dil === 'en', ad = String(d.ad || (en ? 'Your fish' : 'Balığın')).slice(0, 16), P = PAGES.balik;
+  const ol = +d.olum || 0, kalanG = ol ? Math.ceil((ol - now.getTime()) / 864e5) : 0;
+  if (ol && kalanG >= 1 && kalanG <= 4 && d.lastOlum !== date)
+    return { msg: { title: en ? `⚠️ ${ad} is starving` : `⚠️ ${ad} açlıktan ölmek üzere`, body: en ? `It hasn’t eaten for days. Feed it within ${kalanG} day${kalanG > 1 ? 's' : ''} or it will lay its eggs and die.` : `Günlerdir hiç yemek yemedi. ${kalanG} gün içinde beslemezsen yumurtalarını bırakıp ölecek.`, url: P.url, tag: P.tag + '-olum' }, upd: { lastOlum: date } };
   if (+d.ac && now.getTime() >= +d.ac && String(d.lastAc || '') !== String(d.ac))
     return { msg: { title: en ? `🐟 ${ad} is hungry` : `🐟 ${ad} acıktı`, body: en ? 'Drop some food so it keeps growing. The plankton hunt and today’s surprise are waiting too.' : 'Biraz yem at da büyümeye devam etsin. Plankton avı ve günün sürprizi de seni bekliyor.', url: P.url, tag: P.tag }, upd: { lastAc: +d.ac } };
   if (+d.sefer && now.getTime() >= +d.sefer && String(d.lastSefer || '') !== String(d.sefer))
