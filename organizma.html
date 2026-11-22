@@ -188,7 +188,7 @@ body.er-durumlu #mini{bottom:32px}
       <div data-l="tr">
         <ul>
           <li><b>Yön:</b> fareyle ya da parmağınla nereye gideceğini göster. İmleç organizmana yakınsa yavaşlarsın.</li>
-          <li><b>Hamle:</b> tıkla, <b>Boşluk</b> tuşuna bas ya da telefonda <b>HAMLE</b> düğmesine dokun. Kısa bir atılma yaparsın; sonra birkaç saniye dinlenmen gerekir.</li>
+          <li><b>Hamle:</b> tıkla, <b>Boşluk</b> tuşuna bas; dokunmatik ekranda gitmek istediğin yöne <b>hızlıca iki kez dokun</b> ya da <b>HAMLE</b> düğmesini kullan. Kısa bir atılma yaparsın; sonra birkaç saniye dinlenmen gerekir.</li>
           <li><b>Büyük olan küçüğü yer:</b> senden en az dörtte bir büyük olan seni yutabilir. Etrafında kırmızı halka görünen organizmalardan uzak dur.</li>
           <li><b>Küçük olan daha hızlıdır:</b> büyüdükçe yavaşlarsın. Kaçan avı ancak doğru anda yapılan hamleyle yakalarsın. Yeşil halka, avın hamle menzilinde olduğunu gösterir.</li>
           <li><b>Plankton</b> (parlak küçük noktalar) yiyerek yavaş yavaş büyürsün. Çok büyükler zamanla biraz kütle kaybeder.</li>
@@ -208,7 +208,7 @@ body.er-durumlu #mini{bottom:32px}
       <div data-l="en" hidden>
         <ul>
           <li><b>Move:</b> point where to go with the mouse or your finger. Keep the pointer close to your organism to slow down.</li>
-          <li><b>Dash:</b> click, press <b>Space</b> or tap <b>DASH</b> on a phone. You lunge forward, then need a few seconds to recover.</li>
+          <li><b>Dash:</b> click or press <b>Space</b>; on a touch screen <b>double-tap</b> towards where you want to go, or use the <b>DASH</b> button. You lunge forward, then need a few seconds to recover.</li>
           <li><b>The big eat the small:</b> anything at least a quarter bigger than you can swallow you. Keep away from organisms with a red ring.</li>
           <li><b>The small are faster:</b> you slow down as you grow. A fleeing prey can only be caught with a well-timed dash. A green ring means the prey is within dash range.</li>
           <li>Eat <b>plankton</b> (the small glowing dots) to grow slowly. Very large organisms slowly lose some mass.</li>
@@ -1219,7 +1219,7 @@ function basla() {
   $('menu').hidden = true; $('olum').hidden = true;
   ['durum', 'lider', 'mini'].forEach(i => $(i).hidden = false); $('hamleBtn').hidden = !DOKUNMA;
   $('ipucu').hidden = false; $('ipucu').style.opacity = 1;
-  $('ipucu').textContent = DOKUNMA ? T('Parmağını sürükleyerek yönlendir · HAMLE ile atıl · BÖL ile bölün', 'Drag to steer · DASH to lunge · SPLIT to divide') : T('Fareyle yönlendir · Tıkla/Boşluk: hamle · Sağ tık/E: bölün · 1–6: ifade', 'Steer with the mouse · Click/Space: dash · Right-click/E: split · 1–6: emotes');
+  $('ipucu').textContent = DOKUNMA ? T('Parmağını sürükleyerek yönlendir · Çift dokun ya da HAMLE: atıl · BÖL: bölün', 'Drag to steer · Double-tap or DASH: lunge · SPLIT: divide') : T('Fareyle yönlendir · Tıkla/Boşluk: hamle · Sağ tık/E: bölün · 1–6: ifade', 'Steer with the mouse · Click/Space: dash · Right-click/E: split · 1–6: emotes');
   SES.dogum(); KAYIT.oyun++;
 }
 function oyuncuOldu(yiyen) {
@@ -1247,11 +1247,16 @@ function dkYaz(s, birim) {
 }
 
 /* ================= girdi ================= */
+const sonDok = { t: 0, x: 0, y: 0 };
 cv.addEventListener('pointermove', e => { isaret.x = e.clientX; isaret.y = e.clientY; isaret.var = true; });
 cv.addEventListener('pointerdown', e => {
   isaret.x = e.clientX; isaret.y = e.clientY; isaret.var = true; 
   if (olumZ > 0 && olumZ < 2.4) { olumZ = 0.01; return; }
-  if (e.pointerType === 'mouse' && e.button === 0 && oyunda) oyuncuHamle();
+  if (e.pointerType === 'mouse') { if (e.button === 0 && oyunda) oyuncuHamle(); return; }
+  /* dokunmatik: hızlı çift dokunuş, dokunulan yöne hamle */
+  const n = performance.now();
+  if (oyunda && n - sonDok.t < 360 && Math.hypot(e.clientX - sonDok.x, e.clientY - sonDok.y) < 70) { sonDok.t = 0; if (oyuncu && !oyuncu.olu) { oyuncuKontrol(); oyuncu.kon.g = Math.max(oyuncu.kon.g, 0.1); oyuncuHamle(); } }
+  else { sonDok.t = n; sonDok.x = e.clientX; sonDok.y = e.clientY; }
 });
 cv.addEventListener('contextmenu', e => { e.preventDefault(); if (oyunda) oyuncuBol(); });
 addEventListener('keydown', e => {
