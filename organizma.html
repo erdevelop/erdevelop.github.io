@@ -385,22 +385,57 @@ const SES = (() => {
 })();
 
 /* ================= ağ (çevrimiçi oyuncular) =================
-   Varsayılan: Firebase Realtime Database ('organizma/o' oyuncular, 'organizma/e' olaylar).
+   Varsayılan: Firebase Realtime Database. Trafik oyuncu sayısının karesiyle büyümesin diye bölgeli gönderim:
+     organizma/b/<hücre>/<id>  ayrıntılı kayıt (saniyede ~3); herkes yalnızca kendi hücresini ve 8 komşusunu dinler
+     organizma/k/<id>          kaba konum (4 sn'de bir); herkes dinler → oyuncu sayısı, mini harita, yön oku
+     organizma/e/<id>          olaylar (yutulma), organizma/r rekorlar
+   Kurallar b ve k'ye izin vermiyorsa eski düzene (organizma/o, herkes herkesi dinler) düşer.
    ?ag=yerel → aynı tarayıcıdaki sekmeler arasında BroadcastChannel (deneme için). ?ag=yok → kapalı. */
 const AG = (() => {
   const CONFIG = { apiKey: 'AIzaSyCQly5YyU9TNMfvZNBVA1UPZuglO8Rzogo', authDomain: 'mesaj1-fc2c5.firebaseapp.com', databaseURL: 'https://mesaj1-fc2c5-default-rtdb.firebaseio.com', projectId: 'mesaj1-fc2c5', appId: '1:835014166916:web:f47e7f8ec1641bc44c75d1' };
   const KOK = 'organizma';
   const uzak = new Map();          // id → { v: veri, alindi: yerel zaman }
   let mod = PARAM.get('ag') || 'fb', durum = 'baglaniyor', ben = null, db = null, app = null, kayit = null, olayRef = null, bc = null, saatFarki = 0, olayCb = () => { };
+  let eski = false, hucrem = null, kabaKayit = null, kabaZ = 0; const dinlenen = new Map(), komsu = new Set(), HB = 1400, HN = 6;
+  const hucreAd = (x, y) => 'c' + kis(Math.floor((x + R) / HB), 0, HN - 1) + '_' + kis(Math.floor((y + R) / HB), 0, HN - 1);
   const simdi = () => Date.now() + saatFarki;
-  function al(id, v) { if (!v || id === ben) return; if (v.t && simdi() - v.t > 15000) return; uzak.set(id, { v, alindi: performance.now() }); }
+  function al(id, v, detay) {
+    if (!v || id === ben) return; if (v.t && simdi() - v.t > (detay ? 15000 : 20000)) return;
+    const e = uzak.get(id), n = performance.now();
+    if (!detay && e) { if (e.detay && n - e.alindi < 1500) return; uzak.set(id, { v: Object.assign({}, e.v, v, { d: 0, g: 0, k: 0 }), alindi: n, detay: false }); return; }   // kaba konum: taze ayrıntı varken yok sayılır
+    uzak.set(id, { v, alindi: n, detay: !!detay });
+  }
+  /* hücre aboneliği: yalnızca bulunduğum hücre ve komşuları */
+  function hucreAyarla(ad) {
+    komsu.clear();
+    if (ad) { const [cx, cy] = ad.slice(1).split('_').map(Number); for (let dx = -1; dx <= 1; dx++) for (let dy = -1; dy <= 1; dy++) { const x = cx + dx, y = cy + dy; if (x >= 0 && y >= 0 && x < HN && y < HN) komsu.add('c' + x + '_' + y); } }
+    for (const [a, r] of dinlenen) if (!komsu.has(a)) { r.off(); dinlenen.delete(a); }
+    if (!db || eski) return;
+    for (const a of komsu) {
+      if (dinlenen.has(a)) continue; const r = db.ref(KOK + '/b/' + a);
+      r.on('child_added', s => al(s.key, s.val(), true), eskiyeDus); r.on('child_changed', s => al(s.key, s.val(), true), () => { });
+      r.on('child_removed', s => { const e = uzak.get(s.key); if (e) e.detay = false; }, () => { });
+      dinlenen.set(a, r);
+    }
+  }
+  function eskiDinle() {
+    const r = db.ref(KOK + '/o'), hata = () => { durum = 'kapali'; };
+    r.on('child_added', s => al(s.key, s.val(), true), hata); r.on('child_changed', s => al(s.key, s.val(), true), hata); r.on('child_removed', s => uzak.delete(s.key), hata);
+  }
+  function eskiyeDus() {   // kurallar bölgeli yapıya izin vermiyor
+    if (eski || !db) return; eski = true; hucreAyarla(null); try { db.ref(KOK + '/k').off(); } catch (e) { }
+    if (kayit) { try { kayit.onDisconnect().cancel(); } catch (e) { } kayit = null; } kabaKayit = null; hucrem = null;
+    eskiDinle();
+    if (ben) { kayit = db.ref(KOK + '/o/' + ben); kayit.onDisconnect().remove(); }
+  }
   const yukle = src => new Promise((ok, no) => { const s = document.createElement('script'); s.src = src; s.onload = ok; s.onerror = no; document.head.appendChild(s); });
   async function baslat() {
     if (mod === 'yok') { durum = 'kapali'; return; }
     if (mod === 'yerel') {
       bc = new BroadcastChannel('organizma-deneme'); durum = 'acik';
       bc.onmessage = ({ data: m }) => {
-        if (m.tip === 'o') al(m.id, m.v); else if (m.tip === 'sil') uzak.delete(m.id);
+        if (m.tip === 'b') { if (komsu.has(m.ad)) al(m.id, m.v, true); } else if (m.tip === 'k') al(m.id, m.v, false);
+        else if (m.tip === 'bsil') { const e = uzak.get(m.id); if (e) e.detay = false; } else if (m.tip === 'sil') uzak.delete(m.id);
         else if (m.tip === 'e' && m.hedef === ben) olayCb(m.v);
       };
       return;
@@ -413,31 +448,48 @@ const AG = (() => {
       db = firebase.database(app);
       db.ref('.info/serverTimeOffset').on('value', s => saatFarki = s.val() || 0);
       db.ref('.info/connected').on('value', s => { if (durum !== 'kapali') durum = s.val() ? 'acik' : 'baglaniyor'; });
-      const r = db.ref(KOK + '/o'), hata = () => { durum = 'kapali'; };
-      r.on('child_added', s => al(s.key, s.val()), hata);
-      r.on('child_changed', s => al(s.key, s.val()), hata);
-      r.on('child_removed', s => uzak.delete(s.key), hata);
+      const r = db.ref(KOK + '/k');
+      r.on('child_added', s => al(s.key, s.val(), false), eskiyeDus);
+      r.on('child_changed', s => al(s.key, s.val(), false), () => { });
+      r.on('child_removed', s => uzak.delete(s.key), () => { });
     } catch (e) { durum = 'kapali'; }
   }
   function katil(id) {
-    ben = id;
+    ben = id; hucrem = null; kabaZ = 0;
     if (db && durum !== 'kapali') {
-      kayit = db.ref(KOK + '/o/' + id); kayit.onDisconnect().remove();
+      if (eski) { kayit = db.ref(KOK + '/o/' + id); kayit.onDisconnect().remove(); }
+      else { kabaKayit = db.ref(KOK + '/k/' + id); kabaKayit.onDisconnect().remove(); }
       olayRef = db.ref(KOK + '/e/' + id); olayRef.onDisconnect().remove();
       olayRef.on('child_added', s => { const v = s.val(); s.ref.remove().catch(() => { }); olayCb(v); }, () => { });
     }
   }
+  const kaba = v => ({ n: v.n, s: v.s, h: v.h, x: v.x, y: v.y, m: v.m, a: v.a });
   function gonder(v) {
-    if (!ben) return;
-    if (bc) { bc.postMessage({ tip: 'o', id: ben, v: Object.assign({ t: Date.now() }, v) }); return; }
-    if (kayit && durum === 'acik') kayit.set(Object.assign({ t: firebase.database.ServerValue.TIMESTAMP }, v)).catch(e => { if (/permission/i.test(e && e.message)) durum = 'kapali'; });
+    if (!ben) return; const ad = hucreAd(v.x, v.y), n = performance.now(), kabaVakti = n - kabaZ > 4000;
+    if (bc) {
+      if (ad !== hucrem) { if (hucrem) bc.postMessage({ tip: 'bsil', id: ben }); hucrem = ad; hucreAyarla(ad); }
+      bc.postMessage({ tip: 'b', ad, id: ben, v: Object.assign({ t: Date.now() }, v) });
+      if (kabaVakti) { kabaZ = n; bc.postMessage({ tip: 'k', id: ben, v: Object.assign({ t: Date.now() }, kaba(v)) }); }
+      return;
+    }
+    if (!db || durum !== 'acik') return;
+    const TS = firebase.database.ServerValue.TIMESTAMP, izinYok = e => /permission/i.test((e && (e.code || e.message)) || '');
+    if (eski) { if (kayit) kayit.set(Object.assign({ t: TS }, v)).catch(e => { if (izinYok(e)) durum = 'kapali'; }); return; }
+    if (ad !== hucrem) {   // hücre değişti: eski kaydı sil, yenisine geç, abonelikleri güncelle
+      if (kayit) { kayit.onDisconnect().cancel(); kayit.remove().catch(() => { }); }
+      hucrem = ad; kayit = db.ref(KOK + '/b/' + ad + '/' + ben); kayit.onDisconnect().remove(); hucreAyarla(ad);
+    }
+    kayit.set(Object.assign({ t: TS }, v)).catch(e => { if (izinYok(e)) eskiyeDus(); });
+    if (kabaVakti && kabaKayit) { kabaZ = n; kabaKayit.set(Object.assign({ t: TS }, kaba(v))).catch(e => { if (izinYok(e)) eskiyeDus(); }); }
   }
   function ayril() {
     if (!ben) return;
     if (bc) bc.postMessage({ tip: 'sil', id: ben });
     if (kayit) { kayit.remove().catch(() => { }); kayit.onDisconnect().cancel(); kayit = null; }
+    if (kabaKayit) { kabaKayit.remove().catch(() => { }); kabaKayit.onDisconnect().cancel(); kabaKayit = null; }
     if (olayRef) { olayRef.off(); olayRef.remove().catch(() => { }); olayRef = null; }
-    ben = null;
+    hucreAyarla(null); hucrem = null; ben = null;
+    for (const e of uzak.values()) e.detay = false;
   }
   function olay(hedef, v) {
     if (bc) bc.postMessage({ tip: 'e', hedef, v });
@@ -457,9 +509,9 @@ const AG = (() => {
     db.ref(KOK + '/r/' + k).orderByChild('s').limitToLast(10).once('value').then(s => { const L = []; s.forEach(c => { L.push(c.val()); }); cb(L.reverse()); }).catch(() => cb(null));
   }
   /* uzun süre güncellenmeyenleri at (onDisconnect çalışmamış olabilir) */
-  setInterval(() => { const n = performance.now(); for (const [id, u] of uzak) if (n - u.alindi > 8000) uzak.delete(id); }, 2000);
+  setInterval(() => { const n = performance.now(); for (const [id, u] of uzak) if (n - u.alindi > (u.detay ? 8000 : 13000)) uzak.delete(id); }, 2000);
   addEventListener('pagehide', ayril);
-  return { baslat, katil, gonder, ayril, olay, uzak, durum: () => durum, olayda: f => olayCb = f, simdi, gun, rekorYaz, rekorOku };
+  return { baslat, katil, gonder, ayril, olay, uzak, durum: () => durum, olayda: f => olayCb = f, simdi, gun, rekorYaz, rekorOku, hata: () => ({ eski, hucrem, komsu: [...komsu], dinlenen: [...dinlenen.keys()], uzak: [...uzak].map(([id, u]) => [id.slice(0, 4), u.detay, Math.round(u.v.x), Math.round(u.v.y), Math.round(performance.now() - u.alindi)]) }) };
 })();
 
 /* ================= varlıklar ================= */
@@ -731,6 +783,7 @@ function hareket(o, dt) {
 function ye(a, b) {
   if (a.uzak && (b === oyuncu || b.uzak)) return;     // uzak oyuncu beni ancak kendi cihazında yer
   if (b.uzak && a !== oyuncu) return;                 // uzak oyuncuyu yalnızca ben yiyebilirim
+  if (b.uzak) { const e = AG.uzak.get(b.netId); if (!e || !e.detay) return; }   // yalnızca ayrıntılı (yakın) kaydı olan yenebilir
   if (b === oyuncu) oyuncuOldu(a);
   if (b.uzak) { yenmisUzak.add(b.netId); AG.olay(b.netId, { tip: 'ye', n: a.nick, m: Math.round(a.m) }); }
   if (!a.uzak) { a.m = Math.min(KUTLE_UST, a.m + b.m * 0.8); a.enBuyuk = Math.max(a.enBuyuk, a.m); }
@@ -867,7 +920,7 @@ function vekilleriEsle(dt) {
   for (const [id, o] of vekil) if (!AG.uzak.has(id) || yenmisUzak.has(id)) { vekil.delete(id); if (!o.olu) { o.olu = true; o.emil = null; o.olum = 0; P.push({ x: o.x, y: o.y, vx: 0, vy: 0, r: o.r, o: 0.4, t: 0, s: 0.5, tip: 2, h: o.hue }); } }
 }
 function agGonder(dt) {
-  agZ -= dt; if (agZ > 0 || !oyuncu || oyuncu.olu || !oyuncu.netId) return; agZ = 0.2;
+  agZ -= dt; if (agZ > 0 || !oyuncu || oyuncu.olu || !oyuncu.netId) return; agZ = 0.3;
   AG.gonder({ n: oyuncu.nick, s: oyuncu.tur, h: Math.round(oyuncu.hue), x: Math.round(oyuncu.x), y: Math.round(oyuncu.y), m: Math.round(oyuncu.m * 10) / 10, a: Math.round(oyuncu.yas), d: oyuncu.hamle > 0 ? 1 : 0, k: oyuncu.koruma > 0 ? 1 : 0, p: oyuncu.desen | 0, g: oyuncu.gizli > 0.5 ? 1 : 0, z: oyuncu.ev.zar, e: oyuncu.ifadeKod || 0 });
 }
 AG.olayda(v => {
@@ -1730,7 +1783,7 @@ if (PARAM.has('zt')) zEk = +PARAM.get('zt') || 0;
 gorevHazirla(); dunyaKur(); menuKur(); AG.baslat();
 if (PARAM.has('og')) { $('menu').hidden = true; $('ust').hidden = true; }
 requestAnimationFrame(kare);
-window.ORG = { durum: () => ({ O, Y, M, V, oyuncu, kamera, zaman, AV, OLAY, BOLGE, KAYIT, evSecenek, intikam }), basla, hamle: oyuncuHamle, bol: oyuncuBol, evrimSec, isaret, MENZIL, ye, saat, zamanKay: s => { zEk = s; }, basarim, gorevIlerle, dnaEkle, menuAc };
+window.ORG = { durum: () => ({ O, Y, M, V, oyuncu, kamera, zaman, AV, OLAY, BOLGE, KAYIT, evSecenek, intikam }), basla, hamle: oyuncuHamle, bol: oyuncuBol, evrimSec, isaret, MENZIL, ye, saat, zamanKay: s => { zEk = s; }, basarim, gorevIlerle, dnaEkle, menuAc, ag: () => AG.hata() };
 })();
 </script>
 <script data-goatcounter="https://erdevelop.goatcounter.com/count" async src="//gc.zgo.at/count.js"></script>
