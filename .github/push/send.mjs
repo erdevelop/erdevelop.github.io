@@ -96,6 +96,8 @@ export function balikMesaj(d, now = new Date()) {
   const en = d.dil === 'en', ad = String(d.ad || (en ? 'Your fish' : 'Balığın')).slice(0, 16), P = PAGES.balik;
   if (+d.ac && now.getTime() >= +d.ac && String(d.lastAc || '') !== String(d.ac))
     return { msg: { title: en ? `🐟 ${ad} is hungry` : `🐟 ${ad} acıktı`, body: en ? 'Drop some food so it keeps growing. The plankton hunt and today’s surprise are waiting too.' : 'Biraz yem at da büyümeye devam etsin. Plankton avı ve günün sürprizi de seni bekliyor.', url: P.url, tag: P.tag }, upd: { lastAc: +d.ac } };
+  if (+d.sefer && now.getTime() >= +d.sefer && String(d.lastSefer || '') !== String(d.sefer))
+    return { msg: { title: en ? '🧭 Your explorer is back' : '🧭 Kâşif denizatı döndü', body: en ? `It brought loot for ${ad}. Come and collect it!` : `${ad} için ganimet getirdi. Gel ve topla!`, url: P.url, tag: P.tag + '-sefer' }, upd: { lastSefer: +d.sefer } };
   const s = +d.seri || 0;
   if (s >= 2 && d.done !== date && min >= toMin(d.saat || '20:30') && d.lastSeri !== date)
     return { msg: { title: en ? `🔥 Keep your ${s}-day streak` : `🔥 ${s} günlük serin bozulmasın`, body: en ? `${ad} is waiting. One feed today is enough.` : `${ad} seni bekliyor. Bugün bir kez yem atman yeterli.`, url: P.url, tag: P.tag + '-seri' }, upd: { lastSeri: date } };
