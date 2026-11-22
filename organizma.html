@@ -193,7 +193,7 @@ body.er-durumlu #mini{bottom:32px}
           <li><b>Küçük olan daha hızlıdır:</b> büyüdükçe yavaşlarsın. Kaçan avı ancak doğru anda yapılan hamleyle yakalarsın. Yeşil halka, avın hamle menzilinde olduğunu gösterir.</li>
           <li><b>Plankton</b> (parlak küçük noktalar) yiyerek yavaş yavaş büyürsün. Çok büyükler zamanla biraz kütle kaybeder.</li>
           <li><b>Mikro canlılar:</b> bakteri, diatom gibi küçük canlılar ağır ağır dolaşır, plankton ve birbirlerini yer, büyüyünce bölünür. Planktondan daha besleyicidirler; yuttuğunda içinde yavaşça dağılırlar.</li>
-          <li><b>Bölünme:</b> sağ tık, <b>E</b> tuşu ya da <b>BÖL</b> düğmesiyle ikiye bölünürsün (en az 50 kütle). Yarın ileri fırlar, yakaladığını yer ve birkaç saniye sonra sana geri katılır; o sırada iki parça da daha küçük ve savunmasızdır.</li>
+          <li><b>Bölünme:</b> sağ tık, <b>E</b> tuşu, <b>BÖL</b> düğmesi ya da dokunmatik ekranda bir parmağın ekrandayken <b>ikinci parmakla dokunarak</b> ikiye bölünürsün (en az 50 kütle). Yarın ileri fırlar, yakaladığını yer ve birkaç saniye sonra sana geri katılır; o sırada iki parça da daha küçük ve savunmasızdır.</li>
           <li><b>Evrim:</b> büyüdükçe üç özellikten birini seçersin (1–2–3 tuşları): daha uzun hamle, kalın zar, kamuflaj, besin akımı…</li>
           <li><b>Türler:</b> her türün bir özelliği var; tür kutusunun altında yazar.</li>
           <li><b>Bölgeler:</b> yosun alanları besin doludur; bulanık suda saklanabilirsin; girdaplar seni sürükler; asitli bölgeler kütleni eritir.</li>
@@ -213,7 +213,7 @@ body.er-durumlu #mini{bottom:32px}
           <li><b>The small are faster:</b> you slow down as you grow. A fleeing prey can only be caught with a well-timed dash. A green ring means the prey is within dash range.</li>
           <li>Eat <b>plankton</b> (the small glowing dots) to grow slowly. Very large organisms slowly lose some mass.</li>
           <li><b>Microbes:</b> small creatures such as bacteria and diatoms drift slowly, eat plankton and each other, and divide when they grow. They are more nourishing than plankton; once swallowed they slowly dissolve inside you.</li>
-          <li><b>Split:</b> right-click, press <b>E</b> or tap <b>SPLIT</b> to divide in two (at least 50 mass). Your half shoots forward, eats what it catches and rejoins you after a few seconds; meanwhile both parts are smaller and vulnerable.</li>
+          <li><b>Split:</b> right-click, press <b>E</b>, tap <b>SPLIT</b>, or on a touch screen <b>touch with a second finger</b> while the first is down, to divide in two (at least 50 mass). Your half shoots forward, eats what it catches and rejoins you after a few seconds; meanwhile both parts are smaller and vulnerable.</li>
           <li><b>Evolution:</b> as you grow you pick one of three traits (keys 1–2–3): longer dash, thick membrane, camouflage, feeding current…</li>
           <li><b>Species:</b> each species has a trait, shown under its tile.</li>
           <li><b>Zones:</b> algae fields are rich in food; you can hide in murky water; whirlpools drag you along; acid zones dissolve your mass.</li>
@@ -1219,7 +1219,7 @@ function basla() {
   $('menu').hidden = true; $('olum').hidden = true;
   ['durum', 'lider', 'mini'].forEach(i => $(i).hidden = false); $('hamleBtn').hidden = !DOKUNMA;
   $('ipucu').hidden = false; $('ipucu').style.opacity = 1;
-  $('ipucu').textContent = DOKUNMA ? T('Parmağını sürükleyerek yönlendir · Çift dokun ya da HAMLE: atıl · BÖL: bölün', 'Drag to steer · Double-tap or DASH: lunge · SPLIT: divide') : T('Fareyle yönlendir · Tıkla/Boşluk: hamle · Sağ tık/E: bölün · 1–6: ifade', 'Steer with the mouse · Click/Space: dash · Right-click/E: split · 1–6: emotes');
+  $('ipucu').textContent = DOKUNMA ? T('Sürükle: yön · Çift dokun: hamle · İkinci parmak: bölün', 'Drag: steer · Double-tap: dash · Second finger: split') : T('Fareyle yönlendir · Tıkla/Boşluk: hamle · Sağ tık/E: bölün · 1–6: ifade', 'Steer with the mouse · Click/Space: dash · Right-click/E: split · 1–6: emotes');
   SES.dogum(); KAYIT.oyun++;
 }
 function oyuncuOldu(yiyen) {
@@ -1248,8 +1248,16 @@ function dkYaz(s, birim) {
 
 /* ================= girdi ================= */
 const sonDok = { t: 0, x: 0, y: 0 };
-cv.addEventListener('pointermove', e => { isaret.x = e.clientX; isaret.y = e.clientY; isaret.var = true; });
+const parmak = new Set(); let yonParmak = null;   // dokunan parmaklar; ilk parmak yön verir
+const parmakBirak = e => { parmak.delete(e.pointerId); if (e.pointerId === yonParmak) yonParmak = null; };
+cv.addEventListener('pointerup', parmakBirak); cv.addEventListener('pointercancel', parmakBirak);
+cv.addEventListener('pointermove', e => { if (e.pointerType !== 'mouse' && yonParmak !== null && e.pointerId !== yonParmak) return; isaret.x = e.clientX; isaret.y = e.clientY; isaret.var = true; });
 cv.addEventListener('pointerdown', e => {
+  if (e.pointerType !== 'mouse') {
+    parmak.add(e.pointerId);
+    if (parmak.size >= 2 && yonParmak !== null) { if (oyunda && parmak.size === 2) oyuncuBol(); return; }   // ikinci parmak: bölün
+    yonParmak = e.pointerId;
+  }
   isaret.x = e.clientX; isaret.y = e.clientY; isaret.var = true; 
   if (olumZ > 0 && olumZ < 2.4) { olumZ = 0.01; return; }
   if (e.pointerType === 'mouse') { if (e.button === 0 && oyunda) oyuncuHamle(); return; }
