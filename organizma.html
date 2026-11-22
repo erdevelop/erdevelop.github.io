@@ -129,12 +129,12 @@ body.er-durumlu #mini{bottom:32px}
 @media (max-width:640px){
   #duyuru{left:10px;transform:none;align-items:flex-start;max-width:calc(100% - 180px)}#duyuru div{font-size:12px;padding:6px 10px;text-align:left}
   #evrim{bottom:calc(176px + env(safe-area-inset-bottom,0px))}.evSat small{font-size:10.5px}#dEv{display:none}
-  #lider{width:150px;font-size:11px;padding:6px 8px}#lider h4{font-size:10.5px}#lider li:nth-child(n+6):not(.ben){display:none}
+  #lider{width:150px;font-size:11px;padding:6px 8px}#lider h4{font-size:10.5px}#lider li:nth-child(n+6):not(.ben):not(.uz){display:none}
   #mini{width:104px;height:104px}
   #durum{gap:8px;padding:0 9px;font-size:12.5px}
   #ipucu{max-width:calc(100% - 20px);width:max-content;font-size:12px;bottom:calc(122px + env(safe-area-inset-bottom,0px))}
 }
-@media (max-width:420px){#lider li em.k{display:none}#ag span{display:none}#ust{gap:5px}.yuv{min-width:32px;padding:0 6px}}
+@media (max-width:420px){#lider li em.k{display:none}#ag span{font-size:10.5px;max-width:86px;display:inline-block;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;vertical-align:middle}#ust{gap:5px}.yuv{min-width:32px;padding:0 6px}}
 </style>
 <script type="application/ld+json">{"@context":"https://schema.org","@type":"VideoGame","name":"Organizma","url":"https://erdevelop.github.io/organizma.html","genre":["Action","Survival"],"gamePlatform":"Web browser","playMode":["SinglePlayer","MultiPlayer"],"inLanguage":["tr","en"],"isAccessibleForFree":true,"offers":{"@type":"Offer","price":"0","priceCurrency":"TRY"}}</script>
 <script async src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-4775308844679394" crossorigin="anonymous"></script>
@@ -846,6 +846,7 @@ function vekilleriEsle(dt) {
     if (!o) {
       o = yeniOrg({ netId: id, uzak: true, npc: false, x: v.x, y: v.y, m: v.m, tur: v.s | 0, hue: v.h, nick: String(v.n || '?').slice(0, 16), dogum: 0, yas: v.a || 0, desen: kis(v.p | 0, 0, DESENLER.length - 1), ev: Object.assign({}, BOS_EV, { zar: kis(v.z | 0, 0, 2) }), eSon: v.e || 0 });
       o.hx = v.x; o.hy = v.y; o.son = n; vekil.set(id, o); O.push(o);
+      if (oyunda && zaman > 4) duyur('🌐 ' + o.nick + T(' oyuna katıldı — kenardaki oku izle', ' joined — follow the arrow at the edge'), 'iyi', 4);
     }
     if (u.alindi !== o.alindi) {
       const ara = Math.max(0.05, (u.alindi - (o.alindi || u.alindi - 200)) / 1000);
@@ -1202,7 +1203,13 @@ function basla() {
   const nick = ($('nick').value.trim() || T('İsimsiz', 'Nameless')).slice(0, 16);
   KAYIT.nick = $('nick').value.trim(); KAYIT.tur = secTur; KAYIT.renk = secRenk; KAYIT.desen = secDesen; ls.set('organizma-kayit', KAYIT);
   let x, y, dene = 0, ok;
-  do { [x, y] = diskteNokta(600); ok = !O.some(o => !o.olu && o.m > 30 && Math.hypot(o.x - x, o.y - y) < 700); } while (!ok && ++dene < 40);
+  /* çevrimiçi biri varsa onun yakınında (ama dibinde değil) doğ: birbirinizi kolay bulursunuz */
+  const uz = [...vekil.values()].filter(o => !o.olu), yak = uz.length ? uz[(Math.random() * uz.length) | 0] : null;
+  do {
+    const yakin = yak && dene < 45, bos = yakin ? 360 : 700;
+    if (yakin) { const a = Math.random() * TAU, d = rnd(600, 1100); x = yak.x + Math.cos(a) * d; y = yak.y + Math.sin(a) * d; } else[x, y] = diskteNokta(600);
+    ok = Math.hypot(x, y) < R - 400 && !O.some(o => !o.olu && o.m > 30 && Math.hypot(o.x - x, o.y - y) < (o.uzak ? 500 : bos)) && !ASIT.some(b => Math.hypot(b.x - x, b.y - y) < b.r + 150);
+  } while (!ok && ++dene < 80);
   oyuncu = yeniOrg({ npc: false, nick, tur: secTur, hue: secRenk === GOKKUSAGI ? 0 : secRenk + rnd(-4, 4), gk: secRenk === GOKKUSAGI, desen: secDesen, ev: Object.assign({}, BOS_EV), evSay: 0, m: 25, x, y, dogum: 0, bekle: 0, koruma: 4 });
   oyuncu.netId = (Math.random().toString(36).slice(2, 8) + Date.now().toString(36).slice(-4));
   O.push(oyuncu); kamera.x = x; kamera.y = y;
@@ -1515,6 +1522,21 @@ function ciz(t) {
     const sx = (AV.x - kamera.x) * z + W / 2, sy = (AV.y - kamera.y) * z + H / 2 - 125 * z - 8;
     if (sx > -100 && sx < W + 100 && sy > -40 && sy < H + 40) { g.font = '900 17px Nunito, system-ui, sans-serif'; g.lineWidth = 4; g.strokeStyle = 'rgba(2,14,18,.75)'; g.strokeText('⚠ ' + AV.nick, sx, sy); g.fillStyle = '#FFB4A6'; g.fillText('⚠ ' + AV.nick, sx, sy); }
   }
+  if (oyuncu && !oyuncu.olu) {   // ekran dışındaki çevrimiçi oyunculara ok
+    const L = [];
+    for (const o of vekil.values()) {
+      if (o.olu || o.gizli > 0.5 || o.sisB) continue; const sx = (o.x - kamera.x) * z + W / 2, sy = (o.y - kamera.y) * z + H / 2;
+      if (sx > 30 && sx < W - 30 && sy > 60 && sy < H - 30) continue; L.push([Math.hypot(o.x - oyuncu.x, o.y - oyuncu.y), o, sx, sy]);
+    }
+    L.sort((a, b) => a[0] - b[0]);
+    for (const [d, o, sx, sy] of L.slice(0, 4)) {
+      const a = Math.atan2(sy - H / 2, sx - W / 2), k = Math.min((W / 2 - 46) / Math.abs(Math.cos(a) || 1e-6), (H / 2 - 74) / Math.abs(Math.sin(a) || 1e-6)), px = W / 2 + Math.cos(a) * k, py = H / 2 + 14 + Math.sin(a) * k;
+      const renk = yerMi(o, oyuncu) ? '#FF9C8E' : yerMi(oyuncu, o) ? '#9CF5B8' : '#FFFFFF';
+      g.save(); g.translate(px, py); g.rotate(a); g.fillStyle = renk; g.globalAlpha = 0.92; g.beginPath(); g.moveTo(15, 0); g.lineTo(-7, -10); g.lineTo(-2, 0); g.lineTo(-7, 10); g.closePath(); g.fill(); g.restore();
+      const yazi = '🌐 ' + o.nick + ' · ' + Math.round(d / 10) * 10, tx = kis(px - Math.cos(a) * 30, 70, W - 70), ty = kis(py - Math.sin(a) * 26 + 4, 66, H - 16);
+      g.font = '800 12.5px Nunito, system-ui, sans-serif'; g.lineWidth = 3.5; g.strokeStyle = 'rgba(2,14,18,.8)'; g.strokeText(yazi, tx, ty); g.fillStyle = renk; g.fillText(yazi, tx, ty);
+    }
+  }
   if (OLAY.g > 0.01) {   // gece: yalnızca yakın çevre görünür
     const ben = oyuncu && !oyuncu.olu, cx = ben ? (oyuncu.x - kamera.x) * z + W / 2 : W / 2, cy = ben ? (oyuncu.y - kamera.y) * z + H / 2 : H / 2, m = Math.min(W, H);
     const ng = g.createRadialGradient(cx, cy, m * 0.15, cx, cy, m * 0.52); ng.addColorStop(0, 'rgba(1,5,9,0)'); ng.addColorStop(1, `rgba(1,5,9,${0.94 * OLAY.g})`); g.fillStyle = ng; g.fillRect(0, 0, W, H);
@@ -1541,8 +1563,8 @@ function hud(dt) {
     hudZ = 0.25;
     const ag = $('ag'), d = AG.durum(), n = vekil.size;
     ag.className = d === 'acik' ? 'acik' : '';
-    ag.querySelector('span').textContent = d === 'acik' ? (n ? T(`${n + (oyunda ? 1 : 0)} oyuncu`, `${n + (oyunda ? 1 : 0)} players`) : T('Çevrimiçi', 'Online')) : d === 'kapali' ? T('Çevrimdışı', 'Offline') : T('Bağlanıyor…', 'Connecting…');
-    $('agMenu').textContent = d === 'acik' ? (n ? T(`🌐 Şu an ${n} oyuncu daha oynuyor.`, `🌐 ${n} other players are on now.`) : T('🌐 Çevrimiçisin; başka oyuncu girince burada görünür.', '🌐 You are online; other players appear here when they join.')) : d === 'kapali' ? T('Çevrimiçi bağlantı yok; yalnızca organizmalarla oynarsın.', 'No online connection; you play with the organisms only.') : '';
+    ag.querySelector('span').textContent = d === 'acik' ? (n ? (oyunda ? T(`🌐 ${n + 1} oyuncu (sen dahil)`, `🌐 ${n + 1} players (incl. you)`) : T(`🌐 ${n} oyuncu oyunda`, `🌐 ${n} playing`)) : (oyunda ? T('Çevrimiçi · başka oyuncu yok', 'Online · no one else') : T('Çevrimiçi', 'Online'))) : d === 'kapali' ? T('Çevrimdışı', 'Offline') : T('Bağlanıyor…', 'Connecting…');
+    $('agMenu').textContent = d === 'acik' ? (n ? T(`🌐 Şu an ${n} oyuncu oyunda: ${[...vekil.values()].map(o => o.nick).slice(0, 5).join(', ')}. Girince yakınlarında doğarsın.`, `🌐 ${n} playing now: ${[...vekil.values()].map(o => o.nick).slice(0, 5).join(', ')}. You will spawn near them.`) : T('🌐 Çevrimiçisin. Şu an oyunda başka oyuncu yok (yalnızca oyuna girmiş olanlar görünür).', '🌐 You are online. No one else is in the game right now (only players inside a game are shown).')) : d === 'kapali' ? T('Çevrimiçi bağlantı yok; yalnızca organizmalarla oynarsın.', 'No online connection; you play with the organisms only.') : '';
     if (oyuncu && !oyuncu.olu) {
       const o = oyuncu, pr = o.parca && !o.parca.olu ? o.parca : null;
       $('dKutle').textContent = '⚖ ' + Math.round(o.m + (pr ? pr.m : 0)); $('dYas').textContent = '⏱ ' + dkYaz(o.yas); $('dYedi').textContent = '🍽 ' + o.yedigi;
@@ -1566,6 +1588,7 @@ function liderCiz() {
   $('liderBas').firstChild.textContent = liderTur ? T('EN BÜYÜKLER', 'LARGEST') : T('EN UZUN YAŞAYANLAR', 'LONGEST ALIVE');
   let h = '', benVar = false;
   L.slice(0, 8).forEach((o, i) => { if (o === oyuncu) benVar = true; h += satir(o, i + 1); });
+  L.forEach((o, i) => { if (o.uzak && i >= 8) h += satir(o, i + 1); });
   if (oyuncu && !oyuncu.olu && !benVar) { const s = L.indexOf(oyuncu); if (s >= 0) h += satir(oyuncu, s + 1); }
   $('liderListe').innerHTML = h;
   function satir(o, n) { return `<li class="${o === oyuncu ? 'ben' : ''}${o.uzak ? ' uz' : ''}"><em>${n}.</em><b>${esc(o.nick)}</b><em>${liderTur ? Math.round(o.m) : dkYaz(o.yas)}</em><em class="k">${liderTur ? dkYaz(o.yas) : Math.round(o.m)}</em></li>`; }
@@ -1586,7 +1609,8 @@ function miniCiz() {
   for (const o of O) {
     if (o.olu || o === oyuncu) continue; if (!o.uzak && o.m < 120 && !intikamMi(o)) continue;
     if (o.parca || o.sisB || (o.uzak && o.gizli > 0.5)) continue;
-    x.fillStyle = intikamMi(o) ? '#FF6A55' : o.uzak ? '#FFFFFF' : `hsla(${o.hue},60%,65%,.75)`; x.beginPath(); x.arc(o.x * k, o.y * k, Math.max(2.5, o.r * k * 2.5), 0, TAU); x.fill();
+    x.fillStyle = intikamMi(o) ? '#FF6A55' : o.uzak ? '#FFFFFF' : `hsla(${o.hue},60%,65%,.75)`; x.beginPath(); x.arc(o.x * k, o.y * k, o.uzak ? Math.max(5, o.r * k * 2.5) : Math.max(2.5, o.r * k * 2.5), 0, TAU); x.fill();
+    if (o.uzak) { x.strokeStyle = 'rgba(255,255,255,.7)'; x.lineWidth = 1.5; x.beginPath(); x.arc(o.x * k, o.y * k, 9 + nb * 3, 0, TAU); x.stroke(); }
   }
   const vx = W / kamera.z * k, vy = H / kamera.z * k; x.strokeStyle = 'rgba(255,255,255,.25)'; x.lineWidth = 1.5; x.strokeRect(kamera.x * k - vx / 2, kamera.y * k - vy / 2, vx, vy);
   if (oyuncu && !oyuncu.olu) { x.fillStyle = '#FFE29A'; x.beginPath(); x.arc(oyuncu.x * k, oyuncu.y * k, 5, 0, TAU); x.fill(); x.strokeStyle = '#05161C'; x.lineWidth = 2; x.stroke(); }
