@@ -120,6 +120,10 @@ details ul{padding-left:18px;margin:6px 0}
 #ifadeler{position:fixed;right:10px;top:calc(50px + env(safe-area-inset-top,0px));z-index:9;display:flex;gap:4px;background:rgba(6,24,30,.9);border:1px solid var(--line);border-radius:14px;padding:5px}
 #ifadeler button{width:38px;height:38px;border-radius:10px;border:0;background:transparent;font-size:21px;padding:0;touch-action:none}
 #ifadeler button:hover{background:rgba(255,255,255,.08)}
+#sesKutu{position:fixed;right:10px;top:calc(50px + env(safe-area-inset-top,0px));z-index:12;display:flex;gap:8px;align-items:center;background:rgba(6,24,30,.94);border:1px solid var(--line);border-radius:14px;padding:8px 12px}
+#sesKutu input{width:150px;accent-color:var(--acc);touch-action:pan-x}
+#sesKutu button{border:0;background:transparent;font-size:18px;padding:0 2px}
+#sesYuzde{font-size:12.5px;font-weight:800;color:var(--mute);min-width:38px;text-align:right}
 #dEv{letter-spacing:1px}
 body.er-durumlu #mini{bottom:32px}
 @media (max-width:640px){
@@ -158,6 +162,7 @@ body.er-durumlu #mini{bottom:32px}
 <div id="evrim" hidden></div>
 <div id="izleme" hidden></div>
 <div id="ifadeler" hidden></div>
+<div id="sesKutu" hidden><button type="button" id="sesSus" title="Sesi kapat/aç" data-en-title="Mute/unmute" aria-label="Sesi kapat/aç" data-en-aria="Mute/unmute">🔈</button><input id="sesKaydir" type="range" min="0" max="100" step="5" aria-label="Ses düzeyi" data-en-aria="Volume"><span id="sesYuzde"></span></div>
 
 <!-- menü -->
 <div class="perde" id="menu">
@@ -338,19 +343,25 @@ const DOKUNMA = matchMedia('(pointer: coarse)').matches;
 
 /* ================= sesler (WebAudio, çok kısık) ================= */
 const SES = (() => {
-  let ac = null, acik = ls.get('organizma-ses', true);
-  const hazir = () => { if (!acik) return null; if (!ac) try { ac = new (window.AudioContext || window.webkitAudioContext)(); } catch (e) { return null; } if (ac.state === 'suspended') ac.resume(); return ac; };
+  /* ses düzeyi 0–1; ana kazanç düzey × 6, kırpılmasın diye sıkıştırıcıdan geçer */
+  let ac = null, ana = null, duzey = ls.get('organizma-ses-duzey', ls.get('organizma-ses', true) ? 0.6 : 0), acik = duzey > 0;
+  const KAT = 6;
+  const hazir = () => {
+    if (!acik) return null;
+    if (!ac) try { ac = new (window.AudioContext || window.webkitAudioContext)(); ana = ac.createGain(); ana.gain.value = duzey * KAT; const sk = ac.createDynamicsCompressor(); sk.threshold.value = -14; sk.ratio.value = 6; ana.connect(sk).connect(ac.destination); } catch (e) { ac = null; return null; }
+    if (ac.state === 'suspended') ac.resume(); return ac;
+  };
   function ton(f1, f2, sure, tip, v) {
     const a = hazir(); if (!a) return; const o = a.createOscillator(), k = a.createGain(), t = a.currentTime;
     o.type = tip || 'sine'; o.frequency.setValueAtTime(f1, t); o.frequency.exponentialRampToValueAtTime(f2, t + sure);
     k.gain.setValueAtTime(0.0001, t); k.gain.exponentialRampToValueAtTime(v || 0.06, t + 0.015); k.gain.exponentialRampToValueAtTime(0.0001, t + sure);
-    o.connect(k).connect(a.destination); o.start(t); o.stop(t + sure + 0.02);
+    o.connect(k).connect(ana); o.start(t); o.stop(t + sure + 0.02);
   }
   function hava(sure, v) {
     const a = hazir(); if (!a) return; const n = Math.floor(a.sampleRate * sure), b = a.createBuffer(1, n, a.sampleRate), d = b.getChannelData(0);
     for (let i = 0; i < n; i++) d[i] = (Math.random() * 2 - 1) * (1 - i / n);
     const s = a.createBufferSource(), f = a.createBiquadFilter(), k = a.createGain(); s.buffer = b; f.type = 'bandpass'; f.frequency.value = 900; f.Q.value = 0.7; k.gain.value = v || 0.05;
-    s.connect(f).connect(k).connect(a.destination); s.start();
+    s.connect(f).connect(k).connect(ana); s.start();
   }
   let ortamK = null;
   function ortam() {   // kısık su altı uğultusu
@@ -358,15 +369,15 @@ const SES = (() => {
     for (let i = 0; i < n; i++) { v = (v + (Math.random() * 2 - 1) * 0.04) * 0.996; d[i] = v * 2.2; }
     for (let i = 0; i < 3000; i++) { const k = i / 3000; d[i] *= k; d[n - 1 - i] *= k; }
     const src = a.createBufferSource(), f = a.createBiquadFilter(), k = a.createGain(), lfo = a.createOscillator(), lk = a.createGain();
-    src.buffer = b; src.loop = true; f.type = 'lowpass'; f.frequency.value = 260; k.gain.value = 0; k.gain.linearRampToValueAtTime(0.11, a.currentTime + 3);
+    src.buffer = b; src.loop = true; f.type = 'lowpass'; f.frequency.value = 260; k.gain.value = 0; k.gain.linearRampToValueAtTime(0.05, a.currentTime + 3);
     lfo.frequency.value = 0.07; lk.gain.value = 90; lfo.connect(lk).connect(f.frequency); lfo.start();
-    src.connect(f).connect(k).connect(a.destination); src.start(); ortamK = k;
+    src.connect(f).connect(k).connect(ana); src.start(); ortamK = k;
   }
   return {
     ortam, basari: () => { ton(620, 930, 0.12, 'sine', 0.045); setTimeout(() => ton(930, 1240, 0.16, 'sine', 0.04), 110); }, uyari: () => { ton(190, 130, 0.45, 'sawtooth', 0.04); setTimeout(() => ton(190, 130, 0.45, 'sawtooth', 0.04), 520); }, kabarcik: () => ton(300 + Math.random() * 250, 950, 0.09, 'sine', 0.012),
     mikro: () => ton(520 + Math.random() * 80, 240, 0.12, 'sine', 0.035), yut: () => ton(420 + Math.random() * 80, 140, 0.16, 'sine', 0.07), plankton: () => ton(900 + Math.random() * 300, 1400, 0.05, 'sine', 0.012),
     hamle: () => hava(0.22, 0.05), olum: () => { ton(300, 60, 0.5, 'triangle', 0.08); hava(0.4, 0.04); }, dogum: () => ton(260, 620, 0.35, 'sine', 0.05),
-    acik: () => acik, degistir() { acik = !acik; ls.set('organizma-ses', acik); if (acik) hazir(); if (ortamK) ortamK.gain.value = acik ? 0.11 : 0; }
+    acik: () => acik, duzey: () => duzey, ayarla(v) { duzey = kis(v, 0, 1); acik = duzey > 0; ls.set('organizma-ses-duzey', duzey); ls.set('organizma-ses', acik); if (ana) ana.gain.value = duzey * KAT; if (acik) hazir(); }
   };
 })();
 
@@ -1248,7 +1259,7 @@ addEventListener('keyup', e => isaret.tuslar.delete(e.code));
 addEventListener('blur', () => isaret.tuslar.clear());
 $('hamleBtn').addEventListener('pointerdown', e => { e.preventDefault(); e.stopPropagation(); oyuncuHamle(); });
 $('bolBtn').addEventListener('pointerdown', e => { e.preventDefault(); e.stopPropagation(); oyuncuBol(); });
-$('ifadeBtn').onclick = () => { $('ifadeler').hidden = !$('ifadeler').hidden; };
+$('ifadeBtn').onclick = () => { $('ifadeler').hidden = !$('ifadeler').hidden; $('sesKutu').hidden = true; };
 $('ifadeler').innerHTML = IFADELER.map((c, i) => `<button type="button" data-i="${i}">${c}</button>`).join('');
 $('ifadeler').querySelectorAll('button').forEach(b => { b.onclick = () => ifadeGoster(+b.dataset.i); });
 $('ortakG').onclick = () => { ortakTur = 0; ortakYukle(); };
@@ -1264,8 +1275,14 @@ $('ortakT').onclick = () => { ortakTur = 1; ortakYukle(); };
   document.addEventListener('fullscreenchange', guncel); document.addEventListener('webkitfullscreenchange', guncel);
   addEventListener('keydown', e => { if (e.code === 'KeyF' && !(e.target && e.target.tagName === 'INPUT') && !e.repeat && !e.ctrlKey && !e.metaKey) $('tamBtn').click(); });
 })();
-$('sesBtn').onclick = () => { SES.degistir(); $('sesBtn').textContent = SES.acik() ? '🔊' : '🔇'; };
-$('sesBtn').textContent = SES.acik() ? '🔊' : '🔇';
+const sesYaz = () => { const d = SES.duzey(); $('sesBtn').textContent = d <= 0 ? '🔇' : d < 0.5 ? '🔉' : '🔊'; $('sesYuzde').textContent = '%' + Math.round(d * 100); };
+$('sesBtn').onclick = () => { $('sesKutu').hidden = !$('sesKutu').hidden; $('ifadeler').hidden = true; };
+$('sesKaydir').value = Math.round(SES.duzey() * 100);
+$('sesKaydir').addEventListener('input', e => { SES.ayarla(+e.target.value / 100); sesYaz(); if (oyunda) SES.ortam(); });
+$('sesKaydir').addEventListener('change', () => SES.yut());
+$('sesSus').onclick = () => { SES.ayarla(SES.duzey() > 0 ? 0 : 0.6); $('sesKaydir').value = Math.round(SES.duzey() * 100); sesYaz(); if (SES.duzey() > 0) { SES.yut(); if (oyunda) SES.ortam(); } };
+cv.addEventListener('pointerdown', () => { $('sesKutu').hidden = true; });
+sesYaz();
 $('basla').onclick = basla;
 $('yeniden').onclick = basla;
 $('menuye').onclick = () => { $('olum').hidden = true; menuAc(); };
