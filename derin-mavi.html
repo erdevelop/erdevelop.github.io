@@ -34,6 +34,10 @@ a{color:var(--mavi)}
 #ag i{display:inline-block;width:8px;height:8px;border-radius:50%;background:#6b8590;vertical-align:0}
 #ag.acik i{background:#5FD38A;box-shadow:0 0 6px #5FD38A}
 .bos{flex:1}
+#sesKutu{position:fixed;right:10px;top:calc(50px + env(safe-area-inset-top,0px));z-index:31;display:flex;gap:8px;align-items:center;background:rgba(5,30,45,.94);border:1px solid var(--line);border-radius:14px;padding:8px 12px}
+#sesKutu input{width:150px;accent-color:var(--acc);touch-action:pan-x}
+#sesKutu button{border:0;background:transparent;font-size:18px;padding:0 2px}
+#sesYuzde{font-size:12.5px;font-weight:800;color:var(--mute);min-width:38px;text-align:right}
 /* alt panel */
 #panel{position:fixed;left:10px;right:10px;bottom:calc(10px + env(safe-area-inset-bottom,0px));z-index:6;max-width:420px;border-radius:20px;border:1px solid var(--line);background:var(--kart);padding:11px 12px 12px;box-shadow:0 14px 40px rgba(0,0,0,.35);backdrop-filter:blur(10px);-webkit-backdrop-filter:blur(10px)}
 .pUst{display:flex;align-items:center;gap:10px;cursor:pointer}
@@ -153,10 +157,13 @@ body.er-durumlu #panel{bottom:32px}
   <div class="cip altin" id="olayCip" hidden></div>
   <div class="bos"></div>
   <div class="cip" id="ag" title="Çevrimiçi durum" data-en-title="Online status"><i></i><span></span></div>
+  <button class="yuv" id="sesBtn" type="button" title="Ses" data-en-title="Sound" aria-label="Ses" data-en-aria="Sound">🔊</button>
+  <button class="yuv" id="tamBtn" type="button" hidden title="Tam ekran (F)" data-en-title="Full screen (F)" aria-label="Tam ekran" data-en-aria="Full screen"><svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path id="tamYol" d="M2 6V2h4M10 2h4v4M14 10v4h-4M6 14H2v-4"/></svg></button>
   <button class="yuv" id="menuBtn" type="button" aria-label="Menü" data-en-aria="Menu" hidden>☰</button>
   <button class="yuv" data-dil-btn type="button">EN</button>
 </div>
 <div id="ziyaretBant" hidden></div>
+<div id="sesKutu" hidden><button type="button" id="sesSus" title="Sesi kapat/aç" data-en-title="Mute/unmute" aria-label="Sesi kapat/aç" data-en-aria="Mute/unmute">🔈</button><input id="sesKaydir" type="range" min="0" max="100" step="5" aria-label="Ses düzeyi" data-en-aria="Volume"><span id="sesYuzde"></span></div>
 
 <div id="panel" hidden>
   <div class="pUst" id="pUst">
@@ -443,7 +450,7 @@ function gorevKontrol() {
     if (gv.ok.includes(id)) continue;
     const x = GOREVLER.find(y => y.id === id); if (!x) continue;
     if (gorevDeger(x) >= x.h) {
-      gv.ok.push(id);
+      gv.ok.push(id); SES.basari();
       const c = has('gorev') ? 1.5 : 1, xp = Math.round(10 * c), inci = Math.round(5 * c);
       kazan(xp, { sinirsiz: true, tokBagimsiz: true }); S.inci += inci;
       duyur(T(`✅ Görev tamam: ${L2(x.ad)} · +${xp} büyüme, +${inci} inci`, `✅ Quest done: ${L2(x.ad)} · +${xp} growth, +${inci} pearls`), 1);
@@ -452,7 +459,7 @@ function gorevKontrol() {
   }
 }
 function basarimKontrol() {
-  for (const b of BASARIM) if (!S.bas[b.id] && b.c()) { S.bas[b.id] = simdi(); S.inci += b.i; duyur(`🏅 ${L2(b.ad)} · +${b.i} ${T('inci', 'pearls')}`, 1); }
+  for (const b of BASARIM) if (!S.bas[b.id] && b.c()) { S.bas[b.id] = simdi(); SES.basari(); S.inci += b.i; duyur(`🏅 ${L2(b.ad)} · +${b.i} ${T('inci', 'pearls')}`, 1); }
 }
 
 /* ================= renk yardımcıları ================= */
@@ -601,6 +608,56 @@ function pikselBoy(d, olcek) {
   const k = d.a >= 2 && d.tr && TURLER[d.tr] ? Math.pow(TURLER[d.tr].k, 0.22) : 1;
   return taban * k * olcek;
 }
+
+/* ================= ses (Web Audio, dosya yok) =================
+   düzey 0–1, 'derin-mavi-ses' anahtarında saklanır; ilk dokunuşta su altı uğultusu başlar */
+const SES = (() => {
+  let ac = null, ana = null, duzey = ls.get('derin-mavi-ses', 0.5), ortamK = null, kabZ = null;
+  const KAT = 5;
+  const hazir = () => {
+    if (duzey <= 0) return null;
+    if (!ac) try { ac = new (window.AudioContext || window.webkitAudioContext)(); ana = ac.createGain(); ana.gain.value = duzey * KAT; const sk = ac.createDynamicsCompressor(); sk.threshold.value = -14; sk.ratio.value = 6; ana.connect(sk).connect(ac.destination); } catch (e) { ac = null; return null; }
+    if (ac.state === 'suspended') ac.resume(); return ac;
+  };
+  function ton(f1, f2, sure, tip, v, gec) {
+    const a = hazir(); if (!a) return; const o = a.createOscillator(), k = a.createGain(), t = a.currentTime + (gec || 0);
+    o.type = tip || 'sine'; o.frequency.setValueAtTime(f1, t); o.frequency.exponentialRampToValueAtTime(f2, t + sure);
+    k.gain.setValueAtTime(0.0001, t); k.gain.exponentialRampToValueAtTime(v || 0.05, t + 0.015); k.gain.exponentialRampToValueAtTime(0.0001, t + sure);
+    o.connect(k).connect(ana); o.start(t); o.stop(t + sure + 0.03);
+  }
+  function hava(sure, v, fr) {
+    const a = hazir(); if (!a) return; const n = Math.floor(a.sampleRate * sure), b = a.createBuffer(1, n, a.sampleRate), d = b.getChannelData(0);
+    for (let i = 0; i < n; i++) d[i] = (Math.random() * 2 - 1) * Math.pow(1 - i / n, 2);
+    const s = a.createBufferSource(), f = a.createBiquadFilter(), k = a.createGain(); s.buffer = b; f.type = 'bandpass'; f.frequency.value = fr || 900; f.Q.value = 0.8; k.gain.value = v || 0.05;
+    s.connect(f).connect(k).connect(ana); s.start();
+  }
+  const kabarcik = (v) => ton(280 + Math.random() * 260, 900 + Math.random() * 300, 0.08, 'sine', v || 0.012);
+  function ortam() {
+    const a = hazir(); if (!a || ortamK) return; const n = a.sampleRate * 3, b = a.createBuffer(1, n, a.sampleRate), d = b.getChannelData(0); let v = 0;
+    for (let i = 0; i < n; i++) { v = (v + (Math.random() * 2 - 1) * 0.04) * 0.996; d[i] = v * 2.2; }
+    for (let i = 0; i < 3000; i++) { const k = i / 3000; d[i] *= k; d[n - 1 - i] *= k; }
+    const src = a.createBufferSource(), f = a.createBiquadFilter(), k = a.createGain(), lfo = a.createOscillator(), lk = a.createGain();
+    src.buffer = b; src.loop = true; f.type = 'lowpass'; f.frequency.value = 300; k.gain.value = 0; k.gain.linearRampToValueAtTime(0.045, a.currentTime + 3);
+    lfo.frequency.value = 0.06; lk.gain.value = 110; lfo.connect(lk).connect(f.frequency); lfo.start();
+    src.connect(f).connect(k).connect(ana); src.start(); ortamK = k;
+    const dongu = () => { kabZ = setTimeout(() => { if (duzey > 0 && !document.hidden) { kabarcik(0.006); if (Math.random() < 0.5) setTimeout(() => kabarcik(0.005), 90); } dongu(); }, 2500 + Math.random() * 5000); };
+    if (!kabZ) dongu();
+  }
+  return {
+    ortam, kabarcik,
+    yem: () => { hava(0.18, 0.06, 600); ton(180, 90, 0.18, 'sine', 0.05); setTimeout(() => kabarcik(0.01), 120); },
+    lokma: () => ton(520 + Math.random() * 120, 260, 0.09, 'sine', 0.03),
+    plankton: altin => altin ? (ton(880, 1320, 0.08, 'sine', 0.03), ton(1320, 1760, 0.1, 'sine', 0.025, 0.07)) : ton(900 + Math.random() * 300, 1500, 0.05, 'sine', 0.018),
+    carp: () => { ton(240, 120, 0.3, 'sawtooth', 0.04); hava(0.2, 0.04, 2400); },
+    basari: () => { ton(620, 930, 0.12, 'sine', 0.04); ton(930, 1240, 0.16, 'sine', 0.035, 0.11); },
+    kutla: () => [523, 659, 784, 1047].forEach((f, i) => ton(f, f * 1.01, 0.32, 'triangle', 0.04, i * 0.12)),
+    selam: () => ton(700, 1050, 0.12, 'sine', 0.03),
+    hediye: () => { ton(660, 990, 0.14, 'sine', 0.035); ton(990, 1320, 0.18, 'sine', 0.03, 0.12); },
+    dogum: () => { ton(260, 620, 0.35, 'sine', 0.05); setTimeout(() => kabarcik(0.012), 250); },
+    duzey: () => duzey,
+    ayarla(v) { duzey = kis(v, 0, 1); ls.set('derin-mavi-ses', duzey); if (ana) ana.gain.value = duzey * KAT; if (duzey > 0) { hazir(); ortam(); } }
+  };
+})();
 
 /* ================= ortam (sahne) ================= */
 const cv = $('c'), cx = cv.getContext('2d');
@@ -806,7 +863,7 @@ function balikGuncelle(b, dt) {
   if (Math.abs(b.vx) > 3) b.yonH = Math.sign(b.vx);
   b.yon += (b.yonH - b.yon) * Math.min(1, dt * 4);
   b.faz += dt * (3 + Math.hypot(b.vx, b.vy) / 9);
-  if (b.ben) for (let i = YEM.length - 1; i >= 0; i--) { const p = YEM[i]; if (Math.hypot(p.x - b.x - b.yon * L * 0.35, p.y - b.y) < L * 0.4 + 6) { YEM.splice(i, 1); for (let j = 0; j < 5; j++) PARC.push({ x: p.x, y: p.y, vx: rnd(-25, 25), vy: rnd(-25, 25), t: 0.6, c: '#FFD9A0', r: 1.8 }); } }
+  if (b.ben) for (let i = YEM.length - 1; i >= 0; i--) { const p = YEM[i]; if (Math.hypot(p.x - b.x - b.yon * L * 0.35, p.y - b.y) < L * 0.4 + 6) { YEM.splice(i, 1); SES.lokma(); for (let j = 0; j < 5; j++) PARC.push({ x: p.x, y: p.y, vx: rnd(-25, 25), vy: rnd(-25, 25), t: 0.6, c: '#FFD9A0', r: 1.8 }); } }
   /* izler */
   const z = b.d.z || [];
   if ((z.includes('iz') || z.includes('kabarcik')) && Math.hypot(b.vx, b.vy) > 8) {
@@ -942,7 +999,7 @@ function yemAt() {
   if (!S) return; ilerlet();
   if (S.yem <= 0) { reklamTeklif(); return; }
   if (S.tok >= 92) { duyur(T(`${S.ad} tok, şimdi yemez 😌`, `${S.ad} is full right now 😌`)); return; }
-  S.yem--; if (S.yem === yemMax() - 1) S.yemT = simdi();
+  S.yem--; if (S.yem === yemMax() - 1) S.yemT = simdi(); SES.yem();
   const b = BAL.get('ben'), x0 = b ? b.x : W / 2;
   for (let i = 0; i < 4; i++) YEM.push({ x: kis(x0 + rnd(-70, 70), 30, W - 30), y: rnd(30, 60), f: rnd(0, TAU) });
   const g = gunVeri(); g.yem++; S.ist.yem++;
@@ -965,7 +1022,7 @@ function hedefOdulKontrol() {
 }
 function kutla(a) {
   setTimeout(() => {
-    const d = benVeri();
+    SES.kutla(); const d = benVeri();
     const metin = [null,
       T('Larvalıktan çıktın, artık minik bir yavrusun! Şimdi nerede yaşayacağını seç.', 'You are no longer a larva. Now choose where you will live.'),
       T('Gençlik çağına geldin. Şimdi türünü seç!', 'You have reached the juvenile stage. Choose your species!'),
@@ -1048,7 +1105,7 @@ function avGuncelle(dt) {
     if (has('miknatis')) { const ex = A.x - p.x, ey = A.y - p.y, ed = Math.hypot(ex, ey); if (ed < 140 * OL && ed > 1) { p.x += ex / ed * 110 * dt; p.y += ey / ed * 110 * dt; } }
     const px = p.x + Math.sin(p.f) * 3, py = p.y + Math.cos(p.f * 0.8) * 3;
     if (!A.bitti && A.bas <= 0 && Math.hypot(px - A.x - A.yon * L * 0.3, py - A.y) < L * 0.35 + p.r) {
-      A.p.splice(i, 1); A.skor += p.a ? 3 : 1;
+      A.p.splice(i, 1); A.skor += p.a ? 3 : 1; SES.plankton(p.a);
       for (let j = 0; j < 6; j++) A.parc.push({ x: px, y: py, vx: rnd(-50, 50), vy: rnd(-50, 50), t: 0.5, c: p.a ? '#FFE07A' : '#B8FFF0' });
       continue;
     }
@@ -1062,7 +1119,7 @@ function avGuncelle(dt) {
     const s = 22 * OL, p = 1 + Math.sin(m.f * 3) * 0.12;
     c.save(); c.translate(m.x, m.y); c.globalAlpha = 0.75; c.fillStyle = '#F38BD2'; c.beginPath(); c.ellipse(0, 0, s * p, s * 0.8 / p, 0, Math.PI, TAU); c.fill();
     c.strokeStyle = '#F38BD2'; c.lineWidth = 1.6; for (let i = -2; i <= 2; i++) { c.beginPath(); c.moveTo(i * s * 0.35, 0); for (let j = 1; j <= 5; j++) c.lineTo(i * s * 0.35 + Math.sin(m.f * 4 + j + i) * 4, j * s * 0.4); c.stroke(); } c.restore();
-    if (!A.bitti && A.bas <= 0 && A.sersem <= 0 && Math.hypot(m.x - A.x, m.y + s * 0.5 - A.y) < s + L * 0.3) { A.sersem = 1; A.sure = Math.max(0, A.sure - 2); A.flas = 0.3; if (navigator.vibrate) try { navigator.vibrate(80); } catch (x) { } }
+    if (!A.bitti && A.bas <= 0 && A.sersem <= 0 && Math.hypot(m.x - A.x, m.y + s * 0.5 - A.y) < s + L * 0.3) { A.sersem = 1; A.sure = Math.max(0, A.sure - 2); A.flas = 0.3; SES.carp(); if (navigator.vibrate) try { navigator.vibrate(80); } catch (x) { } }
   }
   /* parçacıklar */
   for (let i = A.parc.length - 1; i >= 0; i--) { const p = A.parc[i]; p.t -= dt; if (p.t <= 0) { A.parc.splice(i, 1); continue; } p.x += p.vx * dt; p.y += p.vy * dt; c.globalAlpha = p.t * 2; c.fillStyle = p.c; c.beginPath(); c.arc(p.x, p.y, 2, 0, TAU); c.fill(); c.globalAlpha = 1; }
@@ -1077,6 +1134,7 @@ function avBitir() {
   tokEkle(Math.min(30, skor * 0.9));
   const xp = kazan(Math.round(skor * 0.65));
   hedefKatki(2); gorevKontrol(); basarimKontrol(); kaydet();
+  SES.basari();
   setTimeout(() => {
     $('avKatman').hidden = true; AV = null;
     modal(`<h2>🎯 ${T('Av bitti!', 'Hunt over!')}</h2><div class="izgara"><div><b>✨ ${skor}</b>${T('puan', 'points')}${rekor ? ' 🏆' : ''}</div><div><b>📈 +${Math.round(xp)}</b>${T('büyüme', 'growth')}</div><div><b>🍽 %${Math.round(S.tok)}</b>${T('tokluk', 'fullness')}</div><div><b>🎯 ${Math.max(0, AV_GUN - g.av)}</b>${T('kalan av', 'hunts left')}</div></div>${xp < skor * 0.6 && g.xp >= gunSiniri() ? `<p class="kucuk">${T('Bugünkü büyüme sınırına ulaştın; fazlası inciye döndü.', 'You hit today’s growth limit; the extra became pearls.')}</p>` : ''}<button class="ana" type="button" data-kapat>${T('Akvaryuma dön', 'Back to the aquarium')}</button>`);
@@ -1106,7 +1164,7 @@ function ziyaretBesle(b) {
   if (!S || !b.id) return; const g = bugun();
   if (S.ziyEdilen[b.id] === g) return;
   for (const k of Object.keys(S.ziyEdilen)) if (S.ziyEdilen[k] !== g) delete S.ziyEdilen[k];
-  S.ziyEdilen[b.id] = g; S.ist.ziyaret++; const gv = gunVeri(); gv.ziyaret = (gv.ziyaret || 0) + 1;
+  S.ziyEdilen[b.id] = g; S.ist.ziyaret++; SES.yem(); const gv = gunVeri(); gv.ziyaret = (gv.ziyaret || 0) + 1;
   NET.hediye(b.id, S.ad, S.id);
   for (let i = 0; i < 4; i++) YEM.push({ x: kis(b.x + rnd(-40, 40), 30, W - 30), y: rnd(30, 60), f: rnd(0, TAU), baska: 1 });
   BALON.push({ k: b.k, e: '🍤', t: 2.6, m: S.ad });
@@ -1117,11 +1175,11 @@ function ziyaretBesle(b) {
 function selamVer(b, e) {
   if (!S) return; const gv = gunVeri();
   gv.selamlar = gv.selamlar || []; if (!gv.selamlar.includes(b.id)) { gv.selamlar.push(b.id); gv.selam = gv.selamlar.length; S.ist.selam++; }
-  NET.emoji(b.id, e, S.ad); BALON.push({ k: 'ben', e, t: 2.6 });
+  NET.emoji(b.id, e, S.ad); BALON.push({ k: 'ben', e, t: 2.6 }); SES.selam();
   gorevKontrol(); kaydet(false); kartKapat();
 }
 function hediyeGeldi(v) {
-  if (!S || !v) return; const g = gunVeri(); g.alinan = (g.alinan || 0) + 1; S.ist.alinan++;
+  if (!S || !v) return; SES.hediye(); const g = gunVeri(); g.alinan = (g.alinan || 0) + 1; S.ist.alinan++;
   if (g.alinan <= 10) { const c = has('sosyal') ? 2 : 1; tokEkle(8 * c); kazan(6 * c); }
   duyur(T(`🍤 ${adTemizle(v.n) || 'Biri'} seni besledi!`, `🍤 ${adTemizle(v.n) || 'Someone'} fed you!`), 1);
   const b = BAL.get('ben'); if (b) for (let i = 0; i < 3; i++) YEM.push({ x: kis(b.x + rnd(-40, 40), 30, W - 30), y: rnd(30, 60), f: rnd(0, TAU) });
@@ -1133,6 +1191,7 @@ function emojiGeldi(v) {
   const k = 'u:' + v.f;
   if (BAL.has(k)) BALON.push({ k, e: v.e, t: 2.6 });
   else if (v.h && S && v.h === S.id) BALON.push({ k: 'ben', e: v.e, t: 2.6, m: adTemizle(v.n) });
+  if (S && v.h === S.id) SES.selam();
   if (S && v.h === S.id) duyur(`${v.e} ${adTemizle(v.n)} ${T('sana selam verdi', 'waved at you')}`);
 }
 cv.addEventListener('pointerdown', e => {
@@ -1409,7 +1468,7 @@ $('dogBtn').onclick = () => {
   const ad = adTemizle($('adGir').value);
   if (!ad) { $('adGir').focus(); duyur(T('Balığına bir ad ver 🙂', 'Give your fish a name 🙂')); return; }
   S = yeniKayit(ad); gunVeri(); kaydet(false);
-  girisAcik = false; $('giris').hidden = true; panelAc();
+  girisAcik = false; $('giris').hidden = true; panelAc(); SES.dogum(); SES.ortam();
   duyur(T(`🥚 ${ad} yumurtadan çıktı!`, `🥚 ${ad} has hatched!`), 1);
   setTimeout(() => duyur(T('Ona dokun, sonra 🍤 ile besle', 'Tap it, then feed it with 🍤')), 1600);
   agKur();
@@ -1428,6 +1487,29 @@ $('akvCip').onclick = akvListeAc;
 addEventListener('resize', () => { boyut(); yerliKur(); });
 document.addEventListener('visibilitychange', () => { if (!document.hidden && S) { ilerlet(); gorevKontrol(); uiGuncelle(); uyeYaz(false); } });
 if (window.erDil && erDil.on) erDil.on(() => { uiGuncelle(); });
+
+/* ses düğmesi ve tam ekran */
+const sesYaz = () => { const d = SES.duzey(); $('sesBtn').textContent = d <= 0 ? '🔇' : d < 0.5 ? '🔉' : '🔊'; $('sesSus').textContent = d <= 0 ? '🔇' : '🔈'; $('sesYuzde').textContent = '%' + Math.round(d * 100); };
+$('sesBtn').onclick = () => { $('sesKutu').hidden = !$('sesKutu').hidden; };
+$('sesKaydir').value = Math.round(SES.duzey() * 100);
+$('sesKaydir').addEventListener('input', e => { SES.ayarla(+e.target.value / 100); sesYaz(); });
+$('sesKaydir').addEventListener('change', () => SES.kabarcik(0.02));
+$('sesSus').onclick = () => { SES.ayarla(SES.duzey() > 0 ? 0 : 0.5); $('sesKaydir').value = Math.round(SES.duzey() * 100); sesYaz(); if (SES.duzey() > 0) SES.kabarcik(0.02); };
+document.addEventListener('pointerdown', e => { if (!$('sesKutu').hidden && !$('sesKutu').contains(e.target) && !$('sesBtn').contains(e.target)) $('sesKutu').hidden = true; });
+/* tarayıcılar sesi ancak ilk dokunuştan sonra açar */
+const ilkDokunus = () => { if (SES.duzey() > 0) SES.ortam(); removeEventListener('pointerdown', ilkDokunus, true); removeEventListener('keydown', ilkDokunus, true); };
+addEventListener('pointerdown', ilkDokunus, true); addEventListener('keydown', ilkDokunus, true);
+sesYaz();
+(() => {
+  const el = document.documentElement, ac = el.requestFullscreen || el.webkitRequestFullscreen, kapat = document.exitFullscreen || document.webkitExitFullscreen;
+  const acik = () => !!(document.fullscreenElement || document.webkitFullscreenElement);
+  if (!ac || !kapat) return;
+  $('tamBtn').hidden = false;
+  $('tamBtn').onclick = () => { try { const p = acik() ? kapat.call(document) : ac.call(el, { navigationUI: 'hide' }); if (p && p.catch) p.catch(() => { }); } catch (e) { } };
+  const guncel = () => { $('tamYol').setAttribute('d', acik() ? 'M6 2v4H2M14 6h-4V2M10 14v-4h4M2 10h4v4' : 'M2 6V2h4M10 2h4v4M14 10v4h-4M6 14H2v-4'); setTimeout(() => { boyut(); yerliKur(); }, 80); };
+  document.addEventListener('fullscreenchange', guncel); document.addEventListener('webkitfullscreenchange', guncel);
+  addEventListener('keydown', e => { if (e.code === 'KeyF' && !(e.target && /INPUT|TEXTAREA/.test(e.target.tagName)) && !e.repeat && !e.ctrlKey && !e.metaKey && !e.altKey) $('tamBtn').click(); });
+})();
 
 /* ================= tanıtım görseli modu (?og=1) ================= */
 const ogModu = PARAM.has('og');
