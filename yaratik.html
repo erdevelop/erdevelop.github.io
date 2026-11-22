@@ -105,7 +105,8 @@ details ul{margin:8px 0 0;padding-left:18px;font-size:13.5px}details li{margin:4
     <p class="alt" data-en="Multicellular life — the sequel to Organism">Çok hücreli yaşam — Organizma'nın devamı</p>
     <div id="koken"></div>
     <canvas id="on" width="880" height="220"></canvas>
-    <h3 data-en="BODY PARTS (from your genes)">GÖVDE PARÇALARI (genlerinden)</h3>
+    <p id="onNot" style="margin:0 0 4px;text-align:center;font-size:12.5px;color:var(--mute);font-weight:700"></p>
+    <h3 data-en="PARTS YOU CAN FIT AS YOU GROW">BÜYÜDÜKÇE TAKABİLECEĞİN PARÇALAR</h3>
     <div id="parcalar"></div>
     <button class="ana" id="devam" type="button" hidden></button>
     <button class="ana" id="basla" type="button" data-en="Start a new life">Yeni yaşama başla</button>
@@ -114,7 +115,7 @@ details ul{margin:8px 0 0;padding-left:18px;font-size:13.5px}details li{margin:4
       <summary data-en="How to play">Nasıl oynanır</summary>
       <ul data-dil="tr">
         <li><b>Yüzme:</b> fareyi ya da parmağını gitmek istediğin yöne tut.</li>
-        <li><b>Isır:</b> tık, <b>Boşluk</b> ya da çift dokunuş. İleri atılıp ısırırsın; enerji harcar.</li>
+        <li><b>Isır:</b> tık, <b>Boşluk</b> ya da çift dokunuş. İleri atılıp ısırırsın; biraz enerji harcar. Plankton ve et parçaları üstünden geçince kendiliğinden yenir.</li>
         <li><b>Büyüme:</b> yedikçe biyokütle dolar; dolunca gövdene yeni bir <b>boğum</b> eklenir ve ona takacağın parçayı seçersin (1–3).</li>
         <li><b>Enerji</b> sürekli azalır; bitince canın erir. Can, enerjin yüksekken kendiliğinden dolar.</li>
         <li><b>Yumurta (E ya da 🥚):</b> ölürsen yumurtandan yeni nesil olarak, küçük bir mutasyonla doğarsın. Yumurtan yoksa soyun tükenir. Yengeçler açıktaki yumurtayı yer; yosunların içine bırak.</li>
@@ -124,7 +125,7 @@ details ul{margin:8px 0 0;padding-left:18px;font-size:13.5px}details li{margin:4
       </ul>
       <ul data-dil="en" hidden>
         <li><b>Swim:</b> hold the mouse or your finger in the direction you want to go.</li>
-        <li><b>Bite:</b> click, <b>Space</b> or double-tap. You lunge and bite; it costs energy.</li>
+        <li><b>Bite:</b> click, <b>Space</b> or double-tap. You lunge and bite; it costs a little energy. Plankton and meat are eaten automatically when you swim over them.</li>
         <li><b>Growth:</b> eating fills biomass; when full your body gains a new <b>segment</b> and you pick the part for it (1–3).</li>
         <li><b>Energy</b> drains all the time; at zero your health melts. Health refills by itself while energy is high.</li>
         <li><b>Egg (E or 🥚):</b> if you die you hatch from your egg as the next generation, with a small mutation. Without an egg your line ends. Crabs eat eggs left in the open; lay them inside kelp.</li>
@@ -228,10 +229,11 @@ function hesapla() {
   P.S = { hiz: 150 * (1 + 0.14 * say('yuzgec')) * Math.pow(0.97, say('zirh')) * (1 + 0.03 * m.hiz), isirik: 10 + 6 * say('cene') + 9 * say('dis') + 2 * m.isirik, zirh: Math.pow(0.82, say('zirh')), diken: 6 * say('diken'), yaprak: say('yaprak'), zehir: say('zehir'), isik: say('isik'), dokunac: say('dokunac'), anten: say('anten'),
     canUst: 40 + 14 * n + 5 * (P.kusak - 1) + 6 * m.can, enUst: 100 + 10 * n };
 }
+const baslangicGovde = () => ['yuzgec'].concat(['cene', 'dis', 'zirh', 'dokunac', 'yaprak', 'diken', 'zehir', 'isik', 'anten'].filter(acikMi).slice(0, Math.min(3, Math.floor(GEN.length / 8))));
 function yeniOyuncu() {
   P = { x: 260, y: DH / 2, ang: 0, vx: 0, vy: 0, hue: KOKEN ? KOKEN.hue : 172, kusak: KOKEN ? KOKEN.kusak : 1, nick: KOKEN ? KOKEN.nick : '', segs: [], bio: 0, nesil: 1, hamle: 0, bekle: 0, dok: 0, zehirli: 0, yumBekle: 0, sure: 0, uzak: 0, mut: { can: 0, hiz: 0, isirik: 0 }, agiz: 0, vurdu: 0, kazandi: false, gizli: false };
-  P.segs.push({ x: P.x - 20, y: P.y, p: 'yuzgec' }); if (GEN.length >= 25) P.segs.push({ x: P.x - 40, y: P.y, p: 'cene' });
-  hesapla(); P.can = P.S.canUst; P.en = P.S.enUst * 0.8;
+  baslangicGovde().forEach((p, i) => P.segs.push({ x: P.x - 20 - i * 16, y: P.y, p }));
+  hesapla(); P.can = P.S.canUst; P.en = P.S.enUst;
 }
 function hasar(d, kim, zehir) {
   if (P.dok > 0 || P.can <= 0) return;
@@ -267,8 +269,9 @@ function yumurtaBirak() {
 }
 function hamleYap() {
   if (!oyunda || P.can <= 0 || P.bekle > 0) return;
-  if (P.en < 6) { duyur(T('⚡ Enerjin yok — bir şeyler ye', '⚡ No energy — eat something'), 'uyari', 2); P.bekle = 0.6; return; }
-  P.hamle = 0.22; P.bekle = 0.85; P.en -= 5; P.agiz = 1; SES.hamle();
+  const yorgun = P.en < 3;   // enerji bitse de ısırabilirsin: yalnızca daha seyrek
+  if (yorgun) birKez('yorgun', T('⚡ Enerjin bitti: ısırıkların yavaşladı. Bir şeyler ye', '⚡ Out of energy: your bites are slower. Eat something'), 'uyari', 4);
+  P.hamle = 0.22; P.bekle = yorgun ? 1.5 : 0.85; P.en = Math.max(0, P.en - 3); P.agiz = 1; SES.hamle();
 }
 function besin(en, bio) {
   P.en = Math.min(P.S.enUst, P.en + en); P.bio += bio;
@@ -310,7 +313,7 @@ function dunyaKur() {
   for (const [tip, b, n] of NUFUS) for (let i = 0; i < n; i++) C.push(canliYeni(tip, b, false));
   for (let i = 0; i < 1000; i++) F.push(planktonYeni());
 }
-function planktonYeni() { const u = Math.random(), x = u < 0.45 ? rnd(80, X_GECIT) : u < 0.86 ? rnd(X_GECIT, X_CUKUR) : rnd(X_CUKUR, X_KIYI); return { x, y: rnd(120, DH - 120), vx: rnd(-5, 5), vy: rnd(-5, 5), k: 0, en: 2.2, bio: 1, h: [120, 165, 55, 195][(Math.random() * 4) | 0], f: Math.random() * TAU, omur: 0 }; }
+function planktonYeni() { const u = Math.random(), x = u < 0.45 ? rnd(80, X_GECIT) : u < 0.86 ? rnd(X_GECIT, X_CUKUR) : rnd(X_CUKUR, X_KIYI); return { x, y: rnd(120, DH - 120), vx: rnd(-5, 5), vy: rnd(-5, 5), k: 0, en: 3, bio: 1, h: [120, 165, 55, 195][(Math.random() * 4) | 0], f: Math.random() * TAU, omur: 0 }; }
 function etSac(c, n, jel) { for (let i = 0; i < n; i++) { const a = Math.random() * TAU; F.push({ x: c.x, y: c.y, vx: Math.cos(a) * rnd(30, 110), vy: Math.sin(a) * rnd(30, 110), k: jel ? 2 : 1, en: jel ? 9 : 15, bio: jel ? 5 : 8, h: jel ? 200 : 8, f: Math.random() * TAU, omur: 45 }); } }
 function vur(c, d, diken) {
   if (c.olu) return; c.can -= d; c.vurul = 0.25;
@@ -410,10 +413,10 @@ function guncelle(dt) {
     for (let i = 0; i < P.segs.length; i++) { const s = P.segs[i], ar = i === 0 ? 19 : 17 - Math.min(5, i * 0.6), dx = s.x - ox, dy = s.y - oy, d = Math.hypot(dx, dy) || 1; if (d > ar) { s.x = ox + dx / d * ar; s.y = oy + dy / d * ar; } s.a = Math.atan2(oy - s.y, ox - s.x); ox = s.x; oy = s.y; }
     /* enerji ve can */
     const b = bolgeNo(P.x), n = P.segs.length;
-    P.en -= (0.85 + 0.11 * n + (Math.hypot(P.vx, P.vy) > 60 ? 0.35 : 0)) * dt;
+    P.en -= (0.42 + 0.05 * n + (Math.hypot(P.vx, P.vy) > 60 ? 0.16 : 0)) * dt;
     if (S.yaprak && b < 2) P.en += S.yaprak * (P.gizli ? 0.25 : 0.55) * dt;
     P.en = kis(P.en, 0, S.enUst);
-    if (P.en <= 0) { P.can -= 3 * dt; birKez('ac', T('🍽 Açlıktan canın eriyor — hemen bir şey ye!', '🍽 You are starving — eat something now!'), 'uyari'); }
+    if (P.en <= 0) { P.can -= 1.5 * dt; birKez('ac', T('🍽 Açlıktan canın eriyor — hemen bir şey ye!', '🍽 You are starving — eat something now!'), 'uyari'); }
     else if (P.en > S.enUst * 0.4 && P.can < S.canUst) P.can = Math.min(S.canUst, P.can + 1.6 * dt);
     if (P.zehirli > 0) { P.zehirli -= dt; P.can -= 4 * dt; }
     if (b === 2) { if (!S.isik) birKez('karanlik', T('🌑 Karanlık Çukur: ışık organın yok, neredeyse körsün', '🌑 Dark Pit: without a light organ you are nearly blind'), 'uyari'); }
@@ -643,11 +646,12 @@ function menuKur() {
   const r = KAYIT.rekor; $('rekor').textContent = r.uzak ? T(`En uzak: ${r.uzak} m · En yüksek nesil: ${roma(r.nesil || 1)}${r.kazan ? ' · 🏝 ' + r.kazan + ' kez kıyıya ulaştın' : ''}`, `Farthest: ${r.uzak} m · Highest generation: ${roma(r.nesil || 1)}${r.kazan ? ' · 🏝 reached the shore ' + r.kazan + '×' : ''}`) : '';
   document.querySelectorAll('[data-dil]').forEach(e => e.hidden = e.dataset.dil !== (window.erDil && erDil.lang === 'en' ? 'en' : 'tr'));
   $('sesBtn').textContent = SES.kapali() ? '🔇' : '🔊';
+  $('onNot').textContent = T(`Bu gövdeyle başlarsın (${baslangicGovde().length} boğum). Her 8 gen başlangıca bir boğum ekler, en çok 3.`, `You start with this body (${baslangicGovde().length} segments). Every 8 genes add a starting segment, up to 3.`);
   /* önizleme */
   const c = $('on'), x = c.getContext('2d'); x.clearRect(0, 0, c.width, c.height);
-  const hav = PID.filter(acikMi), o2 = { x: 600, y: 110, ang: 0, hue: KOKEN ? KOKEN.hue : 172, segs: [], S: { isirik: 10 + (hav.includes('cene') ? 6 : 0) + (hav.includes('dis') ? 9 : 0), anten: hav.includes('anten') ? 1 : 0 }, agiz: 0.3, vurdu: 0, dok: 0, can: 1, zehirli: 0 };
-  hav.filter(id => !KAFA_P[id] || id === 'dis').concat(['yuzgec']).slice(0, 7).forEach((p, i) => o2.segs.push({ x: 600 - 36 - i * 44, y: 110 + Math.sin(i * 0.9) * 10, a: 0, p }));
-  x.save(); x.translate(600, 110); x.translate(-600, -110); yaratikCiz(x, Object.assign(o2, { x: 600 }), 0.4, 2.3); x.restore();
+  const hav = baslangicGovde(), bx = 440 + hav.length * 22, o2 = { x: bx, y: 110, ang: 0, hue: KOKEN ? KOKEN.hue : 172, segs: [], S: { isirik: 10 + (hav.includes('cene') ? 6 : 0) + (hav.includes('dis') ? 9 : 0), anten: hav.includes('anten') ? 1 : 0 }, agiz: 0.3, vurdu: 0, dok: 0, can: 1, zehirli: 0 };
+  hav.forEach((p, i) => o2.segs.push({ x: bx - 36 - i * 44, y: 110 + Math.sin(i * 0.9) * 10, a: 0, p }));
+  yaratikCiz(x, o2, 0.4, 2.3);
 }
 function menuAc() { oyunYaz(); oyunda = false; arayuz(false); menuKur(); $('menu').hidden = false; }
 let son = 0;
