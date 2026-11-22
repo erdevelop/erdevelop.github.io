@@ -376,8 +376,19 @@ function guncelleYazi() {
 
 /* ================= harita ================= */
 const hc = $('harita'), hx = hc.getContext('2d'), KB = 100;
+/* Kamera: haritayı keşfedilmiş ve keşfedilebilir karelere sığdırır, ortalar; dar ekranda tuval yükselir. */
+let kam = null;
+function kamHedef() {
+  let x0 = YX, x1 = YX, y0 = YY, y1 = YY;
+  for (let i = 0; i < S.kare.length; i++) if (S.kare[i].d || kesfedilebilir(i)) { const c = kareC(i), r = kareR(i); if (c < x0) x0 = c; if (c > x1) x1 = c; if (r < y0) y0 = r; if (r > y1) y1 = r; }
+  const pay = 0.3, bw = (x1 - x0 + 1 + pay * 2) * KB, bh = (y1 - y0 + 1 + pay * 2) * KB, dar = matchMedia('(max-width:700px)').matches;
+  let s = Math.min(1000 / bw, 2.6); const H = dar ? kis(Math.round(bh * s / 20) * 20, 600, 1000) : 600; s = Math.min(s, H / bh);
+  return { s, H, ox: (1000 - bw * s) / 2 - (x0 - pay) * KB * s, oy: (H - bh * s) / 2 - (y0 - pay) * KB * s };
+}
 function ciz() {
-  const t = performance.now() / 1000, mv = mevsimNo(); hx.clearRect(0, 0, 1000, 600);
+  const t = performance.now() / 1000, mv = mevsimNo();
+  { const h = kamHedef(); if (hc.height !== h.H) { hc.height = h.H; kam = null; } if (!kam) kam = h; else for (const a of ['s', 'ox', 'oy']) kam[a] = Math.abs(h[a] - kam[a]) < 0.01 ? h[a] : kam[a] + (h[a] - kam[a]) * 0.12; }
+  hx.setTransform(1, 0, 0, 1, 0, 0); hx.clearRect(0, 0, 1000, hc.height); hx.setTransform(kam.s, 0, 0, kam.s, kam.ox, kam.oy);
   for (let i = 0; i < S.kare.length; i++) {
     const k = S.kare[i], c = kareC(i), r = kareR(i), x = c * KB, y = r * KB, B = BIYOM[k.b];
     hx.save(); hx.beginPath(); hx.roundRect(x + 2, y + 2, KB - 4, KB - 4, 12); hx.clip();
@@ -407,7 +418,7 @@ function ciz() {
     hx.fillStyle = `hsl(${S.hue + (rr() - 0.5) * 30},65%,62%)`; hx.strokeStyle = 'rgba(0,0,0,.45)'; hx.lineWidth = 1.5; hx.beginPath(); hx.ellipse(px, py, 7, 5, Math.atan2(ty - ny, tx - nx) + (f < 0.5 ? 0 : Math.PI), 0, TAU); hx.fill(); hx.stroke();
   }
 }
-hc.addEventListener('click', e => { const r = hc.getBoundingClientRect(), c = Math.floor((e.clientX - r.left) / r.width * COLS), q = Math.floor((e.clientY - r.top) / r.height * ROWS); if (c < 0 || c >= COLS || q < 0 || q >= ROWS) return; secili = idx(c, q); kirli = true; panelKur(); ciz(); });
+hc.addEventListener('click', e => { if (!kam) return; const r = hc.getBoundingClientRect(), c = Math.floor(((e.clientX - r.left) / r.width * 1000 - kam.ox) / kam.s / KB), q = Math.floor(((e.clientY - r.top) / r.height * hc.height - kam.oy) / kam.s / KB); if (c < 0 || c >= COLS || q < 0 || q >= ROWS) return; secili = idx(c, q); kirli = true; panelKur(); ciz(); });
 
 /* ================= akış ================= */
 document.addEventListener('click', e => {
