@@ -94,6 +94,7 @@ details{margin-top:10px}summary{cursor:pointer;font-weight:800;color:var(--mute)
     <p style="text-align:center;color:var(--mute)" data-en="From one creature to a species — the sequel to Creature">Tek canlıdan türe — Yaratık'ın devamı</p>
     <p id="koken"></p>
     <div id="ozellik"></div>
+    <a class="btn" id="kilitLink" href="/yaratik.html" hidden style="text-align:center;text-decoration:none" data-en="Go to Creature">Yaratık'a git</a>
     <button class="btn" id="mDevam" type="button"></button>
     <button class="btn ik" id="mYeni" type="button"></button>
     <details>
@@ -106,6 +107,7 @@ details{margin-top:10px}summary{cursor:pointer;font-weight:800;color:var(--mute)
         <li><b>Kış</b> gelince toplama çok düşer: depoyu sonbaharda doldur. Besin biterse yavrular ölmeye başlar (son üç yavru her koşulda hayatta kalır).</li>
         <li><b>Baskın</b> uyarısı gelince savunma gücün yetmiyorsa bekçi sayısını artır. Sen yokken yavruların bir kısmı kendiliğinden savunmaya geçer.</li>
         <li><b>Hedef:</b> haritanın en sağındaki yaylaya yerleşmek.</li>
+        <li>Yaratık oyununa dönüp kıyıya daha güçlü bir gövdeyle ulaşırsan türünün özellikleri burada güncellenir.</li>
         <li>Üstteki 🔊 ile ses düzeyini ayarlar, yanındaki düğmeyle tam ekrana geçersin.</li>
       </ul>
       <ul data-dil="en" hidden>
@@ -116,6 +118,7 @@ details{margin-top:10px}summary{cursor:pointer;font-weight:800;color:var(--mute)
         <li>In <b>winter</b> gathering drops sharply: fill the store in autumn. If food runs out, hatchlings start to die (the last three always survive).</li>
         <li>When a <b>raid</b> warning appears and your defence is too low, add guards. While you are away, some hatchlings defend on their own.</li>
         <li><b>Goal:</b> settle the plateau at the far right of the map.</li>
+        <li>If you go back to Creature and reach the shore with a stronger body, your species' traits are updated here.</li>
         <li>Use 🔊 at the top to set the volume and the button next to it for full screen.</li>
       </ul>
     </details>
@@ -188,7 +191,8 @@ const PARCA_OZ = {
 };
 
 /* ================= durum ================= */
-const YRT = (() => { const k = ls.get('yaratik-kayit', {}) || {}, g = k.gecis; return g && Array.isArray(g.segs) ? { segs: g.segs.filter(p => PARCA_OZ[p]).slice(0, 8), nesil: kis(g.nesil | 0, 1, 99), hue: +g.hue || 172, nick: String(g.nick || '').slice(0, 16) } : null; })();
+const YRT = (() => { const k = ls.get('yaratik-kayit', {}) || {}; let g = k.gecis; if (!g && k.oyun && k.oyun.kazandi && Array.isArray(k.oyun.segs)) g = { segs: k.oyun.segs, nesil: k.oyun.nesil, hue: k.oyun.hue }; if (!g && k.rekor && k.rekor.kazan > 0) g = { segs: ['yuzgec'], nesil: 1 }; return g && Array.isArray(g.segs) ? { z: +g.z || 1, segs: g.segs.filter(p => PARCA_OZ[p]).slice(0, 8), nesil: kis(g.nesil | 0, 1, 99), hue: +g.hue || 172, nick: String(g.nick || '').slice(0, 16) } : null; })();
+const KILIT = !YRT;   // Yaratık bitmeden bu oyun oynanamaz
 let S = null, sekme = 'yuva', secili = -1, kirli = true, donus = null;
 const idx = (c, r) => r * COLS + c, kareC = i => i % COLS, kareR = i => (i / COLS) | 0;
 const uzak = i => Math.max(1, Math.round(Math.hypot(kareC(i) - YX, kareR(i) - YY)));
@@ -203,11 +207,11 @@ function yeniOyun() {
   const y = idx(YX, YY); Object.assign(kare[y], { b: 0, f: 3, m: 2, a: 0, d: 1, s: 1, oz: null }); for (const j of komsu(y)) kare[j].d = 1;
   const oz = {}; if (YRT) for (const p of YRT.segs) oz[p] = (oz[p] || 0) + 1;
   S = { v: 1, tohum: th, son: Date.now(), besin: 70, malz: 12, gen: 0, pop: 3 + (YRT ? Math.min(3, YRT.nesil - 1) : 0), rol: { top: 2, tas: 1, avc: 0, bek: 0, kas: 0 }, yuva: 0, yuvaIs: null, yum: [], kare, hedef: -1, evrim: {}, ars: null,
-    baskin: { kalan: 780, uyari: 0, guc: 0, n: 0 }, yil: 0, log: [], oz, hue: YRT ? YRT.hue : 150, nick: YRT ? YRT.nick : '', kazandi: 0, sure: 0, ac: 0, yabani: !YRT };
+    ozZ: YRT ? YRT.z : 0, baskin: { kalan: 780, uyari: 0, guc: 0, n: 0 }, yil: 0, log: [], oz, hue: YRT ? YRT.hue : 150, nick: YRT ? YRT.nick : '', kazandi: 0, sure: 0, ac: 0, yabani: !YRT };
   { let ek = S.pop - 3; if (ek > 0) { S.rol.kas = 1; ek--; } if (ek > 0) { S.rol.top++; ek--; } S.rol.tas += Math.max(0, Math.min(1, ek)); }
   gunluk(YRT ? T(`${YRT.nick || 'Yaratığın'} karaya çıktı ve ilk yuvasını kumsala kurdu.`, `${YRT.nick || 'Your creature'} walked onto land and built its first nest on the beach.`) : T('Yabani bir canlı kumsala ilk yuvasını kurdu.', 'A wild creature built its first nest on the beach.'));
 }
-const kaydet = () => { if (S) { S.son = Date.now(); ls.set('yuva-kayit', S); } };
+const kaydet = () => { if (S && !KILIT) { S.son = Date.now(); ls.set('yuva-kayit', S); } };
 function gunluk(m) { if (!S) return; S.log.unshift([Date.now(), m]); if (S.log.length > 40) S.log.length = 40; if (donus) donus.olay.push(m); else if (!document.hidden) { const q = OLAY_SES.find(o => m.startsWith(o[0])); if (/Açlık|Hunger/.test(m)) SES.hasar(); else if (q) SES[q[1]](); else if (/Evrim tamamlandı|Evolution complete/.test(m)) SES.basari(); } kirli = true; }
 
 /* ================= türetilenler ================= */
@@ -309,7 +313,7 @@ function panelKur() {
     if (!S.yuvaIs && S.yuva < 6) { KAPALI.yu = () => S.malz < yuvaBedel(); h += `<button class="btn" style="width:100%;margin-top:4px" data-act="yuva" data-d="yu">${T(`Yuvayı büyüt · ${yuvaBedel()} malzeme · ${sureYaz(yuvaSure())}`, `Grow the nest · ${yuvaBedel()} material · ${sureYaz(yuvaSure())}`)}</button>`; }
     BAG.bs = () => { const b = S.baskin, sv = hizlar().savunma; return b.uyari ? T(`⚠️ ${sureYaz(b.kalan)} sonra baskın! Güç ${b.guc} · savunman ${say1(sv)}`, `⚠️ Raid in ${sureYaz(b.kalan)}! Strength ${b.guc} · your defence ${say1(sv)}`) : T(`Savunma gücün ${say1(sv)}. Yırtıcılar ara sıra yuvaya saldırır; uyarı gelince bekçi sayısına bak.`, `Your defence is ${say1(sv)}. Predators raid the nest now and then; check your guards when the warning comes.`); };
     h += `<h3>${T('SAVUNMA', 'DEFENCE')}</h3><div style="font-size:13.5px" data-b="bs"></div>`;
-    const ozl = Object.keys(S.oz); h += `<h3>${T('YARATIKTAN GELEN ÖZELLİKLER', 'TRAITS FROM YOUR CREATURE')}</h3>` + (ozl.length ? ozl.map(p => `<span class="oz">${PARCA_OZ[p][0]} ${T(...PARCA_OZ[p][1])}${S.oz[p] > 1 ? ' ×' + S.oz[p] : ''} · ${T(...PARCA_OZ[p][2])}</span>`).join('') : `<div style="color:var(--mute);font-size:13px">${T('Yabani tür: aktarılan özellik yok. Yaratık oyununda karşı kıyıya ulaşırsan gövdendeki parçalar buraya özellik olarak gelir.', 'Wild species: no inherited traits. Reach the far shore in the Creature game and your body parts arrive here as traits.')}</div>`);
+    const ozl = Object.keys(S.oz); h += `<h3>${T('YARATIKTAN GELEN ÖZELLİKLER', 'TRAITS FROM YOUR CREATURE')}</h3>` + (ozl.length ? ozl.map(p => `<span class="oz">${PARCA_OZ[p][0]} ${T(...PARCA_OZ[p][1])}${S.oz[p] > 1 ? ' ×' + S.oz[p] : ''} · ${T(...PARCA_OZ[p][2])}</span>`).join('') : `<div style="color:var(--mute);font-size:13px">${T('Aktarılan özellik yok.', 'No inherited traits.')}</div>`);
   } else if (sekme === 'rol') {
     BAG.bo = () => bosta() > 0 ? T(`${bosta()} yavru boşta bekliyor — bir rol ver.`, `${bosta()} idle — give them a role.`) : T('Herkesin bir işi var.', 'Everyone has a job.');
     h += `<div style="font-weight:800;font-size:13.5px;margin-bottom:4px" data-b="bo"></div>`;
@@ -414,15 +418,20 @@ function bilgiAc(bas, html) { $('bBas').textContent = bas; $('bMetin').innerHTML
 $('bTamam').onclick = () => { $('bilgi').hidden = true; };
 function menuKur() {
   $('koken').innerHTML = YRT ? T(`Yaratık'tan gelen: <b style="color:var(--sari)">${(YRT.nick || 'Yaratık').replace(/[<>&]/g, '')} · ${YRT.nesil}. nesil · ${YRT.segs.length} parça</b>. Parçaların türünün özelliklerine dönüşür; nesil sayın başlangıç nüfusunu artırır.`, `Arrived from Creature: <b style="color:var(--sari)">${(YRT.nick || 'Creature').replace(/[<>&]/g, '')} · generation ${YRT.nesil} · ${YRT.segs.length} parts</b>. Your parts become your species' traits; your generation count raises the starting population.`)
-    : T('Yaratık oyununda henüz karşı kıyıya ulaşmadın: <b>yabani</b> bir türle, özelliksiz başlarsın. <a href="/yaratik.html" style="color:var(--acc)">Yaratık</a>\'ta kıyıya ulaşırsan canlın parçalarıyla buraya geçer.', 'You have not reached the far shore in Creature yet: you start with a <b>wild</b> species and no traits. Reach the shore in <a href="/yaratik.html" style="color:var(--acc)">Creature</a> to bring your creature here with its parts.');
+    : T('🔒 <b>Önce Yaratık\'ı bitir.</b> Bu oyun, Yaratık\'ta büyüttüğün canlının devamı: orada gövdeni tamamla, akciğer kapsülünü bul ve karşı kıyıya ulaş. Canlın parçalarıyla birlikte buraya geçer.', '🔒 <b>Finish Creature first.</b> This game continues the animal you raised in Creature: complete your body there, find the lung capsule and reach the far shore. Your creature arrives here with its parts.');
+  $('kilitLink').hidden = !KILIT;
   $('ozellik').innerHTML = YRT ? [...new Set(YRT.segs)].map(p => `<span class="oz">${PARCA_OZ[p][0]} ${T(...PARCA_OZ[p][1])} · ${T(...PARCA_OZ[p][2])}</span>`).join('') : '';
-  const var_ = !!ls.get('yuva-kayit', null); $('mDevam').hidden = !var_; $('mDevam').textContent = T('Koloniye dön', 'Back to the colony');
+  const var_ = !KILIT && !!ls.get('yuva-kayit', null); $('mDevam').hidden = !var_; $('mYeni').hidden = KILIT; $('mDevam').textContent = T('Koloniye dön', 'Back to the colony');
   $('mYeni').textContent = var_ ? T('Yeni koloni kur (eskisi silinir)', 'Found a new colony (erases the old one)') : T('Koloniyi kur', 'Found the colony'); $('mYeni').className = var_ ? 'btn ik' : 'btn'; delete $('mYeni').dataset.emin;
   document.querySelectorAll('[data-dil]').forEach(e => e.hidden = e.dataset.dil !== (window.erDil && erDil.lang === 'en' ? 'en' : 'tr'));
 }
 $('menuBtn').onclick = () => { kaydet(); menuKur(); $('menu').hidden = false; };
+function ozEsle() {   // Yaratık'ta kıyıya daha güçlü bir gövdeyle ulaşıldıysa türün özellikleri güncellenir
+  if (!YRT || !S || S.ozZ === YRT.z) return; const oz = {}; for (const p of YRT.segs) oz[p] = (oz[p] || 0) + 1; S.oz = oz; S.ozZ = YRT.z; S.hue = YRT.hue; S.yabani = false;
+  gunluk(T('🧬 Yaratık\'tan yeni bir soy geldi: türünün özellikleri güncellendi.', '🧬 A new lineage arrived from Creature: your species\' traits were updated.'));
+}
 $('mDevam').onclick = () => { $('menu').hidden = true; };
-$('mYeni').onclick = () => { const b = $('mYeni'); if (ls.get('yuva-kayit', null) && !b.dataset.emin) { b.dataset.emin = 1; b.textContent = T('Emin misin? Tekrar dokun', 'Sure? Tap again'); return; } yeniOyun(); kaydet(); secili = -1; sekme = 'yuva'; $('menu').hidden = true; panelKur(); ciz(); };
+$('mYeni').onclick = () => { if (KILIT) return; const b = $('mYeni'); if (ls.get('yuva-kayit', null) && !b.dataset.emin) { b.dataset.emin = 1; b.textContent = T('Emin misin? Tekrar dokun', 'Sure? Tap again'); return; } yeniOyun(); kaydet(); secili = -1; sekme = 'yuva'; $('menu').hidden = true; panelKur(); ciz(); };
 function yukle() {
   const k = ls.get('yuva-kayit', null);
   if (k && k.v === 1 && Array.isArray(k.kare) && k.kare.length === COLS * ROWS) {
@@ -435,7 +444,7 @@ function yukle() {
 }
 let yaziZ = 0, kayZ = 0;
 function dongu() {   // duvar saatiyle ilerler: sekme arkadayken ya da uykudayken geçen süre de sayılır
-  if (!S) return; const n = Date.now(), ham = kis((n - S.son) / 1000, 0, 8 * 3600), dt = ham * HIZ; S.son = n;
+  if (!S || KILIT) return; const n = Date.now(), ham = kis((n - S.son) / 1000, 0, 8 * 3600), dt = ham * HIZ; S.son = n;
   { ilerlet(dt); yaziZ += ham; kayZ += ham; if (kirli) panelKur(); else if (yaziZ > 0.5) { yaziZ = 0; guncelleYazi(); } if (kayZ > 10) { kayZ = 0; kaydet(); } ciz(); }
 }
 setInterval(dongu, 200);
@@ -456,7 +465,7 @@ sesYaz();
   } }
 if (window.erDil && erDil.on) erDil.on(() => { menuKur(); kirli = true; });
 
-if (!yukle()) { yeniOyun(); menuKur(); $('menu').hidden = false; }
+if (KILIT || !yukle()) { yeniOyun(); menuKur(); $('menu').hidden = false; } else ozEsle();
 panelKur(); ciz();
 window.YUVA = { S: () => S, ilerlet, eylem, hizlar, yeniOyun, panelKur };
 })();
