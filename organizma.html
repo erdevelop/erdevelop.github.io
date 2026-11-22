@@ -135,6 +135,7 @@ body.er-durumlu #mini{bottom:32px}body.er-durumlu #ipucu{bottom:34px}
           <li><b>Büyük olan küçüğü yer:</b> senden en az dörtte bir büyük olan seni yutabilir. Etrafında kırmızı halka görünen organizmalardan uzak dur.</li>
           <li><b>Küçük olan daha hızlıdır:</b> büyüdükçe yavaşlarsın. Kaçan avı ancak doğru anda yapılan hamleyle yakalarsın. Yeşil halka, avın hamle menzilinde olduğunu gösterir.</li>
           <li><b>Plankton</b> (parlak küçük noktalar) yiyerek yavaş yavaş büyürsün. Çok büyükler zamanla biraz kütle kaybeder.</li>
+          <li><b>Mikro canlılar:</b> bakteri, diatom gibi küçük canlılar ağır ağır dolaşır, plankton ve birbirlerini yer, büyüyünce bölünür. Planktondan daha besleyicidirler; yuttuğunda içinde yavaşça dağılırlar.</li>
           <li>Organizmalar belli aralıklarla doğar, yaşar ve yaşlanıp ölür; öldüklerinde geriye besin bırakırlar.</li>
           <li>Her organizmanın üstünde adı ve kaç dakikadır yaşadığı yazar. Amaç: olabildiğince uzun hayatta kalmak.</li>
         </ul>
@@ -146,6 +147,7 @@ body.er-durumlu #mini{bottom:32px}body.er-durumlu #ipucu{bottom:34px}
           <li><b>The big eat the small:</b> anything at least a quarter bigger than you can swallow you. Keep away from organisms with a red ring.</li>
           <li><b>The small are faster:</b> you slow down as you grow. A fleeing prey can only be caught with a well-timed dash. A green ring means the prey is within dash range.</li>
           <li>Eat <b>plankton</b> (the small glowing dots) to grow slowly. Very large organisms slowly lose some mass.</li>
+          <li><b>Microbes:</b> small creatures such as bacteria and diatoms drift slowly, eat plankton and each other, and divide when they grow. They are more nourishing than plankton; once swallowed they slowly dissolve inside you.</li>
           <li>Organisms are born at intervals, live, grow old and die, leaving food behind.</li>
           <li>Each organism shows its name and how many minutes it has been alive. The goal: survive as long as you can.</li>
         </ul>
@@ -185,7 +187,7 @@ const PARAM = new URLSearchParams(location.search);
 
 /* ================= dünya ve kurallar ================= */
 const R = 4200;                         // petri kabının yarıçapı (dünya birimi)
-const YEMEK_N = 2600, NPC_N = 165;
+const YEMEK_N = 2300, NPC_N = 165, MIKRO_N = 340;
 const yaricap = m => 4 * Math.sqrt(m);
 const hizi = r => 430 / Math.pow(r, 0.42);       // küçük olan daha hızlı
 const HAMLE_S = 0.28, HAMLE_BEKLE = 2.4;
@@ -236,7 +238,7 @@ const SES = (() => {
     s.connect(f).connect(k).connect(a.destination); s.start();
   }
   return {
-    yut: () => ton(420 + Math.random() * 80, 140, 0.16, 'sine', 0.07), plankton: () => ton(900 + Math.random() * 300, 1400, 0.05, 'sine', 0.012),
+    mikro: () => ton(520 + Math.random() * 80, 240, 0.12, 'sine', 0.035), yut: () => ton(420 + Math.random() * 80, 140, 0.16, 'sine', 0.07), plankton: () => ton(900 + Math.random() * 300, 1400, 0.05, 'sine', 0.012),
     hamle: () => hava(0.22, 0.05), olum: () => { ton(300, 60, 0.5, 'triangle', 0.08); hava(0.4, 0.04); }, dogum: () => ton(260, 620, 0.35, 'sine', 0.05),
     acik: () => acik, degistir() { acik = !acik; ls.set('organizma-ses', acik); if (acik) hazir(); }
   };
@@ -311,6 +313,7 @@ const AG = (() => {
 let O = [];               // organizmalar (NPC + oyuncu + uzak oyuncular)
 let Y = [];               // besinler
 let P = [];               // parçacıklar (kabarcık, kırıntı)
+let M = [];               // mikro canlılar (bakteri, diatom…): yavaş gezer, birbirini yer
 let oyuncu = null, sayac = 0, zaman = 0, dogumSay = 0;
 const vekil = new Map();  // uzak oyuncu id → organizma
 const yenmisUzak = new Set();
@@ -343,7 +346,7 @@ function yemekKur() {
   for (let i = 0; i < YEMEK_N; i++) Y.push(yemekYeri({ x: 0, y: 0, vx: rnd(-6, 6), vy: rnd(-6, 6), m: Math.random() < 0.08 ? 3 : 1, k: (Math.random() * 5) | 0, f: Math.random() * TAU, b: 1, gecici: 0 }));
   for (const f of Y) f.b = 1;
 }
-function dunyaKur() { O = []; P = []; vekil.clear(); yemekKur(); for (let i = 0; i < NPC_N; i++) npcDogur(true); }
+function dunyaKur() { O = []; P = []; M = []; vekil.clear(); yemekKur(); for (let i = 0; i < NPC_N; i++) npcDogur(true); for (let i = 0; i < MIKRO_N; i++) mikroDogur(true); }
 
 /* ================= ızgara (yakınlık sorguları) ================= */
 const HUC = 160, GN = Math.ceil(2 * R / HUC) + 2, bas = new Int32Array(GN * GN), sonraki = new Int32Array(YEMEK_N * 3);
@@ -355,6 +358,155 @@ function izgaraKur() {
 function yakinYemek(x, y, rad, fn) {
   const x0 = kis(((x - rad + R) / HUC) | 0, 0, GN - 1), x1 = kis(((x + rad + R) / HUC) | 0, 0, GN - 1), y0 = kis(((y - rad + R) / HUC) | 0, 0, GN - 1), y1 = kis(((y + rad + R) / HUC) | 0, 0, GN - 1);
   for (let gy = y0; gy <= y1; gy++) for (let gx = x0; gx <= x1; gx++) for (let i = bas[gx + gy * GN]; i >= 0; i = sonraki[i]) fn(Y[i], i);
+}
+
+/* ================= mikro canlılar ================= */
+const MIKRO_UST = 14, ERIME = 1.9, MKAP = 800, basM = new Int32Array(GN * GN), sonM = new Int32Array(MKAP);
+/* tür: [renk aralığı, hız aralığı] — 0 basil, 1 spiril, 2 kok, 3 diatom, 4 mini kamçılı */
+const MIKRO_TUR = [[[85, 130], [18, 30]], [[18, 45], [24, 38]], [[318, 350], [6, 12]], [[42, 62], [9, 17]], [[195, 255], [28, 44]]];
+let mikroSay = 0;
+function mikroYeni(x, y, m, tip) {
+  if (tip == null) tip = (Math.random() * MIKRO_TUR.length) | 0;
+  const [rk, hz] = MIKRO_TUR[tip], a = Math.random() * TAU;
+  return { x, y, vx: 0, vy: 0, m, r: yaricap(m), tip, hue: tip === 3 && Math.random() < 0.4 ? rnd(165, 190) : rnd(rk[0], rk[1]), ang: a, yon: a, hiz: rnd(hz[0], hz[1]), gaz: 0.6, f: Math.random() * TAU, akil: Math.random() * 0.7, b: 1, olu: null, n: 2 + ((Math.random() * 3) | 0) };
+}
+function mikroDogur(hazir) { const [x, y] = diskteNokta(40), a = mikroYeni(x, y, rnd(1.5, 9)); a.b = hazir ? 1 : 0; M.push(a); return a; }
+function mikroIzgara() {
+  basM.fill(-1); const n = Math.min(M.length, MKAP);
+  for (let i = 0; i < n; i++) { if (M[i].olu) continue; const h = hucre(M[i].x, M[i].y); sonM[i] = basM[h]; basM[h] = i; }
+}
+function yakinMikro(x, y, rad, fn) {
+  const x0 = kis(((x - rad + R) / HUC) | 0, 0, GN - 1), x1 = kis(((x + rad + R) / HUC) | 0, 0, GN - 1), y0 = kis(((y - rad + R) / HUC) | 0, 0, GN - 1), y1 = kis(((y + rad + R) / HUC) | 0, 0, GN - 1);
+  for (let gy = y0; gy <= y1; gy++) for (let gx = x0; gx <= x1; gx++) for (let i = basM[gx + gy * GN]; i >= 0; i = sonM[i]) fn(M[i]);
+}
+function mikroYe(a, b) {   // a: organizma ya da mikro canlı; b: yenen mikro canlı
+  const org = a.kon !== undefined;
+  if (!(org && a.uzak)) { a.m = Math.min(org ? KUTLE_UST : MIKRO_UST + 3, a.m + b.m * 0.8); if (org) a.enBuyuk = Math.max(a.enBuyuk, a.m); }
+  if (org) { a.yut = Math.max(a.yut, 0.6); if (a === oyuncu) SES.mikro(); }
+  const p = []; for (let i = 0, n = 5 + ((Math.random() * 4) | 0); i < n; i++) p.push({ a: Math.random() * TAU, d: rnd(0.7, 1.7), r: rnd(0.22, 0.48), sp: rnd(-1.5, 1.5) });
+  b.olu = { a, t: 0, ox: b.x - a.x, oy: b.y - a.y, s: ERIME * (org ? 1 : 0.75), p, don: rnd(-1, 1) };
+}
+function mikroAkil(a) {
+  let hx = 0, hy = 0, kac = false, hedef = null, hd = 1e9;
+  yakinMikro(a.x, a.y, 110, b => {
+    if (b === a || b.olu) return; const dx = b.x - a.x, dy = b.y - a.y, d2 = dx * dx + dy * dy; if (d2 > 12100) return;
+    if (b.m >= a.m * 1.3) { const d = Math.sqrt(d2) || 1, w = 1 - d / 110; hx -= dx / d * w; hy -= dy / d * w; kac = true; }
+    else if (a.m >= b.m * 1.3 && d2 < hd) { hd = d2; hedef = b; }
+  });
+  for (const o of O) {
+    if (o.olu) continue; const dx = o.x - a.x, dy = o.y - a.y, lim = o.r + 70; if (dx > lim || dx < -lim || dy > lim || dy < -lim) continue;
+    const d = Math.hypot(dx, dy) || 1; if (d < lim) { const w = 1.6 * (1 - d / lim); hx -= dx / d * w; hy -= dy / d * w; kac = true; }
+  }
+  if (kac) { a.yon = Math.atan2(hy, hx); a.gaz = 1.25; }
+  else if (hedef) { a.yon = Math.atan2(hedef.y - a.y, hedef.x - a.x); a.gaz = 1; }
+  else {
+    let en = null, enD = 8100;
+    yakinYemek(a.x, a.y, 90, f => { if (f.b < 1 || f.yendi) return; const d = (f.x - a.x) ** 2 + (f.y - a.y) ** 2; if (d < enD) { enD = d; en = f; } });
+    if (en) { a.yon = Math.atan2(en.y - a.y, en.x - a.x); a.gaz = 0.8; } else { a.yon += rnd(-0.9, 0.9); a.gaz = 0.55; }
+  }
+}
+function mikroGuncelle(dt) {
+  /* organizmalar mikro canlıları yer */
+  for (const o of O) {
+    if (o.olu || o.dogum < 1 || o.olum > 0) continue;
+    yakinMikro(o.x, o.y, o.r, b => {
+      if (b.olu || b.b < 0.5 || o.m < b.m * YEME) return; const dx = b.x - o.x, dy = b.y - o.y, lim = o.r - b.r * 0.3;
+      if (lim > 0 && dx * dx + dy * dy < lim * lim) mikroYe(o, b);
+    });
+  }
+  const n0 = M.length; let canli = 0; for (const a of M) if (!a.olu) canli++;
+  for (let i = 0; i < n0; i++) {
+    const a = M[i];
+    if (a.olu) {   // yiyenin içinde sürüklenip dağılır
+      const e = a.olu; e.t += dt / e.s; a.ang += e.don * dt;
+      if (!e.a.olu) { const k = Math.max(0, 1 - dt * 0.9); e.ox *= k; e.oy *= k; a.x = e.a.x + e.ox; a.y = e.a.y + e.oy; }
+      continue;
+    }
+    if (a.b < 1) a.b = Math.min(1, a.b + dt * 0.7);
+    a.r = yaricap(a.m);
+    a.akil -= dt; if (a.akil <= 0) { a.akil = rnd(0.35, 0.8); mikroAkil(a); }
+    a.ang += aciFark(a.yon, a.ang) * Math.min(1, dt * 2.2);
+    const v = a.hiz * a.gaz, k = Math.min(1, dt * 2);
+    a.vx += (Math.cos(a.ang) * v - a.vx) * k; a.vy += (Math.sin(a.ang) * v - a.vy) * k;
+    a.x += a.vx * dt; a.y += a.vy * dt;
+    const d = Math.hypot(a.x, a.y); if (d > R - 30) { a.x *= (R - 30) / d; a.y *= (R - 30) / d; a.yon = Math.atan2(-a.y, -a.x) + rnd(-0.6, 0.6); }
+    yakinYemek(a.x, a.y, a.r, f => {
+      if (f.b < 1 || f.yendi) return; const dx = f.x - a.x, dy = f.y - a.y; if (dx * dx + dy * dy > a.r * a.r) return;
+      if (a.m < MIKRO_UST) a.m += f.m * 0.6; f.yendi = true;
+    });
+    yakinMikro(a.x, a.y, a.r + 4, b => {
+      if (b === a || b.olu || a.olu || b.b < 1 || a.m < b.m * 1.3) return; const dx = b.x - a.x, dy = b.y - a.y, lim = a.r * 0.9;
+      if (dx * dx + dy * dy < lim * lim) { mikroYe(a, b); canli--; }
+    });
+    if (a.m >= MIKRO_UST) {   // ikiye bölünme
+      if (canli < MIKRO_N * 1.2 && M.length < MKAP) {
+        a.m *= 0.5; a.r = yaricap(a.m);
+        const c = mikroYeni(a.x - Math.cos(a.ang) * a.r, a.y - Math.sin(a.ang) * a.r, a.m, a.tip);
+        c.hue = a.hue; c.ang = a.ang; c.yon = a.ang + Math.PI; c.n = a.n; M.push(c); canli++;
+      } else a.m = MIKRO_UST;
+    }
+  }
+  M = M.filter(a => !a.olu || a.olu.t < 1);
+  mikroSay -= dt;
+  if (mikroSay <= 0 && canli < MIKRO_N && M.length < MKAP) { mikroSay = MIKRO_N - canli > 40 ? 0.03 : rnd(0.12, 0.4); mikroDogur(false); }
+}
+function mikroCiz(a, z, t, al, olcek) {
+  const r = a.r * olcek * (0.35 + 0.65 * a.b), h = a.hue;
+  g.save(); g.translate(a.x, a.y); g.globalAlpha = al * a.b;
+  if (r * z < 2.6) { g.fillStyle = `hsla(${h},65%,62%,.85)`; g.beginPath(); g.arc(0, 0, Math.max(r, 1.6 / z), 0, TAU); g.fill(); g.restore(); return; }
+  g.rotate(a.ang); g.lineCap = 'round'; g.lineJoin = 'round';
+  const lw = Math.max(0.9 / z, r * 0.1), dol = `hsla(${h},60%,50%,.5)`, cizgi = `hsla(${h},75%,82%,.75)`;
+  if (a.tip === 0) {            // basil: çubuk bakteri, arkada iki ince kamçı
+    const L = r * 1.45, w = r * 0.55;
+    g.strokeStyle = `hsla(${h},50%,82%,.45)`; g.lineWidth = lw * 0.6; g.beginPath();
+    for (const k of [-1, 1]) { g.moveTo(-L, k * w * 0.4); for (let i = 1; i <= 6; i++) { const s = i / 6; g.lineTo(-L - s * r * 1.5, k * w * 0.4 + Math.sin(s * 6 - t * 9 + a.f + k) * r * 0.28 * s); } }
+    g.stroke();
+    g.beginPath(); g.moveTo(-L + w, -w); g.lineTo(L - w, -w); g.arc(L - w, 0, w, -Math.PI / 2, Math.PI / 2); g.lineTo(-L + w, w); g.arc(-L + w, 0, w, Math.PI / 2, Math.PI * 1.5); g.closePath();
+    g.fillStyle = dol; g.fill(); g.strokeStyle = cizgi; g.lineWidth = lw; g.stroke();
+    g.fillStyle = `hsla(${h + 30},50%,85%,.6)`; g.beginPath(); g.arc(-L * 0.35, 0, w * 0.3, 0, TAU); g.arc(L * 0.3, w * 0.1, w * 0.22, 0, TAU); g.fill();
+  } else if (a.tip === 1) {     // spiril: kıvrılarak yüzen sarmal
+    const yol = () => { g.beginPath(); for (let i = 0; i <= 14; i++) { const s = i / 14 - 0.5, x = s * r * 3.3, y = Math.sin(s * 9 - t * 7 + a.f) * r * 0.45; i ? g.lineTo(x, y) : g.moveTo(x, y); } };
+    yol(); g.strokeStyle = `hsla(${h},70%,55%,.7)`; g.lineWidth = r * 0.44; g.stroke();
+    yol(); g.strokeStyle = `hsla(${h},85%,85%,.6)`; g.lineWidth = Math.max(0.6 / z, r * 0.12); g.stroke();
+  } else if (a.tip === 2) {     // kok: birbirine yapışık yuvarlak hücreler
+    g.rotate(t * 0.25 + a.f); g.fillStyle = dol; g.strokeStyle = cizgi; g.lineWidth = lw;
+    for (let i = 0; i < a.n; i++) {
+      const q = i / a.n * TAU, d = a.n === 2 ? r * 0.5 : r * 0.62, cr = r * (a.n === 2 ? 0.62 : 0.52) * (1 + 0.05 * Math.sin(t * 2 + i + a.f));
+      g.beginPath(); g.arc(Math.cos(q) * d, Math.sin(q) * d, cr, 0, TAU); g.fill(); g.stroke();
+      g.fillStyle = `hsla(${h - 20},45%,30%,.45)`; g.beginPath(); g.arc(Math.cos(q) * d, Math.sin(q) * d, cr * 0.35, 0, TAU); g.fill(); g.fillStyle = dol;
+    }
+  } else if (a.tip === 3) {     // diatom: mekik biçimli camsı kabuk
+    const L = r * 1.75, w = r * 0.95;
+    g.beginPath(); g.moveTo(-L, 0); g.quadraticCurveTo(0, -w, L, 0); g.quadraticCurveTo(0, w, -L, 0); g.closePath();
+    g.fillStyle = `hsla(${h},65%,55%,.38)`; g.fill(); g.strokeStyle = `hsla(${h},70%,85%,.8)`; g.lineWidth = lw; g.stroke();
+    g.lineWidth = lw * 0.55; g.strokeStyle = `hsla(${h},60%,88%,.45)`; g.beginPath(); g.moveTo(-L * 0.85, 0); g.lineTo(L * 0.85, 0);
+    for (let i = -3; i <= 3; i++) { const x = i * L * 0.2, y = w * 0.42 * (1 - (i * 0.2) ** 2 * 1.4); g.moveTo(x, -y); g.lineTo(x, y); }
+    g.stroke();
+    g.fillStyle = `hsla(${h + 50},55%,45%,.5)`; g.beginPath(); g.ellipse(-L * 0.35, 0, L * 0.2, w * 0.2, 0, 0, TAU); g.ellipse(L * 0.35, 0, L * 0.2, w * 0.2, 0, 0, TAU); g.fill();
+  } else {                      // mini kamçılı: damla gövde, hızlı çırpan kuyruk
+    g.strokeStyle = `hsla(${h},55%,82%,.55)`; g.lineWidth = lw * 0.7; g.beginPath(); g.moveTo(-r * 0.9, 0);
+    for (let i = 1; i <= 8; i++) { const s = i / 8; g.lineTo(-r * 0.9 - s * r * 2.1, Math.sin(s * 7 - t * 14 + a.f) * r * 0.35 * s); }
+    g.stroke();
+    g.beginPath(); g.moveTo(r * 1.15, 0); g.bezierCurveTo(r * 0.9, -r * 0.85, -r * 0.6, -r * 0.75, -r * 0.95, 0); g.bezierCurveTo(-r * 0.6, r * 0.75, r * 0.9, r * 0.85, r * 1.15, 0); g.closePath();
+    g.fillStyle = dol; g.fill(); g.strokeStyle = cizgi; g.lineWidth = lw; g.stroke();
+    g.fillStyle = `hsla(${h - 30},50%,28%,.55)`; g.beginPath(); g.arc(r * 0.1, 0, r * 0.3, 0, TAU); g.fill();
+  }
+  g.restore();
+}
+function erimeCiz(a, z, t) {
+  const e = a.olu, k = Math.min(1, e.t), y = 1 - (1 - k) * (1 - k), h = a.hue;
+  /* gövde şişer, solar */
+  if (k < 0.5) mikroCiz(a, z, t, 1 - k * 2, 1 + k * 0.7);
+  /* bulut */
+  g.fillStyle = `hsla(${h},60%,70%,${0.16 * (1 - k)})`; g.beginPath(); g.arc(a.x, a.y, a.r * (1 + y * 2.2), 0, TAU); g.fill();
+  /* parçalar */
+  const al = (k < 0.12 ? k / 0.12 : 1 - (k - 0.12) / 0.88) * 0.8;
+  g.fillStyle = `hsla(${h},68%,68%,${al})`; g.beginPath();
+  for (const p of e.p) {
+    const q = p.a + k * p.sp, d = a.r * p.d * y * 1.7, pr = Math.max(0.8 / z, a.r * p.r * (1 - k * 0.65));
+    const px = a.x + Math.cos(q) * d, py = a.y + Math.sin(q) * d; g.moveTo(px + pr, py); g.arc(px, py, pr, 0, TAU);
+  }
+  g.fill();
 }
 
 /* ================= yapay zekâ ================= */
@@ -386,6 +538,7 @@ function npcAkil(o, dt) {
   } else {
     let en = null, enD = 1e9;
     yakinYemek(o.x, o.y, 260 + o.r, f => { if (f.b < 1) return; const d = (f.x - o.x) ** 2 + (f.y - o.y) ** 2; if (d < enD) { enD = d; en = f; } });
+    yakinMikro(o.x, o.y, 300 + o.r, b => { if (b.olu || o.m < b.m * YEME) return; const d = ((b.x - o.x) ** 2 + (b.y - o.y) ** 2) / (1 + b.m * 0.4); if (d < enD) { enD = d; en = b; } });
     if (en) { dx = en.x - o.x; dy = en.y - o.y; gaz = 0.85; }
     else { ai.yon += rnd(-0.7, 0.7); dx = Math.cos(ai.yon); dy = Math.sin(ai.yon); gaz = 0.55; }
   }
@@ -436,7 +589,7 @@ function parcala(o) {   // yaşlılıktan ölünce besine dönüşür
 
 function guncelle(dt) {
   zaman += dt;
-  izgaraKur();
+  izgaraKur(); mikroIzgara();
   vekilleriEsle(dt);
   /* kontrol */
   if (oyuncu && !oyuncu.olu) oyuncuKontrol();
@@ -466,6 +619,7 @@ function guncelle(dt) {
       f.yendi = true; if (o === oyuncu && Math.random() < 0.4) SES.plankton();
     });
   }
+  mikroGuncelle(dt);
   for (let i = Y.length - 1; i >= 0; i--) {
     const f = Y[i];
     if (f.yendi) { if (f.gecici) { Y[i] = Y[Y.length - 1]; Y.pop(); continue; } f.yendi = false; yemekYeri(f); }
@@ -780,6 +934,8 @@ function ciz(t) {
     const ss = Math.max(s, 3.5 * yz);
     g.drawImage(SPR[f.k], f.x - ss, f.y - ss, ss * 2, ss * 2);
   }
+  /* mikro canlılar */
+  for (const a of M) { if (a.olu || a.x < gx0 - 40 || a.x > gx1 + 40 || a.y < gy0 - 40 || a.y > gy1 + 40) continue; mikroCiz(a, z, t, 1, 1); }
   /* parçacıklar */
   for (const p of P) {
     if (p.x < gx0 - 50 || p.x > gx1 + 50 || p.y < gy0 - 50 || p.y > gy1 + 50) continue;
@@ -794,6 +950,8 @@ function ciz(t) {
     if (o.dogum < 1) dogumKabuk(o, z, t);
     orgCiz(g, o, z, t);
   }
+  /* yutulan mikro canlılar: yiyenin içinde yavaşça dağılır */
+  for (const a of M) { if (!a.olu || a.x < gx0 - 60 || a.x > gx1 + 60 || a.y < gy0 - 60 || a.y > gy1 + 60) continue; erimeCiz(a, z, t); }
   /* halkalar: av (yeşil) ve tehlike (kırmızı) */
   const p = oyuncu && !oyuncu.olu && oyuncu.dogum >= 1 ? oyuncu : null;
   if (p) {
@@ -949,7 +1107,7 @@ function kare(ts) {
 dunyaKur(); menuKur(); AG.baslat();
 if (PARAM.has('og')) { $('menu').hidden = true; $('ust').hidden = true; }
 requestAnimationFrame(kare);
-window.ORG = { durum: () => ({ O, Y, oyuncu, kamera, zaman }), basla, hamle: oyuncuHamle, isaret, MENZIL, ye };
+window.ORG = { durum: () => ({ O, Y, M, oyuncu, kamera, zaman }), basla, hamle: oyuncuHamle, isaret, MENZIL, ye };
 })();
 </script>
 <script data-goatcounter="https://erdevelop.goatcounter.com/count" async src="//gc.zgo.at/count.js"></script>
