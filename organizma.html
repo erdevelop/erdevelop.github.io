@@ -238,7 +238,8 @@ body.er-durumlu #mini{bottom:32px}
       <div data-l="tr"><p>Küçükken plankton topla ve devlerden uzak dur. Hamle sonrası dinlenme süresinde savunmasızsın; hamleni boşa harcama. Seni kovalayan biri hamle yapınca hemen yön değiştir. Başka çevrimiçi oyuncular ağ simgesiyle (🌐) görünür.</p></div>
       <div data-l="en" hidden><p>Collect plankton while you are small and stay away from giants. You are vulnerable while recovering after a dash, so don't waste it. When a chaser dashes, change direction at once. Other online players are marked with the globe (🌐).</p></div>
     </details>
-    <p class="kucuk"><span data-en="More games:">Başka oyunlar:</span> <a href="/oyunlar/" data-en="Game Garden">Oyun Bahçesi</a> · <a href="/GameKingdom10.html" data-en="Little Kingdom">Küçük Krallık</a></p>
+    <p class="kucuk" data-en="Additional sounds: Joseph SARDIN – BigSoundBank.com">Ek sesler: Joseph SARDIN – BigSoundBank.com</p>
+    <p class="kucuk" style="margin-top:4px"><span data-en="More games:">Başka oyunlar:</span> <a href="/oyunlar/" data-en="Game Garden">Oyun Bahçesi</a> · <a href="/GameKingdom10.html" data-en="Little Kingdom">Küçük Krallık</a></p>
   </div>
 </div>
 
@@ -380,7 +381,7 @@ const SES = (() => {
   }
   let ortamK = null;
   function ortam() {   // kısık su altı uğultusu
-    const a = hazir(); if (!a || ortamK) return; const n = a.sampleRate * 3, b = a.createBuffer(1, n, a.sampleRate), d = b.getChannelData(0); let v = 0;
+    const a = hazir(); if (!a) return; gegirYukle(); if (ortamK) return; const n = a.sampleRate * 3, b = a.createBuffer(1, n, a.sampleRate), d = b.getChannelData(0); let v = 0;
     for (let i = 0; i < n; i++) { v = (v + (Math.random() * 2 - 1) * 0.04) * 0.996; d[i] = v * 2.2; }
     for (let i = 0; i < 3000; i++) { const k = i / 3000; d[i] *= k; d[n - 1 - i] *= k; }
     const src = a.createBufferSource(), f = a.createBiquadFilter(), k = a.createGain(), lfo = a.createOscillator(), lk = a.createGain();
@@ -388,8 +389,16 @@ const SES = (() => {
     lfo.frequency.value = 0.07; lk.gain.value = 90; lfo.connect(lk).connect(f.frequency); lfo.start();
     src.connect(f).connect(k).connect(ana); src.start(); ortamK = k;
   }
-  function gegir() {   // kısa, komik bir geğirme: titrek alçak ses + ağız boşluğu süzgeci
-    const a = hazir(); if (!a) return; const t = a.currentTime, o = a.createOscillator(), f = a.createBiquadFilter(), k = a.createGain(), lfo = a.createOscillator(), lk = a.createGain(), u = 0.42 + Math.random() * 0.2, p = 0.9 + Math.random() * 0.25;
+  /* geğirme: gerçek kayıt (Joseph SARDIN – BigSoundBank.com, CC0); yüklenemezse üretilen ses çalar */
+  let gegirTampon = null, gegirIstendi = false;
+  function gegirYukle() {
+    const a = hazir(); if (!a || gegirIstendi) return; gegirIstendi = true;
+    fetch('/ses/organizma-gegirme.mp3').then(r => r.ok ? r.arrayBuffer() : Promise.reject()).then(b => new Promise((ok, no) => a.decodeAudioData(b, ok, no))).then(b => { gegirTampon = b; }).catch(() => { });
+  }
+  function gegir() {
+    const a = hazir(); if (!a) return;
+    if (gegirTampon) { const src = a.createBufferSource(), k = a.createGain(); src.buffer = gegirTampon; src.playbackRate.value = 0.8 + Math.random() * 0.3; k.gain.value = 0.3; src.connect(k).connect(ana); src.start(); return; }
+    gegirYukle(); const t = a.currentTime, o = a.createOscillator(), f = a.createBiquadFilter(), k = a.createGain(), lfo = a.createOscillator(), lk = a.createGain(), u = 0.42 + Math.random() * 0.2, p = 0.9 + Math.random() * 0.25;
     o.type = 'sawtooth'; o.frequency.setValueAtTime(100 * p, t); o.frequency.linearRampToValueAtTime(72 * p, t + u * 0.25); o.frequency.linearRampToValueAtTime(112 * p, t + u * 0.6); o.frequency.exponentialRampToValueAtTime(52 * p, t + u);
     f.type = 'bandpass'; f.Q.value = 3.2; f.frequency.setValueAtTime(480, t); f.frequency.linearRampToValueAtTime(920, t + u * 0.3); f.frequency.linearRampToValueAtTime(360, t + u);
     lfo.type = 'square'; lfo.frequency.value = 34 + Math.random() * 10; lk.gain.value = 0.06; lfo.connect(lk).connect(k.gain);
@@ -1822,7 +1831,7 @@ if (PARAM.has('zt')) zEk = +PARAM.get('zt') || 0;
 gorevHazirla(); dunyaKur(); menuKur(); AG.baslat();
 if (PARAM.has('og')) { $('menu').hidden = true; $('ust').hidden = true; }
 requestAnimationFrame(kare);
-window.ORG = { durum: () => ({ O, Y, M, V, oyuncu, kamera, zaman, AV, OLAY, BOLGE, KAYIT, evSecenek, intikam }), basla, hamle: oyuncuHamle, bol: oyuncuBol, evrimSec, isaret, MENZIL, ye, saat, zamanKay: s => { zEk = s; }, basarim, gorevIlerle, dnaEkle, menuAc, ag: () => AG.hata() };
+window.ORG = { gegir: () => SES.gegir(), durum: () => ({ O, Y, M, V, oyuncu, kamera, zaman, AV, OLAY, BOLGE, KAYIT, evSecenek, intikam }), basla, hamle: oyuncuHamle, bol: oyuncuBol, evrimSec, isaret, MENZIL, ye, saat, zamanKay: s => { zEk = s; }, basarim, gorevIlerle, dnaEkle, menuAc, ag: () => AG.hata() };
 })();
 </script>
 <script data-goatcounter="https://erdevelop.goatcounter.com/count" async src="//gc.zgo.at/count.js"></script>
