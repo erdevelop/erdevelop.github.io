@@ -380,6 +380,14 @@ const SES = (() => {
     const s = a.createBufferSource(), f = a.createBiquadFilter(), k = a.createGain(); s.buffer = b; f.type = 'bandpass'; f.frequency.value = 900; f.Q.value = 0.7; k.gain.value = v || 0.05;
     s.connect(f).connect(k).connect(ana); s.start();
   }
+  function yumusakHamle() {   // su içinde yumuşak bir "vuuş": boğuk hışırtı + aşağı kayan kısık ton + minik kabarcık
+    const a = hazir(); if (!a) return; const t = a.currentTime, n = Math.floor(a.sampleRate * 0.34), b = a.createBuffer(1, n, a.sampleRate), d = b.getChannelData(0);
+    for (let i = 0; i < n; i++) d[i] = Math.random() * 2 - 1;
+    const s = a.createBufferSource(), f = a.createBiquadFilter(), k = a.createGain(); s.buffer = b; f.type = 'lowpass'; f.Q.value = 0.4; f.frequency.setValueAtTime(650, t); f.frequency.exponentialRampToValueAtTime(180, t + 0.32);
+    k.gain.setValueAtTime(0.0001, t); k.gain.linearRampToValueAtTime(0.022, t + 0.07); k.gain.exponentialRampToValueAtTime(0.0001, t + 0.34);
+    s.connect(f).connect(k).connect(ana); s.start(t);
+    ton(400, 230, 0.24, 'sine', 0.012); setTimeout(() => ton(650 + Math.random() * 200, 1000, 0.07, 'sine', 0.006), 130);
+  }
   let ortamK = null;
   function ortam() {   // kısık su altı uğultusu
     const a = hazir(); if (!a) return; gegirYukle(); if (ortamK) return; const n = a.sampleRate * 3, b = a.createBuffer(1, n, a.sampleRate), d = b.getChannelData(0); let v = 0;
@@ -409,7 +417,7 @@ const SES = (() => {
   return {
     gegir, ortam, basari: () => { ton(620, 930, 0.12, 'sine', 0.045); setTimeout(() => ton(930, 1240, 0.16, 'sine', 0.04), 110); }, uyari: () => { ton(190, 130, 0.45, 'sawtooth', 0.04); setTimeout(() => ton(190, 130, 0.45, 'sawtooth', 0.04), 520); }, kabarcik: () => ton(300 + Math.random() * 250, 950, 0.09, 'sine', 0.012),
     mikro: () => ton(520 + Math.random() * 80, 240, 0.12, 'sine', 0.035), yut: () => ton(420 + Math.random() * 80, 140, 0.16, 'sine', 0.07), plankton: () => ton(900 + Math.random() * 300, 1400, 0.05, 'sine', 0.012),
-    hamle: () => hava(0.22, 0.05), olum: () => { ton(300, 60, 0.5, 'triangle', 0.08); hava(0.4, 0.04); }, dogum: () => ton(260, 620, 0.35, 'sine', 0.05),
+    hamle: yumusakHamle, olum: () => { ton(300, 60, 0.5, 'triangle', 0.08); hava(0.4, 0.04); }, dogum: () => ton(260, 620, 0.35, 'sine', 0.05),
     acik: () => acik, duzey: () => duzey, ayarla(v) { duzey = kis(v, 0, 1); acik = duzey > 0; ls.set('organizma-ses-duzey', duzey); ls.set('organizma-ses', acik); if (ana) ana.gain.value = duzey * KAT; if (acik) hazir(); }
   };
 })();
@@ -605,7 +613,11 @@ const MIKRO_UST = 14, ERIME = 1.9, MKAP = 800, basM = new Int32Array(GN * GN), s
 /* tür: [renk aralığı, hız aralığı] — 0 basil, 1 spiril, 2 kok, 3 diatom, 4 mini kamçılı */
 const MIKRO_TUR = [[[85, 130], [18, 30]], [[18, 45], [24, 38]], [[318, 350], [6, 12]], [[42, 62], [9, 17]], [[195, 255], [28, 44]],
   /* 5 hilal alg, 6 zincir bakteri, 7 yıldız koloni, 8 kopepod, 9 volvoks, 10 terliksi yavrusu, 11 sarmal alg */
-  [[95, 130], [8, 14]], [[0, 22], [10, 18]], [[45, 65], [5, 9]], [[15, 38], [34, 50]], [[100, 140], [7, 12]], [[265, 300], [20, 32]], [[150, 180], [9, 15]]];
+  [[95, 130], [8, 14]], [[0, 22], [10, 18]], [[45, 65], [5, 9]], [[15, 38], [34, 50]], [[100, 140], [7, 12]], [[265, 300], [20, 32]], [[150, 180], [9, 15]],
+  /* 12 stentor, 13 vortisella, 14 öglena, 15 yuvarlak diatom, 16 spiroket, 17 dörtlü kok, 18 rotifer, 19 su ayısı, 20 nematod,
+     21 amip yavrusu, 22 mini ışınlı, 23 dinoflagellat, 24 vibrio, 25 desmid, 26 hidra yavrusu, 27 efira, 28 ostrakod, 29 maya */
+  [[185, 215], [6, 11]], [[40, 70], [4, 8]], [[100, 135], [22, 34]], [[35, 60], [5, 9]], [[330, 355], [36, 52]], [[280, 310], [4, 8]], [[20, 45], [18, 28]], [[25, 50], [10, 16]], [[50, 80], [20, 32]],
+  [[290, 330], [8, 13]], [[190, 220], [5, 9]], [[15, 40], [16, 26]], [[140, 170], [26, 40]], [[105, 140], [5, 9]], [[80, 110], [5, 9]], [[200, 250], [14, 22]], [[30, 55], [14, 22]], [[45, 65], [4, 7]]];
 let mikroSay = 0;
 function mikroYeni(x, y, m, tip) {
   if (tip == null) tip = (Math.random() * MIKRO_TUR.length) | 0;
@@ -693,6 +705,104 @@ function mikroGuncelle(dt) {
   mikroSay -= dt;
   if (mikroSay <= 0 && canli < MIKRO_N && M.length < MKAP) { mikroSay = MIKRO_N - canli > 40 ? 0.03 : rnd(0.12, 0.4); mikroDogur(false); }
 }
+/* 12–29. mikro canlı türleri: (a, r, h, t, z, lw, dol, cizgi) */
+const dolCiz = (dol, cizgi, lw) => { g.fillStyle = dol; g.fill(); g.strokeStyle = cizgi; g.lineWidth = lw; g.stroke(); };
+const EK_CIZ = [
+  (a, r, h, t, z, lw, dol, cizgi) => {   // 12 stentor: borazan biçimli, ağzında siller
+    g.beginPath(); g.moveTo(-r * 1.5, 0); g.quadraticCurveTo(-r * 0.2, -r * 0.25, r * 1.1, -r * 0.95); g.quadraticCurveTo(r * 1.45, 0, r * 1.1, r * 0.95); g.quadraticCurveTo(-r * 0.2, r * 0.25, -r * 1.5, 0); g.closePath(); dolCiz(dol, cizgi, lw);
+    g.lineWidth = lw * 0.5; g.beginPath(); for (let i = 0; i < 9; i++) { const y = (i / 8 * 2 - 1) * r * 0.9, e = Math.sin(i - t * 10 + a.f) * 0.5; g.moveTo(r * 1.2, y); g.lineTo(r * 1.2 + Math.cos(e) * r * 0.35, y + Math.sin(e) * r * 0.35); } g.stroke();
+    g.fillStyle = `hsla(${h - 30},50%,30%,.5)`; g.beginPath(); for (let i = 0; i < 4; i++) { g.moveTo(-r * 0.5 + i * r * 0.38 + r * 0.1, 0); g.arc(-r * 0.5 + i * r * 0.38, 0, r * 0.1, 0, TAU); } g.fill();
+  },
+  (a, r, h, t, z, lw, dol, cizgi) => {   // 13 vortisella: kasılan sarmal saplı çan
+    const kas = 0.75 + 0.25 * Math.sin(t * 1.3 + a.f); g.strokeStyle = `hsla(${h},50%,80%,.55)`; g.lineWidth = lw * 0.7; g.beginPath(); g.moveTo(-r * 0.7, 0);
+    for (let i = 1; i <= 18; i++) { const s = i / 18; g.lineTo(-r * 0.7 - s * r * 2.4 * kas, Math.sin(s * 16) * r * 0.24 * (1.35 - kas)); } g.stroke();
+    g.beginPath(); g.moveTo(-r * 0.7, 0); g.bezierCurveTo(-r * 0.5, -r * 0.7, r * 0.5, -r * 0.6, r * 0.9, -r * 0.95); g.lineTo(r * 0.9, r * 0.95); g.bezierCurveTo(r * 0.5, r * 0.6, -r * 0.5, r * 0.7, -r * 0.7, 0); g.closePath(); dolCiz(dol, cizgi, lw);
+    g.lineWidth = lw * 0.5; g.beginPath(); for (let i = 0; i < 8; i++) { const y = (i / 7 * 2 - 1) * r * 0.9, e = Math.sin(i * 1.2 - t * 11 + a.f) * 0.6; g.moveTo(r * 0.9, y); g.lineTo(r * 0.9 + Math.cos(e) * r * 0.32, y + Math.sin(e) * r * 0.32); } g.stroke();
+  },
+  (a, r, h, t, z, lw, dol, cizgi) => {   // 14 öglena: yeşil iğ, kırmızı göz beneği, önde kamçı
+    g.strokeStyle = `hsla(${h},50%,82%,.5)`; g.lineWidth = lw * 0.6; g.beginPath(); g.moveTo(r * 1.6, 0); for (let i = 1; i <= 8; i++) { const s = i / 8; g.lineTo(r * 1.6 + s * r * 1.5, Math.sin(s * 7 - t * 12 + a.f) * r * 0.3 * s); } g.stroke();
+    g.beginPath(); g.moveTo(r * 1.6, 0); g.bezierCurveTo(r * 0.6, -r * 0.75, -r * 0.9, -r * 0.55, -r * 1.6, 0); g.bezierCurveTo(-r * 0.9, r * 0.55, r * 0.6, r * 0.75, r * 1.6, 0); g.closePath(); dolCiz(`hsla(${h},62%,42%,.55)`, cizgi, lw);
+    g.fillStyle = `hsla(${h - 15},65%,30%,.5)`; g.beginPath(); for (let i = 0; i < 5; i++) { const x = -r * 0.9 + i * r * 0.4, y = (i % 2 ? 1 : -1) * r * 0.15; g.moveTo(x + r * 0.12, y); g.arc(x, y, r * 0.12, 0, TAU); } g.fill();
+    g.fillStyle = 'rgba(235,70,55,.9)'; g.beginPath(); g.arc(r * 1.0, -r * 0.12, r * 0.13, 0, TAU); g.fill();
+  },
+  (a, r, h, t, z, lw, dol, cizgi) => {   // 15 yuvarlak diatom: ışınsal çizgili camsı disk
+    g.rotate(t * 0.12 + a.f); g.beginPath(); g.arc(0, 0, r * 1.1, 0, TAU); dolCiz(`hsla(${h},60%,58%,.3)`, `hsla(${h},70%,86%,.8)`, lw);
+    g.lineWidth = lw * 0.5; g.strokeStyle = `hsla(${h},60%,88%,.4)`; g.beginPath(); for (let i = 0; i < 12; i++) { const q = i / 12 * TAU; g.moveTo(Math.cos(q) * r * 0.3, Math.sin(q) * r * 0.3); g.lineTo(Math.cos(q) * r * 1.05, Math.sin(q) * r * 1.05); } g.moveTo(r * 0.6, 0); g.arc(0, 0, r * 0.6, 0, TAU); g.stroke();
+    g.fillStyle = `hsla(${h + 50},55%,45%,.5)`; g.beginPath(); g.arc(0, 0, r * 0.24, 0, TAU); g.fill();
+  },
+  (a, r, h, t, z, lw) => {               // 16 spiroket: ince, sık burgulu, hızlı
+    const yol = () => { g.beginPath(); for (let i = 0; i <= 26; i++) { const s = i / 26 - 0.5, x = s * r * 3.8, y = Math.sin(s * 24 - t * 14 + a.f) * r * 0.24; i ? g.lineTo(x, y) : g.moveTo(x, y); } };
+    yol(); g.strokeStyle = `hsla(${h},70%,58%,.75)`; g.lineWidth = r * 0.22; g.stroke(); yol(); g.strokeStyle = `hsla(${h},85%,88%,.55)`; g.lineWidth = Math.max(0.5 / z, r * 0.07); g.stroke();
+  },
+  (a, r, h, t, z, lw, dol, cizgi) => {   // 17 dörtlü kok: kare dizilmiş dört hücre
+    g.rotate(t * 0.15 + a.f); for (const [x, y] of [[-1, -1], [1, -1], [-1, 1], [1, 1]]) { g.beginPath(); g.arc(x * r * 0.5, y * r * 0.5, r * 0.52, 0, TAU); dolCiz(dol, cizgi, lw * 0.8); }
+    g.fillStyle = `hsla(${h - 20},45%,30%,.4)`; g.beginPath(); for (const [x, y] of [[-1, -1], [1, -1], [-1, 1], [1, 1]]) { g.moveTo(x * r * 0.5 + r * 0.16, y * r * 0.5); g.arc(x * r * 0.5, y * r * 0.5, r * 0.16, 0, TAU); } g.fill();
+  },
+  (a, r, h, t, z, lw, dol, cizgi) => {   // 18 rotifer: başında dönen iki çark, çatal ayak
+    g.strokeStyle = cizgi; g.lineWidth = lw * 0.8; g.beginPath(); g.moveTo(-r * 1.15, 0); g.lineTo(-r * 1.9, -r * 0.22); g.moveTo(-r * 1.15, 0); g.lineTo(-r * 1.9, r * 0.22); g.stroke();
+    g.beginPath(); g.ellipse(0, 0, r * 1.2, r * 0.65, 0, 0, TAU); dolCiz(dol, cizgi, lw);
+    for (const k of [-1, 1]) { g.beginPath(); g.arc(r * 1.15, k * r * 0.4, r * 0.3, 0, TAU); dolCiz(`hsla(${h},50%,70%,.35)`, cizgi, lw * 0.7); g.lineWidth = lw * 0.5; g.beginPath(); for (let i = 0; i < 6; i++) { const q = i / 6 * TAU + t * 9 * k; g.moveTo(r * 1.15 + Math.cos(q) * r * 0.3, k * r * 0.4 + Math.sin(q) * r * 0.3); g.lineTo(r * 1.15 + Math.cos(q) * r * 0.5, k * r * 0.4 + Math.sin(q) * r * 0.5); } g.stroke(); }
+    g.fillStyle = `hsla(${h - 30},50%,28%,.55)`; g.beginPath(); g.arc(r * 0.35, 0, r * 0.22, 0, TAU); g.fill();
+  },
+  (a, r, h, t, z, lw, dol, cizgi) => {   // 19 su ayısı (tardigrad): tombul boğumlu gövde, sekiz küt bacak
+    g.strokeStyle = `hsla(${h},45%,62%,.75)`; g.lineWidth = r * 0.24; g.beginPath();
+    for (let i = 0; i < 4; i++) { const x = r * (-0.9 + i * 0.6), s = Math.sin(t * 6 + i * 1.5 + a.f) * r * 0.16; g.moveTo(x, -r * 0.4); g.lineTo(x + s, -r * 0.92); g.moveTo(x, r * 0.4); g.lineTo(x - s, r * 0.92); } g.stroke();
+    for (let i = 0; i < 4; i++) { g.beginPath(); g.arc(r * (-0.9 + i * 0.6), 0, r * 0.56, 0, TAU); g.fillStyle = `hsla(${h},48%,58%,.7)`; g.fill(); }
+    g.beginPath(); g.arc(r * 1.35, 0, r * 0.4, 0, TAU); g.fillStyle = `hsla(${h},48%,62%,.8)`; g.fill();
+    g.strokeStyle = cizgi; g.lineWidth = lw * 0.6; g.beginPath(); for (let i = 0; i < 3; i++) { const x = r * (-0.6 + i * 0.6); g.moveTo(x, -r * 0.45); g.lineTo(x, r * 0.45); } g.stroke();
+    g.fillStyle = 'rgba(20,15,10,.8)'; g.beginPath(); g.arc(r * 1.5, -r * 0.15, r * 0.07, 0, TAU); g.arc(r * 1.5, r * 0.15, r * 0.07, 0, TAU); g.fill();
+  },
+  (a, r, h, t, z, lw) => {               // 20 nematod: kıvrılarak ilerleyen ince solucan
+    const yol = () => { g.beginPath(); for (let i = 0; i <= 18; i++) { const s = i / 18 - 0.5, x = s * r * 4.2, y = Math.sin(s * 7 - t * 6 + a.f) * r * 0.55; i ? g.lineTo(x, y) : g.moveTo(x, y); } };
+    yol(); g.strokeStyle = `hsla(${h},45%,70%,.6)`; g.lineWidth = r * 0.36; g.stroke(); yol(); g.strokeStyle = `hsla(${h},50%,40%,.5)`; g.lineWidth = r * 0.1; g.stroke();
+  },
+  (a, r, h, t, z, lw, dol, cizgi) => {   // 21 amip yavrusu: sürekli biçim değiştiren damla
+    const N = 14, P = []; for (let i = 0; i < N; i++) { const q = i / N * TAU, k = r * (0.95 + 0.3 * Math.sin(3 * q + t * 1.2 + a.f) + 0.2 * Math.sin(5 * q - t * 0.8 + a.f)); P.push([Math.cos(q) * k, Math.sin(q) * k]); }
+    g.beginPath(); g.moveTo((P[N - 1][0] + P[0][0]) / 2, (P[N - 1][1] + P[0][1]) / 2); for (let i = 0; i < N; i++) { const n = (i + 1) % N; g.quadraticCurveTo(P[i][0], P[i][1], (P[i][0] + P[n][0]) / 2, (P[i][1] + P[n][1]) / 2); } g.closePath(); dolCiz(dol, cizgi, lw);
+    g.fillStyle = `hsla(${h - 30},50%,28%,.5)`; g.beginPath(); g.arc(-r * 0.1, 0, r * 0.3, 0, TAU); g.fill(); g.fillStyle = `hsla(${h},40%,92%,.25)`; g.beginPath(); g.arc(r * 0.4, r * 0.25, r * 0.18, 0, TAU); g.fill();
+  },
+  (a, r, h, t, z, lw, dol, cizgi) => {   // 22 mini ışınlı: ince uzun dikenli küre
+    g.rotate(t * 0.1 + a.f); g.strokeStyle = `hsla(${h},45%,88%,.55)`; g.lineWidth = lw * 0.5; g.beginPath(); for (let i = 0; i < 14; i++) { const q = i / 14 * TAU, u = r * (1.6 + 0.25 * Math.sin(i * 2.1)); g.moveTo(Math.cos(q) * r * 0.6, Math.sin(q) * r * 0.6); g.lineTo(Math.cos(q) * u, Math.sin(q) * u); } g.stroke();
+    g.beginPath(); g.arc(0, 0, r * 0.72, 0, TAU); dolCiz(dol, cizgi, lw); g.beginPath(); g.arc(0, 0, r * 0.38, 0, TAU); g.strokeStyle = `hsla(${h},50%,85%,.4)`; g.lineWidth = lw * 0.6; g.stroke();
+  },
+  (a, r, h, t, z, lw, dol, cizgi) => {   // 23 dinoflagellat: üç boynuzlu zırhlı hücre
+    g.beginPath(); g.moveTo(r * 2.1, 0); g.lineTo(r * 0.5, -r * 0.5); g.quadraticCurveTo(-r * 0.3, -r * 0.9, -r * 1.7, -r * 1.0); g.quadraticCurveTo(-r * 0.9, -r * 0.3, -r * 0.8, 0); g.quadraticCurveTo(-r * 0.9, r * 0.3, -r * 1.7, r * 1.0); g.quadraticCurveTo(-r * 0.3, r * 0.9, r * 0.5, r * 0.5); g.closePath(); dolCiz(dol, cizgi, lw);
+    g.strokeStyle = `hsla(${h},60%,88%,.5)`; g.lineWidth = lw * 0.6; g.beginPath(); g.moveTo(r * 0.1, -r * 0.68); g.lineTo(r * 0.1, r * 0.68); g.stroke();
+    g.fillStyle = `hsla(${h - 20},55%,30%,.5)`; g.beginPath(); g.arc(-r * 0.25, 0, r * 0.22, 0, TAU); g.fill();
+  },
+  (a, r, h, t, z, lw) => {               // 24 vibrio: virgül biçimli, tek kamçılı
+    g.strokeStyle = `hsla(${h},50%,82%,.5)`; g.lineWidth = lw * 0.6; g.beginPath(); g.moveTo(-r * 1.0, r * 0.25); for (let i = 1; i <= 8; i++) { const s = i / 8; g.lineTo(-r * 1.0 - s * r * 1.7, r * 0.25 + Math.sin(s * 7 - t * 12 + a.f) * r * 0.3 * s); } g.stroke();
+    const yay = () => { g.beginPath(); g.arc(0, r * 0.95, r * 1.2, -Math.PI * 0.82, -Math.PI * 0.18); };
+    g.lineCap = 'round'; yay(); g.strokeStyle = `hsla(${h},75%,84%,.75)`; g.lineWidth = r * 0.66; g.stroke(); yay(); g.strokeStyle = `hsla(${h},60%,45%,.9)`; g.lineWidth = r * 0.5; g.stroke();
+  },
+  (a, r, h, t, z, lw, dol, cizgi) => {   // 25 desmid: ortadan boğumlu iki yarım hücre
+    for (const k of [-1, 1]) { g.beginPath(); g.ellipse(k * r * 0.72, 0, r * 0.74, r * 1.0, 0, 0, TAU); dolCiz(`hsla(${h},62%,42%,.5)`, cizgi, lw); g.fillStyle = `hsla(${h - 15},65%,28%,.5)`; g.beginPath(); g.arc(k * r * 0.8, 0, r * 0.26, 0, TAU); g.fill(); }
+    g.fillStyle = `hsla(${h + 30},50%,85%,.6)`; g.beginPath(); g.arc(0, 0, r * 0.14, 0, TAU); g.fill();
+  },
+  (a, r, h, t, z, lw, dol, cizgi) => {   // 26 hidra yavrusu: sap gövde, dalgalanan dokunaçlar
+    g.strokeStyle = `hsla(${h},55%,78%,.65)`; g.lineWidth = lw * 0.8; g.beginPath();
+    for (let i = 0; i < 5; i++) { const q = (i - 2) * 0.42; g.moveTo(r * 0.5, 0); for (let k = 1; k <= 6; k++) { const s = k / 6, e = q + Math.sin(s * 4 - t * 3 + i + a.f) * 0.35 * s; g.lineTo(r * 0.5 + Math.cos(e) * r * 1.6 * s, Math.sin(e) * r * 1.6 * s); } } g.stroke();
+    g.beginPath(); g.moveTo(-r * 1.5, -r * 0.18); g.quadraticCurveTo(-r * 0.3, -r * 0.42, r * 0.5, -r * 0.34); g.quadraticCurveTo(r * 0.75, 0, r * 0.5, r * 0.34); g.quadraticCurveTo(-r * 0.3, r * 0.42, -r * 1.5, r * 0.18); g.closePath(); dolCiz(dol, cizgi, lw);
+  },
+  (a, r, h, t, z, lw, dol, cizgi) => {   // 27 efira (denizanası yavrusu): nabız gibi atan sekiz loblu yıldız
+    const p = 1 + 0.14 * Math.sin(t * 5 + a.f); g.rotate(a.f);
+    for (let i = 0; i < 8; i++) { g.save(); g.rotate(i / 8 * TAU); g.beginPath(); g.ellipse(r * 0.95 * p, 0, r * 0.5, r * 0.2, 0, 0, TAU); dolCiz(`hsla(${h},60%,65%,.35)`, cizgi, lw * 0.6); g.restore(); }
+    g.beginPath(); g.arc(0, 0, r * 0.62 * p, 0, TAU); dolCiz(`hsla(${h},60%,62%,.4)`, cizgi, lw); g.strokeStyle = `hsla(${h + 40},60%,85%,.5)`; g.lineWidth = lw * 0.6; g.beginPath(); g.arc(0, 0, r * 0.3, 0, TAU); g.stroke();
+  },
+  (a, r, h, t, z, lw, dol, cizgi) => {   // 28 ostrakod: fasulye biçimli kabuk, altında kıpırdayan bacaklar
+    g.strokeStyle = `hsla(${h},50%,82%,.55)`; g.lineWidth = lw * 0.6; g.beginPath(); for (let i = 0; i < 4; i++) { const x = r * (0.7 - i * 0.45), s = Math.sin(t * 9 + i * 1.4 + a.f) * r * 0.18; g.moveTo(x, r * 0.5); g.lineTo(x + s, r * 0.95); } g.moveTo(r * 1.0, r * 0.2); g.lineTo(r * 1.6, r * 0.5 + Math.sin(t * 7 + a.f) * r * 0.2); g.stroke();
+    g.beginPath(); g.moveTo(-r * 1.25, 0); g.bezierCurveTo(-r * 1.15, -r * 1.0, r * 1.15, -r * 1.0, r * 1.25, 0); g.bezierCurveTo(r * 0.95, r * 0.72, -r * 0.95, r * 0.72, -r * 1.25, 0); g.closePath(); dolCiz(dol, cizgi, lw);
+    g.strokeStyle = `hsla(${h},50%,88%,.35)`; g.lineWidth = lw * 0.5; g.beginPath(); g.moveTo(-r * 0.9, -r * 0.2); g.quadraticCurveTo(0, -r * 0.6, r * 0.9, -r * 0.2); g.stroke();
+    g.fillStyle = 'rgba(25,15,10,.8)'; g.beginPath(); g.arc(r * 0.75, -r * 0.15, r * 0.1, 0, TAU); g.fill();
+  },
+  (a, r, h, t, z, lw, dol, cizgi) => {   // 29 maya: tomurcuklanan oval hücre
+    const b = 0.8 + 0.2 * Math.sin(t * 0.8 + a.f);
+    g.beginPath(); g.ellipse(r * 1.0, -r * 0.4, r * 0.45 * b, r * 0.4 * b, 0, 0, TAU); dolCiz(`hsla(${h},55%,66%,.45)`, cizgi, lw * 0.8);
+    g.beginPath(); g.ellipse(-r * 0.75, r * 0.6, r * 0.24, r * 0.22, 0, 0, TAU); dolCiz(`hsla(${h},55%,66%,.45)`, cizgi, lw * 0.7);
+    g.beginPath(); g.ellipse(0, 0, r * 0.95, r * 0.78, 0, 0, TAU); dolCiz(`hsla(${h},55%,62%,.5)`, cizgi, lw);
+    g.fillStyle = `hsla(${h},40%,94%,.25)`; g.beginPath(); g.arc(-r * 0.2, -r * 0.1, r * 0.3, 0, TAU); g.fill(); g.fillStyle = `hsla(${h - 20},50%,35%,.45)`; g.beginPath(); g.arc(r * 0.35, r * 0.2, r * 0.17, 0, TAU); g.fill();
+  },
+];
 function mikroCiz(a, z, t, al, olcek) {
   const r = a.r * olcek * (0.35 + 0.65 * a.b), h = a.hue;
   g.save(); g.translate(a.x, a.y); g.globalAlpha = al * a.b;
@@ -768,7 +878,8 @@ function mikroCiz(a, z, t, al, olcek) {
     g.beginPath(); g.ellipse(0, 0, L, w, 0, 0, TAU); g.fillStyle = dol; g.fill(); g.strokeStyle = cizgi; g.lineWidth = lw; g.stroke();
     g.fillStyle = `hsla(${h - 30},50%,28%,.5)`; g.beginPath(); g.ellipse(-L * 0.15, 0, L * 0.3, w * 0.4, 0, 0, TAU); g.fill();
     g.strokeStyle = `hsla(${h},40%,92%,.4)`; g.lineWidth = lw * 0.6; g.beginPath(); g.arc(L * 0.5, 0, w * 0.3, 0, TAU); g.stroke();
-  } else {                      // sarmal alg: içinde yeşil sarmal olan saydam çubuk
+  } else if (a.tip > 11) EK_CIZ[a.tip - 12](a, r, h, t, z, lw, dol, cizgi);
+  else {                        // sarmal alg: içinde yeşil sarmal olan saydam çubuk
     const L = r * 1.9, w = r * 0.42;
     g.beginPath(); g.moveTo(-L + w, -w); g.lineTo(L - w, -w); g.arc(L - w, 0, w, -Math.PI / 2, Math.PI / 2); g.lineTo(-L + w, w); g.arc(-L + w, 0, w, Math.PI / 2, Math.PI * 1.5); g.closePath();
     g.fillStyle = `hsla(${h},40%,70%,.2)`; g.fill(); g.strokeStyle = cizgi; g.lineWidth = lw * 0.8; g.stroke();
