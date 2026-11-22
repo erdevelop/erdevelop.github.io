@@ -225,6 +225,7 @@ body.er-durumlu #panel{bottom:32px}
           <li><b>Hızlı atılma:</b> suya iki kez hızlıca dokun (ya da boşluk tuşu), balığın o yöne fırlar. Altın planktonlar kaçar, onları atılarak yakala.</li>
           <li><b>Mutluluk:</b> balığını parmağınla okşa, renkli topa vur, dans ettir (💬), kabarcık patlat, kumu eşele. Mutlu balık %10 daha hızlı büyür; canı sıkılınca seni oyuna çağırır.</li>
           <li><b>Kum ve sırlar:</b> kuma dokununca balığın eşeler, kabuk ya da inci çıkabilir. Her gün kayaların dibinde saklı bir inci parlar, bulmaya çalış.</li>
+          <li><b>Başıboş canlılar:</b> akvaryumda ahtapot, deniz yıldızı, karides, balon balığı, vatoz, kalamar, salyangoz, ermit yengeç, geceleri ışıkfener balıkları ve arada bir yunus dolaşır. Dokun ya da yanlarına yüz: her birinin bir tepkisi var ve albüme işlenir.</li>
           <li><b>Gece ve gündüz:</b> akşam akvaryum kararır, balığın mağarasına çekilip uyur.</li>
           <li><b>Birlikte:</b> bir balığa dokun → "Birlikte yüz". Her saat başı ve buçukta 75 saniyelik yem yağmuru olur; en çok yem kapan kazanır. Her hafta akvaryumun en güzel balığını oylayın.</li>
           <li><b>Özel beceri:</b> türünü seçince sağ alttaki ✨ düğmesi türüne özel bir beceri kazanır (fener ışığı, turbo, sıçrama, buz nefesi…). Bilgisayarda E tuşu.</li>
@@ -251,6 +252,7 @@ body.er-durumlu #panel{bottom:32px}
           <li><b>Dash:</b> double-tap the water (or press Space) and your fish darts that way. Golden plankton flees; dash to catch it.</li>
           <li><b>Happiness:</b> stroke your fish, bump the colourful ball, dance (💬), pop bubbles, dig the sand. A happy fish grows 10% faster; a bored one asks you to play.</li>
           <li><b>Sand and secrets:</b> tap the sand and your fish digs; shells or pearls may turn up. A hidden pearl glints by the rocks every day.</li>
+          <li><b>Wandering creatures:</b> an octopus, starfish, shrimp, a pufferfish, a stingray, a squid, a snail, a hermit crab, lanternfish at night and now and then a dolphin roam the aquarium. Tap them or swim close: each reacts and goes into your album.</li>
           <li><b>Day and night:</b> in the evening the aquarium darkens and your fish sleeps in its cave.</li>
           <li><b>Together:</b> tap a fish → "Swim together". Every hour and half hour there is a 75-second food rain; the top grabber wins. Vote for the aquarium’s loveliest fish every week.</li>
           <li><b>Special skill:</b> once you pick a species, the ✨ button gets a skill of its own (lantern light, turbo, leap, frost breath…). E on a keyboard.</li>
@@ -875,10 +877,12 @@ function balikSenk() {
 /* çevredeki yerli canlılar: sardalya sürüsü, yengeç, denizanası, kaplumbağa */
 const YERLI = { suru: [], lider: { x: 200, y: 200, tx: 400, ty: 260, t: 0 }, yengec: { x: 120, d: 1, t: 0 }, meduz: [], kap: { x: -300, y: 200, d: 1 } };
 function yerliKur() {
+  canliKur();
   YERLI.suru = []; for (let i = 0; i < 9; i++) YERLI.suru.push({ ox: rnd(-50, 50), oy: rnd(-26, 26), x: rnd(0, W), y: rnd(100, 300), vx: 0, vy: 0, f: rnd(0, TAU) });
   YERLI.meduz = []; const n = SAHNE.tm === 'derin' ? 3 : 1; for (let i = 0; i < n; i++) YERLI.meduz.push({ x: rnd(0.1, 0.9) * W, y: rnd(0.25, 0.6) * H, f: rnd(0, TAU), c: SAHNE.tm === 'derin' ? '#9FFFE6' : '#F3B6E8' });
 }
 function yerliGuncelle(dt) {
+  canliGuncelle(dt);
   const A = ALAN, L = YERLI.lider;
   L.t -= dt; if (L.t <= 0 || Math.hypot(L.tx - L.x, L.ty - L.y) < 30) { L.tx = rnd(A.x1, A.x2); L.ty = rnd(A.y1, A.y1 + (A.y2 - A.y1) * 0.7); L.t = rnd(4, 9); }
   const ld = Math.hypot(L.tx - L.x, L.ty - L.y) || 1; L.x += (L.tx - L.x) / ld * 55 * OL * dt; L.y += (L.ty - L.y) / ld * 55 * OL * dt; L.yon = L.tx > L.x ? 1 : -1;
@@ -892,6 +896,7 @@ function yerliGuncelle(dt) {
   if (hedefSeviye() >= 4) { const k = YERLI.kap; k.x += k.d * 34 * OL * dt; k.y = H * 0.35 + Math.sin(zaman * 0.3) * 30; if (k.x > W + 300) { k.d = -1; } if (k.x < -300) k.d = 1; }
 }
 function yerliCiz(c) {
+  canliCiz(c);
   const L = YERLI.lider;
   for (const s of YERLI.suru) { c.save(); c.translate(s.x, s.y); c.scale(L.yon || 1, 1); const l = 12 * OL; c.fillStyle = '#C9D9E6'; c.beginPath(); c.ellipse(0, 0, l * 0.5, l * 0.16, 0, 0, TAU); c.fill(); c.beginPath(); c.moveTo(-l * 0.45, 0); c.lineTo(-l * 0.75, -l * 0.18 + Math.sin(s.f) * 1.5); c.lineTo(-l * 0.75, l * 0.18 + Math.sin(s.f) * 1.5); c.fill(); c.fillStyle = 'rgba(70,110,150,.6)'; c.fillRect(-l * 0.4, -l * 0.04, l * 0.75, 1); c.restore(); }
   for (const m of YERLI.meduz) {
@@ -978,7 +983,7 @@ function yuvarlakDik(c, x, y, w, h, r) { c.beginPath(); c.moveTo(x + r, y); c.ar
 function ciz(dt) {
   const c = cx; c.setTransform(DPR, 0, 0, DPR, 0, 0);
   arkaPlan(c, zaman); mevsimCiz(c, dt);
-  yerliCiz(c); ekCanliGuncelleCiz(c, dt); geceCiz(c); plkGuncelleCiz(c, dt); ygGuncelleCiz(c, dt); topGuncelleCiz(c, dt);
+  yerliCiz(c); ekCanliGuncelleCiz(c, dt); geceCiz(c); canliCiz(c, true); plkGuncelleCiz(c, dt); ygGuncelleCiz(c, dt); topGuncelleCiz(c, dt);
   /* kabarcıklar */
   c.strokeStyle = 'rgba(255,255,255,.5)'; c.lineWidth = 1;
   for (let i = SAHNE.bks.length - 1; i >= 0; i--) { const b = SAHNE.bks[i]; b.y -= (30 + b.r * 8) * dt; b.f += dt * 3; const x = b.x + Math.sin(b.f) * 4; if (b.y < 0) { SAHNE.bks.splice(i, 1); continue; } c.strokeStyle = b.altin ? 'rgba(255,215,90,.95)' : 'rgba(255,255,255,.5)'; c.lineWidth = b.altin ? 2 : 1; c.beginPath(); c.arc(x, b.y, b.r, 0, TAU); c.stroke(); }
@@ -992,7 +997,7 @@ function ciz(dt) {
   /* parçacıklar */
   for (let i = PARC.length - 1; i >= 0; i--) {
     const p = PARC[i]; p.t -= dt; if (p.t <= 0) { PARC.splice(i, 1); continue; }
-    p.x += p.vx * dt; p.y += p.vy * dt;
+    p.x += p.vx * dt; p.y += p.vy * dt; if (p.murekkep) { p.r += dt * 7; p.vx *= 0.96; p.vy *= 0.96; }
     if (p.kalp) { c.globalAlpha = Math.min(1, p.t); c.font = `${Math.round(16 * OL)}px system-ui, sans-serif`; c.textAlign = 'center'; c.fillText('💗', p.x, p.y); c.globalAlpha = 1; continue; }
     if (p.yazi) { c.globalAlpha = Math.min(1, p.t); c.font = `900 ${Math.round(14 * OL)}px Nunito, system-ui, sans-serif`; c.textAlign = 'center'; c.lineWidth = 3; c.strokeStyle = 'rgba(4,24,36,.6)'; c.strokeText(p.yazi, p.x, p.y); c.fillStyle = p.c; c.fillText(p.yazi, p.x, p.y); c.globalAlpha = 1; continue; }
     if (p.z) { c.globalAlpha = Math.min(1, p.t); c.fillStyle = '#EAF6FA'; c.font = `800 ${Math.round(11 * OL)}px Nunito, sans-serif`; c.fillText('z', p.x, p.y); c.globalAlpha = 1; continue; }
@@ -1348,6 +1353,7 @@ cv.addEventListener('pointerdown', e => {
   if (kabarcikPatlat(x, y)) return;
   if (yengecDokun(x, y)) return;
   if (topDokun(x, y)) return;
+  if (canliDokun(x, y)) return;
   for (const b of BAL.values()) { const d = Math.hypot(b.x - x, b.y - y), r = Math.max(26, (b.L || 30) * 0.7); if (d < r && d < enD) { en = b; enD = d; } }
   if (!en || (en.ben && KUMANDA.aktif > 0 && Math.hypot(en.x - x, en.y - y) > (en.L || 30) * 0.35)) {
     kartKapat(); ESLIK = null;
@@ -1900,6 +1906,16 @@ const ALBUM = [
   ...HEDEF.slice(0, 3).map((h, i) => ({ k: 'sus:' + i, grup: 'sus', e: h.e, ad: h.ad, ip: [`Ortak hedef: ${h.n} yem`, `Shared goal: ${h.n} feeds`] })),
   { k: 'ozel:es', grup: 'sus', e: '💞', ad: ['Eşinle yumurta', 'Eggs with a partner'], ip: ['Bir eşle yumurta bırak', 'Lay eggs with a partner'] },
   { k: 'ozel:hazine', grup: 'sus', e: '💰', ad: ['Büyük hazine', 'Big treasure'], ip: ['Hazine kazısında bul', 'Find it while digging'] },
+  { k: 'canli:ahtapot', grup: 'canli', e: '🐙', ad: ['Ahtapot', 'Octopus'], ip: ['Kumdaki ahtapota yaklaş', 'Approach the octopus on the sand'] },
+  { k: 'canli:yildiz', grup: 'canli', e: '⭐', ad: ['Deniz yıldızı', 'Starfish'], ip: ['Kumdaki yıldıza dokun', 'Tap the star on the sand'] },
+  { k: 'canli:karides', grup: 'canli', e: '🦐', ad: ['Temizlikçi karides', 'Cleaner shrimp'], ip: ['Yosunların dibinde', 'At the foot of the seaweed'] },
+  { k: 'canli:balon', grup: 'canli', e: '🐡', ad: ['Balon balığı', 'Pufferfish'], ip: ['Yaklaşınca şişer', 'Puffs up when you get close'] },
+  { k: 'canli:dvatoz', grup: 'canli', e: '🐟', ad: ['Dikenli vatoz', 'Stingray'], ip: ['Kumda iki göz ara', 'Look for two eyes in the sand'] },
+  { k: 'canli:kalamar', grup: 'canli', e: '🦑', ad: ['Kalamar', 'Squid'], ip: ['Açık ve derin sularda', 'In open and deep water'] },
+  { k: 'canli:salyangoz', grup: 'canli', e: '🐌', ad: ['Deniz salyangozu', 'Sea snail'], ip: ['Kumda ağır ağır gezer', 'Creeps slowly over the sand'] },
+  { k: 'canli:ermit', grup: 'canli', e: '🐚', ad: ['Ermit yengeç', 'Hermit crab'], ip: ['Kabuğuyla gezen yengeç', 'The crab with a shell'] },
+  { k: 'canli:yunus', grup: 'canli', e: '🐬', ad: ['Yunus', 'Dolphin'], ip: ['Arada bir yüzeyden geçer, dokun', 'Now and then it passes near the surface; tap it'] },
+  { k: 'canli:isik', grup: 'canli', e: '✨', ad: ['Işıkfener balıkları', 'Lanternfish'], ip: ['Geceleri ya da derin suda', 'At night or in deep water'] },
   { k: 'ozel:sezon', grup: 'sus', e: '🎖️', ad: ['Sezon yıldızı', 'Season star'], ip: ['Sezon kartını bitir', 'Finish the season pass'] },
   { k: 'ozel:sakli', grup: 'sus', e: '🔎', ad: ['Saklı inci', 'Hidden pearl'], ip: ['Kayaların dibinde parlayan inciyi bul', 'Find the pearl glinting by the rocks'] },
   { k: 'ozel:nadirkabuk', grup: 'sus', e: '🐚', ad: ['Nadir deniz kabuğu', 'Rare seashell'], ip: ['Kumu eşele', 'Dig in the sand'] },
@@ -2808,7 +2824,7 @@ const ANSIK = {
   kaplumbaga: [['🐢', 'Deniz kaplumbağası', 'Sea turtle'], ['Onlarca yıl yaşar; dişiler yumurtlamak için çoğu zaman doğdukları kumsala döner.', 'Lives for decades; females often return to the beach where they hatched to lay eggs.']]
 };
 function ansikAc() {
-  const turlar = Object.keys(TURLER), canli = ['sardalya', 'yengec', 'meduz', 'denizati', 'vatoz', 'kaplumbaga'];
+  const turlar = Object.keys(TURLER), canli = ['sardalya', 'yengec', 'meduz', 'denizati', 'vatoz', 'kaplumbaga', ...Object.keys(CANLI_BILGI)];
   const ic = modal(`<h2>📚 ${T('Balık ansiklopedisi', 'Fish encyclopaedia')}</h2><p class="alt">${T('Oyundaki canlıların gerçek hayattaki hâlleri', 'The real-life creatures behind the game')}</p><div class="liste">
     ${turlar.map(k => `<div class="satir" style="align-items:flex-start"><canvas width="108" height="72" data-t="${k}"></canvas><div class="orta"><b>${esc(L2(TURLER[k].ad))}${S.alb['tur:' + k] ? ' ✓' : ''}</b><small style="white-space:normal">${esc(L2(ANSIK[k][0]))}</small></div></div>`).join('')}
     ${canli.map(k => `<div class="satir" style="align-items:flex-start"><span style="font-size:30px;width:54px;text-align:center">${ANSIK[k][0][0]}</span><div class="orta"><b>${esc(T(ANSIK[k][0][1], ANSIK[k][0][2]))}${S.alb['canli:' + k] ? ' ✓' : ''}</b><small style="white-space:normal">${esc(L2(ANSIK[k][1]))}</small></div></div>`).join('')}
@@ -2845,6 +2861,129 @@ function ucuncuKare(c, dt) {
   beceriKare(c, dt); yirticiKare(c, dt);
   ucuncuZ -= dt; if (ucuncuZ <= 0) { ucuncuZ = 1; rehberGuncelle(); unvanKontrol(); }
 }
+
+/* =====================================================================
+   BAŞIBOŞ CANLILAR: ahtapot, deniz yıldızı, karides, balon balığı, vatoz,
+   kalamar, deniz salyangozu, yunus, ışıkfener sürüsü, ermit yengeç.
+   Her birinin kendi tepkisi var; dokununca ya da balığın yaklaşınca albüme girer.
+   ===================================================================== */
+const CNL = { L: [], yunusZ: 120 };
+const CANLI_BILGI = {
+  ahtapot: ['🐙', 'Ahtapot', 'Octopus', 'Üç kalbi vardır, kanı mavidir. Rengini ve deri dokusunu saniyeler içinde değiştirebilir; tehlikede mürekkep püskürtüp kaçar.', 'It has three hearts and blue blood. It can change colour and skin texture in seconds; in danger it squirts ink and escapes.'],
+  yildiz: ['⭐', 'Deniz yıldızı', 'Starfish', 'Kaybettiği kolunu yeniden çıkarabilir. Midesini ağzından dışarı çıkararak avını sindirir.', 'It can regrow a lost arm. It pushes its stomach out of its mouth to digest prey.'],
+  karides: ['🦐', 'Temizlikçi karides', 'Cleaner shrimp', 'Başka balıkların derisindeki parazitleri ve ölü dokuyu temizler; balıklar bunun için sıraya girer.', 'It picks parasites and dead skin off other fish; fish line up to be cleaned.'],
+  balon: ['🐡', 'Balon balığı', 'Pufferfish', 'Tehlikede su yutup top gibi şişer. Birçok türü güçlü bir zehir taşır.', 'In danger it gulps water and puffs up like a ball. Many species carry a strong toxin.'],
+  dvatoz: ['🐟', 'Dikenli vatoz', 'Stingray', 'Kumun içine gömülerek saklanır, sadece gözleri görünür. Kuyruğunda zehirli bir diken vardır.', 'It hides buried in the sand with only its eyes showing. Its tail has a venomous spine.'],
+  kalamar: ['🦑', 'Kalamar', 'Squid', 'Suyu güçlü bir fışkırtmayla iterek jet gibi yüzer; kaçarken mürekkep bırakır.', 'It swims like a jet by squirting water, leaving ink behind as it escapes.'],
+  salyangoz: ['🐌', 'Deniz salyangozu', 'Sea snail', 'Kabuğunu ömrü boyunca büyüterek taşır. Bazıları kayalardaki algleri kazıyarak temizler.', 'It grows its shell all its life. Some graze algae off rocks, keeping them clean.'],
+  yunus: ['🐬', 'Yunus', 'Dolphin', 'Balık değil memelidir; nefes almak için yüzeye çıkar. Islıklarla haberleşir, sesin yankısıyla yön bulur.', 'Not a fish but a mammal; it surfaces to breathe. It talks in whistles and finds its way by echoes.'],
+  isik: ['✨', 'Işıkfener balıkları', 'Lanternfish', 'Okyanusun en kalabalık balıklarındandır. Geceleri derinlerden yüzeye yükselir, karınlarındaki ışık noktalarıyla parlar.', 'Among the most numerous fish in the ocean. At night they rise from the deep, glowing with lights on their bellies.'],
+  ermit: ['🐚', 'Ermit yengeç', 'Hermit crab', 'Boş deniz kabuklarını ev yapar; büyüdükçe daha büyük bir kabuğa taşınır.', 'It lives in empty seashells and moves into a bigger one as it grows.']
+};
+function canliKur() {
+  const tm = SAHNE.tm, r = tohumRnd('cnl' + (gorunenAkv() || 'yerel') + tm), kumY = SAHNE.kumY, A = ALAN, x0 = typeof kumSol === 'function' ? kumSol() : 30;
+  const kx = () => x0 + r() * (W - x0 - 40);
+  const L = [];
+  const ekle = o => L.push(Object.assign({ f: r() * TAU, t: 0, d: r() < 0.5 ? -1 : 1, tepki: 0, bekle: 0 }, o));
+  ekle({ tur: 'yildiz', x: kx(), y: kumY - 4, renk: ['#FF8A5B', '#B36BD4', '#F25C7A'][Math.floor(r() * 3)], aci: r() * TAU });
+  ekle({ tur: 'salyangoz', x: kx(), y: kumY - 2 });
+  ekle({ tur: 'ermit', x: kx(), y: kumY });
+  if (tm !== 'acik' || r() < 0.5) ekle({ tur: 'ahtapot', x: kx(), y: kumY - 6, hue: 10 });
+  for (let i = 0; i < 3; i++) { const y0 = SAHNE.yosun.length ? SAHNE.yosun[Math.floor(r() * SAHNE.yosun.length)] : null; ekle({ tur: 'karides', x: y0 ? y0.x + rnd(-15, 15) : kx(), y: kumY - rnd(20, 70) * OL, ev: y0 ? y0.x : null }); }
+  if (tm !== 'derin') ekle({ tur: 'balon', x: rnd(A.x1, A.x2), y: rnd(A.y1 + 40, A.y2 - 40), sis: 0 });
+  ekle({ tur: 'dvatoz', x: kx(), y: kumY - 8, gomulu: 1, vy: 0 });
+  if (tm !== 'resif' || r() < 0.4) ekle({ tur: 'kalamar', x: rnd(A.x1, A.x2), y: rnd(A.y1 + 30, A.y1 + (A.y2 - A.y1) * 0.6), vx: 0, vy: 0 });
+  const isik = { tur: 'isik', uye: [], x: rnd(A.x1, A.x2), y: rnd(A.y1, A.y2), tx: 0, ty: 0, tt: 0 };
+  for (let i = 0; i < 14; i++) isik.uye.push({ ox: rnd(-50, 50), oy: rnd(-25, 25), x: isik.x, y: isik.y, vx: 0, vy: 0 });
+  ekle(isik);
+  CNL.L = L; CNL.yunus = null;
+}
+function canliYakin(o, mesafe) { const b = BAL.get('ben'); return b && b.L ? Math.hypot(b.x - o.x, b.y - o.y) < mesafe * OL + b.L * 0.4 : false; }
+function canliTepki(o) {
+  if (o.bekle > 0) return false; o.bekle = 5; o.tepki = 3;
+  albumEkle('canli:' + o.tur); mutluEkle(0.6, 'canli', 20);
+  const A = ALAN;
+  switch (o.tur) {
+    case 'ahtapot': for (let i = 0; i < 18; i++) PARC.push({ x: o.x, y: o.y - 8, vx: rnd(-40, 40), vy: rnd(-40, 10), t: 1.6, c: '#1B1B2A', r: rnd(4, 9), murekkep: 1 }); o.kac = 1.2; o.kd = Math.random() < 0.5 ? -1 : 1; SES.carp(); break;
+    case 'yildiz': for (let i = 0; i < 6; i++) PARC.push({ x: o.x, y: o.y - 6, vx: rnd(-30, 30), vy: rnd(-50, -10), t: 0.8, c: '#FFF2A8', r: 1.8, yildiz: 1 }); SES.selam(); break;
+    case 'karides': o.zipla = 0.45; o.zd = Math.random() < 0.5 ? -1 : 1; SES.kabarcik(0.02); break;
+    case 'balon': o.sis = 3.2; SES.yem(); break;
+    case 'dvatoz': o.gomulu = 0; o.kalk = 4; for (let i = 0; i < 12; i++) PARC.push({ x: o.x + rnd(-20, 20), y: SAHNE.kumY, vx: rnd(-40, 40), vy: rnd(-60, -20), t: 0.8, c: ALANLAR[SAHNE.tm].kum, r: 2 }); SES.kabarcik(0.03); break;
+    case 'kalamar': { const b = BAL.get('ben'), dx = b ? o.x - b.x : 1, dy = b ? o.y - b.y : 0, d = Math.hypot(dx, dy) || 1; o.vx = dx / d * 320; o.vy = dy / d * 220; for (let i = 0; i < 10; i++) PARC.push({ x: o.x, y: o.y, vx: rnd(-20, 20), vy: rnd(-20, 20), t: 1.3, c: '#2A2438', r: rnd(3, 7), murekkep: 1 }); SES.carp(); break; }
+    case 'salyangoz': case 'ermit': o.sakli = 4; SES.kabarcik(0.015); break;
+    case 'isik': for (const u of o.uye) { u.vx += rnd(-220, 220); u.vy += rnd(-160, 160); } SES.selam(); break;
+  }
+  return true;
+}
+function canliGuncelle(dt) {
+  if (!CNL.L.length && SAHNE) canliKur();
+  const kumY = SAHNE.kumY, A = ALAN, gece = geceDegeri();
+  for (const o of CNL.L) {
+    o.f += dt; o.bekle = Math.max(0, o.bekle - dt); o.tepki = Math.max(0, o.tepki - dt);
+    if (o.sakli) o.sakli = Math.max(0, o.sakli - dt);
+    switch (o.tur) {
+      case 'yildiz': if (!o.sakli) { o.x = kis(o.x + Math.sin(o.f * 0.05) * 1.5 * dt, 20, W - 20); o.aci += dt * 0.03; } break;
+      case 'salyangoz': if (!o.sakli) { o.x += o.d * 3 * OL * dt; if (o.x < 30 || o.x > W - 30) o.d *= -1; } break;
+      case 'ermit': if (!o.sakli) { o.t -= dt; if (o.t <= 0) { o.d = Math.random() < 0.5 ? -1 : 1; o.t = rnd(2, 6); o.dur = Math.random() < 0.4; } if (!o.dur) o.x = kis(o.x + o.d * 14 * OL * dt, 30, W - 30); } break;
+      case 'ahtapot': if (o.kac > 0) { o.kac -= dt; o.x = kis(o.x + o.kd * 160 * OL * dt, 30, W - 30); } else { o.x = kis(o.x + Math.sin(o.f * 0.2) * 4 * dt, 30, W - 30); } o.hue = (o.hue + dt * (o.tepki > 0 ? 6 : 12)) % 360; break;
+      case 'karides': if (o.zipla > 0) { o.zipla -= dt; o.x += o.zd * 220 * OL * dt; o.y = kis(o.y - 60 * dt, A.y1, kumY - 10); } else { const hx = o.ev != null ? o.ev : o.x; o.x += (hx + Math.sin(o.f * 0.7) * 22 - o.x) * dt * 0.8; o.y += (kumY - 30 * OL + Math.sin(o.f * 0.5) * 18 - o.y) * dt * 0.6; } break;
+      case 'balon': if (o.sis > 0) o.sis -= dt; else { o.x += Math.sin(o.f * 0.15) * 10 * dt + o.d * 6 * dt; o.y += Math.sin(o.f * 0.3) * 6 * dt; if (o.x < A.x1 + 30 || o.x > A.x2 - 30) o.d *= -1; } break;
+      case 'dvatoz': if (o.kalk > 0) { o.kalk -= dt; o.x = kis(o.x + o.d * 60 * OL * dt, 40, W - 40); o.y = kumY - 26 * OL - Math.sin(Math.min(1, (4 - o.kalk) / 1.5) * Math.PI / 2) * 30 * OL; if (o.kalk <= 0) o.gomulu = 1; } else { o.y += (kumY - 8 - o.y) * dt * 2; } break;
+      case 'kalamar': o.x += o.vx * dt; o.y += o.vy * dt; o.vx *= Math.pow(0.25, dt); o.vy *= Math.pow(0.25, dt); o.x = kis(o.x, A.x1 + 20, A.x2 - 20); o.y = kis(o.y, A.y1 + 20, A.y2 - 20); if (Math.abs(o.vx) < 8) { o.x += Math.sin(o.f * 0.4) * 8 * dt; o.y += Math.cos(o.f * 0.6) * 5 * dt; } if (Math.abs(o.vx) > 20) o.d = o.vx > 0 ? -1 : 1; break;
+      case 'isik': {
+        o.tt -= dt; if (o.tt <= 0 || Math.hypot(o.tx - o.x, o.ty - o.y) < 20) { o.tx = rnd(A.x1, A.x2); o.ty = rnd(A.y1, A.y1 + (A.y2 - A.y1) * (gece > 0.5 ? 0.5 : 0.9)); o.tt = rnd(4, 8); }
+        const dd = Math.hypot(o.tx - o.x, o.ty - o.y) || 1; o.x += (o.tx - o.x) / dd * 40 * OL * dt; o.y += (o.ty - o.y) / dd * 40 * OL * dt;
+        for (const u of o.uye) { u.vx += ((o.x + u.ox * OL - u.x) * 1.5 - u.vx) * Math.min(1, dt * 2); u.vy += ((o.y + u.oy * OL - u.y) * 1.5 - u.vy) * Math.min(1, dt * 2); u.x += u.vx * dt; u.y += u.vy * dt; }
+        o.yon = o.tx > o.x ? 1 : -1; break;
+      }
+    }
+    /* balığın yaklaşınca tepki */
+    const yakin = { ahtapot: 70, yildiz: 0, karides: 60, balon: 70, dvatoz: 60, kalamar: 80, salyangoz: 40, ermit: 45, isik: 70 }[o.tur];
+    if (yakin && (o.tur !== 'isik' || gece > 0.3 || SAHNE.tm === 'derin') && canliYakin(o, yakin)) canliTepki(o);
+  }
+  /* yunus: arada bir yüzeyden geçer */
+  if (SAHNE.tm !== 'derin') {
+    if (!CNL.yunus) { CNL.yunusZ -= dt; if (CNL.yunusZ <= 0) { const d = Math.random() < 0.5 ? 1 : -1; CNL.yunus = { tur: 'yunus', x: d > 0 ? -150 : W + 150, y: A.y1 + 30 * OL, d, f: 0, bekle: 0, tepki: 0 }; CNL.yunusZ = rnd(150, 330); } }
+    else { const y = CNL.yunus; y.f += dt; y.bekle = Math.max(0, y.bekle - dt); y.x += y.d * 150 * OL * dt; y.y = A.y1 + 30 * OL + Math.sin(y.f * 1.6) * 22 * OL; if ((y.d > 0 && y.x > W + 160) || (y.d < 0 && y.x < -160)) CNL.yunus = null; }
+  }
+}
+function canliCiz(c, sadeceIsik) {
+  const kumY = SAHNE.kumY, gece = geceDegeri();
+  for (const o of CNL.L) {
+    if ((o.tur === 'isik') !== !!sadeceIsik) continue;
+    c.save(); c.translate(o.x, o.y);
+    switch (o.tur) {
+      case 'yildiz': { const s = 11 * OL; c.rotate(o.aci + (o.tepki > 0 ? Math.sin(o.f * 20) * 0.15 : 0)); c.fillStyle = o.renk; c.beginPath(); for (let i = 0; i < 10; i++) { const rr = i % 2 ? s * 0.42 : s, a = -Math.PI / 2 + i * Math.PI / 5; c.lineTo(Math.cos(a) * rr, Math.sin(a) * rr * 0.55); } c.closePath(); c.fill(); c.fillStyle = 'rgba(255,255,255,.4)'; for (let i = 0; i < 5; i++) { const a = -Math.PI / 2 + i * TAU / 5; c.beginPath(); c.arc(Math.cos(a) * s * 0.55, Math.sin(a) * s * 0.3, 1.1, 0, TAU); c.fill(); } break; }
+      case 'salyangoz': { const s = 8 * OL; c.scale(o.d, 1); if (!o.sakli) { c.fillStyle = '#C9B79A'; c.beginPath(); c.ellipse(s * 0.5, 0, s * 1.2, s * 0.35, 0, Math.PI, TAU); c.fill(); c.strokeStyle = '#C9B79A'; c.lineWidth = 1.2; c.beginPath(); c.moveTo(s * 1.4, -s * 0.2); c.lineTo(s * 1.8, -s * 0.9); c.stroke(); } c.fillStyle = '#B5714B'; c.beginPath(); c.arc(0, -s * 0.6, s * 0.8, 0, TAU); c.fill(); c.strokeStyle = '#7A4A2E'; c.lineWidth = 1.3; c.beginPath(); for (let i = 0; i < 18; i++) { const a = i * 0.6, rr = s * 0.75 * (1 - i / 22); c.lineTo(Math.cos(a) * rr, -s * 0.6 + Math.sin(a) * rr); } c.stroke(); break; }
+      case 'ermit': { const s = 9 * OL; c.scale(o.d, 1); if (!o.sakli) { c.strokeStyle = '#E0763E'; c.lineWidth = 1.6; for (let j = 0; j < 3; j++) { c.beginPath(); c.moveTo(s * 0.5, -s * 0.4); c.lineTo(s * (1 + j * 0.25), Math.sin(o.f * 10 + j) * 2); c.stroke(); } c.fillStyle = '#E0763E'; c.beginPath(); c.arc(s * 1.1, -s * 0.8, s * 0.3, 0, TAU); c.fill(); c.fillStyle = '#111'; c.beginPath(); c.arc(s * 0.9, -s * 1.3, 1.4, 0, TAU); c.fill(); } c.fillStyle = '#EAD9C0'; c.beginPath(); c.moveTo(-s * 0.9, 0); c.quadraticCurveTo(-s * 1.1, -s * 1.6, s * 0.2, -s * 1.4); c.quadraticCurveTo(s * 0.8, -s * 0.6, s * 0.6, 0); c.closePath(); c.fill(); c.strokeStyle = '#B89F7E'; c.lineWidth = 1; for (let i = 1; i < 4; i++) { c.beginPath(); c.arc(-s * 0.2, -s * 0.6, s * 0.25 * i, Math.PI * 1.1, Math.PI * 1.9); c.stroke(); } break; }
+      case 'ahtapot': { const s = 14 * OL, renk = o.tepki > 0 ? '#D9D3C7' : hsl(o.hue, 55, 55); c.strokeStyle = renk; c.lineCap = 'round'; for (let i = 0; i < 8; i++) { const bx = (i - 3.5) * s * 0.28; c.lineWidth = s * 0.18; c.beginPath(); c.moveTo(bx * 0.6, -s * 0.2); for (let j = 1; j <= 6; j++) { const u = j / 6; c.lineTo(bx + Math.sin(o.f * 2 + i + u * 3) * s * 0.3 * u + bx * u, s * 0.1 * u + Math.abs(Math.sin(o.f + i)) * s * 0.15 * u); } c.stroke(); }
+        c.fillStyle = renk; c.beginPath(); c.ellipse(0, -s * 0.75, s * 0.75, s * 0.85, 0, 0, TAU); c.fill(); c.fillStyle = '#fff'; c.beginPath(); c.arc(-s * 0.3, -s * 0.55, s * 0.18, 0, TAU); c.arc(s * 0.3, -s * 0.55, s * 0.18, 0, TAU); c.fill(); c.fillStyle = '#111'; c.beginPath(); c.arc(-s * 0.3, -s * 0.52, s * 0.09, 0, TAU); c.arc(s * 0.3, -s * 0.52, s * 0.09, 0, TAU); c.fill(); break; }
+      case 'karides': { const s = 7 * OL; c.scale(o.zipla > 0 ? -o.zd : (o.d || 1), 1); c.strokeStyle = '#FF9A8A'; c.lineWidth = s * 0.55; c.lineCap = 'round'; c.beginPath(); c.arc(0, 0, s, Math.PI * 0.15, Math.PI * 1.05); c.stroke(); c.fillStyle = '#FFFFFF'; c.beginPath(); c.arc(0, -s * 0.2, s * 0.15, 0, TAU); c.fill(); c.strokeStyle = 'rgba(255,230,220,.8)'; c.lineWidth = 0.8; c.beginPath(); c.moveTo(s, -s * 0.3); c.quadraticCurveTo(s * 2.5, -s * 2 + Math.sin(o.f * 3) * 3, s * 3.2, -s * 0.8); c.moveTo(s, -s * 0.2); c.quadraticCurveTo(s * 2.2, -s * 1.2, s * 3, s * 0.2 + Math.sin(o.f * 2) * 3); c.stroke(); break; }
+      case 'balon': { const sis = o.sis > 0 ? Math.min(1, (3.2 - o.sis) * 4, o.sis * 2) : 0, s = 12 * OL * (1 + sis * 0.9); c.scale(o.d, 1); if (sis > 0.2) { c.strokeStyle = '#8A6A3A'; c.lineWidth = 1.2; for (let i = 0; i < 16; i++) { const a = i / 16 * TAU; c.beginPath(); c.moveTo(Math.cos(a) * s * 0.9, Math.sin(a) * s * 0.9); c.lineTo(Math.cos(a) * s * 1.25, Math.sin(a) * s * 1.25); c.stroke(); } }
+        c.fillStyle = '#E6C77A'; c.beginPath(); c.moveTo(-s * 0.9, 0); c.lineTo(-s * 1.4, -s * 0.35); c.lineTo(-s * 1.4, s * 0.35); c.fill(); const g = c.createRadialGradient(-s * 0.2, -s * 0.3, 1, 0, 0, s); g.addColorStop(0, '#F5DFA0'); g.addColorStop(1, '#C9A55A'); c.fillStyle = g; c.beginPath(); c.ellipse(0, 0, s, s * (0.75 + sis * 0.25), 0, 0, TAU); c.fill();
+        c.fillStyle = 'rgba(90,70,40,.55)'; for (let i = 0; i < 6; i++) { c.beginPath(); c.arc(-s * 0.4 + (i % 3) * s * 0.35, -s * 0.35 + Math.floor(i / 3) * s * 0.25, s * 0.07, 0, TAU); c.fill(); } c.fillStyle = '#fff'; c.beginPath(); c.arc(s * 0.5, -s * 0.2, s * 0.17, 0, TAU); c.fill(); c.fillStyle = '#111'; c.beginPath(); c.arc(s * 0.53, -s * 0.2, s * 0.09, 0, TAU); c.fill(); break; }
+      case 'dvatoz': { const s = 26 * OL; c.scale(o.d, 1); if (o.gomulu && !(o.kalk > 0)) { c.fillStyle = '#111'; c.beginPath(); c.arc(s * 0.15, -3, 1.8, 0, TAU); c.arc(s * 0.3, -3, 1.8, 0, TAU); c.fill(); c.fillStyle = rgba(koyu(ALANLAR[SAHNE.tm].kum, 0.15), 0.9); c.beginPath(); c.ellipse(0, 2, s, s * 0.2, 0, 0, TAU); c.fill(); break; }
+        const k = Math.sin(o.f * 3) * 0.2; c.fillStyle = '#8C7B6B'; c.beginPath(); c.moveTo(s * 0.7, 0); c.quadraticCurveTo(0, -s * (0.75 + k) * 0.6, -s * 0.5, 0); c.quadraticCurveTo(0, s * (0.75 - k) * 0.6, s * 0.7, 0); c.fill(); c.strokeStyle = '#6B5D50'; c.lineWidth = 1.6; c.beginPath(); c.moveTo(-s * 0.45, 0); c.quadraticCurveTo(-s * 1.1, Math.sin(o.f * 2) * 6, -s * 1.6, Math.sin(o.f * 2 + 1) * 8); c.stroke(); c.fillStyle = '#111'; c.beginPath(); c.arc(s * 0.3, -s * 0.12, 1.8, 0, TAU); c.arc(s * 0.3, s * 0.06, 1.8, 0, TAU); c.fill(); break; }
+      case 'kalamar': { const s = 16 * OL; c.scale(o.d, 1); c.fillStyle = '#E9B7C8'; c.beginPath(); c.moveTo(-s * 1.1, 0); c.quadraticCurveTo(-s * 0.4, -s * 0.42, s * 0.4, -s * 0.3); c.lineTo(s * 0.4, s * 0.3); c.quadraticCurveTo(-s * 0.4, s * 0.42, -s * 1.1, 0); c.fill(); c.beginPath(); c.moveTo(-s * 1.1, 0); c.lineTo(-s * 0.75, -s * 0.45 - Math.sin(o.f * 4) * 3); c.lineTo(-s * 0.6, 0); c.lineTo(-s * 0.75, s * 0.45 + Math.sin(o.f * 4) * 3); c.fill();
+        c.strokeStyle = '#E9B7C8'; c.lineWidth = 1.4; for (let i = -3; i <= 3; i++) { c.beginPath(); c.moveTo(s * 0.4, i * s * 0.07); c.quadraticCurveTo(s * 0.9, i * s * 0.12 + Math.sin(o.f * 3 + i) * 4, s * (1.3 + Math.abs(i) * 0.05), i * s * 0.16 + Math.sin(o.f * 2 + i) * 5); c.stroke(); } c.fillStyle = '#fff'; c.beginPath(); c.arc(s * 0.25, -s * 0.08, s * 0.13, 0, TAU); c.fill(); c.fillStyle = '#111'; c.beginPath(); c.arc(s * 0.27, -s * 0.08, s * 0.07, 0, TAU); c.fill(); break; }
+      case 'isik': c.restore(); { const a = SAHNE.tm === 'derin' ? Math.max(0.55, gece) : gece; if (a > 0.05) { c.save(); c.globalCompositeOperation = 'lighter'; for (const u of o.uye) { const g = c.createRadialGradient(u.x, u.y, 0, u.x, u.y, 7); g.addColorStop(0, `rgba(160,255,240,${0.9 * a})`); g.addColorStop(1, 'rgba(160,255,240,0)'); c.fillStyle = g; c.beginPath(); c.arc(u.x, u.y, 7, 0, TAU); c.fill(); c.fillStyle = `rgba(80,110,140,${0.8 * a})`; c.beginPath(); c.ellipse(u.x, u.y, 4 * OL, 1.6 * OL, 0, 0, TAU); c.fill(); } c.restore(); } } c.save(); break;
+    }
+    c.restore();
+  }
+  const y = CNL.yunus; if (y && !sadeceIsik) { const s = 70 * OL; c.save(); c.translate(y.x, y.y); c.scale(y.d, 1); c.rotate(Math.cos(y.f * 1.6) * 0.18); c.fillStyle = '#8FA3B5'; c.beginPath(); c.moveTo(s * 0.62, 0); c.lineTo(s * 0.48, -s * 0.05); c.quadraticCurveTo(s * 0.1, -s * 0.24, -s * 0.45, -s * 0.06); c.lineTo(-s * 0.62, -s * 0.18); c.lineTo(-s * 0.55, 0); c.lineTo(-s * 0.62, s * 0.18); c.lineTo(-s * 0.45, s * 0.06); c.quadraticCurveTo(s * 0.1, s * 0.16, s * 0.48, s * 0.04); c.closePath(); c.fill();
+    c.beginPath(); c.moveTo(0, -s * 0.15); c.lineTo(-s * 0.12, -s * 0.34); c.lineTo(-s * 0.2, -s * 0.12); c.fill(); c.fillStyle = '#D6E2EC'; c.beginPath(); c.ellipse(s * 0.1, s * 0.07, s * 0.3, s * 0.05, 0, 0, TAU); c.fill(); c.fillStyle = '#1B2733'; c.beginPath(); c.arc(s * 0.38, -s * 0.06, 2.2, 0, TAU); c.fill(); c.restore(); }
+}
+function canliDokun(x, y) {
+  for (const o of CNL.L) {
+    if (o.tur === 'isik') { if (geceDegeri() < 0.3 && SAHNE.tm !== 'derin') continue; if (Math.hypot(o.x - x, o.y - y) < 60 * OL) { canliTepki(o); return true; } continue; }
+    const r = { ahtapot: 26, yildiz: 18, karides: 16, balon: 22, dvatoz: 34, kalamar: 26, salyangoz: 16, ermit: 18 }[o.tur] * OL;
+    if (Math.hypot(o.x - x, o.y - 6 * OL - y) < r + 6) { if (!canliTepki(o)) SES.kabarcik(0.015); return true; }
+  }
+  const yn = CNL.yunus; if (yn && Math.hypot(yn.x - x, yn.y - y) < 50 * OL) { if (!yn.bekle) { yn.bekle = 3; albumEkle('canli:yunus'); mutluEkle(2, 'canli', 20); SES.kutla(); for (let i = 0; i < 14; i++) PARC.push({ x: yn.x, y: ALAN.y1 - 5, vx: rnd(-90, 90), vy: rnd(-100, -20), t: 0.9, c: '#E6F7FF', r: rnd(1.5, 3) }); BALON.push({ x: yn.x, y: yn.y - 30, e: '🐬', t: 2 }); } return true; }
+  return false;
+}
+/* ansiklopediye işle */
+for (const [k, b] of Object.entries(CANLI_BILGI)) ANSIK[k] = [[b[0], b[1], b[2]], [b[3], b[4]]];
 
 /* ses düğmesi ve tam ekran */
 const sesYaz = () => { const d = SES.duzey(); $('sesBtn').textContent = d <= 0 ? '🔇' : d < 0.5 ? '🔉' : '🔊'; $('sesSus').textContent = d <= 0 ? '🔇' : '🔈'; $('sesYuzde').textContent = '%' + Math.round(d * 100); };
@@ -2900,7 +3039,7 @@ else if (!S) { girisGoster(); yerliKur(); }
 else { ilerlet(); gunlukGorevler(); gorevKontrol(); basarimKontrol(); kaydet(false); panelAc(); if (olumKontrol()) { } else if (bekleyenSecim()) setTimeout(secimAc, 700); else if (!S.kumandaOgrendi) setTimeout(() => duyur(T('👆 Yeni: suya dokun, balığın oraya yüzsün. Parlayan planktonları ye!', '👆 New: tap the water and your fish swims there. Eat the glowing plankton!'), 1), 1200); }
 NET.baslat().then(() => { if (S && !girisAcik) agKur(); else uiGuncelle(); });
 requestAnimationFrame(kare);
-window.DM = { durum: () => ({ S, BAL, NET, AV, ALAN, PLK, YIR }), kazan: m => { kazan(m, { sinirsiz: true, tokBagimsiz: true }); kaydet(); uiGuncelle(); }, avBitir, sifirla: () => { localStorage.removeItem(KEY); location.reload(); } };
+window.DM = { durum: () => ({ S, BAL, NET, AV, ALAN, PLK, YIR, CNL }), kazan: m => { kazan(m, { sinirsiz: true, tokBagimsiz: true }); kaydet(); uiGuncelle(); }, avBitir, sifirla: () => { localStorage.removeItem(KEY); location.reload(); } };
 })();
 </script>
 <script data-goatcounter="https://erdevelop.goatcounter.com/count" async src="//gc.zgo.at/count.js"></script>
