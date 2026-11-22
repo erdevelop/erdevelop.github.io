@@ -127,6 +127,7 @@ details ul{margin:8px 0 0;padding-left:18px;font-size:13.5px}details li{margin:4
         <li><b>Büyüme:</b> yedikçe biyokütle dolar; dolunca gövdene yeni bir <b>boğum</b> eklenir ve ona takacağın parçayı seçersin (1–3).</li>
         <li><b>Enerji</b> sürekli azalır; bitince canın erir. Can, enerjin yüksekken kendiliğinden dolar.</li>
         <li><b>Yumurta (E ya da 🥚):</b> ölürsen yumurtandan yeni nesil olarak, küçük bir mutasyonla doğarsın. Yumurtan yoksa soyun tükenir. Yengeçler açıktaki yumurtayı yer; yosunların içine bırak.</li>
+        <li><b>Av çeşitleri:</b> iribaşlar ve ışıklı kriller kolay lokmadır. Deniz kurduna yavaş yaklaş, yoksa kuma saklanır. Midye yalnızca kabuğu açıkken ısırılır. Mürekkep balığı mürekkep püskürtüp kaçar. Kefal ve deniz yıldızı birkaç ısırık ister ama et bırakır. Deniz kestanesi zırhsızken batar.</li>
         <li><b>Canlılar:</b> karides ve küçük balıklar kaçar. Yengeç yalnızca <b>arkadan</b> ısırılır. Denizanasına değme. Renkli deniz sümüklüsü zehirlidir. Yosun ormanında yılan balığı pusuda bekler; yosunun içinde yavaşken seni göremez. Çukurda her ışık yem değildir.</li>
         <li><b>Bölgeler:</b> Sığ Kıyı → akıntılı geçit (en az 4 boğum ve 2 yüzgeç ister) → Yosun Ormanı → çukurun bekçisi (yen ya da ışık organı tak) → Karanlık Çukur (ışıksız can erir) → karşı kıyı.</li>
         <li><b>Karaya çıkmak için</b> gövden tamamlanmış (8 boğum) olmalı ve çukurun dibindeki 🫁 akciğer kapsülünü bulmuş olmalısın.</li>
@@ -140,6 +141,7 @@ details ul{margin:8px 0 0;padding-left:18px;font-size:13.5px}details li{margin:4
         <li><b>Growth:</b> eating fills biomass; when full your body gains a new <b>segment</b> and you pick the part for it (1–3).</li>
         <li><b>Energy</b> drains all the time; at zero your health melts. Health refills by itself while energy is high.</li>
         <li><b>Egg (E or 🥚):</b> if you die you hatch from your egg as the next generation, with a small mutation. Without an egg your line ends. Crabs eat eggs left in the open; lay them inside kelp.</li>
+        <li><b>Prey:</b> tadpoles and glow krill are easy bites. Approach the sea worm slowly or it hides in the sand. A mussel can only be bitten while open. The squid squirts ink and flees. Mullet and starfish take a few bites but leave meat. Sea urchins sting unless you have armour.</li>
         <li><b>Creatures:</b> shrimp and small fish flee. Crabs can only be bitten <b>from behind</b>. Don't touch jellyfish. The colourful sea slug is poisonous. An eel waits in ambush in the kelp forest; it can't see you while you move slowly inside kelp. In the pit, not every light is food.</li>
         <li><b>Zones:</b> Shallows → current gate (needs 4 segments and 2 fins) → Kelp Forest → guardian of the pit (defeat it or fit a light organ) → Dark Pit (health drains without light) → far shore.</li>
         <li><b>To walk onto land</b> your body must be complete (8 segments) and you must have found the 🫁 lung capsule at the bottom of the pit.</li>
@@ -233,6 +235,7 @@ const SES = (() => {
 /* ================= durum ================= */
 const cv = $('c'), g = cv.getContext('2d');
 let EW = 0, EH = 0, DPR = 1, zum = 1, kx = 0, ky = 0, zaman = 0, oyunda = false, durdu = false;
+let MUR = [];   // mürekkep bulutları
 let P = null, C = [], F = [], PT = [], yumurta = null, secenek = null, kapsulAlindi = {}, ipucu = {};
 const fare = { x: 0, y: 0, var: false };
 function boyutla() { DPR = Math.min(2, window.devicePixelRatio || 1); const r = cv.getBoundingClientRect(); EW = Math.max(1, r.width); EH = Math.max(1, r.height); cv.width = Math.round(EW * DPR); cv.height = Math.round(EH * DPR); zum = kis(Math.min(EW, EH) / 560, 0.62, 1.25); }
@@ -313,12 +316,17 @@ function secimYap(i) {
 function oyunYaz() { if (!P || !oyunda) return; if (P.kazandi) gecisYaz(); KAYIT.oyun = { x: P.x, y: P.y, hue: P.hue, segs: P.segs.map(s => s.p), bio: P.bio, nesil: P.nesil, can: P.can, en: P.en, mut: P.mut, sure: P.sure, uzak: P.uzak, yum: yumurta ? [yumurta.x, yumurta.y, yumurta.guvenli ? 1 : 0] : null, kaps: kapsulAlindi, kazandi: P.kazandi }; kaydet(); }
 
 /* ================= canlılar ================= */
+const midAcik = c => Math.sin(zaman * 0.9 + c.f) > 0.15;
 const TIP = {
   kar: { r: 7, can: 1, en: 12, bio: 5, ad: ['karides', 'shrimp'] }, bal: { r: 8, can: 1, en: 10, bio: 4, ad: ['balık', 'fish'] },
+  iri: { r: 6, can: 1, en: 6, bio: 3, ad: ['iribaş', 'tadpole'] }, isk: { r: 6, can: 1, en: 9, bio: 5, ad: ['ışıklı kril', 'glow krill'] }, kurt: { r: 8, can: 1, en: 14, bio: 7, ad: ['deniz kurdu', 'sea worm'] },
+  mid: { r: 15, can: 1, en: 22, bio: 14, ad: ['midye', 'mussel'] }, mur: { r: 11, can: 1, en: 16, bio: 12, ad: ['mürekkep balığı', 'squid'] }, yld: { r: 17, can: 22, et: 3, ad: ['deniz yıldızı', 'starfish'] },
+  kef: { r: 13, can: 16, et: 2, ad: ['kefal', 'mullet'] }, kes: { r: 16, can: 20, et: 3, ad: ['deniz kestanesi', 'sea urchin'] },
   sum: { r: 11, can: 6, en: 6, bio: 4, ad: ['deniz sümüklüsü', 'sea slug'] }, anas: { r: 21, can: 18, et: 3, ad: ['denizanası', 'jellyfish'] },
   yen: { r: 22, can: 45, et: 4, ad: ['yengeç', 'crab'] }, bar: { r: 13, can: 55, et: 4, ad: ['barakuda', 'barracuda'] }, yil: { r: 17, can: 75, et: 6, ad: ['yılan balığı', 'eel'] }, fen: { r: 34, can: 130, et: 10, ad: ['fener balığı', 'anglerfish'] }
 };
-const NUFUS = [['kar', 0, 26], ['bal', 0, 24], ['anas', 0, 5], ['yen', 0, 4], ['sum', 0, 3], ['kar', 1, 16], ['bal', 1, 32], ['yen', 1, 8], ['sum', 1, 7], ['yil', 1, 6], ['anas', 1, 5], ['anas', 2, 12], ['fen', 2, 6], ['bal', 2, 14], ['sum', 2, 4], ['yil', 2, 3]];
+const NUFUS = [['kurt', 0, 9], ['mid', 0, 6], ['yld', 0, 4], ['iri', 0, 14], ['kef', 0, 5], ['kes', 0, 3], ['mid', 1, 5], ['yld', 1, 5], ['mur', 1, 6], ['kes', 1, 6], ['iri', 1, 26], ['kef', 1, 8], ['kurt', 1, 4], ['isk', 2, 34], ['mur', 2, 5], ['kes', 2, 5], ['yld', 2, 3],
+  ['kar', 0, 22], ['bal', 0, 14], ['anas', 0, 5], ['yen', 0, 4], ['sum', 0, 3], ['kar', 1, 14], ['bal', 1, 18], ['yen', 1, 8], ['sum', 1, 7], ['yil', 1, 6], ['anas', 1, 5], ['anas', 2, 12], ['fen', 2, 6], ['bal', 2, 14], ['sum', 2, 4], ['yil', 2, 3]];
 const BX = [[420, X_GECIT - 380], [X_GECIT + 380, X_CUKUR - 280], [X_CUKUR + 280, X_KIYI - 150]];
 function canliYeni(tip, b, uzakOl) {
   const t = TIP[tip]; let x, y, i = 0;
@@ -330,7 +338,7 @@ function canliYeni(tip, b, uzakOl) {
   return c;
 }
 function dunyaKur() {
-  C = []; F = []; PT = [];
+  C = []; F = []; PT = []; MUR = [];
   for (const [tip, b, n] of NUFUS) for (let i = 0; i < n; i++) C.push(canliYeni(tip, b, false));
   for (let i = 0; i < 1000; i++) F.push(planktonYeni());
   for (let i = 0; i < Math.min(6, 2 * KAYIT.tur); i++) C.push(canliYeni('bar', i % 2, false));
@@ -357,7 +365,10 @@ function isir(c) {
     const a = Math.atan2(P.y - c.y, P.x - c.x);
     if (Math.abs(aciFark(a, c.ang)) < 1.75) { SES.tik(); P.hamle = 0; P.vx *= -0.4; P.vy *= -0.4; birKez('yen', T('🦀 Yengecin kabuğu önden ısırılmaz — arkasına dolan', '🦀 A crab can\'t be bitten from the front — get behind it'), 'uyari'); return; }
   }
+  if (c.tip === 'mid' && !midAcik(c)) { SES.tik(); P.hamle = 0; P.vx *= -0.4; P.vy *= -0.4; birKez('mid', T('🦪 Midye kapalıyken ısırılmaz — kabuğunu açmasını bekle', '🦪 A closed mussel can\'t be bitten — wait until it opens'), 'uyari'); return; }
   SES.isir(); P.hamle = 0; P.vx *= 0.35; P.vy *= 0.35;
+  if (c.tip === 'kes' && S.zirh >= 1) { hasar(5, null, 0); birKez('kes', T('🌵 Deniz kestanesinin dikenleri batar! Zırhın olursa zarar vermez', '🌵 Sea urchin spines sting! Armour makes them harmless'), 'uyari'); }
+  if (c.tip === 'kef') c.kac = 3;
   if (t.can <= S.isirik && !t.et) {   // küçük av: tek lokma
     c.olu = 0.01; c.yendi = true;
     if (c.tip === 'sum') { if (S.zehir) besin(30, 12); else { besin(6, 4); P.zehirli = 6; birKez('sum', T('🤢 Renkli deniz sümüklüsü zehirli! Zehir bezin olursa besleyici bir lokma olur', '🤢 The colourful sea slug is poisonous! With a venom gland it becomes a rich meal'), 'uyari'); } }
@@ -379,6 +390,25 @@ function canliGuncelle(dt) {
       if (d < (c.tip === 'kar' ? 150 : 175) && gor) c.kac = 1.1;
       if (c.kac > 0) { c.kac -= dt; c.yon = Math.atan2(-dy, -dx) + Math.sin(zaman * 9 + c.f) * 0.5; hz = c.tip === 'kar' ? 215 : 235; }
       else { if (c.akil <= 0) { c.akil = rnd(0.8, 2.4); c.yon += rnd(-1.2, 1.2); if (Math.hypot(c.x - c.ex, c.y - c.ey) > 420) c.yon = Math.atan2(c.ey - c.y, c.ex - c.x); } hz = c.tip === 'kar' ? (Math.sin(zaman * 3 + c.f) > 0.3 ? 70 : 8) : 62; }
+    } else if (c.tip === 'iri' || c.tip === 'isk') {
+      if (d < 120 && gor && c.tip === 'iri') c.kac = 0.7;
+      if (c.kac > 0) { c.kac -= dt; c.yon = Math.atan2(-dy, -dx) + Math.sin(zaman * 14 + c.f) * 0.8; hz = 140; }
+      else { if (c.akil <= 0) { c.akil = rnd(0.6, 1.8); c.yon += rnd(-1.5, 1.5); if (Math.hypot(c.x - c.ex, c.y - c.ey) > 300) c.yon = Math.atan2(c.ey - c.y, c.ex - c.x); } hz = c.tip === 'iri' ? 45 + 25 * Math.sin(zaman * 6 + c.f) : 22; }
+    } else if (c.tip === 'kurt') {   // kuma gömülür: hızlı yaklaşırsan saklanır, yavaş yaklaşırsan fark etmez
+      const korktu = d < 150 && gor && Math.hypot(P.vx, P.vy) > 85; c.gom = kis((c.gom || 0) + (korktu ? 4 : -0.5) * dt, 0, 1); hz = 0;
+      if (korktu) birKez('kurt', T('🪱 Deniz kurdu kuma saklandı — ona yavaşça yaklaş', '🪱 The sea worm hid in the sand — approach it slowly'), '');
+    } else if (c.tip === 'mid' || c.tip === 'kes') {
+      hz = 0;
+      if (c.tip === 'kes' && P.can > 0 && P.S.zirh >= 1) for (let i = -1; i < P.segs.length; i++) { const q = i < 0 ? P : P.segs[i]; if ((q.x - c.x) ** 2 + (q.y - c.y) ** 2 < (c.r + 11) ** 2) { hasar(6, c, 0); birKez('kes', T('🌵 Deniz kestanesinin dikenleri batar! Zırhın olursa zarar vermez', '🌵 Sea urchin spines sting! Armour makes them harmless'), 'uyari'); break; } }
+    } else if (c.tip === 'yld') { if (c.akil <= 0) { c.akil = rnd(3, 7); c.yon += rnd(-1, 1); } hz = 9; c.ang += dt * 0.25; }
+    else if (c.tip === 'mur') {
+      if (d < 210 && gor && c.kac <= 0 && c.bekle <= 0) { c.kac = 1.6; c.bekle = 3.2; MUR.push({ x: c.x, y: c.y, t: 0 }); birKez('mur', T('🦑 Mürekkep balığı mürekkep püskürtüp kaçar — bulutun içinden çıkmasını bekleme, önünü kes', '🦑 The squid squirts ink and flees — cut it off instead of chasing through the cloud'), ''); }
+      if (c.kac > 0) { c.kac -= dt; c.yon = Math.atan2(-dy, -dx); hz = 300 * Math.max(0.25, Math.abs(Math.sin(zaman * 5 + c.f))); }
+      else { if (c.akil <= 0) { c.akil = rnd(1.5, 3.5); c.yon += rnd(-1.3, 1.3); if (Math.hypot(c.x - c.ex, c.y - c.ey) > 450) c.yon = Math.atan2(c.ey - c.y, c.ex - c.x); } hz = 30 + 30 * Math.max(0, Math.sin(zaman * 3 + c.f)); }
+    } else if (c.tip === 'kef') {
+      if (d < 90 && gor && c.kac <= 0) c.kac = 1;
+      if (c.kac > 0) { c.kac -= dt; c.yon = Math.atan2(-dy, -dx) + Math.sin(zaman * 7 + c.f) * 0.4; hz = 225; }
+      else { if (c.akil <= 0) { c.akil = rnd(1.5, 4); c.yon += rnd(-1, 1); if (Math.hypot(c.x - c.ex, c.y - c.ey) > 500) c.yon = Math.atan2(c.ey - c.y, c.ex - c.x); } hz = 55; }
     } else if (c.tip === 'sum') { if (c.akil <= 0) { c.akil = rnd(2, 5); c.yon += rnd(-1, 1); } hz = 14; }
     else if (c.tip === 'anas') {
       c.yon = Math.PI / 2 * Math.sign(Math.sin(zaman * 0.13 + c.f)) + Math.sin(zaman * 0.4 + c.f) * 0.6; hz = 16 + 14 * Math.max(0, Math.sin(zaman * 2.2 + c.f));
@@ -409,14 +439,14 @@ function canliGuncelle(dt) {
     hx = Math.cos(c.yon) * hz; hy = Math.sin(c.yon) * hz;
     const k = Math.min(1, dt * (c.tip === 'yil' ? 6 : 3.5)); c.vx += (hx - c.vx) * k; c.vy += (hy - c.vy) * k;
     c.x += (c.vx - akinti(c.x) * 0.5) * dt; c.y += c.vy * dt;
-    if (Math.abs(c.vx) + Math.abs(c.vy) > 4) c.ang += aciFark(Math.atan2(c.vy, c.vx), c.ang) * Math.min(1, dt * (c.tip === 'yen' ? 2.2 : 7)); else if (c.tip === 'yen' || c.tip === 'fen') c.ang += aciFark(c.yon, c.ang) * Math.min(1, dt * 2);
+    if (c.tip === 'yld') { } else if (Math.abs(c.vx) + Math.abs(c.vy) > 4) c.ang += aciFark(Math.atan2(c.vy, c.vx), c.ang) * Math.min(1, dt * (c.tip === 'yen' ? 2.2 : 7)); else if (c.tip === 'yen' || c.tip === 'fen') c.ang += aciFark(c.yon, c.ang) * Math.min(1, dt * 2);
     kayaIt(c, c.r * 0.8);
     if (c.x < BX[c.b][0] - 200 || c.x > BX[c.b][1] + 200) c.yon = Math.atan2(c.ey - c.y, c.ex - c.x);
     if (c.iz) { c.iz.unshift(c.x, c.y); if (c.iz.length > 44) c.iz.length = 44; }
     /* oyuncunun kafası değdi mi */
-    if (P.can > 0 && d < c.r + 13) {
+    if (P.can > 0 && d < c.r + 13 && !(c.tip === 'kurt' && c.gom > 0.7)) {
       if (P.hamle > 0) isir(c);
-      else if ((c.tip === 'kar' || c.tip === 'bal') && d < c.r + 8) { c.olu = 0.01; c.yendi = true; besin(TIP[c.tip].en, TIP[c.tip].bio); SES.ye(); P.agiz = 1; }
+      else if ((c.tip === 'kar' || c.tip === 'bal' || c.tip === 'iri' || c.tip === 'isk' || c.tip === 'kurt') && d < c.r + 8) { c.olu = 0.01; c.yendi = true; besin(TIP[c.tip].en, TIP[c.tip].bio); SES.ye(); P.agiz = 1; }
     }
   }
   for (let i = C.length - 1; i >= 0; i--) if (C[i].olu >= 1) { const c = C[i]; if (c.bekci) { C.splice(i, 1); continue; } C[i] = canliYeni(c.tip, c.b, true); C[i].bekle = 0; }
@@ -474,6 +504,7 @@ function guncelle(dt) {
   canliGuncelle(dt);
   if (P.can <= 0) { olum(); if (!oyunda) return; }
   if (yumurta) yumurta.t += dt;
+  for (let i = MUR.length - 1; i >= 0; i--) if ((MUR[i].t += dt / 5) >= 1) MUR.splice(i, 1);
   for (let i = PT.length - 1; i >= 0; i--) { const p = PT[i]; p.t += dt / p.s; p.x += p.vx * dt; p.y += p.vy * dt; if (p.t >= 1) { PT[i] = PT[PT.length - 1]; PT.pop(); } }
   /* kamera */
   const gw = EW / zum, gh = EH / zum, hx2 = kis(P.x - gw / 2 + Math.cos(P.ang) * 40, -60, Math.max(-60, DW + 60 - gw)), hy2 = kis(P.y - gh / 2, Math.min(-60, (DH - gh) / 2), Math.max(DH + 60 - gh, (DH - gh) / 2));
@@ -554,7 +585,35 @@ function canliCiz(c, t) {
     g.translate(c.x, c.y);
   }
   g.rotate(c.ang);
-  if (c.tip === 'kar') {
+  if (c.tip === 'iri') {
+    const w = Math.sin(t * 16 + c.f) * 0.5; g.fillStyle = 'rgba(70,95,60,.95)'; g.beginPath(); g.arc(0, 0, r, 0, TAU); g.fill();
+    g.strokeStyle = 'rgba(70,95,60,.9)'; g.lineWidth = 3; g.beginPath(); g.moveTo(-r * 0.8, 0); g.quadraticCurveTo(-r * 2, w * r * 1.6, -r * 3.2, -w * r * 1.4); g.stroke(); g.fillStyle = '#111'; g.beginPath(); g.arc(r * 0.45, -r * 0.4, 1.3, 0, TAU); g.arc(r * 0.45, r * 0.4, 1.3, 0, TAU); g.fill();
+  } else if (c.tip === 'isk') {
+    g.fillStyle = 'rgba(120,235,255,.95)'; g.shadowColor = '#7FE8FF'; g.shadowBlur = 10; g.beginPath(); g.ellipse(0, 0, r * 1.3, r * 0.5, 0, 0, TAU); g.fill(); g.shadowBlur = 0; g.fillStyle = '#fff'; g.beginPath(); g.arc(r * 0.6, 0, 1.6, 0, TAU); g.fill();
+  } else if (c.tip === 'kurt') {
+    g.rotate(-c.ang); const gm = c.gom || 0, boy = (1 - gm) * 30;
+    g.fillStyle = 'rgba(196,172,120,.9)'; g.beginPath(); g.ellipse(0, 4, 15, 7, 0, 0, TAU); g.fill(); g.fillStyle = 'rgba(60,45,30,.7)'; g.beginPath(); g.ellipse(0, 3, 6, 3, 0, 0, TAU); g.fill();
+    if (boy > 2) { g.strokeStyle = 'rgba(232,120,140,.96)'; g.lineWidth = 7; g.beginPath(); g.moveTo(0, 2); for (let j = 1; j <= 6; j++) { const u = j / 6; g.lineTo(Math.sin(t * 3 + c.f + u * 3) * 7 * u, 2 - u * boy); } g.stroke(); g.strokeStyle = 'rgba(255,190,200,.8)'; g.lineWidth = 1.2; for (const k of [-1, 1]) { g.beginPath(); const tx = Math.sin(t * 3 + c.f + 3) * 7; g.moveTo(tx, 2 - boy); g.lineTo(tx + k * 6, -2 - boy - 4); g.stroke(); } }
+  } else if (c.tip === 'mid') {
+    g.rotate(-c.ang + c.f); const ac = midAcik(c) ? 0.2 + 0.35 * Math.min(1, (Math.sin(t * 0.9 + c.f) - 0.15) * 4) : 0.03;
+    if (ac > 0.1) { g.fillStyle = 'rgba(255,225,205,.95)'; g.beginPath(); g.ellipse(0, 0, r * 0.75, r * 0.5, 0, 0, TAU); g.fill(); g.fillStyle = '#fff'; g.beginPath(); g.arc(r * 0.1, 0, 3.4, 0, TAU); g.fill(); }
+    for (const k of [-1, 1]) { g.save(); g.rotate(k * ac); g.fillStyle = vur ? 'rgba(255,150,140,.95)' : 'rgba(58,66,96,.97)'; g.beginPath(); g.moveTo(-r, 0); g.quadraticCurveTo(0, k * r * 1.15, r, 0); g.closePath(); g.fill(); g.strokeStyle = 'rgba(150,165,210,.6)'; g.lineWidth = 1.3; for (let j = 1; j <= 3; j++) { g.beginPath(); g.moveTo(-r * (1 - j * 0.2), 0); g.quadraticCurveTo(0, k * r * (1.15 - j * 0.3), r * (1 - j * 0.2), 0); g.stroke(); } g.restore(); }
+  } else if (c.tip === 'yld') {
+    g.fillStyle = vur ? 'rgba(255,170,150,.95)' : 'rgba(235,120,70,.95)'; g.beginPath(); for (let j = 0; j < 10; j++) { const a = j / 10 * TAU, rr = j % 2 ? r * 0.42 : r * 1.25; j ? g.lineTo(Math.cos(a) * rr, Math.sin(a) * rr) : g.moveTo(Math.cos(a) * rr, Math.sin(a) * rr); } g.closePath(); g.fill();
+    g.fillStyle = 'rgba(255,215,170,.8)'; for (let j = 0; j < 5; j++) { const a = j / 5 * TAU; for (const u of [0.35, 0.65, 0.9]) { g.beginPath(); g.arc(Math.cos(a) * r * u, Math.sin(a) * r * u, 1.7, 0, TAU); g.fill(); } }
+  } else if (c.tip === 'mur') {
+    const nb = 1 + 0.15 * Math.sin(t * (c.kac > 0 ? 14 : 5) + c.f);
+    g.strokeStyle = 'rgba(225,170,215,.8)'; g.lineWidth = 2; for (let j = -2; j <= 2; j++) { g.beginPath(); g.moveTo(-r * 0.8, j * 2.4); g.quadraticCurveTo(-r * 1.7, j * 4 + Math.sin(t * 6 + j + c.f) * 4, -r * 2.5 / nb, j * 3.2); g.stroke(); }
+    g.fillStyle = 'rgba(205,140,200,.95)'; g.beginPath(); g.ellipse(r * 0.2, 0, r * 1.25 / nb, r * 0.65 * nb, 0, 0, TAU); g.fill(); g.beginPath(); g.moveTo(r * 1.1, 0); g.lineTo(r * 0.5, -r * 1.05); g.lineTo(r * 0.5, r * 1.05); g.closePath(); g.fill();
+    g.fillStyle = '#fff'; for (const k of [-1, 1]) { g.beginPath(); g.arc(-r * 0.45, k * r * 0.4, 3, 0, TAU); g.fill(); } g.fillStyle = '#111'; for (const k of [-1, 1]) { g.beginPath(); g.arc(-r * 0.5, k * r * 0.4, 1.5, 0, TAU); g.fill(); }
+  } else if (c.tip === 'kef') {
+    const w = Math.sin(t * (c.kac > 0 ? 16 : 7) + c.f) * 0.4; g.fillStyle = vur ? 'rgba(255,150,140,.95)' : 'rgba(205,190,150,.96)'; g.beginPath(); g.ellipse(0, 0, r * 1.5, r * 0.72, 0, 0, TAU); g.fill();
+    g.beginPath(); g.moveTo(-r * 1.3, 0); g.lineTo(-r * 2.3, -r * 0.85 + w * r); g.lineTo(-r * 2.3, r * 0.85 + w * r); g.closePath(); g.fill(); g.fillStyle = 'rgba(120,105,70,.75)'; g.beginPath(); g.ellipse(-r * 0.1, -r * 0.45, r * 0.9, r * 0.22, 0, 0, TAU); g.fill();
+    g.fillStyle = '#fff'; g.beginPath(); g.arc(r * 0.9, -r * 0.2, 3, 0, TAU); g.fill(); g.fillStyle = '#111'; g.beginPath(); g.arc(r * 0.98, -r * 0.2, 1.5, 0, TAU); g.fill();
+  } else if (c.tip === 'kes') {
+    g.strokeStyle = vur ? 'rgba(255,150,140,.95)' : 'rgba(70,50,95,.95)'; g.lineWidth = 2; g.beginPath(); for (let j = 0; j < 18; j++) { const a = j / 18 * TAU + c.f, u = r * (1.55 + 0.12 * Math.sin(t * 2 + j)); g.moveTo(Math.cos(a) * r * 0.5, Math.sin(a) * r * 0.5); g.lineTo(Math.cos(a) * u, Math.sin(a) * u); } g.stroke();
+    g.fillStyle = vur ? 'rgba(255,170,160,.95)' : 'rgba(96,66,128,.97)'; g.beginPath(); g.arc(0, 0, r * 0.8, 0, TAU); g.fill(); g.fillStyle = 'rgba(200,170,230,.5)'; g.beginPath(); g.arc(-r * 0.2, -r * 0.2, r * 0.25, 0, TAU); g.fill();
+  } else if (c.tip === 'kar') {
     g.strokeStyle = 'rgba(255,200,170,.7)'; g.lineWidth = 1; g.beginPath(); g.moveTo(r, -2); g.lineTo(r * 2.4, -5); g.moveTo(r, 2); g.lineTo(r * 2.4, 5); g.stroke();
     g.fillStyle = 'rgba(255,165,130,.9)'; g.beginPath(); g.ellipse(0, 0, r * 1.3, r * 0.6, 0, 0, TAU); g.fill(); g.beginPath(); g.moveTo(-r * 1.1, 0); g.lineTo(-r * 2, -r * 0.6); g.lineTo(-r * 2, r * 0.6); g.closePath(); g.fill();
     g.fillStyle = '#111'; g.beginPath(); g.arc(r * 0.8, -r * 0.3, 1.3, 0, TAU); g.fill();
@@ -621,6 +680,7 @@ function ciz() {
   for (const c of C) { if (c.x < x0 - 120 || c.x > x1 + 120 || c.y < y0 - 120 || c.y > y1 + 120) continue; canliCiz(c, t); }
   /* oyuncu */
   if (P.can > 0) yaratikCiz(g, P, t, 1);
+  for (const m of MUR) { const rr = 50 + 90 * Math.min(1, m.t * 5), al = (1 - m.t) * 0.93; for (let j = 0; j < 6; j++) { const a = j * 1.05 + m.x, d = j ? rr * 0.45 : 0; g.fillStyle = `rgba(8,8,16,${al})`; g.beginPath(); g.arc(m.x + Math.cos(a) * d, m.y + Math.sin(a) * d, rr * 0.62, 0, TAU); g.fill(); } }
   for (const p of PT) { g.globalAlpha = 1 - p.t; g.fillStyle = `hsl(${p.h},70%,62%)`; g.beginPath(); g.arc(p.x, p.y, p.r, 0, TAU); g.fill(); } g.globalAlpha = 1;
   /* yosunlar (üstte: içindekileri örter) */
   for (const q of YOSUN) {
@@ -643,7 +703,7 @@ function ciz() {
     const sx = (P.x - kx) * zum, sy = (P.y - ky) * zum, gor = (115 + 230 * P.S.isik) * zum, gr = g.createRadialGradient(sx, sy, gor * 0.35, sx, sy, gor);
     gr.addColorStop(0, 'rgba(0,4,8,0)'); gr.addColorStop(1, `rgba(0,4,8,${0.97 * kr})`); g.fillStyle = gr; g.fillRect(0, 0, EW, EH);
     g.save(); g.scale(zum, zum); g.translate(-kx, -ky); g.globalAlpha = kr;
-    for (const c of C) { if (c.olu || c.x < x0 - 80 || c.x > x1 + 80) continue; if (c.tip === 'fen') { const [lx, ly] = fenerYem(c); parla(lx, ly, 42, 'rgba(255,220,110,.55)'); g.fillStyle = '#FFE08A'; g.beginPath(); g.arc(lx, ly, 7, 0, TAU); g.fill(); } else if (c.tip === 'anas') parla(c.x, c.y, c.r * 1.6, 'rgba(120,190,255,.28)'); }
+    for (const c of C) { if (c.olu || c.x < x0 - 80 || c.x > x1 + 80) continue; if (c.tip === 'fen') { const [lx, ly] = fenerYem(c); parla(lx, ly, 42, 'rgba(255,220,110,.55)'); g.fillStyle = '#FFE08A'; g.beginPath(); g.arc(lx, ly, 7, 0, TAU); g.fill(); } else if (c.tip === 'anas') parla(c.x, c.y, c.r * 1.6, 'rgba(120,190,255,.28)'); else if (c.tip === 'isk') { parla(c.x, c.y, 16, 'rgba(120,235,255,.6)'); g.fillStyle = '#BFF6FF'; g.beginPath(); g.arc(c.x, c.y, 2.6, 0, TAU); g.fill(); } }
     if (!kapsulAlindi.akc) { parla(AKC.x, AKC.y, 56, 'rgba(140,220,255,.6)'); g.fillStyle = '#BFEFFF'; g.beginPath(); g.arc(AKC.x, AKC.y, 9, 0, TAU); g.fill(); }
     for (const k of KAPSUL) if (!kapsulAlindi[k.no] && k.x > X_CUKUR) { parla(k.x, k.y, 44, 'rgba(255,220,110,.55)'); g.fillStyle = '#FFE08A'; g.beginPath(); g.arc(k.x, k.y, 7, 0, TAU); g.fill(); }
     g.restore();
@@ -665,7 +725,7 @@ function hud(dt) {
   for (const [a, b, r] of [[0, X_GECIT, '#12606E'], [X_GECIT, X_CUKUR, '#0F5238'], [X_CUKUR, X_KIYI, '#061018'], [X_KIYI, DW, '#C9A860']]) { x.fillStyle = r; x.fillRect(a * k, 0, (b - a) * k, h); }
   x.fillStyle = 'rgba(190,240,255,.5)'; x.fillRect(X_GECIT * k - 3, 820 * k, 6, 760 * k);
   if (!kapsulAlindi.akc && (S.anten || P.x > X_CUKUR)) { x.fillStyle = '#BFEFFF'; x.beginPath(); x.arc(AKC.x * k, AKC.y * k, 6, 0, TAU); x.fill(); }
-  if (S.anten) { for (const q of C) { if (q.olu || q.tip === 'kar' || q.tip === 'bal' || q.tip === 'sum') continue; x.fillStyle = q.tip === 'anas' ? '#9cc8ff' : '#ff6a55'; x.fillRect(q.x * k - 2, q.y * k - 2, 4, 4); } x.fillStyle = '#FFE08A'; for (const q of KAPSUL) if (!kapsulAlindi[q.no]) { x.beginPath(); x.arc(q.x * k, q.y * k, 5, 0, TAU); x.fill(); } }
+  if (S.anten) { for (const q of C) { if (q.olu || !(q.tip === 'anas' || q.tip === 'yen' || q.tip === 'yil' || q.tip === 'fen' || q.tip === 'bar' || q.tip === 'kes')) continue; x.fillStyle = q.tip === 'anas' ? '#9cc8ff' : '#ff6a55'; x.fillRect(q.x * k - 2, q.y * k - 2, 4, 4); } x.fillStyle = '#FFE08A'; for (const q of KAPSUL) if (!kapsulAlindi[q.no]) { x.beginPath(); x.arc(q.x * k, q.y * k, 5, 0, TAU); x.fill(); } }
   if (yumurta) { x.fillStyle = '#fff'; x.beginPath(); x.ellipse(yumurta.x * k, yumurta.y * k, 5, 6.5, 0, 0, TAU); x.fill(); }
   x.fillStyle = '#FFE29A'; x.strokeStyle = '#000'; x.lineWidth = 2; x.beginPath(); x.arc(P.x * k, P.y * k, 6 + Math.sin(zaman * 5) * 1.5, 0, TAU); x.fill(); x.stroke();
 }
