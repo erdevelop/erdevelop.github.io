@@ -39,6 +39,11 @@ button{font:inherit;color:inherit;cursor:pointer}[hidden]{display:none!important
 .kc{width:34px;height:34px;border-radius:10px;border:1px solid var(--line);background:rgba(0,0,0,.25);font-weight:900;font-size:17px;padding:0}
 .kc:disabled{opacity:.3;cursor:default}
 #uyari{margin:0 0 10px;padding:9px 12px;border-radius:12px;border:1px solid rgba(255,123,107,.7);background:rgba(90,24,18,.55);color:#FFD2CB;font-weight:800;font-size:13.5px}
+#sesKutu{position:fixed;right:10px;top:calc(50px + env(safe-area-inset-top,0px));z-index:25;display:flex;gap:8px;align-items:center;background:rgba(6,24,30,.96);border:1px solid var(--line);border-radius:14px;padding:8px 12px}
+#sesKutu input{width:150px;accent-color:var(--acc);touch-action:pan-x}
+#sesKutu button{border:0;background:transparent;font-size:18px;padding:0 2px}
+#sesYuzde{font-size:12.5px;font-weight:800;color:var(--mute);min-width:38px;text-align:right}
+@media (max-width:640px){#ust{gap:5px}.cip{height:32px;font-size:12.5px;padding:0 7px}.cip small{font-size:10.5px}#ust .yuv{min-width:32px;height:32px;padding:0 7px}#cMevsim small{display:none}#sesKutu{top:calc(94px + env(safe-area-inset-top,0px))}}
 #sekme{display:flex;gap:6px;margin-bottom:10px}
 #sekme button{flex:1;padding:8px 4px;border-radius:12px;border:1px solid var(--line);background:rgba(0,0,0,.22);font-weight:800;font-size:13px;color:var(--mute)}
 #sekme button.sec{border-color:var(--acc);color:var(--ink);background:rgba(127,217,160,.13)}
@@ -66,8 +71,11 @@ details{margin-top:10px}summary{cursor:pointer;font-weight:800;color:var(--mute)
   <span class="cip" id="cBesin"></span><span class="cip" id="cMalz"></span><span class="cip" id="cGen"></span><span class="cip" id="cPop"></span><span class="cip" id="cMevsim"></span>
   <div class="bos"></div>
   <button class="yuv" id="menuBtn" type="button" aria-label="Menü" data-en-aria="Menu">☰</button>
+  <button class="yuv" id="tamBtn" type="button" hidden title="Tam ekran" data-en-title="Full screen" aria-label="Tam ekran" data-en-aria="Full screen"><svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path id="tamYol" d="M2 6V2h4M10 2h4v4M14 10v4h-4M6 14H2v-4"/></svg></button>
+  <button class="yuv" id="sesBtn" type="button" aria-label="Ses" data-en-aria="Sound">🔊</button>
   <button class="yuv" data-dil-btn type="button">EN</button>
 </div>
+<div id="sesKutu" hidden><button type="button" id="sesSus" title="Sesi kapat/aç" data-en-title="Mute/unmute" aria-label="Sesi kapat/aç" data-en-aria="Mute/unmute">🔈</button><input id="sesKaydir" type="range" min="0" max="100" step="5" aria-label="Ses düzeyi" data-en-aria="Volume"><span id="sesYuzde"></span></div>
 <div id="ana">
   <div class="kart">
     <div id="uyari" hidden></div>
@@ -98,6 +106,7 @@ details{margin-top:10px}summary{cursor:pointer;font-weight:800;color:var(--mute)
         <li><b>Kış</b> gelince toplama çok düşer: depoyu sonbaharda doldur. Besin biterse yavrular ölmeye başlar (son üç yavru her koşulda hayatta kalır).</li>
         <li><b>Baskın</b> uyarısı gelince savunma gücün yetmiyorsa bekçi sayısını artır. Sen yokken yavruların bir kısmı kendiliğinden savunmaya geçer.</li>
         <li><b>Hedef:</b> haritanın en sağındaki yaylaya yerleşmek.</li>
+        <li>Üstteki 🔊 ile ses düzeyini ayarlar, yanındaki düğmeyle tam ekrana geçersin.</li>
       </ul>
       <ul data-dil="en" hidden>
         <li>This game <b>runs by itself</b>: production, incubation, exploring and evolution continue while the page is closed (up to 8 hours). Dropping in a few times a day to make decisions is enough.</li>
@@ -107,6 +116,7 @@ details{margin-top:10px}summary{cursor:pointer;font-weight:800;color:var(--mute)
         <li>In <b>winter</b> gathering drops sharply: fill the store in autumn. If food runs out, hatchlings start to die (the last three always survive).</li>
         <li>When a <b>raid</b> warning appears and your defence is too low, add guards. While you are away, some hatchlings defend on their own.</li>
         <li><b>Goal:</b> settle the plateau at the far right of the map.</li>
+        <li>Use 🔊 at the top to set the volume and the button next to it for full screen.</li>
       </ul>
     </details>
   </div>
@@ -123,6 +133,21 @@ const PARAM = new URLSearchParams(location.search), HIZ = Math.max(1, +PARAM.get
 function tohum(s) { return () => { s = (s * 1664525 + 1013904223) >>> 0; return s / 4294967296; }; }
 const sureYaz = s => { s = Math.max(0, Math.ceil(s)); return s >= 3600 ? Math.floor(s / 3600) + T(' sa ', ' h ') + Math.floor(s % 3600 / 60) + T(' dk', ' min') : s >= 60 ? Math.floor(s / 60) + T(' dk ', ' min ') + (s % 60) + T(' sn', ' s') : s + T(' sn', ' s'); };
 const say1 = v => { const x = String(v >= 100 ? Math.round(v) : Math.round(v * 10) / 10); return window.erDil && erDil.lang === 'en' ? x : x.replace('.', ','); };
+
+/* ================= ses ================= */
+const SES = (() => {
+  let ac = null, ana = null, duzey = kis(+ls.get('yuva-ses', 0.6), 0, 1); if (!(duzey >= 0)) duzey = 0.6;
+  const hazir = () => { if (duzey <= 0) return false; if (!ac) { try { ac = new (window.AudioContext || window.webkitAudioContext)(); ana = ac.createGain(); ana.gain.value = duzey * 1.6; ana.connect(ac.destination); } catch (e) { return false; } } if (ac.state === 'suspended') ac.resume(); return ac.state === 'running' || true; };
+  const ton = (f1, f2, s, tip, v, g) => { if (!hazir()) return; const t = ac.currentTime + (g || 0), o = ac.createOscillator(), k = ac.createGain(); o.type = tip || 'sine'; o.frequency.setValueAtTime(f1, t); o.frequency.exponentialRampToValueAtTime(Math.max(20, f2), t + s); k.gain.setValueAtTime(0.0001, t); k.gain.exponentialRampToValueAtTime(v || 0.2, t + 0.012); k.gain.exponentialRampToValueAtTime(0.0001, t + s); o.connect(k); k.connect(ana); o.start(t); o.stop(t + s + 0.03); };
+  const dizi = (n, tip, v, ara) => n.forEach((f, i) => ton(f, f, 0.16, tip || 'triangle', v || 0.12, i * (ara || 0.08)));
+  return {
+    tik: () => ton(620, 760, 0.05, 'sine', 0.07), ye: () => ton(420, 640, 0.08, 'sine', 0.12), dogum: () => { ton(500, 760, 0.1, 'sine', 0.13); ton(760, 1040, 0.12, 'sine', 0.1, 0.09); },
+    uyari: () => { ton(440, 440, 0.14, 'square', 0.07); ton(440, 440, 0.14, 'square', 0.07, 0.22); ton(330, 330, 0.24, 'square', 0.07, 0.44); }, basari: () => dizi([523, 659, 784, 1047]), hasar: () => { ton(200, 55, 0.4, 'sawtooth', 0.15); ton(120, 40, 0.5, 'sawtooth', 0.1, 0.08); },
+    kesif: () => dizi([659, 880], 'sine', 0.11, 0.1), yerles: () => { ton(180, 120, 0.12, 'triangle', 0.16); ton(392, 523, 0.18, 'triangle', 0.1, 0.1); }, mevsim: () => dizi([392, 494, 587], 'sine', 0.08, 0.14), zafer: () => dizi([523, 659, 784, 1047, 1319, 1568], 'triangle', 0.13, 0.11),
+    ayarla: v => { duzey = kis(v, 0, 1); ls.set('yuva-ses', duzey); if (ana) ana.gain.value = duzey * 1.6; }, duzey: () => duzey
+  };
+})();
+const OLAY_SES = [['🐣', 'dogum'], ['⚠️', 'uyari'], ['🛡', 'basari'], ['💥', 'hasar'], ['🧭', 'kesif'], ['🏕', 'yerles'], ['🪺', 'basari'], ['⛰', 'zafer'], ['🧬', 'basari'], ['🌱', 'mevsim'], ['☀️', 'mevsim'], ['🍂', 'mevsim'], ['❄️', 'mevsim']];
 
 /* ================= kurallar ================= */
 const COLS = 10, ROWS = 6, YX = 0, YY = 2;
@@ -183,7 +208,7 @@ function yeniOyun() {
   gunluk(YRT ? T(`${YRT.nick || 'Yaratığın'} karaya çıktı ve ilk yuvasını kumsala kurdu.`, `${YRT.nick || 'Your creature'} walked onto land and built its first nest on the beach.`) : T('Yabani bir canlı kumsala ilk yuvasını kurdu.', 'A wild creature built its first nest on the beach.'));
 }
 const kaydet = () => { if (S) { S.son = Date.now(); ls.set('yuva-kayit', S); } };
-function gunluk(m) { if (!S) return; S.log.unshift([Date.now(), m]); if (S.log.length > 40) S.log.length = 40; if (donus) donus.olay.push(m); kirli = true; }
+function gunluk(m) { if (!S) return; S.log.unshift([Date.now(), m]); if (S.log.length > 40) S.log.length = 40; if (donus) donus.olay.push(m); else if (!document.hidden) { const q = OLAY_SES.find(o => m.startsWith(o[0])); if (/Açlık|Hunger/.test(m)) SES.hasar(); else if (q) SES[q[1]](); else if (/Evrim tamamlandı|Evolution complete/.test(m)) SES.basari(); } kirli = true; }
 
 /* ================= türetilenler ================= */
 const ev = id => S.evrim[id] ? 1 : 0, oz = id => S.oz[id] || 0;
@@ -381,8 +406,9 @@ hc.addEventListener('click', e => { const r = hc.getBoundingClientRect(), c = Ma
 
 /* ================= akış ================= */
 document.addEventListener('click', e => {
-  const s = e.target.closest('[data-sekme]'); if (s) { sekme = s.dataset.sekme; panelKur(); return; }
-  const b = e.target.closest('[data-act]'); if (b && !b.disabled) { eylem(b.dataset.act, b.dataset.arg); panelKur(); }
+  const s = e.target.closest('[data-sekme]'); if (s) { sekme = s.dataset.sekme; SES.tik(); panelKur(); return; }
+  const b = e.target.closest('[data-act]'); if (b && !b.disabled) { const lg = S.log.length && S.log[0]; eylem(b.dataset.act, b.dataset.arg); if (S.log[0] === lg) SES.tik(); panelKur(); }
+  if (!e.target.closest('#sesKutu') && !e.target.closest('#sesBtn')) $('sesKutu').hidden = true;
 });
 function bilgiAc(bas, html) { $('bBas').textContent = bas; $('bMetin').innerHTML = html; $('bilgi').hidden = false; }
 $('bTamam').onclick = () => { $('bilgi').hidden = true; };
@@ -414,6 +440,20 @@ function dongu() {   // duvar saatiyle ilerler: sekme arkadayken ya da uykudayke
 }
 setInterval(dongu, 200);
 addEventListener('pagehide', kaydet); document.addEventListener('visibilitychange', () => { if (document.hidden) kaydet(); else kirli = true; });
+const sesYaz = () => { const d = SES.duzey(); $('sesBtn').textContent = d <= 0 ? '🔇' : d < 0.5 ? '🔉' : '🔊'; $('sesYuzde').textContent = '%' + Math.round(d * 100); };
+$('sesBtn').onclick = () => { $('sesKutu').hidden = !$('sesKutu').hidden; };
+$('sesKaydir').value = Math.round(SES.duzey() * 100);
+$('sesKaydir').addEventListener('input', e => { SES.ayarla(+e.target.value / 100); sesYaz(); });
+$('sesKaydir').addEventListener('change', () => SES.ye());
+$('sesSus').onclick = () => { SES.ayarla(SES.duzey() > 0 ? 0 : 0.6); $('sesKaydir').value = Math.round(SES.duzey() * 100); sesYaz(); SES.ye(); };
+sesYaz();
+{ const el = document.documentElement, ac = el.requestFullscreen || el.webkitRequestFullscreen, kapat = document.exitFullscreen || document.webkitExitFullscreen, acik = () => !!(document.fullscreenElement || document.webkitFullscreenElement);
+  if (ac && kapat) {
+    $('tamBtn').hidden = false;
+    $('tamBtn').onclick = () => { try { const p = acik() ? kapat.call(document) : ac.call(el, { navigationUI: 'hide' }); if (p && p.catch) p.catch(() => { }); } catch (e) { } };
+    const guncel = () => $('tamYol').setAttribute('d', acik() ? 'M6 2v4H2M14 6h-4V2M10 14v-4h4M2 10h4v4' : 'M2 6V2h4M10 2h4v4M14 10v4h-4M6 14H2v-4');
+    document.addEventListener('fullscreenchange', guncel); document.addEventListener('webkitfullscreenchange', guncel);
+  } }
 if (window.erDil && erDil.on) erDil.on(() => { menuKur(); kirli = true; });
 
 if (!yukle()) { yeniOyun(); menuKur(); $('menu').hidden = false; }

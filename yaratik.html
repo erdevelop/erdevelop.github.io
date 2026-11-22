@@ -42,6 +42,10 @@ body.er-durumlu #mini{bottom:32px}
 #isirBtn{left:18px;bottom:calc(22px + env(safe-area-inset-bottom,0px));width:86px;height:86px;border:2px solid rgba(255,190,170,.5);background:radial-gradient(circle at 40% 35%,rgba(255,150,120,.32),rgba(90,30,20,.4));font-size:15px}
 #yumBtn{left:114px;bottom:calc(30px + env(safe-area-inset-bottom,0px));width:60px;height:60px;border:2px solid rgba(255,235,170,.45);background:radial-gradient(circle at 40% 35%,rgba(255,235,160,.3),rgba(80,60,10,.4));font-size:24px}
 #isirBtn.bekle,#yumBtn.bekle{opacity:.4}
+#sesKutu{position:fixed;right:10px;top:calc(50px + env(safe-area-inset-top,0px));z-index:25;display:flex;gap:8px;align-items:center;background:rgba(6,24,30,.96);border:1px solid var(--line);border-radius:14px;padding:8px 12px}
+#sesKutu input{width:150px;accent-color:var(--acc);touch-action:pan-x}
+#sesKutu button{border:0;background:transparent;font-size:18px;padding:0 2px}
+#sesYuzde{font-size:12.5px;font-weight:800;color:var(--mute);min-width:38px;text-align:right}
 #secim{position:fixed;left:50%;bottom:calc(24px + env(safe-area-inset-bottom,0px));transform:translateX(-50%);z-index:8;width:min(560px,calc(100% - 20px))}
 #secim h5{margin:0 0 6px;text-align:center;font-size:14px;font-weight:900;text-shadow:0 1px 4px #000}
 .evSat{display:flex;gap:8px}
@@ -97,6 +101,7 @@ details ul{margin:8px 0 0;padding-left:18px;font-size:13.5px}details li{margin:4
 <canvas id="mini" width="528" height="144" hidden></canvas>
 <button id="isirBtn" type="button" hidden data-en="BITE">ISIR</button>
 <button id="yumBtn" type="button" hidden aria-label="Yumurta bırak" data-en-aria="Lay egg">🥚</button>
+<div id="sesKutu" hidden><button type="button" id="sesSus" title="Sesi kapat/aç" data-en-title="Mute/unmute" aria-label="Sesi kapat/aç" data-en-aria="Mute/unmute">🔈</button><input id="sesKaydir" type="range" min="0" max="100" step="5" aria-label="Ses düzeyi" data-en-aria="Volume"><span id="sesYuzde"></span></div>
 <div id="secim" hidden><h5></h5><div class="evSat"></div></div>
 
 <div class="perde" id="menu">
@@ -204,14 +209,14 @@ const acikMi = id => PARCA[id].acik(GEN) || KAYIT.acik.includes(id);
 
 /* ================= ses ================= */
 const SES = (() => {
-  let ac = null, ana = null, kapali = ls.get('yaratik-ses', 1) === 0;
-  const hazir = () => { if (kapali) return false; if (!ac) { try { ac = new (window.AudioContext || window.webkitAudioContext)(); ana = ac.createGain(); ana.gain.value = 0.5; ana.connect(ac.destination); } catch (e) { return false; } } if (ac.state === 'suspended') ac.resume(); return true; };
+  let ac = null, ana = null, duzey = kis(+ls.get('yaratik-ses', 0.6), 0, 1); if (!(duzey >= 0)) duzey = 0.6;
+  const hazir = () => { if (duzey <= 0) return false; if (!ac) { try { ac = new (window.AudioContext || window.webkitAudioContext)(); ana = ac.createGain(); ana.gain.value = duzey * 1.6; ana.connect(ac.destination); } catch (e) { return false; } } if (ac.state === 'suspended') ac.resume(); return true; };
   const ton = (f1, f2, s, tip, v, g) => { if (!hazir()) return; const t = ac.currentTime + (g || 0), o = ac.createOscillator(), k = ac.createGain(); o.type = tip || 'sine'; o.frequency.setValueAtTime(f1, t); o.frequency.exponentialRampToValueAtTime(Math.max(20, f2), t + s); k.gain.setValueAtTime(0.0001, t); k.gain.exponentialRampToValueAtTime(v || 0.2, t + 0.012); k.gain.exponentialRampToValueAtTime(0.0001, t + s); o.connect(k); k.connect(ana); o.start(t); o.stop(t + s + 0.03); };
   return {
     isir: () => { ton(300, 120, 0.09, 'triangle', 0.16); ton(900, 300, 0.05, 'square', 0.03, 0.03); }, ye: () => ton(420, 640, 0.08, 'sine', 0.12), kucuk: () => ton(700, 980, 0.05, 'sine', 0.05),
     hasar: () => ton(180, 60, 0.2, 'sawtooth', 0.14), tik: () => ton(1200, 900, 0.04, 'square', 0.05), yumurta: () => { ton(500, 700, 0.12, 'sine', 0.14); ton(700, 1000, 0.14, 'sine', 0.1, 0.1); },
     ac: () => [523, 659, 784, 1047].forEach((f, i) => ton(f, f, 0.16, 'triangle', 0.12, i * 0.08)), olum: () => ton(320, 50, 0.7, 'sawtooth', 0.16), hamle: () => ton(240, 420, 0.1, 'sine', 0.05),
-    degis: () => { kapali = !kapali; ls.set('yaratik-ses', kapali ? 0 : 1); return kapali; }, kapali: () => kapali
+    ayarla: v => { duzey = kis(v, 0, 1); ls.set('yaratik-ses', duzey); if (ana) ana.gain.value = duzey * 1.6; }, duzey: () => duzey
   };
 })();
 
@@ -652,7 +657,6 @@ function menuKur() {
   $('yuvaLink').hidden = !KAYIT.gecis; $('yuvaLink').textContent = T('🪺 Yuva oyununa geç (karaya çık)', '🪺 Go to the Nest game (walk onto land)');
   const r = KAYIT.rekor; $('rekor').textContent = r.uzak ? T(`En uzak: ${r.uzak} m · En yüksek nesil: ${roma(r.nesil || 1)}${r.kazan ? ' · 🏝 ' + r.kazan + ' kez kıyıya ulaştın' : ''}`, `Farthest: ${r.uzak} m · Highest generation: ${roma(r.nesil || 1)}${r.kazan ? ' · 🏝 reached the shore ' + r.kazan + '×' : ''}`) : '';
   document.querySelectorAll('[data-dil]').forEach(e => e.hidden = e.dataset.dil !== (window.erDil && erDil.lang === 'en' ? 'en' : 'tr'));
-  $('sesBtn').textContent = SES.kapali() ? '🔇' : '🔊';
   $('onNot').textContent = T(`Bu gövdeyle başlarsın (${baslangicGovde().length} boğum). Her 8 gen başlangıca bir boğum ekler, en çok 3.`, `You start with this body (${baslangicGovde().length} segments). Every 8 genes add a starting segment, up to 3.`);
   /* önizleme */
   const c = $('on'), x = c.getContext('2d'); x.clearRect(0, 0, c.width, c.height);
@@ -697,7 +701,14 @@ $('secim').addEventListener('pointerdown', e => { const b = e.target.closest('bu
 $('basla').onclick = () => { if (KAYIT.oyun && KAYIT.oyun.segs && !$('basla').dataset.emin) { $('basla').dataset.emin = 1; $('basla').textContent = T('Emin misin? Kayıtlı yaşam silinir — tekrar dokun', 'Sure? The saved life will be erased — tap again'); return; } delete $('basla').dataset.emin; $('basla').textContent = T('Yeni yaşama başla', 'Start a new life'); basla(false); };
 $('devam').onclick = () => basla(true);
 $('menuBtn').onclick = menuAc; $('sMenu').onclick = () => { $('sonuc').hidden = true; durdu = false; menuAc(); };
-$('sesBtn').onclick = () => { $('sesBtn').textContent = SES.degis() ? '🔇' : '🔊'; };
+const sesYaz = () => { const d = SES.duzey(); $('sesBtn').textContent = d <= 0 ? '🔇' : d < 0.5 ? '🔉' : '🔊'; $('sesYuzde').textContent = '%' + Math.round(d * 100); };
+$('sesBtn').onclick = () => { $('sesKutu').hidden = !$('sesKutu').hidden; };
+$('sesKaydir').value = Math.round(SES.duzey() * 100);
+$('sesKaydir').addEventListener('input', e => { SES.ayarla(+e.target.value / 100); sesYaz(); });
+$('sesKaydir').addEventListener('change', () => SES.ye());
+$('sesSus').onclick = () => { SES.ayarla(SES.duzey() > 0 ? 0 : 0.6); $('sesKaydir').value = Math.round(SES.duzey() * 100); sesYaz(); SES.ye(); };
+sesYaz();
+cv.addEventListener('pointerdown', () => { $('sesKutu').hidden = true; });
 function tamEkran() { const d = document, e = d.documentElement; try { if (d.fullscreenElement || d.webkitFullscreenElement) (d.exitFullscreen || d.webkitExitFullscreen).call(d); else (e.requestFullscreen || e.webkitRequestFullscreen).call(e); } catch (er) { } }
 if (document.documentElement.requestFullscreen || document.documentElement.webkitRequestFullscreen) { $('tamBtn').hidden = false; $('tamBtn').onclick = tamEkran; }
 if (window.erDil && erDil.on) erDil.on(() => { menuKur(); hudZ = 0; });
