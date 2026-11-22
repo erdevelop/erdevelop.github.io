@@ -18,7 +18,8 @@ const SITE = 'https://erdevelop.github.io/ingilizce.html';
 const PAGES = { ingilizce: { url: SITE, icon: '📚', tag: 'eng-kelime' }, fransizca: { url: 'https://erdevelop.github.io/fransizca.html', icon: '🇫🇷', tag: 'fra-kelime' },
   almanca: { url: 'https://erdevelop.github.io/almanca.html', icon: '🇩🇪', tag: 'deu-kelime' },
   seri: { url: 'https://erdevelop.github.io/oyunlar/', icon: '🔥', tag: 'ob-seri' },
-  zeki: { url: 'https://erdevelop.github.io/yapay-zeki/', icon: '⏰', tag: 'zeki-hatirlat' } };
+  zeki: { url: 'https://erdevelop.github.io/yapay-zeki/', icon: '⏰', tag: 'zeki-hatirlat' },
+  balik: { url: 'https://erdevelop.github.io/derin-mavi.html', icon: '🐟', tag: 'derin-mavi' } };
 const b64u = b => Buffer.from(b).toString('base64url');
 const unb64u = s => Buffer.from(String(s), 'base64url');
 const hmac = (key, data) => crypto.createHmac('sha256', key).update(data).digest();
@@ -87,6 +88,18 @@ export function message(d, ORN = {}, now = new Date()) {
   return { title: P.icon + ' ' + w.e + (mean ? ' — ' + w.t : ''),
     body: x ? x + (mean ? (y ? '\n' + y : '') : '\nAnlamı için dokun.') : mean ? 'Dokun, kartı aç.' : 'Anlamını hatırlıyor musun? Dokun ve kontrol et.',
     url: P.url + '?k=' + encodeURIComponent(w.e) + '#kelime', tag: P.tag };
+}
+/* Derin Mavi: balık acıkınca (ac: o anın zamanı, ms) bir kez; seri varken o gün gelinmediyse akşam d.saat'te bir kez.
+   Yalnız 09.00–22.00 arası gönderilir. Dönen upd belgeye yazılır (aynı bildirim ikinci kez gitmesin). */
+export function balikMesaj(d, now = new Date()) {
+  const { date, min } = localNow(d.tz, now); if (min < 540 || min > 1320) return null;
+  const en = d.dil === 'en', ad = String(d.ad || (en ? 'Your fish' : 'Balığın')).slice(0, 16), P = PAGES.balik;
+  if (+d.ac && now.getTime() >= +d.ac && String(d.lastAc || '') !== String(d.ac))
+    return { msg: { title: en ? `🐟 ${ad} is hungry` : `🐟 ${ad} acıktı`, body: en ? 'Drop some food so it keeps growing. The plankton hunt and today’s surprise are waiting too.' : 'Biraz yem at da büyümeye devam etsin. Plankton avı ve günün sürprizi de seni bekliyor.', url: P.url, tag: P.tag }, upd: { lastAc: +d.ac } };
+  const s = +d.seri || 0;
+  if (s >= 2 && d.done !== date && min >= toMin(d.saat || '20:30') && d.lastSeri !== date)
+    return { msg: { title: en ? `🔥 Keep your ${s}-day streak` : `🔥 ${s} günlük serin bozulmasın`, body: en ? `${ad} is waiting. One feed today is enough.` : `${ad} seni bekliyor. Bugün bir kez yem atman yeterli.`, url: P.url, tag: P.tag + '-seri' }, upd: { lastSeri: date } };
+  return null;
 }
 /* Yapay Zeki: zamanı gelmiş (en çok 6 saat gecikmiş) hatırlatmalar */
 export function zekiDue(L, now = new Date()) { const t = now.getTime(); return (L || []).filter(h => +h.z <= t + 60e3 && +h.z > t - 6 * 3600e3); }
@@ -225,6 +238,15 @@ export async function main(env = process.env) {
         if (res.status >= 200 && res.status < 300) sent++; else { failed++; ok = false; if (res.status === 404 || res.status === 410) { await patch(d, { on: false, err: 'Telefon aboneliği artık geçerli değil; Zeki\'de hatırlatmayı yeniden kur.' }); break; } }
       }
       if (ok) await patch(d, { hj: JSON.stringify(kalan), on: kalan.length > 0, sentAt: now, err: '' });
+      continue;
+    }
+    if (d.page === 'balik') {
+      const m = d.sub && d.sub.endpoint ? balikMesaj(d, now) : null;
+      if (!m) { skipped++; continue; }
+      let res; try { res = await sendPush(d.sub, m.msg, env.VAPID_PRIVATE); } catch (e) { res = { status: 0, text: String(e.message || e) }; }
+      console.log(`  ${d._path.split('/').pop().slice(0, 6)}… balik · ${svc(d.sub.endpoint)} → ${res.status}`);
+      if (res.status >= 200 && res.status < 300) { sent++; await patch(d, { ...m.upd, sentAt: now, err: '' }); }
+      else { failed++; await patch(d, res.status === 404 || res.status === 410 ? { on: false, err: 'Telefon aboneliği artık geçerli değil; Derin Mavi’de bildirimleri yeniden aç.' } : { ...m.upd, err: 'Gönderim hatası ' + res.status }); }
       continue;
     }
     const test = d.test === true, key = force ? 'zorla|' + now.toISOString() : test ? 'test|' + now.toISOString() : dueSlot(d, now), msg0 = key && d.sub && d.sub.endpoint ? message(d, ORN, now) : null;
