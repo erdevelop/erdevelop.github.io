@@ -31,6 +31,8 @@ button{font:inherit;color:inherit;cursor:pointer}[hidden]{display:none!important
 @media (max-width:860px){#ana{grid-template-columns:1fr}}
 .kart{background:var(--kart);border:1px solid var(--line);border-radius:18px;padding:12px}
 #harita{display:block;width:100%;border-radius:12px;touch-action:manipulation;cursor:pointer}
+#yol{margin:0 0 10px;font-size:12.5px;font-weight:800}#yol .ad{display:flex;gap:4px;align-items:center}#yol .ad span{flex:1;min-width:0;text-align:center;padding:5px 2px;border-radius:10px;border:1px solid var(--line);background:rgba(0,0,0,.22);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;opacity:.6}#yol .ad span.ok{opacity:1;border-color:rgba(127,217,160,.7);background:rgba(127,217,160,.16)}#yol .ad span.sr{opacity:1;border-color:var(--sari);color:var(--sari)}#yol .ad i{font-style:normal;opacity:.45}#yol .ne{margin-top:6px;color:var(--mute)}#yol .ne b{color:var(--ink)}
+@media (max-width:520px){#yol .ad span em{display:none}}#yol .ad span em{font-style:normal}
 #kareBilgi{margin-top:10px;min-height:74px;font-size:13.5px}
 #kareBilgi b{font-weight:900}#kareBilgi .sat{display:flex;gap:8px;align-items:center;flex-wrap:wrap;margin-top:6px}
 .btn{padding:8px 13px;border-radius:12px;border:0;background:linear-gradient(180deg,var(--acc),var(--acc2));color:#062216;font-weight:900;font-size:13.5px}
@@ -79,6 +81,7 @@ details{margin-top:10px}summary{cursor:pointer;font-weight:800;color:var(--mute)
 <div id="ana">
   <div class="kart">
     <div id="uyari" hidden></div>
+    <div id="yol"></div>
     <canvas id="harita" width="1000" height="600"></canvas>
     <div id="kareBilgi"></div>
   </div>
@@ -199,6 +202,7 @@ const idx = (c, r) => r * COLS + c, kareC = i => i % COLS, kareR = i => (i / COL
 const uzak = i => Math.max(1, Math.round(Math.hypot(kareC(i) - YX, kareR(i) - YY)));
 const komsu = i => { const c = kareC(i), r = kareR(i), o = []; if (c > 0) o.push(i - 1); if (c < COLS - 1) o.push(i + 1); if (r > 0) o.push(i - COLS); if (r < ROWS - 1) o.push(i + COLS); return o; };
 function yeniOyun() {
+  const eskiMiras = Math.max((S && S.miras) | 0, ((ls.get('yuva-kayit', null) || {}).miras) | 0);
   const th = (Math.random() * 1e9) | 0, r = tohum(th), kare = [];
   for (let i = 0; i < COLS * ROWS; i++) {
     const b = biyomNo(kareC(i)), B = BIYOM[b], k = { b, f: Math.max(0, B.f + Math.round(r() * 2 - 1)), m: Math.max(0, B.m + Math.round(r() * 2 - 1)), a: Math.max(0, B.a + Math.round(r() * 2 - 1)), d: 0, s: 0, k: 0, oz: null };
@@ -210,6 +214,7 @@ function yeniOyun() {
   S = { v: 1, tohum: th, son: Date.now(), besin: 70, malz: 12, gen: 0, pop: 3 + (YRT ? Math.min(3, YRT.nesil - 1) : 0), rol: { top: 2, tas: 1, avc: 0, bek: 0, kas: 0 }, yuva: 0, yuvaIs: null, yum: [], kare, hedef: -1, evrim: {}, ars: null,
     ozZ: YRT ? YRT.z : 0, baskin: { kalan: 780, uyari: 0, guc: 0, n: 0 }, yil: 0, log: [], oz, hue: YRT ? YRT.hue : 150, nick: YRT ? YRT.nick : '', kazandi: 0, sure: 0, ac: 0, yabani: !YRT };
   { let ek = S.pop - 3; if (ek > 0) { S.rol.kas = 1; ek--; } if (ek > 0) { S.rol.top++; ek--; } S.rol.tas += Math.max(0, Math.min(1, ek)); }
+  S.miras = eskiMiras;
   gunluk(YRT ? T(`${YRT.nick || 'Yaratığın'} karaya çıktı ve ilk yuvasını kumsala kurdu.`, `${YRT.nick || 'Your creature'} walked onto land and built its first nest on the beach.`) : T('Yabani bir canlı kumsala ilk yuvasını kurdu.', 'A wild creature built its first nest on the beach.'));
 }
 const kaydet = () => { if (S && !KILIT) { S.son = Date.now(); ls.set('yuva-kayit', S); } };
@@ -224,7 +229,8 @@ const popUst = () => 6 + 4 * S.yuva + 6 * ev('suru');
 const depoUst = () => (160 + 140 * S.yuva) * (ev('depo') ? 2 : 1);
 const bosta = () => S.pop - RID.reduce((t, r) => t + S.rol[r], 0);
 const uyumS = () => S.evrim.uyum | 0, uyumGp = () => Math.round(20 * Math.pow(1.5, uyumS())), uyumSure = () => 300 * (1 + uyumS() * 0.5);
-const genel = () => 1 + 0.1 * ev('suru') + 0.06 * uyumS();
+const mirasN = () => Math.min(5, S.miras | 0);
+const genel = () => 1 + 0.1 * ev('suru') + 0.06 * uyumS() + 0.05 * mirasN();
 function hizlar() {   // dakikada
   const Y = yer(), mv = MEVSIM[mevsimNo()], kisK = mevsimNo() === 3 && ev('sicak') ? 2 : 1, g = genel();
   const top = Math.min(S.rol.top, Y.f) * 6.5 * (1 + 0.25 * ev('bacak') + 0.1 * oz('dokunac')) * Math.min(1.25, mv[3] * kisK) * g;
@@ -291,14 +297,39 @@ const EYLEM = {
   yerles(i) {
     i = +i; if (!yerlesilebilir(i) || !kapiAcik(i) || S.malz < yerlesBedel(i)) return; S.malz -= yerlesBedel(i); const k = S.kare[i]; k.s = 1; for (const j of komsu(i)) if (!S.kare[j].d && Math.random() < 0.5) S.kare[j].d = 1;
     gunluk(`🏕 ` + T(`${BIYOM[k.b].ad[0]} karesine yerleşildi.`, `Settled a ${BIYOM[k.b].ad[1]} tile.`));
-    if (k.b === 4 && !S.kazandi) { S.kazandi = 1; gunluk(T('⛰ Türün yaylaya ulaştı!', '⛰ Your species reached the plateau!')); bilgiAc(T('⛰ Yaylaya ulaştın!', '⛰ You reached the plateau!'), `<p>${T(`Türün denizden yaylaya kadar yayıldı: ${S.pop} birey, ${S.kare.filter(s2).length} kare, ${sureYaz(S.sure)} oyun süresi.`, `Your species spread from the sea to the plateau: ${S.pop} members, ${S.kare.filter(s2).length} tiles, ${sureYaz(S.sure)} of play.`)}</p><p>${T('Koloni yaşamaya devam ediyor; haritanın kalanını da alabilirsin.', 'The colony lives on; you can take the rest of the map too.')}</p>`); }
+    if (k.b === 4 && !S.kazandi) { S.kazandi = 1; gunluk(T('⛰ Türün yaylaya ulaştı!', '⛰ Your species reached the plateau!')); bilgiAc(T('⛰ Yaylaya ulaştın!', '⛰ You reached the plateau!'), `<p>${T(`Türün denizden yaylaya kadar yayıldı: ${S.pop} birey, ${S.kare.filter(s2).length} kare, ${sureYaz(S.sure)} oyun süresi.`, `Your species spread from the sea to the plateau: ${S.pop} members, ${S.kare.filter(s2).length} tiles, ${sureYaz(S.sure)} of play.`)}</p><p>${T(`Koloni yaşamaya devam ediyor. <b>Son hedef:</b> bütün evrimleri tamamla, yuvayı 7. seviyeye çıkar ve ${SON_POP} bireye ulaş — türün kalıcı olsun.`, `The colony lives on. <b>Final goal:</b> finish every evolution, raise the nest to level 7 and reach ${SON_POP} members to make your species last.`)}</p>`); }
   }
 };
 function eylem(ad, arg) { if (!EYLEM[ad]) return; EYLEM[ad](arg); kirli = true; kaydet(); ciz(); }
 
 /* ================= arayüz ================= */
 const BAG = {}, GEN_ = {}, KAPALI = {};
+/* ================= türün yolculuğu: görünür hedef ve son ================= */
+const SON_POP = 30, EVRIM_N = Object.keys(EVRIM).length;
+function yolKur() {
+  const el = $('yol'); if (!el || !S) return;
+  const var_ = b => S.kare.some(k => k.b === b && k.s === 1), gor = b => S.kare.some((k, i) => k.b === b && k.d && !k.s && yerlesilebilir(i));
+  let sira = -1; for (let b = 1; b < BIYOM.length; b++) if (!var_(b)) { sira = b; break; }
+  let h = '<div class="ad">' + BIYOM.map((B, b) => `${b ? '<i>›</i>' : ''}<span class="${b === 0 || var_(b) ? 'ok' : b === sira ? 'sr' : ''}">${b === 0 || var_(b) ? '✓ ' : ''}${B.e} <em>${T(...B.ad)}</em></span>`).join('') + '</div>';
+  if (sira > 0) {
+    const B = BIYOM[sira], kp = B.kapi, e = kp && EVRIM[kp];
+    const ne = kp && !ev(kp) ? (S.ars && S.ars.id === kp ? T(`${e.e} ${e.ad[0]} evrimi sürüyor; bitince ${B.ad[0]} açılır.`, `${e.e} ${e.ad[1]} is evolving; ${B.ad[1]} opens when it finishes.`) : e.on && !ev(e.on) ? T(`önce ${EVRIM[e.on].e} ${EVRIM[e.on].ad[0]}, sonra ${e.e} ${e.ad[0]} evrimini aç (Evrim sekmesi).`, `evolve ${EVRIM[e.on].e} ${EVRIM[e.on].ad[1]}, then ${e.e} ${e.ad[1]} (Evolution tab).`) : T(`${e.e} ${e.ad[0]} evrimini aç (Evrim sekmesi · ${e.gp} gen).`, `evolve ${e.e} ${e.ad[1]} (Evolution tab · ${e.gp} genes).`))
+      : gor(sira) ? T(`haritada bir ${B.ad[0]} karesine dokun ve yerleş.`, `tap a ${B.ad[1]} tile on the map and settle.`) : T(`kâşiflerle doğuya doğru keşfet; ${B.ad[0]} karesi bul.`, `explore east with scouts; find a ${B.ad[1]} tile.`);
+    h += `<div class="ne">🎯 <b>${T(`Hedef: ${B.e} ${B.ad[0]}`, `Goal: ${B.e} ${B.ad[1]}`)}${sira === BIYOM.length - 1 ? T(' — son durak', ' — the final stop') : ''}</b> · ${ne}</div>`;
+  } else {
+    const en = Object.keys(EVRIM).filter(k => S.evrim[k]).length, tam = en >= EVRIM_N && S.yuva >= 6 && S.pop >= SON_POP;
+    if (S.kazandi < 2 && tam) {
+      S.kazandi = 2; S.miras = (S.miras | 0) + 1; gunluk(T('🌍 Türün kalıcı oldu!', '🌍 Your species is here to stay!')); kaydet();
+      bilgiAc(T('🌍 Türün kalıcı oldu!', '🌍 Your species is here to stay!'), `<p>${T(`Tek hücreden başlayan yolculuk tamamlandı: ${S.pop} birey, ${S.kare.filter(s2).length} kare, bütün evrimler, ${sureYaz(S.sure)} oyun süresi.`, `The journey that began as a single cell is complete: ${S.pop} members, ${S.kare.filter(s2).length} tiles, every evolution, ${sureYaz(S.sure)} of play.`)}</p><p>${T(`⭐ <b>Miras ${S.miras}</b> kazandın: bütün roller kalıcı olarak +%${mirasN() * 5} verimli — bu kolonide de, yeni başlatacağın kolonilerde de (en çok 5 miras).`, `⭐ You earned <b>Legacy ${S.miras}</b>: all roles are permanently +${mirasN() * 5}% — in this colony and in any new one you start (up to 5 legacies).`)}</p><p>${T('Koloni yaşamaya devam ediyor. Menüden yeni bir koloni başlatıp bir miras daha kazanabilirsin.', 'The colony lives on. Start a new colony from the menu to earn another legacy.')}</p>`);
+    }
+    h += S.kazandi >= 2 ? `<div class="ne">🌍 <b>${T('Türün kalıcı oldu', 'Your species is here to stay')}</b> · ⭐ ${T('Miras', 'Legacy')} ${S.miras | 0} (+%${mirasN() * 5})</div>`
+      : `<div class="ne">🎯 <b>${T('Son hedef: kalıcı tür', 'Final goal: a lasting species')}</b> · 🧬 ${en}/${EVRIM_N} ${T('evrim', 'traits')} · 🪺 ${T('seviye', 'level')} ${S.yuva + 1}/7 · 👥 ${S.pop}/${SON_POP}</div>`;
+  }
+  if (S.miras && S.kazandi < 2) h += `<div class="ne">⭐ ${T('Miras', 'Legacy')} ${S.miras | 0}: ${T('bütün roller', 'all roles')} +%${mirasN() * 5}</div>`;
+  if (el.dataset.h !== h) { el.dataset.h = h; el.innerHTML = h; }
+}
 function panelKur() {
+  yolKur();
   kirli = false; for (const k in BAG) delete BAG[k]; for (const k in GEN_) delete GEN_[k]; for (const k in KAPALI) delete KAPALI[k];
   $('sekme').innerHTML = [['yuva', '🪺', 'Yuva', 'Nest'], ['rol', '👥', 'Roller', 'Roles'], ['evrim', '🧬', 'Evrim', 'Evolution'], ['gunluk', '📜', 'Günlük', 'Log']].map(s => `<button type="button" data-sekme="${s[0]}" class="${sekme === s[0] ? 'sec' : ''}">${s[1]} ${T(s[2], s[3])}${s[0] === 'rol' && bosta() > 0 ? ' <b style="color:var(--sari)">' + bosta() + '</b>' : ''}</button>`).join('');
   let h = '';
