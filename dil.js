@@ -1,7 +1,7 @@
 /* erdevelop · ortak dil (TR/EN) yardımcısı
    Kullanım (sayfanın <head> kısmında, diğer betiklerden önce):
      <script src="/dil.js"></script>
-   - Dil sırası: adresteki ?lang=en|tr  >  son seçim (localStorage 'erdevelop-lang')  >  tarayıcı dili.
+   - Dil sırası: adresteki ?lang=en|tr  >  son seçim (localStorage 'erdevelop-lang')  >  saat dilimi Türkiye ise tr  >  tarayıcı dili.
    - Sabit metin: elemana data-en="English" ekle (Türkçesi elemanın kendi içeriğidir; HTML olabilir).
      Öznitelikler: data-en-ph (placeholder), data-en-aria (aria-label), data-en-title (title).
    - Uzun bloklar: iki kopya yaz, data-l="tr" ve data-l="en" ver (İngilizcesine hidden ekle).
@@ -20,6 +20,10 @@
     if (q === 'en' || q === 'tr') return q;
     try { s = localStorage.getItem(KEY); } catch (e) { }
     if (s === 'en' || s === 'tr') return s;
+    /* nereden giriliyorsa: cihazın saat dilimi Türkiye ise Türkçe (tarayıcı dili İngilizce olsa bile);
+       yurt dışında tarayıcısı Türkçe olanlara da Türkçe; diğer herkese İngilizce */
+    var tz = ''; try { tz = Intl.DateTimeFormat().resolvedOptions().timeZone || ''; } catch (e) { }
+    if (/^(Europe\/Istanbul|Asia\/Istanbul|Turkey)$/i.test(tz)) return 'tr';
     return /^tr/i.test(navigator.language || 'tr') ? 'tr' : 'en';
   }
   var D = window.erDil = {
