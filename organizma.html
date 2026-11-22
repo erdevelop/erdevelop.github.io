@@ -189,6 +189,7 @@ body.er-durumlu #mini{bottom:32px}
         <ul>
           <li><b>Yön:</b> fareyle ya da parmağınla nereye gideceğini göster. İmleç organizmana yakınsa yavaşlarsın.</li>
           <li><b>Hamle:</b> tıkla, <b>Boşluk</b> tuşuna bas; dokunmatik ekranda gitmek istediğin yöne <b>hızlıca iki kez dokun</b> ya da <b>HAMLE</b> düğmesini kullan. Kısa bir atılma yaparsın; sonra birkaç saniye dinlenmen gerekir.</li>
+          <li><b>Acemi dönemi:</b> doğduktan sonraki ilk 45 saniye organizmalar seni avlamaz (etrafındaki ince mavi yay süreyi gösterir); yine de büyüklerin üstüne gidersen yutulursun.</li>
           <li><b>Büyük olan küçüğü yer:</b> senden en az dörtte bir büyük olan seni yutabilir. Etrafında kırmızı halka görünen organizmalardan uzak dur.</li>
           <li><b>Küçük olan daha hızlıdır:</b> büyüdükçe yavaşlarsın. Kaçan avı ancak doğru anda yapılan hamleyle yakalarsın. Yeşil halka, avın hamle menzilinde olduğunu gösterir.</li>
           <li><b>Plankton</b> (parlak küçük noktalar) yiyerek yavaş yavaş büyürsün. Çok büyükler zamanla biraz kütle kaybeder.</li>
@@ -209,6 +210,7 @@ body.er-durumlu #mini{bottom:32px}
         <ul>
           <li><b>Move:</b> point where to go with the mouse or your finger. Keep the pointer close to your organism to slow down.</li>
           <li><b>Dash:</b> click or press <b>Space</b>; on a touch screen <b>double-tap</b> towards where you want to go, or use the <b>DASH</b> button. You lunge forward, then need a few seconds to recover.</li>
+          <li><b>Beginner period:</b> for the first 45 seconds after birth organisms will not hunt you (the thin blue arc around you shows the time left); you are still swallowed if you run into bigger ones.</li>
           <li><b>The big eat the small:</b> anything at least a quarter bigger than you can swallow you. Keep away from organisms with a red ring.</li>
           <li><b>The small are faster:</b> you slow down as you grow. A fleeing prey can only be caught with a well-timed dash. A green ring means the prey is within dash range.</li>
           <li>Eat <b>plankton</b> (the small glowing dots) to grow slowly. Very large organisms slowly lose some mass.</li>
@@ -289,6 +291,7 @@ const bekleO = o => HAMLE_BEKLE * TURLER[o.tur].bekle * (1 - 0.2 * EV(o).bekle);
 const besinK = o => TURLER[o.tur].besin * (1 + 0.2 * EV(o).obur);
 const yerMi = (a, b) => a.m >= b.m * (YEME * TURLER[a.tur].agiz + TURLER[b.tur].zirh + 0.12 * EV(b).zar);
 const EVRIM_ESIK = [50, 110, 220, 420, 800, 1400];
+const ACEMI = 45;   // yeni doğan oyuncuyu organizmaların avlamadığı süre (sn)
 const EVRIMLER = {
   menzil: { ik: '🚀', ad: ['Uzun hamle', 'Long dash'], ac: ['Hamle menzili +%22', 'Dash range +22%'], ust: 3 },
   bekle: { ik: '⚡', ad: ['Çabuk toparlanma', 'Quick recovery'], ac: ['Hamle beklemesi −%20', 'Dash cooldown −20%'], ust: 3 },
@@ -483,7 +486,7 @@ function yeniOrg(o) {
   ob.r = yaricap(ob.m); ob.rr = ob.r * (ob.dogum >= 1 ? 1 : 0.05); ob.enBuyuk = ob.m;
   return ob;
 }
-function npcKutle() { const r = Math.random(); return r < 0.6 ? rnd(8, 38) : r < 0.9 ? rnd(40, 200) : rnd(220, 1100); }
+function npcKutle() { const r = Math.random(); return r < 0.58 ? rnd(6, 26) : r < 0.88 ? rnd(28, 180) : rnd(200, 1000); }
 function npcDogur(hazir) {
   let x, y, dene = 0;
   do { [x, y] = diskteNokta(200); dene++; } while (dene < 20 && oyuncu && !oyuncu.olu && Math.hypot(x - oyuncu.x, y - oyuncu.y) < 450);
@@ -678,7 +681,7 @@ function npcAkil(o, dt) {
     if (yerMi(b, o)) {
       const menz = menzilO(b) * 1.3 + 40;
       if (d < G * 0.8) { const w = (1 - Math.max(0, d) / (G * 0.8)) ** 2 * (d < menz ? 3 : 1); kx -= dx / mer * w; ky -= dy / mer * w; tehlike = Math.max(tehlike, d < menz ? 1 : w); if (d < eskD) { eskD = d; esk = b; } }
-    } else if (yerMi(o, b) && ai.saldir > 0.12) {
+    } else if (yerMi(o, b) && ai.saldir > 0.12 && !(b === oyuncu && b.yas < ACEMI)) {
       const s = (b.m / (Math.max(0, d) + 40)) * (0.4 + ai.saldir);
       if (s > avS) { avS = s; av = b; avD = d; }
     }
@@ -691,7 +694,7 @@ function npcAkil(o, dt) {
   } else if (av) {
     const ox = av.x + av.vx * 0.3 - o.x, oy = av.y + av.vy * 0.3 - o.y; dx = ox; dy = oy;
     const hizala = Math.cos(aciFark(Math.atan2(oy, ox), o.ang));
-    if (avD + 1.35 * av.r < menzilO(o) * 0.9 && hizala > 0.86 && o.bekle <= 0 && Math.random() < ai.beceri) hamleYap(o, Math.atan2(oy, ox));
+    if (avD + 1.35 * av.r < menzilO(o) * 0.9 && hizala > 0.86 && o.bekle <= 0 && Math.random() < ai.beceri * (av === oyuncu ? 0.6 : 1)) hamleYap(o, Math.atan2(oy, ox));
   } else {
     let en = null, enD = 1e9;
     yakinYemek(o.x, o.y, 260 + o.r, f => { if (f.b < 1) return; const d = (f.x - o.x) ** 2 + (f.y - o.y) ** 2; if (d < enD) { enD = d; en = f; } });
@@ -1036,7 +1039,7 @@ function avGuncelle(dt) {
   AV.ang += aciFark(Math.atan2(y2 - y, x2 - x), AV.ang) * Math.min(1, dt * 4); AV.x = x; AV.y = y; AV.m = 0; AV.nick = T('Su piresi', 'Water flea');
   const hx = AV.hx = x + Math.cos(AV.ang) * 85, hy = AV.hy = y + Math.sin(AV.ang) * 85, r2 = AV.r * AV.r;
   for (const o of O) {
-    if (o.olu || o.uzak || o.dogum < 1 || o.koruma > 0) continue; const dx = o.x - hx, dy = o.y - hy; if (dx * dx + dy * dy > r2) continue;
+    if (o.olu || o.uzak || o.dogum < 1 || o.koruma > 0 || (o === oyuncu && o.yas < 20)) continue; const dx = o.x - hx, dy = o.y - hy; if (dx * dx + dy * dy > r2) continue;
     if (o === oyuncu) oyuncuOldu(AV);
     o.olu = true; o.emil = { a: { x: hx, y: hy }, t: 0 };
   }
@@ -1208,9 +1211,9 @@ function basla() {
   do {
     const yakin = yak && dene < 45, bos = yakin ? 360 : 700;
     if (yakin) { const a = Math.random() * TAU, d = rnd(600, 1100); x = yak.x + Math.cos(a) * d; y = yak.y + Math.sin(a) * d; } else[x, y] = diskteNokta(600);
-    ok = Math.hypot(x, y) < R - 400 && !O.some(o => !o.olu && o.m > 30 && Math.hypot(o.x - x, o.y - y) < (o.uzak ? 500 : bos)) && !ASIT.some(b => Math.hypot(b.x - x, b.y - y) < b.r + 150);
+    ok = Math.hypot(x, y) < R - 400 && !O.some(o => !o.olu && o.m > 38 && Math.hypot(o.x - x, o.y - y) < (o.uzak ? 500 : bos)) && !ASIT.some(b => Math.hypot(b.x - x, b.y - y) < b.r + 150);
   } while (!ok && ++dene < 80);
-  oyuncu = yeniOrg({ npc: false, nick, tur: secTur, hue: secRenk === GOKKUSAGI ? 0 : secRenk + rnd(-4, 4), gk: secRenk === GOKKUSAGI, desen: secDesen, ev: Object.assign({}, BOS_EV), evSay: 0, m: 25, x, y, dogum: 0, bekle: 0, koruma: 4 });
+  oyuncu = yeniOrg({ npc: false, nick, tur: secTur, hue: secRenk === GOKKUSAGI ? 0 : secRenk + rnd(-4, 4), gk: secRenk === GOKKUSAGI, desen: secDesen, ev: Object.assign({}, BOS_EV), evSay: 0, m: 32, x, y, dogum: 0, bekle: 0, koruma: 6 });
   oyuncu.netId = (Math.random().toString(36).slice(2, 8) + Date.now().toString(36).slice(-4));
   O.push(oyuncu); kamera.x = x; kamera.y = y;
   AG.katil(oyuncu.netId);
@@ -1219,6 +1222,7 @@ function basla() {
   $('menu').hidden = true; $('olum').hidden = true;
   ['durum', 'lider', 'mini'].forEach(i => $(i).hidden = false); $('hamleBtn').hidden = !DOKUNMA;
   $('ipucu').hidden = false; $('ipucu').style.opacity = 1;
+  setTimeout(() => { if (oyunda && oyuncu && !oyuncu.olu && oyuncu.yas < 20) duyur(T('🛡 İlk 45 saniye organizmalar seni avlamaz — ama üstlerine gitme. Plankton ve mikro canlı topla!', '🛡 For the first 45 seconds organisms will not hunt you — just do not run into them. Gather plankton and microbes!'), 'iyi', 7); }, 1500);
   $('ipucu').textContent = DOKUNMA ? T('Sürükle: yön · Çift dokun: hamle · İkinci parmak: bölün', 'Drag: steer · Double-tap: dash · Second finger: split') : T('Fareyle yönlendir · Tıkla/Boşluk: hamle · Sağ tık/E: bölün · 1–6: ifade', 'Steer with the mouse · Click/Space: dash · Right-click/E: split · 1–6: emotes');
   SES.dogum(); KAYIT.oyun++;
 }
@@ -1508,6 +1512,7 @@ function ciz(t) {
       else if (yerMi(o, p) && d - o.r - p.r < menzilO(o) * 1.25) { g.strokeStyle = `rgba(255,110,90,${0.4 + 0.3 * Math.sin(t * 10)})`; g.lineWidth = 2.5 / z; g.beginPath(); g.arc(o.x, o.y, o.rr * 1.08 + 4 / z, 0, TAU); g.stroke(); }
     }
     if (p.koruma > 0) { g.strokeStyle = `rgba(255,240,180,${Math.min(1, p.koruma) * (0.45 + 0.25 * Math.sin(t * 9))})`; g.lineWidth = 3 / z; g.beginPath(); g.arc(p.x, p.y, p.rr * 1.3 + 6 / z, 0, TAU); g.stroke(); }
+    else if (p.yas < ACEMI) { g.strokeStyle = `rgba(160,235,255,${0.18 + 0.08 * Math.sin(t * 3)})`; g.lineWidth = 1.5 / z; g.beginPath(); g.arc(p.x, p.y, p.rr * 1.3 + 6 / z, -Math.PI / 2, -Math.PI / 2 + TAU * (1 - p.yas / ACEMI)); g.stroke(); }
     /* hamle menzili ve bekleme yayı */
     if (p.bekle <= 0) { g.setLineDash([6 / z, 10 / z]); g.strokeStyle = 'rgba(200,255,240,.14)'; g.lineWidth = 1.5 / z; g.beginPath(); g.arc(p.x, p.y, p.r + menz, 0, TAU); g.stroke(); g.setLineDash([]); }
     else { g.strokeStyle = 'rgba(200,255,240,.55)'; g.lineWidth = 3 / z; g.beginPath(); g.arc(p.x, p.y, p.rr * 1.25 + 6 / z, -Math.PI / 2, -Math.PI / 2 + TAU * (1 - p.bekle / bekleO(p))); g.stroke(); }
