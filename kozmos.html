@@ -189,7 +189,7 @@ details{margin-top:12px;color:var(--mute);font-size:13.5px}summary{cursor:pointe
         <li><b>Klavye:</b> W/↑ itki, A D/← → dönüş, S/↓ fren, Shift hızlan, <b>Boşluk basılı tut: warp</b>.</li>
         <li><b>Yakınlaştır:</b> fare tekerleği, iki parmak ya da + / −. Hızlandıkça görüş kendiliğinden genişler.</li>
         <li><b>Otopilot (O):</b> üstteki düğmeyle Sürüş ↔ Otopilot arasında geç. Otopilotta ekranda bir noktaya, gezegene ya da yıldıza dokun; gemi kendisi döner, normal hızla gider ve vardığında durur. Geminin yanındaki düğmelerle hızlanabilir, uzak hedeflerde warp yapabilirsin (Shift / Boşluk). Haritada seçtiğin sisteme de kendiliğinden gider. Fren ya da yön tuşları otopilotu bırakır.</li>
-        <li><b>Ticaret ve görevler:</b> kolonilere yaklaşıp yavaşlayınca geminin yanında <b>🛬 Yanaş</b> çıkar (E tuşu). Limanda ucuz malı al, ihtiyaç duyulan yerde sat; kargo, yolcu ve keşif görevleri al; yakıt doldur, tersanede gemini geliştir. Warp yakıt harcar, normal uçuş bedavadır. Keşifler de kredi kazandırır.</li>
+        <li><b>Ticaret ve görevler:</b> kolonilere yaklaşıp yavaşlayınca geminin yanında <b>🛬 Yanaş</b> çıkar (E tuşu). Limanda ucuz malı al, ihtiyaç duyulan yerde sat; kargo, yolcu ve keşif görevleri al; yakıt doldur, tersanede gemini geliştir. Kolonisi olmayan gezegenlerde <b>⛏ Kaynak topla</b> çıkar: türüne göre su, cevher, metal, gıda ya da gaz toplayıp kolonilerde satarsın. Warp yakıt harcar, normal uçuş bedavadır. Keşifler de kredi kazandırır.</li>
         <li><b>Harita (M):</b> sistemleri ve galaksileri gör, bir sisteme dokunup rota çiz; ekranda ok seni oraya götürür.</li>
         <li><b>Keşif:</b> sistemlere ve gezegenlere yaklaştıkça keşfedilir, koloniler gece yarısında ışıl ışıldır. Geminin çevresindeki küçük oklar en yakın sistemleri gösterir (mavi: keşfedilmemiş, sarı: kolonili).</li>
         <li><b>Dikkat:</b> kara deliklerin çekimi güçlüdür; fazla yaklaşan bilinmeyen bir yere fırlatılır.</li>
@@ -199,7 +199,7 @@ details{margin-top:12px;color:var(--mute);font-size:13.5px}summary{cursor:pointe
         <li><b>Keyboard:</b> W/↑ thrust, A D/← → turn, S/↓ brake, Shift boost, <b>hold Space: warp</b>.</li>
         <li><b>Zoom:</b> mouse wheel, two fingers or + / −. The view widens on its own as you speed up.</li>
         <li><b>Autopilot (O):</b> switch Manual ↔ Autopilot with the button at the top. In autopilot tap a point, planet or star; the ship turns, flies at normal speed and stops when it arrives. Use the buttons next to the ship to boost, or warp to far targets (Shift / Space). It also flies to a system you pick on the map. Brake or the arrow keys release autopilot.</li>
-        <li><b>Trade and missions:</b> approach a colony and slow down, <b>🛬 Dock</b> appears next to the ship (E key). Buy cheap goods, sell where they are wanted; take cargo, passenger and exploration missions; refuel and upgrade your ship at the shipyard. Warp burns fuel, normal flight is free. Discoveries earn credits too.</li>
+        <li><b>Trade and missions:</b> approach a colony and slow down, <b>🛬 Dock</b> appears next to the ship (E key). Buy cheap goods, sell where they are wanted; take cargo, passenger and exploration missions; refuel and upgrade your ship at the shipyard. Planets without a colony offer <b>⛏ Mine</b>: gather water, ore, metal, food or gas by planet type and sell it at colonies. Warp burns fuel, normal flight is free. Discoveries earn credits too.</li>
         <li><b>Map (M):</b> see systems and galaxies, tap a system to plot a route; an arrow on screen leads you there.</li>
         <li><b>Discovery:</b> systems and planets are discovered as you get close, colonies glow on their night side. Small arrows around the ship point to the nearest systems (blue: undiscovered, gold: with colonies).</li>
         <li><b>Careful:</b> black holes pull hard; get too close and you are flung somewhere unknown.</li>
@@ -578,6 +578,10 @@ let kredi = Number.isFinite(K.kr) ? K.kr : 500, yakit = Number.isFinite(K.yak) ?
 const KARGO = Object.assign({}, K.kargo || {});
 let GOREV = Array.isArray(K.gorev) ? K.gorev : [];
 const ALINAN = new Set(Array.isArray(K.alinan) ? K.alinan.slice(-300) : []);
+const KAYN = { kaya: 'cevher', lav: 'metal', col: 'cevher', buz: 'su', okyanus: 'su', orman: 'gida', zehir: 'gaz', gaz: 'gaz', buzdevi: 'gaz' };
+const KOTA = Object.assign({}, K.kota || {}), KOTA_N = 10;
+let kaynP = null, kazP = null, kazT = 0;
+const kotaKal = p => { const sa = Math.floor(Date.now() / 3.6e6), q = KOTA[p.id]; return KOTA_N - (q && q.s === sa ? q.n : 0); };
 let limanP = null, yanasP = null, limanSek = 'pazar', gpImza = '';
 const motorK = () => 1 + YUK.motor * 0.15, taraK = () => 1 + YUK.tara * 0.3;
 const warpHiz = () => 32000 * (1 + YUK.warp * 0.25), warpSure = () => 1.2 * (1 - YUK.warp * 0.12);
@@ -639,6 +643,7 @@ addEventListener('keydown', e => {
   if (k === 'm') { HM.acik ? haritaKapat() : haritaAc(); }
   else if (k === 'o') modDegis();
   else if (k === 'e' && yanasP && !limanP && oyunda) limanAc(yanasP);
+  else if (k === 'e' && kaynP && oyunda) kazP ? kazDur() : kazBasla(kaynP);
   if (mod === 'oto' && oto && oyunda && !e.repeat) { if (k === ' ') otoWarp(); else if (k === 'shift') otoBoost(); }
   else if (k === 'f') tamEkran();
   else if (k === '+' || k === '=') zKul = kis(zKul * 1.25, 0.06, 2.4);
@@ -704,6 +709,7 @@ function guncelle(dt, t) {
   } else if (!oyunda) { SH.a += dt * 0.05; }
   if (!oyunda || HM.acik || limanP) { warpTus = false; guc = 0; don = 0; yonHedef = null; }
   if (limanP) { fren = true; oto = null; }
+  if (kazP) { if (ileri || sol || sag || oto || (PTR.size === 1 && !pinch && mod === 'surus')) kazDur(); else { fren = true; kazAdim(dt); } }
   otoV = null;
   if (mod === 'oto' && oyunda && oto) {
     if (ileri || sol || sag || fren) { oto = null; duyur('🤖 ' + T('Otopilot bırakıldı', 'Autopilot released')); }
@@ -867,6 +873,9 @@ function hudYaz(v, t) {
     const ds = Math.hypot(tm.x - SH.x, tm.y - SH.y); if (ds < tm.yr * 6 + 400 && ds < ed) { ed = ds; en = null; enS = s; }
     for (const p of s.gez) { const [px, py] = gezPos(p, t), d = Math.hypot(px - SH.x, py - SH.y) - p.r; if (d < p.r * 2 + 1100 && d < ed) { ed = d; en = p; enS = s; } }
   }
+  const yakinMi = en && ed < (en.halka ? en.r * (en.halka.dis - 1) : 0) + 500 && v < 450 && oyunda && !limanP;
+  kaynP = yakinMi && !en.kol && KESIF.has('p:' + en.id) ? en : null;
+  if (kazP && kazP !== kaynP) kazDur();
   yanasP = oyunda && !limanP && en && en.kol && KESIF.has('k:' + en.id) && ed < (en.halka ? en.r * (en.halka.dis - 1) : 0) + 500 && v < 450 ? en : null;
   gpYaz();
   const y = $('yakin');
@@ -874,7 +883,7 @@ function hudYaz(v, t) {
   y.hidden = false;
   if (en) {
     const p = en, bilinen = KESIF.has('p:' + p.id), kols = p.kol ? `<div class="kol">🏙 <b style="display:inline;font-size:14px">${esc(kolAd(p))}</b> — ${L(p.kol.tip)}<br>👥 ${nufYaz(p.kol.nuf)}${T(' kişi', ' people')}${p.kol.ist ? T(' · yörünge istasyonu', ' · orbital station') : ''}</div>` : '';
-    y.innerHTML = `<b>${esc(p.ad)}</b><div class="tur">${L(p.P.ad)}${T(' gezegeni', ' planet')} · ${esc(p.s.t.ad)}${T(' sistemi', ' system')}</div><div class="sat">${T('Yarıçap', 'Radius')} ${SAYI(Math.round(p.r * p.P.km / 100) * 100)} km${p.ay.length ? ' · ' + p.ay.length + T(' uydu', p.ay.length > 1 ? ' moons' : ' moon') : ''}${p.halka ? T(' · halkalı', ' · ringed') : ''} · ${mesafeYaz(Math.max(0, ed))}</div>${kols}${bilinen ? '' : `<div class="sat yeni">${T('Yaklaş: keşfedilmedi', 'Get closer: not discovered')}</div>`}`;
+    y.innerHTML = `<b>${esc(p.ad)}</b><div class="tur">${L(p.P.ad)}${T(' gezegeni', ' planet')} · ${esc(p.s.t.ad)}${T(' sistemi', ' system')}</div><div class="sat">${T('Yarıçap', 'Radius')} ${SAYI(Math.round(p.r * p.P.km / 100) * 100)} km${p.ay.length ? ' · ' + p.ay.length + T(' uydu', p.ay.length > 1 ? ' moons' : ' moon') : ''}${p.halka ? T(' · halkalı', ' · ringed') : ''} · ${mesafeYaz(Math.max(0, ed))}</div>${kols}${bilinen && !p.kol ? `<div class="sat" style="color:#FFD9A6">⛏ ${T('Koloni yok · kaynak', 'No colony · resource')}: ${MAL[KAYN[p.tip]].e} ${L(MAL[KAYN[p.tip]].ad)}${ed > 500 ? T(' — toplamak için yaklaş', ' — get closer to mine') : ''}</div>` : ''}${bilinen ? '' : `<div class="sat yeni">${T('Yaklaş: keşfedilmedi', 'Get closer: not discovered')}</div>`}`;
   } else {
     const s = enS, kn = s.gez.filter(p => p.kol && KESIF.has('k:' + p.id)).length;
     y.innerHTML = `<b>${esc(s.t.ad)}</b><div class="tur">${L(s.Y.ad)}${s.t.ev ? T(' · ana üs', ' · home') : ''}</div><div class="sat">${s.gez.length} ${T('gezegen', s.gez.length === 1 ? 'planet' : 'planets')}${s.kusak ? T(' · asteroit kuşağı', ' · asteroid belt') : ''}${kn ? ' · 🏙 ' + kn : ''}</div>${s.Y.kd ? `<div class="sat" style="color:var(--kirmizi)">⚠ ${T('Güçlü çekim alanı', 'Strong gravity')}</div>` : ''}`;
@@ -1198,6 +1207,16 @@ function ciz(t) {
   arkaPlan(t);
   dunya(t);
   tozCiz();
+  if (kazP) {
+    const [px, py] = gezPos(kazP, t), [GX, GY] = W2S(px, py), [X, Y] = W2S(SH.x, SH.y), dx = GX - X, dy = GY - Y, d = Math.hypot(dx, dy) || 1, sr = kazP.r * cam.z;
+    const ex = GX - dx / d * sr * 0.85, ey = GY - dy / d * sr * 0.85, f = 0.6 + Math.random() * 0.4;
+    ctx.globalCompositeOperation = 'lighter'; ctx.lineCap = 'round';
+    ctx.strokeStyle = `rgba(255,190,90,${(0.25 * f).toFixed(2)})`; ctx.lineWidth = 7; ctx.beginPath(); ctx.moveTo(X, Y); ctx.lineTo(ex, ey); ctx.stroke();
+    ctx.strokeStyle = `rgba(255,240,200,${(0.85 * f).toFixed(2)})`; ctx.lineWidth = 1.8; ctx.beginPath(); ctx.moveTo(X, Y); ctx.lineTo(ex, ey); ctx.stroke();
+    const g = ctx.createRadialGradient(ex, ey, 0, ex, ey, 14); g.addColorStop(0, 'rgba(255,230,160,.9)'); g.addColorStop(1, 'rgba(255,140,40,0)'); ctx.fillStyle = g; ctx.beginPath(); ctx.arc(ex, ey, 14, 0, TAU); ctx.fill();
+    for (let i = 0; i < 5; i++) { const a = Math.random() * TAU, r = Math.random() * 16; ctx.fillStyle = 'rgba(255,210,140,.8)'; ctx.fillRect(ex + Math.cos(a) * r, ey + Math.sin(a) * r, 1.6, 1.6); }
+    ctx.globalCompositeOperation = 'source-over';
+  }
   gemiCiz(t);
   yonCiz();
   if (VIG) ctx.drawImage(VIG, 0, 0, W, H);
@@ -1247,6 +1266,7 @@ function otoBoost() { if (!oto) return; oto.boost = !oto.boost; SES.tik(); gpImz
 function gpYaz() {
   let h = '';
   if (oyunda && !limanP && !HM.acik) {
+    if (kaynP) { const m = MAL[KAYN[kaynP.tip]]; h += kazP === kaynP ? `<button class="gpb on" type="button" data-g="kaz">⛏ ${T('Topluyor', 'Mining')} ${m.e} ${KOTA_N - kotaKal(kaynP)}/${KOTA_N} · ${T('Durdur', 'Stop')}</button>` : `<button class="gpb y" type="button" data-g="kaz">⛏ ${T('Kaynak topla', 'Mine')}: ${m.e} ${L(m.ad)}</button>`; }
     if (yanasP) h += `<button class="gpb y" type="button" data-g="yanas">🛬 ${T('Yanaş', 'Dock')}: ${esc(kolAd(yanasP))}</button>`;
     if (mod === 'oto' && oto && otoV) {
       h += `<button class="gpb ${oto.boost ? 'on' : ''}" type="button" data-g="boost">⚡ ${oto.boost ? T('Normal hız', 'Normal speed') : T('Hızlan', 'Boost')}</button>`;
@@ -1259,9 +1279,28 @@ function gpYaz() {
 $('gp').addEventListener('click', e => {
   const b = e.target.closest('[data-g]'); if (!b) return; e.stopPropagation(); SES.baslat();
   const g = b.dataset.g;
+  if (g === 'kaz' && kaynP) { kazP ? kazDur() : kazBasla(kaynP); return; }
   if (g === 'yanas' && yanasP) limanAc(yanasP); else if (g === 'boost') otoBoost(); else if (g === 'warp') otoWarp();
 });
 $('gp').addEventListener('pointerdown', e => e.stopPropagation());
+
+/* ================= kaynak toplama (kolonisiz gezegenler) ================= */
+function kazBasla(p) {
+  if (kotaKal(p) <= 0) { duyur('⛏ ' + T('Bu gezegende şimdilik toplanacak kaynak kalmadı', 'Nothing left to mine here for now'), 'uyari', T('Bir saat sonra yenilenir', 'Refills in an hour')); return; }
+  if (kargoDolu() >= kapasite()) { duyur('📦 ' + T('Ambar dolu', 'Cargo hold full'), 'uyari', T('Bir kolonide sat ya da tersanede ambarı büyüt', 'Sell at a colony or enlarge the hold at a shipyard')); return; }
+  kazP = p; kazT = 0; oto = null; SES.tik(); gpImza = ''; gpYaz();
+}
+function kazDur() { if (!kazP) return; kazP = null; gpImza = ''; gpYaz(); kaydet(); }
+function kazAdim(dt) {
+  if (!kazP) return;
+  kazT += dt; if (kazT < 1.4) return; kazT = 0;
+  const p = kazP, m = KAYN[p.tip], sa = Math.floor(Date.now() / 3.6e6);
+  if (kotaKal(p) <= 0) { duyur('⛏ ' + T('Kaynak tükendi', 'Deposit depleted'), 'kesif', T('Bir saat sonra yenilenir', 'Refills in an hour')); kazDur(); return; }
+  if (kargoDolu() >= kapasite()) { duyur('📦 ' + T('Ambar doldu', 'Cargo hold full'), 'kesif', T('Bir kolonide satabilirsin', 'Sell it at a colony')); kazDur(); return; }
+  KARGO[m] = (KARGO[m] || 0) + 1; const q = KOTA[p.id]; KOTA[p.id] = { s: sa, n: (q && q.s === sa ? q.n : 0) + 1 };
+  for (const k in KOTA) if (KOTA[k].s !== sa) delete KOTA[k];
+  SES.tik(); gpImza = ''; gpYaz();
+}
 
 /* ================= görevler ================= */
 function koloniBul(sx, sy, R) { const L2 = []; for (let j = -R; j <= R; j++) for (let i = -R; i <= R; i++) { const s = sistem(sx + i, sy + j); if (!s) continue; for (const p of s.gez) if (p.kol) L2.push(p); } return L2; }
@@ -1511,7 +1550,7 @@ $('hEv').onclick = () => { const h = temel(0, 0); HM.x = h.x; HM.y = h.y; HM.z =
 $('hSil').onclick = () => { wp = null; haritaCiz(); kaydet(); };
 
 /* ================= menü, kayıt ================= */
-function kaydet() { ls.set(KAYIT, { x: SH.x, y: SH.y, a: SH.a, kesif: [...KESIF], acik: [...ACIK], wp, zu: zKul, yol, kr: kredi, yak: yakit, kargo: KARGO, gorev: GOREV, alinan: [...ALINAN].slice(-300), yuk: YUK, v: 1 }); }
+function kaydet() { ls.set(KAYIT, { x: SH.x, y: SH.y, a: SH.a, kesif: [...KESIF], acik: [...ACIK], wp, zu: zKul, yol, kr: kredi, yak: yakit, kargo: KARGO, gorev: GOREV, alinan: [...ALINAN].slice(-300), yuk: YUK, kota: KOTA, v: 1 }); }
 function menuKur() {
   let s = 0, p = 0, k = 0, g = 0; for (const x of KESIF) { if (x[0] === 's') s++; else if (x[0] === 'p') p++; else if (x[0] === 'k') k++; else if (x[0] === 'g') g++; }
   $('istat').innerHTML = [[s, T('Sistem', 'Systems')], [p, T('Gezegen', 'Planets')], [k, T('Koloni', 'Colonies')], [g, T('Galaksi', 'Galaxies')]].map(([n, a]) => `<div><b>${SAYI(n)}</b><span>${a}</span></div>`).join('');
@@ -1532,7 +1571,7 @@ function basla() {
 $('mBasla').onclick = basla;
 $('mSifirla').onclick = () => {
   const b = $('mSifirla'); if (!b.dataset.emin) { b.dataset.emin = 1; b.textContent = T('Emin misin? Tekrar bas', 'Are you sure? Press again'); return; }
-  KESIF.clear(); ACIK.clear(); yol = 0; wp = null; oto = null; kredi = 500; for (const k in YUK) YUK[k] = 0; yakit = TANK[0]; for (const k in KARGO) delete KARGO[k]; GOREV = []; ALINAN.clear(); gorevYaz(); const p = evGezegen(), [px, py] = gezPos(p, simT()), a = Math.atan2(py - p.s.y, px - p.s.x);
+  KESIF.clear(); ACIK.clear(); yol = 0; wp = null; oto = null; kredi = 500; for (const k in YUK) YUK[k] = 0; yakit = TANK[0]; for (const k in KARGO) delete KARGO[k]; GOREV = []; ALINAN.clear(); for (const k in KOTA) delete KOTA[k]; kazP = null; gorevYaz(); const p = evGezegen(), [px, py] = gezPos(p, simT()), a = Math.atan2(py - p.s.y, px - p.s.x);
   SH.x = px + Math.cos(a) * (p.r + 260); SH.y = py + Math.sin(a) * (p.r + 260); SH.vx = SH.vy = 0; SH.a = a + Math.PI / 2; cam.x = SH.x; cam.y = SH.y;
   kaydet(); kesifSayYaz(); menuKur();
 };
@@ -1576,7 +1615,7 @@ function kare(now) {
 }
 boyutla(); kesifSayYaz(); menuKur(); radarKur(); gorevYaz();
 requestAnimationFrame(kare);
-window.KOZ = { get kredi() { return kredi; }, set kredi(v) { kredi = v; }, get yakit() { return yakit; }, GOREV: () => GOREV, YUK, limanAc, get limanP() { return limanP; }, get yanasP() { return yanasP; }, SH, cam, temel, sistem, galaksi, KESIF, basla, haritaAc, haritaKapat, set zoom(v) { zKul = v; }, DOKU };
+window.KOZ = { get kaynP() { return kaynP; }, get kazP() { return kazP; }, KARGO, get kredi() { return kredi; }, set kredi(v) { kredi = v; }, get yakit() { return yakit; }, GOREV: () => GOREV, YUK, limanAc, get limanP() { return limanP; }, get yanasP() { return yanasP; }, SH, cam, temel, sistem, galaksi, KESIF, basla, haritaAc, haritaKapat, set zoom(v) { zKul = v; }, DOKU };
 })();
 </script>
 <script data-goatcounter="https://erdevelop.goatcounter.com/count" async src="//gc.zgo.at/count.js"></script>
