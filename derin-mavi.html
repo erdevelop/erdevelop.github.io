@@ -40,7 +40,15 @@ a{color:var(--mavi)}
 #sesYuzde{font-size:12.5px;font-weight:800;color:var(--mute);min-width:38px;text-align:right}
 /* alt panel */
 #panel{position:fixed;left:10px;right:10px;bottom:calc(10px + env(safe-area-inset-bottom,0px));z-index:6;max-width:420px;border-radius:20px;border:1px solid var(--line);background:var(--kart);padding:11px 12px 12px;box-shadow:0 14px 40px rgba(0,0,0,.35);backdrop-filter:blur(10px);-webkit-backdrop-filter:blur(10px)}
-.pUst{display:flex;align-items:center;gap:10px;cursor:pointer}
+.pUst{display:flex;align-items:center;gap:10px;cursor:pointer;padding-right:34px}
+#panel{transition:transform .32s cubic-bezier(.4,.1,.2,1),opacity .32s}
+#panelKapa{position:absolute;top:8px;right:8px;z-index:2;width:30px;height:30px;border-radius:10px;border:1px solid var(--line);background:rgba(0,0,0,.25);color:var(--ink);font-size:20px;font-weight:900;line-height:1;padding:0 0 2px;display:flex;align-items:center;justify-content:center}
+#panelKapa:hover{background:rgba(255,255,255,.08)}
+#panel.kapali{transform:translateX(calc(-100% + 40px))}
+#panel>*:not(#panelKapa){transition:opacity .25s}
+#panel.kapali>*:not(#panelKapa){opacity:0;pointer-events:none}
+#panel.kapali #panelKapa{right:4px;border-color:rgba(255,200,87,.6);color:#FFE29A;background:rgba(40,30,5,.6)}
+#panel.kapali #panelKapa.uyar{animation:nabiz 1.6s infinite}
 #pRes{width:72px;height:48px;border-radius:12px;background:rgba(0,0,0,.18);flex:none}
 .pBilgi{flex:1;min-width:0}
 .pBilgi b{display:block;font-size:17px;font-weight:900;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
@@ -184,6 +192,7 @@ body.er-durumlu #panel{bottom:32px}
 <div id="sesKutu" hidden><button type="button" id="sesSus" title="Sesi kapat/aç" data-en-title="Mute/unmute" aria-label="Sesi kapat/aç" data-en-aria="Mute/unmute">🔈</button><input id="sesKaydir" type="range" min="0" max="100" step="5" aria-label="Ses düzeyi" data-en-aria="Volume"><span id="sesYuzde"></span></div>
 
 <div id="panel" hidden>
+  <button type="button" id="panelKapa" title="Paneli gizle" data-en-title="Hide panel" aria-label="Paneli gizle" data-en-aria="Hide panel" aria-expanded="true">‹</button>
   <div class="pUst" id="pUst">
     <canvas id="pRes" width="144" height="96"></canvas>
     <div class="pBilgi"><b id="pAd"></b><span id="pAlt"></span></div>
@@ -2896,7 +2905,7 @@ function rehberGuncelle() {
   document.body.classList.toggle('rehberVar', !k.hidden);
   rehberIsaret(a.hedef ? $(a.hedef) : null);
 }
-function rehberIsaret(el) { if (rehberHedefEl === el) return; if (rehberHedefEl) rehberHedefEl.classList.remove('rehberHedef'); rehberHedefEl = el; if (el) el.classList.add('rehberHedef'); }
+function rehberIsaret(el) { if (rehberHedefEl === el) return; if (rehberHedefEl) rehberHedefEl.classList.remove('rehberHedef'); rehberHedefEl = el; if (el) { el.classList.add('rehberHedef'); if ($('panel').contains(el) && $('panel').classList.contains('kapali')) { $('panel').classList.remove('kapali'); panelKapaYaz(); } } }
 
 /* ---------- 2) günlük ekranı (üst çubuk sadeleşti) ---------- */
 function gunlukBekleyen() {
@@ -4232,6 +4241,12 @@ ALBUM.push({ k: 'ozel:sebek', grup: 'sus', e: '🎪', ad: ['Şebeklik izleyicisi
 for (const [k, b] of Object.entries(CANLI_BILGI)) ANSIK[k] = [[b[0], b[1], b[2]], [b[3], b[4]]];
 
 /* ses düğmesi ve tam ekran */
+/* sol alttaki paneli gizle/göster; tercih hatırlanır */
+const panelKapaYaz = () => { const k = $('panel').classList.contains('kapali'), b = $('panelKapa'); b.textContent = k ? '›' : '‹'; b.title = T(k ? 'Paneli göster' : 'Paneli gizle', k ? 'Show panel' : 'Hide panel'); b.setAttribute('aria-label', b.title); b.setAttribute('aria-expanded', k ? 'false' : 'true'); };
+try { if (localStorage.getItem('derin-panel-kapali') === '1') $('panel').classList.add('kapali'); } catch (e) { }
+panelKapaYaz();
+$('panelKapa').onclick = e => { e.stopPropagation(); const k = $('panel').classList.toggle('kapali'); try { localStorage.setItem('derin-panel-kapali', k ? '1' : '0'); } catch (er) { } panelKapaYaz(); SES.kabarcik(0.015); };
+setInterval(() => { if (!S) return; const k = $('panel').classList.contains('kapali'); $('panelKapa').classList.toggle('uyar', k && (S.tok < 30 || !!$('secimBtn') && !$('secimBtn').hidden && $('secimBtn').dataset.is === 'acil')); }, 2000);
 const sesYaz = () => { const d = SES.duzey(); $('sesBtn').textContent = d <= 0 ? '🔇' : d < 0.5 ? '🔉' : '🔊'; $('sesSus').textContent = d <= 0 ? '🔇' : '🔈'; $('sesYuzde').textContent = '%' + Math.round(d * 100); };
 $('sesBtn').onclick = () => { $('sesKutu').hidden = !$('sesKutu').hidden; };
 $('sesKaydir').value = Math.round(SES.duzey() * 100);
