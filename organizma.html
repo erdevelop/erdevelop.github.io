@@ -388,7 +388,7 @@ const SOYLAR = {
   isik: { ik: '🌟', ad: ['Biyolüminesans', 'Bioluminescence'], ac: ['Gece görüşün daralmaz, parlarsın', 'Night does not blind you; you glow'], ust: 2 },
   sindir: { ik: '🧪', ad: ['Güçlü sindirim', 'Strong digestion'], ac: ['Besinlerden +%12 kütle', '+12% mass from food'], ust: 2 },
   akim: { ik: '🌀', ad: ['Girdap akımı', 'Vortex current'], ac: ['Besin akımın mikro canlıları da çeker', 'Your feeding current pulls microbes too'], ust: 1 },
-  yildiz: { ik: '⭐', ad: ['Soy yıldızı', 'Lineage star'], ac: ['Besinlerden +%1 kütle (en çok 20 yıldız)', '+1% mass from food (up to 20 stars)'], ust: 999 }
+  yildiz: { ik: '⭐', ad: ['Soy yıldızı', 'Lineage star'], ac: ['Besinlerden +%1 kütle (en çok 20 yıldız)', '+1% mass from food (up to 20 stars)'], ust: 20 }
 };
 const BOS_SOY = { sok: 0, bagisik: 0, bereket: 0, isik: 0, sindir: 0, akim: 0, yildiz: 0 };
 const SOY = o => { const s2 = o.sahip || o; return s2.soy || (s2.soy = Object.assign({}, BOS_SOY)); };
@@ -1642,9 +1642,11 @@ function evDeger(o, k, lv) {   // bir evrim düzeyinde ilgili değerin okunur ha
 function evrimBak() {
   const o = oyuncu; if (!o || o.olu || evSecenek) return; if (!(o.bedava > 0) && (o.evK >= EVRIM_ESIK.length || o.kusakTepe < EVRIM_ESIK[o.evK])) return;
   let hav = Object.keys(EVRIMLER).filter(k => o.ev[k] < EVRIMLER[k].ust);
-  if (!hav.length) {   // evrimler bitti: soy mutasyonları (yıldız hep seçilebilir)
+  if (!hav.length) {   // evrimler bitti: soy mutasyonları yalnızca hediye seçimlerle gelir (büyüme eşikleri artık kart açmaz)
+    if (!(o.bedava > 0)) { o.evK = 99; return; }
     const sy = SOY(o); hav = Object.keys(SOYLAR).filter(k => k !== 'yildiz' && sy[k] < SOYLAR[k].ust).map(k => 's:' + k);
-    if (hav.length < 3) hav.push('s:yildiz');
+    if (hav.length < 3 && sy.yildiz < 20) hav.push('s:yildiz');
+    if (!hav.length) { const n = o.bedava * 10; o.bedava = 0; dnaEkle(n); duyur(T(`🌳 Soyun tamamlandı: hediye seçim yerine +${n} DNA`, `🌳 Lineage complete: +${n} DNA instead of a pick`), 'iyi', 4); return; }
     if (!o.soyBildi) { o.soyBildi = 1; duyur(T('🧬 Bütün evrimlerin tamam! Artık soy mutasyonları seçeceksin.', '🧬 All evolutions done! From now on you pick lineage mutations.'), 'iyi', 6); }
   }
   for (let i = hav.length - 1; i > 0; i--) { const j = (Math.random() * (i + 1)) | 0;[hav[i], hav[j]] = [hav[j], hav[i]]; }
@@ -1876,7 +1878,7 @@ function kusakKart(o) {
     + `<div>🍽 ${T('Biçim', 'Form')}: ${F[en] > 0.08 ? `${FORM_AD[en][0]} ${T(FORM_AD[en][1][0], FORM_AD[en][1][1])} %${Math.round(F[en] * 100)}` : T('henüz belirgin değil', 'not distinct yet')}</div>`
     + `<div>✨ ${T('Evrimler', 'Evolutions')}: ${evl.length ? evl.map(k => EVRIMLER[k].ik + ' ' + esc(T(EVRIMLER[k].ad[0], EVRIMLER[k].ad[1])) + (o.ev[k] > 1 ? ' ' + o.ev[k] : '')).join(', ') : T('yok', 'none')}</div>`
     + (Object.keys(SOY(o)).some(k => SOY(o)[k]) ? `<div>🌳 ${T('Soy', 'Lineage')}: ${Object.keys(SOY(o)).filter(k => SOY(o)[k]).map(k => SOYLAR[k].ik + ' ' + esc(T(SOYLAR[k].ad[0], SOYLAR[k].ad[1])) + (SOY(o)[k] > 1 ? ' ' + SOY(o)[k] : '')).join(', ')}</div>` : '')
-    + `<div>🎁 ${evBitti(o) ? T('Hediye: 1 soy mutasyonu seçimi', 'Gift: 1 lineage mutation pick') : T('Hediye: 1 evrim seçimi', 'Gift: 1 evolution pick')} · +${3 * (o.kusak - 1)} DNA</div>`
+    + `<div>🎁 ${evBitti(o) ? (Object.keys(SOYLAR).some(k => SOY(o)[k] < SOYLAR[k].ust) ? T('Hediye: 1 soy mutasyonu seçimi', 'Gift: 1 lineage mutation pick') : T('Hediye: +10 DNA (soyun tamam)', 'Gift: +10 DNA (lineage complete)')) : T('Hediye: 1 evrim seçimi', 'Gift: 1 evolution pick')} · +${3 * (o.kusak - 1)} DNA</div>`
     + (o.kg ? `<div>🎯 ${T('Kuşak görevi', 'Generation quest')}: ${esc(T(...KG_TUR[o.kg.id].ad(o.kg.h)))} → +${5 + 2 * o.kusak} DNA + ${T('hediye seçim', 'bonus pick')}</div>` : '')
     + `<small>${T(`Küçüldün ama kazandıkların seninle. Sonraki kuşak için ${kusakEsik(o.kusak)} kütleye ulaş.`, `You shrank but kept what you earned. Reach ${kusakEsik(o.kusak)} mass for the next generation.`)}${o.kusak >= 2 && (o.gen || []).length < 15 ? ' ' + T(`Yaratık'a geçiş için ${(o.gen || []).length}/15 gen.`, `${(o.gen || []).length}/15 genes to move on to Creature.`) : ''} ${T('(dokun: kapat)', '(tap to close)')}</small>`;
   $('kusakKart').hidden = false; clearTimeout(kusakKartZ); kusakKartZ = setTimeout(() => { $('kusakKart').hidden = true; }, 9000);
