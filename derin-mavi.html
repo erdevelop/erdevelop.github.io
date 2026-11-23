@@ -181,6 +181,7 @@ body.er-durumlu #panel{bottom:32px}
   <div class="cip" id="akvCip" hidden></div>
   <div class="cip" id="hedefCip" hidden></div>
   <div class="cip altin" id="olayCip" hidden></div>
+  <div class="cip" id="havaCip" hidden title="Hava" data-en-title="Weather"></div>
   <div class="bos"></div>
   <div class="cip" id="ag" title="Çevrimiçi durum" data-en-title="Online status"><i></i><span></span></div>
   <button class="yuv" id="sesBtn" type="button" title="Ses" data-en-title="Sound" aria-label="Ses" data-en-aria="Sound">🔊</button>
@@ -783,6 +784,7 @@ const SES = (() => {
     selam: () => ton(700, 1050, 0.12, 'sine', 0.03),
     motor: () => { ton(70, 55, 2.4, 'sawtooth', 0.012); ton(140, 110, 2.4, 'triangle', 0.008); },
     makara: () => ton(1500, 1350, 0.035, 'square', 0.008),
+    gok: () => { hava(2.2, 0.07, 160); ton(52, 38, 1.8, 'sawtooth', 0.018); },
     boing: () => { ton(260, 620, 0.16, 'sine', 0.03); ton(620, 380, 0.12, 'sine', 0.02, 0.15); },
     flas: () => { ton(2600, 2000, 0.04, 'square', 0.012); ton(900, 500, 0.12, 'sine', 0.02, 0.05); },
     sarki: () => { [[180, 340, 1.6, 0], [340, 220, 1.3, 1.5], [150, 120, 2.2, 3.0], [260, 520, 1.1, 5.2], [520, 300, 1.4, 6.2]].forEach(([a, b, d, g]) => { ton(a, b, d, 'sine', 0.035, g); ton(a * 1.5, b * 1.5, d, 'sine', 0.008, g + 0.05); }); },
@@ -1048,7 +1050,7 @@ function mercanCiz(c, m, y, tm) {
 function yosunCiz(c, y, t, kumY) {
   for (let k = 0; k < y.k; k++) {
     const bx = y.x + k * 9 * OL, hh = y.h * (1 - k * 0.22), pts = [];
-    for (let i = 0; i <= 10; i++) { const u = i / 10; pts.push([bx + Math.sin(t * 0.8 + y.faz + u * 2.6 + k) * 16 * u * u * OL + Math.sin(t * 1.7 + u * 6) * 2 * u, kumY + 6 - hh * u]); }
+    for (let i = 0; i <= 10; i++) { const u = i / 10; pts.push([bx + Math.sin(t * 0.8 + y.faz + u * 2.6 + k) * 16 * (0.75 + HV.akinti * 0.4) * u * u * OL + Math.sin(t * 1.7 + u * 6) * 2 * u, kumY + 6 - hh * u]); }
     c.strokeStyle = koyu(y.c, 0.25 + k * 0.1); c.lineWidth = (2.6 - k * 0.6) * OL; c.lineCap = 'round'; c.beginPath(); pts.forEach((p, i) => i ? c.lineTo(p[0], p[1]) : c.moveTo(p[0], p[1])); c.stroke();
     for (let i = 1; i < pts.length; i++) {
       if (i < 2) continue; const p = pts[i], q = pts[i - 1], a = Math.atan2(p[1] - q[1], p[0] - q[0]), yan = i % 2 ? 1 : -1, ll = (14 + (10 - i) * 1.4) * OL * (1 - k * 0.2), sal = Math.sin(t * 1.3 + i + y.faz) * 0.25;
@@ -1091,7 +1093,7 @@ function kostikCiz(c, t) {
     SAHNE.kostik.getContext('2d').putImageData(SAHNE.kostikD, 0, 0);
   }
   const kumY = SAHNE.kumY; if (SAHNE.tm === 'derin') return;
-  c.save(); c.globalCompositeOperation = 'lighter'; c.globalAlpha = SAHNE.tm === 'acik' ? 0.38 : 0.32; c.imageSmoothingEnabled = true;
+  c.save(); c.globalCompositeOperation = 'lighter'; c.globalAlpha = (SAHNE.tm === 'acik' ? 0.38 : 0.32) * Math.min(1.4, havaIsik(t)); c.imageSmoothingEnabled = true;
   c.drawImage(SAHNE.kostik, 0, kumY - 4, W, H - kumY + 4);
   c.restore();
 }
@@ -1107,7 +1109,7 @@ function arkaPlan(c, t) {
   if (SAHNE.huzme) {
     const kx = W * 0.56 + Math.sin(t * 0.05) * W * 0.04, ky = -H * 0.32, boy = Math.hypot(W, H) * 1.15;
     for (const h of SAHNE.hzm) {
-      const al = (derin ? 0.05 : 0.16) * Math.max(0, 0.45 + 0.55 * Math.sin(t * h.v + h.f)), gen = (60 + h.w * 90) * OL * (0.8 + 0.2 * Math.sin(t * h.v * 1.7 + h.f));
+      const al = havaIsik(t) * (derin ? 0.05 : 0.16) * Math.max(0, 0.45 + 0.55 * Math.sin(t * h.v + h.f)), gen = (60 + h.w * 90) * OL * (0.8 + 0.2 * Math.sin(t * h.v * 1.7 + h.f));
       if (al < 0.004) continue;
       c.globalAlpha = al; c.save(); c.translate(kx, ky); c.rotate(h.a + Math.sin(t * 0.07 + h.f) * 0.03); c.drawImage(SAHNE.huzme, -gen / 2, 0, gen, boy); c.restore();
     }
@@ -1115,11 +1117,11 @@ function arkaPlan(c, t) {
   }
   /* su yüzeyi: aşağıdan görünen, dalgalarla kırılan ışık ağı */
   const yb = Math.max(26, H * 0.06);
-  if (SAHNE.kostik) { c.globalAlpha = derin ? 0.12 : 0.5; c.drawImage(SAHNE.kostik, -20, 0, W + 40, yb); c.globalAlpha = 1; }
+  if (SAHNE.kostik) { c.globalAlpha = (derin ? 0.12 : 0.5) * Math.min(1.3, havaIsik(t)); c.drawImage(SAHNE.kostik, -20, 0, W + 40, yb); c.globalAlpha = 1; }
   const yg = c.createLinearGradient(0, 0, 0, yb); yg.addColorStop(0, `rgba(230,250,255,${derin ? 0.06 : 0.3})`); yg.addColorStop(1, 'rgba(230,250,255,0)'); c.fillStyle = yg; c.fillRect(0, 0, W, yb);
   /* asılı parçacıklar (deniz karı): uzaktakiler küçük ve soluk, yakındakiler iri ve yumuşak */
   if (SAHNE.nokta) for (const p of SAHNE.toz) {
-    const z = p.z || 0.6; p.y -= p.v * 0.016 * z; p.x += Math.sin(t * 0.5 + p.f) * 0.15 * z; if (p.y < -5) { p.y = H + 5; p.x = Math.random() * W; }
+    const z = p.z || 0.6; p.y -= p.v * 0.016 * z; p.x += Math.sin(t * 0.5 + p.f) * 0.15 * z + HV.akinti * 0.35 * z; if (p.x > W + 6) p.x = -6; if (p.y < -5) { p.y = H + 5; p.x = Math.random() * W; }
     const rr = p.s * (0.8 + z * 2.2); c.globalAlpha = (derin ? 0.35 : 0.22) * (0.4 + z * 0.6); c.drawImage(SAHNE.nokta, p.x - rr, p.y - rr, rr * 2, rr * 2);
   }
   c.restore();
@@ -1339,6 +1341,7 @@ function ciz(dt) {
   golgeCiz(c, liste);
   for (const b of liste) { const dd = dansDonusum(b, dt); balikCiz(c, b.d, b.x, b.y + (dd ? dd.oy : 0), b.L, b.faz, dd && dd.yon != null ? dd.yon : b.yon, { t: zaman, uyku: b.uyku || b.geceUyku, solgun: b.solgun, aci: dd ? dd.aci : 0, alfa: b.sersem > 0 ? 0.6 + Math.sin(zaman * 30) * 0.3 : 1 }); }
   onKatman(c, zaman);
+  havaCiz(c, zaman, dt);
   insUstCiz(c);
   /* parçacıklar */
   for (let i = PARC.length - 1; i >= 0; i--) {
@@ -2633,7 +2636,7 @@ function magaraCiz(c) {
 }
 function geceCiz(c) {
   const g = geceDegeri(); if (g <= 0) return;
-  c.fillStyle = `rgba(4,10,40,${0.5 * g})`; c.fillRect(0, 0, W, H);
+  c.fillStyle = `rgba(4,10,40,${0.36 * g})`; c.fillRect(0, 0, W, H);
   /* ay ışığı */
   const ay = c.createRadialGradient(W * 0.8, -40, 0, W * 0.8, -40, H * 0.6); ay.addColorStop(0, `rgba(190,210,255,${0.18 * g})`); ay.addColorStop(1, 'rgba(190,210,255,0)'); c.fillStyle = ay; c.fillRect(0, 0, W, H);
   /* ışıldayan canlılar */
@@ -3291,6 +3294,7 @@ function canliGuncelle(dt) {
   }
   gzGuncelle(dt);
   insGuncelle(dt);
+  havaGuncelle(dt);
   /* yunus: arada bir yüzeyden geçer */
   if (SAHNE.tm !== 'derin') {
     if (!CNL.yunus) { CNL.yunusZ -= dt; if (CNL.yunusZ <= 0) { const d = Math.random() < 0.5 ? 1 : -1; CNL.yunus = { tur: 'yunus', x: d > 0 ? -150 : W + 150, y: A.y1 + 30 * OL, d, f: 0, bekle: 0, tepki: 0 }; CNL.yunusZ = rnd(150, 330); } }
@@ -4237,6 +4241,119 @@ function nhalkaCiz(c, dt) {
   }
 }
 ALBUM.push({ k: 'ozel:sebek', grup: 'sus', e: '🎪', ad: ['Şebeklik izleyicisi', 'Trick spotter'], ip: ['Ziyaretçilerin 10 farklı numarasını yakından izle', 'Watch 10 different visitor tricks up close'] });
+/* =====================================================================
+   MEVSİM VE HAVA: gerçek takvime göre mevsim, günde dört kez değişen hava.
+   Yaz parlak ve berrak, ilkbahar yeşilimsi ve planktonlu, sonbaharda yüzeyden yapraklar düşer,
+   kışın soğuk mavi ve arada yüzey buz tutar. Hava: güneşli, parçalı bulutlu (bulut gölgeleri geçer),
+   yağmurlu (damlalar yüzeye vurur), fırtınalı (dalgalı yüzey, şimşek, güçlü akıntı), plankton patlaması.
+   Çoğu zaman canlı ve aydınlık, arada kasvetli.  Deneme: ?mevsim=kis&hava=firtina
+   ===================================================================== */
+var MEVSIMLER = {
+  ilkbahar: { e: '🌱', ad: ['İlkbahar', 'Spring'], renk: [120, 225, 160], guc: 0.1, parlak: 0.08, ag: { gunes: 4, bulut: 3, yagmur: 2, bulanik: 2 } },
+  yaz: { e: '🏖️', ad: ['Yaz', 'Summer'], renk: [90, 230, 225], guc: 0.08, parlak: 0.14, ag: { gunes: 7, bulut: 2, yagmur: 1, firtina: 0.6 } },
+  sonbahar: { e: '🍂', ad: ['Sonbahar', 'Autumn'], renk: [255, 175, 95], guc: 0.13, parlak: 0.04, ag: { gunes: 3, bulut: 3, yagmur: 3, firtina: 1.2 } },
+  kis: { e: '❄️', ad: ['Kış', 'Winter'], renk: [165, 200, 255], guc: 0.12, parlak: 0, ag: { gunes: 3, bulut: 3, yagmur: 2, firtina: 1.5, ayaz: 2 } }
+};
+var HAVALAR = {
+  gunes: { e: '☀️', ad: ['Güneşli', 'Sunny'], isik: 1.4, parlak: 0.1, gri: 0, yesil: 0, akinti: 0.3, bilgi: ['Su berrak, ışık huzmeleri bol.', 'Clear water and plenty of sunbeams.'] },
+  bulut: { e: '⛅', ad: ['Parçalı bulutlu', 'Partly cloudy'], isik: 1.05, parlak: 0.03, gri: 0.04, yesil: 0, akinti: 0.5, bilgi: ['Bulutların gölgesi ara ara akvaryumun üstünden geçiyor.', 'Cloud shadows drift over the aquarium now and then.'] },
+  yagmur: { e: '🌧️', ad: ['Yağmurlu', 'Rainy'], isik: 0.72, parlak: -0.06, gri: 0.18, yesil: 0, akinti: 0.8, bilgi: ['Yağmur damlaları yüzeye vuruyor, ışık azaldı.', 'Raindrops are hitting the surface and the light is dimmer.'] },
+  firtina: { e: '⛈️', ad: ['Fırtınalı', 'Stormy'], isik: 0.5, parlak: -0.14, gri: 0.3, yesil: 0, akinti: 2.2, bilgi: ['Yüzey dalgalı, şimşekler çakıyor, akıntı güçlü.', 'The surface is rough, lightning flashes and the current is strong.'] },
+  bulanik: { e: '🌿', ad: ['Plankton patlaması', 'Plankton bloom'], isik: 0.92, parlak: 0.02, gri: 0, yesil: 0.22, akinti: 0.4, bilgi: ['Su planktonla yeşillendi; yiyecek bol.', 'The water turned green with plankton; food is everywhere.'] },
+  ayaz: { e: '🧊', ad: ['Ayaz', 'Frosty'], isik: 0.85, parlak: 0.02, gri: 0.08, yesil: 0, akinti: 0.2, bilgi: ['Yüzey ince bir buzla kaplandı; ışık buzdaki çatlaklardan süzülüyor.', 'A thin sheet of ice covers the surface; light filters through its cracks.'] }
+};
+var HV = { m: null, h: null, anah: '', isik: 1, parlak: 0.05, gri: 0, yesil: 0, akinti: 0.4, renk: [120, 200, 230], guc: 0.08, simsek: 0, simsekZ: 6, gok: 0, damla: [], yaprak: [], bulut: [] };
+function havaHedef() {
+  const d = new Date(simdi()), ay = d.getMonth(), q = new URLSearchParams(location.search);
+  const m = q.get('mevsim') in MEVSIMLER ? q.get('mevsim') : ay === 11 || ay < 2 ? 'kis' : ay < 5 ? 'ilkbahar' : ay < 8 ? 'yaz' : 'sonbahar';
+  const blok = Math.floor(d.getHours() / 6), anah = `${d.getFullYear()}-${ay}-${d.getDate()}-${blok}`;
+  let h = q.get('hava');
+  if (!(h in HAVALAR)) { const ag = MEVSIMLER[m].ag, r = tohumRnd('hava' + anah)(); let top = Object.values(ag).reduce((a, b) => a + b, 0) * r; h = Object.keys(ag).find(k => (top -= ag[k]) < 0) || 'gunes'; }
+  return { m, h, anah };
+}
+function havaGuncelle(dt) {
+  const hd = havaHedef();
+  if (hd.anah + hd.m + hd.h !== HV.anah) {
+    const ilk = !HV.anah; HV.anah = hd.anah + hd.m + hd.h; HV.m = hd.m; HV.h = hd.h;
+    if (ilk) { const H0 = HAVALAR[HV.h], M0 = MEVSIMLER[HV.m]; HV.isik = H0.isik; HV.parlak = H0.parlak + M0.parlak; HV.gri = H0.gri; HV.yesil = H0.yesil; HV.akinti = H0.akinti; HV.renk = M0.renk.slice(); HV.guc = M0.guc; }
+    else if (S && !girisAcik) { const H1 = HAVALAR[HV.h]; duyur(`${H1.e} ${T('Hava değişti: ' + H1.ad[0] + '. ' + H1.bilgi[0], 'The weather changed: ' + H1.ad[1] + '. ' + H1.bilgi[1])}`); }
+    havaCipYaz();
+  }
+  const H = HAVALAR[HV.h], M = MEVSIMLER[HV.m], k = Math.min(1, dt * 0.25);
+  HV.isik += (H.isik - HV.isik) * k; HV.parlak += (H.parlak + M.parlak - HV.parlak) * k; HV.gri += (H.gri - HV.gri) * k; HV.yesil += (H.yesil - HV.yesil) * k; HV.akinti += (H.akinti - HV.akinti) * k; HV.guc += (M.guc - HV.guc) * k;
+  for (let i = 0; i < 3; i++) HV.renk[i] += (M.renk[i] - HV.renk[i]) * k;
+}
+function havaCipYaz() {
+  const el = $('havaCip'); if (!el || !HV.h) return; const H = HAVALAR[HV.h], M = MEVSIMLER[HV.m];
+  el.textContent = `${H.e} ${T(M.ad[0], M.ad[1])}`; el.title = T(H.ad[0], H.ad[1]);
+  el.hidden = !S || girisAcik;
+}
+/* bulut gölgeleri için ışık çarpanı: zamanla geçen bulutlar ışığı azaltıp artırır */
+function havaIsik(t) {
+  let k = HV.isik;
+  if (HV.h === 'bulut' || HV.h === 'yagmur') k *= 0.78 + 0.22 * (0.5 + 0.5 * Math.sin(t * 0.09) * Math.sin(t * 0.05 + 1));
+  if (HV.simsek > 0) k += HV.simsek * 2;
+  return SAHNE && SAHNE.tm === 'derin' ? 1 + (k - 1) * 0.4 : k;
+}
+function havaCiz(c, t, dt) {
+  if (!SAHNE || !HV.h) return;
+  const derin = SAHNE.tm === 'derin', sy = typeof insSY === 'function' ? insSY() : 30, gece = geceDegeri();
+  c.save();
+  /* fırtına: dalgalı koyu yüzey ve köpük */
+  if (HV.h === 'firtina' && !derin) {
+    c.fillStyle = 'rgba(15,28,40,.4)'; c.beginPath(); c.moveTo(0, 0); for (let x = 0; x <= W + 10; x += 10) c.lineTo(x, sy + Math.sin(x * 0.012 + t * 2.2) * 9 * OL + Math.sin(x * 0.031 - t * 3.1) * 4 * OL); c.lineTo(W, 0); c.closePath(); c.fill();
+    c.strokeStyle = 'rgba(235,245,255,.45)'; c.lineWidth = 2 * OL; c.beginPath(); for (let x = 0; x <= W + 10; x += 10) c.lineTo(x, sy + Math.sin(x * 0.012 + t * 2.2) * 9 * OL + Math.sin(x * 0.031 - t * 3.1) * 4 * OL); c.stroke();
+  }
+  /* ayaz: yüzeyde ince buz, çatlaklardan ışık */
+  if (HV.h === 'ayaz' && !derin) {
+    const g = c.createLinearGradient(0, 0, 0, sy + 10 * OL); g.addColorStop(0, 'rgba(235,248,255,.55)'); g.addColorStop(1, 'rgba(210,235,250,.12)'); c.fillStyle = g; c.fillRect(0, 0, W, sy + 10 * OL);
+    const r = tohumRnd('buz' + Math.round(W)); c.strokeStyle = 'rgba(255,255,255,.55)'; c.lineWidth = 1; for (let i = 0; i < W / 50; i++) { let x = r() * W, y = sy + r() * 8 * OL; c.beginPath(); c.moveTo(x, y); for (let j = 0; j < 4; j++) { x += (r() - 0.5) * 40 * OL; y = sy + r() * 10 * OL; c.lineTo(x, y); } c.stroke(); }
+  }
+  /* yağmur: damlalar yüzeye vurur, halka yapar, küçük kabarcık bırakır */
+  if ((HV.h === 'yagmur' || HV.h === 'firtina') && !derin) {
+    const hiz = HV.h === 'firtina' ? 70 : 32; let n = hiz * dt; while (n > 0) { if (Math.random() < n) HV.damla.push({ x: Math.random() * W, t: 0, u: 8 + Math.random() * 26 }); n -= 1; }
+    for (let i = HV.damla.length - 1; i >= 0; i--) {
+      const d = HV.damla[i]; d.t += dt; if (d.t > 0.7) { HV.damla.splice(i, 1); continue; }
+      const a = 1 - d.t / 0.7, rr = (2 + d.t * 26) * OL;
+      c.strokeStyle = `rgba(230,245,255,${0.5 * a})`; c.lineWidth = 1; c.beginPath(); c.ellipse(d.x, sy + 2, rr, rr * 0.28, 0, 0, TAU); c.stroke();
+      if (d.t < 0.25) { c.strokeStyle = `rgba(230,245,255,${0.35 * (1 - d.t / 0.25)})`; c.beginPath(); c.moveTo(d.x, sy + 2 + d.t * d.u * 3 * OL); c.lineTo(d.x, sy + 2 + (d.t * 3 + 0.25) * d.u * OL); c.stroke(); }
+    }
+  }
+  /* sonbahar: yüzeyden yapraklar süzülür, kuma konar */
+  if (HV.m === 'sonbahar' && !derin) {
+    if (HV.yaprak.length < 6 && Math.random() < dt * 0.35) HV.yaprak.push({ x: Math.random() * W, y: sy, a: Math.random() * TAU, f: Math.random() * TAU, s: (7 + Math.random() * 6) * OL, r: ['#D9622B', '#E8A33A', '#B8452A', '#9C6B2E', '#E07B39'][Math.floor(Math.random() * 5)], t: 0 });
+    for (let i = HV.yaprak.length - 1; i >= 0; i--) {
+      const y = HV.yaprak[i]; y.t += dt; y.f += dt;
+      if (y.y < SAHNE.kumY - 2) { y.y += 14 * OL * dt; y.x += Math.sin(y.f * 0.9) * 22 * OL * dt + HV.akinti * 6 * OL * dt; y.a += Math.sin(y.f * 0.7) * dt * 1.2; } else if (y.t > 60) { HV.yaprak.splice(i, 1); continue; }
+      c.save(); c.translate(y.x, y.y); c.rotate(y.a); c.globalAlpha = y.t > 50 ? Math.max(0, 1 - (y.t - 50) / 10) : 0.92;
+      c.fillStyle = y.r; c.beginPath(); c.moveTo(-y.s, 0); c.quadraticCurveTo(0, -y.s * 0.6, y.s, 0); c.quadraticCurveTo(0, y.s * 0.6, -y.s, 0); c.fill();
+      c.strokeStyle = 'rgba(80,40,10,.5)'; c.lineWidth = 0.8; c.beginPath(); c.moveTo(-y.s * 1.25, 0); c.lineTo(y.s * 0.9, 0); for (const u of [-0.4, 0, 0.4]) { c.moveTo(y.s * u, 0); c.lineTo(y.s * (u + 0.3), -y.s * 0.3); c.moveTo(y.s * u, 0); c.lineTo(y.s * (u + 0.3), y.s * 0.3); } c.stroke();
+      c.restore();
+    }
+  }
+  /* bulut gölgeleri */
+  if ((HV.h === 'bulut' || HV.h === 'yagmur') && !derin) {
+    if (!HV.bulut.length) for (let i = 0; i < 3; i++) HV.bulut.push({ x: Math.random() * W, y: H * (0.2 + Math.random() * 0.6), r: (180 + Math.random() * 220) * OL, v: 6 + Math.random() * 8 });
+    c.globalCompositeOperation = 'multiply';
+    for (const b of HV.bulut) { b.x += b.v * dt; if (b.x - b.r > W) b.x = -b.r; const g = c.createRadialGradient(b.x, b.y, 0, b.x, b.y, b.r); g.addColorStop(0, `rgba(120,135,150,${HV.h === 'yagmur' ? 0.45 : 0.3})`); g.addColorStop(1, 'rgba(255,255,255,0)'); c.fillStyle = g; c.fillRect(b.x - b.r, b.y - b.r, b.r * 2, b.r * 2); }
+    c.globalCompositeOperation = 'source-over';
+  }
+  /* şimşek */
+  if (HV.h === 'firtina') {
+    HV.simsekZ -= dt; if (HV.simsekZ <= 0) { HV.simsekZ = 7 + Math.random() * 12; HV.simsek = derin ? 0.12 : 0.4; HV.gok = 0.9 + Math.random() * 0.8; }
+    if (HV.gok > 0) { HV.gok -= dt; if (HV.gok <= 0) SES.gok(); }
+  }
+  if (HV.simsek > 0) { c.globalCompositeOperation = 'lighter'; c.fillStyle = `rgba(215,228,255,${HV.simsek * (0.7 + 0.3 * Math.sin(t * 60))})`; c.fillRect(0, 0, W, H); HV.simsek = Math.max(0, HV.simsek - dt * 1.6); c.globalCompositeOperation = 'source-over'; }
+  /* renk: mevsimin tonu, havanın grisi, planktonun yeşili, genel aydınlık (gece biraz bastırılır) */
+  const gk = (1 - gece * 0.6) * (derin ? 0.35 : 1);
+  c.globalCompositeOperation = 'soft-light'; c.fillStyle = `rgba(${HV.renk.map(Math.round).join(',')},${HV.guc * 2 * (derin ? 0.5 : 1)})`; c.fillRect(0, 0, W, H);
+  if (HV.yesil > 0.01) { c.fillStyle = `rgba(110,190,90,${HV.yesil * 1.6})`; c.fillRect(0, 0, W, H); c.globalCompositeOperation = 'source-over'; c.fillStyle = `rgba(120,170,110,${HV.yesil * 0.35})`; c.fillRect(0, 0, W, H); }
+  if (HV.gri > 0.01) { c.globalCompositeOperation = 'saturation'; c.fillStyle = `rgba(128,128,128,${HV.gri})`; c.fillRect(0, 0, W, H); }
+  const p = HV.parlak * gk;
+  if (p > 0.005) { c.globalCompositeOperation = 'screen'; c.fillStyle = `rgba(190,235,255,${p})`; c.fillRect(0, 0, W, H); }
+  else if (p < -0.005) { c.globalCompositeOperation = 'multiply'; c.fillStyle = `rgba(70,80,100,${Math.min(0.6, -p * 2.6 / (derin ? 0.35 : 1) * (derin ? 0.6 : 1))})`; c.fillRect(0, 0, W, H); }
+  c.restore();
+}
 /* ansiklopediye işle */
 for (const [k, b] of Object.entries(CANLI_BILGI)) ANSIK[k] = [[b[0], b[1], b[2]], [b[3], b[4]]];
 
@@ -4247,6 +4364,8 @@ try { if (localStorage.getItem('derin-panel-kapali') === '1') $('panel').classLi
 panelKapaYaz();
 $('panelKapa').onclick = e => { e.stopPropagation(); const k = $('panel').classList.toggle('kapali'); try { localStorage.setItem('derin-panel-kapali', k ? '1' : '0'); } catch (er) { } panelKapaYaz(); SES.kabarcik(0.015); };
 setInterval(() => { if (!S) return; const k = $('panel').classList.contains('kapali'); $('panelKapa').classList.toggle('uyar', k && (S.tok < 30 || !!$('secimBtn') && !$('secimBtn').hidden && $('secimBtn').dataset.is === 'acil')); }, 2000);
+$('havaCip').onclick = () => { if (!HV.h) return; const H = HAVALAR[HV.h], M = MEVSIMLER[HV.m]; duyur(`${M.e} ${T(M.ad[0], M.ad[1])} · ${H.e} ${T(H.ad[0] + '. ' + H.bilgi[0], H.ad[1] + '. ' + H.bilgi[1])} ${T('Hava günde dört kez değişir.', 'The weather changes four times a day.')}`); };
+setInterval(havaCipYaz, 2000);
 const sesYaz = () => { const d = SES.duzey(); $('sesBtn').textContent = d <= 0 ? '🔇' : d < 0.5 ? '🔉' : '🔊'; $('sesSus').textContent = d <= 0 ? '🔇' : '🔈'; $('sesYuzde').textContent = '%' + Math.round(d * 100); };
 $('sesBtn').onclick = () => { $('sesKutu').hidden = !$('sesKutu').hidden; };
 $('sesKaydir').value = Math.round(SES.duzey() * 100);
