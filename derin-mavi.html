@@ -770,6 +770,7 @@ const SES = (() => {
     basari: () => { ton(620, 930, 0.12, 'sine', 0.04); ton(930, 1240, 0.16, 'sine', 0.035, 0.11); },
     kutla: () => [523, 659, 784, 1047].forEach((f, i) => ton(f, f * 1.01, 0.32, 'triangle', 0.04, i * 0.12)),
     selam: () => ton(700, 1050, 0.12, 'sine', 0.03),
+    sarki: () => { [[180, 340, 1.6, 0], [340, 220, 1.3, 1.5], [150, 120, 2.2, 3.0], [260, 520, 1.1, 5.2], [520, 300, 1.4, 6.2]].forEach(([a, b, d, g]) => { ton(a, b, d, 'sine', 0.035, g); ton(a * 1.5, b * 1.5, d, 'sine', 0.008, g + 0.05); }); },
     hediye: () => { ton(660, 990, 0.14, 'sine', 0.035); ton(990, 1320, 0.18, 'sine', 0.03, 0.12); },
     dogum: () => { ton(260, 620, 0.35, 'sine', 0.05); setTimeout(() => kabarcik(0.012), 250); },
     duzey: () => duzey,
@@ -1105,6 +1106,7 @@ function arkaPlan(c, t) {
     const rr = p.s * (0.8 + z * 2.2); c.globalAlpha = (derin ? 0.35 : 0.22) * (0.4 + z * 0.6); c.drawImage(SAHNE.nokta, p.x - rr, p.y - rr, rr * 2, rr * 2);
   }
   c.restore();
+  gzArkaCiz(c);
   hedefSusleri(c, t, 'arka');
   /* yosunlar (kökleri kumun arkasında kalır) */
   for (const y of SAHNE.yosun) yosunCiz(c, y, t, kumY);
@@ -3267,6 +3269,7 @@ function canliGuncelle(dt) {
     const yakin = { ahtapot: 70, yildiz: 0, karides: 60, balon: 70, dvatoz: 60, kalamar: 80, salyangoz: 40, ermit: 45, isik: 70 }[o.tur];
     if (yakin && (o.tur !== 'isik' || gece > 0.3 || SAHNE.tm === 'derin') && canliYakin(o, yakin)) canliTepki(o);
   }
+  gzGuncelle(dt);
   /* yunus: arada bir yüzeyden geçer */
   if (SAHNE.tm !== 'derin') {
     if (!CNL.yunus) { CNL.yunusZ -= dt; if (CNL.yunusZ <= 0) { const d = Math.random() < 0.5 ? 1 : -1; CNL.yunus = { tur: 'yunus', x: d > 0 ? -150 : W + 150, y: A.y1 + 30 * OL, d, f: 0, bekle: 0, tepki: 0 }; CNL.yunusZ = rnd(150, 330); } }
@@ -3298,8 +3301,10 @@ function canliCiz(c, sadeceIsik) {
   }
   const y = CNL.yunus; if (y && !sadeceIsik) { const s = 70 * OL; c.save(); c.translate(y.x, y.y); c.scale(y.d, 1); c.rotate(Math.cos(y.f * 1.6) * 0.18); c.fillStyle = '#8FA3B5'; c.beginPath(); c.moveTo(s * 0.62, 0); c.lineTo(s * 0.48, -s * 0.05); c.quadraticCurveTo(s * 0.1, -s * 0.24, -s * 0.45, -s * 0.06); c.lineTo(-s * 0.62, -s * 0.18); c.lineTo(-s * 0.55, 0); c.lineTo(-s * 0.62, s * 0.18); c.lineTo(-s * 0.45, s * 0.06); c.quadraticCurveTo(s * 0.1, s * 0.16, s * 0.48, s * 0.04); c.closePath(); c.fill();
     c.beginPath(); c.moveTo(0, -s * 0.15); c.lineTo(-s * 0.12, -s * 0.34); c.lineTo(-s * 0.2, -s * 0.12); c.fill(); c.fillStyle = '#D6E2EC'; c.beginPath(); c.ellipse(s * 0.1, s * 0.07, s * 0.3, s * 0.05, 0, 0, TAU); c.fill(); c.fillStyle = '#1B2733'; c.beginPath(); c.arc(s * 0.38, -s * 0.06, 2.2, 0, TAU); c.fill(); c.restore(); }
+  if (!sadeceIsik) gzCiz(c);
 }
 function canliDokun(x, y) {
+  if (gzDokun(x, y)) return true;
   for (const o of CNL.L) {
     if (o.tur === 'isik') { if (geceDegeri() < 0.3 && SAHNE.tm !== 'derin') continue; if (Math.hypot(o.x - x, o.y - y) < 60 * OL) { canliTepki(o); return true; } continue; }
     const r = { ahtapot: 26, yildiz: 18, karides: 16, balon: 22, dvatoz: 34, kalamar: 26, salyangoz: 16, ermit: 18 }[o.tur] * OL;
@@ -3308,6 +3313,352 @@ function canliDokun(x, y) {
   const yn = CNL.yunus; if (yn && Math.hypot(yn.x - x, yn.y - y) < 50 * OL) { if (!yn.bekle) { yn.bekle = 3; albumEkle('canli:yunus'); mutluEkle(2, 'canli', 20); SES.kutla(); for (let i = 0; i < 14; i++) PARC.push({ x: yn.x, y: ALAN.y1 - 5, vx: rnd(-90, 90), vy: rnd(-100, -20), t: 0.9, c: '#E6F7FF', r: rnd(1.5, 3) }); BALON.push({ x: yn.x, y: yn.y - 30, e: '🐬', t: 2 }); } return true; }
   return false;
 }
+/* =====================================================================
+   GEÇEN ZİYARETÇİLER: arada bir ekrandan geçip giden türler.
+   Kaplumbağa, palyaço çifti, papağan balığı, aslan balığı, kutu balığı, kelebek balıkları, manta,
+   deniz ineği, barakuda sürüsü, ay balığı, fok, balina köpekbalığı, uzaktan kambur balina;
+   derinde dumbo ahtapot, dev kalamar, sifonofor, pelikan yılanbalığı.
+   Yanına yüz ya da dokun: albüme girer, ilk tanışmada inci verir, ansiklopediye bilgisi düşer.
+   n: 1 yaygın, 2 nadir, 3 çok nadir · h: kumla yüzey arasındaki yükseklik aralığı · v: hız · b: boy
+   ===================================================================== */
+const GZ_TUR = {
+  dkaplumbaga: { e: '🐢', ad: ['Yeşil deniz kaplumbağası', 'Green sea turtle'], al: ['resif', 'acik'], n: 1, h: [0.25, 0.65], v: 26, b: 92, bilgi: ['Yumurtadan çıktığı kumsala yıllar sonra yumurtlamak için geri döner. 80 yıldan fazla yaşayabilir; uyurken nefesini saatlerce tutar.', 'Returns to the beach where it hatched, years later, to lay its own eggs. It can live over 80 years and holds its breath for hours while sleeping.'] },
+  palyacocift: { e: '🐠', ad: ['Palyaço balığı çifti', 'Clownfish pair'], al: ['resif'], n: 1, h: [0.45, 0.85], v: 34, b: 28, bilgi: ['Anemonun yakıcı dokunaçları arasında yaşar; derisindeki mukus onu korur. Hepsi erkek doğar, grubun en büyüğü dişiye dönüşür.', 'Lives among an anemone’s stinging tentacles, protected by its mucus. All are born male; the largest in the group becomes female.'] },
+  papagan: { e: '🐟', ad: ['Papağan balığı', 'Parrotfish'], al: ['resif'], n: 1, h: [0.35, 0.8], v: 38, b: 62, bilgi: ['Gagasıyla mercan kemirir, sindiremediğini kum olarak dışarı atar; tropik kumsalların kumunun bir kısmını o üretir. Geceleri mukustan bir uyku tulumu örer.', 'Bites coral and passes what it cannot digest as sand; some tropical beach sand is made by it. At night it wraps itself in a mucus sleeping bag.'] },
+  aslan: { e: '🦁', ad: ['Aslan balığı', 'Lionfish'], al: ['resif'], n: 2, h: [0.45, 0.85], v: 18, b: 58, bilgi: ['Yelpaze gibi açılan yüzgeçlerindeki dikenler zehirlidir. Yüzgeçlerini açarak küçük balıkları köşeye sıkıştırır ve tek hamlede yutar.', 'The spines on its fan-like fins are venomous. It spreads its fins to corner small fish and swallows them in one gulp.'] },
+  kutu: { e: '🟨', ad: ['Sarı kutu balığı', 'Yellow boxfish'], al: ['resif'], n: 1, h: [0.4, 0.85], v: 22, b: 34, bilgi: ['Gövdesi kemik plakalardan bir kutudur, eğilip bükülemez; sadece yüzgeçlerini çırparak helikopter gibi yüzer. Tehlikede derisinden zehir salar.', 'Its body is a rigid box of bony plates; it hovers like a helicopter, moving only its fins. In danger it releases a toxin from its skin.'] },
+  kelebek: { e: '🦋', ad: ['Kelebek balıkları', 'Butterflyfish'], al: ['resif', 'acik'], n: 1, h: [0.3, 0.75], v: 40, b: 24, bilgi: ['Kuyruğuna yakın sahte bir göz lekesi taşır; avcı onu baş sanıp yanlış yöne saldırır. Çoğu ömür boyu aynı eşle gezer.', 'Carries a fake eyespot near its tail so predators strike the wrong end. Most stay with the same partner for life.'] },
+  manta: { e: '🛸', ad: ['Manta vatozu', 'Manta ray'], al: ['resif', 'acik'], n: 2, h: [0.15, 0.5], v: 34, b: 130, bilgi: ['Kanat açıklığı 7 metreyi bulur. Beyni balıklar arasında en büyüğüdür; aynada kendini tanıyabildiği düşünülür. Keyfinden ters taklalar atar.', 'Wingspan up to 7 m. It has the largest brain of any fish and may recognise itself in a mirror. It does backflips while feeding.'] },
+  dugong: { e: '🦭', ad: ['Deniz ineği (dugong)', 'Dugong (sea cow)'], al: ['resif', 'acik'], n: 3, h: [0.6, 0.85], v: 20, b: 130, bilgi: ['Deniz çayırı otlayan, 70 yıl yaşayabilen bir memelidir; nefes almak için yüzeye çıkar. Denizkızı efsanelerinin kaynağı olduğu düşünülür.', 'A seagrass-grazing mammal that can live 70 years and surfaces to breathe. Thought to have inspired mermaid legends.'] },
+  barakuda: { e: '🐟', ad: ['Barakuda sürüsü', 'Barracuda school'], al: ['acik', 'resif'], n: 1, h: [0.15, 0.55], v: 70, b: 64, bilgi: ['Saatte 40 kilometreyi aşan hızlarla avına atılır. Gençken sürüyle, büyüyünce çoğu zaman yalnız avlanır; parlayan şeyleri balık sanabilir.', 'It strikes at over 40 km/h. Young ones school, adults usually hunt alone; it can mistake shiny objects for fish.'] },
+  mola: { e: '🌕', ad: ['Ay balığı (mola mola)', 'Ocean sunfish (mola)'], al: ['acik'], n: 2, h: [0.15, 0.45], v: 16, b: 96, bilgi: ['Dünyanın en ağır kemikli balığıdır, 2 tonu geçebilir. Derinden çıkınca yüzeyde yan yatıp güneşlenir; martılar sırtındaki parazitleri temizler.', 'The heaviest bony fish, over 2 tonnes. After deep dives it lies on its side at the surface to warm up while gulls pick off its parasites.'] },
+  fok: { e: '🦭', ad: ['Fok', 'Seal'], al: ['acik'], n: 2, h: [0.2, 0.6], v: 95, b: 100, bilgi: ['Bıyıklarıyla sudaki en küçük titreşimi hisseder; karanlıkta bile balık bulur. Nefesini yarım saat tutabilir, oyun oynamayı çok sever.', 'Its whiskers feel the tiniest vibrations in the water, finding fish even in the dark. It can hold its breath for half an hour and loves to play.'] },
+  balinakb: { e: '🦈', ad: ['Balina köpekbalığı', 'Whale shark'], al: ['acik', 'resif'], n: 3, h: [0.2, 0.5], v: 30, b: 280, bilgi: ['Dünyanın en büyük balığıdır, 12 metreyi geçer; ama sadece plankton yer ve insanlara zararsızdır. Her birinin benek deseni parmak izi gibi eşsizdir.', 'The largest fish in the world, over 12 m, yet it eats only plankton and is harmless to people. Each one’s spot pattern is as unique as a fingerprint.'] },
+  kambur: { e: '🐋', ad: ['Kambur balina', 'Humpback whale'], al: ['acik', 'resif'], n: 3, h: [0.12, 0.3], v: 24, b: 520, arka: 1, bilgi: ['Erkekleri saatlerce süren şarkılar söyler; şarkı her yıl değişir ve okyanusta binlerce kilometre yayılır. Yüzgeçleri gövdesinin üçte biri kadar uzundur.', 'Males sing songs lasting hours; the song changes every year and travels thousands of kilometres. Its flippers are a third as long as its body.'] },
+  dumbo: { e: '🐙', ad: ['Dumbo ahtapot', 'Dumbo octopus'], al: ['derin'], n: 1, h: [0.3, 0.75], v: 16, b: 62, bilgi: ['Kulağa benzeyen yüzgeçlerini çırparak süzülür. 4000 metrenin altında yaşayabilen, bilinen en derin ahtapottur; avını bütün olarak yutar.', 'Glides by flapping ear-like fins. It is the deepest-living octopus known, below 4000 m, and swallows its prey whole.'] },
+  devkalamar: { e: '🦑', ad: ['Dev kalamar', 'Giant squid'], al: ['derin'], n: 3, h: [0.25, 0.6], v: 22, b: 230, bilgi: ['Gözleri futbol topu büyüklüğündedir, hayvanlar âleminin en büyük gözü. Canlı hâli ilk kez 2004’te fotoğraflanabildi.', 'Its eyes are the size of a football, the largest in the animal kingdom. It was first photographed alive in 2004.'] },
+  sifonofor: { e: '✨', ad: ['Sifonofor', 'Siphonophore'], al: ['derin'], n: 2, h: [0.15, 0.55], v: 14, b: 280, bilgi: ['Tek bir hayvan değil, birbirine bağlı binlerce minik canlıdan oluşan bir koloni. 40 metreyi aşanları bulundu; dünyanın en uzun canlılarındandır.', 'Not one animal but a colony of thousands of tiny linked zooids. Some over 40 m long have been found, among the longest creatures on Earth.'] },
+  pelikan: { e: '🪱', ad: ['Pelikan yılanbalığı', 'Gulper eel'], al: ['derin'], n: 2, h: [0.2, 0.7], v: 30, b: 170, bilgi: ['Ağzı gövdesinden büyüktür, kendisinden iri avı yutabilir. Kuyruğunun ucunda pembe bir ışık yanar; avını bununla çektiği düşünülür.', 'Its mouth is bigger than its body and can swallow prey larger than itself. The tip of its tail glows pink, probably to lure prey.'] }
+};
+const GZ = { o: null, z: 12 + Math.random() * 10, son: null };
+for (const [k, g] of Object.entries(GZ_TUR)) {
+  CANLI_BILGI[k] = [g.e, g.ad[0], g.ad[1], g.bilgi[0], g.bilgi[1]];
+  ALBUM.push({ k: 'canli:' + k, grup: 'canli', e: g.e, ad: g.ad, ip: [`Arada bir geçer (${g.al.map(a => ALANLAR[a].ad[0].toLowerCase()).join(', ')})`, `Passes by now and then (${g.al.map(a => ALANLAR[a].ad[1].toLowerCase()).join(', ')})`] });
+}
+const GZ_INCI = { 1: 4, 2: 10, 3: 25 };
+function gzBaslat(tur) {
+  const tm = SAHNE.tm, liste = Object.keys(GZ_TUR).filter(k => GZ_TUR[k].al.includes(tm) && k !== GZ.son);
+  if (!tur) { const ag = liste.map(k => ({ 1: 10, 2: 3.5, 3: 1 })[GZ_TUR[k].n]); let r = Math.random() * ag.reduce((a, b) => a + b, 0); tur = liste.find((k, i) => (r -= ag[i]) < 0) || liste[0]; }
+  if (!tur || !GZ_TUR[tur]) return;
+  const g = GZ_TUR[tur], d = Math.random() < 0.5 ? 1 : -1, s = g.b * OL, kumY = SAHNE.kumY, y1 = ALAN.y1;
+  const yb = y1 + (kumY - y1) * (g.h[0] + Math.random() * (g.h[1] - g.h[0]));
+  GZ.o = { tur, d, s, x: d > 0 ? -s * 0.9 : W + s * 0.9, y: yb, yb, f: Math.random() * 9, tepki: 0, bekle: 0, don: 0 };
+  GZ.son = tur;
+  const yeni = S && !S.alb['canli:' + tur];
+  if (g.n >= 2 || yeni) duyur(T(`${g.e} ${g.ad[0]} geçiyor! ${yeni ? 'Yanına yüz, tanış' : 'Yanına yüz'}`, `${g.e} A ${g.ad[1].toLowerCase()} is passing by! Swim over${yeni ? ' and say hi' : ''}`), g.n >= 2);
+  if (tur === 'kambur') SES.sarki();
+}
+function gzTepki(o) {
+  if (o.bekle > 0) return false;
+  const g = GZ_TUR[o.tur]; o.bekle = 6; o.tepki = 2.5;
+  if (o.tur === 'fok' || o.tur === 'manta') o.don = 1;
+  if (o.tur === 'kambur') SES.sarki(); else if (g.n >= 2) SES.kutla(); else SES.selam();
+  BALON.push({ x: o.x, y: o.y - (o.tur === 'kambur' ? 0 : o.s * 0.3) - 10, e: g.e, t: 2 });
+  mutluEkle(g.n >= 2 ? 2 : 1, 'canli', 20);
+  if (S && !S.alb['canli:' + o.tur]) { const inci = GZ_INCI[g.n]; S.inci += inci; albumEkle('canli:' + o.tur); duyur(T(`${g.e} ${g.ad[0]} ile tanıştın! +${inci} inci · Ansiklopedide hakkında bilgi var`, `${g.e} You met a ${g.ad[1].toLowerCase()}! +${inci} pearls · See the encyclopaedia`), 1); }
+  for (let i = 0; i < 10; i++) PARC.push({ x: o.x + rnd(-20, 20), y: o.y + rnd(-15, 15), vx: rnd(-30, 30), vy: rnd(-60, -20), t: 1, kab: 1, r: rnd(1.5, 3.5) });
+  return true;
+}
+function gzGuncelle(dt) {
+  if (!SAHNE) return;
+  if (GZ.o && !GZ_TUR[GZ.o.tur].al.includes(SAHNE.tm)) GZ.o = null;
+  if (!GZ.o) { GZ.z -= dt; if (GZ.z <= 0) { GZ.z = rnd(35, 75); gzBaslat(); } return; }
+  const o = GZ.o, g = GZ_TUR[o.tur];
+  o.f += dt; o.bekle = Math.max(0, o.bekle - dt); o.tepki = Math.max(0, o.tepki - dt); if (o.don > 0) o.don = Math.max(0, o.don - dt * 0.9);
+  const agir = ['dkaplumbaga', 'mola', 'dugong', 'kambur', 'balinakb', 'devkalamar', 'sifonofor'].includes(o.tur);
+  o.x += o.d * g.v * OL * dt * (agir ? 1 : 1 + o.tepki * 0.5);
+  const dal = { fok: [42, 0.9], dumbo: [16, 0.7], pelikan: [20, 0.4], manta: [14, 0.35], kambur: [10, 0.15], balinakb: [8, 0.2] }[o.tur] || [10, 0.5];
+  o.y = o.yb + Math.sin(o.f * dal[1]) * dal[0] * OL;
+  if ((o.d > 0 && o.x > W + o.s) || (o.d < 0 && o.x < -o.s)) GZ.o = null;
+  else if (!g.arka && canliYakin(o, Math.max(40, o.s * 0.35))) gzTepki(o);
+}
+function gzDokun(x, y) {
+  const o = GZ.o; if (!o) return false;
+  const r = o.tur === 'kambur' ? o.s * 0.45 : Math.max(30 * OL, o.s * 0.45);
+  if (Math.abs(x - o.x) < r && Math.abs(y - o.y) < Math.max(28 * OL, o.s * (o.tur === 'kambur' ? 0.12 : 0.3))) { if (!gzTepki(o)) SES.kabarcik(0.015); return true; }
+  return false;
+}
+/* ---------- çizim yardımcıları ---------- */
+function gzGoz(c, x, y, r, renk) { c.fillStyle = renk || '#0A0E12'; c.beginPath(); c.arc(x, y, r, 0, TAU); c.fill(); c.fillStyle = 'rgba(255,255,255,.85)'; c.beginPath(); c.arc(x + r * 0.3, y - r * 0.35, r * 0.32, 0, TAU); c.fill(); }
+function gzDikey(c, y0, y1, a, b, m) { const g = c.createLinearGradient(0, y0, 0, y1); g.addColorStop(0, a); if (m) g.addColorStop(0.5, m); g.addColorStop(1, b); return g; }
+function gzYaprak(c, x, y, a, L, w, renk) { c.save(); c.translate(x, y); c.rotate(a); c.fillStyle = renk; c.beginPath(); c.moveTo(0, -w * 0.5); c.quadraticCurveTo(L * 0.45, -w * 1.15, L, 0); c.quadraticCurveTo(L * 0.5, w * 0.55, 0, w * 0.5); c.closePath(); c.fill(); c.restore(); }
+function gzKucukPalyaco(c, s, f) {
+  const rx = s * 0.5, ry = s * 0.27, kw = Math.sin(f * 9) * 0.35;
+  c.save(); c.translate(-rx * 0.95, 0); c.rotate(kw); c.fillStyle = '#F26B12'; c.beginPath(); c.moveTo(0, 0); c.quadraticCurveTo(-s * 0.3, -s * 0.3, -s * 0.3, 0); c.quadraticCurveTo(-s * 0.3, s * 0.3, 0, 0); c.fill(); c.strokeStyle = '#141414'; c.lineWidth = Math.max(0.8, s * 0.04); c.stroke(); c.restore();
+  c.fillStyle = '#F26B12'; c.beginPath(); c.moveTo(s * 0.1, -ry * 0.9); c.quadraticCurveTo(-s * 0.05, -ry * 1.75, -s * 0.32, -ry * 0.8); c.fill(); c.strokeStyle = '#141414'; c.lineWidth = Math.max(0.7, s * 0.03); c.stroke();
+  c.beginPath(); c.ellipse(0, 0, rx, ry, 0, 0, TAU); c.fillStyle = gzDikey(c, -ry, ry, '#E2560A', '#FFB060', '#FF8424'); c.fill();
+  c.save(); c.beginPath(); c.ellipse(0, 0, rx, ry, 0, 0, TAU); c.clip();
+  for (const [bx, bw] of [[s * 0.27, 0.075], [-s * 0.02, 0.09], [-s * 0.34, 0.06]]) { c.fillStyle = '#FFFFFF'; c.strokeStyle = '#141414'; c.lineWidth = Math.max(0.8, s * 0.035); c.beginPath(); c.ellipse(bx, 0, s * bw, ry * 1.2, 0.08, 0, TAU); c.fill(); c.stroke(); }
+  c.fillStyle = 'rgba(255,255,255,.25)'; c.fillRect(-rx, -ry, rx * 2, ry * 0.5); c.restore();
+  gzGoz(c, s * 0.36, -s * 0.06, Math.max(1, s * 0.055));
+}
+/* ---------- türlerin çizimi (sağa bakar) ---------- */
+function gzTurCiz(c, o) {
+  const s = o.s, f = o.f, tp = o.tepki;
+  switch (o.tur) {
+    case 'dkaplumbaga': {
+      const k = Math.sin(f * 1.25);
+      gzYaprak(c, s * 0.16, s * 0.02, 2.2 + k * 0.55, s * 0.5, s * 0.12, '#4A5634');
+      gzYaprak(c, -s * 0.38, s * 0.1, 2.6 + k * 0.25, s * 0.2, s * 0.1, '#4A5634');
+      /* boyun ve baş (selamlarken başını sallar) */
+      const ba = tp > 0 ? Math.sin(f * 10) * 0.12 : Math.sin(f * 0.6) * 0.05;
+      c.save(); c.translate(s * 0.44, s * 0.02); c.rotate(ba);
+      c.fillStyle = '#7C8A55'; c.beginPath(); c.ellipse(s * 0.06, 0, s * 0.13, s * 0.075, 0, 0, TAU); c.fill();
+      c.fillStyle = gzDikey(c, -s * 0.09, s * 0.09, '#6E7B45', '#C8C59A', '#8E9A62'); c.beginPath(); c.ellipse(s * 0.2, -s * 0.01, s * 0.12, s * 0.085, -0.1, 0, TAU); c.fill();
+      c.strokeStyle = 'rgba(40,45,20,.45)'; c.lineWidth = Math.max(0.6, s * 0.006); for (let i = 0; i < 4; i++) { c.beginPath(); c.arc(s * (0.14 + i * 0.045), -s * 0.03, s * 0.03, 0, Math.PI); c.stroke(); }
+      gzGoz(c, s * 0.26, -s * 0.035, Math.max(1.2, s * 0.022)); c.strokeStyle = 'rgba(30,30,15,.6)'; c.beginPath(); c.moveTo(s * 0.31, s * 0.02); c.lineTo(s * 0.22, s * 0.035); c.stroke();
+      c.restore();
+      /* kabuk */
+      const kab = () => { c.beginPath(); c.moveTo(-s * 0.52, s * 0.1); c.bezierCurveTo(-s * 0.5, -s * 0.36, s * 0.4, -s * 0.4, s * 0.5, s * 0.06); c.quadraticCurveTo(0, s * 0.2, -s * 0.52, s * 0.1); c.closePath(); };
+      kab(); c.fillStyle = gzDikey(c, -s * 0.3, s * 0.15, '#7A6230', '#3A2E18', '#5C4A24'); c.fill();
+      c.save(); kab(); c.clip();
+      const pul = (x, y, r) => { const g = c.createRadialGradient(x - r * 0.2, y - r * 0.3, 0, x, y, r); g.addColorStop(0, '#C9A35A'); g.addColorStop(0.6, '#8A6A32'); g.addColorStop(1, '#4E3B1C'); c.fillStyle = g; c.beginPath(); for (let i = 0; i < 6; i++) { const a = i / 6 * TAU + 0.5; c.lineTo(x + Math.cos(a) * r, y + Math.sin(a) * r * 0.8); } c.closePath(); c.fill(); c.strokeStyle = 'rgba(30,22,10,.7)'; c.lineWidth = Math.max(0.8, s * 0.008); c.stroke(); };
+      for (const x of [-0.2, 0, 0.2]) pul(x * s, -s * 0.2, s * 0.105);
+      for (const x of [-0.33, -0.11, 0.11, 0.32]) pul(x * s, -s * 0.03, s * 0.1);
+      c.fillStyle = 'rgba(255,240,200,.18)'; c.beginPath(); c.ellipse(-s * 0.05, -s * 0.24, s * 0.3, s * 0.06, -0.1, 0, TAU); c.fill();
+      c.restore();
+      c.strokeStyle = '#D8C99A'; c.lineWidth = s * 0.035; c.beginPath(); c.moveTo(-s * 0.48, s * 0.1); c.quadraticCurveTo(0, s * 0.18, s * 0.46, s * 0.07); c.stroke();
+      gzYaprak(c, s * 0.2, s * 0.08, 2.0 + k * 0.7, s * 0.58, s * 0.14, '#6F7D48');
+      c.fillStyle = 'rgba(220,220,170,.35)'; for (let i = 0; i < 4; i++) { const a = 2.0 + k * 0.7; c.beginPath(); c.arc(s * 0.2 + Math.cos(a) * s * (0.12 + i * 0.1), s * 0.08 + Math.sin(a) * s * (0.12 + i * 0.1), s * 0.018, 0, TAU); c.fill(); }
+      break;
+    }
+    case 'palyacocift': {
+      const ox = -s * 1.5 + Math.sin(f * (tp > 0 ? 3 : 0.9)) * s * 0.5, oy = s * 0.45 + Math.cos(f * (tp > 0 ? 3 : 0.7)) * s * 0.4;
+      c.save(); c.translate(ox, oy); c.scale(0.82, 0.82); gzKucukPalyaco(c, s, f + 1.3); c.restore();
+      gzKucukPalyaco(c, s, f);
+      break;
+    }
+    case 'papagan': {
+      const rx = s * 0.5, ry = s * 0.24, kw = Math.sin(f * 3) * 0.25;
+      c.save(); c.translate(-rx * 0.92, 0); c.rotate(kw); c.fillStyle = '#21A889'; c.beginPath(); c.moveTo(0, -ry * 0.25); c.quadraticCurveTo(-s * 0.2, -s * 0.34, -s * 0.28, -s * 0.3); c.quadraticCurveTo(-s * 0.18, 0, -s * 0.28, s * 0.3); c.quadraticCurveTo(-s * 0.2, s * 0.34, 0, ry * 0.25); c.fill(); c.strokeStyle = '#F07AA8'; c.lineWidth = s * 0.025; c.stroke(); c.restore();
+      c.fillStyle = '#2BB496'; c.beginPath(); c.moveTo(s * 0.25, -ry * 0.85); c.quadraticCurveTo(-s * 0.05, -ry * 1.5, -s * 0.45, -ry * 0.45); c.lineTo(-s * 0.4, -ry * 0.3); c.closePath(); c.fill(); c.strokeStyle = '#F07AA8'; c.lineWidth = s * 0.02; c.stroke();
+      c.beginPath(); c.moveTo(s * 0.05, ry * 0.85); c.quadraticCurveTo(-s * 0.2, ry * 1.35, -s * 0.42, ry * 0.4); c.closePath(); c.fill();
+      const yol = () => { c.beginPath(); c.moveTo(rx, ry * 0.1); c.bezierCurveTo(rx * 0.95, -ry * 1.15, -rx * 0.6, -ry * 1.05, -rx, -ry * 0.25); c.lineTo(-rx, ry * 0.25); c.bezierCurveTo(-rx * 0.6, ry * 1.05, rx * 0.9, ry * 1.1, rx, ry * 0.1); c.closePath(); };
+      yol(); c.fillStyle = gzDikey(c, -ry, ry, '#13856F', '#A8EBD0', '#3CCBA8'); c.fill();
+      c.save(); yol(); c.clip(); c.strokeStyle = 'rgba(240,120,170,.55)'; c.lineWidth = Math.max(0.7, s * 0.012); const ps = s * 0.07;
+      for (let yy = -ry; yy < ry; yy += ps * 0.8) for (let xx = rx * 0.6; xx > -rx; xx -= ps) { const ox2 = (Math.round(yy / ps) % 2) * ps * 0.5; c.beginPath(); c.arc(xx - ox2, yy, ps * 0.55, -Math.PI / 2, Math.PI / 2); c.stroke(); }
+      c.strokeStyle = '#F07AA8'; c.lineWidth = s * 0.03; c.beginPath(); c.moveTo(rx * 0.95, ry * 0.25); c.quadraticCurveTo(rx * 0.55, ry * 0.2, rx * 0.4, -ry * 0.5); c.stroke(); c.beginPath(); c.moveTo(rx * 0.9, -ry * 0.2); c.lineTo(rx * 0.6, -ry * 0.75); c.stroke();
+      c.fillStyle = 'rgba(255,255,255,.2)'; c.fillRect(-rx, -ry, rx * 2, ry * 0.6); c.restore();
+      c.fillStyle = '#E8F4EC'; c.beginPath(); c.moveTo(rx * 0.86, -ry * 0.12); c.quadraticCurveTo(rx * 1.12, -ry * 0.05, rx * 1.04, ry * 0.2); c.quadraticCurveTo(rx * 0.92, ry * 0.32, rx * 0.84, ry * 0.18); c.closePath(); c.fill(); c.strokeStyle = 'rgba(0,0,0,.3)'; c.lineWidth = 0.8; c.beginPath(); c.moveTo(rx * 0.86, ry * 0.05); c.lineTo(rx * 1.07, ry * 0.06); c.stroke();
+      c.fillStyle = '#F7B26A'; c.beginPath(); c.arc(rx * 0.62, -ry * 0.3, s * 0.045, 0, TAU); c.fill(); gzGoz(c, rx * 0.63, -ry * 0.3, s * 0.026);
+      gzYaprak(c, rx * 0.35, ry * 0.2, 2.6 + Math.sin(f * 5) * 0.5, s * 0.18, s * 0.08, 'rgba(60,200,170,.75)');
+      break;
+    }
+    case 'aslan': {
+      const rx = s * 0.45, ry = s * 0.19, ac = 1 + (tp > 0 ? Math.min(1, tp) * 0.35 : 0);
+      /* göğüs yelpazeleri (arkadaki) */
+      const yelpaze = (x, y, a0, a1, L, al) => { c.save(); c.translate(x, y); for (let i = 0; i < 11; i++) { const a = a0 + (a1 - a0) * i / 10 + Math.sin(f * 1.5 + i * 0.3) * 0.05, l = L * (0.8 + 0.25 * Math.sin(i * 1.7)); c.strokeStyle = `rgba(150,40,30,${al})`; c.lineWidth = Math.max(0.8, s * 0.018); c.setLineDash([s * 0.04, s * 0.03]); c.beginPath(); c.moveTo(0, 0); c.lineTo(Math.cos(a) * l, Math.sin(a) * l); c.stroke(); } c.setLineDash([]); c.fillStyle = `rgba(240,215,190,${al * 0.28})`; c.beginPath(); c.moveTo(0, 0); for (let i = 0; i <= 10; i++) { const a = a0 + (a1 - a0) * i / 10; c.lineTo(Math.cos(a) * L * 0.85, Math.sin(a) * L * 0.85); } c.fill(); c.restore(); };
+      yelpaze(s * 0.08, s * 0.05, 1.3 * ac, 2.9, s * 0.62 * ac, 0.55);
+      /* sırt dikenleri */
+      for (let i = 0; i < 12; i++) { const bx = s * 0.22 - i * s * 0.05, a = -1.75 - i * 0.07 + Math.sin(f + i * 0.4) * 0.04, l = s * (0.55 - Math.abs(i - 3) * 0.03) * ac; c.strokeStyle = '#F2E2CC'; c.lineWidth = Math.max(1, s * 0.022); c.beginPath(); c.moveTo(bx, -ry * 0.8); c.lineTo(bx + Math.cos(a) * l, -ry * 0.8 + Math.sin(a) * l); c.stroke(); c.strokeStyle = '#8A2A1E'; c.setLineDash([s * 0.05, s * 0.05]); c.stroke(); c.setLineDash([]); }
+      c.fillStyle = 'rgba(200,120,100,.25)'; c.beginPath(); c.moveTo(s * 0.22, -ry * 0.8); for (let i = 0; i < 12; i++) { const bx = s * 0.22 - i * s * 0.05, a = -1.75 - i * 0.07; c.lineTo(bx + Math.cos(a) * s * 0.22, -ry * 0.8 + Math.sin(a) * s * 0.22); } c.lineTo(-s * 0.35, -ry * 0.5); c.fill();
+      /* kuyruk */
+      c.save(); c.translate(-rx * 0.95, 0); c.rotate(Math.sin(f * 2) * 0.2); c.fillStyle = 'rgba(240,220,200,.45)'; c.beginPath(); c.moveTo(0, 0); c.quadraticCurveTo(-s * 0.25, -s * 0.22, -s * 0.28, 0); c.quadraticCurveTo(-s * 0.25, s * 0.22, 0, 0); c.fill(); c.fillStyle = 'rgba(140,40,30,.7)'; for (let i = 0; i < 8; i++) { c.beginPath(); c.arc(-s * (0.08 + (i % 4) * 0.05), (Math.floor(i / 4) - 0.5) * s * 0.12, s * 0.014, 0, TAU); c.fill(); } c.restore();
+      /* gövde */
+      const yol = () => { c.beginPath(); c.moveTo(rx, ry * 0.15); c.bezierCurveTo(rx * 0.9, -ry * 1.2, -rx * 0.5, -ry * 1.1, -rx, -ry * 0.25); c.lineTo(-rx, ry * 0.25); c.bezierCurveTo(-rx * 0.5, ry * 1.1, rx * 0.9, ry * 1.1, rx, ry * 0.15); c.closePath(); };
+      yol(); c.fillStyle = gzDikey(c, -ry, ry, '#E8CDB0', '#FFF6EA', '#F5E4CF'); c.fill();
+      c.save(); yol(); c.clip(); c.fillStyle = '#8E2C1C'; for (let i = 0; i < 10; i++) { const bx = rx * 0.85 - i * s * 0.095; c.beginPath(); c.moveTo(bx, -ry * 1.2); c.quadraticCurveTo(bx - s * 0.04, 0, bx, ry * 1.2); c.lineTo(bx - s * 0.045, ry * 1.2); c.quadraticCurveTo(bx - s * 0.085, 0, bx - s * 0.045, -ry * 1.2); c.fill(); }
+      c.fillStyle = 'rgba(0,0,0,.18)'; c.fillRect(-rx, ry * 0.2, rx * 2, ry); c.restore();
+      yelpaze(s * 0.12, s * 0.09, 1.0 * ac, 2.5, s * 0.55 * ac, 0.8);
+      c.strokeStyle = '#F2E2CC'; c.lineWidth = Math.max(1, s * 0.02); c.beginPath(); c.moveTo(rx * 0.7, -ry * 0.6); c.quadraticCurveTo(rx * 0.8, -ry * 1.6, rx * 0.95, -ry * 1.9); c.stroke();
+      gzGoz(c, rx * 0.72, -ry * 0.25, Math.max(1.2, s * 0.03), '#5A1A10');
+      break;
+    }
+    case 'kutu': {
+      const w = s * 0.5, h = s * 0.32, r = s * 0.12, fl = Math.sin(f * (tp > 0 ? 22 : 13));
+      c.save(); c.translate(-w, 0); c.rotate(fl * 0.3); c.fillStyle = 'rgba(250,210,60,.8)'; c.beginPath(); c.ellipse(-s * 0.1, 0, s * 0.12, s * 0.14, 0, 0, TAU); c.fill(); c.restore();
+      c.fillStyle = 'rgba(250,210,60,.75)'; c.beginPath(); c.ellipse(-w * 0.55, -h - s * 0.03, s * 0.06, s * 0.08 + fl * s * 0.02, 0.4, 0, TAU); c.fill(); c.beginPath(); c.ellipse(-w * 0.55, h + s * 0.03, s * 0.06, s * 0.08 - fl * s * 0.02, -0.4, 0, TAU); c.fill();
+      yuvarlakDik(c, -w, -h, w * 2, h * 2, r); c.fillStyle = gzDikey(c, -h, h, '#F5C400', '#FFE98A', '#FFDB2E'); c.fill();
+      c.save(); yuvarlakDik(c, -w, -h, w * 2, h * 2, r); c.clip();
+      for (let j = 0; j < 3; j++) for (let i = 0; i < 5; i++) { const x = -w * 0.75 + i * w * 0.36 + (j % 2) * w * 0.18, y = -h * 0.62 + j * h * 0.62; if (x > w * 0.6) continue; c.fillStyle = '#1A1A1A'; c.beginPath(); c.arc(x, y, s * 0.05, 0, TAU); c.fill(); c.fillStyle = '#FFFFFF'; c.beginPath(); c.arc(x, y, s * 0.022, 0, TAU); c.fill(); }
+      c.strokeStyle = 'rgba(180,130,0,.35)'; c.lineWidth = 0.8; for (let i = -2; i <= 2; i++) { c.beginPath(); c.moveTo(-w, i * h * 0.45); c.lineTo(w, i * h * 0.45 + h * 0.2); c.stroke(); }
+      c.fillStyle = 'rgba(255,255,255,.3)'; c.fillRect(-w, -h, w * 2, h * 0.5); c.restore();
+      c.fillStyle = '#F2A0A0'; c.beginPath(); c.ellipse(w + s * 0.03, h * 0.25, s * 0.04, s * 0.035, 0, 0, TAU); c.fill();
+      gzGoz(c, w * 0.55, -h * 0.35, s * 0.075, '#2A2A2A');
+      gzYaprak(c, w * 0.2, h * 0.3, 2.5 + fl * 0.6, s * 0.16, s * 0.08, 'rgba(250,210,60,.7)');
+      break;
+    }
+    case 'kelebek': {
+      const bir = (x, y, k, fz) => {
+        c.save(); c.translate(x, y); c.scale(k, k); const rx = s * 0.42, ry = s * 0.36;
+        c.save(); c.translate(-rx * 0.95, 0); c.rotate(Math.sin(fz * 8) * 0.3); c.fillStyle = 'rgba(255,215,60,.75)'; c.beginPath(); c.moveTo(0, -ry * 0.3); c.lineTo(-s * 0.22, -ry * 0.45); c.lineTo(-s * 0.22, ry * 0.45); c.lineTo(0, ry * 0.3); c.fill(); c.restore();
+        c.beginPath(); c.moveTo(rx * 1.2, 0); c.quadraticCurveTo(rx * 0.7, -ry * 1.2, -rx * 0.2, -ry * 1.25); c.quadraticCurveTo(-rx * 1.05, -ry * 1.05, -rx, 0); c.quadraticCurveTo(-rx * 1.05, ry * 1.05, -rx * 0.2, ry * 1.25); c.quadraticCurveTo(rx * 0.7, ry * 1.2, rx * 1.2, 0); c.closePath();
+        const g = c.createLinearGradient(rx, 0, -rx, 0); g.addColorStop(0, '#FFFFFF'); g.addColorStop(0.45, '#FFF6CC'); g.addColorStop(0.65, '#FFD43B'); g.addColorStop(1, '#F5B800'); c.fillStyle = g; c.fill();
+        c.save(); c.clip(); c.strokeStyle = 'rgba(200,170,90,.45)'; c.lineWidth = 0.7; for (let i = -3; i <= 3; i++) { c.beginPath(); c.moveTo(rx, i * ry * 0.3 - ry * 0.4); c.lineTo(-rx, i * ry * 0.3 + ry * 0.4); c.stroke(); }
+        c.fillStyle = '#1A1A1A'; c.fillRect(rx * 0.42, -ry * 1.3, s * 0.07, ry * 2.6); c.restore();
+        c.fillStyle = '#1A1A1A'; c.beginPath(); c.arc(-rx * 0.55, -ry * 0.55, s * 0.08, 0, TAU); c.fill(); c.strokeStyle = '#FFFFFF'; c.lineWidth = Math.max(0.7, s * 0.025); c.stroke();
+        c.fillStyle = '#2A2A2A'; c.beginPath(); c.arc(rx * 0.52, -ry * 0.12, s * 0.045, 0, TAU); c.fill();
+        c.restore();
+      };
+      const sur = [[0, 0, 1], [-s * 1.6, -s * 0.9, 0.9], [-s * 1.9, s * 0.8, 0.95], [-s * 3.3, -s * 0.1, 0.85], [-s * 3.6, s * 1.4, 0.9]];
+      sur.forEach(([x, y, k], i) => bir(x + Math.sin(f * 0.8 + i * 1.7) * s * 0.3, y + Math.cos(f * 0.7 + i) * s * 0.3, k, f + i));
+      break;
+    }
+    case 'manta': {
+      /* yukarıdan bakış: iki kanat birlikte çırpar, açıklık daralıp genişler */
+      c.rotate(o.don > 0 ? (1 - o.don) * TAU : 0);
+      const k = Math.sin(f * 1.1), sp = s * 0.46 * (0.74 + 0.26 * k), xu = -s * (0.06 + (1 - k) * 0.03);
+      c.strokeStyle = '#1A222C'; c.lineWidth = Math.max(1, s * 0.01); c.beginPath(); c.moveTo(-s * 0.2, 0); c.quadraticCurveTo(-s * 0.45, Math.sin(f * 1.6) * s * 0.03, -s * 0.7, Math.sin(f * 1.6 + 1) * s * 0.04); c.stroke();
+      const yol = () => { c.beginPath(); c.moveTo(s * 0.2, 0);
+        for (const sy of [-1, 1]) { if (sy > 0) c.moveTo(s * 0.2, 0); c.bezierCurveTo(s * 0.16, sy * s * 0.12, xu + s * 0.12, sy * sp * 0.8, xu, sy * sp); c.bezierCurveTo(xu - s * 0.02, sy * sp * 0.7, -s * 0.12, sy * s * 0.1, -s * 0.22, 0); }
+        c.closePath(); };
+      yol(); const g = c.createRadialGradient(s * 0.05, 0, s * 0.02, 0, 0, sp); g.addColorStop(0, '#34485A'); g.addColorStop(0.6, '#1E2A36'); g.addColorStop(1, '#111820'); c.fillStyle = g; c.fill();
+      c.fillStyle = 'rgba(235,240,245,.6)'; for (const sy of [-1, 1]) { c.beginPath(); c.moveTo(s * 0.12, sy * s * 0.05); c.quadraticCurveTo(s * 0.02, sy * sp * 0.4, xu + s * 0.06, sy * sp * 0.62); c.quadraticCurveTo(s * 0.03, sy * sp * 0.3, s * 0.06, sy * s * 0.05); c.fill(); }
+      c.fillStyle = 'rgba(255,255,255,.12)'; c.beginPath(); c.ellipse(s * 0.02, 0, s * 0.14, s * 0.05, 0, 0, TAU); c.fill();
+      for (const sy of [-1, 1]) { c.save(); c.translate(s * 0.19, sy * s * 0.04); c.rotate(sy * (0.25 + Math.sin(f * 2) * 0.12)); c.fillStyle = '#1A222C'; c.beginPath(); c.ellipse(s * 0.05, 0, s * 0.06, s * 0.016, 0, 0, TAU); c.fill(); c.restore(); gzGoz(c, s * 0.17, sy * s * 0.055, Math.max(1, s * 0.01)); }
+      break;
+    }
+    case 'dugong': {
+      const k = Math.sin(f * 1.3);
+      c.save(); c.translate(-s * 0.4, 0); c.rotate(k * 0.25); c.fillStyle = '#7E7A74'; c.beginPath(); c.moveTo(0, -s * 0.04); c.quadraticCurveTo(-s * 0.1, -s * 0.05, -s * 0.18, -s * 0.12); c.quadraticCurveTo(-s * 0.14, 0, -s * 0.18, s * 0.08); c.quadraticCurveTo(-s * 0.1, s * 0.04, 0, s * 0.04); c.fill(); c.restore();
+      const yol = () => { c.beginPath(); c.moveTo(s * 0.5, s * 0.03); c.bezierCurveTo(s * 0.48, -s * 0.12, s * 0.3, -s * 0.15, s * 0.1, -s * 0.15); c.bezierCurveTo(-s * 0.15, -s * 0.15, -s * 0.32, -s * 0.06 + k * s * 0.01, -s * 0.42, -s * 0.03); c.lineTo(-s * 0.42, s * 0.04); c.bezierCurveTo(-s * 0.3, s * 0.1, -s * 0.1, s * 0.16, s * 0.15, s * 0.14); c.bezierCurveTo(s * 0.35, s * 0.13, s * 0.45, s * 0.12, s * 0.5, s * 0.03); c.closePath(); };
+      yol(); c.fillStyle = gzDikey(c, -s * 0.15, s * 0.15, '#76716B', '#C8BFB2', '#99928A'); c.fill();
+      c.save(); yol(); c.clip(); c.strokeStyle = 'rgba(60,55,50,.2)'; c.lineWidth = 1; for (let i = 0; i < 9; i++) { c.beginPath(); c.arc(s * (0.3 - i * 0.07), -s * 0.2, s * 0.1, 0.9, 2.1); c.stroke(); } c.fillStyle = 'rgba(255,255,255,.12)'; c.fillRect(-s * 0.5, -s * 0.15, s, s * 0.06); c.restore();
+      c.fillStyle = '#A59C90'; c.beginPath(); c.ellipse(s * 0.47, s * 0.06, s * 0.05, s * 0.05, 0, 0, TAU); c.fill(); c.fillStyle = 'rgba(60,50,40,.6)'; for (let i = 0; i < 7; i++) { c.beginPath(); c.arc(s * (0.45 + (i % 3) * 0.015), s * (0.04 + Math.floor(i / 3) * 0.015), 0.9, 0, TAU); c.fill(); }
+      gzYaprak(c, s * 0.25, s * 0.1, 2.3 + Math.sin(f * 1.3 + 1) * 0.3, s * 0.14, s * 0.06, '#7E7870');
+      gzGoz(c, s * 0.36, -s * 0.05, Math.max(1, s * 0.011));
+      break;
+    }
+    case 'barakuda': {
+      const bir = (k, fz) => {
+        c.save(); c.scale(k, k); const rx = s * 0.5, ry = s * 0.075;
+        c.save(); c.translate(-rx, 0); c.rotate(Math.sin(fz * 6) * 0.2); c.fillStyle = '#4C6270'; c.beginPath(); c.moveTo(0, 0); c.lineTo(-s * 0.13, -s * 0.11); c.lineTo(-s * 0.07, 0); c.lineTo(-s * 0.13, s * 0.11); c.closePath(); c.fill(); c.restore();
+        c.fillStyle = '#5C7482'; c.beginPath(); c.moveTo(-s * 0.05, -ry * 0.9); c.lineTo(-s * 0.1, -ry * 2.2); c.lineTo(-s * 0.15, -ry * 0.9); c.fill(); c.beginPath(); c.moveTo(-s * 0.3, -ry * 0.8); c.lineTo(-s * 0.33, -ry * 1.8); c.lineTo(-s * 0.37, -ry * 0.7); c.fill();
+        c.beginPath(); c.moveTo(rx * 1.05, ry * 0.1); c.quadraticCurveTo(rx * 0.6, -ry * 1.15, 0, -ry); c.quadraticCurveTo(-rx * 0.7, -ry * 0.9, -rx, -ry * 0.25); c.lineTo(-rx, ry * 0.25); c.quadraticCurveTo(-rx * 0.7, ry * 0.95, 0, ry); c.quadraticCurveTo(rx * 0.6, ry * 1.1, rx * 1.08, ry * 0.25); c.closePath();
+        c.fillStyle = gzDikey(c, -ry, ry, '#5E7888', '#F2F6F8', '#C9D7DF'); c.fill();
+        c.save(); c.clip(); c.strokeStyle = 'rgba(40,60,75,.35)'; c.lineWidth = Math.max(0.8, s * 0.012); for (let i = 0; i < 14; i++) { const x = rx * 0.5 - i * s * 0.065; c.beginPath(); c.moveTo(x, -ry); c.lineTo(x - s * 0.02, 0); c.stroke(); } c.restore();
+        c.strokeStyle = 'rgba(30,40,50,.5)'; c.lineWidth = 0.8; c.beginPath(); c.moveTo(rx * 1.07, ry * 0.2); c.lineTo(rx * 0.75, ry * 0.2); c.stroke();
+        gzGoz(c, rx * 0.76, -ry * 0.25, Math.max(1, s * 0.016), '#1C2228');
+        c.restore();
+      };
+      const sur = [[0, 0, 1], [-s * 0.8, -s * 0.35, 0.92], [-s * 0.9, s * 0.3, 0.95], [-s * 1.7, -s * 0.05, 0.9], [-s * 1.8, s * 0.55, 0.88], [-s * 2.5, -s * 0.4, 0.86]];
+      sur.forEach(([x, y, k], i) => { c.save(); c.translate(x + Math.sin(f * 0.6 + i) * s * 0.08, y + Math.cos(f * 0.5 + i * 2) * s * 0.06); bir(k, f + i * 0.7); c.restore(); });
+      break;
+    }
+    case 'mola': {
+      const k = Math.sin(f * 1.1);
+      c.save(); c.translate(-s * 0.12, -s * 0.24); c.rotate(-0.2 + k * 0.35); c.fillStyle = gzDikey(c, -s * 0.5, 0, '#6E7B84', '#8E9AA2'); c.beginPath(); c.moveTo(s * 0.07, 0); c.quadraticCurveTo(s * 0.05, -s * 0.3, -s * 0.07, -s * 0.48); c.quadraticCurveTo(-s * 0.1, -s * 0.2, -s * 0.12, 0); c.fill(); c.restore();
+      c.save(); c.translate(-s * 0.12, s * 0.24); c.rotate(0.2 - k * 0.35); c.fillStyle = '#8E9AA2'; c.beginPath(); c.moveTo(s * 0.07, 0); c.quadraticCurveTo(s * 0.05, s * 0.3, -s * 0.07, s * 0.48); c.quadraticCurveTo(-s * 0.1, s * 0.2, -s * 0.12, 0); c.fill(); c.restore();
+      const yol = () => { c.beginPath(); c.moveTo(s * 0.42, s * 0.02); c.bezierCurveTo(s * 0.4, -s * 0.25, s * 0.15, -s * 0.34, -s * 0.12, -s * 0.3); c.lineTo(-s * 0.3, -s * 0.24); for (let i = 0; i <= 6; i++) { const y = -s * 0.24 + i * s * 0.08; c.quadraticCurveTo(-s * 0.42, y - s * 0.04 + s * 0.04, -s * 0.33, y + s * 0.04 - (i === 6 ? s * 0.04 : 0)); } c.lineTo(-s * 0.12, s * 0.3); c.bezierCurveTo(s * 0.15, s * 0.34, s * 0.4, s * 0.25, s * 0.42, s * 0.02); c.closePath(); };
+      yol(); c.fillStyle = gzDikey(c, -s * 0.32, s * 0.32, '#6F7D86', '#D8DEE1', '#A9B4BA'); c.fill();
+      c.save(); yol(); c.clip(); const r2 = tohumRnd('mola'); for (let i = 0; i < 26; i++) { c.fillStyle = `rgba(255,255,255,${0.08 + r2() * 0.12})`; c.beginPath(); c.ellipse(-s * 0.3 + r2() * s * 0.7, -s * 0.3 + r2() * s * 0.6, s * (0.02 + r2() * 0.04), s * (0.015 + r2() * 0.03), r2() * 3, 0, TAU); c.fill(); } c.restore();
+      c.fillStyle = '#9AA6AD'; c.beginPath(); c.ellipse(s * 0.15, s * 0.03, s * 0.05, s * 0.025, -0.4 + Math.sin(f * 2) * 0.3, 0, TAU); c.fill();
+      c.fillStyle = '#5A666E'; c.beginPath(); c.ellipse(s * 0.42, s * 0.03, s * 0.02, s * 0.025, 0, 0, TAU); c.fill();
+      gzGoz(c, s * 0.28, -s * 0.06, Math.max(1.4, s * 0.025), '#1E262C');
+      break;
+    }
+    case 'fok': {
+      const egim = Math.cos(f * 0.9) * 0.35; c.rotate(egim + (o.don > 0 ? (1 - o.don) * TAU : 0));
+      const k = Math.sin(f * 4);
+      for (const sy of [-1, 1]) { c.save(); c.translate(-s * 0.4, sy * s * 0.02); c.rotate(sy * 0.25 + k * 0.3); c.fillStyle = '#4C545C'; c.beginPath(); c.moveTo(0, 0); c.quadraticCurveTo(-s * 0.08, -s * 0.09, -s * 0.16, -s * 0.06); c.quadraticCurveTo(-s * 0.12, 0, -s * 0.16, s * 0.06); c.quadraticCurveTo(-s * 0.08, s * 0.09, 0, 0); c.fill(); c.restore(); }
+      const yol = () => { c.beginPath(); c.moveTo(s * 0.5, 0); c.bezierCurveTo(s * 0.5, -s * 0.12, s * 0.35, -s * 0.13, s * 0.25, -s * 0.1); c.bezierCurveTo(s * 0.05, -s * 0.15, -s * 0.25, -s * 0.1, -s * 0.4, -s * 0.02); c.lineTo(-s * 0.4, s * 0.03); c.bezierCurveTo(-s * 0.25, s * 0.12, s * 0.1, s * 0.15, s * 0.3, s * 0.09); c.bezierCurveTo(s * 0.42, s * 0.07, s * 0.5, s * 0.06, s * 0.5, 0); c.closePath(); };
+      yol(); c.fillStyle = gzDikey(c, -s * 0.14, s * 0.14, '#4D5660', '#C4CCD0', '#7F8890'); c.fill();
+      c.save(); yol(); c.clip(); const r2 = tohumRnd('fok'); c.fillStyle = 'rgba(30,35,40,.35)'; for (let i = 0; i < 22; i++) { c.beginPath(); c.ellipse(-s * 0.35 + r2() * s * 0.75, -s * 0.12 + r2() * s * 0.14, s * 0.012 + r2() * s * 0.01, s * 0.008, 0, 0, TAU); c.fill(); } c.fillStyle = 'rgba(255,255,255,.14)'; c.fillRect(-s * 0.5, -s * 0.15, s, s * 0.06); c.restore();
+      gzYaprak(c, s * 0.15, s * 0.08, 2.2 + Math.sin(f * 4 + 1) * 0.3, s * 0.15, s * 0.06, '#5A636C');
+      c.fillStyle = '#1C2024'; c.beginPath(); c.ellipse(s * 0.49, -s * 0.015, s * 0.015, s * 0.01, 0, 0, TAU); c.fill();
+      gzGoz(c, s * 0.39, -s * 0.05, Math.max(1.6, s * 0.03), '#0B0D0F');
+      c.strokeStyle = 'rgba(230,235,240,.7)'; c.lineWidth = 0.7; for (let i = -1; i <= 1; i++) { c.beginPath(); c.moveTo(s * 0.47, s * 0.01); c.lineTo(s * 0.56, s * (0.0 + i * 0.03)); c.stroke(); }
+      break;
+    }
+    case 'balinakb': {
+      c.save(); c.translate(-s * 0.34, 0); c.rotate(Math.sin(f * 0.9) * 0.18);
+      c.fillStyle = gzDikey(c, -s * 0.2, s * 0.1, '#2B4659', '#3E6178'); c.beginPath(); c.moveTo(s * 0.02, -s * 0.03); c.quadraticCurveTo(-s * 0.08, -s * 0.08, -s * 0.16, -s * 0.2); c.quadraticCurveTo(-s * 0.13, -s * 0.05, -s * 0.06, 0); c.quadraticCurveTo(-s * 0.12, s * 0.05, -s * 0.13, s * 0.1); c.quadraticCurveTo(-s * 0.05, s * 0.05, s * 0.02, s * 0.03); c.fill(); c.restore();
+      c.fillStyle = '#2E4A5E'; c.beginPath(); c.moveTo(s * 0.0, -s * 0.105); c.quadraticCurveTo(-s * 0.04, -s * 0.2, -s * 0.1, -s * 0.19); c.quadraticCurveTo(-s * 0.08, -s * 0.12, -s * 0.12, -s * 0.09); c.fill();
+      c.beginPath(); c.moveTo(-s * 0.2, -s * 0.06); c.lineTo(-s * 0.23, -s * 0.1); c.lineTo(-s * 0.25, -s * 0.05); c.fill();
+      gzYaprak(c, s * 0.24, s * 0.06, 2.4 + Math.sin(f * 0.8) * 0.15, s * 0.16, s * 0.05, '#2B4357');
+      const yol = () => { c.beginPath(); c.moveTo(s * 0.5, -s * 0.01); c.quadraticCurveTo(s * 0.48, -s * 0.09, s * 0.36, -s * 0.11); c.bezierCurveTo(s * 0.1, -s * 0.14, -s * 0.2, -s * 0.09, -s * 0.36, -s * 0.03); c.lineTo(-s * 0.36, s * 0.025); c.bezierCurveTo(-s * 0.2, s * 0.07, s * 0.1, s * 0.11, s * 0.36, s * 0.08); c.quadraticCurveTo(s * 0.48, s * 0.07, s * 0.5, -s * 0.01); c.closePath(); };
+      yol(); c.fillStyle = gzDikey(c, -s * 0.13, s * 0.1, '#25404F', '#E2EAEE', '#3F6177'); c.fill();
+      c.save(); yol(); c.clip(); c.beginPath(); c.rect(-s * 0.5, -s * 0.2, s, s * 0.21); c.clip();
+      c.strokeStyle = 'rgba(220,235,240,.35)'; c.lineWidth = Math.max(1, s * 0.004); for (let i = 0; i < 16; i++) { const x = s * 0.3 - i * s * 0.042; c.beginPath(); c.moveTo(x, -s * 0.14); c.lineTo(x - s * 0.01, s * 0.04); c.stroke(); }
+      c.fillStyle = 'rgba(235,245,250,.75)'; const r2 = tohumRnd('bkb'); for (let i = 0; i < 90; i++) { const x = s * 0.45 - r2() * s * 0.82, y = -s * 0.13 + r2() * s * 0.15; c.beginPath(); c.arc(x, y, s * (0.004 + r2() * 0.004), 0, TAU); c.fill(); }
+      c.restore();
+      c.strokeStyle = 'rgba(15,25,35,.5)'; c.lineWidth = Math.max(1, s * 0.004); for (let i = 0; i < 5; i++) { const x = s * (0.33 - i * 0.022); c.beginPath(); c.moveTo(x, -s * 0.04); c.lineTo(x - s * 0.006, s * 0.05); c.stroke(); }
+      c.strokeStyle = 'rgba(10,20,30,.65)'; c.lineWidth = Math.max(1.2, s * 0.005); c.beginPath(); c.moveTo(s * 0.5, s * 0.0); c.quadraticCurveTo(s * 0.47, s * 0.02, s * 0.42, s * 0.02); c.stroke();
+      gzGoz(c, s * 0.43, -s * 0.035, Math.max(1.2, s * 0.007));
+      break;
+    }
+    case 'dumbo': {
+      const k = Math.sin(f * 2.4), puf = tp > 0 ? 1 + Math.sin(tp * 8) * 0.06 : 1;
+      c.scale(o.d, 1); c.scale(puf, puf);
+      for (const sx of [-1, 1]) { c.save(); c.translate(sx * s * 0.22, -s * 0.28); c.rotate(sx * (0.5 + k * 0.45)); c.fillStyle = gzDikey(c, -s * 0.1, s * 0.1, '#F6C2A8', '#D9786A'); c.beginPath(); c.ellipse(sx * s * 0.12, 0, s * 0.14, s * 0.08, 0, 0, TAU); c.fill(); c.restore(); }
+      c.fillStyle = 'rgba(225,130,110,.75)'; c.beginPath(); c.moveTo(-s * 0.36, -s * 0.05);
+      for (let i = 0; i <= 8; i++) { const x = -s * 0.36 + i * s * 0.09, y = s * (0.2 + (i % 2 ? 0.08 : 0)) + Math.sin(f * 2 + i) * s * 0.03 * (1 - Math.abs(k) * 0.5); c.lineTo(x, y); }
+      c.lineTo(s * 0.36, -s * 0.05); c.fill();
+      c.strokeStyle = 'rgba(190,90,80,.6)'; c.lineWidth = Math.max(0.8, s * 0.02); for (let i = 0; i < 8; i++) { c.beginPath(); c.moveTo((i - 3.5) * s * 0.05, 0); c.lineTo((i - 3.5) * s * 0.1, s * 0.25); c.stroke(); }
+      c.beginPath(); c.moveTo(-s * 0.3, 0); c.bezierCurveTo(-s * 0.36, -s * 0.45, s * 0.36, -s * 0.45, s * 0.3, 0); c.closePath(); c.fillStyle = gzDikey(c, -s * 0.38, 0, '#FBD3BE', '#E48A72'); c.fill();
+      c.fillStyle = 'rgba(255,255,255,.3)'; c.beginPath(); c.ellipse(-s * 0.08, -s * 0.28, s * 0.1, s * 0.05, -0.4, 0, TAU); c.fill();
+      gzGoz(c, -s * 0.13, -s * 0.06, s * 0.05, '#2A1414'); gzGoz(c, s * 0.13, -s * 0.06, s * 0.05, '#2A1414');
+      break;
+    }
+    case 'devkalamar': {
+      const k = Math.sin(f * 1.1);
+      for (let i = 0; i < 8; i++) { const sy = (i - 3.5) * s * 0.012; c.strokeStyle = i % 2 ? '#A8382B' : '#C24A38'; c.lineCap = 'round'; c.lineWidth = Math.max(1.5, s * 0.016); c.beginPath(); c.moveTo(-s * 0.02, sy); for (let j = 1; j <= 8; j++) { const u = j / 8; c.lineTo(-s * 0.02 - u * s * 0.32, sy * (1 + u * 3) + Math.sin(f * 2 - u * 4 + i) * s * 0.025 * u); } c.stroke(); }
+      for (const sy of [-1, 1]) { c.strokeStyle = '#B23E30'; c.lineWidth = Math.max(1, s * 0.006); c.beginPath(); c.moveTo(-s * 0.03, 0); for (let j = 1; j <= 14; j++) { const u = j / 14; c.lineTo(-u * s * 0.62, sy * s * 0.02 * u + Math.sin(f * 1.5 - u * 5 + sy) * s * 0.04 * u); } c.stroke(); const ex = -s * 0.62, ey = sy * s * 0.02 + Math.sin(f * 1.5 - 5 + sy) * s * 0.04; c.fillStyle = '#B23E30'; c.beginPath(); c.ellipse(ex, ey, s * 0.03, s * 0.012, 0, 0, TAU); c.fill(); }
+      c.save(); c.translate(s * 0.48, 0); c.fillStyle = '#C24A38'; c.beginPath(); c.moveTo(s * 0.04, 0); c.lineTo(-s * 0.06, -s * 0.07 - k * s * 0.01); c.lineTo(-s * 0.1, 0); c.lineTo(-s * 0.06, s * 0.07 + k * s * 0.01); c.closePath(); c.fill(); c.restore();
+      const yol = () => { c.beginPath(); c.moveTo(s * 0.52, 0); c.quadraticCurveTo(s * 0.3, -s * 0.07, s * 0.06, -s * 0.06 * (1 + k * 0.05)); c.quadraticCurveTo(-s * 0.04, -s * 0.05, -s * 0.04, 0); c.quadraticCurveTo(-s * 0.04, s * 0.05, s * 0.06, s * 0.06 * (1 + k * 0.05)); c.quadraticCurveTo(s * 0.3, s * 0.07, s * 0.52, 0); c.closePath(); };
+      yol(); c.fillStyle = gzDikey(c, -s * 0.07, s * 0.07, '#8E2A20', '#E8907A', '#C8503C'); c.fill();
+      c.save(); yol(); c.clip(); const r2 = tohumRnd('dk'); c.fillStyle = 'rgba(110,20,15,.45)'; for (let i = 0; i < 60; i++) { c.beginPath(); c.arc(-s * 0.04 + r2() * s * 0.56, -s * 0.07 + r2() * s * 0.14, s * 0.004 + r2() * s * 0.004, 0, TAU); c.fill(); } c.restore();
+      c.fillStyle = '#F4E6DA'; c.beginPath(); c.arc(s * 0.03, -s * 0.012, s * 0.03, 0, TAU); c.fill(); c.fillStyle = '#16243A'; c.beginPath(); c.arc(s * 0.035, -s * 0.012, s * 0.021, 0, TAU); c.fill(); c.fillStyle = 'rgba(255,255,255,.8)'; c.beginPath(); c.arc(s * 0.042, -s * 0.02, s * 0.006, 0, TAU); c.fill();
+      break;
+    }
+    case 'sifonofor': {
+      c.save(); c.globalCompositeOperation = 'lighter';
+      const N = 28, nk = i => [-i * s / N, Math.sin(f * 0.8 - i * 0.35) * s * 0.05], par = tp > 0 ? 1.6 : 1;
+      c.strokeStyle = 'rgba(160,230,255,.35)'; c.lineWidth = 1; c.beginPath(); for (let i = 0; i <= N; i++) { const [x, y] = nk(i); i ? c.lineTo(x, y) : c.moveTo(x, y); } c.stroke();
+      for (let i = 0; i <= N; i++) {
+        const [x, y] = nk(i), dalga = 0.5 + 0.5 * Math.sin(f * 2.5 - i * 0.5), renk = i % 3 === 0 ? '180,140,255' : '120,255,225';
+        if (i < 4) { c.fillStyle = `rgba(190,240,255,${0.22 * par})`; c.strokeStyle = `rgba(210,250,255,${0.5 * par})`; c.beginPath(); c.ellipse(x, y, s * 0.028, s * 0.022, 0, 0, TAU); c.fill(); c.stroke(); continue; }
+        const g = c.createRadialGradient(x, y, 0, x, y, s * 0.03); g.addColorStop(0, `rgba(${renk},${(0.35 + dalga * 0.5) * Math.min(1, par)})`); g.addColorStop(1, `rgba(${renk},0)`); c.fillStyle = g; c.beginPath(); c.arc(x, y, s * 0.03, 0, TAU); c.fill();
+        if (i % 2 === 0) { c.strokeStyle = `rgba(${renk},${0.25 * dalga})`; c.lineWidth = 0.7; c.beginPath(); c.moveTo(x, y); const l = s * (0.08 + (i % 5) * 0.02); c.quadraticCurveTo(x + Math.sin(f + i) * s * 0.02, y + l * 0.5, x + Math.sin(f * 0.7 + i) * s * 0.03, y + l); c.stroke(); }
+      }
+      c.restore();
+      break;
+    }
+    case 'pelikan': {
+      const N = 30, ag = Math.max(0, Math.sin(f * 0.6)) * (tp > 0 ? 1.2 : 0.8), pts = [];
+      for (let i = 0; i <= N; i++) { const u = i / N; pts.push([-u * s, Math.sin(f * 2.2 - u * 7) * s * 0.05 * u, s * (0.045 * (1 - u) + 0.004)]); }
+      c.fillStyle = '#121014'; c.beginPath(); pts.forEach(([x, y, w], i) => i ? c.lineTo(x, y - w) : c.moveTo(x, y - w)); for (let i = N; i >= 0; i--) c.lineTo(pts[i][0], pts[i][1] + pts[i][2]); c.closePath(); c.fill();
+      const [tx, ty] = pts[N]; c.save(); c.globalCompositeOperation = 'lighter'; const lg = c.createRadialGradient(tx, ty, 0, tx, ty, s * 0.06); lg.addColorStop(0, `rgba(255,120,190,${0.6 + 0.4 * Math.sin(f * 3)})`); lg.addColorStop(1, 'rgba(255,120,190,0)'); c.fillStyle = lg; c.beginPath(); c.arc(tx, ty, s * 0.06, 0, TAU); c.fill(); c.restore();
+      c.save(); c.translate(s * 0.01, 0);
+      c.fillStyle = 'rgba(30,26,34,.85)'; c.beginPath(); c.moveTo(0, 0); c.lineTo(s * 0.2, -s * 0.03 - ag * s * 0.05); c.quadraticCurveTo(s * 0.1, -s * 0.01, 0, -s * 0.02); c.fill();
+      c.fillStyle = 'rgba(40,32,48,.7)'; c.beginPath(); c.moveTo(0, s * 0.01); c.lineTo(s * 0.2, s * 0.02 + ag * s * 0.12); c.quadraticCurveTo(s * 0.12, s * 0.05 + ag * s * 0.2, 0, s * 0.03); c.fill();
+      c.strokeStyle = 'rgba(160,130,190,.4)'; c.lineWidth = 0.8; c.beginPath(); c.moveTo(0, s * 0.01); c.lineTo(s * 0.2, s * 0.02 + ag * s * 0.12); c.stroke();
+      c.fillStyle = '#6A5A80'; c.beginPath(); c.arc(s * 0.03, -s * 0.012, Math.max(1, s * 0.006), 0, TAU); c.fill();
+      c.restore();
+      break;
+    }
+    case 'kambur': {
+      const A = ALANLAR[SAHNE.tm], koyuR = karis(A.su[1], '#0E1C28', 0.55), acikR = karis(A.su[1], '#C9D6DE', 0.42), k = Math.sin(f * 0.5);
+      c.globalAlpha = 0.62;
+      c.save(); c.translate(-s * 0.42, 0); c.rotate(Math.sin(f * 0.45) * 0.12); c.fillStyle = koyuR; c.beginPath(); c.moveTo(0, -s * 0.015); c.quadraticCurveTo(-s * 0.05, -s * 0.03, -s * 0.09, -s * 0.07); c.quadraticCurveTo(-s * 0.075, 0, -s * 0.09, s * 0.06); c.quadraticCurveTo(-s * 0.05, s * 0.025, 0, s * 0.015); c.fill(); c.restore();
+      c.save(); c.translate(s * 0.2, s * 0.05); c.rotate(0.9 + k * 0.25); c.fillStyle = acikR; c.beginPath(); c.moveTo(0, -s * 0.02); c.quadraticCurveTo(s * 0.15, -s * 0.035, s * 0.3, -s * 0.005); c.quadraticCurveTo(s * 0.15, s * 0.03, 0, s * 0.02); c.fill(); c.restore();
+      const yol = () => { c.beginPath(); c.moveTo(s * 0.5, s * 0.01); c.quadraticCurveTo(s * 0.46, -s * 0.06, s * 0.3, -s * 0.07); c.bezierCurveTo(s * 0.05, -s * 0.09, -s * 0.2, -s * 0.06, -s * 0.42, -s * 0.012); c.lineTo(-s * 0.42, s * 0.012); c.bezierCurveTo(-s * 0.2, s * 0.06, s * 0.1, s * 0.1, s * 0.34, s * 0.07); c.quadraticCurveTo(s * 0.47, s * 0.05, s * 0.5, s * 0.01); c.closePath(); };
+      yol(); c.fillStyle = gzDikey(c, -s * 0.09, s * 0.09, koyuR, acikR, koyuR); c.fill();
+      c.save(); yol(); c.clip(); c.strokeStyle = rgba(acikR, 0.5); c.lineWidth = Math.max(1, s * 0.002); for (let i = 0; i < 10; i++) { c.beginPath(); c.moveTo(s * 0.46, s * (0.03 + i * 0.005)); c.lineTo(s * 0.12, s * (0.06 + i * 0.006)); c.stroke(); } c.fillStyle = rgba(acikR, 0.5); for (let i = 0; i < 8; i++) { c.beginPath(); c.arc(s * (0.44 - i * 0.03), -s * (0.05 - i * 0.002), s * 0.005, 0, TAU); c.fill(); } c.restore();
+      c.fillStyle = koyuR; c.beginPath(); c.moveTo(-s * 0.15, -s * 0.07); c.quadraticCurveTo(-s * 0.18, -s * 0.1, -s * 0.21, -s * 0.06); c.fill();
+      c.globalAlpha = 1;
+      break;
+    }
+  }
+}
+function gzCizO(c, o) {
+  c.save(); c.translate(o.x, o.y);
+  if (o.tur !== 'dumbo') c.scale(o.d, 1);
+  try { gzTurCiz(c, o); } catch (e) { }
+  c.restore();
+}
+function gzCiz(c) { const o = GZ.o; if (o && !GZ_TUR[o.tur].arka) gzCizO(c, o); }
+function gzArkaCiz(c) { const o = GZ.o; if (o && GZ_TUR[o.tur].arka) gzCizO(c, o); }
 /* ansiklopediye işle */
 for (const [k, b] of Object.entries(CANLI_BILGI)) ANSIK[k] = [[b[0], b[1], b[2]], [b[3], b[4]]];
 
@@ -3365,7 +3716,7 @@ else if (!S) { girisGoster(); yerliKur(); }
 else { ilerlet(); gunlukGorevler(); gorevKontrol(); basarimKontrol(); kaydet(false); panelAc(); if (olumKontrol()) { } else if (bekleyenSecim()) setTimeout(secimAc, 700); else if (!S.kumandaOgrendi) setTimeout(() => duyur(T('👆 Yeni: suya dokun, balığın oraya yüzsün. Parlayan planktonları ye!', '👆 New: tap the water and your fish swims there. Eat the glowing plankton!'), 1), 1200); }
 NET.baslat().then(() => { if (S && !girisAcik) agKur(); else uiGuncelle(); });
 requestAnimationFrame(kare);
-window.DM = { durum: () => ({ S, BAL, NET, AV, ALAN, PLK, YIR, CNL }), kazan: m => { kazan(m, { sinirsiz: true, tokBagimsiz: true }); kaydet(); uiGuncelle(); }, avBitir, sifirla: () => { localStorage.removeItem(KEY); location.reload(); } };
+window.DM = { durum: () => ({ S, BAL, NET, AV, ALAN, PLK, YIR, CNL, GZ }), kazan: m => { kazan(m, { sinirsiz: true, tokBagimsiz: true }); kaydet(); uiGuncelle(); }, avBitir, gz: k => { GZ.o = null; gzBaslat(k); }, sifirla: () => { localStorage.removeItem(KEY); location.reload(); } };
 })();
 </script>
 <script data-goatcounter="https://erdevelop.goatcounter.com/count" async src="//gc.zgo.at/count.js"></script>
