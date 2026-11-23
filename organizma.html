@@ -700,6 +700,7 @@ function npcDogur(hazir) {
   do { [x, y] = diskteNokta(200); dene++; } while (dene < 20 && oyuncu && !oyuncu.olu && Math.hypot(x - oyuncu.x, y - oyuncu.y) < 450);
   const m = npcKutle(), omur = rnd(2.5, 11) * 60 * (m > 300 ? 1.3 : 1);
   const o = yeniOrg({ x, y, m, omur, nick: ADLAR[(Math.random() * ADLAR.length) | 0], dogum: hazir ? 1 : 0, yas: hazir ? Math.random() * omur * 0.7 : 0 });
+  if (Math.random() < 0.012) o.altin = true;
   O.push(o); return o;
 }
 function yemekYeri(f) {   // yosun alanlarında besin daha sıktır
@@ -740,9 +741,10 @@ const MIKRO_TUR = [[[85, 130], [18, 30]], [[18, 45], [24, 38]], [[318, 350], [6,
   [[170, 195], [5, 9]], [[22, 42], [3, 6]], [[25, 45], [24, 36]], [[18, 38], [22, 34]], [[62, 95], [16, 26]]];
 let mikroSay = 0;
 function mikroYeni(x, y, m, tip) {
+  const altin = tip == null && Math.random() < 0.015;
   if (tip == null) tip = (Math.random() * MIKRO_TUR.length) | 0;
   const [rk, hz] = MIKRO_TUR[tip], a = Math.random() * TAU;
-  return { x, y, vx: 0, vy: 0, m, r: yaricap(m), tip, hue: tip === 3 && Math.random() < 0.4 ? rnd(165, 190) : rnd(rk[0], rk[1]), ang: a, yon: a, hiz: rnd(hz[0], hz[1]), gaz: 0.6, f: Math.random() * TAU, akil: Math.random() * 0.7, b: 1, olu: null, n: 2 + ((Math.random() * 3) | 0) };
+  const _a = { x, y, vx: 0, vy: 0, m, r: yaricap(m), tip, hue: tip === 3 && Math.random() < 0.4 ? rnd(165, 190) : rnd(rk[0], rk[1]), ang: a, yon: a, hiz: rnd(hz[0], hz[1]), gaz: 0.6, f: Math.random() * TAU, akil: Math.random() * 0.7, b: 1, olu: null, n: 2 + ((Math.random() * 3) | 0) }; if (altin) _a.altin = true; return _a;
 }
 function mikroDogur(hazir) { const [x, y] = diskteNokta(40), a = mikroYeni(x, y, rnd(1.5, 9)); a.b = hazir ? 1 : 0; M.push(a); return a; }
 function mikroIzgara() {
@@ -757,6 +759,7 @@ function mikroYe(a, b) {   // a: organizma ya da mikro canlı; b: yenen mikro ca
   const org = a.kon !== undefined;
   if (org && a.diyet) a.diyet.m += b.m;
   if (org) genYe(a, 'm' + b.tip, (MIKRO_TUR[b.tip][0][0] + MIKRO_TUR[b.tip][0][1]) / 2);
+  if (org && b.altin && (a === oyuncu || a.sahip === oyuncu)) { genYe(a, 'n3', 48); dnaEkle(3); basarim('altin'); duyur(T('✨ Altın mikro canlı! Nadir gen + 3 DNA', '✨ Golden microbe! Rare gene + 3 DNA'), 'iyi', 4); }
   if (!(org && a.uzak)) { a.m = Math.min(org ? KUTLE_UST : MIKRO_UST + 3, a.m + b.m * 0.8 * (org ? besinK(a) : 1)); if (org) a.enBuyuk = Math.max(a.enBuyuk, a.m); }
   if (org) { a.yut = Math.max(a.yut, 0.6); if (a === oyuncu || a.sahip === oyuncu) { SES.mikro(); gorevIlerle('mikro', 1); } }
   const p = []; for (let i = 0, n = 5 + ((Math.random() * 4) | 0); i < n; i++) p.push({ a: Math.random() * TAU, d: rnd(0.7, 1.7), r: rnd(0.22, 0.48), sp: rnd(-1.5, 1.5) });
@@ -1144,6 +1147,7 @@ function ye(a, b) {
   if (b.uzak) { yenmisUzak.add(b.netId); AG.olay(b.netId, { tip: 'ye', n: a.nick, m: Math.round(a.m) }); }
   if (a.diyet) a.diyet.a += b.m * 0.5;
   genYe(a, 't' + b.tur, [150, 200, 28, 285, 95, 52, 110, 200, 35, 30, 53, 318][b.tur] || b.hue);
+  if (b.altin && (a === oyuncu || a.sahip === oyuncu)) { genYe(a, 'n4', 50); dnaEkle(5); basarim('altin'); duyur(T('✨ Altın organizma! Nadir gen + 5 DNA', '✨ Golden organism! Rare gene + 5 DNA'), 'iyi', 4); }
   if (!a.uzak) { a.m = Math.min(KUTLE_UST, a.m + b.m * 0.8); a.enBuyuk = Math.max(a.enBuyuk, a.m); }
   a.yut = 1; (a.sahip || a).yedigi++; b.olu = true; { const q = Math.random() * TAU; b.emil = { a, t: 0, x: b.x, y: b.y, d: b === oyuncu ? 0.9 : 2.4, ox: Math.cos(q) * a.r * 0.22, oy: Math.sin(q) * a.r * 0.22 }; }
   if (a === oyuncu || b === oyuncu || a.sahip === oyuncu) SES.yut();
@@ -1213,7 +1217,7 @@ function guncelle(dt) {
     yakinYemek(o.x, o.y, rad, f => { const dx = o.x - f.x, dy = o.y - f.y, d = Math.hypot(dx, dy) || 1; if (d < rad) { f.x += dx / d * 150 * dt; f.y += dy / d * 150 * dt; } });
     if (SOY(o).akim) for (const a of M) { const dx = o.x - a.x, dy = o.y - a.y; if (dx > rad || dx < -rad || dy > rad || dy < -rad) continue; const d = Math.hypot(dx, dy) || 1; if (d < rad) { a.x += dx / d * 110 * dt; a.y += dy / d * 110 * dt; } }
   }
-  mikroGuncelle(dt); virusGuncelle(dt); suruGuncelle(dt); yetGuncelle(dt);
+  mikroGuncelle(dt); virusGuncelle(dt); suruGuncelle(dt); yetGuncelle(dt); devGuncelle(dt);
   for (let i = Y.length - 1; i >= 0; i--) {
     const f = Y[i];
     if (f.yendi) { if (f.gecici) { Y[i] = Y[Y.length - 1]; Y.pop(); continue; } f.yendi = false; yemekYeri(f); }
@@ -1710,12 +1714,13 @@ const MIKRO_AD = [['Basil', 'Bacillus'], ['Spiril', 'Spirillum'], ['Kok bakteri'
   ['Rotifer', 'Rotifer'], ['Su ayısı', 'Water bear'], ['Nematod', 'Nematode'], ['Amip yavrusu', 'Baby amoeba'], ['Mini ışınlı', 'Tiny radiolarian'], ['Dinoflagellat', 'Dinoflagellate'],
   ['Vibrio', 'Vibrio'], ['Desmid', 'Desmid'], ['Hidra yavrusu', 'Baby hydra'], ['Efira', 'Ephyra'], ['Ostrakod', 'Ostracod'], ['Maya', 'Yeast'],
   ['Kokolitofor', 'Coccolithophore'], ['Foraminifer', 'Foraminifera'], ['Su piresi yavrusu', 'Baby water flea'], ['Nauplius larvası', 'Nauplius larva'], ['Kolpoda', 'Colpoda']];
-const GEN_GRUP = [['p', ['Plankton', 'Plankton'], 5], ['m', ['Mikro canlılar', 'Microbes'], MIKRO_TUR.length], ['t', ['Organizma türleri', 'Organism species'], TURLER.length], ['x', ['Tehlikeler', 'Dangers'], 2]];
-const genAnahtarlar = gr => gr === 'x' ? ['v', 'y'] : Array.from({ length: gr === 'p' ? 5 : gr === 'm' ? MIKRO_TUR.length : TURLER.length }, (_, i) => gr + i);
+const GEN_GRUP = [['n', ['Nadir genler', 'Rare genes'], 5], ['p', ['Plankton', 'Plankton'], 5], ['m', ['Mikro canlılar', 'Microbes'], MIKRO_TUR.length], ['t', ['Organizma türleri', 'Organism species'], TURLER.length], ['x', ['Tehlikeler', 'Dangers'], 2]];
+const genAnahtarlar = gr => gr === 'x' ? ['v', 'y'] : Array.from({ length: gr === 'p' || gr === 'n' ? 5 : gr === 'm' ? MIKRO_TUR.length : TURLER.length }, (_, i) => gr + i);
+const NADIR_AD = [['Dev amip', 'Giant amoeba'], ['Ana virüs', 'Mother virus'], ['Kraliçe Didinium', 'Didinium queen'], ['Altın mikro canlı', 'Golden microbe'], ['Altın organizma', 'Golden organism']];
 function genAd(k) {
   const n = +k.slice(1);
   if (k === 'v') return T('Virüs', 'Virus'); if (k === 'y') return T('Yırtıcı (Didinium)', 'Predator (Didinium)');
-  const a = k[0] === 'p' ? PLANK_AD[n] : k[0] === 'm' ? MIKRO_AD[n] : TURLER[n] && TURLER[n].ad; return a ? T(a[0], a[1]) : k;
+  const a = k[0] === 'n' ? NADIR_AD[n] : k[0] === 'p' ? PLANK_AD[n] : k[0] === 'm' ? MIKRO_AD[n] : TURLER[n] && TURLER[n].ad; return a ? T(a[0], a[1]) : k;
 }
 /* Yaratık'ta genlerin açtığı parçalar (yaratik.html'deki kurallarla aynı) */
 const YR_PARCA = [
@@ -1738,6 +1743,12 @@ function genResim(k) {   // her genin kaynağının küçük resmi (bir kez çiz
     if (k[0] === 'p') { x.drawImage(SPR[n], -S2 * 0.62, -S2 * 0.62, S2 * 1.24, S2 * 1.24); }
     else if (k[0] === 'm') { const a = mikroYeni(0, 0, 6, n); a.b = 1; a.ang = -0.5; a.x = 0; a.y = 0; const sc = S2 * 0.17 / a.r; x.scale(sc, sc); mg = x; mikroCiz(a, sc, 1.3, 1, 1); }
     else if (k[0] === 't') { const tr = TURLER[n], o = yeniOrg({ tur: n, m: 60, dogum: 1, hue: (tr.renk[0] + tr.renk[1]) / 2 }); o.rr = tr.hortum || tr.boynuz ? S2 * 0.2 : S2 * 0.28; o.ang = -0.5; o.vx = 20; o.vy = 0; o.x = 0; o.y = 0; orgCiz(x, o, 1, 2.1); }
+    else if (k[0] === 'n') {
+      if (n === 0 || n === 4) { const o = yeniOrg({ tur: n === 0 ? 2 : 1, m: 60, dogum: 1, hue: n === 0 ? 285 : 46 }); o.rr = S2 * 0.27; o.ang = -0.5; o.vx = 20; o.vy = 0; o.x = 0; o.y = 0; if (n === 4) { x.fillStyle = 'rgba(255,215,90,.35)'; x.beginPath(); x.arc(0, 0, S2 * 0.45, 0, TAU); x.fill(); } orgCiz(x, o, 1, 2.1); }
+      else if (n === 1) { const sc = S2 * 0.03; x.scale(sc, sc); mg = x; virusCiz({ x: 0, y: 0, b: 1.1, don: 0.3, k: 1, olu: 0 }, sc); }
+      else if (n === 2) { const sc = S2 * 0.03; x.scale(sc, sc); mg = x; yirticiCiz({ x: 0, y: 0, ang: -0.4, f: 1, sersem: 0, olu: 0 }, sc, 0.6); x.fillStyle = 'rgba(255,210,80,.95)'; x.fillRect(-6, -14, 12, 4); }
+      else { const a = mikroYeni(0, 0, 6, 9); a.b = 1; a.x = 0; a.y = 0; x.fillStyle = 'rgba(255,215,90,.4)'; x.beginPath(); x.arc(0, 0, S2 * 0.42, 0, TAU); x.fill(); const sc = S2 * 0.17 / a.r; x.scale(sc, sc); mg = x; mikroCiz(a, sc, 1.3, 1, 1); }
+    }
     else if (k === 'v') { const sc = S2 * 0.026; x.scale(sc, sc); mg = x; virusCiz({ x: 0, y: 0, b: 1, don: -0.35, k: 0, olu: 0 }, sc); }
     else if (k === 'y') { const sc = S2 * 0.028; x.scale(sc, sc); mg = x; yirticiCiz({ x: 0, y: 0, ang: -0.4, f: 1, sersem: 0, olu: 0 }, sc, 0.6); }
   } catch (e) { }
@@ -1776,6 +1787,7 @@ function defterAc(bolum) {
     const ks = genAnahtarlar(gr), say = ks.filter(k => var_.has(k)).length;
     h += `<h4><span>${esc(T(ad[0], ad[1])).toLocaleUpperCase(EN() ? 'en' : 'tr')}</span><span>${say}/${ks.length}</span></h4><div class="gIzgara">` + ks.map(k => { const q = var_.get(k); return `<div class="gHuc${q ? '' : ' yok'}${q && q.d > yeniEsik ? ' yeni' : ''}"><img src="${genResim(k)}" alt="">${esc(genAd(k))}${q ? `<sup>×${q.n}</sup>` : ''}</div>`; }).join('') + '</div>';
   }
+  h += `<p class="gAc">${T('✨ Nadir genler: dev canlıları yenerek ve seyrek çıkan altın canlıları yiyerek toplanır.', '✨ Rare genes come from defeating giant creatures and eating the rare golden ones.')}</p>`;
   h += `<button class="ikinci" type="button" id="gdRehber">❓ ${T('Mutasyon nasıl çalışır?', 'How do mutations work?')}</button>`;
   $('genDefterIc').innerHTML = h; $('genDefter').hidden = false;
   const oc = $('gdOniz'); if (oc) { const x = oc.getContext('2d'), F2 = diyetHedef(o); x.setTransform(1, 0, 0, 1, 0, 0); x.clearRect(0, 0, 184, 184); x.translate(92, 92); onizOrg(x, o, 50, zaman, F2.some(v => v > 0) ? F2 : (o.form || SIFIR3).slice()); }
@@ -1879,8 +1891,104 @@ function yetDunyaCiz(z, t) {   // oklar ve kalkan (dünya koordinatında)
   }
 }
 
+
+/* ================= dev canlılar: ara sıra çıkar, hamle / zehir / yardımcılarla ısırılarak yenilir; nadir gen bırakır ================= */
+const DEVLER = [
+  { ad: ['Dev amip', 'Giant amoeba'], ik: '🟣', can: 520, r: 230, hiz: 42, hue: 285 },
+  { ad: ['Ana virüs', 'Mother virus'], ik: '🦠', can: 380, r: 120, hiz: 22, hue: 305 },
+  { ad: ['Kraliçe Didinium', 'Didinium queen'], ik: '👑', can: 450, r: 95, hiz: 105, hue: 8 }
+];
+const DEVB = { b: null, sonraki: 150 };
+function devCikar(tip) {
+  const o = oyuncu; if (!o || o.olu) return;
+  if (tip == null) tip = (Math.random() * DEVLER.length) | 0;
+  const D = DEVLER[tip]; let x, y, k = 0;
+  do { const a = Math.random() * TAU, d = rnd(950, 1300); x = o.x + Math.cos(a) * d; y = o.y + Math.sin(a) * d; k++; } while (k < 20 && Math.hypot(x, y) > R - D.r - 200);
+  if (Math.hypot(x, y) > R - D.r - 200) { const q = Math.atan2(y, x), d = R - D.r - 260; x = Math.cos(q) * d; y = Math.sin(q) * d; }
+  const b = { tip, x, y, vx: 0, vy: 0, r: D.r, can: D.can, canMax: D.can, ang: Math.random() * TAU, t: 0, omur: 240, hasar: 0, bekle: 0, uret: 4, zehir: 0, yon: Math.random() * TAU, gor: null };
+  if (tip === 0) { b.gor = yeniOrg({ tur: 2, m: 3000, hue: D.hue, nick: '', dogum: 1 }); b.gor.rr = D.r; }
+  DEVB.b = b; duyur(`⚠ ${D.ik} ${T(D.ad[0] + ' belirdi! Hamleyle ısırarak yenebilirsin — haritada mor halka', D.ad[1] + ' appeared! Bite it with dashes — purple ring on the map')}`, 'uyari', 6); SES.uyari(); titre([40, 60, 40]);
+}
+function devIsir(b, o, dmg) {   // bir canlı deve hamleyle (ya da okla) zarar verir
+  b.can -= dmg; if (o === oyuncu || (o && (o.sahip === oyuncu || o.dost === oyuncu))) b.hasar += dmg;
+  if (o && o.m !== undefined) { const s2 = o.dost || o.sahip || o; s2.m = Math.min(KUTLE_UST, s2.m + dmg * 0.45); s2.enBuyuk = Math.max(s2.enBuyuk || 0, s2.m); }
+  for (let i = 0; i < 3 && Y.length < YEMEK_N * 2.6; i++) { const a = Math.random() * TAU; Y.push({ x: b.x + Math.cos(a) * b.r * 0.9, y: b.y + Math.sin(a) * b.r * 0.9, vx: Math.cos(a) * rnd(40, 120), vy: Math.sin(a) * rnd(40, 120), m: dmg * 0.08, k: (Math.random() * 5) | 0, f: Math.random() * TAU, b: 1, gecici: rnd(25, 40) }); }
+  P.push({ x: o ? o.x : b.x, y: o ? o.y : b.y, vx: 0, vy: 0, r: 14, o: 0.9, t: 0, s: 0.35, tip: 2, h: DEVLER[b.tip].hue });
+  if (o === oyuncu) { SES.isir(); titre(18); }
+}
+function devOl(b) {
+  const D = DEVLER[b.tip];
+  for (let i = 0; i < 60 && Y.length < YEMEK_N * 2.8; i++) { const a = Math.random() * TAU, d = Math.random() * b.r; Y.push({ x: b.x + Math.cos(a) * d, y: b.y + Math.sin(a) * d, vx: Math.cos(a) * rnd(30, 200), vy: Math.sin(a) * rnd(30, 200), m: rnd(2, 5), k: (Math.random() * 5) | 0, f: Math.random() * TAU, b: 1, gecici: rnd(45, 70) }); }
+  for (let i = 0; i < 3; i++) P.push({ x: b.x, y: b.y, vx: 0, vy: 0, r: b.r * (0.6 + i * 0.5), o: 0.9, t: 0, s: 0.9 + i * 0.3, tip: 2, h: D.hue });
+  if (b.hasar > 0 && oyuncu && !oyuncu.olu) {
+    genYe(oyuncu, 'n' + b.tip, D.hue); dnaEkle(15); basarim('dev');
+    duyur(`🏆 ${D.ik} ${T(D.ad[0] + ' yenildi! Nadir gen + 15 DNA', D.ad[1] + ' defeated! Rare gene + 15 DNA')}`, 'iyi', 6); SES.basari();
+  }
+  DEVB.b = null; DEVB.sonraki = zaman + rnd(240, 330);
+}
+function devGuncelle(dt) {
+  const o = oyuncu;
+  if (!DEVB.b) { if (oyunda && o && !o.olu && o.yas > 90 && zaman > DEVB.sonraki) devCikar(); return; }
+  const b = DEVB.b, D = DEVLER[b.tip]; b.t += dt; b.omur -= dt; if (b.bekle > 0) b.bekle -= dt;
+  if (b.zehir > 0) { b.zehir -= dt; b.can -= 12 * dt; }
+  b.can = Math.min(b.canMax, b.can + dt * 0.8);
+  if (b.can <= 0) { devOl(b); return; }
+  if (b.omur <= 0) { b.kac = (b.kac || 0) + dt; if (b.kac > 2) { if (o && !o.olu) duyur(`${D.ik} ${T(D.ad[0] + ' derinlere çekildi', D.ad[1] + ' retreated into the deep')}`, '', 4); DEVB.b = null; DEVB.sonraki = zaman + rnd(200, 280); return; } }
+  /* hareket */
+  let hx = 0, hy = 0, hz = D.hiz;
+  const hedef = o && !o.olu && Math.hypot(o.x - b.x, o.y - b.y) < 1100 ? o : null;
+  if (b.tip === 2 && hedef) { hx = hedef.x - b.x; hy = hedef.y - b.y; }
+  else if (b.tip === 0) { let en = null, enD = 1e9; for (const q of O) { if (q.olu || q.uzak || q.dogum < 1) continue; const d = Math.hypot(q.x - b.x, q.y - b.y); if (d < 700 && d < enD && q.m < 400) { en = q; enD = d; } } if (en) { hx = en.x - b.x; hy = en.y - b.y; } else { b.yon += rnd(-0.4, 0.4) * dt; hx = Math.cos(b.yon); hy = Math.sin(b.yon); } }
+  else { b.yon += rnd(-0.5, 0.5) * dt; hx = Math.cos(b.yon); hy = Math.sin(b.yon); }
+  if (b.omur <= 0) { hx = b.x; hy = b.y; hz = D.hiz * 2; }
+  const n = Math.hypot(hx, hy) || 1; b.vx += (hx / n * hz - b.vx) * Math.min(1, dt * 1.5); b.vy += (hy / n * hz - b.vy) * Math.min(1, dt * 1.5);
+  b.x += b.vx * dt; b.y += b.vy * dt; if (Math.hypot(b.vx, b.vy) > 5) b.ang += aciFark(Math.atan2(b.vy, b.vx), b.ang) * Math.min(1, dt * 2);
+  const md = Math.hypot(b.x, b.y); if (md > R - b.r - 60) { b.x *= (R - b.r - 60) / md; b.y *= (R - b.r - 60) / md; b.yon += Math.PI; }
+  /* ana virüs virüs üretir */
+  if (b.tip === 1 && (b.uret -= dt) <= 0) { b.uret = 6; if (V.length < VIRUS_N * 1.9) for (let i = 0; i < 3; i++) { const q = Math.random() * TAU, v = virusYeni(b.x + Math.cos(q) * b.r, b.y + Math.sin(q) * b.r); v.vx = Math.cos(q) * 160; v.vy = Math.sin(q) * 160; v.b = 1; V.push(v); } }
+  /* temaslar */
+  for (const q of O) {
+    if (q.olu || q.uzak || q.dogum < 1) continue; const dx = q.x - b.x, dy = q.y - b.y, d = Math.hypot(dx, dy) || 1; if (d > b.r + q.r) continue;
+    const ben = q === oyuncu || q.sahip === oyuncu || q.dost === oyuncu;
+    if (ben && q.hamle > 0 && !(q.devZ > zaman)) {   // hamleyle ısırık
+      q.devZ = zaman + 0.35; devIsir(b, q, 12 + q.m * 0.08 + (q === oyuncu || q.sahip === oyuncu ? 4 * EV(q.sahip || q).menzil : 0));
+      q.x = b.x + dx / d * (b.r + q.r + 6); q.y = b.y + dy / d * (b.r + q.r + 6); q.hamle = 0; q.fren = 0.3; continue;
+    }
+    if (b.tip === 0 && q.m < 400 && !(q.kalkan > 0) && d < b.r - q.r * 0.3) {   // dev amip yutar
+      if (q === oyuncu) { if (!(q.devZ > zaman)) { q.devZ = zaman + 1; const kay = q.m * 0.15; q.m -= kay; b.can = Math.min(b.canMax, b.can + kay); duyur(T('🟣 Dev amip seni sarıyor! Hamleyle kaç ya da ısır', '🟣 The giant amoeba is engulfing you! Dash away or bite'), 'uyari', 2.5); titre([30, 30]); } q.x += dx / d * 120 * dt; q.y += dy / d * 120 * dt; continue; }
+      if (q.npc && !q.parca) { q.olu = true; q.emil = { a: b, t: 0, d: 2, ox: 0, oy: 0 }; b.can = Math.min(b.canMax, b.can + 15); continue; }
+    }
+    if ((b.tip === 2 || b.tip === 1) && q === oyuncu && !(q.kalkan > 0) && b.bekle <= 0) {   // kraliçe ısırır, ana virüs yakar
+      b.bekle = 1.6; const kay = Math.min(q.m * 0.07, 40); q.m -= kay; q.isirik = 0.6; titre(25); SES.isir();
+      q.x = b.x + dx / d * (b.r + q.r + 10); q.y = b.y + dy / d * (b.r + q.r + 10);
+    }
+  }
+  /* zehir okları deve de işler */
+  for (let i = OKLAR.length - 1; i >= 0; i--) { const k = OKLAR[i]; if (Math.hypot(k.x - b.x, k.y - b.y) < b.r) { b.zehir = 5; devIsir(b, oyuncu, 18 * k.lv); OKLAR.splice(i, 1); } }
+}
+function altinCiz(x0, y0, r, z, t) {   // altın varyant: sıcak parıltı ve dönen ışık noktaları
+  const gr = g.createRadialGradient(x0, y0, r * 0.6, x0, y0, r * 2.2); gr.addColorStop(0, 'rgba(255,215,90,.38)'); gr.addColorStop(1, 'rgba(255,215,90,0)');
+  g.fillStyle = gr; g.beginPath(); g.arc(x0, y0, r * 2.2, 0, TAU); g.fill();
+  g.fillStyle = 'rgba(255,240,170,.95)'; for (let i = 0; i < 4; i++) { const q = t * 1.6 + i * TAU / 4, d = r * (1.35 + 0.15 * Math.sin(t * 3 + i)), pr = Math.max(1.2 / z, r * 0.09); g.beginPath(); g.arc(x0 + Math.cos(q) * d, y0 + Math.sin(q) * d, pr, 0, TAU); g.fill(); }
+}
+function devCiz(z, t) {
+  const b = DEVB.b; if (!b) return; const D = DEVLER[b.tip], al = b.omur <= 0 ? Math.max(0, 1 - (b.kac || 0) / 2) : Math.min(1, b.t / 1.5);
+  g.save(); g.globalAlpha = al;
+  const gr = g.createRadialGradient(b.x, b.y, b.r * 0.8, b.x, b.y, b.r * 1.8); gr.addColorStop(0, `hsla(${D.hue},80%,55%,.18)`); gr.addColorStop(1, `hsla(${D.hue},80%,55%,0)`); g.fillStyle = gr; g.beginPath(); g.arc(b.x, b.y, b.r * 1.8, 0, TAU); g.fill();
+  if (b.tip === 0) { const q = b.gor; q.x = b.x; q.y = b.y; q.rr = b.r; q.r = b.r; q.ang = b.ang; q.vx = b.vx; q.vy = b.vy; q.alK = 1; orgCiz(g, q, z, t); }
+  else if (b.tip === 1) { mg = g; virusCiz({ x: b.x, y: b.y, b: b.r / 9 / 1.3, don: t * 0.15, k: 0, olu: 0 }, z); }
+  else { g.save(); g.translate(b.x, b.y); const sc = b.r / 11; g.scale(sc, sc); mg = g; yirticiCiz({ x: 0, y: 0, ang: b.ang, f: 1, sersem: 0, olu: 0 }, z * sc, t); g.restore();
+    g.fillStyle = 'rgba(255,210,80,.95)'; g.beginPath(); for (let i = 0; i < 5; i++) { const q = b.ang + Math.PI + (i - 2) * 0.32, x1 = b.x + Math.cos(q) * b.r * 0.85, y1 = b.y + Math.sin(q) * b.r * 0.85; g.moveTo(x1, y1); g.lineTo(b.x + Math.cos(q) * b.r * 1.22, b.y + Math.sin(q) * b.r * 1.22); g.lineTo(b.x + Math.cos(q + 0.12) * b.r * 0.9, b.y + Math.sin(q + 0.12) * b.r * 0.9); } g.fill(); }
+  if (b.zehir > 0) { g.strokeStyle = `hsla(285,85%,68%,${0.5 + 0.2 * Math.sin(t * 8)})`; g.lineWidth = Math.max(2 / z, b.r * 0.04); g.beginPath(); g.arc(b.x, b.y, b.r * 1.05, 0, TAU); g.stroke(); }
+  /* can çubuğu */
+  const w = Math.max(b.r * 1.4, 140 / z), hb = Math.max(7 / z, 5), y0 = b.y - b.r * 1.35 - 20 / z;
+  g.fillStyle = 'rgba(0,0,0,.55)'; g.fillRect(b.x - w / 2, y0, w, hb); g.fillStyle = `hsl(${D.hue},80%,60%)`; g.fillRect(b.x - w / 2, y0, w * Math.max(0, b.can / b.canMax), hb);
+  g.font = `900 ${Math.max(13 / z, 9)}px Nunito, system-ui, sans-serif`; g.textAlign = 'center'; g.fillStyle = '#FFE9F7'; g.fillText(`${D.ik} ${T(D.ad[0], D.ad[1])}`, b.x, y0 - 6 / z);
+  g.restore();
+}
+
 /* ================= genom: yenen her farklı şey bir gen; DNA sarmalı ve gövde buna göre değişir ================= */
-const GEN_N = 54;   // 5 plankton + 35 mikro canlı + 12 tür + virüs + yırtıcı
+const GEN_N = 59;   // 5 plankton + 35 mikro canlı + 12 tür + virüs + yırtıcı + 5 nadir
 function genYe(o, anahtar, hue) {
   const s = o.sahip || o; if (s !== oyuncu || !s.gen) return;
   let gn = s.gen.find(q => q.k === anahtar);
@@ -2099,6 +2207,7 @@ const GOREVLER = {
   evrim: { h: [3, 4], ad: n => [`Tek hayatta ${n} evrim seç`, `Pick ${n} evolutions in one life`] },
 };
 const BASARIMLAR = {
+  dev: ['🏆', 'Bir dev canlıyı yen', 'Defeat a giant creature'], altin: ['✨', 'Altın bir canlı ye', 'Eat a golden creature'],
   ilk: ['🍽', 'İlk av', 'First prey'], yas5: ['⏱', '5 dakika yaşa', 'Survive 5 minutes'], yas10: ['⏳', '10 dakika yaşa', 'Survive 10 minutes'], yas20: ['🕰', '20 dakika yaşa', 'Survive 20 minutes'],
   kutle500: ['⚖', '500 kütle', '500 mass'], kutle1500: ['🏋', '1500 kütle', '1500 mass'], avci100: ['🦈', 'Toplam 100 av', '100 prey in total'], intikam: ['☠', 'İntikam al', 'Take revenge'],
   kacis: ['🦐', 'Su piresinden kurtul', 'Escape the water flea'], cevrimici: ['🌐', 'Çevrimiçi bir oyuncuyu yut', 'Swallow an online player'], gece: ['🌙', 'Bir geceyi atlat', 'Survive a night'],
@@ -2190,6 +2299,7 @@ function oyuncuHamle() {
   hamleYap(oyuncu, a); if (oyuncu.parca && !oyuncu.parca.olu) hamleYap(oyuncu.parca, a);
 }
 function basla() {
+  DEVB.b = null; DEVB.sonraki = zaman + 150;
   const nick = ($('nick').value.trim() || T('İsimsiz', 'Nameless')).slice(0, 16);
   KAYIT.nick = $('nick').value.trim(); KAYIT.tur = secTur; KAYIT.renk = secRenk; KAYIT.desen = secDesen; ls.set('organizma-kayit', KAYIT);
   let x, y, dene = 0, ok;
@@ -2701,7 +2811,7 @@ function ciz(t) {
     g.save(); g.transform(fc, fs, -fs, fc, f.x, f.y); g.drawImage(SPR[f.k], -ss, -ss, ss * 2, ss * 2); g.restore();
   }
   /* mikro canlılar */
-  for (const a of M) { if (a.olu || a.x < gx0 - 40 || a.x > gx1 + 40 || a.y < gy0 - 40 || a.y > gy1 + 40) continue; mikroCiz(a, z, t, 1, 1); }
+  for (const a of M) { if (a.olu || a.x < gx0 - 40 || a.x > gx1 + 40 || a.y < gy0 - 40 || a.y > gy1 + 40) continue; if (a.altin) altinCiz(a.x, a.y, a.r, z, t); mikroCiz(a, z, t, 1, 1); }
   for (const v of V) { if (v.konak || v.x < gx0 - 30 || v.x > gx1 + 30 || v.y < gy0 - 30 || v.y > gy1 + 30) continue; virusCiz(v, z); }
   /* parçacıklar */
   for (const p of P) {
@@ -2716,9 +2826,10 @@ function ciz(t) {
   for (const o of gor) {
     if (o.dogum < 1) dogumKabuk(o, z, t);
     if (o === oyuncu) susCiz(o, z, t);
+    if (o.altin && !o.olu) altinCiz(o.x, o.y, o.rr || o.r, z, t);
     orgCiz(g, o, z, t);
   }
-  yetDunyaCiz(z, t);
+  devCiz(z, t); yetDunyaCiz(z, t);
   /* sindirim kofulları: yutulan plankton zarla sarılır, kahverengileşip küçülerek erir */
   for (const o of gor) {
     if (!o.kof || !o.kof.length || o.olu || o.rr * z < 9) continue;
@@ -2886,6 +2997,7 @@ function miniCiz() {
   const nb = 0.5 + 0.5 * Math.sin(performance.now() / 160);
   if (OLAY.tip === 'patlama' || OLAY.tip === 'damla') { x.strokeStyle = OLAY.tip === 'patlama' ? `rgba(120,255,160,${0.5 + 0.5 * nb})` : `rgba(255,180,90,${0.5 + 0.5 * nb})`; x.lineWidth = 3; x.beginPath(); x.arc(OLAY.x * k, OLAY.y * k, 9 + nb * 4, 0, TAU); x.stroke(); }
   x.fillStyle = '#FF5A46'; for (const su of SURU) { const px = su.x * k, py = su.y * k, b = su.hedef === oyuncu ? 9 + nb * 3 : 6; x.beginPath(); x.moveTo(px, py - b); x.lineTo(px + b * 0.9, py + b * 0.7); x.lineTo(px - b * 0.9, py + b * 0.7); x.closePath(); x.fill(); }
+  if (DEVB.b) { const b = DEVB.b; x.strokeStyle = `hsla(${DEVLER[b.tip].hue},90%,65%,${0.6 + 0.4 * nb})`; x.lineWidth = 3; x.beginPath(); x.arc(b.x * k, b.y * k, Math.max(8, b.r * k) + nb * 3, 0, TAU); x.stroke(); }
   if (AV.aktif) { x.fillStyle = `rgba(255,80,60,${0.6 + 0.4 * nb})`; x.beginPath(); x.arc(AV.x * k, AV.y * k, 8 + nb * 3, 0, TAU); x.fill(); }
   for (const o of O) {
     if (o.olu || o === oyuncu) continue; if (!o.uzak && o.m < 200 && !intikamMi(o)) continue;
