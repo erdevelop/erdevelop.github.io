@@ -189,6 +189,7 @@ body.er-durumlu #mini{bottom:32px}body.er-durumlu #dna{bottom:188px}
 @media (hover:hover) and (pointer:fine){#yetBtn{left:18px;bottom:calc(30px + env(safe-area-inset-bottom,0px))}}
 @media (max-width:640px){#kgChip{bottom:calc(214px + env(safe-area-inset-bottom,0px))}}
 #ortakKutu .gBas>span:last-child{display:flex;flex-wrap:wrap;gap:4px;justify-content:flex-end}
+#sesKutu{flex-wrap:wrap}
 </style>
 <script type="application/ld+json">{"@context":"https://schema.org","@type":"VideoGame","name":"Organizma","url":"https://erdevelop.github.io/organizma.html","genre":["Action","Survival"],"gamePlatform":"Web browser","playMode":["SinglePlayer","MultiPlayer"],"inLanguage":["tr","en"],"isAccessibleForFree":true,"offers":{"@type":"Offer","price":"0","priceCurrency":"TRY"}}</script>
 <script async src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-4775308844679394" crossorigin="anonymous"></script>
@@ -227,7 +228,7 @@ body.er-durumlu #mini{bottom:32px}body.er-durumlu #dna{bottom:188px}
 <div class="gModal" id="rehber" hidden><div class="gKutu" id="rehberIc"></div></div>
 <div id="izleme" hidden></div>
 <div id="ifadeler" hidden></div>
-<div id="sesKutu" hidden><button type="button" id="sesSus" title="Sesi kapat/aç" data-en-title="Mute/unmute" aria-label="Sesi kapat/aç" data-en-aria="Mute/unmute">🔈</button><input id="sesKaydir" type="range" min="0" max="100" step="5" aria-label="Ses düzeyi" data-en-aria="Volume"><span id="sesYuzde"></span></div>
+<div id="sesKutu" hidden><button type="button" id="sesSus" title="Sesi kapat/aç" data-en-title="Mute/unmute" aria-label="Sesi kapat/aç" data-en-aria="Mute/unmute">🔈</button><input id="sesKaydir" type="range" min="0" max="100" step="5" aria-label="Ses düzeyi" data-en-aria="Volume"><span id="sesYuzde"></span><label id="kaliteSat" style="display:flex;align-items:center;gap:6px;font-size:12px;font-weight:800;width:100%;margin-top:6px">🎨 <span data-en="Graphics">Grafik</span><select id="kaliteSec" style="flex:1;font:inherit;font-size:12px;padding:3px 6px;border-radius:8px;border:1px solid var(--line);background:rgba(0,0,0,.3);color:var(--ink)"><option value="oto">Otomatik</option><option value="2">Yüksek</option><option value="1">Orta</option><option value="0">Düşük</option></select></label></div>
 
 <!-- menü -->
 <div class="perde" id="menu">
@@ -467,11 +468,15 @@ const ADLAR = [
 const cv = $('c'), g = cv.getContext('2d');
 let mg = g;   // küçük resimler için mikro canlı, virüs ve yırtıcı çizimleri geçici olarak başka tuvale yönlenir
 let W = 0, H = 0, DPR = 1;
+/* grafik kalitesi: 0 düşük · 1 orta · 2 yüksek; 'oto' cihaza göre başlar, kare hızı düşerse kendiliğinden iner */
+const KALITE = { secim: (() => { try { return localStorage.getItem('organizma-kalite') || 'oto'; } catch (e) { return 'oto'; } })(), q: 2, fpsT: 0, fpsN: 0, dusuk: 0 };
+KALITE.q = KALITE.secim === 'oto' ? ((matchMedia('(pointer:coarse)').matches && (navigator.hardwareConcurrency || 4) <= 4) || (navigator.deviceMemory && navigator.deviceMemory <= 3) ? 1 : 2) : +KALITE.secim;
+const KF = () => [0.5, 0.78, 1][KALITE.q];
 function boyutla() {
   /* tuvalin boyutunu CSS belirler (%100); buradan yalnızca ölçülür. Sabit piksel verilirse telefon döndürülünce
      eski (geniş) tuval sayfayı taşırıp tarayıcının görünümü küçültmesine, düğmelerin kaymasına yol açabiliyor. */
   W = cv.clientWidth || innerWidth; H = cv.clientHeight || innerHeight;
-  DPR = Math.min(W * H > 1.6e6 ? 1.25 : 2, window.devicePixelRatio || 1);
+  DPR = Math.min(W * H > 1.6e6 ? 1.25 : [1, 1.5, 2][KALITE.q], window.devicePixelRatio || 1);
   const pw = Math.round(W * DPR), ph = Math.round(H * DPR); if (cv.width !== pw) cv.width = pw; if (cv.height !== ph) cv.height = ph;
 }
 /* döndürme sırasında ölçüler bir süre eski kalabildiğinden birkaç kez yeniden ölç */
@@ -2555,6 +2560,9 @@ $('ortakS').onclick = () => { ortakTur = 3; ortakYukle(); };
   document.addEventListener('fullscreenchange', guncel); document.addEventListener('webkitfullscreenchange', guncel);
   addEventListener('keydown', e => { if (e.code === 'KeyF' && !(e.target && e.target.tagName === 'INPUT') && !e.repeat && !e.ctrlKey && !e.metaKey) $('tamBtn').click(); });
 })();
+function kaliteYaz() { const s2 = $('kaliteSec'); if (!s2) return; s2.value = KALITE.secim; const ad = [T('Düşük', 'Low'), T('Orta', 'Medium'), T('Yüksek', 'High')]; s2.options[0].textContent = T('Otomatik', 'Auto') + (KALITE.secim === 'oto' ? ' · ' + ad[KALITE.q] : ''); s2.options[1].textContent = ad[2]; s2.options[2].textContent = ad[1]; s2.options[3].textContent = ad[0]; }
+$('kaliteSec').onchange = e => { KALITE.secim = e.target.value; try { localStorage.setItem('organizma-kalite', KALITE.secim); } catch (x) { } KALITE.q = KALITE.secim === 'oto' ? 2 : +KALITE.secim; KALITE.dusuk = 0; boyutla(); kaliteYaz(); };
+kaliteYaz();
 const sesYaz = () => { const d = SES.duzey(); $('sesBtn').textContent = d <= 0 ? '🔇' : d < 0.5 ? '🔉' : '🔊'; $('sesYuzde').textContent = '%' + Math.round(d * 100); };
 $('sesBtn').onclick = () => { $('sesKutu').hidden = !$('sesKutu').hidden; $('ifadeler').hidden = true; };
 $('sesKaydir').value = Math.round(SES.duzey() * 100);
@@ -2601,7 +2609,7 @@ function orgCiz(x, o, z, t) {
   const F = o.form || SIFIR3, tr = TURLER[o.tur], h = o.hue, al = (o.olum > 0 ? 1 - o.olum : 1) * (o.emil ? Math.max(0, 1 - o.emil.t) : 1) * (o.alK == null ? 1 : o.alK);
   if (o.emil) r *= Math.max(0.05, 1 - o.emil.t * 0.7);
   if (al <= 0.01) return;
-  const ekran = r * z;
+  const ekran = r * z * (x === g ? KF() : 1);
   x.save(); x.translate(o.x, o.y); x.globalAlpha = al;
   if (ekran < 4) { x.fillStyle = `hsla(${h},65%,60%,.75)`; x.beginPath(); x.arc(0, 0, r, 0, TAU); x.fill(); x.restore(); return; }
   x.rotate(o.ang);
@@ -2922,14 +2930,15 @@ function ciz(t) {
   const bg = g.createRadialGradient(W / 2, H * 0.4, 0, W / 2, H / 2, Math.max(W, H) * 0.8);
   bg.addColorStop(0, '#0E3B45'); bg.addColorStop(0.55, '#0A2A33'); bg.addColorStop(1, '#05161C');
   g.fillStyle = bg; g.fillRect(0, 0, W, H);
-  for (const [d, p, s, dr] of [[DOKU1, 0.18, 2.2, 0], [DOKU2, 0.45, 1, 0]]) {
+  for (const [d, p, s, dr] of (KALITE.q ? [[DOKU1, 0.18, 2.2, 0], [DOKU2, 0.45, 1, 0]] : [[DOKU2, 0.45, 1, 0]])) {
     g.save(); const ox = (-kamera.x * p * z) % (512 * s), oy = (-kamera.y * p * z + t * dr) % (512 * s);
     g.translate(ox + Math.sin(t * 0.05) * 20, oy); g.scale(s, s); g.fillStyle = d; g.fillRect(-512, -512, W / s + 1024, H / s + 1024); g.restore();
   }
-  { const KW = W + 64, KH = H + 64;
-    for (const q of KAR) { const sx = ((q.x * KW - kamera.x * q.p * z) % KW + KW) % KW - 32, sy = ((q.y * KH - kamera.y * q.p * z + t * q.v) % KH + KH) % KH - 32; g.globalAlpha = q.a; g.drawImage(KAR_S[q.k], sx - q.s / 2, sy - q.s / 2, q.s, q.s); }
+  if (KALITE.q) { const KW = W + 64, KH = H + 64;
+    for (const q of (KALITE.q > 1 ? KAR : KAR.slice(0, 26))) { const sx = ((q.x * KW - kamera.x * q.p * z) % KW + KW) % KW - 32, sy = ((q.y * KH - kamera.y * q.p * z + t * q.v) % KH + KH) % KH - 32; g.globalAlpha = q.a; g.drawImage(KAR_S[q.k], sx - q.s / 2, sy - q.s / 2, q.s, q.s); }
     g.globalAlpha = 1; }
   /* yüzeyden süzülen ışık hüzmeleri */
+  if (KALITE.q > 1) {
   g.save(); g.globalCompositeOperation = 'lighter';
   if (!window.__isik || window.__isik.h !== H) { const lg = g.createLinearGradient(0, 0, 0, H); lg.addColorStop(0, 'rgba(150,235,230,.045)'); lg.addColorStop(1, 'rgba(150,235,230,0)'); window.__isik = { h: H, lg }; }
   g.fillStyle = window.__isik.lg;
@@ -2938,6 +2947,7 @@ function ciz(t) {
     g.globalAlpha = 0.65 + 0.35 * Math.sin(t * 0.25 + i * 2.3); g.beginPath(); g.moveTo(cx - w, 0); g.lineTo(cx + w, 0); g.lineTo(cx + w * 2.6 + sk, H); g.lineTo(cx - w * 2.6 + sk, H); g.closePath(); g.fill();
   }
   g.globalAlpha = 1; g.restore();
+  }
   /* dünya */
   g.setTransform(DPR * z, 0, 0, DPR * z, DPR * (W / 2 - kamera.x * z), DPR * (H / 2 - kamera.y * z));
   const gx0 = kamera.x - W / 2 / z, gx1 = kamera.x + W / 2 / z, gy0 = kamera.y - H / 2 / z, gy1 = kamera.y + H / 2 / z;
@@ -2983,7 +2993,7 @@ function ciz(t) {
   devCiz(z, t); yetDunyaCiz(z, t);
   /* sindirim kofulları: yutulan plankton zarla sarılır, kahverengileşip küçülerek erir */
   for (const o of gor) {
-    if (!o.kof || !o.kof.length || o.olu || o.rr * z < 9) continue;
+    if (!o.kof || !o.kof.length || o.olu || o.rr * z < 9 || (!KALITE.q && o !== oyuncu)) continue;
     for (const q of o.kof) {
       const k = q.t, bas = Math.min(1, k * 6), sz = q.s * (1 - 0.7 * k), x0 = o.x + q.ox, y0 = o.y + q.oy, kr = q.s * (0.75 - 0.35 * k);
       g.fillStyle = `rgba(220,245,240,${0.1 * bas * (1 - k)})`; g.strokeStyle = `rgba(225,250,245,${0.32 * bas * (1 - k * 0.8)})`; g.lineWidth = Math.max(0.7 / z, q.s * 0.05);
@@ -3262,6 +3272,7 @@ function kare(ts) {
     const r = Math.max(14, hedef.rr || 20), hz = Math.min(W, H) / 640 * Math.pow(34 / r, 0.4) * (hedef === oyuncu ? 1 : 0.75);
     kamera.z += (kis(hz, 0.12, 3) - kamera.z) * Math.min(1, dt * 2);
   }
+  if (KALITE.secim === 'oto' && oyunda) { KALITE.fpsT += dt; KALITE.fpsN++; if (KALITE.fpsT >= 3) { const fps = KALITE.fpsN / KALITE.fpsT; KALITE.fpsT = 0; KALITE.fpsN = 0; KALITE.dusuk = fps < 38 ? KALITE.dusuk + 1 : 0; if (KALITE.dusuk >= 2 && KALITE.q > 0) { KALITE.q--; KALITE.dusuk = 0; boyutla(); kaliteYaz(); } } }
   ciz(zaman);
   hud(dt);
   if (!$('menu').hidden) onizlemeCiz(zaman);
