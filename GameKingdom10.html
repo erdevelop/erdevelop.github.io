@@ -771,7 +771,7 @@ $('list5').addEventListener('click',e=>{const b=e.target.closest('button');if(b)
 // skor tablosu
 const NPC=['Lord Aldric','Leydi Maren','Kral Osric','Baron Hale','Lord Varek','Leydi Isolde','Şövalye Bran','Lord Torvald','Leydi Selin','Kont Dorian'];
 const npcScore=i=>Math.round(250*Math.pow(1.55,i)+(Date.now()-S.t0)/36e5*(6+i*4));
-const titleName=()=>{const t=S.ms||0;let i=0;while(i+1<TT.length&&t>=TT[i+1][0])i++;return TT[i][1]};
+const titleName=()=>{const t=S.ms||0;let i=0;while(i+1<TT.length&&t>=TT[i+1][0])i++;return TT[i][1]+(S.sehirMiras?' 🏛':'')};
 function renderLb(){
  const rows=NPC.map((n,i)=>[n,npcScore(i),0]);rows.push(['Sen ('+titleName()+')',S.ms||0,1]);rows.sort((a,b)=>b[1]-a[1]);
  $('lbn').textContent=`Sıran: ${rows.findIndex(r=>r[2])+1} / ${rows.length}. Rakip lordlar zamanla güçlenir.`;
@@ -1463,6 +1463,15 @@ function renderBazaar(){const tm2=$('tmkt');if(tm2){const ar=v=>v>1.08?'↑':v<0
 (function(){const krvv=$('krvv');if(!krvv)return;krvv.addEventListener('click',e=>{const b=e.target.closest('button');if(!b)return;
  if(b.dataset.kv){if(S.caravan)return toast('Zaten bir kervan yolda');if(tG==='g')return toast('Altın kervanla gönderilmez');const amt=Math.floor((S[tG]||0)*(+b.dataset.kv));if(amt<1)return toast('Yeterli '+RN[tG]+' yok');S[tG]-=amt;const gold=Math.round(amt*VAL[tG]*mkt(tG)*1.25);S.caravan={r:tG,amt:amt,gold:gold,e:Date.now()+480000};if(typeof sfx==='function')sfx('tap');toast('Kervan yola çıktı');save();render()}
  else if(b.id==='krvc'){const c=S.caravan;if(!c||Date.now()<c.e)return;S.g+=c.gold;S.st.g+=c.gold;S.st.tc=(S.st.tc||0)+1;S.caravan=null;if(typeof sfx==='function')sfx('coin');toast('Kervan +'+fmt(c.gold)+' altın getirdi');save();render()}})})();
+// ---- Organizma serisinin sonu: Şehir'den gelen miras ----
+(function(){let k=null;try{k=JSON.parse(localStorage.getItem('sehir-kayit')||'null')}catch(e){}if(!k)return;const o=k.oyun||{},r=k.rekor||{};if(!(o.kazandi||r.devlet>=1))return;
+ const TT2=(a,b)=>window.erDil&&erDil.t?erDil.t(a,b):a,esc2=x=>String(x||'').replace(/[<>&"]/g,c=>({'<':'&lt;','>':'&gt;','&':'&amp;','"':'&quot;'}[c]));
+ const ad=o.ad||TT2('Şehir','City'),kral=o.kral||'';
+ if(!S.sehirMiras){const n=Math.floor(o.nuf||140),h={w:500+n*3,s:400+n*2,f:700+n*4,a:400,g:40+Math.min(60,Math.floor((o.r&&o.r.g)||0)/10)};S.lv.store=Math.max((S.lv.store||1)+2,3);const c0=cap(S.lv);for(const x in h){if(x==='g'){S.g=(S.g||0)+h.g;continue}const once=S[x]||0;S[x]=Math.min(c0,once+h[x]);h[x]=Math.round(S[x]-once)}S.sehirMiras={ad,kral,t:Date.now(),h};save();
+  setTimeout(()=>{const d=document.createElement('div');d.style.cssText='position:fixed;inset:0;z-index:9999;display:flex;align-items:center;justify-content:center;background:rgba(10,8,4,.6);padding:16px';
+   d.innerHTML='<div style="max-width:440px;width:100%;background:#2A2114;color:#F3ECDC;border:1px solid rgba(240,214,160,.3);border-radius:18px;padding:18px;font:600 15px/1.5 Nunito,system-ui,sans-serif;box-shadow:0 20px 60px rgba(0,0,0,.5)"><div style="font-size:22px;font-weight:900;margin-bottom:6px">🏛 '+TT2('Şehrinin mirası','Your city\'s legacy')+'</div><p style="margin:6px 0">'+TT2('Tek hücreden başlayan yolculuğun burada bir krallığa dönüşüyor. <b>'+esc2(ad)+'</b> şehri'+(kral?' ve kralı <b>'+esc2(kral)+'</b>':'')+' krallığına şunları getirdi:','The journey that began as a single cell becomes a kingdom here. The city of <b>'+esc2(ad)+'</b>'+(kral?' and King <b>'+esc2(kral)+'</b>':'')+' brought your realm:')+'</p><p style="font-weight:900;margin:8px 0">🪵 +'+h.w+' · 🪨 +'+h.s+' · 🍞 +'+h.f+' · 💧 +'+h.a+' · 🪙 +'+h.g+'</p><p style="font-size:13px;opacity:.8;margin:6px 0">'+TT2('📦 Depon iki seviye büyüdü (dolu olarak). Sıralamada adının yanında 🏛 işareti görünür.','📦 Your storehouse grew two levels (filled). A 🏛 mark appears next to your name in the rankings.')+'</p><button style="width:100%;margin-top:8px;padding:12px;border:0;border-radius:12px;background:linear-gradient(180deg,#F2A64B,#D9822B);color:#2A1503;font-weight:900;font-size:16px;cursor:pointer">'+TT2('Krallığa başla','Begin the kingdom')+'</button></div>';
+   d.querySelector('button').onclick=()=>d.remove();document.body.appendChild(d);try{render()}catch(e){}},700);}
+})();
 let armed=false;
 $('rst').addEventListener('click',e=>{
  if(!armed){armed=true;e.target.textContent='Emin misin? Tekrar dokun';setTimeout(()=>{armed=false;e.target.textContent='Baştan başla'},3000);return}

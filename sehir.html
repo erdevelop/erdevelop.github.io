@@ -130,6 +130,7 @@ body.er-durumlu #bilgiBtn{bottom:192px}
     <div id="ozellik"></div>
     <a class="ana" id="kilitLink" href="/kabile.html" hidden data-en="Go to Tribe">Kabile'ye git</a>
     <button class="ana" id="mDevam" type="button" hidden></button>
+    <div id="adlar" hidden style="display:flex;gap:6px;margin-top:10px"><input id="sAd" maxlength="18" placeholder="Şehrin adı" data-en-ph="City name" style="flex:1;min-width:0;padding:10px;border-radius:12px;border:1px solid var(--line);background:rgba(0,0,0,.25)"><input id="kAd" maxlength="18" placeholder="Kralın adı" data-en-ph="King's name" style="flex:1;min-width:0;padding:10px;border-radius:12px;border:1px solid var(--line);background:rgba(0,0,0,.25)"></div>
     <button class="ana" id="mYeni" type="button" hidden></button>
     <div id="rekor"></div>
     <div id="seriHesap"></div>
@@ -254,10 +255,12 @@ const B = {
   pazar: { e: '⛺', ad: ['Pazar', 'Market'], ne: ['Kervan ticareti; çevresindeki evlere +1 kişi, göç hızlanır', 'Caravan trade; nearby houses +1, faster growth'], w: 3, h: 3, m: { o: 30, k: 30 }, hp: 100, tek: 'yazi' },
   bakir: { e: '🟤', ad: ['Bakır ocağı', 'Copper mine'], ne: ['Bakır damarının üstüne kur', 'Build over a copper vein'], w: 2, h: 2, m: { o: 20, t: 20 }, hp: 80, is: 3, tek: 'bakir' },
   tunc: { e: '🔥', ad: ['Tunç atölyesi', 'Bronze foundry'], ne: ['2 bakır + 1 kalay → 1 tunç', '2 copper + 1 tin → 1 bronze'], w: 2, h: 2, m: { k: 20, t: 20 }, hp: 90, is: 2, tek: 'tunc' },
+  yol: { e: '🛤', ad: ['Yol', 'Road'], ne: ['İş yerlerini ambar ya da depoya bağlar; bağlı olmayanlar yarı hızla çalışır. Sürükleyerek çiz', 'Links workplaces to a granary or storehouse; unlinked ones work at half speed. Drag to draw'], w: 1, h: 1, m: {}, hp: 30, cizgi: 1 },
+  biraevi: { e: '🍺', ad: ['Bira evi', 'Brewery'], ne: ['Arpadan bira yapar (2 🍞 → 1 🍺); bira halkı mutlu eder', 'Brews beer from barley (2 🍞 → 1 🍺); beer makes people happy'], w: 2, h: 2, m: { k: 15, o: 10 }, hp: 80, is: 2, tek: 'kerpic' },
   zigurat: { e: '🏛', ad: ['Ziggurat', 'Ziggurat'], ne: ['Şehrin göğe uzanan tapınağı. 8 işçi uzun süre çalışarak yükseltir', 'The city\'s temple to the sky. 8 workers raise it over a long time'], w: 4, h: 4, m: { k: 200, t: 120, b: 15 }, hp: 600, is: 8, tek: 'zigurat' }
 };
-const SIRA = ['ev', 'kev', 'tarla', 'oduncu', 'tas', 'ambar', 'depo', 'kuyu', 'tapinak', 'kerpicci', 'kanal', 'sur', 'kule', 'kisla', 'okul', 'pazar', 'bakir', 'tunc', 'zigurat'];
-const ISCI_SIRA = ['tarla', 'kule', 'oduncu', 'tas', 'kerpicci', 'tapinak', 'okul', 'bakir', 'tunc', 'zigurat'];
+const SIRA = ['yol', 'ev', 'kev', 'tarla', 'oduncu', 'tas', 'ambar', 'depo', 'kuyu', 'tapinak', 'kerpicci', 'biraevi', 'kanal', 'sur', 'kule', 'kisla', 'okul', 'pazar', 'bakir', 'tunc', 'zigurat'];
+const ISCI_SIRA = ['tarla', 'kule', 'oduncu', 'tas', 'kerpicci', 'biraevi', 'tapinak', 'okul', 'bakir', 'tunc', 'zigurat'];
 const TEK = {
   kerpic: { e: '🧱', ad: ['Kerpiç', 'Mudbrick'], ne: ['Kerpiççi, kerpiç ev', 'Brickworks, mudbrick houses'], m: 12 },
   sulama: { e: '〰', ad: ['Sulama', 'Irrigation'], ne: ['Sulama kanalları', 'Irrigation canals'], m: 25, on: ['kerpic'] },
@@ -268,10 +271,13 @@ const TEK = {
   kanun: { e: '⚖', ad: ['Yasa taşı', 'Law code'], ne: ['Her ev +1 kişi, göç hızlanır', 'Every house +1, faster growth'], m: 75, on: ['yazi'] },
   zigurat: { e: '🏛', ad: ['Ziggurat planı', 'Ziggurat plan'], ne: ['Ziggurat inşa edilebilir', 'The ziggurat can be built'], m: 90, on: ['yazi', 'kerpic'] }
 };
-const KAYNAK = [['f', '🍞', ['Yiyecek', 'Food']], ['o', '🪵', ['Odun', 'Wood']], ['t', '🪨', ['Taş', 'Stone']], ['k', '🧱', ['Kerpiç', 'Brick']], ['c', '🟤', ['Bakır', 'Copper']], ['z', '⚪', ['Kalay', 'Tin']], ['b', '🟠', ['Tunç', 'Bronze']], ['bl', '📜', ['Bilgi', 'Knowledge']]];
+const KAYNAK = [['f', '🍞', ['Yiyecek', 'Food']], ['o', '🪵', ['Odun', 'Wood']], ['t', '🪨', ['Taş', 'Stone']], ['k', '🧱', ['Kerpiç', 'Brick']], ['c', '🟤', ['Bakır', 'Copper']], ['z', '⚪', ['Kalay', 'Tin']], ['b', '🟠', ['Tunç', 'Bronze']], ['bl', '📜', ['Bilgi', 'Knowledge']], ['g', '🪙', ['Gümüş', 'Silver']], ['br', '🍺', ['Bira', 'Beer']]];
 const KE = {}; KAYNAK.forEach(q => KE[q[0]] = q[1]);
 const MEV = [['🌊', ['İlkbahar · taşkın', 'Spring · flood']], ['☀️', ['Yaz', 'Summer']], ['🌾', ['Sonbahar · hasat', 'Autumn · harvest']], ['🌧', ['Kış', 'Winter']]];
 const MEVSIM = 60;   // saniye
+const geceK = () => { const p = (O.t % MEVSIM) / MEVSIM; return p < 0.7 ? 0 : p < 0.78 ? (p - 0.7) / 0.08 : p < 0.94 ? 1 : (1 - p) / 0.06; };
+const geceC = document.createElement('canvas'), geceX = geceC.getContext('2d');
+const TEKNE = Array.from({ length: 5 }, (_, i) => ({ y: i * 410 + 100, ofs: (i % 2 ? 1 : -1) * rnd(10, 36), yon: i % 2 ? 1 : -1, hz: rnd(14, 24), f: i }));
 
 /* ================= durum ================= */
 const cv = $('c'), g = cv.getContext('2d');
@@ -294,7 +300,7 @@ const kap = k => k === 'f' ? kapF() : k === 'bl' ? 1e9 : kapM();
 const ekle = (k, n) => { O.r[k] = Math.min(kap(k), O.r[k] + n); };
 const yeter = m => Object.keys(m).every(k => O.r[k] >= m[k]);
 const maliyet = t => { const m = Object.assign({}, B[t].m); if (t === 'tapinak' && MIRAS.totem && !say('tapinak')) for (const k in m) m[k] = Math.ceil(m[k] / 2); if (t === 'sur' && O.tek.kerpic) return { k: 2 }; return m; };
-const malYaz = m => Object.keys(m).map(k => m[k] + ' ' + KE[k]).join(' ');
+const malYaz = m => Object.keys(m).length ? Object.keys(m).map(k => m[k] + ' ' + KE[k]).join(' ') : T('bedava', 'free');
 const tekAcik = t => !B[t].tek || O.tek[B[t].tek];
 const uretimCarpan = () => (1 + MIRAS.usta) * (O.tek.tekerlek ? 1.15 : 1);
 function suKur() {   // nehir, kanal ve kuyulardan 6 karo
@@ -312,11 +318,12 @@ function topraK(b) { let s = 0, n = 0; for (let y = b.y; y < b.y + 3; y++) for (
 function ovaOran(b) { let n = 0; for (let y = b.y; y < b.y + 3; y++) for (let x = b.x; x < b.x + 3; x++) if (Z[zi(x, y)] === Z_OVA) n++; return n / 9; }
 function tarlaHiz(b) {
   const m = mevsim(), sul = sulanir(b), ova = ovaOran(b); let k = topraK(b);
-  if (m === 0) k *= (1 - ova) * 1 + 0;   // taşkın: ovadaki kısım su altında
-  else if (m === 1) k *= sul ? 1.3 : ova > 0.5 ? 1 : 0.55;
-  else if (m === 2) k *= 1.35 + (ova > 0 ? 0.15 : 0);
+  const ol = O.olay && O.olay.tip;
+  if (m === 0 || (m === 1 && ol === 'taskin')) k *= (1 - ova);   // taşkın: ovadaki kısım su altında
+  else if (m === 1) k *= sul ? 1.3 : ova > 0.5 ? 1 : ol === 'kurak' ? 0.3 : 0.55;
+  else if (m === 2) k *= (1.35 + (ova > 0 ? 0.15 : 0) + (ol === 'taskin' ? ova * 0.5 : 0)) * (ol === 'kurak' && !sul ? 0.6 : 1) * (ol === 'cekirge' ? 0.6 : 1);
   else k *= 0.6;
-  return k * (MIRAS.tarla ? 1.1 : 1);
+  return k * (MIRAS.tarla ? 1.1 : 1) * (ol === 'bereket' ? 1.3 : 1);
 }
 function agacYakin(b) { let n = 0; const cx = (b.x + 1) * TS, cy = (b.y + 1) * TS; for (const a of AGACLAR) if ((a.x - cx) ** 2 + (a.y - cy) ** 2 < (5 * TS) ** 2) n++; return Math.min(1, n / 10); }
 /* yer kuralı: [uygun, neden] */
@@ -326,7 +333,7 @@ function yerUygun(t, x, y) {
   for (let j = y; j < y + d.h; j++) for (let i = x; i < x + d.w; i++) { const k = zi(i, j); if (BIDX[k] >= 0) return [false, T('Dolu', 'Occupied')]; const z = Z[k]; if (z === Z_SU) su++; if (z === Z_OVA) ova++; if (z === Z_TEPE) tepe++; if (z === Z_BAKIR) bakir++; if (z === Z_ORMAN) orman++; }
   if (su) return [false, T('Suya kurulamaz', 'Can\'t build on water')];
   if (orman) return [false, T('Koruyu kesemezsin; oduncu yanına kurulur', 'You can\'t clear the grove; put a woodcutter beside it')];
-  if (ova && t !== 'tarla' && t !== 'kanal') return [false, T('Taşkın ovası: her bahar su basar. Ovaya yalnızca tarla ve kanal', 'Floodplain: it floods every spring. Only fields and canals here')];
+  if (ova && t !== 'tarla' && t !== 'kanal' && t !== 'yol') return [false, T('Taşkın ovası: her bahar su basar. Ovaya yalnızca tarla ve kanal', 'Floodplain: it floods every spring. Only fields and canals here')];
   if ((tepe || bakir) && t === 'tarla') return [false, T('Tepede tarla olmaz', 'No fields on the hills')];
   if (t === 'tas') { let n = 0; for (let j = y - 1; j <= y + d.h; j++) for (let i = x - 1; i <= x + d.w; i++) { const z = Z[zi(i, j)]; if (z === Z_TEPE || z === Z_BAKIR) n++; } if (n < 3) return [false, T('Taş ocağı tepeye ya da hemen yanına', 'A quarry must be on or next to the hills')]; }
   if (t === 'bakir' && bakir < 2) return [false, T('Bakır damarının üstüne kur (yeşilimsi kayalar)', 'Build over the copper vein (greenish rocks)')];
@@ -341,23 +348,52 @@ function binaEkle(t, x, y, hp, ins, acik) {
   const b = { t, x, y, hp: hp == null ? B[t].hp : hp, ins: ins || 0, acik: acik == null ? 1 : acik, is: 0, v: (x * 7 + y * 13) % 3, uret: 0, cd: 0, id: (O.sayac = (O.sayac | 0) + 1) };
   BL.push(b); idxKur(); return b;
 }
-function idxKur() { BIDX.fill(-1); BL.forEach((b, i) => { for (let j = b.y; j < b.y + B[b.t].h; j++) for (let k = b.x; k < b.x + B[b.t].w; k++) BIDX[zi(k, j)] = i; }); suKur(); }
+const BAG_GEREK = new Set(['tarla', 'oduncu', 'tas', 'kerpicci', 'biraevi', 'bakir', 'tunc']);
+let AG = new Uint8Array(GW * GH);
+function agKur() {   // ambar/depoya değen yollardan başlayarak bağlı yolları işaretle
+  AG.fill(0); const kuyruk = [], depolar = BL.filter(b => (b.t === 'ambar' || b.t === 'depo') && !b.ins);
+  const komsu = (b, fn) => { const d = B[b.t]; for (let x = b.x - 1; x <= b.x + d.w; x++) { fn(x, b.y - 1); fn(x, b.y + d.h); } for (let y = b.y; y < b.y + d.h; y++) { fn(b.x - 1, y); fn(b.x + d.w, y); } };
+  const yolMu = i => i >= 0 && BIDX[i] >= 0 && BL[BIDX[i]].t === 'yol';
+  for (const d of depolar) komsu(d, (x, y) => { const i = zi(x, y); if (yolMu(i) && !AG[i]) { AG[i] = 1; kuyruk.push([x, y]); } });
+  while (kuyruk.length) { const [x, y] = kuyruk.pop(); for (const [dx, dy] of [[1, 0], [-1, 0], [0, 1], [0, -1]]) { const i = zi(x + dx, y + dy); if (yolMu(i) && !AG[i]) { AG[i] = 1; kuyruk.push([x + dx, y + dy]); } } }
+  for (const b of BL) { if (!BAG_GEREK.has(b.t)) { b.bag = 1; continue; } let ok = 0; komsu(b, (x, y) => { const i = zi(x, y); if (i < 0) return; if (AG[i]) ok = 1; const bi = BIDX[i]; if (bi >= 0 && (BL[bi].t === 'ambar' || BL[bi].t === 'depo')) ok = 1; }); b.bag = ok; }
+}
+function yolBagla(b) {   // b'den ağa ya da bir depoya en kısa yolu bulup döşer (BFS)
+  const d = B[b.t], bas = [], hedef = new Uint8Array(GW * GH), on = new Int32Array(GW * GH).fill(-1);
+  for (const q of BL) if (q.t === 'ambar' || q.t === 'depo') for (let x = q.x - 1; x <= q.x + B[q.t].w; x++) for (let y = q.y - 1; y <= q.y + B[q.t].h; y++) { const i = zi(x, y); if (i >= 0) hedef[i] = 1; }
+  for (let i = 0; i < GW * GH; i++) if (AG[i]) hedef[i] = 1;
+  const gecer = i => i >= 0 && (BIDX[i] < 0 ? Z[i] !== Z_SU && Z[i] !== Z_ORMAN : BL[BIDX[i]].t === 'yol');
+  for (let x = b.x - 1; x <= b.x + d.w; x++) for (const y of [b.y - 1, b.y + d.h]) bas.push([x, y]); for (let y = b.y; y < b.y + d.h; y++) for (const x of [b.x - 1, b.x + d.w]) bas.push([x, y]);
+  const kuyruk = []; for (const [x, y] of bas) { const i = zi(x, y); if (gecer(i) || (i >= 0 && hedef[i])) { if (on[i] < 0) { on[i] = i; kuyruk.push(i); } } }
+  let son = -1;
+  for (let k = 0; k < kuyruk.length && k < 6000; k++) { const i = kuyruk[k]; if (hedef[i] && (BIDX[i] < 0 || BL[BIDX[i]].t === 'yol')) { son = i; break; } const x = i % GW, y = (i / GW) | 0; for (const [dx, dy] of [[1, 0], [-1, 0], [0, 1], [0, -1]]) { const n = zi(x + dx, y + dy); if (n >= 0 && on[n] < 0 && gecer(n)) { on[n] = i; kuyruk.push(n); } } }
+  if (son < 0) return -1; let n = 0, i = son;
+  while (true) { if (BIDX[i] < 0) { binaEkleSessiz('yol', i % GW, (i / GW) | 0); n++; } if (on[i] === i) break; i = on[i]; }
+  idxKur(); return n;
+}
+function binaEkleSessiz(t, x, y) { BL.push({ t, x, y, hp: B[t].hp, ins: 0, acik: 1, is: 0, v: 0, uret: 0, cd: 0, id: (O.sayac = (O.sayac | 0) + 1) }); for (let j = y; j < y + B[t].h; j++) for (let k = x; k < x + B[t].w; k++) BIDX[zi(k, j)] = BL.length - 1; }
+function idxKur() { BIDX.fill(-1); BL.forEach((b, i) => { for (let j = b.y; j < b.y + B[b.t].h; j++) for (let k = b.x; k < b.x + B[b.t].w; k++) BIDX[zi(k, j)] = i; }); suKur(); agKur(); }
 function binaSil(b, yikildi) { const i = BL.indexOf(b); if (i < 0) return; BL.splice(i, 1); if (b.t === 'kisla') { for (const a of A) if (a.kisla === b.id) a.kisla = null; } if (yikildi) { for (let k = 0; k < 14; k++) PT.push({ x: (b.x + B[b.t].w / 2) * TS + rnd(-20, 20), y: (b.y + B[b.t].h / 2) * TS + rnd(-20, 20), vx: rnd(-30, 30), vy: rnd(-50, -10), t: 0, s: rnd(1, 2.2), r: rnd(5, 12), renk: 'rgba(60,50,40,.5)', duman: 1 }); O.harabe.push([b.x, b.y, B[b.t].w, B[b.t].h, O.t]); } idxKur(); }
 function yeniOyun() {
   const seed = (Math.random() * 1e9) | 0;
-  O = { v: 1, seed, t: 0, sure: 0, r: { f: 120 + Math.min(100, KB ? KB.f / 3 : 0), o: 70 + Math.min(60, KB ? KB.o / 3 : 0), t: 40 + Math.min(60, KB ? KB.s / 3 : 0), k: 0, c: 0, z: 0, b: 0, bl: MIRAS.tarla ? 6 : 0 }, nuf: Math.min(20, 8 + Math.floor((KB ? KB.kisi : 20) / 4)), tek: {}, asama: 0, kazandi: 0, baskin: { sonraki: 420, n: 0, uyar: 0 }, puskurt: 0, yagma: 0, ticaret: 0, ticCd: {}, gocT: 0, harabe: [], sayac: 0, hue: KB ? KB.hue : 30, ipucu: {} };
+  O = { v: 1, seed, t: 0, sure: 0, r: { f: 120 + Math.min(100, KB ? KB.f / 3 : 0), o: 70 + Math.min(60, KB ? KB.o / 3 : 0), t: 40 + Math.min(60, KB ? KB.s / 3 : 0), k: 0, c: 0, z: 0, b: 0, bl: MIRAS.tarla ? 6 : 0 }, nuf: Math.min(20, 8 + Math.floor((KB ? KB.kisi : 20) / 4)), tek: {}, asama: 0, kazandi: 0, baskin: { sonraki: 420, n: 0, uyar: 0 }, puskurt: 0, yagma: 0, ticaret: 0, ticCd: {}, gocT: 0, harabe: [], sayac: 0, hue: KB ? KB.hue : 30, ipucu: {}, mutlu: 62, vergi: 1, bayram: 0, olay: null, kehanet: null, kent: { guc: 8, harac: 3 * 4 * MEVSIM + MEVSIM * 1.2, fetih: 0, ret: 0 }, sefer: null, ad: sehirAdi(), kral: kralAdi() };
+  O.r.g = 0; O.r.br = 0;
   dunyaKur(seed); BL = []; A = []; R = []; OK = []; KERVAN = []; YURU = [];
   let ilk = null; for (const y of [17, 20, 23]) { let x = Math.floor(nehirX(y + 1)) - 4; while (x > 6 && !yerUygun('ev', x, y)[0]) x--; binaEkle('ev', x, y); if (!ilk) ilk = [x, y]; }
   { let x = ilk[0] + 2, y = ilk[1] + 2; binaEkle('kuyu', x, y); }
-  binaEkle('tarla', nehirOvaX(19), 19); O.t = MEVSIM;
+  const tl = binaEkle('tarla', nehirOvaX(19), 19); O.t = MEVSIM;
+  { let x = ilk[0], y = ilk[1] - 3; while (!yerUygun('depo', x, y)[0] && y > 2) y--; binaEkle('depo', x, y); yolBagla(tl); }
   ipucu = O.ipucu; zum = EW < 700 ? 0.7 : 1;
   kx = ilk[0] * TS - EW / zum / 2; ky = 21 * TS - EH / zum / 2; zumSinir();
 }
+const SEHIRLER = ['Eridu', 'Uruk', 'Lagaş', 'Kiş', 'Nippur', 'Larsa', 'Umma', 'Şuruppak', 'Sippar', 'Mari'];
+function sehirAdi() { const v = ($('sAd') && $('sAd').value || '').trim().slice(0, 18); return v || SEHIRLER[(Math.random() * SEHIRLER.length) | 0]; }
+function kralAdi() { const v = ($('kAd') && $('kAd').value || '').trim().slice(0, 18); return v || (KB && KB.ustalar[0]) || (KB && KB.adlar[0]) || T('Kral', 'The King'); }
 function nehirOvaX(y) { let x = Math.floor(nehirX(y + 1.5)) - 2; while (x > 0 && Z[zi(x, y)] !== Z_OVA) x--; while (x > 0 && Z[zi(x - 1, y)] === Z_OVA && Z[zi(x - 1, y + 2)] === Z_OVA) x--; for (let k = x; k < x + 6; k++) if (yerUygun('tarla', k, y)[0]) return k + 1; return x + 1; }
 function kaydet() {
   if (KILIT || !O) return;
   O.bl = BL.map(b => [b.t, b.x, b.y, Math.round(b.hp), +(b.ins.toFixed ? b.ins.toFixed(3) : b.ins), b.acik]);
-  O.askerler = A.map(a => [a.tunc ? 1 : 0, Math.round(a.hp), Math.round(a.x), Math.round(a.y)]);
+  O.askerler = A.filter(a => !a.sefer).map(a => [a.tunc ? 1 : 0, Math.round(a.hp), Math.round(a.x), Math.round(a.y)]);
   O.ipucu = ipucu; O.son = Date.now(); O.kamera = [Math.round(kx), Math.round(ky), +zum.toFixed(2)];
   ls.set('sehir-kayit', { v: 1, oyun: O, rekor: REKOR });
 }
@@ -369,6 +405,8 @@ function yukle() {
   R = []; OK = []; KERVAN = []; YURU = []; ipucu = O.ipucu || {};
   if (Array.isArray(O.kamera)) { kx = O.kamera[0]; ky = O.kamera[1]; zum = O.kamera[2]; }
   if (O.baskin.aktif) O.baskin.aktif = 0;
+  if (O.mutlu == null) O.mutlu = 60; if (O.vergi == null) O.vergi = 1; O.bayram = O.bayram || 0; if (!O.kent) O.kent = { guc: 8, harac: O.t + 240, fetih: 0, ret: 0 }; if (O.r.g == null) O.r.g = 0; if (O.r.br == null) O.r.br = 0; if (!O.ad) O.ad = sehirAdi(); if (!O.kral) O.kral = kralAdi();
+  if (O.sefer) { for (const q of O.sefer.ask) { const a = askerYeni(q, (nehirX(GH) - 3) * TS, DH - 60); A.push(a); } O.sefer = null; kislaAta(); }
   return true;
 }
 
@@ -381,19 +419,20 @@ function isciDagit() {
   issiz = bos;
 }
 function uret(dt) {
-  const dk = dt / 60, kc = uretimCarpan();
+  const dk = dt / 60, kc0 = uretimCarpan() * (O.mutlu < 25 ? 0.6 : 1);
   for (const b of BL) {
     if (!b.is) { b.uret = 0; continue; }
-    const n = b.is; let h = 0;
+    const n = b.is, kc = kc0 * (b.bag ? 1 : 0.5); let h = 0;
     if (b.t === 'tarla') { h = n * 5 * tarlaHiz(b) * kc; ekle('f', h * dk); }
     else if (b.t === 'oduncu') { h = n * 6 * agacYakin(b) * kc; ekle('o', h * dk); }
     else if (b.t === 'tas') { h = n * 5 * kc; ekle('t', h * dk); }
     else if (b.t === 'kerpicci') { h = n * 4 * kc * (mevsim() === 3 ? 0.6 : 1); ekle('k', h * dk); }
     else if (b.t === 'tapinak') { h = n * 1.5 * kc; ekle('bl', h * dk); }
+    else if (b.t === 'biraevi') { const ist = n * 3 * kc * dk, m = Math.min(ist, O.r.f / 2); if (m > 0 && O.r.f > 30) { O.r.f -= m * 2; ekle('br', m); h = n * 3 * kc; } }
     else if (b.t === 'okul') { h = n * 3 * kc; ekle('bl', h * dk); }
     else if (b.t === 'bakir') { h = n * 3 * kc; ekle('c', h * dk); }
     else if (b.t === 'tunc') { const ist = n * 2 * kc * dk, m = Math.min(ist, O.r.c / 2, O.r.z); if (m > 0) { O.r.c -= m * 2; O.r.z -= m; ekle('b', m); } h = m > 0 ? n * 2 * kc : 0; }
-    else if (b.t === 'zigurat' && b.ins && b.ins < 1) { b.ins = Math.min(1, b.ins + n / 8 * dt / 240 * kc); if (b.ins >= 1) { b.ins = 0; b.hp = B.zigurat.hp; SES.zafer(); duyur(T('🏛 Ziggurat tamamlandı! Şehrin göğe uzanıyor', '🏛 The ziggurat is complete! Your city reaches for the sky'), 'iyi', 8); } }
+    else if (b.t === 'zigurat' && b.ins && b.ins < 1) { b.ins = Math.min(1, b.ins + n / 8 * dt / 240 * kc0); if (b.ins >= 1) { b.ins = 0; b.hp = B.zigurat.hp; SES.zafer(); duyur(T('🏛 Ziggurat tamamlandı! Şehrin göğe uzanıyor', '🏛 The ziggurat is complete! Your city reaches for the sky'), 'iyi', 8); setTimeout(() => yaziGoster(true), 400); } }
     b.uret = h;
   }
 }
@@ -406,11 +445,11 @@ function yuruGuncelle(dt) {
   if (YURU.length > hedefN) YURU.length = hedefN;
   for (let i = YURU.length - 1; i >= 0; i--) {
     const w = YURU[i]; if (!BL.includes(w.ev) || (w.is && !BL.includes(w.is))) { YURU.splice(i, 1); continue; }
-    if (R.length) { const p = merkez(w.ev); w.tx = p.x; w.ty = p.y + 10; }
+    if (R.length || geceK() > 0.5) { const p = merkez(w.ev); w.tx = p.x; w.ty = p.y + 10; w.git = 0; }
     else if (w.bek > 0) { w.bek -= dt; continue; }
     else { const h = w.git && w.is ? w.is : w.ev, p = merkez(h); if (w.tx == null || w.hd !== h) { w.hd = h; w.tx = p.x + rnd(-B[h.t].w * 14, B[h.t].w * 14); w.ty = p.y + rnd(-B[h.t].h * 10, B[h.t].h * 14); } }
     const dx = w.tx - w.x, dy = w.ty - w.y, d = Math.hypot(dx, dy), v = w.hz * (O.tek.tekerlek ? 1.1 : 1) * (R.length ? 1.8 : 1);
-    if (d < 4) { if (!R.length) { w.bek = rnd(3, 9); w.git = w.is ? 1 - w.git : 0; w.yuk = w.git ? 0 : 1; w.tx = null; } continue; }
+    if (d < 4) { if (!R.length && geceK() <= 0.5) { w.bek = rnd(3, 9); w.git = w.is ? 1 - w.git : 0; w.yuk = w.git ? 0 : 1; w.tx = null; } continue; }
     w.x += dx / d * Math.min(d, v * dt); w.y += dy / d * Math.min(d, v * dt); w.ang = Math.atan2(dy, dx); w.yf += v * dt * 0.12;
   }
 }
@@ -424,10 +463,11 @@ function askerYetistir(b, tunc) {
   if (A.filter(a => a.kisla === b.id).length >= 6 || !yeter(m) || O.nuf - askerN() < 2) return false;
   for (const k in m) O.r[k] -= m[k]; const p = merkez(b), a = askerYeni(tunc, p.x + rnd(-20, 20), p.y + rnd(-10, 20)); a.kisla = b.id; A.push(a); SES.boru(); return true;
 }
-function baskinBasla() {
-  const n = O.baskin.n, boy = Math.min(24, 3 + n * 2 + (yil() >= 6 ? 2 : 0)), atli = yil() >= 5 ? Math.floor(boy / 4) : 0;
-  const kenar = O.baskin.kenar; O.baskin.aktif = 1; O.baskin.oldu = 0; O.baskin.boy = boy; O.baskin.sure = 0;
-  for (let i = 0; i < boy; i++) { const at = i < atli; R.push({ x: kenar.x + rnd(-60, 60), y: kenar.y + rnd(-90, 90), hp: at ? 34 : 22, hpMax: at ? 34 : 22, at, hz: at ? 92 : 58, cd: 0, hedef: null, ganimet: 0, kac: 0, ang: Math.PI, yf: 0, vur: 0 }); }
+function baskinBasla(kent) {
+  const n = O.baskin.n, boy = kent ? Math.min(20, 6 + yil()) : Math.min(24, 3 + n * 2 + (yil() >= 6 ? 2 : 0)), atli = kent ? 0 : yil() >= 5 ? Math.floor(boy / 4) : 0;
+  const kenar = kent ? { x: (nehirX(GH) - 4) * TS, y: DH - 30 } : O.baskin.kenar; O.baskin.kenar = kenar; O.baskin.aktif = 1; O.baskin.oldu = 0; O.baskin.boy = boy; O.baskin.sure = 0; O.baskin.kent = kent ? 1 : 0;
+  for (let i = 0; i < boy; i++) { const at = i < atli; R.push({ kent: kent ? 1 : 0, x: kenar.x + rnd(-60, 60), y: kenar.y + rnd(-90, 90), hp: kent ? 44 : at ? 34 : 22, hpMax: kent ? 44 : at ? 34 : 22, at, hz: at ? 92 : 58, cd: 0, hedef: null, ganimet: 0, kac: 0, ang: Math.PI, yf: 0, vur: 0 }); }
+  if (kent) { SES.boru(); duyur(T(`⚔️ Güney kentinin ${boy} askeri haraç için saldırıyor!`, `⚔️ ${boy} soldiers of the southern city attack over the tribute!`), 'uyari', 7); return; }
   SES.boru(); duyur(T(`⚔️ ${boy} göçebe saldırıyor! Askerlerin ve kulelerin savunuyor; halk evlere kaçtı`, `⚔️ ${boy} nomads are attacking! Your soldiers and towers defend; the people fled indoors`), 'uyari', 6);
 }
 function hedefSec(r) {
@@ -439,13 +479,16 @@ function binaHasar(b, d) { b.hp -= d; b.vur = 0.2; if (b.hp <= 0) { SES.yik(); d
 function baskinGuncelle(dt) {
   const bk = O.baskin;
   if (!bk.aktif) {
+    if (O.kentSaldiri && O.t >= O.kentSaldiri) { O.kentSaldiri = 0; baskinBasla(true); return; }
     const kalan = bk.sonraki - O.t;
     if (kalan < 30 && !bk.uyar) { bk.uyar = 1; const sag = Math.random() < 0.65; bk.kenar = sag ? { x: DW - 30, y: rnd(0.2, 0.8) * DH } : { x: rnd(0.55, 0.9) * DW, y: DH - 30 }; SES.boru(); duyur(T(`🐎 Göçebeler görüldü! ${Math.ceil(kalan)} sn sonra ${sag ? 'doğudan' : 'güneyden'} saldıracaklar. Sur, kule ve asker hazırla`, `🐎 Nomads sighted! They attack from the ${sag ? 'east' : 'south'} in ${Math.ceil(kalan)} s. Ready walls, towers and soldiers`), 'uyari', 8); }
-    if (kalan <= 0) baskinBasla();
+    if (kalan <= 0) baskinBasla(false);
   } else {
     bk.sure += dt;
     if (!R.length) {
       bk.aktif = 0; bk.uyar = 0; bk.n++; bk.sonraki = O.t + Math.max(200, 290 - bk.n * 12) + rnd(-20, 20);
+      if (bk.kent) { if (bk.oldu >= bk.boy * 0.5) { O.puskurt++; O.kent.guc = Math.max(6, O.kent.guc - 4); SES.basari(); duyur(T('🛡 Güney kentinin ordusu geri püskürtüldü! Bir süre haraç istemeyecekler', '🛡 The southern army was driven back! They won\'t demand tribute for a while'), 'iyi', 7); } else { O.yagma++; duyur(T('😞 Güney kentinin ordusu yağmalayıp döndü', '😞 The southern army plundered and returned'), 'uyari', 6); } bk.kent = 0; bk.sonraki = Math.max(bk.sonraki, O.t + 150); O.mutlu -= 5; kaydet(); return; }
+      O.sonYagma = bk.oldu >= bk.boy * 0.5 ? O.sonYagma : O.t;
       if (bk.oldu >= bk.boy * 0.5) { O.puskurt++; REKOR.puskurt++; SES.basari(); duyur(T(`🛡 Baskın püskürtüldü! (${bk.oldu}/${bk.boy} göçebe düştü)`, `🛡 The raid was repelled! (${bk.oldu}/${bk.boy} nomads fell)`), 'iyi', 6); }
       else { O.yagma++; duyur(T('😞 Göçebeler yağmalayıp çekildi. Daha çok asker, sur ve kule gerekiyor', '😞 The nomads plundered and withdrew. You need more soldiers, walls and towers'), 'uyari', 6); }
       kaydet();
@@ -455,11 +498,12 @@ function baskinGuncelle(dt) {
     const r = R[i]; if (r.cd > 0) r.cd -= dt; if (r.vur > 0) r.vur -= dt;
     if (r.hp <= 0) { R.splice(i, 1); bk.oldu++; for (let k = 0; k < 6; k++) PT.push({ x: r.x, y: r.y, vx: rnd(-50, 50), vy: rnd(-50, 50), t: 0, s: 0.5, r: 2.5, renk: '#8A2A20' }); continue; }
     if (bk.sure > 75 || r.ganimet >= 40) r.kac = 1;
+    if (r.kac && r.kent && O.baskin.kenar.y < DH - 60) O.baskin.kenar = { x: (nehirX(GH) - 4) * TS, y: DH - 30 };
     let hx, hy;
     if (r.kac) { hx = bk.kenar.x; hy = bk.kenar.y; if (Math.hypot(r.x - hx, r.y - hy) < 40) { R.splice(i, 1); continue; } }
     else {
       let as = null, ad = 70 * 70; for (const a of A) { const d = (a.x - r.x) ** 2 + (a.y - r.y) ** 2; if (d < ad) { ad = d; as = a; } }
-      if (as) { hx = as.x; hy = as.y; if (ad < 22 * 22 && r.cd <= 0) { as.hp -= as.tunc ? 3 : 5; as.vur = 0.2; r.cd = 1; r.vur = 0.2; SES.vur(); } }
+      if (as) { hx = as.x; hy = as.y; if (ad < 22 * 22 && r.cd <= 0) { as.hp -= (as.tunc ? 3 : 5) * (r.kent ? 1.4 : 1); as.vur = 0.2; r.cd = 1; r.vur = 0.2; SES.vur(); } }
       else {
         if (!r.hedef || !BL.includes(r.hedef)) r.hedef = hedefSec(r);
         if (!r.hedef) { r.kac = 1; continue; }
@@ -481,6 +525,7 @@ function baskinGuncelle(dt) {
   for (let i = A.length - 1; i >= 0; i--) {
     const a = A[i]; if (a.cd > 0) a.cd -= dt; if (a.vur > 0) a.vur -= dt;
     if (a.hp <= 0) { A.splice(i, 1); O.nuf = Math.max(0, O.nuf - 1); duyur(T('💀 Bir asker düştü', '💀 A soldier fell'), 'uyari', 2.5); continue; }
+    if (a.sefer) { const hx = (nehirX(GH) - 3) * TS, hy = DH + 40, dx = hx - a.x, dy = hy - a.y, d = Math.hypot(dx, dy); if (d < 30) { A.splice(i, 1); continue; } const v = 80 * dt; a.x += dx / d * v; a.y += dy / d * v; a.ang = Math.atan2(dy, dx); a.yf += v * 0.12; continue; }
     let en = null, ed = 1e12; for (const r of R) { if (r.kac) continue; const d = (r.x - a.x) ** 2 + (r.y - a.y) ** 2; if (d < ed) { ed = d; en = r; } }
     let hx, hy;
     if (en) { hx = en.x; hy = en.y; if (ed < 24 * 24 && a.cd <= 0) { en.hp -= a.tunc ? 11 : 6; en.vur = 0.2; a.cd = 0.9; a.vur = 0.2; SES.vur(); } }
@@ -494,10 +539,11 @@ function baskinGuncelle(dt) {
 
 /* ================= ticaret ================= */
 const TIC = {
-  dag: { e: '⛰', ad: ['Dağ halkı', 'Mountain folk'], ne: ['Kuzeydoğu dağlarından gelir; kalay yalnız onlarda', 'Come from the north-eastern mountains; only they have tin'], kenar: () => ({ x: DW - 20, y: 40 }), takas: [[{ f: 25 }, { z: 6 }], [{ k: 15 }, { z: 6 }], [{ o: 30 }, { t: 25 }]] },
-  guney: { e: '🐪', ad: ['Güney kenti', 'Southern city'], ne: ['Nehrin aşağısındaki büyük kent', 'The great city down the river'], kenar: () => ({ x: nehirX(GH) * TS - 120, y: DH - 20 }), takas: [[{ o: 25 }, { f: 30 }], [{ c: 10 }, { f: 40 }], [{ t: 20 }, { k: 15 }]] }
+  dag: { e: '⛰', ad: ['Dağ halkı', 'Mountain folk'], ne: ['Kuzeydoğu dağlarından gelir; kalay yalnız onlarda', 'Come from the north-eastern mountains; only they have tin'], kenar: () => ({ x: DW - 20, y: 40 }), takas: [[{ f: 25 }, { z: 6 }], [{ g: 15 }, { z: 7 }], [{ k: 15 }, { z: 6 }], [{ o: 30 }, { t: 25 }]] },
+  guney: { e: '🐪', ad: ['Güney kenti', 'Southern city'], ne: ['Nehrin aşağısındaki büyük kent', 'The great city down the river'], kenar: () => ({ x: nehirX(GH) * TS - 120, y: DH - 20 }), takas: [[{ o: 25 }, { f: 30 }], [{ g: 12 }, { f: 45 }], [{ c: 10 }, { f: 40 }], [{ t: 20 }, { k: 15 }]] }
 };
 function ticaretYap(p, i) {
+  if (p === 'guney' && O.kent && O.kent.ret > O.t) { duyur(T('🐪 Güney kenti haraç reddettiğin için ticareti kesti', '🐪 The southern city cut trade after you refused the tribute'), 'uyari', 3); return; }
   const q = TIC[p].takas[i], ver = q[0], al = q[1]; if ((O.ticCd[p] || 0) > O.t || !yeter(ver) || !say('pazar')) return;
   for (const k in ver) O.r[k] -= ver[k]; const pz = BL.find(b => b.t === 'pazar'), s = TIC[p].kenar(), c = merkez(pz);
   KERVAN.push({ x: s.x, y: s.y, hx: c.x, hy: c.y, al, carp: O.tek.tekerlek ? 1.3 : 1, t: 0, ang: 0, yf: 0 });
@@ -515,20 +561,80 @@ function guncelle(dt) {
   /* yiyecek ve nüfus */
   const ye = (O.nuf * 2 + askerN() * 1) / 60 * dt; O.r.f -= ye;
   const kap = nufusKap();
+  mutluGuncelle(dt, kap); kentGuncelle(dt);
   if (O.r.f <= 0) { O.r.f = 0; O.aclik = (O.aclik || 0) + dt; if (O.aclik > 6 && O.nuf > 2) { O.aclik = 0; O.nuf--; birKez('aclik' + Math.floor(O.t / 90), T('🍞 Yiyecek bitti: aileler şehri terk ediyor! Tarla kur ya da tarlalara işçi ver', '🍞 Food is gone: families are leaving the city! Build fields or staff them'), 'uyari'); } }
   else { O.aclik = 0;
-    if (O.nuf < kap && O.r.f > 15) { O.gocT += dt * (1 + (say('pazar') ? 0.5 : 0) + (O.tek.kanun ? 0.4 : 0)); const ara = 5 + O.nuf * 0.06; if (O.gocT >= ara) { O.gocT = 0; O.nuf++; REKOR.enKalabalik = Math.max(REKOR.enKalabalik, Math.floor(O.nuf)); if (Math.random() < 0.25) yaz(rnd(kx + 80, kx + EW / zum - 80), ky + EH / zum - 120, T('+1 göçmen', '+1 settler'), '#B6F08E'); } }
+    if (O.nuf < kap && O.r.f > 15 && O.mutlu >= 35) { O.gocT += dt * (1 + (say('pazar') ? 0.5 : 0) + (O.tek.kanun ? 0.4 : 0)) * (O.mutlu > 70 ? 1.3 : 1); const ara = 5 + O.nuf * 0.06; if (O.gocT >= ara) { O.gocT = 0; O.nuf++; REKOR.enKalabalik = Math.max(REKOR.enKalabalik, Math.floor(O.nuf)); if (Math.random() < 0.25) yaz(rnd(kx + 80, kx + EW / zum - 80), ky + EH / zum - 120, T('+1 göçmen', '+1 settler'), '#B6F08E'); } }
     else if (O.nuf > kap + 0.5) { O.gocT += dt; if (O.gocT > 8) { O.gocT = 0; O.nuf--; birKez('evsiz' + Math.floor(O.t / 120), T('🏚 Evsiz kalanlar şehri terk ediyor: ev kur', '🏚 The homeless are leaving: build houses'), 'uyari'); } }
     else if (O.nuf >= kap) birKez('evYok' + say('ev') + say('kev'), T('🛖 Evler doldu: yeni göçmenler için ev kur (suya yakın)', '🛖 Houses are full: build more (near water) for new settlers'), '', 5);
   }
   if (issiz > 4) birKez('issiz' + Math.floor(O.t / 150), T(`👷 ${issiz} kişi işsiz: yeni iş yerleri kur`, `👷 ${issiz} people are idle: build workplaces`), '', 5);
-  baskinGuncelle(dt); kervanGuncelle(dt); yuruGuncelle(dt);
+  for (const k of TEKNE) { k.y += k.hz * k.yon * dt; if (k.y > DH + 60) k.y = -60; if (k.y < -60) k.y = DH + 60; }
+  baskinGuncelle(dt); kervanGuncelle(dt); yuruGuncelle(dt); if (O.sefer && O.t >= O.sefer.t) seferBitir(); if (O.bayram > O.t && Math.random() < dt * 3) bayramKivilcim();
   for (let i = PT.length - 1; i >= 0; i--) { const p = PT[i]; p.t += dt / p.s; p.x += p.vx * dt; p.y += p.vy * dt; if (p.t >= 1) PT.splice(i, 1); }
   for (let i = FT.length - 1; i >= 0; i--) if ((FT[i].t += dt / 1.6) >= 1) FT.splice(i, 1);
   for (let i = O.harabe.length - 1; i >= 0; i--) if (O.t - O.harabe[i][4] > 120) O.harabe.splice(i, 1);
   ipuclari(); asamaKontrol();
 }
+function tapKapsam() { const ev = BL.filter(b => B[b.t].nuf); if (!ev.length) return 0; return ev.filter(b => yakinTip(b, 'tapinak', 9)).length / ev.length; }
+function mutluHedef(kap) {
+  const L = [[50, T('temel', 'base')]], k = tapKapsam();
+  if (k > 0) L.push([Math.round(15 * k), T('tapınak', 'temples')]);
+  if (say('pazar')) L.push([8, T('pazar', 'market')]);
+  if (O.r.br > 0.5 && say('biraevi')) L.push([12, T('bira', 'beer')]);
+  if (O.tek.kanun) L.push([6, T('yasa taşı', 'law code')]);
+  L.push([[8, 0, -15][O.vergi], T('vergi', 'taxes')]);
+  if (O.bayram > O.t) L.push([25, T('bayram', 'festival')]);
+  if (O.r.f <= 0) L.push([-35, T('açlık', 'hunger')]);
+  if (O.nuf > kap + 0.5) L.push([-10, T('evsizlik', 'homelessness')]);
+  if (O.sonYagma && O.t - O.sonYagma < 120) L.push([-12, T('yağma', 'plunder')]);
+  if (O.salginT && O.t - O.salginT < 120) L.push([-15, T('salgın', 'plague')]);
+  if (O.kent && O.kent.fetih) L.push([6, T('zafer', 'victory')]);
+  return L;
+}
+function mutluGuncelle(dt, kp) {
+  const L = mutluHedef(kp), h = kis(L.reduce((n, q) => n + q[0], 0), 0, 100); O.mutlu += (h - O.mutlu) * Math.min(1, dt / 15);
+  O.r.g = Math.min(kap('g'), O.r.g + O.nuf * [0, 0.15, 0.3][O.vergi] / 60 * dt);
+  if (O.r.br > 0) O.r.br = Math.max(0, O.r.br - O.nuf * 0.04 / 60 * dt);
+  if (O.mutlu < 25) { O.isyanT = (O.isyanT || 0) + dt; birKez('isyan' + Math.floor(O.t / 200), T('😡 Halk ayaklandı! İşler yavaşladı, aileler kaçıyor. Vergiyi düşür, bayram yap, tapınak ve bira evi kur', '😡 The people revolt! Work slows and families flee. Lower taxes, hold a festival, build temples and breweries'), 'uyari', 8); if (O.isyanT > 15 && O.nuf > 10) { O.isyanT = 0; O.nuf--; } }
+  else if (O.mutlu < 40) birKez('mutsuz' + Math.floor(O.t / 200), T('😟 Halk mutsuz: göçmen gelmiyor. 😊 göstergesine dokun', '😟 The people are unhappy: no settlers arrive. Tap the 😊 chip'), 'uyari', 6);
+}
+const OLAY = {
+  kurak: { e: '☀️', ad: ['Kuraklık', 'Drought'], ne: ['Sulanmayan tarlalar yaz ve güz az verir; kanal kaz', 'Unirrigated fields yield little in summer and autumn; dig canals'] },
+  cekirge: { e: '🦗', ad: ['Çekirge sürüsü', 'Locust swarm'], ne: ['Güzün ambarın üçte birini ve hasadın bir kısmını yer; ambarı yazdan doldur', 'In autumn they eat a third of the store and part of the harvest; fill up in summer'] },
+  taskin: { e: '🌊', ad: ['Büyük taşkın', 'Great flood'], ne: ['Ova yaz boyunca da su altında kalır, güzün çok verimli olur', 'The floodplain stays under water through summer, then yields richly in autumn'] },
+  salgin: { e: '🤒', ad: ['Salgın', 'Plague'], ne: ['Yazın hastalık yayılır; temiz su (kuyu) ve tapınak etkisini azaltır', 'Sickness spreads in summer; clean water (wells) and temples soften it'] },
+  bereket: { e: '🌈', ad: ['Bereketli yıl', 'Bountiful year'], ne: ['Bütün tarlalar %30 fazla verir', 'All fields yield 30% more'] },
+  sakin: { e: '🕊', ad: ['Sakin bir yıl', 'A quiet year'], ne: ['Olağanüstü bir şey beklenmiyor', 'Nothing unusual is expected'] }
+};
+function olaySec() { const L = ['kurak', 'cekirge', 'taskin', 'salgin', 'bereket', 'sakin', 'sakin']; let t; do t = L[(Math.random() * L.length) | 0]; while (O.olay && t === O.olay.tip && t !== 'sakin'); return t; }
+function kentGuncelle(dt) {
+  const k = O.kent; if (!k) return;
+  k.guc += dt / 60 * 0.9;
+  if (k.fetih || O.t < k.harac || panelAcik) return;
+  if (mevsim() !== 1 && mevsim() !== 2) return;
+  k.harac = O.t + 2 * 4 * MEVSIM; k.istek = { g: Math.round(15 + 6 * yil()), f: Math.round(60 + 20 * yil()) }; SES.boru(); pnlAc('harac');
+}
+function seferGonder() {
+  const ask = A.filter(a => !a.sefer); if (ask.length < 8 || O.sefer) return;
+  O.sefer = { t: O.t + 50, ask: ask.map(a => a.tunc ? 1 : 0) }; for (const a of ask) a.sefer = 1;
+  SES.boru(); duyur(T(`⚔️ ${ask.length} asker güney kentine yürüyor. Sonuç yaklaşık 50 saniye sonra gelecek`, `⚔️ ${ask.length} soldiers march on the southern city. The outcome arrives in about 50 seconds`), 'iyi', 6); pnlKapa();
+}
+function seferBitir() {
+  const s = O.sefer; O.sefer = null; for (let i = A.length - 1; i >= 0; i--) if (A[i].sefer) A.splice(i, 1);
+  const bizim = s.ask.reduce((n, q) => n + (q ? 2.2 : 1), 0) * rnd(0.85, 1.2), onlar = O.kent.guc * rnd(0.85, 1.15), kaz = bizim > onlar;
+  const kayip = kaz ? Math.max(0.15, onlar / bizim * 0.45) : 0.65, don = s.ask.filter(() => Math.random() > kayip);
+  O.nuf = Math.max(1, O.nuf - (s.ask.length - don.length));
+  for (const q of don) { const a = askerYeni(q, (nehirX(GH) - 3) * TS + rnd(-40, 40), DH - 40); A.push(a); } kislaAta();
+  if (kaz) { O.kent.fetih = 1; SES.zafer(); ekle('g', 80); ekle('f', 150); ekle('z', 20); duyur(T(`🏆 Güney kenti fethedildi! ${don.length} asker döndü. Kent artık her bahar haraç gönderecek`, `🏆 The southern city is conquered! ${don.length} soldiers returned. It will send tribute every spring`), 'iyi', 9); }
+  else { O.mutlu -= 10; duyur(T(`💀 Sefer başarısız: ${s.ask.length - don.length} asker düştü. Güney kentinin gücü ~${Math.round(O.kent.guc)}; daha çok tunç asker gerekiyor`, `💀 The campaign failed: ${s.ask.length - don.length} soldiers fell. The southern city's strength is ~${Math.round(O.kent.guc)}; you need more bronze soldiers`), 'uyari', 8); }
+  kaydet();
+}
 function mevsimDegisti(m) {
+  if (m === 0) { O.olay = O.kehanet ? { tip: O.kehanet } : null; O.kehanet = null; if (O.olay && O.olay.tip !== 'sakin') { const q = OLAY[O.olay.tip]; setTimeout(() => duyur(`${q.e} ${yil()}. ${T('yıl', 'year')}: ${T(...q.ad)} — ${T(...q.ne)}`, 'uyari', 8), 2500); } if (O.kent && O.kent.fetih) { ekle('f', 60); ekle('g', 30); ekle('z', 8); setTimeout(() => duyur(T('🐪 Güney kentinden yıllık haraç geldi: +60 🍞 +30 🪙 +8 ⚪', '🐪 Yearly tribute from the southern city: +60 🍞 +30 🪙 +8 ⚪'), 'iyi', 5), 5000); } }
+  if (m === 1 && O.olay && O.olay.tip === 'salgin') { const kuyu = say('kuyu'), ev = BL.filter(b => B[b.t].nuf).length, koru = Math.min(1, kuyu * 6 / Math.max(1, ev)) * 0.6 + tapKapsam() * 0.3, kay = Math.round(O.nuf * 0.14 * (1 - koru)); O.nuf = Math.max(2, O.nuf - kay); O.salginT = O.t; setTimeout(() => duyur(T(`🤒 Salgın: ${kay} kişi hayatını kaybetti`, `🤒 Plague: ${kay} people died`), 'uyari', 7), 1500); }
+  if (m === 2 && O.olay && O.olay.tip === 'cekirge') { const k = Math.round(O.r.f * 0.33); O.r.f -= k; setTimeout(() => duyur(T(`🦗 Çekirgeler ambardan ${k} yiyecek yedi`, `🦗 The locusts ate ${k} food from the store`), 'uyari', 6), 1500); }
+  if (m === 2 && yil() >= 1) { O.kehanet = olaySec(); if (say('tapinak') && BL.some(b => b.t === 'tapinak' && b.is)) { O.kehanetBilindi = 1; const q = OLAY[O.kehanet]; setTimeout(() => duyur(`🔮 ${T('Kâhin', 'The seer')}: ${T('gelecek yıl', 'next year brings')} ${q.e} ${T(...q.ad)}. ${T(...q.ne)}`, 'iyi', 10), 3500); } else O.kehanetBilindi = 0; }
   if (m === 0) { SES.su(); duyur(T(`🌊 ${yil()}. yıl, ilkbahar: nehir taştı! Ovadaki tarlalar bu mevsim su altında; yaz ve güzde çok verimli olurlar`, `🌊 Year ${yil()}, spring: the river floods! Floodplain fields are under water this season; they will be very rich in summer and autumn`), 'uyari', 7); }
   else if (m === 1) duyur(T('☀️ Yaz: sulanmayan bozkır tarlaları kuruyor. Kanal kazarsan kurumazlar', '☀️ Summer: unirrigated steppe fields dry out. Canals keep them green'), '', 5);
   else if (m === 2) duyur(T('🌾 Sonbahar: hasat zamanı! Ambarları doldur, kış ve taşkın geliyor', '🌾 Autumn: harvest time! Fill the granaries, winter and the flood are coming'), 'iyi', 5);
@@ -543,10 +649,11 @@ function ipuclari() {
   if (O.tek.bakir && !say('bakir')) birKez('i5', T('🟤 Bakır damarları nehrin ötesinde, kuzeydoğu tepelerinde (yeşilimsi kayalar)', '🟤 The copper veins are across the river in the north-eastern hills (greenish rocks)'), 'iyi', 8);
   if (O.tek.tunc && O.r.z < 1 && !say('pazar')) birKez('i6', T('⚪ Tunç için kalay gerekir; kalayı yalnızca pazar kurup dağ halkıyla ticaret yaparak alırsın', '⚪ Bronze needs tin, which you only get by trading with the mountain folk at a market'), 'iyi', 8);
 }
+const ZIG = () => { const zg = BL.find(b => b.t === 'zigurat'); return !!zg && !zg.ins; };
 const HEDEF = [
   () => [[O.nuf >= 40, T(`👥 Nüfus ${Math.min(40, Math.floor(O.nuf))}/40`, `👥 Population ${Math.min(40, Math.floor(O.nuf))}/40`)], [say('tapinak') > 0, T('⛩ Tapınak', '⛩ Temple')], [say('ambar') > 0, T('🏺 Ambar', '🏺 Granary')], [!!O.tek.kerpic, T('🧱 Kerpiç', '🧱 Mudbrick')]],
   () => [[O.nuf >= 80, T(`👥 Nüfus ${Math.min(80, Math.floor(O.nuf))}/80`, `👥 Population ${Math.min(80, Math.floor(O.nuf))}/80`)], [!!O.tek.yazi, T('📜 Çivi yazısı', '📜 Cuneiform')], [say('kanal') >= 6, T(`〰 Kanal ${Math.min(6, say('kanal'))}/6`, `〰 Canals ${Math.min(6, say('kanal'))}/6`)], [O.ticaret >= 2, T(`🐪 Ticaret ${Math.min(2, O.ticaret)}/2`, `🐪 Trades ${Math.min(2, O.ticaret)}/2`)], [O.puskurt >= 1, T('🛡 Bir baskını püskürt', '🛡 Repel a raid')]],
-  () => { const zg = BL.find(b => b.t === 'zigurat'); return [[!!zg && !zg.ins, zg && zg.ins ? T(`🏛 Ziggurat %${Math.floor(zg.ins * 100)}`, `🏛 Ziggurat ${Math.floor(zg.ins * 100)}%`) : T('🏛 Ziggurat', '🏛 Ziggurat')], [A.filter(a => a.tunc).length >= 6, T(`🛡 Tunç asker ${Math.min(6, A.filter(a => a.tunc).length)}/6`, `🛡 Bronze soldiers ${Math.min(6, A.filter(a => a.tunc).length)}/6`)], [O.nuf >= 140, T(`👥 Nüfus ${Math.min(140, Math.floor(O.nuf))}/140`, `👥 Population ${Math.min(140, Math.floor(O.nuf))}/140`)], [O.puskurt >= 4, T(`⚔️ Baskın püskürt ${Math.min(4, O.puskurt)}/4`, `⚔️ Raids repelled ${Math.min(4, O.puskurt)}/4`)]]; }
+  () => { const zg = BL.find(b => b.t === 'zigurat'); return [[(!!zg && !zg.ins) || !!O.kent.fetih, zg && zg.ins ? T(`🏛 Ziggurat %${Math.floor(zg.ins * 100)} (ya da güney kentini fethet)`, `🏛 Ziggurat ${Math.floor(zg.ins * 100)}% (or conquer the south)`) : O.kent.fetih ? T('🏆 Güney kenti fethedildi', '🏆 Southern city conquered') : T('🏛 Ziggurat ya da ⚔️ güney kentini fethet', '🏛 Ziggurat or ⚔️ conquer the southern city')], [A.filter(a => a.tunc).length >= 6, T(`🛡 Tunç asker ${Math.min(6, A.filter(a => a.tunc).length)}/6`, `🛡 Bronze soldiers ${Math.min(6, A.filter(a => a.tunc).length)}/6`)], [O.nuf >= 140, T(`👥 Nüfus ${Math.min(140, Math.floor(O.nuf))}/140`, `👥 Population ${Math.min(140, Math.floor(O.nuf))}/140`)], [O.puskurt >= 4, T(`⚔️ Baskın püskürt ${Math.min(4, O.puskurt)}/4`, `⚔️ Raids repelled ${Math.min(4, O.puskurt)}/4`)]]; }
 ];
 const hedefBaslik = () => O.asama >= 3 ? T('ŞEHİR DEVLETİ', 'CITY-STATE') : [T('HEDEF: KASABA', 'GOAL: TOWN'), T('HEDEF: ŞEHİR', 'GOAL: CITY'), T('HEDEF: ŞEHİR DEVLETİ', 'GOAL: CITY-STATE')][O.asama];
 function asamaKontrol() {
@@ -557,7 +664,7 @@ function asamaKontrol() {
   else {
     O.kazandi = 1; REKOR.devlet++; kaydet(); durdu = true;
     $('sBas').textContent = T('🏛 Şehir devleti kuruldu!', '🏛 The city-state is founded!');
-    $('sMetin').innerHTML = `<p>${T(`Ziggurat göğe yükseldi, ${Math.floor(O.nuf)} kişilik şehrin tunç zırhlı askerleriyle göçebeleri ${O.puskurt} kez püskürttü. ${yil()}. yıl, ${sureYaz(O.sure)} sürdü.`, `The ziggurat rises to the sky and your city of ${Math.floor(O.nuf)}, guarded by bronze-armoured soldiers, repelled the nomads ${O.puskurt} times. Year ${yil()}, ${sureYaz(O.sure)} of play.`)}</p><p>${T('Tek hücreden şehir devletine uzanan yol tamamlandı. Hikâyenin devamı bir krallık: şehrin artık bir krallığın çekirdeği.', 'The road from a single cell to a city-state is complete. The story continues as a kingdom: your city is now the heart of a realm.')}</p><a class="ana" href="/GameKingdom10.html">${T('👑 Sonraki: Küçük Krallık', '👑 Next: Little Kingdom')}</a>`;
+    $('sMetin').innerHTML = `<p>${T(`${esc(O.ad)}: ${ZIG() ? 'ziggurat göğe yükseldi' : 'güney kenti dize geldi'}, ${Math.floor(O.nuf)} kişilik şehrin tunç zırhlı askerleriyle göçebeleri ${O.puskurt} kez püskürttü. ${yil()}. yıl, ${sureYaz(O.sure)} sürdü.`, `${esc(O.ad)}: ${ZIG() ? 'the ziggurat rises to the sky' : 'the southern city has bowed'}, and your city of ${Math.floor(O.nuf)}, guarded by bronze-armoured soldiers, repelled the nomads ${O.puskurt} times. Year ${yil()}, ${sureYaz(O.sure)} of play.`)}</p>${yaziHtml().replace(/<h2>.*?<\/h2>/, '')}<p>${T('Tek hücreden şehir devletine uzanan yol tamamlandı. Hikâyenin devamı bir krallık: şehrin artık bir krallığın çekirdeği.', 'The road from a single cell to a city-state is complete. The story continues as a kingdom: your city is now the heart of a realm.')}</p><a class="ana" href="/GameKingdom10.html">${T('👑 Sonraki: Küçük Krallık (şehrinin mirasıyla)', '👑 Next: Little Kingdom (with your city\'s legacy)')}</a><a class="ikincil" href="/seri.html">🧬 ${T('Bütün yolculuğun', 'Your whole journey')}</a>`;
     $('sDevam').textContent = T('Şehirde kal', 'Stay in the city'); $('sDevam').onclick = () => { $('sonuc').hidden = true; durdu = false; };
     $('sonuc').hidden = false;
   }
@@ -573,6 +680,26 @@ function pnlKur() {
     h += `<h2>📜 ${T('Bilgi', 'Knowledge')}</h2><div class="mal"><span>📜 ${Math.floor(O.r.bl)}</span><span style="font-size:13px;color:var(--mute)">${T('Rahipler ve yazıcılar bilgi üretir', 'Priests and scribes make knowledge')}</span></div><h3>${T('BULUŞLAR', 'DISCOVERIES')}</h3>`;
     for (const id in TEK) { const k = TEK[id], tam = O.tek[id], kilit = (k.on || []).some(q => !O.tek[q]);
       h += `<div class="sat ${tam ? 'tam' : ''}"><span class="ic">${k.e}</span><span class="g"><b>${T(...k.ad)}</b><small>${T(...k.ne)}</small>${!tam && kilit ? `<small style="color:var(--sari)">${T('önce: ', 'first: ')}${k.on.filter(q => !O.tek[q]).map(q => T(...TEK[q].ad)).join(', ')}</small>` : ''}</span>${tam ? '' : `<button class="btn" data-k="tek" data-a="${id}" ${kilit || O.r.bl < k.m ? 'disabled' : ''}>${k.m} 📜</button>`}</div>`; }
+  } else if (panelAcik === 'yonetim') {
+    const L = mutluHedef(nufusKap());
+    h += `<h2>👑 ${esc(O.ad)}</h2><p style="color:var(--mute);margin-top:0">${T('Kral', 'King')}: <b style="color:var(--ink)">${esc(O.kral)}</b> · ${yil()}. ${T('yıl', 'year')}</p>`;
+    h += `<div class="mal"><span>${mutluYuz()} ${Math.round(O.mutlu)}</span><span>🪙 ${Math.floor(O.r.g)}</span><span>🍺 ${Math.floor(O.r.br)}</span></div><div class="cub2"><i style="width:${O.mutlu}%"></i></div>`;
+    h += `<h3>${T('MEMNUNİYET', 'HAPPINESS')}</h3><div style="font-size:13px;font-weight:700;line-height:1.7">${L.map(q => `<span style="display:inline-block;margin-right:10px;color:${q[0] > 0 ? 'var(--yesil)' : q[0] < 0 ? 'var(--kirmizi)' : 'var(--mute)'}">${q[0] > 0 ? '+' : ''}${q[0]} ${q[1]}</span>`).join('')}</div><p style="font-size:12.5px;color:var(--mute)">${T('70 üstü göç hızlanır, 35 altı göçmen gelmez, 25 altı halk ayaklanır.', 'Above 70 settlers come faster, below 35 none come, below 25 the people revolt.')}</p>`;
+    h += `<h3>${T('VERGİ', 'TAXES')}</h3><div style="display:flex;gap:6px">${[T('Yok', 'None'), T('Orta', 'Normal'), T('Ağır', 'Heavy')].map((v, i) => `<button class="${O.vergi === i ? 'btn' : 'ikincil'}" style="margin:0;flex:1" data-k="vergi" data-a="${i}">${v}<br><small>${['+8 😊', '0', '−15 😊'][i]} · ${[0, 0.15, 0.3][i] * Math.floor(O.nuf) | 0} 🪙/${T('dk', 'min')}</small></button>`).join('')}</div>`;
+    h += `<h3>${T('BAYRAM', 'FESTIVAL')}</h3><div class="sat"><span class="ic">🎉</span><span class="g"><b>${T('Bayram ilan et', 'Declare a festival')}</b><small>${O.bayram > O.t ? T(`Bayram sürüyor: ${Math.ceil(O.bayram - O.t)} sn`, `Festival on: ${Math.ceil(O.bayram - O.t)} s`) : T('2 dakika +25 memnuniyet', '+25 happiness for 2 minutes')}</small></span><button class="btn" data-k="bayram" ${O.bayram > O.t || !yeter({ f: 60, g: 20 }) ? 'disabled' : ''}>60 🍞 20 🪙</button></div>`;
+    const ol = O.olay && OLAY[O.olay.tip], ke = O.kehanet && O.kehanetBilindi && OLAY[O.kehanet];
+    h += `<h3>${T('BU YIL', 'THIS YEAR')}</h3><p style="font-size:13.5px">${ol ? `${ol.e} <b>${T(...ol.ad)}</b> — ${T(...ol.ne)}` : T('Olağan bir yıl', 'An ordinary year')}</p>`;
+    h += `<p style="font-size:13.5px">🔮 ${T('Kâhin', 'Seer')}: ${ke ? `${T('gelecek yıl', 'next year')} ${ke.e} <b>${T(...ke.ad)}</b>` : say('tapinak') ? T('güzün gelecek yılı görür', 'foresees next year in autumn') : T('tapınak kurulunca gelecek yılı önceden söyler', 'with a temple, foretells next year')}</p>`;
+    const k = O.kent; h += `<h3>🐪 ${T('GÜNEY KENTİ', 'SOUTHERN CITY')}</h3><p style="font-size:13.5px">${k.fetih ? T('Fethedildi: her bahar haraç gönderiyor.', 'Conquered: sends tribute every spring.') : T(`Gücü ~${Math.round(k.guc)} (zamanla artar). Ara sıra haraç ister.`, `Strength ~${Math.round(k.guc)} (grows over time). Demands tribute now and then.`)}${O.sefer ? ' ⚔️ ' + T('Ordun yolda', 'Your army is marching') : ''}</p>`;
+    if (!k.fetih && !O.sefer) h += `<div class="sat"><span class="ic">⚔️</span><span class="g"><b>${T('Sefere çık', 'March on it')}</b><small>${T(`Bütün askerlerin gider (en az 8). Senin gücün ~${Math.round(A.reduce((n, a) => n + (a.tunc ? 2.2 : 1), 0))}; tunç asker 2,2 sayılır`, `All your soldiers go (at least 8). Your strength ~${Math.round(A.reduce((n, a) => n + (a.tunc ? 2.2 : 1), 0))}; a bronze soldier counts 2.2`)}</small></span><button class="btn kir" data-k="sefer" ${A.length < 8 ? 'disabled' : ''}>${T('Sefer', 'March')}</button></div>`;
+    h += `<h3>${T('ŞEHRİN ADI', 'CITY NAME')}</h3><div style="display:flex;gap:6px"><input id="adGir" maxlength="18" value="${esc(O.ad)}" style="flex:1;padding:8px;border-radius:10px;border:1px solid var(--line);background:rgba(0,0,0,.25)"><input id="kralGir" maxlength="18" value="${esc(O.kral)}" style="flex:1;padding:8px;border-radius:10px;border:1px solid var(--line);background:rgba(0,0,0,.25)"><button class="btn" data-k="adKaydet">✓</button></div>`;
+    if (ZIG()) h += `<button class="ikincil" data-k="yazit">🪨 ${T('Ziggurat yazıtını oku', 'Read the ziggurat inscription')}</button>`;
+  } else if (panelAcik === 'harac') {
+    const q = O.kent.istek || { g: 20, f: 80 };
+    h += `<h2>🐪 ${T('Güney kentinden elçi', 'An envoy from the southern city')}</h2><p>${T(`"Büyük kentimizin koruması altında yaşıyorsunuz. Haraç ödeyin: <b>${q.g} 🪙</b> ya da <b>${q.f} 🍞</b>. Reddederseniz ordumuz gelir."`, `"You live under the protection of our great city. Pay tribute: <b>${q.g} 🪙</b> or <b>${q.f} 🍞</b>. Refuse, and our army will come."`)}</p><p style="font-size:13px;color:var(--mute)">${T(`Güçleri ~${Math.round(O.kent.guc)}. Reddedersen yaklaşık 40 saniye sonra ${Math.min(20, 6 + yil())} asker gelir ve bir yıl ticaret kesilir. Güçlenince kenti fethedebilirsin (👑 panel).`, `Their strength ~${Math.round(O.kent.guc)}. Refuse and about ${Math.min(20, 6 + yil())} soldiers arrive in ~40 s, and trade stops for a year. Grow strong and you can conquer the city (👑 panel).`)}</p>`;
+    h += `<button class="ana" data-k="haracG" ${O.r.g < q.g ? 'disabled' : ''}>${T('Gümüşle öde', 'Pay in silver')} · ${q.g} 🪙</button><button class="ana" data-k="haracF" ${O.r.f < q.f ? 'disabled' : ''}>${T('Yiyecekle öde', 'Pay in food')} · ${q.f} 🍞</button><button class="ikincil" data-k="haracRet" style="border-color:var(--kirmizi)">⚔️ ${T('Reddet', 'Refuse')}</button>`;
+  } else if (panelAcik === 'yazit') {
+    h += yaziHtml();
   } else if (panelAcik === 'bina' && pnlB) {
     const b = pnlB, d = B[b.t];
     h += `<h2>${d.e} ${T(...d.ad)}</h2><p style="color:var(--mute);font-size:13.5px">${T(...d.ne)}</p>`;
@@ -590,7 +717,9 @@ function pnlKur() {
     if (b.t === 'pazar') for (const p in TIC) { const q = TIC[p], cd = (O.ticCd[p] || 0) - O.t;
       h += `<h3>${q.e} ${T(...q.ad).toLocaleUpperCase('tr')}</h3><p style="font-size:12.5px;color:var(--mute);margin:0 0 4px">${T(...q.ne)}${cd > 0 ? ` · ${T('kervan dönüyor', 'caravan returning')} ${Math.ceil(cd)} ${T('sn', 's')}` : ''}</p>`;
       q.takas.forEach((t, i) => { h += `<div class="sat"><span class="g"><b>${malYaz(t[0])} → ${malYaz(t[1])}</b></span><button class="btn" data-k="tic" data-p="${p}" data-a="${i}" ${cd > 0 || !yeter(t[0]) ? 'disabled' : ''}>${T('Takas', 'Trade')}</button></div>`; }); }
+    if (BAG_GEREK.has(b.t)) h += `<p style="font-size:13px">${b.bag ? T('🛤 Yolla depoya bağlı', '🛤 Linked to storage by road') : `<b style="color:var(--kirmizi)">${T('🛤 Yol yok: yarı hızla çalışıyor. Bir ambar ya da depoya yol çiz', '🛤 No road: working at half speed. Draw a road to a granary or storehouse')}</b><br><button class="btn" data-k="otoYol" style="margin-top:6px">🛤 ${T('En yakın depoya yol döşe', 'Lay a road to the nearest storage')}</button>`}</p>`;
     if (b.t === 'tapinak' || b.t === 'okul') h += `<button class="ana" data-k="bilgi">📜 ${T('Buluşlar', 'Discoveries')}</button>`;
+    if (b.t === 'tapinak' || b.t === 'kisla') h += `<button class="ikincil" data-k="yonetim">👑 ${T('Şehir yönetimi: bayram, vergi, kâhin, sefer', 'City affairs: festival, taxes, seer, campaign')}</button>`;
     h += `<div style="display:flex;gap:8px;margin-top:10px">${d.is ? `<button class="ikincil" style="margin:0" data-k="ac">${b.acik ? T('⏸ İşi durdur', '⏸ Pause work') : T('▶ İşe başlat', '▶ Resume work')}</button>` : ''}<button class="ikincil" style="margin:0" data-k="yik">${pnlEmin ? T('Emin misin?', 'Sure?') : T('🔨 Yık (yarısı geri gelir)', '🔨 Demolish (half refunded)')}</button></div>`;
   }
   $('pnlIc').innerHTML = h;
@@ -600,6 +729,15 @@ $('pnl').addEventListener('click', e => {
   const b = e.target.closest('[data-k]'); if (!b || b.disabled) return; const k = b.dataset.k, a = b.dataset.a;
   if (k === 'tek') { const t = TEK[a]; if (!t || O.tek[a] || (t.on || []).some(q => !O.tek[q]) || O.r.bl < t.m) return; O.r.bl -= t.m; O.tek[a] = 1; SES.basari(); duyur(`${t.e} ${T(...t.ad)}! ${T(...t.ne)}`, 'iyi', 6); barKur(); }
   else if (k === 'bilgi') { pnlAc('bilgi'); return; }
+  else if (k === 'yonetim') { pnlAc('yonetim'); return; }
+  else if (k === 'otoYol') { const n = yolBagla(pnlB); if (n < 0) { SES.hata(); duyur(T('⛔ Yol bulunamadı: önce yakına bir ambar ya da depo kur', '⛔ No route found: build a granary or storehouse nearby first'), 'uyari', 3); } else { SES.kur(); duyur(T(`🛤 ${n} karo yol döşendi`, `🛤 ${n} road tiles laid`), 'iyi', 2.5); } }
+  else if (k === 'vergi') { O.vergi = +a; SES.para(); }
+  else if (k === 'bayram') { if (O.bayram > O.t || !yeter({ f: 60, g: 20 })) return; O.r.f -= 60; O.r.g -= 20; O.bayram = O.t + 120; SES.zafer(); duyur(T('🎉 Bayram! Sokaklarda müzik ve dans var', '🎉 Festival! Music and dancing in the streets'), 'iyi', 5); }
+  else if (k === 'sefer') { seferGonder(); return; }
+  else if (k === 'adKaydet') { const a1 = ($('adGir').value || '').trim().slice(0, 18), a2 = ($('kralGir').value || '').trim().slice(0, 18); if (a1) O.ad = a1; if (a2) O.kral = a2; SES.tik(); }
+  else if (k === 'yazit') { pnlAc('yazit'); return; }
+  else if (k === 'haracG' || k === 'haracF') { const q = O.kent.istek; if (k === 'haracG') { if (O.r.g < q.g) return; O.r.g -= q.g; } else { if (O.r.f < q.f) return; O.r.f -= q.f; } SES.para(); duyur(T('🐪 Haraç ödendi; güney kenti şimdilik barışta', '🐪 Tribute paid; the southern city keeps the peace for now'), '', 4); pnlKapa(); kaydet(); return; }
+  else if (k === 'haracRet') { O.kent.ret = O.t + 4 * MEVSIM; O.kentSaldiri = O.t + 40; O.mutlu += 4; SES.boru(); duyur(T('⚔️ Haracı reddettin! Güney kentinin ordusu yola çıktı (≈40 sn). Askerlerini hazırla', '⚔️ You refused the tribute! The southern army is on its way (≈40 s). Ready your soldiers'), 'uyari', 7); pnlKapa(); kaydet(); return; }
   else if (k === 'ask') { askerYetistir(pnlB, a === '1'); }
   else if (k === 'zirh') { const s = A.find(q => q.kisla === pnlB.id && !q.tunc); if (s && yeter({ b: 3 })) { O.r.b -= 3; s.tunc = true; s.hpMax = 55; s.hp = 55; SES.boru(); } }
   else if (k === 'tic') ticaretYap(b.dataset.p, +a);
@@ -608,6 +746,15 @@ $('pnl').addEventListener('click', e => {
   kaydet(); pnlKur();
 });
 $('pnlKapa').onclick = pnlKapa;
+
+/* ================= yazıt ================= */
+function yaziHtml() {
+  const zg = ZIG(), yaz2 = T(`Ben, ${esc(O.kral)}, ${esc(O.ad)} kentinin kralı. Atalarım tek bir hücreydi; denizde yüzdüler, karaya çıktılar, ateşi buldular. Ben nehri ehlileştirdim: ${say('kanal')} kanal kazdırdım, ${Math.floor(O.nuf)} kişiyi kerpiç evlerde barındırdım, göçebeleri ${O.puskurt} kez geri püskürttüm${O.kent.fetih ? ', güney kentini dize getirdim' : ''}${zg ? ' ve tanrılara göğe uzanan bu zigguratı diktim' : ''}. ${yil()}. yılımda bu tableti yazdırdım.`, `I, ${esc(O.kral)}, king of ${esc(O.ad)}. My ancestors were a single cell; they swam the sea, crawled onto land and found fire. I tamed the river: I dug ${say('kanal')} canals, housed ${Math.floor(O.nuf)} people in mudbrick homes, drove back the nomads ${O.puskurt} times${O.kent.fetih ? ', brought the southern city to its knees' : ''}${zg ? ' and raised this ziggurat to the sky for the gods' : ''}. In my ${yil()}th year I had this tablet written.`);
+  return `<h2>🪨 ${T('Yazıt', 'Inscription')}</h2><div style="position:relative;border-radius:14px;padding:16px 16px 14px;background:linear-gradient(160deg,#C9A27A,#9E7650);color:#3A2414;font-weight:800;font-size:14.5px;line-height:1.55;box-shadow:inset 0 2px 8px rgba(255,255,255,.25),inset 0 -6px 14px rgba(0,0,0,.25)"><div style="font-size:12px;letter-spacing:3px;opacity:.55;margin-bottom:6px">▾◂ ▴▾▸ ◂▾ ▴◂▾ ▸▴</div>${yaz2}<div style="font-size:12px;letter-spacing:3px;opacity:.55;margin-top:8px;text-align:right">▴▸ ◂▾▴ ▸◂</div></div>`;
+}
+function yaziGoster(ilk) { if (ilk) { const zg = BL.find(b => b.t === 'zigurat'); if (zg) { const p = merkez(zg); for (let i = 0; i < 40; i++) PT.push({ x: p.x + rnd(-60, 60), y: p.y - 60, vx: rnd(-80, 80), vy: rnd(-140, -40), t: 0, s: rnd(1, 2), r: rnd(2, 4), renk: ['#FFD27A', '#FF8C6A', '#9BE07A', '#7FC8FF'][i % 4] }); } } pnlAc('yazit'); }
+function bayramKivilcim() { const ev = BL.filter(b => B[b.t].nuf || b.t === 'tapinak' || b.t === 'pazar'); if (!ev.length) return; const b = ev[(Math.random() * ev.length) | 0], p = merkez(b); for (let i = 0; i < 6; i++) PT.push({ x: p.x + rnd(-20, 20), y: p.y - 40, vx: rnd(-60, 60), vy: rnd(-100, -40), t: 0, s: rnd(0.8, 1.4), r: 2.5, renk: ['#FFD27A', '#FF6A8A', '#9BE07A', '#7FC8FF'][i % 4] }); }
+const mutluYuz = () => O.mutlu >= 70 ? '😄' : O.mutlu >= 45 ? '🙂' : O.mutlu >= 25 ? '😟' : '😡';
 
 /* ================= inşa ================= */
 let sec = null, hayal = null, boyaSon = null;
@@ -772,6 +919,15 @@ function tarlaCiz(b, t) {
   g.strokeStyle = 'rgba(80,56,30,.8)'; g.lineWidth = 2; g.strokeRect(X + 3, Y + 3, W - 6, W - 6);
   if (!b.is) { g.fillStyle = 'rgba(0,0,0,.25)'; g.fillRect(X + 3, Y + 3, W - 6, W - 6); }
 }
+function yolCiz(b) {
+  const X = b.x * TS, Y = b.y * TS, c = TS / 2, tas = O.tek.kerpic, bag = [];
+  for (const [dx, dy] of [[1, 0], [-1, 0], [0, 1], [0, -1]]) { const i = zi(b.x + dx, b.y + dy); if (i < 0 || BIDX[i] < 0) continue; const q = BL[BIDX[i]]; if (q.t === 'yol') bag.push([dx, dy, 1.02]); else if (q.t !== 'kanal' && q.t !== 'sur') bag.push([dx, dy, 0.55]); }
+  g.lineCap = 'butt'; for (const [w, renk] of [[30, 'rgba(90,70,40,.3)'], [26, tas ? '#C4A57A' : '#B39A6C'], [18, tas ? '#D2B68C' : '#C3AC80']]) { g.strokeStyle = renk; g.fillStyle = renk; g.lineWidth = w; g.fillRect(X + c - w / 2, Y + c - w / 2, w, w); g.beginPath(); for (const [dx, dy, u] of bag) { g.moveTo(X + c, Y + c); g.lineTo(X + c + dx * c * u, Y + c + dy * c * u); } g.stroke(); }
+  if (AG[zi(b.x, b.y)] === 0) { g.fillStyle = 'rgba(255,90,60,.5)'; g.beginPath(); g.arc(X + c, Y + c, 4, 0, TAU); g.fill(); }
+  else if (tas) { g.strokeStyle = 'rgba(120,90,50,.35)'; g.lineWidth = 1; g.beginPath(); for (let i = -1; i <= 1; i++) { g.moveTo(X + c - 8, Y + c + i * 6); g.lineTo(X + c + 8, Y + c + i * 6); } g.stroke(); }
+  else { g.strokeStyle = 'rgba(90,70,40,.35)'; g.lineWidth = 1.2; g.beginPath(); g.moveTo(X + c - 5, Y + c - 6); g.lineTo(X + c - 5, Y + c + 6); g.moveTo(X + c + 5, Y + c - 6); g.lineTo(X + c + 5, Y + c + 6); g.stroke(); }
+}
+function bagIsaret(b, X, Y) { if (b.bag || !BAG_GEREK.has(b.t)) return; const tx = X + B[b.t].w * TS / 2, ty = Y - (b.t === 'tarla' ? -B[b.t].h * TS / 2 : 46); g.fillStyle = 'rgba(120,20,10,.75)'; g.beginPath(); g.arc(tx, ty, 13, 0, TAU); g.fill(); g.font = '15px system-ui'; g.textAlign = 'center'; g.textBaseline = 'middle'; g.fillText('🛤', tx, ty + 1); g.strokeStyle = '#FF8C73'; g.lineWidth = 2.5; g.beginPath(); g.moveTo(tx - 9, ty + 9); g.lineTo(tx + 9, ty - 9); g.stroke(); g.textBaseline = 'alphabetic'; }
 function kanalCiz(b, t) {
   const X = b.x * TS, Y = b.y * TS, c = TS / 2, bag = [[1, 0], [-1, 0], [0, 1], [0, -1]].filter(([dx, dy]) => { const i = zi(b.x + dx, b.y + dy); return i >= 0 && (Z[i] === Z_SU || (BIDX[i] >= 0 && BL[BIDX[i]].t === 'kanal')); });
   g.lineCap = 'round'; for (const [w, renk] of [[22, '#8A7050'], [15, '#3F7C86'], [6, 'rgba(160,210,220,.35)']]) { g.strokeStyle = renk; g.lineWidth = w; g.beginPath(); if (!bag.length) { g.moveTo(X + c - 1, Y + c); g.lineTo(X + c + 1, Y + c); } for (const [dx, dy] of bag) { const nehir = Z[zi(b.x + dx, b.y + dy)] === Z_SU, u = nehir ? c * 2.1 : c * 1.02; g.moveTo(X + c, Y + c); g.lineTo(X + c + dx * u, Y + c + dy * u); } g.stroke(); }
@@ -815,7 +971,7 @@ function ciz() {
   /* süs */
   if (kalite > 0) for (const d of DEKOR) { if (!gor(d.x, d.y, 30)) continue; const i = zi(Math.floor(d.x / TS), Math.floor(d.y / TS)); if (BIDX[i] >= 0 || (m === 0 && Z[i] === Z_OVA)) continue; g.save(); g.translate(d.x, d.y); if (d.tip === 'saz' || d.tip === 'ot') g.rotate(Math.sin(t * 1.2 + d.f) * 0.05); g.scale(d.s, d.s); g.drawImage(susSpr(d), -24, -32); g.restore(); }
   /* düz binalar: tarla, kanal */
-  for (const b of BL) { if (!gor((b.x + 1.5) * TS, (b.y + 1.5) * TS, 160)) continue; if (b.t === 'tarla') tarlaCiz(b, t); else if (b.t === 'kanal') kanalCiz(b, t); }
+  for (const b of BL) { if (!gor((b.x + 1.5) * TS, (b.y + 1.5) * TS, 160)) continue; if (b.t === 'tarla') { tarlaCiz(b, t); bagIsaret(b, b.x * TS, b.y * TS); } else if (b.t === 'kanal') kanalCiz(b, t); else if (b.t === 'yol') yolCiz(b); }
   /* hayal (inşa önizleme) */
   if (sec && hayal) { const d = B[sec]; g.fillStyle = hayal.ok ? 'rgba(120,230,120,.32)' : 'rgba(255,80,60,.35)'; g.strokeStyle = hayal.ok ? 'rgba(160,255,160,.9)' : 'rgba(255,120,100,.9)'; g.lineWidth = 2; g.fillRect(hayal.x * TS, hayal.y * TS, d.w * TS, d.h * TS); g.strokeRect(hayal.x * TS + 1, hayal.y * TS + 1, d.w * TS - 2, d.h * TS - 2);
     if (d.nuf || sec === 'kuyu') { /* su menzili göster */ g.fillStyle = 'rgba(80,160,220,.12)'; for (let y = Math.max(0, Math.floor(y0 / TS)); y < Math.min(GH, Math.ceil(y1 / TS)); y++) for (let x = Math.max(0, Math.floor(x0 / TS)); x < Math.min(GW, Math.ceil(x1 / TS)); x++) if (SU[zi(x, y)] && Z[zi(x, y)] !== Z_SU) g.fillRect(x * TS, y * TS, TS, TS); }
@@ -823,12 +979,16 @@ function ciz() {
     if (sec === 'kule') { g.strokeStyle = 'rgba(255,150,120,.5)'; g.setLineDash([8, 6]); g.beginPath(); g.arc((hayal.x + 0.5) * TS, (hayal.y + 0.5) * TS, 6.5 * TS, 0, TAU); g.stroke(); g.setLineDash([]); } }
   /* yükseklik sıralı: binalar, ağaçlar, canlılar */
   const L = [];
-  for (const b of BL) { if (b.t === 'tarla' || b.t === 'kanal') continue; const cx = (b.x + B[b.t].w / 2) * TS, by = (b.y + B[b.t].h) * TS; if (!gor(cx, by - 40, 200)) continue; L.push([by - 2, 0, b]); }
+  for (const b of BL) { if (b.t === 'tarla' || b.t === 'kanal' || b.t === 'yol') continue; const cx = (b.x + B[b.t].w / 2) * TS, by = (b.y + B[b.t].h) * TS; if (!gor(cx, by - 40, 200)) continue; L.push([by - 2, 0, b]); }
   for (const a of AGACLAR) { if (!gor(a.x, a.y - 40, 80)) continue; L.push([a.y, 1, a]); }
   for (const w of YURU) { if (!gor(w.x, w.y, 20)) continue; L.push([w.y, 2, w]); }
   for (const a of A) { if (!gor(a.x, a.y, 30)) continue; L.push([a.y, 3, a]); }
   for (const r of R) { if (!gor(r.x, r.y, 30)) continue; L.push([r.y, 4, r]); }
   for (const k of KERVAN) { if (!gor(k.x, k.y, 40)) continue; L.push([k.y, 5, k]); }
+  for (const k of TEKNE) { const x = nehirX(k.y / TS) * TS + k.ofs; if (!gor(x, k.y, 40)) continue; L.push([k.y, 6, k]); }
+  if (!R.length && geceK() < 0.4) for (const b of BL) { if (!gor((b.x + 1.5) * TS, (b.y + 1.5) * TS, 100)) continue;
+    if (b.t === 'tarla' && b.is && !(mevsim() === 0 && ovaOran(b) > 0.3)) for (let i = 0; i < b.is; i++) { const px = (b.x + 0.5 + i) * TS + Math.sin(t * 0.2 + i * 2 + b.id) * 12, py = (b.y + 1 + (i % 2) * 1.2) * TS + 8; L.push([py, 7, { x: px, y: py, f: i + b.id, egil: mevsim() === 2 }]); }
+    else if (b.t === 'pazar') for (let i = 0; i < 7; i++) { const a = i / 7 * TAU + t * 0.08 + Math.sin(t * 0.5 + i) * 0.3, px = (b.x + 1.5) * TS + Math.cos(a) * 46, py = (b.y + 1.8) * TS + Math.sin(a) * 30; L.push([py, 7, { x: px, y: py, f: i, renk: i % 4, ang: a + 1.6 }]); } }
   L.sort((p, q) => p[0] - q[0]);
   for (const [, tip, o] of L) {
     if (tip === 0) {
@@ -841,11 +1001,14 @@ function ciz() {
       if ((b.t === 'kerpicci' || b.t === 'tunc') && b.is && Math.random() < 0.12) { const p = b.t === 'tunc' ? [X + d.w * TS - 26, Y - 6] : [X + d.w * TS - 24, Y + d.h * TS - 48]; PT.push({ x: p[0], y: p[1], vx: rnd(4, 14), vy: rnd(-26, -14), t: 0, s: rnd(1.8, 2.8), r: rnd(4, 7), renk: 'rgba(150,140,130,.28)', duman: 1 }); }
       if (b.t === 'tunc' && b.is) { g.fillStyle = `rgba(255,170,60,${0.3 + 0.2 * Math.sin(t * 9)})`; g.beginPath(); g.arc(X + d.w * TS - 26, Y + 32 - 70 + 70, 9, 0, TAU); g.fill(); }
       if (d.is && !b.ins && b.is < d.is && b.acik) { g.font = '700 12px Nunito,system-ui'; g.textAlign = 'center'; g.fillStyle = 'rgba(0,0,0,.55)'; const tx = X + d.w * TS / 2, ty = Y - 34; g.fillRect(tx - 15, ty - 10, 30, 14); g.fillStyle = '#FFD2CB'; g.fillText(`👷${b.is}/${d.is}`, tx, ty + 1); }
+      bagIsaret(b, X, Y);
       if (!b.acik) { g.font = '16px system-ui'; g.textAlign = 'center'; g.fillText('⏸', X + d.w * TS / 2, Y - 30); }
     } else if (tip === 1) { const a = o; g.save(); g.translate(a.x, a.y); g.rotate(Math.sin(t * 0.9 + a.f) * 0.02); g.scale(a.s, a.s); g.drawImage(agacSpr(a.v, a.hurma), -48, -96); g.restore(); }
-    else if (tip === 2) { if (R.length) continue; insanCiz(o.x, o.y, o.ang || 0, o.yf, 'halk', o.yuk, o.renk); }
+    else if (tip === 2) { if (R.length || (geceK() > 0.5 && Math.hypot(o.x - o.tx, o.y - o.ty) < 6)) continue; insanCiz(o.x, o.y, o.ang || 0, o.yf, 'halk', o.yuk, o.renk); }
     else if (tip === 3) insanCiz(o.x, o.y, o.ang, o.yf, 'asker', o.vur, o.tunc);
     else if (tip === 4) { if (o.at) { atCiz(o.x, o.y, o.ang, o.yf); insanCiz(o.x, o.y - 10, o.ang, 0, 'gocebe', o.vur); } else insanCiz(o.x, o.y, o.ang, o.yf, 'gocebe', o.vur); if (o.ganimet > 0) { g.fillStyle = '#D8B060'; g.beginPath(); g.arc(o.x - 5, o.y - 10, 4, 0, TAU); g.fill(); } if (o.hp < o.hpMax) { g.fillStyle = 'rgba(0,0,0,.5)'; g.fillRect(o.x - 10, o.y - 26, 20, 3); g.fillStyle = '#FF6A55'; g.fillRect(o.x - 10, o.y - 26, 20 * Math.max(0, o.hp / o.hpMax), 3); } }
+    else if (tip === 6) { const x = nehirX(o.y / TS) * TS + o.ofs, y = o.y, dy = o.yon; g.strokeStyle = 'rgba(230,245,250,.35)'; g.lineWidth = 1.5; g.beginPath(); g.moveTo(x - 6, y - dy * 18); g.lineTo(x - 14, y - dy * 40); g.moveTo(x + 6, y - dy * 18); g.lineTo(x + 14, y - dy * 40); g.stroke(); g.fillStyle = 'rgba(10,30,40,.35)'; g.beginPath(); g.ellipse(x + 3, y + 3, 8, 22, 0, 0, TAU); g.fill(); const q = g.createLinearGradient(x - 8, 0, x + 8, 0); q.addColorStop(0, '#8A6A3A'); q.addColorStop(0.5, '#C8A060'); q.addColorStop(1, '#7A5A2E'); g.fillStyle = q; g.beginPath(); g.moveTo(x, y - 24); g.quadraticCurveTo(x + 10, y, x, y + 24); g.quadraticCurveTo(x - 10, y, x, y - 24); g.fill(); g.strokeStyle = 'rgba(80,56,24,.6)'; g.lineWidth = 0.8; for (let i = -3; i <= 3; i++) { g.beginPath(); g.moveTo(x - 6, y + i * 5); g.lineTo(x + 6, y + i * 5); g.stroke(); } insanCiz(x, y + 4, Math.PI / 2, 0, 'halk', 0, o.f | 0); g.strokeStyle = '#5A3C20'; g.lineWidth = 1.5; g.beginPath(); g.moveTo(x + 4, y - 4); g.lineTo(x + 16 + Math.sin(t * 2 + o.f) * 4, y + 12); g.stroke(); }
+    else if (tip === 7) { if (o.egil != null) { insanCiz(o.x, o.y, 0, o.egil ? 0 : Math.sin(t * 2 + o.f), 'halk', 0, 0); if (o.egil) { g.strokeStyle = '#B8B0A0'; g.lineWidth = 1.5; g.beginPath(); g.arc(o.x + 7, o.y - 4, 5, -1.2 + Math.sin(t * 4 + o.f) * 0.6, 1); g.stroke(); } } else insanCiz(o.x, o.y, o.ang, t * 3 + o.f, 'halk', o.f % 3 === 0, o.renk); }
     else if (tip === 5) { esekCiz(o.x, o.y, o.ang, o.yf); esekCiz(o.x - Math.cos(o.ang) * 26, o.y - Math.sin(o.ang) * 26, o.ang, o.yf + 1); insanCiz(o.x + Math.cos(o.ang) * 18, o.y + Math.sin(o.ang) * 18 + 6, o.ang, o.yf, 'halk', 0, 1); }
   }
   for (const o of OK) if (o.cx != null) { g.strokeStyle = '#4A3420'; g.lineWidth = 1.5; g.beginPath(); g.moveTo(o.cx - Math.cos(o.ang) * 10, o.cy - Math.sin(o.ang) * 10); g.lineTo(o.cx, o.cy); g.stroke(); }
@@ -856,6 +1019,21 @@ function ciz() {
   if (kalite > 1) for (let i = 0; i < 6; i++) { const RR = 300 + (i % 3) * 120, cx = ((i * 1130 + t * 10) % (DW + 1200)) - 600, cy = (i * 677) % DH; if (!gor(cx, cy, RR)) continue; const q = g.createRadialGradient(cx, cy, RR * 0.2, cx, cy, RR); q.addColorStop(0, 'rgba(10,20,30,.13)'); q.addColorStop(1, 'rgba(10,20,30,0)'); g.fillStyle = q; g.beginPath(); g.ellipse(cx, cy, RR * 1.3, RR, 0.3, 0, TAU); g.fill(); }
   g.font = '900 15px Nunito,system-ui,sans-serif'; g.textAlign = 'center'; for (const f of FT) { g.globalAlpha = 1 - f.t; g.fillStyle = 'rgba(0,0,0,.5)'; g.fillText(f.m, f.x + 1, f.y - f.t * 34 + 1); g.fillStyle = f.renk; g.fillText(f.m, f.x, f.y - f.t * 34); } g.globalAlpha = 1;
   g.restore();
+  /* gece: kandiller, meşaleler */
+  const gk = O ? geceK() : 0;
+  if (gk > 0.02) {
+    const q = 0.5, bw = Math.ceil(EW * q), bh = Math.ceil(EH * q); if (geceC.width !== bw || geceC.height !== bh) { geceC.width = bw; geceC.height = bh; }
+    const x = geceX; x.setTransform(1, 0, 0, 1, 0, 0); x.globalCompositeOperation = 'source-over'; x.clearRect(0, 0, bw, bh); x.fillStyle = `rgba(10,16,40,${gk * 0.55})`; x.fillRect(0, 0, bw, bh); x.globalCompositeOperation = 'destination-out';
+    const isik = [], ekle2 = (wx, wy, r, guc) => { const sx = (wx - kx) * zum * q, sy = (wy - ky) * zum * q, rr = r * zum * q; if (sx < -rr || sy < -rr || sx > bw + rr || sy > bh + rr) return; const gr = x.createRadialGradient(sx, sy, rr * 0.15, sx, sy, rr); gr.addColorStop(0, `rgba(0,0,0,${guc || 0.9})`); gr.addColorStop(1, 'rgba(0,0,0,0)'); x.fillStyle = gr; x.beginPath(); x.arc(sx, sy, rr, 0, TAU); x.fill(); isik.push([wx, wy, r]); };
+    const R0 = { ev: 46, kev: 56, tapinak: 120, zigurat: 170, kule: 90, pazar: 80, kisla: 80, kerpicci: 60, tunc: 70, ambar: 36, depo: 36, okul: 50, biraevi: 64 };
+    for (const b of BL) { const r = R0[b.t]; if (!r || b.ins) continue; const p = merkez(b); ekle2(p.x, p.y - 10, r * (0.94 + 0.06 * Math.sin(t * 7 + b.id)), b.t === 'ev' || b.t === 'kev' ? 0.55 : 0.8); }
+    for (const r of R) ekle2(r.x, r.y - 10, 60 + Math.sin(t * 9 + r.x) * 6, 0.8);
+    for (const a of A) ekle2(a.x, a.y - 10, 44, 0.6);
+    g.drawImage(geceC, 0, 0, EW, EH);
+    g.save(); g.globalCompositeOperation = 'lighter';
+    for (const [wx, wy, r] of isik) { const sx = (wx - kx) * zum, sy = (wy - ky) * zum, rr = r * zum * 0.4, gr = g.createRadialGradient(sx, sy, 0, sx, sy, rr); gr.addColorStop(0, `rgba(255,170,70,${0.2 * gk})`); gr.addColorStop(1, 'rgba(255,120,40,0)'); g.fillStyle = gr; g.beginPath(); g.arc(sx, sy, rr, 0, TAU); g.fill(); }
+    g.restore();
+  }
   /* yağmur (kış) */
   if (O && m === 3 && kalite > 0) { g.strokeStyle = 'rgba(200,210,230,.35)'; g.lineWidth = 1; g.beginPath(); for (let i = 0; i < 80; i++) { const xx = ((i * 97.3 + t * 60) % (EW + 40)) - 20, yy = ((i * 53.7 + t * 420) % (EH + 40)) - 20; g.moveTo(xx, yy); g.lineTo(xx - 3, yy + 12); } g.stroke(); }
   { const vg = g.createRadialGradient(EW / 2, EH / 2, Math.min(EW, EH) * 0.5, EW / 2, EH / 2, Math.hypot(EW, EH) * 0.62); vg.addColorStop(0, 'rgba(10,8,0,0)'); vg.addColorStop(1, 'rgba(10,8,0,.3)'); g.fillStyle = vg; g.fillRect(0, 0, EW, EH); }
@@ -868,12 +1046,15 @@ function hud(dt) {
   const kap = nufusKap(), ye = O.nuf * 2 + askerN(), ur = BL.reduce((n, b) => n + (b.t === 'tarla' ? b.uret : 0), 0) - ye;
   let h = `<span class="cip ${O.r.f < 20 ? 'az' : ''}" title="${T('Yiyecek', 'Food')}">🍞 ${Math.floor(O.r.f)}<small>/${kapF()} ${ur >= 0 ? '+' : ''}${Math.round(ur)}/${T('dk', 'min')}</small></span>`;
   for (const [k, e] of [['o', '🪵'], ['t', '🪨'], ['k', '🧱'], ['c', '🟤'], ['z', '⚪'], ['b', '🟠']]) { if ((k === 'k' && !O.tek.kerpic) || (k === 'c' && !O.tek.bakir) || ((k === 'z' || k === 'b') && !O.tek.tunc)) continue; h += `<span class="cip">${e} ${Math.floor(O.r[k])}<small>/${kapM()}</small></span>`; }
+  h += `<span class="cip">🪙 ${Math.floor(O.r.g)}</span>`; if (say('biraevi') || O.r.br > 0) h += `<span class="cip">🍺 ${Math.floor(O.r.br)}</span>`;
+  h += `<span class="cip ${O.mutlu < 35 ? 'az' : ''}" id="mutluCip" role="button" title="${T('Şehir yönetimi', 'City affairs')}">${mutluYuz()} ${Math.round(O.mutlu)}${O.bayram > O.t ? ' 🎉' : ''}</span>`;
+  if (O.olay && O.olay.tip !== 'sakin') h += `<span class="cip" title="${T(...OLAY[O.olay.tip].ad)}">${OLAY[O.olay.tip].e}</span>`;
   h += `<span class="cip" id="bilgiCip" role="button">📜 ${Math.floor(O.r.bl)}</span><span class="cip ${O.nuf >= kap ? 'az' : ''}">👥 ${Math.floor(O.nuf)}<small>/${kap}${issiz ? ' · ' + issiz + ' ' + T('boşta', 'idle') : ''}${A.length ? ' · ⚔' + A.length : ''}</small></span>`;
   const mv = MEV[mevsim()], kalan = MEVSIM - O.t % MEVSIM; h += `<span class="cip">${mv[0]} ${yil()}. ${T('yıl', 'yr')}<small> · ${T(...mv[1])} ${sureYaz(kalan)}</small></span>`;
   if (O.baskin.uyar && !O.baskin.aktif) h += `<span class="cip az">⚔️ ${Math.ceil(O.baskin.sonraki - O.t)} ${T('sn', 's')}</span>`; else if (O.baskin.aktif) h += `<span class="cip az">⚔️ ${R.length}</span>`;
   const el = $('kaynak'); if (el.dataset.h !== h) { el.dataset.h = h; el.innerHTML = h; }
-  $('hedef').innerHTML = `<b>${hedefBaslik()}</b>` + (O.asama >= 3 ? '' : HEDEF[O.asama]().map(q => `<div class="${q[0] ? 'ok' : ''}">${q[0] ? '✓' : '·'} ${q[1]}</div>`).join(''));
-  barKur(); if (sec) secYaz(); if (panelAcik && pnlB && !BL.includes(pnlB)) pnlKapa(); else if (panelAcik && Math.random() < 0.3) pnlKur();
+  $('hedef').innerHTML = `<div style="font-size:13px;font-weight:900;margin-bottom:2px">🏛 ${esc(O.ad)}</div><b>${hedefBaslik()}</b>` + (O.asama >= 3 ? '' : HEDEF[O.asama]().map(q => `<div class="${q[0] ? 'ok' : ''}">${q[0] ? '✓' : '·'} ${q[1]}</div>`).join(''));
+  barKur(); if (sec) secYaz(); if (panelAcik && pnlB && !BL.includes(pnlB)) pnlKapa(); else if (panelAcik && panelAcik !== 'yonetim' && panelAcik !== 'yazit' && Math.random() < 0.3) pnlKur();
   document.querySelectorAll('#hiz button').forEach(b => b.classList.toggle('sec', +b.dataset.h === (durdu ? 0 : hiz)));
   { const alt = $('ust').getBoundingClientRect().bottom; $('sol').style.top = (alt + 6) + 'px'; if (innerWidth > 640) $('duyuru').style.top = (alt + 6) + 'px'; }
   miniCiz();
@@ -889,7 +1070,7 @@ function miniCiz() {
 }
 let miniArka = null;
 $('hiz').addEventListener('click', e => { const b = e.target.closest('[data-h]'); if (!b) return; const v = +b.dataset.h; if (v === 0) durdu = !durdu; else { durdu = false; hiz = v; } SES.tik(); hudZ = 0; });
-$('kaynak').addEventListener('click', e => { if (e.target.closest('#bilgiCip')) pnlAc('bilgi'); });
+$('kaynak').addEventListener('click', e => { if (e.target.closest('#bilgiCip')) pnlAc('bilgi'); else if (e.target.closest('#mutluCip')) pnlAc('yonetim'); });
 $('bilgiBtn').onclick = () => pnlAc('bilgi');
 function arayuz(ac) { ['kaynak', 'sol', 'mini', 'menuBtn', 'altBar', 'hiz', 'bilgiBtn'].forEach(i => $(i).hidden = !ac); if (!ac) { pnlKapa(); $('secBilgi').hidden = true; sec = null; } }
 function basla(devam) {
@@ -907,7 +1088,8 @@ function menuKur() {
   const oz = []; if (KB) { if (KB.ustalar.length) oz.push(`⭐ ${T('Ustalar', 'Masters')} · ${T('+%' + Math.round(MIRAS.usta * 100) + ' üretim', '+' + Math.round(MIRAS.usta * 100) + '% output')}`); if (MIRAS.comlek) oz.push(`🏺 ${T('Çömlekçilik', 'Pottery')} · ${T('+60 yiyecek kapasitesi', '+60 food storage')}`); if (MIRAS.tarla) oz.push(`🌾 ${T('Tarım bilgisi', 'Farming know-how')} · ${T('tarlalar +%10', 'fields +10%')}`); if (MIRAS.totem) oz.push(`🗿 ${T('Totem', 'Totem')} · ${T('ilk tapınak yarı fiyata', 'first temple at half cost')}`); if (MIRAS.okYay) oz.push(`🏹 ${T('Okçuluk', 'Archery')} · ${T('kuleler +%30 hasar', 'towers +30% damage')}`); }
   $('ozellik').innerHTML = oz.map(s => `<span class="oz">${s}</span>`).join('');
   const k = ls.get('sehir-kayit', null), var_ = !KILIT && !!(k && k.oyun);
-  $('mDevam').hidden = !var_; $('mDevam').textContent = var_ ? T(`Şehre dön · ${Math.floor(k.oyun.nuf)} kişi · ${Math.floor(k.oyun.t / MEVSIM / 4) + 1}. yıl`, `Back to the city · ${Math.floor(k.oyun.nuf)} people · year ${Math.floor(k.oyun.t / MEVSIM / 4) + 1}`) : '';
+  $('mDevam').hidden = !var_; $('mDevam').textContent = var_ ? (k.oyun.ad ? k.oyun.ad + ' · ' : '') + T(`Şehre dön · ${Math.floor(k.oyun.nuf)} kişi · ${Math.floor(k.oyun.t / MEVSIM / 4) + 1}. yıl`, `Back to the city · ${Math.floor(k.oyun.nuf)} people · year ${Math.floor(k.oyun.t / MEVSIM / 4) + 1}`) : '';
+  $('adlar').hidden = KILIT; if (!$('kAd').value && KB && (KB.ustalar[0] || KB.adlar[0])) $('kAd').placeholder = T('Kralın adı', 'King\'s name') + ' (' + (KB.ustalar[0] || KB.adlar[0]) + ')'; $('sAd').placeholder = T('Şehrin adı', 'City name');
   $('mYeni').hidden = KILIT; $('mYeni').textContent = var_ ? T('Yeni şehir kur (eskisi silinir)', 'Found a new city (erases the old one)') : T('Şehri kur', 'Found the city'); $('mYeni').className = var_ ? 'ikincil' : 'ana'; delete $('mYeni').dataset.emin;
   $('rekor').textContent = REKOR.devlet || REKOR.sehir ? T(`🏛 Şehir devleti: ${REKOR.devlet} · 🏙 Şehir: ${REKOR.sehir} · 🛡 Püskürtülen baskın: ${REKOR.puskurt} · 👥 En kalabalık: ${REKOR.enKalabalik}`, `🏛 City-states: ${REKOR.devlet} · 🏙 Cities: ${REKOR.sehir} · 🛡 Raids repelled: ${REKOR.puskurt} · 👥 Largest: ${REKOR.enKalabalik}`) : '';
   document.querySelectorAll('[data-dil]').forEach(e => e.hidden = e.dataset.dil !== (window.erDil && erDil.lang === 'en' ? 'en' : 'tr'));
@@ -1001,7 +1183,7 @@ boyutla();
 if (KILIT) { O = { seed: 7, t: 70, r: { f: 0, o: 0, t: 0, k: 0, c: 0, z: 0, b: 0, bl: 0 }, nuf: 0, tek: {}, harabe: [], baskin: {}, hue: 30 }; dunyaKur(7); BL = []; binaEkle('ev', 15, 19); binaEkle('ev', 18, 19); binaEkle('tapinak', 14, 22); binaEkle('tarla', nehirOvaX(20) - 1, 19); binaEkle('tarla', nehirOvaX(23) - 1, 23); zum = 0.9; kx = 12 * TS; ky = 16 * TS; zumSinir(); }
 else { const k = ls.get('sehir-kayit', null); if (!(k && k.oyun && yukle())) yeniOyun(); isciDagit(); kislaAta(); }
 menuKur(); requestAnimationFrame(kare);
-window.SHR = { O: () => O, BL: () => BL, A: () => A, R: () => R, B, TEK, kur: (t, x, y) => { sec = t; const r = kur(x, y); sec = null; return r; }, yerUygun, guncelle, isciDagit, nufusKap, baskinBasla, pnlAc, ticaretYap, askerYetistir, ekran: (x, y) => [(x - kx) * zum, (y - ky) * zum], git: (x, y, z) => { if (z) zum = z; kx = x - EW / zum / 2; ky = y - EH / zum / 2; zumSinir(); }, kalite: v => { if (v != null) { kalite = v; kaliteKilit = true; } return kalite; }, mevsim, yil, Z, GW, GH, TS };
+window.SHR = { yolBagla, agKur, seferGonder, mutluHedef, geceK, pnl: () => panelAcik, O: () => O, BL: () => BL, A: () => A, R: () => R, B, TEK, kur: (t, x, y) => { sec = t; const r = kur(x, y); sec = null; return r; }, yerUygun, guncelle, isciDagit, nufusKap, baskinBasla, pnlAc, ticaretYap, askerYetistir, ekran: (x, y) => [(x - kx) * zum, (y - ky) * zum], git: (x, y, z) => { if (z) zum = z; kx = x - EW / zum / 2; ky = y - EH / zum / 2; zumSinir(); }, kalite: v => { if (v != null) { kalite = v; kaliteKilit = true; } return kalite; }, mevsim, yil, Z, GW, GH, TS };
 })();
 </script>
 <script data-goatcounter="https://erdevelop.goatcounter.com/count" async src="//gc.zgo.at/count.js"></script>

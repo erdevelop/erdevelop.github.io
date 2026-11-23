@@ -51,6 +51,7 @@
       h = '<div class="sr"><span>☁️ <small>' + T('Kayıt yalnızca bu cihazda. Giriş yaparsan ilerlemen kaybolmaz.', 'Your save lives only on this device. Sign in to keep it safe.') + '</small></span><button type="button" data-s="ac">' + T('Giriş yap', 'Sign in') + '</button></div>';
     }
     if (D.mesaj) h += '<div class="sm">' + esc(D.mesaj) + '</div>';
+    if (!/\/seri\.html$/.test(location.pathname)) h += '<div style="margin-top:7px"><a href="/seri.html" style="font-weight:800;color:inherit">🧬 ' + T('Bütün yolculuğun: tek hücreden krallığa', 'Your whole journey: from a cell to a kingdom') + ' ›</a></div>';
     var e = document.getElementById('seriE'), p = document.getElementById('seriP'), ev = e && e.value, pv = p && p.value;
     kok.innerHTML = h;
     if (D.form && !D.kul) { e = document.getElementById('seriE'); p = document.getElementById('seriP'); if (e && ev) e.value = ev; if (p && pv) p.value = pv; }
