@@ -188,6 +188,7 @@ body.er-durumlu #mini{bottom:32px}body.er-durumlu #dna{bottom:188px}
 #yetBtn[hidden]{display:none}#yetBtn.bekle{filter:saturate(.35) brightness(.85);box-shadow:none}#yetBtn small{position:absolute;top:100%;left:50%;transform:translateX(-50%);margin-top:3px;font-size:10.5px;font-weight:900;white-space:nowrap;color:#FFE9B0;text-shadow:0 1px 4px #02161b}
 @media (hover:hover) and (pointer:fine){#yetBtn{left:18px;bottom:calc(30px + env(safe-area-inset-bottom,0px))}}
 @media (max-width:640px){#kgChip{bottom:calc(214px + env(safe-area-inset-bottom,0px))}}
+#ortakKutu .gBas>span:last-child{display:flex;flex-wrap:wrap;gap:4px;justify-content:flex-end}
 </style>
 <script type="application/ld+json">{"@context":"https://schema.org","@type":"VideoGame","name":"Organizma","url":"https://erdevelop.github.io/organizma.html","genre":["Action","Survival"],"gamePlatform":"Web browser","playMode":["SinglePlayer","MultiPlayer"],"inLanguage":["tr","en"],"isAccessibleForFree":true,"offers":{"@type":"Offer","price":"0","priceCurrency":"TRY"}}</script>
 <script async src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-4775308844679394" crossorigin="anonymous"></script>
@@ -246,12 +247,13 @@ body.er-durumlu #mini{bottom:32px}body.er-durumlu #dna{bottom:188px}
     <button class="ikinci" id="agacBtn" type="button">🌳 Soy ağacı</button>
     <button class="ikinci" id="dukkanBtn" type="button" data-en="🛍 DNA shop">🛍 DNA dükkânı</button>
     <button class="ikinci" id="rehberBtn" type="button" data-en="🧬 How do mutations work?">🧬 Mutasyon nasıl çalışır?</button>
+    <div id="gmKart" style="margin-top:8px;padding:10px 12px;border-radius:14px;border:1px solid rgba(255,226,154,.45);background:rgba(40,32,8,.35)"></div>
     <div id="gecisYol" hidden style="margin-top:8px;padding:9px 11px;border-radius:14px;border:1px solid rgba(190,170,255,.35);background:rgba(30,22,60,.4)"></div>
     <div id="seriHesap"></div>
     <div class="rekor" id="rekor"></div>
     <div id="agMenu"></div>
     <div id="gorevKutu"></div>
-    <div id="ortakKutu" hidden><div class="gBas"><span data-en="SHARED RECORDS">ORTAK REKORLAR</span><span><button type="button" class="sek" id="ortakG" data-en="Today">Bugün</button><button type="button" class="sek" id="ortakT" data-en="All time">Tüm zamanlar</button></span></div><ol id="ortakListe"></ol></div>
+    <div id="ortakKutu" hidden><div class="gBas"><span data-en="SHARED RECORDS">ORTAK REKORLAR</span><span><button type="button" class="sek" id="ortakG" data-en="Today">Bugün</button><button type="button" class="sek" id="ortakT" data-en="All time">Tüm zamanlar</button><button type="button" class="sek" id="ortakM" data-en="Challenge">📅 Meydan</button><button type="button" class="sek" id="ortakS" data-en="Lineage (week)">🌳 Soy</button></span></div><ol id="ortakListe"></ol></div>
     <details><summary id="basOzet">Başarımlar</summary><div id="basarimlar"></div></details>
     <details>
       <summary data-en="How to play">Nasıl oynanır?</summary>
@@ -326,6 +328,7 @@ body.er-durumlu #mini{bottom:32px}body.er-durumlu #dna{bottom:188px}
     <div id="oRekor"></div>
     <div id="oDna"></div>
     <div id="oSoy"></div>
+    <div id="oGm"></div>
     <button class="ana" id="yeniden" type="button" data-en="Be born again">Yeniden doğ</button>
     <button class="ikinci" id="menuye" type="button" data-en="Menu">Menü</button>
   </div>
@@ -371,11 +374,11 @@ for (const t of TURLER) { t.hiz = t.hiz || 1; t.bekle = t.bekle || 1; t.agiz = t
 /* tür ve evrim özelliklerine göre kurallar */
 const BOS_EV = { menzil: 0, bekle: 0, hiz: 0, zar: 0, obur: 0, kamuflaj: 0, miknatis: 0 };
 const EV = o => o.ev || BOS_EV;
-const hizO = o => hizi(o.r) * TURLER[o.tur].hiz * (1 + 0.08 * EV(o).hiz) * (o.zehir > 0 ? 0.55 : 1) * (1 - 0.15 * derinK(o.x, o.y) * (o === oyuncu || o.sahip === oyuncu ? 1 - 0.5 * Math.min(1, agacLv('dalgic')) : 1));
+const hizO = o => hizi(o.r) * TURLER[o.tur].hiz * (1 + 0.08 * EV(o).hiz) * (o.zehir > 0 ? 0.55 : 1) * (gmVar('hizli') ? 1.15 : 1) * (1 - 0.15 * derinK(o.x, o.y) * (o === oyuncu || o.sahip === oyuncu ? 1 - 0.5 * Math.min(1, agacLv('dalgic')) : 1));
 const menzilK = o => TURLER[o.tur].menzil * (1 + 0.22 * EV(o).menzil);
 const menzilO = o => MENZIL(o.r) * menzilK(o);
 const bekleO = o => HAMLE_BEKLE * TURLER[o.tur].bekle * (1 - 0.2 * EV(o).bekle);
-const besinK = o => TURLER[o.tur].besin * (1 + 0.2 * EV(o).obur) * ((o.sahip || o) === oyuncu ? 1 + 0.03 * agacLv('verim') : 1) * ((o.sahip || o).soy ? 1 + 0.12 * (o.sahip || o).soy.sindir + 0.01 * Math.min(20, (o.sahip || o).soy.yildiz) : 1);
+const besinK = o => TURLER[o.tur].besin * (1 + 0.2 * EV(o).obur) * ((o.sahip || o) === oyuncu ? (1 + 0.03 * agacLv('verim')) * (gmVar('bolluk') ? 1.4 : 1) : 1) * ((o.sahip || o).soy ? 1 + 0.12 * (o.sahip || o).soy.sindir + 0.01 * Math.min(20, (o.sahip || o).soy.yildiz) : 1);
 const yerMi = (a, b) => a.m >= b.m * (YEME * TURLER[a.tur].agiz + TURLER[b.tur].zirh + 0.12 * EV(b).zar);
 const EVRIM_ESIK = [50, 110, 220, 420, 800, 1400];
 const ACEMI = 45;   // yeni doğan oyuncuyu organizmaların avlamadığı süre (sn)
@@ -657,6 +660,11 @@ const AG = (() => {
   /* ortak rekor tablosu: organizma/r/g<gün>/<uid> ve organizma/r/tum/<uid> */
   const gun = () => new Date(simdi() + 3 * 3600e3).toISOString().slice(0, 10).replace(/-/g, '');
   const uid = () => { try { const u = app && firebase.auth(app).currentUser; return u ? u.uid : null; } catch (e) { return null; } };
+  function rekorYazK(k, v) {   // anahtarlı tablo: günlük meydan okuma (gm<gün>), haftalık soy (sh<hafta>)
+    if (bc) { const d = ls.get('organizma-rekor-deneme', {}); d[k] = d[k] || {}; const e = d[k][v.n]; if (!e || v.s > e.s) d[k][v.n] = v; ls.set('organizma-rekor-deneme', d); return; }
+    const u = uid(); if (!db || !u || durum !== 'acik') return;
+    const r = db.ref(KOK + '/r/' + k + '/' + u); r.once('value').then(s2 => { const e = s2.val(); if (!e || +e.s < v.s) r.set(v).catch(() => { }); }).catch(() => { });
+  }
   function rekorYaz(v) {
     if (bc) { const d = ls.get('organizma-rekor-deneme', {}); for (const k of ['g' + gun(), 'tum']) { d[k] = d[k] || {}; const e = d[k][v.n]; if (!e || v.s > e.s) d[k][v.n] = v; } ls.set('organizma-rekor-deneme', d); return; }
     const u = uid(); if (!db || !u || durum !== 'acik') return;
@@ -670,7 +678,7 @@ const AG = (() => {
   /* uzun süre güncellenmeyenleri at (onDisconnect çalışmamış olabilir) */
   setInterval(() => { const n = performance.now(); for (const [id, u] of uzak) if (n - u.alindi > (u.detay ? 8000 : 13000)) uzak.delete(id); }, 2000);
   addEventListener('pagehide', ayril);
-  return { baslat, katil, gonder, ayril, olay, uzak, durum: () => durum, olayda: f => olayCb = f, simdi, gun, rekorYaz, rekorOku, hata: () => ({ eski, hucrem, komsu: [...komsu], dinlenen: [...dinlenen.keys()], uzak: [...uzak].map(([id, u]) => [id.slice(0, 4), u.detay, Math.round(u.v.x), Math.round(u.v.y), Math.round(performance.now() - u.alindi)]) }) };
+  return { baslat, katil, gonder, ayril, olay, uzak, durum: () => durum, olayda: f => olayCb = f, simdi, gun, rekorYaz, rekorYazK, rekorOku, hata: () => ({ eski, hucrem, komsu: [...komsu], dinlenen: [...dinlenen.keys()], uzak: [...uzak].map(([id, u]) => [id.slice(0, 4), u.detay, Math.round(u.v.x), Math.round(u.v.y), Math.round(performance.now() - u.alindi)]) }) };
 })();
 
 /* ================= varlıklar ================= */
@@ -1445,7 +1453,7 @@ function virusGuncelle(dt) {
     }
   }
   V = V.filter(v => !(v.olu >= 1));
-  virusSay -= dt; if (virusSay <= 0 && V.length < VIRUS_N) { virusSay = 2.5; const [x, y] = diskteNokta(60); V.push(virusYeni(x, y)); }
+  virusSay -= dt; if (virusSay <= 0 && V.length < VIRUS_N * (gmVar('virus') ? 2.4 : 1)) { virusSay = gmVar('virus') ? 1 : 2.5; const [x, y] = diskteNokta(60); V.push(virusYeni(x, y)); }
 }
 function virusCiz(v, z) {
   const r = 9 * v.b * (v.olu ? 1 + v.olu * 2 : 1), al = v.olu ? 1 - v.olu : 1; if (al <= 0) return;
@@ -1953,16 +1961,16 @@ function devOl(b) {
     genYe(oyuncu, 'n' + b.tip, D.hue); dnaEkle(15); basarim('dev'); oyuncu.devYen = (oyuncu.devYen || 0) + 1;
     duyur(`🏆 ${D.ik} ${T(D.ad[0] + ' yenildi! Nadir gen + 15 DNA', D.ad[1] + ' defeated! Rare gene + 15 DNA')}`, 'iyi', 6); SES.basari();
   }
-  DEVB.b = null; DEVB.sonraki = zaman + rnd(240, 330);
+  DEVB.b = null; DEVB.sonraki = zaman + (gmVar('dev') ? rnd(60, 90) : rnd(240, 330));
 }
 function devGuncelle(dt) {
   const o = oyuncu;
-  if (!DEVB.b) { if (oyunda && o && !o.olu && o.yas > 90 && zaman > DEVB.sonraki) devCikar(); return; }
+  if (!DEVB.b) { if (oyunda && o && !o.olu && o.yas > (gmVar('dev') ? 20 : 90) && zaman > DEVB.sonraki) devCikar(); return; }
   const b = DEVB.b, D = DEVLER[b.tip]; b.t += dt; b.omur -= dt; if (b.bekle > 0) b.bekle -= dt;
   if (b.zehir > 0) { b.zehir -= dt; b.can -= 12 * dt; }
   b.can = Math.min(b.canMax, b.can + dt * 0.8);
   if (b.can <= 0) { devOl(b); return; }
-  if (b.omur <= 0) { b.kac = (b.kac || 0) + dt; if (b.kac > 2) { if (o && !o.olu) duyur(`${D.ik} ${T(D.ad[0] + ' derinlere çekildi', D.ad[1] + ' retreated into the deep')}`, '', 4); DEVB.b = null; DEVB.sonraki = zaman + rnd(200, 280); return; } }
+  if (b.omur <= 0) { b.kac = (b.kac || 0) + dt; if (b.kac > 2) { if (o && !o.olu) duyur(`${D.ik} ${T(D.ad[0] + ' derinlere çekildi', D.ad[1] + ' retreated into the deep')}`, '', 4); DEVB.b = null; DEVB.sonraki = zaman + (gmVar('dev') ? rnd(50, 80) : rnd(200, 280)); return; } }
   /* hareket */
   let hx = 0, hy = 0, hz = D.hiz;
   const hedef = o && !o.olu && Math.hypot(o.x - b.x, o.y - b.y) < 1100 ? o : null;
@@ -2051,7 +2059,8 @@ function derinCiz(z, t, gx0, gx1, gy0, gy1) {   // dünya koordinatında: katman
   }
 }
 function derinKaranlik(z) {   // ekran koordinatında: derine indikçe karanlık ve dar görüş
-  const o = oyuncu, cx0 = o && !o.olu ? o.x : kamera.x, cy0 = o && !o.olu ? o.y : kamera.y, dk = derinK(cx0, cy0) * (o && !o.olu ? (1 - 0.35 * SOY(o).isik) * (agacLv('dalgic') >= 2 ? 0.5 : 1) : 1);
+  const o = oyuncu, cx0 = o && !o.olu ? o.x : kamera.x, cy0 = o && !o.olu ? o.y : kamera.y; let dk = derinK(cx0, cy0) * (o && !o.olu ? (1 - 0.35 * SOY(o).isik) * (agacLv('dalgic') >= 2 ? 0.5 : 1) : 1);
+  if (gmVar('karanlik')) dk = Math.max(dk, 0.45);
   if (dk < 0.01) return;
   const cx = (cx0 - kamera.x) * z + W / 2, cy = (cy0 - kamera.y) * z + H / 2, m = Math.min(W, H);
   const ng = g.createRadialGradient(cx, cy, m * (0.32 - 0.12 * dk), cx, cy, m * (0.8 - 0.25 * dk)); ng.addColorStop(0, `rgba(1,6,16,${0.25 * dk})`); ng.addColorStop(1, `rgba(1,6,16,${0.82 * dk})`);
@@ -2089,6 +2098,25 @@ function agacAc() {
   $('agacIc').querySelectorAll('[data-ag]').forEach(b => b.onclick = () => { const d = AGAC.find(q => q.id === b.dataset.ag), lv = agacLv(d.id), fy = agacFiyat(d, lv); if (lv >= d.ust || agacBos() < fy) return; a.h += fy; a.lv[d.id] = lv + 1; SES.basari(); ls.set('organizma-kayit', KAYIT); kayitKirli = true; agacAc(); agacBtnYaz(); });
 }
 function agacBtnYaz() { const b = $('agacBtn'); if (b) b.textContent = `🌳 ${T('Soy ağacı', 'Lineage tree')}${agacBos() > 0 ? ` (${agacBos()} ${T('puan', 'pts')})` : ''}`; }
+
+
+/* ================= günlük meydan okuma: herkese aynı gün aynı tür ve iki koşul; ayrı puan ve sıralama ================= */
+const GM_MOD = {
+  derin: { ik: '🌑', ad: ['Derinde doğ', 'Born in deep water'] }, dev: { ik: '🏆', ad: ['Devler sık gelir', 'Frequent giants'] }, virus: { ik: '🦠', ad: ['Virüs salgını', 'Virus outbreak'] },
+  bolluk: { ik: '🌿', ad: ['Bereketli su (+%40 besin)', 'Rich water (+40% food)'] }, hizli: { ik: '💨', ad: ['Hızlı su (herkes +%15 hız)', 'Fast water (everyone +15% speed)'] }, karanlik: { ik: '🌘', ad: ['Bulanık su', 'Murky water'] }
+};
+let GM = null;
+const gmVar = k => !!(GM && GM.mod.includes(k));
+function gunlukKosul() { const gun = AG.gun(), r = tohum(+gun * 7919 + 13), ks = Object.keys(GM_MOD), a = ks.splice((r() * ks.length) | 0, 1)[0], b = ks[(r() * ks.length) | 0]; return { gun, mod: [a, b], tur: (r() * TURLER.length) | 0 }; }
+const gmPuan = o => Math.round((o.yas || 0) + (o.enBuyuk || 0) * 0.5 + (o.yedigi || 0) * 5 + (o.devYen || 0) * 120 + (o.kgSay || 0) * 60 + (o.enDerinH || 0) * 0.1 + ((o.kusak || 1) - 1) * 80);
+const hafta = () => { const g = AG.gun(); return String(Math.floor((Date.UTC(+g.slice(0, 4), +g.slice(4, 6) - 1, +g.slice(6, 8)) / 864e5 + 3) / 7)); };
+function gmKartKur() {
+  const k = gunlukKosul(), tr = TURLER[k.tur], en = KAYIT.gm && KAYIT.gm.gun === k.gun ? KAYIT.gm.en : 0;
+  $('gmKart').innerHTML = `<div style="font-weight:900;font-size:14px">📅 ${T('Bugünün meydan okuması', 'Today\'s challenge')}</div>`
+    + `<div style="font-size:12.5px;font-weight:700;opacity:.9;margin:4px 0 8px;line-height:1.5">${T('Tür', 'Species')}: <b>${esc(T(tr.ad[0], tr.ad[1]))}</b> · ${k.mod.map(m => GM_MOD[m].ik + ' ' + esc(T(GM_MOD[m].ad[0], GM_MOD[m].ad[1]))).join(' · ')}<br>${T('Herkes aynı koşullarla oynar; puan: süre, kütle, av, dev, görev, derinlik.', 'Everyone plays the same conditions; score: time, mass, prey, giants, quests, depth.')}${en ? `<br>🏅 ${T('Bugünkü en iyin', 'Your best today')}: <b>${en}</b>` : ''}</div>`
+    + `<button type="button" class="ikinci" id="gmBasla" style="margin:0">▶ ${T('Meydan okumayı oyna', 'Play the challenge')}</button>`;
+  $('gmBasla').onclick = () => { GM = gunlukKosul(); basla(); };
+}
 
 /* ================= genom: yenen her farklı şey bir gen; DNA sarmalı ve gövde buna göre değişir ================= */
 const GEN_N = 61;   // 5 plankton + 35 mikro canlı + 12 tür + virüs + yırtıcı + 5 nadir + 2 derin su
@@ -2404,7 +2432,7 @@ function oyuncuHamle() {
   hamleYap(oyuncu, a); if (oyuncu.parca && !oyuncu.parca.olu) hamleYap(oyuncu.parca, a);
 }
 function basla() {
-  DEVB.b = null; DEVB.sonraki = zaman + 150;
+  DEVB.b = null; DEVB.sonraki = zaman + (GM && GM.mod.includes('dev') ? 35 : 150);
   const nick = ($('nick').value.trim() || T('İsimsiz', 'Nameless')).slice(0, 16);
   KAYIT.nick = $('nick').value.trim(); KAYIT.tur = secTur; KAYIT.renk = secRenk; KAYIT.desen = secDesen; ls.set('organizma-kayit', KAYIT);
   let x, y, dene = 0, ok;
@@ -2415,7 +2443,8 @@ function basla() {
     if (yakin) { const a = Math.random() * TAU, d = rnd(600, 1100); x = yak.x + Math.cos(a) * d; y = yak.y + Math.sin(a) * d; } else[x, y] = diskteNokta(600);
     ok = Math.hypot(x, y) < R - 400 && !O.some(o => !o.olu && o.m > 38 && Math.hypot(o.x - x, o.y - y) < (o.uzak ? 500 : bos)) && !ASIT.some(b => Math.hypot(b.x - x, b.y - y) < b.r + 150);
   } while (!ok && ++dene < 80);
-  oyuncu = yeniOrg({ npc: false, nick, tur: secTur, hue: secRenk === GOKKUSAGI ? 0 : secRenk + rnd(-4, 4), gk: secRenk === GOKKUSAGI, desen: secDesen, ev: Object.assign({}, BOS_EV), evSay: 0, evK: 0, kusak: 1, kusakTepe: 0, bedava: 0, acemiBit: 0, diyet: { p: 0, m: 0, a: 0 }, gen: [], form: [0, 0, 0], formBildi: [0, 0, 0], m: 32, x, y, dogum: 0, bekle: 0, koruma: 6 });
+  if (GM && gmVar('derin')) { const q = Math.random() * TAU; x = Math.cos(q) * R * 0.84; y = Math.sin(q) * R * 0.84; }
+  oyuncu = yeniOrg({ npc: false, nick, tur: GM ? GM.tur : secTur, hue: secRenk === GOKKUSAGI ? 0 : secRenk + rnd(-4, 4), gk: secRenk === GOKKUSAGI, desen: secDesen, ev: Object.assign({}, BOS_EV), evSay: 0, evK: 0, kusak: 1, kusakTepe: 0, bedava: 0, acemiBit: 0, diyet: { p: 0, m: 0, a: 0 }, gen: [], form: [0, 0, 0], formBildi: [0, 0, 0], m: 32, x, y, dogum: 0, bekle: 0, koruma: 6 });
   oyuncu.netId = (Math.random().toString(36).slice(2, 8) + Date.now().toString(36).slice(-4));
   {   // soy ağacından gelen kalıcı güçler
     const bm = 32 + 8 * agacLv('bas'); oyuncu.m = bm; oyuncu.r = yaricap(bm);
@@ -2450,6 +2479,11 @@ function oyuncuOldu(yiyen) {
   $('oIst').innerHTML = [[dkYaz(s, true), T('hayatta kaldın', 'survived')], [Math.round(oyuncu.enBuyuk), T('en büyük kütle', 'largest mass')], [oyuncu.yedigi, T('yuttuğun organizma', 'organisms eaten')], [dkYaz(KAYIT.uzun, true), T('rekorun', 'your record')]]
     .map(([b, k]) => `<div><b>${b}</b><small>${k}</small></div>`).join('');
   $('oRekor').innerHTML = yeniU ? `<span class="yeniRekor">🏆 ${T('Yeni hayatta kalma rekoru!', 'New survival record!')}</span>` : (yeniB ? `<span class="yeniRekor">🏆 ${T('Yeni kütle rekoru!', 'New mass record!')}</span>` : '');
+  { const nk = oyuncu.nick, hf = hafta(), sh = KAYIT.soyHafta && KAYIT.soyHafta.h === hf ? KAYIT.soyHafta : (KAYIT.soyHafta = { h: hf, p: 0 }); sh.p += soyPuani(oyuncu).n;
+    if (sh.p > 0) AG.rekorYazK('sh' + hf, { n: nk, s: sh.p, m: Math.round(KAYIT.enDerin || 0), k: AGC().p });
+    if (GM) { const p = gmPuan(oyuncu), eski = KAYIT.gm && KAYIT.gm.gun === GM.gun ? KAYIT.gm.en : 0; KAYIT.gm = { gun: GM.gun, en: Math.max(eski, p) }; AG.rekorYazK('gm' + GM.gun, { n: nk, s: p, m: Math.round(oyuncu.enBuyuk), k: oyuncu.kusak });
+      $('oGm').innerHTML = `<span class="yeniRekor" style="background:rgba(255,226,154,.14);color:#FFE9B0">📅 ${T('Günlük puan', 'Daily score')}: <b>${p}</b>${p > eski ? ' · ' + T('bugünkü en iyin!', 'your best today!') : ` · ${T('en iyin', 'best')} ${eski}`}</span>`; }
+    else $('oGm').innerHTML = ''; }
   { const sp = soyPuani(oyuncu); AGC().p += sp.n; KAYIT.genHafiza = (oyuncu.gen || []).map(q => ({ k: q.k, h: Math.round(q.h) })); agacBtnYaz();
     $('oSoy').innerHTML = sp.n ? `<span class="yeniRekor" style="background:rgba(127,227,140,.14);color:#CFF7D6;cursor:pointer" id="oSoyB">🌳 +${sp.n} ${T('soy puanı', 'lineage pts')} <small style="font-weight:700;opacity:.8">(${sp.d.map(q => q[1] + ' ' + q[0]).join(' · ')})</small> — ${T('Soy ağacına harca', 'Spend in the lineage tree')}</span>` : ''; const sb = $('oSoyB'); if (sb) sb.onclick = agacAc; }
   $('oDna').innerHTML = hayatDna ? `<span class="yeniRekor" style="background:rgba(95,211,184,.16);color:#BFF3E4">🧬 +${hayatDna} DNA</span>` : '';
@@ -2508,6 +2542,8 @@ $('ifadeler').innerHTML = IFADELER.map((c, i) => `<button type="button" data-i="
 $('ifadeler').querySelectorAll('button').forEach(b => { b.onclick = () => ifadeGoster(+b.dataset.i); });
 $('ortakG').onclick = () => { ortakTur = 0; ortakYukle(); };
 $('ortakT').onclick = () => { ortakTur = 1; ortakYukle(); };
+$('ortakM').onclick = () => { ortakTur = 2; ortakYukle(); };
+$('ortakS').onclick = () => { ortakTur = 3; ortakYukle(); };
 /* tam ekran */
 (() => {
   const el = document.documentElement, ac = el.requestFullscreen || el.webkitRequestFullscreen, kapat = document.exitFullscreen || document.webkitExitFullscreen;
@@ -2527,7 +2563,7 @@ $('sesKaydir').addEventListener('change', () => SES.yut());
 $('sesSus').onclick = () => { SES.ayarla(SES.duzey() > 0 ? 0 : 0.6); $('sesKaydir').value = Math.round(SES.duzey() * 100); sesYaz(); if (SES.duzey() > 0) { SES.yut(); if (oyunda) SES.ortam(); } };
 cv.addEventListener('pointerdown', () => { $('sesKutu').hidden = true; });
 sesYaz();
-$('basla').onclick = basla;
+$('basla').onclick = () => { GM = null; basla(); };
 $('yeniden').onclick = basla;
 $('menuye').onclick = () => { $('olum').hidden = true; menuAc(); };
 let liderTur = 0; $('liderBas').onclick = () => { liderTur = 1 - liderTur; liderCiz(); };
@@ -3047,7 +3083,7 @@ function hud(dt) {
     $('agMenu').textContent = d === 'acik' ? (n ? T(`🌐 Şu an ${n} oyuncu oyunda: ${[...vekil.values()].map(o => o.nick).slice(0, 5).join(', ')}. Girince yakınlarında doğarsın.`, `🌐 ${n} playing now: ${[...vekil.values()].map(o => o.nick).slice(0, 5).join(', ')}. You will spawn near them.`) : T('🌐 Çevrimiçisin. Şu an oyunda başka oyuncu yok (yalnızca oyuna girmiş olanlar görünür).', '🌐 You are online. No one else is in the game right now (only players inside a game are shown).')) : d === 'kapali' ? T('Çevrimiçi bağlantı yok; yalnızca organizmalarla oynarsın.', 'No online connection; you play with the organisms only.') : '';
     if (oyuncu && !oyuncu.olu) {
       const o = oyuncu, pr = o.parca && !o.parca.olu ? o.parca : null;
-      { const mt = metre(o.x, o.y), dk = derinK(o.x, o.y); $('dDerin').textContent = (dk <= 0 ? '🌊 ' : dk < 0.5 ? '🌘 ' : '🌑 ') + mt + ' m'; }
+      { const mt = metre(o.x, o.y), dk = derinK(o.x, o.y); $('dDerin').textContent = (GM ? '📅 ' + gmPuan(o) + ' · ' : '') + (dk <= 0 ? '🌊 ' : dk < 0.5 ? '🌘 ' : '🌑 ') + mt + ' m'; }
       $('dKutle').textContent = '⚖ ' + Math.round(o.m + (pr ? pr.m : 0)); $('dYas').textContent = '⏱ ' + dkYaz(o.yas); $('dYedi').textContent = '🍽 ' + o.yedigi + (o.kusak > 1 ? '  🧬 ' + romaYaz(o.kusak) : '');
       $('hamleBtn').classList.toggle('bekle', o.bekle > 0); $('bolBtn').classList.toggle('bekle', o.m < 50 || !!pr);
       o.kusakTepe = Math.max(o.kusakTepe, o.m);
@@ -3143,7 +3179,7 @@ const onizleme = [];
 const kilitli = k => !!k && KAYIT.dna < k;
 const ilr = (ad, n, ust, ek) => { const t = n >= ust; return `<div style="margin:7px 0 0;font-size:13px;font-weight:800"><div style="display:flex;justify-content:space-between;gap:8px"><span>${t ? '✅' : '⬜'} ${ad}</span><span style="opacity:.85">${ek || Math.min(n, ust) + ' / ' + ust}</span></div><div style="height:7px;border-radius:5px;background:rgba(0,0,0,.35);overflow:hidden;margin-top:4px"><i style="display:block;height:100%;border-radius:5px;width:${Math.round(Math.min(1, n / ust) * 100)}%;background:${t ? '#4CD08A' : '#E8B84A'}"></i></div></div>`; };
 function menuKur() {
-  agacBtnYaz();
+  agacBtnYaz(); try { gmKartKur(); } catch (e) { }
   { const gy = $('gecisYol'); gy.hidden = !!KAYIT.gecis; if (!KAYIT.gecis) gy.innerHTML = `<div style="font-weight:900;font-size:13px">${T('🦐 Sonraki aşama: Yaratık', '🦐 Next stage: Creature')}</div><div style="font-size:12px;opacity:.8;font-weight:700">${T('İkisini de tamamlayınca oyunda 🥚 Evrimleş düğmesi çıkar.', 'Complete both and the 🥚 Evolve button appears in game.')}</div>` + ilr(T('2. kuşağa ulaş (çoğal)', 'Reach generation 2 (reproduce)'), KAYIT.enKusak || 1, 2) + ilr(T('15 gen topla (farklı şeyler ye)', 'Collect 15 genes (eat different things)'), KAYIT.enGen || 0, 15); }
   { const gl = $('gecisLink'), gc = KAYIT.gecis; gl.hidden = !gc; if (gc) gl.textContent = T(`🦐 Yaratık oyununa geç (${gc.gen.length} gen, ${romaYaz(gc.kusak)}. kuşak)`, `🦐 Go to the Creature game (${gc.gen.length} genes, generation ${romaYaz(gc.kusak)})`); }
   if (!TURLER[secTur] || kilitli(TURLER[secTur].kilit)) secTur = 0;
@@ -3191,11 +3227,12 @@ function basYaz() {
 }
 function ortakYukle() {
   ortakYuk = performance.now();
-  $('ortakG').classList.toggle('sec', !ortakTur); $('ortakT').classList.toggle('sec', !!ortakTur);
-  AG.rekorOku(ortakTur ? 'tum' : 'g' + AG.gun(), L => {
+  ['ortakG', 'ortakT', 'ortakM', 'ortakS'].forEach((id, i) => $(id).classList.toggle('sec', ortakTur === i));
+  const puanMi = ortakTur >= 2;
+  AG.rekorOku([ 'g' + AG.gun(), 'tum', 'gm' + AG.gun(), 'sh' + hafta()][ortakTur] || 'tum', L => {
     if (!L) { $('ortakKutu').hidden = true; return; }
     $('ortakKutu').hidden = false;
-    $('ortakListe').innerHTML = L.length ? L.map((v, i) => `<li><em>${i + 1}.</em><b>${esc(String(v.n).slice(0, 16))}</b><em>⏱ ${dkYaz(+v.s || 0)}</em><em>⚖ ${Math.round(+v.m || 0)}</em>${+v.k > 1 ? `<em>🧬 ${romaYaz(Math.min(99, +v.k | 0))}</em>` : ''}</li>`).join('') : `<li class="bos2">${T('Henüz kayıt yok — ilk sen ol!', 'No records yet — be the first!')}</li>`;
+    $('ortakListe').innerHTML = L.length ? L.map((v, i) => `<li><em>${i + 1}.</em><b>${esc(String(v.n).slice(0, 16))}</b>${puanMi ? `<em>🏅 ${Math.round(+v.s || 0)}</em>${ortakTur === 3 ? (+v.m ? `<em>🌑 ${Math.round(+v.m)} m</em>` : '') : `<em>⚖ ${Math.round(+v.m || 0)}</em>`}` : `<em>⏱ ${dkYaz(+v.s || 0)}</em><em>⚖ ${Math.round(+v.m || 0)}</em>`}${+v.k > 1 ? `<em>🧬 ${romaYaz(Math.min(99, +v.k | 0))}</em>` : ''}</li>`).join('') : `<li class="bos2">${T('Henüz kayıt yok — ilk sen ol!', 'No records yet — be the first!')}</li>`;
   });
 }
 function kilitUyar(k) { duyur(T(`🔒 ${k} DNA gerekir (sende ${KAYIT.dna}). Görev ve başarımlarla DNA kazanırsın.`, `🔒 Needs ${k} DNA (you have ${KAYIT.dna}). Earn DNA from quests and achievements.`), '', 3.5); }
