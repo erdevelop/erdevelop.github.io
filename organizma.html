@@ -197,7 +197,7 @@ body.er-durumlu #mini{bottom:32px}body.er-durumlu #dna{bottom:188px}
 
 <div id="ust">
   <a class="yuv" href="/Tools.html" title="Geri" data-en-title="Back" aria-label="Geri" data-en-aria="Back">‹</a>
-  <div id="durum" hidden><span id="dKutle"></span><span id="dYas"></span><span id="dYedi"></span><span id="dEv"></span></div>
+  <div id="durum" hidden><span id="dDerin"></span><span id="dKutle"></span><span id="dYas"></span><span id="dYedi"></span><span id="dEv"></span></div>
   <div class="bos"></div>
   <div id="ag" title="Çevrimiçi durum" data-en-title="Online status"><i></i><span></span></div>
   <button class="yuv" id="ifadeBtn" type="button" hidden aria-label="İfade" data-en-aria="Emote">😀</button>
@@ -368,7 +368,7 @@ for (const t of TURLER) { t.hiz = t.hiz || 1; t.bekle = t.bekle || 1; t.agiz = t
 /* tür ve evrim özelliklerine göre kurallar */
 const BOS_EV = { menzil: 0, bekle: 0, hiz: 0, zar: 0, obur: 0, kamuflaj: 0, miknatis: 0 };
 const EV = o => o.ev || BOS_EV;
-const hizO = o => hizi(o.r) * TURLER[o.tur].hiz * (1 + 0.08 * EV(o).hiz) * (o.zehir > 0 ? 0.55 : 1);
+const hizO = o => hizi(o.r) * TURLER[o.tur].hiz * (1 + 0.08 * EV(o).hiz) * (o.zehir > 0 ? 0.55 : 1) * (1 - 0.15 * derinK(o.x, o.y));
 const menzilK = o => TURLER[o.tur].menzil * (1 + 0.22 * EV(o).menzil);
 const menzilO = o => MENZIL(o.r) * menzilK(o);
 const bekleO = o => HAMLE_BEKLE * TURLER[o.tur].bekle * (1 - 0.2 * EV(o).bekle);
@@ -679,6 +679,9 @@ let oyuncu = null, sayac = 0, zaman = 0, dogumSay = 0;
 const vekil = new Map();  // uzak oyuncu id → organizma
 const yenmisUzak = new Set();
 
+const derinK = (x, y) => kis((Math.hypot(x, y) / R - 0.55) / 0.4, 0, 1);   // 0: sığ · 0–0,5: alacakaranlık · 0,5–1: derin
+const metre = (x, y) => Math.round(Math.hypot(x, y) / R * 1000);
+const BACA = (() => { const a = []; for (let i = 0; i < 6; i++) { const q = i / 6 * TAU + rnd(-0.3, 0.3), d = R * rnd(0.82, 0.9); a.push({ x: Math.cos(q) * d, y: Math.sin(q) * d, r: 75, z: 0, s: Math.random() * 100 }); } return a; })();
 function diskteNokta(ic) { const a = Math.random() * TAU, d = Math.sqrt(Math.random()) * (R - (ic || 0)); return [Math.cos(a) * d, Math.sin(a) * d]; }
 function yeniOrg(o) {
   const tur = o.tur != null ? kis(o.tur | 0, 0, TURLER.length - 1) : (Math.random() < 0.7 ? Math.random() * 4 : 4 + Math.random() * (TURLER.length - 4)) | 0, tr = TURLER[tur];
@@ -737,16 +740,16 @@ const MIKRO_TUR = [[[85, 130], [18, 30]], [[18, 45], [24, 38]], [[318, 350], [6,
      21 amip yavrusu, 22 mini ışınlı, 23 dinoflagellat, 24 vibrio, 25 desmid, 26 hidra yavrusu, 27 efira, 28 ostrakod, 29 maya */
   [[185, 215], [6, 11]], [[40, 70], [4, 8]], [[100, 135], [22, 34]], [[35, 60], [5, 9]], [[330, 355], [36, 52]], [[280, 310], [4, 8]], [[20, 45], [18, 28]], [[25, 50], [10, 16]], [[50, 80], [20, 32]],
   [[290, 330], [8, 13]], [[190, 220], [5, 9]], [[15, 40], [16, 26]], [[140, 170], [26, 40]], [[105, 140], [5, 9]], [[80, 110], [5, 9]], [[200, 250], [14, 22]], [[30, 55], [14, 22]], [[45, 65], [4, 7]],
-  /* 30 kokolitofor, 31 foraminifer, 32 su piresi yavrusu, 33 nauplius larvası, 34 kolpoda */
-  [[170, 195], [5, 9]], [[22, 42], [3, 6]], [[25, 45], [24, 36]], [[18, 38], [22, 34]], [[62, 95], [16, 26]]];
+  /* 30 kokolitofor, 31 foraminifer, 32 su piresi yavrusu, 33 nauplius larvası, 34 kolpoda, 35 noctiluca (yalnız derinde) */
+  [[170, 195], [5, 9]], [[22, 42], [3, 6]], [[25, 45], [24, 36]], [[18, 38], [22, 34]], [[62, 95], [16, 26]], [[175, 195], [3, 6]]];
 let mikroSay = 0;
 function mikroYeni(x, y, m, tip) {
   const altin = tip == null && Math.random() < 0.015;
-  if (tip == null) tip = (Math.random() * MIKRO_TUR.length) | 0;
+  if (tip == null) tip = (Math.random() * (MIKRO_TUR.length - 1)) | 0;
   const [rk, hz] = MIKRO_TUR[tip], a = Math.random() * TAU;
   const _a = { x, y, vx: 0, vy: 0, m, r: yaricap(m), tip, hue: tip === 3 && Math.random() < 0.4 ? rnd(165, 190) : rnd(rk[0], rk[1]), ang: a, yon: a, hiz: rnd(hz[0], hz[1]), gaz: 0.6, f: Math.random() * TAU, akil: Math.random() * 0.7, b: 1, olu: null, n: 2 + ((Math.random() * 3) | 0) }; if (altin) _a.altin = true; return _a;
 }
-function mikroDogur(hazir) { const [x, y] = diskteNokta(40), a = mikroYeni(x, y, rnd(1.5, 9)); a.b = hazir ? 1 : 0; M.push(a); return a; }
+function mikroDogur(hazir) { const [x, y] = diskteNokta(40), a = mikroYeni(x, y, rnd(1.5, 9), derinK(x, y) > 0.45 && Math.random() < 0.22 ? MIKRO_TUR.length - 1 : null); a.b = hazir ? 1 : 0; M.push(a); return a; }
 function mikroIzgara() {
   basM.fill(-1); const n = Math.min(M.length, MKAP);
   for (let i = 0; i < n; i++) { if (M[i].olu) continue; const h = hucre(M[i].x, M[i].y); sonM[i] = basM[h]; basM[h] = i; }
@@ -758,7 +761,7 @@ function yakinMikro(x, y, rad, fn) {
 function mikroYe(a, b) {   // a: organizma ya da mikro canlı; b: yenen mikro canlı
   const org = a.kon !== undefined;
   if (org && a.diyet) a.diyet.m += b.m;
-  if (org) genYe(a, 'm' + b.tip, (MIKRO_TUR[b.tip][0][0] + MIKRO_TUR[b.tip][0][1]) / 2);
+  if (org) genYe(a, b.tip === MIKRO_TUR.length - 1 ? 'd1' : 'm' + b.tip, (MIKRO_TUR[b.tip][0][0] + MIKRO_TUR[b.tip][0][1]) / 2);
   if (org && b.altin && (a === oyuncu || a.sahip === oyuncu)) { genYe(a, 'n3', 48); dnaEkle(3); basarim('altin'); duyur(T('✨ Altın mikro canlı! Nadir gen + 3 DNA', '✨ Golden microbe! Rare gene + 3 DNA'), 'iyi', 4); }
   if (!(org && a.uzak)) { a.m = Math.min(org ? KUTLE_UST : MIKRO_UST + 3, a.m + b.m * 0.8 * (org ? besinK(a) : 1)); if (org) a.enBuyuk = Math.max(a.enBuyuk, a.m); }
   if (org) { a.yut = Math.max(a.yut, 0.6); if (a === oyuncu || a.sahip === oyuncu) { SES.mikro(); gorevIlerle('mikro', 1); } }
@@ -966,6 +969,14 @@ const EK_CIZ = [
     mg.strokeStyle = `hsla(${h},40%,92%,.25)`; mg.lineWidth = lw * 0.25; mg.beginPath(); for (let j = -2; j <= 2; j++) { mg.moveTo(-r * 0.9, j * r * 0.2); mg.quadraticCurveTo(0, j * r * 0.32, r * 0.9, j * r * 0.18 - r * 0.1); } mg.stroke();
     mg.fillStyle = `hsla(${h - 30},50%,28%,.5)`; mg.beginPath(); mg.arc(-r * 0.15, -r * 0.1, r * 0.28, 0, TAU); mg.fill();
     mg.fillStyle = `hsla(${h},40%,94%,.3)`; mg.beginPath(); mg.arc(-r * 0.7, r * 0.05, r * 0.14 * (0.6 + 0.4 * Math.sin(t * 2 + a.f)), 0, TAU); mg.fill();
+  },
+  (a, r, h, t, z, lw, dol, cizgi) => {   // 35 noctiluca: saydam kese, tek dokunaç, sitoplazma iplikleri, mavi biyolüminesans
+    const par = 0.55 + 0.45 * Math.sin(t * 2.2 + a.f * 3);
+    const gl = mg.createRadialGradient(0, 0, r * 0.2, 0, 0, r * 2.4); gl.addColorStop(0, `rgba(120,230,255,${0.35 * par})`); gl.addColorStop(1, 'rgba(120,230,255,0)'); mg.fillStyle = gl; mg.beginPath(); mg.arc(0, 0, r * 2.4, 0, TAU); mg.fill();
+    mg.strokeStyle = `hsla(${h},50%,85%,.55)`; mg.lineWidth = lw * 0.5; mg.beginPath(); mg.moveTo(-r * 0.9, 0); mg.quadraticCurveTo(-r * 1.4, r * 0.3 * Math.sin(t * 2 + a.f), -r * 1.7, r * 0.1); mg.stroke();
+    mg.beginPath(); mg.arc(0, 0, r, 0, TAU); mg.fillStyle = `hsla(${h},40%,70%,.18)`; mg.fill(); mg.strokeStyle = `hsla(${h},60%,88%,.6)`; mg.lineWidth = lw * 0.5; mg.stroke();
+    mg.strokeStyle = `hsla(${h},40%,85%,.25)`; mg.lineWidth = lw * 0.25; mg.beginPath(); for (let i = 0; i < 9; i++) { const q = i / 9 * TAU + a.f; mg.moveTo(-r * 0.3, 0); mg.lineTo(Math.cos(q) * r * 0.95, Math.sin(q) * r * 0.95); } mg.stroke();
+    mg.fillStyle = `rgba(170,245,255,${0.6 + 0.4 * par})`; mg.beginPath(); for (let i = 0; i < 10; i++) { const q = i * 2.4 + a.f, d = r * (0.3 + (i % 4) * 0.17), px = Math.cos(q) * d, py = Math.sin(q) * d; mg.moveTo(px + r * 0.06, py); mg.arc(px, py, r * 0.06, 0, TAU); } mg.fill();
   },
 ];
 function mikroCiz(a, z, t, al, olcek) {
@@ -1207,7 +1218,7 @@ function guncelle(dt) {
     const rr = o.r * 0.92;
     yakinYemek(o.x, o.y, rr, f => {
       if (f.b < 1 || f.yendi) return; const dx = f.x - o.x, dy = f.y - o.y; if (dx * dx + dy * dy > rr * rr) return;
-      if (!o.uzak) { if (o.diyet) o.diyet.p += f.m; genYe(o, 'p' + f.k, YEMEK_RENK[f.k][0]); o.m = Math.min(KUTLE_UST, o.m + f.m * besinK(o)); o.enBuyuk = Math.max(o.enBuyuk, o.m); }
+      if (!o.uzak) { if (o.diyet) o.diyet.p += f.m; genYe(o, f.baca ? 'd0' : 'p' + f.k, f.baca ? 30 : YEMEK_RENK[f.k][0]); o.m = Math.min(KUTLE_UST, o.m + f.m * besinK(o) * (1 + 0.6 * derinK(f.x, f.y))); o.enBuyuk = Math.max(o.enBuyuk, o.m); if (f.baca && (o === oyuncu || o.sahip === oyuncu)) gorevIlerle('baca', 1); }
       { const kf = o.kof || (o.kof = []), ben = o === oyuncu || o.sahip === oyuncu; if (kf.length >= (ben ? 16 : 5)) kf.shift(); kf.push({ k: f.k, ox: dx, oy: dy, t: 0, d: rnd(2.4, 3.8), s: (6 + f.m * 2.4) * 1.15, a: f.f, don: rnd(-0.6, 0.6) }); }
       f.yendi = true; if (o === oyuncu && Math.random() < 0.25) SES.plankton();
     });
@@ -1217,7 +1228,7 @@ function guncelle(dt) {
     yakinYemek(o.x, o.y, rad, f => { const dx = o.x - f.x, dy = o.y - f.y, d = Math.hypot(dx, dy) || 1; if (d < rad) { f.x += dx / d * 150 * dt; f.y += dy / d * 150 * dt; } });
     if (SOY(o).akim) for (const a of M) { const dx = o.x - a.x, dy = o.y - a.y; if (dx > rad || dx < -rad || dy > rad || dy < -rad) continue; const d = Math.hypot(dx, dy) || 1; if (d < rad) { a.x += dx / d * 110 * dt; a.y += dy / d * 110 * dt; } }
   }
-  mikroGuncelle(dt); virusGuncelle(dt); suruGuncelle(dt); yetGuncelle(dt); devGuncelle(dt);
+  mikroGuncelle(dt); virusGuncelle(dt); suruGuncelle(dt); yetGuncelle(dt); devGuncelle(dt); derinGuncelle(dt);
   for (let i = Y.length - 1; i >= 0; i--) {
     const f = Y[i];
     if (f.yendi) { if (f.gecici) { Y[i] = Y[Y.length - 1]; Y.pop(); continue; } f.yendi = false; yemekYeri(f); }
@@ -1580,7 +1591,7 @@ function rehberAc() {
     ['ye', ['1. Ye, gen topla', '1. Eat, collect genes'], ['Plankton, mikro canlı, organizma, virüs… Yediğin her <b>farklı</b> canlı DNA sarmalına yeni bir gen ekler ve gövdende o renkte bir organel belirir. Sarmala dokununca <b>gen defteri</b> açılır.', 'Plankton, microbes, organisms, viruses… Every <b>different</b> thing you eat adds a gene to your DNA helix and an organelle of that colour appears in your body. Tap the helix to open your <b>gene book</b>.']],
     ['bicim', ['2. Ne yersen o olursun', '2. You are what you eat'], ['Çoğunlukla plankton yersen <b>otçul</b> (yeşil kloroplastlar), mikro canlı yersen <b>süpürücü</b> (dokunaçlar), organizma avlarsan <b>avcı</b> (dişler, uzun gövde) görünüme geçersin. Sağdaki küçük gösterge bunu izler.', 'Eat mostly plankton and you become a <b>grazer</b> (green chloroplasts), microbes a <b>sweeper</b> (tentacles), organisms a <b>hunter</b> (teeth, longer body). The small gauge on the right tracks it.']],
     ['evrim', ['3. Büyüdükçe evrim seç', '3. Pick evolutions as you grow'], ['Belli kütlelerde üç özellikten birini seçersin. Kartta değerin şimdi ve seçince ne olacağı yazar (ör. hamle menzili 120 → 146).', 'At certain masses you pick one of three traits. The card shows the value now and after (e.g. dash range 120 → 146).']],
-    ['kusak', ['4. Çoğal, kuşak atla', '4. Reproduce, next generation'], ['500 kütlede çoğalırsın: küçülürsün ama genlerin, biçimin ve evrimlerin yavruna geçer, bir evrim de hediye gelir. İlk çoğalmada bir <b>uzmanlık yolu</b> seçersin: 🦂 Avcı (zehir oku), 🫧 Koloni (yardımcı sürü), 🌿 Simbiyont (fotosentez kalkanı); yeteneği düğmeyle ya da Q ile kullanırsın. Her kuşağın bir <b>görevi</b> var; bitirince DNA ve ek seçim kazanırsın. Evrimlerin hepsi bitince <b>soy mutasyonları</b> başlar: elektrik şoku, bağışıklık, biyolüminesans… Biriken DNA ile <b>DNA dükkânı</b>ndan süs alırsın.', 'At 500 mass you reproduce: you shrink but your genes, form and evolutions pass on, plus a free evolution. At your first reproduction you pick a <b>path</b>: 🦂 Hunter (toxin dart), 🫧 Colony (helper swarm), 🌿 Symbiont (photosynthesis shield); use its ability with the button or Q. Each generation has a <b>quest</b> that pays DNA and a bonus pick. Once every evolution is maxed, <b>lineage mutations</b> begin: electric shock, immunity, bioluminescence… Spend DNA in the <b>DNA shop</b> on decorations.']],
+    ['kusak', ['4. Çoğal, kuşak atla', '4. Reproduce, next generation'], ['500 kütlede çoğalırsın: küçülürsün ama genlerin, biçimin ve evrimlerin yavruna geçer, bir evrim de hediye gelir. İlk çoğalmada bir <b>uzmanlık yolu</b> seçersin: 🦂 Avcı (zehir oku), 🫧 Koloni (yardımcı sürü), 🌿 Simbiyont (fotosentez kalkanı); yeteneği düğmeyle ya da Q ile kullanırsın. Her kuşağın bir <b>görevi</b> var; bitirince DNA ve ek seçim kazanırsın. Evrimlerin hepsi bitince <b>soy mutasyonları</b> başlar: elektrik şoku, bağışıklık, biyolüminesans… Biriken DNA ile <b>DNA dükkânı</b>ndan süs alırsın. Haritanın kenarı <b>derin su</b>dur: karanlık, basınçlı ama besin değerli; sıcak bacalarda beslenebilir, dev canlıları yenip nadir gen toplayabilirsin.', 'At 500 mass you reproduce: you shrink but your genes, form and evolutions pass on, plus a free evolution. At your first reproduction you pick a <b>path</b>: 🦂 Hunter (toxin dart), 🫧 Colony (helper swarm), 🌿 Symbiont (photosynthesis shield); use its ability with the button or Q. Each generation has a <b>quest</b> that pays DNA and a bonus pick. Once every evolution is maxed, <b>lineage mutations</b> begin: electric shock, immunity, bioluminescence… Spend DNA in the <b>DNA shop</b> on decorations. The edge of the map is <b>deep water</b>: dark and pressured but rich; feed at hot vents, defeat giants for rare genes.']],
     ['yaratik', ['5. Yaratık\'a geç', '5. On to Creature'], ['2. kuşak + 15 gen olunca <b>🥚 Evrimleş</b> çıkar. Genlerin Yaratık\'ta vücut parçaları açar:', 'At generation 2 with 15 genes, <b>🥚 Evolve</b> appears. Your genes unlock body parts in Creature:']]
   ];
   let h = `<div class="gBas2"><b>🧬 ${T('Mutasyon nasıl çalışır?', 'How do mutations work?')}</b><button type="button" class="gKapa" data-kapa aria-label="${T('Kapat', 'Close')}">✕</button></div>`;
@@ -1713,14 +1724,14 @@ const MIKRO_AD = [['Basil', 'Bacillus'], ['Spiril', 'Spirillum'], ['Kok bakteri'
   ['Stentor yavrusu', 'Young stentor'], ['Vortisella', 'Vorticella'], ['Küçük öglena', 'Small euglena'], ['Yuvarlak diyatome', 'Round diatom'], ['Spiroket', 'Spirochete'], ['Dörtlü kok', 'Tetrad coccus'],
   ['Rotifer', 'Rotifer'], ['Su ayısı', 'Water bear'], ['Nematod', 'Nematode'], ['Amip yavrusu', 'Baby amoeba'], ['Mini ışınlı', 'Tiny radiolarian'], ['Dinoflagellat', 'Dinoflagellate'],
   ['Vibrio', 'Vibrio'], ['Desmid', 'Desmid'], ['Hidra yavrusu', 'Baby hydra'], ['Efira', 'Ephyra'], ['Ostrakod', 'Ostracod'], ['Maya', 'Yeast'],
-  ['Kokolitofor', 'Coccolithophore'], ['Foraminifer', 'Foraminifera'], ['Su piresi yavrusu', 'Baby water flea'], ['Nauplius larvası', 'Nauplius larva'], ['Kolpoda', 'Colpoda']];
-const GEN_GRUP = [['n', ['Nadir genler', 'Rare genes'], 5], ['p', ['Plankton', 'Plankton'], 5], ['m', ['Mikro canlılar', 'Microbes'], MIKRO_TUR.length], ['t', ['Organizma türleri', 'Organism species'], TURLER.length], ['x', ['Tehlikeler', 'Dangers'], 2]];
-const genAnahtarlar = gr => gr === 'x' ? ['v', 'y'] : Array.from({ length: gr === 'p' || gr === 'n' ? 5 : gr === 'm' ? MIKRO_TUR.length : TURLER.length }, (_, i) => gr + i);
+  ['Kokolitofor', 'Coccolithophore'], ['Foraminifer', 'Foraminifera'], ['Su piresi yavrusu', 'Baby water flea'], ['Nauplius larvası', 'Nauplius larva'], ['Kolpoda', 'Colpoda'], ['Noctiluca (ışıldak)', 'Noctiluca (sea sparkle)']];
+const GEN_GRUP = [['n', ['Nadir genler', 'Rare genes'], 5], ['d', ['Derin su', 'Deep water'], 2], ['p', ['Plankton', 'Plankton'], 5], ['m', ['Mikro canlılar', 'Microbes'], MIKRO_TUR.length - 1], ['t', ['Organizma türleri', 'Organism species'], TURLER.length], ['x', ['Tehlikeler', 'Dangers'], 2]];
+const genAnahtarlar = gr => gr === 'x' ? ['v', 'y'] : gr === 'd' ? ['d0', 'd1'] : Array.from({ length: gr === 'p' || gr === 'n' ? 5 : gr === 'm' ? MIKRO_TUR.length - 1 : TURLER.length }, (_, i) => gr + i);
 const NADIR_AD = [['Dev amip', 'Giant amoeba'], ['Ana virüs', 'Mother virus'], ['Kraliçe Didinium', 'Didinium queen'], ['Altın mikro canlı', 'Golden microbe'], ['Altın organizma', 'Golden organism']];
 function genAd(k) {
   const n = +k.slice(1);
   if (k === 'v') return T('Virüs', 'Virus'); if (k === 'y') return T('Yırtıcı (Didinium)', 'Predator (Didinium)');
-  const a = k[0] === 'n' ? NADIR_AD[n] : k[0] === 'p' ? PLANK_AD[n] : k[0] === 'm' ? MIKRO_AD[n] : TURLER[n] && TURLER[n].ad; return a ? T(a[0], a[1]) : k;
+  const a = k === 'd0' ? ['Baca bakterisi', 'Vent bacteria'] : k === 'd1' ? MIKRO_AD[MIKRO_TUR.length - 1] : k[0] === 'n' ? NADIR_AD[n] : k[0] === 'p' ? PLANK_AD[n] : k[0] === 'm' ? MIKRO_AD[n] : TURLER[n] && TURLER[n].ad; return a ? T(a[0], a[1]) : k;
 }
 /* Yaratık'ta genlerin açtığı parçalar (yaratik.html'deki kurallarla aynı) */
 const YR_PARCA = [
@@ -1743,6 +1754,8 @@ function genResim(k) {   // her genin kaynağının küçük resmi (bir kez çiz
     if (k[0] === 'p') { x.drawImage(SPR[n], -S2 * 0.62, -S2 * 0.62, S2 * 1.24, S2 * 1.24); }
     else if (k[0] === 'm') { const a = mikroYeni(0, 0, 6, n); a.b = 1; a.ang = -0.5; a.x = 0; a.y = 0; const sc = S2 * 0.17 / a.r; x.scale(sc, sc); mg = x; mikroCiz(a, sc, 1.3, 1, 1); }
     else if (k[0] === 't') { const tr = TURLER[n], o = yeniOrg({ tur: n, m: 60, dogum: 1, hue: (tr.renk[0] + tr.renk[1]) / 2 }); o.rr = tr.hortum || tr.boynuz ? S2 * 0.2 : S2 * 0.28; o.ang = -0.5; o.vx = 20; o.vy = 0; o.x = 0; o.y = 0; orgCiz(x, o, 1, 2.1); }
+    else if (k === 'd1') { const a = mikroYeni(0, 0, 6, MIKRO_TUR.length - 1); a.b = 1; a.x = 0; a.y = 0; const sc = S2 * 0.15 / a.r; x.scale(sc, sc); mg = x; mikroCiz(a, sc, 1.3, 1, 1); }
+    else if (k === 'd0') { x.fillStyle = '#2a211c'; x.beginPath(); x.arc(0, S2 * 0.05, S2 * 0.26, 0, TAU); x.fill(); const ig = x.createRadialGradient(0, S2 * 0.05, 0, 0, S2 * 0.05, S2 * 0.2); ig.addColorStop(0, 'rgba(255,230,160,1)'); ig.addColorStop(1, 'rgba(255,110,40,0)'); x.fillStyle = ig; x.beginPath(); x.arc(0, S2 * 0.05, S2 * 0.2, 0, TAU); x.fill(); x.fillStyle = 'rgba(240,235,215,.8)'; for (let i = 0; i < 12; i++) { const q = i * 0.52; x.beginPath(); x.ellipse(Math.cos(q) * S2 * 0.34, S2 * 0.05 + Math.sin(q) * S2 * 0.3, S2 * 0.06, S2 * 0.025, q, 0, TAU); x.fill(); } }
     else if (k[0] === 'n') {
       if (n === 0 || n === 4) { const o = yeniOrg({ tur: n === 0 ? 2 : 1, m: 60, dogum: 1, hue: n === 0 ? 285 : 46 }); o.rr = S2 * 0.27; o.ang = -0.5; o.vx = 20; o.vy = 0; o.x = 0; o.y = 0; if (n === 4) { x.fillStyle = 'rgba(255,215,90,.35)'; x.beginPath(); x.arc(0, 0, S2 * 0.45, 0, TAU); x.fill(); } orgCiz(x, o, 1, 2.1); }
       else if (n === 1) { const sc = S2 * 0.03; x.scale(sc, sc); mg = x; virusCiz({ x: 0, y: 0, b: 1.1, don: 0.3, k: 1, olu: 0 }, sc); }
@@ -1787,7 +1800,7 @@ function defterAc(bolum) {
     const ks = genAnahtarlar(gr), say = ks.filter(k => var_.has(k)).length;
     h += `<h4><span>${esc(T(ad[0], ad[1])).toLocaleUpperCase(EN() ? 'en' : 'tr')}</span><span>${say}/${ks.length}</span></h4><div class="gIzgara">` + ks.map(k => { const q = var_.get(k); return `<div class="gHuc${q ? '' : ' yok'}${q && q.d > yeniEsik ? ' yeni' : ''}"><img src="${genResim(k)}" alt="">${esc(genAd(k))}${q ? `<sup>×${q.n}</sup>` : ''}</div>`; }).join('') + '</div>';
   }
-  h += `<p class="gAc">${T('✨ Nadir genler: dev canlıları yenerek ve seyrek çıkan altın canlıları yiyerek toplanır.', '✨ Rare genes come from defeating giant creatures and eating the rare golden ones.')}</p>`;
+  h += `<p class="gAc">${T('✨ Nadir genler: dev canlıları yenerek ve seyrek çıkan altın canlıları yiyerek toplanır. 🌑 Derin su genleri haritanın kenarındaki derin katmanda bulunur.', '✨ Rare genes come from defeating giant creatures and eating the rare golden ones. 🌑 Deep-water genes are found in the deep layer at the edge of the map.')}</p>`;
   h += `<button class="ikinci" type="button" id="gdRehber">❓ ${T('Mutasyon nasıl çalışır?', 'How do mutations work?')}</button>`;
   $('genDefterIc').innerHTML = h; $('genDefter').hidden = false;
   const oc = $('gdOniz'); if (oc) { const x = oc.getContext('2d'), F2 = diyetHedef(o); x.setTransform(1, 0, 0, 1, 0, 0); x.clearRect(0, 0, 184, 184); x.translate(92, 92); onizOrg(x, o, 50, zaman, F2.some(v => v > 0) ? F2 : (o.form || SIFIR3).slice()); }
@@ -1987,8 +2000,49 @@ function devCiz(z, t) {
   g.restore();
 }
 
+
+/* ================= derin su: karanlık, basınç, sıcak bacalar ================= */
+let derinBolge = 0;
+function derinGuncelle(dt) {
+  for (const b of BACA) {
+    b.z -= dt; if (b.z <= 0) { b.z = 0.45; let n = 0; for (const f of Y) if (f.baca && !f.yendi) n++; if (n < 90) { const a = Math.random() * TAU, d = rnd(b.r * 0.9, b.r * 2.6); Y.push({ x: b.x + Math.cos(a) * d, y: b.y + Math.sin(a) * d, vx: Math.cos(a) * rnd(5, 25), vy: Math.sin(a) * rnd(5, 25) - 10, m: rnd(1.6, 3), k: Math.random() < 0.5 ? 1 : 4, f: Math.random() * TAU, b: 1, gecici: rnd(40, 60), baca: 1 }); } }
+    for (const o of O) { if (o.olu || o.uzak || o.dogum < 1) continue; const dx = o.x - b.x, dy = o.y - b.y; if (dx > b.r || dx < -b.r || dy > b.r || dy < -b.r) continue; if (dx * dx + dy * dy < b.r * b.r * 0.5 && !(o.kalkan > 0) && !((o === oyuncu || o.sahip === oyuncu) && SOY(o).bagisik >= 2)) { o.m -= o.m * 0.05 * dt; if (o === oyuncu && !(o.yanZ > zaman)) { o.yanZ = zaman + 3; duyur(T('🔥 Bacanın ağzı çok sıcak! Kenarında beslen', '🔥 The vent mouth is scalding! Feed at its edge'), 'uyari', 3); titre(30); } } }
+  }
+  const o = oyuncu; if (!o || o.olu || !oyunda) return;
+  const dk = derinK(o.x, o.y), bol = dk <= 0 ? 0 : dk < 0.5 ? 1 : 2, mt = metre(o.x, o.y);
+  if (bol !== derinBolge) {
+    if (bol > derinBolge) duyur(bol === 1 ? T('🌘 Alacakaranlık bölgesi: daha karanlık, plankton daha besleyici', '🌘 Twilight zone: darker, plankton more nourishing') : T('🌑 Derin su: basınç yavaşlatır, ışık yok; sıcak bacalar besin dolu (haritada turuncu)', '🌑 Deep water: pressure slows you, no light; hot vents are full of food (orange on the map)'), 'iyi', 5);
+    derinBolge = bol;
+  }
+  if (mt > (KAYIT.enDerin || 0)) { KAYIT.enDerin = mt; kayitKirli = true; }
+  if (o.kg && o.kg.id === 'derin' && mt > o.kg.n) kgIlerle('derin', mt - o.kg.n);
+}
+function derinCiz(z, t, gx0, gx1, gy0, gy1) {   // dünya koordinatında: katman sınırları ve bacalar
+  g.setLineDash([18 / z, 22 / z]); g.lineWidth = 2 / z;
+  for (const [k, al] of [[0.55, 0.12], [0.75, 0.16]]) { g.strokeStyle = `rgba(150,200,255,${al})`; g.beginPath(); g.arc(0, 0, R * k, 0, TAU); g.stroke(); }
+  g.setLineDash([]);
+  for (const b of BACA) {
+    if (b.x < gx0 - 300 || b.x > gx1 + 300 || b.y < gy0 - 300 || b.y > gy1 + 300) continue;
+    const gr = g.createRadialGradient(b.x, b.y, b.r * 0.2, b.x, b.y, b.r * 3); gr.addColorStop(0, 'rgba(255,170,80,.28)'); gr.addColorStop(1, 'rgba(255,120,40,0)'); g.fillStyle = gr; g.beginPath(); g.arc(b.x, b.y, b.r * 3, 0, TAU); g.fill();
+    g.fillStyle = 'rgba(240,235,215,.35)'; for (let i = 0; i < 26; i++) { const q = i * 2.399 + b.s, d = b.r * (0.95 + (i % 5) * 0.22); g.beginPath(); g.ellipse(b.x + Math.cos(q) * d, b.y + Math.sin(q) * d, b.r * 0.12, b.r * 0.05, q, 0, TAU); g.fill(); }
+    g.fillStyle = 'rgba(255,150,60,.35)'; for (let i = 0; i < 14; i++) { const q = i * 1.7 + b.s, d = b.r * (1.1 + (i % 3) * 0.3); g.beginPath(); g.arc(b.x + Math.cos(q) * d, b.y + Math.sin(q) * d, b.r * 0.06, 0, TAU); g.fill(); }
+    g.fillStyle = '#2a211c'; g.strokeStyle = 'rgba(120,95,80,.9)'; g.lineWidth = Math.max(1.5 / z, b.r * 0.04); g.beginPath();
+    for (let i = 0; i < 12; i++) { const q = i / 12 * TAU, d = b.r * (0.62 + 0.12 * Math.sin(i * 2.7 + b.s)); i ? g.lineTo(b.x + Math.cos(q) * d, b.y + Math.sin(q) * d) : g.moveTo(b.x + Math.cos(q) * d, b.y + Math.sin(q) * d); }
+    g.closePath(); g.fill(); g.stroke();
+    const ig = g.createRadialGradient(b.x, b.y, 0, b.x, b.y, b.r * 0.4); ig.addColorStop(0, 'rgba(255,230,160,.95)'); ig.addColorStop(0.5, 'rgba(255,120,40,.7)'); ig.addColorStop(1, 'rgba(120,40,10,0)'); g.fillStyle = ig; g.beginPath(); g.arc(b.x, b.y, b.r * 0.4, 0, TAU); g.fill();
+    for (let i = 0; i < 7; i++) { const q = (t * 0.35 + i / 7 + b.s) % 1, px = b.x + Math.sin(t * 0.8 + i * 1.3) * b.r * 0.3 * q, py = b.y - q * b.r * 2.4, pr = b.r * (0.18 + q * 0.4); g.fillStyle = `rgba(220,210,200,${0.18 * (1 - q)})`; g.beginPath(); g.arc(px, py, pr, 0, TAU); g.fill(); }
+  }
+}
+function derinKaranlik(z) {   // ekran koordinatında: derine indikçe karanlık ve dar görüş
+  const o = oyuncu, cx0 = o && !o.olu ? o.x : kamera.x, cy0 = o && !o.olu ? o.y : kamera.y, dk = derinK(cx0, cy0) * (o && !o.olu ? 1 - 0.35 * SOY(o).isik : 1);
+  if (dk < 0.01) return;
+  const cx = (cx0 - kamera.x) * z + W / 2, cy = (cy0 - kamera.y) * z + H / 2, m = Math.min(W, H);
+  const ng = g.createRadialGradient(cx, cy, m * (0.32 - 0.12 * dk), cx, cy, m * (0.8 - 0.25 * dk)); ng.addColorStop(0, `rgba(1,6,16,${0.25 * dk})`); ng.addColorStop(1, `rgba(1,6,16,${0.82 * dk})`);
+  g.fillStyle = ng; g.fillRect(0, 0, W, H);
+}
+
 /* ================= genom: yenen her farklı şey bir gen; DNA sarmalı ve gövde buna göre değişir ================= */
-const GEN_N = 59;   // 5 plankton + 35 mikro canlı + 12 tür + virüs + yırtıcı + 5 nadir
+const GEN_N = 61;   // 5 plankton + 35 mikro canlı + 12 tür + virüs + yırtıcı + 5 nadir + 2 derin su
 function genYe(o, anahtar, hue) {
   const s = o.sahip || o; if (s !== oyuncu || !s.gen) return;
   let gn = s.gen.find(q => q.k === anahtar);
@@ -2235,7 +2289,9 @@ const KG_TUR = {
   yirtici: { ik: '🔴', h: k => 2 + Math.min(4, k >> 2), ad: n => [`Küçükken ${n} yırtıcı ye`, `Eat ${n} predators while small`] },
   sersem: { ik: '💫', h: k => 4 + Math.min(8, k), ad: n => [`${n} yırtıcı sersemlet`, `Stun ${n} predators`] },
   virus: { ik: '🧫', h: k => 2 + Math.min(3, k >> 2), ad: n => [`Küçükken ${n} virüs ye`, `Eat ${n} viruses while small`] },
-  bol: { ik: '✂️', h: k => 1 + Math.min(3, k >> 2), ad: n => [`Bölünen parçanla ${n} av yakala`, `Catch ${n} prey with your split half`] }
+  bol: { ik: '✂️', h: k => 1 + Math.min(3, k >> 2), ad: n => [`Bölünen parçanla ${n} av yakala`, `Catch ${n} prey with your split half`] },
+  derin: { ik: '🌑', h: k => Math.min(950, 640 + 30 * k), ad: n => [`${n} m derine in`, `Dive to ${n} m`] },
+  baca: { ik: '🔥', h: k => 12 + 3 * Math.min(8, k), ad: n => [`Sıcak bacada ${n} besin ye`, `Eat ${n} vent foods`] }
 };
 function kgVer(o) {
   const ks = Object.keys(KG_TUR).filter(k => !o.kg || o.kg.id !== k), id = ks[(Math.random() * ks.length) | 0];
@@ -2801,6 +2857,7 @@ function ciz(t) {
   bolgeCiz(z, t, gx0, gx1, gy0, gy1, false);
   if (OLAY.tip === 'patlama') { const pg = g.createRadialGradient(OLAY.x, OLAY.y, 30, OLAY.x, OLAY.y, 430); pg.addColorStop(0, `rgba(120,255,160,${0.13 + 0.04 * Math.sin(t * 2)})`); pg.addColorStop(1, 'rgba(120,255,160,0)'); g.fillStyle = pg; g.beginPath(); g.arc(OLAY.x, OLAY.y, 430, 0, TAU); g.fill(); }
   /* besinler */
+  derinCiz(z, t, gx0, gx1, gy0, gy1);
   const yz = Math.max(1, 1 / z);
   for (const f of Y) {
     if (f.x < gx0 - 20 || f.x > gx1 + 20 || f.y < gy0 - 20 || f.y > gy1 + 20) continue;
@@ -2901,6 +2958,7 @@ function ciz(t) {
       g.font = '800 12.5px Nunito, system-ui, sans-serif'; g.lineWidth = 3.5; g.strokeStyle = 'rgba(2,14,18,.8)'; g.strokeText(yazi, tx, ty); g.fillStyle = renk; g.fillText(yazi, tx, ty);
     }
   }
+  derinKaranlik(z);
   if (OLAY.g > 0.01) {   // gece: yalnızca yakın çevre görünür
     const ben = oyuncu && !oyuncu.olu, cx = ben ? (oyuncu.x - kamera.x) * z + W / 2 : W / 2, cy = ben ? (oyuncu.y - kamera.y) * z + H / 2 : H / 2, m = Math.min(W, H);
     const gk = ben ? [1, 1.6, 2.3][Math.min(2, SOY(oyuncu).isik)] : 1, ng = g.createRadialGradient(cx, cy, m * 0.15 * gk, cx, cy, m * 0.52 * gk); ng.addColorStop(0, 'rgba(1,5,9,0)'); ng.addColorStop(1, `rgba(1,5,9,${0.94 * OLAY.g})`); g.fillStyle = ng; g.fillRect(0, 0, W, H);
@@ -2931,6 +2989,7 @@ function hud(dt) {
     $('agMenu').textContent = d === 'acik' ? (n ? T(`🌐 Şu an ${n} oyuncu oyunda: ${[...vekil.values()].map(o => o.nick).slice(0, 5).join(', ')}. Girince yakınlarında doğarsın.`, `🌐 ${n} playing now: ${[...vekil.values()].map(o => o.nick).slice(0, 5).join(', ')}. You will spawn near them.`) : T('🌐 Çevrimiçisin. Şu an oyunda başka oyuncu yok (yalnızca oyuna girmiş olanlar görünür).', '🌐 You are online. No one else is in the game right now (only players inside a game are shown).')) : d === 'kapali' ? T('Çevrimiçi bağlantı yok; yalnızca organizmalarla oynarsın.', 'No online connection; you play with the organisms only.') : '';
     if (oyuncu && !oyuncu.olu) {
       const o = oyuncu, pr = o.parca && !o.parca.olu ? o.parca : null;
+      { const mt = metre(o.x, o.y), dk = derinK(o.x, o.y); $('dDerin').textContent = (dk <= 0 ? '🌊 ' : dk < 0.5 ? '🌘 ' : '🌑 ') + mt + ' m'; }
       $('dKutle').textContent = '⚖ ' + Math.round(o.m + (pr ? pr.m : 0)); $('dYas').textContent = '⏱ ' + dkYaz(o.yas); $('dYedi').textContent = '🍽 ' + o.yedigi + (o.kusak > 1 ? '  🧬 ' + romaYaz(o.kusak) : '');
       $('hamleBtn').classList.toggle('bekle', o.bekle > 0); $('bolBtn').classList.toggle('bekle', o.m < 50 || !!pr);
       o.kusakTepe = Math.max(o.kusakTepe, o.m);
@@ -2997,6 +3056,8 @@ function miniCiz() {
   const nb = 0.5 + 0.5 * Math.sin(performance.now() / 160);
   if (OLAY.tip === 'patlama' || OLAY.tip === 'damla') { x.strokeStyle = OLAY.tip === 'patlama' ? `rgba(120,255,160,${0.5 + 0.5 * nb})` : `rgba(255,180,90,${0.5 + 0.5 * nb})`; x.lineWidth = 3; x.beginPath(); x.arc(OLAY.x * k, OLAY.y * k, 9 + nb * 4, 0, TAU); x.stroke(); }
   x.fillStyle = '#FF5A46'; for (const su of SURU) { const px = su.x * k, py = su.y * k, b = su.hedef === oyuncu ? 9 + nb * 3 : 6; x.beginPath(); x.moveTo(px, py - b); x.lineTo(px + b * 0.9, py + b * 0.7); x.lineTo(px - b * 0.9, py + b * 0.7); x.closePath(); x.fill(); }
+  x.setLineDash([3, 4]); x.lineWidth = 1; for (const [kk, al] of [[0.55, 0.25], [0.75, 0.35]]) { x.strokeStyle = `rgba(150,200,255,${al})`; x.beginPath(); x.arc(0, 0, R * kk * k, 0, TAU); x.stroke(); } x.setLineDash([]);
+  x.fillStyle = '#FF9A40'; for (const b of BACA) { x.beginPath(); x.arc(b.x * k, b.y * k, 3.5, 0, TAU); x.fill(); }
   if (DEVB.b) { const b = DEVB.b; x.strokeStyle = `hsla(${DEVLER[b.tip].hue},90%,65%,${0.6 + 0.4 * nb})`; x.lineWidth = 3; x.beginPath(); x.arc(b.x * k, b.y * k, Math.max(8, b.r * k) + nb * 3, 0, TAU); x.stroke(); }
   if (AV.aktif) { x.fillStyle = `rgba(255,80,60,${0.6 + 0.4 * nb})`; x.beginPath(); x.arc(AV.x * k, AV.y * k, 8 + nb * 3, 0, TAU); x.fill(); }
   for (const o of O) {
@@ -3046,7 +3107,7 @@ function menuSec() {
   $('desenler').querySelectorAll('button').forEach(b => b.classList.toggle('sec', +b.dataset.d === secDesen));
 }
 function rekorYaz() {
-  $('rekor').innerHTML = KAYIT.oyun ? `<span>🏆 ${T('En uzun', 'Longest')}: <b>${dkYaz(KAYIT.uzun)}</b></span><span>⚖ ${T('En büyük', 'Largest')}: <b>${KAYIT.buyuk}</b></span>` : '';
+  $('rekor').innerHTML = KAYIT.oyun ? `<span>🏆 ${T('En uzun', 'Longest')}: <b>${dkYaz(KAYIT.uzun)}</b></span><span>⚖ ${T('En büyük', 'Largest')}: <b>${KAYIT.buyuk}</b></span>${KAYIT.enDerin ? `<span>🌑 ${T('En derin', 'Deepest')}: <b>${KAYIT.enDerin} m</b></span>` : ''}` : '';
 }
 function onizlemeCiz(t) {
   $('turler').querySelectorAll('canvas').forEach((c, i) => {
