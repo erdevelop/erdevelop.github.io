@@ -1,0 +1,37 @@
+# Derin Mavi gerçek görseller: derin-mavi/ham/ klasörüne fotoğraf eklenince balıkların arka planını siler,
+# kırpar, küçültür ve derin-mavi/gorsel/ + gorsel.json dosyalarını günceller. Ayrıntı: derin-mavi/OKUBENI.md
+name: Derin Mavi görselleri
+
+on:
+  push:
+    branches: [main]
+    paths: ['derin-mavi/ham/**', '.github/derin-mavi/**']
+  workflow_dispatch:
+
+concurrency:
+  group: derin-mavi-gorsel
+  cancel-in-progress: false
+
+permissions:
+  contents: write
+
+jobs:
+  hazirla:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - run: pip install -q "rembg[cpu]" pillow
+      - run: python .github/derin-mavi/hazirla.py
+      - name: Kaydet
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add derin-mavi/gorsel derin-mavi/gorsel.json
+          git diff --cached --quiet && exit 0
+          git commit -m "Derin Mavi: görseller hazırlandı"
+          git pull --rebase origin main
+          git push

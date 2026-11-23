@@ -554,6 +554,30 @@ function palet(d, t) {
 
 /* ================= balık çizimi =================
    d: { a: aşama, al: alan, tr: tür, r: renk, z: [aksesuar] } · L: boy (piksel) · yön: +1 sağa, −1 sola */
+/* ================= gerçek fotoğraflar (derin-mavi/gorsel.json; ayrıntı derin-mavi/OKUBENI.md) =================
+   Listede olan tür fotoğrafla, olmayan çizimle gösterilir. Fotoğraf dikey şeritler hâlinde basılır; şeritler
+   kuyruğa doğru dalgalanır, böylece durağan fotoğraf yüzüyormuş gibi kıvrılır. */
+const GORSEL = { balik: {}, arka: {} };
+if (!PARAM.has('cizim')) fetch('/derin-mavi/gorsel.json', { cache: 'no-cache' }).then(r => r.ok ? r.json() : null).then(j => {
+  if (!j) return;
+  const yukle = (hedef, k, dosya, sonra) => { const im = new Image(); im.onload = () => { hedef[k] = im; sonra && sonra(); }; im.src = '/derin-mavi/gorsel/' + dosya; };
+  for (const [k, v] of Object.entries(j.balik || {})) yukle(GORSEL.balik, k, v.d || v);
+  for (const [k, v] of Object.entries(j.arka || {})) yukle(GORSEL.arka, k, v, () => { if (SAHNE) { sahneKur(); yerliKur(); } });
+}).catch(() => { });
+const FOTO_SUZGEC = ['', 'grayscale(85%) brightness(150%)', 'sepia(100%) saturate(260%) hue-rotate(-12deg) brightness(110%)', 'brightness(55%) hue-rotate(200deg) saturate(140%)', '', 'grayscale(60%) brightness(140%)', 'hue-rotate(40deg) saturate(120%)'];
+function fotoBalikCiz(c, im, d, L, faz, o) {
+  const en = L * 1.3, boy = en * im.height / im.width, x0 = -en * 0.58, N = 26, sw = im.width / N, dw = en / N;
+  const f = [o.solgun ? 'saturate(35%) brightness(90%)' : '', d.r === 4 ? `hue-rotate(${Math.round((o.t || 0) * 50) % 360}deg)` : FOTO_SUZGEC[d.r | 0] || ''].filter(Boolean).join(' ');
+  if (f) c.filter = f;
+  if (d.a >= 4) { const ag = c.createRadialGradient(0, 0, L * 0.1, 0, 0, L * 0.85); ag.addColorStop(0, 'rgba(255,240,190,.28)'); ag.addColorStop(1, 'rgba(255,240,190,0)'); c.fillStyle = ag; c.beginPath(); c.arc(0, 0, L * 0.85, 0, TAU); c.fill(); }
+  for (let i = 0; i < N; i++) {
+    const u = 1 - (i + 0.5) / N, dy = o.sabit ? 0 : Math.sin(faz - u * 3.2) * L * 0.075 * u * u;   // u: baştan uzaklık
+    c.drawImage(im, i * sw, 0, sw, im.height, x0 + i * dw - 0.3, -boy / 2 + dy, dw + 0.6, boy);
+  }
+  c.filter = 'none';
+  if (d.h) { c.fillStyle = 'rgba(255,255,255,.9)'; for (let i = 0; i < 7; i++) { c.beginPath(); c.arc(L * (0.25 - i * 0.1), -boy * 0.2 + ((i * 37) % 9) / 9 * boy * 0.4, Math.max(0.9, boy * 0.03), 0, TAU); c.fill(); } }
+  if (d.z && d.z.includes('tac')) { const tx = L * 0.2, ty = -boy * 0.42, tw = Math.max(5, L * 0.16); c.fillStyle = '#FFD23F'; c.strokeStyle = '#B8860B'; c.lineWidth = 1; c.beginPath(); c.moveTo(tx - tw / 2, ty); c.lineTo(tx - tw / 2, ty - tw * 0.55); c.lineTo(tx - tw / 4, ty - tw * 0.3); c.lineTo(tx, ty - tw * 0.7); c.lineTo(tx + tw / 4, ty - tw * 0.3); c.lineTo(tx + tw / 2, ty - tw * 0.55); c.lineTo(tx + tw / 2, ty); c.closePath(); c.fill(); c.stroke(); }
+}
 /* yüzerken gövdenin arka yarısı kıvrılır */
 let BUK = 0;
 const bk = (x, L) => x < 0 ? BUK * L * Math.pow(x / (L * 0.5), 2) * 0.5 : 0;
@@ -597,6 +621,8 @@ function balikCiz(c, d, x, y, L, faz, yon, o = {}) {
   c.globalAlpha = alfa;
   if ((d.a | 0) === 0) { larvaCiz(c, L, faz, alfa); c.restore(); return; }
   const tr = d.a >= 2 && d.tr && TURLER[d.tr], g = tr ? tr.g : YAVRU_G, P = palet(d, t);
+  const fim = GORSEL.balik[tr ? d.tr : 'yavru'];
+  if (fim) { fotoBalikCiz(c, fim, d, L * (g.L || 1), faz, o); c.restore(); return; }
   const Lb = L * (g.L || 1), h = Lb * g.H * 0.5, nx = Lb * 0.5;
   const dalga = Math.sin(faz) * 0.3; BUK = o.sabit ? 0 : Math.sin(faz - 0.9) * 0.13;
   if (d.a >= 4) { const ag = c.createRadialGradient(0, 0, Lb * 0.1, 0, 0, Lb * 0.85); ag.addColorStop(0, 'rgba(255,240,190,.28)'); ag.addColorStop(1, 'rgba(255,240,190,0)'); c.fillStyle = ag; c.beginPath(); c.arc(0, 0, Lb * 0.85, 0, TAU); c.fill(); }
@@ -794,10 +820,17 @@ function sahneKur() {
   for (let i = 0; i < 3; i++) kabarcik.push({ x: r() * W, t: r() * 3 });
   for (let i = 0; i < 46; i++) toz.push({ x: r() * W, y: r() * H, s: 0.6 + r() * 1.6, v: 3 + r() * 8, f: r() * TAU });
   SAHNE = { tm, kumY, kayalar, yosun, mercan, kabarcik, toz, bks: [], cim, anemon, kostik: null, kostikZ: 0 };
-  try { SAHNE.arka = arkaKatmanCiz(A, kumY, tm, r); SAHNE.zemin = zeminKatmanCiz(A, kumY, tm, kayalar, mercan); } catch (e) { SAHNE.arka = SAHNE.zemin = null; }
+  SAHNE.foto = !!GORSEL.arka[tm];
+  if (SAHNE.foto) { yosun.length = 0; cim.length = 0; anemon.length = 0; }   /* fotoğraflı sahnede çizim bitkiler ve mercanlar yok */
+  try { SAHNE.arka = arkaKatmanCiz(A, kumY, tm, r); SAHNE.zemin = SAHNE.foto ? katman()[0] : zeminKatmanCiz(A, kumY, tm, kayalar, mercan); } catch (e) { SAHNE.arka = SAHNE.zemin = null; }
 }
 function arkaKatmanCiz(A, kumY, tm, r) {
-  const [k, c] = katman();
+  const [k, c] = katman(), fa = GORSEL.arka[tm];
+  if (fa) { /* fotoğrafı ekranı kaplayacak biçimde, alt kenara yaslı yerleştir */
+    const ol = Math.max(W / fa.width, H / fa.height), w = fa.width * ol, h = fa.height * ol; c.drawImage(fa, (W - w) / 2, H - h, w, h);
+    const v = c.createRadialGradient(W / 2, H * 0.45, Math.min(W, H) * 0.4, W / 2, H * 0.45, Math.max(W, H) * 0.85); v.addColorStop(0, 'rgba(0,0,0,0)'); v.addColorStop(1, 'rgba(0,10,25,.3)'); c.fillStyle = v; c.fillRect(0, 0, W, H);
+    return k;
+  }
   const g = c.createLinearGradient(0, 0, 0, H); g.addColorStop(0, A.su[0]); g.addColorStop(0.5, A.su[1]); g.addColorStop(1, A.su[2]); c.fillStyle = g; c.fillRect(0, 0, W, H);
   /* yüzeye yakın parlaklık */
   const yg = c.createRadialGradient(W * 0.5, -H * 0.3, 0, W * 0.5, -H * 0.3, H * 1.1); yg.addColorStop(0, `rgba(255,255,255,${tm === 'derin' ? 0.05 : 0.16})`); yg.addColorStop(1, 'rgba(255,255,255,0)'); c.fillStyle = yg; c.fillRect(0, 0, W, H);
@@ -2499,6 +2532,7 @@ let mutluBalonZ = 30;
 /* ---------- 4) gece-gündüz ve mağara ---------- */
 const magara = () => ({ x: W * 0.87, y: SAHNE.kumY });
 function magaraCiz(c) {
+  if (SAHNE.foto) return;
   const m = magara(), s = 46 * OL;
   c.fillStyle = '#4A5560'; c.beginPath(); c.moveTo(m.x - s * 1.4, m.y + 6); c.quadraticCurveTo(m.x - s * 1.3, m.y - s * 1.5, m.x, m.y - s * 1.6); c.quadraticCurveTo(m.x + s * 1.3, m.y - s * 1.5, m.x + s * 1.4, m.y + 6); c.fill();
   c.fillStyle = '#16212B'; c.beginPath(); c.ellipse(m.x, m.y + 2, s * 0.62, s * 0.78, 0, Math.PI, TAU); c.fill();
