@@ -827,6 +827,7 @@ function sahneKur() {
   SAHNE = { tm, kumY, kayalar, yosun, mercan, kabarcik, toz, bks: [], cim, anemon, kostik: null, kostikZ: 0 };
   SAHNE.foto = !!GORSEL.arka[tm];
   isikKur(A, tm);
+  SAHNE.duvar = SAHNE.foto ? null : duvarKur(A, kumY, tm);
   if (SAHNE.foto) { yosun.length = 0; cim.length = 0; anemon.length = 0; }   /* fotoğraflı sahnede çizim bitkiler ve mercanlar yok */
   try { SAHNE.arka = arkaKatmanCiz(A, kumY, tm, r); SAHNE.zemin = SAHNE.foto ? katman()[0] : zeminKatmanCiz(A, kumY, tm, kayalar, mercan); } catch (e) { SAHNE.arka = SAHNE.zemin = null; }
 }
@@ -935,6 +936,7 @@ function zeminKatmanCiz(A, kumY, tm, kayalar, mercan) {
     c2.globalCompositeOperation = 'source-atop'; c2.fillStyle = rgba(karis(A.su[1], A.su[0], 0.3), 0.42); c2.fillRect(0, 0, W, H);
     c.filter = `blur(${1.3 * DPR}px)`; c.drawImage(k2, 0, 0, W, H); c.filter = 'none';
   }
+  duvarCiz(c, A, kumY, tm);
   /* kayalar */
   for (const kya of kayalar) kayaCiz(c, kya, kumY);
   /* mercanlar */
@@ -1115,6 +1117,7 @@ function arkaPlan(c, t) {
   kostikCiz(c, t);
   for (const m of SAHNE.cim) cimCiz(c, m, t, kumY);
   for (const a of SAHNE.anemon) anemonCiz(c, a, t, kumY);
+  duvarCanliCiz(c, t);
   sakliCiz(c);
   hedefSusleri(c, t, 'on');
   magaraCiz(c); koseCiz(c); surprizCiz(c);
@@ -3021,7 +3024,7 @@ function yirticiKare(c, dt) {
     for (const x of BAL.values()) if (!x.ben && Math.abs(x.x - YIR.x) < 200) { x.ty = ALAN.y2; x.yt = 2; }
     if (b && !YIR.kontrol && Math.abs(YIR.x - b.x) < 30) {
       YIR.kontrol = true;
-      const m = magara(), yosunda = SAHNE.yosun.some(y => Math.abs(y.x - b.x) < 34 * OL && b.y > SAHNE.kumY - y.h * 0.95), magarada = Math.hypot(m.x - b.x, SAHNE.kumY - 30 * OL - b.y) < 100 * OL;
+      const m = magara(), yosunda = SAHNE.yosun.some(y => Math.abs(y.x - b.x) < 34 * OL && b.y > SAHNE.kumY - y.h * 0.95), magarada = Math.hypot(m.x - b.x, SAHNE.kumY - 30 * OL - b.y) < 100 * OL || (SAHNE.duvar && Math.hypot(SAHNE.duvar.mg.x - b.x, SAHNE.kumY - SAHNE.duvar.mg.h * 0.4 - b.y) < SAHNE.duvar.mg.w * 1.6);
       const g = gunVeri(); g.sakla = (g.sakla || 0);
       if (yosunda || magarada) { g.sakla++; istArt('sakla'); mutluEkle(2); if (g.sakla <= 5) { S.inci += 3; yaziUcur(b.x, b.y - 30, '🫧 +3'); } SES.basari(); duyur(T('😮‍💨 Saklandın, köpekbalığı seni görmedi! +3 inci', '😮‍💨 You hid and the shark missed you! +3 pearls'), 1); kaydet(false); }
       else { b.sersem = 1.2; mutluEkle(-3); duyur(T('😅 Köpekbalığı seni gördü ama aç değildi. Bir dahakine saklan!', '😅 The shark saw you but wasn’t hungry. Hide next time!')); }
@@ -3305,6 +3308,7 @@ function canliCiz(c, sadeceIsik) {
 }
 function canliDokun(x, y) {
   if (gzDokun(x, y)) return true;
+  if (duvarDokun(x, y)) return true;
   for (const o of CNL.L) {
     if (o.tur === 'isik') { if (geceDegeri() < 0.3 && SAHNE.tm !== 'derin') continue; if (Math.hypot(o.x - x, o.y - y) < 60 * OL) { canliTepki(o); return true; } continue; }
     const r = { ahtapot: 26, yildiz: 18, karides: 16, balon: 22, dvatoz: 34, kalamar: 26, salyangoz: 16, ermit: 18 }[o.tur] * OL;
@@ -3659,6 +3663,205 @@ function gzCizO(c, o) {
 }
 function gzCiz(c) { const o = GZ.o; if (o && !GZ_TUR[o.tur].arka) gzCizO(c, o); }
 function gzArkaCiz(c) { const o = GZ.o; if (o && GZ_TUR[o.tur].arka) gzCizO(c, o); }
+/* =====================================================================
+   SOL RESİF DUVARI: kumdan yükselen, mağaralı büyük kayalık.
+   Kaya, üstündeki ve yüzündeki mercanlar, süngerler, polip kümeleri bir kez çizilir (zemin katmanı).
+   Canlı kısım: akıntıda salınan yumuşak mercanlar ve deniz yelpazeleri, balık yaklaşınca tüpüne
+   çekilen yelpaze solucanları, çevresinde dolaşan küçük balık sürüsü, mağarada ara ara başını
+   çıkaran müren.
+   ===================================================================== */
+function duvarKur(A, kumY, tm) {
+  const r = tohumRnd('duvar' + Math.round(W) + tm), dar = W < 600;
+  /* geniş ekranda sol alttaki panelin arkasında kalmasın diye kayalık panelin sağına kadar uzar, mağara panelin hemen sağında açılır */
+  const sol = W >= 860 ? 450 : 0, x1 = sol ? sol + 270 * OL : Math.max(150 * OL, W * 0.42), hR = (kumY - ALAN.y1) * (sol ? 0.6 : dar ? 0.34 : 0.46), v0 = sol ? sol - 60 : 0, vx = () => v0 + r() * (x1 * 0.85 - v0);
+  const f1 = r() * 9, f2 = r() * 9, tepe = 0.22 + r() * 0.15, ust = [];
+  for (let i = 0; i <= 48; i++) {
+    const u = i / 48, x = -12 + (x1 + 12) * u, dus = u < 0.8 ? 1 : Math.cos((u - 0.8) / 0.2 * Math.PI / 2);
+    const h = (hR * (1 - 0.42 * u) + hR * 0.09 * Math.sin(u * 11 + f1) + hR * 0.05 * Math.sin(u * 27 + f2) + hR * 0.2 * Math.exp(-Math.pow((u - tepe) / 0.07, 2))) * Math.max(0, dus);
+    ust.push([x, kumY + 4 - h]);
+  }
+  const ustY = x => { if (x <= ust[0][0]) return ust[0][1]; for (let i = 1; i < ust.length; i++) if (x <= ust[i][0]) { const p = ust[i - 1], q = ust[i], u = (x - p[0]) / (q[0] - p[0]); return p[1] + (q[1] - p[1]) * u; } return kumY + 10; };
+  const mx = sol ? sol + 95 * OL : x1 * 0.6, mw = sol ? 62 * OL : x1 * 0.16, mh = Math.min(hR * 0.42, (kumY - ustY(mx)) * 0.62);
+  const D = { x1, h: hR, ust, ustY, mg: { x: mx, w: mw, h: mh }, yumusak: [], yelpaze: [], solucan: [], suru: [], muren: null, sonT: 0 };
+  const icinde = (x, y, pay) => y > ustY(x) + pay && y < kumY - 4 && !(Math.abs(x - mx) < mw * 1.25 && y > kumY - mh * 1.2);
+  D.icinde = icinde;
+  /* yumuşak mercanlar: duvarın üstünde ve kumda dağınık */
+  const YR = tm === 'derin' ? ['#F2EEE6', '#E7C7A0'] : ['#F06292', '#BA68C8', '#FF8A50', '#EF5350', '#FFCA28', '#F48FB1'];
+  const nU = tm === 'resif' ? 4 : tm === 'acik' ? 2 : 2;
+  for (let i = 0; i < nU; i++) { const x = vx(); D.yumusak.push({ x, y: ustY(x) + 8 * OL, s: (30 + r() * 26) * OL * (dar ? 0.85 : 1), renk: YR[Math.floor(r() * YR.length)], faz: r() * TAU, tohum: r() * 1e6, sars: 0 }); }
+  if (tm === 'resif') for (let i = 0; i < Math.round(W / 300) + 1; i++) { const x = x1 + r() * (W - x1 - 40); D.yumusak.push({ x, y: kumY + 6, s: (26 + r() * 22) * OL, renk: YR[Math.floor(r() * YR.length)], faz: r() * TAU, tohum: r() * 1e6, sars: 0 }); }
+  /* deniz yelpazeleri */
+  const nY = tm === 'resif' ? 2 : tm === 'acik' ? 1 : 1;
+  for (let i = 0; i < nY; i++) { const x = vx(); D.yelpaze.push({ x, y: ustY(x) + 6 * OL, s: (50 + r() * 30) * OL * (dar ? 0.8 : 1), renk: tm === 'derin' ? '#E8D9C8' : ['#9C4DCC', '#D84343', '#F08A3C'][Math.floor(r() * 3)], faz: r() * TAU, tohum: r() * 1e6 }); }
+  /* yelpaze solucanları (kaya yüzünde) */
+  for (let i = 0, d = 0; i < (tm === 'derin' ? 3 : 6) && d < 200; d++) { const x = vx(), y = kumY - r() * hR; if (!icinde(x, y, 14 * OL)) continue; i++; D.solucan.push({ x, y, s: (9 + r() * 6) * OL, a: 1, kapali: 0, renk: tm === 'derin' ? ['#7FF3E0', '#B48CFF'][i % 2] : [['#8E44AD', '#F5EEF8'], ['#E74C3C', '#F9E79F'], ['#F39C12', '#FDF2E9'], ['#2E86C1', '#EBF5FB']][Math.floor(r() * 4)], faz: r() * TAU }); }
+  /* küçük balık sürüsü (resifte turuncu antias, açıkta mavi kromis) */
+  if (tm !== 'derin') { const sx0 = sol ? sol + 60 * OL : x1 * 0.45, merk = [sx0, ustY(sx0) - 40 * OL]; for (let i = 0; i < (dar ? 9 : 14); i++) D.suru.push({ x: merk[0] + (r() - 0.5) * 120 * OL, y: merk[1] + (r() - 0.5) * 60 * OL, vx: 0, vy: 0, ox: (r() - 0.5) * 2, oy: (r() - 0.5) * 2, f: r() * TAU, d: 1, k: 0.8 + r() * 0.4 }); D.suruMerk = merk; }
+  D.muren = { c: 0, hedef: 0, z: 4 + r() * 5, f: 0, bekle: 0 };
+  return D;
+}
+function duvarCiz(c, A, kumY, tm) {
+  const D = SAHNE.duvar; if (!D) return;
+  const r = tohumRnd('duvarc' + Math.round(W) + tm), m = D.mg;
+  const K = tm === 'derin' ? ['#2E3440', '#4A5262', '#12151C'] : tm === 'acik' ? ['#7C7D72', '#A9A592', '#3B3C35'] : ['#7A7262', '#A89F86', '#3A362D'];
+  const yol = () => { c.beginPath(); c.moveTo(-14, kumY + 12); for (const p of D.ust) c.lineTo(p[0], p[1]); c.lineTo(D.x1 + 6, kumY + 12); c.closePath(); };
+  /* kumdaki gölge */
+  const sg = c.createRadialGradient(D.x1 * 0.7, kumY + 8, 0, D.x1 * 0.7, kumY + 8, D.x1 * 0.6); sg.addColorStop(0, 'rgba(0,0,0,.32)'); sg.addColorStop(1, 'rgba(0,0,0,0)'); c.fillStyle = sg; c.beginPath(); c.ellipse(D.x1 * 0.7, kumY + 8, D.x1 * 0.6, 16 * OL, 0, 0, TAU); c.fill();
+  yol(); const g = c.createLinearGradient(D.x1, kumY - D.h, D.x1 * 0.1, kumY); g.addColorStop(0, acik(K[1], 0.18)); g.addColorStop(0.45, K[0]); g.addColorStop(1, K[2]); c.fillStyle = g; c.fill();
+  c.save(); yol(); c.clip();
+  /* iri kaya blokları: her biri üstten aydınlık, alttan gölgeli */
+  for (let i = 0; i < 30; i++) {
+    const x = r() * D.x1, y0 = D.ustY(x), y = y0 + r() * (kumY - y0), rr = (18 + r() * 46) * OL, bg = c.createRadialGradient(x - rr * 0.3, y - rr * 0.45, rr * 0.1, x, y, rr);
+    bg.addColorStop(0, rgba(acik(K[1], 0.12), 0.55)); bg.addColorStop(0.7, rgba(K[0], 0.25)); bg.addColorStop(1, rgba(K[2], 0)); c.fillStyle = bg; c.beginPath(); c.ellipse(x, y, rr, rr * 0.75, r() - 0.5, 0, TAU); c.fill();
+    c.strokeStyle = 'rgba(0,0,0,.18)'; c.lineWidth = Math.max(1, 1.5 * OL); c.beginPath(); c.ellipse(x, y + rr * 0.12, rr * 0.95, rr * 0.7, r() - 0.5, 0.2, Math.PI - 0.2); c.stroke();
+  }
+  /* katmanlı raflar: üstü ışıklı ince çizgi, altı koyu gölge */
+  for (let i = 0; i < 7; i++) {
+    const yy = kumY - D.h * (0.12 + i * 0.13), f = r() * 9;
+    c.strokeStyle = 'rgba(0,0,0,.16)'; c.lineWidth = (2 + r() * 3) * OL; c.beginPath(); for (let x = -10; x <= D.x1; x += 10) c.lineTo(x, yy + 4 * OL + Math.sin(x * 0.03 + f) * 5 * OL); c.stroke();
+    c.strokeStyle = 'rgba(255,250,235,.1)'; c.lineWidth = 1.2 * OL; c.beginPath(); for (let x = -10; x <= D.x1; x += 10) c.lineTo(x, yy + Math.sin(x * 0.03 + f) * 5 * OL); c.stroke();
+  }
+  for (let i = 0; i < D.x1 * D.h / 22; i++) { const x = r() * D.x1, y = kumY - r() * D.h; c.fillStyle = r() < 0.5 ? 'rgba(255,255,255,.1)' : 'rgba(0,0,0,.16)'; c.fillRect(x, y, 1.5, 1.5); }
+  c.strokeStyle = 'rgba(0,0,0,.25)'; c.lineWidth = 1; for (let i = 0; i < 9; i++) { let x = r() * D.x1, y = kumY - r() * D.h; c.beginPath(); c.moveTo(x, y); for (let j = 0; j < 5; j++) { x += (r() - 0.5) * 22 * OL; y += r() * 14 * OL; c.lineTo(x, y); } c.stroke(); }
+  /* kaplayan canlılar: sünger, polip kümesi, pembe kalker yosunu, noel ağacı solucanı */
+  if (tm !== 'derin') {
+    for (let i = 0; i < 40; i++) { const x = r() * D.x1, y = kumY - r() * D.h; if (!D.icinde(x, y, 4)) continue; c.fillStyle = `rgba(${tm === 'resif' ? '226,120,160' : '170,150,120'},${0.15 + r() * 0.2})`; c.beginPath(); c.ellipse(x, y, (6 + r() * 16) * OL, (3 + r() * 6) * OL, r(), 0, TAU); c.fill(); }
+    const SR = tm === 'resif' ? ['#E8743B', '#9C5BD0', '#F2C230', '#D8434E', '#3FA7C9', '#F06BA8'] : ['#C9A15A', '#B5794A', '#8E9A5A'];
+    for (let i = 0, d = 0; i < (tm === 'resif' ? 16 : 8) && d < 300; d++) {
+      const x = r() * D.x1, y = kumY - r() * D.h; if (!D.icinde(x, y, 8 * OL)) continue; i++;
+      const renk = SR[Math.floor(r() * SR.length)], n = 3 + Math.floor(r() * 4), s = (5 + r() * 9) * OL;
+      for (let j = 0; j < n; j++) { const px = x + (r() - 0.5) * s * 2.4, py = y + (r() - 0.5) * s * 1.2, rr = s * (0.6 + r() * 0.6), pg = c.createRadialGradient(px - rr * 0.3, py - rr * 0.4, 0, px, py, rr); pg.addColorStop(0, acik(renk, 0.35)); pg.addColorStop(0.7, renk); pg.addColorStop(1, koyu(renk, 0.35)); c.fillStyle = pg; c.beginPath(); c.ellipse(px, py, rr, rr * 0.8, 0, 0, TAU); c.fill(); c.fillStyle = rgba(koyu(renk, 0.55), 0.7); for (let k = 0; k < 3; k++) { c.beginPath(); c.arc(px + (r() - 0.5) * rr, py + (r() - 0.5) * rr * 0.6, Math.max(0.8, rr * 0.12), 0, TAU); c.fill(); } }
+    }
+    if (tm === 'resif') {
+      for (let i = 0, d = 0; i < 12 && d < 200; d++) { const x = r() * D.x1, y = kumY - r() * D.h; if (!D.icinde(x, y, 6 * OL)) continue; i++; const ZR = ['#4DD0A8', '#9CCC65', '#FF8A65', '#4FC3F7'][Math.floor(r() * 4)]; for (let j = 0; j < 9; j++) { const px = x + (r() - 0.5) * 18 * OL, py = y + (r() - 0.5) * 9 * OL, rr = (2 + r() * 2) * OL; c.fillStyle = ZR; c.beginPath(); c.arc(px, py, rr, 0, TAU); c.fill(); c.fillStyle = acik(ZR, 0.6); c.beginPath(); c.arc(px, py, rr * 0.45, 0, TAU); c.fill(); } }
+      for (let i = 0, d = 0; i < 14 && d < 200; d++) { const x = r() * D.x1, y = kumY - r() * D.h; if (!D.icinde(x, y, 6 * OL)) continue; i++; const NR = ['#E53935', '#1E88E5', '#FDD835', '#FB8C00', '#8E24AA'][Math.floor(r() * 5)], s = (3 + r() * 2) * OL; for (const dx of [-s * 0.6, s * 0.6]) { c.fillStyle = NR; for (let k = 0; k < 4; k++) { const w = s * (1 - k * 0.22), yy = y - k * s * 0.55; c.beginPath(); c.moveTo(x + dx - w * 0.5, yy); c.lineTo(x + dx, yy - s * 0.8); c.lineTo(x + dx + w * 0.5, yy); c.fill(); } } }
+    }
+  } else {
+    /* derin: soluk cam süngerler ve beyaz soğuk su mercanı lekeleri */
+    for (let i = 0; i < 26; i++) { const x = r() * D.x1, y = kumY - r() * D.h; if (!D.icinde(x, y, 4)) continue; c.fillStyle = `rgba(230,225,210,${0.08 + r() * 0.12})`; c.beginPath(); c.ellipse(x, y, (4 + r() * 10) * OL, (2 + r() * 4) * OL, r(), 0, TAU); c.fill(); }
+  }
+  /* mağara ağzı */
+  const yolM = (k) => { c.beginPath(); c.moveTo(m.x - m.w * k, kumY + 12); c.bezierCurveTo(m.x - m.w * 1.08 * k, kumY - m.h * 0.9 * k, m.x - m.w * 0.5 * k, kumY - m.h * 1.15 * k, m.x + m.w * 0.05, kumY - m.h * k); c.bezierCurveTo(m.x + m.w * 0.7 * k, kumY - m.h * 1.05 * k, m.x + m.w * 1.06 * k, kumY - m.h * 0.6 * k, m.x + m.w * k, kumY + 12); c.closePath(); };
+  yolM(1.22); c.fillStyle = 'rgba(0,0,0,.28)'; c.fill();
+  yolM(1); const ig = c.createRadialGradient(m.x + m.w * 0.1, kumY - m.h * 0.35, 0, m.x, kumY - m.h * 0.45, m.w * 1.3); ig.addColorStop(0, '#02050A'); ig.addColorStop(0.55, '#0A141E'); ig.addColorStop(1, koyu(K[2], 0.2)); c.fillStyle = ig; c.fill();
+  c.fillStyle = rgba(A.su[2], 0.35); c.beginPath(); c.ellipse(m.x - m.w * 0.15, kumY - m.h * 0.3, m.w * 0.35, m.h * 0.25, 0, 0, TAU); c.fill();
+  c.fillStyle = koyu(K[2], 0.2); for (let i = 0; i < 6; i++) { const x = m.x - m.w * 0.7 + i * m.w * 0.28, y = kumY - m.h * (0.92 + Math.sin(i * 1.7) * 0.05), l = (6 + r() * 10) * OL; c.beginPath(); c.moveTo(x - 3 * OL, y); c.lineTo(x, y + l); c.lineTo(x + 3 * OL, y); c.fill(); }
+  yolM(1); c.strokeStyle = rgba(acik(K[1], 0.3), 0.35); c.lineWidth = 2 * OL; c.stroke();
+  /* tabanda koyuluk */
+  const ao = c.createLinearGradient(0, kumY - 30 * OL, 0, kumY + 10); ao.addColorStop(0, 'rgba(0,0,0,0)'); ao.addColorStop(1, 'rgba(0,0,0,.35)'); c.fillStyle = ao; c.fillRect(-14, kumY - 30 * OL, D.x1 + 20, 40 * OL + 10);
+  c.restore();
+  /* üst kenara vuran güneş */
+  c.strokeStyle = rgba(acik(K[1], 0.45), tm === 'derin' ? 0.25 : 0.55); c.lineWidth = 2.2 * OL; c.lineJoin = 'round'; c.beginPath(); D.ust.forEach((p, i) => i ? c.lineTo(p[0], p[1] + 1) : c.moveTo(p[0], p[1] + 1)); c.stroke();
+  /* üstte ve yüzde sert mercanlar */
+  const RENK = ['#FF8A80', '#FFB36B', '#F48FB1', '#B39DDB', '#FFD180', '#80CBC4', '#CE93D8', '#FF7043', '#81D4FA'];
+  const turler = tm === 'resif' ? ['beyin', 'geyik', 'masa', 'tup', 'geyik', 'beyin', 'masa'] : tm === 'acik' ? ['beyin', 'tup', 'beyin'] : ['geyik', 'kirbac', 'tup'];
+  const ms = [];
+  for (let x = 14 * OL; x < D.x1 - 14 * OL; x += (tm === 'resif' ? 24 : 46) * OL * (0.7 + r() * 0.7)) ms.push({ tur: turler[Math.floor(r() * turler.length)], x, s: (tm === 'resif' ? 18 + r() * 30 : 14 + r() * 22) * OL, tohum: r() * 1e6, c: tm === 'derin' ? karis('#F2EEE6', '#E2B98A', r() * 0.5) : RENK[Math.floor(r() * RENK.length)], y: D.ustY(x) + 7 * OL });
+  for (let i = 0, d = 0; i < (tm === 'resif' ? 7 : 3) && d < 200; d++) { const x = r() * D.x1, y = kumY - r() * D.h * 0.8; if (!D.icinde(x, y, 26 * OL)) continue; i++; ms.push({ tur: tm === 'derin' ? 'geyik' : ['beyin', 'tup', 'masa'][Math.floor(r() * 3)], x, s: (12 + r() * 16) * OL, tohum: r() * 1e6, c: tm === 'derin' ? '#EDE6DA' : RENK[Math.floor(r() * RENK.length)], y }); }
+  ms.sort((a, b) => a.y - b.y || b.s - a.s);
+  for (const mm of ms) mercanCiz(c, mm, mm.y, tm);
+}
+/* yumuşak mercan ve deniz yelpazesi kalıpları: bir kez çizilir, her karede akıntıyla eğilerek basılır */
+function yumusakKalip(o, tm) {
+  const s = o.s, w = Math.ceil(s * 1.6), h = Math.ceil(s * 1.5), k = document.createElement('canvas'); k.width = Math.round(w * DPR); k.height = Math.round(h * DPR);
+  const c = k.getContext('2d'), r = tohumRnd('yk' + o.tohum); c.setTransform(DPR, 0, 0, DPR, 0, 0); c.translate(w / 2, h);
+  const renk = o.renk, sap = tm === 'derin' ? 'rgba(240,235,225,.75)' : rgba(acik(renk, 0.6), 0.7), uclar = [];
+  const dal = (x, y, a, l, kal, n) => { const ex = x + Math.cos(a) * l, ey = y + Math.sin(a) * l; c.strokeStyle = sap; c.lineWidth = kal; c.lineCap = 'round'; c.beginPath(); c.moveTo(x, y); c.quadraticCurveTo(x + Math.cos(a + 0.4) * l * 0.5, y + Math.sin(a + 0.4) * l * 0.5, ex, ey); c.stroke(); if (n <= 0) { uclar.push([ex, ey]); return; } const kk = 2 + (r() < 0.4 ? 1 : 0); for (let i = 0; i < kk; i++) dal(ex, ey, a + (i - (kk - 1) / 2) * (0.55 + r() * 0.3), l * (0.62 + r() * 0.15), kal * 0.68, n - 1); };
+  dal(0, 0, -Math.PI / 2, s * 0.32, s * 0.12, 3);
+  for (const [ux, uy] of uclar) { const n = 6 + Math.floor(r() * 5), rr = s * (0.06 + r() * 0.04); for (let i = 0; i < n; i++) { const px = ux + (r() - 0.5) * rr * 3, py = uy + (r() - 0.5) * rr * 2.4, pr = rr * (0.5 + r() * 0.6), g = c.createRadialGradient(px - pr * 0.3, py - pr * 0.3, 0, px, py, pr); g.addColorStop(0, acik(renk, 0.45)); g.addColorStop(0.7, renk); g.addColorStop(1, koyu(renk, 0.3)); c.fillStyle = g; c.beginPath(); c.arc(px, py, pr, 0, TAU); c.fill(); } c.fillStyle = 'rgba(255,255,255,.55)'; for (let i = 0; i < 4; i++) { c.beginPath(); c.arc(ux + (r() - 0.5) * rr * 2.5, uy + (r() - 0.5) * rr * 2, Math.max(0.5, rr * 0.18), 0, TAU); c.fill(); } }
+  o.spr = k; o.w = w; o.h = h;
+}
+function yelpazeKalip(o) {
+  const s = o.s, w = Math.ceil(s * 1.5), h = Math.ceil(s * 1.25), k = document.createElement('canvas'); k.width = Math.round(w * DPR); k.height = Math.round(h * DPR);
+  const c = k.getContext('2d'), r = tohumRnd('yp' + o.tohum); c.setTransform(DPR, 0, 0, DPR, 0, 0); c.translate(w / 2, h);
+  const rc = o.renk; c.lineCap = 'round';
+  const kol = (bx, by, a, l, kal, n) => { if (n <= 0) return; const ex = bx + Math.cos(a) * l, ey = by + Math.sin(a) * l; c.strokeStyle = n > 4 ? koyu(rc, 0.2) : rc; c.lineWidth = kal; c.beginPath(); c.moveTo(bx, by); c.lineTo(ex, ey); c.stroke(); kol(ex, ey, a - 0.3 - r() * 0.18, l * 0.8, kal * 0.74, n - 1); kol(ex, ey, a + 0.3 + r() * 0.18, l * 0.8, kal * 0.74, n - 1); };
+  kol(0, 0, -Math.PI / 2, s * 0.22, s * 0.06, 7);
+  c.globalAlpha = 0.35; c.strokeStyle = acik(rc, 0.2); c.lineWidth = 0.7; for (let i = 0; i < 70; i++) { const a = -Math.PI / 2 + (r() - 0.5) * 2, rr = s * (0.3 + r() * 0.75), a2 = a + (r() - 0.5) * 0.35; c.beginPath(); c.moveTo(Math.cos(a) * rr, Math.sin(a) * rr * 0.95); c.lineTo(Math.cos(a2) * rr * 0.93, Math.sin(a2) * rr * 0.9); c.stroke(); }
+  c.globalAlpha = 1; c.fillStyle = 'rgba(255,255,255,.5)'; for (let i = 0; i < 40; i++) { const a = -Math.PI / 2 + (r() - 0.5) * 2, rr = s * (0.3 + r() * 0.8); c.beginPath(); c.arc(Math.cos(a) * rr, Math.sin(a) * rr * 0.95, 0.8, 0, TAU); c.fill(); }
+  o.spr = k; o.w = w; o.h = h;
+}
+function duvarCanliCiz(c, t) {
+  const D = SAHNE.duvar; if (!D) return;
+  const dt = Math.min(0.05, D.sonT ? t - D.sonT : 0.016); D.sonT = t;
+  const tm = SAHNE.tm, ben = BAL.get('ben'), kumY = SAHNE.kumY;
+  const yakin = (x, y, d) => ben && ben.L && Math.hypot(ben.x - x, ben.y - y) < d * OL + ben.L * 0.4;
+  /* deniz yelpazeleri: akıntıya karşı yavaşça eğilir, hafif daralıp genişler */
+  for (const o of D.yelpaze) { if (!o.spr) yelpazeKalip(o); const sw = Math.sin(t * 0.55 + o.faz) * 0.1 + Math.sin(t * 1.3 + o.faz) * 0.025; c.save(); c.translate(o.x, o.y); c.transform(1, 0, sw, 1, 0, 0); c.scale(0.9 + 0.1 * Math.cos(t * 0.55 + o.faz), 1); c.globalAlpha = 0.95; c.drawImage(o.spr, -o.w / 2, -o.h, o.w, o.h); c.restore(); }
+  /* yumuşak mercanlar */
+  for (const o of D.yumusak) { if (!o.spr) yumusakKalip(o, tm); o.sars = Math.max(0, o.sars - dt); const sw = Math.sin(t * 0.8 + o.faz) * 0.13 + Math.sin(t * 2.2 + o.faz) * 0.03 + (o.sars > 0 ? Math.sin(o.sars * 18) * 0.25 * o.sars : 0); c.save(); c.translate(o.x, o.y); c.transform(1, 0, sw, 1, 0, 0); c.scale(1, 0.94 + 0.06 * Math.sin(t * 0.8 + o.faz + 1)); c.drawImage(o.spr, -o.w / 2, -o.h, o.w, o.h); c.restore(); }
+  /* yelpaze solucanları: balık yaklaşınca tüpüne kaçar, birkaç saniye sonra yeniden açılır */
+  for (const o of D.solucan) {
+    if (yakin(o.x, o.y, 55)) o.kapali = 3; o.kapali = Math.max(0, o.kapali - dt);
+    o.a += ((o.kapali > 0 ? 0 : 1) - o.a) * Math.min(1, dt * (o.kapali > 0 ? 18 : 1.5));
+    const s = o.s; c.fillStyle = '#CDBB9A'; c.fillRect(o.x - s * 0.08, o.y - s * 0.3, s * 0.16, s * 0.3);
+    if (o.a < 0.05) continue;
+    const [r1, r2] = Array.isArray(o.renk) ? o.renk : [o.renk, '#FFFFFF'], n = 16, R = s * o.a;
+    if (tm === 'derin') { c.save(); c.globalCompositeOperation = 'lighter'; }
+    for (let i = 0; i < n; i++) { const a = -Math.PI / 2 + (i / (n - 1) - 0.5) * 2.4 + Math.sin(t * 1.5 + o.faz + i * 0.4) * 0.06, ex = o.x + Math.cos(a) * R, ey = o.y - s * 0.3 + Math.sin(a) * R; c.strokeStyle = i % 2 ? r1 : r2; c.lineWidth = Math.max(0.8, s * 0.08); c.beginPath(); c.moveTo(o.x, o.y - s * 0.3); c.quadraticCurveTo(o.x + Math.cos(a) * R * 0.5, o.y - s * 0.3 + Math.sin(a) * R * 0.45 - R * 0.1, ex, ey); c.stroke(); }
+    if (tm === 'derin') c.restore();
+  }
+  /* küçük balık sürüsü: kayalığın üstünde plankton toplar, balığın yaklaşınca mercanlara dalar */
+  if (D.suru.length) {
+    const [mx, my] = D.suruMerk, kac = yakin(mx, my, 110), renk = tm === 'resif' ? ['#FF7A45', '#FFB199', '#B388FF'] : ['#29B6F6', '#B3E5FC', '#0277BD'];
+    for (const p of D.suru) {
+      p.f += dt; const tx = mx + Math.sin(t * 0.3 + p.ox * 3) * 70 * OL + p.ox * 30 * OL, ty = (kac ? D.ustY(mx) + 6 * OL : my) + Math.cos(t * 0.4 + p.oy * 3) * 22 * OL + p.oy * 14 * OL;
+      p.vx += ((tx - p.x) * (kac ? 3 : 0.8) - p.vx) * Math.min(1, dt * 2); p.vy += ((ty - p.y) * (kac ? 3 : 0.8) - p.vy) * Math.min(1, dt * 2); p.x += p.vx * dt; p.y += p.vy * dt; if (Math.abs(p.vx) > 4) p.d = p.vx > 0 ? 1 : -1;
+      const s = 9 * OL * p.k; c.save(); c.translate(p.x, p.y); c.scale(p.d, 1);
+      c.fillStyle = renk[2]; c.beginPath(); c.moveTo(-s * 0.45, 0); c.lineTo(-s * 0.85, -s * 0.32 + Math.sin(p.f * 12) * s * 0.06); c.lineTo(-s * 0.7, 0); c.lineTo(-s * 0.85, s * 0.32 - Math.sin(p.f * 12) * s * 0.06); c.closePath(); c.fill();
+      c.fillStyle = gzDikey(c, -s * 0.25, s * 0.25, renk[0], renk[1]); c.beginPath(); c.ellipse(0, 0, s * 0.5, s * 0.22, 0, 0, TAU); c.fill();
+      c.fillStyle = '#111'; c.beginPath(); c.arc(s * 0.28, -s * 0.04, Math.max(0.7, s * 0.06), 0, TAU); c.fill();
+      c.restore();
+    }
+  }
+  /* müren: ara ara mağaradan başını çıkarır, ağzını açıp kapar (nefes alır); yaklaşınca geri çekilir */
+  const mu = D.muren, m = D.mg; if (mu) {
+    mu.f += dt; mu.z -= dt; mu.bekle = Math.max(0, mu.bekle - dt);
+    if (mu.z <= 0) { mu.hedef = mu.hedef ? 0 : 1; mu.z = mu.hedef ? 4 + Math.random() * 5 : 6 + Math.random() * 8; }
+    if (mu.c > 0.3 && yakin(m.x + m.w, kumY - m.h * 0.35, 45)) { mu.hedef = 0; mu.z = 5; }
+    mu.c += (mu.hedef - mu.c) * Math.min(1, dt * (mu.hedef ? 0.9 : 3));
+    if (mu.c > 0.02) {
+      const s = Math.max(m.w * 1.1, 34 * OL), hx = m.x - m.w * 0.3 + mu.c * (m.w * 1.25), hy = kumY - m.h * 0.45 + Math.sin(mu.f * 0.8) * 3 * OL, ag = (0.5 + 0.5 * Math.sin(mu.f * 2.2)) * 0.35 + (mu.bekle > 4 ? 0.4 : 0);
+      const R = tm === 'derin' ? ['#3A4250', '#5C6678', '#1E232C'] : ['#7C8A2E', '#B9C25A', '#4A5418'];
+      c.save(); c.beginPath(); c.rect(m.x - m.w * 0.9, 0, W, H); c.clip();
+      /* gövde mağaranın karanlığından çıkar: arkası karanlığa karışır */
+      const bx0 = m.x - m.w * 0.6, gg = c.createLinearGradient(bx0, 0, hx, 0); gg.addColorStop(0, rgba(R[2], 0)); gg.addColorStop(0.45, rgba(R[0], 0.85)); gg.addColorStop(1, R[0]);
+      c.strokeStyle = gg; c.lineCap = 'round'; c.lineWidth = s * 0.28; c.beginPath(); c.moveTo(bx0, hy + s * 0.1); c.bezierCurveTo(bx0 + (hx - bx0) * 0.35, hy + s * 0.22 + Math.sin(mu.f) * 3, bx0 + (hx - bx0) * 0.7, hy + s * 0.02, hx - s * 0.2, hy + s * 0.02); c.stroke();
+      c.strokeStyle = rgba(R[1], 0.35); c.lineWidth = s * 0.06; c.beginPath(); c.moveTo(bx0 + (hx - bx0) * 0.4, hy + s * 0.06); c.bezierCurveTo(bx0 + (hx - bx0) * 0.6, hy - s * 0.04, hx - s * 0.3, hy - s * 0.08, hx - s * 0.15, hy - s * 0.1); c.stroke();
+      c.translate(hx, hy);
+      c.fillStyle = gzDikey(c, -s * 0.2, s * 0.18, R[0], R[1]); c.beginPath(); c.moveTo(-s * 0.3, -s * 0.13); c.bezierCurveTo(-s * 0.1, -s * 0.22, s * 0.15, -s * 0.16, s * 0.33, -s * 0.03 - ag * s * 0.05); c.lineTo(s * 0.06, 0); c.lineTo(s * 0.3, s * 0.03 + ag * s * 0.12); c.bezierCurveTo(s * 0.15, s * 0.12 + ag * s * 0.06, -s * 0.05, s * 0.16, -s * 0.3, s * 0.15); c.closePath(); c.fill();
+      c.fillStyle = 'rgba(255,255,255,.12)'; c.beginPath(); c.ellipse(-s * 0.02, -s * 0.12, s * 0.18, s * 0.035, -0.15, 0, TAU); c.fill();
+      c.fillStyle = '#3A1A1A'; c.beginPath(); c.moveTo(s * 0.05, 0); c.lineTo(s * 0.32, -s * 0.03 - ag * s * 0.05); c.lineTo(s * 0.3, s * 0.04 + ag * s * 0.12); c.closePath(); c.fill();
+      c.fillStyle = 'rgba(255,255,255,.85)'; for (let i = 0; i < 4; i++) { c.beginPath(); c.moveTo(s * (0.12 + i * 0.045), -s * 0.01 - ag * s * 0.02 * i / 3); c.lineTo(s * (0.14 + i * 0.045), s * 0.02); c.lineTo(s * (0.16 + i * 0.045), -s * 0.01 - ag * s * 0.02 * i / 3); c.fill(); }
+      c.fillStyle = rgba(R[2], 0.5); for (let i = 0; i < 10; i++) { c.beginPath(); c.arc(-s * 0.25 + (i % 5) * s * 0.07, -s * 0.08 + Math.floor(i / 5) * s * 0.1, s * 0.018, 0, TAU); c.fill(); }
+      gzGoz(c, s * 0.12, -s * 0.09, Math.max(1.2, s * 0.035), tm === 'derin' ? '#6FE0FF' : '#E8D24A'); c.fillStyle = '#111'; c.beginPath(); c.arc(s * 0.125, -s * 0.09, Math.max(0.7, s * 0.017), 0, TAU); c.fill();
+      c.restore();
+    }
+  }
+}
+function duvarDokun(x, y) {
+  const D = SAHNE.duvar; if (!D) return false;
+  const m = D.mg, mu = D.muren, kumY = SAHNE.kumY;
+  if (mu && mu.c > 0.3) { const s = Math.max(m.w * 1.1, 34 * OL), hx = m.x - m.w * 0.3 + mu.c * m.w * 1.25, hy = kumY - m.h * 0.45; if (Math.hypot(x - hx, y - hy) < s * 0.45 + 10) { if (mu.bekle <= 0) { mu.bekle = 5; albumEkle('canli:muren'); mutluEkle(0.8, 'canli', 20); SES.carp(); BALON.push({ x: hx, y: hy - 30, e: '😮', t: 1.6 }); mu.hedef = 0; mu.z = 6; } return true; } }
+  for (const o of D.solucan) if (Math.hypot(x - o.x, y - (o.y - o.s * 0.5)) < o.s + 12) { o.kapali = 4; albumEkle('canli:yelpazesolucan'); SES.kabarcik(0.02); return true; }
+  for (const o of D.yumusak) if (Math.abs(x - o.x) < o.s * 0.5 && y < o.y && y > o.y - o.s * 1.2) { o.sars = 1.2; albumEkle('canli:yumusakmercan'); SES.kabarcik(0.015); return true; }
+  if (D.suru.length) { const p = D.suru.find(p => Math.hypot(p.x - x, p.y - y) < 30 * OL); if (p) { for (const q of D.suru) { q.vx += rnd(-160, 160); q.vy += rnd(-120, 60); } albumEkle(SAHNE.tm === 'resif' ? 'canli:antias' : 'canli:kromis'); SES.selam(); return true; } }
+  return false;
+}
+Object.assign(CANLI_BILGI, {
+  muren: ['🐍', 'Müren', 'Moray eel', 'Ağzını sürekli açıp kapatması saldırganlık değil, nefes almasıdır; solungaçlarına su pompalar. Boğazında avını içeri çeken ikinci bir çenesi vardır.', 'Opening and closing its mouth is not aggression but breathing: it pumps water over its gills. A second set of jaws in its throat pulls prey inside.'],
+  yelpazesolucan: ['🪶', 'Yelpaze solucanı', 'Feather duster worm', 'Tüy gibi tacıyla hem nefes alır hem sudan plankton süzer. Bir gölge ya da titreşim hissedince göz açıp kapayıncaya kadar tüpüne çekilir.', 'Its feathery crown both breathes and filters plankton. At a shadow or vibration it snaps back into its tube in the blink of an eye.'],
+  yumusakmercan: ['🌸', 'Yumuşak mercan', 'Soft coral', 'Sert iskeleti yoktur; suyla şişip akıntıda açılır, polipleriyle plankton yakalar. Renkleri dokusundaki minik kireç iğnelerinden gelir.', 'It has no hard skeleton; it swells with water and opens in the current to catch plankton with its polyps. Its colours come from tiny lime spicules in its tissue.'],
+  antias: ['🐠', 'Antias sürüsü', 'Anthias school', 'Resiflerin üstünde plankton toplayan turuncu küçük balıklardır. Sürünün erkeği ölünce en büyük dişi erkeğe dönüşür.', 'Small orange fish that pick plankton above reefs. When the school’s male dies, the largest female becomes male.'],
+  kromis: ['🐟', 'Mavi kromis', 'Blue chromis', 'Kayalıkların üstünde sürü halinde plankton yer; tehlikede hep birlikte mercanların arasına dalar.', 'Feeds on plankton in schools above rocks; in danger the whole school dives into the coral together.']
+});
+ALBUM.push(
+  { k: 'canli:muren', grup: 'canli', e: '🐍', ad: ['Müren', 'Moray eel'], ip: ['Soldaki mağaradan başını çıkarınca dokun', 'Tap it when it peeks out of the cave on the left'] },
+  { k: 'canli:yelpazesolucan', grup: 'canli', e: '🪶', ad: ['Yelpaze solucanı', 'Feather duster worm'], ip: ['Kayalıktaki renkli taçlara dokun', 'Tap the colourful crowns on the rock'] },
+  { k: 'canli:yumusakmercan', grup: 'canli', e: '🌸', ad: ['Yumuşak mercan', 'Soft coral'], ip: ['Salınan mercanlara dokun', 'Tap the swaying corals'] },
+  { k: 'canli:antias', grup: 'canli', e: '🐠', ad: ['Antias sürüsü', 'Anthias school'], ip: ['Resif kayalığının üstünde', 'Above the reef rock'] },
+  { k: 'canli:kromis', grup: 'canli', e: '🐟', ad: ['Mavi kromis', 'Blue chromis'], ip: ['Açık denizdeki kayalığın üstünde', 'Above the rock in open water'] }
+);
 /* ansiklopediye işle */
 for (const [k, b] of Object.entries(CANLI_BILGI)) ANSIK[k] = [[b[0], b[1], b[2]], [b[3], b[4]]];
 
@@ -3716,7 +3919,7 @@ else if (!S) { girisGoster(); yerliKur(); }
 else { ilerlet(); gunlukGorevler(); gorevKontrol(); basarimKontrol(); kaydet(false); panelAc(); if (olumKontrol()) { } else if (bekleyenSecim()) setTimeout(secimAc, 700); else if (!S.kumandaOgrendi) setTimeout(() => duyur(T('👆 Yeni: suya dokun, balığın oraya yüzsün. Parlayan planktonları ye!', '👆 New: tap the water and your fish swims there. Eat the glowing plankton!'), 1), 1200); }
 NET.baslat().then(() => { if (S && !girisAcik) agKur(); else uiGuncelle(); });
 requestAnimationFrame(kare);
-window.DM = { durum: () => ({ S, BAL, NET, AV, ALAN, PLK, YIR, CNL, GZ }), kazan: m => { kazan(m, { sinirsiz: true, tokBagimsiz: true }); kaydet(); uiGuncelle(); }, avBitir, gz: k => { GZ.o = null; gzBaslat(k); }, sifirla: () => { localStorage.removeItem(KEY); location.reload(); } };
+window.DM = { durum: () => ({ S, BAL, NET, AV, ALAN, PLK, YIR, CNL, GZ, SAHNE }), kazan: m => { kazan(m, { sinirsiz: true, tokBagimsiz: true }); kaydet(); uiGuncelle(); }, avBitir, gz: k => { GZ.o = null; gzBaslat(k); }, sifirla: () => { localStorage.removeItem(KEY); location.reload(); } };
 })();
 </script>
 <script data-goatcounter="https://erdevelop.goatcounter.com/count" async src="//gc.zgo.at/count.js"></script>
