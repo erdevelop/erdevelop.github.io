@@ -189,6 +189,7 @@ details{margin-top:12px;color:var(--mute);font-size:13.5px}summary{cursor:pointe
         <li><b>Klavye:</b> W/↑ itki, A D/← → dönüş, S/↓ fren, Shift hızlan, <b>Boşluk basılı tut: warp</b>.</li>
         <li><b>Yakınlaştır:</b> fare tekerleği, iki parmak ya da + / −. Hızlandıkça görüş kendiliğinden genişler.</li>
         <li><b>Otopilot (O):</b> üstteki düğmeyle Sürüş ↔ Otopilot arasında geç. Otopilotta ekranda bir noktaya, gezegene ya da yıldıza dokun; gemi kendisi döner, normal hızla gider ve vardığında durur. Geminin yanındaki düğmelerle hızlanabilir, uzak hedeflerde warp yapabilirsin (Shift / Boşluk). Haritada seçtiğin sisteme de kendiliğinden gider. Fren ya da yön tuşları otopilotu bırakır.</li>
+        <li><b>Görev listesi</b> sol üstte, en yakından en uzağa sıralı ve kalan mesafeyle görünür.</li>
         <li><b>Ticaret ve görevler:</b> kolonilere yaklaşıp yavaşlayınca geminin yanında <b>🛬 Yanaş</b> çıkar (E tuşu). Limanda ucuz malı al, ihtiyaç duyulan yerde sat; kargo, yolcu ve keşif görevleri al; yakıt doldur, tersanede gemini geliştir. Kolonisi olmayan gezegenlerde <b>⛏ Kaynak topla</b> çıkar: türüne göre su, cevher, metal, gıda ya da gaz toplayıp kolonilerde satarsın. Warp yakıt harcar, normal uçuş bedavadır. Keşifler de kredi kazandırır.</li>
         <li><b>Harita (M):</b> sistemleri ve galaksileri gör, bir sisteme dokunup rota çiz; ekranda ok seni oraya götürür.</li>
         <li><b>Keşif:</b> sistemlere ve gezegenlere yaklaştıkça keşfedilir, koloniler gece yarısında ışıl ışıldır. Geminin çevresindeki küçük oklar en yakın sistemleri gösterir (mavi: keşfedilmemiş, sarı: kolonili).</li>
@@ -199,6 +200,7 @@ details{margin-top:12px;color:var(--mute);font-size:13.5px}summary{cursor:pointe
         <li><b>Keyboard:</b> W/↑ thrust, A D/← → turn, S/↓ brake, Shift boost, <b>hold Space: warp</b>.</li>
         <li><b>Zoom:</b> mouse wheel, two fingers or + / −. The view widens on its own as you speed up.</li>
         <li><b>Autopilot (O):</b> switch Manual ↔ Autopilot with the button at the top. In autopilot tap a point, planet or star; the ship turns, flies at normal speed and stops when it arrives. Use the buttons next to the ship to boost, or warp to far targets (Shift / Space). It also flies to a system you pick on the map. Brake or the arrow keys release autopilot.</li>
+        <li><b>Mission list</b> at the top left, sorted nearest first with the remaining distance.</li>
         <li><b>Trade and missions:</b> approach a colony and slow down, <b>🛬 Dock</b> appears next to the ship (E key). Buy cheap goods, sell where they are wanted; take cargo, passenger and exploration missions; refuel and upgrade your ship at the shipyard. Planets without a colony offer <b>⛏ Mine</b>: gather water, ore, metal, food or gas by planet type and sell it at colonies. Warp burns fuel, normal flight is free. Discoveries earn credits too.</li>
         <li><b>Map (M):</b> see systems and galaxies, tap a system to plot a route; an arrow on screen leads you there.</li>
         <li><b>Discovery:</b> systems and planets are discovered as you get close, colonies glow on their night side. Small arrows around the ship point to the nearest systems (blue: undiscovered, gold: with colonies).</li>
@@ -604,7 +606,7 @@ const TERS = [
 ];
 const tersFiyat = (u, L) => Math.round(u.f * Math.pow(2.2, L) / 10) * 10;
 let mod = ls.get('kozmos-mod', 'surus') === 'oto' ? 'oto' : 'surus', oto = null, otoV = null;
-let miniT = 0, sonGal = null, radar = [], yakinP = null, hudT = 0, kesifT = 0, radarT = 0, kayitT = 0;
+let gorevT = 0, miniT = 0, sonGal = null, radar = [], yakinP = null, hudT = 0, kesifT = 0, radarT = 0, kayitT = 0;
 
 function simT() { return Date.now() / 1000 - 1.79e9; }
 function evGezegen() { const s = sistem(0, 0); return s.gez[2]; }
@@ -803,6 +805,7 @@ function guncelle(dt, t) {
   radarT -= dt; if (radarT <= 0) { radarT = 0.5; radarKur(); }
   hudT -= dt; if (hudT <= 0) { hudT = 0.16; hudYaz(v, t); }
   kayitT -= dt; if (kayitT <= 0) { kayitT = 4; kaydet(); }
+  gorevT -= dt; if (gorevT <= 0) { gorevT = 1; if (GOREV.length) gorevYaz(); }
   miniT -= dt; if (miniT <= 0) { miniT = 0.1; miniCiz(); }
   SES.guncelle(oyunda ? SH.itki : 0, v, SH.warp);
 }
@@ -1335,7 +1338,10 @@ let gorevAcik = !DOKUN;
 function gorevYaz() {
   $('gorevCip').hidden = !GOREV.length; $('gorevSay').textContent = GOREV.length;
   const P = $('gorevPanel'); P.hidden = !GOREV.length || !gorevAcik || !oyunda;
-  P.innerHTML = GOREV.map((g, i) => `<div class="gv"><div>${gorevMetin(g)}<small style="color:var(--altin)">+${SAYI(g.odul)} 💰</small></div><button class="kb" type="button" data-git="${i}">${T('Git', 'Go')}</button></div>`).join('');
+  if (P.hidden) { P.innerHTML = ''; return; }
+  const t = simT(), sira = GOREV.map((g, i) => { const h = gorevHedef(g), [x, y] = h ? otoPos(h, t) : [SH.x, SH.y]; return { g, i, d: Math.hypot(x - SH.x, y - SH.y) }; }).sort((a, b) => a.d - b.d);
+  const html = sira.map(({ g, i, d }) => `<div class="gv"><div>${gorevMetin(g)}<small style="color:var(--altin)">+${SAYI(g.odul)} 💰 · <span style="color:var(--acc)">📍 ${mesafeYaz(d)}</span></small></div><button class="kb" type="button" data-git="${i}">${T('Git', 'Go')}</button></div>`).join('');
+  if (html !== P._h) { P._h = html; P.innerHTML = html; }
 }
 $('gorevCip').onclick = () => { gorevAcik = !gorevAcik; gorevYaz(); SES.tik(); };
 $('gorevPanel').addEventListener('click', e => {
