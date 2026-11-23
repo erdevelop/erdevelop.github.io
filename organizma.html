@@ -1317,6 +1317,8 @@ function vekilleriEsle(dt) {
       o.nvx = (v.x - o.hx) / ara * 0.5 + (o.nvx || 0) * 0.5; o.nvy = (v.y - o.hy) / ara * 0.5 + (o.nvy || 0) * 0.5;
       o.hx = v.x; o.hy = v.y; o.alindi = u.alindi; o.m = v.m; o.yasRef = v.a; o.yasZ = zaman; o.hamle = v.d ? 0.2 : 0; o.koruma = v.k ? 0.5 : 0; o.gizliH = v.g ? 1 : 0; if (typeof v.h === 'number') o.hue = v.h;
       o.kusak = kis(v.ku | 0, 1, 99);
+      o.yol = { a: 'avci', k: 'koloni', s: 'simb' }[v.yl] || null;
+      if (typeof v.sz === 'string' && v.sz !== o.szK) { o.szK = v.sz; const p = v.sz.split('.'); o.sus = { hale: p[0] || null, iz: p[1] || null, rozet: p[2] || null }; }
       if (typeof v.f === 'string' && /^\d{3}$/.test(v.f)) for (let i = 0; i < 3; i++) o.form[i] = +v.f[i] / 9;
       if (v.e && v.e !== o.eSon) { o.eSon = v.e; const c = IFADELER[parseInt(v.e, 10)]; if (c) o.ifade = { c, t: 2.6 }; }
     }
@@ -1331,9 +1333,10 @@ function vekilleriEsle(dt) {
 }
 function agGonder(dt) {
   agZ -= dt; if (agZ > 0 || !oyuncu || oyuncu.olu || !oyuncu.netId) return; agZ = 0.3;
-  AG.gonder({ n: oyuncu.nick, s: oyuncu.tur, h: Math.round(oyuncu.hue), x: Math.round(oyuncu.x), y: Math.round(oyuncu.y), m: Math.round(oyuncu.m * 10) / 10, a: Math.round(oyuncu.yas), d: oyuncu.hamle > 0 ? 1 : 0, k: oyuncu.koruma > 0 ? 1 : 0, p: oyuncu.desen | 0, g: oyuncu.gizli > 0.5 ? 1 : 0, ku: oyuncu.kusak, f: oyuncu.form.map(v => Math.round(kis(v, 0, 1) * 9)).join(''), z: oyuncu.ev.zar, e: oyuncu.ifadeKod || 0 });
+  AG.gonder({ n: oyuncu.nick, s: oyuncu.tur, h: Math.round(oyuncu.hue), x: Math.round(oyuncu.x), y: Math.round(oyuncu.y), m: Math.round(oyuncu.m * 10) / 10, a: Math.round(oyuncu.yas), d: oyuncu.hamle > 0 ? 1 : 0, k: oyuncu.koruma > 0 ? 1 : 0, p: oyuncu.desen | 0, g: oyuncu.gizli > 0.5 ? 1 : 0, ku: oyuncu.kusak, f: oyuncu.form.map(v => Math.round(kis(v, 0, 1) * 9)).join(''), z: oyuncu.ev.zar, e: oyuncu.ifadeKod || 0, yl: oyuncu.yol ? oyuncu.yol[0] : '', sz: ['hale', 'iz', 'rozet'].map(k => DUK().sec[k] || '').join('.') });
 }
 AG.olayda(v => {
+  if (v && v.tip === 'dev') { const b = DEVB.b; if (b && b.ortak && b.slot === v.s) { b.can -= Math.max(0, Math.min(400, +v.d || 0)); P.push({ x: b.x + rnd(-b.r, b.r) * 0.7, y: b.y + rnd(-b.r, b.r) * 0.7, vx: 0, vy: 0, r: 12, o: 0.8, t: 0, s: 0.35, tip: 2, h: DEVLER[b.tip].hue }); } return; }
   if (!v || !oyuncu || oyuncu.olu) return;
   if (v.tip !== 'ye') return;
   let yiyen = null; for (const o of vekil.values()) if (o.nick === v.n) yiyen = o;
@@ -1657,7 +1660,7 @@ const SUSLER = [
 ];
 const DUK = () => KAYIT.dukkan || (KAYIT.dukkan = { al: [], sec: {}, harca: 0 });
 const dnaBos = () => KAYIT.dna - (DUK().harca || 0);
-const susSec = tip => { const id = DUK().sec[tip]; return id ? SUSLER.find(q => q[0] === tip && q[1] === id) : null; };
+const susSec = (tip, o) => { const id = o && o !== oyuncu ? (o.sus && o.sus[tip]) : DUK().sec[tip]; return id ? SUSLER.find(q => q[0] === tip && q[1] === id) : null; };
 function dukkanAc() {
   const d = DUK(), grup = [['hale', ['HALELER', 'AURAS']], ['iz', ['İZLER', 'TRAILS']], ['rozet', ['AD ROZETLERİ', 'NAME BADGES']]];
   let h = `<div class="gBas2"><b>🛍 ${T('DNA dükkânı', 'DNA shop')}</b><span>🧬 ${dnaBos()} DNA</span><button type="button" class="gKapa" data-kapa aria-label="${T('Kapat', 'Close')}">✕</button></div><p class="gAc">${T('Görev, başarım ve çoğalmayla kazandığın DNA ile canlına süs al. Harcadığın DNA açtığın türleri ve desenleri geri kilitlemez.', 'Spend DNA from quests, achievements and reproducing on decorations. Spending never re-locks species or patterns.')}</p>`;
@@ -1674,9 +1677,9 @@ function dukkanAc() {
 }
 let izSon = 0; const IZ = [];
 function susCiz(o, z, t) {   // oyuncunun halesi ve izi (dünya koordinatında)
-  const hl = susSec('hale'), iz = susSec('iz'), r = o.rr || o.r;
+  const hl = susSec('hale', o), iz = susSec('iz', o), r = o.rr || o.r, IZ = o.izA || (o.izA = []);
   if (iz) {
-    if (zaman - izSon > 0.06 && Math.hypot(o.vx || 0, o.vy || 0) > 20) { izSon = zaman; const a = Math.random() * TAU; IZ.push({ x: o.x - Math.cos(o.ang) * r * 0.9 + Math.cos(a) * r * 0.3, y: o.y - Math.sin(o.ang) * r * 0.9 + Math.sin(a) * r * 0.3, t: zaman, h: iz[5] < 0 ? (zaman * 90) % 360 : iz[5], s: rnd(0.12, 0.26) * r }); }
+    if (zaman - (o.izSon || 0) > 0.06 && Math.hypot(o.vx || 0, o.vy || 0) > 20) { o.izSon = zaman; const a = Math.random() * TAU; IZ.push({ x: o.x - Math.cos(o.ang) * r * 0.9 + Math.cos(a) * r * 0.3, y: o.y - Math.sin(o.ang) * r * 0.9 + Math.sin(a) * r * 0.3, t: zaman, h: iz[5] < 0 ? (zaman * 90) % 360 : iz[5], s: rnd(0.12, 0.26) * r }); }
     while (IZ.length && zaman - IZ[0].t > 1.6) IZ.shift();
     g.save(); g.globalCompositeOperation = 'lighter';
     for (const p of IZ) { const k = 1 - (zaman - p.t) / 1.6; g.fillStyle = `hsla(${p.h},85%,${iz[1] === 'kabarcik' ? 80 : 65}%,${k * 0.55})`; g.beginPath(); if (iz[1] === 'kabarcik') { g.strokeStyle = g.fillStyle; g.lineWidth = Math.max(1 / z, p.s * 0.18); g.arc(p.x, p.y - (1 - k) * r * 0.5, p.s * (1.3 - k * 0.3), 0, TAU); g.stroke(); } else { g.arc(p.x, p.y, p.s * k, 0, TAU); g.fill(); } }
@@ -1687,7 +1690,7 @@ function susCiz(o, z, t) {   // oyuncunun halesi ve izi (dünya koordinatında)
     gr.addColorStop(0, `hsla(${hh},95%,62%,0)`); gr.addColorStop(0.1, `hsla(${hh},95%,64%,.7)`); gr.addColorStop(0.45, `hsla(${hh + (hl[5] < 0 ? 60 : 0)},95%,60%,.3)`); gr.addColorStop(1, `hsla(${hh + (hl[5] < 0 ? 120 : 0)},90%,60%,0)`);
     g.save(); g.globalCompositeOperation = 'lighter'; g.fillStyle = gr; g.beginPath(); g.arc(o.x, o.y, r * 1.9 * pul, 0, TAU); g.fill(); g.restore();
   }
-  if (SOY(o).isik) { const gr = g.createRadialGradient(o.x, o.y, r * 0.5, o.x, o.y, r * 2.6); gr.addColorStop(0, `hsla(${o.hue},90%,70%,${0.12 + 0.08 * SOY(o).isik})`); gr.addColorStop(1, 'rgba(0,0,0,0)'); g.save(); g.globalCompositeOperation = 'lighter'; g.fillStyle = gr; g.beginPath(); g.arc(o.x, o.y, r * 2.6, 0, TAU); g.fill(); g.restore(); }
+  if (o === oyuncu && SOY(o).isik) { const gr = g.createRadialGradient(o.x, o.y, r * 0.5, o.x, o.y, r * 2.6); gr.addColorStop(0, `hsla(${o.hue},90%,70%,${0.12 + 0.08 * SOY(o).isik})`); gr.addColorStop(1, 'rgba(0,0,0,0)'); g.save(); g.globalCompositeOperation = 'lighter'; g.fillStyle = gr; g.beginPath(); g.arc(o.x, o.y, r * 2.6, 0, TAU); g.fill(); g.restore(); }
 }
 function evDeger(o, k, lv) {   // bir evrim düzeyinde ilgili değerin okunur hali
   if (k.startsWith('s:')) return soyDeger(k.slice(2), lv);
@@ -1956,7 +1959,7 @@ const DEVLER = [
   { ad: ['Kraliçe Didinium', 'Didinium queen'], ik: '👑', can: 450, r: 95, hiz: 105, hue: 8 }
 ];
 const DEVB = { b: null, sonraki: 150 };
-function devCikar(tip) {
+function devCikar(tip, ortak) {
   const o = oyuncu; if (!o || o.olu) return;
   if (tip == null) tip = (Math.random() * DEVLER.length) | 0;
   const D = DEVLER[tip]; let x, y, k = 0;
@@ -1964,11 +1967,11 @@ function devCikar(tip) {
   if (Math.hypot(x, y) > R - D.r - 200) { const q = Math.atan2(y, x), d = R - D.r - 260; x = Math.cos(q) * d; y = Math.sin(q) * d; }
   const b = { tip, x, y, vx: 0, vy: 0, r: D.r, can: D.can, canMax: D.can, ang: Math.random() * TAU, t: 0, omur: 240, hasar: 0, bekle: 0, uret: 4, zehir: 0, yon: Math.random() * TAU, gor: null };
   if (tip === 0) { b.gor = yeniOrg({ tur: 2, m: 3000, hue: D.hue, nick: '', dogum: 1 }); b.gor.rr = D.r; }
-  DEVB.b = b; duyur(`⚠ ${D.ik} ${T(D.ad[0] + ' belirdi! Hamleyle ısırarak yenebilirsin — haritada mor halka', D.ad[1] + ' appeared! Bite it with dashes — purple ring on the map')}`, 'uyari', 6); SES.uyari(); titre([40, 60, 40]);
+  DEVB.b = b; duyur(`⚠ ${D.ik} ${ortak ? T(D.ad[0] + ' belirdi! Bütün oyuncular birlikte yenebilir — haritada mor halka', D.ad[1] + ' appeared! All players can defeat it together — purple ring on the map') : T(D.ad[0] + ' belirdi! Hamleyle ısırarak yenebilirsin — haritada mor halka', D.ad[1] + ' appeared! Bite it with dashes — purple ring on the map')}`, 'uyari', 6); SES.uyari(); titre([40, 60, 40]);
 }
 function devIsir(b, o, dmg) {   // bir canlı deve hamleyle (ya da okla) zarar verir
   if (o === oyuncu || (o && (o.sahip === oyuncu || o.dost === oyuncu))) dmg *= 1 + 0.25 * agacLv('dev');
-  b.can -= dmg; if (o === oyuncu || (o && (o.sahip === oyuncu || o.dost === oyuncu))) b.hasar += dmg;
+  b.can -= dmg; if (o === oyuncu || (o && (o.sahip === oyuncu || o.dost === oyuncu))) { b.hasar += dmg; if (b.ortak) for (const [id, q] of vekil) if (!q.olu && Math.hypot(q.x - b.x, q.y - b.y) < 2600) AG.olay(id, { tip: 'dev', s: b.slot, d: Math.round(dmg) }); }
   if (o && o.m !== undefined) { const s2 = o.dost || o.sahip || o; s2.m = Math.min(KUTLE_UST, s2.m + dmg * 0.45); s2.enBuyuk = Math.max(s2.enBuyuk || 0, s2.m); }
   for (let i = 0; i < 3 && Y.length < YEMEK_N * 2.6; i++) { const a = Math.random() * TAU; Y.push({ x: b.x + Math.cos(a) * b.r * 0.9, y: b.y + Math.sin(a) * b.r * 0.9, vx: Math.cos(a) * rnd(40, 120), vy: Math.sin(a) * rnd(40, 120), m: dmg * 0.08, k: (Math.random() * 5) | 0, f: Math.random() * TAU, b: 1, gecici: rnd(25, 40) }); }
   P.push({ x: o ? o.x : b.x, y: o ? o.y : b.y, vx: 0, vy: 0, r: 14, o: 0.9, t: 0, s: 0.35, tip: 2, h: DEVLER[b.tip].hue });
@@ -1982,11 +1985,29 @@ function devOl(b) {
     genYe(oyuncu, 'n' + b.tip, D.hue); dnaEkle(15); basarim('dev'); oyuncu.devYen = (oyuncu.devYen || 0) + 1;
     duyur(`🏆 ${D.ik} ${T(D.ad[0] + ' yenildi! Nadir gen + 15 DNA', D.ad[1] + ' defeated! Rare gene + 15 DNA')}`, 'iyi', 6); SES.basari();
   }
+  if (b.ortak) DEVB.yenilen = b.slot;
   DEVB.b = null; DEVB.sonraki = zaman + (gmVar('dev') ? rnd(60, 90) : rnd(240, 330));
+}
+const ortakMi = () => AG.durum() === 'acik';
+const DEV_PER = 330, DEV_BAS = 60, DEV_SURE = 240;
+function ortakDevYol(b) {   // herkeste aynı rota: ortak saatten hesaplanır
+  const k = saat() - b.t0; return [b.ox + Math.cos(k * 0.021 + b.ph) * 420 + Math.cos(k * 0.047) * 120, b.oy + Math.sin(k * 0.018 + b.ph) * 420 + Math.sin(k * 0.039) * 120];
+}
+function ortakDevDenetle() {
+  const sa = saat(), slot = Math.floor(sa / DEV_PER), f = sa - slot * DEV_PER, akt = f >= DEV_BAS && f < DEV_BAS + DEV_SURE;
+  if (!akt) { if (DEVB.b && DEVB.b.ortak && DEVB.b.omur > 0) DEVB.b.omur = 0; return; }
+  if (DEVB.b && DEVB.b.ortak && DEVB.b.slot === slot) return;
+  if (DEVB.yenilen === slot) return;
+  const r = tohum(slot * 7717 + 3), tip = (r() * 3) | 0, q = r() * TAU, d = R * (0.4 + r() * 0.3);
+  const o = oyuncu; DEVB.b = null; devCikar(tip, true);
+  const b = DEVB.b; if (!b) return;
+  b.ortak = 1; b.slot = slot; b.t0 = slot * DEV_PER + DEV_BAS; b.ox = Math.cos(q) * d; b.oy = Math.sin(q) * d; b.ph = r() * TAU; b.can = b.canMax = DEVLER[tip].can * 1.6; b.omur = DEV_BAS + DEV_SURE - f;
+  [b.x, b.y] = ortakDevYol(b); b.t = Math.min(b.t, 0);
 }
 function devGuncelle(dt) {
   const o = oyuncu;
-  if (!DEVB.b) { if (oyunda && o && !o.olu && !ogrAktif() && o.yas > (gmVar('dev') ? 20 : 90) && zaman > DEVB.sonraki) devCikar(); return; }
+  if (ortakMi() && oyunda) ortakDevDenetle();
+  if (!DEVB.b) { if (!ortakMi() && oyunda && o && !o.olu && !ogrAktif() && o.yas > (gmVar('dev') ? 20 : 90) && zaman > DEVB.sonraki) devCikar(); return; }
   const b = DEVB.b, D = DEVLER[b.tip]; b.t += dt; b.omur -= dt; if (b.bekle > 0) b.bekle -= dt;
   if (b.zehir > 0) { b.zehir -= dt; b.can -= 12 * dt; }
   b.can = Math.min(b.canMax, b.can + dt * 0.8);
@@ -1999,8 +2020,9 @@ function devGuncelle(dt) {
   else if (b.tip === 0) { let en = null, enD = 1e9; for (const q of O) { if (q.olu || q.uzak || q.dogum < 1) continue; const d = Math.hypot(q.x - b.x, q.y - b.y); if (d < 700 && d < enD && q.m < 400) { en = q; enD = d; } } if (en) { hx = en.x - b.x; hy = en.y - b.y; } else { b.yon += rnd(-0.4, 0.4) * dt; hx = Math.cos(b.yon); hy = Math.sin(b.yon); } }
   else { b.yon += rnd(-0.5, 0.5) * dt; hx = Math.cos(b.yon); hy = Math.sin(b.yon); }
   if (b.omur <= 0) { hx = b.x; hy = b.y; hz = D.hiz * 2; }
-  const n = Math.hypot(hx, hy) || 1; b.vx += (hx / n * hz - b.vx) * Math.min(1, dt * 1.5); b.vy += (hy / n * hz - b.vy) * Math.min(1, dt * 1.5);
-  b.x += b.vx * dt; b.y += b.vy * dt; if (Math.hypot(b.vx, b.vy) > 5) b.ang += aciFark(Math.atan2(b.vy, b.vx), b.ang) * Math.min(1, dt * 2);
+  if (b.ortak && b.omur > 0) { const [nx, ny] = ortakDevYol(b); b.vx = (nx - b.x) / Math.max(dt, 1e-3); b.vy = (ny - b.y) / Math.max(dt, 1e-3); if (Math.hypot(b.vx, b.vy) > 400) { b.vx = b.vy = 0; } b.x = nx; b.y = ny; hx = 0; hy = 0; hz = 0; }
+  if (!(b.ortak && b.omur > 0)) { const n = Math.hypot(hx, hy) || 1; b.vx += (hx / n * hz - b.vx) * Math.min(1, dt * 1.5); b.vy += (hy / n * hz - b.vy) * Math.min(1, dt * 1.5);
+  b.x += b.vx * dt; b.y += b.vy * dt; } if (Math.hypot(b.vx, b.vy) > 5) b.ang += aciFark(Math.atan2(b.vy, b.vx), b.ang) * Math.min(1, dt * 2);
   const md = Math.hypot(b.x, b.y); if (md > R - b.r - 60) { b.x *= (R - b.r - 60) / md; b.y *= (R - b.r - 60) / md; b.yon += Math.PI; }
   /* ana virüs virüs üretir */
   if (b.tip === 1 && (b.uret -= dt) <= 0) { b.uret = 6; if (V.length < VIRUS_N * 1.9) for (let i = 0; i < 3; i++) { const q = Math.random() * TAU, v = virusYeni(b.x + Math.cos(q) * b.r, b.y + Math.sin(q) * b.r); v.vx = Math.cos(q) * 160; v.vy = Math.sin(q) * 160; v.b = 1; V.push(v); } }
@@ -3048,7 +3070,7 @@ function ciz(t) {
   const gor = O.filter(o => o.x + o.rr * 2.5 > gx0 && o.x - o.rr * 2.5 < gx1 && o.y + o.rr * 2.5 > gy0 && o.y - o.rr * 2.5 < gy1 && !gorunmez(o)).sort((a, b) => a.m - b.m);
   for (const o of gor) {
     if (o.dogum < 1) dogumKabuk(o, z, t);
-    if (o === oyuncu) susCiz(o, z, t);
+    if (o === oyuncu || (o.uzak && o.sus)) susCiz(o, z, t);
     if (o.altin && !o.olu) altinCiz(o.x, o.y, o.rr || o.r, z, t);
     orgCiz(g, o, z, t);
   }
@@ -3098,7 +3120,7 @@ function ciz(t) {
     const ust = sy - rs * (TURLER[o.tur].diken ? 1.45 : 1.12) - 6;
     g.globalAlpha = al;
     g.font = `800 ${fs}px Nunito, system-ui, sans-serif`; g.lineWidth = 3.5; g.strokeStyle = 'rgba(2,14,18,.7)';
-    const kin = intikamMi(o), rz = o === oyuncu ? susSec('rozet') : null, ad = (kin ? '☠ ' : '') + (o.uzak ? '🌐 ' : '') + (rz ? rz[2] + ' ' : '') + o.nick + (o.kusak > 1 ? ' · ' + romaYaz(o.kusak) : '') + (o === oyuncu && SOY(o).yildiz ? ' ⭐' + SOY(o).yildiz : '');
+    const kin = intikamMi(o), rz = o === oyuncu || o.uzak ? susSec('rozet', o) : null, ad = (kin ? '☠ ' : '') + (o.uzak ? '🌐 ' : '') + (rz ? rz[2] + ' ' : '') + o.nick + (o.kusak > 1 ? ' · ' + romaYaz(o.kusak) : '') + (o === oyuncu && SOY(o).yildiz ? ' ⭐' + SOY(o).yildiz : '');
     g.strokeText(ad, sx, ust - fs * 0.95); g.fillStyle = o === oyuncu ? '#FFE29A' : kin ? '#FF9C8E' : '#F2FBFA'; g.fillText(ad, sx, ust - fs * 0.95);
     g.font = `700 ${Math.round(fs * 0.78)}px Nunito, system-ui, sans-serif`; const yz2 = '⏱ ' + dkYaz(o.yas);
     g.strokeText(yz2, sx, ust); g.fillStyle = o.npc && o.yas > o.omur * 0.85 ? '#E9B8A8' : 'rgba(190,232,236,.95)'; g.fillText(yz2, sx, ust);
