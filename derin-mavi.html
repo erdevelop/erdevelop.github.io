@@ -626,6 +626,24 @@ function larvaCiz(c, L, faz, alfa) {
   c.fillStyle = '#10202A'; c.beginPath(); c.arc(L * 0.36, -L * 0.015, L * 0.075, 0, TAU); c.fill();
   c.fillStyle = '#fff'; c.beginPath(); c.arc(L * 0.38, -L * 0.04, L * 0.025, 0, TAU); c.fill();
 }
+/* gerçekçilik yardımcıları: pul dokusu (boyuta göre önbellekli) ve ince gren */
+const PUL_K = new Map();
+function pulDesen(c, ps) {
+  const k = Math.max(3, Math.round(ps));
+  if (!PUL_K.has(k)) {
+    const s = Math.max(1, Math.round(DPR)), w = Math.round(k * 1.1 * s), h = Math.round(k * 1.6 * s), cv = document.createElement('canvas'); cv.width = w; cv.height = h;
+    const x = cv.getContext('2d'); x.fillStyle = 'rgb(128,128,128)'; x.fillRect(0, 0, w, h);
+    const pul = (cx, cy) => { const r = k * 0.62 * s, g = x.createRadialGradient(cx - r * 0.35, cy, r * 0.1, cx, cy, r); g.addColorStop(0, 'rgb(150,150,150)'); g.addColorStop(0.75, 'rgb(118,118,118)'); g.addColorStop(1, 'rgb(96,96,96)'); x.fillStyle = g; x.beginPath(); x.arc(cx, cy, r, -Math.PI / 2, Math.PI / 2); x.closePath(); x.fill(); x.strokeStyle = 'rgb(185,185,185)'; x.lineWidth = Math.max(1, s * 0.8); x.beginPath(); x.arc(cx, cy, r, -Math.PI / 2.4, Math.PI / 2.4); x.stroke(); };
+    for (const [cx, cy] of [[w, 0], [w, h * 0.5], [w, h], [w * 0.5, h * 0.25], [w * 0.5, h * 0.75], [0, 0], [0, h * 0.5], [0, h]]) pul(cx, cy);
+    const p = c.createPattern(cv, 'repeat'); if (p.setTransform) p.setTransform(new DOMMatrix().scale(1 / s)); PUL_K.set(k, p);
+  }
+  return PUL_K.get(k);
+}
+let GREN = null;
+function grenUygula(c, k, guc) {
+  if (!GREN) { const cv = document.createElement('canvas'); cv.width = cv.height = 128; const x = cv.getContext('2d'), id = x.createImageData(128, 128); for (let i = 0; i < id.data.length; i += 4) { const v = Math.random() < 0.5 ? 0 : 255; id.data[i] = id.data[i + 1] = id.data[i + 2] = v; id.data[i + 3] = Math.random() * 38; } x.putImageData(id, 0, 0); GREN = cv; }
+  c.save(); c.setTransform(1, 0, 0, 1, 0, 0); c.globalCompositeOperation = 'source-atop'; c.globalAlpha = guc; c.fillStyle = c.createPattern(GREN, 'repeat'); c.fillRect(0, 0, k.width, k.height); c.restore();
+}
 function balikCiz(c, d, x, y, L, faz, yon, o = {}) {
   const t = o.t || 0, alfa = (o.alfa == null ? 1 : o.alfa) * (d.r === 5 ? 0.6 : 1);
   c.save(); c.translate(x, y); if (o.aci) c.rotate(o.aci); c.scale(yon, 1);
@@ -644,7 +662,7 @@ function balikCiz(c, d, x, y, L, faz, yon, o = {}) {
   if (g.kuyruk !== 'yok') {
     c.save(); c.translate(-Lb * 0.5, bk(-Lb * 0.5, Lb)); c.rotate(dalga * 0.75 - BUK * 1.6);
     const kr = g.kuyrukR ? P[g.kuyrukR] : yuzR, tl = Lb * (g.kuyruk === 'hilal' ? 0.3 : 0.28), th = Math.max(h, Lb * 0.16);
-    const kg = c.createLinearGradient(0, 0, -tl, 0); kg.addColorStop(0, kr); kg.addColorStop(1, rgba(acik(kr, 0.2), 0.7));
+    const kg = c.createLinearGradient(0, 0, -tl, 0); kg.addColorStop(0, kr); kg.addColorStop(0.6, rgba(kr, 0.85)); kg.addColorStop(1, rgba(acik(kr, 0.25), 0.45));
     c.fillStyle = kg; c.globalAlpha *= 0.92; kuyrukYol(c, g.kuyruk, tl, th); c.fill();
     if (Lb > 26) { c.save(); kuyrukYol(c, g.kuyruk, tl, th); c.clip(); c.strokeStyle = 'rgba(0,0,0,.16)'; c.lineWidth = Math.max(0.5, Lb * 0.006); for (let i = -4; i <= 4; i++) { c.beginPath(); c.moveTo(2, i * th * 0.04); c.lineTo(-tl * 1.1, i * th * 0.34); c.stroke(); } c.restore(); }
     c.restore();
@@ -662,6 +680,7 @@ function balikCiz(c, d, x, y, L, faz, yon, o = {}) {
     default: c.moveTo(Lb * 0.06, -h * 0.9); c.lineTo(-Lb * 0.1, -h * 1.5 + sal); c.lineTo(-Lb * 0.22, -h * 0.82);
   }
   c.closePath(); c.fill();
+  if (Lb > 24 && g.sirt !== 'serit') { c.save(); c.clip(); c.strokeStyle = rgba(koyu(yuzR, 0.35), 0.45); c.lineWidth = Math.max(0.5, Lb * 0.006); for (let xx = Lb * 0.36; xx > -Lb * 0.55; xx -= Lb * 0.032) { c.beginPath(); c.moveTo(xx, -h * 0.7); c.lineTo(xx - h * 1.1, -h * 4); c.moveTo(xx, h * 0.7); c.lineTo(xx - h * 1.1, h * 4); c.stroke(); } const fg = c.createLinearGradient(0, -h * 2.6, 0, -h * 0.8); fg.addColorStop(0, 'rgba(230,248,255,.28)'); fg.addColorStop(1, 'rgba(230,248,255,0)'); c.fillStyle = fg; c.fillRect(-Lb, -h * 4.5, Lb * 2, h * 3.7); c.restore(); }
   if (g.sirt !== 'yelken') { c.beginPath(); c.moveTo(-Lb * 0.12, h * 0.85); c.lineTo(-Lb * 0.24, h * 1.3 - sal); c.lineTo(-Lb * 0.32, h * 0.7); c.closePath(); c.fill(); }
   /* gövde */
   govdeYol(c, Lb, h);
@@ -681,11 +700,21 @@ function balikCiz(c, d, x, y, L, faz, yon, o = {}) {
     c.fillStyle = rgba(P[2], 0.75); for (let i = 0; i < 7; i++) { const u = i / 6; c.beginPath(); c.arc(Lb * 0.3 - u * Lb * 0.72, -h * 0.25 + Math.sin(i * 1.7) * h * 0.25, Math.max(0.8, h * 0.11), 0, TAU); c.fill(); }
   }
   /* parlaklık */
-  if (Lb > 30 && !g.seffaf) {
-    c.strokeStyle = 'rgba(0,0,0,.07)'; c.lineWidth = Math.max(0.5, Lb * 0.005); const ps = Math.max(2.2, Lb * 0.045);
-    for (let yy = -h * 0.8; yy <= h * 0.8; yy += ps * 0.9) for (let xx = Lb * 0.22, j = 0; xx > -Lb * 0.46; xx -= ps * 1.1, j++) { const ox = (Math.round(yy / ps) % 2) * ps * 0.55; c.beginPath(); c.arc(xx - ox, yy + bk(xx - ox, Lb), ps * 0.62, -Math.PI / 2, Math.PI / 2); c.stroke(); }
+  if (Lb > 22 && !g.seffaf) {
+    /* pul dokusu: her pulun ortası açık, kenarı koyu, ucu parlak */
+    c.save(); c.globalCompositeOperation = 'soft-light'; c.globalAlpha = alfa * 0.75; c.fillStyle = pulDesen(c, Math.max(2.6, Lb * 0.05)); c.fillRect(-Lb * 0.5, -h * 1.1, Lb * 0.78, h * 2.2); c.restore();
+    /* ince yanardönerlik: açıya göre kayan renk kuşağı */
+    const ir = c.createLinearGradient(-Lb * 0.5, -h, Lb * 0.4, h), ka = (t * 20 + faz * 2) % 360;
+    ir.addColorStop(0, `hsla(${ka},80%,60%,0)`); ir.addColorStop(0.35, `hsla(${(ka + 180) % 360},85%,65%,.10)`); ir.addColorStop(0.6, `hsla(${(ka + 260) % 360},85%,65%,.08)`); ir.addColorStop(1, `hsla(${(ka + 40) % 360},80%,60%,0)`);
+    c.save(); c.globalCompositeOperation = 'overlay'; c.fillStyle = ir; c.fillRect(-Lb, -h * 1.2, Lb * 2, h * 2.4); c.restore();
+  }
+  /* yüzeyden süzülen dalgalı ışık ağı balığın sırtında oynar (ana sahnede, sığ sularda) */
+  if (o.dunya && SAHNE && SAHNE.kostik && SAHNE.tm !== 'derin' && !g.seffaf) {
+    const der = kis((y - ALAN.y1) / Math.max(1, SAHNE.kumY - ALAN.y1), 0, 1), a = 0.42 * (1 - der * 0.55) * (typeof havaIsik === 'function' ? Math.min(1.3, havaIsik(t)) : 1) * (1 - geceDegeri() * 0.8);
+    if (a > 0.02) { const kw = 240 * OL, kh = 100 * OL, ox = -Lb - (((x * yon) % kw) + kw) % kw; c.save(); c.globalCompositeOperation = 'lighter'; c.globalAlpha = alfa * a; for (let i = 0; i < 3; i++) c.drawImage(SAHNE.kostik, ox + i * kw, -h * 1.2 - ((y % kh) + kh) % kh * 0.3, kw, kh); c.restore(); }
   }
   c.strokeStyle = 'rgba(255,255,255,.2)'; c.lineWidth = Math.max(0.6, Lb * 0.008); c.beginPath(); for (let i = 0; i <= 10; i++) { const xx = Lb * 0.26 - i / 10 * Lb * 0.72; c.lineTo(xx, -h * 0.08 + Math.sin(i * 0.6) * h * 0.06 + bk(xx, Lb)); } c.stroke();
+  { const og = c.createRadialGradient(nx - Lb * 0.46, 0, h * 0.5, nx - Lb * 0.46, 0, h * 0.8); og.addColorStop(0, 'rgba(0,0,0,0)'); og.addColorStop(0.85, 'rgba(0,10,20,.16)'); og.addColorStop(1, 'rgba(0,0,0,0)'); c.fillStyle = og; c.beginPath(); c.arc(nx - Lb * 0.46, 0, h * 0.8, -0.8, 0.8); c.lineTo(nx - Lb * 0.46, 0); c.fill(); }
   c.strokeStyle = 'rgba(0,0,0,.2)'; c.lineWidth = Math.max(0.7, Lb * 0.012); c.beginPath(); c.arc(nx - Lb * 0.46, 0, h * 0.75, -0.75, 0.75); c.stroke();
   const pg = c.createLinearGradient(0, -h, 0, 0); pg.addColorStop(0, 'rgba(255,255,255,.26)'); pg.addColorStop(1, 'rgba(255,255,255,0)'); c.fillStyle = pg; c.fillRect(-Lb, -h, Lb * 2, h * 0.7);
   const sp = c.createRadialGradient(Lb * 0.15, -h * 0.45, 0, Lb * 0.15, -h * 0.45, Lb * 0.28); sp.addColorStop(0, 'rgba(255,255,255,.28)'); sp.addColorStop(1, 'rgba(255,255,255,0)'); c.fillStyle = sp; c.fillRect(-Lb * 0.2, -h, Lb * 0.7, h);
@@ -722,6 +751,7 @@ function balikCiz(c, d, x, y, L, faz, yon, o = {}) {
   c.fillStyle = '#05090C'; c.beginPath(); c.arc(gx + gr * 0.1, gy, gr * 0.64, 0, TAU); c.fill();
   c.fillStyle = 'rgba(255,255,255,.95)'; c.beginPath(); c.arc(gx + gr * 0.35, gy - gr * 0.32, gr * 0.24, 0, TAU); c.fill();
   c.fillStyle = 'rgba(255,255,255,.4)'; c.beginPath(); c.arc(gx - gr * 0.25, gy + gr * 0.3, gr * 0.12, 0, TAU); c.fill();
+  { const kg3 = c.createLinearGradient(gx, gy - gr, gx, gy + gr); kg3.addColorStop(0, 'rgba(255,255,255,.28)'); kg3.addColorStop(0.5, 'rgba(255,255,255,0)'); c.fillStyle = kg3; c.beginPath(); c.arc(gx, gy, gr, 0, TAU); c.fill(); c.strokeStyle = 'rgba(0,0,0,.35)'; c.lineWidth = Math.max(0.6, gr * 0.14); c.beginPath(); c.arc(gx, gy, gr, 0, TAU); c.stroke(); }
   if (!g.dis && !g.gaga) { c.strokeStyle = 'rgba(0,0,0,.35)'; c.lineWidth = Math.max(0.6, Lb * 0.01); c.beginPath(); c.moveTo(nx, h * 0.06); c.quadraticCurveTo(nx - Lb * 0.03, h * 0.16, nx - Lb * 0.07, h * 0.12); c.stroke(); }
   if (o.uyku) { c.strokeStyle = '#0E1A22'; c.lineWidth = Math.max(1, gr * 0.35); c.fillStyle = P[0]; c.beginPath(); c.arc(gx, gy, gr * 1.22, Math.PI, TAU); c.fill(); c.beginPath(); c.moveTo(gx - gr, gy); c.lineTo(gx + gr, gy); c.stroke(); }
   /* taç */
@@ -916,6 +946,7 @@ function arkaKatmanCiz(A, kumY, tm, r) {
   c.filter = 'none';
   /* dipte asılı duran sis: sırtların eteği suya karışır */
   const ds = c.createLinearGradient(0, kumY - 150 * OL, 0, kumY + 10); ds.addColorStop(0, rgba(A.su[1], 0)); ds.addColorStop(1, rgba(karis(A.su[1], A.su[0], 0.3), derin ? 0.35 : 0.5)); c.fillStyle = ds; c.fillRect(0, kumY - 150 * OL, W, 160 * OL + 10);
+  grenUygula(c, k, 0.2);
   return k;
 }
 function kumKenar(x) { return SAHNE ? 0 : 0; }
@@ -960,6 +991,7 @@ function zeminKatmanCiz(A, kumY, tm, kayalar, mercan) {
   for (const m of onM) mercanCiz(c, m, ust(m.x) + 4, tm);
   /* ön kenarda hafif gölge */
   const og = c.createLinearGradient(0, H - 60, 0, H); og.addColorStop(0, 'rgba(0,0,0,0)'); og.addColorStop(1, 'rgba(0,0,0,.18)'); c.fillStyle = og; c.fillRect(0, H - 60, W, 60);
+  grenUygula(c, k, 0.45);
   return k;
 }
 function kayaCiz(c, k, kumY) {
@@ -1102,7 +1134,7 @@ function arkaPlan(c, t) {
   if (SAHNE.arka && SAHNE.foto) { /* fotoğraf arka plan: akıntıdaymış gibi çok yavaş kayar ve nefes alır */
     const k = 1.05 + Math.sin(t * 0.021) * 0.012, w = W * k, h = H * k;
     c.drawImage(SAHNE.arka, (W - w) / 2 + Math.sin(t * 0.037) * W * 0.012, (H - h) / 2 + Math.sin(t * 0.029 + 1) * H * 0.008, w, h);
-  } else if (SAHNE.arka) c.drawImage(SAHNE.arka, 0, 0, W, H); else { const g = c.createLinearGradient(0, 0, 0, H); g.addColorStop(0, A.su[0]); g.addColorStop(1, A.su[2]); c.fillStyle = g; c.fillRect(0, 0, W, H); }
+  } else if (SAHNE.arka) { const ka = SAHNE.arka, n = 24, sh = H / n, sk = ka.height / n; for (let i = 0; i < n; i++) { const dx = (Math.sin(t * 0.9 + i * 0.7) * 1.4 + Math.sin(t * 1.7 + i * 1.9) * 0.6) * OL; c.drawImage(ka, 0, i * sk, ka.width, sk + 1, dx - 3, i * sh, W + 6, sh + 1); } } else { const g = c.createLinearGradient(0, 0, 0, H); g.addColorStop(0, A.su[0]); g.addColorStop(1, A.su[2]); c.fillStyle = g; c.fillRect(0, 0, W, H); }
   const derin = SAHNE.tm === 'derin';
   c.save(); c.globalCompositeOperation = 'lighter';
   /* ışık hüzmeleri: ekranın üstündeki güneşten yelpaze gibi açılır, yavaşça salınır ve nefes alır */
@@ -1346,7 +1378,7 @@ function ciz(dt) {
   const liste = [...BAL.values()].sort((a, b) => (b.L || 0) - (a.L || 0));
   for (const b of liste) balikGuncelle(b, dt);
   golgeCiz(c, liste);
-  for (const b of liste) { const dd = dansDonusum(b, dt); balikCiz(c, b.d, b.x, b.y + (dd ? dd.oy : 0), b.L, b.faz, dd && dd.yon != null ? dd.yon : b.yon, { t: zaman, uyku: b.uyku || b.geceUyku, solgun: b.solgun, aci: dd ? dd.aci : 0, alfa: b.sersem > 0 ? 0.6 + Math.sin(zaman * 30) * 0.3 : 1 }); }
+  for (const b of liste) { const dd = dansDonusum(b, dt); balikCiz(c, b.d, b.x, b.y + (dd ? dd.oy : 0), b.L, b.faz, dd && dd.yon != null ? dd.yon : b.yon, { dunya: 1, t: zaman, uyku: b.uyku || b.geceUyku, solgun: b.solgun, aci: dd ? dd.aci : 0, alfa: b.sersem > 0 ? 0.6 + Math.sin(zaman * 30) * 0.3 : 1 }); }
   onKatman(c, zaman);
   havaCiz(c, zaman, dt);
   insUstCiz(c);
