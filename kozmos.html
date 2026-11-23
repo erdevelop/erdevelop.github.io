@@ -215,6 +215,7 @@ details{margin-top:12px;color:var(--mute);font-size:13.5px}summary{cursor:pointe
         <li><b>Umut-7 hikâyesi:</b> ilk yanaşmadan sonra kayıp koloni gemisinin izini sür. Kolonilerle ticaret yaptıkça itibarın artar, fiyatlar iyileşir. Tersanede yeni gemiler, boya ve gemi adı.</li>
         <li><b>Çevrimiçi:</b> aynı evrende uçan diğer oyuncuların gemilerini görürsün (yeşil). Bir sistemi evrende ilk keşfeden olursan adın oraya yazılır. Menüde keşif ve kazanç sıralaması var. Görünen adın gemi adındır (limanda Gemiler sekmesi).</li>
         <li><b>Kokpit (K):</b> sağ üstte motor gücü, gövde ısısı, pilot nabzı, yakıt, gövde ve warp çekirdeği. Yıldıza çok yaklaşırsan gövde ısınır ve 1.200 °C üstünde hasar alır; tehlikede nabız yükselir.</li>
+        <li><b>Teçhizat ve av:</b> tersanede füze, mayın, kalkan patlaması (Q), çekici ışın, tamir botları ve yardımcı drone al; gemine 2–3 tanesini tak. Limanların görev sekmesinde ☠ aranan korsanlar var: bul, yen, büyük ödülü al. 5. seviye karakolu kendi kolonine çevirebilirsin.</li>
         <li><b>Uzaylılar ve keşif:</b> bazı galaksilerde Vel 💠, Krai 🪲 ya da Oru 🐙 uygarlıkları yaşar; kendi mallarını satarlar, bu mallar insan kolonilerinde çok değerlidir. Limanda 📰 haberler kıtlık ve bolluk fırsatlarını gösterir. 🏛 işaretli gezegenlerde antik kalıntı bulmacaları, boşlukta uzay balinaları 🐋 ve koloniler arası konvoylar vardır.</li>
         <li><b>Bölüm 2 – Kadim Kapı:</b> Umut-7’yi bulduktan sonra kaptanın izini sür; komşu galaksiye git, gölge dronlarını yen ve galaksiler arası kapı ağını aç.</li>
         <li><b>Görev listesi</b> sol üstte, en yakından en uzağa sıralı ve kalan mesafeyle görünür.</li>
@@ -233,6 +234,7 @@ details{margin-top:12px;color:var(--mute);font-size:13.5px}summary{cursor:pointe
         <li><b>The Hope-7 story:</b> after your first docking, follow the trail of a lost colony ship. Trading with colonies builds reputation and better prices. New ships, paint and a ship name at the shipyard.</li>
         <li><b>Online:</b> you see other players flying in the same universe (green). Be the first in the universe to discover a system and your name stays on it. The menu has discovery and earnings leaderboards. Your display name is your ship name (Ships tab at a port).</li>
         <li><b>Cockpit (K):</b> engine power, hull heat, pilot heart rate, fuel, hull and warp core at the top right. Fly too close to a star and the hull heats up, taking damage above 1,200 °C; danger raises your heart rate.</li>
+        <li><b>Equipment and bounties:</b> buy missiles, mines, a shield burst (Q), a tractor beam, repair bots and a companion drone at the shipyard; equip 2–3 of them. Ports list ☠ wanted pirates in the missions tab: find them, beat them, claim the bounty. A level 5 outpost can become your own colony.</li>
         <li><b>Aliens and exploration:</b> some galaxies are home to the Vel 💠, Krai 🪲 or Oru 🐙; they sell their own goods, which are very valuable in human colonies. 📰 news at ports shows shortages and gluts. Planets marked 🏛 hold ancient ruin puzzles; space whales 🐋 roam the void and convoys run between colonies.</li>
         <li><b>Chapter 2 – The Ancient Gate:</b> after finding Hope-7, follow the captain’s lead; reach the neighbouring galaxy, defeat the shadow drones and open the gate network between galaxies.</li>
         <li><b>Mission list</b> at the top left, sorted nearest first with the remaining distance.</li>
@@ -765,6 +767,7 @@ addEventListener('keydown', e => {
   if (k === 'm') { HM.acik ? haritaKapat() : haritaAc(); }
   else if (k === 'o') modDegis();
   else if (k === 'k') kokpitAc(!kokAcik);
+  else if (k === 'q') patlamaKullan();
   else if (k === 'e' && yanasP && !limanP && oyunda) limanAc(yanasP);
   else if (k === 'e' && kaynP && oyunda) kazP ? kazDur() : kazBasla(kaynP);
   if (mod === 'oto' && oto && oyunda && !e.repeat) { if (k === ' ') otoWarp(); else if (k === 'shift') otoBoost(); }
@@ -1012,7 +1015,7 @@ function hudYaz(v, t) {
   kaynP = kp || null;
   kalintiP = yakinMi && en.kalinti && KESIF.has('p:' + en.id) && !KESIF.has('r:' + en.id) ? en : null;
   balinaP = null; if (oyunda && !limanP && v < 700) for (const b of yakinBalinalar(t)) if (!KESIF.has('w:' + b.id) && Math.hypot(b.x - SH.x, b.y - SH.y) < 1100) { balinaP = b; break; }
-  enkazP = oyunda && !limanP && v < 550 ? OLAY.find(o => o.tip === 'enkaz' && Math.hypot(o.x - SH.x, o.y - SH.y) < 340) || null : null;
+  enkazP = oyunda && !limanP && v < 550 ? OLAY.find(o => o.tip === 'enkaz' && Math.hypot(o.x - SH.x, o.y - SH.y) < (takili('cekici') ? 950 : 340)) || null : null;
   imdatP = oyunda && !limanP ? GOREV.find(g => g.tip === 'imdat' && Math.hypot(g.x - SH.x, g.y - SH.y) < 450) || null : null;
   if (kazP && kazP !== kaynP) kazDur();
   yanasP = oyunda && !limanP && en && en.kol && KESIF.has('k:' + en.id) && ed < (en.halka ? en.r * (en.halka.dis - 1) : 0) + 500 && v < 450 ? en : null;
@@ -1083,7 +1086,7 @@ function sistemCiz(s, t, X, Y, etiket) {
     gezegenCiz(p, t, GX, GY, sr, lx, ly);
     if (sr > 2.5 && z > 0.035) {
       const pb = KESIF.has('p:' + p.id);
-      if (KARAKOL.some(k => k.id === p.id)) { etiket.push(['⚑ ' + p.ad, GX, GY + Math.max(sr, 4) + 18, '#B8F09A']); karakolCiz(GX, GY, sr, t); }
+      const kkx = KARAKOL.find(k => k.id === p.id); if (kkx) { etiket.push([kkx.koloni ? '🏙⚑ ' + kkx.koloni.ad : '⚑ ' + p.ad, GX, GY + Math.max(sr, 4) + 18, '#B8F09A']); karakolCiz(GX, GY, sr, t); }
       else if (pb && p.kol) etiket.push([(yabanciMi(p) ? IRK[p.kol.irk].e : '🏙') + ' ' + kolAd(p), GX, GY + Math.max(sr, 4) + 18, '#FFD98A']);
       else if (pb) etiket.push([(p.kalinti && !KESIF.has('r:' + p.id) ? '🏛 ' : '') + p.ad, GX, GY + Math.max(sr, 4) + 18, '#C9D4F5']);
     }
@@ -1369,6 +1372,7 @@ function ciz(t) {
     }
     ctx.globalCompositeOperation = 'source-over';
   }
+  tecCiz(t);
   gemiCiz(t);
   gemiEtiket();
   yonCiz();
@@ -1429,11 +1433,14 @@ function gpYaz() {
         if (kk.sv < 5) h += `<button class="gpb" type="button" data-g="kup" ${kredi < 2000 * kk.sv ? 'disabled' : ''}>⬆ ${T('Seviye', 'Level')} ${kk.sv + 1} · ${SAYI(2000 * kk.sv)} 💰</button>`;
         if (kk.sv >= 3 && yakit < tank() - 1) h += `<button class="gpb" type="button" data-g="kyak">⛽ ${T('Yakıt al', 'Refuel')}</button>`;
         if (kk.sv >= 5 && can < maxCan() - 1) h += `<button class="gpb" type="button" data-g="konar">🔧 ${T('Onar', 'Repair')}</button>`;
+        if (kk.sv >= 5 && !kk.koloni) h += `<button class="gpb w" type="button" data-g="kkol" ${kredi < KOL_F ? 'disabled' : ''}>🏙 ${T('Koloniye dönüştür', 'Turn into a colony')} · ${SAYI(KOL_F)} 💰</button>`;
+        if (kk.koloni) { const vg = kkVergi(kk); h += `<button class="gpb y" type="button" data-g="kvergi" ${vg < 1 ? 'disabled' : ''}>🏙 ${esc(kk.koloni.ad)} · 👥 ${nufYaz(kkNufus(kk))} · ${T('vergi', 'taxes')} ${SAYI(vg)} 💰</button>`; if (Object.keys(KARGO).length) h += `<button class="gpb" type="button" data-g="ksat">📦 ${T('Kargoyu kolonine sat', 'Sell cargo to your colony')}</button>`; }
       } else if (KARAKOL.length < KK_MAX) h += `<button class="gpb" type="button" data-g="kkur" ${kredi < KK_F ? 'disabled' : ''}>🏗 ${T('Karakol kur', 'Build outpost')} · ${SAYI(KK_F)} 💰</button>`;
     }
     if (enkazP) h += `<button class="gpb y" type="button" data-g="enkaz">📦 ${T('Enkazı topla', 'Salvage wreck')}</button>`;
     if (imdatP) h += `<button class="gpb y" type="button" data-g="imdat" ${yakit < 5 ? 'disabled' : ''}>⛽ ${T('5 yakıt ver', 'Give 5 fuel')} · ${esc(imdatP.ad)}</button>`;
     if (HIK.kapi && yakinKapi()) h += `<button class="gpb w" type="button" data-g="kapi">⛩ ${T('Kapıdan geç', 'Use the gate')}</button>`;
+    if (takili('patlama') && KORS.length) h += `<button class="gpb ${patlamaT > 0 ? '' : 'w'}" type="button" data-g="patla" ${patlamaT > 0 ? 'disabled' : ''}>💥 ${patlamaT > 0 ? Math.ceil(patlamaT) + ' sn' : T('Patlama (Q)', 'Burst (Q)')}</button>`;
     if (kalintiP) h += `<button class="gpb y" type="button" data-g="kalinti">🏛 ${T('Kalıntıyı incele', 'Investigate ruins')}</button>`;
     if (balinaP) h += `<button class="gpb y" type="button" data-g="balina">🐋 ${T('Balinaları gözlemle', 'Observe the whales')}</button>`;
     if (yanasP) h += `<button class="gpb y" type="button" data-g="yanas">🛬 ${T('Yanaş', 'Dock')}: ${esc(kolAd(yanasP))}</button>`;
@@ -1459,6 +1466,10 @@ $('gp').addEventListener('click', e => {
   else if (g === 'kal' && kaynP) kkAl(kkBul(kaynP), kaynP);
   else if (g === 'kup' && kaynP) kkYukselt(kkBul(kaynP));
   else if (g === 'kyak') { yakit = tank(); SES.tik(); duyur('⛽ ' + T('Karakoldan yakıt alındı', 'Refuelled at your outpost')); }
+  else if (g === 'patla') patlamaKullan();
+  else if (g === 'kkol' && kaynP) kkKoloni(kkBul(kaynP), kaynP);
+  else if (g === 'kvergi' && kaynP) { const kk = kkBul(kaynP), vg = kkVergi(kk); if (vg > 0) { kazan(vg); kk.koloni.vt = Date.now(); duyur('🏙 ' + T('Vergi toplandı', 'Taxes collected'), 'koloni', `+${SAYI(vg)} 💰`); SES.koloni(); } }
+  else if (g === 'ksat') { let top = 0; for (const m in KARGO) { top += MAL[m].f * KARGO[m]; delete KARGO[m]; } top = Math.round(top * 1.1); kazan(top); duyur('🏙 ' + T('Kargo kolonine satıldı', 'Cargo sold to your colony'), 'koloni', `+${SAYI(top)} 💰`); SES.koloni(); }
   else if (g === 'konar') { can = maxCan(); SES.tik(); duyur('🔧 ' + T('Karakolda onarıldı', 'Repaired at your outpost')); }
   gpImza = ''; gpYaz(); kaydet();
 });
@@ -1473,7 +1484,7 @@ function kazBasla(p) {
 function kazDur() { if (!kazP) return; kazP = null; gpImza = ''; gpYaz(); kaydet(); }
 function kazAdim(dt) {
   if (!kazP) return;
-  kazT += dt; if (kazT < 1.4) return; kazT = 0;
+  kazT += dt; if (kazT < (takili('cekici') ? 0.7 : 1.4)) return; kazT = 0;
   const p = kazP, m = KAYN[p.tip], sa = Math.floor(Date.now() / 3.6e6);
   if (kotaKal(p) <= 0) { duyur('⛏ ' + T('Kaynak tükendi', 'Deposit depleted'), 'kesif', T('Bir saat sonra yenilenir', 'Refills in an hour')); kazDur(); return; }
   if (kargoDolu() >= kapasite()) { duyur('📦 ' + T('Ambar doldu', 'Cargo hold full'), 'kesif', T('Bir kolonide satabilirsin', 'Sell it at a colony')); kazDur(); return; }
@@ -1486,16 +1497,18 @@ function kazAdim(dt) {
 function koloniBul(sx, sy, R) { const L2 = []; for (let j = -R; j <= R; j++) for (let i = -R; i <= R; i++) { const s = sistem(sx + i, sy + j); if (!s) continue; for (const p of s.gez) if (p.kol) L2.push(p); } return L2; }
 function gorevHedef(g) {
   if (g.tip === 'imdat') return { x: g.x, y: g.y, dur: 220, ad: g.ad };
+  if (g.tip === 'kelle') return { x: g.x, y: g.y, dur: 0, ad: g.ad };
   if (g.tip === 'hikaye') return hikHedef(g);
   if (g.tip === 'kesif') { const tm = temel(g.hs[0], g.hs[1]); return tm ? { tm, ad: g.ad } : null; }
   const s = sistem(g.hs[0], g.hs[1]); const p = s && s.gez[g.hs[2]]; return p ? { p, ad: g.ad } : null;
 }
-const gEm = g => ({ kesif: '🔭', yolcu: '🧑‍🚀', imdat: '🆘', hikaye: '⭐' }[g.tip] || '📦');
+const gEm = g => ({ kesif: '🔭', yolcu: '🧑‍🚀', imdat: '🆘', hikaye: '⭐', kelle: '☠' }[g.tip] || '📦');
 const gSay = () => GOREV.filter(g => g.tip !== 'imdat' && g.tip !== 'hikaye').length;
 function gorevMetin(g) {
   const sek = g.hs ? `${T('Sektör', 'Sector')} ${g.hs[0]} : ${g.hs[1]}` : '', yildiz = g.oz ? ' ⭐' : '';
   if (g.tip === 'hikaye' && g.a >= 6) return `⛩ <b>${T('Kadim Kapı', 'Ancient Gate')} · ${T('Adım', 'Step')} ${g.a - 5}/4</b> — ${L(HIKM2[g.a])}<small>${esc(g.ad)}</small>`;
   if (g.tip === 'hikaye') return `⭐ <b>Umut-7 · ${T('Adım', 'Step')} ${g.a}/4</b> — ${L(HIKM[g.a])}<small>${esc(g.ad)}${sek ? ' · ' + sek : ''}</small>`;
+  if (g.tip === 'kelle') return `☠ <b>${T('Aranan', 'Wanted')}: ${esc(g.ad)}</b> — ${T('bul ve yok et', 'find and destroy')}<small>${sek} · 🛡 ${g.kc}</small>`;
   if (g.tip === 'imdat') return `🆘 <b>${T('İmdat', 'Distress')}: ${esc(g.ad)}</b> — ${T('5 yakıt götür', 'bring 5 fuel')}<small>${sek}</small>`;
   if (g.tip === 'teslim') return T(`📦 <b>${g.yuk} birim kargo</b> → ${esc(g.ad)}`, `📦 <b>${g.yuk} units of cargo</b> → ${esc(g.ad)}`) + yildiz + `<small>${esc(g.sis)}${T(' sistemi', ' system')} · ${sek}</small>`;
   if (g.tip === 'yolcu') return T(`🧑‍🚀 <b>${g.kisi} yolcu</b> → ${esc(g.ad)}`, `🧑‍🚀 <b>${g.kisi} passengers</b> → ${esc(g.ad)}`) + yildiz + `<small>${esc(g.sis)}${T(' sistemi', ' system')} · ${sek}</small>`;
@@ -1592,9 +1605,18 @@ function limanYaz() {
     const tek = gorevTeklif(p);
     h += `<div class="alt" style="margin:12px 0 0;font-weight:900;color:var(--ink)">${T('Bu limandaki işler', 'Jobs at this port')}</div>`;
     if (!tek.length) h += `<div class="alt">${T('Şu an iş yok, sonra tekrar uğra.', 'No jobs right now, come back later.')}</div>`;
+    const ar = arananlar(p);
+    if (ar.length) { h += `<div class="alt" style="margin:12px 0 0;font-weight:900;color:#FFB3A6">☠ ${T('Aranan korsanlar', 'Wanted pirates')}</div>`; ar.forEach((g, i) => { const dol = gSay() >= 4; h += `<div class="satir"><div>${gorevMetin(g)}<small style="color:var(--altin)">+${SAYI(g.odul)} 💰 · ${mesafeYaz(Math.hypot(g.x - SH.x, g.y - SH.y))}</small></div><div class="dg"><button class="kb al" type="button" data-kelle="${i}" ${dol ? 'disabled' : ''}>${dol ? T('En çok 4', 'Max 4') : T('Avı kabul et', 'Take the bounty')}</button></div></div>`; }); limanP._ar = ar; }
     tek.forEach((g, i) => { const yer = kargoDolu() + (g.yuk || 0) <= kapasite(), dol = gSay() >= 4; h += `<div class="satir"><div>${gorevMetin(g)}<small style="color:var(--altin)">+${SAYI(g.odul)} 💰${g.yuk ? ' · 📦 ' + g.yuk + T(' birim yer kaplar', ' units of space') : ''}</small></div><div class="dg"><button class="kb al" type="button" data-kabul="${i}" ${!yer || dol ? 'disabled' : ''}>${dol ? T('En çok 4', 'Max 4') : !yer ? T('Ambar dolu', 'Hold full') : T('Kabul et', 'Accept')}</button></div></div>`; });
     limanP._tek = tek;
   } else if (limanSek === 'ters') {
+    h += `<div class="alt" style="margin:4px 0 0;font-weight:900;color:var(--ink)">🧰 ${T('Teçhizat', 'Equipment')} (${TAK.length}/${slotSay()} ${T('yuva', 'slots')})</div>`;
+    for (const k in TEC) {
+      const E = TEC[k], var_ = TEKS.has(k), tk = takili(k);
+      const dg = tk ? `<button class="kb" type="button" data-tcik="${k}">${T('Çıkar', 'Remove')}</button>` : var_ ? `<button class="kb al" type="button" data-ttak="${k}" ${TAK.length >= slotSay() ? 'disabled' : ''}>${TAK.length >= slotSay() ? T('Yuva dolu', 'Slots full') : T('Tak', 'Equip')}</button>` : `<button class="kb al" type="button" data-tal="${k}" ${kredi < E.f ? 'disabled' : ''}>${T('Satın al', 'Buy')} · ${SAYI(E.f)} 💰</button>`;
+      h += `<div class="satir"><div>${E.e} <b>${L(E.ad)}</b>${tk ? ' ✓' : ''}<small>${L(E.ne)}</small></div><div class="dg">${dg}</div></div>`;
+    }
+    h += `<div class="alt" style="margin:12px 0 0;font-weight:900;color:var(--ink)">🛠 ${T('Yükseltmeler', 'Upgrades')}</div>`;
     h += `<div class="alt" style="margin:4px 0 0;font-size:12.5px">${T('Gemini geliştir: her parçanın 5 seviyesi var. Yükseltmeler gemi değiştirsen de kalır.', 'Upgrade your ship: every part has 5 levels. Upgrades stay when you switch ships.')}</div>`;
     for (const u of TERS) {
       const L0 = YUK[u.k], son = L0 >= 4, f = son ? 0 : tersFiyat(u, L0);
@@ -1617,7 +1639,7 @@ function limanYaz() {
 function gemiSec(k) {
   const yeniKap = Math.round(KAP[YUK.kargo] * GEMI[k].kargo);
   if (kargoDolu() > yeniKap) { duyur('📦 ' + T('Bu gemiye yükün sığmaz: önce biraz sat', 'Your cargo will not fit: sell some first'), 'uyari'); return false; }
-  const oran = can / maxCan(); gemiTip = k; can = Math.max(1, maxCan() * oran); return true;
+  const oran = can / maxCan(); gemiTip = k; can = Math.max(1, maxCan() * oran); TAK = TAK.slice(0, slotSay()); return true;
 }
 $('liman').addEventListener('click', e => {
   const p = limanP; if (!p) return; const b = e.target.closest('button'); if (!b || b.disabled) return;
@@ -1629,8 +1651,12 @@ $('liman').addEventListener('click', e => {
   else if (b.dataset.al) { const m = b.dataset.al, f = alF(p, m), n = Math.min(+b.dataset.n, kapasite() - kargoDolu(), Math.floor(kredi / f)); if (n > 0) { kredi -= n * f; KARGO[m] = (KARGO[m] || 0) + n; itEkle(p.id, 1); SES.tik(); } }
   else if (b.dataset.sat) { const m = b.dataset.sat, n = Math.min(+b.dataset.n, KARGO[m] || 0); if (n > 0) { kazan(n * satF(p, m)); KARGO[m] -= n; if (!KARGO[m]) delete KARGO[m]; itEkle(p.id, 1); SES.tik(); } }
   else if (b.dataset.kabul != null) { const g = (p._tek || [])[+b.dataset.kabul]; if (g && gSay() < 4 && kargoDolu() + (g.yuk || 0) <= kapasite()) { GOREV.push(g); ALINAN.add(g.id); SES.koloni(); gorevYaz(); } }
+  else if (b.dataset.kelle != null) { const g = (p._ar || [])[+b.dataset.kelle]; if (g && gSay() < 4) { GOREV.push(g); ALINAN.add(g.id); SES.koloni(); gorevYaz(); } }
   else if (b.dataset.iptal != null) { const g = GOREV[+b.dataset.iptal]; if (g && g.tip !== 'hikaye') GOREV.splice(+b.dataset.iptal, 1); SES.tik(); gorevYaz(); }
   else if (b.dataset.ters) { const u = TERS.find(x => x.k === b.dataset.ters), L0 = YUK[u.k]; if (L0 < 4) { const f = tersFiyat(u, L0); if (kredi >= f) { const oran = can / maxCan(); kredi -= f; YUK[u.k]++; if (u.k === 'tank') yakit = Math.min(tank(), yakit + (TANK[YUK.tank] - TANK[YUK.tank - 1])); if (u.k === 'kalkan') can = maxCan() * oran; SES.koloni(); duyur('🛠 ' + L(u.ad) + ' → ' + T('seviye ', 'level ') + (YUK[u.k] + 1), 'koloni', u.ne(YUK[u.k])); basarimKontrol(); } } }
+  else if (b.dataset.tal) { const k = b.dataset.tal, E = TEC[k]; if (kredi >= E.f && !TEKS.has(k)) { kredi -= E.f; TEKS.add(k); if (TAK.length < slotSay()) TAK.push(k); SES.koloni(); duyur(E.e + ' ' + L(E.ad), 'koloni', L(E.ne)); basarimKontrol(); } }
+  else if (b.dataset.ttak) { if (TAK.length < slotSay() && !takili(b.dataset.ttak)) TAK.push(b.dataset.ttak); SES.tik(); }
+  else if (b.dataset.tcik) { TAK = TAK.filter(k => k !== b.dataset.tcik); SES.tik(); }
   else if (b.dataset.gsec) { if (gemiSec(b.dataset.gsec)) { SES.koloni(); duyur('🚀 ' + L(GEMI[gemiTip].ad), 'koloni'); } }
   else if (b.dataset.gal) { const k = b.dataset.gal, G = GEMI[k]; if (G.f > 0 && kredi >= G.f) { kredi -= G.f; GEMILER.add(k); gemiSec(k); SES.koloni(); duyur('🛸 ' + T('Yeni gemi: ', 'New ship: ') + '<b>' + L(G.ad) + '</b>', 'koloni'); basarimKontrol(); } }
   else if (b.dataset.renk != null) { gemiRenk = +b.dataset.renk; SES.tik(); }
@@ -1678,10 +1704,97 @@ function tehlike(dt, t, v) {
     if (firtina <= 0) duyur('🌤 ' + T('Güneş fırtınası geçti', 'The solar storm has passed'), 'kesif');
   }
   for (let i = OLAY.length - 1; i >= 0; i--) if (Math.hypot(OLAY[i].x - SH.x, OLAY[i].y - SH.y) > 40000) OLAY.splice(i, 1);
-  korsanlar(dt, t); olaylar(dt, t);
+  korsanlar(dt, t); olaylar(dt, t); tecGuncelle(dt, t); kelleKontrol();
 }
 const korsanGuc = () => kis(Math.hypot(SH.x - SEK / 2, SH.y - SEK / 2) / SEK / 14, 0, 1);
 let kalintiP = null, balinaP = null;
+/* ================= teçhizat ================= */
+const TEC = {
+  fuze: { e: '🚀', ad: ['Füze rampası', 'Missile launcher'], ne: ['Korsanlara güdümlü füze atar (2,5 sn’de bir)', 'Fires homing missiles at enemies (every 2.5 s)'], f: 4000 },
+  mayin: { e: '💣', ad: ['Mayın bırakıcı', 'Mine layer'], ne: ['Savaşta arkana mayın bırakır', 'Drops mines behind you in combat'], f: 2500 },
+  patlama: { e: '💥', ad: ['Kalkan patlaması', 'Shield burst'], ne: ['Q ya da 💥: yakındaki düşmanları savurur ve yakar (20 sn)', 'Q or 💥: blasts nearby enemies away (20 s)'], f: 3500 },
+  cekici: { e: '🧲', ad: ['Çekici ışın', 'Tractor beam'], ne: ['Enkazı uzaktan toplar, kaynak toplamayı 2 kat hızlandırır', 'Salvages wrecks from afar, doubles collecting speed'], f: 2000 },
+  tamir: { e: '🔧', ad: ['Tamir botları', 'Repair bots'], ne: ['Savaş dışında gövdeyi yavaşça onarır', 'Slowly repairs the hull out of combat'], f: 3000 },
+  drone: { e: '🤖', ad: ['Yardımcı drone', 'Companion drone'], ne: ['Yanında uçar: düşmanlara ateş eder, enkaz toplar', 'Flies with you: shoots enemies, salvages wrecks'], f: 5000 },
+};
+const TEKS = new Set(Array.isArray(K.tek) ? K.tek : []);
+let TAK = Array.isArray(K.tak) ? K.tak.filter(k => TEC[k]) : [];
+const slotSay = () => gemiTip === 'zirh' || gemiTip === 'umut' ? 3 : 2;
+const takili = k => TAK.includes(k);
+const MAYIN = []; let patlamaT = 0, fuzeT = 0, mayinT = 0, droneA = 0, droneT = 0;
+function patlamaKullan() {
+  if (!takili('patlama') || patlamaT > 0 || !oyunda || limanP) return; patlamaT = 20;
+  patlamaEkle(SH.x, SH.y, 260, '127,227,255'); SES.patla();
+  for (let i = KORS.length - 1; i >= 0; i--) { const k = KORS[i], dx = k.x - SH.x, dy = k.y - SH.y, d = Math.hypot(dx, dy) || 1; if (d < 460) { k.can -= 60; k.vx += dx / d * 1400; k.vy += dy / d * 1400; if (k.can <= 0) korsanOldu(k, i); } }
+  for (let i = MERMI.length - 1; i >= 0; i--) if (!MERMI[i].d && Math.hypot(MERMI[i].x - SH.x, MERMI[i].y - SH.y) < 460) MERMI.splice(i, 1);
+  gpImza = ''; gpYaz();
+}
+function tecGuncelle(dt, t) {
+  patlamaT = Math.max(0, patlamaT - dt);
+  if (!oyunda || limanP) return;
+  const savas = KORS.length > 0;
+  if (takili('tamir') && !savas && can < maxCan()) can = Math.min(maxCan(), can + dt * 1.5);
+  if (takili('fuze') && savas) { fuzeT -= dt; if (fuzeT <= 0) { let en = null, ed = 1700; for (const k of KORS) { const d = Math.hypot(k.x - SH.x, k.y - SH.y); if (d < ed) { ed = d; en = k; } } if (en) { fuzeT = 2.5; const a = Math.atan2(en.y - SH.y, en.x - SH.x) + (Math.random() - 0.5) * 0.8; MERMI.push({ x: SH.x, y: SH.y, vx: Math.cos(a) * 700 + SH.vx, vy: Math.sin(a) * 700 + SH.vy, o: 0, w: 3.5, d: true, h: 45, fuze: en }); SES.ates(0.3); } } }
+  if (takili('mayin') && savas) { mayinT -= dt; if (mayinT <= 0 && KORS.some(k => Math.hypot(k.x - SH.x, k.y - SH.y) < 900)) { mayinT = 3; MAYIN.push({ x: SH.x - Math.cos(SH.a) * 30, y: SH.y - Math.sin(SH.a) * 30, o: 0 }); } }
+  for (let i = MAYIN.length - 1; i >= 0; i--) {
+    const m = MAYIN[i]; m.o += dt; if (m.o > 25) { MAYIN.splice(i, 1); continue; }
+    if (m.o > 0.8 && KORS.some(k => Math.hypot(k.x - m.x, k.y - m.y) < 120)) { MAYIN.splice(i, 1); patlamaEkle(m.x, m.y, 120, '255,170,80'); SES.patla(); for (let j = KORS.length - 1; j >= 0; j--) { const k = KORS[j]; if (Math.hypot(k.x - m.x, k.y - m.y) < 200) { k.can -= 80; if (k.can <= 0) korsanOldu(k, j); } } }
+  }
+  if (takili('drone')) {
+    droneA += dt * 1.6; droneT -= dt; const dx = SH.x + Math.cos(droneA) * 70, dy = SH.y + Math.sin(droneA) * 70;
+    if (droneT <= 0) {
+      droneT = 0.6; let en = null, ed = 750; for (const k of KORS) { const d = Math.hypot(k.x - dx, k.y - dy); if (d < ed) { ed = d; en = k; } }
+      if (en) { const hz = 2400, ax = en.x + en.vx * ed / hz - dx, ay = en.y + en.vy * ed / hz - dy, al = Math.hypot(ax, ay) || 1; MERMI.push({ x: dx, y: dy, vx: ax / al * hz + SH.vx, vy: ay / al * hz + SH.vy, o: 0, w: 0.8, d: true, h: 7 }); }
+      else { const o = OLAY.find(o2 => o2.tip === 'enkaz' && Math.hypot(o2.x - SH.x, o2.y - SH.y) < 650); if (o) enkazTopla(o); }
+    }
+  }
+  if (takili('cekici') && !takili('drone')) { const o = OLAY.find(o2 => o2.tip === 'enkaz' && Math.hypot(o2.x - SH.x, o2.y - SH.y) < 950); if (o && Math.random() < dt) enkazTopla(o); }
+}
+function tecCiz(t) {
+  const s2 = Math.max(cam.z, 0.6);
+  for (const m of MAYIN) { const [X, Y] = W2S(m.x, m.y); if (X < -10 || X > W + 10 || Y < -10 || Y > H + 10) continue; ctx.fillStyle = '#2A2F3A'; ctx.beginPath(); ctx.arc(X, Y, 6 * s2, 0, TAU); ctx.fill(); ctx.fillStyle = Math.sin(t * 8) > 0 ? '#FF5C6E' : '#5A1E26'; ctx.beginPath(); ctx.arc(X, Y, 2.5 * s2, 0, TAU); ctx.fill(); }
+  if (takili('drone') && oyunda) {
+    const [X, Y] = W2S(SH.x + Math.cos(droneA) * 70, SH.y + Math.sin(droneA) * 70);
+    ctx.save(); ctx.translate(X, Y); ctx.rotate(droneA * 2); ctx.scale(s2, s2); ctx.fillStyle = '#CFD8E8'; ctx.strokeStyle = '#2A3448'; ctx.lineWidth = 1; ctx.beginPath(); ctx.arc(0, 0, 5, 0, TAU); ctx.fill(); ctx.stroke();
+    for (let i = 0; i < 4; i++) { const a = i * Math.PI / 2; ctx.fillStyle = '#7FE3FF'; ctx.fillRect(Math.cos(a) * 7 - 1.5, Math.sin(a) * 7 - 1.5, 3, 3); } ctx.restore();
+  }
+}
+
+/* ================= aranan korsanlar ================= */
+const ARANAN_AD = [['Kızıl Sakal', 'Red Beard'], ['Kör Yıldız', 'Blind Star'], ['Demir Pençe', 'Iron Claw'], ['Kuzgun', 'Raven'], ['Sessiz Ölüm', 'Silent Death'], ['Yarım Ay', 'Half Moon'], ['Kara Toz', 'Black Dust'], ['Buz Diş', 'Ice Fang'], ['Çifte Kuyruk', 'Twin Tail'], ['Paslı Kanca', 'Rusty Hook']];
+function arananlar(p) {
+  const gun = Math.floor(Date.now() / 864e5), r = rng(h32(p.seed, gun, 66)), L2 = [];
+  for (let i = 0; i < 2; i++) {
+    const id = 'b' + p.id + '@' + gun + '#' + i; if (ALINAN.has(id)) continue;
+    const a = r() * TAU, d = 4 + r() * 8, x = p.s.x + Math.cos(a) * d * SEK, y = p.s.y + Math.sin(a) * d * SEK, ad = ARANAN_AD[(r() * ARANAN_AD.length) | 0];
+    L2.push({ id, tip: 'kelle', x, y, hs: [Math.floor(x / SEK), Math.floor(y / SEK)], ad: L(ad), odul: Math.round((1500 + d * 260 + r() * 900) / 10) * 10, kc: Math.round(500 + d * 80 + korsanGuc() * 400) });
+  }
+  return L2;
+}
+function kelleKontrol() {
+  for (const g of GOREV) {
+    if (g.tip !== 'kelle') continue; const d = Math.hypot(g.x - SH.x, g.y - SH.y);
+    if (!g.aktif && d < 3500 && SH.warp < 0.3) {
+      g.aktif = true; const a0 = Math.random() * TAU;
+      KORS.push({ x: g.x, y: g.y, vx: 0, vy: 0, a: a0, can: g.kc, max: g.kc, atT: 2, yon: 1, boss: true, gid: g.id, ad: g.ad });
+      for (let i = 0; i < 2; i++) { const a = a0 + (i ? 1 : -1) * 0.8; KORS.push({ x: g.x + Math.cos(a) * 400, y: g.y + Math.sin(a) * 400, vx: 0, vy: 0, a, can: 90, max: 90, atT: 2.5, yon: i ? 1 : -1 }); }
+      duyur('☠ ' + T('Aranan korsan: ', 'Wanted pirate: ') + '<b>' + esc(g.ad) + '</b>', 'uyari', T('Korumalarıyla birlikte saldırıyor!', 'Attacking with escorts!')); SES.uyari();
+    } else if (g.aktif && !KORS.some(k => k.gid === g.id)) g.aktif = false;
+  }
+}
+
+/* ================= karakoldan koloniye ================= */
+const KOL_F = 15000;
+const kkNufus = k => Math.min(250000, Math.round(1000 + (Date.now() - k.koloni.t0) / 3.6e6 * 400));
+const kkVergi = k => Math.floor(Math.min(24, (Date.now() - k.koloni.vt) / 3.6e6) * (40 + kkNufus(k) / 1000));
+function kkKoloni(k, p) {
+  if (!k || k.koloni || k.sv < 5 || kredi < KOL_F) return;
+  let ad = null; try { ad = prompt(T('Kolonine bir ad ver:', 'Name your colony:'), (gemiAd || pilotAd()) + T(' Kolonisi', ' Colony')); } catch (e) { }
+  if (ad === null) return; ad = (ad || '').trim().slice(0, 24) || p.ad;
+  kredi -= KOL_F; k.koloni = { ad, t0: Date.now(), vt: Date.now() };
+  duyur('🏙 ' + T('Kendi kolonin kuruldu: ', 'Your own colony is founded: ') + '<b>' + esc(ad) + '</b>', 'galaksi', T('Nüfus büyüdükçe vergi toplarsın; ücretsiz yakıt ve onarım verir.', 'As it grows you collect taxes; free fuel and repairs.')); SES.galaksi(); basarimKontrol(); kaydet();
+}
+
 /* ---- uzay balinaları ---- */
 const BAL = new Map();
 function balinaSuru(cx, cy) {
@@ -1805,7 +1918,8 @@ function golgeCikar(x, y) {
   duyur('👁 ' + T('Gölge dronları uyandı!', 'Shadow drones have awoken!'), 'uyari', T('Kapıyı koruyorlar: hepsini yen. Kalkan ve taret yükseltmeleri işine yarar.', 'They guard the gate: defeat them all. Shield and turret upgrades help.')); SES.uyari();
 }
 function korsanOldu(k, j) {
-  KORS.splice(j, 1); patlamaEkle(k.x, k.y, 70, '255,150,90'); SES.patla(); ST.korsan++;
+  KORS.splice(j, 1); patlamaEkle(k.x, k.y, k.boss ? 150 : 70, '255,150,90'); SES.patla(); ST.korsan++;
+  if (k.boss) { const g = GOREV.find(x => x.id === k.gid); if (g) { GOREV = GOREV.filter(x => x !== g); kazan(g.odul); ST.gorev++; ST.kelle = (ST.kelle || 0) + 1; gorevYaz(); setTimeout(() => { duyur('🎯 ' + T('Aranan yakalandı: ', 'Wanted pirate caught: ') + '<b>' + esc(g.ad) + '</b>', 'galaksi', `+${SAYI(g.odul)} 💰`); SES.galaksi(); }, 700); } }
   const g = korsanGuc(), od = Math.round(60 + g * 220 + Math.random() * 60); kazan(od);
   let yag = ''; if (Math.random() < 0.45) { const ml = Object.keys(MAL).filter(m => !OZEL.includes(m)), m = ml[(Math.random() * ml.length) | 0], n = Math.min(2 + ((Math.random() * 5) | 0), kapasite() - kargoDolu()); if (n > 0) { KARGO[m] = (KARGO[m] || 0) + n; yag = ` · ${MAL[m].e} +${n}`; } }
   duyur('💥 ' + T('Korsan yok edildi', 'Pirate destroyed'), 'kesif', `+${SAYI(od)} 💰${yag}`);
@@ -1822,7 +1936,8 @@ function korsanlar(dt, t) {
     const yak = d < 520, tx = yak ? -dy / d * k.yon : dx / d, ty = yak ? dx / d * k.yon : dy / d, vm = yak ? 650 : 1500 + g * 350;
     k.vx += (tx * vm + (yak ? SH.vx * 0.85 : 0) - k.vx) * Math.min(1, dt * 1.8); k.vy += (ty * vm + (yak ? SH.vy * 0.85 : 0) - k.vy) * Math.min(1, dt * 1.8);
     k.x += k.vx * dt; k.y += k.vy * dt; k.a = Math.atan2(dy, dx); k.atT -= dt;
-    if (k.atT <= 0 && d < 950) { k.atT = 1.2 + Math.random() * 0.8 - g * 0.4; const hz = 1500, td = d / hz, ax = SH.x + SH.vx * td - k.x, ay = SH.y + SH.vy * td - k.y, al = Math.hypot(ax, ay) || 1; MERMI.push({ x: k.x, y: k.y, vx: ax / al * hz + k.vx * 0.3, vy: ay / al * hz + k.vy * 0.3, o: 0, w: 1.4, d: false, h: k.golge ? 13 : 5 + g * 9 }); SES.ates(0.5); }
+    if (k.atT <= 0 && d < 1000 && k.boss) { k.atT = 0.9; for (const sp of [-0.18, 0, 0.18]) { const a = Math.atan2(dy, dx) + sp; MERMI.push({ x: k.x, y: k.y, vx: Math.cos(a) * 1500 + k.vx * 0.3, vy: Math.sin(a) * 1500 + k.vy * 0.3, o: 0, w: 1.4, d: false, h: 12 + g * 6 }); } SES.ates(0.4); }
+    else if (k.atT <= 0 && d < 950) { k.atT = 1.2 + Math.random() * 0.8 - g * 0.4; const hz = 1500, td = d / hz, ax = SH.x + SH.vx * td - k.x, ay = SH.y + SH.vy * td - k.y, al = Math.hypot(ax, ay) || 1; MERMI.push({ x: k.x, y: k.y, vx: ax / al * hz + k.vx * 0.3, vy: ay / al * hz + k.vy * 0.3, o: 0, w: 1.4, d: false, h: k.golge ? 13 : 5 + g * 9 }); SES.ates(0.5); }
   }
   SH.atT = (SH.atT || 0) - dt;
   if (KORS.length && SH.atT <= 0) {
@@ -1831,6 +1946,7 @@ function korsanlar(dt, t) {
   }
   for (let i = MERMI.length - 1; i >= 0; i--) {
     const m = MERMI[i]; m.o += dt; m.x += m.vx * dt; m.y += m.vy * dt; if (m.o > m.w) { MERMI.splice(i, 1); continue; }
+    if (m.fuze) { const hd = KORS.includes(m.fuze) ? m.fuze : KORS[0]; if (hd) { const ax = hd.x - m.x, ay = hd.y - m.y, al = Math.hypot(ax, ay) || 1, hz = 1300; m.vx += (ax / al * hz - m.vx) * Math.min(1, dt * 3); m.vy += (ay / al * hz - m.vy) * Math.min(1, dt * 3); } if (Math.random() < 0.5) PAR.push({ x: m.x, y: m.y, vx: 0, vy: 0, o: 0, w: 0.4, s: 2, wp: false }); }
     if (m.d) { for (let j = KORS.length - 1; j >= 0; j--) { const k = KORS[j]; if (Math.hypot(k.x - m.x, k.y - m.y) < 28) { k.can -= m.h; MERMI.splice(i, 1); patlamaEkle(m.x, m.y, 10, '127,227,255'); if (k.can <= 0) korsanOldu(k, j); break; } } }
     else if (Math.hypot(SH.x - m.x, SH.y - m.y) < 22) { MERMI.splice(i, 1); hasar(m.h); patlamaEkle(m.x, m.y, 12, '255,120,90'); }
   }
@@ -1956,16 +2072,18 @@ function ekCiz(t) {
   for (const k of KORS) {
     const [X, Y] = W2S(k.x, k.y);
     if (X < -30 || X > W + 30 || Y < -30 || Y > H + 30) { const a = Math.atan2(k.y - SH.y, k.x - SH.x); okCiz(GX + Math.cos(a) * 92, GY + Math.sin(a) * 92, a, 8, k.golge ? 'rgba(180,140,255,.95)' : 'rgba(255,80,95,.95)'); continue; }
-    ctx.save(); ctx.translate(X, Y); ctx.rotate(k.a); ctx.scale(s, s);
+    const kb = k.boss ? 1.9 : 1;
+    ctx.save(); ctx.translate(X, Y); ctx.rotate(k.a); ctx.scale(s * kb, s * kb);
     ctx.globalCompositeOperation = 'lighter'; ctx.fillStyle = 'rgba(255,90,70,.5)'; ctx.beginPath(); ctx.arc(-13, 0, 4 + Math.random() * 3, 0, TAU); ctx.fill(); ctx.globalCompositeOperation = 'source-over';
     ctx.fillStyle = k.golge ? '#22103E' : '#4A1820'; ctx.strokeStyle = k.golge ? '#B48CFF' : '#FF5C6E'; ctx.lineWidth = 1.4;
     ctx.beginPath(); ctx.moveTo(19, 0); ctx.lineTo(3, -6); ctx.lineTo(-9, -15); ctx.lineTo(-6, -4); ctx.lineTo(-12, 0); ctx.lineTo(-6, 4); ctx.lineTo(-9, 15); ctx.lineTo(3, 6); ctx.closePath(); ctx.fill(); ctx.stroke();
     ctx.fillStyle = '#FF5C6E'; ctx.beginPath(); ctx.arc(6, 0, 2.4, 0, TAU); ctx.fill(); ctx.restore();
-    if (k.can < k.max) { const w = 34 * s; ctx.fillStyle = 'rgba(0,0,0,.6)'; ctx.fillRect(X - w / 2, Y - 26 * s, w, 4); ctx.fillStyle = '#FF5C6E'; ctx.fillRect(X - w / 2, Y - 26 * s, w * Math.max(0, k.can / k.max), 4); }
+    if (k.boss) { ctx.font = '900 12px Nunito, system-ui, sans-serif'; ctx.textAlign = 'center'; ctx.fillStyle = '#FFD98A'; ctx.fillText('👑 ' + k.ad, X, Y - 40 * s); }
+    if (k.can < k.max || k.boss) { const w = 34 * s * kb; ctx.fillStyle = 'rgba(0,0,0,.6)'; ctx.fillRect(X - w / 2, Y - 26 * s, w, 4); ctx.fillStyle = '#FF5C6E'; ctx.fillRect(X - w / 2, Y - 26 * s, w * Math.max(0, k.can / k.max), 4); }
   }
   // mermiler
   ctx.globalCompositeOperation = 'lighter'; ctx.lineCap = 'round';
-  for (const m of MERMI) { const [X, Y] = W2S(m.x, m.y); if (X < -20 || X > W + 20 || Y < -20 || Y > H + 20) continue; const k = 0.018 * Math.max(z, 0.4); ctx.strokeStyle = m.d ? 'rgba(127,227,255,.95)' : 'rgba(255,110,90,.95)'; ctx.lineWidth = 2.2; ctx.beginPath(); ctx.moveTo(X, Y); ctx.lineTo(X - m.vx * k, Y - m.vy * k); ctx.stroke(); }
+  for (const m of MERMI) { const [X, Y] = W2S(m.x, m.y); if (m.fuze) { if (X > -20 && X < W + 20 && Y > -20 && Y < H + 20) { ctx.fillStyle = 'rgba(255,190,90,.95)'; ctx.beginPath(); ctx.arc(X, Y, 3.2, 0, TAU); ctx.fill(); } continue; } if (X < -20 || X > W + 20 || Y < -20 || Y > H + 20) continue; const k = 0.018 * Math.max(z, 0.4); ctx.strokeStyle = m.d ? 'rgba(127,227,255,.95)' : 'rgba(255,110,90,.95)'; ctx.lineWidth = 2.2; ctx.beginPath(); ctx.moveTo(X, Y); ctx.lineTo(X - m.vx * k, Y - m.vy * k); ctx.stroke(); }
   // patlamalar
   for (const p of PATL) {
     const [X, Y] = W2S(p.x, p.y), k = p.o / p.w, R = p.r * (0.3 + k) * Math.max(z, 0.5); if (X < -R || X > W + R || Y < -R || Y > H + R) continue;
@@ -2172,6 +2290,9 @@ const BASARIM = [
   ['kal1', '🏛', ['Arkeolog', 'Archaeologist'], ['Bir antik kalıntıyı çöz', 'Solve ancient ruins'], () => (ST.kalinti || 0) >= 1],
   ['kal10', '📜', ['Kadim bilge', 'Ancient sage'], ['10 kalıntı çöz', 'Solve 10 ruins'], () => (ST.kalinti || 0) >= 10],
   ['balina', '🐋', ['Balina şarkısı', 'Whale song'], ['Uzay balinalarını gözlemle', 'Observe space whales'], () => (ST.balina || 0) > 0],
+  ['kelle', '🎯', ['Kelle avcısı', 'Bounty hunter'], ['Bir aranan korsanı yakala', 'Catch a wanted pirate'], () => (ST.kelle || 0) >= 1],
+  ['tec', '🧰', ['Donanımlı', 'Well equipped'], ['Tüm teçhizat yuvalarını doldur', 'Fill all equipment slots'], () => TAK.length >= 2],
+  ['kendi', '🏙', ['Kurucu', 'Founder'], ['Kendi kolonini kur', 'Found your own colony'], () => KARAKOL.some(k => k.koloni)],
   ['kapi', '⛩', ['Kapı bekçisi', 'Gatekeeper'], ['Kadim Kapıları aç', 'Open the Ancient Gates'], () => !!HIK.kapi],
   ['hik', '🚀', ['Umut-7', 'Hope-7'], ['Hikâyeyi bitir', 'Finish the story'], () => HIK.a >= 5],
 ];
@@ -2447,7 +2568,7 @@ $('hEv').onclick = () => { const h = temel(0, 0); HM.x = h.x; HM.y = h.y; HM.z =
 $('hSil').onclick = () => { wp = null; haritaCiz(); kaydet(); };
 
 /* ================= menü, kayıt ================= */
-function kaydet(zorla) { if (window.__seriYukleniyor || (!oyunda && !zorla)) return; AG.siraGonder(); ls.set(KAYIT, { x: SH.x, y: SH.y, a: SH.a, kesif: [...KESIF], acik: [...ACIK], wp, zu: zKul, yol, kr: kredi, yak: yakit, kargo: KARGO, gorev: GOREV, alinan: [...ALINAN].slice(-300), yuk: YUK, kota: KOTA, gemi: gemiTip, gemiler: [...GEMILER], renk: gemiRenk, gad: gemiAd, can, sl: sonLiman, st: ST, bas: [...BAS], itibar: ITIBAR, karakol: KARAKOL, hik: HIK, v: 1 }); }
+function kaydet(zorla) { if (window.__seriYukleniyor || (!oyunda && !zorla)) return; AG.siraGonder(); ls.set(KAYIT, { x: SH.x, y: SH.y, a: SH.a, kesif: [...KESIF], acik: [...ACIK], wp, zu: zKul, yol, kr: kredi, yak: yakit, kargo: KARGO, gorev: GOREV, alinan: [...ALINAN].slice(-300), yuk: YUK, kota: KOTA, gemi: gemiTip, gemiler: [...GEMILER], renk: gemiRenk, gad: gemiAd, can, sl: sonLiman, st: ST, bas: [...BAS], itibar: ITIBAR, karakol: KARAKOL, hik: HIK, tek: [...TEKS], tak: TAK, v: 1 }); }
 function menuKur() {
   let s = 0, p = 0, k = 0, g = 0; for (const x of KESIF) { if (x[0] === 's') s++; else if (x[0] === 'p') p++; else if (x[0] === 'k') k++; else if (x[0] === 'g') g++; }
   $('istat').innerHTML = [[s, T('Sistem', 'Systems')], [p, T('Gezegen', 'Planets')], [k, T('Koloni', 'Colonies')], [g, T('Galaksi', 'Galaxies')]].map(([n, a]) => `<div><b>${SAYI(n)}</b><span>${a}</span></div>`).join('');
@@ -2472,7 +2593,7 @@ function basla() {
 $('mBasla').onclick = basla;
 $('mSifirla').onclick = () => {
   const b = $('mSifirla'); if (!b.dataset.emin) { b.dataset.emin = 1; b.textContent = T('Emin misin? Tekrar bas', 'Are you sure? Press again'); return; }
-  KESIF.clear(); ACIK.clear(); yol = 0; wp = null; oto = null; kredi = 500; for (const k in YUK) YUK[k] = 0; yakit = TANK[0]; for (const k in KARGO) delete KARGO[k]; GOREV = []; ALINAN.clear(); for (const k in KOTA) delete KOTA[k]; kazP = null; gemiTip = 'kasif'; GEMILER.clear(); GEMILER.add('kasif'); gemiRenk = 0; gemiAd = ''; can = maxCan(); sonLiman = null; for (const k in ST) ST[k] = 0; BAS.clear(); for (const k in ITIBAR) delete ITIBAR[k]; KARAKOL = []; HIK.a = 0; HIK.kapi = false; HIK.dalga = false; KORS.length = 0; MERMI.length = 0; OLAY.length = 0; firtina = 0; gorevYaz(); const p = evGezegen(), [px, py] = gezPos(p, simT()), a = Math.atan2(py - p.s.y, px - p.s.x);
+  KESIF.clear(); ACIK.clear(); yol = 0; wp = null; oto = null; kredi = 500; for (const k in YUK) YUK[k] = 0; yakit = TANK[0]; for (const k in KARGO) delete KARGO[k]; GOREV = []; ALINAN.clear(); for (const k in KOTA) delete KOTA[k]; kazP = null; gemiTip = 'kasif'; GEMILER.clear(); GEMILER.add('kasif'); gemiRenk = 0; gemiAd = ''; can = maxCan(); sonLiman = null; for (const k in ST) ST[k] = 0; BAS.clear(); for (const k in ITIBAR) delete ITIBAR[k]; KARAKOL = []; HIK.a = 0; HIK.kapi = false; HIK.dalga = false; TEKS.clear(); TAK = []; MAYIN.length = 0; KORS.length = 0; MERMI.length = 0; OLAY.length = 0; firtina = 0; gorevYaz(); const p = evGezegen(), [px, py] = gezPos(p, simT()), a = Math.atan2(py - p.s.y, px - p.s.x);
   SH.x = px + Math.cos(a) * (p.r + 260); SH.y = py + Math.sin(a) * (p.r + 260); SH.vx = SH.vy = 0; SH.a = a + Math.PI / 2; cam.x = SH.x; cam.y = SH.y;
   kaydet(true); kesifSayYaz(); menuKur();
 };
@@ -2520,7 +2641,7 @@ function kare(now) {
 }
 boyutla(); kesifSayYaz(); menuKur(); radarKur(); gorevYaz();
 requestAnimationFrame(kare);
-window.KOZ = { IRK, piyasaOlay, balinaSuru, yakinBalinalar, bulmacaAc, get BLM() { return BLM; },  kapiPos, golgeCikar,  get nabiz() { return nabiz; }, get isi() { return isi; },  AG, bolgeBul,  KORS, OLAY, HIK, ST, BAS, get can() { return can; }, set can(v) { can = v; }, korsanCikar, hikAdim, hikBasla, kuyruk, kuyrukPos, nebulaB, nebulaIc, get gemiTip() { return gemiTip; }, KARAKOL: () => KARAKOL, olayZorla: () => { olayT = 0; },  get kaynP() { return kaynP; }, get kazP() { return kazP; }, KARGO, get kredi() { return kredi; }, set kredi(v) { kredi = v; }, get yakit() { return yakit; }, GOREV: () => GOREV, YUK, limanAc, get limanP() { return limanP; }, get yanasP() { return yanasP; }, SH, cam, temel, sistem, galaksi, KESIF, basla, haritaAc, haritaKapat, set zoom(v) { zKul = v; }, DOKU };
+window.KOZ = { TEKS, get TAK() { return TAK; }, set TAK(v) { TAK = v; }, arananlar, patlamaKullan,  IRK, piyasaOlay, balinaSuru, yakinBalinalar, bulmacaAc, get BLM() { return BLM; },  kapiPos, golgeCikar,  get nabiz() { return nabiz; }, get isi() { return isi; },  AG, bolgeBul,  KORS, OLAY, HIK, ST, BAS, get can() { return can; }, set can(v) { can = v; }, korsanCikar, hikAdim, hikBasla, kuyruk, kuyrukPos, nebulaB, nebulaIc, get gemiTip() { return gemiTip; }, KARAKOL: () => KARAKOL, olayZorla: () => { olayT = 0; },  get kaynP() { return kaynP; }, get kazP() { return kazP; }, KARGO, get kredi() { return kredi; }, set kredi(v) { kredi = v; }, get yakit() { return yakit; }, GOREV: () => GOREV, YUK, limanAc, get limanP() { return limanP; }, get yanasP() { return yanasP; }, SH, cam, temel, sistem, galaksi, KESIF, basla, haritaAc, haritaKapat, set zoom(v) { zKul = v; }, DOKU };
 })();
 </script>
 <script data-goatcounter="https://erdevelop.goatcounter.com/count" async src="//gc.zgo.at/count.js"></script>
