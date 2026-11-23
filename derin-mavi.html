@@ -1814,6 +1814,7 @@ function menuAc() {
     <button type="button" data-m="akv"><span>🐠</span>${T('Akvaryumdakiler', 'Who’s in the aquarium')}<em>${ak ? NET.uyeler().size + '/' + AKV_KAP : T('çevrimdışı', 'offline')}</em></button>
     <button type="button" data-m="gunluk"><span>📜</span>${T('Bugün', 'Today')}${gunlukBekleyen() ? `<em>${gunlukBekleyen()} ${T('bekliyor', 'waiting')}</em>` : ''}</button>
     <button type="button" data-m="sefer"><span>🧭</span>${T('Keşif seferleri', 'Expeditions')}<em>${S.sefer ? (simdi() >= S.sefer.bit ? '🎁' : sureYaz(S.sefer.bit - simdi())) : ''}</em></button>
+    <button type="button" data-m="mevsim"><span>🍂</span>${T('Mevsim', 'Season')}<em>${HV.m ? T(MEVSIMLER[HV.m].ad[0], MEVSIMLER[HV.m].ad[1]) : ''}</em></button>
     <button type="button" data-m="d3"><span>🧊</span>${T('3D görünüm', '3D view')}<em>${G3 ? T('açık', 'on') : T('kapalı', 'off')}</em></button>
     <button type="button" data-m="oy"><span>🗳️</span>${T('Haftanın balığı', 'Fish of the week')}${GECEN_KAZANAN ? '<em>🏅</em>' : ''}</button>
     <h3>${T('ARKADAŞLAR', 'FRIENDS')}</h3>
@@ -1838,7 +1839,7 @@ function menuAc() {
     <button type="button" data-m="rehber"><span>🎓</span>${T('Rehberi baştan göster', 'Replay the tutorial')}</button>
     <button type="button" data-m="nasil"><span>❔</span>${T('Nasıl oynanır?', 'How to play')}</button></div>
     <p class="kucuk">${T('Balığın bu tarayıcıda saklanır. <a href="/hesap.html">Hesabınla giriş yapıp</a> senkronu açarsan diğer cihazlarına da gelir.', 'Your fish is stored in this browser. <a href="/hesap.html">Sign in</a> and turn on sync to bring it to your other devices.')}</p>`);
-  ic.querySelectorAll('[data-m]').forEach(b => b.onclick = () => ({ d3: () => { kaydet(false); try { localStorage.setItem('derin-gorunum', G3 ? '2d' : '3d'); } catch (e) { } location.href = '/derin-mavi.html'; }, akv: akvListeAc, hedef: hedefAc, dukkan: dukkanAc, bas: basarimAc, rekor: rekorAc, sohret: sohretAc, reklam: reklamTeklif, paylas, tasi: tasiAc, nasil: nasilAc, gunluk: gunlukAc, sefer: seferAc, okul: okulAc, unvan: unvanAc, foto: fotoAc, ansik: ansikAc, rehber: () => { S.rehber = 0; S.rb = Object.fromEntries(Object.entries(S.rb).filter(([k]) => k.startsWith('u_'))); S.kumandaOgrendi = 0; kaydet(false); modalKapat(); }, ark: arkadaslarAc, sezon: sezonAc, album: albumAc, etk: etkinlikAc, bild: bildirimAc, oy: oylamaAc })[b.dataset.m]());
+  ic.querySelectorAll('[data-m]').forEach(b => b.onclick = () => ({ d3: () => { kaydet(false); try { localStorage.setItem('derin-gorunum', G3 ? '2d' : '3d'); } catch (e) { } location.href = '/derin-mavi.html'; }, mevsim: mevsimAc, akv: akvListeAc, hedef: hedefAc, dukkan: dukkanAc, bas: basarimAc, rekor: rekorAc, sohret: sohretAc, reklam: reklamTeklif, paylas, tasi: tasiAc, nasil: nasilAc, gunluk: gunlukAc, sefer: seferAc, okul: okulAc, unvan: unvanAc, foto: fotoAc, ansik: ansikAc, rehber: () => { S.rehber = 0; S.rb = Object.fromEntries(Object.entries(S.rb).filter(([k]) => k.startsWith('u_'))); S.kumandaOgrendi = 0; kaydet(false); modalKapat(); }, ark: arkadaslarAc, sezon: sezonAc, album: albumAc, etk: etkinlikAc, bild: bildirimAc, oy: oylamaAc })[b.dataset.m]());
 }
 function akvListeAc() {
   const L = [...BAL.values()].filter(b => b.ad).sort((a, b) => ((b.v && b.v.b) || (b.ben ? boyHesap(S) : 0)) - ((a.v && a.v.b) || (a.ben ? boyHesap(S) : 0)));
@@ -4235,7 +4236,8 @@ var HAVALAR = {
 var HV = { m: null, h: null, anah: '', isik: 1, parlak: 0.05, gri: 0, yesil: 0, akinti: 0.4, renk: [120, 200, 230], guc: 0.08, simsek: 0, simsekZ: 6, gok: 0, damla: [], yaprak: [], bulut: [] };
 function havaHedef() {
   const d = new Date(simdi()), ay = d.getMonth(), q = new URLSearchParams(location.search);
-  const m = q.get('mevsim') in MEVSIMLER ? q.get('mevsim') : ay === 11 || ay < 2 ? 'kis' : ay < 5 ? 'ilkbahar' : ay < 8 ? 'yaz' : 'sonbahar';
+  let sec = ''; try { sec = localStorage.getItem('derin-mevsim') || ''; } catch (e) { }
+  const m = q.get('mevsim') in MEVSIMLER ? q.get('mevsim') : sec in MEVSIMLER ? sec : ay === 11 || ay < 2 ? 'kis' : ay < 5 ? 'ilkbahar' : ay < 8 ? 'yaz' : 'sonbahar';
   const blok = Math.floor(d.getHours() / 6), anah = `${d.getFullYear()}-${ay}-${d.getDate()}-${blok}`;
   let h = q.get('hava');
   if (!(h in HAVALAR)) { const ag = MEVSIMLER[m].ag, r = tohumRnd('hava' + anah)(); let top = Object.values(ag).reduce((a, b) => a + b, 0) * r; h = Object.keys(ag).find(k => (top -= ag[k]) < 0) || 'gunes'; }
@@ -4334,7 +4336,20 @@ try { if (localStorage.getItem('derin-panel-kapali') === '1') $('panel').classLi
 panelKapaYaz();
 $('panelKapa').onclick = e => { e.stopPropagation(); const k = $('panel').classList.toggle('kapali'); try { localStorage.setItem('derin-panel-kapali', k ? '1' : '0'); } catch (er) { } panelKapaYaz(); SES.kabarcik(0.015); };
 setInterval(() => { if (!S) return; const k = $('panel').classList.contains('kapali'); $('panelKapa').classList.toggle('uyar', k && (S.tok < 30 || !!$('secimBtn') && !$('secimBtn').hidden && $('secimBtn').dataset.is === 'acil')); }, 2000);
-$('havaCip').onclick = () => { if (!HV.h) return; const H = HAVALAR[HV.h], M = MEVSIMLER[HV.m]; duyur(`${M.e} ${T(M.ad[0], M.ad[1])} · ${H.e} ${T(H.ad[0] + '. ' + H.bilgi[0], H.ad[1] + '. ' + H.bilgi[1])} ${T('Hava günde dört kez değişir.', 'The weather changes four times a day.')}`); };
+function mevsimAc() {
+  let sec = ''; try { sec = localStorage.getItem('derin-mevsim') || ''; } catch (e) { }
+  const H = HAVALAR[HV.h] || HAVALAR.gunes;
+  const kart = (k, e, ad, alt) => `<button class="secim${sec === k ? ' sec' : ''}" type="button" data-mv="${k}" style="${sec === k ? 'outline:3px solid #7fe0ff' : ''}"><span style="font-size:30px">${e}</span>${ad}<small>${alt}</small></button>`;
+  const ic = modal(`<h2>${T('Mevsim', 'Season')}</h2><p class="alt">${T('Şu an hava: ', 'Current weather: ')}${H.e} ${T(H.ad[0] + '. ' + H.bilgi[0], H.ad[1] + '. ' + H.bilgi[1])} ${T('Hava günde dört kez değişir.', 'The weather changes four times a day.')}</p><div class="secimler">
+    ${kart('', '📅', T('Takvime göre', 'By calendar'), T('Gerçek aya göre değişir', 'Follows the real month'))}
+    ${kart('ilkbahar', '🌱', T('İlkbahar', 'Spring'), T('Yeşilimsi, planktonlu su', 'Greenish water, lots of plankton'))}
+    ${kart('yaz', '🏖️', T('Yaz', 'Summer'), T('Berrak turkuaz, bol güneş', 'Clear turquoise, lots of sun'))}
+    ${kart('sonbahar', '🍂', T('Sonbahar', 'Autumn'), T('Kehribar tonlu su, düşen yapraklar', 'Amber-tinted water, falling leaves'))}
+    ${kart('kis', '❄️', T('Kış', 'Winter'), T('Soğuk mavi, arada buz', 'Cold blue, ice now and then'))}</div>
+    <p class="kucuk">${T('Seçim yalnızca görünümü değiştirir; kışa özel tür gibi oyun kuralları gerçek takvime bağlı kalır.', 'This only changes the look; game rules such as winter-only species still follow the real calendar.')}</p>`);
+  ic.querySelectorAll('[data-mv]').forEach(b => b.onclick = () => { try { if (b.dataset.mv) localStorage.setItem('derin-mevsim', b.dataset.mv); else localStorage.removeItem('derin-mevsim'); } catch (e) { } HV.anah = ''; modalKapat(); havaGuncelle(0); const M = MEVSIMLER[HV.m]; duyur(`${M.e} ${T(M.ad[0], M.ad[1])}`); });
+}
+$('havaCip').onclick = () => { if (HV.h) mevsimAc(); };
 setInterval(havaCipYaz, 2000);
 const sesYaz = () => { const d = SES.duzey(); $('sesBtn').textContent = d <= 0 ? '🔇' : d < 0.5 ? '🔉' : '🔊'; $('sesSus').textContent = d <= 0 ? '🔇' : '🔈'; $('sesYuzde').textContent = '%' + Math.round(d * 100); };
 $('sesBtn').onclick = () => { $('sesKutu').hidden = !$('sesKutu').hidden; };
