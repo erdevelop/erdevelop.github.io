@@ -50,13 +50,18 @@ addEventListener('error', e => { const h = document.getElementById('hata'); if (
 <script type="module">
 import * as THREE from '/derin-mavi/3d/three.module.min.js';
 import { GLTFLoader } from '/derin-mavi/3d/addons/loaders/GLTFLoader.js';
+import { EffectComposer } from '/derin-mavi/3d/addons/postprocessing/EffectComposer.js';
+import { RenderPass } from '/derin-mavi/3d/addons/postprocessing/RenderPass.js';
+import { ShaderPass } from '/derin-mavi/3d/addons/postprocessing/ShaderPass.js';
+import { UnrealBloomPass } from '/derin-mavi/3d/addons/postprocessing/UnrealBloomPass.js';
+import { OutputPass } from '/derin-mavi/3d/addons/postprocessing/OutputPass.js';
 window.__d3 = 1;
 
 const T = (tr, en) => (document.documentElement.lang === 'en' ? en : tr);
 const $ = id => document.getElementById(id);
 const mobil = matchMedia('(pointer:coarse)').matches || Math.min(innerWidth, innerHeight) < 600;
 let kalite = localStorage.getItem('derin3d-kalite') || (mobil ? 'orta' : 'yuksek');
-const KAL = { dusuk: { dpr: 1, golge: false, parca: 250 }, orta: { dpr: 1.5, golge: false, parca: 450 }, yuksek: { dpr: 2, golge: true, parca: 800 } };
+const KAL = { dusuk: { dpr: 1, golge: false, sm: 512, parca: 250, post: false, kostik: 0.9 }, orta: { dpr: 1.5, golge: true, sm: 1024, parca: 450, post: false, kostik: 1.15 }, yuksek: { dpr: 2, golge: true, sm: 2048, parca: 900, post: true, kostik: 1.4 } };
 const kaliteYaz = () => { $('kalite').textContent = { dusuk: T('⚙️ Düşük', '⚙️ Low'), orta: T('⚙️ Orta', '⚙️ Medium'), yuksek: T('⚙️ Yüksek', '⚙️ High') }[kalite]; };
 
 /* ---------------- çizici, sahne, kamera ---------------- */
@@ -65,25 +70,26 @@ let R;
 try { R = new THREE.WebGLRenderer({ canvas, antialias: true, powerPreference: 'high-performance' }); }
 catch (e) { $('hata').style.display = 'block'; document.querySelector('#yukle i').style.display = 'none'; throw e; }
 R.outputColorSpace = THREE.SRGBColorSpace;
-R.toneMapping = THREE.ACESFilmicToneMapping; R.toneMappingExposure = 1.1;
+R.toneMapping = THREE.NeutralToneMapping; R.toneMappingExposure = 1.12;
 R.shadowMap.type = THREE.PCFSoftShadowMap;
 const sahne = new THREE.Scene();
-const SIS = new THREE.Color('#14657f');
-sahne.fog = new THREE.FogExp2(SIS, 0.048);
+const SIS = new THREE.Color('#1a7d99');
+sahne.fog = new THREE.FogExp2(SIS, 0.044);
 const kam = new THREE.PerspectiveCamera(50, 1, 0.1, 220);
 const KAM0 = new THREE.Vector3(0, 3.3, 14), BAK0 = new THREE.Vector3(0, 2.7, -2);
 let dikey = false;
 function boyut() {
   const w = innerWidth, h = innerHeight; R.setPixelRatio(Math.min(devicePixelRatio, KAL[kalite].dpr)); R.setSize(w, h, false);
+  if (typeof komp !== 'undefined') { komp.setPixelRatio(Math.min(devicePixelRatio, KAL[kalite].dpr)); komp.setSize(w, h); }
   kam.aspect = w / h; dikey = kam.aspect < 0.9; KAM0.set(0, dikey ? 2.6 : 3.3, dikey ? 11.5 : 14); BAK0.set(dikey ? 1 : 0, dikey ? 2.6 : 2.7, -2); const yatay = (dikey ? 56 : 72) * Math.PI / 180; kam.fov = THREE.MathUtils.clamp(2 * Math.atan(Math.tan(yatay / 2) / kam.aspect) * 180 / Math.PI, 38, 88); kam.updateProjectionMatrix();
 }
-function kaliteUygula() { R.shadowMap.enabled = KAL[kalite].golge; sahne.traverse(o => { if (o.material) [].concat(o.material).forEach(m => m.needsUpdate = true); }); boyut(); kaliteYaz(); }
+function kaliteUygula() { const K = KAL[kalite]; R.shadowMap.enabled = K.golge; gunes.shadow.mapSize.set(K.sm, K.sm); if (gunes.shadow.map) { gunes.shadow.map.dispose(); gunes.shadow.map = null; } U.kostikGuc.value = K.kostik; if (typeof parcaKur === 'function' && PARCA) parcaKur(); sahne.traverse(o => { if (o.material) [].concat(o.material).forEach(m => m.needsUpdate = true); }); boyut(); kaliteYaz(); }
 $('kalite').onclick = () => { kalite = { dusuk: 'orta', orta: 'yuksek', yuksek: 'dusuk' }[kalite]; localStorage.setItem('derin3d-kalite', kalite); kaliteUygula(); };
 
 /* ---------------- gökyüzü kubbesi: yukarısı aydınlık, aşağısı koyu su ---------------- */
 const kubbeMat = new THREE.ShaderMaterial({
   side: THREE.BackSide, depthWrite: false, fog: false,
-  uniforms: { uUst: { value: new THREE.Color('#8fe0f2') }, uOrta: { value: new THREE.Color('#14657f') }, uAlt: { value: new THREE.Color('#04202e') } },
+  uniforms: { uUst: { value: new THREE.Color('#b4f3ff') }, uOrta: { value: new THREE.Color('#1a7d99') }, uAlt: { value: new THREE.Color('#06324a') } },
   vertexShader: 'varying vec3 vD; void main(){ vD = normalize(position); gl_Position = projectionMatrix * modelViewMatrix * vec4(position,1.0); }',
   fragmentShader: `varying vec3 vD; uniform vec3 uUst, uOrta, uAlt;
     void main(){ float y = vD.y; vec3 c = y > 0.0 ? mix(uOrta, uUst, smoothstep(0.0, 0.95, y)) : mix(uOrta, uAlt, smoothstep(0.0, 0.5, -y));
@@ -97,8 +103,8 @@ const pm = new THREE.PMREMGenerator(R); const envS = new THREE.Scene(); envS.add
 sahne.environment = pm.fromScene(envS, 0.04).texture; sahne.environmentIntensity = 0.55;
 
 /* ---------------- ışıklar ---------------- */
-sahne.add(new THREE.HemisphereLight('#9fe2f5', '#3b3424', 0.9));
-const gunes = new THREE.DirectionalLight('#e8f9ff', 2.6); gunes.position.set(5, 22, 8); gunes.castShadow = true;
+sahne.add(new THREE.HemisphereLight('#8fe8ff', '#c9b68c', 1.15));
+const gunes = new THREE.DirectionalLight('#fff3dc', 3.3); gunes.position.set(5, 22, 8); gunes.castShadow = true;
 gunes.shadow.mapSize.set(2048, 2048); Object.assign(gunes.shadow.camera, { left: -18, right: 18, top: 18, bottom: -18, near: 1, far: 60 }); gunes.shadow.bias = -0.0004; gunes.shadow.normalBias = 0.03;
 sahne.add(gunes);
 
@@ -115,12 +121,25 @@ function kostikDoku(n = 256) {
   const t = new THREE.CanvasTexture(cv); t.wrapS = t.wrapT = THREE.RepeatWrapping; t.colorSpace = THREE.NoColorSpace; return t;
 }
 const KOSTIK = kostikDoku();
-const U = { zaman: { value: 0 }, kostikGuc: { value: 1.0 }, kostik: { value: KOSTIK } };
+/* kaya ve mercanlara ince pürüz: döşenebilir gürültüden normal ve yükseklik dokusu */
+function detayDoku(n = 256) {
+  const h = new Float32Array(n * n), r = () => Math.random();
+  const kat = (f, a) => { const g = new Float32Array((f + 1) * (f + 1)); for (let i = 0; i < g.length; i++) g[i] = r(); for (let y = 0; y <= f; y++) g[y * (f + 1) + f] = g[y * (f + 1)]; for (let x = 0; x <= f; x++) g[f * (f + 1) + x] = g[x];
+    for (let j = 0; j < n; j++) for (let i = 0; i < n; i++) { const u = i / n * f, v = j / n * f, x0 = Math.floor(u), y0 = Math.floor(v), fx = u - x0, fy = v - y0, sx = fx * fx * (3 - 2 * fx), sy = fy * fy * (3 - 2 * fy), a0 = g[y0 * (f + 1) + x0], b0 = g[y0 * (f + 1) + x0 + 1], a1 = g[(y0 + 1) * (f + 1) + x0], b1 = g[(y0 + 1) * (f + 1) + x0 + 1]; h[j * n + i] += a * ((a0 + (b0 - a0) * sx) * (1 - sy) + (a1 + (b1 - a1) * sx) * sy); } };
+  kat(4, 0.5); kat(8, 0.25); kat(16, 0.14); kat(32, 0.08); kat(64, 0.04);
+  const a = document.createElement('canvas'), b = document.createElement('canvas'); a.width = a.height = b.width = b.height = n;
+  const ax = a.getContext('2d'), bx = b.getContext('2d'), ai = ax.createImageData(n, n), bi = bx.createImageData(n, n);
+  for (let j = 0; j < n; j++) for (let i = 0; i < n; i++) { const o = (j * n + i) * 4, dx = h[j * n + (i + 1) % n] - h[j * n + (i - 1 + n) % n], dy = h[((j + 1) % n) * n + i] - h[((j - 1 + n) % n) * n + i], nx = -dx * 6, ny = -dy * 6, l = Math.hypot(nx, ny, 1); ai.data[o] = (nx / l * 0.5 + 0.5) * 255; ai.data[o + 1] = (ny / l * 0.5 + 0.5) * 255; ai.data[o + 2] = (1 / l * 0.5 + 0.5) * 255; ai.data[o + 3] = 255; const v = Math.min(255, Math.max(0, (h[j * n + i] - 0.25) * 255 / 0.75)); bi.data[o] = bi.data[o + 1] = bi.data[o + 2] = v; bi.data[o + 3] = 255; }
+  ax.putImageData(ai, 0, 0); bx.putImageData(bi, 0, 0);
+  return [a, b].map(c => { const t = new THREE.CanvasTexture(c); t.wrapS = t.wrapT = THREE.RepeatWrapping; t.colorSpace = THREE.NoColorSpace; return t; });
+}
+const [DETAY_N, DETAY_H] = detayDoku();
+const U = { zaman: { value: 0 }, kostikGuc: { value: 1.0 }, kostik: { value: KOSTIK }, detayN: { value: DETAY_N }, detayH: { value: DETAY_H } };
 
 /* malzemelere ekle: dünya konumuna göre üstten düşen ışık ağı; istenirse balık yüzmesi ya da akıntıda salınım */
 function yama(mat, ek = {}) {
   mat.onBeforeCompile = sh => {
-    sh.uniforms.uZaman = U.zaman; sh.uniforms.uKostik = U.kostik; sh.uniforms.uKostikGuc = U.kostikGuc;
+    sh.uniforms.uZaman = U.zaman; sh.uniforms.uKostik = U.kostik; sh.uniforms.uKostikGuc = U.kostikGuc; sh.uniforms.uDetayN = U.detayN; sh.uniforms.uDetayH = U.detayH;
     if (ek.yuz) { sh.uniforms.uFaz = ek.yuz.faz; sh.uniforms.uGenlik = ek.yuz.genlik; }
     sh.vertexShader = 'varying vec3 vDP; varying vec3 vDN;\nuniform float uZaman;\n' + (ek.yuz ? 'uniform float uFaz; uniform float uGenlik;\n' : '') + (ek.salin ? 'attribute float aBoy; attribute float aFaz;\n' : '') + sh.vertexShader;
     let govde = '#include <begin_vertex>\n';
@@ -129,7 +148,19 @@ function yama(mat, ek = {}) {
     if (ek.dokunac) govde += 'float dk = max(0.0, position.y - 0.25) * 2.4; transformed.x += dk * sin(uZaman * 1.6 + position.x * 9.0 + position.z * 7.0) * 0.07; transformed.z += dk * cos(uZaman * 1.3 + position.z * 9.0) * 0.06;\n';
     sh.vertexShader = sh.vertexShader.replace('#include <begin_vertex>', govde)
       .replace('#include <project_vertex>', '#include <project_vertex>\n vec4 dpw = modelMatrix * vec4(transformed, 1.0); vDP = dpw.xyz; vDN = normalize(mat3(modelMatrix) * objectNormal);');
-    sh.fragmentShader = 'varying vec3 vDP; varying vec3 vDN; uniform float uZaman; uniform sampler2D uKostik; uniform float uKostikGuc;\n' + sh.fragmentShader.replace('#include <opaque_fragment>', `
+    let fs = sh.fragmentShader;
+    if (ek.detay) {
+      fs = fs.replace('#include <color_fragment>', `#include <color_fragment>
+        { vec3 tw = pow(abs(vDN), vec3(4.0)); tw /= (tw.x + tw.y + tw.z); vec3 dp = vDP * ${ek.detay.toFixed(2)};
+          float dh = texture2D(uDetayH, dp.zy).r * tw.x + texture2D(uDetayH, dp.xz).r * tw.y + texture2D(uDetayH, dp.xy).r * tw.z;
+          diffuseColor.rgb *= mix(0.62, 1.12, dh); }`)
+        .replace('#include <normal_fragment_maps>', `#include <normal_fragment_maps>
+        { vec3 tw = pow(abs(vDN), vec3(4.0)); tw /= (tw.x + tw.y + tw.z); vec3 dp = vDP * ${ek.detay.toFixed(2)};
+          vec3 nx = texture2D(uDetayN, dp.zy).xyz * 2.0 - 1.0, ny = texture2D(uDetayN, dp.xz).xyz * 2.0 - 1.0, nz = texture2D(uDetayN, dp.xy).xyz * 2.0 - 1.0;
+          vec3 pert = tw.x * vec3(0.0, nx.y, nx.x) + tw.y * vec3(ny.x, 0.0, ny.y) + tw.z * vec3(nz.x, nz.y, 0.0);
+          normal = normalize(normal + (viewMatrix * vec4(pert * 0.9, 0.0)).xyz); }`);
+    }
+    sh.fragmentShader = 'varying vec3 vDP; varying vec3 vDN; uniform float uZaman; uniform sampler2D uKostik; uniform float uKostikGuc; uniform sampler2D uDetayN; uniform sampler2D uDetayH;\n' + fs.replace('#include <opaque_fragment>', `
       { vec2 kp = vDP.xz * 0.2;
         float ka = texture2D(uKostik, kp + vec2(uZaman * 0.021, uZaman * 0.013)).r;
         float kb = texture2D(uKostik, kp * 1.31 + vec2(-uZaman * 0.017, uZaman * 0.023)).r;
@@ -139,7 +170,7 @@ function yama(mat, ek = {}) {
         outgoingLight += diffuseColor.rgb * vec3(0.8, 0.97, 1.0) * kk * yon * yuk * uKostikGuc; }
       #include <opaque_fragment>`);
   };
-  mat.customProgramCacheKey = () => 'dm3d' + Object.keys(ek).join('');
+  mat.customProgramCacheKey = () => 'dm3d' + Object.keys(ek).join('') + (ek.detay || '');
   return mat;
 }
 
@@ -225,7 +256,10 @@ let BEN = null, SURU = [], DUVAR = null;
 const HACIM = { x1: -13, x2: 13, y1: 0.7, y2: 8.5, z1: -7, z2: 4 };
 
 function malzHazirla(o, ek) {
-  o.traverse(m => { if (!m.isMesh) return; m.castShadow = true; m.receiveShadow = true; const mats = [].concat(m.material).map(mt => { const n = mt.clone(); n.vertexColors = true; if (n.name === 'yuzgec') { n.transparent = true; n.opacity = 0.86; n.side = THREE.DoubleSide; n.depthWrite = true; } if (n.name === 'isik') { n.emissive = new THREE.Color('#9fffe8'); n.emissiveIntensity = 2.5; } return yama(n, ek(n)); }); m.material = mats.length === 1 ? mats[0] : mats; });
+  o.traverse(m => { if (!m.isMesh) return; m.castShadow = true; m.receiveShadow = true; const mats = [].concat(m.material).map(mt => { let n = mt.clone();
+    if (/^govde|^goz/.test(n.name)) { const parlak = n.name === 'govde_parlak', goz = n.name === 'goz'; n = new THREE.MeshPhysicalMaterial({ name: n.name, vertexColors: true, roughness: goz ? 0.05 : parlak ? 0.3 : 0.42, metalness: parlak ? 0.45 : 0.05, clearcoat: goz ? 1 : 0.55, clearcoatRoughness: goz ? 0.02 : 0.28, iridescence: parlak ? 0.7 : 0.18, iridescenceIOR: 1.6, sheen: parlak ? 0 : 0.3, sheenColor: new THREE.Color('#bfe9ff') }); }
+    if (n.name === 'kaya') n.color.setRGB(1.12, 1.06, 0.98);
+    if (n.name === 'mercan' || n.name === 'anemon') n.color.setRGB(1.18, 1.12, 1.12); n.vertexColors = true; if (n.name === 'yuzgec') { n.transparent = true; n.opacity = 0.86; n.side = THREE.DoubleSide; n.depthWrite = true; } if (n.name === 'isik') { n.emissive = new THREE.Color('#9fffe8'); n.emissiveIntensity = 2.5; } return yama(n, ek(n)); }); m.material = mats.length === 1 ? mats[0] : mats; });
 }
 function yerlestir(kaynak, x, z, olcek, donus, yuzeyde) {
   const o = kaynak.clone(true); o.position.set(x, 0, z); o.scale.setScalar(olcek); o.rotation.y = donus;
@@ -250,7 +284,7 @@ function hacimdenHedef(b) {
 async function kur() {
   const [bg, rg] = await Promise.all([yukle('/derin-mavi/3d/baliklar.glb'), yukle('/derin-mavi/3d/resif.glb')]);
   const P = {}; rg.scene.traverse(o => { if (o.isMesh && o.parent === rg.scene) P[o.name] = o; });
-  for (const k in P) { P[k].position.set(0, 0, 0); P[k].rotation.set(0, 0, 0); P[k].scale.set(1, 1, 1); malzHazirla(P[k], m => (/anemon/.test(m.name) ? { dokunac: 1 } : {})); }
+  for (const k in P) { P[k].position.set(0, 0, 0); P[k].rotation.set(0, 0, 0); P[k].scale.set(1, 1, 1); malzHazirla(P[k], m => (/anemon/.test(m.name) ? { dokunac: 1, detay: 2.5 } : /kaya/.test(m.name) ? { detay: 0.9 } : { detay: 2.2 })); }
   const B = {}; bg.scene.children.forEach(o => { if (o.name.startsWith('balik_')) B[o.name.slice(6)] = o; });
 
   /* resif duvarı ve mağara solda */
@@ -354,9 +388,32 @@ function dongu() {
   /* kamera balığı yumuşakça izler */
   if (BEN) { const hx = THREE.MathUtils.clamp(BEN.g.position.x * 0.35, -4, 4), hy = THREE.MathUtils.clamp((BEN.g.position.y - 3) * 0.2, -0.6, 1); kam.position.lerp(tmpV.set(KAM0.x + hx, KAM0.y + hy, KAM0.z), dt * 0.6); }
   kam.lookAt(BAK0.x + (kam.position.x - KAM0.x) * 0.8, BAK0.y + (kam.position.y - KAM0.y) * 0.6, BAK0.z);
-  R.render(sahne, kam);
+  if (KAL[kalite].post) { gunesUzak.set(kam.position.x + 18, 60, kam.position.z - 30).project(kam); huzmePass.uniforms.uGunes.value.set(gunesUzak.x * 0.5 + 0.5, Math.min(1.6, gunesUzak.y * 0.5 + 0.5)); komp.render(); } else R.render(sahne, kam);
   if (BEN) { const v = BEN.g.position.clone(); v.y += 0.5 * BEN.olcek + 0.2; v.project(kam); const el = $('ad'); el.hidden = v.z > 1; el.textContent = BEN.ad; el.style.left = (v.x * 0.5 + 0.5) * innerWidth + 'px'; el.style.top = (-v.y * 0.5 + 0.5) * innerHeight + 'px'; }
 }
+/* yüksek kalitede son işlem: güneşten süzülen hacimsel huzmeler, parlama (bloom), canlı renk ve kenar karartma */
+const komp = new EffectComposer(R);
+komp.addPass(new RenderPass(sahne, kam));
+const huzmePass = new ShaderPass({
+  uniforms: { tDiffuse: { value: null }, uGunes: { value: new THREE.Vector2(0.55, 1.3) }, uGuc: { value: 0.55 } },
+  vertexShader: 'varying vec2 vUv; void main(){ vUv = uv; gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0); }',
+  fragmentShader: `uniform sampler2D tDiffuse; uniform vec2 uGunes; uniform float uGuc; varying vec2 vUv;
+    void main(){ vec3 taban = texture2D(tDiffuse, vUv).rgb; vec2 d = (vUv - uGunes) * (0.9 / 48.0); vec2 uv = vUv; float ag = 1.0; vec3 top = vec3(0.0);
+      for (int i = 0; i < 48; i++) { uv -= d; vec3 s = texture2D(tDiffuse, clamp(uv, 0.001, 0.999)).rgb; float l = max(0.0, dot(s, vec3(0.3, 0.59, 0.11)) - 0.62); top += l * ag; ag *= 0.955; }
+      gl_FragColor = vec4(taban + top * uGuc * 0.06 * vec3(0.85, 0.97, 1.0), 1.0); }`
+});
+komp.addPass(huzmePass);
+const parlama = new UnrealBloomPass(new THREE.Vector2(256, 256), 0.32, 0.55, 0.86); komp.addPass(parlama);
+komp.addPass(new ShaderPass({
+  uniforms: { tDiffuse: { value: null } },
+  vertexShader: 'varying vec2 vUv; void main(){ vUv = uv; gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0); }',
+  fragmentShader: `uniform sampler2D tDiffuse; varying vec2 vUv;
+    void main(){ vec4 c = texture2D(tDiffuse, vUv); float l = dot(c.rgb, vec3(0.2126, 0.7152, 0.0722)); c.rgb = mix(vec3(l), c.rgb, 1.2);
+      c.rgb = (c.rgb - 0.18) * 1.06 + 0.18; float v = smoothstep(0.95, 0.25, length((vUv - 0.5) * vec2(1.15, 1.0))); c.rgb *= mix(0.7, 1.0, v);
+      c.rgb *= mix(vec3(0.9, 1.0, 1.05), vec3(1.04, 1.02, 0.98), smoothstep(0.0, 1.0, vUv.y)); gl_FragColor = c; }`
+}));
+komp.addPass(new OutputPass());
+const gunesUzak = new THREE.Vector3();
 addEventListener('resize', boyut);
 kaliteYaz(); boyut();
 kur().catch(e => { console.error(e); $('hata').textContent = T('Modeller yüklenemedi: ', 'Models failed to load: ') + e.message; $('hata').style.display = 'block'; });
