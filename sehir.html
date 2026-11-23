@@ -138,6 +138,7 @@ body.er-durumlu #bilgiBtn{bottom:192px}
       <ul data-dil="tr">
         <li><b>Bina kur:</b> alttaki çubuktan bir bina seç, haritaya tıkla. Telefonda bir kez dokununca yer gösterilir, aynı yere tekrar dokun ya da ✓ Kur'a bas. Sur ve kanalı sürükleyerek çizersin. Sağ tık ya da ✕ seçimi bırakır.</li>
         <li><b>Harita:</b> sürükleyerek kaydır, tekerlek ya da iki parmakla yakınlaştır, küçük haritaya tıklayıp git. Klavyede W A S D ya da oklar.</li>
+        <li><b>Kerpiççi</b> kilini ovadan alır: ovanın hemen kenarına (en çok 2 kare uzağa) kurulur, ovanın içine kurulamaz.</li>
         <li><b>Halk:</b> göçmenler boş ev ve yiyecek oldukça gelir. Evler suya (nehir, kanal, kuyu) yakın olmalı; tapınak ve pazar yakınındaki evler daha çok kişi alır. İşçiler kendiliğinden işlere dağılır, önce tarlalara.</li>
         <li><b>Taşkın:</b> her ilkbahar nehir taşar; ovadaki tarlalar o mevsim su altındadır ama yaz ve sonbaharda çok verimlidir. Ovaya yalnızca tarla ve kanal kurulur. Yazın sulanmayan bozkır tarlaları kurur: <b>kanal</b> kaz.</li>
         <li><b>Bilgi (📜):</b> rahipler ve yazıcılar bilgi üretir. Kerpiç, sulama, çivi yazısı, bakır, tekerlek, tunç, yasa taşı ve ziggurat planını bilgiyle bulursun.</li>
@@ -149,6 +150,7 @@ body.er-durumlu #bilgiBtn{bottom:192px}
       <ul data-dil="en" hidden>
         <li><b>Build:</b> pick a building from the bar below and click the map. On a phone, the first tap shows the spot; tap it again or press ✓ Build. Drag to draw walls and canals. Right-click or ✕ cancels.</li>
         <li><b>Map:</b> drag to pan, wheel or two fingers to zoom, click the minimap to jump. W A S D or arrow keys on a keyboard.</li>
+        <li>The <b>brickworks</b> takes its clay from the floodplain: build it right at its edge (within 2 tiles), not on it.</li>
         <li><b>People:</b> settlers arrive while there are free houses and food. Houses must be near water (river, canal, well); houses near a temple or market hold more. Workers spread to jobs on their own, fields first.</li>
         <li><b>Flood:</b> every spring the river floods; floodplain fields are under water that season but very rich in summer and autumn. Only fields and canals may be built on the floodplain. Unirrigated steppe fields dry out in summer: dig <b>canals</b>.</li>
         <li><b>Knowledge (📜):</b> priests and scribes make knowledge. Use it to discover mudbrick, irrigation, cuneiform, copper, the wheel, bronze, the law code and the ziggurat plan.</li>
@@ -243,7 +245,7 @@ const B = {
   depo: { e: '📦', ad: ['Depo', 'Storehouse'], ne: ['Malzeme kapasitesi +200', '+200 material storage'], w: 2, h: 2, m: { o: 25 }, hp: 80 },
   kuyu: { e: '🪣', ad: ['Kuyu', 'Well'], ne: ['Çevresindeki evlere su verir', 'Gives water to nearby houses'], w: 1, h: 1, m: { t: 8 }, hp: 60 },
   tapinak: { e: '⛩', ad: ['Tapınak', 'Temple'], ne: ['Rahipler bilgi üretir; çevresindeki evlere +1 kişi', 'Priests make knowledge; nearby houses +1'], w: 3, h: 3, m: { o: 30, t: 30 }, hp: 120, is: 2 },
-  kerpicci: { e: '🧱', ad: ['Kerpiççi', 'Brickworks'], ne: ['Kerpiç. Nehir kıyısına yakın olmalı', 'Mudbrick. Must be near the river'], w: 2, h: 2, m: { o: 10, t: 5 }, hp: 70, is: 3, tek: 'kerpic' },
+  kerpicci: { e: '🧱', ad: ['Kerpiççi', 'Brickworks'], ne: ['Kerpiç. Taşkın ovasının kenarına kur (kili ovadan alır)', 'Mudbrick. Build at the edge of the floodplain (takes clay from it)'], w: 2, h: 2, m: { o: 10, t: 5 }, hp: 70, is: 3, tek: 'kerpic' },
   kanal: { e: '〰', ad: ['Sulama kanalı', 'Irrigation canal'], ne: ['Nehre ya da başka kanala bağlanır; yanındaki tarlalar yazın kurumaz', 'Joins the river or another canal; fields beside it never dry out'], w: 1, h: 1, m: { o: 2 }, hp: 40, tek: 'sulama', cizgi: 1 },
   sur: { e: '🧱', ad: ['Sur', 'Wall'], ne: ['Baskıncıları durdurur. Sürükleyerek çiz', 'Stops raiders. Drag to draw'], w: 1, h: 1, m: { t: 3 }, hp: 140, cizgi: 1 },
   kule: { e: '🗼', ad: ['Gözcü kulesi', 'Watchtower'], ne: ['1 okçu: baskıncılara ok atar', '1 archer: shoots raiders'], w: 1, h: 1, m: { o: 10, t: 15 }, hp: 160, is: 1 },
@@ -329,7 +331,7 @@ function yerUygun(t, x, y) {
   if (t === 'tas') { let n = 0; for (let j = y - 1; j <= y + d.h; j++) for (let i = x - 1; i <= x + d.w; i++) { const z = Z[zi(i, j)]; if (z === Z_TEPE || z === Z_BAKIR) n++; } if (n < 3) return [false, T('Taş ocağı tepeye ya da hemen yanına', 'A quarry must be on or next to the hills')]; }
   if (t === 'bakir' && bakir < 2) return [false, T('Bakır damarının üstüne kur (yeşilimsi kayalar)', 'Build over the copper vein (greenish rocks)')];
   if (t === 'oduncu' && agacYakin({ x, y }) < 0.3) return [false, T('Yakında koru yok', 'No grove nearby')];
-  if (t === 'kerpicci') { let ok = false; for (let j = y - 3; j <= y + d.h + 2 && !ok; j++) for (let i = x - 3; i <= x + d.w + 2; i++) if (Z[zi(i, j)] === Z_SU) { ok = true; break; } if (!ok) return [false, T('Kerpiç için nehir kili gerekir: kıyıya yakın kur', 'Bricks need river clay: build near the bank')]; }
+  if (t === 'kerpicci') { let ok = false; for (let j = y - 2; j < y + d.h + 2 && !ok; j++) for (let i = x - 2; i < x + d.w + 2; i++) { const z = Z[zi(i, j)]; if (z === Z_SU || z === Z_OVA) { ok = true; break; } } if (!ok) return [false, T('Kerpiç için nehir kili gerekir: taşkın ovasının kenarına kur (en çok 2 kare uzağa)', 'Bricks need river clay: build at the edge of the floodplain (within 2 tiles)')]; }
   if (t === 'kanal' && !kanalBagli(x, y)) return [false, T('Kanal nehre ya da başka bir kanala bitişik olmalı', 'A canal must touch the river or another canal')];
   return [true, ''];
 }
