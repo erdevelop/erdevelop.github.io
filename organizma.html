@@ -1148,7 +1148,7 @@ function guncelle(dt) {
     else if (o.parca) o.gizli = o.sahip.gizli;
     o.alK = o.gizli > 0.01 ? 1 - o.gizli * (o.uzak ? 0.93 : 0.7) : 1;
     if (o.olum > 0) { o.olum += dt / 1.6; if (o.olum >= 1) { o.olu = true; parcala(o); } }
-    o.yut = Math.max(0, o.yut - dt * 3.5); if (o.genParla && (o.genParla.t -= dt * 1.1) <= 0) o.genParla = null;
+    o.yut = Math.max(0, o.yut - dt * 3.5); if (o.tok) o.tok = Math.max(0, o.tok - dt * 0.035); if (o.genParla && (o.genParla.t -= dt * 1.1) <= 0) o.genParla = null;
     o.rr += (o.r * (o.dogum < 1 ? easeBack(o.dogum) : 1) - o.rr) * Math.min(1, dt * 7);
   }
   /* plankton */
@@ -1928,13 +1928,17 @@ function gorevIlerle(id, n, enb) {
   }
 }
 const intikamMi = o => !!intikam && (o === intikam.o || (!!o.netId && o.netId === intikam.netId));
+const TOK_ESIK = 0.7;   // kendi kütlenin ~%70'i kadar yiyince doyarsın
 function avKaydi(a, b) {   // oyuncu (ya da parçası) bir organizma yuttu
   gorevIlerle('ye', 1); KAYIT.topYe = (KAYIT.topYe || 0) + 1; kayitKirli = true; basarim('ilk'); if (KAYIT.topYe >= 100) basarim('avci100');
   if (b.uzak) basarim('cevrimici');
   if (a.parca) gorevIlerle('bol', 1); else if (a.hamle > 0 || a.fren > 0) gorevIlerle('hamle', 1);
   if (intikamMi(b)) { intikam = null; duyur(T('☠ İntikam alındı! +3 DNA', '☠ Revenge taken! +3 DNA'), 'iyi', 4); basarim('intikam'); dnaEkle(3); }
   titre(20);
-  if (b.uzak || b.m > 20) { setTimeout(() => SES.gegir(), 380); if (b.uzak && oyuncu && !oyuncu.olu) setTimeout(() => { if (oyuncu && !oyuncu.olu) oyuncu.ifade = { c: '😋', t: 2 }; }, 420); }
+  {   // doygunluk: yutulan kütle boyuna oranla mideyi doldurur, zamanla sindirilir; mide dolunca bir kez geğirir
+    const s2 = a.sahip || a; s2.tok = (s2.tok || 0) + b.m / Math.max(20, s2.m);
+    if (s2.tok >= TOK_ESIK && zaman - (s2.gegirZ || -99) > 10) { s2.tok = 0.25; s2.gegirZ = zaman; setTimeout(() => SES.gegir(), 380); if (oyuncu && !oyuncu.olu) setTimeout(() => { if (oyuncu && !oyuncu.olu) oyuncu.ifade = { c: '😋', t: 2 }; }, 420); }
+  }
 }
 function ifadeGoster(i) { if (!oyuncu || oyuncu.olu || !IFADELER[i]) return; oyuncu.ifade = { c: IFADELER[i], t: 2.6 }; oyuncu.ifadeKod = i + '.' + (++ifadeN); $('ifadeler').hidden = true; }
 
