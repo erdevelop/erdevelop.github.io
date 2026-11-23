@@ -181,6 +181,7 @@ details{margin-top:12px;color:var(--mute);font-size:13.5px}summary{cursor:pointe
     <div class="istat" id="istat"></div>
     <div class="yol" id="yolYaz"></div>
     <button class="ana" id="mBasla" type="button"></button>
+    <div id="seriHesap" data-anahtar='{"z":"kozmos-kayit"}' data-ad='{"z":["Kozmos","Kozmos"]}' data-aciklama="Kozmos ilerlemen (keşifler, kredi, gemi, görevler) hesabına yedekleniyor|Your Kozmos progress (discoveries, credits, ship, missions) is backed up" data-link="0"></div>
     <button class="ikincil" id="mSifirla" type="button" hidden data-en="Start over (erase discoveries)">Baştan başla (keşifler silinir)</button>
     <details>
       <summary data-en="How to fly">Nasıl uçulur</summary>
@@ -1556,7 +1557,7 @@ $('hEv').onclick = () => { const h = temel(0, 0); HM.x = h.x; HM.y = h.y; HM.z =
 $('hSil').onclick = () => { wp = null; haritaCiz(); kaydet(); };
 
 /* ================= menü, kayıt ================= */
-function kaydet() { ls.set(KAYIT, { x: SH.x, y: SH.y, a: SH.a, kesif: [...KESIF], acik: [...ACIK], wp, zu: zKul, yol, kr: kredi, yak: yakit, kargo: KARGO, gorev: GOREV, alinan: [...ALINAN].slice(-300), yuk: YUK, kota: KOTA, v: 1 }); }
+function kaydet(zorla) { if (window.__seriYukleniyor || (!oyunda && !zorla)) return; ls.set(KAYIT, { x: SH.x, y: SH.y, a: SH.a, kesif: [...KESIF], acik: [...ACIK], wp, zu: zKul, yol, kr: kredi, yak: yakit, kargo: KARGO, gorev: GOREV, alinan: [...ALINAN].slice(-300), yuk: YUK, kota: KOTA, v: 1 }); }
 function menuKur() {
   let s = 0, p = 0, k = 0, g = 0; for (const x of KESIF) { if (x[0] === 's') s++; else if (x[0] === 'p') p++; else if (x[0] === 'k') k++; else if (x[0] === 'g') g++; }
   $('istat').innerHTML = [[s, T('Sistem', 'Systems')], [p, T('Gezegen', 'Planets')], [k, T('Koloni', 'Colonies')], [g, T('Galaksi', 'Galaxies')]].map(([n, a]) => `<div><b>${SAYI(n)}</b><span>${a}</span></div>`).join('');
@@ -1567,6 +1568,7 @@ function menuKur() {
 }
 function basla() {
   $('menu').hidden = true; SES.baslat();
+  setTimeout(() => { kaydet(); if (window.seriKayit) seriKayit.simdi(); }, 1500);
   setTimeout(gorevYaz, 0);
   if (!oyunda) {
     oyunda = true; sonGal = undefined;
@@ -1579,7 +1581,7 @@ $('mSifirla').onclick = () => {
   const b = $('mSifirla'); if (!b.dataset.emin) { b.dataset.emin = 1; b.textContent = T('Emin misin? Tekrar bas', 'Are you sure? Press again'); return; }
   KESIF.clear(); ACIK.clear(); yol = 0; wp = null; oto = null; kredi = 500; for (const k in YUK) YUK[k] = 0; yakit = TANK[0]; for (const k in KARGO) delete KARGO[k]; GOREV = []; ALINAN.clear(); for (const k in KOTA) delete KOTA[k]; kazP = null; gorevYaz(); const p = evGezegen(), [px, py] = gezPos(p, simT()), a = Math.atan2(py - p.s.y, px - p.s.x);
   SH.x = px + Math.cos(a) * (p.r + 260); SH.y = py + Math.sin(a) * (p.r + 260); SH.vx = SH.vy = 0; SH.a = a + Math.PI / 2; cam.x = SH.x; cam.y = SH.y;
-  kaydet(); kesifSayYaz(); menuKur();
+  kaydet(true); kesifSayYaz(); menuKur();
 };
 $('baslik').onclick = () => { menuKur(); $('menu').hidden = false; };
 $('kesifCip').onclick = () => { menuKur(); $('menu').hidden = false; };
@@ -1625,6 +1627,7 @@ window.KOZ = { get kaynP() { return kaynP; }, get kazP() { return kazP; }, KARGO
 })();
 </script>
 <script data-goatcounter="https://erdevelop.goatcounter.com/count" async src="//gc.zgo.at/count.js"></script>
+<script src="/js/seri-kayit.js" defer></script>
 <script src="/js/site.js" defer></script>
 </body>
 </html>

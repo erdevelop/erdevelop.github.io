@@ -9,6 +9,10 @@
   var SDK = 'https://www.gstatic.com/firebasejs/10.12.2/firebase-';
   var ANAHTAR = { o: 'organizma-kayit', y: 'yaratik-kayit', v: 'yuva-kayit', k: 'kabile-kayit', s: 'sehir-kayit' };
   var AD = { o: ['Organizma', 'Organism'], y: ['Yaratık', 'Creature'], v: ['Yuva', 'Nest'], k: ['Kabile', 'Tribe'], s: ['Şehir', 'City'] };
+  /* Seri dışı oyunlar da kullanabilir: <div id="seriHesap" data-anahtar='{"z":"kozmos-kayit"}' data-ad='{"z":["Kozmos","Kozmos"]}'
+     data-aciklama="Türkçe|English" data-link="0">. Her oyun kendi anahtarını "seri" alanına ekler, diğerlerine dokunmaz. */
+  var OZEL = null; try { if (kok.dataset.anahtar) { ANAHTAR = JSON.parse(kok.dataset.anahtar); AD = JSON.parse(kok.dataset.ad || '{}'); OZEL = (kok.dataset.aciklama || '').split('|'); } } catch (e) { }
+  var LINK = kok.dataset.link !== '0';
   var ESIT = 'seri-esit', IPUCU = 'seri-giris', ARALIK = 90000;
 
   function T(a, b) { return window.erDil && erDil.t ? erDil.t(a, b) : a; }
@@ -34,14 +38,14 @@
   function ciz() {
     var h = '';
     if (D.cakisma) {
-      var adlar = D.cakisma.map(function (k) { return T(AD[k][0], AD[k][1]); }).join(', ');
+      var adlar = D.cakisma.map(function (k) { return AD[k] ? T(AD[k][0], AD[k][1]) : k; }).join(', ');
       h = '<div>☁️ <b>' + T('Hesabında başka bir cihazdan daha yeni kayıt var', 'Your account has a newer save from another device') + '</b> (' + esc(adlar) + ')</div>' +
         '<div class="sb"><button type="button" class="a" data-s="yukle">' + T('Hesaptakini yükle', 'Load account save') + '</button><button type="button" data-s="koru">' + T('Bu cihazdakini koru', 'Keep this device') + '</button></div>';
     } else if (D.kul) {
       var dur = !D.hazir ? T('eşitleniyor…', 'syncing…') : D.son ? T('yedeklendi ✓', 'backed up ✓') : T('hazır', 'ready');
-      h = '<div class="sr"><span>☁️ <b>' + esc(D.kul.email || T('Hesap', 'Account')) + '</b><br><small>' + T('Serideki oyunların ilerlemesi hesabına yedekleniyor', 'Progress of the whole series is backed up') + ' · ' + dur + '</small></span><button type="button" data-s="cikis">' + T('Çıkış', 'Sign out') + '</button></div>';
+      h = '<div class="sr"><span>☁️ <b>' + esc(D.kul.email || T('Hesap', 'Account')) + '</b><br><small>' + (OZEL && OZEL[0] ? T(OZEL[0], OZEL[1] || OZEL[0]) : T('Serideki oyunların ilerlemesi hesabına yedekleniyor', 'Progress of the whole series is backed up')) + ' · ' + dur + '</small></span><button type="button" data-s="cikis">' + T('Çıkış', 'Sign out') + '</button></div>';
     } else if (D.form) {
-      h = '<div><b>☁️ ' + T('Hesabına giriş yap', 'Sign in') + '</b><br><small>' + T('Organizma, Yaratık, Yuva, Kabile ve Şehir ilerlemen her cihazda açılır.', 'Your Organism, Creature, Nest, Tribe and City progress opens on every device.') + '</small></div>' +
+      h = '<div><b>☁️ ' + T('Hesabına giriş yap', 'Sign in') + '</b><br><small>' + (OZEL && OZEL[0] ? T('İlerlemen her cihazda açılır.', 'Your progress opens on every device.') : T('Organizma, Yaratık, Yuva, Kabile ve Şehir ilerlemen her cihazda açılır.', 'Your Organism, Creature, Nest, Tribe and City progress opens on every device.')) + '</small></div>' +
         '<input id="seriE" type="email" autocomplete="email" placeholder="' + T('E-posta', 'E-mail') + '">' +
         '<input id="seriP" type="password" autocomplete="current-password" placeholder="' + T('Şifre', 'Password') + '">' +
         '<div class="sb"><button type="button" class="a" data-s="gir"' + (D.mesgul ? ' disabled' : '') + '>' + T('Giriş yap', 'Sign in') + '</button><button type="button" data-s="kayit"' + (D.mesgul ? ' disabled' : '') + '>' + T('Kayıt ol', 'Sign up') + '</button><button type="button" data-s="vazgec">' + T('Vazgeç', 'Cancel') + '</button></div>';
@@ -51,7 +55,7 @@
       h = '<div class="sr"><span>☁️ <small>' + T('Kayıt yalnızca bu cihazda. Giriş yaparsan ilerlemen kaybolmaz.', 'Your save lives only on this device. Sign in to keep it safe.') + '</small></span><button type="button" data-s="ac">' + T('Giriş yap', 'Sign in') + '</button></div>';
     }
     if (D.mesaj) h += '<div class="sm">' + esc(D.mesaj) + '</div>';
-    if (!/\/seri\.html$/.test(location.pathname)) h += '<div style="margin-top:7px"><a href="/seri.html" style="font-weight:800;color:inherit">🧬 ' + T('Bütün yolculuğun: tek hücreden krallığa', 'Your whole journey: from a cell to a kingdom') + ' ›</a></div>';
+    if (LINK && !/\/seri\.html$/.test(location.pathname)) h += '<div style="margin-top:7px"><a href="/seri.html" style="font-weight:800;color:inherit">🧬 ' + T('Bütün yolculuğun: tek hücreden krallığa', 'Your whole journey: from a cell to a kingdom') + ' ›</a></div>';
     var e = document.getElementById('seriE'), p = document.getElementById('seriP'), ev = e && e.value, pv = p && p.value;
     kok.innerHTML = h;
     if (D.form && !D.kul) { e = document.getElementById('seriE'); p = document.getElementById('seriP'); if (e && ev) e.value = ev; if (p && pv) p.value = pv; }
