@@ -1,5 +1,5 @@
-/* Organizma – Yaratık – Yuva: ortak hesap kaydı (bulut yedeği).
-   Üç oyunun yerel kayıtlarını (zincir ilerlemesi dahil) hesabın users/{uid} belgesindeki
+/* Organizma – Yaratık – Yuva – Kabile: ortak hesap kaydı (bulut yedeği).
+   Serideki oyunların yerel kayıtlarını (zincir ilerlemesi dahil) hesabın users/{uid} belgesindeki
    "seri" alanına yedekler. Firebase yalnızca giriş yapılmışsa ya da oyuncu giriş istediğinde yüklenir. */
 (function () {
   'use strict';
@@ -7,8 +7,8 @@
   if (!kok) return;
   var FBC = { apiKey: 'AIzaSyBtNow8j7AZQO2sWCiXb1WbOT261wJUGRU', authDomain: 'oyun-bahcesi-62633.firebaseapp.com', projectId: 'oyun-bahcesi-62633', storageBucket: 'oyun-bahcesi-62633.firebasestorage.app', messagingSenderId: '591926138614', appId: '1:591926138614:web:24101e1be195ebc04c3ed7' };
   var SDK = 'https://www.gstatic.com/firebasejs/10.12.2/firebase-';
-  var ANAHTAR = { o: 'organizma-kayit', y: 'yaratik-kayit', v: 'yuva-kayit' };
-  var AD = { o: ['Organizma', 'Organism'], y: ['Yaratık', 'Creature'], v: ['Yuva', 'Nest'] };
+  var ANAHTAR = { o: 'organizma-kayit', y: 'yaratik-kayit', v: 'yuva-kayit', k: 'kabile-kayit' };
+  var AD = { o: ['Organizma', 'Organism'], y: ['Yaratık', 'Creature'], v: ['Yuva', 'Nest'], k: ['Kabile', 'Tribe'] };
   var ESIT = 'seri-esit', IPUCU = 'seri-giris', ARALIK = 90000;
 
   function T(a, b) { return window.erDil && erDil.t ? erDil.t(a, b) : a; }
@@ -39,9 +39,9 @@
         '<div class="sb"><button type="button" class="a" data-s="yukle">' + T('Hesaptakini yükle', 'Load account save') + '</button><button type="button" data-s="koru">' + T('Bu cihazdakini koru', 'Keep this device') + '</button></div>';
     } else if (D.kul) {
       var dur = !D.hazir ? T('eşitleniyor…', 'syncing…') : D.son ? T('yedeklendi ✓', 'backed up ✓') : T('hazır', 'ready');
-      h = '<div class="sr"><span>☁️ <b>' + esc(D.kul.email || T('Hesap', 'Account')) + '</b><br><small>' + T('Üç oyunun ilerlemesi hesabına yedekleniyor', 'Progress of all three games is backed up') + ' · ' + dur + '</small></span><button type="button" data-s="cikis">' + T('Çıkış', 'Sign out') + '</button></div>';
+      h = '<div class="sr"><span>☁️ <b>' + esc(D.kul.email || T('Hesap', 'Account')) + '</b><br><small>' + T('Serideki oyunların ilerlemesi hesabına yedekleniyor', 'Progress of the whole series is backed up') + ' · ' + dur + '</small></span><button type="button" data-s="cikis">' + T('Çıkış', 'Sign out') + '</button></div>';
     } else if (D.form) {
-      h = '<div><b>☁️ ' + T('Hesabına giriş yap', 'Sign in') + '</b><br><small>' + T('Organizma, Yaratık ve Yuva ilerlemen her cihazda açılır.', 'Your Organism, Creature and Nest progress opens on every device.') + '</small></div>' +
+      h = '<div><b>☁️ ' + T('Hesabına giriş yap', 'Sign in') + '</b><br><small>' + T('Organizma, Yaratık, Yuva ve Kabile ilerlemen her cihazda açılır.', 'Your Organism, Creature, Nest and Tribe progress opens on every device.') + '</small></div>' +
         '<input id="seriE" type="email" autocomplete="email" placeholder="' + T('E-posta', 'E-mail') + '">' +
         '<input id="seriP" type="password" autocomplete="current-password" placeholder="' + T('Şifre', 'Password') + '">' +
         '<div class="sb"><button type="button" class="a" data-s="gir"' + (D.mesgul ? ' disabled' : '') + '>' + T('Giriş yap', 'Sign in') + '</button><button type="button" data-s="kayit"' + (D.mesgul ? ' disabled' : '') + '>' + T('Kayıt ol', 'Sign up') + '</button><button type="button" data-s="vazgec">' + T('Vazgeç', 'Cancel') + '</button></div>';
