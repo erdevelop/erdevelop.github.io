@@ -183,6 +183,7 @@ body.er-durumlu #panel{bottom:32px}
   <div class="cip altin" id="olayCip" hidden></div>
   <div class="cip" id="havaCip" hidden title="Hava" data-en-title="Weather"></div>
   <div class="bos"></div>
+  <button class="yuv" id="kalite3" type="button" hidden title="3D görüntü kalitesi" data-en-title="3D graphics quality"></button>
   <div class="cip" id="ag" title="Çevrimiçi durum" data-en-title="Online status"><i></i><span></span></div>
   <button class="yuv" id="sesBtn" type="button" title="Ses" data-en-title="Sound" aria-label="Ses" data-en-aria="Sound">🔊</button>
   <button class="yuv" id="tamBtn" type="button" hidden title="Tam ekran (F)" data-en-title="Full screen (F)" aria-label="Tam ekran" data-en-aria="Full screen"><svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path id="tamYol" d="M2 6V2h4M10 2h4v4M14 10v4h-4M6 14H2v-4"/></svg></button>
@@ -827,6 +828,26 @@ const SES = (() => {
 
 /* ================= ortam (sahne) ================= */
 const cv = $('c'), cx = cv.getContext('2d');
+/* ---------- 3D görünüm: ortam ve balıklar WebGL'de, oyun aynı ---------- */
+let G3 = null;
+const g3Tercih = (() => { const q = new URLSearchParams(location.search).get('gorunum'); if (q === '3d' || q === '2d') { try { localStorage.setItem('derin-gorunum', q); } catch (e) { } } try { return localStorage.getItem('derin-gorunum') || '2d'; } catch (e) { return '2d'; } })();
+async function g3Baslat() {
+  const t3 = document.createElement('canvas'); t3.id = 'c3'; t3.setAttribute('aria-hidden', 'true'); t3.style.cssText = 'position:fixed;left:0;top:0;width:100%;height:100%;display:block;pointer-events:none';
+  cv.parentNode.insertBefore(t3, cv);
+  try {
+    const { kur3D } = await import('/derin-mavi/3d/sahne3d.js');
+    let kal = null; try { kal = localStorage.getItem('derin3d-kalite'); } catch (e) { }
+    const api = await kur3D({ tuval: t3, kalite: kal });
+    G3 = api; alanHesap(); sahneKur();
+    const kb = $('kalite3'), yaz = () => { const ad = { dusuk: T('Düşük', 'Low'), orta: T('Orta', 'Medium'), yuksek: T('Yüksek', 'High') }[G3.kalite()]; kb.textContent = innerWidth < 560 ? '⚙️' : '⚙️ ' + ad; kb.title = T('3D kalite: ', '3D quality: ') + ad; };
+    kb.hidden = false; yaz(); kb.onclick = () => { const k = G3.kaliteDegis(); try { localStorage.setItem('derin3d-kalite', k); } catch (e) { } yaz(); };
+  } catch (e) { console.error(e); t3.remove(); G3 = null; duyur(T('3D görünüm bu cihazda açılamadı, 2D ile devam ediliyor.', '3D view could not start on this device; continuing in 2D.')); }
+}
+function g3Durum() {
+  const L = [];
+  for (const [id, b] of BAL) { if (!b.d || (b.d.a | 0) === 0 || !b.L) continue; L.push({ id, tur: b.d.a >= 2 && b.d.tr ? b.d.tr : 'yavru', x: b.x, y: b.y, L: b.L, yon: b.yon, faz: b.faz, vx: b.vx, vy: b.vy, uyku: b.uyku || b.geceUyku }); }
+  return { baliklar: L, gece: geceDegeri(), isik: typeof havaIsik === 'function' ? havaIsik(zaman) : 1, akinti: typeof HV !== 'undefined' ? HV.akinti : 1 };
+}
 let W = 0, H = 0, DPR = 1, OL = 1, ALAN = { x1: 0, x2: 0, y1: 0, y2: 0, kum: 0 };
 let SAHNE = null, zaman = 0;
 function tohumRnd(s) { let t = 0; for (const c of String(s)) t = (t * 31 + c.charCodeAt(0)) >>> 0; t = t || 1; return () => { t = (t * 1664525 + 1013904223) >>> 0; return t / 4294967296; }; }
@@ -847,6 +868,7 @@ function alanHesap() {
   /* telefonda panel ekranın altını kaplar: kum zemini panelin hemen üstüne çıkar ki sürpriz ve süsler görünsün */
   if (!p.hidden && !genis) { const sb = $('secimBtn'), ph = p.offsetHeight - (sb.hidden ? 0 : sb.offsetHeight + 9) + 53; kumY = Math.min(kumY, H - ph - 14); y2 = kumY - 26; }
   ALAN = { x1: 20, x2: W - 20, y1: 70 + (W < 520 ? 30 : 0), y2: Math.max(170, y2), kum, kumY };
+  if (G3) G3.boyut(W, H, kumY, { x: W * 0.87 });
 }
 /* ================= ortam (sahne) — gerçekçi sürüm =================
    Durağan katmanlar (uzak arka plan; kum, kaya, mercan) bir kez ekran dışı tuvallere çizilir,
@@ -874,7 +896,7 @@ function sahneKur() {
   SAHNE = { tm, kumY, kayalar, yosun, mercan, kabarcik, toz, bks: [], cim, anemon, kostik: null, kostikZ: 0 };
   SAHNE.foto = !!GORSEL.arka[tm];
   isikKur(A, tm);
-  SAHNE.duvar = SAHNE.foto ? null : duvarKur(A, kumY, tm);
+  SAHNE.duvar = SAHNE.foto || G3 ? null : duvarKur(A, kumY, tm);
   if (SAHNE.foto) { yosun.length = 0; cim.length = 0; anemon.length = 0; }   /* fotoğraflı sahnede çizim bitkiler ve mercanlar yok */
   try { SAHNE.arka = arkaKatmanCiz(A, kumY, tm, r); SAHNE.zemin = SAHNE.foto ? katman()[0] : zeminKatmanCiz(A, kumY, tm, kayalar, mercan); } catch (e) { SAHNE.arka = SAHNE.zemin = null; }
 }
@@ -1131,6 +1153,10 @@ function kostikCiz(c, t) {
 }
 function arkaPlan(c, t) {
   const A = ALANLAR[SAHNE.tm], kumY = SAHNE.kumY;
+  /* 3D görünümde ortamı WebGL katmanı çizer; burada yalnızca etkileşimli 2D şeyler kalır */
+  if (G3) { c.clearRect(0, 0, W, H); gzArkaCiz(c); hedefSusleri(c, t, 'arka'); sakliCiz(c); hedefSusleri(c, t, 'on'); koseCiz(c); surprizCiz(c);
+  for (const b of SAHNE.kabarcik) { b.t -= 0.016; if (b.t <= 0) { b.t = 0.5 + Math.random() * 2.5; SAHNE.bks.push({ x: b.x, y: kumY, r: 1.5 + Math.random() * (Math.random() < 0.2 ? 7 : 3.5), f: Math.random() * TAU, altin: Math.random() < 0.04 }); } }
+    return; }
   if (SAHNE.arka && SAHNE.foto) { /* fotoğraf arka plan: akıntıdaymış gibi çok yavaş kayar ve nefes alır */
     const k = 1.05 + Math.sin(t * 0.021) * 0.012, w = W * k, h = H * k;
     c.drawImage(SAHNE.arka, (W - w) / 2 + Math.sin(t * 0.037) * W * 0.012, (H - h) / 2 + Math.sin(t * 0.029 + 1) * H * 0.008, w, h);
@@ -1367,7 +1393,7 @@ function yuvarlakDik(c, x, y, w, h, r) { c.beginPath(); c.moveTo(x + r, y); c.ar
 function ciz(dt) {
   const c = cx; c.setTransform(DPR, 0, 0, DPR, 0, 0);
   arkaPlan(c, zaman); mevsimCiz(c, dt);
-  yerliCiz(c); ekCanliGuncelleCiz(c, dt); geceCiz(c); canliCiz(c, true); plkGuncelleCiz(c, dt); ygGuncelleCiz(c, dt); topGuncelleCiz(c, dt);
+  yerliCiz(c); ekCanliGuncelleCiz(c, dt); if (!G3) geceCiz(c); canliCiz(c, true); plkGuncelleCiz(c, dt); ygGuncelleCiz(c, dt); topGuncelleCiz(c, dt);
   /* kabarcıklar */
   c.strokeStyle = 'rgba(255,255,255,.5)'; c.lineWidth = 1;
   for (let i = SAHNE.bks.length - 1; i >= 0; i--) { const b = SAHNE.bks[i]; b.y -= (30 + b.r * 8) * dt; b.f += dt * 3; const x = b.x + Math.sin(b.f) * 4; if (b.y < 0) { SAHNE.bks.splice(i, 1); continue; } c.strokeStyle = b.altin ? 'rgba(255,215,90,.95)' : 'rgba(255,255,255,.5)'; c.lineWidth = b.altin ? 2 : 1; c.beginPath(); c.arc(x, b.y, b.r, 0, TAU); c.stroke(); }
@@ -1377,9 +1403,9 @@ function ciz(dt) {
   /* balıklar: küçükler önde */
   const liste = [...BAL.values()].sort((a, b) => (b.L || 0) - (a.L || 0));
   for (const b of liste) balikGuncelle(b, dt);
-  golgeCiz(c, liste);
-  for (const b of liste) { const dd = dansDonusum(b, dt); balikCiz(c, b.d, b.x, b.y + (dd ? dd.oy : 0), b.L, b.faz, dd && dd.yon != null ? dd.yon : b.yon, { dunya: 1, t: zaman, uyku: b.uyku || b.geceUyku, solgun: b.solgun, aci: dd ? dd.aci : 0, alfa: b.sersem > 0 ? 0.6 + Math.sin(zaman * 30) * 0.3 : 1 }); }
-  onKatman(c, zaman);
+  if (!G3) golgeCiz(c, liste);
+  for (const b of liste) { const dd = dansDonusum(b, dt); if (G3 && b.d && (b.d.a | 0) > 0) continue; balikCiz(c, b.d, b.x, b.y + (dd ? dd.oy : 0), b.L, b.faz, dd && dd.yon != null ? dd.yon : b.yon, { dunya: 1, t: zaman, uyku: b.uyku || b.geceUyku, solgun: b.solgun, aci: dd ? dd.aci : 0, alfa: b.sersem > 0 ? 0.6 + Math.sin(zaman * 30) * 0.3 : 1 }); }
+  if (!G3) onKatman(c, zaman);
   havaCiz(c, zaman, dt);
   insUstCiz(c);
   /* parçacıklar */
@@ -1788,7 +1814,7 @@ function menuAc() {
     <button type="button" data-m="akv"><span>🐠</span>${T('Akvaryumdakiler', 'Who’s in the aquarium')}<em>${ak ? NET.uyeler().size + '/' + AKV_KAP : T('çevrimdışı', 'offline')}</em></button>
     <button type="button" data-m="gunluk"><span>📜</span>${T('Bugün', 'Today')}${gunlukBekleyen() ? `<em>${gunlukBekleyen()} ${T('bekliyor', 'waiting')}</em>` : ''}</button>
     <button type="button" data-m="sefer"><span>🧭</span>${T('Keşif seferleri', 'Expeditions')}<em>${S.sefer ? (simdi() >= S.sefer.bit ? '🎁' : sureYaz(S.sefer.bit - simdi())) : ''}</em></button>
-    <button type="button" data-m="d3"><span>🧊</span>${T('3D akvaryum (yeni)', '3D aquarium (new)')}<em>${T('deneme', 'beta')}</em></button>
+    <button type="button" data-m="d3"><span>🧊</span>${T('3D görünüm', '3D view')}<em>${G3 ? T('açık', 'on') : T('kapalı', 'off')}</em></button>
     <button type="button" data-m="oy"><span>🗳️</span>${T('Haftanın balığı', 'Fish of the week')}${GECEN_KAZANAN ? '<em>🏅</em>' : ''}</button>
     <h3>${T('ARKADAŞLAR', 'FRIENDS')}</h3>
     <button type="button" data-m="ark"><span>👥</span>${T('Arkadaşlar ve hediyeler', 'Friends & gifts')}<em>${Object.keys(S.arkadas).length}</em></button>
@@ -1812,7 +1838,7 @@ function menuAc() {
     <button type="button" data-m="rehber"><span>🎓</span>${T('Rehberi baştan göster', 'Replay the tutorial')}</button>
     <button type="button" data-m="nasil"><span>❔</span>${T('Nasıl oynanır?', 'How to play')}</button></div>
     <p class="kucuk">${T('Balığın bu tarayıcıda saklanır. <a href="/hesap.html">Hesabınla giriş yapıp</a> senkronu açarsan diğer cihazlarına da gelir.', 'Your fish is stored in this browser. <a href="/hesap.html">Sign in</a> and turn on sync to bring it to your other devices.')}</p>`);
-  ic.querySelectorAll('[data-m]').forEach(b => b.onclick = () => ({ d3: () => { kaydet(false); location.href = '/derin-mavi-3d.html'; }, akv: akvListeAc, hedef: hedefAc, dukkan: dukkanAc, bas: basarimAc, rekor: rekorAc, sohret: sohretAc, reklam: reklamTeklif, paylas, tasi: tasiAc, nasil: nasilAc, gunluk: gunlukAc, sefer: seferAc, okul: okulAc, unvan: unvanAc, foto: fotoAc, ansik: ansikAc, rehber: () => { S.rehber = 0; S.rb = Object.fromEntries(Object.entries(S.rb).filter(([k]) => k.startsWith('u_'))); S.kumandaOgrendi = 0; kaydet(false); modalKapat(); }, ark: arkadaslarAc, sezon: sezonAc, album: albumAc, etk: etkinlikAc, bild: bildirimAc, oy: oylamaAc })[b.dataset.m]());
+  ic.querySelectorAll('[data-m]').forEach(b => b.onclick = () => ({ d3: () => { kaydet(false); try { localStorage.setItem('derin-gorunum', G3 ? '2d' : '3d'); } catch (e) { } location.href = '/derin-mavi.html'; }, akv: akvListeAc, hedef: hedefAc, dukkan: dukkanAc, bas: basarimAc, rekor: rekorAc, sohret: sohretAc, reklam: reklamTeklif, paylas, tasi: tasiAc, nasil: nasilAc, gunluk: gunlukAc, sefer: seferAc, okul: okulAc, unvan: unvanAc, foto: fotoAc, ansik: ansikAc, rehber: () => { S.rehber = 0; S.rb = Object.fromEntries(Object.entries(S.rb).filter(([k]) => k.startsWith('u_'))); S.kumandaOgrendi = 0; kaydet(false); modalKapat(); }, ark: arkadaslarAc, sezon: sezonAc, album: albumAc, etk: etkinlikAc, bild: bildirimAc, oy: oylamaAc })[b.dataset.m]());
 }
 function akvListeAc() {
   const L = [...BAL.values()].filter(b => b.ad).sort((a, b) => ((b.v && b.v.b) || (b.ben ? boyHesap(S) : 0)) - ((a.v && a.v.b) || (a.ben ? boyHesap(S) : 0)));
@@ -4345,7 +4371,7 @@ function demoKur() {
 let son = performance.now(), uiZ = 0, kayitZ = 0, albumZ = 3;
 function kare(ts) {
   const dt = Math.min(0.05, Math.max(0, (ts - son) / 1000)); son = ts; zaman += dt;
-  if (!AV) { klavyeYuz(); etkilesimKare(dt); yerliGuncelle(dt); ciz(dt); }
+  if (!AV) { klavyeYuz(); etkilesimKare(dt); yerliGuncelle(dt); ciz(dt); if (G3) G3.kare(dt, g3Durum()); }
   else if (AV.mod === 'yaris') yarisGuncelle(dt);
   else avGuncelle(dt);
   onizlemeCiz(dt);
@@ -4358,6 +4384,7 @@ function kare(ts) {
 
 /* başlat */
 boyut();
+if (g3Tercih === '3d' && !ogModu) g3Baslat();
 if (ogModu) { demoKur(); $('ust').hidden = true; S = null; balikSenk(); yerliKur(); }
 else if (!S) { girisGoster(); yerliKur(); }
 else { ilerlet(); gunlukGorevler(); gorevKontrol(); basarimKontrol(); kaydet(false); panelAc(); if (olumKontrol()) { } else if (bekleyenSecim()) setTimeout(secimAc, 700); else if (!S.kumandaOgrendi) setTimeout(() => duyur(T('👆 Yeni: suya dokun, balığın oraya yüzsün. Parlayan planktonları ye!', '👆 New: tap the water and your fish swims there. Eat the glowing plankton!'), 1), 1200); }
