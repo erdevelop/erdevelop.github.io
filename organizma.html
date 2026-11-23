@@ -190,6 +190,9 @@ body.er-durumlu #mini{bottom:32px}body.er-durumlu #dna{bottom:188px}
 @media (max-width:640px){#kgChip{bottom:calc(214px + env(safe-area-inset-bottom,0px))}}
 #ortakKutu .gBas>span:last-child{display:flex;flex-wrap:wrap;gap:4px;justify-content:flex-end}
 #sesKutu{flex-wrap:wrap}
+#kgChip.ogr{pointer-events:auto;border-color:rgba(127,227,179,.7);background:rgba(6,30,26,.82);color:#E4FBF3;padding:7px 34px 7px 11px;font-size:13px;line-height:1.35}
+#kgChip.ogr small{display:block;font-size:10.5px;color:#9FE8D2;letter-spacing:.04em;text-transform:uppercase}
+#kgChip.ogr button{position:absolute;right:6px;top:6px;width:24px;height:24px;border-radius:8px;border:1px solid var(--line);background:rgba(255,255,255,.06);color:var(--ink);font-size:12px;padding:0}
 </style>
 <script type="application/ld+json">{"@context":"https://schema.org","@type":"VideoGame","name":"Organizma","url":"https://erdevelop.github.io/organizma.html","genre":["Action","Survival"],"gamePlatform":"Web browser","playMode":["SinglePlayer","MultiPlayer"],"inLanguage":["tr","en"],"isAccessibleForFree":true,"offers":{"@type":"Offer","price":"0","priceCurrency":"TRY"}}</script>
 <script async src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-4775308844679394" crossorigin="anonymous"></script>
@@ -1142,7 +1145,7 @@ function hamleYap(o, aci) {
   if (o.bekle > 0 || o.dogum < 1 || o.olu) return false;
   o.hamle = HAMLE_S; o.hamleA = aci; o.bekle = bekleO(o); if (o.m > 30) o.m *= 0.985;
   for (let i = 0; i < 7; i++) { const a = aci + Math.PI + rnd(-0.5, 0.5), d = o.r * rnd(0.8, 1.1); P.push({ x: o.x + Math.cos(a) * d, y: o.y + Math.sin(a) * d, vx: Math.cos(a) * rnd(20, 70), vy: Math.sin(a) * rnd(20, 70), r: o.r * rnd(0.05, 0.12), o: 1, t: 0, s: rnd(0.6, 1.2), tip: 0 }); }
-  if (o === oyuncu) { SES.hamle(); titre(8); }
+  if (o === oyuncu) { SES.hamle(); titre(8); o.hamleSay = (o.hamleSay || 0) + 1; }
   if ((o === oyuncu || o.sahip === oyuncu) && SOY(o).sok) sokYap(o, SOY(o).sok);
   return true;
 }
@@ -1236,7 +1239,7 @@ function guncelle(dt) {
       if (f.b < 1 || f.yendi) return; const dx = f.x - o.x, dy = f.y - o.y; if (dx * dx + dy * dy > rr * rr) return;
       if (!o.uzak) { if (o.diyet) o.diyet.p += f.m; genYe(o, f.baca ? 'd0' : 'p' + f.k, f.baca ? 30 : YEMEK_RENK[f.k][0]); o.m = Math.min(KUTLE_UST, o.m + f.m * besinK(o) * (1 + 0.6 * derinK(f.x, f.y))); o.enBuyuk = Math.max(o.enBuyuk, o.m); if (f.baca && (o === oyuncu || o.sahip === oyuncu)) gorevIlerle('baca', 1); }
       { const kf = o.kof || (o.kof = []), ben = o === oyuncu || o.sahip === oyuncu; if (kf.length >= (ben ? 16 : 5)) kf.shift(); kf.push({ k: f.k, ox: dx, oy: dy, t: 0, d: rnd(2.4, 3.8), s: (6 + f.m * 2.4) * 1.15, a: f.f, don: rnd(-0.6, 0.6) }); }
-      f.yendi = true; if (o === oyuncu && Math.random() < 0.25) SES.plankton();
+      f.yendi = true; if (o === oyuncu || o.sahip === oyuncu) { const s2 = o.sahip || o; s2.plankSay = (s2.plankSay || 0) + 1; } if (o === oyuncu && Math.random() < 0.25) SES.plankton();
     });
   }
   if (oyuncu && !oyuncu.olu && oyuncu.ev.miknatis) {   // besin akımı: yakındaki planktonu çeker
@@ -1970,7 +1973,7 @@ function devOl(b) {
 }
 function devGuncelle(dt) {
   const o = oyuncu;
-  if (!DEVB.b) { if (oyunda && o && !o.olu && o.yas > (gmVar('dev') ? 20 : 90) && zaman > DEVB.sonraki) devCikar(); return; }
+  if (!DEVB.b) { if (oyunda && o && !o.olu && !ogrAktif() && o.yas > (gmVar('dev') ? 20 : 90) && zaman > DEVB.sonraki) devCikar(); return; }
   const b = DEVB.b, D = DEVLER[b.tip]; b.t += dt; b.omur -= dt; if (b.bekle > 0) b.bekle -= dt;
   if (b.zehir > 0) { b.zehir -= dt; b.can -= 12 * dt; }
   b.can = Math.min(b.canMax, b.can + dt * 0.8);
@@ -2139,7 +2142,7 @@ function genYe(o, anahtar, hue) {
 }
 let dnaZ = 0, diyetZ = 0;
 function diyetCiz() {
-  const el = $('diyetG'), o = oyuncu, goster = oyunda && o && !o.olu && o.diyet && (o.diyet.p + o.diyet.m + o.diyet.a) > 6 && $('dna') && !$('dna').hidden;
+  const el = $('diyetG'), o = oyuncu, goster = oyunda && o && !o.olu && ogrAdim() >= 3 && o.diyet && (o.diyet.p + o.diyet.m + o.diyet.a) > 6 && $('dna') && !$('dna').hidden;
   el.hidden = !goster; if (!goster) return;
   const F = o.form, H2 = diyetHedef(o), en = [0, 1, 2].reduce((a, i) => H2[i] > H2[a] ? i : a, 0), A = FORM_AD[en];
   const ne = F[en] >= FORM_ESIK ? T(`${A[1][0]} görünüm`, `${A[1][1]} look`) : T(`${A[1][0]} görünüme %${Math.round(F[en] / FORM_ESIK * 100)}`, `→ ${A[1][1]} ${Math.round(F[en] / FORM_ESIK * 100)}%`);
@@ -2387,8 +2390,36 @@ function kgIlerle(id, n) {
     duyur(`🎯 ${T('Kuşak görevi tamam', 'Generation quest done')}: +${odul} DNA · ${T('hediye seçim!', 'bonus pick!')}`, 'iyi', 5); SES.basari(); titre([20, 30, 20]); kgCiz();
   }
 }
+
+/* ================= kademeli öğretim: yeni oyuncuya sistemler sırayla tanıtılır ================= */
+const OGR = [
+  { ik: '🌿', ad: ['Plankton ye: renkli küçük hücrelere doğru yüz', 'Eat plankton: swim to the small coloured cells'], h: 10, n: o => o.plankSay || 0 },
+  { ik: '💨', get ad() { return DOKUNMA ? ['Hamle: HAMLE düğmesiyle (ya da çift dokun) ileri atıl', 'Dash: use the DASH button (or double-tap)'] : ['Hamle: tıkla ya da Boşluk ile ileri atıl', 'Dash: click or press Space']; }, h: 3, n: o => o.hamleSay || 0 },
+  { ik: '🧬', ad: ['Farklı canlılar ye: her yeni tür DNA\'na bir gen ekler', 'Eat different things: each new kind adds a gene to your DNA'], h: 5, n: o => (o.gen || []).length },
+  { ik: '⚠️', ad: ['Kırmızı Didinium\'lar ve pembe virüsler büyüklere saldırır; büyüdükçe dikkat et', 'Red Didinium and pink viruses attack big cells; careful as you grow'], h: 150, n: o => Math.round(o.m), birim: ['kütle', 'mass'] },
+  { ik: '🥚', ad: ['500 kütleye ulaş ve ÇOĞAL: genlerin yavruna geçer', 'Reach 500 mass and REPRODUCE: your genes pass on'], h: 2, n: o => o.kusak || 1, birim: ['kuşak', 'generation'] }
+];
+const ogrAdim = () => { if (KAYIT.ogr == null) KAYIT.ogr = (KAYIT.oyun | 0) >= 4 ? 99 : 0; return KAYIT.ogr | 0; };
+const ogrAktif = () => ogrAdim() < OGR.length;
+function ogrGuncelle() {
+  const o = oyuncu; if (!ogrAktif() || !o || o.olu || !oyunda) return;
+  const a = OGR[ogrAdim()];
+  if (a.n(o) >= a.h) {
+    KAYIT.ogr = ogrAdim() + 1; kayitKirli = true; dnaEkle(2); SES.basari();
+    duyur(ogrAktif() ? `✅ ${T('Tamam!', 'Done!')} ${OGR[ogrAdim()].ik} ${T('Sıradaki adım solda', 'Next step on the left')}` : T('🎓 Temel eğitim bitti! Artık gen defteri, beslenme göstergesi ve dev canlılar seni bekliyor.', '🎓 Basics complete! Your gene book, feeding gauge and giant creatures await.'), 'iyi', 4.5);
+  }
+  kgCiz();
+}
 function kgCiz() {
   const el = $('kgChip'), o = oyuncu; if (!el) return;
+  if (o && !o.olu && oyunda && !o.kg && ogrAktif()) {
+    const a = OGR[ogrAdim()], n = Math.min(a.h, a.n(o));
+    el.hidden = false; el.classList.remove('ok'); el.classList.add('ogr');
+    const ic = `<small>${T('Öğretim', 'Tutorial')} ${ogrAdim() + 1}/${OGR.length}</small>${a.ik} ${esc(T(a.ad[0], a.ad[1]))} <b>${n}/${a.h}${a.birim ? ' ' + T(a.birim[0], a.birim[1]) : ''}</b><button type="button" id="ogrGec" aria-label="${T('Öğretimi geç', 'Skip tutorial')}">✕</button>`;
+    if (el.dataset.h !== ic) { el.dataset.h = ic; el.innerHTML = ic; const gb = $('ogrGec'); if (gb) gb.onpointerdown = e => { e.stopPropagation(); e.preventDefault(); KAYIT.ogr = 99; kayitKirli = true; el.dataset.h = ''; duyur(T('Öğretim geçildi. Menüdeki "Mutasyon nasıl çalışır?" her şeyi anlatır.', 'Tutorial skipped. "How do mutations work?" in the menu explains everything.'), '', 4); kgCiz(); }; }
+    return;
+  }
+  el.classList.remove('ogr'); el.dataset.h = '';
   if (!o || o.olu || !o.kg || !oyunda) { el.hidden = true; return; }
   const q = o.kg, t2 = KG_TUR[q.id], a = t2.ad(q.h); el.hidden = false; el.classList.toggle('ok', !!q.ok);
   el.innerHTML = `🎯 ${q.ok ? '✓ ' : ''}${esc(T(a[0], a[1]))} <b>${q.n}/${q.h}</b>`;
@@ -3132,7 +3163,7 @@ function hud(dt) {
   if (miniZ <= 0 && !$('mini').hidden) { miniZ = 0.07; miniCiz(); }
   dnaZ -= dt; if (dnaZ <= 0 && !$('dna').hidden) { dnaZ = 0.033; dnaCiz(zaman); }
   yetCiz();
-  diyetZ -= dt; if (diyetZ <= 0) { diyetZ = 0.25; diyetCiz(); if (!oyunda || !oyuncu || oyuncu.olu) $('kgChip').hidden = true; }
+  diyetZ -= dt; if (diyetZ <= 0) { diyetZ = 0.25; ogrGuncelle(); diyetCiz(); if (!oyunda || !oyuncu || oyuncu.olu) $('kgChip').hidden = true; }
   if (ipucuZ > 0) { ipucuZ -= dt; if (ipucuZ <= 0) { $('ipucu').style.opacity = 0; setTimeout(() => { if (ipucuZ <= 0) $('ipucu').hidden = true; }, 900); } }
 }
 function liderCiz() {
