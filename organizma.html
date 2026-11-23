@@ -1102,6 +1102,7 @@ function erimeCiz(a, z, t) {   // fagositoz: av zarla sarılır (sindirim kofulu
 function npcAkil(o, dt) {
   const ai = o.ai; ai.zaman -= dt; if (ai.zaman > 0) return; ai.zaman = rnd(0.1, 0.22);
   if (o.dost && dostAkil(o)) return;
+  if (!o.yolSec && o.m > 160 && !o.parca) { o.yolSec = 1; if (Math.random() < 0.55) { o.yol = ['avci', 'koloni', 'simb'][(Math.random() * 3) | 0]; o.yolLv = o.m > 500 ? 2 : 1; o.yetBek = rnd(4, 12); } }
   if ((o.virus > 0 || o.isirik > 0) && o.bekle <= 0) hamleYap(o, o.ang);
   const G = (420 + o.r * 4) * (1 - 0.4 * OLAY.g);
   let kx = 0, ky = 0, tehlike = 0, esk = null, eskD = 1e9, av = null, avS = 0, avD = 0;
@@ -1117,6 +1118,11 @@ function npcAkil(o, dt) {
       const s = (b.m / (Math.max(0, d) + 40)) * (0.4 + ai.saldir);
       if (s > avS) { avS = s; av = b; avD = d; }
     }
+  }
+  if (o.yol && !(o.yetBek > 0)) {   // NPC yeteneği
+    if (o.yol === 'avci' && av && avD < 360) { const a = Math.atan2(av.y - o.y, av.x - o.x); OKLAR.push({ x: o.x + Math.cos(a) * o.r, y: o.y + Math.sin(a) * o.r, vx: Math.cos(a) * 700, vy: Math.sin(a) * 700, t: 0, lv: 1, sahip: o }); o.yetBek = 12; }
+    else if (o.yol === 'koloni' && (av || tehlike > 0.4)) { for (let i = 0; i < 2; i++) { const q = Math.random() * TAU, h2 = yeniOrg({ x: o.x + Math.cos(q) * (o.r + 12), y: o.y + Math.sin(q) * (o.r + 12), m: 12, tur: o.tur, hue: o.hue, nick: '', dogum: 1 }); h2.dost = o; h2.dostT = 15; h2.koruma = 1; h2.rr = h2.r; O.push(h2); } o.yetBek = 26; }
+    else if (o.yol === 'simb' && tehlike > 0.5) { o.kalkan = 4; o.yetBek = 25; }
   }
   const mr = Math.hypot(o.x, o.y), duvar = R - 380 - o.r;
   let dx = 0, dy = 0, gaz = 1;
@@ -1221,6 +1227,7 @@ function guncelle(dt) {
     bolgeEtki(o, dt);
     if (o.ifade && (o.ifade.t -= dt) <= 0) o.ifade = null;
     if (o.isirik > 0) o.isirik -= dt;
+    if (o !== oyuncu) { if (o.yetBek > 0) o.yetBek -= dt; if (o.kalkan > 0) o.kalkan -= dt; }
     if (o.zehir > 0) { o.zehir -= dt; const kay = o.m * 0.06 * dt; if (o.m > 8) { o.m -= kay; if (o.zehirK && !o.zehirK.olu) { o.zehirK.m = Math.min(KUTLE_UST, o.zehirK.m + kay * 0.6); } } }
     if (o.dost) { o.dostT -= dt; if (o.dostT <= 0 || !o.dost || o.dost.olu) { const s2 = o.dost; if (s2 && !s2.olu) { s2.m = Math.min(KUTLE_UST, s2.m + o.m * 0.5); o.olu = true; o.emil = { a: s2, t: 0, d: 0.7, ox: 0, oy: 0 }; } else o.dost = null; } }
     if (o === oyuncu) { if (o.ev.kamuflaj) o.gizli = kis(o.gizli + (o.kon.g < 0.3 && o.hamle <= 0 ? dt / 1.2 : -dt * 3), 0, 1); if (o.gk) o.hue = (zaman * 40) % 360; }
@@ -1581,12 +1588,14 @@ const OL_P = 110, OL_BAS = 25, OL_S = 45;
 const OLAY = { tip: null, slot: -1, x: 0, y: 0, g: 0, b: 0, zorla: PARAM.get('olay'), geceO: null };
 function olayGuncelle(dt) {
   const s = saat(), slot = Math.floor(s / OL_P), f = s - slot * OL_P, r = tohum(slot * 104729 + 7);
-  let tip = ['gece', 'patlama', 'damla'][(r() * 3) | 0]; const a = r() * TAU, d = Math.sqrt(r()) * (R - 700);
+  let tip = ['gece', 'patlama', 'damla', 'salgin', 'goc'][(r() * 5) | 0]; const a = r() * TAU, d = Math.sqrt(r()) * (R - 700);
   if (OLAY.zorla) tip = OLAY.zorla;
   const aktif = f >= OL_BAS && f < OL_BAS + OL_S;
   if (aktif && OLAY.slot !== slot) {
     OLAY.slot = slot; OLAY.tip = tip; OLAY.x = Math.cos(a) * d; OLAY.y = Math.sin(a) * d; OLAY.geceO = oyuncu && !oyuncu.olu ? oyuncu : null;
     if (tip === 'gece') oyunda && duyur(T('🌙 Gece oldu — görüş daralıyor', '🌙 Night falls — visibility shrinks'), '', 5);
+    else if (tip === 'salgin') oyunda && duyur(T('🦠 Virüs salgını! Haritadaki pembe halkadan uzak dur — ya da küçükken git ve virüs avla', '🦠 Virus outbreak! Avoid the pink ring on the map — or go while small and hunt viruses'), 'uyari', 6);
+    else if (tip === 'goc') { const q = r() * TAU, su = { x: OLAY.x - Math.cos(q) * 1100, y: OLAY.y - Math.sin(q) * 1100, yon: q, gocYon: q, goc: 1, hedef: null, akil: 99, sure: 0, dinlen: 99, ekle: 99 }; SURU.push(su); for (let i = 0; i < SURU_BOY + 3; i++) S.push(yirticiYeni(su, i)); oyunda && duyur(T('🔴 Yırtıcı göçü! Büyük bir Didinium sürüsü haritayı geçiyor (kırmızı ok)', '🔴 Predator migration! A big Didinium pack is crossing the map (red arrow)'), 'uyari', 6); }
     else if (tip === 'patlama') oyunda && duyur(T('🌿 Plankton patlaması! Haritadaki yeşil halkaya bak', '🌿 Plankton bloom! See the green ring on the map'), 'iyi', 6);
     else {
       if (oyunda) duyur(T('💧 Besin damlası düştü! Haritadaki turuncu halkaya bak', '💧 A food drop has fallen! See the orange ring on the map'), 'iyi', 6);
@@ -1596,6 +1605,8 @@ function olayGuncelle(dt) {
   }
   if (!aktif && OLAY.tip) { if (OLAY.tip === 'gece' && OLAY.geceO && OLAY.geceO === oyuncu && !oyuncu.olu) basarim('gece'); OLAY.tip = null; }
   OLAY.g += ((aktif && OLAY.tip === 'gece' ? 1 : 0) - OLAY.g) * Math.min(1, dt * 0.8);
+  if (aktif && OLAY.tip === 'salgin' && (OLAY.vz = (OLAY.vz || 0) - dt) <= 0) { OLAY.vz = 0.5; if (V.length < VIRUS_N * 2.6) { const q = Math.random() * TAU, u = Math.sqrt(Math.random()) * 380; V.push(virusYeni(OLAY.x + Math.cos(q) * u, OLAY.y + Math.sin(q) * u)); } }
+  if (!aktif || OLAY.tip !== 'goc') { for (const su of SURU) if (su.goc) { su.bitti = 1; for (const b of S) if (b.su === su && !b.olu) b.olu = 0.01; } SURU = SURU.filter(su => !su.bitti); }
   if (aktif && OLAY.tip === 'patlama' && Y.length < YEMEK_N * 2.4) {
     OLAY.b += dt * 22;
     while (OLAY.b >= 1) { OLAY.b--; const q = Math.random() * TAU, u = Math.sqrt(Math.random()) * 380; Y.push({ x: OLAY.x + Math.cos(q) * u, y: OLAY.y + Math.sin(q) * u, vx: rnd(-8, 8), vy: rnd(-8, 8), m: 1, k: (Math.random() * 3) | 0, f: Math.random() * TAU, b: 0, gecici: rnd(22, 34) }); }
@@ -1898,9 +1909,10 @@ function yetGuncelle(dt) {
   }
   for (let i = OKLAR.length - 1; i >= 0; i--) {
     const k = OKLAR[i]; k.t += dt; k.x += k.vx * dt; k.y += k.vy * dt; let vur = null;
-    for (const q of O) { if (q === oyuncu || q.olu || q.uzak || q.dost || q.sahip === oyuncu || q.dogum < 1) continue; const dx = q.x - k.x, dy = q.y - k.y; if (dx > q.r || dx < -q.r || dy > q.r || dy < -q.r) continue; if (dx * dx + dy * dy < q.r * q.r) { vur = q; break; } }
-    if (vur) { vur.zehir = k.lv >= 1 ? 4 : 4; vur.zehirK = k.lv >= 3 ? oyuncu : null; vur.isirik = 0.6; P.push({ x: k.x, y: k.y, vx: 0, vy: 0, r: 10, o: 0.9, t: 0, s: 0.4, tip: 2, h: 285 }); OKLAR.splice(i, 1); continue; }
-    let yb = false; for (const b of S) if (!b.olu && Math.hypot(b.x - k.x, b.y - k.y) < 12) { b.sersem = 4; yb = true; gorevIlerle('sersem', 1); break; }
+    const ks = k.sahip || oyuncu;
+    for (const q of O) { if (q === ks || q.olu || q.uzak || q.dost === ks || q.sahip === ks || (ks === oyuncu && q.dost) || q.dogum < 1 || q.kalkan > 0) continue; const dx = q.x - k.x, dy = q.y - k.y; if (dx > q.r || dx < -q.r || dy > q.r || dy < -q.r) continue; if (dx * dx + dy * dy < q.r * q.r) { vur = q; break; } }
+    if (vur) { if (vur === oyuncu) { duyur(T('☠ Bir avcı seni zehir okuyla vurdu! Yavaşlıyor ve eriyorsun', '☠ A hunter hit you with a toxin dart! You slow down and melt'), 'uyari', 3); titre([20, 20]); } vur.zehir = 4; vur.zehirK = k.lv >= 3 ? ks : null; vur.isirik = 0.6; P.push({ x: k.x, y: k.y, vx: 0, vy: 0, r: 10, o: 0.9, t: 0, s: 0.4, tip: 2, h: 285 }); OKLAR.splice(i, 1); continue; }
+    let yb = false; for (const b of S) if (!b.olu && Math.hypot(b.x - k.x, b.y - k.y) < 12) { b.sersem = 4; yb = true; if (ks === oyuncu) gorevIlerle('sersem', 1); break; }
     if (yb || k.t > 0.85) OKLAR.splice(i, 1);
   }
 }
@@ -1925,6 +1937,7 @@ function yetDunyaCiz(z, t) {   // oklar ve kalkan (dünya koordinatında)
     g.strokeStyle = 'rgba(200,120,255,.35)'; g.lineWidth = Math.max(1.5 / z, 5); g.beginPath(); g.moveTo(k.x - Math.cos(a) * L * 2.2, k.y - Math.sin(a) * L * 2.2); g.lineTo(k.x, k.y); g.stroke();
     g.strokeStyle = 'rgba(235,190,255,.95)'; g.lineWidth = Math.max(1 / z, 2.2); g.beginPath(); g.moveTo(k.x - Math.cos(a) * L, k.y - Math.sin(a) * L); g.lineTo(k.x + Math.cos(a) * 4, k.y + Math.sin(a) * 4); g.stroke();
   }
+  for (const q of O) { if (q === oyuncu || q.olu || !(q.kalkan > 0)) continue; const r = (q.rr || q.r) * 1.3; g.strokeStyle = `rgba(170,255,160,${0.45 * Math.min(1, q.kalkan)})`; g.lineWidth = Math.max(1.2 / z, r * 0.04); g.fillStyle = `rgba(120,230,120,${0.1 * Math.min(1, q.kalkan)})`; g.beginPath(); g.arc(q.x, q.y, r, 0, TAU); g.fill(); g.stroke(); }
   const o = oyuncu;
   if (o && !o.olu && o.kalkan > 0) {
     const r = (o.rr || o.r) * 1.32, al = Math.min(1, o.kalkan) * (0.75 + 0.25 * Math.sin(t * 5));
@@ -2009,7 +2022,7 @@ function devGuncelle(dt) {
     }
   }
   /* zehir okları deve de işler */
-  for (let i = OKLAR.length - 1; i >= 0; i--) { const k = OKLAR[i]; if (Math.hypot(k.x - b.x, k.y - b.y) < b.r) { b.zehir = 5; devIsir(b, oyuncu, 18 * k.lv); OKLAR.splice(i, 1); } }
+  for (let i = OKLAR.length - 1; i >= 0; i--) { const k = OKLAR[i]; if (Math.hypot(k.x - b.x, k.y - b.y) < b.r) { b.zehir = 5; devIsir(b, k.sahip || oyuncu, 18 * k.lv); OKLAR.splice(i, 1); } }
 }
 function altinCiz(x0, y0, r, z, t) {   // altın varyant: sıcak parıltı ve dönen ışık noktaları
   const gr = g.createRadialGradient(x0, y0, r * 0.6, x0, y0, r * 2.2); gr.addColorStop(0, 'rgba(255,215,90,.38)'); gr.addColorStop(1, 'rgba(255,215,90,0)');
@@ -2252,6 +2265,7 @@ function suruGuncelle(dt) {
       for (const o of O) { if (o.olu || o.uzak || o.parca || o.m < YIRTICI_ESIK || o.dogum < 1 || o.koruma > 0 || o.sisB || o.gizli > 0.5 || SURU.some(q => q.hedef === o)) continue; const d = (o.x - su.x) ** 2 + (o.y - su.y) ** 2; if (d < en) { en = d; su.hedef = o; } }
       if (su.hedef) { su.sure = 0; if (su.hedef === oyuncu) { duyur(T('🦷 Yırtıcı sürüsü peşinde! Hamleyle sersemlet, bulanık suya gir ya da çoğalıp küçül', '🦷 A predator pack is after you! Stun them with a dash, hide in murky water, or reproduce and shrink'), 'uyari', 6); SES.uyari(); titre([40, 30, 40]); } }
     }
+    if (su.goc) { su.hedef = null; su.x += Math.cos(su.gocYon) * 55 * dt; su.y += Math.sin(su.gocYon) * 55 * dt; continue; }
     if (su.hedef) { su.x += (su.hedef.x - su.x) * Math.min(1, dt * 1.2); su.y += (su.hedef.y - su.y) * Math.min(1, dt * 1.2); }
     else { su.yon += rnd(-1, 1) * dt * 1.5; su.x += Math.cos(su.yon) * 38 * dt; su.y += Math.sin(su.yon) * 38 * dt; if (Math.hypot(su.x, su.y) > R - 500) su.yon = Math.atan2(-su.y, -su.x); }
     su.ekle += dt; if (su.ekle > 9) { su.ekle = 0; let n = 0; for (const b of S) if (b.su === su && !b.olu) n++; if (n < SURU_BOY) S.push(yirticiYeni(su, n)); }
@@ -3006,6 +3020,7 @@ function ciz(t) {
   g.strokeStyle = 'rgba(200,245,250,.35)'; g.lineWidth = 2.5 / z; g.stroke();
   /* bölgeler ve olay izleri */
   bolgeCiz(z, t, gx0, gx1, gy0, gy1, false);
+  if (OLAY.tip === 'salgin') { const pg = g.createRadialGradient(OLAY.x, OLAY.y, 30, OLAY.x, OLAY.y, 460); pg.addColorStop(0, `rgba(255,120,220,${0.12 + 0.05 * Math.sin(t * 2)})`); pg.addColorStop(1, 'rgba(255,120,220,0)'); g.fillStyle = pg; g.beginPath(); g.arc(OLAY.x, OLAY.y, 460, 0, TAU); g.fill(); }
   if (OLAY.tip === 'patlama') { const pg = g.createRadialGradient(OLAY.x, OLAY.y, 30, OLAY.x, OLAY.y, 430); pg.addColorStop(0, `rgba(120,255,160,${0.13 + 0.04 * Math.sin(t * 2)})`); pg.addColorStop(1, 'rgba(120,255,160,0)'); g.fillStyle = pg; g.beginPath(); g.arc(OLAY.x, OLAY.y, 430, 0, TAU); g.fill(); }
   /* besinler */
   derinCiz(z, t, gx0, gx1, gy0, gy1);
@@ -3205,6 +3220,8 @@ function miniCiz() {
     else { x.fillStyle = b.tip === 'yosun' ? 'rgba(80,190,100,.3)' : b.tip === 'asit' ? 'rgba(215,235,60,.45)' : 'rgba(0,0,0,.5)'; x.fill(); }
   }
   const nb = 0.5 + 0.5 * Math.sin(performance.now() / 160);
+  if (OLAY.tip === 'salgin') { x.strokeStyle = `rgba(255,120,220,${0.5 + 0.5 * nb})`; x.lineWidth = 2; x.beginPath(); x.arc(OLAY.x * k, OLAY.y * k, 10 + nb * 3, 0, TAU); x.stroke(); }
+  for (const su of SURU) if (su.goc) { const a = su.gocYon, px = su.x * k, py = su.y * k; x.strokeStyle = x.fillStyle = `rgba(255,90,70,${0.7 + 0.3 * nb})`; x.lineWidth = 2.5; x.beginPath(); x.moveTo(px - Math.cos(a) * 12, py - Math.sin(a) * 12); x.lineTo(px + Math.cos(a) * 8, py + Math.sin(a) * 8); x.stroke(); x.beginPath(); x.moveTo(px + Math.cos(a) * 12, py + Math.sin(a) * 12); x.lineTo(px + Math.cos(a + 2.5) * 6, py + Math.sin(a + 2.5) * 6); x.lineTo(px + Math.cos(a - 2.5) * 6, py + Math.sin(a - 2.5) * 6); x.fill(); }
   if (OLAY.tip === 'patlama' || OLAY.tip === 'damla') { x.strokeStyle = OLAY.tip === 'patlama' ? `rgba(120,255,160,${0.5 + 0.5 * nb})` : `rgba(255,180,90,${0.5 + 0.5 * nb})`; x.lineWidth = 3; x.beginPath(); x.arc(OLAY.x * k, OLAY.y * k, 9 + nb * 4, 0, TAU); x.stroke(); }
   x.fillStyle = '#FF5A46'; for (const su of SURU) { const px = su.x * k, py = su.y * k, b = su.hedef === oyuncu ? 9 + nb * 3 : 6; x.beginPath(); x.moveTo(px, py - b); x.lineTo(px + b * 0.9, py + b * 0.7); x.lineTo(px - b * 0.9, py + b * 0.7); x.closePath(); x.fill(); }
   x.setLineDash([3, 4]); x.lineWidth = 1; for (const [kk, al] of [[0.55, 0.25], [0.75, 0.35]]) { x.strokeStyle = `rgba(150,200,255,${al})`; x.beginPath(); x.arc(0, 0, R * kk * k, 0, TAU); x.stroke(); } x.setLineDash([]);
