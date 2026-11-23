@@ -1,0 +1,172 @@
+{
+  "rules": {
+    "sohbet": {
+      "mesajlar": {
+        "$id": {
+          ".write": "auth != null && ((!data.exists() && newData.exists()) || (data.exists() && !newData.exists() && (data.child('uid').val() == auth.uid || (root.child('sohbet/ayar/saklama').exists() && root.child('sohbet/ayar/saklama').val() > 0 && data.child('ts').val() < now - root.child('sohbet/ayar/saklama').val()) || (!root.child('sohbet/ayar/saklama').exists() && data.child('ts').val() < now - 3600000))))",
+          ".validate": "newData.hasChildren(['text','ts']) && newData.child('text').isString() && newData.child('text').val().length <= 500 && newData.child('ts').isNumber() && newData.child('ts').val() <= now",
+          "uid": {
+            ".validate": "newData.val() == auth.uid"
+          },
+          "nick": {
+            ".validate": "newData.isString() && newData.val().length <= 16"
+          },
+          "img": {
+            ".validate": "newData.isString() && newData.val().beginsWith('data:image/') && newData.val().length <= 1500000"
+          },
+          "dosya": {
+            ".validate": "newData.hasChildren(['ad','veri'])",
+            "ad": {
+              ".validate": "newData.isString() && newData.val().length <= 120"
+            },
+            "boyut": {
+              ".validate": "newData.isNumber()"
+            },
+            "veri": {
+              ".validate": "newData.isString() && newData.val().length <= 1500000"
+            },
+            "$diger": {
+              ".validate": false
+            }
+          }
+        },
+        ".read": true,
+        ".indexOn": [
+          "ts"
+        ]
+      },
+      "aktif": {
+        ".read": true,
+        "$k": {
+          ".write": "auth != null"
+        }
+      },
+      "yaziyor": {
+        ".read": true,
+        "$k": {
+          ".write": "auth != null"
+        }
+      },
+      "ayar": {
+        ".read": true,
+        ".write": "auth != null",
+        ".validate": "newData.hasChildren(['saklama','kim','ts'])",
+        "saklama": {
+          ".validate": "newData.isNumber() && (newData.val() === 0 || newData.val() === 3600000 || newData.val() === 86400000 || newData.val() === 604800000)"
+        },
+        "kim": {
+          ".validate": "newData.isString() && newData.val().length <= 16"
+        },
+        "ts": {
+          ".validate": "newData.isNumber() && newData.val() <= now"
+        },
+        "$diger": {
+          ".validate": false
+        }
+      },
+      "odalar": {
+        ".read": true,
+        ".indexOn": [
+          "ts"
+        ],
+        "$oda": {
+          ".write": "auth != null && ((!data.exists() && newData.child('sahip').val() == auth.uid) || (data.exists() && data.child('sahip').val() == auth.uid))",
+          ".validate": "newData.hasChildren(['ad','sahip','ts']) && newData.child('ad').isString() && newData.child('ad').val().length >= 2 && newData.child('ad').val().length <= 40",
+          "sahip": {
+            ".validate": "!data.exists() || newData.val() == data.val()"
+          },
+          "sahipNick": {
+            ".validate": "newData.isString() && newData.val().length <= 16"
+          }
+        }
+      },
+      "uyeOda": {
+        "$uid": {
+          ".read": "auth != null && auth.uid == $uid",
+          "$oda": {
+            ".write": "auth != null && (auth.uid == $uid || (root.child('sohbet/oda/'+$oda+'/uyeler/'+auth.uid).child('rol').val() == 'sahip' || root.child('sohbet/oda/'+$oda+'/uyeler/'+auth.uid).child('rol').val() == 'yetkili'))"
+          }
+        }
+      },
+      "oda": {
+        "$oda": {
+          ".read": "auth != null && root.child('sohbet/oda/'+$oda+'/uyeler/'+auth.uid).exists()",
+          ".write": "auth != null && root.child('sohbet/odalar/'+$oda+'/sahip').val() == auth.uid",
+          "uyeler": {
+            "$uid": {
+              ".read": "auth != null && auth.uid == $uid",
+              ".write": "auth != null && ((root.child('sohbet/oda/'+$oda+'/uyeler/'+auth.uid).child('rol').val() == 'yetkili' && (!data.exists() || data.child('rol').val() == 'uye') && (!newData.exists() || newData.child('rol').val() == 'uye')) || (auth.uid == $uid && data.exists() && data.child('rol').val() != 'sahip' && !newData.exists()) || (auth.uid == $uid && data.exists() && newData.exists() && newData.child('rol').val() == data.child('rol').val()))",
+              ".validate": "newData.hasChildren(['nick','rol']) && newData.child('nick').isString() && newData.child('nick').val().length <= 16 && (newData.child('rol').val() == 'uye' || newData.child('rol').val() == 'yetkili' || newData.child('rol').val() == 'sahip')"
+            }
+          },
+          "istekler": {
+            "$uid": {
+              ".read": "auth != null && auth.uid == $uid",
+              ".write": "auth != null && ((auth.uid == $uid && !root.child('sohbet/oda/'+$oda+'/uyeler/'+auth.uid).exists() && root.child('sohbet/odalar/'+$oda).exists()) || (!newData.exists() && root.child('sohbet/oda/'+$oda+'/uyeler/'+auth.uid).child('rol').val() == 'yetkili'))",
+              ".validate": "newData.hasChildren(['nick','ts']) && newData.child('nick').isString() && newData.child('nick').val().length <= 16 && newData.child('ts').val() <= now"
+            }
+          },
+          "mesajlar": {
+            "$id": {
+              ".write": "auth != null && root.child('sohbet/oda/'+$oda+'/uyeler/'+auth.uid).exists() && ((!data.exists() && newData.exists()) || (data.exists() && !newData.exists() && (data.child('uid').val() == auth.uid || (root.child('sohbet/oda/'+$oda+'/uyeler/'+auth.uid).child('rol').val() == 'sahip' || root.child('sohbet/oda/'+$oda+'/uyeler/'+auth.uid).child('rol').val() == 'yetkili') || (root.child('sohbet/oda/'+$oda+'/ayar/saklama').val() > 0 && data.child('ts').val() < now - root.child('sohbet/oda/'+$oda+'/ayar/saklama').val()))))",
+              ".validate": "newData.hasChildren(['text','ts']) && newData.child('text').isString() && newData.child('text').val().length <= 500 && newData.child('ts').isNumber() && newData.child('ts').val() <= now",
+              "uid": {
+                ".validate": "newData.val() == auth.uid"
+              },
+              "nick": {
+                ".validate": "newData.isString() && newData.val().length <= 16"
+              },
+              "img": {
+                ".validate": "newData.isString() && newData.val().beginsWith('data:image/') && newData.val().length <= 1500000"
+              },
+              "dosya": {
+                ".validate": "newData.hasChildren(['ad','veri'])",
+                "ad": {
+                  ".validate": "newData.isString() && newData.val().length <= 120"
+                },
+                "boyut": {
+                  ".validate": "newData.isNumber()"
+                },
+                "veri": {
+                  ".validate": "newData.isString() && newData.val().length <= 1500000"
+                },
+                "$diger": {
+                  ".validate": false
+                }
+              }
+            },
+            ".indexOn": [
+              "ts"
+            ]
+          },
+          "aktif": {
+            "$k": {
+              ".write": "auth != null && (!newData.exists() || root.child('sohbet/oda/'+$oda+'/uyeler/'+auth.uid).exists())"
+            }
+          },
+          "yaziyor": {
+            "$k": {
+              ".write": "auth != null && (!newData.exists() || root.child('sohbet/oda/'+$oda+'/uyeler/'+auth.uid).exists())"
+            }
+          },
+          "ayar": {
+            ".validate": "newData.hasChildren(['saklama','kim','ts'])",
+            "saklama": {
+              ".validate": "newData.isNumber() && (newData.val() === 0 || newData.val() === 3600000 || newData.val() === 86400000 || newData.val() === 604800000)"
+            },
+            "kim": {
+              ".validate": "newData.isString() && newData.val().length <= 16"
+            },
+            "ts": {
+              ".validate": "newData.isNumber() && newData.val() <= now"
+            },
+            "$diger": {
+              ".validate": false
+            },
+            ".write": "auth != null && root.child('sohbet/oda/'+$oda+'/uyeler/'+auth.uid).child('rol').val() == 'yetkili'"
+          }
+        }
+      }
+    }
+  }
+}
