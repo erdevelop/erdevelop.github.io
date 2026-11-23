@@ -72,8 +72,17 @@ const $ = id => document.getElementById(id), T = (a, b) => window.erDil ? erDil.
 const ls = k => { try { return JSON.parse(localStorage.getItem(k) || 'null'); } catch (e) { return null; } };
 const esc = s => String(s == null ? '' : s).replace(/[<>&"]/g, c => ({ '<': '&lt;', '>': '&gt;', '&': '&amp;', '"': '&quot;' }[c]));
 const sure = s => { s = Math.max(0, Math.round(+s || 0)); return Math.floor(s / 60) + ':' + String(s % 60).padStart(2, '0'); };
+let KR_BULUT = null;
+async function bulutKrallik() {   // girişliyse krallığı hesaptaki kayıttan da oku
+  try { if (localStorage.getItem('seri-giris') !== '1') return; } catch (e) { return; }
+  for (let i = 0; i < 60 && !(window.firebase && firebase.apps && firebase.apps.length && firebase.firestore); i++) await new Promise(r => setTimeout(r, 250));
+  if (!(window.firebase && firebase.apps && firebase.apps.length && firebase.firestore)) return;
+  try { const u = await new Promise(r => { const off = firebase.auth().onAuthStateChanged(x => { off(); r(x); }); }); if (!u) return;
+    const d = await firebase.firestore().collection('users').doc(u.uid).get(), k = d.exists && d.data().krallik; if (!k || !k.v) return;
+    KR_BULUT = JSON.parse(k.v); KR_BULUT.t = Math.max(KR_BULUT.t || 0, k.t || 0); ciz(); } catch (e) { }
+}
 function veri() {
-  const og = ls('organizma-kayit') || {}, ya = ls('yaratik-kayit') || {}, yu = ls('yuva-kayit') || {}, ka = ls('kabile-kayit') || {}, se = ls('sehir-kayit') || {}, kr = ls('kucuk-krallik-v1');
+  const og = ls('organizma-kayit') || {}, ya = ls('yaratik-kayit') || {}, yu = ls('yuva-kayit') || {}, ka = ls('kabile-kayit') || {}, se = ls('sehir-kayit') || {}, krY = ls('kucuk-krallik-v1'), kr = KR_BULUT && (!krY || (KR_BULUT.t || 0) > (krY.t || 0)) ? KR_BULUT : krY;
   const yaTam = !!(ya.gecis || ((ya.rekor || {}).kazan > 0)), kaO = ka.oyun || {}, kaR = ka.rekor || {}, seO = se.oyun || {}, seR = se.rekor || {};
   const kaTam = (kaR.koy >= 1) || kaO.asama >= 2, seTam = (seR.devlet >= 1) || !!seO.kazandi;
   const L = [
@@ -114,7 +123,7 @@ function kart(L) {
 }
 $('indir').onclick = () => { const a = document.createElement('a'); a.download = 'yolculugum.png'; a.href = $('kartC').toDataURL('image/png'); a.click(); };
 $('paylas').onclick = () => { $('kartC').toBlob(async b => { try { const f = new File([b], 'yolculugum.png', { type: 'image/png' }); if (navigator.canShare && navigator.canShare({ files: [f] })) await navigator.share({ files: [f], title: T('Yolculuğum', 'My journey'), text: T('Tek hücreden krallığa yolculuğum', 'My journey from a single cell to a kingdom'), url: 'https://erdevelop.github.io/seri.html' }); else if (navigator.share) await navigator.share({ title: T('Yolculuğum', 'My journey'), url: 'https://erdevelop.github.io/seri.html' }); else { await navigator.clipboard.writeText('https://erdevelop.github.io/seri.html'); $('paylas').textContent = T('Bağlantı kopyalandı', 'Link copied'); } } catch (e) { } }, 'image/png'); };
-ciz(); if (window.erDil && erDil.on) erDil.on(ciz); addEventListener('storage', ciz);
+ciz(); bulutKrallik(); if (window.erDil && erDil.on) erDil.on(ciz); addEventListener('storage', ciz);
 if (document.fonts && document.fonts.ready) document.fonts.ready.then(() => kart(veri()));
 })();
 </script>
