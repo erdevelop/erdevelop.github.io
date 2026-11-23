@@ -215,7 +215,7 @@ const KAYIT = Object.assign({ acik: [], rekor: { uzak: 0, nesil: 0, kazan: 0 }, 
 KAYIT.kalici = Object.assign({ can: 0, hiz: 0, isirik: 0 }, KAYIT.kalici); KAYIT.tur = KAYIT.tur | 0;
 const ZK = () => 1 + 0.25 * KAYIT.tur;   // soy turu: her turda canlılar daha güçlü
 const kaydet = () => ls.set('yaratik-kayit', KAYIT);
-const KOKEN = (() => { const g = (ls.get('organizma-kayit', {}) || {}).gecis; return g && Array.isArray(g.gen) ? { nick: String(g.nick || '').slice(0, 16), tur: g.tur | 0, hue: +g.hue || 172, kusak: kis(g.kusak | 0, 1, 99), gen: g.gen.filter(q => q && typeof q.k === 'string').slice(0, 60) } : null; })();
+const KOKEN = (() => { const g = (ls.get('organizma-kayit', {}) || {}).gecis; return g && Array.isArray(g.gen) ? { nick: String(g.nick || '').slice(0, 16), tur: g.tur | 0, hue: +g.hue || 172, kusak: kis(g.kusak | 0, 1, 99), yol: ['avci', 'koloni', 'simb'].includes(g.yol) ? g.yol : null, gen: g.gen.filter(q => q && typeof q.k === 'string').slice(0, 60) } : null; })();
 const GEN = KOKEN ? KOKEN.gen : [];
 if (!KAYIT.gecis && KAYIT.oyun && KAYIT.oyun.kazandi && Array.isArray(KAYIT.oyun.segs)) KAYIT.gecis = { segs: KAYIT.oyun.segs, nesil: KAYIT.oyun.nesil || 1, hue: KAYIT.oyun.hue || 172, nick: KOKEN ? KOKEN.nick : '' };
 const acikMi = id => PARCA[id].acik(GEN) || KAYIT.acik.includes(id);
@@ -249,9 +249,21 @@ const titre = p => { try { if (DOKUNMA && navigator.vibrate) navigator.vibrate(p
 const say = id => { let n = 0; for (const s of P.segs) if (s.p === id) n++; return n; };
 function hesapla() {
   const n = P.segs.length, m = P.mut;
-  const K = KAYIT.kalici;
-  P.S = { hiz: 150 * (1 + 0.14 * say('yuzgec')) * Math.pow(0.97, say('zirh')) * (1 + 0.03 * m.hiz + 0.04 * K.hiz), isirik: 10 + 6 * say('cene') + 9 * say('dis') + 2 * m.isirik + 3 * K.isirik, zirh: Math.pow(0.82, say('zirh')), diken: 6 * say('diken'), yaprak: say('yaprak'), zehir: say('zehir'), isik: say('isik'), dokunac: say('dokunac'), anten: say('anten'),
-    canUst: 40 + 14 * n + 5 * (Math.min(P.kusak, 11) - 1) + 6 * m.can + 10 * K.can, enUst: 100 + 10 * n };
+  const K = KAYIT.kalici, MR = mirasHesap();
+  P.S = { hiz: 150 * (1 + 0.14 * say('yuzgec')) * Math.pow(0.97, say('zirh')) * (1 + 0.03 * m.hiz + 0.04 * K.hiz) * (1 + MR.hiz), isirik: 10 + 6 * say('cene') + 9 * say('dis') + 2 * m.isirik + 3 * K.isirik + MR.isirik, zirh: Math.pow(0.82, say('zirh')) * (1 - MR.zirh), diken: 6 * say('diken'), yaprak: say('yaprak') + MR.yaprak, zehir: say('zehir') + MR.zehir, isik: say('isik'), dokunac: say('dokunac') + MR.dokunac, anten: say('anten'),
+    canUst: 40 + 14 * n + 5 * (Math.min(P.kusak, 11) - 1) + 6 * m.can + 10 * K.can + MR.can, enUst: 100 + 10 * n };
+}
+/* Organizma mirası: yol ve nadir/derin genler boğum harcamadan kalıcı armağan verir */
+function mirasHesap() {
+  const r = { hiz: 0, isirik: 0, zirh: 0, yaprak: 0, zehir: 0, dokunac: 0, can: 0, L: [] }; if (!KOKEN) return r;
+  const nDev = GEN.filter(q => /^n[012]$/.test(q.k)).length, nAlt = GEN.filter(q => /^n[34]$/.test(q.k)).length, nDer = GEN.filter(q => q.k[0] === 'd').length;
+  if (KOKEN.yol === 'avci') { r.isirik += 5; r.zehir += 1; r.L.push(T('🦂 Avcı: ısırık +5, zehirli ısırık', '🦂 Hunter: bite +5, venomous bite')); }
+  if (KOKEN.yol === 'koloni') { r.dokunac += 1; r.L.push(T('🫧 Koloni: besin çeken dokunaç gücü', '🫧 Colony: tentacle food pull')); }
+  if (KOKEN.yol === 'simb') { r.yaprak += 1; r.L.push(T('🌿 Simbiyont: ışıkta enerji', '🌿 Symbiont: energy in light')); }
+  if (nDev) { r.can += 8 * nDev; r.L.push(T(`🏆 ${nDev} dev geni: can +${8 * nDev}`, `🏆 ${nDev} giant gene(s): health +${8 * nDev}`)); }
+  if (nAlt) { r.hiz += 0.05 * nAlt; r.L.push(T(`✨ Altın pul: hız +%${5 * nAlt}`, `✨ Golden scales: speed +${5 * nAlt}%`)); }
+  if (nDer) { r.zirh += 0.06 * nDer; r.L.push(T(`🌑 Basınç derisi: hasar −%${6 * nDer}`, `🌑 Pressure skin: damage −${6 * nDer}%`)); }
+  return r;
 }
 const baslangicGovde = () => ['yuzgec'].concat(['cene', 'dis', 'zirh', 'dokunac', 'yaprak', 'diken', 'zehir', 'isik', 'anten'].filter(acikMi).slice(0, Math.min(3, Math.floor(GEN.length / 8))));
 function yeniOyuncu() {
@@ -942,6 +954,7 @@ const ilr = (ad, n, ust, ek) => { const t = n >= ust; return `<div style="margin
 function menuKur() {
   $('koken').innerHTML = KOKEN ? T(`Organizma'dan gelen: <b>${KOKEN.nick ? KOKEN.nick.replace(/[<>&]/g, '') + ' · ' : ''}${roma(KOKEN.kusak)}. kuşak · ${GEN.length} gen</b>. Genlerin aşağıdaki parçaları açtı; kuşağın başlangıç canını artırır.`, `Arrived from Organism: <b>${KOKEN.nick ? KOKEN.nick.replace(/[<>&]/g, '') + ' · ' : ''}generation ${roma(KOKEN.kusak)} · ${GEN.length} genes</b>. Your genes unlocked the parts below; your generation raises starting health.`)
     : T('🔒 <b>Önce Organizma\'yı bitir.</b> Bu oyun, Organizma\'da büyüttüğün hücrenin devamı: orada 2. kuşağa ulaş, 15 gen topla ve çıkan <b>🥚 Evrimleş</b> düğmesine bas. Canlın genleriyle birlikte buraya geçer.', '🔒 <b>Finish Organism first.</b> This game continues the cell you raised in Organism: reach generation 2 there, collect 15 genes and press the <b>🥚 Evolve</b> button. Your creature arrives here with its genes.');
+  { const MR = mirasHesap(); if (MR.L.length) $('koken').innerHTML += `<div style="margin-top:8px;font-size:13px;font-weight:800;line-height:1.5">🎁 ${T('Organizma mirası', 'Organism legacy')}:<br>${MR.L.join('<br>')}</div>`; }
   if (!KOKEN) { const ok = ls.get('organizma-kayit', {}) || {}; $('koken').innerHTML += `<div style="margin-top:10px;padding:9px 11px;border-radius:14px;border:1px solid var(--line);background:rgba(0,0,0,.2)"><div style="font-weight:900;font-size:13px">${ok.oyun ? T('Organizma\'daki ilerlemen', 'Your progress in Organism') : T('Organizma\'yı henüz oynamadın', 'You have not played Organism yet')}</div>` + ilr(T('2. kuşağa ulaş', 'Reach generation 2'), ok.enKusak || 1, 2) + ilr(T('15 gen topla', 'Collect 15 genes'), ok.enGen || 0, 15) + '</div>'; }
   { const k = !KOKEN; $('kilitLink').hidden = !k; for (const id of ['on', 'onNot', 'parcalar', 'basla']) $(id).hidden = k; document.querySelectorAll('#menu h3').forEach(e => e.hidden = k); }
   $('parcalar').innerHTML = PID.map(id => { const a = acikMi(id), p = PARCA[id]; return `<div class="${a ? '' : 'kilit'}">${a ? p.e : '🔒'} ${T(...p.ad)}<small>${a ? T(...p.ne) : T(...p.sart) + T(' ya da gen kapsülü', ' or a gene capsule')}</small></div>`; }).join('');

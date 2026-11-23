@@ -1747,6 +1747,17 @@ const YR_PARCA = [
   ['📡', ['Anten', 'Antenna'], ['haritada canlıları gösterir', 'shows creatures on the map'], 'm', 20, ['mikro canlı geni', 'microbe genes']],
   ['💡', ['Işık organı', 'Light organ'], ['karanlıkta görüş', 'vision in the dark'], '*', 25, ['gen toplam', 'genes in total']]
 ];
+/* Organizma'dan Yaratık'a taşınan kalıcı armağanlar (yaratik.html'deki mirasHesap ile aynı kurallar) */
+function mirasListe(yol, G) {
+  const L = [], nDev = G.filter(q => /^n[012]$/.test(q.k)).length, nAlt = G.filter(q => /^n[34]$/.test(q.k)).length, nDer = G.filter(q => q.k[0] === 'd').length;
+  if (yol === 'avci') L.push(['🦂', ['Avcı yolu', 'Hunter path'], ['ısırık +5 ve zehirli ısırık', 'bite +5 and venomous bite']]);
+  if (yol === 'koloni') L.push(['🫧', ['Koloni yolu', 'Colony path'], ['yakındaki besini çeken dokunaç gücü', 'tentacle pull on nearby food']]);
+  if (yol === 'simb') L.push(['🌿', ['Simbiyont yolu', 'Symbiont path'], ['ışıkta kendiliğinden enerji', 'passive energy in light']]);
+  if (nDev) L.push(['🏆', [`${nDev} dev geni`, `${nDev} giant gene${nDev > 1 ? 's' : ''}`], [`başlangıç canı +${8 * nDev}`, `start health +${8 * nDev}`]]);
+  if (nAlt) L.push(['✨', ['Altın pul', 'Golden scales'], [`hız +%${5 * nAlt}`, `speed +${5 * nAlt}%`]]);
+  if (nDer) L.push(['🌑', ['Basınç derisi', 'Pressure skin'], [`hasar −%${6 * nDer}`, `damage −${6 * nDer}%`]]);
+  return L;
+}
 const genSay = (G, h) => h === '*' ? G.length : G.filter(q => q.k[0] === h).length;
 const RESIM = new Map();
 function genResim(k) {   // her genin kaynağının küçük resmi (bir kez çizilip saklanır)
@@ -1798,6 +1809,7 @@ function defterAc(bolum) {
   h += `<h4><span>🥚 ${T('YARATIK\'A GEÇİŞ', 'ON TO CREATURE')}</span></h4><div class="gPar${gk ? ' ok' : ''}"><i>🧬</i><span><b>${T('2. kuşağa ulaş', 'Reach generation 2')}</b> <small>· ${T('büyü ve çoğal', 'grow and reproduce')}</small></span><em>${gk ? '✓' : (o.kusak || 1) + '/2'}</em><div class="gCub"><i style="width:${gk ? 100 : 50}%"></i></div></div>`;
   h += `<div class="gPar${gg ? ' ok' : ''}"><i>🧪</i><span><b>${T('15 gen topla', 'Collect 15 genes')}</b></span><em>${gg ? '✓' : G.length + '/15'}</em><div class="gCub"><i style="width:${Math.round(Math.min(1, G.length / 15) * 100)}%"></i></div></div>`;
   h += `<h4><span>🧩 ${T('YARATIK\'TA AÇACAKLARIN', 'PARTS YOU WILL UNLOCK IN CREATURE')}</span></h4>` + parcaHtml(G);
+  { const mr = mirasListe(o.yol, G); if (mr.length) h += `<h4><span>🎁 ${T('YARATIK\'A MİRAS', 'LEGACY FOR CREATURE')}</span></h4><p class="gAc">${mr.map(q => q[0] + ' <b>' + esc(T(q[1][0], q[1][1])) + '</b>: ' + esc(T(q[2][0], q[2][1]))).join('<br>')}</p>`; }
   h += `<h4 id="gdDiyet"><span>🍽 ${T('BESLENME BİÇİMİN', 'YOUR FEEDING FORM')}</span></h4><div class="gDiy"><div>${diyetSatir(o, true)}<p class="gAc">${T('Çubuk şu anki görünümün, açık işaret yediklerinin oranı, beyaz çizgi görünümün değiştiği eşik.', 'Bar = your look now, light mark = what you eat, white line = where your look changes.')}<br>${FORM_AD.map(a => `${a[0]} <b>${T(a[1][0], a[1][1])}</b>: ${T(a[2][0], a[2][1])} ${T('yersen', '→')} ${T(a[3][0], a[3][1])}`).join('<br>')}</p></div><canvas id="gdOniz" width="184" height="184"></canvas></div>`;
   for (const [gr, ad] of GEN_GRUP) {
     const ks = genAnahtarlar(gr), say = ks.filter(k => var_.has(k)).length;
@@ -3044,7 +3056,7 @@ function hud(dt) {
       if (o.kusak >= 2 && o.gen.length >= 15) {   // Yaratık oyununa geçiş: genom kaydedilir
         const gc = KAYIT.gecis, gb = $('gecisBtn');
         if (!gc || o.gen.length > gc.gen.length || o.kusak > gc.kusak) {
-          const ilk = !gc; KAYIT.gecis = { nick: o.nick, tur: o.tur, hue: Math.round(o.hue), kusak: o.kusak, gen: o.gen.map(q => ({ k: q.k, h: Math.round(q.h), n: q.n })) }; kayitKirli = true;
+          const ilk = !gc; KAYIT.gecis = { nick: o.nick, tur: o.tur, hue: Math.round(o.hue), kusak: o.kusak, yol: o.yol || null, yolLv: o.yolLv || 0, gen: o.gen.map(q => ({ k: q.k, h: Math.round(q.h), n: q.n })) }; kayitKirli = true;
           if (ilk) { kaydet(); duyur(T('🥚 Canlın çok hücreli yaşama hazır! "Evrimleş" ile Yaratık oyununa geçebilirsin; genlerin kaydedildi.', '🥚 Your creature is ready for multicellular life! Use "Evolve" to move on to the Creature game; your genes are saved.'), 'iyi', 9); SES.basari(); }
         }
         if (gb.hidden) { gb.hidden = false; gb.textContent = T('🥚 Evrimleş → Yaratık', '🥚 Evolve → Creature'); delete gb.dataset.emin; }
