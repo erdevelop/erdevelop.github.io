@@ -37,7 +37,7 @@ button,input{font:inherit;color:inherit}button{cursor:pointer}[hidden]{display:n
 #duyuru div{background:rgba(20,16,8,.88);border:1px solid var(--line);border-radius:12px;padding:7px 14px;font-weight:800;font-size:13.5px;text-align:center;animation:duy .35s ease-out;transition:opacity .6s}
 #duyuru div.uyari{border-color:rgba(255,123,107,.7);color:#FFD2CB}#duyuru div.iyi{border-color:rgba(155,224,122,.6);color:#E2FBD2}
 @keyframes duy{from{transform:translateY(-8px);opacity:0}}
-#mini{position:fixed;right:10px;bottom:calc(10px + env(safe-area-inset-bottom,0px));width:240px;height:150px;border-radius:12px;z-index:4;opacity:.94;border:1px solid var(--line)}
+#mini{cursor:pointer;touch-action:none;position:fixed;right:10px;bottom:calc(10px + env(safe-area-inset-bottom,0px));width:240px;height:150px;border-radius:12px;z-index:4;opacity:.94;border:1px solid var(--line)}
 body.er-durumlu #mini{bottom:32px}
 #altBar{position:fixed;left:50%;bottom:calc(12px + env(safe-area-inset-bottom,0px));transform:translateX(-50%);z-index:7;display:flex;flex-direction:column;align-items:center;gap:7px}
 body.er-durumlu #altBar{bottom:34px}
@@ -657,8 +657,9 @@ function guncelle(dt) {
   if (Math.hypot(RS.x - RAKIP.x, RS.y - RAKIP.y) < 900 && !O.rakipYok) birKez('t5', T('🛖 Komşu kabile! Kamplarına yaklaşıp konuşabilirsin: hediye, takas, ittifak ya da savaş', '🛖 A neighbouring tribe! Approach their camp to talk: gifts, trade, alliance or war'), '', 7);
   koyKontrol();
   /* kamera */
-  const gw = EW / zum, gh = EH / zum, hx2 = kis(RS.x - gw / 2 + Math.cos(RS.ang) * 30, -60, DW + 60 - gw), hy2 = kis(RS.y - gh / 2, -60, DH + 60 - gh);
-  kx += (hx2 - kx) * Math.min(1, dt * 5); ky += (hy2 - ky) * Math.min(1, dt * 5);
+  if (bak && !miniBas && (bak.sure -= dt) <= 0) bak = null;
+  const gw = EW / zum, gh = EH / zum, mx = bak ? bak.x : RS.x + Math.cos(RS.ang) * 30, my = bak ? bak.y : RS.y, hx2 = kis(mx - gw / 2, -60, DW + 60 - gw), hy2 = kis(my - gh / 2, -60, DH + 60 - gh), ck = Math.min(1, dt * (bak ? 9 : 5));
+  kx += (hx2 - kx) * ck; ky += (hy2 - ky) * ck;
 }
 function hedefSatir() {
   if ((O.asama | 0) === 0) return [[!!O.tek.ates, T('🔥 Ateş', '🔥 Fire')], [O.barinak >= 3, T(`🏠 Barınak ${Math.min(O.barinak, 3)}/3`, `🏠 Shelters ${Math.min(O.barinak, 3)}/3`)], [!!O.tek.comlek, T('🏺 Çömlek', '🏺 Pottery')], [kisi() >= 15, T(`👥 Kabile ${Math.min(kisi(), 15)}/15`, `👥 Tribe ${Math.min(kisi(), 15)}/15`)]];
@@ -1075,7 +1076,7 @@ function ciz() {
 /* ================= arayüz ================= */
 let hudZ = 0;
 function hud(dt) {
-  hudZ -= dt; if (hudZ > 0) return; hudZ = 0.12;
+  hudZ -= dt; if (hudZ > 0) return; hudZ = bak ? 0.04 : 0.12;
   const tuk = tuketim(), bz = bozulma();
   $('cF').innerHTML = `🍖 ${Math.floor(O.f)}<small> −${Math.round(tuk)}${bz > 0.5 ? ' 🦠' + Math.round(bz) : ''}/${T('dk', 'min')}</small>`; $('cF').classList.toggle('az', O.f < tuk * 1.5 || bz > tuk);
   $('cO').innerHTML = `🪵 ${Math.floor(O.o)}${O.tek.ates ? `<small> 🔥${Math.ceil(O.yakit)}${T('sn', 's')}</small>` : ''}`; $('cO').classList.toggle('az', O.tek.ates && O.o < 2 && O.yakit < 30);
@@ -1100,6 +1101,8 @@ function hud(dt) {
   for (const hh of H) { if (hh.olu || sisli(hh.x, hh.y)) continue; if (hh.tip === 'mamut') x.fillText('🦣', hh.x * k, hh.y * k); else if (hh.tip === 'ayi') x.fillText('🐻', hh.x * k, hh.y * k); else if (KAL.anten && hh.tip === 'kurt') nok(hh.x, hh.y, 3, '#FF6A55'); else if ((hh.baskin || savas()) && rakipMi(hh)) nok(hh.x, hh.y, 3, '#E8402E'); }
   x.fillStyle = 'rgba(28,34,26,.88)'; for (let i = 0; i < SX * SY; i++) if (!O.sis[i]) x.fillRect((i % SX) * SC * k, Math.floor(i / SX) * SC * k, SC * k + 0.5, SC * k + 0.5);
   for (const u of U) nok(u.x, u.y, 2.4, '#fff');
+  x.strokeStyle = 'rgba(255,255,255,.55)'; x.lineWidth = 1.5; x.strokeRect(kx * k, ky * k, EW / zum * k, EH / zum * k);
+  if (RS.hedef) { const q = RS.hedef, tx = q.h ? q.h.x : q.n ? q.n.x : q.x, ty = q.h ? q.h.y : q.n ? q.n.y : q.y; x.strokeStyle = '#FFE29A'; x.lineWidth = 2; x.setLineDash([3, 3]); x.beginPath(); x.moveTo(RS.x * k, RS.y * k); x.lineTo(tx * k, ty * k); x.stroke(); x.setLineDash([]); x.beginPath(); x.arc(tx * k, ty * k, 5, 0, TAU); x.stroke(); }
   x.save(); x.translate(RS.x * k, RS.y * k); x.rotate(RS.ang); x.fillStyle = '#FFE29A'; x.strokeStyle = '#000'; x.lineWidth = 1.5; x.beginPath(); x.moveTo(9, 0); x.lineTo(-6, -6); x.lineTo(-3, 0); x.lineTo(-6, 6); x.closePath(); x.fill(); x.stroke(); x.restore();
 }
 const MODLAR = [['izle', '🚶', ['İzle', 'Follow']], ['topla', '🧺', ['Topla', 'Gather']], ['avla', '🏹', ['Avla', 'Hunt']]];
@@ -1134,6 +1137,12 @@ $('mYeni').onclick = () => { const b = $('mYeni'), k = ls.get('kabile-kayit', nu
 $('sMenu').onclick = () => { $('sonuc').hidden = true; durdu = false; menuAc(); };
 
 /* ================= girdi ================= */
+let bak = null, miniBas = false;   // küçük haritadan bakılan yer
+const miniDunya = e => { const r = $('mini').getBoundingClientRect(); return { x: kis((e.clientX - r.left) / r.width * DW, 30, DW - 30), y: kis((e.clientY - r.top) / r.height * DH, 30, DH - 30) }; };
+$('mini').addEventListener('pointerdown', e => { e.preventDefault(); e.stopPropagation(); if (!oyunda || durdu || panelAcik) return; try { $('mini').setPointerCapture(e.pointerId); } catch (er) { } miniBas = true; bak = Object.assign(miniDunya(e), { sure: 99 }); });
+$('mini').addEventListener('pointermove', e => { if (!miniBas) return; e.preventDefault(); const q = miniDunya(e); bak.x = q.x; bak.y = q.y; });
+const miniBit = e => { if (!miniBas) return; miniBas = false; if (e.type === 'pointerup' && bak) { RS.hedef = { x: bak.x, y: bak.y, t: zaman }; SES.teslim(); } if (bak) bak.sure = 1.4; };
+$('mini').addEventListener('pointerup', miniBit); $('mini').addEventListener('pointercancel', miniBit);
 function tikla(sx, sy) {
   if (!oyunda || durdu || panelAcik || !RS) return;
   const wx = sx / zum + kx, wy = sy / zum + ky; let en = null, ed = 1e9;
