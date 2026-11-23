@@ -81,6 +81,19 @@ details ul{margin:8px 0 0;padding-left:18px;font-size:13.5px}details li{margin:4
 #sesKutu{position:fixed;right:10px;top:calc(50px + env(safe-area-inset-top,0px));z-index:25;display:flex;gap:8px;align-items:center;background:rgba(10,22,14,.96);border:1px solid var(--line);border-radius:14px;padding:8px 12px}
 #sesKutu input{width:150px;accent-color:var(--acc);touch-action:pan-x}#sesKutu button{border:0;background:transparent;font-size:18px;padding:0 2px}
 #sesYuzde{font-size:12.5px;font-weight:800;color:var(--mute);min-width:38px;text-align:right}
+#tur{position:fixed;right:10px;top:calc(54px + env(safe-area-inset-top,0px));z-index:6;display:flex;flex-direction:column;align-items:flex-end;gap:6px;pointer-events:none}
+#tur>*{pointer-events:auto}
+#turBtn{width:36px;height:36px;border-radius:12px;border:1px solid var(--line);background:rgba(10,22,14,.72);color:var(--ink);font-size:17px;backdrop-filter:blur(6px);-webkit-backdrop-filter:blur(6px)}
+#turP{width:232px;background:rgba(10,22,14,.78);border:1px solid var(--line);border-radius:16px;padding:9px 10px;backdrop-filter:blur(6px);-webkit-backdrop-filter:blur(6px);font-size:12px}
+#turC{display:block;width:212px;height:122px;border-radius:10px;background:rgba(0,0,0,.28)}
+#turS{display:grid;grid-template-columns:1fr 1fr;gap:3px 8px;margin:7px 0 2px;font-weight:800}
+#turS span{display:flex;justify-content:space-between;gap:4px;white-space:nowrap}#turS small{color:var(--mute);font-weight:800}
+#turG h5{margin:7px 0 4px;font-size:10.5px;font-weight:900;letter-spacing:.06em;color:var(--mute)}
+#turG .gl{display:flex;flex-wrap:wrap;gap:4px}
+#turG .gn{display:inline-flex;align-items:center;justify-content:center;min-width:26px;height:26px;padding:0 4px;border-radius:8px;border:1px solid var(--line);background:rgba(0,0,0,.25);font-size:14px;font-weight:900;filter:grayscale(1);opacity:.35}
+#turG .gn.on{filter:none;opacity:1;border-color:rgba(155,224,122,.55);background:rgba(155,224,122,.12)}
+#turG .gn small{font-size:10px;margin-left:1px;color:var(--sari)}
+@media (max-width:640px){#tur{top:calc(124px + env(safe-area-inset-top,0px))}#turP{width:196px;padding:7px 8px}#turC{width:180px;height:104px}#turS{font-size:11px}}
 @media (max-width:640px){
   #ust{gap:4px}.cip{height:32px;font-size:12.5px;padding:0 7px}.cip small{display:none}#ust .yuv{min-width:32px;height:32px;padding:0 7px}
   #evre{top:calc(86px + env(safe-area-inset-top,0px))}#evreY{font-size:12.5px}
@@ -108,6 +121,7 @@ details ul{margin:8px 0 0;padding-left:18px;font-size:13.5px}details li{margin:4
 <div id="sesKutu" hidden><button type="button" id="sesSus" title="Sesi kapat/aç" data-en-title="Mute/unmute" aria-label="Sesi kapat/aç" data-en-aria="Mute/unmute">🔈</button><input id="sesKaydir" type="range" min="0" max="100" step="5" aria-label="Ses düzeyi" data-en-aria="Volume"><span id="sesYuzde"></span></div>
 <div id="evre"><div id="evreY"></div><div id="cubuklar"><div class="cb" id="yuvaCb"><i></i><span></span></div><div class="cb can" id="canCb"><i></i><span></span></div></div></div>
 <div id="duyuru"></div>
+<div id="tur"><button id="turBtn" type="button" title="Türün: genler ve nabız" data-en-title="Your species: genes and pulse" aria-label="Tür paneli" data-en-aria="Species panel">🧬</button><div id="turP" hidden><canvas id="turC" width="424" height="244"></canvas><div id="turS"></div><div id="turG"></div></div></div>
 <button id="atilBtn" type="button" aria-label="Atıl" data-en-aria="Dash">⚡<small data-en="dash">atıl</small></button>
 <div id="alt">
   <button class="ab" id="yumBtn" type="button"></button>
@@ -1231,6 +1245,66 @@ function basla(tur) {
   arayuz();
 }
 
+
+/* ================= tür paneli: nabız, DNA sarmalı, genler ================= */
+const TP = { acik: ls.get('yuva-panel', null), bpm: 64, faz: 0, iz: [], izT: 0, don: 0 };
+if (TP.acik == null) TP.acik = innerWidth > 900;
+const EV_RENK = { akciger: '#7FD0F0', bacak: '#F2B25A', kulucka: '#F4E6C0', duyu: '#C58CF2', deri: '#8BC46A', depo: '#D9A35A', suru: '#F27AB0', sicak: '#FF7B5B' };
+function turAc(v) { TP.acik = v; ls.set('yuva-panel', v); $('turP').hidden = !v; $('turBtn').textContent = v ? '✕' : '🧬'; if (v) turYaz(); }
+$('turBtn').onclick = () => { turAc(!TP.acik); SES.tik(); };
+function nabizHedef() {
+  if (!P || !O) return 0; if (P.olu) return 0;
+  const hp = kis(P.hp / st.can, 0, 1), v = Math.hypot(P.vx, P.vy) / st.hiz;
+  return 58 + (P.savas > 0 ? 58 : 0) + 34 * kis(v, 0, 1) + 55 * (1 - hp) + (P.atilT > 0 ? 35 : 0) + (evre === 'gece' ? 10 : 0) - (ev('sicak') ? 4 : 0);
+}
+const EKG = f => { /* bir atımın biçimi: P dalgası, QRS, T dalgası */
+  const g2 = (m, s, a) => a * Math.exp(-((f - m) ** 2) / (2 * s * s));
+  return g2(0.12, 0.025, 0.12) - g2(0.255, 0.008, 0.16) + g2(0.28, 0.011, 1) - g2(0.305, 0.009, 0.28) + g2(0.5, 0.045, 0.24); };
+function turCiz(dt) {
+  if (!TP.acik || !O) return;
+  const c = $('turC'), x = c.getContext('2d'), W = c.width, H = c.height;
+  const hed = nabizHedef(); TP.bpm += (hed - TP.bpm) * Math.min(1, dt * 1.5);
+  /* EKG izi: soldan sağa akar */
+  const ekgH = H * 0.46, hiz = 90;   // px/sn (tuval ölçeğinde)
+  TP.izT += dt * hiz; while (TP.izT >= 1) { TP.izT -= 1; TP.faz += (TP.bpm / 60) / hiz; if (TP.faz >= 1) TP.faz -= 1; TP.iz.push(P && P.olu ? 0 : EKG(TP.faz)); }
+  if (TP.iz.length > W) TP.iz.splice(0, TP.iz.length - W);
+  x.clearRect(0, 0, W, H);
+  /* ızgara */
+  x.strokeStyle = 'rgba(120,220,150,.08)'; x.lineWidth = 1; for (let i = 0; i < W; i += 16) { x.beginPath(); x.moveTo(i, 0); x.lineTo(i, ekgH); x.stroke(); } for (let j = 0; j < ekgH; j += 16) { x.beginPath(); x.moveTo(0, j); x.lineTo(W, j); x.stroke(); }
+  const az = P && !P.olu && P.hp / st.can < 0.35, renk = P && P.olu ? '#FF6B5B' : az ? '#FFB060' : '#7DF2A0';
+  x.strokeStyle = renk; x.lineWidth = 3; x.lineJoin = 'round'; x.shadowColor = renk; x.shadowBlur = 8; x.beginPath();
+  const n = TP.iz.length; for (let i = 0; i < n; i++) { const yy = ekgH * 0.68 - TP.iz[i] * ekgH * 0.55; i ? x.lineTo(W - n + i, yy) : x.moveTo(W - n + i, yy); } x.stroke(); x.shadowBlur = 0;
+  if (n) { x.fillStyle = '#fff'; x.beginPath(); x.arc(W - 1, ekgH * 0.68 - TP.iz[n - 1] * ekgH * 0.55, 3.5, 0, TAU); x.fill(); }
+  x.font = '900 34px Nunito,sans-serif'; x.textAlign = 'left'; x.textBaseline = 'top'; x.fillStyle = renk; x.fillText(P && P.olu ? '— —' : Math.round(TP.bpm), 10, 8);
+  const nw = x.measureText(P && P.olu ? '— —' : String(Math.round(TP.bpm))).width; x.font = '800 18px Nunito,sans-serif'; x.fillStyle = 'rgba(230,240,230,.75)'; x.fillText(T('nabız', 'bpm'), 16 + nw, 20);
+  const kalp = 1 + Math.max(0, EKG(TP.faz)) * 0.35; x.save(); x.translate(W - 22, 22); x.scale(kalp, kalp); x.fillStyle = renk; x.beginPath(); x.moveTo(0, 6); x.bezierCurveTo(-12, -3, -7, -13, 0, -6); x.bezierCurveTo(7, -13, 12, -3, 0, 6); x.fill(); x.restore();
+  /* DNA sarmalı: her evrim kendi renginde bir basamak, kartlar parlak halka */
+  const ust = ekgH + 8, dh = H - ust - 6, mid = ust + dh / 2, A = dh * 0.4; TP.don += dt * (0.8 + TP.bpm / 90);
+  const ids = Object.keys(EVRIM), N = 16;
+  for (let k = 0; k < 2; k++) { x.strokeStyle = k ? 'rgba(160,200,255,.75)' : 'rgba(155,224,122,.75)'; x.lineWidth = 3; x.beginPath(); for (let i = 0; i <= W; i += 4) { const a = i / W * TAU * 2.2 + TP.don + k * Math.PI, yy = mid + Math.sin(a) * A; i ? x.lineTo(i, yy) : x.moveTo(i, yy); } x.stroke(); }
+  for (let i = 0; i < N; i++) { const px = (i + 0.5) / N * W, a = px / W * TAU * 2.2 + TP.don, y1 = mid + Math.sin(a) * A, y2 = mid + Math.sin(a + Math.PI) * A, on = Math.cos(a) > 0;
+    const id = ids[i % ids.length], var_ = O.evrim[id], kart = Object.keys(O.kart).some(k => i % ids.length === Object.keys(EK).indexOf(k) && O.kart[k]);
+    x.strokeStyle = var_ ? EV_RENK[id] : kart ? 'rgba(255,226,154,.6)' : 'rgba(255,255,255,.12)'; x.globalAlpha = on ? 1 : 0.45; x.lineWidth = var_ ? 5 : 3; x.beginPath(); x.moveTo(px, y1); x.lineTo(px, y2); x.stroke();
+    if (var_) { x.fillStyle = EV_RENK[id]; for (const yy of [y1, y2]) { x.beginPath(); x.arc(px, yy, 4, 0, TAU); x.fill(); } } }
+  x.globalAlpha = 1;
+}
+function turYaz() {
+  if (!TP.acik || !O || !P) return;
+  const S2 = [
+    ['❤️', `${Math.ceil(Math.max(0, P.hp))}/${Math.ceil(st.can)}`, T('Can', 'Health')], ['🏃', Math.round(st.hiz), T('Hız', 'Speed')],
+    ['🦷', Math.round(st.isir), T('Isırık gücü', 'Bite')], ['👁', Math.round(st.isik), T('Gece görüşü', 'Night vision')],
+    ['⚡', P.atil > 0 ? Math.ceil(P.atil) + T(' sn', ' s') : T('hazır', 'ready'), T('Atılma', 'Dash')], ['🐣', `×${st.yavruK.toFixed(2).replace('.', T(',', '.'))}`, T('Yavruların gücü', 'Hatchling power')]
+  ];
+  const h1 = S2.map(([e, v, ad]) => `<span title="${ad}">${e}<small>${v}</small></span>`).join('');
+  const ev2 = Object.keys(EVRIM).map(id => `<span class="gn${O.evrim[id] ? ' on' : ''}" title="${esc(T(...EVRIM[id].ad))}: ${esc(T(...EVRIM[id].ne))}">${EVRIM[id].e}</span>`).join('');
+  const ek2 = Object.keys(EK).filter(k => O.kart[k]).map(k => `<span class="gn on" title="${esc(T(...EK[k].ad))}: ${esc(T(...EK[k].ne))}">${EK[k].e}${O.kart[k] > 1 ? `<small>${O.kart[k]}</small>` : ''}</span>`).join('');
+  const pz = Object.keys(K.oz).filter(p => PARCA_OZ[p]).map(p => `<span class="gn on" title="${esc(T(...PARCA_OZ[p][1]))}: ${esc(T(...PARCA_OZ[p][2]))}">${PARCA_OZ[p][0]}${K.oz[p] > 1 ? `<small>${K.oz[p]}</small>` : ''}</span>`).join('');
+  const h2 = `<h5>${T('EVRİMLER', 'TRAITS')} · ${Object.keys(O.evrim).length}/${Object.keys(EVRIM).length}</h5><div class="gl">${ev2}</div>` + (ek2 ? `<h5>${T('KAZANIMLAR', 'BOONS')}</h5><div class="gl">${ek2}</div>` : '') + (pz ? `<h5>${T('YARATIK\'TAN GELEN', 'FROM CREATURE')}</h5><div class="gl">${pz}</div>` : '');
+  if ($('turS').dataset.h !== h1) { $('turS').dataset.h = h1; $('turS').innerHTML = h1; }
+  if ($('turG').dataset.h !== h2) { $('turG').dataset.h = h2; $('turG').innerHTML = h2; }
+}
+turAc(!!TP.acik);
+
 /* ================= döngü ================= */
 let son = 0, fpsS = 0, fpsT = 0;
 function kare(ts) {
@@ -1238,7 +1312,8 @@ function kare(ts) {
   if (cv.width !== Math.round(innerWidth * Math.min(dprUst, devicePixelRatio || 1))) boyutla();
   /* yavaş cihazda çözünürlüğü düşür */
   if (oyunda && !durdu && dt0 > 0) { fpsS++; fpsT += dt0; if (fpsT > 3) { const f = fpsS / fpsT; fpsS = fpsT = 0; if (f < 38 && dprUst > 1 && DPR > 1) { dprUst = Math.max(1, DPR - 0.5); boyutla(); } } }
-  if (oyunda && !durdu && !secimAcik && O) { for (let i = 0; i < HIZ; i++) { guncelle(dt0); if (!oyunda) break; } arayuzZ += dt0; if (arayuzZ > 0.2) { arayuzZ = 0; arayuz(); } }
+  if (oyunda && !durdu && !secimAcik && O) { for (let i = 0; i < HIZ; i++) { guncelle(dt0); if (!oyunda) break; } arayuzZ += dt0; if (arayuzZ > 0.2) { arayuzZ = 0; arayuz(); turYaz(); } }
+  if (oyunda && !durdu && O) turCiz(dt0);
   ciz();
 }
 addEventListener('pagehide', kosuKaydetGunduz); document.addEventListener('visibilitychange', () => { if (document.hidden) { kosuKaydetGunduz(); if (oyunda && !durdu) { menuAc(); } } });
@@ -1251,7 +1326,7 @@ $('sesKaydir').addEventListener('input', e => { SES.ayarla(+e.target.value / 100
 $('sesKaydir').addEventListener('change', () => SES.topla());
 $('sesSus').onclick = () => { SES.ayarla(SES.duzey() > 0 ? 0 : 0.6); $('sesKaydir').value = Math.round(SES.duzey() * 100); sesYaz(); SES.topla(); };
 sesYaz();
-if (window.erDil && erDil.on) erDil.on(() => { menuKur(); arayuz(); if (insYer >= 0) insAc(insYer); });
+if (window.erDil && erDil.on) erDil.on(() => { menuKur(); arayuz(); if (insYer >= 0) insAc(insYer); $('turS').dataset.h = ''; $('turG').dataset.h = ''; turYaz(); });
 
 boyutla();
 /* menü arkasında: kilitliyse ya da kayıt yoksa örnek bir kumsal */
