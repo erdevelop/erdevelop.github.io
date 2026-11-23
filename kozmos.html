@@ -43,6 +43,9 @@ body.otomod #kHiz,body.otomod #kWarp{display:none}
 #warpBar{height:5px;border-radius:3px;background:rgba(255,255,255,.08);margin-top:6px;overflow:hidden}
 #warpBar i{display:block;height:100%;width:0;background:linear-gradient(90deg,#7FE3FF,#B48CFF);transition:width .1s}
 #ipucu{margin-top:5px;font-size:11.5px;color:var(--mute);opacity:.85}
+#kokpit{position:fixed;right:10px;top:calc(54px + env(safe-area-inset-top,0px));z-index:5;width:184px;height:262px;border-radius:16px;border:1px solid var(--line);background:rgba(6,10,26,.62);backdrop-filter:blur(8px);-webkit-backdrop-filter:blur(8px);pointer-events:none}
+@media (max-height:660px){#kokpit{display:none}}body.odak #kokpit{display:none}
+.secim{display:flex;align-items:center;gap:10px;margin-top:10px;font-size:13.5px;font-weight:800;cursor:pointer}.secim input{width:18px;height:18px;accent-color:var(--acc)}
 #yakin{position:fixed;right:10px;bottom:calc(200px + env(safe-area-inset-bottom,0px));z-index:5;width:290px;padding:11px 13px;border-radius:16px;border:1px solid var(--line);background:rgba(6,10,26,.7);backdrop-filter:blur(8px);-webkit-backdrop-filter:blur(8px);pointer-events:none;font-size:13px}
 #yakin b{display:block;font-size:16.5px;font-weight:900}
 #yakin .tur{color:var(--mute);font-size:12.5px}
@@ -147,6 +150,7 @@ details{margin-top:12px;color:var(--mute);font-size:13.5px}summary{cursor:pointe
   <div id="ekon"></div>
   <div id="ipucu"></div>
 </div>
+<canvas id="kokpit" hidden></canvas>
 <div id="yakin" hidden></div>
 <div id="gp"></div>
 <div id="gorevPanel" hidden></div>
@@ -192,6 +196,7 @@ details{margin-top:12px;color:var(--mute);font-size:13.5px}summary{cursor:pointe
     <button class="ana" id="mBasla" type="button"></button>
     <div id="seriHesap" data-anahtar='{"z":"kozmos-kayit"}' data-ad='{"z":["Kozmos","Kozmos"]}' data-aciklama="Kozmos ilerlemen (keşifler, kredi, gemi, görevler) hesabına yedekleniyor|Your Kozmos progress (discoveries, credits, ship, missions) is backed up" data-link="0"></div>
     <button class="ikincil" id="mSifirla" type="button" hidden data-en="Start over (erase discoveries)">Baştan başla (keşifler silinir)</button>
+    <label class="secim"><input type="checkbox" id="kokSec"><span data-en="🎛 Cockpit gauges (engine, heart rate, hull heat…) · K">🎛 Kokpit göstergeleri (motor, nabız, gövde ısısı…) · K</span></label>
     <details id="siraDet"><summary data-en="🏆 Leaderboard">🏆 Sıralama</summary><div class="sekme" style="margin-top:8px"><button type="button" data-sira="s" class="on" data-en="🔭 Discovery">🔭 Keşif</button><button type="button" data-sira="p" data-en="💰 Earnings">💰 Kazanç</button></div><div class="sira" id="siraList"></div></details>
     <details id="basDet"><summary id="basOz">🏅 Başarımlar</summary><div class="bas" id="basList"></div></details>
     <details>
@@ -205,6 +210,7 @@ details{margin-top:12px;color:var(--mute);font-size:13.5px}summary{cursor:pointe
         <li><b>Olaylar ve keşif:</b> enkazlardan mal topla, imdat çağrılarına yakıt götür, kuyruklu yıldızlardan buz, nebulalardan nadir nebula özü topla. Kolonisiz gezegenlere karakol kurarsan sen yokken de üretir.</li>
         <li><b>Umut-7 hikâyesi:</b> ilk yanaşmadan sonra kayıp koloni gemisinin izini sür. Kolonilerle ticaret yaptıkça itibarın artar, fiyatlar iyileşir. Tersanede yeni gemiler, boya ve gemi adı.</li>
         <li><b>Çevrimiçi:</b> aynı evrende uçan diğer oyuncuların gemilerini görürsün (yeşil). Bir sistemi evrende ilk keşfeden olursan adın oraya yazılır. Menüde keşif ve kazanç sıralaması var. Görünen adın gemi adındır (limanda Gemiler sekmesi).</li>
+        <li><b>Kokpit (K):</b> sağ üstte motor gücü, gövde ısısı, pilot nabzı, yakıt, gövde ve warp çekirdeği. Yıldıza çok yaklaşırsan gövde ısınır ve 1.200 °C üstünde hasar alır; tehlikede nabız yükselir.</li>
         <li><b>Görev listesi</b> sol üstte, en yakından en uzağa sıralı ve kalan mesafeyle görünür.</li>
         <li><b>Ticaret ve görevler:</b> kolonilere yaklaşıp yavaşlayınca geminin yanında <b>🛬 Yanaş</b> çıkar (E tuşu). Limanda ucuz malı al, ihtiyaç duyulan yerde sat; kargo, yolcu ve keşif görevleri al; yakıt doldur, tersanede gemini geliştir. Kolonisi olmayan gezegenlerde <b>⛏ Kaynak topla</b> çıkar: türüne göre su, cevher, metal, gıda ya da gaz toplayıp kolonilerde satarsın. Warp yakıt harcar, normal uçuş bedavadır. Keşifler de kredi kazandırır.</li>
         <li><b>Harita (M):</b> sistemleri ve galaksileri gör, bir sisteme dokunup rota çiz; ekranda ok seni oraya götürür.</li>
@@ -220,6 +226,7 @@ details{margin-top:12px;color:var(--mute);font-size:13.5px}summary{cursor:pointe
         <li><b>Events and exploration:</b> salvage wrecks, bring fuel to distress calls, collect ice from comets and rare nebula essence in nebulas. Outposts built on colony-less planets keep producing while you are away.</li>
         <li><b>The Hope-7 story:</b> after your first docking, follow the trail of a lost colony ship. Trading with colonies builds reputation and better prices. New ships, paint and a ship name at the shipyard.</li>
         <li><b>Online:</b> you see other players flying in the same universe (green). Be the first in the universe to discover a system and your name stays on it. The menu has discovery and earnings leaderboards. Your display name is your ship name (Ships tab at a port).</li>
+        <li><b>Cockpit (K):</b> engine power, hull heat, pilot heart rate, fuel, hull and warp core at the top right. Fly too close to a star and the hull heats up, taking damage above 1,200 °C; danger raises your heart rate.</li>
         <li><b>Mission list</b> at the top left, sorted nearest first with the remaining distance.</li>
         <li><b>Trade and missions:</b> approach a colony and slow down, <b>🛬 Dock</b> appears next to the ship (E key). Buy cheap goods, sell where they are wanted; take cargo, passenger and exploration missions; refuel and upgrade your ship at the shipyard. Planets without a colony offer <b>⛏ Mine</b>: gather water, ore, metal, food or gas by planet type and sell it at colonies. Warp burns fuel, normal flight is free. Discoveries earn credits too.</li>
         <li><b>Map (M):</b> see systems and galaxies, tap a system to plot a route; an arrow on screen leads you there.</li>
@@ -728,6 +735,7 @@ addEventListener('keydown', e => {
   const k = e.key.toLowerCase(); TUS[k] = true; TUS[e.code] = true;
   if (k === 'm') { HM.acik ? haritaKapat() : haritaAc(); }
   else if (k === 'o') modDegis();
+  else if (k === 'k') kokpitAc(!kokAcik);
   else if (k === 'e' && yanasP && !limanP && oyunda) limanAc(yanasP);
   else if (k === 'e' && kaynP && oyunda) kazP ? kazDur() : kazBasla(kaynP);
   if (mod === 'oto' && oto && oyunda && !e.repeat) { if (k === ' ') otoWarp(); else if (k === 'shift') otoBoost(); }
@@ -866,6 +874,7 @@ function guncelle(dt, t) {
   v = Math.hypot(SH.vx, SH.vy); yol += v * dt;
   if (SH.warp > 0.3) yakit = Math.max(0, yakit - v * dt / SEK * (1 - YUK.warp * 0.1));
   tehlike(dt, t, v);
+  kokpitGuncelle(dt, v);
   // kamera
   const zHedef = kis(zKul / (1 + v / 1700) / (1 + SH.warp * 6), 0.022, 2.4);
   cam.z *= Math.exp((Math.log(zHedef) - Math.log(cam.z)) * Math.min(1, dt * 3));
@@ -1333,6 +1342,7 @@ function ciz(t) {
   if (SH.warp > 0.05) { ctx.fillStyle = `rgba(90,60,200,${(SH.warp * 0.08).toFixed(3)})`; ctx.fillRect(0, 0, W, H); }
   ustCiz(t);
   gpKonum();
+  kokpitCiz(t);
 }
 
 /* ================= otopilot ================= */
@@ -1813,6 +1823,73 @@ function gemiEtiket() {
   if (can < mx - 0.5 || KORS.length) { const w = 46, y = Y - 30 * s; ctx.fillStyle = 'rgba(0,0,0,.55)'; ctx.fillRect(X - w / 2 - 1, y - 1, w + 2, 6); const k = Math.max(0, can / mx); ctx.fillStyle = k > 0.5 ? '#9BE07A' : k > 0.25 ? '#FFC857' : '#FF5C6E'; ctx.fillRect(X - w / 2, y, w * k, 4); }
   if (gemiAd && cam.z > 0.2) { ctx.font = '800 11px Nunito, system-ui, sans-serif'; ctx.textAlign = 'center'; ctx.fillStyle = 'rgba(230,238,255,.75)'; ctx.fillText(gemiAd, X, Y + 32 * s); }
 }
+/* ================= kokpit göstergeleri ================= */
+let kokAcik = ls.get('kozmos-kokpit', !DOKUN) !== false, nabiz = 68, isi = -80, kokT = 0;
+const EKG = new Float32Array(150); let ekgI = 0, ekgFaz = 0, ekgBirikim = 0;
+function kokpitAc(v) { kokAcik = !!v; ls.set('kozmos-kokpit', kokAcik); $('kokpit').hidden = !kokAcik || !oyunda; $('kokSec').checked = kokAcik; }
+function kokpitGuncelle(dt, v) {
+  // gövde ısısı: yakın yıldızlar, fırtına, warp
+  let f = 0; const ssx = Math.floor(SH.x / SEK), ssy = Math.floor(SH.y / SEK);
+  for (let j = -1; j <= 1; j++) for (let i = -1; i <= 1; i++) { const tm = temel(ssx + i, ssy + j); if (!tm || YT[tm.yt].kd) continue; const d = Math.max(tm.yr, Math.hypot(tm.x - SH.x, tm.y - SH.y)); f += Math.pow(tm.yr * 1.12 / d, 2) * (tm.yr / 220); }
+  const isiH = -80 + 2500 * f + (firtina > 0 ? 140 : 0) + SH.warp * 90 + SH.itki * 25;
+  isi += (isiH - isi) * Math.min(1, dt * 1.5);
+  if (oyunda && !limanP && isi > 1200) { hasar(dt * (isi - 1200) / 160, true); if (performance.now() - (SH._isiU || 0) > 6000) { SH._isiU = performance.now(); duyur('🌡 ' + T('Gövde ısısı kritik! Yıldızdan uzaklaş', 'Hull temperature critical! Move away from the star'), 'uyari'); SES.uyari(); } }
+  // pilot nabzı: hız, warp, korsan, hasar, kara delik, ısı
+  let bh = 0; for (let j = -1; j <= 1; j++) for (let i = -1; i <= 1; i++) { const tm = temel(ssx + i, ssy + j); if (tm && YT[tm.yt].kd) bh = Math.max(bh, 1 - Math.hypot(tm.x - SH.x, tm.y - SH.y) / 9000); }
+  const hedef = 66 + Math.min(v, 3200) / 3200 * 16 + SH.warp * 30 + (KORS.length ? 28 : 0) + hasarFlas * 40 + Math.max(0, bh) * 38 + kis((isi - 300) / 900, 0, 1) * 22 + (can < maxCan() * 0.3 ? 14 : 0) + (limanP ? -6 : 0);
+  nabiz += (hedef - nabiz) * Math.min(1, dt * (hedef > nabiz ? 1.2 : 0.25));
+  // EKG dalgası
+  ekgFaz += dt * nabiz / 60; ekgBirikim += dt * 60;
+  while (ekgBirikim >= 1) {
+    ekgBirikim -= 1; const ph = ekgFaz % 1;
+    let y = 0; if (ph < 0.12) y = Math.sin(ph / 0.12 * Math.PI) * 0.12; else if (ph < 0.2) y = 0; else if (ph < 0.23) y = -0.25; else if (ph < 0.27) y = 1; else if (ph < 0.3) y = -0.35; else if (ph < 0.5) y = 0; else if (ph < 0.68) y = Math.sin((ph - 0.5) / 0.18 * Math.PI) * 0.22;
+    EKG[ekgI] = y + (Math.random() - 0.5) * 0.03; ekgI = (ekgI + 1) % EKG.length;
+  }
+}
+function kokpitCiz(t) {
+  const c = $('kokpit'); if (c.hidden) return; kokT++; if (kokT % 2) return;
+  const w = 184, h = 262; if (c.width !== Math.round(w * DPR)) { c.width = Math.round(w * DPR); c.height = Math.round(h * DPR); }
+  const x = c.getContext('2d'); x.setTransform(DPR, 0, 0, DPR, 0, 0); x.clearRect(0, 0, w, h);
+  x.textAlign = 'center'; x.textBaseline = 'alphabetic';
+  const yazi = (s2, X, Y, f, renk, hz) => { x.font = `${f || 800} ${hz || 10}px Nunito, system-ui, sans-serif`; x.fillStyle = renk || '#97A5CA'; x.fillText(s2, X, Y); };
+  // kadran
+  const kadran = (cx, cy, r, oran, renk, etiket, deger, uyari) => {
+    const a0 = Math.PI * 0.75, a1 = Math.PI * 2.25;
+    x.lineCap = 'round'; x.lineWidth = 6; x.strokeStyle = 'rgba(255,255,255,.08)'; x.beginPath(); x.arc(cx, cy, r, a0, a1); x.stroke();
+    x.strokeStyle = renk; x.beginPath(); x.arc(cx, cy, r, a0, a0 + (a1 - a0) * kis(oran, 0, 1)); x.stroke();
+    for (let i = 0; i <= 10; i++) { const a = a0 + (a1 - a0) * i / 10, r1 = r - 9, r2 = r - (i % 5 ? 12 : 15); x.strokeStyle = 'rgba(200,215,255,.3)'; x.lineWidth = 1; x.beginPath(); x.moveTo(cx + Math.cos(a) * r1, cy + Math.sin(a) * r1); x.lineTo(cx + Math.cos(a) * r2, cy + Math.sin(a) * r2); x.stroke(); }
+    const an = a0 + (a1 - a0) * kis(oran, 0, 1); x.strokeStyle = uyari ? '#FF7B8A' : '#E8EEFF'; x.lineWidth = 2; x.beginPath(); x.moveTo(cx, cy); x.lineTo(cx + Math.cos(an) * (r - 13), cy + Math.sin(an) * (r - 13)); x.stroke();
+    x.fillStyle = '#E8EEFF'; x.beginPath(); x.arc(cx, cy, 2.5, 0, TAU); x.fill();
+    yazi(deger, cx, cy + 18, 900, uyari && Math.sin(t * 8) > 0 ? '#FF7B8A' : '#E8EEFF', 13); yazi(etiket, cx, cy + r + 9, 900, '#97A5CA', 9.5);
+  };
+  const mot = SH.warp > 0.2 ? 1 : SH.itki, motR = SH.warp > 0.2 ? '#B48CFF' : boost && guc > 0 ? '#FFC857' : '#7FE3FF';
+  kadran(46, 42, 30, mot, motR, T('MOTOR', 'ENGINE'), SH.warp > 0.2 ? 'WARP' : Math.round(mot * 100) + '%');
+  const isiO = (isi + 100) / 1600, isiR = isi < 0 ? '#7FB8FF' : isi < 400 ? '#9BE07A' : isi < 1000 ? '#FFC857' : '#FF5C6E';
+  kadran(138, 42, 30, isiO, isiR, T('GÖVDE ISISI', 'HULL HEAT'), Math.round(isi) + '°', isi > 1000);
+  // nabız
+  const ey = 96, eh = 48, ux = 10, uw = w - 20, nb = Math.round(nabiz), nR = nb < 95 ? '#7CF0A6' : nb < 125 ? '#FFC857' : '#FF5C6E';
+  x.fillStyle = 'rgba(0,0,0,.25)'; x.fillRect(ux, ey, uw, eh);
+  x.strokeStyle = 'rgba(124,240,166,.08)'; x.lineWidth = 1; x.beginPath(); for (let i = 1; i < 6; i++) { x.moveTo(ux + uw * i / 6, ey); x.lineTo(ux + uw * i / 6, ey + eh); } x.stroke();
+  x.strokeStyle = nR; x.lineWidth = 1.6; x.shadowColor = nR; x.shadowBlur = 6; x.beginPath();
+  for (let i = 0; i < EKG.length; i++) { const v = EKG[(ekgI + i) % EKG.length], px = ux + uw * i / (EKG.length - 1), py = ey + eh * 0.62 - v * eh * 0.5; i ? x.lineTo(px, py) : x.moveTo(px, py); }
+  x.stroke(); x.shadowBlur = 0;
+  x.textAlign = 'left'; yazi('♥ ' + nb, ux + 4, ey + 13, 900, nR, 12); x.textAlign = 'right'; yazi(T('PİLOT NABZI', 'PILOT PULSE'), ux + uw - 4, ey + 12, 900, '#97A5CA', 8.5); x.textAlign = 'center';
+  // çubuklar
+  const cubuk = (Y, etiket, oran, renk, deger, uyari) => {
+    x.textAlign = 'left'; yazi(etiket, 10, Y, 900, '#97A5CA', 9.5); x.textAlign = 'right'; yazi(deger, w - 10, Y, 900, uyari && Math.sin(t * 8) > 0 ? '#FF7B8A' : '#E8EEFF', 10.5); x.textAlign = 'center';
+    x.fillStyle = 'rgba(255,255,255,.08)'; x.fillRect(10, Y + 4, w - 20, 7);
+    const n = 20, gw = (w - 20) / n; for (let i = 0; i < n; i++) if (i < Math.round(kis(oran, 0, 1) * n)) { x.fillStyle = renk; x.fillRect(10 + i * gw + 0.5, Y + 4, gw - 1.5, 7); }
+  };
+  const yo = yakit / tank(), co = can / maxCan(), ko = kargoDolu() / kapasite();
+  cubuk(168, '⛽ ' + T('YAKIT', 'FUEL'), yo, yo < 0.15 ? '#FF5C6E' : '#FFC857', Math.floor(yakit) + '/' + tank(), yo < 0.15);
+  cubuk(194, '🛡 ' + T('GÖVDE', 'HULL'), co, co < 0.3 ? '#FF5C6E' : '#9BE07A', Math.ceil(can) + '/' + maxCan(), co < 0.3);
+  cubuk(220, '📦 ' + T('KARGO', 'CARGO'), ko, '#7FE3FF', kargoDolu() + '/' + kapasite());
+  const wo = Math.max(SH.sarj, SH.warp);
+  cubuk(246, '🌀 ' + T('WARP ÇEKİRDEĞİ', 'WARP CORE'), yakit > 0 ? (wo > 0.01 ? wo : 1) : 0, wo > 0.01 ? '#B48CFF' : 'rgba(180,140,255,.45)', yakit <= 0 ? T('YAKIT YOK', 'NO FUEL') : SH.warp > 0.2 ? T('AKTİF', 'ACTIVE') : wo > 0.01 ? Math.round(wo * 100) + '%' : T('HAZIR', 'READY'), yakit <= 0);
+}
+$('kokSec').checked = kokAcik;
+$('kokSec').addEventListener('change', e => { kokpitAc(e.target.checked); SES.tik(); });
+
 function ustCiz(t) {
   if (nebSon) { ctx.fillStyle = `rgba(${nebSon.c[0].join(',')},.07)`; ctx.fillRect(0, 0, W, H); }
   if (firtina > 0) {
@@ -2189,6 +2266,7 @@ function menuKur() {
 function basla() {
   $('menu').hidden = true; SES.baslat();
   setTimeout(() => { kaydet(); if (window.seriKayit) seriKayit.simdi(); }, 1500);
+  setTimeout(() => kokpitAc(kokAcik), 0);
   setTimeout(gorevYaz, 0);
   if (!oyunda) {
     oyunda = true; sonGal = undefined;
@@ -2247,7 +2325,7 @@ function kare(now) {
 }
 boyutla(); kesifSayYaz(); menuKur(); radarKur(); gorevYaz();
 requestAnimationFrame(kare);
-window.KOZ = { AG, bolgeBul,  KORS, OLAY, HIK, ST, BAS, get can() { return can; }, set can(v) { can = v; }, korsanCikar, hikAdim, hikBasla, kuyruk, kuyrukPos, nebulaB, nebulaIc, get gemiTip() { return gemiTip; }, KARAKOL: () => KARAKOL, olayZorla: () => { olayT = 0; },  get kaynP() { return kaynP; }, get kazP() { return kazP; }, KARGO, get kredi() { return kredi; }, set kredi(v) { kredi = v; }, get yakit() { return yakit; }, GOREV: () => GOREV, YUK, limanAc, get limanP() { return limanP; }, get yanasP() { return yanasP; }, SH, cam, temel, sistem, galaksi, KESIF, basla, haritaAc, haritaKapat, set zoom(v) { zKul = v; }, DOKU };
+window.KOZ = { get nabiz() { return nabiz; }, get isi() { return isi; },  AG, bolgeBul,  KORS, OLAY, HIK, ST, BAS, get can() { return can; }, set can(v) { can = v; }, korsanCikar, hikAdim, hikBasla, kuyruk, kuyrukPos, nebulaB, nebulaIc, get gemiTip() { return gemiTip; }, KARAKOL: () => KARAKOL, olayZorla: () => { olayT = 0; },  get kaynP() { return kaynP; }, get kazP() { return kazP; }, KARGO, get kredi() { return kredi; }, set kredi(v) { kredi = v; }, get yakit() { return yakit; }, GOREV: () => GOREV, YUK, limanAc, get limanP() { return limanP; }, get yanasP() { return yanasP; }, SH, cam, temel, sistem, galaksi, KESIF, basla, haritaAc, haritaKapat, set zoom(v) { zKul = v; }, DOKU };
 })();
 </script>
 <script data-goatcounter="https://erdevelop.goatcounter.com/count" async src="//gc.zgo.at/count.js"></script>
