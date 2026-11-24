@@ -236,7 +236,9 @@ export async function kur3D({ tuval, kalite }) {
     const yuz = { faz: { value: 0 }, genlik: { value: 1 } };
     malzHazirla(o, () => ({ yuz }));
     const g = new THREE.Group(); g.add(o); sahne.add(g);
-    return { g, yuz, tur, yaw: null, pit: 0 };
+    /* modelin boyutları: kuma gömülmesin diye en alt noktası ve yarım boyu */
+    const kutu = new THREE.Box3().setFromObject(o), bo = kutu.getSize(new THREE.Vector3());
+    return { g, yuz, tur, yaw: null, pit: 0, alt: Math.max(0.05, -kutu.min.y, kutu.max.y, bo.y / 2), yarim: Math.max(bo.x, bo.z) / 2 };
   }
 
   /* ---------- son işlem ---------- */
@@ -312,13 +314,20 @@ export async function kur3D({ tuval, kalite }) {
         let f = BAL.get(b.id);
         if (f && f.tur !== b.tur) { sahne.remove(f.g); BAL.delete(b.id); f = null; }
         if (!f) { f = balikYap(b.tur); BAL.set(b.id, f); }
-        const p = dunya(b.x, b.y); f.g.position.copy(p);
-        const s = b.L * M.k * (b.tur === 'yavru' ? 0.9 : 1); f.g.scale.setScalar(Math.max(0.05, s));
+        const p = dunya(b.x, b.y);
+        const s = Math.max(0.05, b.L * M.k * (b.tur === 'yavru' ? 0.9 : 1)); f.g.scale.setScalar(s);
+        /* kuma gömülmesin: gövdenin en alt noktası (eğim ve kıvrılma payıyla) zeminin biraz üstünde kalır */
+        const taban = zeminY(p.x, p.z) + s * (f.alt * 1.1 + f.yarim * Math.abs(Math.sin(f.pit)) + 0.04);
+        const yakin = THREE.MathUtils.clamp((p.y - taban) / (s * f.alt * 2 + 0.01), 0, 1);
+        if (p.y < taban) p.y = taban;
+        f.g.position.copy(p);
         const hedefYaw = b.yon > 0 ? -0.32 : Math.PI + 0.32;
         if (f.yaw == null) f.yaw = hedefYaw;
         let dy = hedefYaw - f.yaw; while (dy > Math.PI) dy -= Math.PI * 2; while (dy < -Math.PI) dy += Math.PI * 2;
         f.yaw += dy * Math.min(1, dt * 5);
-        const hiz = Math.hypot(b.vx || 0, b.vy || 0), pit = THREE.MathUtils.clamp(-(b.vy || 0) / (hiz + 25), -0.45, 0.45);
+        const hiz = Math.hypot(b.vx || 0, b.vy || 0);
+        let pit = THREE.MathUtils.clamp(-(b.vy || 0) / (hiz + 25), -0.45, 0.45);
+        if ((b.vy || 0) > 0) pit *= yakin; /* zemine yaklaşınca burnunu kuma doğru eğmesin */
         f.pit += (pit - f.pit) * Math.min(1, dt * 3);
         eul.set(-dy * 0.4, f.yaw, f.pit); f.g.quaternion.setFromEuler(eul);
         f.yuz.faz.value = b.faz; f.yuz.genlik.value = b.uyku ? 0.25 : 0.7 + Math.min(1, hiz / 90);
