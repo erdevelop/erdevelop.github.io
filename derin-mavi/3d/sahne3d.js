@@ -214,14 +214,32 @@ export async function kur3D({ tuval, kalite }) {
     const koy = (k, x, z, sc, rot, ustte) => {
       const o = P[k].clone(true); o.scale.setScalar(sc); o.rotation.y = rot;
       let y = zeminY(x, z) - 0.05 * sc;
-      if (ustte) { ISIN.set(new THREE.Vector3(x, 40, z), new THREE.Vector3(0, -1, 0)); const h = ISIN.intersectObject(DUVAR, true)[0]; if (!h) return; y = h.point.y - 0.05; }
-      o.position.set(x, y, z); ORTAM.add(o);
+      if (ustte) { ISIN.set(new THREE.Vector3(x, 40, z), new THREE.Vector3(0, -1, 0)); const h = ISIN.intersectObject(ustte === true ? DUVAR : ustte, true)[0]; if (!h) return; y = h.point.y - 0.05; }
+      o.position.set(x, y, z); ORTAM.add(o); return o;
     };
     const kayalar = ['kaya_0', 'kaya_1', 'kaya_2', 'kaya_3'];
     for (let i = 0; i < Math.round(VW / 3) + 3; i++) koy(kayalar[i % 4], ara(-yarim, yarim), ara(-11, -1.5), ara(0.6, 1.4), r() * 6.28);
     const mercanlar = ['beyin_0', 'beyin_1', 'dalli_0', 'dalli_1', 'dalli_2', 'dalli_3', 'masa_0', 'masa_1', 'tup_0', 'tup_1', 'yelpaze_0', 'yelpaze_1'];
     for (let i = 0; i < Math.round(VW * 3) + 10; i++) { const k = mercanlar[Math.floor(r() * mercanlar.length)], z = ara(-10, -1.4); koy(k, ara(-yarim, yarim), z, (k.startsWith('yelpaze') ? ara(0.8, 1.4) : k.startsWith('masa') ? ara(0.45, 0.8) : ara(0.5, 1.1)) * (z > -3 ? 0.65 : 1), k.startsWith('yelpaze') ? ara(-0.4, 0.4) : r() * 6.28); }
     for (let i = 0; i < 14; i++) { const k = mercanlar[Math.floor(r() * mercanlar.length)]; koy(k, magX - 1.8 * ds + ara(-7, 7) * ds, ara(-8, -2) * ds, ara(0.45, 0.9) * ds * 1.4, r() * 6.28, true); }
+    const cok = kalite === 'dusuk' ? 0.55 : 1;
+    /* sol tepecik: iri kayalardan bir resif tümseği, üstü ve eteği mercan dolu */
+    const SOL = new THREE.Group(); ORTAM.add(SOL);
+    const solX = -yarim + 3 + VW * 0.12;
+    for (let i = 0; i < 9; i++) {
+      const ust = i >= 6, o = P[kayalar[i % 4]].clone(true), sc = ust ? ara(1.3, 1.9) : ara(2, 3.2) * (i < 2 ? 1.2 : 1);
+      o.scale.set(sc, sc * (ust ? ara(1.1, 1.5) : ara(0.9, 1.3)), sc); o.rotation.y = r() * 6.28;
+      o.position.set(solX + ara(-3, 3) * (ust ? 0.6 : 1), zeminY(solX, -5) - 0.2 * sc + (ust ? ara(0.9, 1.4) : 0), ara(-7.5, -3.5)); SOL.add(o);
+    }
+    SOL.updateMatrixWorld(true);
+    for (let i = 0; i < Math.round(34 * cok); i++) { const k = mercanlar[Math.floor(r() * mercanlar.length)]; koy(k, solX + ara(-4.5, 4.5), ara(-8.5, -3), (k.startsWith('masa') ? ara(0.5, 0.8) : k.startsWith('yelpaze') ? ara(1, 1.5) : ara(0.7, 1.2)), k.startsWith('yelpaze') ? ara(-0.5, 0.5) : r() * 6.28, SOL); }
+    for (let i = 0; i < Math.round(26 * cok); i++) { const k = mercanlar[Math.floor(r() * mercanlar.length)], z = ara(-7, -1.5); koy(k, solX + ara(-6, 6.5), z, ara(0.5, 1.05) * (z > -3 ? 0.7 : 1), k.startsWith('yelpaze') ? ara(-0.4, 0.4) : r() * 6.28); }
+    for (let i = 0; i < 3; i++) koy(i % 2 ? 'anemon_0' : 'anemon_1', solX + ara(-5, 5), ara(-3.5, -1.7), ara(0.9, 1.2), r() * 6);
+    /* derinlik: arka planda sise gömülen ikinci bir resif sırtı ve sık mercan bahçeleri */
+    const ARKA = P.duvar.clone(true); const as = ds * 1.7; ARKA.scale.set(as, as * 0.85, as); ARKA.position.set(-VW * 0.18, -0.3, -19); ARKA.rotation.y = 0.25; ORTAM.add(ARKA); ARKA.updateMatrixWorld(true);
+    for (let i = 0; i < Math.round(30 * cok); i++) { const k = mercanlar[Math.floor(r() * mercanlar.length)]; koy(k, -VW * 0.18 + ara(-11, 11) * as, -19 + ara(-5, 4) * as, ara(0.6, 1.2) * as * 1.3, r() * 6.28, ARKA); }
+    for (let i = 0; i < Math.round(VW / 2.5); i++) koy(kayalar[i % 4], ara(-yarim - 4, yarim + 4), ara(-20, -11), ara(1.2, 2.6), r() * 6.28);
+    for (let i = 0; i < Math.round((VW * 2.2 + 14) * cok); i++) { const k = mercanlar[Math.floor(r() * mercanlar.length)]; koy(k, ara(-yarim - 5, yarim + 5), ara(-21, -10), (k.startsWith('masa') ? ara(0.6, 1.1) : ara(0.9, 1.7)), k.startsWith('yelpaze') ? ara(-0.5, 0.5) : r() * 6.28); }
     for (let i = 0; i < Math.max(2, Math.round(VW / 7)); i++) koy(i % 2 ? 'anemon_1' : 'anemon_0', ara(-yarim + 2, yarim - 2), ara(-4, -1.6), ara(0.9, 1.2), r() * 6);
     ORTAM.add(cayir(Math.round(VW * 9), [-yarim, yarim, 0.6, 4], 0.55, 0.022, '#3f7a2e', '#9bc45a', 7));
     ORTAM.add(cayir(Math.round(VW * 2.4), [-yarim, yarim, -13, -6], 4.2, 0.16, '#2f5a26', '#87a84a', 11));
