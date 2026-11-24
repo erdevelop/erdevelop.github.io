@@ -220,6 +220,7 @@ details{margin-top:12px;color:var(--mute);font-size:13.5px}summary{cursor:pointe
     <button class="ana" id="mBasla" type="button"></button>
     <div id="seriHesap" data-anahtar='{"z":"kozmos-kayit"}' data-ad='{"z":["Kozmos","Kozmos"]}' data-aciklama="Kozmos ilerlemen (keşifler, kredi, gemi, görevler) hesabına yedekleniyor|Your Kozmos progress (discoveries, credits, ship, missions) is backed up" data-link="0"></div>
     <button class="ikincil" id="mSifirla" type="button" hidden data-en="Start over (erase discoveries)">Baştan başla (keşifler silinir)</button>
+    <label class="secim"><input type="checkbox" id="dinKamSec"><span data-en="🎥 Speed-based camera (zooms out and leads ahead as you speed up)">🎥 Hıza göre kamera (hızlanınca uzaklaşır ve öne kayar)</span></label>
     <label class="secim"><input type="checkbox" id="kokSec"><span data-en="🎛 Cockpit panel (speed, radar, heart rate, hull heat…) · K">🎛 Kokpit paneli (hız, radar, nabız, gövde ısısı…) · K</span></label>
     <details id="siraDet"><summary data-en="🏆 Leaderboard">🏆 Sıralama</summary><div class="sekme" style="margin-top:8px"><button type="button" data-sira="s" class="on" data-en="🔭 Discovery">🔭 Keşif</button><button type="button" data-sira="p" data-en="💰 Earnings">💰 Kazanç</button><button type="button" data-sira="h" data-en="📅 Weekly">📅 Haftalık</button></div><div class="sira" id="siraList"></div></details>
     <label class="secim"><input type="checkbox" id="fpSec"><span data-en="🪟 Cockpit view: look out of the window · V">🪟 Kokpit görünümü: camdan bak · V</span></label>
@@ -692,6 +693,7 @@ const OKS_MAX = () => 480 * (giyili('oksijen') ? 2 : 1) * (1 + 0.15 * ekipLv('do
 const SARF = Object.assign({ kit: 0, yhucre: 0, okskart: 0, emp: 0 }, K.sarf || {}), TLV = Object.assign({}, K.tlv || {});
 const tlv = k => TLV[k] || 1, MK = ['', '', ' Mk II', ' Mk III'];
 const EKIP = Array.isArray(K.ekip) ? K.ekip : [], FR = Object.assign({ birlik: 0, tuccar: 0, klan: 0 }, K.fr || {}), KERVAN = Array.isArray(K.kervan) ? K.kervan : [], ZIY = Array.isArray(K.ziy) ? K.ziy : [];
+let dinKam = ls.get('kozmos-dinkam', false) === true;
 let fotoMod = false, kokGor = ls.get('kozmos-fp', false) === true, inisAcik = false;
 const DEFTER = Array.isArray(K.defter) ? K.defter : [];
 const ekipLv = r => EKIP.reduce((a, e) => e.rol === r ? Math.max(a, e.lv) : a, 0);
@@ -981,12 +983,12 @@ function guncelle(dt, t) {
   if (olumBekle) patla();
   kokpitGuncelle(dt, v);
   // kamera
-  const zHedef = fotoMod ? kis(zKul, 0.01, 2.4) : kis(zKul / (1 + v / 1700) / (1 + SH.warp * 6), 0.022, 2.4);
+  const zHedef = fotoMod ? kis(zKul, 0.01, 2.4) : kis(zKul / (dinKam ? 1 + v / 1700 : 1) / (1 + SH.warp * (dinKam ? 6 : 3)), 0.022, 2.4);
   cam.z *= Math.exp((Math.log(zHedef) - Math.log(cam.z)) * Math.min(1, dt * 3));
   if (fotoMod) { bg.x += 0; } else {
-  const ox = cam.x, oy = cam.y, lead = 0.32 / (1 + SH.warp * 3);
+  const ox = cam.x, oy = cam.y, lead = dinKam ? 0.32 / (1 + SH.warp * 3) : 0, takip = dinKam ? 4.5 : 14;
   const hx = SH.x + SH.vx * lead, hy = SH.y + SH.vy * lead;
-  cam.x += (hx - cam.x) * Math.min(1, dt * 4.5); cam.y += (hy - cam.y) * Math.min(1, dt * 4.5);
+  cam.x += (hx - cam.x) * Math.min(1, dt * takip); cam.y += (hy - cam.y) * Math.min(1, dt * takip);
   if (Math.abs(cam.x - SH.x) * cam.z > W * 0.42) cam.x = SH.x + Math.sign(cam.x - SH.x) * W * 0.42 / cam.z;
   if (Math.abs(cam.y - SH.y) * cam.z > H * 0.42) cam.y = SH.y + Math.sign(cam.y - SH.y) * H * 0.42 / cam.z;
   bg.x += (cam.x - ox) * cam.z; bg.y += (cam.y - oy) * cam.z; }
@@ -3189,6 +3191,7 @@ function kokpitCiz(t) {
 }
 $('kokSec').checked = kokAcik;
 $('kokSec').addEventListener('change', e => { kokpitAc(e.target.checked); SES.tik(); });
+$('dinKamSec').checked = dinKam; $('dinKamSec').addEventListener('change', e => { dinKam = e.target.checked; ls.set('kozmos-dinkam', dinKam); SES.tik(); });
 
 function ustCiz(t) {
   if (flasT > 0) { ctx.fillStyle = `rgba(255,250,235,${Math.min(0.85, flasT * 0.6).toFixed(2)})`; ctx.fillRect(0, 0, W, H); }
