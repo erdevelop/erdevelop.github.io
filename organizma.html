@@ -807,7 +807,7 @@ function mikroYe(a, b) {   // a: organizma ya da mikro canlı; b: yenen mikro ca
   if (org && a.diyet) a.diyet.m += b.m;
   if (org) genYe(a, b.tip === MIKRO_TUR.length - 1 ? 'd1' : 'm' + b.tip, (MIKRO_TUR[b.tip][0][0] + MIKRO_TUR[b.tip][0][1]) / 2);
   if (org && b.altin && (a === oyuncu || a.sahip === oyuncu)) { genYe(a, 'n3', 48); dnaEkle(3); basarim('altin'); duyur(T('✨ Altın mikro canlı! Nadir gen + 3 DNA', '✨ Golden microbe! Rare gene + 3 DNA'), 'iyi', 4); }
-  if (!(org && a.uzak)) { a.m = Math.min(org ? KUTLE_UST : MIKRO_UST + 3, a.m + b.m * 0.8 * (org ? besinK(a) : 1)); if (org) a.enBuyuk = Math.max(a.enBuyuk, a.m); }
+  if (!(org && a.uzak)) { a.m = Math.min(org ? KUTLE_UST : MIKRO_UST + 3, a.m + b.m * 0.8 * (org ? besinK(a) : 1)); if (org) { a.enBuyuk = Math.max(a.enBuyuk, a.m); tokEkle(a.sahip || a, b.m); } }
   if (org) { a.yut = Math.max(a.yut, 0.6); if (a === oyuncu || a.sahip === oyuncu) { SES.mikro(); gorevIlerle('mikro', 1); } }
   const p = []; for (let i = 0, n = 5 + ((Math.random() * 4) | 0); i < n; i++) p.push({ a: Math.random() * TAU, d: rnd(0.7, 1.7), r: rnd(0.22, 0.48), sp: rnd(-1.5, 1.5) });
   b.olu = { a, t: 0, ox: b.x - a.x, oy: b.y - a.y, s: ERIME * (org ? 1 : 0.75), p, don: rnd(-1, 1) };
@@ -1155,16 +1155,17 @@ function npcAkil(o, dt) {
   if (tehlike > 0.22 * (1.3 - ai.cesaret)) {
     dx = kx; dy = ky;
     if (esk && eskD < menzilO(esk) * 0.85 && o.bekle <= 0 && Math.random() < ai.beceri && hamleYap(o, Math.atan2(ky, kx)) && Math.random() < 0.3) o.ifade = { c: '😱', t: 1.6 };
-  } else if (av) {
+  } else if (av && !(o === oyuncu && avD > 220)) {   // izleme modundaki canlı uzaktaki avın peşine takılmaz, önce beslenir
     const ox = av.x + av.vx * 0.3 - o.x, oy = av.y + av.vy * 0.3 - o.y; dx = ox; dy = oy;
     const hizala = Math.cos(aciFark(Math.atan2(oy, ox), o.ang));
     if (avD + 1.35 * av.r < menzilO(o) * 0.9 && hizala > 0.86 && o.bekle <= 0 && Math.random() < ai.beceri * (av === oyuncu ? 0.6 : 1)) hamleYap(o, Math.atan2(oy, ox));
   } else {
     let en = null, enD = 1e9;
-    yakinYemek(o.x, o.y, 260 + o.r, f => { if (f.b < 1) return; const d = (f.x - o.x) ** 2 + (f.y - o.y) ** 2; if (d < enD) { enD = d; en = f; } });
-    yakinMikro(o.x, o.y, 300 + o.r, b => { if (b.olu || o.m < b.m * YEME) return; const d = ((b.x - o.x) ** 2 + (b.y - o.y) ** 2) / (1 + b.m * 0.4); if (d < enD) { enD = d; en = b; } });
+    const ara = o === oyuncu ? 650 : 0;   // izleme modunda daha geniş besin arar
+    yakinYemek(o.x, o.y, 260 + ara + o.r, f => { if (f.b < 1) return; const d = (f.x - o.x) ** 2 + (f.y - o.y) ** 2; if (d < enD) { enD = d; en = f; } });
+    yakinMikro(o.x, o.y, 300 + ara + o.r, b => { if (b.olu || o.m < b.m * YEME) return; const d = ((b.x - o.x) ** 2 + (b.y - o.y) ** 2) / (1 + b.m * 0.4); if (d < enD) { enD = d; en = b; } });
     if (en) { dx = en.x - o.x; dy = en.y - o.y; gaz = 0.85; }
-    else { ai.yon += rnd(-0.7, 0.7); dx = Math.cos(ai.yon); dy = Math.sin(ai.yon); gaz = 0.55; }
+    else { ai.yon += rnd(-0.7, 0.7); if (o === oyuncu && Math.hypot(o.x, o.y) > R * 0.55 && Math.random() < 0.5) ai.yon = Math.atan2(-o.y, -o.x) + rnd(-0.5, 0.5); dx = Math.cos(ai.yon); dy = Math.sin(ai.yon); gaz = o === oyuncu ? 0.8 : 0.55; }
   }
   for (const b of ASIT) { const ax = o.x - b.x, ay = o.y - b.y, ad = Math.hypot(ax, ay) || 1, lim = b.r + o.r + 90; if (ad < lim) { const w = (1 - ad / lim) * 4 + (ad < b.r ? 3 : 0), n0 = Math.hypot(dx, dy) || 1; dx = dx / n0 + ax / ad * w; dy = dy / n0 + ay / ad * w; } }
   if (AV.aktif) { const ax = o.x - AV.hx, ay = o.y - AV.hy, ad = Math.hypot(ax, ay) || 1; if (ad < 520) { const n0 = Math.hypot(dx, dy) || 1, w = (1 - ad / 520) * 6; dx = dx / n0 + ax / ad * w; dy = dy / n0 + ay / ad * w; gaz = 1; } }
@@ -1261,7 +1262,7 @@ function guncelle(dt) {
     o.alK = o.gizli > 0.01 ? 1 - o.gizli * (o.uzak ? 0.93 : 0.7) : 1;
     if (o.olum > 0) { o.olum += dt / 1.6; if (o.olum >= 1) { o.olu = true; parcala(o); } }
     if (o.kof && o.kof.length) { const ic = o.r * 0.55; for (const q of o.kof) { q.t += dt / q.d; const d = Math.hypot(q.ox, q.oy), hd = ic * (0.35 + 0.65 * ((q.a * 7) % 1)); if (d > hd) { const k = Math.max(hd / d, 1 - dt * 2.2); q.ox *= k; q.oy *= k; } const c = Math.cos(dt * 0.25), sn = Math.sin(dt * 0.25); const x2 = q.ox * c - q.oy * sn; q.oy = q.ox * sn + q.oy * c; q.ox = x2; q.a += q.don * dt; } if (o.kof[0].t >= 1) o.kof = o.kof.filter(q => q.t < 1); }
-    o.yut = Math.max(0, o.yut - dt * 3.5); if (o.tok) o.tok = Math.max(0, o.tok - dt * 0.035); if (o.genParla && (o.genParla.t -= dt * 1.1) <= 0) o.genParla = null;
+    o.yut = Math.max(0, o.yut - dt * 3.5); if (o.tok) o.tok = Math.max(0, o.tok - dt * 0.018); if (o.genParla && (o.genParla.t -= dt * 1.1) <= 0) o.genParla = null;
     o.rr += (o.r * (o.dogum < 1 ? easeBack(o.dogum) : 1) - o.rr) * Math.min(1, dt * 7);
   }
   /* plankton */
@@ -1272,7 +1273,7 @@ function guncelle(dt) {
       if (f.b < 1 || f.yendi) return; const dx = f.x - o.x, dy = f.y - o.y; if (dx * dx + dy * dy > rr * rr) return;
       if (!o.uzak) { if (o.diyet) o.diyet.p += f.m; genYe(o, f.baca ? 'd0' : 'p' + f.k, f.baca ? 30 : YEMEK_RENK[f.k][0]); o.m = Math.min(KUTLE_UST, o.m + f.m * besinK(o) * (1 + 0.6 * derinK(f.x, f.y))); o.enBuyuk = Math.max(o.enBuyuk, o.m); if (f.baca && (o === oyuncu || o.sahip === oyuncu)) gorevIlerle('baca', 1); }
       { const kf = o.kof || (o.kof = []), ben = o === oyuncu || o.sahip === oyuncu; if (kf.length >= (ben ? 16 : 5)) kf.shift(); kf.push({ k: f.k, ox: dx, oy: dy, t: 0, d: rnd(2.4, 3.8), s: (6 + f.m * 2.4) * 1.15, a: f.f, don: rnd(-0.6, 0.6) }); }
-      f.yendi = true; if (o === oyuncu || o.sahip === oyuncu) { const s2 = o.sahip || o; s2.plankSay = (s2.plankSay || 0) + 1; } if (o === oyuncu && Math.random() < 0.25) SES.plankton();
+      f.yendi = true; if (!o.uzak) tokEkle(o.sahip || o, f.m); if (o === oyuncu || o.sahip === oyuncu) { const s2 = o.sahip || o; s2.plankSay = (s2.plankSay || 0) + 1; } if (o === oyuncu && Math.random() < 0.25) SES.plankton();
     });
   }
   if (oyuncu && !oyuncu.olu && oyuncu.ev.miknatis) {   // besin akımı: yakındaki planktonu çeker
@@ -2495,17 +2496,20 @@ function gorevIlerle(id, n, enb) { if (IZLE) return;
   }
 }
 const intikamMi = o => !!intikam && (o === intikam.o || (!!o.netId && o.netId === intikam.netId));
-const TOK_ESIK = 0.7;   // kendi kütlenin ~%70'i kadar yiyince doyarsın
+const TOK_ESIK = 0.7;   // mide 0–1; 0,7'yi geçince doyar ve bir kez geğirir
+function tokEkle(s2, km) {   // doygunluk: yenen kütle (plankton, mikro canlı, organizma) boyuna oranla mideyi doldurur, zamanla sindirilir
+  if (!s2 || s2.uzak) return;
+  s2.tok = Math.min(1, (s2.tok || 0) + km / Math.max(20, s2.m) * 1.4);
+  if (s2.tok < TOK_ESIK * 0.6) s2.doydu = 0;
+  if (s2 === oyuncu && s2.tok >= TOK_ESIK && !s2.doydu && zaman - (s2.gegirZ || -99) > 10) { s2.doydu = 1; s2.gegirZ = zaman; setTimeout(() => SES.gegir(), 380); setTimeout(() => { if (oyuncu && !oyuncu.olu) oyuncu.ifade = { c: '😋', t: 2 }; }, 420); }
+}
 function avKaydi(a, b) {   // oyuncu (ya da parçası) bir organizma yuttu
   gorevIlerle('ye', 1); KAYIT.topYe = (KAYIT.topYe || 0) + 1; kayitKirli = true; basarim('ilk'); if (KAYIT.topYe >= 100) basarim('avci100');
   if (b.uzak) basarim('cevrimici');
   if (a.parca) gorevIlerle('bol', 1); else if (a.hamle > 0 || a.fren > 0) gorevIlerle('hamle', 1);
   if (intikamMi(b)) { intikam = null; duyur(T('☠ İntikam alındı! +3 DNA', '☠ Revenge taken! +3 DNA'), 'iyi', 4); basarim('intikam'); dnaEkle(3); }
   titre(20);
-  {   // doygunluk: yutulan kütle boyuna oranla mideyi doldurur, zamanla sindirilir; mide dolunca bir kez geğirir
-    const s2 = a.sahip || a; s2.tok = (s2.tok || 0) + b.m / Math.max(20, s2.m);
-    if (s2.tok >= TOK_ESIK && zaman - (s2.gegirZ || -99) > 10) { s2.tok = 0.25; s2.gegirZ = zaman; setTimeout(() => SES.gegir(), 380); if (oyuncu && !oyuncu.olu) setTimeout(() => { if (oyuncu && !oyuncu.olu) oyuncu.ifade = { c: '😋', t: 2 }; }, 420); }
-  }
+  tokEkle(a.sahip || a, b.m);
 }
 function ifadeGoster(i) { if (!oyuncu || oyuncu.olu || !IFADELER[i]) return; oyuncu.ifade = { c: IFADELER[i], t: 2.6 }; oyuncu.ifadeKod = i + '.' + (++ifadeN); $('ifadeler').hidden = true; }
 
@@ -3424,12 +3428,12 @@ function yasamGuncelle(dt) {
       const nb = $('yNabiz'); nb.textContent = '♥ ' + Math.round(YS.bpm); nb.className = tl > 0.6 ? 'yuksek' : tl > 0.2 ? 'orta' : '';
       if (!YS.kapali) {
         const mtr = metre(o.x, o.y), dk = derinK(o.x, o.y);
-        let isi = 21 - 15 * Math.max(0, dk); for (const b of BACA) { const d = Math.hypot(b.x - o.x, b.y - o.y); if (d < 520) isi += 72 * (1 - d / 520) ** 2; }
-        const tok = Math.min(1, (o.tok || 0) / TOK_ESIK), bk = o.bekle > 0 ? 1 - o.bekle / bekleO(o) : 1, kof = (o.kof || []).length;
+        let isi = 21 - 18 * Math.min(1, Math.max(0, dk)); for (const b of BACA) { const d = Math.hypot(b.x - o.x, b.y - o.y); if (d < 520) isi += 72 * (1 - d / 520) ** 2; }
+        const tok = Math.min(1, o.tok || 0), bk = o.bekle > 0 ? 1 - o.bekle / bekleO(o) : 1, kof = (o.kof || []).length;
         const ok = net > 0.05 ? '▲' : net < -0.05 ? '▼' : '•', ns = (net >= 0 ? '+' : '−') + Math.abs(net).toFixed(Math.abs(net) < 10 ? 1 : 0);
         let h = yasamSatir('⚖', T('Kütle', 'Mass'), `${Math.round(mt)} <small style="opacity:.8">${ok} ${ns}/${T('sn', 's')}</small>`, net > 0.05 ? 'iyi' : net < -0.3 ? 'kotu' : '')
           + yasamSatir('🔥', T('Metabolizma', 'Metabolism'), `−${met.toFixed(met < 1 ? 2 : 1)}/${T('sn', 's')}`, o.zehir > 0 ? 'kotu' : '', null, null, true)
-          + yasamSatir('🍽', T('Doygunluk', 'Satiety'), tok >= 0.95 ? T('dolu', 'full') : tok > 0.5 ? T('tok', 'fed') : tok > 0.12 ? T('yarı aç', 'peckish') : T('aç', 'hungry'), '', tok, tok > 0.85 ? '#FFD27A' : '#7FE3B3')
+          + yasamSatir('🍽', T('Doygunluk', 'Satiety'), (tok >= TOK_ESIK ? T('dolu', 'full') : tok > 0.42 ? T('tok', 'fed') : tok > 0.15 ? T('yarı aç', 'peckish') : T('aç', 'hungry')) + ' ' + Math.round(tok * 100) + '%', '', tok, tok >= TOK_ESIK ? '#FFD27A' : '#7FE3B3')
           + yasamSatir('🫧', T('Sindirim', 'Digestion'), kof ? kof + ' ' + T('koful', 'vacuoles') : T('boş', 'empty'), '', null, null, true)
           + yasamSatir('💨', T('Hamle', 'Dash'), bk >= 1 ? T('hazır', 'ready') : Math.round(bk * 100) + '%', bk >= 1 ? 'iyi' : '', bk, bk >= 1 ? '#8FF0B8' : '#5F9FD3');
         if (o.virus > 0) h += yasamSatir('🦠', T('Enfeksiyon', 'Infection'), o.virus + '/3', 'kotu', o.virus / 3, '#FF7FCF');
