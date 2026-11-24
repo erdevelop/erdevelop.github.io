@@ -10,7 +10,7 @@ import { RenderPass } from './addons/postprocessing/RenderPass.js';
 import { ShaderPass } from './addons/postprocessing/ShaderPass.js';
 import { UnrealBloomPass } from './addons/postprocessing/UnrealBloomPass.js';
 import { OutputPass } from './addons/postprocessing/OutputPass.js';
-import { mercanUret, MERCAN_RENK, canliUret, canliOyna } from './uretec.js';
+import { mercanUret, MERCAN_RENK, canliUret, canliOyna, yuzenUret, yuzenOyna } from './uretec.js';
 
 const KAL = {
   dusuk: { dpr: 1, golge: false, sm: 512, parca: 220, post: false, kostik: 0.9 },
@@ -296,6 +296,15 @@ export async function kur3D({ tuval, kalite }) {
     return { g, yuz, tur, yaw: null, pit: 0, alt: Math.max(0.05, -kutu.min.y, kutu.max.y, bo.y / 2), yarim: Math.max(bo.x, bo.z) / 2 };
   }
 
+  /* ziyaretçiler için hazır balık modelinden renklendirilmiş kopya */
+  function balikKlon(k, ton) {
+    const o = (B[k] || B.sardalya).clone(true); o.position.set(0, 0, 0); const yuz = { faz: { value: 0 }, genlik: { value: 1 } };
+    malzHazirla(o, () => ({ yuz }));
+    if (ton) { const c = new THREE.Color(ton); o.traverse(m => { if (m.isMesh) [].concat(m.material).forEach(mt => { if (mt.name !== 'goz') mt.color.multiply(c); }); }); }
+    return { o, yuz };
+  }
+  const YZN = new Map();
+
   /* ---------- son işlem ---------- */
   const komp = new EffectComposer(R);
   komp.addPass(new RenderPass(sahne, kam));
@@ -379,6 +388,21 @@ export async function kur3D({ tuval, kalite }) {
           canliOyna(c.g, o.tur, o, t); c.g.visible = !o.gizli;
         }
         for (const [id, c] of CAN) if (!gor.has(id)) { sahne.remove(c.g); CAN.delete(id); }
+      }
+      /* yüzen canlılar, geçen ziyaretçiler ve top */
+      if (d.yuzenler) {
+        const gor = new Set();
+        for (const o of d.yuzenler) {
+          gor.add(o.id); let c = YZN.get(o.id);
+          if (!c) { c = { g: yuzenUret(o.tur, m => yama(m, {}), balikKlon), yaw: null }; sahne.add(c.g); YZN.set(o.id, c); }
+          let p = dunya(o.x, o.y), sc = Math.max(0.02, o.s * M.k);
+          if (o.arka) { const z = -12, k2 = (kam.position.z - z) / kam.position.z; p = kam.position.clone().add(p.sub(kam.position).multiplyScalar(k2)); sc *= k2; }
+          c.g.position.copy(p); c.g.scale.setScalar(sc);
+          const hedef = o.tur === 'top' ? 0 : o.d > 0 ? -0.35 : Math.PI + 0.35; c.yaw = c.yaw == null ? hedef : c.yaw + (hedef - c.yaw) * Math.min(1, dt * 3);
+          c.g.rotation.set(o.tur === 'top' ? 0.3 : 0, c.yaw, o.tur === 'top' ? -o.don : 0);
+          yuzenOyna(c.g, o.tur, o, t);
+        }
+        for (const [id, c] of YZN) if (!gor.has(id)) { sahne.remove(c.g); YZN.delete(id); }
       }
       const gorulen = new Set();
       for (const b of d.baliklar) {
