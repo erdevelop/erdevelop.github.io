@@ -43,7 +43,7 @@ body.otomod #kHiz,body.otomod #kWarp{display:none}
 #warpBar{height:5px;border-radius:3px;background:rgba(255,255,255,.08);margin-top:6px;overflow:hidden}
 #warpBar i{display:block;height:100%;width:0;background:linear-gradient(90deg,#7FE3FF,#B48CFF);transition:width .1s}
 #ipucu{margin-top:5px;font-size:11.5px;color:var(--mute);opacity:.85}
-#kokpit{position:fixed;right:10px;top:calc(54px + env(safe-area-inset-top,0px));z-index:5;width:184px;height:262px;border-radius:16px;border:1px solid var(--line);background:rgba(6,10,26,.62);backdrop-filter:blur(8px);-webkit-backdrop-filter:blur(8px);pointer-events:none}
+#kokpit{position:fixed;right:10px;top:calc(54px + env(safe-area-inset-top,0px));z-index:5;width:212px;height:298px;border-radius:16px;border:1px solid rgba(127,227,255,.22);background:linear-gradient(160deg,rgba(14,22,44,.78),rgba(4,8,20,.72));box-shadow:0 10px 30px rgba(0,0,0,.45),inset 0 1px 0 rgba(255,255,255,.06);backdrop-filter:blur(8px);-webkit-backdrop-filter:blur(8px);pointer-events:none}
 @media (max-height:660px){#kokpit{display:none}}body.odak #kokpit{display:none}
 .secim{display:flex;align-items:center;gap:10px;margin-top:10px;font-size:13.5px;font-weight:800;cursor:pointer}.secim input{width:18px;height:18px;accent-color:var(--acc)}
 #yakin{position:fixed;right:10px;bottom:calc(200px + env(safe-area-inset-bottom,0px));z-index:5;width:290px;padding:11px 13px;border-radius:16px;border:1px solid var(--line);background:rgba(6,10,26,.7);backdrop-filter:blur(8px);-webkit-backdrop-filter:blur(8px);pointer-events:none;font-size:13px}
@@ -220,7 +220,7 @@ details{margin-top:12px;color:var(--mute);font-size:13.5px}summary{cursor:pointe
     <button class="ana" id="mBasla" type="button"></button>
     <div id="seriHesap" data-anahtar='{"z":"kozmos-kayit"}' data-ad='{"z":["Kozmos","Kozmos"]}' data-aciklama="Kozmos ilerlemen (keşifler, kredi, gemi, görevler) hesabına yedekleniyor|Your Kozmos progress (discoveries, credits, ship, missions) is backed up" data-link="0"></div>
     <button class="ikincil" id="mSifirla" type="button" hidden data-en="Start over (erase discoveries)">Baştan başla (keşifler silinir)</button>
-    <label class="secim"><input type="checkbox" id="kokSec"><span data-en="🎛 Cockpit gauges (engine, heart rate, hull heat…) · K">🎛 Kokpit göstergeleri (motor, nabız, gövde ısısı…) · K</span></label>
+    <label class="secim"><input type="checkbox" id="kokSec"><span data-en="🎛 Cockpit panel (speed, radar, heart rate, hull heat…) · K">🎛 Kokpit paneli (hız, radar, nabız, gövde ısısı…) · K</span></label>
     <details id="siraDet"><summary data-en="🏆 Leaderboard">🏆 Sıralama</summary><div class="sekme" style="margin-top:8px"><button type="button" data-sira="s" class="on" data-en="🔭 Discovery">🔭 Keşif</button><button type="button" data-sira="p" data-en="💰 Earnings">💰 Kazanç</button><button type="button" data-sira="h" data-en="📅 Weekly">📅 Haftalık</button></div><div class="sira" id="siraList"></div></details>
     <label class="secim"><input type="checkbox" id="fpSec"><span data-en="🪟 Cockpit view: look out of the window · V">🪟 Kokpit görünümü: camdan bak · V</span></label>
     <button class="ikincil" id="fotoBtn" type="button" data-en="📷 Photo mode · P">📷 Fotoğraf modu · P</button>
@@ -3080,47 +3080,112 @@ function kokpitGuncelle(dt, v) {
     EKG[ekgI] = y + (Math.random() - 0.5) * 0.03; ekgI = (ekgI + 1) % EKG.length;
   }
 }
+let kokG = 0, kokSonV = 0, kokSonZ = 0, kokTara = 0;
 function kokpitCiz(t) {
-  const c = $('kokpit'); if (c.hidden) return; kokT++; if (kokT % 2) return;
-  const w = 184, h = 262; if (c.width !== Math.round(w * DPR)) { c.width = Math.round(w * DPR); c.height = Math.round(h * DPR); }
+  const c = $('kokpit'); if (c.hidden) return; kokT++;
+  // G kuvveti (her karede ölç)
+  const vv = Math.hypot(SH.vx, SH.vy), zz = performance.now(), dtt = Math.max(0.001, (zz - kokSonZ) / 1000); if (kokSonZ) { const gA = Math.abs(vv - kokSonV) / dtt / 320; kokG += (Math.min(9.9, gA + (SH.warp > 0.2 ? 4 + SH.warp * 3 : 0)) - kokG) * Math.min(1, dtt * 3); } kokSonV = vv; kokSonZ = zz;
+  if (kokT % 2) return;
+  const w = 212, av = kis(innerHeight - 380, 248, 420), bolum = { ekg: av >= 298, tec: av >= 326, mini: av >= 370 };
+  const h = 248 + (bolum.ekg ? 50 : 0) + (bolum.mini ? 44 : 0) + (bolum.tec ? 28 : 0);
+  if (c.width !== Math.round(w * DPR) || c.height !== Math.round(h * DPR)) { c.width = Math.round(w * DPR); c.height = Math.round(h * DPR); c.style.height = h + 'px'; c.style.width = w + 'px'; }
   const x = c.getContext('2d'); x.setTransform(DPR, 0, 0, DPR, 0, 0); x.clearRect(0, 0, w, h);
-  x.textAlign = 'center'; x.textBaseline = 'alphabetic';
-  const yazi = (s2, X, Y, f, renk, hz) => { x.font = `${f || 800} ${hz || 10}px Nunito, system-ui, sans-serif`; x.fillStyle = renk || '#97A5CA'; x.fillText(s2, X, Y); };
-  // kadran
-  const kadran = (cx, cy, r, oran, renk, etiket, deger, uyari) => {
-    const a0 = Math.PI * 0.75, a1 = Math.PI * 2.25;
-    x.lineCap = 'round'; x.lineWidth = 6; x.strokeStyle = 'rgba(255,255,255,.08)'; x.beginPath(); x.arc(cx, cy, r, a0, a1); x.stroke();
-    x.strokeStyle = renk; x.beginPath(); x.arc(cx, cy, r, a0, a0 + (a1 - a0) * kis(oran, 0, 1)); x.stroke();
-    for (let i = 0; i <= 10; i++) { const a = a0 + (a1 - a0) * i / 10, r1 = r - 9, r2 = r - (i % 5 ? 12 : 15); x.strokeStyle = 'rgba(200,215,255,.3)'; x.lineWidth = 1; x.beginPath(); x.moveTo(cx + Math.cos(a) * r1, cy + Math.sin(a) * r1); x.lineTo(cx + Math.cos(a) * r2, cy + Math.sin(a) * r2); x.stroke(); }
-    const an = a0 + (a1 - a0) * kis(oran, 0, 1); x.strokeStyle = uyari ? '#FF7B8A' : '#E8EEFF'; x.lineWidth = 2; x.beginPath(); x.moveTo(cx, cy); x.lineTo(cx + Math.cos(an) * (r - 13), cy + Math.sin(an) * (r - 13)); x.stroke();
-    x.fillStyle = '#E8EEFF'; x.beginPath(); x.arc(cx, cy, 2.5, 0, TAU); x.fill();
-    yazi(deger, cx, cy + 18, 900, uyari && Math.sin(t * 8) > 0 ? '#FF7B8A' : '#E8EEFF', 13); yazi(etiket, cx, cy + r + 9, 900, '#97A5CA', 9.5);
+  x.textAlign = 'center'; x.textBaseline = 'alphabetic'; x.lineCap = 'round';
+  const yazi = (s2, X, Y, f, renk, hz, hiz) => { x.font = `${f || 800} ${hz || 10}px Nunito, system-ui, sans-serif`; x.fillStyle = renk || '#97A5CA'; if (hiz) x.textAlign = hiz; x.fillText(s2, X, Y); x.textAlign = 'center'; };
+  const ayrac = Y => { const g = x.createLinearGradient(10, 0, w - 10, 0); g.addColorStop(0, 'rgba(127,227,255,0)'); g.addColorStop(0.5, 'rgba(127,227,255,.22)'); g.addColorStop(1, 'rgba(127,227,255,0)'); x.fillStyle = g; x.fillRect(10, Y, w - 20, 1); };
+  const yan = ph => Math.sin(t * 8 + (ph || 0)) > 0;
+  // köşe braketleri
+  x.strokeStyle = 'rgba(127,227,255,.45)'; x.lineWidth = 1.5; for (const [cx, cy, sx, sy] of [[5, 5, 1, 1], [w - 5, 5, -1, 1], [5, h - 5, 1, -1], [w - 5, h - 5, -1, -1]]) { x.beginPath(); x.moveTo(cx, cy + sy * 10); x.lineTo(cx, cy); x.lineTo(cx + sx * 10, cy); x.stroke(); }
+  // tarama çizgisi
+  kokTara = (kokTara + 0.6) % h; { const g = x.createLinearGradient(0, kokTara - 14, 0, kokTara); g.addColorStop(0, 'rgba(127,227,255,0)'); g.addColorStop(1, 'rgba(127,227,255,.05)'); x.fillStyle = g; x.fillRect(2, kokTara - 14, w - 4, 14); }
+  // ---- başlık ----
+  const gAd = kapsul ? T('Kaçış kapsülü', 'Escape pod') : L((GEMI[gemiTip] || GEMI.kasif).ad), deg = Math.round((((SH.a * 180 / Math.PI) + 90) % 360 + 360) % 360);
+  yazi('◈ ' + gAd.toUpperCase(), 12, 17, 900, '#E8EEFF', 10.5, 'left'); yazi(String(deg).padStart(3, '0') + '°', w - 12, 17, 900, '#7FE3FF', 11, 'right');
+  const led = [['OTO', mod === 'oto', '#7FE3FF'], ['FREN', fren, '#FFC857'], ['WARP', SH.warp > 0.2 || SH.sarj > 0.01, '#B48CFF'], [T('TRT', 'TUR'), KORS.length > 0 && !kapsul, '#FF7B8A'], ['SİG', sigorta, '#9BE07A']];
+  led.forEach(([ad, on, rk], i) => { const lw = (w - 24) / led.length, lx = 12 + i * lw; x.fillStyle = on ? rk : 'rgba(255,255,255,.07)'; x.globalAlpha = on ? (ad === 'TRT' || ad === 'TUR' ? (yan(i) ? 1 : 0.55) : 0.9) : 1; x.beginPath(); x.roundRect ? x.roundRect(lx, 24, lw - 4, 11, 3) : x.rect(lx, 24, lw - 4, 11); x.fill(); x.globalAlpha = 1; yazi(ad, lx + (lw - 4) / 2, 32.5, 900, on ? '#08101E' : 'rgba(151,165,202,.55)', 7.5); });
+  let Y = 40; ayrac(Y);
+  // ---- hız kadranı ----
+  { const cx = 50, cy = Y + 50, r = 36, a0 = Math.PI * 0.75, a1 = Math.PI * 2.25, warpO = SH.warp > 0.2, oran = warpO ? 0.8 + 0.2 * kis(SH.warp, 0, 1) : 0.8 * Math.sqrt(kis(vv / 3200, 0, 1));
+    x.lineWidth = 5; x.strokeStyle = 'rgba(255,255,255,.07)'; x.beginPath(); x.arc(cx, cy, r, a0, a1); x.stroke();
+    x.strokeStyle = 'rgba(180,140,255,.25)'; x.beginPath(); x.arc(cx, cy, r, a0 + (a1 - a0) * 0.8, a1); x.stroke();
+    const gk = x.createLinearGradient(cx - r, cy, cx + r, cy); gk.addColorStop(0, '#3AA8FF'); gk.addColorStop(0.7, '#7FE3FF'); gk.addColorStop(1, '#B48CFF'); x.strokeStyle = gk; x.shadowColor = '#7FE3FF'; x.shadowBlur = 6; x.beginPath(); x.arc(cx, cy, r, a0, a0 + (a1 - a0) * oran); x.stroke(); x.shadowBlur = 0;
+    for (let i = 0; i <= 20; i++) { const a = a0 + (a1 - a0) * i / 20, r1 = r - 6, r2 = r - (i % 5 ? 9 : 13); x.strokeStyle = i >= 16 ? 'rgba(180,140,255,.5)' : 'rgba(200,215,255,.32)'; x.lineWidth = 1; x.beginPath(); x.moveTo(cx + Math.cos(a) * r1, cy + Math.sin(a) * r1); x.lineTo(cx + Math.cos(a) * r2, cy + Math.sin(a) * r2); x.stroke(); }
+    // itki iç halkası
+    const mot = SH.warp > 0.2 ? 1 : SH.itki; x.lineWidth = 2.5; x.strokeStyle = 'rgba(255,255,255,.06)'; x.beginPath(); x.arc(cx, cy, r - 17, a0, a1); x.stroke(); x.strokeStyle = boost && guc > 0 ? '#FFC857' : '#9BE07A'; x.beginPath(); x.arc(cx, cy, r - 17, a0, a0 + (a1 - a0) * kis(mot, 0, 1)); x.stroke();
+    const an = a0 + (a1 - a0) * oran; x.strokeStyle = '#FF7B8A'; x.lineWidth = 2; x.beginPath(); x.moveTo(cx - Math.cos(an) * 5, cy - Math.sin(an) * 5); x.lineTo(cx + Math.cos(an) * (r - 4), cy + Math.sin(an) * (r - 4)); x.stroke(); x.fillStyle = '#E8EEFF'; x.beginPath(); x.arc(cx, cy, 3, 0, TAU); x.fill();
+    const [hd, hb] = hizYaz(vv); yazi(hd, cx, cy + 22, 900, '#E8EEFF', 13); yazi(hb, cx, cy + 32, 900, '#97A5CA', 8.5); yazi(T('HIZ', 'SPEED'), cx, Y + 10, 900, '#97A5CA', 8.5);
+  }
+  // ---- radar ----
+  { let kd = Infinity; for (const k of KORS) kd = Math.min(kd, Math.hypot(k.x - SH.x, k.y - SH.y)); const cx = 154, cy = Y + 50, r = 44, RR = Math.min(6000 * taraK(), Math.max(1200, kd * 1.7)), sc = r / RR, ca = Math.cos(-SH.a - Math.PI / 2), sa = Math.sin(-SH.a - Math.PI / 2);
+    const P = (wx, wy) => { const dx = wx - SH.x, dy = wy - SH.y; return [cx + (dx * ca - dy * sa) * sc, cy + (dx * sa + dy * ca) * sc, Math.hypot(dx, dy)]; };
+    x.save(); x.beginPath(); x.arc(cx, cy, r, 0, TAU); x.clip();
+    const bg2 = x.createRadialGradient(cx, cy, 0, cx, cy, r); bg2.addColorStop(0, 'rgba(20,60,50,.55)'); bg2.addColorStop(1, 'rgba(4,16,14,.7)'); x.fillStyle = bg2; x.fillRect(cx - r, cy - r, r * 2, r * 2);
+    x.strokeStyle = 'rgba(124,240,166,.18)'; x.lineWidth = 1; for (const k of [0.33, 0.66]) { x.beginPath(); x.arc(cx, cy, r * k, 0, TAU); x.stroke(); } x.beginPath(); x.moveTo(cx - r, cy); x.lineTo(cx + r, cy); x.moveTo(cx, cy - r); x.lineTo(cx, cy + r); x.stroke();
+    const sw = (t * 2.2) % TAU; for (let i = 0; i < 14; i++) { x.fillStyle = `rgba(124,240,166,${(0.16 * (1 - i / 14)).toFixed(3)})`; x.beginPath(); x.moveTo(cx, cy); x.arc(cx, cy, r, sw - (i + 1) * 0.06, sw - i * 0.06); x.closePath(); x.fill(); }
+    x.strokeStyle = 'rgba(160,255,200,.7)'; x.beginPath(); x.moveTo(cx, cy); x.lineTo(cx + Math.cos(sw) * r, cy + Math.sin(sw) * r); x.stroke();
+    const nokta = (wx, wy, renk, tip, puls) => { const [px, py, d] = P(wx, wy); if (d > RR * 1.02) return; const ba = Math.atan2(py - cy, px - cx), fark = ((sw - ba) % TAU + TAU) % TAU, parla = 0.45 + 0.55 * Math.max(0, 1 - fark / 2.2); x.globalAlpha = parla; x.fillStyle = renk; if (tip === 'k') { x.fillRect(px - 2.5, py - 2.5, 5, 5); } else if (tip === 'e') { x.beginPath(); x.moveTo(px, py - 3.5); x.lineTo(px + 3, py + 2.5); x.lineTo(px - 3, py + 2.5); x.closePath(); x.fill(); } else { x.beginPath(); x.arc(px, py, tip === 'b' ? 3.2 : 2.2, 0, TAU); x.fill(); } if (puls) { x.strokeStyle = renk; x.globalAlpha = parla * (1 - (t * 1.5 % 1)); x.lineWidth = 1; x.beginPath(); x.arc(px, py, 3 + (t * 1.5 % 1) * 6, 0, TAU); x.stroke(); } x.globalAlpha = 1; };
+    const sx2 = Math.floor(SH.x / SEK), sy2 = Math.floor(SH.y / SEK), tt = simT();
+    for (let j = -1; j <= 1; j++) for (let i = -1; i <= 1; i++) { const tm = temel(sx2 + i, sy2 + j); if (tm) nokta(tm.x, tm.y, `rgb(${YT[tm.yt].g})`, 'b'); const s2 = Math.abs(i) + Math.abs(j) <= 1 && sistem(sx2 + i, sy2 + j); if (s2) for (const q of s2.gez) { const [qx, qy] = gezPos(q, tt); nokta(qx, qy, q.kol ? '#FFC857' : 'rgba(127,190,255,.9)', ''); } }
+    for (const o of OLAY) nokta(o.x, o.y, o.tip === 'enkaz' ? '#FFB066' : '#D8C6FF', '');
+    { const [bx, by] = bankaPos(); nokta(bx, by, '#FFC857', 'k'); const G = galaksi(...galHucre(SH.x, SH.y)), [ix, iy] = istPos(G), [kx, ky] = korsanLimanPos(G); nokta(ix, iy, '#7FE3FF', 'k'); nokta(kx, ky, '#FF7B8A', 'k'); }
+    for (const [, L0] of LON) nokta(L0.x, L0.y, L0.id === ST.lonca ? '#FFC857' : '#9BE07A', 'k');
+    for (const kv of KERVAN) { const ps = kvPos(kv); if (ps) nokta(ps[0], ps[1], '#FFE3A6', 'e'); }
+    for (const d of DOST) nokta(d.x, d.y, '#7FE3FF', 'e');
+    for (const [, e] of AG.UZAK) nokta(e.cx, e.cy, '#7CF0A6', 'e');
+    for (const k of KORS) nokta(k.x, k.y, k.golge ? '#B48CFF' : k.ist ? '#7CF0A6' : '#FF5C6E', 'e', true);
+    x.restore();
+    // hedef işareti (kenarda)
+    const hd = wp || (oto ? (() => { const q = otoPos(oto, simT()); return q ? { x: q[0], y: q[1] } : null; })() : null);
+    if (hd) { const [px, py, d] = P(hd.x, hd.y), ba = Math.atan2(py - cy, px - cx), ic = d < RR, mx = ic ? px : cx + Math.cos(ba) * (r - 4), my = ic ? py : cy + Math.sin(ba) * (r - 4); x.strokeStyle = '#FFC857'; x.lineWidth = 1.5; x.beginPath(); x.moveTo(mx, my - 4); x.lineTo(mx + 4, my); x.lineTo(mx, my + 4); x.lineTo(mx - 4, my); x.closePath(); x.stroke(); }
+    x.strokeStyle = 'rgba(124,240,166,.5)'; x.lineWidth = 1.2; x.beginPath(); x.arc(cx, cy, r, 0, TAU); x.stroke();
+    x.fillStyle = '#E8EEFF'; x.beginPath(); x.moveTo(cx, cy - 5); x.lineTo(cx + 3.5, cy + 4); x.lineTo(cx, cy + 2); x.lineTo(cx - 3.5, cy + 4); x.closePath(); x.fill();
+    yazi('RADAR', cx, Y + 10, 900, '#97A5CA', 8.5);
+    yazi('◎ ' + mesafeYaz(RR), cx - r - 4, cy + r + 9, 800, 'rgba(124,240,166,.85)', 7.5, 'left'); if (KORS.length) yazi('⚠ ' + KORS.length, cx + r + 4, cy + r + 9, 900, yan() ? '#FF7B8A' : '#FFB3BC', 9, 'right');
+  }
+  Y += 100; ayrac(Y);
+  // ---- nabız ----
+  if (bolum.ekg) {
+    const ey = Y + 6, eh = 40, ux = 10, uw = w - 20, nb = Math.round(nabiz), nR = nb < 95 ? '#7CF0A6' : nb < 125 ? '#FFC857' : '#FF5C6E';
+    x.fillStyle = 'rgba(0,0,0,.28)'; x.fillRect(ux, ey, uw, eh);
+    x.strokeStyle = 'rgba(124,240,166,.07)'; x.lineWidth = 1; x.beginPath(); for (let i = 1; i < 8; i++) { x.moveTo(ux + uw * i / 8, ey); x.lineTo(ux + uw * i / 8, ey + eh); } for (let i = 1; i < 4; i++) { x.moveTo(ux, ey + eh * i / 4); x.lineTo(ux + uw, ey + eh * i / 4); } x.stroke();
+    x.strokeStyle = nR; x.lineWidth = 1.6; x.shadowColor = nR; x.shadowBlur = 6; x.beginPath();
+    for (let i = 0; i < EKG.length; i++) { const v = EKG[(ekgI + i) % EKG.length], px = ux + uw * i / (EKG.length - 1), py = ey + eh * 0.64 - v * eh * 0.5; i ? x.lineTo(px, py) : x.moveTo(px, py); }
+    x.stroke(); x.shadowBlur = 0;
+    { const px = ux + uw, py = ey + eh * 0.64 - EKG[(ekgI + EKG.length - 1) % EKG.length] * eh * 0.5; x.fillStyle = '#FFFFFF'; x.beginPath(); x.arc(px - 1, py, 2, 0, TAU); x.fill(); }
+    yazi('♥ ' + nb, ux + 5, ey + 12, 900, nR, 12, 'left'); yazi(T('PİLOT NABZI', 'PILOT PULSE') + ' · ' + (nb < 95 ? T('SAKİN', 'CALM') : nb < 125 ? T('GERGİN', 'TENSE') : T('PANİK', 'PANIC')), ux + uw - 5, ey + 11, 900, '#97A5CA', 7.5, 'right');
+    Y += 50; ayrac(Y);
+  }
+  // ---- mini kadranlar ----
+  if (bolum.mini) {
+    const mini = (cx, oran, renk, etk, deger, uy) => { const cy = Y + 30, r = 17, a0 = Math.PI, a1 = Math.PI * 2; x.lineWidth = 4; x.strokeStyle = 'rgba(255,255,255,.07)'; x.beginPath(); x.arc(cx, cy, r, a0, a1); x.stroke(); x.strokeStyle = renk; x.beginPath(); x.arc(cx, cy, r, a0, a0 + Math.PI * kis(oran, 0, 1)); x.stroke(); yazi(deger, cx, cy - 2, 900, uy && yan() ? '#FF7B8A' : '#E8EEFF', 11); yazi(etk, cx, cy + 10, 900, '#97A5CA', 7.5); };
+    const mot = SH.warp > 0.2 ? 1 : SH.itki, isiO = (isi + 100) / 1600, isiR = isi < 0 ? '#7FB8FF' : isi < 400 ? '#9BE07A' : isi < 1000 ? '#FFC857' : '#FF5C6E';
+    mini(40, mot, SH.warp > 0.2 ? '#B48CFF' : boost && guc > 0 ? '#FFC857' : '#7FE3FF', T('MOTOR', 'ENGINE'), SH.warp > 0.2 ? 'W' : Math.round(mot * 100) + '%');
+    mini(106, isiO, isiR, T('GÖVDE ISISI', 'HULL HEAT'), Math.round(isi) + '°', isi > 1000);
+    mini(172, kokG / 9.9, kokG > 6 ? '#FF7B8A' : kokG > 3 ? '#FFC857' : '#9BE07A', T('G-KUVVETİ', 'G-FORCE'), kokG.toFixed(1) + 'g', kokG > 7);
+    Y += 44; ayrac(Y);
+  }
+  // ---- çubuklar ----
+  const cubuk = (etiket, oran, renk, deger, uyari) => {
+    const y = Y + 13; yazi(etiket, 12, y, 900, '#97A5CA', 9, 'left'); yazi(deger, w - 12, y, 900, uyari && yan() ? '#FF7B8A' : '#E8EEFF', 10, 'right');
+    x.fillStyle = 'rgba(255,255,255,.06)'; x.fillRect(12, y + 4, w - 24, 6);
+    const n = 24, gw = (w - 24) / n, dolu = Math.round(kis(oran, 0, 1) * n); for (let i = 0; i < n; i++) if (i < dolu) { x.fillStyle = renk; x.globalAlpha = 0.55 + 0.45 * (i / n); x.fillRect(12 + i * gw + 0.5, y + 4, gw - 1.5, 6); } x.globalAlpha = 1;
+    if (dolu) { x.fillStyle = renk; x.shadowColor = renk; x.shadowBlur = 8; x.fillRect(12 + (dolu - 1) * gw + 0.5, y + 4, gw - 1.5, 6); x.shadowBlur = 0; }
+    Y += 26;
   };
-  const mot = SH.warp > 0.2 ? 1 : SH.itki, motR = SH.warp > 0.2 ? '#B48CFF' : boost && guc > 0 ? '#FFC857' : '#7FE3FF';
-  kadran(46, 42, 30, mot, motR, T('MOTOR', 'ENGINE'), SH.warp > 0.2 ? 'WARP' : Math.round(mot * 100) + '%');
-  const isiO = (isi + 100) / 1600, isiR = isi < 0 ? '#7FB8FF' : isi < 400 ? '#9BE07A' : isi < 1000 ? '#FFC857' : '#FF5C6E';
-  kadran(138, 42, 30, isiO, isiR, T('GÖVDE ISISI', 'HULL HEAT'), Math.round(isi) + '°', isi > 1000);
-  // nabız
-  const ey = 96, eh = 48, ux = 10, uw = w - 20, nb = Math.round(nabiz), nR = nb < 95 ? '#7CF0A6' : nb < 125 ? '#FFC857' : '#FF5C6E';
-  x.fillStyle = 'rgba(0,0,0,.25)'; x.fillRect(ux, ey, uw, eh);
-  x.strokeStyle = 'rgba(124,240,166,.08)'; x.lineWidth = 1; x.beginPath(); for (let i = 1; i < 6; i++) { x.moveTo(ux + uw * i / 6, ey); x.lineTo(ux + uw * i / 6, ey + eh); } x.stroke();
-  x.strokeStyle = nR; x.lineWidth = 1.6; x.shadowColor = nR; x.shadowBlur = 6; x.beginPath();
-  for (let i = 0; i < EKG.length; i++) { const v = EKG[(ekgI + i) % EKG.length], px = ux + uw * i / (EKG.length - 1), py = ey + eh * 0.62 - v * eh * 0.5; i ? x.lineTo(px, py) : x.moveTo(px, py); }
-  x.stroke(); x.shadowBlur = 0;
-  x.textAlign = 'left'; yazi('♥ ' + nb, ux + 4, ey + 13, 900, nR, 12); x.textAlign = 'right'; yazi(T('PİLOT NABZI', 'PILOT PULSE'), ux + uw - 4, ey + 12, 900, '#97A5CA', 8.5); x.textAlign = 'center';
-  // çubuklar
-  const cubuk = (Y, etiket, oran, renk, deger, uyari) => {
-    x.textAlign = 'left'; yazi(etiket, 10, Y, 900, '#97A5CA', 9.5); x.textAlign = 'right'; yazi(deger, w - 10, Y, 900, uyari && Math.sin(t * 8) > 0 ? '#FF7B8A' : '#E8EEFF', 10.5); x.textAlign = 'center';
-    x.fillStyle = 'rgba(255,255,255,.08)'; x.fillRect(10, Y + 4, w - 20, 7);
-    const n = 20, gw = (w - 20) / n; for (let i = 0; i < n; i++) if (i < Math.round(kis(oran, 0, 1) * n)) { x.fillStyle = renk; x.fillRect(10 + i * gw + 0.5, Y + 4, gw - 1.5, 7); }
-  };
-  const yo = yakit / tank(), co = can / maxCan(), ko = kargoDolu() / Math.max(1, kapasite());
-  if (kapsul) { const oo = oks / OKS_MAX(), dk = Math.max(0, Math.ceil(oks)); cubuk(168, '🫁 ' + T('OKSİJEN', 'OXYGEN'), oo, oo < 0.2 ? '#FF5C6E' : '#7FE3FF', Math.floor(dk / 60) + ':' + String(dk % 60).padStart(2, '0'), oo < 0.2); } else
-  cubuk(168, '⛽ ' + T('YAKIT', 'FUEL'), yo, yo < 0.15 ? '#FF5C6E' : '#FFC857', Math.floor(yakit) + '/' + tank(), yo < 0.15);
-  cubuk(194, '🛡 ' + T('GÖVDE', 'HULL'), co, co < 0.3 ? '#FF5C6E' : '#9BE07A', Math.ceil(can) + '/' + maxCan(), co < 0.3);
-  cubuk(220, '📦 ' + T('KARGO', 'CARGO'), ko, '#7FE3FF', kargoDolu() + '/' + kapasite());
-  const wo = Math.max(SH.sarj, SH.warp);
-  cubuk(246, '🌀 ' + T('WARP ÇEKİRDEĞİ', 'WARP CORE'), yakit > 0 ? (wo > 0.01 ? wo : 1) : 0, wo > 0.01 ? '#B48CFF' : 'rgba(180,140,255,.45)', yakit <= 0 ? T('YAKIT YOK', 'NO FUEL') : SH.warp > 0.2 ? T('AKTİF', 'ACTIVE') : wo > 0.01 ? Math.round(wo * 100) + '%' : T('HAZIR', 'READY'), yakit <= 0);
+  const yo = yakit / tank(), co = can / maxCan(), ko = kargoDolu() / Math.max(1, kapasite()), wo = Math.max(SH.sarj, SH.warp);
+  if (kapsul) { const oo = oks / OKS_MAX(), dk = Math.max(0, Math.ceil(oks)); cubuk('🫁 ' + T('OKSİJEN', 'OXYGEN'), oo, oo < 0.2 ? '#FF5C6E' : '#7FE3FF', Math.floor(dk / 60) + ':' + String(dk % 60).padStart(2, '0'), oo < 0.2); }
+  else { const menz = yakit > 0 ? Math.round(yakit / 0.9) : 0; cubuk('⛽ ' + T('YAKIT', 'FUEL'), yo, yo < 0.15 ? '#FF5C6E' : '#FFC857', Math.floor(yakit) + '/' + tank(), yo < 0.15); }
+  cubuk('🛡 ' + T('GÖVDE', 'HULL') + (sigorta ? ' · 🛡' : ''), co, co < 0.3 ? '#FF5C6E' : co < 0.6 ? '#FFC857' : '#9BE07A', Math.ceil(can) + '/' + maxCan(), co < 0.3);
+  cubuk('📦 ' + T('KARGO', 'CARGO'), ko, ko > 0.9 ? '#FFC857' : '#7FE3FF', kargoDolu() + '/' + kapasite());
+  cubuk('🌀 ' + T('WARP ÇEKİRDEĞİ', 'WARP CORE'), yakit > 0 ? (wo > 0.01 ? wo : 1) : 0, wo > 0.01 ? '#B48CFF' : 'rgba(180,140,255,.55)', kapsul ? T('YOK', 'NONE') : yakit <= 0 ? T('YAKIT YOK', 'NO FUEL') : SH.warp > 0.2 ? T('AKTİF', 'ACTIVE') : wo > 0.01 ? Math.round(wo * 100) + '%' : T('HAZIR', 'READY'), yakit <= 0);
+  // ---- teçhizat ----
+  if (bolum.tec) {
+    ayrac(Y + 2); const L2 = [];
+    for (const k of TAK) { const E = TEC[k]; let o = 1; if (k === 'fuze') o = 1 - fuzeT / (2.5 / (1 + 0.35 * (tlv('fuze') - 1))); else if (k === 'mayin') o = 1 - mayinT / (3 / (1 + 0.35 * (tlv('mayin') - 1))); else if (k === 'patlama') o = 1 - patlamaT / (20 - 4 * (tlv('patlama') - 1)); L2.push([E.e, kis(o, 0, 1), k === 'patlama' ? 'Q' : '']); }
+    for (const k in SARF) if (SARF[k] > 0) L2.push([SARFE[k].e, 1, '×' + SARF[k]]);
+    if (!L2.length) yazi(T('Teçhizat yok', 'No equipment'), w / 2, Y + 20, 800, 'rgba(151,165,202,.6)', 9);
+    L2.slice(0, 8).forEach(([e, o, et], i) => { const cx = 20 + i * 24.5, cy = Y + 16; x.lineWidth = 2; x.strokeStyle = 'rgba(255,255,255,.08)'; x.beginPath(); x.arc(cx, cy, 9.5, 0, TAU); x.stroke(); x.strokeStyle = o >= 1 ? '#7CF0A6' : '#7FE3FF'; x.beginPath(); x.arc(cx, cy, 9.5, -Math.PI / 2, -Math.PI / 2 + TAU * o); x.stroke(); x.globalAlpha = o >= 1 ? 1 : 0.5; x.font = '11px system-ui, sans-serif'; x.textBaseline = 'middle'; x.fillText(e, cx, cy + 0.5); x.textBaseline = 'alphabetic'; x.globalAlpha = 1; if (et) yazi(et, cx + 8, cy + 10, 900, '#E8EEFF', 7.5); });
+  }
 }
 $('kokSec').checked = kokAcik;
 $('kokSec').addEventListener('change', e => { kokpitAc(e.target.checked); SES.tik(); });
