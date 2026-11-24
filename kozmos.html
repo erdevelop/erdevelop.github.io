@@ -219,6 +219,7 @@ details{margin-top:12px;color:var(--mute);font-size:13.5px}summary{cursor:pointe
         <li><b>Kokpit (K):</b> sağ üstte motor gücü, gövde ısısı, pilot nabzı, yakıt, gövde ve warp çekirdeği. Yıldıza çok yaklaşırsan gövde ısınır ve 1.200 °C üstünde hasar alır; tehlikede nabız yükselir.</li>
         <li><b>Kaçış kapsülü:</b> gemin patlarsa kapsüle geçersin. Silah, ambar ve warp yoktur; oksijen 8 dakika yeter. Bir koloniye yanaşıp yeni gemi seç (Kaşif ücretsiz). Kargon enkazda kalır, dönüp toplayabilirsin. Sigortasız gemi ve takılı teçhizat kaybolur.</li>
         <li><b>🏦 Merkez Bankası:</b> Yeni Umut’un yakınında döner. Kazançların burada güvende. Faiz al, koloni vergilerini topla, gemini sigortala ve kazanç dökümüne bak.</li>
+        <li><b>🎒 Tek kullanımlık:</b> tamir kiti (1), yakıt hücresi (2), oksijen kartuşu (3), EMP bombası (4). Üretim sekmesinde yapılır, cebinde taşınır, gemi patlasa da kaybolmaz. Gerektiğinde gemi yanında düğmesi çıkar. <b>⬆ Mk II / Mk III:</b> teçhizatını nadir kaynaklarla yükselt.</li>
         <li><b>⚒ Üretim:</b> planlarla, ambarındaki kaynaklardan gemi teçhizatı ve pilot kıyafeti (kask, giysi, sırt) üret. Yeni planlar kalıntılarda, aranan korsanlarda, uzay balinalarında ve plan satıcılarında bulunur.</li>
         <li><b>Diğer pilotlar:</b> yakındaki bir pilota 👋 selam, emoji ya da 🎁 500 kredilik hediye gönderebilirsin. Birlikte korsan avlarsanız <b>%25 filo bonusu</b> alırsınız. Diğer pilotların karakolları haritada turuncu ⚑ ile görünür. <b>📅 Haftalık yarışma:</b> haftanın en çok kazanan ilk 3 pilotu ödül alır.</li>
         <li><b>Bölüm 3 – Gölgeler:</b> kapı ağı açıldıktan sonra gölge üssünü yok et, veri çekirdeğini bir uzaylı kolonisine götür, kalıntılardan 3 kadim parça topla ve ana gemi Örtü ile son savaşa gir.</li>
@@ -243,6 +244,7 @@ details{margin-top:12px;color:var(--mute);font-size:13.5px}summary{cursor:pointe
         <li><b>Cockpit (K):</b> engine power, hull heat, pilot heart rate, fuel, hull and warp core at the top right. Fly too close to a star and the hull heats up, taking damage above 1,200 °C; danger raises your heart rate.</li>
         <li><b>Escape pod:</b> if your ship is destroyed you switch to the pod. No weapons, hold or warp; oxygen lasts 8 minutes. Dock at a colony and pick a new ship (the Explorer is free). Your cargo stays in the wreck for you to collect. Without insurance you lose the ship and fitted equipment.</li>
         <li><b>🏦 Central Bank:</b> orbits near New Hope. Your earnings are safe here. Collect interest and colony taxes, insure your ship and see where your money comes from.</li>
+        <li><b>🎒 Consumables:</b> repair kit (1), fuel cell (2), oxygen cartridge (3), EMP bomb (4). Craft them in the Crafting tab; they stay in your pocket even if the ship is destroyed. A button appears next to the ship when they are useful. <b>⬆ Mk II / Mk III:</b> upgrade your equipment with rare resources.</li>
         <li><b>⚒ Crafting:</b> use blueprints and resources in your hold to craft ship equipment and pilot suit parts (helmet, suit, back). New blueprints come from ruins, wanted pirates, space whales and blueprint dealers.</li>
         <li><b>Other pilots:</b> wave 👋, send an emoji or a 🎁 500-credit gift to a nearby pilot. Hunting pirates together gives a <b>25% fleet bonus</b>. Other pilots’ outposts show on the map with an orange ⚑. <b>📅 Weekly contest:</b> the top 3 earners of the week win prizes.</li>
         <li><b>Chapter 3 – The Shadows:</b> after the gates open, destroy the shadow base, take the data core to an alien colony, collect 3 ancient shards from ruins and face the mothership Shroud.</li>
@@ -655,6 +657,8 @@ const KIYS = new Set(Array.isArray(K.kiys) ? K.kiys : []), KIY = Object.assign({
 const PLANLAR = new Set(Array.isArray(K.plan) ? K.plan : ['cekici', 'tamir', 'oksijen', 'termal']);
 const giyili = k => KIY.kask === k || KIY.giysi === k || KIY.sirt === k;
 const OKS_MAX = () => 480 * (giyili('oksijen') ? 2 : 1);
+const SARF = Object.assign({ kit: 0, yhucre: 0, okskart: 0, emp: 0 }, K.sarf || {}), TLV = Object.assign({}, K.tlv || {});
+const tlv = k => TLV[k] || 1, MK = ['', '', ' Mk II', ' Mk III'];
 const KESIF = new Set(Array.isArray(K.kesif) ? K.kesif : []);
 const ACIK = new Set(Array.isArray(K.acik) ? K.acik : []);
 const HC = SEK / 2; // keşif sisi hücresi (yarım sektör)
@@ -790,6 +794,7 @@ addEventListener('keydown', e => {
   else if (k === 'o') modDegis();
   else if (k === 'k') kokpitAc(!kokAcik);
   else if (k === 'q') patlamaKullan();
+  else if (k >= '1' && k <= '4' && !e.repeat) { const s2 = Object.keys(SARFE).find(x => SARFE[x].tus === k); if (s2) sarfKullan(s2); }
   else if (k === 'e' && yanasP && !limanP && oyunda) limanAc(yanasP);
   else if (k === 'e' && kaynP && oyunda) kazP ? kazDur() : kazBasla(kaynP);
   if (mod === 'oto' && oto && oyunda && !e.repeat) { if (k === ' ') otoWarp(); else if (k === 'shift') otoBoost(); }
@@ -1039,7 +1044,7 @@ function hudYaz(v, t) {
   kaynP = kp || null;
   kalintiP = yakinMi && en.kalinti && KESIF.has('p:' + en.id) && !KESIF.has('r:' + en.id) ? en : null;
   balinaP = null; if (oyunda && !limanP && v < 700) for (const b of yakinBalinalar(t)) if (!KESIF.has('w:' + b.id) && Math.hypot(b.x - SH.x, b.y - SH.y) < 1100) { balinaP = b; break; }
-  enkazP = oyunda && !limanP && v < 550 ? OLAY.find(o => o.tip === 'enkaz' && Math.hypot(o.x - SH.x, o.y - SH.y) < (takili('cekici') ? 950 : 340)) || null : null;
+  enkazP = oyunda && !limanP && v < 550 ? OLAY.find(o => o.tip === 'enkaz' && Math.hypot(o.x - SH.x, o.y - SH.y) < (takili('cekici') ? 950 * (1 + 0.3 * (tlv('cekici') - 1)) : 340)) || null : null;
   imdatP = oyunda && !limanP ? GOREV.find(g => g.tip === 'imdat' && Math.hypot(g.x - SH.x, g.y - SH.y) < 450) || null : null;
   if (kazP && kazP !== kaynP) kazDur();
   yanasP = oyunda && !limanP && en && en.kol && KESIF.has('k:' + en.id) && ed < (en.halka ? en.r * (en.halka.dis - 1) : 0) + 500 && v < 450 ? en : null;
@@ -1454,6 +1459,7 @@ function gpYaz() {
     const dk = Math.max(0, Math.ceil(oks)); h += `<button class="gpb ${oks < 60 ? 'y' : ''}" type="button" disabled style="opacity:1">🫁 ${T('Oksijen', 'Oxygen')} ${Math.floor(dk / 60)}:${String(dk % 60).padStart(2, '0')}</button>`;
     if (!yanasP) h += `<button class="gpb w" type="button" data-g="kgit">🏙 ${T('En yakın koloniye git', 'Go to the nearest colony')}</button>`;
   }
+  if (oyunda && !limanP && !HM.acik) h += sarfGp();
   if (oyunda && !limanP && !HM.acik && bankaYakin()) h += `<button class="gpb y" type="button" data-g="banka">🏦 ${T('Merkez Bankası’na yanaş', 'Dock at the Central Bank')}</button>`;
   if (oyunda && !limanP && !HM.acik && !kapsul) {
     if (kaynP) { const m = MAL[KAYN[kaynP.tip]], ik = kaynP.kuyruk ? '☄' : kaynP.nebula ? '🌫' : '⛏'; h += kazP === kaynP ? `<button class="gpb on" type="button" data-g="kaz">${ik} ${T('Topluyor', 'Collecting')} ${m.e} ${KOTA_N - kotaKal(kaynP)}/${KOTA_N} · ${T('Durdur', 'Stop')}</button>` : `<button class="gpb y" type="button" data-g="kaz">${ik} ${T('Topla', 'Collect')}: ${m.e} ${L(m.ad)}</button>`; }
@@ -1496,6 +1502,7 @@ $('gp').addEventListener('click', e => {
   else if (g === 'kalinti' && kalintiP) bulmacaAc(kalintiP);
   else if (g === 'oy') oySelam(b.dataset.e);
   else if (g === 'kgit') kapsulGit();
+  else if (g === 'sarf') sarfKullan(b.dataset.k);
   else if (g === 'banka') bankaAc();
   else if (g === 'hed') oyHediye();
   else if (g === 'balina' && balinaP) { KESIF.add('w:' + balinaP.id); kazan(250, 'kesif'); if (Math.random() < 0.25) setTimeout(() => planVer('balina'), 1500); ST.balina = (ST.balina || 0) + 1; duyur('🐋 ' + T('Uzay balinaları: ', 'Space whales: ') + '<b>' + esc(balinaP.ad) + '</b>', 'galaksi', T('Şarkılarını kaydettin · +250 💰', 'You recorded their song · +250 💰')); SES.galaksi(); basarimKontrol(); }
@@ -1524,7 +1531,7 @@ function kazBasla(p) {
 function kazDur() { if (!kazP) return; kazP = null; gpImza = ''; gpYaz(); kaydet(); }
 function kazAdim(dt) {
   if (!kazP) return;
-  kazT += dt; if (kazT < (takili('cekici') ? 0.7 : 1.4)) return; kazT = 0;
+  kazT += dt; if (kazT < (takili('cekici') ? 0.7 / (1 + 0.3 * (tlv('cekici') - 1)) : 1.4)) return; kazT = 0;
   const p = kazP, m = KAYN[p.tip], sa = Math.floor(Date.now() / 3.6e6);
   if (kotaKal(p) <= 0) { duyur('⛏ ' + T('Kaynak tükendi', 'Deposit depleted'), 'kesif', T('Bir saat sonra yenilenir', 'Refills in an hour')); kazDur(); return; }
   if (kargoDolu() >= kapasite()) { duyur('📦 ' + T('Ambar doldu', 'Cargo hold full'), 'kesif', T('Bir kolonide satabilirsin', 'Sell it at a colony')); kazDur(); return; }
@@ -1655,7 +1662,7 @@ function limanYaz() {
     for (const k in TEC) {
       const E = TEC[k], var_ = TEKS.has(k), tk = takili(k);
       const dg = tk ? `<button class="kb" type="button" data-tcik="${k}">${T('Çıkar', 'Remove')}</button>` : var_ ? `<button class="kb al" type="button" data-ttak="${k}" ${TAK.length >= slotSay() ? 'disabled' : ''}>${TAK.length >= slotSay() ? T('Yuva dolu', 'Slots full') : T('Tak', 'Equip')}</button>` : E.f < 0 ? `<button class="kb" type="button" disabled>⚒ ${T('Planla üretilir', 'Craft from blueprint')}</button>` : `<button class="kb al" type="button" data-tal="${k}" ${kredi < E.f ? 'disabled' : ''}>${T('Satın al', 'Buy')} · ${SAYI(E.f)} 💰</button>`;
-      h += `<div class="satir"><div>${E.e} <b>${L(E.ad)}</b>${tk ? ' ✓' : ''}<small>${L(E.ne)}</small></div><div class="dg">${dg}</div></div>`;
+      h += `<div class="satir"><div>${E.e} <b>${L(E.ad)}${var_ ? MK[tlv(k)] : ''}</b>${tk ? ' ✓' : ''}<small>${L(E.ne)}</small></div><div class="dg">${dg}</div></div>`;
     }
     h += `<div class="alt" style="margin:12px 0 0;font-weight:900;color:var(--ink)">🛠 ${T('Yükseltmeler', 'Upgrades')}</div>`;
     h += `<div class="alt" style="margin:4px 0 0;font-size:12.5px">${T('Gemini geliştir: her parçanın 5 seviyesi var. Yükseltmeler gemi değiştirsen de kalır.', 'Upgrade your ship: every part has 5 levels. Upgrades stay when you switch ships.')}</div>`;
@@ -1704,6 +1711,8 @@ $('liman').addEventListener('click', e => {
   else if (b.dataset.gsec) { if (gemiSec(b.dataset.gsec)) { SES.koloni(); duyur('🚀 ' + L(GEMI[gemiTip].ad), 'koloni'); } }
   else if (b.dataset.gal) { const k = b.dataset.gal, G = GEMI[k]; if (G.f > 0 && kredi >= G.f) { kredi -= G.f; GEMILER.add(k); gemiSec(k); SES.koloni(); duyur('🛸 ' + T('Yeni gemi: ', 'New ship: ') + '<b>' + L(G.ad) + '</b>', 'koloni'); basarimKontrol(); } }
   else if (b.dataset.renk != null) { gemiRenk = +b.dataset.renk; SES.tik(); }
+  else if (b.dataset.sarf) { const k = b.dataset.sarf, E = SARFE[k]; if (SARF[k] < SARF_MAX && kredi >= E.k && Object.entries(E.mal).every(([m, n]) => (KARGO[m] || 0) >= n)) { for (const [m, n] of Object.entries(E.mal)) { KARGO[m] -= n; if (!KARGO[m]) delete KARGO[m]; } kredi -= E.k; SARF[k]++; ST.uret = (ST.uret || 0) + 1; SES.koloni(); basarimKontrol(); } }
+  else if (b.dataset.mk) { const k = b.dataset.mk, M = mkTarif(k); if (TEKS.has(k) && tlv(k) < 3 && kredi >= M.k && Object.entries(M.mal).every(([m, n]) => (KARGO[m] || 0) >= n)) { for (const [m, n] of Object.entries(M.mal)) { KARGO[m] -= n; if (!KARGO[m]) delete KARGO[m]; } kredi -= M.k; TLV[k] = tlv(k) + 1; ST.mk = (ST.mk || 0) + 1; patlamaEkle(SH.x, SH.y, 40, '127,227,255'); SES.galaksi(); duyur('⬆ ' + TEC[k].e + ' <b>' + L(TEC[k].ad) + MK[TLV[k]] + '</b>', 'koloni', L(MK_NE[k] || ['', ''])); basarimKontrol(); } }
   else if (b.dataset.giy) { const k = b.dataset.giy, y = KIYE[k].yuva; KIY[y] = KIY[y] === k ? null : k; if (kapsul) can = Math.min(can, maxCan()); SES.tik(); }
   else if (b.dataset.plal) { const k = b.dataset.plal, f = PLAN[k].pf; if (kredi >= f && !PLANLAR.has(k)) { kredi -= f; PLANLAR.add(k); SES.koloni(); duyur('📜 ' + T('Plan alındı: ', 'Blueprint bought: ') + '<b>' + L(planBilgi(k).ad) + '</b>', 'koloni'); basarimKontrol(); } }
   else if (b.dataset.uret) { const k = b.dataset.uret, P = PLAN[k], bb = planBilgi(k); if (PLANLAR.has(k) && !planVar(k) && kredi >= P.k && Object.entries(P.mal).every(([m, n]) => (KARGO[m] || 0) >= n)) { for (const [m, n] of Object.entries(P.mal)) { KARGO[m] -= n; if (!KARGO[m]) delete KARGO[m]; } kredi -= P.k; ST.uret = (ST.uret || 0) + 1; if (bb.tur === 'tec') { TEKS.add(k); if (TAK.length < slotSay()) TAK.push(k); } else { KIYS.add(k); if (!KIY[bb.yuva]) KIY[bb.yuva] = k; } patlamaEkle(SH.x, SH.y, 30, '255,220,140'); SES.koloni(); duyur('⚒ ' + T('Üretildi: ', 'Crafted: ') + '<b>' + bb.e + ' ' + L(bb.ad) + '</b>', 'koloni', bb.tur === 'tec' ? T('Tersane’de gemine takılı', 'Fitted at the Shipyard') : T('Kıyafetine giyildi', 'Added to your suit')); basarimKontrol(); } }
@@ -1730,7 +1739,7 @@ function patla() {
   if (sigorta) { sigorta = false; kayipYaz = T('Sigortan gemini ve teçhizatını karşıladı.', 'Your insurance covered the ship and equipment.'); }
   else {
     const L2 = []; if (GEMI[eskiGemi].f > 0) { GEMILER.delete(eskiGemi); L2.push(L(GEMI[eskiGemi].ad)); }
-    for (const k of TAK) { TEKS.delete(k); L2.push(L(TEC[k].ad)); } TAK = [];
+    for (const k of TAK) { TEKS.delete(k); delete TLV[k]; L2.push(L(TEC[k].ad) + MK[tlv(k)]); } TAK = [];
     kayipYaz = L2.length ? T('Kaybedilenler: ', 'Lost: ') + L2.join(', ') + '.' : '';
   }
   kapsul = true; oks = OKS_MAX(); can = maxCan(); SH.vx *= 0.3; SH.vy *= 0.3; hasarFlas = 1; ST.olum = (ST.olum || 0) + 1;
@@ -1806,9 +1815,32 @@ const PLAN = {
   jet: { mal: { gaz: 5, metal: 4, elek: 2 }, k: 500, pf: 2000 }, zgiysi: { mal: { metal: 6, cevher: 4, kris: 1 }, k: 600, pf: 2500 },
   hud: { mal: { elek: 4, metal: 2, kris: 1 }, k: 500, pf: 2500 }, tarakask: { mal: { elek: 3, su: 2, inci: 1 }, k: 450, pf: 2000 },
 };
+const NADIR = ['kris', 'krai', 'inci', 'neb'];
+function mkTarif(k) { const L0 = tlv(k), P = PLAN[k], mal = {}; for (const [m, n] of Object.entries(P.mal)) mal[m] = Math.ceil(n * (0.5 + 0.5 * L0)); const nd = NADIR[(k.length + L0) % 4]; mal[nd] = (mal[nd] || 0) + 2 * L0; return { mal, k: P.k * 3 * L0 }; }
+const MK_NE = { fuze: ['Daha sık ve daha güçlü füze', 'Faster, stronger missiles'], mayin: ['Daha sık, daha güçlü mayın', 'More frequent, stronger mines'], patlama: ['Daha kısa bekleme, daha çok hasar', 'Shorter cooldown, more damage'], cekici: ['Daha uzun menzil, daha hızlı toplama', 'Longer range, faster collecting'], tamir: ['Onarım hızı artar', 'Faster repairs'], drone: ['Drone daha hızlı ve sert ateş eder', 'Drone fires faster and harder'], yakitgen: ['Daha çok yakıt üretir', 'Makes more fuel'], gizli: ['Korsanlar daha da seyrek gelir', 'Pirates come even less often'] };
 const PLAN_SAT = { vel: ['hud', 'patlama', 'drone'], krai: ['gizli', 'yakitgen', 'zgiysi'], oru: ['tarakask', 'jet', 'fuze'], insan: ['mayin', 'fuze', 'jet'] };
 const planBilgi = k => TEC[k] ? { e: TEC[k].e, ad: TEC[k].ad, ne: TEC[k].ne, tur: 'tec' } : { e: KIYE[k].e, ad: KIYE[k].ad, ne: KIYE[k].ne, tur: 'kiy', yuva: KIYE[k].yuva };
 const planVar = k => planBilgi(k).tur === 'tec' ? TEKS.has(k) : KIYS.has(k);
+const SARFE = {
+  kit: { e: '🩹', tus: '1', ad: ['Tamir kiti', 'Repair kit'], ne: ['Gövdeyi hemen 60 onarır (kapsülde de çalışır)', 'Instantly repairs 60 hull (works in the pod too)'], mal: { metal: 2, elek: 1 }, k: 80 },
+  yhucre: { e: '🔋', tus: '2', ad: ['Yakıt hücresi', 'Fuel cell'], ne: ['Depoya hemen 20 yakıt ekler', 'Instantly adds 20 fuel'], mal: { gaz: 3, su: 1 }, k: 60 },
+  okskart: { e: '🫧', tus: '3', ad: ['Oksijen kartuşu', 'Oxygen cartridge'], ne: ['Kapsülde oksijeni 3 dakika uzatır', 'Adds 3 minutes of pod oxygen'], mal: { su: 2, gaz: 1 }, k: 50 },
+  emp: { e: '⚡', tus: '4', ad: ['EMP bombası', 'EMP bomb'], ne: ['Yakındaki düşmanlara 120 hasar, mermileri siler', '120 damage to nearby enemies, wipes their shots'], mal: { elek: 3, kris: 1, gaz: 2 }, k: 300 },
+};
+const SARF_MAX = 9;
+function sarfKullan(k) {
+  if (!oyunda || limanP || bankaAcik || !SARF[k]) return; const E = SARFE[k];
+  if (k === 'kit') { if (can >= maxCan() - 0.5) return; can = Math.min(maxCan(), can + 60); patlamaEkle(SH.x, SH.y, 30, '155,224,122'); }
+  else if (k === 'yhucre') { if (kapsul || yakit >= tank() - 0.5) return; yakit = Math.min(tank(), yakit + 20); }
+  else if (k === 'okskart') { if (!kapsul) return; oks = Math.min(OKS_MAX() + 180, oks + 180); }
+  else if (k === 'emp') { if (!KORS.length) return; patlamaEkle(SH.x, SH.y, 320, '160,200,255'); for (let i = MERMI.length - 1; i >= 0; i--) if (!MERMI[i].d && Math.hypot(MERMI[i].x - SH.x, MERMI[i].y - SH.y) < 700) MERMI.splice(i, 1); for (let i = KORS.length - 1; i >= 0; i--) { const q = KORS[i]; if (Math.hypot(q.x - SH.x, q.y - SH.y) < 700) { q.can -= q.ana && !HIK.mizrak ? 0 : 120; if (q.can <= 0) korsanOldu(q, i); } } }
+  SARF[k]--; ST.sarf = (ST.sarf || 0) + 1; SES.koloni(); duyur(E.e + ' ' + L(E.ad), 'koloni', T('Kalan: ', 'Left: ') + SARF[k]); gpImza = ''; kaydet();
+}
+function sarfGp() {
+  let h = ''; const uy = { kit: can < maxCan() * 0.7, yhucre: !kapsul && yakit < tank() - 8, okskart: kapsul, emp: KORS.length > 0 };
+  for (const k in SARFE) if (SARF[k] > 0 && uy[k]) h += `<button class="gpb ${k === 'kit' && can < maxCan() * 0.3 || k === 'okskart' && oks < 90 ? 'y' : ''}" type="button" data-g="sarf" data-k="${k}">${SARFE[k].e} ${L(SARFE[k].ad)} ×${SARF[k]}${DOKUN ? '' : ' (' + SARFE[k].tus + ')'}</button>`;
+  return h;
+}
 function planVer(neden) {
   const L2 = Object.keys(PLAN).filter(k => !PLANLAR.has(k)); if (!L2.length) return false;
   const k = L2[(Math.random() * L2.length) | 0], b = planBilgi(k); PLANLAR.add(k);
@@ -1830,6 +1862,16 @@ function uretYaz(p) {
     const ok = Object.entries(P.mal).every(([m, n]) => (KARGO[m] || 0) >= n) && kredi >= P.k;
     const tarif = Object.entries(P.mal).map(([m, n]) => `<span style="color:${(KARGO[m] || 0) >= n ? '#9BE07A' : '#FF9AA6'}">${MAL[m].e} ${KARGO[m] || 0}/${n}</span>`).join(' ') + ` · ${SAYI(P.k)} 💰`;
     h += `<div class="satir"><div>${b.e} <b>${L(b.ad)}</b> <span class="lv">${b.tur === 'tec' ? T('gemi teçhizatı', 'ship equipment') : L(YUVA[b.yuva])}</span><small>${L(b.ne)}</small><small>${tarif}</small></div><div class="dg"><button class="kb al" type="button" data-uret="${k}" ${var_ || !ok ? 'disabled' : ''}>${var_ ? T('Sende var', 'Owned') : '⚒ ' + T('Üret', 'Craft')}</button></div></div>`;
+  }
+  h += `<div class="alt" style="margin:14px 0 0;font-weight:900;color:var(--ink)">🎒 ${T('Tek kullanımlık', 'Consumables')}</div><div class="alt" style="margin:2px 0 0;font-size:12px">${T('Cebinde taşınır: gemin patlasa da kaybolmaz. Her birinden en çok 9.', 'Carried in your pocket: never lost with the ship. Up to 9 of each.')}</div>`;
+  for (const k in SARFE) { const E = SARFE[k], ok = SARF[k] < SARF_MAX && Object.entries(E.mal).every(([m, n]) => (KARGO[m] || 0) >= n) && kredi >= E.k; const tarif = Object.entries(E.mal).map(([m, n]) => `<span style="color:${(KARGO[m] || 0) >= n ? '#9BE07A' : '#FF9AA6'}">${MAL[m].e} ${KARGO[m] || 0}/${n}</span>`).join(' ') + ` · ${SAYI(E.k)} 💰`;
+    h += `<div class="satir"><div>${E.e} <b>${L(E.ad)}</b> <span class="lv">×${SARF[k]}/${SARF_MAX}</span><small>${L(E.ne)}${DOKUN ? '' : ' · ' + T('tuş', 'key') + ' ' + E.tus}</small><small>${tarif}</small></div><div class="dg"><button class="kb al" type="button" data-sarf="${k}" ${ok ? '' : 'disabled'}>⚒ ${T('Üret', 'Craft')}</button></div></div>`; }
+  const mkL = [...TEKS].filter(k => TEC[k] && PLAN[k]);
+  if (mkL.length) {
+    h += `<div class="alt" style="margin:14px 0 0;font-weight:900;color:var(--ink)">⬆ ${T('Teçhizat yükseltme', 'Equipment upgrades')}</div><div class="alt" style="margin:2px 0 0;font-size:12px">${T('Sahip olduğun teçhizatı Mk II ve Mk III’e çıkar: daha hızlı, daha güçlü. Seviye, teçhizat gemiyle kaybolursa sıfırlanır.', 'Upgrade owned equipment to Mk II and Mk III: faster and stronger. The level resets if the equipment is lost with the ship.')}</div>`;
+    for (const k of mkL) { const L0 = tlv(k), E = TEC[k]; if (L0 >= 3) { h += `<div class="satir"><div>${E.e} <b>${L(E.ad)}${MK[3]}</b><small>${T('En üst seviye', 'Max level')}</small></div><div class="dg"><button class="kb" type="button" disabled>✓</button></div></div>`; continue; }
+      const M = mkTarif(k), ok = Object.entries(M.mal).every(([m, n]) => (KARGO[m] || 0) >= n) && kredi >= M.k, tarif = Object.entries(M.mal).map(([m, n]) => `<span style="color:${(KARGO[m] || 0) >= n ? '#9BE07A' : '#FF9AA6'}">${MAL[m].e} ${KARGO[m] || 0}/${n}</span>`).join(' ') + ` · ${SAYI(M.k)} 💰`;
+      h += `<div class="satir"><div>${E.e} <b>${L(E.ad)}${MK[L0]}</b> → <b style="color:var(--acc)">${MK[L0 + 1].trim()}</b><small>${L(MK_NE[k] || ['Daha güçlü', 'Stronger'])}</small><small>${tarif}</small></div><div class="dg"><button class="kb al" type="button" data-mk="${k}" ${ok ? '' : 'disabled'}>⬆ ${T('Yükselt', 'Upgrade')}</button></div></div>`; }
   }
   const kal = Object.keys(PLAN).length - PLANLAR.size;
   if (kal) h += `<div class="alt" style="margin:10px 0 0;font-size:12px">🔒 ${T(`${kal} plan daha var: antik kalıntılarda, aranan korsanlarda, uzay balinalarında ve plan satıcılarında bulunur.`, `${kal} more blueprints: found in ancient ruins, on wanted pirates, near space whales and at blueprint dealers.`)}</div>`;
@@ -1879,35 +1921,35 @@ const takili = k => TAK.includes(k);
 let LAZ = null;
 const MAYIN = []; let patlamaT = 0, fuzeT = 0, mayinT = 0, droneA = 0, droneT = 0;
 function patlamaKullan() {
-  if (!takili('patlama') || patlamaT > 0 || !oyunda || limanP) return; patlamaT = 20;
+  if (!takili('patlama') || patlamaT > 0 || !oyunda || limanP || kapsul) return; patlamaT = 20 - 4 * (tlv('patlama') - 1);
   patlamaEkle(SH.x, SH.y, 260, '127,227,255'); SES.patla();
-  for (let i = KORS.length - 1; i >= 0; i--) { const k = KORS[i], dx = k.x - SH.x, dy = k.y - SH.y, d = Math.hypot(dx, dy) || 1; if (d < 460) { k.can -= 60; k.vx += dx / d * 1400; k.vy += dy / d * 1400; if (k.can <= 0) korsanOldu(k, i); } }
+  for (let i = KORS.length - 1; i >= 0; i--) { const k = KORS[i], dx = k.x - SH.x, dy = k.y - SH.y, d = Math.hypot(dx, dy) || 1; if (d < 460) { k.can -= 60 * (1 + 0.4 * (tlv('patlama') - 1)); k.vx += dx / d * 1400; k.vy += dy / d * 1400; if (k.can <= 0) korsanOldu(k, i); } }
   for (let i = MERMI.length - 1; i >= 0; i--) if (!MERMI[i].d && Math.hypot(MERMI[i].x - SH.x, MERMI[i].y - SH.y) < 460) MERMI.splice(i, 1);
   gpImza = ''; gpYaz();
 }
 function tecGuncelle(dt, t) {
   patlamaT = Math.max(0, patlamaT - dt);
   if (!oyunda || limanP || kapsul) return;
-  if (takili('yakitgen') && SH.warp < 0.2 && yakit < tank()) yakit = Math.min(tank(), yakit + dt * 0.035);
+  if (takili('yakitgen') && SH.warp < 0.2 && yakit < tank()) yakit = Math.min(tank(), yakit + dt * 0.035 * tlv('yakitgen'));
   const savas = KORS.length > 0;
-  if (takili('tamir') && !savas && can < maxCan()) can = Math.min(maxCan(), can + dt * 1.5);
-  if (takili('fuze') && savas) { fuzeT -= dt; if (fuzeT <= 0) { let en = null, ed = 1700; for (const k of KORS) { const d = Math.hypot(k.x - SH.x, k.y - SH.y); if (d < ed) { ed = d; en = k; } } if (en) { fuzeT = 2.5; const a = Math.atan2(en.y - SH.y, en.x - SH.x) + (Math.random() - 0.5) * 0.8; MERMI.push({ x: SH.x, y: SH.y, vx: Math.cos(a) * 700 + SH.vx, vy: Math.sin(a) * 700 + SH.vy, o: 0, w: 3.5, d: true, h: 45, fuze: en }); SES.ates(0.3); } } }
-  if (takili('mayin') && savas) { mayinT -= dt; if (mayinT <= 0 && KORS.some(k => Math.hypot(k.x - SH.x, k.y - SH.y) < 900)) { mayinT = 3; MAYIN.push({ x: SH.x - Math.cos(SH.a) * 30, y: SH.y - Math.sin(SH.a) * 30, o: 0 }); } }
+  if (takili('tamir') && !savas && can < maxCan()) can = Math.min(maxCan(), can + dt * 1.5 * tlv('tamir'));
+  if (takili('fuze') && savas) { fuzeT -= dt; if (fuzeT <= 0) { let en = null, ed = 1700; for (const k of KORS) { const d = Math.hypot(k.x - SH.x, k.y - SH.y); if (d < ed) { ed = d; en = k; } } if (en) { fuzeT = 2.5 / (1 + 0.35 * (tlv('fuze') - 1)); const a = Math.atan2(en.y - SH.y, en.x - SH.x) + (Math.random() - 0.5) * 0.8; MERMI.push({ x: SH.x, y: SH.y, vx: Math.cos(a) * 700 + SH.vx, vy: Math.sin(a) * 700 + SH.vy, o: 0, w: 3.5, d: true, h: 45 * (1 + 0.25 * (tlv('fuze') - 1)), fuze: en }); SES.ates(0.3); } } }
+  if (takili('mayin') && savas) { mayinT -= dt; if (mayinT <= 0 && KORS.some(k => Math.hypot(k.x - SH.x, k.y - SH.y) < 900)) { mayinT = 3 / (1 + 0.35 * (tlv('mayin') - 1)); MAYIN.push({ x: SH.x - Math.cos(SH.a) * 30, y: SH.y - Math.sin(SH.a) * 30, o: 0 }); } }
   for (let i = MAYIN.length - 1; i >= 0; i--) {
     const m = MAYIN[i]; m.o += dt; if (m.o > 25) { MAYIN.splice(i, 1); continue; }
-    if (m.o > 0.8 && KORS.some(k => Math.hypot(k.x - m.x, k.y - m.y) < 120)) { MAYIN.splice(i, 1); patlamaEkle(m.x, m.y, 120, '255,170,80'); SES.patla(); for (let j = KORS.length - 1; j >= 0; j--) { const k = KORS[j]; if (Math.hypot(k.x - m.x, k.y - m.y) < 200) { k.can -= 80; if (k.can <= 0) korsanOldu(k, j); } } }
+    if (m.o > 0.8 && KORS.some(k => Math.hypot(k.x - m.x, k.y - m.y) < 120)) { MAYIN.splice(i, 1); patlamaEkle(m.x, m.y, 120, '255,170,80'); SES.patla(); for (let j = KORS.length - 1; j >= 0; j--) { const k = KORS[j]; if (Math.hypot(k.x - m.x, k.y - m.y) < 200) { k.can -= 80 * (1 + 0.3 * (tlv('mayin') - 1)); if (k.can <= 0) korsanOldu(k, j); } } }
   }
   if (HIK.mizrak) { SH.mizT = (SH.mizT || 0) - dt; const dv = KORS.find(k => k.ana || k.us); if (dv && SH.mizT <= 0 && Math.hypot(dv.x - SH.x, dv.y - SH.y) < 1800) { SH.mizT = 1.4; dv.can -= 150; LAZ = { x1: SH.x, y1: SH.y, x2: dv.x, y2: dv.y, o: 0 }; patlamaEkle(dv.x, dv.y, 50, '255,240,200'); SES.ates(1); if (dv.can <= 0) korsanOldu(dv, KORS.indexOf(dv)); } }
   if (LAZ) { LAZ.o += dt; if (LAZ.o > 0.3) LAZ = null; }
   if (takili('drone')) {
     droneA += dt * 1.6; droneT -= dt; const dx = SH.x + Math.cos(droneA) * 70, dy = SH.y + Math.sin(droneA) * 70;
     if (droneT <= 0) {
-      droneT = 0.6; let en = null, ed = 750; for (const k of KORS) { const d = Math.hypot(k.x - dx, k.y - dy); if (d < ed) { ed = d; en = k; } }
-      if (en) { const hz = 2400, ax = en.x + en.vx * ed / hz - dx, ay = en.y + en.vy * ed / hz - dy, al = Math.hypot(ax, ay) || 1; MERMI.push({ x: dx, y: dy, vx: ax / al * hz + SH.vx, vy: ay / al * hz + SH.vy, o: 0, w: 0.8, d: true, h: 7 }); }
+      droneT = 0.6 / (1 + 0.3 * (tlv('drone') - 1)); let en = null, ed = 750; for (const k of KORS) { const d = Math.hypot(k.x - dx, k.y - dy); if (d < ed) { ed = d; en = k; } }
+      if (en) { const hz = 2400, ax = en.x + en.vx * ed / hz - dx, ay = en.y + en.vy * ed / hz - dy, al = Math.hypot(ax, ay) || 1; MERMI.push({ x: dx, y: dy, vx: ax / al * hz + SH.vx, vy: ay / al * hz + SH.vy, o: 0, w: 0.8, d: true, h: 7 * (1 + 0.25 * (tlv('drone') - 1)) }); }
       else { const o = OLAY.find(o2 => o2.tip === 'enkaz' && Math.hypot(o2.x - SH.x, o2.y - SH.y) < 650); if (o) enkazTopla(o); }
     }
   }
-  if (takili('cekici') && !takili('drone')) { const o = OLAY.find(o2 => o2.tip === 'enkaz' && Math.hypot(o2.x - SH.x, o2.y - SH.y) < 950); if (o && Math.random() < dt) enkazTopla(o); }
+  if (takili('cekici') && !takili('drone')) { const o = OLAY.find(o2 => o2.tip === 'enkaz' && Math.hypot(o2.x - SH.x, o2.y - SH.y) < 950 * (1 + 0.3 * (tlv('cekici') - 1))); if (o && Math.random() < dt) enkazTopla(o); }
 }
 function tecCiz(t) {
   const s2 = Math.max(cam.z, 0.6);
@@ -2030,6 +2072,7 @@ $('bulmaca').addEventListener('click', e => {
     const p = BLM.p; KESIF.add('r:' + p.id); ST.kalinti = (ST.kalinti || 0) + 1; const od = Math.round((400 + ((Math.random() * 800) | 0)) * (giyili('tarakask') ? 1.5 : 1)); kazan(od, 'kesif');
     let ek = '';
     if (HIK.a === 13) { HIK.parca = (HIK.parca || 0) + 1; ek = ' · ' + T('Kadim parça', 'Ancient shard') + ` ${HIK.parca}/3`; }
+    else if (Math.random() < 0.25) { const k = ['kit', 'yhucre', 'emp'][(Math.random() * 3) | 0]; if (SARF[k] < SARF_MAX) { SARF[k]++; ek = ' · ' + SARFE[k].e + ' ' + L(SARFE[k].ad); } }
     else if (Math.random() < 0.45 && planVer('kalinti')) ek = ' · 📜 ' + T('yeni plan bulundu', 'new blueprint found');
     else if (Math.random() < 0.5) { const a = Math.random() * TAU, d = (3 + Math.random() * 3) * SEK; ac(SH.x + Math.cos(a) * d, SH.y + Math.sin(a) * d, 5); ek = ' · ' + T('harita parçası: mini haritada yeni bölge açıldı', 'map fragment: a new area opened on the mini map'); }
     $('blmYaz').textContent = T('Kalıntı açıldı!', 'The ruins opened!'); SES.koloni(); setTimeout(() => { $('bulmaca').hidden = true; }, 900);
@@ -2090,7 +2133,7 @@ function korsanOldu(k, j) {
 function korsanlar(dt, t) {
   if (HM.acik) return;
   const evUzak = Math.hypot(SH.x - SEK / 2, SH.y - SEK / 2) > SEK * 1.6;
-  if (!KORS.length && evUzak && SH.warp < 0.2 && !HM.acik && !kazP && !kapsul && !bankaAcik) { korsT -= dt; if (korsT <= 0) { korsT = (110 + Math.random() * 150) * (takili('gizli') ? 2 : 1); korsanCikar(); } }
+  if (!KORS.length && evUzak && SH.warp < 0.2 && !HM.acik && !kazP && !kapsul && !bankaAcik) { korsT -= dt; if (korsT <= 0) { korsT = (110 + Math.random() * 150) * (takili('gizli') ? 2 + 0.75 * (tlv('gizli') - 1) : 1); korsanCikar(); } }
   const g = korsanGuc();
   for (let i = KORS.length - 1; i >= 0; i--) {
     const k = KORS[i], dx = SH.x - k.x, dy = SH.y - k.y, d = Math.hypot(dx, dy) || 1;
@@ -2548,6 +2591,7 @@ const BASARIM = [
   ['kendi', '🏙', ['Kurucu', 'Founder'], ['Kendi kolonini kur', 'Found your own colony'], () => KARAKOL.some(k => k.koloni)],
   ['kapi', '⛩', ['Kapı bekçisi', 'Gatekeeper'], ['Kadim Kapıları aç', 'Open the Ancient Gates'], () => !!HIK.kapi],
   ['kapsul', '🫁', ['Hayatta kalan', 'Survivor'], ['Kaçış kapsülüyle yeni bir gemiye kavuş', 'Get a new ship after escaping in the pod'], () => (ST.kapsulK || 0) > 0],
+  ['mk', '⬆', ['Mühendis', 'Engineer'], ['Bir teçhizatı Mk III’e çıkar', 'Upgrade equipment to Mk III'], () => Object.values(TLV).some(v => v >= 3)],
   ['usta', '⚒', ['Usta', 'Craftsman'], ['İlk eşyanı üret', 'Craft your first item'], () => (ST.uret || 0) > 0],
   ['plan', '📜', ['Plan avcısı', 'Blueprint hunter'], ['8 plan topla', 'Collect 8 blueprints'], () => PLANLAR.size >= 8],
   ['faiz', '📈', ['Yatırımcı', 'Investor'], ['Bankadan faiz al', 'Collect interest from the bank'], () => (ST.faizTop || 0) > 0],
@@ -2862,7 +2906,7 @@ $('hEv').onclick = () => { const h = temel(0, 0); HM.x = h.x; HM.y = h.y; HM.z =
 $('hSil').onclick = () => { wp = null; haritaCiz(); kaydet(); };
 
 /* ================= menü, kayıt ================= */
-function kaydet(zorla) { if (window.__seriYukleniyor || (!oyunda && !zorla)) return; AG.siraGonder(); ls.set(KAYIT, { x: SH.x, y: SH.y, a: SH.a, kesif: [...KESIF], acik: [...ACIK], wp, zu: zKul, yol, kr: kredi, yak: yakit, kargo: KARGO, gorev: GOREV, alinan: [...ALINAN].slice(-300), yuk: YUK, kota: KOTA, gemi: gemiTip, gemiler: [...GEMILER], renk: gemiRenk, gad: gemiAd, can, sl: sonLiman, st: ST, bas: [...BAS], itibar: ITIBAR, karakol: KARAKOL, hik: HIK, tek: [...TEKS], tak: TAK, kap: kapsul, oks, sig: sigorta, kiys: [...KIYS], kiy: KIY, plan: [...PLANLAR], v: 1 }); }
+function kaydet(zorla) { if (window.__seriYukleniyor || (!oyunda && !zorla)) return; AG.siraGonder(); ls.set(KAYIT, { x: SH.x, y: SH.y, a: SH.a, kesif: [...KESIF], acik: [...ACIK], wp, zu: zKul, yol, kr: kredi, yak: yakit, kargo: KARGO, gorev: GOREV, alinan: [...ALINAN].slice(-300), yuk: YUK, kota: KOTA, gemi: gemiTip, gemiler: [...GEMILER], renk: gemiRenk, gad: gemiAd, can, sl: sonLiman, st: ST, bas: [...BAS], itibar: ITIBAR, karakol: KARAKOL, hik: HIK, tek: [...TEKS], tak: TAK, kap: kapsul, oks, sig: sigorta, kiys: [...KIYS], kiy: KIY, plan: [...PLANLAR], sarf: SARF, tlv: TLV, v: 1 }); }
 function menuKur() {
   let s = 0, p = 0, k = 0, g = 0; for (const x of KESIF) { if (x[0] === 's') s++; else if (x[0] === 'p') p++; else if (x[0] === 'k') k++; else if (x[0] === 'g') g++; }
   $('istat').innerHTML = [[s, T('Sistem', 'Systems')], [p, T('Gezegen', 'Planets')], [k, T('Koloni', 'Colonies')], [g, T('Galaksi', 'Galaxies')]].map(([n, a]) => `<div><b>${SAYI(n)}</b><span>${a}</span></div>`).join('');
@@ -2887,7 +2931,7 @@ function basla() {
 $('mBasla').onclick = basla;
 $('mSifirla').onclick = () => {
   const b = $('mSifirla'); if (!b.dataset.emin) { b.dataset.emin = 1; b.textContent = T('Emin misin? Tekrar bas', 'Are you sure? Press again'); return; }
-  KESIF.clear(); ACIK.clear(); yol = 0; wp = null; oto = null; kredi = 500; for (const k in YUK) YUK[k] = 0; yakit = TANK[0]; for (const k in KARGO) delete KARGO[k]; GOREV = []; ALINAN.clear(); for (const k in KOTA) delete KOTA[k]; kazP = null; gemiTip = 'kasif'; GEMILER.clear(); GEMILER.add('kasif'); gemiRenk = 0; gemiAd = ''; can = maxCan(); sonLiman = null; for (const k in ST) ST[k] = 0; BAS.clear(); for (const k in ITIBAR) delete ITIBAR[k]; KARAKOL = []; HIK.a = 0; HIK.kapi = false; HIK.dalga = false; HIK.mizrak = false; HIK.savas = false; HIK.parca = 0; TEKS.clear(); TAK = []; kapsul = false; oks = 0; sigorta = false; olumBekle = false; KIYS.clear(); KIY.kask = KIY.giysi = KIY.sirt = null; PLANLAR.clear(); ['cekici', 'tamir', 'oksijen', 'termal'].forEach(k => PLANLAR.add(k)); MAYIN.length = 0; KORS.length = 0; MERMI.length = 0; OLAY.length = 0; firtina = 0; gorevYaz(); const p = evGezegen(), [px, py] = gezPos(p, simT()), a = Math.atan2(py - p.s.y, px - p.s.x);
+  KESIF.clear(); ACIK.clear(); yol = 0; wp = null; oto = null; kredi = 500; for (const k in YUK) YUK[k] = 0; yakit = TANK[0]; for (const k in KARGO) delete KARGO[k]; GOREV = []; ALINAN.clear(); for (const k in KOTA) delete KOTA[k]; kazP = null; gemiTip = 'kasif'; GEMILER.clear(); GEMILER.add('kasif'); gemiRenk = 0; gemiAd = ''; can = maxCan(); sonLiman = null; for (const k in ST) ST[k] = 0; BAS.clear(); for (const k in ITIBAR) delete ITIBAR[k]; KARAKOL = []; HIK.a = 0; HIK.kapi = false; HIK.dalga = false; HIK.mizrak = false; HIK.savas = false; HIK.parca = 0; TEKS.clear(); TAK = []; kapsul = false; oks = 0; sigorta = false; olumBekle = false; KIYS.clear(); KIY.kask = KIY.giysi = KIY.sirt = null; for (const k in SARF) SARF[k] = 0; for (const k in TLV) delete TLV[k]; PLANLAR.clear(); ['cekici', 'tamir', 'oksijen', 'termal'].forEach(k => PLANLAR.add(k)); MAYIN.length = 0; KORS.length = 0; MERMI.length = 0; OLAY.length = 0; firtina = 0; gorevYaz(); const p = evGezegen(), [px, py] = gezPos(p, simT()), a = Math.atan2(py - p.s.y, px - p.s.x);
   SH.x = px + Math.cos(a) * (p.r + 260); SH.y = py + Math.sin(a) * (p.r + 260); SH.vx = SH.vy = 0; SH.a = a + Math.PI / 2; cam.x = SH.x; cam.y = SH.y;
   kaydet(true); kesifSayYaz(); menuKur();
 };
@@ -2935,7 +2979,7 @@ function kare(now) {
 }
 boyutla(); kesifSayYaz(); menuKur(); radarKur(); gorevYaz();
 requestAnimationFrame(kare);
-window.KOZ = { get kapsul() { return kapsul; }, get oks() { return oks; }, set oks(v) { oks = v; }, PLANLAR, KIY, KIYS, bankaAc, bankaPos, planVer, get sigorta() { return sigorta; },  OKK, oyuncuYakin, oyGelen, haftaK,  devCikar, kalintiBul,  TEKS, get TAK() { return TAK; }, set TAK(v) { TAK = v; }, arananlar, patlamaKullan,  IRK, piyasaOlay, balinaSuru, yakinBalinalar, bulmacaAc, get BLM() { return BLM; },  kapiPos, golgeCikar,  get nabiz() { return nabiz; }, get isi() { return isi; },  AG, bolgeBul,  KORS, OLAY, HIK, ST, BAS, get can() { return can; }, set can(v) { can = v; }, korsanCikar, hikAdim, hikBasla, kuyruk, kuyrukPos, nebulaB, nebulaIc, get gemiTip() { return gemiTip; }, KARAKOL: () => KARAKOL, olayZorla: () => { olayT = 0; },  get kaynP() { return kaynP; }, get kazP() { return kazP; }, KARGO, get kredi() { return kredi; }, set kredi(v) { kredi = v; }, get yakit() { return yakit; }, GOREV: () => GOREV, YUK, limanAc, get limanP() { return limanP; }, get yanasP() { return yanasP; }, SH, cam, temel, sistem, galaksi, KESIF, basla, haritaAc, haritaKapat, set zoom(v) { zKul = v; }, DOKU };
+window.KOZ = { SARF, TLV, sarfKullan,  get kapsul() { return kapsul; }, get oks() { return oks; }, set oks(v) { oks = v; }, PLANLAR, KIY, KIYS, bankaAc, bankaPos, planVer, get sigorta() { return sigorta; },  OKK, oyuncuYakin, oyGelen, haftaK,  devCikar, kalintiBul,  TEKS, get TAK() { return TAK; }, set TAK(v) { TAK = v; }, arananlar, patlamaKullan,  IRK, piyasaOlay, balinaSuru, yakinBalinalar, bulmacaAc, get BLM() { return BLM; },  kapiPos, golgeCikar,  get nabiz() { return nabiz; }, get isi() { return isi; },  AG, bolgeBul,  KORS, OLAY, HIK, ST, BAS, get can() { return can; }, set can(v) { can = v; }, korsanCikar, hikAdim, hikBasla, kuyruk, kuyrukPos, nebulaB, nebulaIc, get gemiTip() { return gemiTip; }, KARAKOL: () => KARAKOL, olayZorla: () => { olayT = 0; },  get kaynP() { return kaynP; }, get kazP() { return kazP; }, KARGO, get kredi() { return kredi; }, set kredi(v) { kredi = v; }, get yakit() { return yakit; }, GOREV: () => GOREV, YUK, limanAc, get limanP() { return limanP; }, get yanasP() { return yanasP; }, SH, cam, temel, sistem, galaksi, KESIF, basla, haritaAc, haritaKapat, set zoom(v) { zKul = v; }, DOKU };
 })();
 </script>
 <script data-goatcounter="https://erdevelop.goatcounter.com/count" async src="//gc.zgo.at/count.js"></script>
