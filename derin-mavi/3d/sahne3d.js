@@ -141,7 +141,25 @@ export async function kur3D({ tuval, kalite }) {
 
   /* ---------- su yüzeyi ve ışık huzmeleri ---------- */
   const yuzeyDoku = KOSTIK.clone(); yuzeyDoku.repeat.set(22, 22); yuzeyDoku.needsUpdate = true;
-  const yuzey = new THREE.Mesh(new THREE.PlaneGeometry(260, 260), new THREE.MeshBasicMaterial({ color: '#b8f0ff', map: yuzeyDoku, transparent: true, opacity: 0.2, depthWrite: false, side: THREE.DoubleSide, blending: THREE.AdditiveBlending }));
+  /* yüzey dalgaları: oyunun deniz durumuna göre (durgun ↔ fırtına) köşelerde yükselip alçalır,
+     tepeler sivri; ışığa dönük yüzler parlar */
+  const DZ = { uT: { value: 0 }, uA: { value: 0.05 }, uQ: { value: 0.4 }, uD: { value: 0.2 } };
+  const yuzeyMat = new THREE.MeshBasicMaterial({ color: '#b8f0ff', map: yuzeyDoku, transparent: true, opacity: 0.2, depthWrite: false, side: THREE.DoubleSide, blending: THREE.AdditiveBlending });
+  yuzeyMat.onBeforeCompile = sh => {
+    Object.assign(sh.uniforms, DZ);
+    const dalga = `uniform float uT, uA, uQ, uD; varying float vE;
+      float dlg(vec2 p) { float y = 0.0; vec2 d1 = normalize(vec2(1.0, 0.25)), d2 = normalize(vec2(0.8, -0.6)), d3 = normalize(vec2(-0.3, 1.0)), d4 = normalize(vec2(1.0, 0.9));
+        float t1 = dot(p, d1) * 0.73 - uT * 0.95, t2 = dot(p, d2) * 1.3 - uT * 1.25, t3 = dot(p, d3) * 2.3 + uT * 1.6, t4 = dot(p, d4) * 4.1 - uT * 2.2;
+        y += cos(t1 - uQ * sin(t1)); y += 0.5 * cos(t2 - uQ * sin(t2)); y += 0.28 * cos(t3 - uQ * sin(t3)); y += 0.14 * cos(t4);
+        return y * uA + (1.0 - uD) * 0.012 * sin(p.x * 9.0 + uT * 3.0) * sin(p.y * 7.0 - uT * 2.0); }`;
+    sh.vertexShader = dalga + sh.vertexShader.replace('#include <begin_vertex>', `#include <begin_vertex>
+      vec2 wp = vec2(position.x, -position.y); float h0 = dlg(wp);
+      vE = (dlg(wp + vec2(0.15, 0.0)) - h0) / 0.15;
+      transformed.z -= h0;`);
+    sh.fragmentShader = 'uniform float uD; varying float vE;\n' + sh.fragmentShader.replace('#include <opaque_fragment>', `outgoingLight *= 0.75 + max(0.0, -vE) * (3.0 + uD * 4.0) - max(0.0, vE) * 0.6;
+      #include <opaque_fragment>`);
+  };
+  const yuzey = new THREE.Mesh(new THREE.PlaneGeometry(260, 260, 220, 220), yuzeyMat);
   yuzey.rotation.x = Math.PI / 2; sahne.add(yuzey);
   const HUZME = [];
   for (let i = 0; i < 9; i++) {
@@ -324,6 +342,8 @@ export async function kur3D({ tuval, kalite }) {
       R.toneMappingExposure = 1.12 * (1 - 0.25 * g);
       for (const h of HUZME) { h.material.uniforms.uGuc.value = 0.11 * (1 - g) * Math.min(1.3, isik); h.scale.x = 0.75 + 0.35 * Math.sin(t * h.userData.v + h.userData.f); h.lookAt(kam.position.x, h.position.y, kam.position.z); h.rotateZ(h.userData.a + Math.sin(t * 0.07 + h.userData.f) * 0.04); }
       yuzeyDoku.offset.set(t * 0.01, t * 0.007);
+      { const dz = d.deniz == null ? 0.2 : d.deniz; DZ.uT.value = t; DZ.uD.value = dz; DZ.uQ.value = 0.35 + dz * 0.45; DZ.uA.value = Math.max(0.02, (d.dalgaA || 4) * M.k * 0.7);
+        yuzeyMat.opacity = 0.2 + dz * 0.12; if (d.sy != null) yuzey.position.y = M.Hc + (M.H / 2 - d.sy) * M.k; }
       if (PARCA) { const a = PARCA.geometry.attributes.position; for (let i = 0; i < a.count; i++) { let y = a.getY(i) + dt * 0.05, x = a.getX(i) + Math.sin(t * 0.3 + i) * dt * 0.03 + dt * 0.04 * (d.akinti || 1); if (y > 14) y = 0; if (x > 20) x = -20; a.setY(i, y); a.setX(i, x); } a.needsUpdate = true; }
       /* balıklar */
       const gorulen = new Set();
