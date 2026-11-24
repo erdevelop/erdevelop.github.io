@@ -161,6 +161,23 @@ body.foto #ust,body.foto #panel,body.foto #sohbetBtn,body.foto #beceriBtn,body.f
 #avUst{position:absolute;left:0;right:0;top:calc(10px + env(safe-area-inset-top,0px));display:flex;justify-content:center;gap:10px;pointer-events:none}
 #avUst span{padding:7px 14px;border-radius:13px;background:rgba(5,30,45,.7);border:1px solid var(--line);font-weight:900;font-size:17px}
 #avIpucu{position:absolute;left:50%;bottom:calc(26px + env(safe-area-inset-bottom,0px));transform:translateX(-50%);padding:8px 14px;border-radius:13px;background:rgba(5,30,45,.75);border:1px solid var(--line);font-weight:800;font-size:13.5px;pointer-events:none;text-align:center;width:max-content;max-width:90%}
+/* FPS göstergesi ve canlı veriler */
+#fpsG{position:fixed;left:10px;top:calc(54px + env(safe-area-inset-top,0px));z-index:7;padding:3px 8px;border-radius:8px;background:rgba(0,0,0,.55);font:800 12px/1.3 ui-monospace,Menlo,Consolas,monospace;color:#9EF7B0;pointer-events:none;white-space:pre}
+#vital{position:fixed;right:10px;top:calc(56px + env(safe-area-inset-top,0px));z-index:6;width:212px;border-radius:16px;border:1px solid var(--line);background:var(--kart);box-shadow:0 10px 30px rgba(0,0,0,.3);backdrop-filter:blur(10px);-webkit-backdrop-filter:blur(10px);overflow:hidden;font-size:12.5px}
+#vitalBas{display:flex;align-items:center;gap:7px;width:100%;padding:8px 10px;border:0;background:none;color:var(--ink);font-weight:900;font-size:13px;text-align:left;cursor:pointer}
+#vitalBas .kalp{display:inline-block;transition:transform .12s}
+#vitalBas .kalp.vur{transform:scale(1.35)}
+#vitalBas b{font-variant-numeric:tabular-nums}
+#vitalBas i{margin-left:auto;font-style:normal;opacity:.7;font-size:15px}
+#vitalIc{padding:0 10px 9px}
+#vEkg{display:block;width:100%;height:42px;border-radius:9px;background:rgba(0,0,0,.28)}
+#vitalIc dl{display:grid;grid-template-columns:auto 1fr;gap:4px 8px;margin:8px 0 0}
+#vitalIc dt{opacity:.8;font-weight:700;white-space:nowrap}
+#vitalIc dd{margin:0;text-align:right;font-weight:900;font-variant-numeric:tabular-nums;white-space:nowrap}
+#vitalIc small{display:block;margin-top:7px;opacity:.65;font-size:11px;line-height:1.35}
+#vital.kapali{width:auto}
+#vital.kapali #vitalIc{display:none}
+@media (max-width:560px){#vital{top:calc(52px + env(safe-area-inset-top,0px));width:186px;font-size:12px}}
 body.er-durumlu #panel{bottom:32px}
 @media (min-width:860px){
   #panel{right:auto;width:400px}
@@ -214,6 +231,15 @@ body.er-durumlu #panel{bottom:32px}
 <div id="rehber" hidden><span></span><button type="button" id="rehberAtla" data-en="Skip">Atla</button></div>
 <button id="beceriBtn" type="button" hidden aria-label="Özel beceri" data-en-aria="Special skill">🫧</button>
 <div id="fotoBar" hidden><button type="button" id="fotoEtiket" title="İsimler" data-en-title="Names">🏷️</button><button type="button" id="fotoCek" aria-label="Fotoğraf çek" data-en-aria="Take photo"></button><button type="button" id="fotoKapat" aria-label="Kapat" data-en-aria="Close">✕</button></div>
+<div id="fpsG" hidden></div>
+<div id="vital" hidden>
+  <button type="button" id="vitalBas" aria-expanded="true"><span class="kalp">❤️</span><b id="vNabiz">–</b><span id="vNabizB">/dk</span><i id="vOk">▾</i></button>
+  <div id="vitalIc">
+    <canvas id="vEkg" width="384" height="84"></canvas>
+    <dl id="vListe"></dl>
+    <small id="vNot"></small>
+  </div>
+</div>
 <button id="sohbetBtn" type="button" hidden aria-label="Sohbet ve dans" data-en-aria="Chat and dance" title="Sohbet ve dans" data-en-title="Chat and dance">💬</button>
 <div id="sohbetKutu" hidden></div>
 <div id="duyuru"></div>
@@ -1833,13 +1859,15 @@ function menuAc() {
     <button type="button" data-m="rekor"><span>🏆</span>${T('En iri balıklar', 'Biggest fish')}</button>
     <button type="button" data-m="sohret"><span>🖼️</span>${T('Şöhret Duvarı', 'Hall of Fame')}<em>${S.ata.length}</em></button>
     <h3>${T('AYARLAR', 'SETTINGS')}</h3>
+    <button type="button" data-m="fps"><span>📈</span>${T('FPS göstergesi', 'FPS counter')}<em>${fpsAcik ? T('açık', 'on') : T('kapalı', 'off')}</em></button>
+    <button type="button" data-m="vital"><span>❤️</span>${T('Canlı veriler (nabız, ısı…)', 'Live vitals (heart rate, temp…)')}<em>${vitalAcik ? T('açık', 'on') : T('kapalı', 'off')}</em></button>
     <button type="button" data-m="bild"><span>🔔</span>${T('Bildirimler', 'Notifications')}<em>${S.bildirim.on ? T('açık', 'on') : T('kapalı', 'off')}</em></button>
     <button type="button" data-m="reklam" ${reklamKalan() > 0 ? '' : 'disabled'}><span>📺</span>${T('Kısa reklam izle: +2 yem', 'Watch a short ad: +2 food')}<em>${reklamKalan()}/${REKLAM_GUN}</em></button>
     <button type="button" data-m="tasi" ${dur === 'acik' && S.akv && !ziyaretModu() ? '' : 'disabled'}><span>🚚</span>${T('Başka akvaryuma taşın', 'Move to another aquarium')}</button>
     <button type="button" data-m="rehber"><span>🎓</span>${T('Rehberi baştan göster', 'Replay the tutorial')}</button>
     <button type="button" data-m="nasil"><span>❔</span>${T('Nasıl oynanır?', 'How to play')}</button></div>
     <p class="kucuk">${T('Balığın bu tarayıcıda saklanır. <a href="/hesap.html">Hesabınla giriş yapıp</a> senkronu açarsan diğer cihazlarına da gelir.', 'Your fish is stored in this browser. <a href="/hesap.html">Sign in</a> and turn on sync to bring it to your other devices.')}</p>`);
-  ic.querySelectorAll('[data-m]').forEach(b => b.onclick = () => ({ d3: () => { kaydet(false); try { localStorage.setItem('derin-gorunum', G3 ? '2d' : '3d'); } catch (e) { } location.href = '/derin-mavi.html'; }, mevsim: mevsimAc, akv: akvListeAc, hedef: hedefAc, dukkan: dukkanAc, bas: basarimAc, rekor: rekorAc, sohret: sohretAc, reklam: reklamTeklif, paylas, tasi: tasiAc, nasil: nasilAc, gunluk: gunlukAc, sefer: seferAc, okul: okulAc, unvan: unvanAc, foto: fotoAc, ansik: ansikAc, rehber: () => { S.rehber = 0; S.rb = Object.fromEntries(Object.entries(S.rb).filter(([k]) => k.startsWith('u_'))); S.kumandaOgrendi = 0; kaydet(false); modalKapat(); }, ark: arkadaslarAc, sezon: sezonAc, album: albumAc, etk: etkinlikAc, bild: bildirimAc, oy: oylamaAc })[b.dataset.m]());
+  ic.querySelectorAll('[data-m]').forEach(b => b.onclick = () => ({ d3: () => { kaydet(false); try { localStorage.setItem('derin-gorunum', G3 ? '2d' : '3d'); } catch (e) { } location.href = '/derin-mavi.html'; }, mevsim: mevsimAc, fps: () => { fpsAcik = !fpsAcik; try { localStorage.setItem('derin-fps', fpsAcik ? '1' : '0'); } catch (e) { } menuEmYaz('fps', fpsAcik); }, vital: () => { vitalAcik = !vitalAcik; try { localStorage.setItem('derin-vital', vitalAcik ? '1' : '0'); } catch (e) { } menuEmYaz('vital', vitalAcik); }, akv: akvListeAc, hedef: hedefAc, dukkan: dukkanAc, bas: basarimAc, rekor: rekorAc, sohret: sohretAc, reklam: reklamTeklif, paylas, tasi: tasiAc, nasil: nasilAc, gunluk: gunlukAc, sefer: seferAc, okul: okulAc, unvan: unvanAc, foto: fotoAc, ansik: ansikAc, rehber: () => { S.rehber = 0; S.rb = Object.fromEntries(Object.entries(S.rb).filter(([k]) => k.startsWith('u_'))); S.kumandaOgrendi = 0; kaydet(false); modalKapat(); }, ark: arkadaslarAc, sezon: sezonAc, album: albumAc, etk: etkinlikAc, bild: bildirimAc, oy: oylamaAc })[b.dataset.m]());
 }
 function akvListeAc() {
   const L = [...BAL.values()].filter(b => b.ad).sort((a, b) => ((b.v && b.v.b) || (b.ben ? boyHesap(S) : 0)) - ((a.v && a.v.b) || (a.ben ? boyHesap(S) : 0)));
@@ -4384,12 +4412,113 @@ function demoKur() {
 
 /* ================= döngü ================= */
 let son = performance.now(), uiZ = 0, kayitZ = 0, albumZ = 3;
+/* =====================================================================
+   FPS GÖSTERGESİ (menü > Ayarlar) ve CANLI VERİLER (sağ üst kart)
+   Balıklar soğukkanlıdır: vücut ısısı suyun ısısını izler (orkinos ve yelken balığı
+   kaslarındaki ısıyı tutup suyun birkaç derece üstünde kalabilir). Nabız ve solungaç
+   hızı ısıyla (Q10≈2), hareketle ve stresle artar, uykuda düşer. Sıcak suda daha az
+   oksijen çözünür.
+   ===================================================================== */
+function menuEmYaz(k, acik) { const e = document.querySelector(`[data-m="${k}"] em`); if (e) e.textContent = acik ? T('açık', 'on') : T('kapalı', 'off'); }
+let fpsAcik = (() => { try { return localStorage.getItem('derin-fps') === '1'; } catch (e) { return false; } })();
+const FPS = { n: 0, t: 0, min: 999, son: 0 };
+function fpsKare(dt) {
+  const el = $('fpsG'); if (!el) return;
+  el.hidden = !fpsAcik; if (!fpsAcik) return;
+  FPS.n++; FPS.t += dt; if (dt > 0) FPS.min = Math.min(FPS.min, 1 / dt);
+  if (FPS.t >= 0.5) {
+    const f = FPS.n / FPS.t; FPS.son = f;
+    el.textContent = `${Math.round(f)} FPS · ${(1000 / f).toFixed(1)} ms\n${T('en düşük', 'min')} ${Math.round(Math.min(f, FPS.min))} · ${G3 ? '3D' : '2D'}`;
+    el.style.color = f >= 50 ? '#9EF7B0' : f >= 30 ? '#FFE29A' : '#FF9A8A';
+    FPS.n = 0; FPS.t = 0; FPS.min = 999;
+  }
+}
+let vitalAcik = (() => { try { return localStorage.getItem('derin-vital') !== '0'; } catch (e) { return true; } })();
+let vitalKapali = (() => { try { const v = localStorage.getItem('derin-vital-kapali'); return v == null ? innerWidth < 560 : v === '1'; } catch (e) { return false; } })();
+const VT = { hr: 0, op: 0, govde: 0, su: 0, o2: 0, hiz: 0, der: 0, stres: 0, faz: 0, ekg: [], yaz: 0, vur: 0, ilk: true };
+const SU_ISI = { resif: 27, acik: 21, derin: 6 }, DERINLIK = { resif: [1, 18], acik: [2, 60], derin: [180, 700] };
+const MEV_ISI = { kis: -4, ilkbahar: -1.5, yaz: 2.2, sonbahar: 0.4 }, HAVA_ISI = { gunes: 0.6, bulut: 0, yagmur: -0.6, firtina: -1.2, bulanik: 0.3, ayaz: -2.2 };
+function ekgDeger(f) {
+  const g = (m, s, a) => a * Math.exp(-((f - m) * (f - m)) / (2 * s * s));
+  return g(0.12, 0.03, 0.14) + g(0.27, 0.008, -0.12) + g(0.3, 0.009, 1) + g(0.335, 0.01, -0.22) + g(0.55, 0.055, 0.3);
+}
+$('vitalBas').onclick = () => { vitalKapali = !vitalKapali; try { localStorage.setItem('derin-vital-kapali', vitalKapali ? '1' : '0'); } catch (e) { } VT.yaz = 0; };
+function vitalKare(dt) {
+  const el = $('vital'), b = BAL.get('ben');
+  const gor = vitalAcik && S && !girisAcik && !AV && !ogModu && b && b.L;
+  el.hidden = !gor; if (!gor) return;
+  el.classList.toggle('kapali', vitalKapali); $('vitalBas').setAttribute('aria-expanded', vitalKapali ? 'false' : 'true'); $('vOk').textContent = vitalKapali ? '▸' : '▾';
+  const alan = S.alan || 'resif', tur = S.asama >= 2 ? S.tur : null, a = S.asama | 0;
+  const kumY = SAHNE ? SAHNE.kumY : H * 0.85, ust = typeof insSY === 'function' ? insSY() : 30;
+  const der = kis((b.y - ust) / Math.max(1, kumY - ust), 0, 1), dR = DERINLIK[alan] || DERINLIK.resif;
+  const gece = geceDegeri(), mv = HV.m || 'sonbahar', hv = HV.h || 'gunes', dz = alan === 'derin' ? 0.2 : 1;
+  /* su ısısı */
+  let su = (SU_ISI[alan] || 24) + ((MEV_ISI[mv] || 0) + (HAVA_ISI[hv] || 0) - 0.7 * gece) * dz - 1.4 * der * dz + 0.15 * Math.sin(zaman * 0.05);
+  if (tur === 'buz') su = Math.min(su, 1.2) - 1.5;
+  /* hareket: saniyede kaç boy */
+  const hizPx = Math.hypot(b.vx || 0, b.vy || 0), boyCm = boyHesap(S), cmPx = boyCm / Math.max(1, b.L);
+  const hizCm = hizPx * cmPx, bls = hizCm / Math.max(0.5, boyCm), atil = (typeof KUMANDA !== 'undefined' && KUMANDA.atil > 0) ? 1 : 0;
+  const uyku = !!(b.uyku || b.geceUyku), takili = typeof INS !== 'undefined' && INS.tak;
+  /* stres */
+  let stres = 8 + (S.tok < 30 ? (30 - S.tok) * 1.2 : 0) + ((S.mutlu ?? 70) < 35 ? (35 - S.mutlu) : 0) + (S.hasta ? 25 : 0) + (S.su < 40 ? (40 - S.su) * 0.6 : 0) + (takili ? 60 : 0) + atil * 10 - (uyku ? 6 : 0);
+  stres = kis(stres, 0, 100);
+  /* vücut ısısı: sıcakkanlı değil; orkinos ve yelken kas ısısını tutar */
+  const govde = su + (tur === 'orkinos' ? 3.5 + Math.min(2, bls * 0.8) : tur === 'yelken' ? 1.8 + Math.min(1, bls * 0.5) : 0.15 + Math.min(0.4, bls * 0.1));
+  /* nabız */
+  const q = Math.pow(2, (govde - 20) / 10), boyK = Math.pow(30 / Math.max(3, boyCm), 0.18);
+  let hr = (a === 0 ? 150 : a === 1 ? 95 : 42) * q * boyK;
+  if (tur === 'buz') hr *= 0.75; if (tur === 'orkinos') hr *= 1.35;
+  hr *= (1 + 0.45 * Math.min(2.5, bls) / 2.5 + atil * 0.25 + stres * 0.004) * (uyku ? 0.72 : 1);
+  hr = kis(hr, 8, 240);
+  /* çözünmüş oksijen (deniz suyu, mg/L) */
+  const T0 = kis(su, -2, 35); let o2 = (14.62 - 0.3898 * T0 + 0.006969 * T0 * T0 - 0.00005897 * T0 * T0 * T0) * 0.8;
+  o2 += (hv === 'firtina' ? 0.6 : 0) + (hv === 'bulanik' ? (gece > 0.5 ? -1.2 : 0.8) : 0) - 2.2 * (1 - kis(S.su ?? 100, 0, 100) / 100) - (alan === 'derin' ? 1.5 : 0);
+  o2 = Math.max(1, o2);
+  /* solungaç: oksijen azaldıkça ve hareket arttıkça hızlanır */
+  let op = 48 * q * (1 + 0.55 * Math.min(2.5, bls) / 2.5 + atil * 0.3) * (uyku ? 0.7 : 1) * kis(7 / o2, 0.8, 1.9) * (1 + stres * 0.003);
+  if (tur === 'orkinos') op = 0; /* orkinos ağzı açık yüzerek solur */
+  const k = VT.ilk ? 1 : Math.min(1, dt * 1.5); VT.ilk = false;
+  VT.hr += (hr - VT.hr) * k; VT.op += (op - VT.op) * k; VT.govde += (govde - VT.govde) * Math.min(1, dt * 0.4 + (k === 1 ? 1 : 0)); VT.su += (su - VT.su) * Math.min(1, dt * 0.4 + (k === 1 ? 1 : 0));
+  VT.o2 += (o2 - VT.o2) * k; VT.hiz += (hizCm - VT.hiz) * Math.min(1, dt * 4); VT.der = dR[0] + (dR[1] - dR[0]) * der; VT.stres += (stres - VT.stres) * k;
+  /* kalp atışı ve EKG */
+  const onceki = VT.faz; VT.faz += dt * VT.hr / 60;
+  if (Math.floor(VT.faz + 0.7) !== Math.floor(onceki + 0.7)) { VT.vur = 0.13; }
+  VT.vur -= dt; el.querySelector('.kalp').classList.toggle('vur', VT.vur > 0);
+  if (!vitalKapali) {
+    const c = $('vEkg'), x = c.getContext('2d'), w = c.width, h = c.height, adim = 2, n = Math.ceil(w / adim);
+    VT.ekgB = (VT.ekgB || 0) + dt * 70; const yeni = Math.floor(VT.ekgB); VT.ekgB -= yeni;
+    for (let i = 0; i < yeni; i++) { const f = VT.faz - (yeni - 1 - i) * (VT.hr / 60) / 70; VT.ekg.push(ekgDeger(((f % 1) + 1) % 1) + (Math.random() - 0.5) * 0.02); }
+    while (VT.ekg.length > n) VT.ekg.shift();
+    x.clearRect(0, 0, w, h);
+    x.strokeStyle = 'rgba(158,247,176,.12)'; x.lineWidth = 1; x.beginPath(); for (let gx = 0; gx < w; gx += 24) { x.moveTo(gx, 0); x.lineTo(gx, h); } for (let gy = 0; gy < h; gy += 21) { x.moveTo(0, gy); x.lineTo(w, gy); } x.stroke();
+    const renk = stres > 60 ? '#FF9A8A' : stres > 30 ? '#FFE29A' : '#7CF7A0';
+    x.strokeStyle = renk; x.lineWidth = 2.4; x.lineJoin = 'round'; x.shadowColor = renk; x.shadowBlur = 6; x.beginPath();
+    const bas = n - VT.ekg.length; VT.ekg.forEach((v, i) => { const px = (bas + i) * adim, py = h * 0.72 - v * h * 0.58; i ? x.lineTo(px, py) : x.moveTo(px, py); }); x.stroke(); x.shadowBlur = 0;
+  }
+  VT.yaz -= dt; if (VT.yaz > 0) return; VT.yaz = 0.5;
+  /* üst çubuk dar ekranda iki satıra inebilir: kartı ve FPS'i hep onun altına koy */
+  const ub = $('ust').getBoundingClientRect().bottom; el.style.top = Math.round(ub + 8) + 'px'; $('fpsG').style.top = Math.round(ub + 8) + 'px';
+  $('vNabiz').textContent = Math.round(VT.hr); $('vNabizB').textContent = vitalKapali ? T(' /dk', ' bpm') : T(' atım/dk', ' bpm');
+  if (vitalKapali) return;
+  const st = VT.stres < 25 ? T('sakin', 'calm') : VT.stres < 50 ? T('hafif', 'mild') : VT.stres < 75 ? T('yüksek', 'high') : T('panik', 'panic');
+  const satir = (e, ad, v) => `<dt>${e} ${ad}</dt><dd>${v}</dd>`, f1 = v => v.toFixed(1).replace('.', T(',', '.'));
+  $('vListe').innerHTML = satir('🌡️', T('Vücut ısısı', 'Body temp'), f1(VT.govde) + ' °C') + satir('💧', T('Su ısısı', 'Water temp'), f1(VT.su) + ' °C')
+    + satir('🫧', T('Solungaç', 'Gill rate'), tur === 'orkinos' ? T('ağız açık', 'ram') : Math.round(VT.op) + T(' /dk', ' /min')) + satir('🧪', T('Sudaki O₂', 'Dissolved O₂'), f1(VT.o2) + ' mg/L')
+    + satir('🏊', T('Hız', 'Speed'), (uyku ? T('uyuyor', 'asleep') : Math.round(VT.hiz) + ' cm/s')) + satir('📏', T('Derinlik', 'Depth'), Math.round(VT.der) + ' m')
+    + satir('😰', T('Stres', 'Stress'), `${Math.round(VT.stres)}% · ${st}`);
+  $('vNot').textContent = tur === 'orkinos' ? T('Orkinos kaslarının ısısını tutar; vücudu sudan sıcaktır.', 'Tuna keep their muscles warm, so their body is warmer than the water.')
+    : tur === 'buz' ? T('Buz balığının kanında hemoglobin yok; oksijeni soğuk sudan doğrudan alır.', 'Icefish blood has no haemoglobin; it takes oxygen straight from the cold water.')
+    : takili ? T('Oltaya takıldı! Nabız fırladı.', 'Hooked! Heart rate is racing.')
+    : uyku ? T('Uykuda nabız ve solungaç hızı düşer.', 'Heart and gill rates drop during sleep.')
+    : T('Balıklar soğukkanlıdır: vücut ısısı suyu izler.', 'Fish are cold-blooded: body temperature follows the water.');
+}
 function kare(ts) {
   const dt = Math.min(0.05, Math.max(0, (ts - son) / 1000)); son = ts; zaman += dt;
   if (!AV) { klavyeYuz(); etkilesimKare(dt); yerliGuncelle(dt); ciz(dt); if (G3) G3.kare(dt, g3Durum()); }
   else if (AV.mod === 'yaris') yarisGuncelle(dt);
   else avGuncelle(dt);
   onizlemeCiz(dt);
+  fpsKare(dt); vitalKare(dt);
   if (S && !girisAcik) panelResim(dt);
   uiZ -= dt; if (uiZ <= 0) { uiZ = 1; if (S && !girisAcik) { balikSenk(); uiGuncelle(); } }
   albumZ -= dt; if (albumZ <= 0) { albumZ = 5; if (S && !girisAcik && !ogModu) albumTara(); }
