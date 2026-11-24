@@ -10,7 +10,7 @@ import { RenderPass } from './addons/postprocessing/RenderPass.js';
 import { ShaderPass } from './addons/postprocessing/ShaderPass.js';
 import { UnrealBloomPass } from './addons/postprocessing/UnrealBloomPass.js';
 import { OutputPass } from './addons/postprocessing/OutputPass.js';
-import { mercanUret, MERCAN_RENK, canliUret, canliOyna, yuzenUret, yuzenOyna } from './uretec.js';
+import { mercanUret, MERCAN_RENK, canliUret, canliOyna, yuzenUret, yuzenOyna, insanUret, insanOyna } from './uretec.js';
 
 const KAL = {
   dusuk: { dpr: 1, golge: false, sm: 512, parca: 220, post: false, kostik: 0.9 },
@@ -303,7 +303,7 @@ export async function kur3D({ tuval, kalite }) {
     if (ton) { const c = new THREE.Color(ton); o.traverse(m => { if (m.isMesh) [].concat(m.material).forEach(mt => { if (mt.name !== 'goz') mt.color.multiply(c); }); }); }
     return { o, yuz };
   }
-  const YZN = new Map();
+  const YZN = new Map(); let INS3 = null;
 
   /* ---------- son işlem ---------- */
   const komp = new EffectComposer(R);
@@ -404,6 +404,16 @@ export async function kur3D({ tuval, kalite }) {
         }
         for (const [id, c] of YZN) if (!gor.has(id)) { sahne.remove(c.g); YZN.delete(id); }
       }
+      /* yüzeyden gelenler: tekneler, dalgıçlar, denizaltı, robot */
+      { const o = d.insan;
+        if (!o) { if (INS3) { sahne.remove(INS3.g); INS3 = null; } }
+        else {
+          if (!INS3 || INS3.id !== o.id) { if (INS3) sahne.remove(INS3.g); INS3 = { id: o.id, g: insanUret(o.tur, m => yama(m, {})) }; sahne.add(INS3.g); }
+          const g = INS3.g; g.position.copy(dunya(o.x, o.y)); g.scale.setScalar(Math.max(0.05, o.boy * M.k));
+          if (o.tur === 'serbest') g.rotation.set(0, -0.25, -o.a);
+          else g.rotation.set(0, o.d > 0 ? -0.3 : Math.PI + 0.3, -o.egim * o.d);
+          insanOyna(g, o.tur, o, t);
+        } }
       const gorulen = new Set();
       for (const b of d.baliklar) {
         gorulen.add(b.id);
