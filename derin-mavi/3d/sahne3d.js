@@ -10,6 +10,7 @@ import { RenderPass } from './addons/postprocessing/RenderPass.js';
 import { ShaderPass } from './addons/postprocessing/ShaderPass.js';
 import { UnrealBloomPass } from './addons/postprocessing/UnrealBloomPass.js';
 import { OutputPass } from './addons/postprocessing/OutputPass.js';
+import { mercanUret, MERCAN_RENK, canliUret, canliOyna } from './uretec.js';
 
 const KAL = {
   dusuk: { dpr: 1, golge: false, sm: 512, parca: 220, post: false, kostik: 0.9 },
@@ -151,7 +152,8 @@ export async function kur3D({ tuval, kalite }) {
       float dlg(vec2 p) { float y = 0.0; vec2 d1 = normalize(vec2(1.0, 0.25)), d2 = normalize(vec2(0.8, -0.6)), d3 = normalize(vec2(-0.3, 1.0)), d4 = normalize(vec2(1.0, 0.9));
         float t1 = dot(p, d1) * 0.73 - uT * 0.95, t2 = dot(p, d2) * 1.3 - uT * 1.25, t3 = dot(p, d3) * 2.3 + uT * 1.6, t4 = dot(p, d4) * 4.1 - uT * 2.2;
         y += cos(t1 - uQ * sin(t1)); y += 0.5 * cos(t2 - uQ * sin(t2)); y += 0.28 * cos(t3 - uQ * sin(t3)); y += 0.14 * cos(t4);
-        return y * uA + (1.0 - uD) * 0.012 * sin(p.x * 9.0 + uT * 3.0) * sin(p.y * 7.0 - uT * 2.0); }`;
+        return y * uA + (1.0 - uD) * 0.012 * sin(p.x * 9.0 + uT * 3.0) * sin(p.y * 7.0 - uT * 2.0); }
+`;
     sh.vertexShader = dalga + sh.vertexShader.replace('#include <begin_vertex>', `#include <begin_vertex>
       vec2 wp = vec2(position.x, -position.y); float h0 = dlg(wp);
       vE = (dlg(wp + vec2(0.15, 0.0)) - h0) / 0.15;
@@ -216,6 +218,23 @@ export async function kur3D({ tuval, kalite }) {
   }
   const P = {}; rg.scene.traverse(o => { if (o.isMesh && o.parent === rg.scene) P[o.name] = o; });
   for (const k in P) { P[k].position.set(0, 0, 0); P[k].rotation.set(0, 0, 0); P[k].scale.set(1, 1, 1); malzHazirla(P[k], m => (/anemon/.test(m.name) ? { dokunac: 1, detay: 2.5 } : /kaya/.test(m.name) ? { detay: 0.9 } : { detay: 2.2 })); }
+  /* yordamsal mercanlar: beş tür, her biri birkaç renk ve biçimde; ağaç gibi dallı mercanın renkli kopyaları */
+  const YENI = [];
+  { const hRef = new THREE.Box3().setFromObject(P.dalli_0).getSize(new THREE.Vector3()).y || 1;
+    const BOY = { geyik: 0.95, gorgon: 1.35, parmak: 0.7, kirbac: 1.7, karanfil: 1.05 };
+    let tohum = 11;
+    for (const tur in MERCAN_RENK) MERCAN_RENK[tur].forEach((renk, i) => {
+      const { geo, salin } = mercanUret(tur, tohum += 17, renk); geo.scale(hRef * BOY[tur], hRef * BOY[tur], hRef * BOY[tur]);
+      const m = new THREE.Mesh(geo, yama(new THREE.MeshStandardMaterial({ vertexColors: true, roughness: tur === 'karanfil' ? 0.55 : 0.78 }), salin ? { salin: 1, detay: 2.2 } : { detay: 2.2 }));
+      m.castShadow = true; m.receiveShadow = true; const k = 'u_' + tur + '_' + i; P[k] = m; YENI.push(k);
+    });
+    const TON = ['#ff9ec4', '#8fd0ff', '#ffd36b', '#c79bff', '#7dffc8', '#ff8a6b'];
+    for (const dk of ['dalli_0', 'dalli_1', 'dalli_2', 'dalli_3']) TON.forEach((ton, j) => {
+      if ((j + dk.length) % 2) return; const o = P[dk].clone(true);
+      o.traverse(m => { if (m.isMesh) m.material = [].concat(m.material).map(mt => { const n = mt.clone(); n.color.multiply(new THREE.Color(ton)).multiplyScalar(1.35); return yama(n, { detay: 2.2 }); }).reduce((a, b, _, arr) => arr.length === 1 ? b : arr); });
+      const k = dk + '_t' + j; P[k] = o; YENI.push(k);
+    });
+  }
   const B = {}; bg.scene.children.forEach(o => { if (o.name.startsWith('balik_')) B[o.name.slice(6)] = o; });
 
   /* ---------- yerleşim: ekran genişliğine göre kurulur ---------- */
@@ -237,7 +256,7 @@ export async function kur3D({ tuval, kalite }) {
     };
     const kayalar = ['kaya_0', 'kaya_1', 'kaya_2', 'kaya_3'];
     for (let i = 0; i < Math.round(VW / 3) + 3; i++) koy(kayalar[i % 4], ara(-yarim, yarim), ara(-11, -1.5), ara(0.6, 1.4), r() * 6.28);
-    const mercanlar = ['beyin_0', 'beyin_1', 'dalli_0', 'dalli_1', 'dalli_2', 'dalli_3', 'masa_0', 'masa_1', 'tup_0', 'tup_1', 'yelpaze_0', 'yelpaze_1'];
+    const mercanlar = ['beyin_0', 'beyin_1', 'dalli_0', 'dalli_1', 'masa_0', 'masa_1', 'tup_0', 'tup_1', 'yelpaze_0', 'yelpaze_1', ...YENI];
     for (let i = 0; i < Math.round(VW * 3) + 10; i++) { const k = mercanlar[Math.floor(r() * mercanlar.length)], z = ara(-10, -1.4); koy(k, ara(-yarim, yarim), z, (k.startsWith('yelpaze') ? ara(0.8, 1.4) : k.startsWith('masa') ? ara(0.45, 0.8) : ara(0.5, 1.1)) * (z > -3 ? 0.65 : 1), k.startsWith('yelpaze') ? ara(-0.4, 0.4) : r() * 6.28); }
     for (let i = 0; i < 14; i++) { const k = mercanlar[Math.floor(r() * mercanlar.length)]; koy(k, magX - 1.8 * ds + ara(-7, 7) * ds, ara(-8, -2) * ds, ara(0.45, 0.9) * ds * 1.4, r() * 6.28, true); }
     const cok = kalite === 'dusuk' ? 0.55 : 1;
@@ -316,6 +335,7 @@ export async function kur3D({ tuval, kalite }) {
     yuzey.position.y = Hc + (H / 2) * k + 0.6;
     if (yeniden) ortamKur(VW, magX);
   }
+  const CAN = new Map();
   const dunya = (x, y) => new THREE.Vector3((x - M.W / 2) * M.k, M.Hc + (M.H / 2 - y) * M.k, 0);
 
   function kaliteUygula() {
@@ -346,6 +366,20 @@ export async function kur3D({ tuval, kalite }) {
         yuzeyMat.opacity = 0.2 + dz * 0.12; if (d.sy != null) yuzey.position.y = M.Hc + (M.H / 2 - d.sy) * M.k; }
       if (PARCA) { const a = PARCA.geometry.attributes.position; for (let i = 0; i < a.count; i++) { let y = a.getY(i) + dt * 0.05, x = a.getX(i) + Math.sin(t * 0.3 + i) * dt * 0.03 + dt * 0.04 * (d.akinti || 1); if (y > 14) y = 0; if (x > 20) x = -20; a.setY(i, y); a.setX(i, x); } a.needsUpdate = true; }
       /* balıklar */
+      /* kum canlıları: konum ve davranış 2D oyundan gelir, burada 3D model olarak çizilir */
+      if (d.canlilar) {
+        const gor = new Set();
+        for (const o of d.canlilar) {
+          gor.add(o.id); let c = CAN.get(o.id);
+          if (!c || c.tur !== o.tur) { if (c) sahne.remove(c.g); c = { tur: o.tur, g: canliUret(o.tur, m => yama(m, {}), o) }; sahne.add(c.g); CAN.set(o.id, c); }
+          const p = dunya(o.x, o.y), sc = Math.max(0.02, (o.s || 10) * M.k);
+          if (o.zemin) p.y = zeminY(p.x, 0); c.g.position.copy(p); c.g.scale.setScalar(sc);
+          c.g.rotation.y = o.tur === 'yengec' ? -Math.PI / 2 + (o.d || 1) * 0.25 : o.tur === 'yildiz' || o.tur === 'istiridye' ? 0 : (o.d || 1) > 0 ? -0.45 : Math.PI + 0.45;
+          if (o.tur === 'istiridye') c.g.scale.setScalar(sc * (o.nab || 1));
+          canliOyna(c.g, o.tur, o, t); c.g.visible = !o.gizli;
+        }
+        for (const [id, c] of CAN) if (!gor.has(id)) { sahne.remove(c.g); CAN.delete(id); }
+      }
       const gorulen = new Set();
       for (const b of d.baliklar) {
         gorulen.add(b.id);

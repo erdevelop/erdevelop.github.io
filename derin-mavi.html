@@ -863,6 +863,17 @@ const SES = (() => {
 const cv = $('c'), cx = cv.getContext('2d');
 /* ---------- 3D görünüm: ortam ve balıklar WebGL'de, oyun aynı ---------- */
 let G3 = null;
+/* 3D'de model olarak çizilen kum canlıları: 2D boyut birimi (s) ve zemine oturup oturmadığı */
+const G3_CANLI = { yildiz: [11, 1], salyangoz: [8, 1], ermit: [9, 1], ahtapot: [14, 1], karides: [7, 0], dvatoz: [26, 1] };
+let g3Sira = 0;
+function g3Canlilar() {
+  const L = [];
+  for (const o of CNL.L) { const k = G3_CANLI[o.tur]; if (!k) continue; o._g3 = o._g3 || ++g3Sira;
+    L.push({ id: 'c' + o._g3, tur: o.tur, x: o.x, y: o.y, s: k[0] * OL, zemin: k[1], d: o.tur === 'karides' && o.zipla > 0 ? -o.zd : o.d, aci: o.aci, renk: o.renk, hue: o.hue, sakli: o.sakli, tepki: o.tepki, gomulu: o.gomulu, kalk: o.kalk, zipla: o.zipla }); }
+  const y = YERLI.yengec; if (SAHNE) L.push({ id: 'yengec', tur: 'yengec', x: y.x, y: SAHNE.kumY, s: 9 * OL, zemin: 1, d: y.d, dur: y.dur, gizli: y.sakli > 0 });
+  if (surprizVar()) { const p = surprizYeri(); L.push({ id: 'surpriz', tur: 'istiridye', x: p.x, y: p.y, s: 16 * OL, zemin: 1, nab: 1 + Math.sin(zaman * 3) * 0.05 }); }
+  return L;
+}
 const g3Tercih = (() => { const q = new URLSearchParams(location.search).get('gorunum'); if (q === '3d' || q === '2d') { try { localStorage.setItem('derin-gorunum', q); } catch (e) { } } try { return localStorage.getItem('derin-gorunum') || '2d'; } catch (e) { return '2d'; } })();
 async function g3Baslat() {
   const t3 = document.createElement('canvas'); t3.id = 'c3'; t3.setAttribute('aria-hidden', 'true'); t3.style.cssText = 'position:fixed;left:0;top:0;width:100%;height:100%;display:block;pointer-events:none';
@@ -879,7 +890,7 @@ async function g3Baslat() {
 function g3Durum() {
   const L = [];
   for (const [id, b] of BAL) { if (!b.d || (b.d.a | 0) === 0 || !b.L) continue; L.push({ id, tur: b.d.a >= 2 && b.d.tr ? b.d.tr : 'yavru', x: b.x, y: b.y, L: b.L, yon: b.yon, faz: b.faz, vx: b.vx, vy: b.vy, uyku: b.uyku || b.geceUyku }); }
-  return { baliklar: L, gece: geceDegeri(), isik: typeof havaIsik === 'function' ? havaIsik(zaman) : 1, akinti: typeof HV !== 'undefined' ? HV.akinti : 1, deniz: DENIZ.d, dalgaA: dalgaGenlik(), sy: insSY() };
+  return { baliklar: L, gece: geceDegeri(), isik: typeof havaIsik === 'function' ? havaIsik(zaman) : 1, akinti: typeof HV !== 'undefined' ? HV.akinti : 1, deniz: DENIZ.d, dalgaA: dalgaGenlik(), sy: insSY(), canlilar: g3Canlilar() };
 }
 let W = 0, H = 0, DPR = 1, OL = 1, ALAN = { x1: 0, x2: 0, y1: 0, y2: 0, kum: 0 };
 let SAHNE = null, zaman = 0;
@@ -1342,7 +1353,7 @@ function yerliCiz(c) {
     c.strokeStyle = m.c; c.lineWidth = 1.2; for (let i = -2; i <= 2; i++) { c.beginPath(); c.moveTo(i * s * 0.35, 0); for (let j = 1; j <= 5; j++) c.lineTo(i * s * 0.35 + Math.sin(m.f * 3 + j + i) * 3, j * s * 0.45); c.stroke(); } c.restore();
   }
   const y = YERLI.yengec, ky = SAHNE.kumY + 2, s = 9 * OL;
-  if (y.sakli > 0) { c.fillStyle = '#111'; c.beginPath(); c.arc(y.x - s * 0.3, ky - s * 0.25, 1.8, 0, TAU); c.arc(y.x + s * 0.3, ky - s * 0.25, 1.8, 0, TAU); c.fill(); }
+  if (G3) { } else if (y.sakli > 0) { c.fillStyle = '#111'; c.beginPath(); c.arc(y.x - s * 0.3, ky - s * 0.25, 1.8, 0, TAU); c.arc(y.x + s * 0.3, ky - s * 0.25, 1.8, 0, TAU); c.fill(); }
   else { c.save(); c.translate(y.x, ky); c.fillStyle = '#E2624B'; c.beginPath(); c.ellipse(0, -s * 0.6, s, s * 0.6, 0, 0, TAU); c.fill();
   c.strokeStyle = '#C14C38'; c.lineWidth = 1.5; for (let i = -1; i <= 1; i += 2) for (let j = 0; j < 3; j++) { c.beginPath(); c.moveTo(i * s * 0.6, -s * 0.4); c.lineTo(i * s * (1.2 + j * 0.15), -s * 0.1 + Math.sin(y.f + j) * 2); c.stroke(); }
   c.fillStyle = '#E2624B'; c.beginPath(); c.arc(-s * 1.2, -s * 1.2, s * 0.35, 0, TAU); c.arc(s * 1.2, -s * 1.2, s * 0.35, 0, TAU); c.fill();
@@ -2224,11 +2235,11 @@ const surprizVar = () => S && !girisAcik && S.surpriz !== bugun() && !ziyaretMod
 function surprizCiz(c) {
   if (!surprizVar()) return; const p = surprizYeri(), s = 16 * OL, nab = 1 + Math.sin(zaman * 3) * 0.08;
   const g = c.createRadialGradient(p.x, p.y - s * 0.4, 0, p.x, p.y - s * 0.4, s * 3); g.addColorStop(0, 'rgba(255,240,180,.55)'); g.addColorStop(1, 'rgba(255,240,180,0)'); c.fillStyle = g; c.beginPath(); c.arc(p.x, p.y - s * 0.4, s * 3, 0, TAU); c.fill();
-  c.save(); c.translate(p.x, p.y); c.scale(nab, nab);
+  if (!G3) { c.save(); c.translate(p.x, p.y); c.scale(nab, nab);
   c.fillStyle = '#F7D9E8'; c.beginPath(); c.moveTo(-s, 0); c.quadraticCurveTo(-s, -s * 1.3, 0, -s * 1.35); c.quadraticCurveTo(s, -s * 1.3, s, 0); c.closePath(); c.fill();
   c.strokeStyle = '#D59BB8'; c.lineWidth = 1.3; for (let i = -2; i <= 2; i++) { c.beginPath(); c.moveTo(0, -s * 0.1); c.lineTo(i * s * 0.42, -s * 1.2 + Math.abs(i) * s * 0.18); c.stroke(); }
   c.fillStyle = '#FFFFFF'; c.beginPath(); c.arc(0, -s * 0.15, s * 0.28, 0, TAU); c.fill();
-  c.restore();
+  c.restore(); }
   if (!IZLE) c.font = `800 ${Math.round(11 * OL)}px Nunito, sans-serif`; c.textAlign = 'center'; c.fillStyle = 'rgba(255,250,230,.95)'; if (!IZLE) c.fillText(T('Bugünün sürprizi!', 'Today’s surprise!'), p.x, p.y - s * 2.2);
 }
 function surprizAc() {
@@ -3408,6 +3419,7 @@ function canliCiz(c, sadeceIsik) {
   const kumY = SAHNE.kumY, gece = geceDegeri();
   for (const o of CNL.L) {
     if ((o.tur === 'isik') !== !!sadeceIsik) continue;
+    if (G3 && G3_CANLI[o.tur]) continue; /* 3D görünümde bunları WebGL çiziyor */
     c.save(); c.translate(o.x, o.y);
     switch (o.tur) {
       case 'yildiz': { const s = 11 * OL; c.rotate(o.aci + (o.tepki > 0 ? Math.sin(o.f * 20) * 0.15 : 0)); c.fillStyle = o.renk; c.beginPath(); for (let i = 0; i < 10; i++) { const rr = i % 2 ? s * 0.42 : s, a = -Math.PI / 2 + i * Math.PI / 5; c.lineTo(Math.cos(a) * rr, Math.sin(a) * rr * 0.55); } c.closePath(); c.fill(); c.fillStyle = 'rgba(255,255,255,.4)'; for (let i = 0; i < 5; i++) { const a = -Math.PI / 2 + i * TAU / 5; c.beginPath(); c.arc(Math.cos(a) * s * 0.55, Math.sin(a) * s * 0.3, 1.1, 0, TAU); c.fill(); } break; }
