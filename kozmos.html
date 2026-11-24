@@ -248,7 +248,7 @@ details{margin-top:12px;color:var(--mute);font-size:13.5px}summary{cursor:pointe
     <label class="secim"><input type="checkbox" id="fpSec"><span data-en="🪟 Cockpit view: look out of the window · V">🪟 Kokpit görünümü: camdan bak · V</span></label>
     <button class="ikincil" id="fotoBtn" type="button" data-en="📷 Photo mode · P">📷 Fotoğraf modu · P</button>
     <button class="ikincil" id="profBtn" type="button" data-en="🪪 Pilot card (share)">🪪 Pilot kartı (paylaş)</button>
-    <details id="radDet"><summary data-en="📻 Space radio">📻 Uzay radyosu</summary><div id="radList"></div><label class="secim"><input type="checkbox" id="spikSec"><span data-en="🎙 Announcer reads the news aloud">🎙 Spiker haberleri sesli okusun</span></label></details>
+    <details id="radDet"><summary data-en="📻 Space radio">📻 Uzay radyosu</summary><div id="radList"></div><label class="secim"><input type="checkbox" id="spikSec"><span data-en="🎙 Announcer reads the news aloud">🎙 Spiker haberleri sesli okusun (İngilizce)</span></label></details>
     <details id="defDet"><summary data-en="📔 Ship's log">📔 Seyir defteri</summary><div id="defList" style="max-height:260px;overflow:auto;font-size:13px"></div><button class="ikincil" id="defKopya" type="button" data-en="📋 Copy the log">📋 Defteri kopyala</button></details>
     <details id="takDet"><summary data-en="📅 Galaxy calendar">📅 Galaksi takvimi</summary><div id="takList"></div></details>
     <details id="frDet"><summary data-en="⚖ Factions">⚖ Fraksiyonlar</summary><div id="frList"></div></details>
@@ -343,7 +343,8 @@ details{margin-top:12px;color:var(--mute);font-size:13.5px}summary{cursor:pointe
 (() => {
 'use strict';
 const $ = id => document.getElementById(id);
-const EN = () => !!(window.erDil && erDil.lang === 'en');
+let enZorla = false;
+const EN = () => enZorla || !!(window.erDil && erDil.lang === 'en');
 const T = (a, b) => EN() ? b : a;
 const L = a => EN() ? a[1] : a[0];
 const ls = { get(k, d) { try { const v = localStorage.getItem(k); return v == null ? d : JSON.parse(v); } catch (e) { return d; } }, set(k, v) { try { localStorage.setItem(k, JSON.stringify(v)); } catch (e) { } } };
@@ -2678,7 +2679,8 @@ let spiker = ls.get('kozmos-spiker', false) === true, radyoT = 90;
 function radyoYaz() { const k = SES.kanal(); $('radList').innerHTML = `<div class="dg" style="flex-wrap:wrap;margin:6px 0">${Object.keys(KANALLAR).map(c => `<button class="kb ${c === k ? 'al' : ''}" type="button" data-kanal="${c}">${L(KANALLAR[c])}</button>`).join('')}</div><div class="alt" style="font-size:12px">${T('Haberler birkaç dakikada bir ekranda çıkar.', 'News bulletins appear every few minutes.')}</div>`; $('spikSec').checked = spiker; }
 $('radList').addEventListener('click', e => { const b = e.target.closest('[data-kanal]'); if (!b) return; SES.baslat(); SES.kanal(b.dataset.kanal); if (!SES.muzik()) { SES.muzik(true); if (typeof muzYaz === 'function') muzYaz(); } ST.radyo = 1; basarimKontrol(); radyoYaz(); duyur('📻 ' + L(KANALLAR[b.dataset.kanal]), 'kesif'); radyoT = 6; });
 $('spikSec').addEventListener('change', e => { spiker = e.target.checked; ls.set('kozmos-spiker', spiker); if (!spiker && window.speechSynthesis) speechSynthesis.cancel(); });
-function haberUret() {
+function haberUret() { const L2 = haberListe(); return L2[(Math.random() * L2.length) | 0]; }
+function haberListe() {
   const L2 = [], tk = TAKVIM[gunOlay()];
   L2.push(T(`Günün olayı: ${tk.ad[0]}. ${tk.ne[0]}.`, `Event of the day: ${tk.ad[1]}. ${tk.ne[1]}.`));
   const po = piyasaOlay(Math.floor(Math.floor(SH.x / SEK) / 8), Math.floor(Math.floor(SH.y / SEK) / 8)); for (const o of po) L2.push(T(`Piyasa: ${kolAd(o.p)} kolonisinde ${o.kit ? 'kıtlık' : 'bolluk'} var, ${MAL[o.m].ad[0].toLocaleLowerCase('tr')} ${o.kit ? 'pahalı' : 'ucuz'}.`, `Markets: ${o.kit ? 'a shortage' : 'a glut'} of ${MAL[o.m].ad[1].toLowerCase()} at ${kolAd(o.p)}.`));
@@ -2687,12 +2689,12 @@ function haberUret() {
   for (const k in DIP) if (DIP[k] >= 30) L2.push(T(`${IRK[k].ad[0]} elçiliği insanlarla dostluğun sürdüğünü açıkladı.`, `The ${IRK[k].ad[1]} embassy confirmed its friendship with humanity.`));
   L2.push(T('Hatırlatma: uzayda süzülen kara kutular kayıp gemilerin hikâyelerini taşıyor.', 'Reminder: black boxes drifting in space carry the stories of lost ships.'), T('Güvenli uçuşlar! Yakıtınızı kontrol etmeyi unutmayın.', 'Fly safe! Don’t forget to check your fuel.'), T('Bilim ofisinden: her yeni keşif bilim puanı kazandırıyor.', 'From the science office: every new discovery earns science.'));
   if (KERVAN.length) L2.push(T(`Kervan hatları açık: ${KERVAN.length} kervanınız yolda.`, `Convoy lanes are open: ${KERVAN.length} of your convoys are on the road.`));
-  return L2[(Math.random() * L2.length) | 0];
+  return L2;
 }
 function radyoAdim(dt) {
   if (!oyunda || !SES.muzik() || SES.kanal() === 'oto') return; radyoT -= dt; if (radyoT > 0) return; radyoT = 150 + Math.random() * 90;
-  const m = haberUret(); duyur('📻 ' + L(KANALLAR[SES.kanal()]), 'kesif', esc(m));
-  if (spiker && window.speechSynthesis) { try { const u = new SpeechSynthesisUtterance(m); u.lang = EN() ? 'en-US' : 'tr-TR'; u.rate = 1.05; u.volume = 0.8; speechSynthesis.cancel(); speechSynthesis.speak(u); } catch (e) { } }
+  const L1 = haberListe(), hi = (Math.random() * L1.length) | 0, m = L1[hi]; duyur('📻 ' + L(KANALLAR[SES.kanal()]), 'kesif', esc(m));
+  if (spiker && window.speechSynthesis) { try { let me = m; enZorla = true; try { me = haberListe()[hi] || m; } finally { enZorla = false; } const u = new SpeechSynthesisUtterance(me); u.lang = 'en-US'; const ses = speechSynthesis.getVoices().filter(v => /^en[-_]/i.test(v.lang)); if (ses.length) u.voice = ses.find(v => /en[-_]US/i.test(v.lang) && /natural|google|samantha|aria|jenny/i.test(v.name)) || ses.find(v => /en[-_](US|GB)/i.test(v.lang)) || ses[0]; u.rate = 1.05; u.volume = 0.8; speechSynthesis.cancel(); speechSynthesis.speak(u); } catch (e) { } }
 }
 /* ================= galaksi takvimi ================= */
 const TAKVIM = {
