@@ -481,8 +481,8 @@ export async function kur3D({ tuval, kalite }) {
       SIS.copy(SIS_G).lerp(SIS_N, g * 0.85);
       /* su berraklığı: yaz berrak (sis seyrek), plankton yeşili ya da fırtına kumu bulanıklaştırır */
       { const br = d.eko && d.eko.berrak != null ? d.eko.berrak : 0.8; berrakP += (br - berrakP) * Math.min(1, dt * 0.6);
-        sahne.fog.density = 0.04 * (0.62 + (1 - berrakP) * 1.7);
-        SIS.lerp(tmp.set(d.eko && d.eko.bulanNeden === 'kum' ? '#8c8a6c' : '#4f8a66'), Math.max(0, 0.75 - berrakP) * 0.9); }
+        sahne.fog.density = 0.04 * (0.42 + (1 - berrakP) * 1.9); /* berrak suda uzak resif de seçilir */
+        SIS.lerp(tmp.set(d.eko && d.eko.bulanNeden === 'kum' ? '#8c8a6c' : '#4f8a66'), Math.max(0, 0.8 - berrakP) * 0.9); }
       sahne.fog.color.copy(SIS);
       kubbeMat.uniforms.uUst.value.copy(RENK.ust).lerp(tmp.set('#24486e'), g * 0.85); kubbeMat.uniforms.uOrta.value.copy(SIS); kubbeMat.uniforms.uAlt.value.copy(RENK.alt).lerp(SIS_N, g);
       R.toneMappingExposure = 1.12 * (1 - 0.25 * g);
