@@ -415,7 +415,7 @@ export function yuzenUret(tur, malz, balik, o = {}) {
           P.push(x, y, z);
           /* renk: sırtı bronz-gri, karnı beyaz, yumuşak geçişli; yanlarda beyaz bir dil (kara uçlu resif köpekbalığı) */
           const sirt = THREE.MathUtils.smoothstep(sy, -0.62, -0.12), dil = THREE.MathUtils.smoothstep(sy, -0.45, -0.1) * (1 - THREE.MathUtils.smoothstep(sy, -0.1, 0.15)) * THREE.MathUtils.smoothstep(u, 0.15, 0.45) * (1 - THREE.MathUtils.smoothstep(u, 0.55, 0.75));
-          col.set('#E6EAE8').lerp(c2.set('#6F7C80'), sirt).lerp(c2.set('#DDE2E0'), dil * 0.22);
+          col.set('#E9ECEA').lerp(c2.set('#55636B'), sirt).lerp(c2.set('#DDE2E0'), dil * 0.22);
           if (u > 0.9 && u < 0.95 && sy < -0.55) col.lerp(c2.set('#2a2f30'), 0.7); /* ağız */
           C.push(col.r, col.g, col.b);
         }

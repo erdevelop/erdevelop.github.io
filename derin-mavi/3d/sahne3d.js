@@ -565,7 +565,7 @@ export async function kur3D({ tuval, kalite }) {
           if (o.arka || o.uzak) { const z = o.uzak ? -16 : -12, k2 = (kam.position.z - z) / kam.position.z; p = kam.position.clone().add(p.sub(kam.position).multiplyScalar(k2)); sc *= k2 * (o.uzak ? 0.75 : 1); }
           /* derinlikte çapraz geçiş: köpekbalığı uzaktan gelip kameranın yanından geçer; ziyaretçiler de kendi derinlik yolunu izler.
              Ekrandaki yeri 2D ile aynı kalır, kamera ışını boyunca ileri-geri gider; yönü gerçek 3D hareketinden hesaplanır. */
-          const yol = o.id === 'yirtici' ? [-10, 2.6] : (o.id.startsWith('gz') && !o.arka) ? (() => { const h = [...o.id].reduce((a, ch) => (a * 31 + ch.charCodeAt(0)) % 9973, 7); return [-7 + (h % 70) / 10, -7 + ((h >> 3) % 85) / 10]; })() : null;
+          const yol = o.id === 'yirtici' ? [-4.5, 2.2] : (o.id.startsWith('gz') && !o.arka) ? (() => { const h = [...o.id].reduce((a, ch) => (a * 31 + ch.charCodeAt(0)) % 9973, 7); return [-7 + (h % 70) / 10, -7 + ((h >> 3) % 85) / 10]; })() : null;
           let hedef = o.tur === 'top' ? 0 : o.d > 0 ? -0.35 : Math.PI + 0.35;
           if (yol) {
             const u = THREE.MathUtils.clamp(o.d > 0 ? (o.x + o.s) / (M.W + 2 * o.s) : (M.W + o.s - o.x) / (M.W + 2 * o.s), 0, 1), z = yol[0] + (yol[1] - yol[0]) * (u * u * (3 - 2 * u));
