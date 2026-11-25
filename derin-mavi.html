@@ -912,7 +912,7 @@ async function g3Baslat() {
 function g3Durum() {
   const L = [];
   for (const [id, b] of BAL) { if (!b.d || (b.d.a | 0) === 0 || !b.L) continue; L.push({ id, tur: b.d.a >= 2 && b.d.tr ? b.d.tr : 'yavru', x: b.x, y: b.y, L: b.L, yon: b.yon, faz: b.faz, vx: b.vx, vy: b.vy, uyku: b.uyku || b.geceUyku, der: b.der || 0, dans: b._dans }); }
-  return { baliklar: L, gece: geceDegeri(), isik: typeof havaIsik === 'function' ? havaIsik(zaman) : 1, akinti: typeof HV !== 'undefined' ? HV.akinti : 1, deniz: DENIZ.d, dalgaA: dalgaGenlik(), sy: insSY(), eko: S && S.eko ? { berrak: S.eko.berrak ?? 0.8, bulanNeden: S.eko.bulanNeden, beyaz: S.eko.beyaz, buyume: S.eko.buyume, koloni: S.eko.koloni, cayir: S.eko.cayir, yosun: S.eko.yosun, gun: ekoGun() } : null, canlilar: g3Canlilar(), yuzenler: g3Yuzenler(), insan: g3Insan() };
+  return { baliklar: L, gece: geceDegeri(), isik: typeof havaIsik === 'function' ? havaIsik(zaman) : 1, akinti: typeof HV !== 'undefined' ? HV.akinti : 1, deniz: DENIZ.d, dalgaA: dalgaGenlik(), sy: insSY(), eko: S && S.eko ? { berrak: S.eko.berrak ?? 0.8, bulanNeden: S.eko.bulanNeden, beyaz: S.eko.beyaz, buyume: S.eko.buyume, koloni: ekoKoloniGorunen(), cayir: S.eko.cayir, yosun: S.eko.yosun, gun: ekoGun() } : null, canlilar: g3Canlilar(), yuzenler: g3Yuzenler(), insan: g3Insan() };
 }
 let W = 0, H = 0, DPR = 1, OL = 1, ALAN = { x1: 0, x2: 0, y1: 0, y2: 0, kum: 0 };
 let SAHNE = null, zaman = 0;
@@ -1317,7 +1317,7 @@ let ortakHedef = 0;
 function hedefSeviye() { let s = 0; for (const h of HEDEF) if (ortakHedef >= h.n) s++; return s; }
 function benVeri() { return S ? { a: S.asama, al: S.alan, tr: S.tur, r: S.renk, z: S.giy, mz: S.melez ? S.melez.tr : null, h: S.hasta } : null; }
 function ozet() {
-  return { n: S.ad, a: S.asama, al: S.alan || '', tr: S.tur || '', r: S.renk, b: boyHesap(S), x: Math.round(S.xp), o: Math.round(S.tok), ng: S.nesil, z: (S.giy || []).join(','), g: S.dogum, d: (S.kose || []).join(','), h: S.hasta ? 1 : 0, mz: S.melez ? S.melez.tr : '', un: S.unvan || '', ok: S.okul ? (S.okul.e + ' ' + S.okul.ad).slice(0, 18) : '' };
+  return { n: S.ad, a: S.asama, al: S.alan || '', tr: S.tur || '', r: S.renk, b: boyHesap(S), x: Math.round(S.xp), o: Math.round(S.tok), ng: S.nesil, z: (S.giy || []).join(','), g: S.dogum, d: (S.kose || []).join(','), h: S.hasta ? 1 : 0, mz: S.melez ? S.melez.tr : '', un: S.unvan || '', ok: S.okul ? (S.okul.e + ' ' + S.okul.ad).slice(0, 18) : '', rs: S.eko ? Math.round(S.eko.saglik * 100) : 80, md: S.dikHafta === hafta() ? (S.dikSay || 0) : 0, mw: hafta() };
 }
 const rekorVeri = () => ({ n: S.ad, b: boyHesap(S), tr: S.tur || '', r: S.renk, ng: S.nesil, a: S.asama });
 function uyeVeri(v) { return { a: v.a | 0, al: v.al || null, tr: v.tr || null, r: v.r | 0, z: v.z ? String(v.z).split(',') : [], mz: v.mz && TURLER[v.mz] ? v.mz : null, h: !!v.h }; }
@@ -4156,6 +4156,25 @@ function ekoS() {
   if (S.eko.cayir == null) { S.eko.cayir = 0.85; S.eko.yosun = 0.85; }
   return S.eko;
 }
+/* ORTAK RESİF: akvaryumdaki herkesin resif sağlığı ortalanır ve herkesin bu hafta diktiği mercanlar
+   herkesin resifinde koloni olarak görünür. Günde bir kez mercan dikebilirsin (resife parça ekleme, gerçek
+   resif onarımındaki gibi). Ortak sağlık iyi olunca herkesin resifi biraz daha hızlı iyileşir. */
+function ortakResif() {
+  const hw = hafta(); let top = 0, n = 0, dik = 0, uye = 0;
+  if (S && S.eko) { top += S.eko.saglik * 100; n++; }
+  try { for (const [id, v] of NET.uyeler()) { if (!v || (S && id === S.id)) continue; uye++; if (v.rs != null) { top += +v.rs || 0; n++; } if ((v.mw | 0) === hw) dik += Math.min(7, v.md | 0); } } catch (e) { }
+  const ben = S && S.dikHafta === hw ? (S.dikSay || 0) : 0;
+  return { saglik: n ? top / n / 100 : 0.8, baskaDik: Math.min(EKO_KOL_MAX, dik), benDik: ben, uye, kisi: n };
+}
+const ekoKoloniGorunen = () => S && S.eko ? Math.min(EKO_KOL_MAX, S.eko.koloni + ortakResif().baskaDik) : 0;
+const dikebilir = () => S && !ziyaretModu() && S.dikGun !== bugun();
+function mercanDik() {
+  if (!dikebilir()) { duyur(T('🪸 Bugün mercanını diktin; yarın yine dikebilirsin.', '🪸 You planted your coral today; you can plant again tomorrow.')); return; }
+  const e = ekoS(), hw = hafta(); S.dikGun = bugun(); if (S.dikHafta !== hw) { S.dikHafta = hw; S.dikSay = 0; } S.dikSay++;
+  S.dikToplam = (S.dikToplam || 0) + 1; if (e.koloni < EKO_KOL_MAX) e.koloni++; e.saglik = Math.min(1, e.saglik + 0.03);
+  NET.hedefEkle(3); mutluEkle(3); kaydet(); uyeYaz(true); SES.basari();
+  duyur(T('🪸 Resife bir mercan parçası diktin! Akvaryumdaki herkesin resifinde de görünecek. +3 ortak hedef', '🪸 You planted a coral fragment! It will show up on everyone’s reef in the aquarium. +3 shared goal'), 1);
+}
 const EKO_OLAY = {
   plankton: { e: '🌱', ad: ['Plankton patlaması', 'Plankton bloom'], d: ['Su planktonla doldu; sardalya sürüsü büyüyecek, manta ve balina köpekbalığı uğrayabilir.', 'The water is full of plankton; the sardine school will grow, mantas and whale sharks may drop by.'] },
   meduz: { e: '🪼', ad: ['Denizanası patlaması', 'Jellyfish bloom'], d: ['Ilık suda denizanaları çoğaldı. Dikkat, sokabilirler!', 'Jellyfish multiplied in the warm water. Careful, they sting!'] },
@@ -4190,7 +4209,7 @@ function ekoAdim(h, sessiz) {
   if (ol && ol.tur === 'plankton') plkH = 2.2; if (HV.h === 'bulanik') plkH *= 1.3; plkH *= 1 + (1 - su) * 0.25; if (tm === 'derin') plkH *= 0.7;
   e.plk += (plkH - e.plk) * Math.min(1, h * 0.08);
   const isi = (mv === 'yaz' ? 0.1 : 0) + (ol && ol.tur === 'sicak' ? 0.38 : 0);
-  const sH = kis(0.22 + 0.78 * su - isi, 0, 1);
+  const ort = ortakResif(), sH = kis(0.22 + 0.78 * su - isi + (ort.kisi > 1 ? (ort.saglik - 0.6) * 0.15 : 0), 0, 1);
   e.saglik += (sH - e.saglik) * Math.min(1, h * (sH < e.saglik ? 0.05 : 0.025));
   const bH = kis((0.55 - e.saglik) * 2.2, 0, 1);
   e.beyaz += (bH - e.beyaz) * Math.min(1, h * (bH > e.beyaz ? 0.04 : 0.015));
@@ -4284,7 +4303,7 @@ function ekoZeminCiz(c, t) {
   if (SAHNE.tm === 'derin' || G3) return;
   const r = tohumRnd('koloni' + Math.round(W)), kumY = SAHNE.kumY, x0 = W >= 860 ? 470 : 30;
   const RENK = ['#FF7FA8', '#FFB347', '#B98CFF', '#5FD3C4', '#FFE066', '#FF6B6B', '#7FB8FF'];
-  for (let i = 0; i < Math.min(e.koloni, EKO_KOL_MAX); i++) {
+  for (let i = 0; i < ekoKoloniGorunen(); i++) {
     const x = x0 + r() * (W - x0 - 40), tip = Math.floor(r() * 3), rk = RENK[Math.floor(r() * RENK.length)], y = kumY + 6 * OL + r() * 18 * OL;
     const boy = (0.4 + 0.6 * Math.min(1, (e.koloni - i) * 0.25)) * (0.85 + 0.3 * e.buyume) * (14 + r() * 10) * OL;
     const renk = karis(rk, '#EDEBE2', Math.min(0.9, e.beyaz));
@@ -4300,7 +4319,7 @@ function ekoAc() {
   const cubuk = (ad, v, renk, yazi) => `<div style="margin:9px 0"><div style="display:flex;justify-content:space-between;font-weight:800"><span>${ad}</span><span>${yazi}</span></div><div style="height:9px;border-radius:6px;background:rgba(255,255,255,.12);overflow:hidden;margin-top:4px"><i style="display:block;height:100%;width:${Math.round(kis(v, 0, 1) * 100)}%;background:${renk};border-radius:6px"></i></div></div>`;
   const plkAd = e.plk < 0.75 ? T('az', 'low') : e.plk < 1.3 ? T('normal', 'normal') : e.plk < 1.9 ? T('bol', 'plenty') : T('patlama', 'bloom');
   const O = ol && EKO_OLAY[ol.tur];
-  modal(`<h2>🌿 ${T('Ekosistem', 'Ecosystem')}</h2><p class="alt">${T('Akvaryum gerçek zamanla yaşıyor: resif büyür ya da ağarır, plankton çoğalır ya da azalır, sürüler ve avcılar buna göre değişir.', 'The aquarium lives in real time: the reef grows or bleaches, plankton rises and falls, and schools and predators follow.')}</p>
+  const ic = modal(`<h2>🌿 ${T('Ekosistem', 'Ecosystem')}</h2><p class="alt">${T('Akvaryum gerçek zamanla yaşıyor: resif büyür ya da ağarır, plankton çoğalır ya da azalır, sürüler ve avcılar buna göre değişir.', 'The aquarium lives in real time: the reef grows or bleaches, plankton rises and falls, and schools and predators follow.')}</p>
     ${cubuk('🪸 ' + T('Resif sağlığı', 'Reef health'), e.saglik, e.saglik > 0.6 ? '#5FD38A' : e.saglik > 0.4 ? '#FFC857' : '#FF7A6B', Math.round(e.saglik * 100) + '%')}
     ${cubuk('🤍 ' + T('Beyazlama', 'Bleaching'), e.beyaz, '#E8E4DA', e.beyaz < 0.1 ? T('yok', 'none') : Math.round(e.beyaz * 100) + '%')}
     ${cubuk('🌿 ' + T('Mercan büyümesi', 'Coral growth'), e.buyume, '#FF8FB1', Math.round(e.buyume * 100) + '%')}
@@ -4309,8 +4328,11 @@ function ekoAc() {
     ${cubuk('💧 ' + T('Su berraklığı', 'Water clarity'), e.berrak ?? 0.8, '#7FD8FF', Math.round((e.berrak ?? 0.8) * 100) + '%')}
     ${cubuk('🦠 ' + T('Plankton', 'Plankton'), e.plk / 2.2, '#7FE0FF', plkAd)}
     ${cubuk('🐟 ' + T('Sardalya sürüsü', 'Sardine school'), sr / 22, '#B8CCDA', sr + T(' balık', ' fish'))}
+    ${(() => { const o = ortakResif(); return o.uye ? `<div style="margin:12px 0;padding:10px 12px;border-radius:12px;background:rgba(255,255,255,.06)"><b>🤝 ${T('Ortak resif', 'Shared reef')}</b> · ${o.kisi} ${T('kişi', 'people')}<br>${T('Ortak sağlık', 'Shared health')}: <b>${Math.round(o.saglik * 100)}%</b> · ${T('Bu hafta dikilen mercan', 'Corals planted this week')}: <b>${o.baskaDik + o.benDik}</b> (${T('senin', 'yours')}: ${o.benDik})</div>` : ''; })()}
+    <button type="button" class="ana" id="dikBtn" ${dikebilir() ? '' : 'disabled style="opacity:.55"'}>🪸 ${dikebilir() ? T('Bugünün mercanını dik', 'Plant today’s coral') : T('Bugün diktin — yarın yine', 'Planted today — again tomorrow')}</button>
     <p style="margin-top:12px"><b>${T('Bu hafta', 'This week')}:</b> ${O ? `${O.e} ${T(O.ad[0], O.ad[1])}. ${T(O.d[0], O.d[1])}` : T('Sakin bir hafta.', 'A quiet week.')}</p>
     <p class="kucuk">${T('Besin zinciri: plankton → sardalya → barakuda. Plankton boluyken manta ve balina köpekbalığı da gelir. Akıntı suyu kendiliğinden tazeler; plankton patlamasının çürümesi ve sıcak dalgası suyu bozar, mercanları ağartabilir.', 'Food chain: plankton → sardines → barracuda. Mantas and whale sharks come when plankton is plentiful. Currents keep the water fresh; decaying plankton blooms and heatwaves spoil it and can bleach the corals.')}</p>`);
+  const db = ic.querySelector('#dikBtn'); if (db) db.onclick = () => { mercanDik(); modalKapat(); setTimeout(ekoAc, 50); };
 }
 /* =====================================================================
    SU YÜZEYİ VE DENİZ DURUMU
