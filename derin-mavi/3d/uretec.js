@@ -238,14 +238,46 @@ export function yuzenUret(tur, malz, balik, o = {}) {
       if (dev) G.scale.setScalar(0.8);
       break;
     }
-    case 'dkaplumbaga': { /* yeşil deniz kaplumbağası */
-      const kab = renkle(new THREE.SphereGeometry(0.34, 24, 14), (v, c) => { const h = Math.sin(v.x * 22) * Math.sin(v.z * 22); c.set(v.y > 0 ? (h > 0.35 ? '#5C4A2A' : '#8A6F3E') : '#E8D9A8'); }); kab.scale(1.15, 0.42, 0.95);
-      ekle(kab, vc); const deri = M('#7E8A5E', { roughness: 0.7 });
-      const bas = ekle(new THREE.SphereGeometry(0.11, 14, 10), deri); bas.scale.set(1.4, 0.9, 0.95); bas.position.set(0.48, 0.02, 0);
-      goz(0.55, 0.06, -0.08, 0.025); goz(0.55, 0.06, 0.08, 0.025);
-      const on = yuzgec([[0, 0], [0.14, -0.06], [0.06, -0.5], [-0.05, -0.47]], 0.03), ar = yuzgec([[0, 0], [0.05, -0.04], [-0.02, -0.18], [-0.1, -0.15]], 0.03);
-      A.on = [1, -1].map(z => { const k = kanat(G, 0.22, 0, z * 0.28, on, deri); k.rotation.x = z * 1.45; return [k, z]; });
-      A.ar = [1, -1].map(z => { const k = kanat(G, -0.3, 0, z * 0.22, ar, deri); k.rotation.x = z * 1.35; return [k, z]; });
+    case 'dkaplumbaga': { /* yeşil deniz kaplumbağası: kalp biçimli kubbe kabuk ve plakaları, düz karın, gagalı pullu baş, kanat gibi uzun ön yüzgeçler */
+      const kab = new THREE.SphereGeometry(0.36, 48, 24), p = kab.attributes.position, cc = new Float32Array(p.count * 3), col = new THREE.Color(), c2 = new THREE.Color();
+      for (let i = 0; i < p.count; i++) {
+        let x = p.getX(i), y = p.getY(i), z = p.getZ(i); const u = x / 0.36; /* -1 kuyruk … +1 baş */
+        z *= 1.02 * (u < 0 ? 1 - Math.pow(-u, 1.6) * 0.45 : 1 - Math.pow(u, 2) * 0.12); x *= 1.18; y = y > 0 ? y * 0.4 * (1 - Math.pow(Math.abs(u), 3) * 0.25) : y * 0.14;
+        p.setXYZ(i, x, y, z);
+        if (y < 0.004) col.set('#E9D9A6'); /* karın kabuğu */
+        else {
+          /* sırt plakaları: ortada 5 omur plakası, iki yanda 4'er kaburga plakası, kenarda küçük kenar plakaları */
+          const az = Math.abs(z) / 0.36, kenar = az > 0.86 || Math.abs(u) > 0.93;
+          let cell, ic;
+          if (kenar) { const k = (Math.atan2(z, x) / Math.PI * 12 + 24) % 1; cell = 99; ic = Math.min(k, 1 - k) * 2; }
+          else if (az < 0.3) { const k = (u * 2.5 + 5) % 1; cell = Math.floor(u * 2.5); ic = Math.min(Math.min(k, 1 - k) * 2, (0.3 - az) / 0.08); }
+          else { const k = (u * 2 + 5) % 1; cell = 10 + Math.floor(u * 2); ic = Math.min(Math.min(k, 1 - k) * 2, (az - 0.3) / 0.08, (0.86 - az) / 0.1); }
+          ic = Math.max(0, Math.min(1, ic));
+          /* plaka içinde merkezden dışa ışınsal açık çizgiler (yeşil kaplumbağanın kehribar desenleri) */
+          const isin = Math.pow(0.5 + 0.5 * Math.sin(Math.atan2(z - Math.round(z * 4) / 4, x - Math.round(x * 3) / 3) * 7 + cell * 2.1), 3);
+          col.set(kenar ? '#5E4626' : '#6A4A22').lerp(c2.set('#D2A55A'), (0.2 + 0.55 * isin) * Math.min(1, ic * 1.6)).lerp(c2.set('#24180C'), ic < 0.2 ? 0.85 : 0);
+        }
+        cc.set([col.r, col.g, col.b], i * 3);
+      }
+      kab.setAttribute('color', new THREE.BufferAttribute(cc, 3)); kab.computeVertexNormals();
+      A.gov = new THREE.Group(); G.add(A.gov); ekle(kab, M('#ffffff', { vertexColors: true, roughness: 0.55 }), A.gov).position.y = 0.02;
+      /* pullu deri dokusu: zeytin yeşili üstüne sarı kenarlı koyu pullar */
+      const deriG = (g, olcek) => renkle(g, (v, c) => { const a = Math.sin(v.x * olcek) * Math.sin(v.z * olcek + v.y * olcek * 0.7); c.set(a > 0.55 ? '#3D3A22' : a > 0.35 ? '#D9C77A' : '#7F8152'); });
+      const boyun = ekle(deriG(new THREE.SphereGeometry(0.075, 14, 10), 60), M('#ffffff', { vertexColors: true, roughness: 0.7 }), A.gov); boyun.scale.set(1.3, 0.75, 0.95); boyun.position.set(0.43, 0.0, 0);
+      A.bas = new THREE.Group(); A.bas.position.set(0.47, 0.012, 0); A.gov.add(A.bas);
+      const bg = new THREE.SphereGeometry(0.085, 20, 14); const bp = bg.attributes.position; for (let i = 0; i < bp.count; i++) { const x = bp.getX(i); bp.setX(i, x * (x > 0 ? 1.55 : 1.1)); bp.setY(i, bp.getY(i) * (x > 0 ? 0.85 - x * 1.2 : 0.95)); } bg.computeVertexNormals();
+      ekle(deriG(bg, 90), M('#ffffff', { vertexColors: true, roughness: 0.6 }), A.bas).position.x = 0.07;
+      const gaga = ekle(new THREE.ConeGeometry(0.03, 0.06, 8).rotateZ(-Math.PI / 2), M('#5A5440', { roughness: 0.4 }), A.bas); gaga.position.set(0.2, -0.022, 0); gaga.scale.set(1, 0.7, 1.2);
+      for (const z of [-1, 1]) { const g = ekle(new THREE.SphereGeometry(0.022, 10, 8), M('#14110c', { roughness: 0.05 }), A.bas); g.position.set(0.135, 0.018, z * 0.055); }
+      /* ön yüzgeçler: uzun, kavisli, kanat gibi */
+      const sh = new THREE.Shape(); sh.moveTo(0, 0.03); sh.bezierCurveTo(0.08, -0.05, 0.1, -0.32, 0.02, -0.6); sh.bezierCurveTo(-0.02, -0.5, -0.06, -0.25, -0.07, -0.02); sh.closePath();
+      const yg = new THREE.ExtrudeGeometry(sh, { depth: 0.012, bevelEnabled: true, bevelThickness: 0.01, bevelSize: 0.012, bevelSegments: 2, curveSegments: 14 }); yg.translate(0, 0, -0.006); yg.scale(0.85, 0.72, 1);
+      const ygR = deriG(yg, 70), ym = M('#ffffff', { vertexColors: true, roughness: 0.65 });
+      A.on = [1, -1].map(z => { const g = new THREE.Group(); g.position.set(0.2, -0.01, z * 0.27); A.gov.add(g); const m = ekle(ygR, ym, g); m.rotation.x = -Math.PI / 2 * z; return [g, z]; });
+      const sh2 = new THREE.Shape(); sh2.moveTo(0, 0.02); sh2.quadraticCurveTo(0.03, -0.12, -0.04, -0.16); sh2.quadraticCurveTo(-0.08, -0.08, -0.04, 0); sh2.closePath();
+      const ag = deriG(new THREE.ExtrudeGeometry(sh2, { depth: 0.01, bevelEnabled: true, bevelThickness: 0.008, bevelSize: 0.008, bevelSegments: 1 }), 70);
+      A.ar = [1, -1].map(z => { const g = new THREE.Group(); g.position.set(-0.32, -0.01, z * 0.14); A.gov.add(g); const m = ekle(ag, ym, g); m.rotation.x = -Math.PI / 2 * z; return [g, z]; });
+      ekle(new THREE.ConeGeometry(0.025, 0.08, 8).rotateZ(Math.PI / 2), M('#6E7049'), A.gov).position.set(-0.45, -0.005, 0);
       break;
     }
     case 'manta': { /* manta: geniş baklava kanatlar, ağız yüzgeçleri, ince kuyruk */
@@ -378,7 +410,12 @@ export function yuzenOyna(G, tur, o, t) {
   switch (tur) {
     case 'balon': { const sis = o.sis || 0; G.scale.multiplyScalar(1 + sis * 0.9); A.gov.scale.set(1.15 - sis * 0.15, 0.8 + sis * 0.35, 0.8 + sis * 0.35); A.diken.visible = sis > 0.2; A.diken.scale.setScalar(0.85 + sis * 0.4); break; }
     case 'kalamar': case 'devkalamar': for (const [g, a, uzun] of A.kol) { g.rotation.z = Math.sin(f * 3 + a) * 0.25 + Math.cos(a) * 0.25; g.rotation.y = Math.sin(f * 2.4 + a * 2) * (uzun ? 0.5 : 0.3) + Math.sin(a) * 0.3; } A.yz.forEach((k, i) => k.rotation.z = Math.sin(f * 4 + i) * 0.4); break;
-    case 'dkaplumbaga': G.rotation.x += 0.25; A.on.forEach(([k, z]) => { k.rotation.x = z * (1.05 + Math.sin(f * 1.6) * 0.45); k.rotation.y = Math.sin(f * 1.6 + 0.8) * 0.4; }); A.ar.forEach(([k, z]) => k.rotation.x = z * (1.35 + Math.sin(f * 1.6 + 1) * 0.2)); break;
+    case 'dkaplumbaga': { /* ön yüzgeçler birlikte kanat çırpar gibi aşağı-geri süpürür; gövde hafifçe iner kalkar */
+      const v = f * 1.15, st = Math.sin(v); G.rotation.x += 0.3;
+      A.on.forEach(([g, z]) => { g.rotation.x = -z * (0.1 + st * 0.55); g.rotation.y = z * (0.45 + Math.cos(v) * 0.35); });
+      A.ar.forEach(([g, z]) => { g.rotation.y = -z * (0.5 + Math.sin(v * 0.5 + z) * 0.15); g.rotation.x = -z * 0.1; });
+      A.gov.position.y = -st * 0.02; A.gov.rotation.z = Math.cos(v) * 0.03; A.bas.rotation.z = Math.sin(v * 0.5) * 0.08; break;
+    }
     case 'manta': G.rotation.x += 0.45; A.k.forEach(([g, z]) => g.rotation.x = z * Math.sin(f * 1.4) * 0.35); break; /* hafif yatık: sırtı ve kanatları görünsün */
     case 'mola': A.s.rotation.y = Math.sin(f * 2) * 0.5; A.k.rotation.y = -Math.sin(f * 2) * 0.5; break;
     case 'fok': case 'dugong': A.kuyruk.rotation.z = Math.sin(f * (tur === 'fok' ? 5 : 2)) * 0.35; A.y.forEach(([k, z]) => k.rotation.y = Math.sin(f * 2 + z) * 0.3); A.gov.rotation.z = Math.sin(f * (tur === 'fok' ? 5 : 2) - 1) * 0.05; break;

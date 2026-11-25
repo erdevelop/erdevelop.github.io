@@ -883,6 +883,7 @@ function g3Yuzenler() {
   YERLI.meduz.forEach((m, i) => L.push({ id: 'meduz' + i + m.c, tur: 'meduz', x: m.x, y: m.y, s: 32 * OL, d: 1, f: m.f, renk: m.c, derin: SAHNE.tm === 'derin' }));
   YERLI.suru.forEach((f, i) => L.push({ id: 'suru' + i, tur: 'sardalya1', x: f.x, y: f.y, s: 13 * OL, d: YERLI.lider.yon || 1, f: zaman + i }));
   if (GOC.o) GOC.o.b.forEach((f, i) => L.push({ id: 'goc' + i, tur: 'sardalya1', x: f.x, y: f.y, s: 13 * OL, d: GOC.o.d, f: zaman + i }));
+  if (UZAK.o) L.push({ id: 'uzak' + UZAK.o.tur + Math.round(UZAK.o.yb), tur: UZAK.o.tur, x: UZAK.o.x, y: UZAK.o.y, s: UZAK.o.s, d: UZAK.o.d, f: UZAK.o.f, uzak: true });
   if (YIR.durum === 'gec') L.push({ id: 'yirtici', tur: 'kopekbaligi', x: YIR.x, y: YIR.y, s: 170 * OL, d: YIR.d, f: zaman });
   if (TOP.kur) L.push({ id: 'top', tur: 'top', x: TOP.x, y: TOP.y, s: TOP.r, d: 1, f: zaman, don: TOP.x / TOP.r * 0.5 });
   return L;
@@ -910,7 +911,7 @@ async function g3Baslat() {
 }
 function g3Durum() {
   const L = [];
-  for (const [id, b] of BAL) { if (!b.d || (b.d.a | 0) === 0 || !b.L) continue; L.push({ id, tur: b.d.a >= 2 && b.d.tr ? b.d.tr : 'yavru', x: b.x, y: b.y, L: b.L, yon: b.yon, faz: b.faz, vx: b.vx, vy: b.vy, uyku: b.uyku || b.geceUyku }); }
+  for (const [id, b] of BAL) { if (!b.d || (b.d.a | 0) === 0 || !b.L) continue; L.push({ id, tur: b.d.a >= 2 && b.d.tr ? b.d.tr : 'yavru', x: b.x, y: b.y, L: b.L, yon: b.yon, faz: b.faz, vx: b.vx, vy: b.vy, uyku: b.uyku || b.geceUyku, der: b.der || 0, dans: b._dans }); }
   return { baliklar: L, gece: geceDegeri(), isik: typeof havaIsik === 'function' ? havaIsik(zaman) : 1, akinti: typeof HV !== 'undefined' ? HV.akinti : 1, deniz: DENIZ.d, dalgaA: dalgaGenlik(), sy: insSY(), eko: S && S.eko ? { beyaz: S.eko.beyaz, buyume: S.eko.buyume, koloni: S.eko.koloni } : null, canlilar: g3Canlilar(), yuzenler: g3Yuzenler(), insan: g3Insan() };
 }
 let W = 0, H = 0, DPR = 1, OL = 1, ALAN = { x1: 0, x2: 0, y1: 0, y2: 0, kum: 0 };
@@ -1451,6 +1452,10 @@ function balikGuncelle(b, dt) {
     const g = (min - uz) / min, nx = uz > 0.5 ? ex / uz : (b.k > o.k ? 1 : -1) * 0.3, ny = uz > 0.5 ? ey / uz : (b.k > o.k ? 1 : -1);
     itX += nx * g; itY += ny * g;
   }
+  /* denizaltı, dalgıç, robot ve geçen ziyaretçilerden de uzak dur */
+  { const E = []; const io = INS.o; if (io && !io.uzak) { if (io.tur === 'denizalti') E.push([io.x, io.y, io.L * 0.55, io.L * 0.2]); else if (io.tur === 'dalgic' || io.tur === 'serbest') E.push([io.x, io.y, io.L * 0.5, io.L * 0.14]); else if (io.tur === 'rov') E.push([io.x, io.y, io.s * 0.6, io.s * 0.4]); }
+    const go = GZ.o; if (go && !GZ_TUR[go.tur].arka) E.push([go.x, go.y, go.s * 0.5, go.s * 0.28]);
+    for (const [x, y, rx, ry] of E) { const ex = (b.x - x) / (rx + L * 0.5), ey = (b.y - y) / (ry + L * 0.25), uz = Math.hypot(ex, ey); if (uz < 1 && uz > 0.01) { const g = (1 - uz) * 2; itX += ex / uz * g; itY += ey / uz * g; } } }
   for (const o of CNL.L) {
     if (o.tur !== 'balon' && o.tur !== 'kalamar') continue;
     const r = o.tur === 'balon' ? 12 * OL * (1 + (o.sis > 0 ? 0.9 : 0)) : 22 * OL, ex = b.x - o.x, ey = (b.y - o.y) * 1.3, uz = Math.hypot(ex, ey), min = L * 0.55 + r + 6 * OL;
@@ -1463,6 +1468,11 @@ function balikGuncelle(b, dt) {
   if (Math.abs(b.vx) > 3) b.yonH = Math.sign(b.vx);
   b.yon += (b.yonH - b.yon) * Math.min(1, dt * 4);
   b.faz += dt * (3 + Math.hypot(b.vx, b.vy) / 9);
+  /* derinlikte gezinme: ara ara ekrana yaklaşır ya da uzaklaşır; uyurken ve gece mağaradayken öndeki düzleme döner */
+  b.derZ = (b.derZ ?? rnd(2, 8)) - dt;
+  if (b.derZ <= 0) { b.derZ = rnd(9, 22); const r = Math.random(); b.derH = r < 0.45 ? 0 : r < 0.75 ? -rnd(0.4, 1) : rnd(0.3, 0.9); }
+  const dh = (b.uyku || b.geceUyku || gc || (b.ben && KUMANDA.aktif > 0)) ? 0 : (b.derH || 0);
+  b.der = (b.der || 0) + (dh - (b.der || 0)) * Math.min(1, dt * 0.35);
   if (b.ben) for (let i = YEM.length - 1; i >= 0; i--) { const p = YEM[i]; if (Math.hypot(p.x - b.x - b.yon * L * 0.35, p.y - b.y) < L * 0.4 + 6) { YEM.splice(i, 1); SES.lokma(); for (let j = 0; j < 5; j++) PARC.push({ x: p.x, y: p.y, vx: rnd(-25, 25), vy: rnd(-25, 25), t: 0.6, c: '#FFD9A0', r: 1.8 }); } }
   /* izler */
   const z = b.d.z || [];
@@ -1503,7 +1513,9 @@ function ciz(dt) {
   const liste = [...BAL.values()].sort((a, b) => (b.L || 0) - (a.L || 0));
   for (const b of liste) balikGuncelle(b, dt);
   if (!G3) golgeCiz(c, liste);
-  for (const b of liste) { const dd = dansDonusum(b, dt); if (G3 && b.d && (b.d.a | 0) > 0) continue; balikCiz(c, b.d, b.x, b.y + (dd ? dd.oy : 0), b.L, b.faz, dd && dd.yon != null ? dd.yon : b.yon, { dunya: 1, t: zaman, uyku: b.uyku || b.geceUyku, solgun: b.solgun, aci: dd ? dd.aci : 0, alfa: b.sersem > 0 ? 0.6 + Math.sin(zaman * 30) * 0.3 : 1 }); }
+  /* derinlik: uzaktakiler önce çizilir ve biraz küçük görünür, yakına gelenler büyür */
+  const cizL = [...liste].sort((a, b) => (a.der || 0) - (b.der || 0));
+  for (const b of cizL) { const dd = dansDonusum(b, dt); b._dd = dd; b._dans = b.dans ? { tip: b.dans.tip, p: Math.min(1, b.dans.t / 1.3), oy: dd ? dd.oy : 0 } : null; if (G3 && b.d && (b.d.a | 0) > 0) continue; balikCiz(c, b.d, b.x, b.y + (dd ? dd.oy : 0), b.L * (1 + (b.der || 0) * (b.der > 0 ? 0.22 : 0.18)), b.faz, dd && dd.yon != null ? dd.yon : b.yon, { dunya: 1, t: zaman, uyku: b.uyku || b.geceUyku, solgun: b.solgun, aci: dd ? dd.aci : 0, alfa: b.sersem > 0 ? 0.6 + Math.sin(zaman * 30) * 0.3 : 1 }); }
   if (!G3) onKatman(c, zaman);
   havaCiz(c, zaman, dt);
   insUstCiz(c);
@@ -3479,7 +3491,7 @@ function canliGuncelle(dt) {
   }
   gzGuncelle(dt);
   insGuncelle(dt);
-  havaGuncelle(dt); denizGuncelle(dt); ekoKare(dt);
+  havaGuncelle(dt); denizGuncelle(dt); ekoKare(dt); uzakGuncelle(dt);
   /* yunus: arada bir yüzeyden geçer */
   if (SAHNE.tm !== 'derin') {
     if (!CNL.yunus) { CNL.yunusZ -= dt; if (CNL.yunusZ <= 0) { const d = Math.random() < 0.5 ? 1 : -1; CNL.yunus = { tur: 'yunus', x: d > 0 ? -150 : W + 150, y: A.y1 + 30 * OL, d, f: 0, bekle: 0, tepki: 0 }; CNL.yunusZ = rnd(150, 330); } }
@@ -3870,7 +3882,24 @@ function gzCizO(c, o) {
   c.restore();
 }
 function gzCiz(c) { const o = GZ.o; if (o && !G3 && !GZ_TUR[o.tur].arka) gzCizO(c, o); }
-function gzArkaCiz(c) { const o = GZ.o; if (o && !G3 && GZ_TUR[o.tur].arka) gzCizO(c, o); }
+function gzArkaCiz(c) { const o = GZ.o; if (o && !G3 && GZ_TUR[o.tur].arka) gzCizO(c, o); uzakCiz(c); }
+/* uzaktan geçenler: ara ara sisin içinden, çok uzakta bir balina, manta, kaplumbağa ya da sürü süzülür (dokunulmaz, sadece manzara) */
+const UZAK = { o: null, z: 25 + Math.random() * 30 };
+const UZAK_TUR = { resif: ['kambur', 'balinakb', 'manta', 'dkaplumbaga', 'barakuda', 'mola'], acik: ['kambur', 'balinakb', 'manta', 'mola', 'barakuda', 'fok', 'dugong'], derin: ['devkalamar', 'sifonofor', 'kambur', 'pelikan'] };
+function uzakGuncelle(dt) {
+  if (!SAHNE) return;
+  const o = UZAK.o;
+  if (o) { o.x += o.d * o.v * dt; o.f += dt; o.y = o.yb + Math.sin(o.f * 0.25) * 8 * OL; if ((o.d > 0 && o.x > W + o.s) || (o.d < 0 && o.x < -o.s)) UZAK.o = null; return; }
+  UZAK.z -= dt; if (UZAK.z > 0) return;
+  UZAK.z = rnd(35, 80);
+  const L = UZAK_TUR[SAHNE.tm] || UZAK_TUR.resif, tur = L[Math.floor(Math.random() * L.length)], g = GZ_TUR[tur]; if (!g) return;
+  const d = Math.random() < 0.5 ? 1 : -1, s = g.b * OL * (g.arka ? 0.6 : 0.75), yb = ALAN.y1 + (SAHNE.kumY - ALAN.y1) * rnd(0.12, 0.42);
+  UZAK.o = { tur, d, s, x: d > 0 ? -s : W + s, y: yb, yb, v: Math.max(14, g.v * 0.45) * OL, f: Math.random() * 9, tepki: 0, bekle: 0, don: 0 };
+}
+function uzakCiz(c) {
+  const o = UZAK.o; if (!o || G3) return;
+  c.save(); c.globalAlpha = 0.22; try { c.filter = 'blur(1.6px) saturate(0.4)'; } catch (e) { } gzCizO(c, o); c.restore();
+}
 /* =====================================================================
    SOL RESİF DUVARI: kumdan yükselen, mağaralı büyük kayalık.
    Kaya, üstündeki ve yüzündeki mercanlar, süngerler, polip kümeleri bir kez çizilir (zemin katmanı).

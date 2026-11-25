@@ -415,7 +415,7 @@ export async function kur3D({ tuval, kalite }) {
           gor.add(o.id); let c = YZN.get(o.id);
           if (!c) { c = { g: yuzenUret(o.tur, m => yama(m, {}), balikKlon, o), yaw: null }; sahne.add(c.g); YZN.set(o.id, c); }
           let p = dunya(o.x, o.y), sc = Math.max(0.02, o.s * M.k);
-          if (o.arka) { const z = -12, k2 = (kam.position.z - z) / kam.position.z; p = kam.position.clone().add(p.sub(kam.position).multiplyScalar(k2)); sc *= k2; }
+          if (o.arka || o.uzak) { const z = o.uzak ? -16 : -12, k2 = (kam.position.z - z) / kam.position.z; p = kam.position.clone().add(p.sub(kam.position).multiplyScalar(k2)); sc *= k2 * (o.uzak ? 0.75 : 1); }
           c.g.position.copy(p); c.g.scale.setScalar(sc);
           const hedef = o.tur === 'top' ? 0 : o.d > 0 ? -0.35 : Math.PI + 0.35; c.yaw = c.yaw == null ? hedef : c.yaw + (hedef - c.yaw) * Math.min(1, dt * 3);
           c.g.rotation.set(o.tur === 'top' ? 0.3 : 0, c.yaw, o.tur === 'top' ? -o.don : 0);
@@ -439,8 +439,12 @@ export async function kur3D({ tuval, kalite }) {
         let f = BAL.get(b.id);
         if (f && f.tur !== b.tur) { sahne.remove(f.g); BAL.delete(b.id); f = null; }
         if (!f) { f = balikYap(b.tur); BAL.set(b.id, f); }
-        const p = dunya(b.x, b.y);
+        const dans = b.dans;
+        let p = dunya(b.x, b.y + (dans ? dans.oy : 0));
         const s = Math.max(0.05, b.L * M.k * (b.tur === 'yavru' ? 0.9 : 1)); f.g.scale.setScalar(s);
+        /* derinlik: ekrandaki yeri aynı kalır, kamera ışını boyunca yaklaşır ya da uzaklaşır (uzakta küçük ve sisli görünür) */
+        if (b.der) { let z = b.der > 0 ? b.der * 5 : b.der * 11; const c0 = kam.position;
+          for (let i = 0; i < 12; i++) { const k2 = (c0.z - z) / c0.z, q = c0.clone().add(p.clone().sub(c0).multiplyScalar(k2)); if (q.y > zeminY(q.x, q.z) + s * 0.8 + (z < -1 ? 2.4 : 0) || z >= 0) { p = q; break; } z = Math.min(0, z + 1); } } /* uzaklaşırken resifin arkasına saklanmasın: dipteyken uzağa gitmez */
         /* kuma gömülmesin: gövdenin en alt noktası (eğim ve kıvrılma payıyla) zeminin biraz üstünde kalır */
         const taban = zeminY(p.x, p.z) + s * (f.alt * 1.1 + f.yarim * Math.abs(Math.sin(f.pit)) + 0.04);
         const yakin = THREE.MathUtils.clamp((p.y - taban) / (s * f.alt * 2 + 0.01), 0, 1);
@@ -454,7 +458,10 @@ export async function kur3D({ tuval, kalite }) {
         let pit = THREE.MathUtils.clamp(-(b.vy || 0) / (hiz + 25), -0.45, 0.45);
         if ((b.vy || 0) > 0) pit *= yakin; /* zemine yaklaşınca burnunu kuma doğru eğmesin */
         f.pit += (pit - f.pit) * Math.min(1, dt * 3);
-        eul.set(-dy * 0.4, f.yaw, f.pit); f.g.quaternion.setFromEuler(eul);
+        /* dön, takla, zıpla */
+        let ey = f.yaw, ez = f.pit;
+        if (dans) { const yu = Math.sin(dans.p * Math.PI); if (dans.tip === 0) ey += dans.p * Math.PI * 4; else if (dans.tip === 1) ez += dans.p * Math.PI * 2; else ez += 0.45 * yu; }
+        eul.set(-dy * 0.4, ey, ez); f.g.quaternion.setFromEuler(eul);
         f.yuz.faz.value = b.faz; f.yuz.genlik.value = b.uyku ? 0.25 : 0.7 + Math.min(1, hiz / 90);
         f.g.visible = true;
       }
