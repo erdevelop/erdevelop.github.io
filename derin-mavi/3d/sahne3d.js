@@ -373,6 +373,7 @@ export async function kur3D({ tuval, kalite }) {
     yuzey.position.y = Hc + (H / 2) * k + 0.6;
     if (yeniden) ortamKur(VW, magX);
   }
+  let berrakP = 0.8;
   const CAN = new Map(), MERCAN_K = new Set(), KOL_MAX = 24; let MERCAN3 = [], KOLONI3 = [], ekoSon = '';
   const dunya = (x, y) => new THREE.Vector3((x - M.W / 2) * M.k, M.Hc + (M.H / 2 - y) * M.k, 0);
 
@@ -395,7 +396,12 @@ export async function kur3D({ tuval, kalite }) {
       const g = gecePay, isik = d.isik == null ? 1 : d.isik;
       gunes.intensity = 3.3 * (1 - 0.85 * g) * Math.min(1.35, isik); ay.intensity = 0.9 * g; hemi.intensity = 1.15 * (1 - 0.6 * g) * (0.75 + 0.25 * Math.min(1.2, isik));
       U.kostikGuc.value = KAL[kalite].kostik * (1 - 0.85 * g) * Math.min(1.35, isik);
-      SIS.copy(SIS_G).lerp(SIS_N, g * 0.85); sahne.fog.color.copy(SIS);
+      SIS.copy(SIS_G).lerp(SIS_N, g * 0.85);
+      /* su berraklığı: yaz berrak (sis seyrek), plankton yeşili ya da fırtına kumu bulanıklaştırır */
+      { const br = d.eko && d.eko.berrak != null ? d.eko.berrak : 0.8; berrakP += (br - berrakP) * Math.min(1, dt * 0.6);
+        sahne.fog.density = 0.04 * (0.62 + (1 - berrakP) * 1.7);
+        SIS.lerp(tmp.set(d.eko && d.eko.bulanNeden === 'kum' ? '#8c8a6c' : '#4f8a66'), Math.max(0, 0.75 - berrakP) * 0.9); }
+      sahne.fog.color.copy(SIS);
       kubbeMat.uniforms.uUst.value.copy(RENK.ust).lerp(tmp.set('#24486e'), g * 0.85); kubbeMat.uniforms.uOrta.value.copy(SIS); kubbeMat.uniforms.uAlt.value.copy(RENK.alt).lerp(SIS_N, g);
       R.toneMappingExposure = 1.12 * (1 - 0.25 * g);
       for (const h of HUZME) { h.material.uniforms.uGuc.value = 0.11 * (1 - g) * Math.min(1.3, isik); h.scale.x = 0.75 + 0.35 * Math.sin(t * h.userData.v + h.userData.f); h.lookAt(kam.position.x, h.position.y, kam.position.z); h.rotateZ(h.userData.a + Math.sin(t * 0.07 + h.userData.f) * 0.04); }
