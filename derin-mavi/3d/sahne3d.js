@@ -462,6 +462,8 @@ export async function kur3D({ tuval, kalite }) {
       if (KAL[kalite].post) { gunesUzak.set(kam.position.x + 18, 60, kam.position.z - 30).project(kam); huzmePass.uniforms.uGunes.value.set(gunesUzak.x * 0.5 + 0.5, Math.min(1.6, gunesUzak.y * 0.5 + 0.5)); huzmePass.uniforms.uGuc.value = 0.55 * (1 - g); komp.render(); }
       else R.render(sahne, kam);
     },
+    /* fotoğraf için: hemen yeniden çiz ve tuvali döndür (çizim tamponu aynı görevde okunabilir) */
+    anlik() { if (KAL[kalite].post) komp.render(); else R.render(sahne, kam); return R.domElement; },
     kapat() { R.dispose(); }
   };
   kaliteUygula();
