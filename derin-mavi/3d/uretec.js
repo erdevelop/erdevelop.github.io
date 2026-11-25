@@ -597,15 +597,15 @@ export function yuzenUret(tur, malz, balik, o = {}) {
       const kuy = finEx(sekil(s => { s.moveTo(0.03, 0.012); s.bezierCurveTo(-0.05, 0.08, -0.13, 0.2, -0.2, 0.28); s.bezierCurveTo(-0.17, 0.17, -0.15, 0.08, -0.1, 0.0); s.bezierCurveTo(-0.13, -0.05, -0.15, -0.1, -0.16, -0.13); s.bezierCurveTo(-0.08, -0.08, -0.03, -0.04, 0.03, -0.012); s.closePath(); }), 0.006, finR); kuy.translate(-0.48, 0, 0);
       const gs = finEx(sekil(s => { s.moveTo(0.06, 0.01); s.bezierCurveTo(0.02, -0.06, -0.06, -0.15, -0.13, -0.2); s.bezierCurveTo(-0.08, -0.11, -0.07, -0.05, -0.06, 0); s.closePath(); }), 0.006, finR);
       /* çekiç: yukarıdan bakınca T biçimli yassı kanat, iki ucunda göz */
-      const cek = finEx(sekil(s => { s.moveTo(0.04, 0); s.bezierCurveTo(0.05, 0.08, 0.035, 0.15, 0.01, 0.19); s.lineTo(-0.035, 0.18); s.bezierCurveTo(-0.02, 0.1, -0.035, 0.05, -0.06, 0); s.bezierCurveTo(-0.035, -0.05, -0.02, -0.1, -0.035, -0.18); s.lineTo(0.01, -0.19); s.bezierCurveTo(0.035, -0.15, 0.05, -0.08, 0.04, 0); }), 0.012, (v, bb, c) => c.set('#757E80')); cek.rotateX(Math.PI / 2); cek.translate(0.44, 0.0, 0);
+      const cek = finEx(sekil(s => { s.moveTo(0.045, 0); s.bezierCurveTo(0.055, 0.09, 0.04, 0.17, 0.015, 0.22); s.lineTo(-0.04, 0.21); s.bezierCurveTo(-0.025, 0.11, -0.04, 0.05, -0.07, 0); s.bezierCurveTo(-0.04, -0.05, -0.025, -0.11, -0.04, -0.21); s.lineTo(0.015, -0.22); s.bezierCurveTo(0.04, -0.17, 0.055, -0.09, 0.045, 0); }), 0.022, (v, bb, c) => c.set('#6A7376').lerp(c2.set('#4C5457'), yumusak(Math.abs(v.y) / 0.22, 0.6, 1))); cek.rotateX(Math.PI / 2); cek.translate(0.44, 0.0, 0);
       A.b = [];
       for (const [x, y, z, k, fz] of [[0.12, -0.04, 0, 1, 0], [-0.32, 0.16, -0.18, 0.86, 1.7], [-0.2, -0.22, 0.2, 0.8, 3.1], [-0.62, 0.02, 0.05, 0.74, 4.4]]) {
         const yuz = { faz: { value: 0 }, genlik: { value: 1 } }, SM = ek => malz(new THREE.MeshPhysicalMaterial(Object.assign({ color: '#ffffff', vertexColors: true, roughness: 0.4, clearcoat: 0.3 }, ek)), { yuz });
         const t = new THREE.Group(); t.position.set(x, -y, z); t.scale.setScalar(0.5 * k); G.add(t);
         for (const g of [gg, sirt, kuy, cek]) ekle(g, SM(), t);
         for (const zz of [-1, 1]) { const m = ekle(gs, SM(), t); m.position.set(0.18, -0.055, zz * 0.06); m.rotation.x = zz * -1.1; m.rotation.y = zz * 0.25; }
-        for (const zz of [-1, 1]) { const g = ekle(new THREE.SphereGeometry(0.011, 8, 6), M('#050505', { roughness: 0.05 }), t); g.position.set(0.455, 0.004, zz * 0.185); }
-        A.b.push({ yuz, fz }); }
+        for (const zz of [-1, 1]) { const g = ekle(new THREE.SphereGeometry(0.017, 10, 8), M('#050505', { roughness: 0.05 }), t); g.position.set(0.455, 0.006, zz * 0.215); }
+        A.b.push({ yuz, fz, t }); }
       break;
     }
     case 'orka': case 'ispermecet': { /* balinalar: kuyruk yukarı-aşağı çırpar; gövde ve yüzgeçler aynı dikey bükülmeyi paylaşır */
@@ -698,7 +698,7 @@ export function yuzenOyna(G, tur, o, t) {
       for (const [g, z] of A.kanat) g.rotation.x = z * (0.12 + (o.durum === 'cik' ? Math.sin(f * 6) * 0.08 : 0)); /* su altında kanat katlı; çıkarken hafif kımıldar */
       A.balik.visible = !!o.aldi; break; }
     case 'ks': A.b[0].yuz.faz.value = f * 9; if (A.b[0].yuz.genlik) A.b[0].yuz.genlik.value = o.hamle ? 1.8 : 1; break;
-    case 'cekic': for (const b of A.b) b.yuz.faz.value = f * 5 + b.fz; break;
+    case 'cekic': { const d = (o.d || 1) > 0 ? 1 : -1; for (const b of A.b) { b.yuz.faz.value = f * 5 + b.fz; b.t.rotation.x = d * (0.55 + Math.sin(f * 0.7 + b.fz) * 0.12); b.t.rotation.z = Math.sin(f * 0.5 + b.fz) * 0.06; } break; } /* yana yatık yüzer: çekiç başın T biçimi yandan da seçilsin */
     case 'orka': case 'ispermecet': for (const b of A.b) { b.yuz.faz.value = f * (tur === 'orka' ? 1.7 : 0.9) + b.fz; b.t.position.y += 0; } if (A.kal) { A.kal.rotation.z = Math.sin(f * 1.3) * 0.12; A.kal.rotation.x = Math.sin(f * 0.9) * 0.08; } break;
     case 'kilic': A.b[0].yuz.faz.value = f * 9; if (A.b[0].yuz.genlik) A.b[0].yuz.genlik.value = o.savur ? 2.2 : 1; G.rotation.z += o.savur ? Math.sin(f * 30) * 0.1 : 0; break;
     case 'palyacocift': case 'papagan': case 'kelebek': case 'barakuda': for (const b of A.b) { b.yuz.faz.value = f * 9 + b.i; b.o.position.y += Math.sin(f * 1.3 + b.i * 2) * 0.0015; } break;
