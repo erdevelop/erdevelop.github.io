@@ -963,7 +963,7 @@ const cv = $('c'), cx = cv.getContext('2d');
 /* ---------- 3D görünüm: ortam ve balıklar WebGL'de, oyun aynı ---------- */
 let G3 = null;
 /* 3D'de model olarak çizilen kum canlıları: 2D boyut birimi (s) ve zemine oturup oturmadığı */
-const G3_CANLI = { yildiz: [11, 1], salyangoz: [8, 1], ermit: [9, 1], ahtapot: [14, 1], karides: [7, 0], dvatoz: [26, 1] };
+const G3_CANLI = { yildiz: [11, 1], salyangoz: [8, 1], ermit: [9, 1], ahtapot: [14, 1], karides: [7, 0], dvatoz: [26, 1], kumyilan: [14, 1], nudibrans: [8, 1], kestane: [6, 1], hiyar: [12, 1], mantis: [12, 1], murekkep: [34, 0], baca: [84, 1] };
 const G3_YUZEN = { balon: 2, kalamar: 1.8 }; /* 2D boyutu (s) → 3D model ölçeği */
 let g3Sira = 0;
 /* 3D parçacıklar: kabarcık, yem ve plankton (ekrandaki yerleri, piksel boyları ve türleri) */
@@ -985,20 +985,20 @@ function g3Yuzenler() {
   for (const o of CNL.L) { const k = G3_YUZEN[o.tur]; if (!k) continue; o._g3 = o._g3 || ++g3Sira;
     const sis = o.tur === 'balon' && o.sis > 0 ? Math.min(1, (3.2 - o.sis) * 4, o.sis * 2) : 0;
     L.push({ id: 'y' + o._g3, tur: o.tur, x: o.x, y: o.y, s: (o.tur === 'balon' ? 12 : 16) * OL * k, d: o.d || 1, f: o.f, sis, tepki: o.tepki }); }
-  const g = GZ.o; if (g) L.push({ id: 'gz' + g.tur + Math.round(g.yb), tur: g.tur, x: g.x, y: g.y, s: g.s, d: g.tur === 'dumbo' ? 1 : g.d, f: g.f, tepki: g.tepki, arka: !!GZ_TUR[g.tur].arka });
+  const g = GZ.o; if (g) L.push({ id: 'gz' + g.tur + Math.round(g.yb), tur: g.tur, x: g.x, y: g.y, s: g.s, d: g.tur === 'dumbo' ? 1 : g.d, f: g.f, tepki: g.tepki, arka: !!GZ_TUR[g.tur].arka, savas: g.savas, savur: g.savur > 0 ? 1 : 0 });
   YERLI.meduz.forEach((m, i) => L.push({ id: 'meduz' + i + m.c, tur: 'meduz', x: m.x, y: m.y, s: 32 * OL, d: 1, f: m.f, renk: m.c, derin: SAHNE.tm === 'derin' }));
   YERLI.suru.forEach((f, i) => L.push({ id: 'suru' + i, tur: 'sardalya1', x: f.x, y: f.y, s: 13 * OL, d: YERLI.lider.yon || 1, f: zaman + i }));
   if (GOC.o) GOC.o.b.forEach((f, i) => L.push({ id: 'goc' + i, tur: 'sardalya1', x: f.x, y: f.y, s: 13 * OL, d: GOC.o.d, f: zaman + i }));
   if (UZAK.o) L.push({ id: 'uzak' + UZAK.o.tur + Math.round(UZAK.o.yb), tur: UZAK.o.tur, x: UZAK.o.x, y: UZAK.o.y, s: UZAK.o.s, d: UZAK.o.d, f: UZAK.o.f, uzak: true });
   if (YIR.durum === 'gec') L.push({ id: 'yirtici', tur: 'kopekbaligi', x: YIR.x, y: YIR.y, s: 170 * OL, d: YIR.d, f: zaman });
-  g3Kucuk(L); g3Avci(L);
+  g3Kucuk(L); g3Avci(L); g3Yeni(L);
   if (TOP.kur) L.push({ id: 'top', tur: 'top', x: TOP.x, y: TOP.y, s: TOP.r, d: 1, f: zaman, don: TOP.x / TOP.r * 0.5 });
   return L;
 }
 function g3Canlilar() {
   const L = [];
   for (const o of CNL.L) { const k = G3_CANLI[o.tur]; if (!k) continue; o._g3 = o._g3 || ++g3Sira;
-    L.push({ id: 'c' + o._g3, tur: o.tur, x: o.x, y: o.y, s: k[0] * OL, zemin: k[1], d: o.tur === 'karides' && o.zipla > 0 ? -o.zd : o.d, aci: o.aci, renk: o.renk, hue: o.hue, sakli: o.sakli, tepki: o.tepki, gomulu: o.gomulu, kalk: o.kalk, zipla: o.zipla }); }
+    L.push({ id: 'c' + o._g3, tur: o.tur, x: o.x, y: o.y, s: k[0] * OL, zemin: k[1], d: o.tur === 'karides' && o.zipla > 0 ? -o.zd : o.d, aci: o.aci, renk: o.renk, hue: o.hue, sakli: o.sakli, tepki: o.tepki, gomulu: o.gomulu, kalk: o.kalk, zipla: o.zipla, gizli: o.yok > 0, ...(YENI_G3[o.tur] ? YENI_G3[o.tur](o) : {}) }); }
   const y = YERLI.yengec; if (SAHNE && !(y.yok > 0)) L.push({ id: 'yengec', tur: 'yengec', x: y.x, y: SAHNE.kumY, s: 9 * OL, zemin: 1, d: y.d, dur: y.dur, gizli: y.sakli > 0 });
   if (surprizVar()) { const p = surprizYeri(); L.push({ id: 'surpriz', tur: 'istiridye', x: p.x, y: p.y, s: 16 * OL, zemin: 1, nab: 1 + Math.sin(zaman * 3) * 0.05 }); }
   return L;
@@ -1487,7 +1487,7 @@ const AVCI_TUR = new Set(['orkinos', 'yelken', 'lambuka', 'engerek', 'fener', 'u
 const ksIyi = e => !e ? 0.6 : Math.min(e.plk ?? 1, 1.4) / 1.4 * (0.35 + 0.65 * (e.saglik ?? 0.8)) * ({ kis: 0.6, ilkbahar: 1.25 }[HV.m] || 1);
 /* yeni balık katılma aralığı (gerçek saniye): iyi koşulda 4-6 dk; koşul kötüleştikçe uzar, çok kötüyse neredeyse durur */
 const ksKatilim = e => rnd(240, 360) / kis(ksIyi(e) / 0.6, 0.12, 1.3);
-const ksTurler = tm => Object.keys(KS_TUR).filter(k => !KS_TUR[k].avci && KS_TUR[k].alan.includes(tm)).slice(0, 3);
+const ksTurler = tm => Object.keys(KS_TUR).filter(k => !KS_TUR[k].avci && !KS_TUR[k].ozel && KS_TUR[k].alan.includes(tm)).slice(0, 3);
 const KS = { g: [], z: 0, duyuruT: -999, ahtT: 0, yirGecis: 0 };
 const ORF = { o: null };
 function ksUye(g, x, y, yeni) { const t = KS_TUR[g.tur]; return { ox: rnd(-1, 1) * t.L * 2.4, oy: rnd(-1, 1) * t.L * 0.9, x, y, vx: 0, vy: 0, f: rnd(0, TAU), dz: rnd(-0.45, 0.45), L: t.L * rnd(0.88, 1.08), a: yeni ? 0 : 1 }; }
@@ -1509,6 +1509,7 @@ function ksTehdit() {
   const o = ORF.o; if (o) T_.push([o.x, o.y, (o.tok <= 0 ? 170 : 80) * OL, 'orfoz']);
   const gz = GZ.o; if (gz && !GZ_TUR[gz.tur].arka && (gz.tur === 'barakuda' || gz.s > 120 * OL)) T_.push([gz.x, gz.y, 170 * OL, gz.tur]);
   if (YIR.durum === 'gec') T_.push([YIR.x, YIR.y, 230 * OL, 'kopek']);
+  if (TET.o && TET.o.mod === 'kovala') T_.push([TET.o.x, TET.o.y, 70 * OL, 'tetik']);
   for (const b of BAL.values()) { if (!b.d || !b.L) continue; const tr = b.d.a >= 2 && b.d.tr; if ((tr && AVCI_TUR.has(tr)) || b.L > 60 * OL) T_.push([b.x, b.y, (tr && AVCI_TUR.has(tr) ? 120 : 60) * OL + b.L * 0.4, 'balik']); }
   return T_;
 }
@@ -1589,7 +1590,13 @@ function orfozGuncelle(dt) {
     let hedef = null;
     if (o.tok <= 0) { const menzil = (o.mod === 'alaca' ? 300 : 230) * OL; let en = menzil; for (const gr of KS.g) for (const u of gr.uy) { if (u.a < 1) continue; const d = Math.hypot(u.x - o.x, u.y - o.y); if (d < en && u.y > A.y1 + (A.y2 - A.y1) * 0.35) { en = d; hedef = { g: gr, u }; } }
       if (hedef) { const d = Math.hypot(hedef.u.x - o.x, hedef.u.y - o.y); if (d < 95 * OL) { o.hamle = 0.55; o.av = hedef; } else { o.tx = hedef.u.x; o.ty = hedef.u.y; } } }
-    if (!hedef) {
+    const I = TMZ.ist, tmz = !hedef && !saklan && I && TMZ.orfT <= 0 && o.mod !== 'gece';
+    if (tmz) { /* temizlik istasyonuna uğrar, ağzını açıp bekler */
+      o.tx = I.x - o.yon * o.L * 0.15; o.ty = I.y + 4 * OL;
+      if (Math.hypot(I.x - o.x, I.y - o.y) < 46 * OL) { if (!(o.temizlen > 0)) o.temizlen = rnd(6, 9); o.temizlen -= dt; if (o.temizlen <= 0) { o.temizlen = 0; TMZ.orfT = rnd(160, 340); temizlikBitti('orfoz'); } }
+      else if (Math.hypot(I.x - o.x, I.y - o.y) > 600 * OL) TMZ.orfT = rnd(60, 120); }
+    else if (o.temizlen > 0) o.temizlen = 0;
+    if (!hedef && !tmz) {
       if (saklan) { o.tx = o.ev.x; o.ty = o.ev.y; } /* oyuğa gir */
       else { o.t -= dt; if (o.t <= 0) { const R = o.mod === 'alaca' ? 280 : 90, Y = o.mod === 'alaca' ? 90 : 28; o.tx = kis(o.ev.x + rnd(-R, R) * OL, A.x1, A.x2); o.ty = o.ev.y - rnd(0, Y) * OL; o.t = rnd(o.mod === 'alaca' ? 4 : 5, o.mod === 'alaca' ? 8 : 11); } }
     }
@@ -1737,6 +1744,226 @@ function avciDokun(x, y) {
   const o = MUR.o; if (o && o.iz.some(p => Math.hypot(p[0] - x, p[1] - y) < 18 * OL)) { albumEkle('canli:muren'); o.tok = Math.max(o.tok, 20); o.tx = o.ev.x; o.ty = o.ev.y; o.t = 4; return true; }
   return false;
 }
+/* =====================================================================
+   YENİ CANLILAR: kum yılan balıkları, nudibranş, deniz kestanesi ve hıyarı, mantis karidesi, mürekkep balığı,
+   temizlik istasyonu (temizlikçi balıklar), bölgesini koruyan tetik balığı; derin sahnede hidrotermal baca.
+   Ziyaretçiler (çekiç başlı köpekbalığı, orka, ispermeçet, kılıç balığı) GZ_TUR'da.
+   ===================================================================== */
+Object.assign(KS_TUR, {
+  tetik: { L: 62, ozel: 1, alan: ['resif'], e: '🐟', ad: ['Tetik balığı', 'Titan triggerfish'], g: { H: 0.78, L: 0.9, kuyruk: 'catal', sirt: 'yelken', desen: 'nokta', r: ['#8C8A44', '#E6C25A', '#3E4A2A'] } },
+  temizlikci: { L: 20, ozel: 1, alan: ['resif', 'acik'], e: '🐟', ad: ['Temizlikçi balık', 'Cleaner wrasse'], g: { H: 0.3, kuyruk: 'yuvarlak', sirt: 'uzun', desen: 'cizgiY', r: ['#4A8FE6', '#101018', '#F2EEDD'] } },
+  kilic: { L: 150, ozel: 1, alan: [], e: '🗡️', ad: ['Kılıç balığı', 'Swordfish'], g: { H: 0.24, L: 1, kuyruk: 'hilal', sirt: 'yelken', desen: 'golge', r: ['#4A3E52', '#D8D2C8', '#2E2632'] } }
+});
+const hkat = () => Math.min(6, Math.sqrt(EKO_HIZ || 1));
+/* ---------- tetik balığı: kumdaki yuvasını korur, kestane avlar, kumu üfleyip yuva kazar ---------- */
+const TET = { o: null, uyar: -999 };
+function tetikKur() {
+  TET.o = null; if (!SAHNE || SAHNE.tm !== 'resif') return;
+  const x = W * 0.84, k = SAHNE.kumY;
+  TET.o = { x, y: k - 60 * OL, yuva: { x, y: k - 6 * OL }, L: KS_TUR.tetik.L * OL, f: 0, yon: -1, vx: 0, vy: 0, tx: x, ty: k - 60 * OL, t: 0, mod: 'devriye', mt: 0, kestT: rnd(60, 150), icT: 0, esele: 0, isir: 0 };
+}
+function tetikGuncelle(dt) {
+  const o = TET.o; if (!o) return; const b = BAL.get('ben'), A = ALAN, k = SAHNE.kumY, R = 130 * OL;
+  o.f += dt * (o.mod === 'kovala' ? 10 : 4); o.mt -= dt; o.kestT -= dt * hkat(); if (o.isir > 0) o.isir -= dt;
+  const bolgede = b && b.L && Math.abs(b.x - o.yuva.x) < R && b.y > k - 190 * OL;
+  if (o.mod === 'devriye') {
+    o.icT = bolgede ? o.icT + dt : Math.min(0, o.icT + dt);
+    if (o.icT > 0.7) { o.mod = 'kovala'; o.mt = 3.2; if (zaman - TET.uyar > 120) { TET.uyar = zaman; duyur(T('🐟 Tetik balığı yuvasını koruyor! Yuvasının üstünde fazla oyalanma.', '🐟 The triggerfish is guarding its nest! Don’t linger above it.')); } }
+    else if (o.kestT <= 0) { const kes = CNL.L.filter(q => q.tur === 'kestane' && !(q.yenik > 0)); if (kes.length) { o.hedef = kes.reduce((a, q) => Math.abs(q.x - o.x) < Math.abs(a.x - o.x) ? q : a); o.mod = 'kestane'; o.mt = 14; } else o.kestT = rnd(60, 120); }
+    else { o.t -= dt; if (o.t <= 0) { o.tx = o.yuva.x + rnd(-R, R) * 0.8; o.ty = k - rnd(25, 110) * OL; o.t = rnd(3, 7); if (Math.random() < 0.25) { o.tx = o.yuva.x; o.ty = o.yuva.y - 14 * OL; o.esele = 2.5; } } }
+  }
+  if (o.mod === 'kovala') {
+    if (!b || (!bolgede && o.mt < 2.4) || o.mt <= 0) { o.mod = 'devriye'; o.icT = 0; o.t = 0; }
+    else { o.tx = b.x; o.ty = b.y;
+      if (Math.hypot(b.x - o.x, b.y - o.y) < o.L * 0.45 + b.L * 0.3 && o.isir <= 0) { /* ısırık: balığı bölgesinden dışarı iter */
+        o.isir = 1.2; b.sersem = 0.8; b.vx = (b.vx || 0) + Math.sign(b.x - o.yuva.x || 1) * 220; b.vy = (b.vy || 0) - 120; mutluEkle(-1); SES.carp(); yaziUcur(b.x, b.y - 24, '💢'); o.mod = 'devriye'; o.icT = -2.5; } }
+  }
+  if (o.mod === 'kestane') { const q = o.hedef;
+    if (!q || q.yenik > 0 || o.mt <= 0) { o.mod = 'devriye'; o.kestT = rnd(90, 200); }
+    else { o.tx = q.x; o.ty = q.y - 12 * OL;
+      if (Math.hypot(q.x - o.x, q.y - 12 * OL - o.y) < 16 * OL) { q.ters = 1.4; q.yenik = rnd(300, 600); o.mod = 'devriye'; o.kestT = rnd(120, 240);
+        for (let i = 0; i < 8; i++) PARC.push({ x: q.x, y: q.y - 4, vx: rnd(-40, 40), vy: rnd(-50, -10), t: 0.8, c: '#5B2C6F', r: rnd(1, 2) });
+        avciDuyur('🐟 Tetik balığı bir deniz kestanesini ters çevirip yedi: dikensiz alt yüzü savunmasızdır.', '🐟 The triggerfish flipped a sea urchin and ate it: its spineless underside is defenceless.'); } } }
+  if (o.esele > 0) { o.esele -= dt; if (Math.random() < dt * 14) PARC.push({ x: o.yuva.x + rnd(-8, 8), y: o.yuva.y, vx: rnd(-35, 35), vy: rnd(-60, -20), t: 0.9, c: '#D8C79A', r: rnd(1, 2.4) }); }
+  const sp = (o.mod === 'kovala' ? 150 : o.mod === 'kestane' ? 45 : 22) * OL, dx = o.tx - o.x, dy = o.ty - o.y, d = Math.hypot(dx, dy) || 1;
+  if (d > 4) { o.vx += (dx / d * sp - o.vx) * Math.min(1, dt * 3); o.vy += (dy / d * sp * 0.8 - o.vy) * Math.min(1, dt * 3); if (Math.abs(dx) > 6) o.yon = dx > 0 ? 1 : -1; } else { o.vx *= 0.9; o.vy *= 0.9; }
+  o.x = kis(o.x + o.vx * dt, A.x1, A.x2); o.y = kis(o.y + o.vy * dt, A.y1 + (A.y2 - A.y1) * 0.35, k - 14 * OL);
+}
+/* ---------- temizlik istasyonu: iki temizlikçi balık; orfoz ve oyuncunun balığı gelip temizlenir ---------- */
+const TMZ = { ist: null, b: [], orfT: rnd(40, 90), benT: 0, mus: null, duy: -999 };
+function temizlikKur() {
+  TMZ.b = []; TMZ.ist = null; TMZ.mus = null; if (!SAHNE || !KS_TUR.temizlikci.alan.includes(SAHNE.tm)) return;
+  TMZ.ist = { x: W * 0.67, y: SAHNE.kumY - 64 * OL };
+  for (let i = 0; i < 2; i++) TMZ.b.push({ x: TMZ.ist.x + i * 14, y: TMZ.ist.y, f: Math.random() * 9, yon: 1, a: rnd(0, TAU) });
+}
+function temizlikGuncelle(dt) {
+  const I = TMZ.ist; if (!I) return; const b = BAL.get('ben'), o = ORF.o;
+  TMZ.orfT -= dt * hkat();
+  if (!TMZ.mus && b && b.L && Math.hypot(b.x - I.x, b.y - I.y) < 50 * OL + b.L * 0.3 && Math.hypot(b.vx || 0, b.vy || 0) < 45) { TMZ.benT += dt; if (TMZ.benT > 1.2) TMZ.mus = { tip: 'ben', t: 4 }; } else if (!TMZ.mus) TMZ.benT = Math.min(0, TMZ.benT + dt);
+  if (!TMZ.mus && o && o.temizlen > 0) TMZ.mus = { tip: 'orfoz', t: 99 };
+  const m = TMZ.mus;
+  if (m) { m.t -= dt; const h = m.tip === 'ben' ? b : o;
+    if (!h || (m.tip === 'ben' && Math.hypot(b.x - I.x, b.y - I.y) > 90 * OL + b.L * 0.4) || (m.tip === 'orfoz' && !(o.temizlen > 0))) { TMZ.mus = null; TMZ.benT = 0; }
+    else if (m.tip === 'ben' && m.t <= 0) { temizlikBitti('ben'); TMZ.mus = null; TMZ.benT = -6; } }
+  const hd = TMZ.mus ? (TMZ.mus.tip === 'ben' ? b : o) : null;
+  TMZ.b.forEach((f, i) => { f.f += dt * 9; f.a += dt * (hd ? 2.4 : 0.8) * (i ? -1 : 1);
+    const L = hd ? hd.L : 30 * OL, cx = hd ? hd.x + (hd.yon || 1) * L * 0.25 : I.x, cy = hd ? hd.y : I.y;
+    const tx = cx + Math.cos(f.a) * L * (hd ? 0.35 : 0.5), ty = cy + Math.sin(f.a * 1.3) * L * (hd ? 0.2 : 0.25) - (hd ? 0 : Math.abs(Math.sin(f.f * 0.3)) * 10 * OL);
+    const ox = f.x; f.x += (tx - f.x) * Math.min(1, dt * 3); f.y += (ty - f.y) * Math.min(1, dt * 3); if (Math.abs(f.x - ox) > 0.05) f.yon = f.x > ox ? 1 : -1; });
+}
+function temizlikBitti(tip) {
+  albumEkle('canli:temizlikci');
+  if (tip === 'ben') {
+    if (S.hasta) { S.hasta = false; SES.kutla(); duyur(T(`🧽 Temizlikçi balıklar ${S.ad} adlı balığının derisindeki asalakları ayıkladı; ${S.ad} iyileşti!`, `🧽 The cleaner wrasses picked the parasites off ${S.ad} — ${S.ad} is healthy again!`), 1); kaydet(); uyeYaz(true); uiGuncelle(); return; }
+    const b = BAL.get('ben'); mutluEkle(2, 'temiz', 4); if (b) yaziUcur(b.x, b.y - 28, '🧽 ✨');
+    if (zaman - TMZ.duy > 60) { TMZ.duy = zaman; duyur(T('🧽 Temizlikçi balıklar yüzgeçlerini ve solungaçlarını temizledi. Gerçekte balıklar bu istasyonlarda sıraya girer!', '🧽 The cleaner wrasses tidied its fins and gills. Real fish queue up at stations like this!')); }
+  } else if (zaman - TMZ.duy > 90) { TMZ.duy = zaman; duyur(T('🧽 Orfoz temizlik istasyonuna uğradı: temizlikçi balıklar ağzına girip asalakları ayıkladı, orfoz onları yemedi.', '🧽 The grouper visited the cleaning station: the wrasses swam into its mouth to pick parasites, and it didn’t eat them.')); }
+}
+/* ---------- kum canlıları ve mürekkep balığı: CNL listesinde, davranış (g), 2D çizim (c), dokunma (t) ---------- */
+function canliYeniKur(ekle, tm, kx, r) {
+  const kumY = SAHNE.kumY, A = ALAN, x0 = typeof kumSol === 'function' ? kumSol() : 30;
+  if (tm === 'derin') { ekle({ tur: 'baca', x: W * 0.7, y: kumY, duman: [], dz: 0, sol: Array.from({ length: 9 }, (_, i) => ({ ox: (i - 4) * 10 + rnd(-3, 3), h: 1, hed: 1, bek: 0, f: r() * 9, boy: rnd(0.7, 1.2) })), yen: [{ ox: -44, d: 1, f: 0 }, { ox: 50, d: -1, f: 2 }] }); return; }
+  ekle({ tur: 'kumyilan', x: W * 0.4, y: kumY, uy: Array.from({ length: 11 }, (_, i) => ({ ox: (i - 5) * 11 + rnd(-4, 4), h: 1, hed: 1, bek: 0, f: r() * TAU, boy: rnd(0.8, 1.15) })) });
+  for (let i = 0; i < 2; i++) ekle({ tur: 'nudibrans', x: kx(), y: kumY - 2, renk: Math.floor(r() * 3) });
+  for (let i = 0; i < 3; i++) ekle({ tur: 'kestane', x: W * 0.66 + (i - 1) * 26 * OL + rnd(-6, 6), y: kumY - 3, yenik: 0, ters: 0 });
+  ekle({ tur: 'hiyar', x: kx(), y: kumY - 2 });
+  if (tm === 'resif') ekle({ tur: 'mantis', x: x0 + 70 * OL, y: kumY, ev: x0 + 70 * OL, cik: 0.5, yum: 0, yumT: rnd(10, 30), d: 1 });
+  ekle({ tur: 'murekkep', x: rnd(A.x1 + 80, A.x2 - 80), y: kumY - 70 * OL, mod: 'normal', mt: 0, renkF: 0, tx: W * 0.5, ty: kumY - 70 * OL, t: 0, ac: rnd(10, 30), vur: 0 });
+}
+const NUDI = [{ g: '#2D5BD8', k: '#F7E27A', s: '#F28C28' }, { g: '#9B59D0', k: '#FFFFFF', s: '#FF8C2E' }, { g: '#F08BC0', k: '#FFE24A', s: '#B0287A' }];
+const YENI_CNL = {
+  kumyilan: {
+    g(o, dt) { const b = BAL.get('ben'), T_ = [];
+      if (b && b.L) T_.push([b.x, b.y, 60 * OL + b.L * 0.3]); if (ORF.o) T_.push([ORF.o.x, ORF.o.y, 70 * OL]); if (TET.o) T_.push([TET.o.x, TET.o.y, 60 * OL]); if (MUR.o) T_.push([MUR.o.x, MUR.o.y, 70 * OL]);
+      for (const g of KS.g) for (const u of g.uy) if (Math.abs(u.x - o.x) < 120 * OL) T_.push([u.x, u.y, 16 * OL]);
+      for (const u of o.uy) { const x = o.x + u.ox * OL, top = o.y - 40 * OL * u.boy;
+        if (T_.some(([tx, ty, R]) => Math.abs(tx - x) < R && ty > top - R * 0.6)) { u.hed = 0; u.bek = rnd(2.5, 5); } else if (u.bek > 0) u.bek -= dt; else u.hed = 1;
+        u.h += (u.hed - u.h) * Math.min(1, dt * (u.hed < u.h ? 7 : 0.7)); u.f += dt; } },
+    t(o) { for (const u of o.uy) { u.hed = 0; u.bek = rnd(3, 6); } },
+    c(c, o) { for (const u of o.uy) { const x = u.ox * OL; c.fillStyle = 'rgba(40,30,20,.45)'; c.beginPath(); c.ellipse(x, 0, 3.2 * OL, 1.3 * OL, 0, 0, TAU); c.fill(); if (u.h < 0.03) continue;
+        const H = 42 * OL * u.boy * u.h, a = Math.sin(u.f * 0.9 + u.ox * 0.07) * 0.22 + 0.12, ex = x + Math.sin(a) * H * 0.6, ey = -H;
+        c.strokeStyle = '#EDE6D3'; c.lineWidth = 2.8 * OL; c.lineCap = 'round'; c.beginPath(); c.moveTo(x, 0); c.quadraticCurveTo(x - Math.sin(a) * H * 0.2, -H * 0.55, ex, ey); c.stroke();
+        c.fillStyle = '#2A2A2A'; for (let k = 1; k < 5; k++) { const t = k / 5; c.beginPath(); c.arc(x + (ex - x) * t * t, -H * t, 0.7 * OL, 0, TAU); c.fill(); }
+        c.fillStyle = '#F2ECDC'; c.beginPath(); c.ellipse(ex + 2 * OL, ey + 1 * OL, 3.4 * OL, 2.2 * OL, 0.5, 0, TAU); c.fill(); c.fillStyle = '#111'; c.beginPath(); c.arc(ex + 3 * OL, ey, 0.9 * OL, 0, TAU); c.fill(); } }
+  },
+  nudibrans: {
+    g(o, dt) { o.x += o.d * 3 * OL * dt; if (o.x < 40 || o.x > W - 40 || Math.random() < dt * 0.02) o.d *= -1; },
+    c(c, o) { const s = 8 * OL, p = NUDI[o.renk || 0], k = Math.sin(o.f * 3) * 0.6; c.scale(o.d, 1);
+      c.fillStyle = p.g; c.beginPath(); c.ellipse(0, -s * 0.4, s * 1.1, s * 0.42, 0, 0, TAU); c.fill(); c.strokeStyle = p.k; c.lineWidth = 1.2 * OL; c.stroke();
+      if (o.renk === 1) { c.fillStyle = p.s; for (let i = 0; i < 7; i++) { const x = -s * 0.8 + i * s * 0.26; c.beginPath(); c.moveTo(x - s * 0.08, -s * 0.7); c.lineTo(x + k, -s * 1.25); c.lineTo(x + s * 0.08, -s * 0.7); c.fill(); } }
+      else { c.fillStyle = p.s; c.beginPath(); c.moveTo(-s * 0.75, -s * 0.75); for (let i = 0; i < 5; i++) c.lineTo(-s * 0.95 + i * 0.12 * s + k * 0.3, -s * (1.2 + (i % 2) * 0.15)); c.lineTo(-s * 0.45, -s * 0.75); c.fill(); }
+      c.fillStyle = p.s; for (const dx of [0.65, 0.85]) { c.beginPath(); c.ellipse(s * dx, -s * 0.95, s * 0.07, s * 0.22, 0.2, 0, TAU); c.fill(); } }
+  },
+  kestane: {
+    g(o, dt) { if (o.yenik > 0) { o.yenik -= dt * hkat(); if (o.yenik <= 0) { o.yenik = 0; o.ters = 0; } } if (o.ters > 0) o.ters -= dt; },
+    c(c, o) { if (o.yenik > 0 && !(o.ters > 0)) return; const s = 6 * OL;
+      if (o.ters > 0) { c.globalAlpha = Math.min(1, o.ters); c.fillStyle = '#C9A9C9'; c.beginPath(); c.arc(0, -s * 0.8, s * 0.9, 0, TAU); c.fill(); c.globalAlpha = 1; return; }
+      c.strokeStyle = '#2A1235'; c.lineWidth = 1.1 * OL; for (let i = 0; i < 22; i++) { const a = Math.PI + i / 21 * Math.PI + Math.sin(o.f * 0.7 + i) * 0.06; c.beginPath(); c.moveTo(Math.cos(a) * s * 0.8, -s * 0.8 + Math.sin(a) * s * 0.8); c.lineTo(Math.cos(a) * s * 2, -s * 0.8 + Math.sin(a) * s * 2); c.stroke(); }
+      c.fillStyle = '#3B1F4A'; c.beginPath(); c.arc(0, -s * 0.8, s, 0, TAU); c.fill(); }
+  },
+  hiyar: {
+    g(o, dt) { o.x += o.d * 2.2 * OL * dt; if (o.x < 40 || o.x > W - 40 || Math.random() < dt * 0.01) o.d *= -1; },
+    c(c, o) { const s = 12 * OL, k = Math.sin(o.f * 1.5) * 0.06; c.scale(o.d, 1);
+      c.fillStyle = '#6B4A32'; c.beginPath(); c.ellipse(0, -s * 0.32, s * (1.1 + k), s * 0.32, 0, 0, TAU); c.fill();
+      c.fillStyle = '#A98460'; for (let i = 0; i < 9; i++) { c.beginPath(); c.arc(-s * 0.9 + i * s * 0.22, -s * (0.52 + (i % 2) * 0.06), s * 0.05, 0, TAU); c.fill(); }
+      c.strokeStyle = '#D9C3A4'; c.lineWidth = 1 * OL; for (let i = 0; i < 5; i++) { c.beginPath(); c.moveTo(s * 1.05, -s * 0.32); c.lineTo(s * (1.25 + Math.sin(o.f * 4 + i) * 0.05), -s * (0.15 + i * 0.09)); c.stroke(); } }
+  },
+  mantis: {
+    g(o, dt) { const k = SAHNE.kumY, b = BAL.get('ben'); o.yumT -= dt; if (o.yum > 0) o.yum -= dt;
+      const korku = (b && b.L && Math.hypot(b.x - o.ev, b.y - k) < 50 * OL + b.L * 0.4) || o.sakli > 0;
+      const hc = korku ? 0 : (o.f % 40 < 26 ? 0.55 : 1); o.cik += (hc - o.cik) * Math.min(1, dt * (hc < o.cik ? 6 : 0.8)); o.x = o.ev + o.cik * 16 * OL * o.d;
+      if (o.yumT <= 0 && o.cik > 0.4) { const y = YERLI.yengec, av = CNL.L.find(q => q.tur === 'ermit' && !(q.sakli > 0) && Math.abs(q.x - o.x) < 46 * OL) || (Math.abs(y.x - o.x) < 46 * OL && !(y.sakli > 0) && !(y.yok > 0) ? y : null);
+        if (av) { o.d = av.x > o.x ? 1 : -1; o.yum = 0.3; o.yumT = rnd(25, 50); av.sakli = 5; if (av === y) y.d = o.d;
+          for (let i = 0; i < 6; i++) PARC.push({ x: o.x + o.d * 14 * OL, y: k - 6 * OL, vx: rnd(-20, 20), vy: rnd(-40, -10), t: 0.6, r: rnd(1.2, 2.5), kab: 1 }); PARC.push({ x: o.x + o.d * 16 * OL, y: k - 6 * OL, vx: 0, vy: -5, t: 0.35, c: '#FFFFFF', r: 2.4, yildiz: 1 });
+          avciDuyur('🦐 Mantis karidesi yumruğunu fırlattı! Öyle hızlıdır ki suda minik bir ışık çakmasıyla kabarcık patlar.', '🦐 The mantis shrimp threw a punch! It is so fast that the water flashes and a tiny bubble bursts.'); } } },
+    t(o) { o.sakli = 4; },
+    c(c, o) { const s = 9 * OL, ev = (o.ev - o.x); c.fillStyle = 'rgba(30,22,15,.6)'; c.beginPath(); c.ellipse(ev, 0, s * 0.9, s * 0.3, 0, 0, TAU); c.fill(); if (o.cik < 0.05) return; c.scale(o.d, 1);
+      const n = Math.max(2, Math.round(6 * o.cik)); for (let i = n - 1; i >= 0; i--) { const x = -i * s * 0.32; c.fillStyle = i % 2 ? '#2EA86A' : '#3BC27C'; c.beginPath(); c.ellipse(x, -s * 0.42, s * 0.24, s * 0.34, 0, 0, TAU); c.fill(); c.fillStyle = '#FF7A2E'; c.fillRect(x - s * 0.04, -s * 0.12, s * 0.06, s * 0.14); }
+      const ux = o.yum > 0 ? s * 0.9 : s * 0.35; c.fillStyle = '#E2403A'; c.beginPath(); c.ellipse(s * 0.25 + ux * 0.5, -s * 0.35, ux * 0.5, s * 0.1, 0, 0, TAU); c.fill(); c.fillStyle = '#F25AA0'; c.beginPath(); c.arc(s * 0.25 + ux, -s * 0.35, s * 0.12, 0, TAU); c.fill();
+      for (const z of [-1, 1]) { c.strokeStyle = '#3BC27C'; c.lineWidth = 1.2 * OL; c.beginPath(); c.moveTo(s * 0.2, -s * 0.65); c.lineTo(s * 0.3 + z * s * 0.06, -s * 1.05); c.stroke(); c.fillStyle = '#2C9AD8'; c.beginPath(); c.ellipse(s * 0.3 + z * s * 0.06, -s * 1.1, s * 0.09, s * 0.13, 0, 0, TAU); c.fill(); c.fillStyle = '#111'; c.fillRect(s * 0.28 + z * s * 0.06, -s * 1.12, s * 0.06, s * 0.03); } }
+  },
+  murekkep: {
+    g(o, dt) { const A = ALAN, k = SAHNE.kumY, b = BAL.get('ben'); o.mt -= dt; o.ac -= dt * hkat(); o.renkF += dt; if (o.vur > 0) o.vur -= dt;
+      const tehdit = (b && b.L > 30 * OL && Math.hypot(b.x - o.x, b.y - o.y) < 70 * OL + b.L * 0.3 && Math.hypot(b.vx || 0, b.vy || 0) > 60) || (ORF.o && Math.hypot(ORF.o.x - o.x, ORF.o.y - o.y) < 120 * OL) || (YIR.durum === 'gec' && Math.abs(YIR.x - o.x) < 250);
+      if (o.mod !== 'kac' && o.mod !== 'kamuflaj' && tehdit) { o.mod = 'kamuflaj'; o.mt = rnd(5, 8); o.tx = o.x; o.ty = k - 10 * OL; }
+      if ((o.mod === 'kamuflaj' || o.mod === 'kac') && o.mt <= 0) { o.mod = 'normal'; o.t = 0; }
+      if (o.mod === 'normal' && o.ac <= 0) { const kr = CNL.L.find(q => q.tur === 'karides' && !(q.yok > 0) && Math.hypot(q.x - o.x, q.y - o.y) < 160 * OL); if (kr) { o.mod = 'av'; o.av = kr; o.mt = 12; } else o.ac = rnd(8, 15); }
+      if (o.mod === 'av') { const q = o.av; if (!q || q.yok > 0 || o.mt <= 0) { o.mod = 'normal'; o.ac = rnd(20, 40); }
+        else { o.tx = q.x - o.d * 24 * OL; o.ty = q.y; if (Math.hypot(q.x - o.x, q.y - o.y) < 32 * OL) { o.vur = 0.35; q.yok = rnd(60, 140); for (let i = 0; i < 5; i++) PARC.push({ x: q.x, y: q.y, vx: rnd(-20, 20), vy: rnd(-30, 0), t: 0.6, c: '#F4B6A0', r: 1.5 });
+          o.mod = 'normal'; o.ac = rnd(60, 120); avciDuyur('🦑 Mürekkep balığı renklerini dalga dalga oynatıp avını büyüledi ve iki uzun koluyla karidesi kaptı.', '🦑 The cuttlefish rippled its colours to mesmerise its prey, then shot out two long tentacles and grabbed the shrimp.'); } } }
+      if (o.mod === 'normal') { o.t -= dt; if (o.t <= 0) { o.tx = kis(o.x + rnd(-160, 160) * OL, A.x1 + 40, A.x2 - 40); o.ty = k - rnd(30, 110) * OL; o.t = rnd(4, 9); } }
+      const sp = (o.mod === 'kac' ? 160 : o.mod === 'av' ? 18 : 14) * OL, dx = o.tx - o.x, dy = o.ty - o.y, d = Math.hypot(dx, dy) || 1;
+      if (d > 3) { o.x += dx / d * Math.min(d, sp * dt); o.y += dy / d * Math.min(d, sp * dt * 0.7); if (Math.abs(dx) > 4 && o.mod !== 'kac') o.d = dx > 0 ? 1 : -1; } },
+    t(o) { o.mod = 'kac'; o.mt = 1.6; o.tx = kis(o.x - o.d * 220 * OL, ALAN.x1, ALAN.x2); o.ty = o.y - 20 * OL; for (let i = 0; i < 16; i++) PARC.push({ x: o.x, y: o.y, vx: rnd(-40, 40), vy: rnd(-30, 20), t: rnd(2.2, 3), c: '#2A1E16', r: rnd(4, 9), murekkep: 1 }); SES.carp(); },
+    c(c, o) { const L = 34 * OL, h = 11 * OL, t = o.renkF; c.scale(o.d, 1); if (o.mod === 'kamuflaj') c.globalAlpha = 0.6;
+      const etek = Math.sin(t * 6); c.fillStyle = o.mod === 'kamuflaj' ? '#CDBB94' : '#B89A74'; c.beginPath(); for (let i = 0; i <= 24; i++) { const a = i / 24 * TAU, w = 1 + 0.05 * Math.sin(a * 8 + t * 9); c.lineTo(Math.cos(a) * L * 0.52 * w - L * 0.05, Math.sin(a) * h * 1.25 * w); } c.fill(); /* dalgalanan yüzgeç eteği */
+      c.save(); c.beginPath(); c.ellipse(-L * 0.05, 0, L * 0.46, h, 0, 0, TAU); c.clip();
+      c.fillStyle = o.mod === 'kamuflaj' ? '#D2C29C' : o.mod === 'kac' ? '#E9E1D2' : '#8A6A4E'; c.fillRect(-L, -h * 2, L * 2, h * 4);
+      if (o.mod === 'av') { for (let i = -6; i < 7; i++) { const x = i * L * 0.12 + ((t * 70 * OL) % (L * 0.24)); c.fillStyle = 'rgba(30,18,10,.55)'; c.fillRect(x, -h, L * 0.06, h * 2); } } /* avı büyüleyen geçen bantlar */
+      else if (o.mod !== 'kac') { c.fillStyle = o.mod === 'kamuflaj' ? 'rgba(150,130,95,.5)' : 'rgba(240,225,200,.35)'; for (let i = 0; i < 10; i++) { c.beginPath(); c.arc(-L * 0.4 + (i * 37 % 10) / 10 * L * 0.8, -h * 0.6 + (i * 53 % 10) / 10 * h * 1.2, h * 0.16, 0, TAU); c.fill(); } c.fillStyle = 'rgba(40,25,15,.35)'; for (let i = 0; i < 5; i++) c.fillRect(-L * 0.35 + i * L * 0.15, -h, L * 0.03, h * 0.7); }
+      c.restore();
+      c.fillStyle = o.mod === 'kamuflaj' ? '#C9B791' : '#9A7B5C'; c.beginPath(); c.ellipse(L * 0.44, h * 0.05, L * 0.12, h * 0.62, 0, 0, TAU); c.fill(); /* baş */
+      c.fillStyle = '#E8D38A'; c.beginPath(); c.arc(L * 0.42, -h * 0.25, h * 0.22, 0, TAU); c.fill(); c.strokeStyle = '#111'; c.lineWidth = 1.2 * OL; c.beginPath(); c.moveTo(L * 0.37, -h * 0.3); c.quadraticCurveTo(L * 0.42, -h * 0.1, L * 0.47, -h * 0.3); c.stroke(); /* W göz bebeği */
+      c.strokeStyle = o.mod === 'kamuflaj' ? '#C9B791' : '#A88866'; c.lineWidth = 2 * OL; c.lineCap = 'round'; for (let i = 0; i < 5; i++) { const a = -0.35 + i * 0.17 + Math.sin(t * 2 + i) * 0.05; c.beginPath(); c.moveTo(L * 0.54, h * 0.1); c.lineTo(L * 0.54 + Math.cos(a) * L * 0.18, h * 0.1 + Math.sin(a) * L * 0.18); c.stroke(); }
+      if (o.vur > 0) { c.strokeStyle = '#E8C7B0'; c.lineWidth = 1.6 * OL; c.beginPath(); c.moveTo(L * 0.56, h * 0.1); c.lineTo(L * 1.3, h * 0.2); c.stroke(); } /* av kolları fırlar */
+      c.globalAlpha = 1; }
+  },
+  baca: {
+    g(o, dt) { const b = BAL.get('ben'), top = o.y - 129 * OL; o.dz -= dt;
+      if (o.dz <= 0) { o.dz = 0.06; o.duman.push({ x: o.x + rnd(-3, 3) * OL, y: top, r: 6 * OL, t: 0, vx: rnd(-5, 5), vy: -rnd(34, 50) * OL }); }
+      for (const p of o.duman) { p.t += dt; p.x += (p.vx + (S && S.eko ? 6 : 0)) * dt; p.y += p.vy * dt; p.vy *= Math.pow(0.85, dt); p.r += 12 * OL * dt; }
+      o.duman = o.duman.filter(p => p.t < 6 && p.y > ALAN.y1 - 40);
+      for (const u of o.sol) { const yakin = b && b.L && Math.hypot(b.x - (o.x + u.ox * 1.4 * OL), b.y - o.y) < 50 * OL + b.L * 0.3; if (yakin) { u.hed = 0; u.bek = rnd(2, 4); } else if (u.bek > 0) u.bek -= dt; else u.hed = 1; u.h += (u.hed - u.h) * Math.min(1, dt * (u.hed < u.h ? 8 : 0.8)); u.f += dt; }
+      for (const y of o.yen) { y.f += dt; y.ox += y.d * 6 * dt; if (Math.abs(y.ox) > 70 || Math.random() < dt * 0.05) y.d *= -1; } },
+    t(o) { for (const u of o.sol) { u.hed = 0; u.bek = rnd(3, 5); } },
+    c(c, o) { const s = OL * 1.4;
+      c.fillStyle = '#3B332E'; c.beginPath(); c.moveTo(-60 * s, 0); c.quadraticCurveTo(-40 * s, -26 * s, -16 * s, -34 * s); c.lineTo(-12 * s, -70 * s); c.lineTo(-7 * s, -92 * s); c.lineTo(7 * s, -92 * s); c.lineTo(11 * s, -64 * s); c.lineTo(18 * s, -36 * s); c.quadraticCurveTo(42 * s, -24 * s, 62 * s, 0); c.fill();
+      c.fillStyle = 'rgba(255,255,255,.06)'; c.fillRect(-10 * s, -88 * s, 4 * s, 50 * s);
+      const g = c.createRadialGradient(0, -92 * s, 0, 0, -92 * s, 12 * s); g.addColorStop(0, 'rgba(255,140,60,.85)'); g.addColorStop(1, 'rgba(255,90,30,0)'); c.fillStyle = g; c.beginPath(); c.arc(0, -92 * s, 12 * s, 0, TAU); c.fill(); /* sıcak ağız */
+      for (const u of o.sol) { const x = u.ox * s, H = 30 * s * u.boy; c.fillStyle = '#EDEDE6'; c.fillRect(x - 1.6 * s, -H, 3.2 * s, H); if (u.h > 0.05) { const k = Math.sin(u.f * 1.4 + u.ox) * 0.15; c.fillStyle = '#D0242A'; c.beginPath(); c.ellipse(x + k * 4 * s, -H - 5 * s * u.h, 3.2 * s * u.h, 6 * s * u.h, k, 0, TAU); c.fill(); } }
+      for (const y of o.yen) { const x = y.ox * s, k = Math.sin(y.f * 9) * 1.5 * s; c.fillStyle = '#F2EFE6'; c.beginPath(); c.ellipse(x, -4 * s, 6 * s, 3.6 * s, 0, 0, TAU); c.fill(); c.strokeStyle = '#E6E1D3'; c.lineWidth = 1.2 * s; for (const z of [-1, 1]) for (let i = 0; i < 3; i++) { c.beginPath(); c.moveTo(x + z * 4 * s, -3 * s); c.lineTo(x + z * (8 + i * 2) * s, (1 + (i % 2 ? k : -k) * 0.3) * s); c.stroke(); } } }
+  }
+};
+/* 3D'ye giden ek bilgiler */
+const YENI_G3 = {
+  kumyilan: o => ({ uy: o.uy.map(u => [u.ox / 14, u.h, u.boy, u.f]) }),
+  nudibrans: o => ({ renk: o.renk || 0 }),
+  kestane: o => ({ yenik: o.yenik > 0 && !(o.ters > 0), ters: o.ters > 0 ? 1 : 0 }),
+  mantis: o => ({ cik: o.cik, yum: o.yum > 0 ? 1 : 0, ev: (o.ev - o.x) / (12 * OL) }),
+  murekkep: o => ({ mod: o.mod, renkF: o.renkF, vur: o.vur > 0 ? 1 : 0 }),
+  baca: o => ({ sol: o.sol.map(u => [u.ox / 60, u.h, u.boy, u.f]), yen: o.yen.map(y => [y.ox / 60, y.d, y.f]) })
+};
+/* kara duman: 2D katmanda her iki görünümde de çizilir */
+function bacaDuman(c) {
+  for (const o of CNL.L) { if (o.tur !== 'baca') continue;
+    for (const p of o.duman) { const a = Math.max(0, 0.75 - p.t * 0.12), k = Math.max(0, 1 - p.t * 1.5); const g = c.createRadialGradient(p.x, p.y, 0, p.x, p.y, p.r); g.addColorStop(0, `rgba(${14 + 60 * k | 0},${12 + 30 * k | 0},${12 + 10 * k | 0},${a})`); g.addColorStop(0.6, `rgba(30,27,25,${a * 0.5})`); g.addColorStop(1, 'rgba(30,27,25,0)'); c.fillStyle = g; c.beginPath(); c.arc(p.x, p.y, p.r, 0, TAU); c.fill(); } }
+}
+function yeniGuncelle(dt) { if (!SAHNE) return; if (TET.sahne !== SAHNE) { TET.sahne = SAHNE; tetikKur(); temizlikKur(); } tetikGuncelle(dt); temizlikGuncelle(dt); kilicGuncelle(dt); }
+/* kılıç balığı: sardalya sürüsünün içinden geçerken kılıcını savurur, sersemleyen bir balığı kapar */
+function kilicGuncelle(dt) {
+  const g = GZ.o; if (!g || g.tur !== 'kilic') return; if (g.savur > 0) g.savur -= dt; if (g.avladi) return; const ux = g.x + g.d * g.s * 0.7;
+  const s = YERLI.suru.find(f => Math.hypot(f.x - ux, f.y - g.y) < 40 * OL); if (!s) return;
+  g.avladi = 1; g.savur = 0.5; YERLI.suru.splice(YERLI.suru.indexOf(s), 1); if (S && S.eko) S.eko.suru = Math.max(3, S.eko.suru - 1); YERLI.kac = 2;
+  for (let i = 0; i < 8; i++) PARC.push({ x: s.x, y: s.y, vx: rnd(-60, 60), vy: rnd(-40, 40), t: 0.7, c: '#DDE6EE', r: rnd(1, 2) });
+  avciDuyur('🗡️ Kılıç balığı sardalya sürüsünün içinden geçerken kılıcını savurdu ve sersemleyen bir balığı kaptı.', '🗡️ The swordfish slashed through the sardine school with its bill and snapped up a stunned fish.');
+}
+function yeniCiz(c) {
+  bacaDuman(c);
+  if (G3) return;
+  if (TMZ.ist) { const I = TMZ.ist; c.fillStyle = '#C98B6B'; c.beginPath(); c.ellipse(I.x, SAHNE.kumY - 8 * OL, 26 * OL, 16 * OL, 0, Math.PI, TAU); c.fill(); c.strokeStyle = 'rgba(120,70,50,.6)'; c.lineWidth = 1; for (let i = 0; i < 4; i++) { c.beginPath(); c.arc(I.x, SAHNE.kumY - 8 * OL, (8 + i * 5) * OL, Math.PI * 1.1, Math.PI * 1.9); c.stroke(); } } /* istasyonun beyin mercanı */
+  for (const f of TMZ.b) balikCiz(c, { a: 2, tr: 'temizlikci' }, f.x, f.y, KS_TUR.temizlikci.L * OL, f.f, f.yon, { t: zaman });
+  const o = TET.o; if (o) balikCiz(c, { a: 2, tr: 'tetik' }, o.x, o.y, o.L, o.f, o.yon, { t: zaman });
+}
+function g3Yeni(L) {
+  TMZ.b.forEach((f, i) => L.push({ id: 'tmz' + i, tur: 'ks', model: 'temizlikci', x: f.x, y: f.y, s: KS_TUR.temizlikci.L * OL, d: f.yon, f: f.f / 9, z: 0.3 }));
+  const o = TET.o; if (o) L.push({ id: 'tetik', tur: 'ks', model: 'tetik', x: o.x, y: o.y, s: o.L, d: o.yon, f: o.f / 9, z: 0, hamle: o.mod === 'kovala' ? 1 : 0 });
+}
+function yeniDokun(x, y) {
+  const o = TET.o; if (o && Math.hypot(o.x - x, o.y - y) < o.L * 0.55) { albumEkle('canli:tetik'); o.esele = 1.5; return true; }
+  for (const f of TMZ.b) if (Math.hypot(f.x - x, f.y - y) < 20 * OL) { albumEkle('canli:temizlikci'); return true; }
+  return false;
+}
+
 const YERLI = { suru: [], lider: { x: 200, y: 200, tx: 400, ty: 260, t: 0 }, yengec: { x: 120, d: 1, t: 0 }, meduz: [], kap: { x: -300, y: 200, d: 1 } };
 function yerliKur() {
   canliKur(); ksKur(); KS.tm = SAHNE && SAHNE.tm;
@@ -1890,6 +2117,7 @@ function balikGuncelle(b, dt) {
   { const E = []; const io = INS.o; if (io && !io.uzak) { if (io.tur === 'denizalti') E.push([io.x, io.y, io.L * 0.55, io.L * 0.2]); else if (io.tur === 'dalgic' || io.tur === 'serbest') E.push([io.x, io.y, io.L * 0.5, io.L * 0.14]); else if (io.tur === 'rov') E.push([io.x, io.y, io.s * 0.6, io.s * 0.4]); }
     const go = GZ.o; if (go && !GZ_TUR[go.tur].arka) E.push([go.x, go.y, go.s * 0.5, go.s * 0.28]);
     if (ORF.o) E.push([ORF.o.x, ORF.o.y, ORF.o.L * 0.5, ORF.o.L * 0.2]);
+    if (TET.o && !b.ben) E.push([TET.o.x, TET.o.y, TET.o.L * 0.5, TET.o.L * 0.35]);
     for (const [x, y, rx, ry] of E) { const ex = (b.x - x) / (rx + L * 0.5), ey = (b.y - y) / (ry + L * 0.25), uz = Math.hypot(ex, ey); if (uz < 1 && uz > 0.01) { const g = (1 - uz) * 2; itX += ex / uz * g; itY += ey / uz * g; } } }
   for (const o of CNL.L) {
     if (o.tur === 'ahtapot' || o.tur === 'ermit' || o.tur === 'salyangoz') { const r = (o.tur === 'ahtapot' ? 26 : 14) * OL, ex = (b.x - o.x) / (r + L * 0.5), ey = (b.y - (o.y - r * 0.5)) / (r + balikYuk(b) * 0.5), uz = Math.hypot(ex, ey); if (uz < 1 && uz > 0.01) { itX += ex / uz * (1 - uz) * 1.5; itY += ey / uz * (1 - uz) * 2; } continue; }
@@ -2943,7 +3171,7 @@ function rehberModel(k) {
   if (k.startsWith('tur:')) return { balik: k.slice(4) };
   if (!k.startsWith('canli:')) return null; const c = k.slice(6), e = REHBER_ESLE[c];
   if (e) return e[0] === 'b' ? { balik: e.slice(2) } : { canli: e.slice(2) };
-  const VAR = ['yildiz', 'salyangoz', 'ermit', 'ahtapot', 'karides', 'dvatoz', 'balon', 'kalamar', 'dkaplumbaga', 'palyacocift', 'papagan', 'aslan', 'kutu', 'kelebek', 'manta', 'dugong', 'barakuda', 'mola', 'fok', 'balinakb', 'kambur', 'dumbo', 'devkalamar', 'sifonofor', 'pelikan'];
+  const VAR = ['yildiz', 'salyangoz', 'ermit', 'ahtapot', 'karides', 'dvatoz', 'balon', 'kalamar', 'dkaplumbaga', 'palyacocift', 'papagan', 'aslan', 'kutu', 'kelebek', 'manta', 'dugong', 'barakuda', 'mola', 'fok', 'balinakb', 'kambur', 'dumbo', 'devkalamar', 'sifonofor', 'pelikan', 'kumyilan', 'nudibrans', 'kestane', 'hiyar', 'mantis', 'murekkep', 'baca', 'cekic', 'orka', 'ispermecet'];
   return VAR.includes(c) ? { canli: c } : null;
 }
 let rehberDur = null;
@@ -3965,6 +4193,7 @@ function canliKur() {
   const isik = { tur: 'isik', uye: [], x: rnd(A.x1, A.x2), y: rnd(A.y1, A.y2), tx: 0, ty: 0, tt: 0 };
   for (let i = 0; i < 14; i++) isik.uye.push({ ox: rnd(-50, 50), oy: rnd(-25, 25), x: isik.x, y: isik.y, vx: 0, vy: 0 });
   ekle(isik);
+  canliYeniKur(ekle, tm, kx, r);
   CNL.L = L; CNL.yunus = null;
 }
 function canliYakin(o, mesafe) { const b = BAL.get('ben'); return b && b.L ? Math.hypot(b.x - o.x, b.y - o.y) < mesafe * OL + b.L * 0.4 : false; }
@@ -3981,6 +4210,7 @@ function canliTepki(o) {
     case 'kalamar': { const b = BAL.get('ben'), dx = b ? o.x - b.x : 1, dy = b ? o.y - b.y : 0, d = Math.hypot(dx, dy) || 1; o.vx = dx / d * 320; o.vy = dy / d * 220; for (let i = 0; i < 10; i++) PARC.push({ x: o.x, y: o.y, vx: rnd(-20, 20), vy: rnd(-20, 20), t: 1.3, c: '#2A2438', r: rnd(3, 7), murekkep: 1 }); SES.carp(); break; }
     case 'salyangoz': case 'ermit': o.sakli = 4; SES.kabarcik(0.015); break;
     case 'isik': for (const u of o.uye) { u.vx += rnd(-220, 220); u.vy += rnd(-160, 160); } SES.selam(); break;
+    default: if (YENI_CNL[o.tur] && YENI_CNL[o.tur].t) { YENI_CNL[o.tur].t(o); SES.kabarcik(0.02); }
   }
   return true;
 }
@@ -3990,7 +4220,9 @@ function canliGuncelle(dt) {
   for (const o of CNL.L) {
     o.f += dt; o.bekle = Math.max(0, o.bekle - dt); o.tepki = Math.max(0, o.tepki - dt);
     if (o.sakli) o.sakli = Math.max(0, o.sakli - dt);
+    if (o.yok > 0) { o.yok -= dt * hkat(); continue; } /* avlandı: bir süre sonra yenisi gelir */
     switch (o.tur) {
+      default: if (YENI_CNL[o.tur]) YENI_CNL[o.tur].g(o, dt); break;
       case 'yildiz': if (!o.sakli) { o.x = kis(o.x + Math.sin(o.f * 0.05) * 1.5 * dt, 20, W - 20); o.aci += dt * 0.03; } break;
       case 'salyangoz': if (!o.sakli) { o.x += o.d * 3 * OL * dt; if (o.x < 30 || o.x > W - 30) o.d *= -1; } break;
       case 'ermit': if (!o.sakli) { o.t -= dt; if (o.t <= 0) { o.d = Math.random() < 0.5 ? -1 : 1; o.t = rnd(2, 6); o.dur = Math.random() < 0.4; } if (!o.dur) o.x = kis(o.x + o.d * 14 * OL * dt, 30, W - 30); } break;
@@ -4013,7 +4245,7 @@ function canliGuncelle(dt) {
     const yakin = { ahtapot: 70, yildiz: 0, karides: 60, balon: 70, dvatoz: 60, kalamar: 80, salyangoz: 40, ermit: 45, isik: 70 }[o.tur];
     if (yakin && (o.tur !== 'isik' || gece > 0.3 || SAHNE.tm === 'derin') && canliYakin(o, yakin)) canliTepki(o);
   }
-  gzGuncelle(dt);
+  gzGuncelle(dt); yeniGuncelle(dt);
   insGuncelle(dt);
   havaGuncelle(dt); denizGuncelle(dt); ekoKare(dt); uzakGuncelle(dt); nesilGuncelle(dt);
   /* yunus: arada bir yüzeyden geçer */
@@ -4027,8 +4259,10 @@ function canliCiz(c, sadeceIsik) {
   for (const o of CNL.L) {
     if ((o.tur === 'isik') !== !!sadeceIsik) continue;
     if (G3 && (G3_CANLI[o.tur] || G3_YUZEN[o.tur])) continue; /* 3D görünümde bunları WebGL çiziyor */
+    if (o.yok > 0) continue;
     c.save(); c.translate(o.x, o.y);
     switch (o.tur) {
+      default: if (YENI_CNL[o.tur]) YENI_CNL[o.tur].c(c, o); break;
       case 'yildiz': { const s = 11 * OL; c.rotate(o.aci + (o.tepki > 0 ? Math.sin(o.f * 20) * 0.15 : 0)); c.fillStyle = o.renk; c.beginPath(); for (let i = 0; i < 10; i++) { const rr = i % 2 ? s * 0.42 : s, a = -Math.PI / 2 + i * Math.PI / 5; c.lineTo(Math.cos(a) * rr, Math.sin(a) * rr * 0.55); } c.closePath(); c.fill(); c.fillStyle = 'rgba(255,255,255,.4)'; for (let i = 0; i < 5; i++) { const a = -Math.PI / 2 + i * TAU / 5; c.beginPath(); c.arc(Math.cos(a) * s * 0.55, Math.sin(a) * s * 0.3, 1.1, 0, TAU); c.fill(); } break; }
       case 'salyangoz': { const s = 8 * OL; c.scale(o.d, 1); if (!o.sakli) { c.fillStyle = '#C9B79A'; c.beginPath(); c.ellipse(s * 0.5, 0, s * 1.2, s * 0.35, 0, Math.PI, TAU); c.fill(); c.strokeStyle = '#C9B79A'; c.lineWidth = 1.2; c.beginPath(); c.moveTo(s * 1.4, -s * 0.2); c.lineTo(s * 1.8, -s * 0.9); c.stroke(); } c.fillStyle = '#B5714B'; c.beginPath(); c.arc(0, -s * 0.6, s * 0.8, 0, TAU); c.fill(); c.strokeStyle = '#7A4A2E'; c.lineWidth = 1.3; c.beginPath(); for (let i = 0; i < 18; i++) { const a = i * 0.6, rr = s * 0.75 * (1 - i / 22); c.lineTo(Math.cos(a) * rr, -s * 0.6 + Math.sin(a) * rr); } c.stroke(); break; }
       case 'ermit': { const s = 9 * OL; c.scale(o.d, 1); if (!o.sakli) { c.strokeStyle = '#E0763E'; c.lineWidth = 1.6; for (let j = 0; j < 3; j++) { c.beginPath(); c.moveTo(s * 0.5, -s * 0.4); c.lineTo(s * (1 + j * 0.25), Math.sin(o.f * 10 + j) * 2); c.stroke(); } c.fillStyle = '#E0763E'; c.beginPath(); c.arc(s * 1.1, -s * 0.8, s * 0.3, 0, TAU); c.fill(); c.fillStyle = '#111'; c.beginPath(); c.arc(s * 0.9, -s * 1.3, 1.4, 0, TAU); c.fill(); } c.fillStyle = '#EAD9C0'; c.beginPath(); c.moveTo(-s * 0.9, 0); c.quadraticCurveTo(-s * 1.1, -s * 1.6, s * 0.2, -s * 1.4); c.quadraticCurveTo(s * 0.8, -s * 0.6, s * 0.6, 0); c.closePath(); c.fill(); c.strokeStyle = '#B89F7E'; c.lineWidth = 1; for (let i = 1; i < 4; i++) { c.beginPath(); c.arc(-s * 0.2, -s * 0.6, s * 0.25 * i, Math.PI * 1.1, Math.PI * 1.9); c.stroke(); } break; }
@@ -4048,16 +4282,19 @@ function canliCiz(c, sadeceIsik) {
   }
   const y = CNL.yunus; if (y && !sadeceIsik) { const s = 70 * OL; c.save(); c.translate(y.x, y.y); c.scale(y.d, 1); c.rotate(Math.cos(y.f * 1.6) * 0.18); c.fillStyle = '#8FA3B5'; c.beginPath(); c.moveTo(s * 0.62, 0); c.lineTo(s * 0.48, -s * 0.05); c.quadraticCurveTo(s * 0.1, -s * 0.24, -s * 0.45, -s * 0.06); c.lineTo(-s * 0.62, -s * 0.18); c.lineTo(-s * 0.55, 0); c.lineTo(-s * 0.62, s * 0.18); c.lineTo(-s * 0.45, s * 0.06); c.quadraticCurveTo(s * 0.1, s * 0.16, s * 0.48, s * 0.04); c.closePath(); c.fill();
     c.beginPath(); c.moveTo(0, -s * 0.15); c.lineTo(-s * 0.12, -s * 0.34); c.lineTo(-s * 0.2, -s * 0.12); c.fill(); c.fillStyle = '#D6E2EC'; c.beginPath(); c.ellipse(s * 0.1, s * 0.07, s * 0.3, s * 0.05, 0, 0, TAU); c.fill(); c.fillStyle = '#1B2733'; c.beginPath(); c.arc(s * 0.38, -s * 0.06, 2.2, 0, TAU); c.fill(); c.restore(); }
-  if (!sadeceIsik) { gzCiz(c); insCiz(c); }
+  if (!sadeceIsik) { yeniCiz(c); gzCiz(c); insCiz(c); }
 }
 function canliDokun(x, y) {
   if (gzDokun(x, y)) return true;
   if (duvarDokun(x, y)) return true;
   if (ksDokun(x, y)) return true;
   if (avciDokun(x, y)) return true;
+  if (yeniDokun(x, y)) return true;
   for (const o of CNL.L) {
+    if (o.yok > 0) continue;
     if (o.tur === 'isik') { if (geceDegeri() < 0.3 && SAHNE.tm !== 'derin') continue; if (Math.hypot(o.x - x, o.y - y) < 60 * OL) { canliTepki(o); return true; } continue; }
-    const r = { ahtapot: 26, yildiz: 18, karides: 16, balon: 22, dvatoz: 34, kalamar: 26, salyangoz: 16, ermit: 18 }[o.tur] * OL;
+    const r = { ahtapot: 26, yildiz: 18, karides: 16, balon: 22, dvatoz: 34, kalamar: 26, salyangoz: 16, ermit: 18, kumyilan: 60, nudibrans: 14, kestane: 14, hiyar: 18, mantis: 18, murekkep: 26, baca: 60 }[o.tur] * OL;
+    if (!r) continue;
     if (Math.hypot(o.x - x, o.y - 6 * OL - y) < r + 6) { if (!canliTepki(o)) SES.kabarcik(0.015); return true; }
   }
   const yn = CNL.yunus; if (yn && Math.hypot(yn.x - x, yn.y - y) < 50 * OL) { if (!yn.bekle) { yn.bekle = 3; albumEkle('canli:yunus'); mutluEkle(2, 'canli', 20); SES.kutla(); for (let i = 0; i < 14; i++) PARC.push({ x: yn.x, y: ALAN.y1 - 5, vx: rnd(-90, 90), vy: rnd(-100, -20), t: 0.9, c: '#E6F7FF', r: rnd(1.5, 3) }); BALON.push({ x: yn.x, y: yn.y - 30, e: '🐬', t: 2 }); } return true; }
@@ -4088,7 +4325,11 @@ const GZ_TUR = {
   dumbo: { e: '🐙', ad: ['Dumbo ahtapot', 'Dumbo octopus'], al: ['derin'], n: 1, h: [0.3, 0.75], v: 16, b: 62, bilgi: ['Kulağa benzeyen yüzgeçlerini çırparak süzülür. 4000 metrenin altında yaşayabilen, bilinen en derin ahtapottur; avını bütün olarak yutar.', 'Glides by flapping ear-like fins. It is the deepest-living octopus known, below 4000 m, and swallows its prey whole.'] },
   devkalamar: { e: '🦑', ad: ['Dev kalamar', 'Giant squid'], al: ['derin'], n: 3, h: [0.25, 0.6], v: 22, b: 230, bilgi: ['Gözleri futbol topu büyüklüğündedir, hayvanlar âleminin en büyük gözü. Canlı hâli ilk kez 2004’te fotoğraflanabildi.', 'Its eyes are the size of a football, the largest in the animal kingdom. It was first photographed alive in 2004.'] },
   sifonofor: { e: '✨', ad: ['Sifonofor', 'Siphonophore'], al: ['derin'], n: 2, h: [0.15, 0.55], v: 14, b: 280, bilgi: ['Tek bir hayvan değil, birbirine bağlı binlerce minik canlıdan oluşan bir koloni. 40 metreyi aşanları bulundu; dünyanın en uzun canlılarındandır.', 'Not one animal but a colony of thousands of tiny linked zooids. Some over 40 m long have been found, among the longest creatures on Earth.'] },
-  pelikan: { e: '🪱', ad: ['Pelikan yılanbalığı', 'Gulper eel'], al: ['derin'], n: 2, h: [0.2, 0.7], v: 30, b: 170, bilgi: ['Ağzı gövdesinden büyüktür, kendisinden iri avı yutabilir. Kuyruğunun ucunda pembe bir ışık yanar; avını bununla çektiği düşünülür.', 'Its mouth is bigger than its body and can swallow prey larger than itself. The tip of its tail glows pink, probably to lure prey.'] }
+  pelikan: { e: '🪱', ad: ['Pelikan yılanbalığı', 'Gulper eel'], al: ['derin'], n: 2, h: [0.2, 0.7], v: 30, b: 170, bilgi: ['Ağzı gövdesinden büyüktür, kendisinden iri avı yutabilir. Kuyruğunun ucunda pembe bir ışık yanar; avını bununla çektiği düşünülür.', 'Its mouth is bigger than its body and can swallow prey larger than itself. The tip of its tail glows pink, probably to lure prey.'] },
+  cekic: { e: '🦈', ad: ['Çekiç başlı köpekbalıkları', 'Hammerhead sharks'], al: ['acik', 'resif'], n: 2, h: [0.18, 0.5], v: 42, b: 150, bilgi: ['Çekiç biçimli başının iki ucunda gözleri vardır; başını sallayarak etrafı neredeyse tam daire görür. Başındaki duyu gözenekleri kuma gömülü vatozların elektrik sinyalini bile sezer. Gündüzleri sürüler hâlinde dolaşır.', 'Its eyes sit at the two ends of its hammer-shaped head; swinging it, it sees almost all around. Sense pores on the head even detect the electric signals of rays buried in sand. By day they roam in schools.'] },
+  orka: { e: '🐋', ad: ['Orka ailesi', 'Orca pod'], al: ['acik'], n: 3, h: [0.1, 0.35], v: 62, b: 330, bilgi: ['Aslında yunusların en büyüğüdür. Anne soyuna bağlı aileler hâlinde yaşar; her ailenin kendi \'lehçesi\' ve av taktikleri vardır, yavrulara öğretilir. Erkeklerin sırt yüzgeci 1,8 metreye ulaşır.', 'It is actually the largest dolphin. It lives in family pods led by mothers; each pod has its own \'dialect\' and hunting tricks, taught to the young. A male\'s dorsal fin can reach 1.8 m.'] },
+  ispermecet: { e: '🐋', ad: ['İspermeçet balinası', 'Sperm whale'], al: ['derin', 'acik'], n: 3, h: [0.15, 0.45], v: 20, b: 480, arka: 1, bilgi: ['Dünyanın en büyük beynine sahiptir. Kutu gibi başındaki yağ organıyla tıkırtılar çıkarıp yankıyla 2000 metrenin altında dev kalamar avlar; derisinde kalamar vantuzlarının izleri görülür. Bir saatten fazla nefes tutabilir.', 'It has the largest brain on Earth. Its boxy head holds an oil organ that sends clicks to hunt giant squid by echo below 2000 m; sucker scars from squid mark its skin. It can hold its breath for over an hour.'] },
+  kilic: { e: '🗡️', ad: ['Kılıç balığı', 'Swordfish'], al: ['acik'], n: 2, h: [0.15, 0.5], v: 90, b: 150, bilgi: ['Uzun yassı kılıcını mızrak gibi değil, sürünün içinde savurarak balıkları sersemletmek için kullanır. Gözlerinin yanındaki özel bir doku gözünü ve beynini ısıtır; soğuk derinlerde de keskin görür.', 'It does not spear with its long flat bill but slashes it through schools to stun fish. A special tissue beside its eyes warms its eyes and brain, so it sees sharply in cold depths.'] }
 };
 const GZ = { o: null, z: 12 + Math.random() * 10, son: null };
 for (const [k, g] of Object.entries(GZ_TUR)) {
@@ -4105,6 +4346,7 @@ function gzBaslat(tur) {
   const yb = y1 + (kumY - y1) * (g.h[0] + Math.random() * (g.h[1] - g.h[0]));
   GZ.o = { tur, d, s, x: d > 0 ? -s * 0.9 : W + s * 0.9, y: yb, yb, f: Math.random() * 9, tepki: 0, bekle: 0, don: 0 };
   GZ.son = tur;
+  if (tur === 'ispermecet' && tm === 'derin' && Math.random() < 0.35) { GZ.o.savas = 1; duyur(T('🐋🦑 Derinlerde bir savaş: ispermeçet balinası bir dev kalamarla boğuşuyor!', '🐋🦑 A battle in the deep: a sperm whale is wrestling a giant squid!'), 1); }
   const yeni = S && !S.alb['canli:' + tur];
   if (g.n >= 2 || yeni) duyur(T(`${g.e} ${g.ad[0]} geçiyor! ${yeni ? 'Yanına yüz, tanış' : 'Yanına yüz'}`, `${g.e} A ${g.ad[1].toLowerCase()} is passing by! Swim over${yeni ? ' and say hi' : ''}`), g.n >= 2);
   if (tur === 'kambur') SES.sarki();
@@ -4125,9 +4367,9 @@ function gzGuncelle(dt) {
   if (!GZ.o) { GZ.z -= dt; if (GZ.z <= 0) { const e = S && S.eko, ol = ekoOlay(); GZ.z = rnd(35, 75) * (e ? 1.5 - e.saglik * 0.6 : 1) * (ol && ol.tur === 'derin' && SAHNE.tm === 'derin' ? 0.5 : 1); gzBaslat(); } return; }
   const o = GZ.o, g = GZ_TUR[o.tur];
   o.f += dt; o.bekle = Math.max(0, o.bekle - dt); o.tepki = Math.max(0, o.tepki - dt); if (o.don > 0) o.don = Math.max(0, o.don - dt * 0.9);
-  const agir = ['dkaplumbaga', 'mola', 'dugong', 'kambur', 'balinakb', 'devkalamar', 'sifonofor'].includes(o.tur);
+  const agir = ['dkaplumbaga', 'mola', 'dugong', 'kambur', 'balinakb', 'devkalamar', 'sifonofor', 'ispermecet'].includes(o.tur);
   o.x += o.d * g.v * OL * dt * (agir ? 1 : 1 + o.tepki * 0.5);
-  const dal = { fok: [42, 0.9], dumbo: [16, 0.7], pelikan: [20, 0.4], manta: [14, 0.35], kambur: [10, 0.15], balinakb: [8, 0.2] }[o.tur] || [10, 0.5];
+  const dal = { orka: [18, 0.5], ispermecet: [8, 0.15], cekic: [10, 0.4], fok: [42, 0.9], dumbo: [16, 0.7], pelikan: [20, 0.4], manta: [14, 0.35], kambur: [10, 0.15], balinakb: [8, 0.2] }[o.tur] || [10, 0.5];
   o.y = o.yb + Math.sin(o.f * dal[1]) * dal[0] * OL;
   if ((o.d > 0 && o.x > W + o.s) || (o.d < 0 && o.x < -o.s)) GZ.o = null;
   else if (!g.arka && canliYakin(o, Math.max(40, o.s * 0.35))) gzTepki(o);
@@ -4278,6 +4520,59 @@ function gzTurCiz(c, o) {
       gzYaprak(c, s * 0.25, s * 0.1, 2.3 + Math.sin(f * 1.3 + 1) * 0.3, s * 0.14, s * 0.06, '#7E7870');
       gzGoz(c, s * 0.36, -s * 0.05, Math.max(1, s * 0.011));
       break;
+    }
+    case 'cekic': { /* çekiç başlı köpekbalığı sürüsü */
+      const bir = (k, fz) => { c.save(); c.scale(k, k); const L = s * 0.5, h = L * 0.11, sw = Math.sin(fz * 3) * 0.12;
+        c.fillStyle = '#7C8486'; c.save(); c.translate(-L * 0.46, 0); c.rotate(sw); c.beginPath(); c.moveTo(0, 0); c.quadraticCurveTo(-L * 0.12, -L * 0.1, -L * 0.24, -L * 0.24); c.quadraticCurveTo(-L * 0.12, -L * 0.04, -L * 0.07, 0); c.lineTo(-L * 0.12, L * 0.08); c.quadraticCurveTo(-L * 0.04, L * 0.03, 0, 0); c.fill(); c.restore();
+        c.beginPath(); c.moveTo(L * 0.05, -h * 0.9); c.quadraticCurveTo(L * 0.03, -h * 2.6, -L * 0.04, -h * 3.4); c.quadraticCurveTo(-L * 0.06, -h * 1.8, -L * 0.14, -h * 0.8); c.fill(); /* uzun orak sırt yüzgeci */
+        c.beginPath(); c.moveTo(L * 0.18, h * 0.6); c.quadraticCurveTo(L * 0.06, h * 1.8, -L * 0.02, h * 2.2); c.quadraticCurveTo(L * 0.04, h * 1.1, L * 0.02, h * 0.6); c.fill();
+        c.beginPath(); c.moveTo(L * 0.42, -h * 0.2); c.quadraticCurveTo(L * 0.25, -h * 1.15, 0, -h); c.quadraticCurveTo(-L * 0.3, -h * 0.75, -L * 0.47, -h * 0.15); c.lineTo(-L * 0.47, h * 0.15); c.quadraticCurveTo(-L * 0.3, h * 0.75, 0, h); c.quadraticCurveTo(L * 0.25, h * 1.05, L * 0.42, h * 0.3); c.closePath();
+        c.fillStyle = gzDikey(c, -h, h, '#6E777A', '#E8ECEB', '#A9B1B2'); c.fill();
+        c.fillStyle = '#6E777A'; c.beginPath(); c.ellipse(L * 0.45, 0, L * 0.035, h * 2.1, 0, 0, TAU); c.fill(); /* çekiç: başın iki yana uzanan kanadı */
+        gzGoz(c, L * 0.46, -h * 1.85, Math.max(1, L * 0.018)); gzGoz(c, L * 0.46, h * 1.85, Math.max(1, L * 0.016));
+        c.restore(); };
+      for (const [x, y, k, fz] of [[0.12, -0.04, 1, 0], [-0.32, 0.16, 0.86, 1.7], [-0.2, -0.22, 0.8, 3.1], [-0.62, 0.02, 0.74, 4.4]]) { c.save(); c.translate(x * s, y * s + Math.sin(f * 0.9 + fz) * 3); bir(k, f + fz); c.restore(); }
+      break;
+    }
+    case 'orka': { /* üç orka: siyah sırt, beyaz karın ve göz lekesi, yatay kuyruk */
+      const bir = (k, fz, erkek) => { c.save(); c.scale(k, k); const L = s * 0.36, h = L * 0.15, kv = Math.sin(fz * 1.6) * 0.18;
+        c.save(); c.translate(-L * 0.46, 0); c.rotate(kv); c.fillStyle = '#121416'; c.beginPath(); c.moveTo(L * 0.04, -h * 0.2); c.lineTo(-L * 0.1, -h * 0.7); c.quadraticCurveTo(-L * 0.16, -h * 0.05, -L * 0.12, h * 0.25); c.lineTo(L * 0.04, h * 0.2); c.fill(); c.restore();
+        c.fillStyle = '#121416'; c.beginPath(); c.moveTo(L * 0.42, -h * 0.05); c.quadraticCurveTo(L * 0.3, -h * 1.15, 0, -h); c.quadraticCurveTo(-L * 0.3, -h * 0.75, -L * 0.48, -h * 0.12); c.lineTo(-L * 0.48, h * 0.15); c.quadraticCurveTo(-L * 0.3, h * 0.8, 0, h); c.quadraticCurveTo(L * 0.32, h * 1.05, L * 0.42, h * 0.25); c.closePath(); c.fill();
+        c.save(); c.clip(); c.fillStyle = '#F4F4F0'; c.beginPath(); c.ellipse(L * 0.12, h * 0.95, L * 0.34, h * 0.45, 0, 0, TAU); c.fill(); c.beginPath(); c.ellipse(-L * 0.22, h * 0.65, L * 0.12, h * 0.35, -0.5, 0, TAU); c.fill();
+        c.beginPath(); c.ellipse(L * 0.28, -h * 0.42, L * 0.065, h * 0.2, -0.15, 0, TAU); c.fill(); /* göz lekesi */
+        c.fillStyle = 'rgba(160,165,170,.75)'; c.beginPath(); c.ellipse(-L * 0.1, -h * 0.92, L * 0.12, h * 0.2, 0, 0, TAU); c.fill(); c.restore(); /* sırt eyeri */
+        c.fillStyle = '#121416'; c.beginPath(); c.moveTo(L * 0.02, -h * 0.9); c.lineTo(erkek ? -L * 0.04 : -L * 0.08, -h * (erkek ? 3.4 : 2.1)); c.quadraticCurveTo(-L * 0.06, -h * 1.3, -L * 0.13, -h * 0.85); c.fill();
+        c.beginPath(); c.ellipse(L * 0.18, h * 0.8, L * 0.09, h * 0.3, 0.5, 0, TAU); c.fill();
+        c.restore(); };
+      for (const [x, y, k, fz, e] of [[0.1, -0.03, 1, 0, 1], [-0.28, 0.1, 0.8, 1.3, 0], [-0.08, 0.16, 0.55, 2.6, 0]]) { c.save(); c.translate(x * s, y * s + Math.sin(f * 0.7 + fz) * 4); bir(k, f + fz, e); c.restore(); }
+      break;
+    }
+    case 'ispermecet': { /* kutu başlı dev balina; derinde bazen dev kalamarla boğuşur */
+      const L = s, h = L * 0.1, kv = Math.sin(f * 0.9) * 0.14;
+      c.save(); c.translate(-L * 0.47, 0); c.rotate(kv); c.fillStyle = '#3E3A37'; c.beginPath(); c.moveTo(L * 0.03, -h * 0.15); c.lineTo(-L * 0.06, -h * 0.55); c.quadraticCurveTo(-L * 0.11, -h * 0.05, -L * 0.08, h * 0.4); c.lineTo(L * 0.03, h * 0.15); c.fill(); c.restore();
+      c.beginPath(); c.moveTo(L * 0.5, -h * 0.85); c.lineTo(L * 0.5, h * 0.35); c.quadraticCurveTo(L * 0.46, h * 0.75, L * 0.3, h * 0.8); c.quadraticCurveTo(0, h * 1.05, -L * 0.3, h * 0.55); c.quadraticCurveTo(-L * 0.42, h * 0.25, -L * 0.47, h * 0.08); c.lineTo(-L * 0.47, -h * 0.1);
+      c.quadraticCurveTo(-L * 0.3, -h * 0.65, -L * 0.05, -h * 0.85); c.lineTo(L * 0.44, -h * 1.02); c.quadraticCurveTo(L * 0.5, -h * 1.0, L * 0.5, -h * 0.85); c.closePath();
+      c.fillStyle = gzDikey(c, -h, h, '#4F4A45', '#3A3633', '#5B5550'); c.fill();
+      c.save(); c.clip(); c.strokeStyle = 'rgba(25,22,20,.35)'; c.lineWidth = Math.max(0.8, L * 0.0025); for (let i = 0; i < 22; i++) { const x = -L * 0.02 - i * L * 0.02; c.beginPath(); c.moveTo(x, -h); c.quadraticCurveTo(x + L * 0.01, 0, x - L * 0.005, h); c.stroke(); } /* kırışık deri */
+      if (o.savas) { c.strokeStyle = 'rgba(240,235,225,.55)'; for (let i = 0; i < 9; i++) { c.beginPath(); c.arc(L * (0.22 + (i * 37 % 10) / 40), -h * 0.6 + (i * 53 % 10) / 10 * h * 1.1, L * 0.008, 0, TAU); c.stroke(); } } c.restore();
+      c.fillStyle = '#35312E'; c.beginPath(); c.moveTo(L * 0.42, h * 0.42); c.lineTo(L * 0.12, h * 0.62); c.lineTo(L * 0.1, h * 0.5); c.lineTo(L * 0.4, h * 0.34); c.fill(); /* dar alt çene */
+      c.fillStyle = '#EDE8DC'; for (let i = 0; i < 6; i++) { c.beginPath(); c.moveTo(L * (0.38 - i * 0.045), h * 0.36); c.lineTo(L * (0.375 - i * 0.045), h * 0.27); c.lineTo(L * (0.37 - i * 0.045), h * 0.37); c.fill(); }
+      gzGoz(c, L * 0.12, h * 0.25, Math.max(1, L * 0.007));
+      c.fillStyle = '#3A3633'; c.beginPath(); c.ellipse(L * 0.05, h * 0.75, L * 0.05, h * 0.18, 0.5, 0, TAU); c.fill();
+      c.beginPath(); c.moveTo(-L * 0.12, -h * 0.75); c.quadraticCurveTo(-L * 0.16, -h * 1.05, -L * 0.2, -h * 0.68); c.fill(); for (let i = 0; i < 4; i++) { c.beginPath(); c.arc(-L * (0.25 + i * 0.045), -h * (0.55 - i * 0.07), L * 0.009, Math.PI, TAU); c.fill(); }
+      if (o.savas) { /* dev kalamar başa sarılmış: kolları kırmızımsı, manto aşağıda sallanır */
+        const kr = '#B5523F', mx = L * 0.36, my = h * 1.25 + Math.sin(f * 1.3) * h * 0.15;
+        c.strokeStyle = kr; c.lineCap = 'round';
+        for (let i = 0; i < 8; i++) { c.lineWidth = Math.max(1.5, L * (0.012 - i * 0.0008)); c.beginPath(); c.moveTo(mx, my - h * 0.4); const ax = L * (0.5 - i * 0.04), ay = -h * (1.1 - i * 0.12); c.bezierCurveTo(mx + L * 0.15, my - h * 1.4, ax + L * 0.06 + Math.sin(f * 2 + i) * L * 0.01, ay - h * 0.2, ax, ay + Math.sin(f * 2.4 + i) * h * 0.1); c.stroke(); }
+        c.lineWidth = Math.max(1, L * 0.005); c.beginPath(); c.moveTo(mx, my); c.bezierCurveTo(L * 0.26, my + h * 0.6, L * 0.18, my + h * 0.4 + Math.sin(f * 1.6) * h * 0.3, L * 0.08, my + h * 0.9); c.stroke(); c.beginPath(); c.moveTo(mx, my); c.bezierCurveTo(L * 0.46, my + h * 0.3, L * 0.5, my + h * 1.1, L * 0.44, my + h * 1.4 + Math.sin(f * 1.2) * h * 0.2); c.stroke();
+        c.fillStyle = gzDikey(c, my, my + h * 2, '#C96A52', '#8E3A2C'); c.beginPath(); c.ellipse(mx + L * 0.03, my + h * 0.9, L * 0.03, h * 0.95, -0.5, 0, TAU); c.fill(); gzGoz(c, mx - L * 0.004, my + h * 0.1, Math.max(1.5, L * 0.008), '#1A1A2A'); }
+      break;
+    }
+    case 'kilic': { /* kılıç balığı: yassı uzun kılıç, hilal kuyruk; avda kılıcını savurur */
+      c.save(); if (o.savur > 0) c.rotate(Math.sin(o.savur * 30) * 0.12);
+      balikCiz(c, { a: 2, tr: 'kilic' }, -s * 0.12, 0, s * 0.72, f * 9, 1, { t: zaman });
+      const bx = s * 0.2, by = -s * 0.012; c.fillStyle = '#2E2632'; c.beginPath(); c.moveTo(bx, by - s * 0.016); c.lineTo(bx + s * 0.34, by + s * 0.002); c.lineTo(bx, by + s * 0.014); c.closePath(); c.fill();
+      c.restore(); break;
     }
     case 'barakuda': {
       const bir = (k, fz) => {
@@ -4641,6 +4936,32 @@ ALBUM.push(
   { k: 'canli:antias', grup: 'canli', e: '🐠', ad: ['Antias sürüsü', 'Anthias school'], ip: ['Resif kayalığının üstünde', 'Above the reef rock'] },
   { k: 'canli:kromis', grup: 'canli', e: '🐟', ad: ['Mavi kromis', 'Blue chromis'], ip: ['Açık denizdeki kayalığın üstünde', 'Above the rock in open water'] }
 );
+
+Object.assign(CANLI_BILGI, {
+  kumyilan: ['🪱', 'Kum yılan balıkları', 'Garden eels', 'Yüzlercesi kumda yan yana kazdıkları tüplerde yaşar; kuyrukları tüpte, gövdeleri akıntıya doğru uzanıp geçen planktonu toplar. Bir balık ya da dalgıç yaklaşınca hepsi birden kuma çekilir, tehlike geçince yavaşça yeniden çıkar.', 'Hundreds live side by side in tubes dug into the sand; tails in the tube, bodies reaching into the current to pick passing plankton. When a fish or diver comes near they all sink into the sand, then slowly rise again once it passes.'],
+  nudibrans: ['🐌', 'Nudibranş', 'Nudibranch', 'Kabuksuz bir deniz salyangozudur. Parlak renkleri "beni yeme, zehirliyim" uyarısıdır: bazıları yediği süngerin ve mercanın zehrini, hatta dokunaçlardaki iğne hücrelerini kendi derisine taşır. Sırtındaki tüy demetiyle nefes alır.', 'A sea slug with no shell. Its bright colours warn "don’t eat me, I’m toxic": some store the toxins of the sponges and corals they eat, even the stinging cells, in their own skin. It breathes through the feathery tuft on its back.'],
+  kestane: ['🟣', 'Deniz kestanesi', 'Sea urchin', 'Dikenleri arasındaki yüzlerce minik tüp ayakla yürür; alttaki ağzıyla kayalardaki algleri kazır. Çoğalınca yosun ormanlarını kemirip bitirebilir; onu dengede tutan tetik balığı ve su samuru gibi avcılardır.', 'It walks on hundreds of tiny tube feet between its spines and scrapes algae off rocks with the mouth underneath. In large numbers it can wipe out kelp forests; predators like triggerfish and sea otters keep it in check.'],
+  hiyar: ['🥒', 'Deniz hıyarı', 'Sea cucumber', 'Dibin çöpçüsüdür: kumu yutup içindeki artıkları sindirir ve temizlenmiş kumu geri bırakır. Tehlikede iç organlarının bir kısmını dışarı fırlatıp kaçabilir, sonra onları yeniden büyütür.', 'The cleaner of the seabed: it swallows sand, digests the scraps and leaves cleaned sand behind. In danger it can eject some internal organs and escape, then regrow them.'],
+  mantis: ['🦐', 'Mantis karidesi', 'Mantis shrimp', 'Hayvanlar âleminin en hızlı vuruşlarından birini yapar: kıskaç-sopasını bir mermi gibi fırlatır, sudaki basınç farkı bir an ışık çakması ve patlayan kabarcık yaratır. Gözleri 12-16 renk alıcısıyla ultraviyole ve polarize ışığı da görür.', 'It delivers one of the fastest strikes in the animal kingdom: its club shoots out like a bullet and the pressure change makes a flash of light and a collapsing bubble. Its eyes have 12–16 colour receptors and see ultraviolet and polarised light.'],
+  murekkep: ['🦑', 'Mürekkep balığı', 'Cuttlefish', 'Derisindeki milyonlarca renk hücresiyle saniyede birkaç kez desen değiştirir; avını büyülemek için gövdesinde kara bantları dalga dalga gezdirir. Göz bebeği W biçimindedir, kemiğiyle (kalamar kemiği) yüzerliğini ayarlar.', 'With millions of colour cells in its skin it changes pattern several times a second, and rolls dark bands along its body to mesmerise prey. Its pupil is W-shaped and it adjusts its buoyancy with its cuttlebone.'],
+  baca: ['🌋', 'Hidrotermal baca', 'Hydrothermal vent', 'Okyanus tabanındaki çatlaklardan 350 °C’yi aşan, minerallerle kararmış su fışkırır ("kara duman"). Güneş ışığı yoktur; buradaki yaşam kimyasal enerjiyle beslenen bakterilere dayanır. Kırmızı tüylü dev tüp solucanlarının ağzı ve midesi yoktur, içlerindeki bakteriler onları besler.', 'From cracks in the ocean floor, water above 350 °C, blackened by minerals, gushes out ("black smoker"). There is no sunlight; life here depends on bacteria that feed on chemical energy. Giant red-plumed tube worms have no mouth or gut — bacteria inside them feed them.'],
+  temizlikci: ['🧽', 'Temizlikçi balık', 'Cleaner wrasse', 'Resifte bir "temizlik istasyonu" işletir: büyük balıklar, hatta avcılar sıraya girip ağızlarını açar; o da derilerindeki asalakları ve ölü dokuyu yer. Avcılar onu yemez; bu ortaklık resifin sağlığı için çok önemlidir.', 'It runs a "cleaning station" on the reef: big fish, even predators, line up and open their mouths, and it eats the parasites and dead skin off them. Predators don’t eat it; this partnership is vital to reef health.'],
+  tetik: ['🐟', 'Tetik balığı', 'Titan triggerfish', 'Sırt yüzgecindeki dikeni bir tetikle kilitleyip kendini kaya yarığına sabitler. Kumda kazdığı yuvayı huni biçimindeki bir alanda çok sert korur, dalgıçları bile ısırır. Deniz kestanesini ağzından su püskürterek ters çevirir ve dikensiz altından yer.', 'It locks its dorsal spine with a "trigger" to wedge itself into a crevice. It defends the nest it digs in the sand fiercely within a cone-shaped zone, even biting divers. It flips sea urchins with jets of water and eats them from the spineless underside.']
+});
+ALBUM.push(
+  { k: 'canli:kumyilan', grup: 'canli', e: '🪱', ad: ['Kum yılan balıkları', 'Garden eels'], ip: ['Kumdan uzanan koloniye dokun (yaklaşınca saklanır)', 'Tap the colony rising from the sand (it hides when you come close)'] },
+  { k: 'canli:nudibrans', grup: 'canli', e: '🐌', ad: ['Nudibranş', 'Nudibranch'], ip: ['Kumda yavaşça gezen renkli salyangoz', 'A colourful slug creeping over the sand'] },
+  { k: 'canli:kestane', grup: 'canli', e: '🟣', ad: ['Deniz kestanesi', 'Sea urchin'], ip: ['Kumdaki dikenli toplar', 'Spiny balls on the sand'] },
+  { k: 'canli:hiyar', grup: 'canli', e: '🥒', ad: ['Deniz hıyarı', 'Sea cucumber'], ip: ['Dipte ağır ağır sürünür', 'Crawls slowly along the bottom'] },
+  { k: 'canli:mantis', grup: 'canli', e: '🦐', ad: ['Mantis karidesi', 'Mantis shrimp'], ip: ['Resifte sol taraftaki yuvasından bakar', 'Peeks out of its burrow on the left of the reef'] },
+  { k: 'canli:murekkep', grup: 'canli', e: '🦑', ad: ['Mürekkep balığı', 'Cuttlefish'], ip: ['Renk değiştirerek dolaşır, dokununca mürekkep bırakır', 'Roams changing colour; inks when tapped'] },
+  { k: 'canli:baca', grup: 'canli', e: '🌋', ad: ['Hidrotermal baca', 'Hydrothermal vent'], ip: ['Derin denizde kara duman çıkaran baca', 'A black-smoking chimney in the deep sea'] },
+  { k: 'canli:temizlikci', grup: 'canli', e: '🧽', ad: ['Temizlikçi balık', 'Cleaner wrasse'], ip: ['Sağdaki beyin mercanının üstünde balığını bekletirsen temizlenir', 'Let your fish wait at the station in the middle to get cleaned'] },
+  { k: 'canli:tetik', grup: 'canli', e: '🐟', ad: ['Tetik balığı', 'Titan triggerfish'], ip: ['Resifin sağında yuvasını korur, dokun ama dikkat!', 'Guards its nest on the right of the reef — tap it, but careful!'] }
+);
+Object.assign(BESIN, { kumyilan: ['plk', 'buyuk'], nudibrans: ['sung,mercan', ''], kestane: ['alg', 'tet'], hiyar: ['art', 'buyuk'], mantis: ['yen,midye', 'ahta,buyuk'], murekkep: ['kar,yen', 'kop,fok'], temizlikci: ['par', ''], tetik: ['kest,yen,midye', 'kop'], cekic: ['kb,kal,vat', ''], orka: ['fok,kb,kal', ''], ispermecet: ['kal', 'orka'], kilic: ['sard,kal', 'orka'] });
+Object.assign(BESIN_AD, { tet: ['🐟', 'tetik balığı', 'triggerfish'], kest: ['🟣', 'deniz kestanesi', 'sea urchins'], vat: ['🐟', 'vatozlar', 'rays'], orka: ['🐋', 'orkalar', 'orcas'] });
+Object.assign(REHBER_ESLE, { temizlikci: 'b:temizlikci', tetik: 'b:tetik', kilic: 'b:kilic' });
 /* =====================================================================
    YÜZEYDEN GELENLER: arada bir insanlar uğrar.
    Balıkçı teknesi durup olta sarkıtır (bazen çapa atar); yeme dokunan balık oltaya takılır,
@@ -5796,6 +6117,7 @@ function gelPanel() {
   const avB = bolum('🍽️ ' + tr('Av ve sürüler', 'Hunting and schools'), false, surKutu,
     sat(tr('Orfoz', 'Grouper'), btn(tr('Acıktır', 'Make hungry'), () => DM.orfozAc()), btn(tr('Sığınak değiştir', 'Move lair'), () => DM.orfozTasi())),
     sat(tr('Diğer avcılar', 'Other hunters'), btn(tr('Müren', 'Moray'), () => DM.avci('muren')), btn(tr('Sümsük kuşu', 'Gannet'), () => DM.avci('kus')), btn(tr('Ahtapot → yengeç', 'Octopus → crab'), () => DM.avci('ahtapot'))),
+    sat(tr('Resif sakinleri', 'Reef residents'), btn(tr('Tetik → kestane', 'Trigger → urchin'), () => DM.avci('tetik')), btn(tr('Mantis yumruğu', 'Mantis punch'), () => DM.avci('mantis')), btn(tr('Mürekkep → karides', 'Cuttle → shrimp'), () => DM.avci('murekkep')), btn(tr('Orfoz → temizlik', 'Grouper → cleaning'), () => DM.avci('temizlik'))),
     e('div', { className: 'not', textContent: tr('+ ve − ekosistemdeki sayıyı değiştirir; balıklar birkaç saniyede gelir ya da ayrılır.', '+ and − change the count in the ecosystem; fish arrive or leave within seconds.') }));
 
   /* --- deneme ve oyun --- */
@@ -5826,8 +6148,15 @@ function gelPanel() {
 setInterval(() => { if (PANEL.el && PANEL.yenile && !document.hidden) PANEL.yenile(); }, 1000);
 window.DM = { panel: () => gelPanel(),
   gen: g => { if (g === undefined) return S.gen; S.gen = Object.assign(S.gen || genIlk(), typeof g === 'string' ? { m: GEN_MUT[g] ? g : null } : g); kaydet(false); return S.gen; },
-  nesilDene: (n = 20) => { let g = S.gen || genIlk(); const L = []; for (let i = 1; i <= n; i++) { g = genCocuk(g); L.push({ nesil: S.nesil + i, ton: g.h, doygunluk: g.s, açıklık: g.l, 'nadir gen': g.m ? GEN_MUT[g.m].ad[0] : '' }); } console.table(L); return T('(yalnızca deneme; kayıt değişmedi)', '(simulation only; save unchanged)'); }, cihaz: () => G3 ? Object.assign({ kalite: G3.kalite(), otomatik: G3.oto(), fps: Math.round(G3.fps()) }, G3.cihaz()) : { mod: '2D', olcek: OLCEK2D }, durum: () => ({ S, BAL, NET, AV, ALAN, PLK, YIR, CNL, GZ, SAHNE, INS, DENIZ, KS, ORF, MUR, KUS, YERLI }), eko: o => { Object.assign(ekoS(), o); }, gece: v => { GECE_ZORLA = v == null ? null : kis(+v, 0, 1); }, mercanDogum: v => { NESIL.zorla = !!v; }, yumurtla: () => { const e = ekoS(); e.yum = e.yum || []; e.yum.push({ x: 0.6, g0: ekoGun() - 2.05, n: 16, id: Date.now() }); }, ay: () => ayYasi(), hiz: n => ekoHiz(n), ks: () => ({ gruplar: KS.g.map(g => ({ tur: g.tur, n: g.uy.length, eko: S.eko.ks && S.eko.ks[g.tur] })), orfoz: ORF.o && { tok: ORF.o.tok, hamle: ORF.o.hamle, mod: ORF.o.mod, sak: +ORF.o.sak.toFixed(2), siginak: ORF.o.ev.ad, konum: [Math.round(ORF.o.x), Math.round(ORF.o.y)], oyuk: [Math.round(ORF.o.ev.x), Math.round(ORF.o.ev.y)] } }), orfozTasi: i => { const o = ORF.o; if (!o || !ORF.sig) return; o.si = i == null ? (o.si + 1) % ORF.sig.length : i; o.ev = ORF.sig[o.si]; o.t = 0; o.sigT = rnd(180, 420); return o.ev.ad; }, orfozAc: () => { if (ORF.o) ORF.o.tok = 0; },
-  avci: ad => { if (ad === 'muren') { MUR.z = 0; if (geceDegeri() < 0.72) DM.gece(1); if (MUR.o) MUR.o.tok = 0; return 'müren yuvasından çıkıyor'; }
+  nesilDene: (n = 20) => { let g = S.gen || genIlk(); const L = []; for (let i = 1; i <= n; i++) { g = genCocuk(g); L.push({ nesil: S.nesil + i, ton: g.h, doygunluk: g.s, açıklık: g.l, 'nadir gen': g.m ? GEN_MUT[g.m].ad[0] : '' }); } console.table(L); return T('(yalnızca deneme; kayıt değişmedi)', '(simulation only; save unchanged)'); }, cihaz: () => G3 ? Object.assign({ kalite: G3.kalite(), otomatik: G3.oto(), fps: Math.round(G3.fps()) }, G3.cihaz()) : { mod: '2D', olcek: OLCEK2D }, durum: () => ({ S, BAL, NET, AV, ALAN, PLK, YIR, CNL, GZ, SAHNE, INS, DENIZ, KS, ORF, MUR, KUS, YERLI, TET, TMZ }), eko: o => { Object.assign(ekoS(), o); }, gece: v => { GECE_ZORLA = v == null ? null : kis(+v, 0, 1); }, mercanDogum: v => { NESIL.zorla = !!v; }, yumurtla: () => { const e = ekoS(); e.yum = e.yum || []; e.yum.push({ x: 0.6, g0: ekoGun() - 2.05, n: 16, id: Date.now() }); }, ay: () => ayYasi(), hiz: n => ekoHiz(n), ks: () => ({ gruplar: KS.g.map(g => ({ tur: g.tur, n: g.uy.length, eko: S.eko.ks && S.eko.ks[g.tur] })), orfoz: ORF.o && { tok: ORF.o.tok, hamle: ORF.o.hamle, mod: ORF.o.mod, sak: +ORF.o.sak.toFixed(2), siginak: ORF.o.ev.ad, konum: [Math.round(ORF.o.x), Math.round(ORF.o.y)], oyuk: [Math.round(ORF.o.ev.x), Math.round(ORF.o.ev.y)] } }), orfozTasi: i => { const o = ORF.o; if (!o || !ORF.sig) return; o.si = i == null ? (o.si + 1) % ORF.sig.length : i; o.ev = ORF.sig[o.si]; o.t = 0; o.sigT = rnd(180, 420); return o.ev.ad; }, orfozAc: () => { if (ORF.o) ORF.o.tok = 0; },
+  alan: a => { if (!ALANLAR[a]) return 'alanlar: ' + Object.keys(ALANLAR).join(', '); if (gorunenAkv()) return 'ortak akvaryumdayken alan akvaryuma bağlı'; S.alan = a; kaydet(); sahneKur(); yerliKur(); uiGuncelle(); return a + ' sahnesine geçildi'; },
+  avci: ad => {
+    const cn = t => CNL.L.find(k => k.tur === t);
+    if (ad === 'tetik') { if (!TET.o) return 'tetik balığı yalnız resifte'; TET.o.kestT = 0; CNL.L.forEach(k => { if (k.tur === 'kestane') { k.yenik = 0; k.ters = 0; } }); return 'tetik balığı bir deniz kestanesine gidiyor'; }
+    if (ad === 'temizlik') { if (!TMZ.ist || !ORF.o) return 'temizlik istasyonu ya da orfoz bu sahnede yok'; TMZ.orfT = 0; if (geceDegeri() > 0.7) DM.gece(0); return 'orfoz temizlik istasyonuna gidiyor'; }
+    if (ad === 'mantis') { const o = cn('mantis'); if (!o) return 'mantis karidesi yalnız resifte'; const e = cn('ermit'); if (e) { e.x = o.ev + 30 * OL; e.sakli = 0; } o.yumT = 0; o.cik = 1; o.sakli = 0; return 'mantis karidesi yumruğunu hazırlıyor'; }
+    if (ad === 'murekkep') { const o = cn('murekkep'), k = cn('karides'); if (!o || !k) return 'mürekkep balığı ya da karides yok'; k.yok = 0; o.x = kis(k.x - 90 * OL, 40, W - 40); o.y = k.y; o.ac = 0; o.mod = 'normal'; return 'mürekkep balığı karidese yaklaşıyor'; }
+    if (ad === 'muren') { MUR.z = 0; if (geceDegeri() < 0.72) DM.gece(1); if (MUR.o) MUR.o.tok = 0; return 'müren yuvasından çıkıyor'; }
     if (ad === 'kus') { KUS.z = 0; const L = YERLI.lider; L.ty = ALAN.y1 + (ALAN.y2 - ALAN.y1) * 0.2; L.t = 8; return 'sürü yüzeye çıkınca kuş dalacak'; }
     if (ad === 'ahtapot') { const o = CNL.L.find(k => k.tur === 'ahtapot'); if (!o) return 'bu sahnede ahtapot yok'; if (geceDegeri() < 0.6) DM.gece(1); const y = YERLI.yengec; y.yok = 0; y.sakli = 0; y.x = kis(o.x + 180 * OL, 30, W - 30); o.avT = 0; return 'ahtapot yengeci gördü'; } }, ekoDurum: () => { const d = ekoDurum(); console.table(d); return d; }, su: v => { S.su = kis(+v, 0, 100); return S.su; }, yirtici: (x = 0.45) => { Object.assign(YIR, { durum: 'gec', d: 1, x: W * x, y: (ALAN.y1 + ALAN.y2) * 0.45, kontrol: true }); }, kalabalik: n => { demoBaliklar = new Map(Array.from({ length: n }, (_, i) => [`t${i}`, { ad: 'Test' + i, d: { a: 3, tr: ['palyaco', 'cerrah', 'melek'][i % 3], al: 'resif', r: 0, z: [] }, gun: 3, id: 't' + i }])); balikSenk(); }, ekoIleri: h => ekoIlerlet(h), deniz: v => { DENIZ.sabit = v == null ? null : kis(+v, 0, 1); DENIZ.d = DENIZ.sabit ?? DENIZ.d; }, kazan: m => { kazan(m, { sinirsiz: true, tokBagimsiz: true }); kaydet(); uiGuncelle(); }, avBitir, gz: k => { GZ.o = null; gzBaslat(k); }, ins: (k, cesit) => { INS.o = null; INS.tak = null; insBaslat(k, cesit); }, sifirla: () => { localStorage.removeItem(KEY); location.reload(); },
   /* konsol komutlarının listesi: DM.yardim() ya da DM.yardim('eko') gibi bir kelimeyle süzerek */
@@ -5844,10 +6173,11 @@ window.DM = { panel: () => gelPanel(),
       ['Av ve sürüler', 'DM.ks()', 'Küçük sürülerin (flama, kardinal, sarpa…) sayısını ve orfozun açlığını gösterir.', 'DM.ks()'],
       ['Av ve sürüler', 'DM.orfozAc()', 'Orfozu hemen acıktırır; yakına gelen ilk sürü balığına hamle yapar.', 'DM.orfozAc()'],
       ['Av ve sürüler', 'DM.orfozTasi(i)', 'Orfozu başka bir sığınağa gönderir (0 sol kayalık, 1 orta kaya, 2 mağara yanı; boş bırakılırsa sıradaki).', 'DM.orfozTasi(2)'],
-      ['Av ve sürüler', 'DM.avci(ad)', "Avcıyı hemen çıkarır: 'muren' (gece olmalı), 'kus' (sardalya yüzeye yakınken bekler), 'ahtapot' (ahtapotu yengecin yanına götürür).", "DM.avci('kus')"],
+      ['Av ve sürüler', 'DM.avci(ad)', "Avcıyı hemen çıkarır: 'muren' (gece olmalı), 'kus' (sardalya yüzeye yakınken bekler), 'ahtapot' (ahtapotu yengecin yanına götürür), 'tetik' (deniz kestanesi yer), 'mantis' (ermite yumruk), 'murekkep' (karides avlar), 'temizlik' (orfoz temizlik istasyonuna gider).", "DM.avci('kus')"],
       ['Av ve sürüler', 'DM.yirtici(x)', 'Köpekbalığını hemen geçirir; x ekranda nereden geçeceği (0 sol – 1 sağ).', 'DM.yirtici(0.5)'],
       ['Sahne', 'DM.gece(0-1)', 'Gece/gündüzü zorlar (1 tam gece, 0 gündüz). Değersiz çağrılırsa gerçek saate döner.', 'DM.gece(1)'],
       ['Sahne', 'DM.deniz(0-1)', 'Deniz durumunu sabitler (0 durgun, 1 fırtınalı). Değersiz çağrılırsa normale döner.', 'DM.deniz(0.8)'],
+      ['Sahne', 'DM.alan(ad)', 'Sahneyi değiştirir: resif, acik (açık deniz) ya da derin.', "DM.alan('derin')"],
       ['Sahne', 'DM.gz(tür)', 'Bir ziyaretçiyi hemen getirir. Türler: ' + Object.keys(GZ_TUR).join(', '), "DM.gz('kambur')"],
       ['Sahne', 'DM.ins(tür, çeşit)', 'Bir tekne, dalgıç ya da denizaltı getirir; çeşit numarası verilirse o renk/boy (yoksa rastgele). Türler: ' + Object.keys(INS_TUR).join(', '), "DM.ins('denizalti', 4)"],
       ['Sahne', 'DM.kalabalik(n)', 'Sahneye n tane deneme balığı ekler (çakışma ve performans denemesi için).', 'DM.kalabalik(6)'],

@@ -545,7 +545,7 @@ export async function kur3D({ tuval, kalite }) {
           if (!c || c.tur !== o.tur) { if (c) sahne.remove(c.g); c = { tur: o.tur, g: canliUret(o.tur, m => yama(m, {}), o) }; sahne.add(c.g); CAN.set(o.id, c); }
           const p = dunya(o.x, o.y), sc = Math.max(0.02, (o.s || 10) * M.k);
           if (o.zemin) p.y = zeminY(p.x, 0); c.g.position.copy(p); c.g.scale.setScalar(sc);
-          c.g.rotation.y = o.tur === 'yengec' ? -Math.PI / 2 + (o.d || 1) * 0.25 : o.tur === 'yildiz' || o.tur === 'istiridye' ? 0 : (o.d || 1) > 0 ? -0.45 : Math.PI + 0.45;
+          c.g.rotation.y = o.tur === 'yengec' ? -Math.PI / 2 + (o.d || 1) * 0.25 : o.tur === 'yildiz' || o.tur === 'istiridye' || o.tur === 'kumyilan' || o.tur === 'baca' || o.tur === 'kestane' ? 0 : (o.d || 1) > 0 ? -0.45 : Math.PI + 0.45;
           if (o.tur === 'istiridye') c.g.scale.setScalar(sc * (o.nab || 1));
           canliOyna(c.g, o.tur, o, t); c.g.visible = !o.gizli;
         }

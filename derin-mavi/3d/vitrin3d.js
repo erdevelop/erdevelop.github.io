@@ -6,7 +6,7 @@ import { canliUret, canliOyna, yuzenUret, yuzenOyna } from './uretec.js';
 
 let GLB = null;
 const glbYukle = () => GLB || (GLB = yukle(new URL('./baliklar.glb', import.meta.url).href));
-const ZEMIN = ['yildiz', 'salyangoz', 'ermit', 'ahtapot', 'karides', 'dvatoz', 'yengec', 'istiridye'];
+const ZEMIN = ['yildiz', 'salyangoz', 'ermit', 'ahtapot', 'karides', 'dvatoz', 'yengec', 'istiridye', 'kumyilan', 'nudibrans', 'kestane', 'hiyar', 'mantis', 'murekkep', 'baca'];
 
 /* tur: { balik: 'palyaco' } ya da { canli: 'manta' } */
 export async function vitrin(tuval, tur) {
