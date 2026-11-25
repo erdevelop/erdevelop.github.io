@@ -211,7 +211,7 @@ function lathe(profil, seg = 20) { /* profil: [[x, r], ...] x ekseni boyunca dö
 function renkle(g, fn) { const p = g.attributes.position, c = new Float32Array(p.count * 3), col = new THREE.Color(), v = new THREE.Vector3(); for (let i = 0; i < p.count; i++) { v.fromBufferAttribute(p, i); fn(v, col); c.set([col.r, col.g, col.b], i * 3); } g.setAttribute('color', new THREE.BufferAttribute(c, 3)); return g; }
 function yuzgec(noktalar, kalin = 0.01) { const sh = new THREE.Shape(); noktalar.forEach(([x, y], i) => i ? sh.lineTo(x, y) : sh.moveTo(x, y)); sh.closePath(); const g = new THREE.ExtrudeGeometry(sh, { depth: kalin, bevelEnabled: false }); g.translate(0, 0, -kalin / 2); return g; }
 
-export function yuzenUret(tur, malz, balik) {
+export function yuzenUret(tur, malz, balik, o = {}) {
   const G = new THREE.Group(), A = {}, M = (r, ek) => malz(new THREE.MeshStandardMaterial(Object.assign({ color: r, roughness: 0.55 }, ek)));
   const ekle = (geo, mat, ust = G) => { const m = new THREE.Mesh(geo, mat); m.castShadow = true; m.receiveShadow = true; ust.add(m); return m; };
   const goz = (x, y, z, r, ust = G) => { ekle(new THREE.SphereGeometry(r, 10, 8), M('#f4f2ea', { roughness: 0.15 }), ust).position.set(x, y, z); ekle(new THREE.SphereGeometry(r * 0.6, 8, 6), M('#050505', { roughness: 0.05 }), ust).position.set(x + r * 0.35, y, z + Math.sign(z) * r * 0.45); };
@@ -332,6 +332,24 @@ export function yuzenUret(tur, malz, balik) {
       A.gov = ekle(g, malz(new THREE.MeshPhysicalMaterial({ vertexColors: true, roughness: 0.25, clearcoat: 1, transparent: true, opacity: 0.9 })));
       break;
     }
+    case 'meduz': { /* denizanası: yarı saydam çan, içte dört pembe halka, kıvrımlı ağız kolları, ince dokunaçlar */
+      const renk = new THREE.Color(o.renk || '#F3B6E8'), derin = !!o.derin;
+      const canM = malz(new THREE.MeshPhysicalMaterial({ color: renk, roughness: 0.15, transparent: true, opacity: 0.42, side: THREE.DoubleSide, emissive: renk, emissiveIntensity: derin ? 0.9 : 0.12, depthWrite: false, sheen: 0.5, sheenColor: new THREE.Color('#ffffff') }));
+      const can = new THREE.SphereGeometry(0.5, 28, 14, 0, Math.PI * 2, 0, Math.PI * 0.52); const p = can.attributes.position;
+      for (let i = 0; i < p.count; i++) { const x = p.getX(i), z = p.getZ(i), y = p.getY(i), a = Math.atan2(z, x), k = 1 + 0.035 * Math.cos(a * 16) * (1 - y / 0.5); p.setXYZ(i, x * k, y * 0.85, z * k); }
+      can.computeVertexNormals(); A.can = new THREE.Group(); G.add(A.can); const m = new THREE.Mesh(can, canM); A.can.add(m);
+      const ic = malz(new THREE.MeshStandardMaterial({ color: derin ? '#7fffe0' : '#ff8fc8', emissive: derin ? '#4fffd0' : '#ff6fb0', emissiveIntensity: derin ? 1.4 : 0.35, transparent: true, opacity: 0.75 }));
+      for (let i = 0; i < 4; i++) { const t = new THREE.Mesh(new THREE.TorusGeometry(0.07, 0.018, 6, 14), ic); const a = i * Math.PI / 2 + 0.78; t.position.set(Math.cos(a) * 0.12, 0.18, Math.sin(a) * 0.12); t.rotation.x = Math.PI / 2; A.can.add(t); }
+      A.kol = []; const kolM = malz(new THREE.MeshPhysicalMaterial({ color: renk, roughness: 0.3, transparent: true, opacity: 0.55, side: THREE.DoubleSide, emissive: renk, emissiveIntensity: derin ? 0.7 : 0.08, depthWrite: false }));
+      for (let i = 0; i < 4; i++) { const g = new THREE.Group(); const a = i * Math.PI / 2; g.position.set(Math.cos(a) * 0.05, 0.02, Math.sin(a) * 0.05); G.add(g);
+        const yol = new THREE.CatmullRomCurve3(Array.from({ length: 7 }, (_, j) => new THREE.Vector3(Math.sin(j * 1.3 + i) * 0.05, -j * 0.13, Math.cos(j * 1.1 + i) * 0.05)));
+        const tg = new THREE.TubeGeometry(yol, 28, 0.035, 5); tg.scale(1, 1, 0.45); const k = new THREE.Mesh(tg, kolM); k.rotation.y = a; g.add(k); A.kol.push([g, i]); }
+      /* ince dokunaçlar: her kare yeniden şekillenen çizgiler */
+      A.dok = []; const cm = new THREE.LineBasicMaterial({ color: renk, transparent: true, opacity: 0.55, depthWrite: false });
+      for (let i = 0; i < 18; i++) { const a = i / 18 * Math.PI * 2, g = new THREE.BufferGeometry(); g.setAttribute('position', new THREE.BufferAttribute(new Float32Array(12 * 3), 3)); const l = new THREE.Line(g, cm); G.add(l); A.dok.push([l, a, 1.1 + (i % 3) * 0.35]); }
+      break;
+    }
+    case 'sardalya1': { const f = balik('sardalya'); G.add(f.o); A.b = [{ ...f, i: 0 }]; break; }
     case 'palyacocift': case 'papagan': case 'kelebek': case 'barakuda': {
       const P = { palyacocift: ['palyaco', null, [[0.15, 0.05, 0], [-0.5, -0.2, 0.25]], 0.55], papagan: ['cerrah', '#7dffd0', [[0, 0, 0]], 1], kelebek: ['melek', '#fff27a', [[0.1, 0, 0], [-0.5, 0.25, -0.3], [-0.6, -0.3, 0.25]], 0.5], barakuda: ['orkinos', '#d8e6ee', [[0, 0, 0], [-0.3, 0.25, -0.4], [-0.6, -0.2, 0.3], [0.2, -0.35, 0.5], [-0.9, 0.05, -0.1]], 0.42] }[tur];
       A.b = P[2].map(([x, y, z], i) => { const f = balik(P[0], P[1]); f.o.position.set(x, y, z); f.o.scale.setScalar(P[3]); if (tur === 'barakuda') f.o.scale.set(P[3] * 1.2, P[3] * 0.5, P[3] * 0.5); G.add(f.o); return { ...f, i }; });
@@ -355,6 +373,13 @@ export function yuzenOyna(G, tur, o, t) {
     case 'dumbo': A.k.forEach(([k, z]) => k.rotation.y = Math.sin(f * 3) * 0.5 * z); A.etek.scale.set(1 + Math.sin(f * 1.5) * 0.12, 1, 1 + Math.sin(f * 1.5) * 0.12); break;
     case 'sifonofor': A.z.forEach((b, i) => { b.position.y = Math.sin(f * 0.8 - i * 0.25) * 0.04; b.position.z = Math.cos(f * 0.6 - i * 0.2) * 0.03; }); break;
     case 'pelikan': { const p = A.yol.points; p.forEach((v, i) => v.y = Math.sin(f * 2.5 - i * 0.6) * 0.04 * (i / 9)); A.gov.geometry.dispose(); A.gov.geometry = new THREE.TubeGeometry(A.yol, 40, 0.03, 6); A.uc.position.copy(p[9]); A.ag.scale.set(1, 1 + Math.sin(f * 1.5) * 0.15, 1 + Math.sin(f * 1.5) * 0.15); break; }
+    case 'meduz': {
+      const p = 1 + Math.sin(f * 2.2) * 0.12, r = 0.48 * p; A.can.scale.set(p, 1 / p, p);
+      A.kol.forEach(([g, i]) => { g.rotation.x = Math.sin(f * 1.1 + i) * 0.18; g.rotation.z = Math.cos(f * 0.9 + i * 2) * 0.18; });
+      for (const [l, a, L] of A.dok) { const pa = l.geometry.attributes.position; for (let j = 0; j < 12; j++) { const u = j / 11, sal = Math.sin(f * 2.4 - u * 5 + a * 3) * 0.06 * u; pa.setXYZ(j, Math.cos(a) * r * (1 - u * 0.15) + sal, -u * L + 0.02, Math.sin(a) * r * (1 - u * 0.15) + Math.cos(f * 2 - u * 4 + a) * 0.05 * u); } pa.needsUpdate = true; }
+      break;
+    }
+    case 'sardalya1': A.b[0].yuz.faz.value = f * 12; break;
     case 'palyacocift': case 'papagan': case 'kelebek': case 'barakuda': for (const b of A.b) { b.yuz.faz.value = f * 9 + b.i; b.o.position.y += Math.sin(f * 1.3 + b.i * 2) * 0.0015; } break;
   }
 }
