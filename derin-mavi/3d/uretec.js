@@ -492,7 +492,7 @@ export function yuzenOyna(G, tur, o, t) {
 /* ======================= insanlar ve araçlar =======================
    Tekneler: boy 1, su çizgisi y = 0, gövde aşağıda (su altından görünen kısım).
    Dalgıçlar: baştan palete boy 1, yüzüstü (sırt +y), baş +x. Denizaltı boy 1, ROV genişlik 1. */
-export function insanUret(tur, malz) {
+export function insanUret(tur, malz, ce = {}) {
   const G = new THREE.Group(), A = {}, M = (r, ek) => malz(new THREE.MeshStandardMaterial(Object.assign({ color: r, roughness: 0.55 }, ek)));
   const ekle = (geo, mat, ust = G) => { const m = new THREE.Mesh(geo, mat); m.castShadow = true; m.receiveShadow = true; ust.add(m); return m; };
   const silindir = (r0, r1, L, mat, ust, seg = 10) => { const g = new THREE.CylinderGeometry(r1, r0, L, seg); g.rotateZ(-Math.PI / 2); g.translate(L / 2, 0, 0); return ekle(g, mat, ust); };
@@ -505,32 +505,48 @@ export function insanUret(tur, malz) {
   const vc = M('#ffffff', { vertexColors: true, roughness: 0.45 });
   switch (tur) {
     case 'balikci': {
-      ekle(govde(1, 0.2, 0.15, (v, c) => c.set(v.y < -0.13 ? '#7A2E24' : v.y > -0.025 ? '#2A1C12' : '#5A4230')), vc);
-      const kl = ekle(new THREE.BoxGeometry(0.85, 0.035, 0.015), M('#2A1C12')); kl.position.y = -0.2;
-      const dm = ekle(new THREE.BoxGeometry(0.03, 0.12, 0.012), M('#2A1C12')); dm.position.set(-0.49, -0.14, 0);
+      const ust = ce.ust || '#2A1C12', gov = ce.gov || '#5A4230', alt = ce.alt || '#7A2E24';
+      ekle(govde(1, 0.2, 0.15, (v, c) => c.set(v.y < -0.13 ? alt : v.y > -0.025 ? ust : gov)), vc);
+      const kl = ekle(new THREE.BoxGeometry(0.85, 0.035, 0.015), M(ust)); kl.position.y = -0.2;
+      const dm = ekle(new THREE.BoxGeometry(0.03, 0.12, 0.012), M(ust)); dm.position.set(-0.49, -0.14, 0);
       A.p = pervane(-0.44, -0.16, 0.07, M('#B08D57', { metalness: 0.7, roughness: 0.3 })); break;
     }
     case 'yelkenli': {
-      ekle(govde(1, 0.12, 0.17, (v, c) => c.set(v.y > -0.025 ? '#1565C0' : '#F4F6F8')), vc);
-      const om = M('#37474F'); const sh = new THREE.Shape(); sh.moveTo(0.1, 0); sh.lineTo(0.02, -0.27); sh.lineTo(-0.06, -0.27); sh.lineTo(-0.04, 0); sh.closePath();
+      ekle(govde(1, 0.12, 0.17, (v, c) => c.set(v.y > -0.025 ? (ce.serit || '#1565C0') : (ce.gov || '#F4F6F8'))), vc);
+      const om = M(ce.salma || '#37474F'); const sh = new THREE.Shape(); sh.moveTo(0.1, 0); sh.lineTo(0.02, -0.27); sh.lineTo(-0.06, -0.27); sh.lineTo(-0.04, 0); sh.closePath();
       ekle(new THREE.ExtrudeGeometry(sh, { depth: 0.02, bevelEnabled: false }), om).position.set(0, -0.1, -0.01);
       const ag = ekle(new THREE.SphereGeometry(0.035, 12, 8), om); ag.scale.set(3, 1, 1); ag.position.set(-0.02, -0.38, 0);
       const ru = ekle(new THREE.BoxGeometry(0.04, 0.14, 0.012), M('#455A64')); ru.position.set(-0.38, -0.15, 0); break;
     }
     case 'surat': {
-      ekle(govde(1, 0.15, 0.16, (v, c) => c.set(v.y > -0.03 ? '#C62828' : v.y < -0.1 ? '#90A4AE' : '#FFFFFF')), vc);
+      ekle(govde(1, 0.15, 0.16, (v, c) => c.set(v.y > -0.03 ? (ce.ust || '#C62828') : v.y < -0.1 ? (ce.alt || '#90A4AE') : (ce.gov || '#FFFFFF'))), vc);
       const mm = M('#212121', { roughness: 0.35 }); const ay = ekle(new THREE.BoxGeometry(0.05, 0.2, 0.03), mm); ay.position.set(-0.53, -0.08, 0);
       A.p = pervane(-0.53, -0.2, 0.06, M('#cfd8dc', { metalness: 0.8, roughness: 0.25 })); break;
     }
+    case 'sandal': { /* küçük kürekli sandal: tahta kaplama çizgileri, iki kürek iskeleden suya girer */
+      const gov = ce.gov || '#9C6B3F', ust = ce.ust || '#5D3A1E', alt = ce.alt || '#6B4423';
+      ekle(govde(1, 0.15, 0.22, (v, c) => c.set(v.y > -0.025 ? ust : v.y < -0.115 ? alt : (Math.abs((v.y * 60) % 2) < 0.18 ? alt : gov))), vc);
+      const om = ekle(new THREE.BoxGeometry(0.8, 0.025, 0.02), M(alt)); om.position.y = -0.15;
+      const km = M('#A1825C', { roughness: 0.7 }); A.kurek = [];
+      for (const z of [-1, 1]) { const g = new THREE.Group(); g.position.set(0.05, 0.02, z * 0.2); G.add(g);
+        const sap = ekle(new THREE.CylinderGeometry(0.008, 0.008, 0.62, 6), km, g); sap.position.y = -0.31;
+        const pala = ekle(new THREE.BoxGeometry(0.06, 0.16, 0.008), km, g); pala.position.y = -0.62; A.kurek.push([g, z]); }
+      break;
+    }
     case 'dalgic': case 'serbest': case 'snorkel': {
-      const suit = M(tur === 'snorkel' ? '#2B3A55' : '#1A1E26', { roughness: 0.75 }), ten = M('#D9A27E'), fin = M(tur === 'serbest' ? '#22262E' : '#1E88E5', { roughness: 0.4 });
+      const suit = M(ce.suit || (tur === 'snorkel' ? '#2B3A55' : '#1A1E26'), { roughness: 0.75 }), ten = M('#D9A27E'), fin = M((ce.palet && ce.palet[0]) || (tur === 'serbest' ? '#22262E' : '#1E88E5'), { roughness: 0.4 }), vur = M(ce.vurgu || '#26C6DA', { roughness: 0.6 });
       const g = new THREE.CapsuleGeometry(0.07, 0.34, 6, 12); g.rotateZ(Math.PI / 2); const t = ekle(g, suit); t.position.set(0.24, 0, 0); t.scale.set(1, 0.85, 1.15);
       const bas = ekle(new THREE.SphereGeometry(0.058, 16, 12), suit); bas.position.set(0.52, 0.01, 0);
+      /* elbise deseni: yan şerit, bantlar ya da kamuflaj lekeleri */
+      if (ce.desen === 'kamuflaj') { const r = ((i) => () => (i = (i * 16807) % 2147483647) / 2147483647)(7 + (ce.i || 0)), koyu = M('#2A3326', { roughness: 0.8 });
+        for (let i = 0; i < 16; i++) { const a = r() * Math.PI * 2, x = 0.06 + r() * 0.36, l = ekle(new THREE.SphereGeometry(0.022, 8, 6), i % 2 ? vur : koyu); l.scale.set(1.6, 0.5, 1); l.position.set(x, Math.cos(a) * 0.058, Math.sin(a) * 0.079); l.lookAt(x, 0, 0); l.rotateX(Math.PI / 2); } }
+      else if (ce.desen === 'bant') { for (const x of [0.16, 0.32]) { const b = ekle(new THREE.CylinderGeometry(0.072, 0.072, 0.03, 16).rotateZ(Math.PI / 2), vur); b.position.x = x; b.scale.set(1, 0.86, 1.16); } }
+      else if (tur !== 'snorkel') for (const z of [-1, 1]) { const b = ekle(new THREE.BoxGeometry(0.4, 0.018, 0.006), vur); b.position.set(0.24, -0.005, z * 0.079); }
       const mask = ekle(new THREE.BoxGeometry(0.03, 0.04, 0.08), malz(new THREE.MeshPhysicalMaterial({ color: '#9fd8ff', roughness: 0.05, metalness: 0.1, transmission: 0, clearcoat: 1 }))); mask.position.set(0.565, -0.01, 0);
       ekle(new THREE.BoxGeometry(0.008, 0.045, 0.085), M('#111')).position.set(0.55, -0.01, 0);
-      if (tur === 'snorkel') { const s = ekle(new THREE.CylinderGeometry(0.008, 0.008, 0.16, 6), M('#FFD54F')); s.position.set(0.5, 0.09, 0.05); }
+      if (tur === 'snorkel') { const s = ekle(new THREE.CylinderGeometry(0.008, 0.008, 0.16, 6), vur); s.position.set(0.5, 0.09, 0.05); }
       if (tur === 'dalgic') {
-        const tp = ekle(new THREE.CapsuleGeometry(0.035, 0.22, 4, 10).rotateZ(Math.PI / 2), M('#FFD54F', { metalness: 0.3, roughness: 0.35 })); tp.position.set(0.24, 0.085, 0);
+        const tp = ekle(new THREE.CapsuleGeometry(0.035, 0.22, 4, 10).rotateZ(Math.PI / 2), M(ce.tup || '#FFD54F', { metalness: 0.3, roughness: 0.35 })); tp.position.set(0.24, 0.085, 0);
         const kam = ekle(new THREE.BoxGeometry(0.06, 0.05, 0.07), M('#263238')); kam.position.set(0.66, -0.05, 0); const ob = ekle(new THREE.CylinderGeometry(0.02, 0.02, 0.03, 10).rotateZ(Math.PI / 2), M('#90CAF9', { roughness: 0.05 })); ob.position.set(0.705, -0.05, 0);
         for (const z of [-0.06, 0.06]) { const k = ekle(new THREE.CylinderGeometry(0.004, 0.004, 0.1, 4), M('#37474F')); k.position.set(0.68, 0.0, z); k.rotation.x = z * 8; }
       }
@@ -541,21 +557,28 @@ export function insanUret(tur, malz) {
       for (const z of [-1, 1]) {
         const b = new THREE.Group(); b.position.set(0.06, 0, z * 0.04); G.add(b); const ic = new THREE.Group(); b.add(ic); ic.rotation.y = Math.PI;
         silindir(0.032, 0.024, 0.22, suit, ic, 8); const diz = new THREE.Group(); diz.position.x = 0.22; ic.add(diz); silindir(0.024, 0.02, 0.2, suit, diz, 8);
+        if (ce.desen === 'bant' && tur !== 'snorkel') { const bb = ekle(new THREE.CylinderGeometry(0.03, 0.03, 0.03, 10).rotateZ(Math.PI / 2), vur, ic); bb.position.x = 0.12; }
         const pl = new THREE.Shape(); const fl = tur === 'serbest' ? 0.34 : 0.2; pl.moveTo(0, -0.025); pl.lineTo(fl, -0.045); pl.lineTo(fl, 0.045); pl.lineTo(0, 0.025); pl.closePath();
         const pg = new THREE.ExtrudeGeometry(pl, { depth: 0.006, bevelEnabled: false }); pg.rotateX(Math.PI / 2); const pa = ekle(pg, fin, diz); pa.position.x = 0.2;
         A.bacak.push([b, diz, z]);
       }
       break;
     }
-    case 'denizalti': {
-      const sar = M('#F5C542', { roughness: 0.35, metalness: 0.2 });
-      const g = new THREE.CapsuleGeometry(0.15, 0.72, 8, 20); g.rotateZ(Math.PI / 2); ekle(g, sar);
-      const ku = ekle(new THREE.BoxGeometry(0.22, 0.12, 0.1), sar); ku.position.set(-0.06, 0.18, 0);
+    case 'denizalti': { /* çeşide göre: gövde kalınlığı (h), renkler, lomboz sayısı, ön kubbe, yan iticiler (mini keşif denizaltısı) */
+      const h = ce.h || 0.15, g3 = ce.g || ['#FFE082', '#B8860B', '#F5C542'], pen = ce.pen ?? 5, kb = ce.kubbe || 0.1;
+      const gm = M(g3[2], { roughness: 0.35, metalness: 0.2 }), km = M(ce.kule || g3[2], { roughness: 0.4, metalness: 0.15 });
+      const g = new THREE.CapsuleGeometry(h, Math.max(0.2, 1 - 2 * h), 8, 20); g.rotateZ(Math.PI / 2); ekle(g, gm);
+      if (ce.it) { const kf = ekle(new THREE.BoxGeometry(0.34, 0.05, h * 1.1), km); kf.position.set(-0.04, h + 0.015, 0); const di = ekle(new THREE.CylinderGeometry(0.006, 0.006, 0.12, 5), M('#37474F')); di.position.set(-0.12, h + 0.08, 0);
+        for (const z of [-1, 1]) for (const y of [h * 0.45, -h * 0.45]) { const t = ekle(new THREE.CylinderGeometry(0.035, 0.035, 0.16, 12).rotateZ(Math.PI / 2), km); t.position.set(-0.33, y, z * (h + 0.025)); } }
+      else { const ku = ekle(new THREE.BoxGeometry(0.22, 0.12, h * 0.7), km); ku.position.set(-0.06, h + 0.03, 0); }
+      if (ce.cizgi) for (const z of [-1, 1]) { const b = ekle(new THREE.BoxGeometry(0.75, h * 0.2, 0.006), M(ce.cizgi)); b.position.set(0, -h * 0.35, z * h * 0.955); }
       const cam = malz(new THREE.MeshStandardMaterial({ color: '#FFF3C4', emissive: '#F2C46B', emissiveIntensity: 1.2, roughness: 0.2 }));
-      for (let i = 0; i < 5; i++) for (const z of [-1, 1]) { const p = ekle(new THREE.CylinderGeometry(0.04, 0.04, 0.02, 14), cam); p.rotation.x = Math.PI / 2; p.position.set(-0.3 + i * 0.15, 0, z * 0.145); }
-      const kub = ekle(new THREE.SphereGeometry(0.13, 16, 12, 0, Math.PI), malz(new THREE.MeshPhysicalMaterial({ color: '#b4e1ff', roughness: 0.05, transparent: true, opacity: 0.55 }))); kub.rotation.y = -Math.PI / 2; kub.position.x = 0.5;
-      ekle(new THREE.TorusGeometry(0.08, 0.012, 6, 16).rotateY(Math.PI / 2), M('#8D6E00')).position.x = -0.55;
-      A.p = pervane(-0.55, 0, 0.12, M('#8D6E00', { metalness: 0.6 })); break;
+      for (let i = 0; i < pen; i++) for (const z of [-1, 1]) { const p = ekle(new THREE.CylinderGeometry(0.04, 0.04, 0.02, 14), cam); p.rotation.x = Math.PI / 2; p.position.set(-0.3 + i * (pen > 1 ? 0.6 / (pen - 1) * 0.92 : 0), 0, z * (h - 0.005)); }
+      const kr = ce.it ? h * 0.95 : Math.max(0.12, h * 0.87);
+      const kub = ekle(new THREE.SphereGeometry(kr, 18, 14, 0, Math.PI), malz(new THREE.MeshPhysicalMaterial({ color: '#b4e1ff', roughness: 0.05, transparent: true, opacity: 0.5 }))); kub.rotation.y = -Math.PI / 2; kub.position.x = 0.5 - h + (ce.it ? 0.02 : 0.15 - (kb - 0.1));
+      if (ce.it) { const pil = ekle(new THREE.SphereGeometry(0.045, 10, 8), M('#455A64')); pil.position.set(kub.position.x + 0.05, 0.01, 0); }
+      ekle(new THREE.TorusGeometry(0.08 * h / 0.15, 0.012, 6, 16).rotateY(Math.PI / 2), M('#5f5a4a')).position.x = -0.55;
+      A.p = pervane(-0.55, 0, 0.12 * Math.min(1.2, h / 0.15), M('#8D6E00', { metalness: 0.6 })); break;
     }
     case 'rov': {
       const sar = M('#FFC107', { roughness: 0.4 }), kara = M('#1F1F1F', { roughness: 0.6 });
@@ -577,4 +600,5 @@ export function insanOyna(G, tur, o, t) {
   if (A.bacak) { const hz = tur === 'serbest' ? 2.2 : tur === 'snorkel' ? 1.7 : 2.8; for (const [b, diz, z] of A.bacak) { const k = Math.sin(f * hz + (z > 0 ? 0 : Math.PI)); b.rotation.z = k * 0.28; diz.rotation.z = -Math.max(0, k) * 0.35; } }
   if (A.it) A.it.forEach((it, i) => it.rotation.x = f * 20 + i);
   if (A.kol) A.kol.rotation.z = -0.4 - Math.sin(f * 0.8) * 0.3;
+  if (A.kurek) { const a = f * 1.7; for (const [g, z] of A.kurek) { g.rotation.z = Math.cos(a) * 0.55; g.rotation.x = -z * (0.55 - Math.max(0, Math.sin(a)) * 0.35); } } /* kürek: geriye süpürür, suda iken dik, havada iken yana kalkık */
 }

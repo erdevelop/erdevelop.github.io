@@ -555,7 +555,7 @@ export async function kur3D({ tuval, kalite }) {
       { const o = d.insan;
         if (!o) { if (INS3) { sahne.remove(INS3.g); INS3 = null; } }
         else {
-          if (!INS3 || INS3.id !== o.id) { if (INS3) sahne.remove(INS3.g); INS3 = { id: o.id, g: insanUret(o.tur, m => yama(m, {})) }; sahne.add(INS3.g); }
+          if (!INS3 || INS3.id !== o.id) { if (INS3) sahne.remove(INS3.g); INS3 = { id: o.id, g: insanUret(o.tur, m => yama(m, {}), o.ce || {}) }; sahne.add(INS3.g); }
           const g = INS3.g; g.position.copy(dunya(o.x, o.y)); g.scale.setScalar(Math.max(0.05, o.boy * M.k));
           if (o.tur === 'serbest') g.rotation.set(0, -0.25, -o.a);
           else g.rotation.set(0, o.d > 0 ? -0.3 : Math.PI + 0.3, -o.egim * o.d);
