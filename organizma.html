@@ -244,7 +244,7 @@ body.izle.iz-yasam #yasam,body.izle.iz-lider #lider,body.izle.iz-mini #mini,body
 .yNb{font-size:11px;font-weight:900;color:var(--ink);display:flex;gap:4px;align-items:baseline}.yNb small{font-weight:700;color:var(--mute);font-size:10px;margin-left:auto}
 #yNufus{display:block;width:100%;height:46px;margin:4px 0 3px;border-radius:8px;background:rgba(0,0,0,.25)}
 #yNufusL{display:flex;flex-wrap:wrap;gap:2px 8px;font-size:10.5px;color:var(--mute);font-variant-numeric:tabular-nums}#yNufusL span{white-space:nowrap}#yNufusL i{display:inline-block;width:7px;height:7px;border-radius:50%;margin-right:3px;vertical-align:0}#yNufusL b{color:var(--ink);font-weight:800}
-#yasam.kapali #yNufusK{display:none}#yasam.sik .yS.yk{display:none}#yasam.sik #yNufus{height:28px}#yasam.sik #yEkg{height:28px}
+#yasam.kapali #yNufusK{display:none}#yasam.sik .yS.yk{display:none}#yasam.sik2 #yNufusK{display:none}#yasam{overflow:hidden}#yasam.sik #yNufus{height:28px}#yasam.sik #yEkg{height:28px}
 body.izle.iz-nufus #yNufusK,body:not(.izle).og-nufus #yNufusK{display:none}
 @media (max-width:640px){#yNufus{height:34px}#yNufusL{font-size:9.5px;gap:1px 6px}}
 
@@ -3518,23 +3518,24 @@ function yasamTehlike(o) {
   const b = DEVB.b; if (b && b.omur > 0) { const d = Math.hypot(b.x - o.x, b.y - o.y) - b.r - o.r; if (d < ed) { ed = d; ad = T(DEVLER[b.tip].ad[0], DEVLER[b.tip].ad[1]); } }
   return [ad, ed];
 }
-function yasamYer() {   // sıralamanın altına; sığmazsa sıralamanın soluna
+function yasamYer() {   // sıralamanın altına, sağa yaslı
   const Yp = $('yasam'), L = $('lider'), Lyok = L.hidden || !L.offsetWidth, ust = (IZLE ? 60 : 52) + (parseFloat(getComputedStyle(document.documentElement).getPropertyValue('--sat')) || 0);
   let top = Lyok ? ust : L.getBoundingClientRect().bottom + 8, sag = 10;
   let alt = innerHeight;
   for (const id of ['diyetG', 'dna', 'mini']) { const e = $(id); if (!e || e.hidden || !e.offsetWidth) continue; const r = e.getBoundingClientRect(); if (r.right > innerWidth - Yp.offsetWidth - 20 && r.top > top - 4) alt = Math.min(alt, r.top); }
-  Yp.classList.remove('sik');
-  if (top + Yp.offsetHeight > alt - 8) {
-    Yp.classList.add('sik');   // önce sıkıştır
-    if (top + Yp.offsetHeight > alt - 8) {   // sığmıyor: mini harita / DNA sütununun soluna, yine sıralamanın altına
-      Yp.classList.remove('sik'); let kol = 0;
-      for (const id of ['mini', 'dna', 'diyetG']) { const e = $(id); if (e && !e.hidden && e.offsetWidth) { const r = e.getBoundingClientRect(); if (r.bottom > top) kol = Math.max(kol, innerWidth - r.left); } }
-      kol += 10;
-      if (innerWidth - kol - Yp.offsetWidth > innerWidth * 0.45 && top + Yp.offsetHeight < innerHeight - 12) sag = kol;
-      else if (!Lyok) { top = L.getBoundingClientRect().top; sag = L.offsetWidth + 18; }
+  // sıralamanın altında, sağa yaslı kalır; sığmazsa kademeli sıkışır (az önemli satırlar, sonra ekosistem grafiği gizlenir)
+  Yp.style.maxHeight = ''; let sev = 0;
+  const dene = n => { Yp.classList.toggle('sik', n >= 1); Yp.classList.toggle('sik2', n >= 2); return top + Yp.offsetHeight <= alt - 8; };
+  while (sev < 2 && !dene(sev)) sev++;
+  if (sev === 2 && !dene(2)) {
+    if (innerWidth >= 900) {   // geniş ama alçak ekran: sol üste, hizalı bir sütun olarak
+      const kg = $('kgChip'); top = ust; if (kg && !kg.hidden && kg.offsetWidth && kg.getBoundingClientRect().left < 240) top = Math.max(top, kg.getBoundingClientRect().bottom + 8);
+      alt = innerHeight - 64; sev = 0; while (sev < 2 && !dene(sev)) sev++; if (!dene(sev)) Yp.style.maxHeight = Math.max(90, alt - top) + 'px';
+      Yp.style.top = top + 'px'; Yp.style.left = '10px'; Yp.style.right = 'auto'; return;
     }
+    else Yp.style.maxHeight = Math.max(90, alt - 8 - top) + 'px';   // dar ekranda yerinde kalır, taşan kısım kırpılır
   }
-  Yp.style.top = top + 'px'; Yp.style.right = sag + 'px';
+  Yp.style.top = top + 'px'; Yp.style.right = sag + 'px'; Yp.style.left = '';
 }
 function yasamSatir(ik, ad, deger, sinif, bar, renk, yk) {
   return `<div class="yS${sinif ? ' ' + sinif : ''}${yk ? ' yk' : ''}"><i>${ik}</i><span>${ad}</span><b>${deger}</b>${bar != null ? `<em><u style="width:${Math.round(Math.max(0, Math.min(1, bar)) * 100)}%${renk ? ';background:' + renk : ''}"></u></em>` : ''}</div>`;
