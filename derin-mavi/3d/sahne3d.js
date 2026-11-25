@@ -436,8 +436,20 @@ export async function kur3D({ tuval, kalite }) {
           if (!c) { c = { g: yuzenUret(o.tur, (m, ek) => yama(m, ek || {}), balikKlon, o), yaw: null }; sahne.add(c.g); YZN.set(o.id, c); }
           let p = dunya(o.x, o.y), sc = Math.max(0.02, o.s * M.k);
           if (o.arka || o.uzak) { const z = o.uzak ? -16 : -12, k2 = (kam.position.z - z) / kam.position.z; p = kam.position.clone().add(p.sub(kam.position).multiplyScalar(k2)); sc *= k2 * (o.uzak ? 0.75 : 1); }
+          /* derinlikte çapraz geçiş: köpekbalığı uzaktan gelip kameranın yanından geçer; ziyaretçiler de kendi derinlik yolunu izler.
+             Ekrandaki yeri 2D ile aynı kalır, kamera ışını boyunca ileri-geri gider; yönü gerçek 3D hareketinden hesaplanır. */
+          const yol = o.id === 'yirtici' ? [-10, 2.6] : (o.id.startsWith('gz') && !o.arka) ? (() => { const h = [...o.id].reduce((a, ch) => (a * 31 + ch.charCodeAt(0)) % 9973, 7); return [-7 + (h % 70) / 10, -7 + ((h >> 3) % 85) / 10]; })() : null;
+          let hedef = o.tur === 'top' ? 0 : o.d > 0 ? -0.35 : Math.PI + 0.35;
+          if (yol) {
+            const u = THREE.MathUtils.clamp(o.d > 0 ? (o.x + o.s) / (M.W + 2 * o.s) : (M.W + o.s - o.x) / (M.W + 2 * o.s), 0, 1), z = yol[0] + (yol[1] - yol[0]) * (u * u * (3 - 2 * u));
+            const k2 = (kam.position.z - z) / kam.position.z; p = kam.position.clone().add(p.sub(kam.position).multiplyScalar(k2));
+            const taban = zeminY(p.x, p.z) + sc * 0.3; if (p.y < taban) p.y = taban;
+            if (c.onceki) { const vx = p.x - c.onceki.x, vz = p.z - c.onceki.z; if (Math.hypot(vx, vz) > 1e-4) hedef = Math.atan2(-vz, vx); }
+            c.onceki = p.clone();
+          }
           c.g.position.copy(p); c.g.scale.setScalar(sc);
-          const hedef = o.tur === 'top' ? 0 : o.d > 0 ? -0.35 : Math.PI + 0.35; c.yaw = c.yaw == null ? hedef : c.yaw + (hedef - c.yaw) * Math.min(1, dt * 3);
+          if (c.yaw != null) { let dy = hedef - c.yaw; while (dy > Math.PI) dy -= Math.PI * 2; while (dy < -Math.PI) dy += Math.PI * 2; hedef = c.yaw + dy; }
+          c.yaw = c.yaw == null ? hedef : c.yaw + (hedef - c.yaw) * Math.min(1, dt * 3);
           c.g.rotation.set(o.tur === 'top' ? 0.3 : 0, c.yaw, o.tur === 'top' ? -o.don : 0);
           yuzenOyna(c.g, o.tur, o, t);
         }

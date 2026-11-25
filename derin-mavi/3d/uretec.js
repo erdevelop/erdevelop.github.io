@@ -384,7 +384,7 @@ export function yuzenUret(tur, malz, balik, o = {}) {
     case 'kopekbaligi': { /* kara uçlu resif köpekbalığı: tek parça pürüzsüz gövde, kalınlığı olan kavisli yüzgeçler, uçları siyah;
                              bütün parçalar aynı yüzme bükülmesini paylaşır, gövde kuyruğa doğru dalgalanır */
       A.yuz = { faz: { value: 0 }, genlik: { value: 1 } };
-      const SM = (r, ek) => malz(new THREE.MeshStandardMaterial(Object.assign({ color: r, roughness: 0.42, metalness: 0.05 }, ek)), { yuz: A.yuz });
+      const SM = (r, ek) => malz(new THREE.MeshPhysicalMaterial(Object.assign({ color: r, roughness: 0.38, metalness: 0.0, clearcoat: 0.35, clearcoatRoughness: 0.5 }, ek)), { yuz: A.yuz });
       /* gövde: boyuna kesitleri elips olan, sivri burunlu, kuyruk sapına incelen tek ağ */
       const NX = 110, NA = 32, X0 = -0.5, X1 = 0.56, P = [], C = [], I = [], col = new THREE.Color(), c2 = new THREE.Color();
       const PRF = [[0, 0.1], [0.12, 0.26], [0.3, 0.62], [0.5, 0.94], [0.6, 1], [0.72, 0.93], [0.84, 0.74], [0.92, 0.55], [0.97, 0.36], [0.995, 0.15], [1, 0]];
@@ -396,7 +396,7 @@ export function yuzenUret(tur, malz, balik, o = {}) {
           P.push(x, y, z);
           /* renk: sırtı bronz-gri, karnı beyaz, yumuşak geçişli; yanlarda beyaz bir dil (kara uçlu resif köpekbalığı) */
           const sirt = THREE.MathUtils.smoothstep(sy, -0.62, -0.12), dil = THREE.MathUtils.smoothstep(sy, -0.45, -0.1) * (1 - THREE.MathUtils.smoothstep(sy, -0.1, 0.15)) * THREE.MathUtils.smoothstep(u, 0.15, 0.45) * (1 - THREE.MathUtils.smoothstep(u, 0.55, 0.75));
-          col.set('#EEF1EF').lerp(c2.set('#7E8A8C'), sirt).lerp(c2.set('#A9B2AF'), (1 - sirt) * 0.0).lerp(c2.set('#EEF1EF'), dil * 0.6);
+          col.set('#E6EAE8').lerp(c2.set('#6F7C80'), sirt).lerp(c2.set('#DDE2E0'), dil * 0.22);
           if (u > 0.9 && u < 0.95 && sy < -0.55) col.lerp(c2.set('#2a2f30'), 0.7); /* ağız */
           C.push(col.r, col.g, col.b);
         }
