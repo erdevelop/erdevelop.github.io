@@ -18,7 +18,7 @@ const KAL = {
   yuksek: { dpr: 2, golge: true, sm: 2048, parca: 800, post: true, kostik: 1.4 }
 };
 const KAT = new URL('./', import.meta.url).href;
-const ESLE = { palyaco: 'palyaco', cerrah: 'cerrah', melek: 'melek', orkinos: 'orkinos', yelken: 'orkinos', ucan: 'sardalya', fener: 'fener', balta: 'sardalya', kurdele: 'cerrah', buz: 'sardalya', yavru: 'sardalya' };
+const ESLE = { palyaco: 'palyaco', cerrah: 'cerrah', melek: 'melek', orkinos: 'orkinos', yelken: 'yelken', ucan: 'ucan', fener: 'fener', balta: 'balta', kurdele: 'kurdele', buz: 'buz', yavru: 'sardalya' };
 
 export async function kur3D({ tuval, kalite }) {
   const mobil = matchMedia('(pointer:coarse)').matches || Math.min(innerWidth, innerHeight) < 600;

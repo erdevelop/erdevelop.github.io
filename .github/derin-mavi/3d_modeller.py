@@ -339,6 +339,60 @@ TURLER['fener'] = dict(H=0.27, W=0.2, a=0.32, b=0.95, ped=0.12, cz=-0.05,
     yuzgecler=[(0.55, 0.75, 0.08, False, 'sirt', 0.3, None), (0.6, 0.78, 0.07, True, 'anal', 0.3, None)],
     gozU=0.12, gozR=0.022, gozZ=0.45, iris='#7E8A5A')
 
+# yelken balığı (açık deniz): ince uzun gövde, kılıç gaga, dev mavi yelken sırt
+def yelkenEk(u, v, c):
+    w = yumusak(0.55, 0.85, math.sin(u * 55)) * yumusak(-0.2, -0.05, v) * (1 - yumusak(0.25, 0.35, v)) * yumusak(0.25, 0.3, u) * (1 - yumusak(0.85, 0.9, u))
+    return karis(c, renk('#9FD4F2'), w * 0.7)
+TURLER['yelken'] = dict(H=0.1, W=0.06, a=0.5, b=1.0, ped=0.04, cz=0.0, parlak=True,
+    renk=govdeRenk('#0E2A55', '#2F67A8', '#E2E8EE', yelkenEk),
+    yuzgec=lambda p, s, t: (yuzgecRenk('#1E4FA0', '#0A2048', 0.9, 0.9, '#4F8FE0') if p == 'yelken' else yuzgecRenk('#173A6E', None, 0.9, 0.85))(p, s, t),
+    kuyruk='hilal', kL=0.22, kH=0.24,
+    yuzgecler=[(0.1, 0.72, 0.34, False, 'yelken', 0.15, lambda s: math.sin(math.pi * min(1, s * 1.05)) ** 0.45 * (1 - 0.35 * s)), (0.62, 0.72, 0.06, True, 'anal', 0.6, lambda s: 1 - s * 0.7)],
+    gogusU=0.22, gogusL=0.2, gogusG=0.02, gogusA=0.3, gozU=0.08, gozR=0.022, iris='#8CA0B8')
+
+# uçan balık (açık deniz): kanat gibi çok uzun göğüs yüzgeçleri, çatal kuyruğun alt lobu uzun
+def ucanEk(u, v, c):
+    return c
+TURLER['ucan'] = dict(H=0.13, W=0.075, a=0.45, b=0.9, ped=0.06, cz=0.0, parlak=True,
+    renk=govdeRenk('#1C4E86', '#6E9CCB', '#EEF3F7', ucanEk),
+    yuzgec=lambda p, s, t: (yuzgecRenk('#9BC6EA', '#3E7DB8', 0.85, 0.9) if p == 'gogus' else yuzgecRenk('#6A9CC8', None, 0.9, 0.85))(p, s, t),
+    kuyruk='catal', kL=0.2, kH=0.17,
+    yuzgecler=[(0.55, 0.66, 0.05, False, 'sirt', 0.5, None), (0.58, 0.68, 0.05, True, 'anal', 0.5, None), (0.45, 0.55, 0.05, True, 'karin', 0.6, None)],
+    gogusU=0.25, gogusL=0.5, gogusG=0.16, gogusA=1.4, gozU=0.1, gozR=0.032, iris='#C8D4E0')
+
+# balta balığı (derin): bıçak gibi ince, derin gövdeli, gümüş, karnında ışık organları
+def baltaEk(u, v, c):
+    org = (1 - yumusak(0.015, 0.03, abs(v + 0.42))) * yumusak(0.2, 0.3, u) * (1 - yumusak(0.65, 0.7, u)) * yumusak(0.2, 0.6, math.sin(u * 80))
+    return karis(c, renk('#7FE8FF'), org)
+TURLER['balta'] = dict(H=0.3, W=0.028, a=0.34, b=0.6, ped=0.05, cz=-0.08, parlak=True,
+    renk=govdeRenk('#3A4450', '#C9D2DA', '#EDF2F6', baltaEk),
+    yuzgec=lambda p, s, t: yuzgecRenk('#C6D0D8', None, 0.9, 0.9)(p, s, t),
+    kuyruk='catal', kL=0.16, kH=0.12,
+    yuzgecler=[(0.45, 0.58, 0.06, False, 'sirt', 0.4, None), (0.6, 0.75, 0.05, True, 'anal', 0.5, None)],
+    gozU=0.14, gozR=0.05, gozZ=0.35, iris='#5A6470')
+
+# kurdele balığı (derin): şerit gibi çok uzun gövde, baştan kuyruğa kırmızı sırt yüzgeci, başta kırmızı tepelik
+def kurdeleEk(u, v, c):
+    benek = yumusak(0.6, 0.85, noise.noise(Vector((u * 40, v * 8, 1.7))))
+    return karis(c, renk('#5A6A78'), benek * 0.5)
+TURLER['kurdele'] = dict(ns=200, nr=24, H=0.075, W=0.022, a=0.5, b=1.0, ped=0.02, cz=0.0, parlak=True,
+    renk=govdeRenk('#8C9AA8', '#D8E0E8', '#EEF2F6', kurdeleEk),
+    yuzgec=lambda p, s, t: yuzgecRenk('#E0362F', '#8C1A16', 0.85, 0.85)(p, s, t),
+    kuyruk='duz', kL=0.06, kH=0.04,
+    yuzgecler=[(0.03, 0.98, 0.04, False, 'sirt', 0.1, lambda s: 0.75 + 0.25 * math.sin(s * 40)), (0.01, 0.07, 0.16, False, 'tepelik', 0.5, lambda s: (1 - s) ** 0.5)],
+    gogusU=0.12, gogusL=0.05, gogusG=0.02, gozU=0.04, gozR=0.016, iris='#C0C6CC')
+
+# buz balığı (derin, kış): soluk yarı şeffaf gövde (kanında hemoglobin yok), uzun ördek gagası gibi burun
+def buzEk(u, v, c):
+    n = noise.noise(Vector((u * 14, v * 6, 2.3)))
+    return karis(c, renk('#9DB6C2'), max(0, n) * 0.4)
+TURLER['buz'] = dict(H=0.13, W=0.075, a=0.36, b=0.9, ped=0.05, cz=0.0,
+    renk=govdeRenk('#8EA3AE', '#DCE8EE', '#F4F8FA', buzEk),
+    yuzgec=lambda p, s, t: yuzgecRenk('#E6EEF2', '#A9BCC6', 0.85, 0.85)(p, s, t),
+    kuyruk='duz', kL=0.12, kH=0.08,
+    yuzgecler=[(0.28, 0.38, 0.1, False, 'sirt', 0.3, None), (0.42, 0.78, 0.06, False, 'sirt2', 0.25, None), (0.45, 0.8, 0.05, True, 'anal', 0.25, None)],
+    gogusU=0.25, gogusL=0.18, gogusG=0.1, gogusA=0.9, gozU=0.13, gozR=0.03, gozZ=0.4, iris='#F0F4F6')
+
 bpy.ops.wm.read_factory_settings(use_empty=True)
 for i, (ad, sp) in enumerate(TURLER.items()):
     k = balik(ad, sp)
@@ -362,6 +416,14 @@ for i in range(7):
         m = Matrix.Translation((x, yan * 0.07 * (1 - i * 0.08), -0.02)) @ Matrix.Rotation(math.pi, 4, 'X')
         bmesh.ops.create_cone(bm, cap_ends=True, segments=5, radius1=0.008, radius2=0.0, depth=0.05, matrix=m)
 bm_obje('fener_dis', bm, malz('dis', 0.2), lambda co, n: renk('#F2F0E6'), ebeveyn=f)
+
+# yelken balığının kılıç gagası ve buz balığının uzun burnu
+for ad_, uz, r0, z0, renk_ in [('yelken', 0.22, 0.012, 0.0, '#14305A'), ('buz', 0.09, 0.022, -0.005, '#C8D8E0')]:
+    ob = bpy.data.objects['balik_' + ad_]
+    bm = bmesh.new()
+    m = Matrix.Translation((0.5 + uz / 2 - 0.01, 0, z0)) @ Matrix.Rotation(-math.pi / 2, 4, 'Y')
+    bmesh.ops.create_cone(bm, cap_ends=True, segments=10, radius1=r0, radius2=0.002, depth=uz, matrix=m)
+    bm_obje(ad_ + '_gaga', bm, malz('gaga', 0.35), lambda co, n, r=renk_: renk(r), ebeveyn=ob)
 
 # dışa aktar
 for o in bpy.data.objects:
