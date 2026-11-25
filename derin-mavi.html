@@ -498,6 +498,7 @@ function ilerlet() {
   if (S.yem >= mx) S.yemT = n;
   else { const k = Math.floor((n - S.yemT) / YEM_MS); if (k > 0) { S.yem = Math.min(mx, S.yem + k); S.yemT += k * YEM_MS; if (S.yem >= mx) S.yemT = n; } }
   S.su = Math.max(0, (S.su == null ? 100 : S.su) - saat * 0.22);
+  ekoIlerlet(saat);
   S.mutlu = Math.max(0, (S.mutlu == null ? 70 : S.mutlu) - saat * 3);
   if (!S.hasta && S.su < 25 && S.tok < 15) { S.hasta = true; duyur(T(`🤒 ${S.ad} hastalandı. Suyu temizle ve iyileştir.`, `🤒 ${S.ad} got sick. Clean the water and heal it.`)); }
   S.son = n; gunVeri(); sezonKontrol();
@@ -881,6 +882,7 @@ function g3Yuzenler() {
   const g = GZ.o; if (g) L.push({ id: 'gz' + g.tur + Math.round(g.yb), tur: g.tur, x: g.x, y: g.y, s: g.s, d: g.tur === 'dumbo' ? 1 : g.d, f: g.f, tepki: g.tepki, arka: !!GZ_TUR[g.tur].arka });
   YERLI.meduz.forEach((m, i) => L.push({ id: 'meduz' + i + m.c, tur: 'meduz', x: m.x, y: m.y, s: 32 * OL, d: 1, f: m.f, renk: m.c, derin: SAHNE.tm === 'derin' }));
   YERLI.suru.forEach((f, i) => L.push({ id: 'suru' + i, tur: 'sardalya1', x: f.x, y: f.y, s: 13 * OL, d: YERLI.lider.yon || 1, f: zaman + i }));
+  if (GOC.o) GOC.o.b.forEach((f, i) => L.push({ id: 'goc' + i, tur: 'sardalya1', x: f.x, y: f.y, s: 13 * OL, d: GOC.o.d, f: zaman + i }));
   if (TOP.kur) L.push({ id: 'top', tur: 'top', x: TOP.x, y: TOP.y, s: TOP.r, d: 1, f: zaman, don: TOP.x / TOP.r * 0.5 });
   return L;
 }
@@ -908,7 +910,7 @@ async function g3Baslat() {
 function g3Durum() {
   const L = [];
   for (const [id, b] of BAL) { if (!b.d || (b.d.a | 0) === 0 || !b.L) continue; L.push({ id, tur: b.d.a >= 2 && b.d.tr ? b.d.tr : 'yavru', x: b.x, y: b.y, L: b.L, yon: b.yon, faz: b.faz, vx: b.vx, vy: b.vy, uyku: b.uyku || b.geceUyku }); }
-  return { baliklar: L, gece: geceDegeri(), isik: typeof havaIsik === 'function' ? havaIsik(zaman) : 1, akinti: typeof HV !== 'undefined' ? HV.akinti : 1, deniz: DENIZ.d, dalgaA: dalgaGenlik(), sy: insSY(), canlilar: g3Canlilar(), yuzenler: g3Yuzenler(), insan: g3Insan() };
+  return { baliklar: L, gece: geceDegeri(), isik: typeof havaIsik === 'function' ? havaIsik(zaman) : 1, akinti: typeof HV !== 'undefined' ? HV.akinti : 1, deniz: DENIZ.d, dalgaA: dalgaGenlik(), sy: insSY(), eko: S && S.eko ? { beyaz: S.eko.beyaz, buyume: S.eko.buyume, koloni: S.eko.koloni } : null, canlilar: g3Canlilar(), yuzenler: g3Yuzenler(), insan: g3Insan() };
 }
 let W = 0, H = 0, DPR = 1, OL = 1, ALAN = { x1: 0, x2: 0, y1: 0, y2: 0, kum: 0 };
 let SAHNE = null, zaman = 0;
@@ -1250,12 +1252,12 @@ function arkaPlan(c, t) {
   hedefSusleri(c, t, 'arka');
   /* yosunlar (kökleri kumun arkasında kalır) */
   for (const y of SAHNE.yosun) yosunCiz(c, y, t, kumY);
-  if (SAHNE.zemin) c.drawImage(SAHNE.zemin, 0, 0, W, H);
+  if (SAHNE.zemin) { c.drawImage(SAHNE.zemin, 0, 0, W, H); ekoZeminCiz(c, t); }
   else { c.fillStyle = A.kum; c.fillRect(0, kumY, W, H - kumY); }
   kostikCiz(c, t);
   for (const m of SAHNE.cim) cimCiz(c, m, t, kumY);
   for (const a of SAHNE.anemon) anemonCiz(c, a, t, kumY);
-  duvarCanliCiz(c, t);
+  { const bz = S && S.eko ? S.eko.beyaz : 0; if (bz > 0.05) c.filter = `saturate(${(1 - bz * 0.85).toFixed(2)}) brightness(${(1 + bz * 0.3).toFixed(2)})`; duvarCanliCiz(c, t); c.filter = 'none'; }
   sakliCiz(c);
   hedefSusleri(c, t, 'on');
   magaraCiz(c); koseCiz(c); surprizCiz(c);
@@ -1352,6 +1354,23 @@ function yerliGuncelle(dt) {
   const A = ALAN, L = YERLI.lider;
   L.t -= dt; if (L.t <= 0 || Math.hypot(L.tx - L.x, L.ty - L.y) < 30) { L.tx = rnd(A.x1, A.x2); L.ty = rnd(A.y1, A.y1 + (A.y2 - A.y1) * 0.7); L.t = rnd(4, 9); }
   const ld = Math.hypot(L.tx - L.x, L.ty - L.y) || 1; L.x += (L.tx - L.x) / ld * 55 * OL * dt; L.y += (L.ty - L.y) / ld * 55 * OL * dt; L.yon = L.tx > L.x ? 1 : -1;
+  /* ekosistem: sürünün ve denizanalarının sayısı zamanla hedefe yaklaşır */
+  YERLI.ekoZ = (YERLI.ekoZ || 0) - dt;
+  if (YERLI.ekoZ <= 0 && S && S.eko) {
+    YERLI.ekoZ = 0.6; const n = Math.round(S.eko.suru);
+    if (YERLI.suru.length < n) YERLI.suru.push({ ox: rnd(-60, 60), oy: rnd(-30, 30), x: L.x - (L.yon || 1) * 300, y: L.y + rnd(-40, 40), vx: 0, vy: 0, f: rnd(0, TAU) });
+    else if (YERLI.suru.length > n) YERLI.suru.pop();
+    const ol = ekoOlay(), mn = SAHNE.tm === 'derin' ? 3 : ol && ol.tur === 'meduz' ? 6 : 1;
+    if (YERLI.meduz.length < mn) YERLI.meduz.push({ x: rnd(0.1, 0.9) * W, y: A.y2, f: rnd(0, TAU), c: SAHNE.tm === 'derin' ? '#9FFFE6' : ['#F3B6E8', '#BFD8FF', '#FFD0A8'][YERLI.meduz.length % 3] });
+    else if (YERLI.meduz.length > mn) YERLI.meduz.pop();
+  }
+  /* av: barakuda sürünün yanından geçerken sürü dağılır, birkaç balık avlanır */
+  const gzo = GZ.o; if (gzo && gzo.tur === 'barakuda' && !gzo.avladi && Math.hypot(gzo.x - L.x, gzo.y - L.y) < 170 * OL && YERLI.suru.length > 3) {
+    gzo.avladi = true; const yen = Math.min(YERLI.suru.length - 3, 1 + Math.floor(Math.random() * 2)); YERLI.suru.splice(0, yen); if (S && S.eko) S.eko.suru = Math.max(3, S.eko.suru - yen);
+    L.tx = kis(L.x - (gzo.x - L.x) * 3, A.x1, A.x2); L.ty = kis(L.y - (gzo.y - L.y) * 3, A.y1, A.y2); L.t = 3; YERLI.kac = 2.5;
+    duyur(T('🐟 Barakudalar sardalya sürüsüne daldı!', '🐟 The barracudas dived into the sardine school!'));
+  }
+  if (YERLI.kac > 0) { YERLI.kac -= dt; const ek = 1.6; L.x += (L.tx - L.x) / ld * 55 * OL * dt * ek; L.y += (L.ty - L.y) / ld * 55 * OL * dt * ek; }
   for (const s of YERLI.suru) {
     const hx = L.x + s.ox * OL, hy = L.y + s.oy * OL; s.vx += ((hx - s.x) * 1.4 - s.vx) * Math.min(1, dt * 2); s.vy += ((hy - s.y) * 1.4 - s.vy) * Math.min(1, dt * 2);
     s.x += s.vx * dt; s.y += s.vy * dt; s.f += dt * 12;
@@ -1364,6 +1383,7 @@ function yerliGuncelle(dt) {
 function yerliCiz(c) {
   canliCiz(c);
   const L = YERLI.lider;
+  ekoGocCiz(c);
   if (!G3) for (const s of YERLI.suru) { c.save(); c.translate(s.x, s.y); c.scale(L.yon || 1, 1); const l = 12 * OL; c.fillStyle = '#C9D9E6'; c.beginPath(); c.ellipse(0, 0, l * 0.5, l * 0.16, 0, 0, TAU); c.fill(); c.beginPath(); c.moveTo(-l * 0.45, 0); c.lineTo(-l * 0.75, -l * 0.18 + Math.sin(s.f) * 1.5); c.lineTo(-l * 0.75, l * 0.18 + Math.sin(s.f) * 1.5); c.fill(); c.fillStyle = 'rgba(70,110,150,.6)'; c.fillRect(-l * 0.4, -l * 0.04, l * 0.75, 1); c.restore(); }
   if (!G3) for (const m of YERLI.meduz) {
     const s = 16 * OL, p = 1 + Math.sin(m.f * 2.2) * 0.12;
@@ -1877,6 +1897,7 @@ function menuAc() {
     <button type="button" data-m="akv"><span>🐠</span>${T('Akvaryumdakiler', 'Who’s in the aquarium')}<em>${ak ? NET.uyeler().size + '/' + AKV_KAP : T('çevrimdışı', 'offline')}</em></button>
     <button type="button" data-m="gunluk"><span>📜</span>${T('Bugün', 'Today')}${gunlukBekleyen() ? `<em>${gunlukBekleyen()} ${T('bekliyor', 'waiting')}</em>` : ''}</button>
     <button type="button" data-m="sefer"><span>🧭</span>${T('Keşif seferleri', 'Expeditions')}<em>${S.sefer ? (simdi() >= S.sefer.bit ? '🎁' : sureYaz(S.sefer.bit - simdi())) : ''}</em></button>
+    <button type="button" data-m="eko"><span>🌿</span>${T('Ekosistem', 'Ecosystem')}<em>${S && S.eko ? Math.round(S.eko.saglik * 100) + '%' : ''}</em></button>
     <button type="button" data-m="mevsim"><span>🍂</span>${T('Mevsim', 'Season')}<em>${HV.m ? T(MEVSIMLER[HV.m].ad[0], MEVSIMLER[HV.m].ad[1]) : ''}</em></button>
     <button type="button" data-m="d3"><span>🧊</span>${T('3D görünüm', '3D view')}<em>${G3 ? T('açık', 'on') : T('kapalı', 'off')}</em></button>
     <button type="button" data-m="oy"><span>🗳️</span>${T('Haftanın balığı', 'Fish of the week')}${GECEN_KAZANAN ? '<em>🏅</em>' : ''}</button>
@@ -1904,7 +1925,7 @@ function menuAc() {
     <button type="button" data-m="rehber"><span>🎓</span>${T('Rehberi baştan göster', 'Replay the tutorial')}</button>
     <button type="button" data-m="nasil"><span>❔</span>${T('Nasıl oynanır?', 'How to play')}</button></div>
     <p class="kucuk">${T('Balığın bu tarayıcıda saklanır. <a href="/hesap.html">Hesabınla giriş yapıp</a> senkronu açarsan diğer cihazlarına da gelir.', 'Your fish is stored in this browser. <a href="/hesap.html">Sign in</a> and turn on sync to bring it to your other devices.')}</p>`);
-  ic.querySelectorAll('[data-m]').forEach(b => b.onclick = () => ({ d3: () => { kaydet(false); try { localStorage.setItem('derin-gorunum', G3 ? '2d' : '3d'); } catch (e) { } location.href = '/derin-mavi.html'; }, mevsim: mevsimAc, fps: () => { fpsAcik = !fpsAcik; try { localStorage.setItem('derin-fps', fpsAcik ? '1' : '0'); } catch (e) { } menuEmYaz('fps', fpsAcik); }, vital: () => { vitalAcik = !vitalAcik; try { localStorage.setItem('derin-vital', vitalAcik ? '1' : '0'); } catch (e) { } menuEmYaz('vital', vitalAcik); }, akv: akvListeAc, hedef: hedefAc, dukkan: dukkanAc, bas: basarimAc, rekor: rekorAc, sohret: sohretAc, reklam: reklamTeklif, paylas, tasi: tasiAc, nasil: nasilAc, gunluk: gunlukAc, sefer: seferAc, okul: okulAc, unvan: unvanAc, foto: fotoAc, ansik: ansikAc, rehber: () => { S.rehber = 0; S.rb = Object.fromEntries(Object.entries(S.rb).filter(([k]) => k.startsWith('u_'))); S.kumandaOgrendi = 0; kaydet(false); modalKapat(); }, ark: arkadaslarAc, sezon: sezonAc, album: albumAc, etk: etkinlikAc, bild: bildirimAc, oy: oylamaAc })[b.dataset.m]());
+  ic.querySelectorAll('[data-m]').forEach(b => b.onclick = () => ({ d3: () => { kaydet(false); try { localStorage.setItem('derin-gorunum', G3 ? '2d' : '3d'); } catch (e) { } location.href = '/derin-mavi.html'; }, mevsim: mevsimAc, eko: ekoAc, fps: () => { fpsAcik = !fpsAcik; try { localStorage.setItem('derin-fps', fpsAcik ? '1' : '0'); } catch (e) { } menuEmYaz('fps', fpsAcik); }, vital: () => { vitalAcik = !vitalAcik; try { localStorage.setItem('derin-vital', vitalAcik ? '1' : '0'); } catch (e) { } menuEmYaz('vital', vitalAcik); }, akv: akvListeAc, hedef: hedefAc, dukkan: dukkanAc, bas: basarimAc, rekor: rekorAc, sohret: sohretAc, reklam: reklamTeklif, paylas, tasi: tasiAc, nasil: nasilAc, gunluk: gunlukAc, sefer: seferAc, okul: okulAc, unvan: unvanAc, foto: fotoAc, ansik: ansikAc, rehber: () => { S.rehber = 0; S.rb = Object.fromEntries(Object.entries(S.rb).filter(([k]) => k.startsWith('u_'))); S.kumandaOgrendi = 0; kaydet(false); modalKapat(); }, ark: arkadaslarAc, sezon: sezonAc, album: albumAc, etk: etkinlikAc, bild: bildirimAc, oy: oylamaAc })[b.dataset.m]());
 }
 function akvListeAc() {
   const L = [...BAL.values()].filter(b => b.ad).sort((a, b) => ((b.v && b.v.b) || (b.ben ? boyHesap(S) : 0)) - ((a.v && a.v.b) || (a.ben ? boyHesap(S) : 0)));
@@ -2188,7 +2209,7 @@ const PLK_GUN = 60;    // günde büyüme veren en çok plankton
 function plkGuncelleCiz(c, dt) {
   if (!S || girisAcik) return;
   const yaz = mevsim() === 'yaz';
-  plkZ -= dt; if (plkZ <= 0 && PLK.length < (yaz ? 20 : 14)) { plkZ = PLK.length < 6 ? 0.15 : rnd(1.8, 3.6) * (yaz ? 0.6 : 1); const A = ALAN; const al = Math.random() < 0.1; PLK.push({ x: rnd(A.x1 + 20, A.x2 - 20), y: rnd(A.y1 + 10, A.y2 - 10), f: rnd(0, TAU), a: al, kac: al || Math.random() < 0.2, yas: 0 }); }
+  plkZ -= dt; if (plkZ <= 0 && PLK.length < Math.round((yaz ? 20 : 14) * Math.min(1.6, ekoPlk()))) { plkZ = PLK.length < 6 ? 0.15 : rnd(1.8, 3.6) * (yaz ? 0.6 : 1) / ekoPlk(); const A = ALAN; const al = Math.random() < 0.1; PLK.push({ x: rnd(A.x1 + 20, A.x2 - 20), y: rnd(A.y1 + 10, A.y2 - 10), f: rnd(0, TAU), a: al, kac: al || Math.random() < 0.2, yas: 0 }); }
   const b = BAL.get('ben');
   for (let i = PLK.length - 1; i >= 0; i--) {
     const p = PLK[i]; p.f += dt * 2; p.yas += dt; p.x += Math.sin(p.f * 0.7) * 6 * dt; p.y += Math.cos(p.f * 0.5) * 4 * dt;
@@ -3427,7 +3448,7 @@ function canliGuncelle(dt) {
   }
   gzGuncelle(dt);
   insGuncelle(dt);
-  havaGuncelle(dt); denizGuncelle(dt);
+  havaGuncelle(dt); denizGuncelle(dt); ekoKare(dt);
   /* yunus: arada bir yüzeyden geçer */
   if (SAHNE.tm !== 'derin') {
     if (!CNL.yunus) { CNL.yunusZ -= dt; if (CNL.yunusZ <= 0) { const d = Math.random() < 0.5 ? 1 : -1; CNL.yunus = { tur: 'yunus', x: d > 0 ? -150 : W + 150, y: A.y1 + 30 * OL, d, f: 0, bekle: 0, tepki: 0 }; CNL.yunusZ = rnd(150, 330); } }
@@ -3508,7 +3529,8 @@ for (const [k, g] of Object.entries(GZ_TUR)) {
 const GZ_INCI = { 1: 4, 2: 10, 3: 25 };
 function gzBaslat(tur) {
   const tm = SAHNE.tm, liste = Object.keys(GZ_TUR).filter(k => GZ_TUR[k].al.includes(tm) && k !== GZ.son);
-  if (!tur) { const ag = liste.map(k => ({ 1: 10, 2: 3.5, 3: 1 })[GZ_TUR[k].n]); let r = Math.random() * ag.reduce((a, b) => a + b, 0); tur = liste.find((k, i) => (r -= ag[i]) < 0) || liste[0]; }
+  if (!tur) { const e = S && S.eko, ol = ekoOlay(), sr = YERLI.suru.length;
+    const ag = liste.map(k => ({ 1: 10, 2: 3.5, 3: 1 })[GZ_TUR[k].n] * (!e ? 1 : k === 'barakuda' ? Math.pow(Math.max(3, sr) / 9, 1.5) : (k === 'manta' || k === 'balinakb') ? e.plk : k === 'kambur' && ol && ol.tur === 'derin' ? 3 : (k === 'dkaplumbaga' || k === 'palyacocift' || k === 'kelebek' || k === 'papagan') ? 0.5 + e.saglik : 1)); let r = Math.random() * ag.reduce((a, b) => a + b, 0); tur = liste.find((k, i) => (r -= ag[i]) < 0) || liste[0]; }
   if (!tur || !GZ_TUR[tur]) return;
   const g = GZ_TUR[tur], d = Math.random() < 0.5 ? 1 : -1, s = g.b * OL, kumY = SAHNE.kumY, y1 = ALAN.y1;
   const yb = y1 + (kumY - y1) * (g.h[0] + Math.random() * (g.h[1] - g.h[0]));
@@ -3531,7 +3553,7 @@ function gzTepki(o) {
 function gzGuncelle(dt) {
   if (!SAHNE) return;
   if (GZ.o && !GZ_TUR[GZ.o.tur].al.includes(SAHNE.tm)) GZ.o = null;
-  if (!GZ.o) { GZ.z -= dt; if (GZ.z <= 0) { GZ.z = rnd(35, 75); gzBaslat(); } return; }
+  if (!GZ.o) { GZ.z -= dt; if (GZ.z <= 0) { const e = S && S.eko, ol = ekoOlay(); GZ.z = rnd(35, 75) * (e ? 1.5 - e.saglik * 0.6 : 1) * (ol && ol.tur === 'derin' && SAHNE.tm === 'derin' ? 0.5 : 1); gzBaslat(); } return; }
   const o = GZ.o, g = GZ_TUR[o.tur];
   o.f += dt; o.bekle = Math.max(0, o.bekle - dt); o.tepki = Math.max(0, o.tepki - dt); if (o.don > 0) o.don = Math.max(0, o.don - dt * 0.9);
   const agir = ['dkaplumbaga', 'mola', 'dugong', 'kambur', 'balinakb', 'devkalamar', 'sifonofor'].includes(o.tur);
@@ -4040,6 +4062,140 @@ ALBUM.push(
   ...Object.entries(INS_TUR).map(([k, g]) => ({ k: 'olay:' + k, grup: 'sus', e: g.e, ad: g.ad, ip: [k === 'dalgic' ? 'Dalgıç geçerken yanına yüz, fotoğrafını çeksin' : 'Geçerken üstüne dokun', k === 'dalgic' ? 'Swim up to a passing diver for a photo' : 'Tap it as it passes'] })),
   { k: 'olay:olta', grup: 'sus', e: '🪝', ad: ['Oltadan kurtulan', 'Off the hook'], ip: ['Oltaya takılınca hızlı dokunarak kurtul', 'Get hooked, then tap fast to break free'] }
 );
+/* =====================================================================
+   EKOSİSTEM: zamanla değişen, birbirini etkileyen yaşam
+   - Resif sağlığı su temizliğine ve ısıya bağlı. Sağlıklı resif gerçek günler içinde büyür ve
+     yeni mercan kolonileri çıkar; kirli su ya da sıcak dalgası mercanları ağartır (beyazlama),
+     su düzelince renkler yavaş yavaş geri gelir, uzun süre ağarmış resif koloni kaybeder.
+   - Besin zinciri: plankton mevsime göre çoğalır (ilkbahar patlaması, kış azlığı); sardalya sürüsü
+     gecikmeli olarak planktonu izler; sürü kalabalıkken barakuda daha sık gelir ve sürüden avlanır;
+     plankton boluyken manta ve balina köpekbalığı uğrar; sağlıklı resif ziyaretçi çeker.
+   - Mevsim olayları (haftalık, tohumlu): ilkbahar plankton patlaması, yaz denizanası patlaması ve
+     sıcak dalgası, sonbahar göç eden sürüler, kış derinlerde canlılık ve kambur balina göçü.
+   Sayfa kapalıyken geçen zaman da hesaplanır (en çok 30 gün). Deneme: DM.eko({...}), DM.ekoIleri(saat)
+   ===================================================================== */
+const EKO_KOL_MAX = 24;
+function ekoS() {
+  if (!S) return null;
+  if (!S.eko) S.eko = { saglik: 0.8, buyume: 0.35, beyaz: 0, plk: 1, suru: 9, koloni: 3, kolY: 0, kolO: 0, olayK: '' };
+  return S.eko;
+}
+const EKO_OLAY = {
+  plankton: { e: '🌱', ad: ['Plankton patlaması', 'Plankton bloom'], d: ['Su planktonla doldu; sardalya sürüsü büyüyecek, manta ve balina köpekbalığı uğrayabilir.', 'The water is full of plankton; the sardine school will grow, mantas and whale sharks may drop by.'] },
+  meduz: { e: '🪼', ad: ['Denizanası patlaması', 'Jellyfish bloom'], d: ['Ilık suda denizanaları çoğaldı. Dikkat, sokabilirler!', 'Jellyfish multiplied in the warm water. Careful, they sting!'] },
+  sicak: { e: '🌡️', ad: ['Sıcak dalgası', 'Marine heatwave'], d: ['Su ısındı; mercanlar strese girer ve ağarabilir. Suyu temiz tutmak onları korur.', 'The water warmed up; corals get stressed and may bleach. Clean water protects them.'] },
+  goc: { e: '🐟', ad: ['Göç mevsimi', 'Migration season'], d: ['Kalabalık sürüler resifin önünden geçerek göç ediyor.', 'Big schools are migrating past the reef.'] },
+  derin: { e: '🐋', ad: ['Kış göçü', 'Winter migration'], d: ['Kambur balinalar göç yolunda; derinlerde de canlılık arttı.', 'Humpbacks are on the move, and the deep is livelier too.'] }
+};
+function ekoOlay() {
+  const gun = Math.floor((simdi() + 3 * 3.6e6) / 864e5), hafta = Math.floor((gun + 3) / 7), gk = ((gun + 3) % 7 + 7) % 7;
+  if (gk < 1 || gk > 5) return null; /* haftanın 2.–6. günleri sürer */
+  const r = tohumRnd('eko' + hafta)(), mv = HV.m || 'sonbahar';
+  const tur = mv === 'ilkbahar' ? (r < 0.75 ? 'plankton' : null) : mv === 'yaz' ? (r < 0.45 ? 'meduz' : r < 0.75 ? 'sicak' : null) : mv === 'sonbahar' ? (r < 0.7 ? 'goc' : null) : (r < 0.7 ? 'derin' : null);
+  return tur ? { tur, k: hafta + tur } : null;
+}
+const ekoPlk = () => { const e = S && S.eko; return e ? kis(e.plk, 0.4, 2.2) : 1; };
+function ekoAdim(h, sessiz) {
+  const e = ekoS(); if (!e || h <= 0) return;
+  const mv = HV.m || 'sonbahar', ol = ekoOlay(), su = kis(S.su ?? 100, 0, 100) / 100, tm = SAHNE ? SAHNE.tm : (S.alan || 'resif');
+  const once = { beyaz: e.beyaz, koloni: e.koloni };
+  let plkH = { ilkbahar: 1.6, yaz: 1.0, sonbahar: 1.25, kis: 0.55 }[mv] || 1;
+  if (ol && ol.tur === 'plankton') plkH = 2.2; if (HV.h === 'bulanik') plkH *= 1.3; plkH *= 1 + (1 - su) * 0.25; if (tm === 'derin') plkH *= 0.7;
+  e.plk += (plkH - e.plk) * Math.min(1, h * 0.08);
+  const isi = (mv === 'yaz' ? 0.1 : 0) + (ol && ol.tur === 'sicak' ? 0.38 : 0);
+  const sH = kis(0.22 + 0.78 * su - isi, 0, 1);
+  e.saglik += (sH - e.saglik) * Math.min(1, h * (sH < e.saglik ? 0.05 : 0.025));
+  const bH = kis((0.55 - e.saglik) * 2.2, 0, 1);
+  e.beyaz += (bH - e.beyaz) * Math.min(1, h * (bH > e.beyaz ? 0.04 : 0.015));
+  e.buyume = kis(e.buyume + h * (e.saglik > 0.6 ? 0.0025 * (e.saglik - 0.6) / 0.4 : 0) - h * (e.beyaz > 0.6 ? 0.003 : 0), 0, 1);
+  e.kolY += h * Math.max(0, e.saglik - 0.6) / 14; while (e.kolY >= 1) { e.kolY -= 1; if (e.koloni < EKO_KOL_MAX) e.koloni++; }
+  if (e.beyaz > 0.8) { e.kolO += h / 48; if (e.kolO >= 1) { e.kolO = 0; if (e.koloni > 0) e.koloni--; } } else e.kolO = Math.max(0, e.kolO - h / 96);
+  const sH2 = kis(3 + 15 * Math.min(1.6, e.plk) / 1.6 * (0.45 + 0.55 * e.saglik), 3, 22);
+  e.suru += kis(sH2 - e.suru, -h * 0.6, h * 0.6);
+  if (sessiz) return;
+  if (e.koloni > once.koloni) duyur(T('🪸 Resifte yeni bir mercan kolonisi büyüdü!', '🪸 A new coral colony has grown on the reef!'), 1);
+  if (e.koloni < once.koloni) duyur(T('💀 Uzun süre ağaran bir mercan kolonisi öldü. Suyu temiz tut.', '💀 A long-bleached coral colony died. Keep the water clean.'));
+  if (once.beyaz < 0.3 && e.beyaz >= 0.3) duyur(T('⚠️ Mercanlar ağarmaya başladı: su kirli ya da çok sıcak. Suyu temizle.', '⚠️ The corals are starting to bleach: the water is dirty or too warm. Clean it.'));
+  if (once.beyaz > 0.15 && e.beyaz <= 0.15) duyur(T('🌈 Mercanlar renklerine kavuştu.', '🌈 The corals have got their colours back.'), 1);
+}
+/* sayfa kapalıyken geçen saatleri saat saat işle (en çok 30 gün) */
+function ekoIlerlet(saat) {
+  const e = ekoS(); if (!e) return; saat = Math.min(saat, 720);
+  const once = { koloni: e.koloni, beyaz: e.beyaz };
+  for (let h = saat; h > 0; h -= 1) ekoAdim(Math.min(1, h), true);
+  if (saat > 2) {
+    const fark = e.koloni - once.koloni;
+    if (fark > 0) duyur(T(`🪸 Sen yokken resifte ${fark} yeni mercan kolonisi büyüdü.`, `🪸 ${fark} new coral colon${fark > 1 ? 'ies' : 'y'} grew while you were away.`), 1);
+    else if (fark < 0) duyur(T('💀 Sen yokken ağaran mercanlardan bazıları öldü. Suyu temizle.', '💀 Some bleached corals died while you were away. Clean the water.'));
+    if (once.beyaz < 0.3 && e.beyaz >= 0.3) duyur(T('⚠️ Mercanlar ağarıyor: su kirli ya da çok sıcak.', '⚠️ The corals are bleaching: the water is dirty or too warm.'));
+  }
+}
+let ekoZ = 0, ekoOlayK = null;
+function ekoKare(dt) {
+  if (!S || girisAcik) return;
+  ekoZ += dt; if (ekoZ >= 5) { ekoAdim(ekoZ / 3600); ekoZ = 0; }
+  const ol = ekoOlay(), e = ekoS();
+  if (ol && e.olayK !== ol.k) { e.olayK = ol.k; const O = EKO_OLAY[ol.tur]; duyur(`${O.e} ${T(O.ad[0], O.ad[1])}: ${T(O.d[0], O.d[1])}`, 1); kaydet(false); }
+  ekoGoc(dt, ol);
+}
+/* göç eden sürü (sonbahar olayı): ara ara kalabalık bir sürü ekranı boydan boya geçer */
+const GOC = { o: null, z: 20 };
+function ekoGoc(dt, ol) {
+  if (GOC.o) {
+    const g = GOC.o; g.x += g.d * 85 * OL * dt; g.f += dt;
+    for (const f of g.b) { f.x = g.x + f.ox * OL + Math.sin(g.f * 0.8 + f.ox * 0.05) * 6 * OL; f.y = g.y + f.oy * OL + Math.sin(g.f * 1.3 + f.ox * 0.03) * 10 * OL; }
+    if ((g.d > 0 && g.x > W + 260 * OL) || (g.d < 0 && g.x < -260 * OL)) GOC.o = null;
+    return;
+  }
+  if (!ol || ol.tur !== 'goc' || !SAHNE || SAHNE.tm === 'derin') return;
+  GOC.z -= dt; if (GOC.z > 0) return; GOC.z = rnd(80, 180);
+  const d = Math.random() < 0.5 ? 1 : -1, A = ALAN, b = [];
+  for (let i = 0; i < 38; i++) { const u = Math.random(), v = Math.random() - 0.5; b.push({ ox: -d * u * 230 + (Math.random() - 0.5) * 30, oy: v * (70 - u * 30), x: 0, y: 0 }); }
+  GOC.o = { d, x: d > 0 ? -60 * OL : W + 60 * OL, y: A.y1 + (A.y2 - A.y1) * rnd(0.15, 0.5), f: 0, b };
+}
+function ekoGocCiz(c) {
+  if (!GOC.o || G3) return; const g = GOC.o, l = 13 * OL;
+  c.save(); c.fillStyle = '#B8CCDA';
+  for (const f of g.b) { c.save(); c.translate(f.x, f.y); c.scale(g.d, 1); c.beginPath(); c.ellipse(0, 0, l * 0.5, l * 0.15, 0, 0, TAU); c.fill(); c.beginPath(); c.moveTo(-l * 0.45, 0); c.lineTo(-l * 0.7, -l * 0.14); c.lineTo(-l * 0.7, l * 0.14); c.fill(); c.restore(); }
+  c.restore();
+}
+/* 2D'de beyazlama: zemin katmanının solmuş kopyası üstüne bindirilir; yeni koloniler kumun üstünde çizilir */
+const EKO2 = { kaynak: null, agar: null };
+function ekoZeminCiz(c, t) {
+  const e = S && S.eko; if (!e || !SAHNE.zemin) return;
+  if (e.beyaz > 0.02) {
+    if (EKO2.kaynak !== SAHNE.zemin) { EKO2.kaynak = SAHNE.zemin; const k = document.createElement('canvas'); k.width = SAHNE.zemin.width; k.height = SAHNE.zemin.height; const x = k.getContext('2d'); x.filter = 'saturate(0.12) brightness(1.4) contrast(0.85)'; x.drawImage(SAHNE.zemin, 0, 0); EKO2.agar = k; }
+    c.globalAlpha = Math.min(0.9, e.beyaz * 0.9); c.drawImage(EKO2.agar, 0, 0, W, H); c.globalAlpha = 1;
+  }
+  if (SAHNE.tm === 'derin' || G3) return;
+  const r = tohumRnd('koloni' + Math.round(W)), kumY = SAHNE.kumY, x0 = W >= 860 ? 470 : 30;
+  const RENK = ['#FF7FA8', '#FFB347', '#B98CFF', '#5FD3C4', '#FFE066', '#FF6B6B', '#7FB8FF'];
+  for (let i = 0; i < Math.min(e.koloni, EKO_KOL_MAX); i++) {
+    const x = x0 + r() * (W - x0 - 40), tip = Math.floor(r() * 3), rk = RENK[Math.floor(r() * RENK.length)], y = kumY + 6 * OL + r() * 18 * OL;
+    const boy = (0.4 + 0.6 * Math.min(1, (e.koloni - i) * 0.25)) * (0.85 + 0.3 * e.buyume) * (14 + r() * 10) * OL;
+    const renk = karis(rk, '#EDEBE2', Math.min(0.9, e.beyaz));
+    c.save(); c.translate(x, y);
+    if (tip === 0) { c.strokeStyle = renk; c.lineCap = 'round'; const dal = (x1, y1, a, L, w, k) => { const x2 = x1 + Math.cos(a) * L, y2 = y1 + Math.sin(a) * L; c.lineWidth = w; c.beginPath(); c.moveTo(x1, y1); c.lineTo(x2, y2); c.stroke(); if (k < 3) { dal(x2, y2, a - 0.45, L * 0.72, w * 0.72, k + 1); dal(x2, y2, a + 0.4, L * 0.7, w * 0.72, k + 1); } }; dal(0, 0, -Math.PI / 2 + Math.sin(t * 0.5 + i) * 0.03, boy * 0.45, boy * 0.16, 0); }
+    else if (tip === 1) { const g = c.createRadialGradient(-boy * 0.15, -boy * 0.35, 0, 0, -boy * 0.2, boy * 0.6); g.addColorStop(0, karis(renk, '#FFFFFF', 0.35)); g.addColorStop(1, karis(renk, '#2A1E18', 0.3)); c.fillStyle = g; c.beginPath(); c.ellipse(0, -boy * 0.2, boy * 0.55, boy * 0.42, 0, Math.PI, TAU); c.fill(); c.strokeStyle = 'rgba(0,0,0,.18)'; c.lineWidth = 1; for (let j = 0; j < 4; j++) { c.beginPath(); c.ellipse(0, -boy * 0.2, boy * (0.15 + j * 0.1), boy * (0.1 + j * 0.08), 0, Math.PI * 1.1, Math.PI * 1.9); c.stroke(); } }
+    else { c.fillStyle = renk; c.globalAlpha = 0.85; c.beginPath(); c.moveTo(0, 0); for (let j = 0; j <= 10; j++) { const a = Math.PI * (1.05 + j * 0.09) + Math.sin(t * 0.7 + i) * 0.04; c.lineTo(Math.cos(a) * boy * 0.6, Math.sin(a) * boy * 0.95); } c.closePath(); c.fill(); c.globalAlpha = 1; }
+    c.restore();
+  }
+}
+function ekoAc() {
+  const e = ekoS(); if (!e) return; const ol = ekoOlay(), sr = YERLI.suru.length;
+  const cubuk = (ad, v, renk, yazi) => `<div style="margin:9px 0"><div style="display:flex;justify-content:space-between;font-weight:800"><span>${ad}</span><span>${yazi}</span></div><div style="height:9px;border-radius:6px;background:rgba(255,255,255,.12);overflow:hidden;margin-top:4px"><i style="display:block;height:100%;width:${Math.round(kis(v, 0, 1) * 100)}%;background:${renk};border-radius:6px"></i></div></div>`;
+  const plkAd = e.plk < 0.75 ? T('az', 'low') : e.plk < 1.3 ? T('normal', 'normal') : e.plk < 1.9 ? T('bol', 'plenty') : T('patlama', 'bloom');
+  const O = ol && EKO_OLAY[ol.tur];
+  modal(`<h2>🌿 ${T('Ekosistem', 'Ecosystem')}</h2><p class="alt">${T('Akvaryum gerçek zamanla yaşıyor: resif büyür ya da ağarır, plankton çoğalır ya da azalır, sürüler ve avcılar buna göre değişir.', 'The aquarium lives in real time: the reef grows or bleaches, plankton rises and falls, and schools and predators follow.')}</p>
+    ${cubuk('🪸 ' + T('Resif sağlığı', 'Reef health'), e.saglik, e.saglik > 0.6 ? '#5FD38A' : e.saglik > 0.4 ? '#FFC857' : '#FF7A6B', Math.round(e.saglik * 100) + '%')}
+    ${cubuk('🤍 ' + T('Beyazlama', 'Bleaching'), e.beyaz, '#E8E4DA', e.beyaz < 0.1 ? T('yok', 'none') : Math.round(e.beyaz * 100) + '%')}
+    ${cubuk('🌿 ' + T('Mercan büyümesi', 'Coral growth'), e.buyume, '#FF8FB1', Math.round(e.buyume * 100) + '%')}
+    ${cubuk('🆕 ' + T('Yeni koloniler', 'New colonies'), e.koloni / EKO_KOL_MAX, '#B98CFF', e.koloni + ' / ' + EKO_KOL_MAX)}
+    ${cubuk('🦠 ' + T('Plankton', 'Plankton'), e.plk / 2.2, '#7FE0FF', plkAd)}
+    ${cubuk('🐟 ' + T('Sardalya sürüsü', 'Sardine school'), sr / 22, '#B8CCDA', sr + T(' balık', ' fish'))}
+    <p style="margin-top:12px"><b>${T('Bu hafta', 'This week')}:</b> ${O ? `${O.e} ${T(O.ad[0], O.ad[1])}. ${T(O.d[0], O.d[1])}` : T('Sakin bir hafta.', 'A quiet week.')}</p>
+    <p class="kucuk">${T('Besin zinciri: plankton → sardalya → barakuda. Plankton boluyken manta ve balina köpekbalığı da gelir. Temiz su resifi büyütür; kirli su ve sıcak dalgası mercanları ağartır.', 'Food chain: plankton → sardines → barracuda. Mantas and whale sharks come when plankton is plentiful. Clean water grows the reef; dirty water and heatwaves bleach it.')}</p>`);
+}
 /* =====================================================================
    SU YÜZEYİ VE DENİZ DURUMU
    Deniz durumu 0 (çarşaf gibi) ile 1 (fırtına) arasında yavaş yavaş değişir: havaya bağlı bir
@@ -4633,6 +4789,7 @@ function vitalKare(dt) {
   const gece = geceDegeri(), mv = HV.m || 'sonbahar', hv = HV.h || 'gunes', dz = alan === 'derin' ? 0.2 : 1;
   /* su ısısı */
   let su = (SU_ISI[alan] || 24) + ((MEV_ISI[mv] || 0) + (HAVA_ISI[hv] || 0) - 0.7 * gece) * dz - 1.4 * der * dz + 0.15 * Math.sin(zaman * 0.05);
+  if (ekoOlay()?.tur === 'sicak') su += 2.5 * dz;
   if (tur === 'buz') su = Math.min(su, 1.2) - 1.5;
   /* hareket: saniyede kaç boy */
   const hizPx = Math.hypot(b.vx || 0, b.vy || 0), boyCm = boyHesap(S), cmPx = boyCm / Math.max(1, b.L);
@@ -4713,7 +4870,7 @@ else if (!S) { girisGoster(); yerliKur(); }
 else { ilerlet(); gunlukGorevler(); gorevKontrol(); basarimKontrol(); kaydet(false); panelAc(); if (olumKontrol()) { } else if (bekleyenSecim()) setTimeout(secimAc, 700); else if (!S.kumandaOgrendi) setTimeout(() => duyur(T('👆 Yeni: suya dokun, balığın oraya yüzsün. Parlayan planktonları ye!', '👆 New: tap the water and your fish swims there. Eat the glowing plankton!'), 1), 1200); }
 NET.baslat().then(() => { if (S && !girisAcik) agKur(); else uiGuncelle(); });
 requestAnimationFrame(kare);
-window.DM = { durum: () => ({ S, BAL, NET, AV, ALAN, PLK, YIR, CNL, GZ, SAHNE, INS, DENIZ }), deniz: v => { DENIZ.sabit = v == null ? null : kis(+v, 0, 1); DENIZ.d = DENIZ.sabit ?? DENIZ.d; }, kazan: m => { kazan(m, { sinirsiz: true, tokBagimsiz: true }); kaydet(); uiGuncelle(); }, avBitir, gz: k => { GZ.o = null; gzBaslat(k); }, ins: k => { INS.o = null; INS.tak = null; insBaslat(k); }, sifirla: () => { localStorage.removeItem(KEY); location.reload(); } };
+window.DM = { durum: () => ({ S, BAL, NET, AV, ALAN, PLK, YIR, CNL, GZ, SAHNE, INS, DENIZ }), eko: o => { Object.assign(ekoS(), o); }, ekoIleri: h => ekoIlerlet(h), deniz: v => { DENIZ.sabit = v == null ? null : kis(+v, 0, 1); DENIZ.d = DENIZ.sabit ?? DENIZ.d; }, kazan: m => { kazan(m, { sinirsiz: true, tokBagimsiz: true }); kaydet(); uiGuncelle(); }, avBitir, gz: k => { GZ.o = null; gzBaslat(k); }, ins: k => { INS.o = null; INS.tak = null; insBaslat(k); }, sifirla: () => { localStorage.removeItem(KEY); location.reload(); } };
 })();
 </script>
 <script data-goatcounter="https://erdevelop.goatcounter.com/count" async src="//gc.zgo.at/count.js"></script>

@@ -30,7 +30,7 @@ export async function kur3D({ tuval, kalite }) {
   const SIS_G = new THREE.Color('#1a7d99'), SIS_N = new THREE.Color('#071e30'), SIS = SIS_G.clone();
   sahne.fog = new THREE.FogExp2(SIS, 0.04);
   const kam = new THREE.PerspectiveCamera(50, 1, 0.1, 220);
-  const U = { zaman: { value: 0 }, kostikGuc: { value: 1 } };
+  const U = { zaman: { value: 0 }, kostikGuc: { value: 1 }, agar: { value: 0 } };
 
   /* ---------- gökyüzü kubbesi ---------- */
   const RENK = { ust: new THREE.Color('#b4f3ff'), orta: new THREE.Color('#1a7d99'), alt: new THREE.Color('#06324a') };
@@ -85,7 +85,7 @@ export async function kur3D({ tuval, kalite }) {
   /* malzemelere: üstten düşen ışık ağı, kaya pürüzü, balık yüzmesi, akıntıda salınım */
   function yama(mat, ek = {}) {
     mat.onBeforeCompile = sh => {
-      Object.assign(sh.uniforms, { uZaman: U.zaman, uKostik: U.kostik, uKostikGuc: U.kostikGuc, uDetayN: U.detayN, uDetayH: U.detayH });
+      Object.assign(sh.uniforms, { uZaman: U.zaman, uKostik: U.kostik, uKostikGuc: U.kostikGuc, uDetayN: U.detayN, uDetayH: U.detayH, uAgar: U.agar });
       if (ek.yuz) { sh.uniforms.uFaz = ek.yuz.faz; sh.uniforms.uGenlik = ek.yuz.genlik; }
       sh.vertexShader = 'varying vec3 vDP; varying vec3 vDN;\nuniform float uZaman;\n' + (ek.yuz ? 'uniform float uFaz; uniform float uGenlik;\n' : '') + (ek.salin ? 'attribute float aBoy; attribute float aFaz;\n' : '') + sh.vertexShader;
       let gv = '#include <begin_vertex>\n';
@@ -95,6 +95,9 @@ export async function kur3D({ tuval, kalite }) {
       sh.vertexShader = sh.vertexShader.replace('#include <begin_vertex>', gv)
         .replace('#include <project_vertex>', '#include <project_vertex>\n vec4 dpw = modelMatrix * vec4(transformed, 1.0); vDP = dpw.xyz; vDN = normalize(mat3(modelMatrix) * objectNormal);');
       let fs = sh.fragmentShader;
+      /* mercan beyazlaması: ekosistem kötüleşince renk solar, kemik beyazına döner */
+      if (mat.userData.mercan) fs = 'uniform float uAgar;\n' + fs.replace('#include <color_fragment>', `#include <color_fragment>
+          { float lum = dot(diffuseColor.rgb, vec3(0.3, 0.59, 0.11)); diffuseColor.rgb = mix(diffuseColor.rgb, vec3(0.92, 0.91, 0.86) * (0.72 + 0.35 * lum), uAgar); }`);
       if (ek.detay) {
         const o = ek.detay.toFixed(2);
         fs = fs.replace('#include <color_fragment>', `#include <color_fragment>
@@ -116,7 +119,7 @@ export async function kur3D({ tuval, kalite }) {
           outgoingLight += diffuseColor.rgb * vec3(0.8, 0.97, 1.0) * kk * yon * yuk * uKostikGuc; }
         #include <opaque_fragment>`);
     };
-    mat.customProgramCacheKey = () => 'dm3d' + Object.keys(ek).join('') + (ek.detay || '');
+    mat.customProgramCacheKey = () => 'dm3d' + Object.keys(ek).join('') + (ek.detay || '') + (mat.userData.mercan ? 'M' : '');
     return mat;
   }
 
@@ -242,7 +245,7 @@ export async function kur3D({ tuval, kalite }) {
   let DUVAR = null;
   const ISIN = new THREE.Raycaster();
   function ortamKur(VW, magX) {
-    ORTAM.clear();
+    ORTAM.clear(); MERCAN3 = []; KOLONI3 = []; ekoSon = "";
     let s = 9137; const r = () => (s = (s * 16807) % 2147483647) / 2147483647, ara = (a, b) => a + r() * (b - a);
     const yarim = VW / 2 + 3;
     /* mağaralı kayalık: mağara ağzı 2D'deki uyku mağarasının üstüne gelir */
@@ -252,11 +255,19 @@ export async function kur3D({ tuval, kalite }) {
       const o = P[k].clone(true); o.scale.setScalar(sc); o.rotation.y = rot;
       let y = zeminY(x, z) - 0.05 * sc;
       if (ustte) { ISIN.set(new THREE.Vector3(x, 40, z), new THREE.Vector3(0, -1, 0)); const h = ISIN.intersectObject(ustte === true ? DUVAR : ustte, true)[0]; if (!h) return; y = h.point.y - 0.05; }
-      o.position.set(x, y, z); ORTAM.add(o); return o;
+      o.position.set(x, y, z); ORTAM.add(o);
+      if (MERCAN_K.has(k)) { o.userData.s0 = o.scale.x; MERCAN3.push(o); }
+      return o;
     };
     const kayalar = ['kaya_0', 'kaya_1', 'kaya_2', 'kaya_3'];
     for (let i = 0; i < Math.round(VW / 3) + 3; i++) koy(kayalar[i % 4], ara(-yarim, yarim), ara(-11, -1.5), ara(0.6, 1.4), r() * 6.28);
     const mercanlar = ['beyin_0', 'beyin_1', 'dalli_0', 'dalli_1', 'masa_0', 'masa_1', 'tup_0', 'tup_1', 'yelpaze_0', 'yelpaze_1', ...YENI];
+    /* mercan malzemelerini beyazlamaya hazırla (ilk çizimden önce) */
+    for (const k of [...mercanlar, 'dalli_2', 'dalli_3']) { MERCAN_K.add(k); P[k] && P[k].traverse(m => { if (m.isMesh) [].concat(m.material).forEach(mt => { mt.userData.mercan = true; }); }); }
+    /* yeni koloniler: resif sağlıklıyken zamanla birer birer belirir ve büyür */
+    { let s2 = 4241; const r2 = () => (s2 = (s2 * 16807) % 2147483647) / 2147483647;
+      for (let i = 0; i < KOL_MAX; i++) { const k = mercanlar[Math.floor(r2() * mercanlar.length)], x = (r2() - 0.5) * VW * 0.95, z = -0.6 - r2() * 5.5;
+        const o = P[k].clone(true); const sc = k.startsWith('masa') ? 0.55 : k.startsWith('yelpaze') ? 1 : 0.8; o.userData.s0 = sc; o.rotation.y = r2() * 6.28; o.position.set(x, zeminY(x, z) - 0.04, z); o.visible = false; ORTAM.add(o); KOLONI3.push(o); } }
     for (let i = 0; i < Math.round(VW * 3) + 10; i++) { const k = mercanlar[Math.floor(r() * mercanlar.length)], z = ara(-10, -1.4); koy(k, ara(-yarim, yarim), z, (k.startsWith('yelpaze') ? ara(0.8, 1.4) : k.startsWith('masa') ? ara(0.45, 0.8) : ara(0.5, 1.1)) * (z > -3 ? 0.65 : 1), k.startsWith('yelpaze') ? ara(-0.4, 0.4) : r() * 6.28); }
     for (let i = 0; i < 14; i++) { const k = mercanlar[Math.floor(r() * mercanlar.length)]; koy(k, magX - 1.8 * ds + ara(-7, 7) * ds, ara(-8, -2) * ds, ara(0.45, 0.9) * ds * 1.4, r() * 6.28, true); }
     const cok = kalite === 'dusuk' ? 0.55 : 1;
@@ -344,7 +355,7 @@ export async function kur3D({ tuval, kalite }) {
     yuzey.position.y = Hc + (H / 2) * k + 0.6;
     if (yeniden) ortamKur(VW, magX);
   }
-  const CAN = new Map();
+  const CAN = new Map(), MERCAN_K = new Set(), KOL_MAX = 24; let MERCAN3 = [], KOLONI3 = [], ekoSon = '';
   const dunya = (x, y) => new THREE.Vector3((x - M.W / 2) * M.k, M.Hc + (M.H / 2 - y) * M.k, 0);
 
   function kaliteUygula() {
@@ -375,6 +386,14 @@ export async function kur3D({ tuval, kalite }) {
         yuzeyMat.opacity = 0.2 + dz * 0.12; if (d.sy != null) yuzey.position.y = M.Hc + (M.H / 2 - d.sy) * M.k; }
       if (PARCA) { const a = PARCA.geometry.attributes.position; for (let i = 0; i < a.count; i++) { let y = a.getY(i) + dt * 0.05, x = a.getX(i) + Math.sin(t * 0.3 + i) * dt * 0.03 + dt * 0.04 * (d.akinti || 1); if (y > 14) y = 0; if (x > 20) x = -20; a.setY(i, y); a.setX(i, x); } a.needsUpdate = true; }
       /* balıklar */
+      /* ekosistem: beyazlama, büyüme ve yeni koloniler */
+      if (d.eko) {
+        const e = d.eko; U.agar.value += (e.beyaz * 0.85 - U.agar.value) * Math.min(1, dt * 2);
+        const anah = e.buyume.toFixed(2) + '|' + e.koloni + '|' + MERCAN3.length;
+        if (anah !== ekoSon) { ekoSon = anah; const bf = 0.85 + 0.3 * e.buyume;
+          for (const o of MERCAN3) o.scale.setScalar(o.userData.s0 * bf);
+          KOLONI3.forEach((o, i) => { o.visible = i < e.koloni; if (o.visible) o.scale.setScalar(o.userData.s0 * bf * (0.35 + 0.65 * Math.min(1, (e.koloni - i) * 0.25))); }); }
+      }
       /* kum canlıları: konum ve davranış 2D oyundan gelir, burada 3D model olarak çizilir */
       if (d.canlilar) {
         const gor = new Set();
