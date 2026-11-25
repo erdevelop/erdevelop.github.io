@@ -279,7 +279,33 @@ export async function kur3D({ tuval, kalite }) {
 
   /* ---------- yerleşim: ekran genişliğine göre kurulur ---------- */
   const ORTAM = new THREE.Group(); sahne.add(ORTAM);
-  let DUVAR = null;
+  let DUVAR = null, TUNEL = null;
+  /* kaya engeli: mağaralı duvarın ve sol tepeciğin üst yüzeyi bir yükseklik ızgarasına çıkarılır (köşe noktalarından, ışın atmadan ucuzca).
+     Mağaranın tüneli ayrıca bir elipsoitle tanımlanır: içi boştur, balık girebilir. */
+  const ENG = { x0: 0, z0: 0, h: 0.2, nx: 0, nz: 0, y: null };
+  function engelKur(objs, x0, x1, z0, z1) {
+    const h = 0.2, nx = Math.ceil((x1 - x0) / h) + 1, nz = Math.ceil((z1 - z0) / h) + 1, y = new Float32Array(nx * nz).fill(-99), v = new THREE.Vector3();
+    for (const ob of objs) ob.traverse(m => { if (!m.isMesh) return; m.updateWorldMatrix(true, false); const p = m.geometry.attributes.position;
+      for (let i = 0; i < p.count; i++) { v.fromBufferAttribute(p, i).applyMatrix4(m.matrixWorld); const ix = Math.round((v.x - x0) / h), iz = Math.round((v.z - z0) / h); if (ix < 0 || iz < 0 || ix >= nx || iz >= nz) continue; const k = iz * nx + ix; if (v.y > y[k]) y[k] = v.y; } });
+    for (let gec = 0; gec < 2; gec++) { const y2 = y.slice(); /* köşe noktası düşmeyen hücreleri komşularından doldur */
+      for (let iz = 1; iz < nz - 1; iz++) for (let ix = 1; ix < nx - 1; ix++) { const k = iz * nx + ix; if (y[k] > -98) continue; let n = 0, t = 0; for (let a = -1; a <= 1; a++) for (let b = -1; b <= 1; b++) { const q = y[k + a * nx + b]; if (q > -98) { n++; t += q; } } if (n >= 3) y2[k] = t / n; }
+      y.set(y2); }
+    Object.assign(ENG, { x0, z0, h, nx, nz, y });
+  }
+  const kayaY = (x, z) => { if (!ENG.y) return -99; const fx = (x - ENG.x0) / ENG.h, fz = (z - ENG.z0) / ENG.h, ix = Math.floor(fx), iz = Math.floor(fz); if (ix < 0 || iz < 0 || ix >= ENG.nx - 1 || iz >= ENG.nz - 1) return -99; const k = iz * ENG.nx + ix, Y = ENG.y; return Math.max(Y[k], Y[k + 1], Y[k + ENG.nx], Y[k + ENG.nx + 1]); };
+  const tunelIc = (x, y, z, r) => { const T = TUNEL; if (!T) return false; const a = (x - T.x) / Math.max(0.05, T.rx - r), b = (y - T.y) / Math.max(0.05, T.ry - r), c = (z - T.z) / T.rz; return a * a + b * b + c * c < 1; };
+  const kayaIc = (x, y, z, ry, rx) => !tunelIc(x, y, z, Math.max(ry, rx * 0.6)) && y - ry < Math.max(kayaY(x, z), kayaY(x - rx, z), kayaY(x + rx, z));
+  /* ekrandaki noktadan (z = 0) kamera ışını boyunca istenen derinliğe */
+  const isinV = new THREE.Vector3();
+  const isinda = (p0, z, out = new THREE.Vector3()) => { const c0 = kam.position, k2 = (c0.z - z) / c0.z; return out.set(c0.x + (p0.x - c0.x) * k2, c0.y + (p0.y - c0.y) * k2, z); };
+  /* balık kayanın içinde ya da arkasında kalıyorsa aynı ışın üzerinde kayanın önüne gelir: ekrandaki yeri değişmez, kayaya gömülmez, arkasında kaybolmaz */
+  /* uzaklaşırken resifin arkasına saklanmasın: dipteyken uzağa gitmez */
+  const derZ = (p0, z, s) => { for (let i = 0; i < 12; i++) { const q = isinda(p0, z, isinV); if (q.y > zeminY(q.x, q.z) + s * 0.8 + (z < -1 ? 2.4 : 0) || z >= 0) return z; z = Math.min(0, z + 1); } return 0; };
+  function kayaZ(p0, z, ry, rx) {
+    if (!ENG.y) return z;
+    for (let zz = 2.6; zz >= z - 1e-4; zz -= 0.15) { isinda(p0, zz, isinV); if (kayaIc(isinV.x, isinV.y, zz, ry, rx)) return Math.max(z, Math.min(3, zz + 0.15 + ry * 0.6)); }
+    return z;
+  }
   const ISIN = new THREE.Raycaster();
   function ortamKur(VW, magX) {
     ORTAM.clear(); MERCAN3 = []; KOLONI3 = []; ekoSon = "";
@@ -317,6 +343,8 @@ export async function kur3D({ tuval, kalite }) {
       o.position.set(solX + ara(-3, 3) * (ust ? 0.6 : 1), zeminY(solX, -5) - 0.2 * sc + (ust ? ara(0.9, 1.4) : 0), ara(-7.5, -3.5)); SOL.add(o);
     }
     SOL.updateMatrixWorld(true);
+    engelKur([DUVAR, SOL], -yarim - 1, yarim + 1, -13, 3);
+    TUNEL = { x: magX, y: -0.05 + 0.4 * ds, z: -0.1 * ds, rx: 1.5 * ds, ry: 2.2 * ds, rz: 4.2 * ds };
     for (let i = 0; i < Math.round(34 * cok); i++) { const k = mercanlar[Math.floor(r() * mercanlar.length)]; koy(k, solX + ara(-4.5, 4.5), ara(-8.5, -3), (k.startsWith('masa') ? ara(0.5, 0.8) : k.startsWith('yelpaze') ? ara(1, 1.5) : ara(0.7, 1.2)), k.startsWith('yelpaze') ? ara(-0.5, 0.5) : r() * 6.28, SOL); }
     for (let i = 0; i < Math.round(26 * cok); i++) { const k = mercanlar[Math.floor(r() * mercanlar.length)], z = ara(-7, -1.5); koy(k, solX + ara(-6, 6.5), z, ara(0.5, 1.05) * (z > -3 ? 0.7 : 1), k.startsWith('yelpaze') ? ara(-0.4, 0.4) : r() * 6.28); }
     for (let i = 0; i < 3; i++) koy(i % 2 ? 'anemon_0' : 'anemon_1', solX + ara(-5, 5), ara(-3.5, -1.7), ara(0.9, 1.2), r() * 6);
@@ -495,6 +523,10 @@ export async function kur3D({ tuval, kalite }) {
           gor.add(o.id); let c = YZN.get(o.id);
           if (!c) { c = { g: yuzenUret(o.tur, (m, ek) => yama(m, ek || {}), balikKlon, o), yaw: null }; sahne.add(c.g); YZN.set(o.id, c); }
           let p = dunya(o.x, o.y), sc = Math.max(0.02, o.s * M.k);
+          if (o.z != null) { /* derinliği olan küçük sürü balıkları: ekrandaki yeri aynı, kamera ışını boyunca kendi derinliğinde; kayaya ve resife gömülmez */
+            const p0 = p.clone(); let z = derZ(p0, o.z, sc); z = kayaZ(p0, z, sc * 0.22, sc * 0.42);
+            c.zs = c.zs == null ? z : c.zs + (z - c.zs) * Math.min(1, dt * (z > c.zs ? 6 : 1.5)); if (z > c.zs + 0.6) c.zs = z - 0.6;
+            p = isinda(p0, c.zs); const taban = zeminY(p.x, p.z) + sc * 0.25; if (p.y < taban) p.y = taban; }
           if (o.arka || o.uzak) { const z = o.uzak ? -16 : -12, k2 = (kam.position.z - z) / kam.position.z; p = kam.position.clone().add(p.sub(kam.position).multiplyScalar(k2)); sc *= k2 * (o.uzak ? 0.75 : 1); }
           /* derinlikte çapraz geçiş: köpekbalığı uzaktan gelip kameranın yanından geçer; ziyaretçiler de kendi derinlik yolunu izler.
              Ekrandaki yeri 2D ile aynı kalır, kamera ışını boyunca ileri-geri gider; yönü gerçek 3D hareketinden hesaplanır. */
@@ -536,11 +568,14 @@ export async function kur3D({ tuval, kalite }) {
         if (f && f.tur !== b.tur) { sahne.remove(f.g); BAL.delete(b.id); f = null; }
         if (!f) { f = balikYap(b.tur); BAL.set(b.id, f); }
         const dans = b.dans;
-        let p = dunya(b.x, b.y + (dans ? dans.oy : 0));
+        const p0 = dunya(b.x, b.y + (dans ? dans.oy : 0));
         const s = Math.max(0.05, b.L * M.k * (b.tur === 'yavru' ? 0.9 : 1)); f.g.scale.setScalar(s);
         /* derinlik: ekrandaki yeri aynı kalır, kamera ışını boyunca yaklaşır ya da uzaklaşır (uzakta küçük ve sisli görünür) */
-        if (b.der) { let z = b.der > 0 ? b.der * 5 : b.der * 11; const c0 = kam.position;
-          for (let i = 0; i < 12; i++) { const k2 = (c0.z - z) / c0.z, q = c0.clone().add(p.clone().sub(c0).multiplyScalar(k2)); if (q.y > zeminY(q.x, q.z) + s * 0.8 + (z < -1 ? 2.4 : 0) || z >= 0) { p = q; break; } z = Math.min(0, z + 1); } } /* uzaklaşırken resifin arkasına saklanmasın: dipteyken uzağa gitmez */
+        let zt = b.der ? derZ(p0, b.der > 0 ? b.der * 5 : b.der * 11, s) : 0;
+        zt = kayaZ(p0, zt, s * f.alt * 1.05, s * f.yarim * 0.75);
+        f.zs = f.zs == null ? zt : f.zs + (zt - f.zs) * Math.min(1, dt * (zt > f.zs ? 6 : 1.5));
+        if (zt > f.zs + 0.6) f.zs = zt - 0.6; /* kayanın içinden geçerek gelmesin */
+        const p = isinda(p0, f.zs);
         /* kuma gömülmesin: gövdenin en alt noktası (eğim ve kıvrılma payıyla) zeminin biraz üstünde kalır */
         const taban = zeminY(p.x, p.z) + s * (f.alt * 1.1 + f.yarim * Math.abs(Math.sin(f.pit)) + 0.04);
         const yakin = THREE.MathUtils.clamp((p.y - taban) / (s * f.alt * 2 + 0.01), 0, 1);

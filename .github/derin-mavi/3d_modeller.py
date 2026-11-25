@@ -462,6 +462,74 @@ TURLER['isikli'] = dict(ns=100, nr=36, H=0.16, W=0.07, a=0.4, b=0.95, ped=0.06, 
     yuzgecler=[(0.4, 0.55, 0.06, False, 'sirt', 0.4, None), (0.6, 0.72, 0.05, True, 'anal', 0.4, None)],
     gozU=0.12, gozR=0.048, gozZ=0.3, iris='#3A5A80')
 
+# ---- küçük sürü türleri (3-5'li gruplar) ve pusu avcısı orfoz: sahnede çok küçük göründükleri için düşük çözünürlük
+# flama balığı (Heniochus): beyaz disk gövde, iki geniş eğik siyah bant, sarı arka yüzgeçler, uzun sırt flaması
+def flamaEk(u, v, c):
+    S_ = renk('#121212')
+    for (m, w) in ((0.3, 0.085), (0.66, 0.08)):
+        d = abs(u - m + 0.09 * v)
+        c = karis(c, S_, 1 - yumusak(w - 0.01, w + 0.01, d))
+    c = karis(c, renk('#F2D22E'), yumusak(0.8, 0.88, u) * yumusak(0.0, 0.3, v))
+    return karis(c, renk('#2A2A2A'), (1 - yumusak(0.04, 0.07, u)) * 0.8)
+TURLER['flama'] = dict(ns=80, nr=28, H=0.32, W=0.045, a=0.45, b=0.62, ped=0.14, cz=0.04,
+    renk=govdeRenk('#EDEBE4', '#F7F6F1', '#FFFFFF', flamaEk),
+    yuzgec=lambda p, s, t: (yuzgecRenk('#F2D22E', None, 0.9, 0.85) if p in ('kuyruk', 'sirt2', 'gogus') else yuzgecRenk('#151515', None, 0.9, 0.85) if p == 'anal' else yuzgecRenk('#F4F2EA', None, 0.9, 0.9, '#FFFFFF'))(p, s, t),
+    kuyruk='kesik', kL=0.18, kH=0.16,
+    yuzgecler=[(0.2, 0.5, 0.62, False, 'sirt', 0.55, lambda s: 0.22 + 0.78 * math.exp(-((s - 0.12) / 0.09) ** 2)), (0.5, 0.84, 0.12, False, 'sirt2', 0.3, None), (0.5, 0.84, 0.12, True, 'anal', 0.3, None)],
+    gogusU=0.26, gogusL=0.12, gogusG=0.05, gozU=0.13, gozR=0.03, iris='#2A2A2A')
+
+# sarpa (Akdeniz): gümüş-gri iğ gövde, boydan boya altın sarısı ince çizgiler
+def sarpaEk(u, v, c):
+    q = math.sin(v * math.pi * 5.5 + 0.4)
+    c = karis(c, renk('#E9C23C'), yumusak(0.55, 0.8, q) * yumusak(0.06, 0.14, u) * (1 - yumusak(0.9, 0.96, u)))
+    return karis(c, renk('#1A1A1A'), (1 - yumusak(0.012, 0.022, math.hypot(u - 0.27, (v + 0.05) * 0.2))))
+TURLER['sarpa'] = dict(ns=80, nr=28, H=0.16, W=0.07, a=0.45, b=0.9, ped=0.08, cz=0.0, parlak=True,
+    renk=govdeRenk('#6F8496', '#B9C6D0', '#EEF2F4', sarpaEk),
+    yuzgec=lambda p, s, t: yuzgecRenk('#A9B4BC', None, 0.9, 0.85, '#D9C27A')(p, s, t),
+    kuyruk='catal', kL=0.2, kH=0.17,
+    yuzgecler=[(0.24, 0.72, 0.07, False, 'sirt', 0.3, None), (0.55, 0.8, 0.05, True, 'anal', 0.3, None)],
+    gogusU=0.27, gogusL=0.12, gogusG=0.04, gozU=0.11, gozR=0.03, iris='#D8B848')
+
+# karagöz (Akdeniz): gümüş yassı gövde, başın ardında ve kuyruk sapında siyah bant
+def karagozEk(u, v, c):
+    S_ = renk('#151515')
+    c = karis(c, S_, 1 - yumusak(0.025, 0.04, abs(u - 0.21 - 0.02 * v)))
+    c = karis(c, S_, yumusak(0.84, 0.87, u) * (1 - yumusak(0.95, 0.98, u)))
+    q = math.sin(v * math.pi * 7)
+    return karis(c, renk('#8E9AA6'), yumusak(0.6, 0.9, q) * 0.35)
+TURLER['karagoz'] = dict(ns=80, nr=28, H=0.24, W=0.06, a=0.45, b=0.8, ped=0.12, cz=0.02, parlak=True,
+    renk=govdeRenk('#7C8A96', '#C9D2D9', '#F2F4F5', karagozEk),
+    yuzgec=lambda p, s, t: yuzgecRenk('#B8C0C4', '#E2CE7A', 0.82, 0.85)(p, s, t),
+    kuyruk='catal', kL=0.21, kH=0.19,
+    yuzgecler=[(0.22, 0.76, 0.09, False, 'sirt', 0.3, None), (0.55, 0.8, 0.07, True, 'anal', 0.3, None)],
+    gogusU=0.27, gogusL=0.13, gogusG=0.05, gozU=0.12, gozR=0.034, iris='#C9CFD4')
+
+# banggai kardinal balığı (resif): gümüş gövde, üç siyah dikey bant, arkada beyaz benekler, uzun yüzgeçler
+def kardinalEk(u, v, c):
+    S_ = renk('#121212')
+    for (m, w) in ((0.1, 0.035), (0.36, 0.05), (0.7, 0.16)):
+        c = karis(c, S_, 1 - yumusak(w - 0.01, w + 0.008, abs(u - m)))
+    n = noise.noise(Vector((u * 40, v * 14, 7.7)))
+    return karis(c, renk('#FFFFFF'), yumusak(0.45, 0.55, n) * yumusak(0.5, 0.6, u))
+TURLER['kardinal'] = dict(ns=80, nr=28, H=0.25, W=0.055, a=0.42, b=0.8, ped=0.14, cz=0.0,
+    renk=govdeRenk('#9DA6AA', '#D8DDDC', '#EEF0EE', kardinalEk),
+    yuzgec=lambda p, s, t: yuzgecRenk('#161616', '#F2F2F2', 0.88, 0.9)(p, s, t),
+    kuyruk='catal', kL=0.3, kH=0.26,
+    yuzgecler=[(0.26, 0.4, 0.24, False, 'sirt', 0.25, None), (0.5, 0.82, 0.26, False, 'sirt2', 0.55, lambda s: 0.3 + 0.7 * math.exp(-((s - 0.2) / 0.18) ** 2)), (0.5, 0.84, 0.24, True, 'anal', 0.55, lambda s: 0.3 + 0.7 * math.exp(-((s - 0.2) / 0.18) ** 2))],
+    gogusU=0.27, gogusL=0.12, gogusG=0.05, gozU=0.1, gozR=0.036, iris='#D9C24A')
+
+# orfoz (Akdeniz pusu avcısı): iri kahverengi-zeytin gövde, açık lekeler, sarımsı karın, kenarı açık yüzgeçler, geniş ağız
+def orfozEk(u, v, c):
+    n = noise.noise(Vector((u * 18, v * 7, 2.3)))
+    c = karis(c, renk('#D8C79A'), yumusak(0.3, 0.5, n) * 0.75 * yumusak(-0.2, 0.2, v))
+    return karis(c, renk('#3A2A1C'), (1 - yumusak(0.005, 0.012, abs(v + 0.1 - u * 0.4))) * (1 - yumusak(0.0, 0.1, u)) * 0.6)
+TURLER['orfoz'] = dict(ns=90, nr=30, H=0.2, W=0.11, a=0.36, b=0.95, ped=0.16, cz=-0.04,
+    renk=govdeRenk('#4A3A26', '#7A6040', '#E2C77A', orfozEk),
+    yuzgec=lambda p, s, t: yuzgecRenk('#5C4630', '#E8E0C8', 0.88, 0.85)(p, s, t),
+    kuyruk='kesik', kL=0.17, kH=0.15,
+    yuzgecler=[(0.24, 0.5, 0.08, False, 'sirt', 0.25, lambda s: 0.6 + 0.4 * math.sin(math.pi * s)), (0.5, 0.8, 0.1, False, 'sirt2', 0.3, None), (0.56, 0.8, 0.08, True, 'anal', 0.3, None)],
+    gogusU=0.27, gogusL=0.15, gogusG=0.08, gogusA=0.7, gozU=0.09, gozR=0.03, gozZ=0.45, iris='#C9A24A')
+
 bpy.ops.wm.read_factory_settings(use_empty=True)
 for i, (ad, sp) in enumerate(TURLER.items()):
     k = balik(ad, sp)
