@@ -448,6 +448,29 @@ export function yuzenUret(tur, malz, balik, o = {}) {
     }
     case 'sardalya1': { const f = balik('sardalya'); G.add(f.o); A.b = [{ ...f, i: 0 }]; break; }
     case 'ks': { const f = balik(o.model || 'sardalya'); G.add(f.o); A.b = [{ ...f, i: 0 }]; break; } /* küçük sürü balığı ya da orfoz */
+    case 'muren': { /* yeşil müren: 2D'deki gövde izini izleyen boğum zinciri; dünyaya hizalı iç grup */
+      const ic = new THREE.Group(); G.add(ic); A.ic = ic; A.seg = [];
+      const gm = M('#5F8E3F', { roughness: 0.55 }), km = M('#3F6528', { roughness: 0.6 });
+      for (let i = 1; i < 14; i++) { const t = i / 13, m = ekle(new THREE.SphereGeometry(0.066 * (1 - t * 0.65), 10, 8), t > 0.8 ? km : gm, ic); m.scale.set(1.7, 1, 1); A.seg.push(m); }
+      const bas = new THREE.Group(); ic.add(bas); A.bas = bas;
+      const kafa = ekle(new THREE.SphereGeometry(0.06, 14, 10), M('#6A9A48', { roughness: 0.5 }), bas); kafa.scale.set(2, 1, 1.05);
+      const cene = ekle(new THREE.SphereGeometry(0.045, 10, 8), M('#557F38'), bas); cene.scale.set(1.9, 0.5, 0.9); cene.position.set(0.03, -0.035, 0); A.cene = cene;
+      for (const z of [-1, 1]) { const g = ekle(new THREE.SphereGeometry(0.014, 8, 6), M('#F2D45C', { emissive: '#4a3a00' }), bas); g.position.set(0.055, 0.025, z * 0.045); }
+      break;
+    }
+    case 'kus': { /* sümsük kuşu: beyaz gövde, sarımsı baş, gri gaga, siyah kanat uçları; dalışta kanatlar katlı */
+      const bm = M('#F4F4F0', { roughness: 0.6 });
+      const gv = ekle(new THREE.SphereGeometry(0.5, 16, 10), bm); gv.scale.set(1, 0.28, 0.3);
+      const bas = ekle(new THREE.SphereGeometry(0.11, 12, 10), M('#F2D79A')); bas.position.set(0.42, 0.02, 0);
+      const gaga = ekle(new THREE.ConeGeometry(0.04, 0.3, 8).rotateZ(-Math.PI / 2), M('#8A949A')); gaga.position.set(0.62, 0, 0);
+      const kuy = ekle(new THREE.ConeGeometry(0.07, 0.25, 6).rotateZ(Math.PI / 2), bm); kuy.position.set(-0.55, 0, 0); kuy.scale.set(1, 0.4, 1);
+      A.kanat = [];
+      for (const z of [-1, 1]) { const g = new THREE.Group(); g.position.set(0.05, 0.04, z * 0.08); G.add(g);
+        const k = ekle(new THREE.BoxGeometry(0.28, 0.015, 0.7), bm, g); k.position.z = z * 0.35;
+        const u = ekle(new THREE.BoxGeometry(0.2, 0.016, 0.22), M('#1B1B1B'), g); u.position.set(-0.04, 0, z * 0.78); A.kanat.push([g, z]); }
+      A.balik = ekle(new THREE.CapsuleGeometry(0.035, 0.18, 4, 8).rotateZ(Math.PI / 2), M('#C9D9E6', { metalness: 0.5, roughness: 0.3 })); A.balik.position.set(0.8, -0.02, 0); A.balik.visible = false;
+      break;
+    }
     case 'palyacocift': case 'papagan': case 'kelebek': case 'barakuda': {
       const P = { palyacocift: ['palyaco', null, [[0.15, 0.05, 0], [-0.5, -0.2, 0.25]], 0.55], papagan: ['papagan', null, [[0, 0, 0]], 1], kelebek: ['melek', '#fff27a', [[0.1, 0, 0], [-0.5, 0.25, -0.3], [-0.6, -0.3, 0.25]], 0.5], barakuda: ['orkinos', '#d8e6ee', [[0, 0, 0], [-0.3, 0.25, -0.4], [-0.6, -0.2, 0.3], [0.2, -0.35, 0.5], [-0.9, 0.05, -0.1]], 0.42] }[tur];
       A.b = P[2].map(([x, y, z], i) => { const f = balik(P[0], P[1]); f.o.position.set(x, y, z); f.o.scale.setScalar(P[3]); if (tur === 'barakuda') f.o.scale.set(P[3] * 1.2, P[3] * 0.5, P[3] * 0.5); G.add(f.o); return { ...f, i }; });
@@ -484,6 +507,12 @@ export function yuzenOyna(G, tur, o, t) {
     }
     case 'kopekbaligi': A.yuz.faz.value = f * 5.5; A.yuz.genlik.value = 1.6; break;
     case 'sardalya1': A.b[0].yuz.faz.value = f * 12; break;
+    case 'muren': { if (!A.ic) break; A.ic.rotation.y = -G.rotation.y; const iz = o.iz || []; /* boğumlar 2D gövde izinde */
+      A.seg.forEach((m, i) => { const p = iz[i + 1] || iz[iz.length - 1] || [0, 0]; m.position.set(p[0], p[1], Math.sin(i * 0.7 + f * 3) * 0.01); const q = iz[i] || p; m.rotation.z = Math.atan2(q[1] - p[1], q[0] - p[0]); });
+      const a = iz[1] ? Math.atan2(-iz[1][1], -iz[1][0]) : 0; A.bas.rotation.z = a; A.cene.position.y = -0.035 - (o.hamle ? 0.03 : 0.01 + 0.01 * Math.sin(f * 2.2)); break; }
+    case 'kus': { const ac = o.aci || 0; G.rotation.z = -ac; /* dalış açısı */
+      for (const [g, z] of A.kanat) { if (o.acik) { g.rotation.set(z * (0.2 + Math.sin(f * 9) * 0.7), 0, 0); g.scale.set(1, 1, 1); } else { g.rotation.set(0, z * 1.35, 0); g.scale.set(1, 1, 0.55); } } /* katlı kanat geriye yatar */
+      A.balik.visible = !!o.aldi; break; }
     case 'ks': A.b[0].yuz.faz.value = f * 9; if (A.b[0].yuz.genlik) A.b[0].yuz.genlik.value = o.hamle ? 1.8 : 1; break;
     case 'palyacocift': case 'papagan': case 'kelebek': case 'barakuda': for (const b of A.b) { b.yuz.faz.value = f * 9 + b.i; b.o.position.y += Math.sin(f * 1.3 + b.i * 2) * 0.0015; } break;
   }
