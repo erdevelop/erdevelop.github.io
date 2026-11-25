@@ -4148,7 +4148,7 @@ const EKO_OLAY = {
   derin: { e: '🐋', ad: ['Kış göçü', 'Winter migration'], d: ['Kambur balinalar göç yolunda; derinlerde de canlılık arttı.', 'Humpbacks are on the move, and the deep is livelier too.'] }
 };
 function ekoOlay() {
-  const gun = Math.floor((simdi() + 3 * 3.6e6) / 864e5), hafta = Math.floor((gun + 3) / 7), gk = ((gun + 3) % 7 + 7) % 7;
+  const gun = Math.floor((ekoSaat() + 3 * 3.6e6) / 864e5), hafta = Math.floor((gun + 3) / 7), gk = ((gun + 3) % 7 + 7) % 7;
   if (gk < 1 || gk > 5) return null; /* haftanın 2.–6. günleri sürer */
   const r = tohumRnd('eko' + hafta)(), mv = HV.m || 'sonbahar';
   const tur = mv === 'ilkbahar' ? (r < 0.75 ? 'plankton' : null) : mv === 'yaz' ? (r < 0.45 ? 'meduz' : r < 0.75 ? 'sicak' : null) : mv === 'sonbahar' ? (r < 0.7 ? 'goc' : null) : (r < 0.7 ? 'derin' : null);
@@ -4191,9 +4191,32 @@ function ekoIlerlet(saat) {
   }
 }
 let ekoZ = 0, ekoOlayK = null;
+/* hızlandırma (konsoldan DM.hiz(24) gibi): yalnızca ekosistemin saati hızlanır; açlık, yem hakkı, gün-gece
+   gerçek saatte kalır. Sayfa yenilenince 1×'e döner. Ekranda küçük bir gösterge ekosistemi canlı izler. */
+let EKO_HIZ = 1, EKO_OFF = 0;
+const ekoSaat = () => simdi() + EKO_OFF;
+function ekoHiz(n) {
+  if (n == null) return EKO_HIZ;
+  EKO_HIZ = Math.max(0, +n || 0); ekoZ = 0;
+  let el = $('ekoHizG');
+  if (EKO_HIZ !== 1 && !el) { el = document.createElement('div'); el.id = 'ekoHizG'; el.style.cssText = 'position:fixed;left:50%;transform:translateX(-50%);bottom:calc(40px + env(safe-area-inset-bottom,0px));z-index:9;padding:6px 12px;border-radius:12px;background:rgba(5,30,45,.82);border:1px solid rgba(255,255,255,.18);color:#EAFBFF;font:800 12px/1.35 ui-monospace,Menlo,Consolas,monospace;pointer-events:none;white-space:pre;text-align:center'; document.body.appendChild(el); }
+  if (EKO_HIZ === 1 && el) el.remove();
+  console.log(EKO_HIZ === 1 ? 'Ekosistem normal hızda (1×).' : `Ekosistem ${EKO_HIZ}× hızda: 1 saniye = ${(EKO_HIZ / 60).toFixed(EKO_HIZ < 60 ? 2 : 0)} dakika. Durdurmak için DM.hiz(1), anlık durum için DM.ekoDurum().`);
+  return EKO_HIZ;
+}
+function ekoDurum() {
+  const e = ekoS(); if (!e) return null; const ol = ekoOlay();
+  return { 'hız': EKO_HIZ + '×', 'sanal tarih': new Date(ekoSaat()).toLocaleString('tr-TR'), 'mevsim': HV.m, 'su temizliği': Math.round(S.su) + '%', 'resif sağlığı': Math.round(e.saglik * 100) + '%', 'beyazlama': Math.round(e.beyaz * 100) + '%', 'büyüme': Math.round(e.buyume * 100) + '%', 'koloni': e.koloni, 'plankton': +e.plk.toFixed(2), 'sardalya hedefi': Math.round(e.suru), 'sardalya şu an': YERLI.suru.length, 'olay': ol ? ol.tur : '-' };
+}
 function ekoKare(dt) {
   if (!S || girisAcik) return;
-  ekoZ += dt; if (ekoZ >= 5) { ekoAdim(ekoZ / 3600); ekoZ = 0; }
+  if (EKO_HIZ !== 1) {
+    EKO_OFF += (EKO_HIZ - 1) * dt * 1000;
+    S.su = Math.max(0, (S.su ?? 100) - 0.22 * Math.max(0, EKO_HIZ - 1) * dt / 3600); /* hızlanan zamanda su da kirlenir */
+    ekoZ += dt; if (ekoZ >= 0.5) { ekoAdim(ekoZ * EKO_HIZ / 3600); ekoZ = 0; }
+    const el = $('ekoHizG'), e = ekoS(), ol = ekoOlay();
+    if (el && (el._t = (el._t || 0) - dt) <= 0) { el._t = 0.25; el.textContent = `⏩ ${EKO_HIZ}× · ${new Date(ekoSaat()).toLocaleString(T('tr-TR', 'en-GB'), { day: '2-digit', month: 'short', hour: '2-digit', minute: '2-digit' })}${ol ? ' · ' + EKO_OLAY[ol.tur].e + ' ' + T(EKO_OLAY[ol.tur].ad[0], EKO_OLAY[ol.tur].ad[1]) : ''}\n🪸 ${Math.round(e.saglik * 100)}%  🤍 ${Math.round(e.beyaz * 100)}%  🌿 ${Math.round(e.buyume * 100)}%  🆕 ${e.koloni}  🦠 ${e.plk.toFixed(2)}  🐟 ${YERLI.suru.length}  💧 ${Math.round(S.su)}%`; }
+  } else { ekoZ += dt; if (ekoZ >= 5) { ekoAdim(ekoZ / 3600); ekoZ = 0; } }
   const ol = ekoOlay(), e = ekoS();
   if (ol && e.olayK !== ol.k) { e.olayK = ol.k; const O = EKO_OLAY[ol.tur]; duyur(`${O.e} ${T(O.ad[0], O.ad[1])}: ${T(O.d[0], O.d[1])}`, 1); kaydet(false); }
   ekoGoc(dt, ol);
@@ -4939,7 +4962,7 @@ else if (!S) { girisGoster(); yerliKur(); }
 else { ilerlet(); gunlukGorevler(); gorevKontrol(); basarimKontrol(); kaydet(false); panelAc(); if (olumKontrol()) { } else if (bekleyenSecim()) setTimeout(secimAc, 700); else if (!S.kumandaOgrendi) setTimeout(() => duyur(T('👆 Yeni: suya dokun, balığın oraya yüzsün. Parlayan planktonları ye!', '👆 New: tap the water and your fish swims there. Eat the glowing plankton!'), 1), 1200); }
 NET.baslat().then(() => { if (S && !girisAcik) agKur(); else uiGuncelle(); });
 requestAnimationFrame(kare);
-window.DM = { durum: () => ({ S, BAL, NET, AV, ALAN, PLK, YIR, CNL, GZ, SAHNE, INS, DENIZ }), eko: o => { Object.assign(ekoS(), o); }, yirtici: (x = 0.45) => { Object.assign(YIR, { durum: 'gec', d: 1, x: W * x, y: (ALAN.y1 + ALAN.y2) * 0.45, kontrol: true }); }, kalabalik: n => { demoBaliklar = new Map(Array.from({ length: n }, (_, i) => [`t${i}`, { ad: 'Test' + i, d: { a: 3, tr: ['palyaco', 'cerrah', 'melek'][i % 3], al: 'resif', r: 0, z: [] }, gun: 3, id: 't' + i }])); balikSenk(); }, ekoIleri: h => ekoIlerlet(h), deniz: v => { DENIZ.sabit = v == null ? null : kis(+v, 0, 1); DENIZ.d = DENIZ.sabit ?? DENIZ.d; }, kazan: m => { kazan(m, { sinirsiz: true, tokBagimsiz: true }); kaydet(); uiGuncelle(); }, avBitir, gz: k => { GZ.o = null; gzBaslat(k); }, ins: k => { INS.o = null; INS.tak = null; insBaslat(k); }, sifirla: () => { localStorage.removeItem(KEY); location.reload(); } };
+window.DM = { durum: () => ({ S, BAL, NET, AV, ALAN, PLK, YIR, CNL, GZ, SAHNE, INS, DENIZ }), eko: o => { Object.assign(ekoS(), o); }, hiz: n => ekoHiz(n), ekoDurum: () => { const d = ekoDurum(); console.table(d); return d; }, su: v => { S.su = kis(+v, 0, 100); return S.su; }, yirtici: (x = 0.45) => { Object.assign(YIR, { durum: 'gec', d: 1, x: W * x, y: (ALAN.y1 + ALAN.y2) * 0.45, kontrol: true }); }, kalabalik: n => { demoBaliklar = new Map(Array.from({ length: n }, (_, i) => [`t${i}`, { ad: 'Test' + i, d: { a: 3, tr: ['palyaco', 'cerrah', 'melek'][i % 3], al: 'resif', r: 0, z: [] }, gun: 3, id: 't' + i }])); balikSenk(); }, ekoIleri: h => ekoIlerlet(h), deniz: v => { DENIZ.sabit = v == null ? null : kis(+v, 0, 1); DENIZ.d = DENIZ.sabit ?? DENIZ.d; }, kazan: m => { kazan(m, { sinirsiz: true, tokBagimsiz: true }); kaydet(); uiGuncelle(); }, avBitir, gz: k => { GZ.o = null; gzBaslat(k); }, ins: k => { INS.o = null; INS.tak = null; insBaslat(k); }, sifirla: () => { localStorage.removeItem(KEY); location.reload(); } };
 })();
 </script>
 <script data-goatcounter="https://erdevelop.goatcounter.com/count" async src="//gc.zgo.at/count.js"></script>
