@@ -4,7 +4,7 @@
 const V = 'erdevelop-v3', PAGES = V + '-sayfa', LIBS = V + '-kutup';
 const CORE = ['/', '/Tools.html', '/404.html', '/favicon.svg', '/kesif/tema.css', '/kesif/tema.js',
   '/kesif/ruzgar.html', '/kesif/cam.html', '/kesif/kar.html', '/kesif/profil.html', '/kesif/genlesme.html', '/kesif/yogusma.html', '/kesif/ucw.html', '/kesif/ral.html', '/kesif/gunes.html',
-  '/derin-mavi.html', '/derin-mavi/3d/sahne3d.js', '/derin-mavi/3d/uretec.js', '/derin-mavi/3d/three.module.min.js', '/arac_kutusu.html', '/YakitHesapla.html', '/cam-agirlik.html', '/cephe-bolme.html'];
+  '/derin-mavi.html', '/derin-mavi/3d/sahne3d.js', '/derin-mavi/3d/uretec.js', '/derin-mavi/3d/yukleyici.js', '/derin-mavi/3d/addons/libs/meshopt_decoder.module.js', '/derin-mavi/3d/three.module.min.js', '/arac_kutusu.html', '/YakitHesapla.html', '/cam-agirlik.html', '/cephe-bolme.html'];
 const SKIP = [/^\/oyunlar\//, /^\/cephex\/pyodide\//, /^\/_/, /\.(zip|mp4|webm|mov|pdf)$/i, /^\/araclar\/lib\/(reactos|v86\/ubuntu)\//, /\.(wasm|bin|zst)$/i];
 /* sayfa ve kodlar her açılışta sunucuyla doğrulanır (değişmediyse kısa bir 304 yanıtı gelir); böylece yeni sürüm hemen görünür */
 const FRESH = /(\/|\.(html?|js|css|json|txt|xml))$/i;

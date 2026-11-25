@@ -4,7 +4,7 @@
    etiketler orada çizilmeye devam eder. Koordinatlar: ekrandaki (x, y) noktası z = 0 düzlemine
    izdüşürülür; kum çizgisi (kumY) dünyada y = 0'a denk gelir, böylece 2D ve 3D üst üste oturur. */
 import * as THREE from './three.module.min.js';
-import { GLTFLoader } from './addons/loaders/GLTFLoader.js';
+import { glbYukle } from './yukleyici.js';
 import { EffectComposer } from './addons/postprocessing/EffectComposer.js';
 import { RenderPass } from './addons/postprocessing/RenderPass.js';
 import { ShaderPass } from './addons/postprocessing/ShaderPass.js';
@@ -238,7 +238,7 @@ export async function kur3D({ tuval, kalite }) {
   }
 
   /* ---------- modeller ---------- */
-  const yukle = u => new Promise((ok, red) => new GLTFLoader().load(u, ok, undefined, red));
+  const yukle = glbYukle; /* meshopt ile sıkıştırılmış modeller */
   const [bg, rg] = await Promise.all([yukle(KAT + 'baliklar.glb'), yukle(KAT + 'resif.glb')]);
   function malzHazirla(o, ek) {
     o.traverse(m => {

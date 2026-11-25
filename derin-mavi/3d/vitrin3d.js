@@ -1,11 +1,11 @@
 /* Derin Mavi — canlı rehberi vitrini: albümdeki bir canlının 3D modelini küçük bir tuvalde döndürerek gösterir.
    Balıklar baliklar.glb'den, diğer canlılar uretec.js'teki yordamsal modellerden gelir. */
 import * as THREE from './three.module.min.js';
-import { GLTFLoader } from './addons/loaders/GLTFLoader.js';
+import { glbYukle as yukle } from './yukleyici.js';
 import { canliUret, canliOyna, yuzenUret, yuzenOyna } from './uretec.js';
 
 let GLB = null;
-const glbYukle = () => GLB || (GLB = new Promise((ok, hata) => new GLTFLoader().load(new URL('./baliklar.glb', import.meta.url).href, ok, undefined, hata)));
+const glbYukle = () => GLB || (GLB = yukle(new URL('./baliklar.glb', import.meta.url).href));
 const ZEMIN = ['yildiz', 'salyangoz', 'ermit', 'ahtapot', 'karides', 'dvatoz', 'yengec', 'istiridye'];
 
 /* tur: { balik: 'palyaco' } ya da { canli: 'manta' } */
