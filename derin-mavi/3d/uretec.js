@@ -349,6 +349,21 @@ export function yuzenUret(tur, malz, balik, o = {}) {
       for (let i = 0; i < 18; i++) { const a = i / 18 * Math.PI * 2, g = new THREE.BufferGeometry(); g.setAttribute('position', new THREE.BufferAttribute(new Float32Array(12 * 3), 3)); const l = new THREE.Line(g, cm); G.add(l); A.dok.push([l, a, 1.1 + (i % 3) * 0.35]); }
       break;
     }
+    case 'kopekbaligi': { /* resif köpekbalığı: iğ gövde (sırtı gri-mavi, karnı beyaz), yarım ay kuyruk, sırt ve göğüs yüzgeçleri */
+      const renkF = (v, c) => c.set(v.y > 0.03 ? '#4E6273' : v.y > -0.02 ? '#7D909E' : '#E8ECEE');
+      const on = renkle(lathe([[0, 0.1], [0.15, 0.11], [0.3, 0.095], [0.42, 0.065], [0.5, 0.03], [0.55, 0]], 22), renkF); on.scale(1, 0.9, 0.8); ekle(on, vc);
+      A.arka = new THREE.Group(); G.add(A.arka);
+      const ar = renkle(lathe([[-0.42, 0], [-0.38, 0.02], [-0.25, 0.05], [-0.1, 0.085], [0, 0.1]], 22), renkF); ar.scale(1, 0.9, 0.8); ekle(ar, vc, A.arka);
+      const fm = M('#56697A', { roughness: 0.5 });
+      ekle(yuzgec([[0.12, 0.07], [-0.02, 0.27], [-0.08, 0.27], [-0.06, 0.07]], 0.015), fm);
+      for (const z of [-1, 1]) { const k = kanat(G, 0.18, -0.06, z * 0.07, yuzgec([[0, 0], [0.04, -0.02], [-0.1, -0.2], [-0.14, -0.19]], 0.012), fm); k.rotation.x = z * 0.9; }
+      A.kuyruk = new THREE.Group(); A.kuyruk.position.x = -0.4; A.arka.add(A.kuyruk);
+      ekle(yuzgec([[0, 0], [-0.14, 0.24], [-0.19, 0.24], [-0.08, 0.01], [-0.15, -0.15], [-0.1, -0.15]], 0.015), fm, A.kuyruk);
+      ekle(yuzgec([[-0.22, 0.04], [-0.28, 0.1], [-0.3, 0.09], [-0.27, 0.035]], 0.01), fm, A.arka); /* küçük ikinci sırt yüzgeci */
+      const gz = M('#0B0F12', { roughness: 0.1 }); for (const z of [-1, 1]) { ekle(new THREE.SphereGeometry(0.012, 8, 6), gz).position.set(0.43, 0.02, z * 0.045);
+        for (let i = 0; i < 5; i++) { const y = ekle(new THREE.BoxGeometry(0.004, 0.05, 0.004), M('#2c3842')); y.position.set(0.3 - i * 0.022, 0, z * 0.078); } }
+      break;
+    }
     case 'sardalya1': { const f = balik('sardalya'); G.add(f.o); A.b = [{ ...f, i: 0 }]; break; }
     case 'palyacocift': case 'papagan': case 'kelebek': case 'barakuda': {
       const P = { palyacocift: ['palyaco', null, [[0.15, 0.05, 0], [-0.5, -0.2, 0.25]], 0.55], papagan: ['cerrah', '#7dffd0', [[0, 0, 0]], 1], kelebek: ['melek', '#fff27a', [[0.1, 0, 0], [-0.5, 0.25, -0.3], [-0.6, -0.3, 0.25]], 0.5], barakuda: ['orkinos', '#d8e6ee', [[0, 0, 0], [-0.3, 0.25, -0.4], [-0.6, -0.2, 0.3], [0.2, -0.35, 0.5], [-0.9, 0.05, -0.1]], 0.42] }[tur];
@@ -379,6 +394,7 @@ export function yuzenOyna(G, tur, o, t) {
       for (const [l, a, L] of A.dok) { const pa = l.geometry.attributes.position; for (let j = 0; j < 12; j++) { const u = j / 11, sal = Math.sin(f * 2.4 - u * 5 + a * 3) * 0.06 * u; pa.setXYZ(j, Math.cos(a) * r * (1 - u * 0.15) + sal, -u * L + 0.02, Math.sin(a) * r * (1 - u * 0.15) + Math.cos(f * 2 - u * 4 + a) * 0.05 * u); } pa.needsUpdate = true; }
       break;
     }
+    case 'kopekbaligi': A.arka.rotation.y = Math.sin(f * 3.2) * 0.18; A.kuyruk.rotation.y = Math.sin(f * 3.2 - 0.9) * 0.45; break;
     case 'sardalya1': A.b[0].yuz.faz.value = f * 12; break;
     case 'palyacocift': case 'papagan': case 'kelebek': case 'barakuda': for (const b of A.b) { b.yuz.faz.value = f * 9 + b.i; b.o.position.y += Math.sin(f * 1.3 + b.i * 2) * 0.0015; } break;
   }

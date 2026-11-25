@@ -883,6 +883,7 @@ function g3Yuzenler() {
   YERLI.meduz.forEach((m, i) => L.push({ id: 'meduz' + i + m.c, tur: 'meduz', x: m.x, y: m.y, s: 32 * OL, d: 1, f: m.f, renk: m.c, derin: SAHNE.tm === 'derin' }));
   YERLI.suru.forEach((f, i) => L.push({ id: 'suru' + i, tur: 'sardalya1', x: f.x, y: f.y, s: 13 * OL, d: YERLI.lider.yon || 1, f: zaman + i }));
   if (GOC.o) GOC.o.b.forEach((f, i) => L.push({ id: 'goc' + i, tur: 'sardalya1', x: f.x, y: f.y, s: 13 * OL, d: GOC.o.d, f: zaman + i }));
+  if (YIR.durum === 'gec') L.push({ id: 'yirtici', tur: 'kopekbaligi', x: YIR.x, y: YIR.y, s: 170 * OL, d: YIR.d, f: zaman });
   if (TOP.kur) L.push({ id: 'top', tur: 'top', x: TOP.x, y: TOP.y, s: TOP.r, d: 1, f: zaman, don: TOP.x / TOP.r * 0.5 });
   return L;
 }
@@ -3207,9 +3208,18 @@ function yirticiKare(c, dt) {
   }
   if (YIR.durum === 'gec') {
     YIR.x += YIR.d * (W + 520) / 7 * dt; YIR.y += Math.sin(zaman) * 10 * dt;
-    const s = 170 * OL; c.save(); c.translate(YIR.x, YIR.y); c.scale(YIR.d, 1); c.globalAlpha = 0.55; c.fillStyle = '#18222C';
-    c.beginPath(); c.moveTo(s * 0.55, 0); c.quadraticCurveTo(s * 0.25, -s * 0.2, -s * 0.35, -s * 0.06); c.lineTo(-s * 0.55, -s * 0.28 + Math.sin(zaman * 6) * 6); c.lineTo(-s * 0.48, 0); c.lineTo(-s * 0.55, s * 0.24 + Math.sin(zaman * 6) * 6); c.lineTo(-s * 0.35, s * 0.06); c.quadraticCurveTo(s * 0.2, s * 0.16, s * 0.55, 0); c.fill();
-    c.beginPath(); c.moveTo(s * 0.05, -s * 0.12); c.lineTo(-s * 0.08, -s * 0.38); c.lineTo(-s * 0.16, -s * 0.1); c.fill(); c.restore();
+    if (!G3) { /* 2D: gölge değil, gerçek renkli bir resif köpekbalığı (sırtı gri-mavi, karnı beyaz) */
+      const s = 170 * OL, k = Math.sin(zaman * 6) * 6; c.save(); c.translate(YIR.x, YIR.y); c.scale(YIR.d, 1);
+      const yol = () => { c.beginPath(); c.moveTo(s * 0.55, s * 0.01); c.quadraticCurveTo(s * 0.42, -s * 0.13, s * 0.1, -s * 0.15); c.quadraticCurveTo(-s * 0.2, -s * 0.13, -s * 0.38, -s * 0.04); c.lineTo(-s * 0.58, -s * 0.3 + k); c.lineTo(-s * 0.5, -s * 0.01); c.lineTo(-s * 0.56, s * 0.17 + k * 0.7); c.lineTo(-s * 0.37, s * 0.04); c.quadraticCurveTo(-s * 0.1, s * 0.12, s * 0.2, s * 0.11); c.quadraticCurveTo(s * 0.45, s * 0.09, s * 0.55, s * 0.01); c.closePath(); };
+      const g = c.createLinearGradient(0, -s * 0.15, 0, s * 0.12); g.addColorStop(0, '#4E6273'); g.addColorStop(0.45, '#7D909E'); g.addColorStop(0.62, '#D8DEE2'); g.addColorStop(1, '#EEF1F2');
+      c.fillStyle = '#4E6273'; c.beginPath(); c.moveTo(s * 0.12, -s * 0.14); c.quadraticCurveTo(s * 0.0, -s * 0.36, -s * 0.1, -s * 0.38); c.quadraticCurveTo(-s * 0.06, -s * 0.24, -s * 0.12, -s * 0.12); c.fill(); /* sırt yüzgeci */
+      yol(); c.fillStyle = g; c.fill();
+      c.fillStyle = '#5E7384'; c.beginPath(); c.moveTo(s * 0.14, s * 0.07); c.quadraticCurveTo(s * 0.02, s * 0.25, -s * 0.12, s * 0.3); c.quadraticCurveTo(-s * 0.02, s * 0.15, -s * 0.02, s * 0.07); c.fill(); /* göğüs yüzgeci */
+      c.strokeStyle = 'rgba(40,52,62,.55)'; c.lineWidth = 1.2 * OL; for (let i = 0; i < 5; i++) { c.beginPath(); c.moveTo(s * (0.27 - i * 0.025), -s * 0.06); c.quadraticCurveTo(s * (0.25 - i * 0.025), 0, s * (0.27 - i * 0.025), s * 0.05); c.stroke(); } /* solungaç yarıkları */
+      c.fillStyle = '#0B0F12'; c.beginPath(); c.arc(s * 0.42, -s * 0.045, s * 0.016, 0, TAU); c.fill();
+      c.strokeStyle = 'rgba(30,30,30,.5)'; c.lineWidth = 1.4 * OL; c.beginPath(); c.moveTo(s * 0.5, s * 0.05); c.quadraticCurveTo(s * 0.43, s * 0.08, s * 0.36, s * 0.06); c.stroke(); /* ağız */
+      c.restore();
+    }
     for (const x of BAL.values()) if (!x.ben && Math.abs(x.x - YIR.x) < 200) { x.ty = ALAN.y2; x.yt = 2; }
     if (b && !YIR.kontrol && Math.abs(YIR.x - b.x) < 30) {
       YIR.kontrol = true;
@@ -4900,7 +4910,7 @@ else if (!S) { girisGoster(); yerliKur(); }
 else { ilerlet(); gunlukGorevler(); gorevKontrol(); basarimKontrol(); kaydet(false); panelAc(); if (olumKontrol()) { } else if (bekleyenSecim()) setTimeout(secimAc, 700); else if (!S.kumandaOgrendi) setTimeout(() => duyur(T('👆 Yeni: suya dokun, balığın oraya yüzsün. Parlayan planktonları ye!', '👆 New: tap the water and your fish swims there. Eat the glowing plankton!'), 1), 1200); }
 NET.baslat().then(() => { if (S && !girisAcik) agKur(); else uiGuncelle(); });
 requestAnimationFrame(kare);
-window.DM = { durum: () => ({ S, BAL, NET, AV, ALAN, PLK, YIR, CNL, GZ, SAHNE, INS, DENIZ }), eko: o => { Object.assign(ekoS(), o); }, kalabalik: n => { demoBaliklar = new Map(Array.from({ length: n }, (_, i) => [`t${i}`, { ad: 'Test' + i, d: { a: 3, tr: ['palyaco', 'cerrah', 'melek'][i % 3], al: 'resif', r: 0, z: [] }, gun: 3, id: 't' + i }])); balikSenk(); }, ekoIleri: h => ekoIlerlet(h), deniz: v => { DENIZ.sabit = v == null ? null : kis(+v, 0, 1); DENIZ.d = DENIZ.sabit ?? DENIZ.d; }, kazan: m => { kazan(m, { sinirsiz: true, tokBagimsiz: true }); kaydet(); uiGuncelle(); }, avBitir, gz: k => { GZ.o = null; gzBaslat(k); }, ins: k => { INS.o = null; INS.tak = null; insBaslat(k); }, sifirla: () => { localStorage.removeItem(KEY); location.reload(); } };
+window.DM = { durum: () => ({ S, BAL, NET, AV, ALAN, PLK, YIR, CNL, GZ, SAHNE, INS, DENIZ }), eko: o => { Object.assign(ekoS(), o); }, yirtici: (x = 0.45) => { Object.assign(YIR, { durum: 'gec', d: 1, x: W * x, y: (ALAN.y1 + ALAN.y2) * 0.45, kontrol: true }); }, kalabalik: n => { demoBaliklar = new Map(Array.from({ length: n }, (_, i) => [`t${i}`, { ad: 'Test' + i, d: { a: 3, tr: ['palyaco', 'cerrah', 'melek'][i % 3], al: 'resif', r: 0, z: [] }, gun: 3, id: 't' + i }])); balikSenk(); }, ekoIleri: h => ekoIlerlet(h), deniz: v => { DENIZ.sabit = v == null ? null : kis(+v, 0, 1); DENIZ.d = DENIZ.sabit ?? DENIZ.d; }, kazan: m => { kazan(m, { sinirsiz: true, tokBagimsiz: true }); kaydet(); uiGuncelle(); }, avBitir, gz: k => { GZ.o = null; gzBaslat(k); }, ins: k => { INS.o = null; INS.tak = null; insBaslat(k); }, sifirla: () => { localStorage.removeItem(KEY); location.reload(); } };
 })();
 </script>
 <script data-goatcounter="https://erdevelop.goatcounter.com/count" async src="//gc.zgo.at/count.js"></script>
