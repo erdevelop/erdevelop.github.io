@@ -13,7 +13,8 @@ import { OutputPass } from './addons/postprocessing/OutputPass.js';
 import { mercanUret, MERCAN_RENK, canliUret, canliOyna, yuzenUret, yuzenOyna, insanUret, insanOyna } from './uretec.js';
 
 const KAL = {
-  dusuk: { dpr: 1, golge: false, sm: 512, parca: 220, post: false, kostik: 0.9 },
+  tasarruf: { dpr: 0.85, golge: false, sm: 512, parca: 100, post: false, kostik: 0.7, cok: 0.35 },
+  dusuk: { dpr: 1, golge: false, sm: 512, parca: 220, post: false, kostik: 0.9, cok: 0.55 },
   orta: { dpr: 1.5, golge: true, sm: 1024, parca: 420, post: false, kostik: 1.15 },
   yuksek: { dpr: 2, golge: true, sm: 2048, parca: 800, post: true, kostik: 1.4 }
 };
@@ -21,9 +22,27 @@ const KAT = new URL('./', import.meta.url).href;
 const ESLE = { palyaco: 'palyaco', cerrah: 'cerrah', melek: 'melek', orkinos: 'orkinos', yelken: 'yelken', ucan: 'ucan', fener: 'fener', balta: 'balta', kurdele: 'kurdele', buz: 'buz', mandarin: 'mandarin', papagan: 'papagan', lambuka: 'lambuka', uskumru: 'uskumru', engerek: 'engerek', isikli: 'isikli', yavru: 'sardalya' };
 
 export async function kur3D({ tuval, kalite }) {
-  const mobil = matchMedia('(pointer:coarse)').matches || Math.min(innerWidth, innerHeight) < 600;
-  kalite = KAL[kalite] ? kalite : (mobil ? 'orta' : 'yuksek');
-  const R = new THREE.WebGLRenderer({ canvas: tuval, antialias: true, powerPreference: 'high-performance' });
+  const mobil = matchMedia('(pointer:coarse)').matches || Math.min(innerWidth, innerHeight) < 600 || /Android|iPhone|iPad|Mobile/i.test(navigator.userAgent);
+  const R = new THREE.WebGLRenderer({ canvas: tuval, antialias: !mobil, powerPreference: 'high-performance' });
+  /* CİHAZ SINIFI: ekran kartının adı, işlemci çekirdeği, bellek ve telefon olup olmadığına bakarak başlangıç kalitesi */
+  const cihaz = (() => {
+    let gpu = ''; try { const gl = R.getContext(), x = gl.getExtension('WEBGL_debug_renderer_info'); gpu = String(x ? gl.getParameter(x.UNMASKED_RENDERER_WEBGL) : gl.getParameter(gl.RENDERER)); } catch (e) { }
+    const cek = navigator.hardwareConcurrency || 4, bel = navigator.deviceMemory || 4, sira = ['tasarruf', 'dusuk', 'orta', 'yuksek'];
+    let s;
+    if (/SwiftShader|llvmpipe|Software|Basic Render/i.test(gpu)) s = 0;
+    else if (/RTX|GTX|Radeon (RX|Pro)|Apple M\d|Arc A|Quadro/i.test(gpu)) s = 3;
+    else if (/Adreno.*?(\d{3})/i.test(gpu)) { const n = +gpu.match(/Adreno.*?(\d{3})/i)[1]; s = n >= 730 ? 2 : n >= 640 ? 1 : 0; }
+    else if (/Mali-G(\d+)/i.test(gpu)) { const n = +gpu.match(/Mali-G(\d+)/i)[1]; s = n >= 710 ? 2 : n >= 76 ? 1 : 0; }
+    else if (/Apple GPU/i.test(gpu)) s = 2; /* iPhone/iPad: model adı gizli, orta başla, gerekirse otomatik iner */
+    else if (/Intel|UHD|Iris|Radeon(TM)? Graphics|Vega/i.test(gpu)) s = 2;
+    else s = mobil ? 1 : 2;
+    if (cek <= 4 || bel <= 3) s = Math.max(0, s - 1);
+    if (mobil) s = Math.min(s, 2);
+    return { gpu, cek, bel, mobil, seviye: sira[s] };
+  })();
+  /* kalite tercihi: 'oto' (önerilen) ya da sabit bir seviye */
+  let oto = !KAL[kalite]; kalite = KAL[kalite] ? kalite : cihaz.seviye;
+  let dprCarp = 1; /* otomatikte önce çözünürlük kısılır, yetmezse seviye iner */
   R.outputColorSpace = THREE.SRGBColorSpace; R.toneMapping = THREE.NeutralToneMapping; R.toneMappingExposure = 1.12;
   R.shadowMap.type = THREE.PCFSoftShadowMap;
   const sahne = new THREE.Scene();
@@ -288,7 +307,7 @@ export async function kur3D({ tuval, kalite }) {
         const o = P[k].clone(true); const sc = k.startsWith('masa') ? 0.55 : k.startsWith('yelpaze') ? 1 : 0.8; o.userData.s0 = sc; o.rotation.y = r2() * 6.28; o.position.set(x, zeminY(x, z) - 0.04, z); o.visible = false; ORTAM.add(o); KOLONI3.push(o); } }
     for (let i = 0; i < Math.round(VW * 3) + 10; i++) { const k = mercanlar[Math.floor(r() * mercanlar.length)], z = ara(-10, -1.4); koy(k, ara(-yarim, yarim), z, (k.startsWith('yelpaze') ? ara(0.8, 1.4) : k.startsWith('masa') ? ara(0.45, 0.8) : ara(0.5, 1.1)) * (z > -3 ? 0.65 : 1), k.startsWith('yelpaze') ? ara(-0.4, 0.4) : r() * 6.28); }
     for (let i = 0; i < 14; i++) { const k = mercanlar[Math.floor(r() * mercanlar.length)]; koy(k, magX - 1.8 * ds + ara(-7, 7) * ds, ara(-8, -2) * ds, ara(0.45, 0.9) * ds * 1.4, r() * 6.28, true); }
-    const cok = kalite === 'dusuk' ? 0.55 : 1;
+    const cok = KAL[kalite].cok || 1;
     /* sol tepecik: iri kayalardan bir resif tümseği, üstü ve eteği mercan dolu */
     const SOL = new THREE.Group(); ORTAM.add(SOL);
     const solX = -yarim + 3 + VW * 0.12;
@@ -374,7 +393,7 @@ export async function kur3D({ tuval, kalite }) {
   const M = { W: 1, H: 1, kumY: 1, k: 0.01, Hc: 1, VW: 20, magX: 0 };
   const D = 14;
   function boyut(W, H, kumY, magara) {
-    const dpr = Math.min(devicePixelRatio || 1, KAL[kalite].dpr);
+    const dpr = Math.max(0.6, Math.min(devicePixelRatio || 1, KAL[kalite].dpr) * dprCarp);
     R.setPixelRatio(dpr); R.setSize(W, H, false); komp.setPixelRatio(dpr); komp.setSize(W, H);
     kam.aspect = W / H; const yatay = (W / H < 0.9 ? 62 : 72) * Math.PI / 180;
     kam.fov = THREE.MathUtils.clamp(2 * Math.atan(Math.tan(yatay / 2) / kam.aspect) * 180 / Math.PI, 36, 92); kam.updateProjectionMatrix();
@@ -396,14 +415,32 @@ export async function kur3D({ tuval, kalite }) {
     boyut(M.W, M.H, M.kumY, { x: M.magX / M.k + M.W / 2 });
   }
 
+  const FG = { n: 0, t0: 0, son: 60, yavas: 0, hizli: 0, ust: null, degisti: null };
   const gecici = new THREE.Vector3(), eul = new THREE.Euler(0, 0, 0, 'YXZ'), gunesUzak = new THREE.Vector3(), tmp = new THREE.Color();
   let gecePay = 0;
   const api = {
     boyut,
-    kalite: () => kalite,
-    kaliteDegis() { kalite = { dusuk: 'orta', orta: 'yuksek', yuksek: 'dusuk' }[kalite]; kaliteUygula(); return kalite; },
+    kalite: () => kalite, degisince: f => { FG.degisti = f; },
+    /* sıra: Otomatik → Pil dostu → Düşük → Orta → Yüksek → Otomatik */
+    kaliteDegis() {
+      if (oto) { oto = false; kalite = 'tasarruf'; } else if (kalite === 'yuksek') { oto = true; kalite = cihaz.seviye; } else kalite = { tasarruf: 'dusuk', dusuk: 'orta', orta: 'yuksek' }[kalite];
+      dprCarp = 1; FG.ust = null; kaliteUygula(); return oto ? 'oto' : kalite;
+    },
+    oto: () => oto, cihaz: () => cihaz, fps: () => FG.son,
     kare(dt, d) {
       U.zaman.value += dt; const t = U.zaman.value;
+      /* KARE HIZI YÖNETİCİSİ (otomatikte): 2 saniyelik pencerelerde ölçer; yavaşsa önce çözünürlüğü kısar, sonra seviyeyi indirir;
+         uzun süre rahatsa bir basamak çıkar ama yakın zamanda zorlandığı seviyenin üstüne çıkmaz */
+      { const simd = performance.now(); FG.n++; if (!FG.t0) FG.t0 = simd;
+        if (simd - FG.t0 > 2000) { const f = FG.n * 1000 / (simd - FG.t0); FG.son = f; FG.n = 0; FG.t0 = simd;
+          if (oto && !document.hidden) {
+            const sira = ['tasarruf', 'dusuk', 'orta', 'yuksek'], i = sira.indexOf(kalite);
+            if (f < 40) { FG.yavas++; FG.hizli = 0; } else if (f > 56) { FG.hizli++; FG.yavas = 0; } else { FG.yavas = 0; FG.hizli = 0; }
+            if (FG.yavas >= 2) { FG.yavas = 0; if (dprCarp > 0.72) { dprCarp = Math.max(0.7, dprCarp - 0.15); boyut(M.W, M.H, M.kumY, { x: M.magX / M.k + M.W / 2 }); } else if (i > 0) { FG.ust = { s: kalite, t: simd }; kalite = sira[i - 1]; dprCarp = 1; kaliteUygula(); FG.degisti && FG.degisti(); } }
+            else if (FG.hizli >= 6) { FG.hizli = 0;
+              if (dprCarp < 1) { dprCarp = Math.min(1, dprCarp + 0.15); boyut(M.W, M.H, M.kumY, { x: M.magX / M.k + M.W / 2 }); }
+              else if (i < sira.length - 1 && i < sira.indexOf(cihaz.seviye) + 1 && !(FG.ust && sira.indexOf(FG.ust.s) <= i + 1 && simd - FG.ust.t < 90000)) { kalite = sira[i + 1]; kaliteUygula(); FG.degisti && FG.degisti(); } }
+          } } }
       /* gece ve hava: ışık, sis ve renkler */
       gecePay += ((d.gece || 0) - gecePay) * Math.min(1, dt * 0.5);
       const g = gecePay, isik = d.isik == null ? 1 : d.isik;

@@ -946,11 +946,13 @@ async function g3Baslat() {
   cv.parentNode.insertBefore(t3, cv);
   try {
     const { kur3D } = await import('/derin-mavi/3d/sahne3d.js');
-    let kal = null; try { kal = localStorage.getItem('derin3d-kalite'); } catch (e) { }
+    let kal = null; try { kal = localStorage.getItem('derin3d-kalite2'); } catch (e) { } /* yoksa ya da 'oto' ise otomatik */
     const api = await kur3D({ tuval: t3, kalite: kal });
-    G3 = api; alanHesap(); sahneKur();
-    const kb = $('kalite3'), yaz = () => { const ad = { dusuk: T('Düşük', 'Low'), orta: T('Orta', 'Medium'), yuksek: T('Yüksek', 'High') }[G3.kalite()]; kb.textContent = innerWidth < 560 ? '⚙️' : '⚙️ ' + ad; kb.title = T('3D kalite: ', '3D quality: ') + ad; };
-    kb.hidden = false; yaz(); kb.onclick = () => { const k = G3.kaliteDegis(); try { localStorage.setItem('derin3d-kalite', k); } catch (e) { } yaz(); };
+    G3 = api; boyut();
+    const AD = { tasarruf: T('Pil dostu', 'Battery saver'), dusuk: T('Düşük', 'Low'), orta: T('Orta', 'Medium'), yuksek: T('Yüksek', 'High') };
+    const kb = $('kalite3'), yaz = () => { const ad = AD[G3.kalite()], o = G3.oto(); kb.textContent = innerWidth < 560 ? (o ? '⚙️A' : '⚙️') : '⚙️ ' + (o ? T('Otomatik', 'Auto') + ' · ' + ad : ad); kb.title = T('3D kalite: ', '3D quality: ') + (o ? T('Otomatik — cihaza ve kare hızına göre ayarlanır (şu an ', 'Auto — adapts to the device and frame rate (now ') + ad + ')' : ad) + T('. Değiştirmek için dokun.', '. Tap to change.'); };
+    kb.hidden = false; yaz(); G3.degisince(yaz);
+    kb.onclick = () => { const k = G3.kaliteDegis(); try { localStorage.setItem('derin3d-kalite2', k); } catch (e) { } yaz(); duyur(k === 'oto' ? T('⚙️ Otomatik: cihazına ve akıcılığa göre kendini ayarlar', '⚙️ Auto: adapts to your device and smoothness') : '⚙️ ' + AD[k] + (k === 'tasarruf' ? T(' — en akıcı, pili korur', ' — smoothest, saves battery') : k === 'yuksek' ? T(' — en güzel görüntü, güçlü cihazlar için', ' — best looks, for powerful devices') : '')); };
   } catch (e) { console.error(e); t3.remove(); G3 = null; duyur(T('3D görünüm bu cihazda açılamadı, 2D ile devam ediliyor.', '3D view could not start on this device; continuing in 2D.')); }
 }
 function g3Durum() {
@@ -966,8 +968,18 @@ function tema() {
   if (a) { const n = +a.slice(1) || 1; return ['resif', 'acik', 'derin'][(n - 1) % 3]; }
   return (S && S.alan) || 'resif';
 }
+/* 2D'de akıcılık: kare hızı uzun süre düşükse çizim çözünürlüğü kademeli kısılır (en çok %60'a), rahatlayınca geri açılır */
+let OLCEK2D = 1;
+const FG2 = { n: 0, t0: 0, yavas: 0, hizli: 0 };
+function akicilik2D() {
+  if (G3 || document.hidden) return; const s = performance.now(); FG2.n++; if (!FG2.t0) FG2.t0 = s; if (s - FG2.t0 < 2500) return;
+  const f = FG2.n * 1000 / (s - FG2.t0); FG2.n = 0; FG2.t0 = s;
+  if (f < 40) { FG2.yavas++; FG2.hizli = 0; } else if (f > 57) { FG2.hizli++; FG2.yavas = 0; } else { FG2.yavas = 0; FG2.hizli = 0; }
+  if (FG2.yavas >= 2 && OLCEK2D > 0.62) { FG2.yavas = 0; OLCEK2D = Math.max(0.6, OLCEK2D - 0.13); boyut(); }
+  else if (FG2.hizli >= 8 && OLCEK2D < 1) { FG2.hizli = 0; OLCEK2D = Math.min(1, OLCEK2D + 0.13); boyut(); }
+}
 function boyut() {
-  DPR = Math.min(2, devicePixelRatio || 1); W = innerWidth; H = innerHeight;
+  DPR = Math.min(2, devicePixelRatio || 1) * OLCEK2D * (G3 && matchMedia('(pointer:coarse)').matches ? 0.7 : 1); W = innerWidth; H = innerHeight;
   cv.width = Math.round(W * DPR); cv.height = Math.round(H * DPR); cv.style.width = W + 'px'; cv.style.height = H + 'px';
   OL = kis(Math.min(W, H) / 640, 0.78, 1.3);
   alanHesap(); sahneKur();
@@ -5099,7 +5111,7 @@ function fpsKare(dt) {
   FPS.n++; FPS.t += dt; if (dt > 0) FPS.min = Math.min(FPS.min, 1 / dt);
   if (FPS.t >= 0.5) {
     const f = FPS.n / FPS.t; FPS.son = f;
-    el.textContent = `${Math.round(f)} FPS · ${(1000 / f).toFixed(1)} ms\n${T('en düşük', 'min')} ${Math.round(Math.min(f, FPS.min))} · ${G3 ? '3D' : '2D'}`;
+    el.textContent = `${Math.round(f)} FPS · ${(1000 / f).toFixed(1)} ms\n${T('en düşük', 'min')} ${Math.round(Math.min(f, FPS.min))} · ${G3 ? '3D ' + G3.kalite() + (G3.oto() ? ' (oto)' : '') : '2D' + (OLCEK2D < 1 ? ' ×' + OLCEK2D.toFixed(2) : '')}`;
     el.style.color = f >= 50 ? '#9EF7B0' : f >= 30 ? '#FFE29A' : '#FF9A8A';
     FPS.n = 0; FPS.t = 0; FPS.min = 999;
   }
@@ -5191,7 +5203,7 @@ function kare(ts) {
   else if (AV.mod === 'yaris') yarisGuncelle(dt);
   else avGuncelle(dt);
   onizlemeCiz(dt);
-  fpsKare(dt); vitalKare(dt);
+  fpsKare(dt); vitalKare(dt); akicilik2D();
   if (S && !girisAcik) panelResim(dt);
   uiZ -= dt; if (uiZ <= 0) { uiZ = 1; if (S && !girisAcik) { balikSenk(); uiGuncelle(); } }
   albumZ -= dt; if (albumZ <= 0) { albumZ = 5; if (S && !girisAcik && !ogModu) albumTara(); }
@@ -5207,7 +5219,7 @@ else if (!S) { girisGoster(); yerliKur(); }
 else { ilerlet(); gunlukGorevler(); gorevKontrol(); basarimKontrol(); kaydet(false); panelAc(); if (olumKontrol()) { } else if (bekleyenSecim()) setTimeout(secimAc, 700); else if (!S.kumandaOgrendi) setTimeout(() => duyur(T('👆 Yeni: suya dokun, balığın oraya yüzsün. Parlayan planktonları ye!', '👆 New: tap the water and your fish swims there. Eat the glowing plankton!'), 1), 1200); }
 NET.baslat().then(() => { if (S && !girisAcik) agKur(); else uiGuncelle(); });
 requestAnimationFrame(kare);
-window.DM = { durum: () => ({ S, BAL, NET, AV, ALAN, PLK, YIR, CNL, GZ, SAHNE, INS, DENIZ }), eko: o => { Object.assign(ekoS(), o); }, gece: v => { GECE_ZORLA = v == null ? null : kis(+v, 0, 1); }, mercanDogum: v => { NESIL.zorla = !!v; }, yumurtla: () => { const e = ekoS(); e.yum = e.yum || []; e.yum.push({ x: 0.6, g0: ekoGun() - 2.05, n: 16, id: Date.now() }); }, ay: () => ayYasi(), hiz: n => ekoHiz(n), ekoDurum: () => { const d = ekoDurum(); console.table(d); return d; }, su: v => { S.su = kis(+v, 0, 100); return S.su; }, yirtici: (x = 0.45) => { Object.assign(YIR, { durum: 'gec', d: 1, x: W * x, y: (ALAN.y1 + ALAN.y2) * 0.45, kontrol: true }); }, kalabalik: n => { demoBaliklar = new Map(Array.from({ length: n }, (_, i) => [`t${i}`, { ad: 'Test' + i, d: { a: 3, tr: ['palyaco', 'cerrah', 'melek'][i % 3], al: 'resif', r: 0, z: [] }, gun: 3, id: 't' + i }])); balikSenk(); }, ekoIleri: h => ekoIlerlet(h), deniz: v => { DENIZ.sabit = v == null ? null : kis(+v, 0, 1); DENIZ.d = DENIZ.sabit ?? DENIZ.d; }, kazan: m => { kazan(m, { sinirsiz: true, tokBagimsiz: true }); kaydet(); uiGuncelle(); }, avBitir, gz: k => { GZ.o = null; gzBaslat(k); }, ins: k => { INS.o = null; INS.tak = null; insBaslat(k); }, sifirla: () => { localStorage.removeItem(KEY); location.reload(); } };
+window.DM = { cihaz: () => G3 ? Object.assign({ kalite: G3.kalite(), otomatik: G3.oto(), fps: Math.round(G3.fps()) }, G3.cihaz()) : { mod: '2D', olcek: OLCEK2D }, durum: () => ({ S, BAL, NET, AV, ALAN, PLK, YIR, CNL, GZ, SAHNE, INS, DENIZ }), eko: o => { Object.assign(ekoS(), o); }, gece: v => { GECE_ZORLA = v == null ? null : kis(+v, 0, 1); }, mercanDogum: v => { NESIL.zorla = !!v; }, yumurtla: () => { const e = ekoS(); e.yum = e.yum || []; e.yum.push({ x: 0.6, g0: ekoGun() - 2.05, n: 16, id: Date.now() }); }, ay: () => ayYasi(), hiz: n => ekoHiz(n), ekoDurum: () => { const d = ekoDurum(); console.table(d); return d; }, su: v => { S.su = kis(+v, 0, 100); return S.su; }, yirtici: (x = 0.45) => { Object.assign(YIR, { durum: 'gec', d: 1, x: W * x, y: (ALAN.y1 + ALAN.y2) * 0.45, kontrol: true }); }, kalabalik: n => { demoBaliklar = new Map(Array.from({ length: n }, (_, i) => [`t${i}`, { ad: 'Test' + i, d: { a: 3, tr: ['palyaco', 'cerrah', 'melek'][i % 3], al: 'resif', r: 0, z: [] }, gun: 3, id: 't' + i }])); balikSenk(); }, ekoIleri: h => ekoIlerlet(h), deniz: v => { DENIZ.sabit = v == null ? null : kis(+v, 0, 1); DENIZ.d = DENIZ.sabit ?? DENIZ.d; }, kazan: m => { kazan(m, { sinirsiz: true, tokBagimsiz: true }); kaydet(); uiGuncelle(); }, avBitir, gz: k => { GZ.o = null; gzBaslat(k); }, ins: k => { INS.o = null; INS.tak = null; insBaslat(k); }, sifirla: () => { localStorage.removeItem(KEY); location.reload(); } };
 })();
 </script>
 <script data-goatcounter="https://erdevelop.goatcounter.com/count" async src="//gc.zgo.at/count.js"></script>
