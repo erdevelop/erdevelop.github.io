@@ -15,6 +15,7 @@
 <meta name="twitter:card" content="summary_large_image">
 <link rel="canonical" href="https://erdevelop.github.io/organizma.html">
 <link rel="icon" href="/favicon.svg" type="image/svg+xml">
+<link rel="manifest" href="/organizma.webmanifest"><link rel="apple-touch-icon" href="/organizma/apple-touch-icon.png"><meta name="apple-mobile-web-app-capable" content="yes"><meta name="mobile-web-app-capable" content="yes"><meta name="apple-mobile-web-app-status-bar-style" content="black-translucent"><meta name="apple-mobile-web-app-title" content="Organizma">
 <link href="https://fonts.googleapis.com/css2?family=Nunito:wght@600;700;800;900&display=swap" rel="stylesheet">
 <style>
 :root{--ink:#E4F3F2;--mute:#9CC0BE;--acc:#5FD3B8;--acc2:#3FB59A;--kart:rgba(10,32,38,.86);--line:rgba(150,220,215,.18);--kirmizi:#FF7B6B}
@@ -316,6 +317,7 @@ body.izle #dostOk{display:none}
     <button class="ana" id="basla" type="button" data-en="Survive!">Hayatta kal!</button>
     <button class="ikinci" id="davetBtn" type="button" data-en="👥 Invite a friend">👥 Arkadaşını davet et</button>
     <button class="ikinci" id="izleBtn" type="button" data-en="📺 Watch mode (screensaver)">📺 İzleme modu (ekran koruyucu)</button>
+    <button class="ikinci" id="kurBtn" type="button" hidden data-en="📲 Add to home screen (plays offline)">📲 Ana ekrana ekle (çevrimdışı da oynanır)</button>
     <a id="ansLink" href="/mikro-dunya/" data-en="📖 Micro World Encyclopedia (Turkish)">📖 Mikro Dünya Ansiklopedisi: oyundaki canlıların gerçek hikâyeleri</a>
     <a id="gecisLink" href="/yaratik.html" hidden></a>
     <button class="ikinci" id="agacBtn" type="button">🌳 Soy ağacı</button>
@@ -3810,6 +3812,26 @@ function dostOkGuncelle() {
   el.firstChild.style.transform = `rotate(${a}rad)`;
   const yz = `${d.n} · ${dist > 999 ? (dist / 1000).toFixed(1) + 'k' : dist} µm`; if (el.lastChild.textContent !== yz) el.lastChild.textContent = yz;
 }
+
+/* ================= uygulama gibi kurulum (PWA) ve çevrimdışı oyun ================= */
+const PWA = { olay: null, kurulu: matchMedia('(display-mode: fullscreen), (display-mode: standalone)').matches || navigator.standalone === true };
+const iosMu = /iP(hone|ad|od)/.test(navigator.userAgent) || (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
+if ('serviceWorker' in navigator && location.protocol === 'https:') addEventListener('load', () => {
+  navigator.serviceWorker.register('/sw.js').then(() => navigator.serviceWorker.ready).then(() => {
+    // oyunu bir kez önbelleğe al: internet yokken de açılsın (site service worker'ıyla aynı önbellek)
+    caches.open('erdevelop-v3-sayfa').then(c => Promise.allSettled(['/organizma.html', '/dil.js', '/js/seri-kayit.js', '/js/site.js', '/favicon.svg', '/organizma/ikon-192.png'].map(u => c.match(u).then(m => m || c.add(u)))));
+  }).catch(() => { });
+});
+addEventListener('beforeinstallprompt', e => { e.preventDefault(); PWA.olay = e; if (!PWA.kurulu) $('kurBtn').hidden = false; });
+addEventListener('appinstalled', () => { PWA.kurulu = true; $('kurBtn').hidden = true; olcum('pwa-kuruldu'); });
+if (!PWA.kurulu && iosMu && !/CriOS|FxiOS/.test(navigator.userAgent)) $('kurBtn').hidden = false;   // iOS Safari: elle ekleme yönergesi
+if (PWA.kurulu || PARAM.has('pwa')) olcum('pwa-acilis');
+$('kurBtn').onclick = async () => {
+  if (PWA.olay) { PWA.olay.prompt(); const r = await PWA.olay.userChoice.catch(() => null); PWA.olay = null; if (r && r.outcome === 'accepted') $('kurBtn').hidden = true; return; }
+  duyurHtml(T('📲 iPhone/iPad: alttaki <b>Paylaş</b> düğmesine (kare ve yukarı ok) dokun, sonra <b>Ana Ekrana Ekle</b>\'yi seç. Organizma bir uygulama gibi açılır.', '📲 iPhone/iPad: tap the <b>Share</b> button (square with an arrow), then <b>Add to Home Screen</b>. Organizma will open like an app.'), 'iyi', 9);
+};
+function cevrimDurum() { if (!navigator.onLine) duyur(T('📴 İnternet yok: yapay zekâ rakiplerle oynuyorsun. Bağlantı gelince çevrimiçi dünyaya katılmak için sayfayı yenile.', '📴 Offline: you are playing against AI rivals. Reload when you are back online to join the online world.'), '', 6); }
+addEventListener('offline', cevrimDurum); setTimeout(cevrimDurum, 1500);
 
 /* ================= döngü ================= */
 let son = performance.now(), izle = null, izleZ = 0;
