@@ -381,19 +381,50 @@ export function yuzenUret(tur, malz, balik, o = {}) {
       for (let i = 0; i < 18; i++) { const a = i / 18 * Math.PI * 2, g = new THREE.BufferGeometry(); g.setAttribute('position', new THREE.BufferAttribute(new Float32Array(12 * 3), 3)); const l = new THREE.Line(g, cm); G.add(l); A.dok.push([l, a, 1.1 + (i % 3) * 0.35]); }
       break;
     }
-    case 'kopekbaligi': { /* resif köpekbalığı: iğ gövde (sırtı gri-mavi, karnı beyaz), yarım ay kuyruk, sırt ve göğüs yüzgeçleri */
-      const renkF = (v, c) => c.set(v.y > 0.03 ? '#4E6273' : v.y > -0.02 ? '#7D909E' : '#E8ECEE');
-      const on = renkle(lathe([[0, 0.1], [0.15, 0.11], [0.3, 0.095], [0.42, 0.065], [0.5, 0.03], [0.55, 0]], 22), renkF); on.scale(1, 0.9, 0.8); ekle(on, vc);
-      A.arka = new THREE.Group(); G.add(A.arka);
-      const ar = renkle(lathe([[-0.42, 0], [-0.38, 0.02], [-0.25, 0.05], [-0.1, 0.085], [0, 0.1]], 22), renkF); ar.scale(1, 0.9, 0.8); ekle(ar, vc, A.arka);
-      const fm = M('#56697A', { roughness: 0.5 });
-      ekle(yuzgec([[0.12, 0.07], [-0.02, 0.27], [-0.08, 0.27], [-0.06, 0.07]], 0.015), fm);
-      for (const z of [-1, 1]) { const k = kanat(G, 0.18, -0.06, z * 0.07, yuzgec([[0, 0], [0.04, -0.02], [-0.1, -0.2], [-0.14, -0.19]], 0.012), fm); k.rotation.x = z * 0.9; }
-      A.kuyruk = new THREE.Group(); A.kuyruk.position.x = -0.4; A.arka.add(A.kuyruk);
-      ekle(yuzgec([[0, 0], [-0.14, 0.24], [-0.19, 0.24], [-0.08, 0.01], [-0.15, -0.15], [-0.1, -0.15]], 0.015), fm, A.kuyruk);
-      ekle(yuzgec([[-0.22, 0.04], [-0.28, 0.1], [-0.3, 0.09], [-0.27, 0.035]], 0.01), fm, A.arka); /* küçük ikinci sırt yüzgeci */
-      const gz = M('#0B0F12', { roughness: 0.1 }); for (const z of [-1, 1]) { ekle(new THREE.SphereGeometry(0.012, 8, 6), gz).position.set(0.43, 0.02, z * 0.045);
-        for (let i = 0; i < 5; i++) { const y = ekle(new THREE.BoxGeometry(0.004, 0.05, 0.004), M('#2c3842')); y.position.set(0.3 - i * 0.022, 0, z * 0.078); } }
+    case 'kopekbaligi': { /* kara uçlu resif köpekbalığı: tek parça pürüzsüz gövde, kalınlığı olan kavisli yüzgeçler, uçları siyah;
+                             bütün parçalar aynı yüzme bükülmesini paylaşır, gövde kuyruğa doğru dalgalanır */
+      A.yuz = { faz: { value: 0 }, genlik: { value: 1 } };
+      const SM = (r, ek) => malz(new THREE.MeshStandardMaterial(Object.assign({ color: r, roughness: 0.42, metalness: 0.05 }, ek)), { yuz: A.yuz });
+      /* gövde: boyuna kesitleri elips olan, sivri burunlu, kuyruk sapına incelen tek ağ */
+      const NX = 110, NA = 32, X0 = -0.5, X1 = 0.56, P = [], C = [], I = [], col = new THREE.Color(), c2 = new THREE.Color();
+      const PRF = [[0, 0.1], [0.12, 0.26], [0.3, 0.62], [0.5, 0.94], [0.6, 1], [0.72, 0.93], [0.84, 0.74], [0.92, 0.55], [0.97, 0.36], [0.995, 0.15], [1, 0]];
+      const pr = u => { /* u: 0 kuyruk sapı … 1 burun ucu; yumuşak ara değer */ for (let k = 1; k < PRF.length; k++) if (u <= PRF[k][0]) { const [u0, a0] = PRF[k - 1], [u1, a1] = PRF[k], t = (u - u0) / (u1 - u0), e = t * t * (3 - 2 * t); return a0 + (a1 - a0) * e; } return 0; };
+      for (let i = 0; i <= NX; i++) {
+        const u = i / NX, x = X0 + (X1 - X0) * u, bas = THREE.MathUtils.smoothstep(u, 0.7, 0.95), ry = (0.1 - bas * 0.03) * pr(u) + 0.004, rz = (0.082 + bas * 0.012) * pr(u) + 0.004, yc = -0.004 - bas * 0.012;
+        for (let j = 0; j <= NA; j++) {
+          const a = j / NA * Math.PI * 2, sy = Math.sin(a), y = yc + ry * sy * (sy < 0 ? 0.82 : 1), z = rz * Math.cos(a);
+          P.push(x, y, z);
+          /* renk: sırtı bronz-gri, karnı beyaz, yumuşak geçişli; yanlarda beyaz bir dil (kara uçlu resif köpekbalığı) */
+          const sirt = THREE.MathUtils.smoothstep(sy, -0.62, -0.12), dil = THREE.MathUtils.smoothstep(sy, -0.45, -0.1) * (1 - THREE.MathUtils.smoothstep(sy, -0.1, 0.15)) * THREE.MathUtils.smoothstep(u, 0.15, 0.45) * (1 - THREE.MathUtils.smoothstep(u, 0.55, 0.75));
+          col.set('#EEF1EF').lerp(c2.set('#7E8A8C'), sirt).lerp(c2.set('#A9B2AF'), (1 - sirt) * 0.0).lerp(c2.set('#EEF1EF'), dil * 0.6);
+          if (u > 0.9 && u < 0.95 && sy < -0.55) col.lerp(c2.set('#2a2f30'), 0.7); /* ağız */
+          C.push(col.r, col.g, col.b);
+        }
+      }
+      for (let i = 0; i < NX; i++) for (let j = 0; j < NA; j++) { const a = i * (NA + 1) + j, b = a + NA + 1; I.push(a, b, a + 1, b, b + 1, a + 1); }
+      const gg = new THREE.BufferGeometry(); gg.setAttribute('position', new THREE.Float32BufferAttribute(P, 3)); gg.setAttribute('color', new THREE.Float32BufferAttribute(C, 3)); gg.setIndex(I); gg.computeVertexNormals();
+      ekle(gg, SM('#ffffff', { vertexColors: true }));
+      /* yüzgeçler: bevelli, kalınlığı olan kavisli plakalar; uçları siyaha döner */
+      const yzg = (sh, kal, uc) => { const g = new THREE.ExtrudeGeometry(sh, { depth: kal, bevelEnabled: true, bevelThickness: kal * 0.9, bevelSize: kal * 0.9, bevelSegments: 3, curveSegments: 16 }); g.translate(0, 0, -kal / 2);
+        g.computeBoundingBox(); const bb = g.boundingBox; return renkle(g, (v, c) => { const t = uc(v, bb); c.set('#7E8A8C').lerp(c2.set('#121516'), THREE.MathUtils.smoothstep(t, 0.72, 0.86)); }); };
+      const sirtS = new THREE.Shape(); sirtS.moveTo(0.11, 0); sirtS.bezierCurveTo(0.07, 0.06, 0.02, 0.15, -0.035, 0.2); sirtS.bezierCurveTo(-0.03, 0.12, -0.05, 0.05, -0.1, 0.012); sirtS.lineTo(-0.1, 0); sirtS.closePath();
+      const sg = yzg(sirtS, 0.008, v => v.y / 0.2); const srt = ekle(sg, SM('#ffffff', { vertexColors: true })); srt.position.set(0.08, 0.095, 0);
+      const gs = new THREE.Shape(); gs.moveTo(0.06, 0.01); gs.bezierCurveTo(0.02, -0.06, -0.08, -0.17, -0.16, -0.24); gs.bezierCurveTo(-0.1, -0.13, -0.08, -0.06, -0.06, 0); gs.closePath();
+      const gsg = yzg(gs, 0.007, v => -v.y / 0.24);
+      for (const z of [-1, 1]) { const m = ekle(gsg, SM('#ffffff', { vertexColors: true })); m.position.set(0.2, -0.06, z * 0.07); m.rotation.x = z * -1.1; m.rotation.y = z * 0.25; }
+      const ks = new THREE.Shape(); ks.moveTo(0.03, 0.012); ks.bezierCurveTo(-0.05, 0.08, -0.13, 0.2, -0.2, 0.27); ks.bezierCurveTo(-0.17, 0.17, -0.15, 0.08, -0.1, 0.0); ks.bezierCurveTo(-0.13, -0.05, -0.15, -0.1, -0.16, -0.14); ks.bezierCurveTo(-0.08, -0.08, -0.03, -0.04, 0.03, -0.012); ks.closePath();
+      const kq = ekle(yzg(ks, 0.006, v => Math.max(v.y / 0.27, -v.y / 0.14)), SM('#ffffff', { vertexColors: true })); kq.position.set(-0.48, 0.0, 0);
+      const ki = new THREE.Shape(); ki.moveTo(0.03, 0); ki.quadraticCurveTo(0.0, 0.06, -0.035, 0.07); ki.quadraticCurveTo(-0.03, 0.03, -0.04, 0); ki.closePath();
+      ekle(yzg(ki, 0.004, v => v.y / 0.07), SM('#ffffff', { vertexColors: true })).position.set(-0.26, 0.04, 0); /* ikinci sırt yüzgeci */
+      const an = new THREE.Shape(); an.moveTo(0.03, 0); an.quadraticCurveTo(0.0, -0.05, -0.035, -0.06); an.quadraticCurveTo(-0.03, -0.025, -0.04, 0); an.closePath();
+      ekle(yzg(an, 0.004, v => -v.y / 0.06), SM('#ffffff', { vertexColors: true })).position.set(-0.27, -0.035, 0); /* anal yüzgeç */
+      for (const z of [-1, 1]) { const m = ekle(yzg(an, 0.004, v => -v.y / 0.06), SM('#ffffff', { vertexColors: true })); m.position.set(-0.08, -0.07, z * 0.03); m.rotation.x = z * -0.6; } /* karın yüzgeçleri */
+      /* solungaç yarıkları: gövdenin yan yüzeyinde beş ince kavisli çizgi */
+      const sm = SM('#3b4547', { roughness: 0.6 });
+      for (const z of [-1, 1]) for (let k = 0; k < 5; k++) { const u = 0.72 + k * 0.018, x = X0 + (X1 - X0) * u, b2 = THREE.MathUtils.smoothstep(u, 0.7, 0.95), ry = (0.1 - b2 * 0.03) * pr(u) + 0.004, rz = (0.082 + b2 * 0.012) * pr(u) + 0.004;
+        const pts = []; for (let q = 0; q <= 6; q++) { const a = (-0.35 + q / 6 * 0.75); pts.push(new THREE.Vector3(x - Math.abs(a) * 0.006, -0.004 - b2 * 0.012 + ry * Math.sin(a) * 0.95, z * (rz * Math.cos(a) + 0.0015))); }
+        ekle(new THREE.TubeGeometry(new THREE.CatmullRomCurve3(pts), 8, 0.0016, 3), sm); }
+      for (const z of [-1, 1]) { const g = ekle(new THREE.SphereGeometry(0.0115, 12, 10), SM('#080a0b', { roughness: 0.05, metalness: 0.2 })); g.position.set(0.455, 0.012, z * 0.052); g.scale.set(1, 1, 0.6); }
       break;
     }
     case 'sardalya1': { const f = balik('sardalya'); G.add(f.o); A.b = [{ ...f, i: 0 }]; break; }
@@ -431,7 +462,7 @@ export function yuzenOyna(G, tur, o, t) {
       for (const [l, a, L] of A.dok) { const pa = l.geometry.attributes.position; for (let j = 0; j < 12; j++) { const u = j / 11, sal = Math.sin(f * 2.4 - u * 5 + a * 3) * 0.06 * u; pa.setXYZ(j, Math.cos(a) * r * (1 - u * 0.15) + sal, -u * L + 0.02, Math.sin(a) * r * (1 - u * 0.15) + Math.cos(f * 2 - u * 4 + a) * 0.05 * u); } pa.needsUpdate = true; }
       break;
     }
-    case 'kopekbaligi': A.arka.rotation.y = Math.sin(f * 3.2) * 0.18; A.kuyruk.rotation.y = Math.sin(f * 3.2 - 0.9) * 0.45; break;
+    case 'kopekbaligi': A.yuz.faz.value = f * 5.5; A.yuz.genlik.value = 1.6; break;
     case 'sardalya1': A.b[0].yuz.faz.value = f * 12; break;
     case 'palyacocift': case 'papagan': case 'kelebek': case 'barakuda': for (const b of A.b) { b.yuz.faz.value = f * 9 + b.i; b.o.position.y += Math.sin(f * 1.3 + b.i * 2) * 0.0015; } break;
   }

@@ -413,7 +413,7 @@ export async function kur3D({ tuval, kalite }) {
         const gor = new Set();
         for (const o of d.yuzenler) {
           gor.add(o.id); let c = YZN.get(o.id);
-          if (!c) { c = { g: yuzenUret(o.tur, m => yama(m, {}), balikKlon, o), yaw: null }; sahne.add(c.g); YZN.set(o.id, c); }
+          if (!c) { c = { g: yuzenUret(o.tur, (m, ek) => yama(m, ek || {}), balikKlon, o), yaw: null }; sahne.add(c.g); YZN.set(o.id, c); }
           let p = dunya(o.x, o.y), sc = Math.max(0.02, o.s * M.k);
           if (o.arka || o.uzak) { const z = o.uzak ? -16 : -12, k2 = (kam.position.z - z) / kam.position.z; p = kam.position.clone().add(p.sub(kam.position).multiplyScalar(k2)); sc *= k2 * (o.uzak ? 0.75 : 1); }
           c.g.position.copy(p); c.g.scale.setScalar(sc);
