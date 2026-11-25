@@ -5040,7 +5040,15 @@ $('fotoGal').onclick = async () => {
 const BUL_AB = 'abcdefghjkmnpqrstuvwxyz23456789';
 function kayitPaket() { kaydet(true); const d = {}; for (let i = 0; i < localStorage.length; i++) { const k = localStorage.key(i); if (k && k.startsWith('kozmos') && !k.startsWith('kozmos-yrh-')) d[k] = localStorage.getItem(k); } return JSON.stringify({ s: 'kozmos', v: 1, t: Date.now(), d }); }
 function kayitUygula(str) { let o; try { o = JSON.parse(str); } catch (e) { return false; } if (!o || o.s !== 'kozmos' || !o.d || typeof o.d !== 'object' || !o.d[KAYIT]) return false; window.__seriYukleniyor = true; const kod = ls.get('kozmos-bulut-kod', null); for (const k in o.d) if (k.startsWith('kozmos') && typeof o.d[k] === 'string') localStorage.setItem(k, o.d[k]); if (kod) ls.set('kozmos-bulut-kod', kod); setTimeout(() => location.reload(), 300); return true; }
-let bulOnay = 0;
+let bulOnay = 0, sifirOnay = 0;
+/* oyunu sıfırla: ilerleme silinir, ayarlar kalır; bulut yedeği korunur (otomatik bulut kaydı kapatılır ki üzerine yazılmasın) */
+function oyunSifirla() {
+  window.__seriYukleniyor = true;
+  try { for (let i = localStorage.length - 1; i >= 0; i--) { const k = localStorage.key(i); if (/^kozmos-(yrh|yrb)-/.test(k)) localStorage.removeItem(k); } } catch (e) { }
+  ls.set(KAYIT, {}); /* boş kayıt: hesap yedeği eski ilerlemeyi geri indirmesin, yeni oyun yedeklensin */
+  if (ls.get('kozmos-bulut-kod', null)) ls.set('kozmos-bulut-oto', false);
+  location.reload();
+}
 function bulYaz() {
   const kod = ls.get('kozmos-bulut-kod', null), ac = AG.durum() === 'acik', oto2 = ls.get('kozmos-bulut-oto', true) !== false;
   $('bulIc').innerHTML = `<div class="dg" style="flex-wrap:wrap;gap:6px;margin:6px 0"><button class="kb al" type="button" data-bl="indir">💾 ${T('Kaydı indir', 'Download save')}</button><button class="kb" type="button" data-bl="dosya">📂 ${T('Dosyadan yükle', 'Load from file')}</button></div>
@@ -5048,13 +5056,16 @@ function bulYaz() {
   ${kod ? `<div style="margin:6px 0;font-weight:900;letter-spacing:2px;font-size:16px;color:var(--altin)">🔑 ${esc(kod)}</div>` : ''}
   <div class="dg" style="flex-wrap:wrap;gap:6px;margin:6px 0"><button class="kb al" type="button" data-bl="yukle" ${ac ? '' : 'disabled'}>☁ ${kod ? T('Buluta kaydet', 'Save to cloud') : T('Bulut kodu oluştur', 'Create a cloud code')}</button></div>
   <div class="dg" style="gap:6px;margin:6px 0"><input id="bulKod" maxlength="16" placeholder="${T('Kod', 'Code')}" style="flex:1;min-width:0;font:inherit;padding:7px 10px;border-radius:10px;border:1px solid var(--line);background:rgba(255,255,255,.06);color:var(--ink)"><button class="kb" type="button" data-bl="al" ${ac ? '' : 'disabled'}>${bulOnay ? '⚠ ' + T('Emin misin? Bu cihazdaki kayıt silinir', 'Sure? This device’s save is replaced') : '☁ ' + T('Buluttan yükle', 'Load from cloud')}</button></div>
-  ${kod ? `<label class="secim"><input type="checkbox" id="bulOto" ${oto2 ? 'checked' : ''}><span>${T('Her 5 dakikada otomatik buluta kaydet', 'Auto-save to the cloud every 5 minutes')}</span></label>` : ''}${ac ? '' : `<div class="alt" style="font-size:12px">${T('Bulut için çevrimiçi olmalısın.', 'You need to be online for the cloud.')}</div>`}`;
+  ${kod ? `<label class="secim"><input type="checkbox" id="bulOto" ${oto2 ? 'checked' : ''}><span>${T('Her 5 dakikada otomatik buluta kaydet', 'Auto-save to the cloud every 5 minutes')}</span></label>` : ''}${ac ? '' : `<div class="alt" style="font-size:12px">${T('Bulut için çevrimiçi olmalısın.', 'You need to be online for the cloud.')}</div>`}
+  <div style="margin:12px 0 4px;padding-top:10px;border-top:1px solid var(--line)"><button class="kb" type="button" data-bl="sifirla" style="${sifirOnay ? 'background:rgba(255,90,90,.25);border-color:#FF6B6B;color:#FFD0D0' : ''}">${sifirOnay ? '⚠ ' + T('Emin misin? Tüm ilerleme silinir, yeniden dokun', 'Sure? All progress is erased, tap again') : '🗑 ' + T('Oyunu sıfırla (baştan başla)', 'Reset the game (start over)')}</button>
+  <div class="alt" style="font-size:12px;margin-top:4px">${T('Kredi, gemi, keşifler, koloni, görevler ve yarış rekorları silinir. Ses, grafik ve pilot adı ayarların kalır. İstersen önce 💾 Kaydı indir.', 'Credits, ship, discoveries, colony, missions and race records are erased. Sound, graphics and pilot name settings stay. Download your save first if you like.')}</div></div>`;
   const bo = $('bulOto'); if (bo) bo.onchange = () => ls.set('kozmos-bulut-oto', bo.checked);
 }
 async function bulutKaydet(sessiz) { let kod = ls.get('kozmos-bulut-kod', null); if (!kod) { kod = ''; for (let i = 0; i < 10; i++) kod += BUL_AB[(Math.random() * BUL_AB.length) | 0]; ls.set('kozmos-bulut-kod', kod); } const ok = await AG.bulutYaz(kod, kayitPaket()); if (ok) { ST.bulut = Date.now(); if (!sessiz) { duyur('☁ ' + T('Kaydın buluta kondu', 'Save stored in the cloud'), 'koloni', '🔑 ' + kod); SES.koloni(); basarimKontrol(); } } else if (!sessiz) duyur('☁ ' + T('Buluta kaydedilemedi', 'Could not save to the cloud'), 'uyari'); if (!$('menu').hidden) bulYaz(); }
 $('bulIc').addEventListener('click', async e => { const b = e.target.closest('[data-bl]'); if (!b || b.disabled) return; const k = b.dataset.bl;
   if (k === 'indir') { const a = document.createElement('a'); a.download = 'kozmos-kayit-' + new Date().toISOString().slice(0, 10) + '.json'; a.href = URL.createObjectURL(new Blob([kayitPaket()], { type: 'application/json' })); document.body.appendChild(a); a.click(); a.remove(); SES.tik(); }
   else if (k === 'dosya') $('bulDosya').click();
+  else if (k === 'sifirla') { if (!sifirOnay) { sifirOnay = 1; bulYaz(); SES.tik(); setTimeout(() => { sifirOnay = 0; if (!$('menu').hidden) bulYaz(); }, 6000); return; } sifirOnay = 0; duyur('🗑 ' + T('Oyun sıfırlanıyor…', 'Resetting the game…'), 'uyari'); setTimeout(oyunSifirla, 400); }
   else if (k === 'yukle') bulutKaydet(false);
   else if (k === 'al') { const kod = ($('bulKod').value || '').trim().toLowerCase(); if (kod.length < 10) { duyur('☁ ' + T('Geçerli bir kod gir', 'Enter a valid code'), 'uyari'); return; } if (!bulOnay) { bulOnay = 1; bulYaz(); $('bulKod').value = kod; setTimeout(() => { bulOnay = 0; if (!$('menu').hidden) bulYaz(); }, 6000); return; } bulOnay = 0; const o = await AG.bulutOku(kod); if (!o || !o.v) { duyur('☁ ' + T('Bu kodda kayıt yok', 'No save under this code'), 'uyari'); bulYaz(); return; } ls.set('kozmos-bulut-kod', kod); if (!kayitUygula(o.v)) duyur('☁ ' + T('Kayıt okunamadı', 'Could not read the save'), 'uyari'); else duyur('☁ ' + T('Kayıt yüklendi, oyun yeniden başlıyor…', 'Save loaded, restarting…'), 'koloni'); }
 });
@@ -5106,6 +5117,7 @@ const DEVK = {
   cevrimici: [[], ['Sıralamaya gönderimi aç/kapa', 'Toggle leaderboard submissions'], () => { DEV.cevrim = !DEV.cevrim; ls.set('kozmos-dev-cevrim', DEV.cevrim); return '🌐 ' + (DEV.cevrim ? T('gönderim açık', 'submissions on') : T('gönderim kapalı', 'submissions off')); }],
   kaydet: [[], ['Hemen kaydet', 'Save now'], () => { kaydet(true); return '💾 ✓'; }],
   durum: [[], ['Konum ve durum', 'Position and status'], () => devDurum().replace(/<br>/g, '\n')],
+  sifirla: [['evet'], ['Oyunu sıfırla (ilerleme silinir)', 'Reset the game (progress erased)'], a => { if (a[0] !== 'evet') return T('Emin misin? sifirla evet yaz', 'Sure? type: sifirla evet'); setTimeout(oyunSifirla, 300); return T('Sıfırlanıyor…', 'Resetting…'); }],
 };
 function devKomut(str) {
   const p = String(str || '').trim().split(/\s+/).filter(Boolean); if (!p.length) return ''; const k = p[0].toLowerCase(), C = DEVK[k];
