@@ -1183,11 +1183,106 @@ boyutla();
 if (KILIT) { O = { seed: 7, t: 70, r: { f: 0, o: 0, t: 0, k: 0, c: 0, z: 0, b: 0, bl: 0 }, nuf: 0, tek: {}, harabe: [], baskin: {}, hue: 30 }; dunyaKur(7); BL = []; binaEkle('ev', 15, 19); binaEkle('ev', 18, 19); binaEkle('tapinak', 14, 22); binaEkle('tarla', nehirOvaX(20) - 1, 19); binaEkle('tarla', nehirOvaX(23) - 1, 23); zum = 0.9; kx = 12 * TS; ky = 16 * TS; zumSinir(); }
 else { const k = ls.get('sehir-kayit', null); if (!(k && k.oyun && yukle())) yeniOyun(); isciDagit(); kislaAta(); }
 menuKur(); requestAnimationFrame(kare);
+/* ================= butonlu komut paneli: konsolda panel() ================= */
+let KPN = null;
+function kpSehir() {
+  const KP = window.KomutPanel, kv = KP.kv, ic = () => oyunda && O;
+  const yok = () => `<div class="kpUyari">${T('Önce oyunu başlat (menüden "Şehre dön" ya da "Şehri kur").', 'Start the game first (menu: "Back to the city" or "Found the city").')}</div>`;
+  const zg = () => BL.find(b => b.t === 'zigurat');
+  return KP({
+    baslik: '🏛 ' + T('Şehir · komut paneli', 'City · command panel'), renk: '#E0B060', canli: ['bilgi'],
+    sekmeler: [['bilgi', '📋 ' + T('Bilgi', 'Info')], ['kaynak', '🎒 ' + T('Kaynak', 'Goods')], ['tek', '📜 ' + T('Buluş', 'Tech')], ['dunya', '🌍 ' + T('Dünya', 'World')], ['kayit', '💾 ' + T('Kayıt', 'Save')]],
+    ciz(sek) {
+      if (sek !== 'kayit' && !ic()) return yok();
+      if (sek === 'bilgi') {
+        const ol = O.olay && OLAY[O.olay.tip], ke = O.kehanet && OLAY[O.kehanet], tur = {}; for (const b of BL) tur[b.t] = (tur[b.t] || 0) + 1;
+        return `<h4>${esc(O.ad)} · ${esc(O.kral)}</h4>` + kv({ [T('Yıl', 'Year')]: yil() + ' · ' + T(...MEV[mevsim()][1]) + (geceK() > 0.5 ? ' 🌙' : ''), [T('Aşama', 'Stage')]: hedefBaslik(), [T('Nüfus', 'Population')]: Math.floor(O.nuf) + ' / ' + nufusKap() + ' · ' + T('boşta ', 'idle ') + issiz, [T('Memnuniyet', 'Happiness')]: Math.round(O.mutlu) + ' ' + mutluYuz(), [T('Vergi', 'Taxes')]: [T('yok', 'none'), T('orta', 'normal'), T('ağır', 'heavy')][O.vergi], [T('Oyun süresi', 'Play time')]: sureYaz(O.sure) })
+          + `<h4>${T('Depo', 'Store')}</h4>` + kv(Object.fromEntries(KAYNAK.map(([k, e]) => [e, Math.floor(O.r[k] || 0) + (k === 'bl' ? '' : ' / ' + kap(k))])))
+          + `<h4>${T('Savunma ve dış dünya', 'Defence and the world')}</h4>` + kv({ [T('Asker', 'Soldiers')]: A.length + ' (' + A.filter(a => a.tunc).length + ' ' + T('tunç', 'bronze') + ')', [T('Sonraki baskın', 'Next raid')]: O.baskin.aktif ? T('şu an! ', 'now! ') + R.length : sureYaz(O.baskin.sonraki - O.t), [T('Püskürtülen', 'Repelled')]: O.puskurt + ' · ' + T('yağma ', 'plundered ') + O.yagma, [T('Güney kenti', 'Southern city')]: O.kent.fetih ? T('fethedildi', 'conquered') : T('güç ', 'strength ') + Math.round(O.kent.guc), [T('Ticaret', 'Trades')]: O.ticaret, [T('Bu yıl', 'This year')]: ol ? ol.e + ' ' + T(...ol.ad) : '—', [T('Kehanet', 'Prophecy')]: ke ? ke.e + ' ' + T(...ke.ad) : '—' })
+          + `<h4>${T('Binalar', 'Buildings')} · ${BL.length}</h4><div class="kpAc">${Object.entries(tur).map(([t, n]) => B[t].e + ' ' + n).join(' · ')}${zg() && zg().ins ? ' · 🏛 %' + Math.floor(zg().ins * 100) : ''}</div>`;
+      }
+      if (sek === 'kaynak') {
+        let h = `<div class="kpAc">${T('Değerleri yaz ve uygula ya da hızlı düğmeleri kullan. Depo kapasitesi aşılabilir.', 'Type values and apply, or use the quick buttons. Storage limits can be exceeded.')}</div><div class="kpSat"><button class="kB kAna" data-k="dolu">📦 ${T('Her şeyi doldur', 'Fill everything')}</button><button class="kB eksi" data-k="bosalt">${T('Hepsini boşalt', 'Empty all')}</button></div>`;
+        for (const [k, e, ad] of KAYNAK) h += `<div class="kpSat"><label>${e} ${T(...ad)} <b style="color:#F3ECDC">${Math.floor(O.r[k] || 0)}</b></label><input type="number" step="10" value="100" id="kpN_${k}"><button class="kB" data-k="r+" data-v="${k}">+</button><button class="kB eksi" data-k="r-" data-v="${k}">−</button><button class="kB" data-k="r=" data-v="${k}">=</button></div>`;
+        h += `<h4>👥 ${T('Nüfus', 'Population')} · ${Math.floor(O.nuf)}</h4><div class="kpSat"><input type="number" min="1" value="10" id="kpNuf"><button class="kB" data-k="nuf" data-v="1">+ ${T('Ekle', 'Add')}</button><button class="kB eksi" data-k="nuf" data-v="-1">− ${T('Çıkar', 'Remove')}</button></div>`;
+        h += `<h4>⚔️ ${T('Askerler', 'Soldiers')} · ${A.length}</h4><div class="kpSat"><button class="kB" data-k="asker" data-v="0">+3 ${T('mızraklı', 'spearmen')}</button><button class="kB" data-k="asker" data-v="1">+3 ${T('tunç', 'bronze')}</button><button class="kB eksi" data-k="askerSil">${T('Hepsini çıkar', 'Remove all')}</button></div>`;
+        h += `<h4>😊 ${T('Memnuniyet', 'Happiness')} · <span id="kpMutY" style="color:#F3ECDC">${Math.round(O.mutlu)}</span></h4><div class="kpSat"><input type="range" min="0" max="100" value="${Math.round(O.mutlu)}" data-k="mutlu"></div><div class="kpAc">${T('Memnuniyet koşullara göre yeniden kayar; bayram ya da vergiyle kalıcı etki ver.', 'Happiness drifts back with conditions; use festivals or taxes for lasting effect.')}</div>`;
+        return h;
+      }
+      if (sek === 'tek') {
+        let h = `<div class="kpSat"><button class="kB kAna" data-k="tekHepsi">✅ ${T('Hepsini bul', 'Discover all')}</button><button class="kB eksi" data-k="tekSil">${T('Hepsini unut', 'Forget all')}</button></div><div class="kpIzgara">`;
+        h += Object.keys(TEK).map(k => `<button class="kB${O.tek[k] ? ' sec' : ''}" data-k="tek" data-v="${k}">${O.tek[k] ? '✅' : '⬜'} ${TEK[k].e} ${T(...TEK[k].ad)}</button>`).join('') + '</div>';
+        h += `<h4>🏗 ${T('Binalar', 'Buildings')}</h4><div class="kpSat"><button class="kB" data-k="onar">🔧 ${T('Hepsini onar', 'Repair all')}</button><button class="kB" data-k="ziggurat" ${zg() && zg().ins ? '' : 'disabled'}>🏛 ${T('Zigguratı bitir', 'Finish the ziggurat')}</button><button class="kB" data-k="yolBagla">🛤 ${T('Bütün iş yerlerine yol', 'Roads to every workplace')}</button></div>`;
+        h += `<h4>${T('Aşama', 'Stage')}</h4><div class="kpSat">${[T('Köy', 'Village'), T('Kasaba', 'Town'), T('Şehir', 'City')].map((a, i) => `<button class="kB${O.asama === i ? ' sec' : ''}" data-k="asama" data-v="${i}">${a}</button>`).join('')}</div>`;
+        return h;
+      }
+      if (sek === 'dunya') {
+        let h = `<h4>⏩ ${T('Oyun hızı', 'Game speed')}</h4><div class="kpSat">${[1, 2, 4, 8].map(v => `<button class="kB${!durdu && hiz === v ? ' sec' : ''}" data-k="hiz" data-v="${v}">${v}×</button>`).join('')}<button class="kB${durdu ? ' sec' : ''}" data-k="hiz" data-v="0">❚❚</button></div>`;
+        h += `<h4>🌗 ${T('Zaman', 'Time')}</h4><div class="kpSat">${MEV.map((m, i) => `<button class="kB${mevsim() === i ? ' sec' : ''}" data-k="mevsim" data-v="${i}">${m[0]} ${T(...m[1]).split(' ')[0]}</button>`).join('')}</div><div class="kpSat"><button class="kB" data-k="yil">⏭ ${T('Bir yıl ilerle', 'Skip a year')}</button><button class="kB" data-k="gece">🌙 ${T('Geceye geç', 'Go to night')}</button></div>`;
+        h += `<h4>🔮 ${T('Bu yılın olayı', 'This year\'s event')}</h4><div class="kpIzgara">${Object.keys(OLAY).map(k => `<button class="kB${O.olay && O.olay.tip === k ? ' sec' : ''}" data-k="olay" data-v="${k}">${OLAY[k].e} ${T(...OLAY[k].ad)}</button>`).join('')}</div>`;
+        h += `<h4>⚔️ ${T('Saldırılar', 'Attacks')}</h4><div class="kpSat"><button class="kB" data-k="baskin">🐎 ${T('Göçebe baskını şimdi', 'Nomad raid now')}</button><button class="kB" data-k="kentOrdu">🐪 ${T('Kent ordusu', 'Southern army')}</button><button class="kB" data-k="harac">📜 ${T('Haraç iste', 'Tribute demand')}</button></div><div class="kpSat"><button class="kB" data-k="ertele">🕊 ${T('Baskını 10 dk ertele', 'Delay raids 10 min')}</button><button class="kB eksi" data-k="baskinBitir">${T('Baskıncıları yok et', 'Remove raiders')}</button><button class="kB${O.kent.fetih ? ' sec' : ''}" data-k="fetih">🏆 ${T('Kent fethedildi', 'City conquered')}</button></div>`;
+        h += `<h4>🎉</h4><div class="kpSat"><button class="kB" data-k="bayram">🎉 ${T('Bedava bayram', 'Free festival')}</button><button class="kB" data-k="yazit">🪨 ${T('Yazıtı göster', 'Show inscription')}</button></div>`;
+        return h;
+      }
+      const k = ls.get('sehir-kayit', null);
+      return `<h4>${T('Yedek', 'Backup')}</h4><div class="kpAc">${T('Şehrini bir dosyaya kaydet; başka cihazda ya da sıfırladıktan sonra geri yükleyebilirsin.', 'Save your city to a file; restore it on another device or after a reset.')}</div><div class="kpSat"><button class="kB kAna" data-k="indir">⬇ ${T('Yedek indir', 'Download backup')}</button><button class="kB" data-k="yukle">⬆ ${T('Yedek yükle', 'Restore backup')}</button></div>`
+        + `<h4>${T('Sıfırla', 'Reset')}</h4><div class="kpAc">${T('Hepsi iki kez basınca çalışır. Hesaba girişliysen bulut kaydı da değişir.', 'Each needs two taps. If you are signed in, the cloud save changes too.')}</div>`
+        + `<div class="kpSat"><button class="kB tehlike" data-k="sifirla" data-v="oyun">🔄 ${T('Şehri 1. yıldan yeniden kur', 'Refound the city from year 1')}</button></div><div class="kpSat"><button class="kB tehlike" data-k="sifirla" data-v="rekor">🗑 ${T('Rekorları sıfırla', 'Reset records')}</button></div><div class="kpSat"><button class="kB tehlike" data-k="sifirla" data-v="hepsi">💥 ${T('Şehir kaydını tamamen sil', 'Delete the city save entirely')}</button></div>`
+        + `<h4>${T('Kayıt', 'Save')}</h4>` + kv({ [T('Kayıtlı oyun', 'Saved game')]: k && k.oyun ? (k.oyun.ad || '') + ' · ' + (Math.floor(k.oyun.t / MEVSIM / 4) + 1) + '. ' + T('yıl', 'year') : '—', [T('Boyut', 'Size')]: Math.round(JSON.stringify(k || {}).length / 1024) + ' KB' });
+    },
+    tik(k, v, el) {
+      const n = id => +($(id) && $(id).value) || 0;
+      if (['indir', 'yukle', 'sifirla'].indexOf(k) < 0 && !ic()) return T('Oyun başlamadı', 'The game has not started');
+      switch (k) {
+        case 'r+': O.r[v] = Math.max(0, (O.r[v] || 0) + n('kpN_' + v)); break;
+        case 'r-': O.r[v] = Math.max(0, (O.r[v] || 0) - n('kpN_' + v)); break;
+        case 'r=': O.r[v] = Math.max(0, n('kpN_' + v)); break;
+        case 'dolu': for (const [r2] of KAYNAK) O.r[r2] = r2 === 'bl' ? Math.max(O.r.bl, 500) : kap(r2); break;
+        case 'bosalt': for (const [r2] of KAYNAK) O.r[r2] = 0; break;
+        case 'nuf': O.nuf = Math.max(1, O.nuf + n('kpNuf') * +v); isciDagit(); break;
+        case 'asker': { const ks = BL.find(b => b.t === 'kisla'), p = ks ? merkez(ks) : merkez(BL[0]); for (let i = 0; i < 3; i++) { const a = askerYeni(+v, p.x + rnd(-40, 40), p.y + rnd(-20, 30)); A.push(a); O.nuf++; } kislaAta(); break; }
+        case 'askerSil': O.nuf = Math.max(1, O.nuf - A.length); A.length = 0; break;
+        case 'mutlu': O.mutlu = +el.value; const y2 = $('kpMutY'); if (y2) y2.textContent = O.mutlu; return;
+        case 'tek': O.tek[v] = O.tek[v] ? 0 : 1; barKur(); break;
+        case 'tekHepsi': for (const t in TEK) O.tek[t] = 1; barKur(); break;
+        case 'tekSil': O.tek = {}; barKur(); break;
+        case 'onar': for (const b of BL) b.hp = B[b.t].hp; break;
+        case 'ziggurat': { const z = zg(); if (z && z.ins) { z.ins = 0.999; } break; }
+        case 'yolBagla': { let say2 = 0; for (const b of BL) if (!b.bag && BAG_GEREK.has(b.t)) { if (yolBagla(b) >= 0) say2++; } return say2 + T(' iş yeri bağlandı', ' workplaces linked'); }
+        case 'asama': O.asama = +v; O.kazandi = 0; break;
+        case 'hiz': if (+v === 0) durdu = !durdu; else { hiz = +v; durdu = false; } break;
+        case 'mevsim': { const y = Math.floor(O.t / MEVSIM / 4); O.t = (y * 4 + +v) * MEVSIM + 1; break; }
+        case 'yil': O.t += 4 * MEVSIM; break;
+        case 'gece': O.t = Math.floor(O.t / MEVSIM) * MEVSIM + MEVSIM * 0.8; break;
+        case 'olay': O.olay = { tip: v }; break;
+        case 'baskin': if (O.baskin.aktif) return T('Zaten baskın var', 'A raid is already on'); O.baskin.kenar = { x: DW - 30, y: rnd(0.2, 0.8) * DH }; baskinBasla(false); break;
+        case 'kentOrdu': if (O.baskin.aktif) return T('Zaten baskın var', 'A raid is already on'); baskinBasla(true); break;
+        case 'harac': O.kent.fetih = 0; O.kent.harac = O.t; if (mevsim() !== 1 && mevsim() !== 2) O.t = (Math.floor(O.t / MEVSIM / 4) * 4 + 1) * MEVSIM + 1; KPN.kapat(); return;
+        case 'ertele': O.baskin.sonraki = O.t + 600; O.baskin.uyar = 0; break;
+        case 'baskinBitir': R.length = 0; break;
+        case 'fetih': O.kent.fetih = O.kent.fetih ? 0 : 1; break;
+        case 'bayram': O.bayram = O.t + 120; break;
+        case 'yazit': KPN.kapat(); pnlAc('yazit'); return;
+        case 'indir': KomutPanel.indir('sehir-yedek-' + new Date().toISOString().slice(0, 10) + '.json', ls.get('sehir-kayit', null)); return T('Yedek indirildi', 'Backup downloaded');
+        case 'yukle': KomutPanel.dosyaSec((d, er) => { if (!d || er || !('oyun' in d)) { KPN.not(T('Bu dosya bir şehir yedeği değil', 'This file is not a city backup'), true); return; } ls.set('sehir-kayit', d); location.reload(); }); return false;
+        case 'sifirla': { if (el.dataset.emin !== '1') { el.dataset.emin = '1'; el.textContent = '⚠️ ' + T('Emin misin? Tekrar bas', 'Sure? Press again'); setTimeout(() => { if (el.isConnected) KPN.ciz(); }, 3500); return false; }
+          if (v === 'oyun') { basla(false); KPN.kapat(); return; } if (v === 'rekor') { for (const q in REKOR) REKOR[q] = 0; if (O) kaydet(); else ls.set('sehir-kayit', Object.assign(ls.get('sehir-kayit', {}) || {}, { rekor: REKOR })); menuKur(); return T('Rekorlar sıfırlandı', 'Records reset'); }
+          try { localStorage.removeItem('sehir-kayit'); } catch (e2) { } location.reload(); return false; }
+      }
+      if (ic()) { idxKur(); isciDagit(); kaydet(); hudZ = 0; } return T('Uygulandı', 'Applied');
+    }
+  });
+}
+window.panel = s => { if (!window.KomutPanel) return T('Panel yükleniyor, birazdan tekrar dene', 'The panel is loading, try again in a moment'); if (!KPN) KPN = kpSehir(); KPN.ac(s); return T('Komut paneli açıldı', 'Command panel opened'); };
+window.yardim = () => { console.log('%c🏛 Şehir komutları', 'font-weight:bold;font-size:14px'); console.table({ 'panel()': T('Butonlu komut panelini açar', 'Opens the button command panel'), 'panel("dunya")': T('Doğrudan bir sekmeyi açar: bilgi, kaynak, tek, dunya, kayit', 'Opens a tab directly: bilgi, kaynak, tek, dunya, kayit'), 'yardim()': T('Bu listeyi gösterir', 'Shows this list') }); return '🏛'; };
+window.help = window.yardim;
+try { console.log('%c🏛 Şehir: butonlu komut paneli için konsola panel() yaz · yardım: yardim()', 'color:#E0B060;font-weight:bold'); } catch (e) { }
 window.SHR = { yolBagla, agKur, seferGonder, mutluHedef, geceK, pnl: () => panelAcik, O: () => O, BL: () => BL, A: () => A, R: () => R, B, TEK, kur: (t, x, y) => { sec = t; const r = kur(x, y); sec = null; return r; }, yerUygun, guncelle, isciDagit, nufusKap, baskinBasla, pnlAc, ticaretYap, askerYetistir, ekran: (x, y) => [(x - kx) * zum, (y - ky) * zum], git: (x, y, z) => { if (z) zum = z; kx = x - EW / zum / 2; ky = y - EH / zum / 2; zumSinir(); }, kalite: v => { if (v != null) { kalite = v; kaliteKilit = true; } return kalite; }, mevsim, yil, Z, GW, GH, TS };
 })();
 </script>
 <script data-goatcounter="https://erdevelop.goatcounter.com/count" async src="//gc.zgo.at/count.js"></script>
 <script src="/js/seri-kayit.js" defer></script>
+<script src="/js/komut-panel.js" defer></script>
 <script src="/js/site.js" defer></script>
 </body>
 </html>

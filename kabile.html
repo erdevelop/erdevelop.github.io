@@ -708,7 +708,9 @@ function kampHalki(dt) {
   const gece = karanlik() > 0.5;
   for (const c of COCUK) { if ((c.akil -= dt) <= 0) { c.akil = rnd(1.5, 4); const a = Math.random() * TAU, r = gece ? rnd(70, 110) : rnd(60, 220); c.hx = KAMP.x + Math.cos(a) * r; c.hy = KAMP.y + Math.sin(a) * r; } hareket(c, c.hx, c.hy, 95, dt, 6); }
 }
+const TEST = { hiz: 1, olumsuz: false };
 function guncelle(dt) {
+  if (TEST.olumsuz && RS) { RS.hp = reisCanUst(); for (const u of U) u.hp = uyeCanUst(); if (O.kopek) O.kopek.hp = O.kopek.hpMax; }
   zaman += dt; O.sure += dt;
   const once = O.gun; O.gun += dt; if (O.gun >= GUN) O.gun -= GUN;
   if (once < 150 && O.gun >= 150) { if (!atesYanar()) duyur(O.tek.ates ? T('🌇 Akşam yaklaşıyor ve ateş sönük — odun getir!', '🌇 Evening is near and the fire is out — bring wood!') : T('🌇 Akşam yaklaşıyor. Ateşin yok: geceleri kurtlar gelir', '🌇 Evening is near. You have no fire: wolves come at night'), 'uyari', 5); else duyur(T('🌇 Akşam yaklaşıyor — kabileyi ateşin yanına topla', '🌇 Evening is near — gather the tribe by the fire'), '', 4); }
@@ -1352,7 +1354,7 @@ let son = 0;
 function kare(ts) {
   requestAnimationFrame(kare); const dt = Math.min(0.05, (ts - son) / 1000 || 0); son = ts;
   if (!O) return; if (cv.width !== Math.round(cv.getBoundingClientRect().width * DPR)) boyutla();
-  if (oyunda && !durdu && !panelAcik) { guncelle(dt); hud(dt); if (!kaliteKilit && dt > 0 && dt < 0.2) { kSay++; kSure += dt; if (kSure >= 3) { const f = kSay / kSure; kSay = kSure = 0; if (f < 40 && kalite > 0) kalite--; else if (f < 40) kaliteKilit = true; } } } else zaman += dt * 0.3;
+  if (oyunda && !durdu && !panelAcik) { for (let i = 0; i < TEST.hiz; i++) guncelle(dt); hud(dt); if (!kaliteKilit && dt > 0 && dt < 0.2) { kSay++; kSure += dt; if (kSure >= 3) { const f = kSay / kSure; kSay = kSure = 0; if (f < 40 && kalite > 0) kalite--; else if (f < 40) kaliteKilit = true; } } } else zaman += dt * 0.3;
   ciz();
 }
 setInterval(() => { if (oyunda && O && RS) kaydet(); }, 5000);
@@ -1362,11 +1364,116 @@ boyutla();
 if (KILIT) { O = { gun: 60, gunN: 2, tek: {}, barinak: 0, hue: 30, rakipYok: false, ittifak: false, rel: 0, yakit: 0, o: 0, s: 0, f: 0, seed: 7, bulunan: {}, sis: null }; dunyaKur(7); RS = { x: KAMP.x + 300, y: KAMP.y, vx: 0, vy: 0, ang: 0, hp: 1, yf: 0, f: 0 }; U = []; H = []; hayvanlarKur(); kx = KAMP.x - 200; ky = KAMP.y - EH / zum / 2; }
 else { const k = ls.get('kabile-kayit', null); if (!(k && k.oyun && yukle())) yeniOyun(); kx = RS.x - EW / zum / 2; ky = RS.y - EH / zum / 2; }
 menuKur(); requestAnimationFrame(kare);
+/* ================= butonlu komut paneli: konsolda panel() ================= */
+let KPN = null;
+function kpKabile() {
+  const KP = window.KomutPanel, kv = KP.kv, e = KP.esc, ic = () => oyunda && O && RS;
+  const MAL = [['f', '🍖', T('Yiyecek', 'Food')], ['o', '🪵', T('Odun', 'Wood')], ['s', '🪨', T('Taş', 'Stone')], ['d', '🟫', T('Post', 'Hides')]];
+  const HAY = [['tavsan', '🐇'], ['geyik', '🦌'], ['domuz', '🐗'], ['kurt', '🐺'], ['mamut', '🦣'], ['ayi', '🐻']];
+  const IS = [['kamp', '🔥', KAMP], ['magara', '🕳', { x: YER.magara.x, y: YER.magara.y + 160 }], ['in', '🐺', { x: YER.in.x, y: YER.in.y + 140 }], ['kil', '🟫', YER.kil], ['tohum', '🌾', YER.tohum], ['cakmak', '🪨', YER.cakmak], ['rakip', '🛖', { x: RAKIP.x - 300, y: RAKIP.y }]];
+  const yok = () => `<div class="kpUyari">${T('Önce oyunu başlat (menüden "Kabileye dön" ya da "Kabileyi kur").', 'Start the game first (menu: "Back to the tribe" or "Found the tribe").')}</div>`;
+  return KP({
+    baslik: '🔥 ' + T('Kabile · komut paneli', 'Tribe · command panel'), renk: '#F2A64B', canli: ['bilgi'],
+    sekmeler: [['bilgi', '📋 ' + T('Bilgi', 'Info')], ['kaynak', '🎒 ' + T('Kabile', 'Tribe')], ['tek', '🔧 ' + T('Keşif', 'Tech')], ['dunya', '🌍 ' + T('Dünya', 'World')], ['kayit', '💾 ' + T('Kayıt', 'Save')]],
+    ciz(sek) {
+      if (sek !== 'kayit' && !ic()) return yok();
+      if (sek === 'bilgi') {
+        const roller = {}; for (const u of U) { const r = rolOf(u); roller[r] = (roller[r] || 0) + 1; }
+        return `<h4>${T('Durum', 'Status')}</h4>` + kv({ [T('Gün', 'Day')]: O.gunN + ' · ' + T(...MEV[mevsim()][1]) + ' · ' + (geceMi() ? '🌙' : '☀️'), [T('Aşama', 'Stage')]: hedefBaslik(), [T('Kişi', 'People')]: kisi() + ' / ' + nufusUst(), [T('Reis canı', 'Chief health')]: Math.ceil(RS.hp) + ' / ' + reisCanUst(), [T('Oyun süresi', 'Play time')]: sureYaz(O.sure), [T('Kayıp', 'Losses')]: O.kayip })
+          + `<h4>${T('Depo', 'Store')}</h4>` + kv({ '🍖': Math.floor(O.f) + ' (−' + tuketim().toFixed(1) + (bozulma() > 0.1 ? ', 🦠−' + bozulma().toFixed(1) : '') + '/' + T('dk', 'min') + ')', '🪵': Math.floor(O.o), '🪨': Math.floor(O.s), '🟫': O.d | 0, '🧥': (O.giysi | 0) + ' / ' + kisi(), '🔥': O.tek.ates ? Math.ceil(O.yakit) + ' ' + T('sn yakıt', 's fuel') : '—' })
+          + `<h4>${T('Kabile', 'Tribe')}</h4>` + kv({ [T('Görevler', 'Roles')]: Object.entries(roller).map(([r, n]) => (ROLLER.find(q => q[0] === r) || ['', '?'])[1] + n).join(' ') || '—', [T('Ustalar', 'Masters')]: U.filter(u => lv(u.xp.a) === 3 || lv(u.xp.t) === 3).length, [T('Köpek', 'Dog')]: O.kopek ? O.kopek.ad + (O.kopek.yas < 1 ? ' %' + Math.floor(O.kopek.yas * 100) : ' ✓') : '—', [T('Barınak', 'Shelters')]: O.barinak + ' / ' + BARINAK_UST, [T('Tuzak', 'Traps')]: (O.tuzak || []).length })
+          + `<h4>${T('Dünya', 'World')}</h4>` + kv({ [T('Komşu', 'Neighbours')]: O.rakipYok ? T('teslim oldu', 'surrendered') : O.ittifak ? T('müttefik', 'allied') : Math.round(O.rel), [T('Evlilik', 'Marriages')]: O.evlilik | 0, '🦣 / 🐻': (O.mamut | 0) + ' / ' + (O.ayi | 0), [T('Kış atlatıldı', 'Winters survived')]: O.kis | 0, [T('Hayvan', 'Animals')]: H.filter(h => !h.olu && !rakipMi(h)).length, [T('Bekleyen olay', 'Pending event')]: O.olayP ? O.olayP.tip + ' (' + Math.ceil(O.olayP.t - O.sure) + ' sn)' : '—' })
+          + `<h4>${T('Keşifler', 'Discoveries')}</h4><div class="kpAc">${Object.keys(TEK).map(k => (O.tek[k] ? '✅ ' : '⬜ ') + TEK[k].e + ' ' + T(...TEK[k].ad)).join(' · ')}</div>`;
+      }
+      if (sek === 'kaynak') {
+        let h = `<div class="kpAc">${T('Değerleri yaz ve uygula ya da hızlı düğmeleri kullan. Değişiklikler kayda işlenir.', 'Type values and apply, or use the quick buttons. Changes are saved.')}</div>`;
+        for (const [k, ik, ad] of MAL) h += `<h4>${ik} ${ad} · <span style="color:#F3ECDC">${Math.floor(O[k] || 0)}</span></h4><div class="kpSat"><input type="number" step="10" value="100" id="kpN_${k}"><button class="kB" data-k="mal+" data-v="${k}">+ ${T('Ekle', 'Add')}</button><button class="kB eksi" data-k="mal-" data-v="${k}">− ${T('Çıkar', 'Remove')}</button><button class="kB" data-k="mal=" data-v="${k}">= ${T('Ayarla', 'Set')}</button></div><div class="kpSat">${[50, 500].map(n => `<button class="kB" data-k="malH" data-v="${k}:${n}">+${n}</button>`).join('')}<button class="kB eksi" data-k="malH" data-v="${k}:0">0</button></div>`;
+        h += `<h4>🧥 ${T('Giysi', 'Clothes')} · ${O.giysi | 0}</h4><div class="kpSat"><button class="kB" data-k="giysi" data-v="1">+1</button><button class="kB" data-k="giysi" data-v="99">${T('Herkese', 'Everyone')}</button><button class="kB eksi" data-k="giysi" data-v="-99">0</button></div>`;
+        h += `<h4>👥 ${T('Üyeler', 'Members')} · ${kisi()}</h4><div class="kpSat"><input type="number" min="1" max="30" value="3" id="kpUye"><button class="kB" data-k="uye+">+ ${T('Üye ekle', 'Add members')}</button><button class="kB eksi" data-k="uye-">− ${T('Çıkar', 'Remove')}</button></div><div class="kpSat"><button class="kB" data-k="usta">⭐ ${T('Herkesi usta yap', 'Make everyone a master')}</button><button class="kB" data-k="iyiles">💚 ${T('Herkesi iyileştir', 'Heal everyone')}</button></div>`;
+        h += `<div class="kpSat"><label>🏠 ${T('Barınak', 'Shelters')} ${O.barinak}</label><button class="kB eksi" data-k="bar" data-v="-1">−1</button><button class="kB" data-k="bar" data-v="1">+1</button></div>`;
+        h += `<h4>🐕 ${T('Köpek', 'Dog')}</h4><div class="kpSat">${O.kopek ? `<button class="kB" data-k="kopekBuyut">${T('Hemen büyüt', 'Grow up now')}</button><button class="kB eksi" data-k="kopekSil">${T('Kaldır', 'Remove')}</button>` : `<button class="kB" data-k="kopekVer">🐶 ${T('Köpek ver', 'Give a dog')}</button>`}</div>`;
+        h += `<h4>🛡 ${T('Hile', 'Cheats')}</h4><div class="kpSat"><button class="kB${TEST.olumsuz ? ' sec' : ''}" data-k="olumsuz">${TEST.olumsuz ? '✅' : '⬜'} ${T('Ölümsüzlük', 'Immortality')}</button></div>`;
+        return h;
+      }
+      if (sek === 'tek') {
+        let h = `<div class="kpSat"><button class="kB kAna" data-k="tekHepsi">✅ ${T('Hepsini aç', 'Unlock all')}</button><button class="kB eksi" data-k="tekSil">${T('Hepsini kapat', 'Lock all')}</button></div><h4>${T('Keşifler', 'Discoveries')}</h4><div class="kpIzgara">`;
+        h += Object.keys(TEK).map(k => `<button class="kB${O.tek[k] ? ' sec' : ''}" data-k="tek" data-v="${k}">${O.tek[k] ? '✅' : '⬜'} ${TEK[k].e} ${T(...TEK[k].ad)}</button>`).join('') + '</div>';
+        h += `<h4>${T('Haritadaki yerler', 'Places on the map')}</h4><div class="kpIzgara">` + ['kil', 'tohum', 'cakmak', 'magara', 'in', 'resim'].map(k => `<button class="kB${O.bulunan[k] ? ' sec' : ''}" data-k="yer" data-v="${k}">${O.bulunan[k] ? '✅' : '⬜'} ${YER[k].e} ${T(...YER[k].ad)}</button>`).join('') + '</div>';
+        h += `<div class="kpSat"><button class="kB" data-k="sisAc">🗺 ${T('Bütün haritayı aç', 'Reveal the whole map')}</button><button class="kB${O.elizi ? ' sec' : ''}" data-k="elizi">🖐 ${T('El izi', 'Handprint')}</button></div>`;
+        h += `<h4>${T('Aşama', 'Stage')}</h4><div class="kpSat">${[T('Kamp', 'Camp'), T('Oba', 'Settlement'), T('Köy', 'Village')].map((a, i) => `<button class="kB${(O.asama | 0) === i ? ' sec' : ''}" data-k="asama" data-v="${i}">${a}</button>`).join('')}</div>`;
+        return h;
+      }
+      if (sek === 'dunya') {
+        let h = `<h4>⏩ ${T('Oyun hızı', 'Game speed')}</h4><div class="kpSat">${[1, 2, 4, 8].map(v => `<button class="kB${TEST.hiz === v ? ' sec' : ''}" data-k="hiz" data-v="${v}">${v}×</button>`).join('')}</div>`;
+        h += `<h4>🌗 ${T('Zaman', 'Time')}</h4><div class="kpSat"><button class="kB" data-k="sabah">🌅 ${T('Sonraki sabah', 'Next morning')}</button><button class="kB" data-k="gece">🌙 ${T('Geceyi başlat', 'Start the night')}</button></div><div class="kpSat">${MEV.map((m, i) => `<button class="kB${mevsim() === i ? ' sec' : ''}" data-k="mevsim" data-v="${i}">${m[0]} ${T(...m[1])}</button>`).join('')}</div>`;
+        h += `<h4>⚡ ${T('Olaylar', 'Events')}</h4><div class="kpSat"><button class="kB" data-k="olay" data-v="yangin">🔥 ${T('Orman yangını', 'Forest fire')}</button><button class="kB" data-k="olay" data-v="firtina">🌨 ${T('Kar fırtınası', 'Blizzard')}</button><button class="kB" data-k="olay" data-v="sel">🌊 ${T('Sel', 'Flood')}</button></div><div class="kpSat"><button class="kB" data-k="baskin">⚔️ ${T('Komşu baskını', 'Neighbour raid')}</button><button class="kB" data-k="sakin">🕊 ${T('Olayları durdur', 'Stop events')}</button></div>`;
+        h += `<h4>🐾 ${T('Hayvan çağır (reisin yanına)', 'Spawn animals (next to the chief)')}</h4><div class="kpSat"><select id="kpHay">${HAY.map(([k, ik]) => `<option value="${k}">${ik} ${k}</option>`).join('')}</select><input type="number" min="1" max="20" value="1" id="kpHayN"><button class="kB kAna" data-k="hayvan">${T('Çağır', 'Spawn')}</button></div><div class="kpSat"><button class="kB eksi" data-k="hayvanSil">${T('Yakındaki saldırganları yok et', 'Remove nearby attackers')}</button></div>`;
+        h += `<h4>🤝 ${T('Komşu ilişkisi', 'Neighbour relation')} · <span id="kpRelY" style="color:#F3ECDC">${Math.round(O.rel)}</span></h4><div class="kpSat"><input type="range" min="-100" max="100" step="5" value="${Math.round(O.rel)}" data-k="rel"></div>`;
+        h += `<h4>📍 ${T('Işınlan', 'Teleport')}</h4><div class="kpIzgara">` + IS.map(([k, ik]) => `<button class="kB" data-k="isinla" data-v="${k}">${ik} ${k}</button>`).join('') + `<button class="kB" data-k="isinla" data-v="mamut">🦣 mamut</button></div>`;
+        return h;
+      }
+      const k = ls.get('kabile-kayit', null);
+      return `<h4>${T('Yedek', 'Backup')}</h4><div class="kpAc">${T('Kabileyi bir dosyaya kaydet; başka cihazda ya da sıfırladıktan sonra geri yükleyebilirsin.', 'Save the tribe to a file; restore it on another device or after a reset.')}</div><div class="kpSat"><button class="kB kAna" data-k="indir">⬇ ${T('Yedek indir', 'Download backup')}</button><button class="kB" data-k="yukle">⬆ ${T('Yedek yükle', 'Restore backup')}</button></div>`
+        + `<h4>${T('Sıfırla', 'Reset')}</h4><div class="kpAc">${T('Hepsi iki kez basınca çalışır. Hesaba girişliysen bulut kaydı da değişir.', 'Each needs two taps. If you are signed in, the cloud save changes too.')}</div>`
+        + `<div class="kpSat"><button class="kB tehlike" data-k="sifirla" data-v="oyun">🔄 ${T('Kabileyi 1. günden yeniden başlat', 'Restart the tribe from day 1')}</button></div><div class="kpSat"><button class="kB tehlike" data-k="sifirla" data-v="rekor">🗑 ${T('Rekorları sıfırla', 'Reset records')}</button></div><div class="kpSat"><button class="kB tehlike" data-k="sifirla" data-v="hepsi">💥 ${T('Kabile kaydını tamamen sil', 'Delete the tribe save entirely')}</button></div>`
+        + `<h4>${T('Kayıt', 'Save')}</h4>` + KP.kv({ [T('Kayıtlı oyun', 'Saved game')]: k && k.oyun ? (k.oyun.gunN || 1) + '. ' + T('gün', 'day') : '—', [T('Boyut', 'Size')]: Math.round(JSON.stringify(k || {}).length / 1024) + ' KB' });
+    },
+    tik(k, v, el) {
+      const n = id => +($(id) && $(id).value) || 0;
+      if (['indir', 'yukle', 'sifirla'].indexOf(k) < 0 && !ic()) return T('Oyun başlamadı', 'The game has not started');
+      switch (k) {
+        case 'mal+': O[v] = Math.max(0, (O[v] || 0) + n('kpN_' + v)); break;
+        case 'mal-': O[v] = Math.max(0, (O[v] || 0) - n('kpN_' + v)); break;
+        case 'mal=': O[v] = Math.max(0, n('kpN_' + v)); break;
+        case 'malH': { const [r, m] = v.split(':'); O[r] = +m ? (O[r] || 0) + +m : 0; break; }
+        case 'giysi': O.giysi = kis((O.giysi | 0) + +v, 0, +v === 99 ? kisi() : 99); if (+v === 99) O.giysi = kisi(); break;
+        case 'uye+': for (let i = 0; i < kis(n('kpUye'), 1, 30); i++) uyeEkle(RS.x + rnd(-80, 80), RS.y + rnd(-80, 80)); break;
+        case 'uye-': U.splice(Math.max(0, U.length - kis(n('kpUye'), 1, 30))); break;
+        case 'usta': for (const u of U) u.xp = { t: Math.max(60, u.xp.t), a: Math.max(60, u.xp.a) }; break;
+        case 'iyiles': RS.hp = reisCanUst(); for (const u of U) u.hp = uyeCanUst(); break;
+        case 'bar': O.barinak = kis(O.barinak + +v, 0, BARINAK_UST); break;
+        case 'kopekVer': O.kopek = { kopek: 1, ad: T('Karabaş', 'Shadow'), x: RS.x + 30, y: RS.y + 20, vx: 0, vy: 0, ang: 0, yf: 0, hp: 30, hpMax: 30, yas: 1, cd: 0, dok: 0, vurdu: 0 }; break;
+        case 'kopekBuyut': O.kopek.yas = 1; break;
+        case 'kopekSil': O.kopek = null; break;
+        case 'olumsuz': TEST.olumsuz = !TEST.olumsuz; break;
+        case 'tek': O.tek[v] = O.tek[v] ? 0 : 1; if (v === 'ates' && O.tek.ates && O.yakit < 30) O.yakit = 60; break;
+        case 'tekHepsi': for (const t in TEK) O.tek[t] = 1; O.yakit = Math.max(O.yakit, 60); for (const q of ['kil', 'tohum', 'cakmak', 'resim']) O.bulunan[q] = 1; break;
+        case 'tekSil': O.tek = {}; break;
+        case 'yer': O.bulunan[v] = O.bulunan[v] ? 0 : 1; if (v === 'resim' && O.bulunan.resim) O.ayi = Math.max(1, O.ayi | 0); break;
+        case 'sisAc': O.sis.fill(1); break;
+        case 'elizi': O.elizi = O.elizi ? 0 : 1; break;
+        case 'asama': O.asama = +v; O.kazandi = 0; break;
+        case 'hiz': TEST.hiz = +v; break;
+        case 'sabah': O.gun = 284.9; break;
+        case 'gece': O.gun = 194.9; break;
+        case 'mevsim': { const once = mevsim(); O.gunN = 1 + 2 * +v + 8 * Math.floor((O.gunN - 1) / 8); if (once !== +v && +v === 0) O.kis = (O.kis | 0) + 0; break; }
+        case 'olay': olayBasla(v); break;
+        case 'sakin': O.olayP = null; O.firtina = 0; O.sel = 0; for (const q of N) if (q.yan > 0) { q.yan = 0; } O.yanSay = 0; break;
+        case 'baskin': if (O.rakipYok) return T('Komşu kabile yok', 'No neighbouring tribe'); for (const h of H) if (h.tip === 'rk' && !h.olu) h.baskin = true; O.gun = Math.max(O.gun, 196); break;
+        case 'hayvan': { const t = $('kpHay').value, c = kis(n('kpHayN'), 1, 20); for (let i = 0; i < c; i++) { const a = Math.random() * TAU, h = hayvanYeni(t, RS.x + Math.cos(a) * 220, RS.y + Math.sin(a) * 220); h.ev = { x: h.x, y: h.y }; H.push(h); } return `${c} ${t}`; }
+        case 'hayvanSil': for (const h of H) if (dusman(h) && Math.hypot(h.x - RS.x, h.y - RS.y) < 1500) h.olu = 0.01; break;
+        case 'rel': O.rel = +el.value; const y2 = $('kpRelY'); if (y2) y2.textContent = O.rel; return;
+        case 'isinla': { let p = (IS.find(q => q[0] === v) || [])[2]; if (v === 'mamut') { const m = H.find(h => h.tip === 'mamut' && !h.olu); if (!m) return T('Mamut yok', 'No mammoth'); p = { x: m.x - 300, y: m.y }; } KBL.isinla(p.x, p.y); sisAc(p.x, p.y, 700); kx = p.x - EW / zum / 2; ky = p.y - EH / zum / 2; break; }
+        case 'indir': KomutPanel.indir('kabile-yedek-' + new Date().toISOString().slice(0, 10) + '.json', ls.get('kabile-kayit', null)); return T('Yedek indirildi', 'Backup downloaded');
+        case 'yukle': KomutPanel.dosyaSec((d, er) => { if (!d || er || !('oyun' in d)) { KPN.not(T('Bu dosya bir kabile yedeği değil', 'This file is not a tribe backup'), true); return; } ls.set('kabile-kayit', d); location.reload(); }); return false;
+        case 'sifirla': { if (el.dataset.emin !== '1') { el.dataset.emin = '1'; el.textContent = '⚠️ ' + T('Emin misin? Tekrar bas', 'Sure? Press again'); setTimeout(() => { if (el.isConnected) KPN.ciz(); }, 3500); return false; }
+          if (v === 'oyun') { basla(false); KPN.kapat(); return; } if (v === 'rekor') { for (const q in REKOR) REKOR[q] = 0; kaydet(); ls.set('kabile-kayit', Object.assign(ls.get('kabile-kayit', {}) || {}, { rekor: REKOR })); menuKur(); return T('Rekorlar sıfırlandı', 'Records reset'); }
+          try { localStorage.removeItem('kabile-kayit'); } catch (e2) { } location.reload(); return false; }
+      }
+      if (ic()) { kaydet(); hudZ = 0; } return T('Uygulandı', 'Applied');
+    }
+  });
+}
+window.panel = s => { if (!window.KomutPanel) return T('Panel yükleniyor, birazdan tekrar dene', 'The panel is loading, try again in a moment'); if (!KPN) KPN = kpKabile(); KPN.ac(s); return T('Komut paneli açıldı', 'Command panel opened'); };
+window.yardim = () => { console.log('%c🔥 Kabile komutları', 'font-weight:bold;font-size:14px'); console.table({ 'panel()': T('Butonlu komut panelini açar', 'Opens the button command panel'), 'panel("kaynak")': T('Doğrudan bir sekmeyi açar: bilgi, kaynak, tek, dunya, kayit', 'Opens a tab directly: bilgi, kaynak, tek, dunya, kayit'), 'yardim()': T('Bu listeyi gösterir', 'Shows this list') }); return '🔥'; };
+window.help = window.yardim;
+try { console.log('%c🔥 Kabile: butonlu komut paneli için konsola panel() yaz · yardım: yardim()', 'color:#F2A64B;font-weight:bold'); } catch (e) { }
 window.KBL = { tuzakKur, olayBasla, kopek: () => O.kopek, ekran: (x, y) => [(x - kx) * zum, (y - ky) * zum], kalite: v => { if (v != null) { kalite = v; kaliteKilit = true; } return kalite; }, O: () => O, RS: () => RS, U: () => U, H: () => H, N: () => N, YER, basla, vur, firlat, modSec, pnlAc, guncelle, geceBasla, sabah, sisAc, isinla: (x, y) => { RS.x = x; RS.y = y; for (const u of U) { u.x = x + rnd(-40, 40); u.y = y + rnd(-40, 40); } }, hayvan: (tip, x, y) => { const h = hayvanYeni(tip, x, y); H.push(h); return h; } };
 })();
 </script>
 <script data-goatcounter="https://erdevelop.goatcounter.com/count" async src="//gc.zgo.at/count.js"></script>
 <script src="/js/seri-kayit.js" defer></script>
+<script src="/js/komut-panel.js" defer></script>
 <script src="/js/site.js" defer></script>
 </body>
 </html>
