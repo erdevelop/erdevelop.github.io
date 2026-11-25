@@ -2544,7 +2544,7 @@ function ogrGuncelle() {
   const o = oyuncu; if (!ogrAktif() || !o || o.olu || !oyunda) return;
   const a = OGR[ogrAdim()];
   if (a.n(o) >= a.h) {
-    KAYIT.ogr = ogrAdim() + 1; kayitKirli = true; dnaEkle(2); SES.basari();
+    KAYIT.ogr = ogrAdim() + 1; kayitKirli = true; dnaEkle(2); SES.basari(); olcum('ogretim-' + Math.min(KAYIT.ogr, OGR.length) + '-tamam');
     duyur(ogrAktif() ? `✅ ${T('Tamam!', 'Done!')} ${OGR[ogrAdim()].ik} ${T('Sıradaki adım solda', 'Next step on the left')}` : T('🎓 Temel eğitim bitti! Artık gen defteri, beslenme göstergesi ve dev canlılar seni bekliyor.', '🎓 Basics complete! Your gene book, feeding gauge and giant creatures await.'), 'iyi', 4.5);
   }
   kgCiz();
@@ -2555,7 +2555,7 @@ function kgCiz() {
     const a = OGR[ogrAdim()], n = Math.min(a.h, a.n(o));
     el.hidden = false; el.classList.remove('ok'); el.classList.add('ogr');
     const ic = `<small>${T('Öğretim', 'Tutorial')} ${ogrAdim() + 1}/${OGR.length}</small>${a.ik} ${esc(T(a.ad[0], a.ad[1]))} <b>${n}/${a.h}${a.birim ? ' ' + T(a.birim[0], a.birim[1]) : ''}</b><button type="button" id="ogrGec" aria-label="${T('Öğretimi geç', 'Skip tutorial')}">✕</button>`;
-    if (el.dataset.h !== ic) { el.dataset.h = ic; el.innerHTML = ic; const gb = $('ogrGec'); if (gb) gb.onpointerdown = e => { e.stopPropagation(); e.preventDefault(); KAYIT.ogr = 99; kayitKirli = true; el.dataset.h = ''; duyur(T('Öğretim geçildi. Menüdeki "Mutasyon nasıl çalışır?" her şeyi anlatır.', 'Tutorial skipped. "How do mutations work?" in the menu explains everything.'), '', 4); kgCiz(); }; }
+    if (el.dataset.h !== ic) { el.dataset.h = ic; el.innerHTML = ic; const gb = $('ogrGec'); if (gb) gb.onpointerdown = e => { e.stopPropagation(); e.preventDefault(); olcum('ogretim-gecildi-' + (ogrAdim() + 1)); KAYIT.ogr = 99; kayitKirli = true; el.dataset.h = ''; duyur(T('Öğretim geçildi. Menüdeki "Mutasyon nasıl çalışır?" her şeyi anlatır.', 'Tutorial skipped. "How do mutations work?" in the menu explains everything.'), '', 4); kgCiz(); }; }
     return;
   }
   el.classList.remove('ogr'); el.dataset.h = '';
@@ -3288,7 +3288,7 @@ let hudZ = 0, miniZ = 0;
 function hud(dt) {
   hudZ -= dt; miniZ -= dt;
   if (IZLE) izleTik(dt);
-  dostOkGuncelle();
+  dostOkGuncelle(); window.olcumTik && olcumTik(dt);
   yasamGuncelle(dt); nufusGuncelle(dt);
   if (hudZ <= 0) {
     hudZ = 0.25;
@@ -3579,7 +3579,7 @@ function izleHayat() {
 function izleYazi() { const k = $('izleKat'); k.classList.remove('sessiz'); IZD.yaziZ = 4; }
 async function izleKilit() { try { if (IZLE && 'wakeLock' in navigator && !IZD.kilit && document.visibilityState === 'visible') { IZD.kilit = await navigator.wakeLock.request('screen'); IZD.kilit.addEventListener('release', () => { IZD.kilit = null; }); } } catch (e) { } }
 function izleBasla() {
-  if (IZLE) return; IZLE = true; window.izleSus = true; IZD.yedek = JSON.stringify(KAYIT); IZD.bas = performance.now(); IZD.hayat = 0;
+  if (IZLE) return; olcum('izle-basla'); IZLE = true; window.izleSus = true; IZD.yedek = JSON.stringify(KAYIT); IZD.bas = performance.now(); IZD.hayat = 0;
   document.body.classList.add('izle'); $('izleKat').hidden = false; izleYazi();
   try { if (!document.fullscreenElement && document.documentElement.requestFullscreen) document.documentElement.requestFullscreen().then(() => { IZD.tam = true; }).catch(() => { }); } catch (e) { }
   izleKilit(); izleHayat();
@@ -3888,6 +3888,28 @@ function haftaKartKur() {
   const sira = [0, 1, 2, 3].map(i => HAFTA_E[(+hafta() + i) % HAFTA_E.length]);
   el.innerHTML = `<div class="hB">${E.ik} ${T('Bu hafta', 'This week')}: ${esc(T(E.ad[0], E.ad[1]))}<small>⏳ ${gK ? gK + T(' gün ', 'd ') : ''}${sK}${T(' sa', 'h')}</small></div><p>${esc(T(E.ac[0], E.ac[1]))} <b style="color:#BFE3FF">${T('Tüm DNA kazancı +%25.', 'All DNA gains +25%.')}</b></p>`
     + `<div class="hS">${sira.map((q, i) => `<span${i ? '' : ' class="bu"'}>${i ? (i === 1 ? T('sonra', 'next') : '') : T('şimdi', 'now')} ${q.ik} ${esc(T(q.ad[0], q.ad[1]))}</span>`).join('')}</div>`;
+}
+
+/* ================= ölçüm: oyuncuların nerede bıraktığını görmek için GoatCounter olayları (oturum başına bir kez) ================= */
+{
+  const sar = (ad, f) => function () { try { f.apply(null, arguments); } catch (e) { } return ad.apply(this, arguments); };
+  const ilkOyun = (KAYIT.oyun | 0) === 0;
+  basla = sar(basla, () => { olcum(GM ? 'gm-basla' : 'oyun-basla'); if (ilkOyun) olcum('ilk-oyun'); if (DAVET.ad) olcum('davetle-geldi'); olcum(AG.durum() === 'acik' ? 'mod-cevrimici' : 'mod-cevrimdisi'); });
+  oyuncuOldu = sar(oyuncuOldu, () => { const y = oyuncu ? oyuncu.yas : 0, k = y < 30 ? '0-30sn' : y < 60 ? '30-60sn' : y < 180 ? '1-3dk' : y < 600 ? '3-10dk' : '10dk+'; olcum((ilkOyun && !olcum.ilkOlum ? 'ilk-olum-' : 'olum-') + k); olcum.ilkOlum = 1; });
+  evrimSec = sar(evrimSec, () => olcum('evrim-secti'));
+  devOl = sar(devOl, () => olcum('dev-yenildi'));
+  for (const [id, ad] of [['dukkanBtn', 'dukkan-ac'], ['agacBtn', 'agac-ac'], ['rehberBtn', 'rehber-ac'], ['ansLink', 'ansiklopedi-tik'], ['gecisLink', 'yaratik-gecis'], ['gmBasla', 'gm-tik'], ['davetBtn', 'davet-tik'], ['kurBtn', 'kur-tik']]) { const e = $(id); if (e) e.addEventListener('click', () => olcum(ad)); }
+  $('gecisBtn').addEventListener('pointerdown', () => olcum('yaratik-gecis'), true);
+  $('dna').addEventListener('pointerdown', () => olcum('defter-ac'), true);
+  // ilerleme eşikleri: kuşak, gen, kütle
+  let olZ = 0;
+  window.olcumTik = dt => {
+    if ((olZ -= dt) > 0) return; olZ = 1; const o = oyuncu; if (!oyunda || IZLE || !o || o.olu) return;
+    for (const k of [2, 3, 5, 10]) if ((o.kusak || 1) >= k) olcum('kusak-' + k);
+    for (const k of [5, 15, 30, 45]) if ((o.gen || []).length >= k) olcum('gen-' + k);
+    for (const k of [150, 500, 1500]) if (o.m >= k) olcum('kutle-' + k);
+    for (const k of [60, 300, 900]) if (o.yas >= k) olcum('yasadi-' + (k / 60) + 'dk');
+  };
 }
 
 /* ================= döngü ================= */
