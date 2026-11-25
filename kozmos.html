@@ -15,6 +15,7 @@
 <meta name="twitter:card" content="summary_large_image">
 <link rel="canonical" href="https://erdevelop.github.io/kozmos.html">
 <link rel="icon" href="/favicon.svg" type="image/svg+xml">
+<link rel="manifest" href="/kozmos.webmanifest"><link rel="apple-touch-icon" href="/kozmos/apple-touch-icon.png"><meta name="apple-mobile-web-app-capable" content="yes"><meta name="mobile-web-app-capable" content="yes"><meta name="apple-mobile-web-app-status-bar-style" content="black-translucent"><meta name="apple-mobile-web-app-title" content="Kozmos">
 <link href="https://fonts.googleapis.com/css2?family=Nunito:wght@600;700;800;900&display=swap" rel="stylesheet">
 <style>
 :root{--ink:#E8EEFF;--mute:#97A5CA;--acc:#7FE3FF;--acc2:#3FA9F5;--altin:#FFC857;--mor:#B48CFF;--kart:rgba(8,12,30,.9);--line:rgba(150,180,255,.18);--kirmizi:#FF7B8A}
@@ -268,6 +269,7 @@ details{margin-top:12px;color:var(--mute);font-size:13.5px}summary{cursor:pointe
     <label class="secim"><input type="checkbox" id="fpSec"><span data-en="🪟 Cockpit view: look out of the window · V">🪟 Kokpit görünümü: camdan bak · V</span></label>
     <button class="ikincil" id="fotoBtn" type="button" data-en="📷 Photo mode · P">📷 Fotoğraf modu · P</button>
     <button class="ikincil" id="profBtn" type="button" data-en="🪪 Pilot card (share)">🪪 Pilot kartı (paylaş)</button>
+    <button class="ikincil" id="kurBtn" type="button" hidden data-en="📲 Install as an app (plays offline)">📲 Uygulama olarak yükle (çevrimdışı da oynanır)</button>
     <button class="ikincil" id="rehBtn" type="button" data-en="🧭 Captain’s guide">🧭 Kaptan rehberi</button>
     <details id="bulDet"><summary data-en="☁ Save and cloud">☁ Kayıt ve bulut</summary><div id="bulIc"></div><input type="file" id="bulDosya" accept=".json,application/json" hidden></details>
     <details id="radDet"><summary data-en="📻 Space radio">📻 Uzay radyosu</summary><div id="radList"></div><label class="secim"><input type="checkbox" id="spikSec"><span data-en="🎙 Announcer reads the news aloud">🎙 Spiker haberleri sesli okusun (İngilizce)</span></label></details>
@@ -5098,6 +5100,23 @@ setInterval(() => { if (!$('devPanel').hidden) devYazDurum(); }, 600);
 window.dev = Object.assign(() => devAc(true), { run: str => { const r = devKomut(str); devLog('> ' + str); devLog(r); devYazDurum(); return r; }, kapat: () => devAc(false) });
 for (const k in DEVK) if (!window.dev[k]) window.dev[k] = (...a) => window.dev.run([k, ...a].join(' '));
 if (/[?&]dev=1/.test(location.search)) setTimeout(() => devAc(true), 600);
+/* ================= uygulama gibi kurulum (PWA) ve çevrimdışı oyun ================= */
+const PWA = { olay: null, kurulu: matchMedia('(display-mode: fullscreen), (display-mode: standalone)').matches || navigator.standalone === true };
+const iosMu = /iP(hone|ad|od)/.test(navigator.userAgent) || (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
+if ('serviceWorker' in navigator && location.protocol === 'https:') addEventListener('load', () => {
+  navigator.serviceWorker.register('/sw.js').then(() => navigator.serviceWorker.ready).then(() => {
+    caches.open('erdevelop-v3-sayfa').then(c => Promise.allSettled(['/kozmos.html', '/dil.js', '/js/seri-kayit.js', '/js/site.js', '/favicon.svg', '/kozmos/ikon-192.png', '/kozmos.webmanifest'].map(u => c.match(u).then(m => m || c.add(u)))));
+  }).catch(() => { });
+});
+addEventListener('beforeinstallprompt', e => { e.preventDefault(); PWA.olay = e; if (!PWA.kurulu) $('kurBtn').hidden = false; });
+addEventListener('appinstalled', () => { PWA.kurulu = true; $('kurBtn').hidden = true; duyur('📲 ' + T('Kozmos ana ekranına eklendi', 'Kozmos was added to your home screen'), 'koloni'); });
+if (!PWA.kurulu && iosMu && !/CriOS|FxiOS/.test(navigator.userAgent)) $('kurBtn').hidden = false;
+$('kurBtn').onclick = async () => {
+  if (PWA.olay) { PWA.olay.prompt(); const r = await PWA.olay.userChoice.catch(() => null); PWA.olay = null; if (r && r.outcome === 'accepted') $('kurBtn').hidden = true; return; }
+  $('menu').hidden = true; diyalog([T('📲 Ana ekrana ekle', '📲 Add to home screen'), T('iPhone/iPad’de Safari’nin altındaki <b>Paylaş</b> düğmesine (kare ve yukarı ok) dokun, sonra <b>Ana Ekrana Ekle</b>’yi seç. Kozmos tam ekran bir uygulama gibi açılır ve internet yokken de oynanır.', 'In Safari on iPhone/iPad, tap the <b>Share</b> button (square with an arrow), then choose <b>Add to Home Screen</b>. Kozmos opens full screen like an app and plays offline too.')].map(x => [x, x]), () => { });
+};
+function cevrimDurum() { if (!navigator.onLine) duyur('📴 ' + T('İnternet yok: oyun çevrimdışı devam ediyor', 'No internet: the game carries on offline'), 'kesif', T('Sohbet, sıralama, Kolos ve galeri bağlantı gelince açılır', 'Chat, leaderboards, the Colossus and the gallery return when you are back online')); }
+addEventListener('offline', cevrimDurum); addEventListener('online', () => duyur('🌐 ' + T('İnternet geri geldi', 'Back online'), 'kesif', T('Çevrimiçi özellikler için sayfayı yenileyebilirsin', 'Reload the page for the online features'))); setTimeout(cevrimDurum, 2500);
 /* ================= kaptan rehberi ================= */
 const REHA = [
   [['Gemini uçur', 'Fly your ship'], ['W A S D ile uç. Telefonda “Sürüş” modunda ekrana dokunup yönlendir.', 'Fly with W A S D. On a phone, touch and steer in “Drive” mode.'], () => yol > 1500, 100],
