@@ -15,6 +15,9 @@
 <meta name="twitter:card" content="summary_large_image">
 <link rel="canonical" href="https://erdevelop.github.io/derin-mavi.html">
 <link rel="icon" href="/favicon.svg" type="image/svg+xml">
+<link rel="manifest" href="/derin-mavi.webmanifest">
+<link rel="apple-touch-icon" href="/derin-mavi/ikon-192.png">
+<meta name="mobile-web-app-capable" content="yes"><meta name="apple-mobile-web-app-capable" content="yes">
 <link href="https://fonts.googleapis.com/css2?family=Nunito:wght@600;700;800;900&display=swap" rel="stylesheet">
 <style>
 :root{--ink:#EAF6FA;--mute:#A9CBD8;--acc:#FFC857;--acc2:#F2A93B;--mavi:#5FC8E8;--kart:rgba(8,38,56,.86);--line:rgba(170,220,240,.2);--yesil:#6EE7A8;--kirmizi:#FF8A7A}
@@ -837,9 +840,36 @@ const SES = (() => {
     src.connect(f).connect(k).connect(ana); src.start(); ortamK = k;
     const dongu = () => { kabZ = setTimeout(() => { if (duzey > 0 && !document.hidden) { kabarcik(0.006); if (Math.random() < 0.5) setTimeout(() => kabarcik(0.005), 90); } dongu(); }, 2500 + Math.random() * 5000); };
     if (!kabZ) dongu();
+    ekoSesBasla();
+  }
+  /* EKOSİSTEM SESLERİ: sağlıklı resif gerçekte gürültülüdür — tabanca karideslerin çıtırtısı resif sağlığıyla artar;
+     dalga uğultusu deniz durumuyla kabarır, fırtınada boğuk gürleme; kışın ve balinalar geçerken uzaktan balina şarkısı;
+     yağmurda yüzeyde tıpırtı. Durumu oyundan SES.durumAl() ile okur. */
+  let ekoZam = null, balinaZ = 30 + Math.random() * 30, gurultu = null;
+  function cit(v) { const a = hazir(); if (!a) return; const n = Math.floor(a.sampleRate * 0.012), b = a.createBuffer(1, n, a.sampleRate), d = b.getChannelData(0); for (let i = 0; i < n; i++) d[i] = (Math.random() * 2 - 1) * Math.pow(1 - i / n, 6);
+    const s = a.createBufferSource(), f = a.createBiquadFilter(), k = a.createGain(), p = a.createStereoPanner ? a.createStereoPanner() : null; s.buffer = b; f.type = 'highpass'; f.frequency.value = 2500 + Math.random() * 3000; k.gain.value = v;
+    if (p) { p.pan.value = Math.random() * 2 - 1; s.connect(f).connect(k).connect(p).connect(ana); } else s.connect(f).connect(k).connect(ana); s.start(); }
+  function balinaSarki() { const a = hazir(); if (!a) return; const t0 = a.currentTime, gecikme = a.createDelay(2), geri = a.createGain(), yum = a.createBiquadFilter(); gecikme.delayTime.value = 0.6; geri.gain.value = 0.45; yum.type = 'lowpass'; yum.frequency.value = 900;
+    gecikme.connect(geri).connect(gecikme); gecikme.connect(yum).connect(ana);
+    [[160, 420, 2.6, 0], [420, 260, 1.8, 2.4], [110, 95, 3.2, 4.6], [300, 620, 1.4, 8], [620, 380, 2, 9.3]].forEach(([f1, f2, d, g]) => { const o = a.createOscillator(), v = a.createOscillator(), vk = a.createGain(), k = a.createGain(), t = t0 + g;
+      o.type = 'sine'; o.frequency.setValueAtTime(f1, t); o.frequency.exponentialRampToValueAtTime(f2, t + d); v.frequency.value = 5 + Math.random() * 3; vk.gain.value = f1 * 0.02; v.connect(vk).connect(o.frequency);
+      k.gain.setValueAtTime(0.0001, t); k.gain.exponentialRampToValueAtTime(0.016, t + d * 0.3); k.gain.exponentialRampToValueAtTime(0.0001, t + d); o.connect(k); k.connect(yum); k.connect(gecikme); o.start(t); v.start(t); o.stop(t + d + 0.1); v.stop(t + d + 0.1); }); }
+  function ekoSesBasla() {
+    if (ekoZam) return;
+    ekoZam = setInterval(() => {
+      if (duzey <= 0 || document.hidden || !ac) return; const D = (SES.durumAl && SES.durumAl()) || {};
+      /* çıtırtı: saniyede birkaç ile onlarca arası, sağlığa göre */
+      const yog = (D.derin ? 0.15 : 0.4 + (D.saglik ?? 0.7) * 1.6) * (D.gece ? 1.3 : 1); const n = Math.random() < yog * 0.25 ? 1 + Math.floor(Math.random() * yog * 2) : 0;
+      for (let i = 0; i < n; i++) setTimeout(() => cit(0.004 + Math.random() * 0.006), Math.random() * 240);
+      /* dalga uğultusu ve fırtına */
+      if (ortamK) ortamK.gain.setTargetAtTime(0.03 + (D.deniz || 0) * 0.07 + (D.firtina ? 0.05 : 0), ac.currentTime, 2);
+      if (D.yagmur && Math.random() < 0.9) for (let i = 0; i < 3; i++) setTimeout(() => cit(0.0025), Math.random() * 240);
+      /* balina şarkısı */
+      balinaZ -= 0.25; if (balinaZ <= 0) { balinaZ = (D.balina ? 25 : D.kis ? 60 : 160) + Math.random() * 60; if (D.balina || D.kis || Math.random() < 0.3) balinaSarki(); }
+    }, 250);
   }
   return {
-    ortam, kabarcik,
+    ortam, kabarcik, durumAl: null, balinaSarki,
     yem: () => { hava(0.18, 0.06, 600); ton(180, 90, 0.18, 'sine', 0.05); setTimeout(() => kabarcik(0.01), 120); },
     lokma: () => ton(520 + Math.random() * 120, 260, 0.09, 'sine', 0.03),
     plankton: altin => altin ? (ton(880, 1320, 0.08, 'sine', 0.03), ton(1320, 1760, 0.1, 'sine', 0.025, 0.07)) : ton(900 + Math.random() * 300, 1500, 0.05, 'sine', 0.018),
@@ -2501,6 +2531,41 @@ function albumTara() {
   const hs = hedefSeviye(); for (let i = 0; i < Math.min(3, hs); i++) albumEkle('sus:' + i); if (hs >= 4) albumEkle('canli:kaplumbaga');
   } finally { const L = albumToplu; albumToplu = null; if (L.length === 1) duyur(T(`📖 Albüme eklendi: ${L[0]}`, `📖 Added to album: ${L[0]}`)); else if (L.length > 1) duyur(T(`📖 Albüme ${L.length} yeni kayıt: ${L.slice(0, 3).join(', ')}${L.length > 3 ? '…' : ''}`, `📖 ${L.length} new album entries: ${L.slice(0, 3).join(', ')}${L.length > 3 ? '…' : ''}`)); }
 }
+/* =====================================================================
+   CANLI REHBERİ: albümde açılmış bir canlıya dokununca 3D modeli dönen bir kart; gerçek bilgisi ve
+   besin ağındaki yeri (ne yer, kim onu yer) gösterilir.
+   ===================================================================== */
+const BESIN_AD = { plk: ['🦠', 'plankton', 'plankton'], alg: ['🌿', 'algler', 'algae'], cayir: ['🌾', 'deniz çayırı', 'seagrass'], mercan: ['🪸', 'mercan polipleri', 'coral polyps'], sung: ['🧽', 'süngerler', 'sponges'], sard: ['🐟', 'sardalya', 'sardines'], kb: ['🐠', 'küçük balıklar', 'small fish'], kar: ['🦐', 'karidesler', 'shrimp'], yen: ['🦀', 'yengeçler', 'crabs'], kal: ['🦑', 'kalamar', 'squid'], med: ['🪼', 'denizanası', 'jellyfish'], art: ['🍂', 'artıklar', 'scraps'], par: ['🦠', 'parazitler', 'parasites'], midye: ['🐚', 'midye, istiridye', 'mussels, clams'], kril: ['🦐', 'kril', 'krill'], yum: ['🥚', 'balık yumurtası', 'fish eggs'],
+  bar: ['🐟', 'barakuda', 'barracuda'], kop: ['🦈', 'köpekbalığı', 'sharks'], fok: ['🦭', 'fok', 'seals'], kap: ['🐢', 'kaplumbağa', 'turtles'], ahta: ['🐙', 'ahtapot', 'octopus'], mola: ['🌕', 'ay balığı', 'sunfish'], kus: ['🐦', 'deniz kuşları', 'seabirds'], orki: ['🐟', 'orkinos', 'tuna'], kasa: ['🐋', 'kaşalot', 'sperm whales'], buyuk: ['🐟', 'büyük balıklar', 'big fish'] };
+const BESIN = { sardalya: ['plk', 'bar,kop,fok,orki,kus'], meduz: ['plk,yum', 'kap,mola'], manta: ['plk', 'kop'], balinakb: ['plk', ''], dkaplumbaga: ['cayir,med', 'kop'], kaplumbaga: ['cayir,med', 'kop'], dugong: ['cayir', 'kop'], barakuda: ['sard,kb', 'kop'], fok: ['sard,kal', 'kop'],
+  papagan: ['alg,mercan', 'kop'], kelebek: ['mercan', 'buyuk'], kutu: ['alg,kb', 'buyuk'], palyacocift: ['plk,alg', 'buyuk'], aslan: ['kb,kar', ''], mola: ['med', 'kop'], kambur: ['kril,kb', ''], dumbo: ['kar', 'buyuk'], devkalamar: ['kb,kal', 'kasa'], sifonofor: ['plk,kb', 'kap'], pelikan: ['kar,kb', 'buyuk'],
+  ahtapot: ['yen,kar', 'kop,fok'], yildiz: ['midye', ''], karides: ['par,art', 'kb,ahta'], balon: ['midye,yen', 'kop'], dvatoz: ['yen,midye', 'kop'], kalamar: ['kb,kar', 'fok,orki'], salyangoz: ['alg', 'yen,ahta'], ermit: ['art,alg', 'ahta'], yengec: ['alg,art', 'ahta,kb'], muren: ['kb,ahta', 'kop'],
+  palyaco: ['plk,alg', 'buyuk'], cerrah: ['alg', 'buyuk'], melek: ['sung,alg', 'buyuk'], orkinos: ['sard,kal', 'kop'], yelken: ['sard,kal', 'kop'], ucan: ['plk', 'orki,kus'], fener: ['kb,kar', ''], balta: ['plk', 'buyuk'], kurdele: ['kril,plk', 'kop'], buz: ['kril,kb', 'fok'] };
+const REHBER_ESLE = { sardalya: 'b:sardalya', kaplumbaga: 'c:dkaplumbaga', vatoz: 'c:manta', meduz: 'c:meduz', yengec: 'c:yengec' };
+function rehberModel(k) {
+  if (k.startsWith('tur:')) { const t = k.slice(4); return { balik: { yelken: 'yelken', ucan: 'ucan', balta: 'balta', kurdele: 'kurdele', buz: 'buz', fener: 'fener', orkinos: 'orkinos', palyaco: 'palyaco', cerrah: 'cerrah', melek: 'melek' }[t] || 'sardalya' }; }
+  if (!k.startsWith('canli:')) return null; const c = k.slice(6), e = REHBER_ESLE[c];
+  if (e) return e[0] === 'b' ? { balik: e.slice(2) } : { canli: e.slice(2) };
+  const VAR = ['yildiz', 'salyangoz', 'ermit', 'ahtapot', 'karides', 'dvatoz', 'balon', 'kalamar', 'dkaplumbaga', 'palyacocift', 'papagan', 'aslan', 'kutu', 'kelebek', 'manta', 'dugong', 'barakuda', 'mola', 'fok', 'balinakb', 'kambur', 'dumbo', 'devkalamar', 'sifonofor', 'pelikan'];
+  return VAR.includes(c) ? { canli: c } : null;
+}
+let rehberDur = null;
+async function rehberKart(k) {
+  const m = rehberModel(k), a = ALBUM.find(x => x.k === k); if (!m || !a) return;
+  const id = k.split(':')[1], cb = CANLI_BILGI[id], gz = GZ_TUR[id], tr = TURLER[id];
+  const ad = k.startsWith('tur:') ? L2(tr.ad) : cb ? T(cb[1], cb[2]) : gz ? L2(gz.ad) : L2(a.ad);
+  const bilgi = cb ? T(cb[3], cb[4]) : gz && gz.bilgi ? L2(gz.bilgi) : tr ? T(`${L2(ALANLAR[tr.alan].ad)} türü. Özelliği: ${tr.oz}.`, `A ${L2(ALANLAR[tr.alan].ad)} species.`) : '';
+  const bs = BESIN[REHBER_ESLE[id] ? REHBER_ESLE[id].slice(2) : id] || BESIN[id];
+  const zincir = (L) => L ? L.split(',').filter(Boolean).map(x => BESIN_AD[x] ? `<span style="display:inline-block;margin:2px;padding:3px 8px;border-radius:10px;background:rgba(255,255,255,.1)">${BESIN_AD[x][0]} ${T(BESIN_AD[x][1], BESIN_AD[x][2])}</span>` : '').join('') : '';
+  const ic = modal(`<h2>${a.e || '🐟'} ${esc(ad)}</h2><canvas id="rehberTuval" style="width:100%;height:220px;display:block;border-radius:14px;background:radial-gradient(circle at 50% 35%,#2d8fae,#0b3550)"></canvas>
+    <p style="margin-top:10px">${esc(bilgi)}</p>
+    ${bs ? `<h3 style="margin-top:12px">🕸️ ${T('Besin ağındaki yeri', 'Place in the food web')}</h3>
+    <p class="kucuk" style="text-align:left">🍽️ <b>${T('Yer', 'Eats')}:</b> ${zincir(bs[0]) || '—'}</p>
+    <p class="kucuk" style="text-align:left">⚠️ <b>${T('Avcıları', 'Eaten by')}:</b> ${zincir(bs[1]) || T('neredeyse yok', 'almost none')}</p>` : ''}
+    <button class="ana" type="button" id="rehberGeri">← ${T('Albüme dön', 'Back to album')}</button>`);
+  ic.querySelector('#rehberGeri').onclick = () => { modalKapat(); setTimeout(albumAc, 30); };
+  try { if (rehberDur) rehberDur(); const V = await import('/derin-mavi/3d/vitrin3d.js'); const tv = ic.querySelector('#rehberTuval'); if (tv && tv.isConnected) rehberDur = await V.vitrin(tv, m); } catch (e) { const tv = ic.querySelector('#rehberTuval'); if (tv) tv.replaceWith(Object.assign(document.createElement('div'), { textContent: a.e || '🐟', style: 'font-size:90px;text-align:center' })); }
+}
 function albumAc() {
   const n = Object.keys(S.alb).length;
   const kart = a => {
@@ -2510,12 +2575,13 @@ function albumAc() {
     else if (a.grup === 'renk') { const r = RENKLER[+a.k.slice(5)]; ad = L2(r.ad); ip = L2(r.kosul); }
     else { ad = L2(a.ad); ip = a.ip ? L2(a.ip) : ''; }
     const gorsel = a.grup === 'tur' || a.grup === 'renk' ? `<canvas width="300" height="170" data-k="${a.k}"></canvas>` : `<div style="font-size:42px;height:84px;display:flex;align-items:center;justify-content:center;${var_ ? '' : 'filter:grayscale(1) brightness(.35)'}">${a.e}</div>`;
-    return `<div class="secim${var_ ? '' : ' kilit'}">${gorsel}${var_ ? esc(ad) : '???'}<small>${esc(var_ ? '' : ip)}</small></div>`;
+    return `<div class="secim${var_ ? '' : ' kilit'}" ${var_ && rehberModel(a.k) ? `data-rk="${a.k}" style="cursor:pointer"` : ''}>${gorsel}${var_ ? esc(ad) : '???'}<small>${esc(var_ ? (rehberModel(a.k) ? T('🔍 dokun: 3D ve bilgi', '🔍 tap: 3D and facts') : '') : ip)}</small></div>`;
   };
   const grup = (g, b) => `<h3>${b}</h3><div class="secimler">${ALBUM.filter(a => a.grup === g).map(kart).join('')}</div>`;
   const ic = modal(`<h2>📖 ${T('Koleksiyon albümü', 'Collection album')}</h2><p class="alt">${n}/${ALBUM.length} · %${Math.round(n / ALBUM.length * 100)}</p><div class="ilerle"><i style="width:${n / ALBUM.length * 100}%"></i></div>
     <p class="kucuk">${T('Akvaryumda gördüğün her tür, açtığın her renk ve rastladığın her canlı albüme işlenir. Her 5 kayıtta +10 inci.', 'Every species you see, colour you unlock and creature you meet is recorded. +10 pearls every 5 entries.')}</p>
     ${grup('tur', T('TÜRLER', 'SPECIES'))}${grup('renk', T('RENKLER', 'COLOURS'))}${grup('canli', T('CANLILAR', 'CREATURES'))}${grup('sus', T('ÖZEL ANLAR', 'SPECIAL MOMENTS'))}`);
+  ic.querySelectorAll('[data-rk]').forEach(d => d.onclick = () => rehberKart(d.dataset.rk));
   ic.querySelectorAll('canvas[data-k]').forEach(c => {
     const k = c.dataset.k, var_ = !!S.alb[k];
     const d = k.startsWith('tur:') ? { a: 3, tr: k.slice(4), al: TURLER[k.slice(4)].alan, r: 0 } : Object.assign(benVeri(), { a: Math.max(2, S.asama), tr: S.tur || 'palyaco', r: +k.slice(5) });
@@ -2586,6 +2652,7 @@ function bakimCiz(c) {
     if (e && (e.berrak ?? 0) > 0.88) { c.save(); c.globalCompositeOperation = 'soft-light'; c.fillStyle = `rgba(140,230,255,${((e.berrak - 0.88) * 1.6).toFixed(3)})`; c.fillRect(0, 0, W, H); c.restore(); } }
   if (TEMIZ) for (const l of TEMIZ.leke) if (l.a > 0) { const g = c.createRadialGradient(l.x, l.y, 0, l.x, l.y, l.r); g.addColorStop(0, `rgba(95,105,55,${0.8 * l.a})`); g.addColorStop(1, 'rgba(95,105,55,0)'); c.fillStyle = g; c.beginPath(); c.arc(l.x, l.y, l.r, 0, TAU); c.fill(); }
 }
+{ const mk0 = modalKapat; modalKapat = function () { if (rehberDur) { try { rehberDur(); } catch (e) { } rehberDur = null; } return mk0.apply(this, arguments); }; }
 function iyilestir() {
   if (!S || !S.hasta) return;
   S.hasta = false; SES.kutla(); duyur(T(`💊 ${S.ad} iyileşti! Artık yine büyüyebilir.`, `💊 ${S.ad} is healthy again and can grow!`), 1); kaydet(); uyeYaz(true); uiGuncelle();
@@ -4270,6 +4337,21 @@ function ekoIlerlet(saat) {
   }
 }
 let ekoZ = 0, ekoOlayK = null;
+/* EKOSİSTEM GEÇMİŞİ: her ekosistem gününde bir örnek (en çok 30 gün) — panelde grafik */
+function ekoKayit() {
+  const e = ekoS(); if (!e) return; const g = Math.floor(ekoGun()); e.gecmis = e.gecmis || [];
+  const son = e.gecmis[e.gecmis.length - 1]; if (son && son.g === g) return;
+  e.gecmis.push({ g, s: +e.saglik.toFixed(3), b: +e.beyaz.toFixed(3), p: +e.plk.toFixed(2), n: Math.round(e.suru), c: +(e.cayir ?? 0.8).toFixed(2), k: e.koloni, br: +(e.berrak ?? 0.8).toFixed(2) });
+  while (e.gecmis.length > 30) e.gecmis.shift();
+}
+function ekoGrafik() {
+  const e = S && S.eko, L = (e && e.gecmis) || []; if (L.length < 2) return `<p class="kucuk">${T('Grafik için birkaç gün geçmesi gerekiyor. Hızlı görmek için konsolda DM.hiz(86400).', 'The chart needs a few days of data. To see it quickly, run DM.hiz(86400) in the console.')}</p>`;
+  const W0 = 300, H0 = 110, x = i => 4 + i * (W0 - 8) / (L.length - 1), y = v => H0 - 6 - kis(v, 0, 1) * (H0 - 12);
+  const cizgi = (f, renk, kes) => `<polyline fill="none" stroke="${renk}" stroke-width="2" ${kes ? 'stroke-dasharray="4 3"' : ''} stroke-linejoin="round" points="${L.map((o, i) => x(i).toFixed(1) + ',' + y(f(o)).toFixed(1)).join(' ')}"/>`;
+  const S2 = [['#5FD38A', o => o.s, T('sağlık', 'health')], ['#7FE0FF', o => o.p / 2.2, T('plankton', 'plankton')], ['#B8CCDA', o => o.n / 22, T('sardalya', 'sardines')], ['#A6E07A', o => o.c, T('çayır', 'seagrass')], ['#F2EFE6', o => o.b, T('beyazlama', 'bleaching'), 1]];
+  return `<svg viewBox="0 0 ${W0} ${H0}" style="width:100%;height:auto;background:rgba(255,255,255,.05);border-radius:10px">${[0.25, 0.5, 0.75].map(v => `<line x1="0" x2="${W0}" y1="${y(v)}" y2="${y(v)}" stroke="rgba(255,255,255,.08)"/>`).join('')}${S2.map(([r, f, , k]) => cizgi(f, r, k)).join('')}</svg>
+    <p class="kucuk" style="margin-top:4px">${S2.map(([r, , ad]) => `<span style="color:${r}">●</span> ${ad}`).join(' · ')} · ${T('son', 'last')} ${L.length} ${T('gün', 'days')}</p>`;
+}
 /* hızlandırma (konsoldan DM.hiz(24) gibi): yalnızca ekosistemin saati hızlanır; açlık, yem hakkı, gün-gece
    gerçek saatte kalır. Sayfa yenilenince 1×'e döner. Ekranda küçük bir gösterge ekosistemi canlı izler. */
 let EKO_HIZ = 1, EKO_OFF = 0;
@@ -4297,7 +4379,7 @@ function ekoKare(dt) {
   } else { ekoZ += dt; if (ekoZ >= 5) { ekoAdim(ekoZ / 3600); ekoZ = 0; } }
   const ol = ekoOlay(), e = ekoS();
   if (ol && e.olayK !== ol.k) { e.olayK = ol.k; const O = EKO_OLAY[ol.tur]; duyur(`${O.e} ${T(O.ad[0], O.ad[1])}: ${T(O.d[0], O.d[1])}`, 1); kaydet(false); }
-  ekoGoc(dt, ol);
+  ekoGoc(dt, ol); ekoKayit();
 }
 /* göç eden sürü (sonbahar olayı): ara ara kalabalık bir sürü ekranı boydan boya geçer */
 const GOC = { o: null, z: 20 };
@@ -4358,6 +4440,7 @@ function ekoAc() {
     ${cubuk('🐟 ' + T('Sardalya sürüsü', 'Sardine school'), sr / 22, '#B8CCDA', sr + T(' balık', ' fish'))}
     ${(() => { const o = ortakResif(); return o.uye ? `<div style="margin:12px 0;padding:10px 12px;border-radius:12px;background:rgba(255,255,255,.06)"><b>🤝 ${T('Ortak resif', 'Shared reef')}</b> · ${o.kisi} ${T('kişi', 'people')}<br>${T('Ortak sağlık', 'Shared health')}: <b>${Math.round(o.saglik * 100)}%</b> · ${T('Bu hafta dikilen mercan', 'Corals planted this week')}: <b>${o.baskaDik + o.benDik}</b> (${T('senin', 'yours')}: ${o.benDik})</div>` : ''; })()}
     <button type="button" class="ana" id="dikBtn" ${dikebilir() ? '' : 'disabled style="opacity:.55"'}>🪸 ${dikebilir() ? T('Bugünün mercanını dik', 'Plant today’s coral') : T('Bugün diktin — yarın yine', 'Planted today — again tomorrow')}</button>
+    <h3 style="margin-top:12px">📈 ${T('Son günler', 'Recent days')}</h3>${ekoGrafik()}
     <p style="margin-top:12px"><b>${T('Bu hafta', 'This week')}:</b> ${O ? `${O.e} ${T(O.ad[0], O.ad[1])}. ${T(O.d[0], O.d[1])}` : T('Sakin bir hafta.', 'A quiet week.')}</p>
     <p class="kucuk">${T('Besin zinciri: plankton → sardalya → barakuda. Plankton boluyken manta ve balina köpekbalığı da gelir. Akıntı suyu kendiliğinden tazeler; plankton patlamasının çürümesi ve sıcak dalgası suyu bozar, mercanları ağartabilir.', 'Food chain: plankton → sardines → barracuda. Mantas and whale sharks come when plankton is plentiful. Currents keep the water fresh; decaying plankton blooms and heatwaves spoil it and can bleach the corals.')}</p>`);
   const db = ic.querySelector('#dikBtn'); if (db) db.onclick = () => { mercanDik(); modalKapat(); setTimeout(ekoAc, 50); };
@@ -4923,6 +5006,9 @@ $('sesKaydir').addEventListener('change', () => SES.kabarcik(0.02));
 $('sesSus').onclick = () => { SES.ayarla(SES.duzey() > 0 ? 0 : 0.5); $('sesKaydir').value = Math.round(SES.duzey() * 100); sesYaz(); if (SES.duzey() > 0) SES.kabarcik(0.02); };
 document.addEventListener('pointerdown', e => { if (!$('sesKutu').hidden && !$('sesKutu').contains(e.target) && !$('sesBtn').contains(e.target)) $('sesKutu').hidden = true; });
 /* tarayıcılar sesi ancak ilk dokunuştan sonra açar */
+/* çevrimdışı: site geneli service worker sayfayı, kodları ve 3D modelleri önbelleğe alır; internet yokken oyun açılır, ağ özellikleri bağlanınca döner */
+if ('serviceWorker' in navigator && location.protocol === 'https:') addEventListener('load', () => navigator.serviceWorker.register('/sw.js').catch(() => { }));
+SES.durumAl = () => ({ saglik: S && S.eko ? S.eko.saglik : 0.7, gece: geceDegeri() > 0.6, deniz: DENIZ.d, firtina: HV.h === 'firtina', yagmur: HV.h === 'yagmur', kis: HV.m === 'kis', derin: SAHNE && SAHNE.tm === 'derin', balina: !!((GZ.o && /kambur|balinakb/.test(GZ.o.tur)) || (UZAK.o && /kambur|balinakb/.test(UZAK.o.tur))) });
 const ilkDokunus = () => { if (SES.duzey() > 0) SES.ortam(); removeEventListener('pointerdown', ilkDokunus, true); removeEventListener('keydown', ilkDokunus, true); };
 addEventListener('pointerdown', ilkDokunus, true); addEventListener('keydown', ilkDokunus, true);
 sesYaz();
