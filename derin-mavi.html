@@ -1474,6 +1474,7 @@ function geceGezi(b, dt) {
   if (g.t <= 0) { g.gezi = !g.gezi; g.t = g.gezi ? rnd(25, 50) : rnd(60, 120); b.yt = 0; }
   return g.gezi;
 }
+const balikYuk = b => (b.L || 30) * (b.d && b.d.a >= 2 && b.d.tr && TURLER[b.d.tr] ? TURLER[b.d.tr].g.H : 0.46);
 /* BALIK KİŞİLİĞİ: her balığın kimliğinden çıkan kalıcı bir huyu var.
    meraklı: geçen ziyaretçilere, dalgıçlara, tekneye yanaşır · çekingen: dipte, yosun ve mağara yakınında, uzakta durur
    oyuncu: topun ve kabarcıkların peşine düşer, arada kendiliğinden takla atar · sosyal: diğer balıklara ve sürüye katılır */
@@ -1502,7 +1503,7 @@ function balikGuncelle(b, dt) {
   if (b.ben && KUMANDA.aktif > 0) { KUMANDA.aktif -= dt; b.tx = kis(KUMANDA.x, A.x1, A.x2); b.ty = kis(KUMANDA.y, A.y1, A.y2); hiz = Math.max(hiz * (b.uyku ? 1.2 : 2.8), (b.uyku ? 50 : 115) * OL); b.yt = 4; if (Math.hypot(b.tx - b.x, b.ty - b.y) < 8 && !KUMANDA.basili) KUMANDA.aktif = Math.min(KUMANDA.aktif, 1.5); }
   else if (eh) { b.tx = eh.x; b.ty = eh.y; hiz *= 1.7; b.yt = 2; }
   else if (hedefYem) { b.tx = hedefYem.x; b.ty = hedefYem.y; hiz *= 2.6; }
-  else if (gc && b.ben && !geceGezi(b, dt)) { const m = magara(), h = (tohumRnd('uyku' + (b.k || 'ben'))() - 0.5); b.tx = m.x + h * 90 * OL; b.ty = SAHNE.kumY - (22 + Math.abs(h) * 50) * OL; b.yt = 3; if (Math.hypot(b.tx - b.x, b.ty - b.y) < 30 + b.L * 0.5) b.geceUyku = true; }
+  else if (gc && b.ben && !geceGezi(b, dt)) { const m = magara(), rr = tohumRnd('uyku' + (b.k || 'ben')), h = rr() - 0.5, kat = Math.floor(rr() * 3); b.tx = kis(m.x + h * 170 * OL, ALAN.x1, ALAN.x2); b.ty = SAHNE.kumY - (26 + kat * 34 + Math.abs(h) * 30) * OL; b.yt = 3; if (Math.hypot(b.tx - b.x, b.ty - b.y) < 30 + b.L * 0.5) b.geceUyku = true; }
   else if (b.tx == null || b.yt <= 0 || Math.hypot(b.tx - b.x, b.ty - b.y) < 16) {
     b.tx = rnd(A.x1 + L, A.x2 - L);
     const yy = b.uyku ? [0.82, 0.97] : gc ? [0.5, 0.95] : tm; b.ty = A.y1 + (A.y2 - A.y1) * rnd(yy[0], yy[1]); if (gc) hiz *= 0.6;
@@ -1521,16 +1522,18 @@ function balikGuncelle(b, dt) {
   let itX = 0, itY = 0;
   for (const o of BAL.values()) {
     if (o === b || !o.L || !o.d || (o.d.a | 0) === 0 && (b.d.a | 0) !== 0 && o.L < L * 0.4) continue;
-    const ex = b.x - o.x, ey = (b.y - o.y) * 1.5, uz = Math.hypot(ex, ey), min = (L + o.L) * 0.55 + 8 * OL;
-    if (uz >= min) continue;
-    const g = (min - uz) / min, nx = uz > 0.5 ? ex / uz : (b.k > o.k ? 1 : -1) * 0.3, ny = uz > 0.5 ? ey / uz : (b.k > o.k ? 1 : -1);
-    itX += nx * g; itY += ny * g;
+    /* elips mesafe: yatayda boyların, dikeyde gövde yüksekliklerinin yarısı kadar yer kaplar (melek gibi yüksek balıklar dikeyde daha çok yer ister) */
+    const rx = (L + o.L) * 0.5 + 6 * OL, ry = (balikYuk(b) + balikYuk(o)) * 0.5 + 6 * OL, ex = (b.x - o.x) / rx, ey = (b.y - o.y) / ry, uz = Math.hypot(ex, ey);
+    if (uz >= 1) continue;
+    const g = 1 - uz, nx = uz > 0.01 ? ex / uz : (b.k > o.k ? 1 : -1) * 0.3, ny = uz > 0.01 ? ey / uz : (b.k > o.k ? 1 : -1);
+    itX += nx * g * 1.2; itY += ny * g * 1.6;
   }
   /* denizaltı, dalgıç, robot ve geçen ziyaretçilerden de uzak dur */
   { const E = []; const io = INS.o; if (io && !io.uzak) { if (io.tur === 'denizalti') E.push([io.x, io.y, io.L * 0.55, io.L * 0.2]); else if (io.tur === 'dalgic' || io.tur === 'serbest') E.push([io.x, io.y, io.L * 0.5, io.L * 0.14]); else if (io.tur === 'rov') E.push([io.x, io.y, io.s * 0.6, io.s * 0.4]); }
     const go = GZ.o; if (go && !GZ_TUR[go.tur].arka) E.push([go.x, go.y, go.s * 0.5, go.s * 0.28]);
     for (const [x, y, rx, ry] of E) { const ex = (b.x - x) / (rx + L * 0.5), ey = (b.y - y) / (ry + L * 0.25), uz = Math.hypot(ex, ey); if (uz < 1 && uz > 0.01) { const g = (1 - uz) * 2; itX += ex / uz * g; itY += ey / uz * g; } } }
   for (const o of CNL.L) {
+    if (o.tur === 'ahtapot' || o.tur === 'ermit' || o.tur === 'salyangoz') { const r = (o.tur === 'ahtapot' ? 26 : 14) * OL, ex = (b.x - o.x) / (r + L * 0.5), ey = (b.y - (o.y - r * 0.5)) / (r + balikYuk(b) * 0.5), uz = Math.hypot(ex, ey); if (uz < 1 && uz > 0.01) { itX += ex / uz * (1 - uz) * 1.5; itY += ey / uz * (1 - uz) * 2; } continue; }
     if (o.tur !== 'balon' && o.tur !== 'kalamar') continue;
     const r = o.tur === 'balon' ? 12 * OL * (1 + (o.sis > 0 ? 0.9 : 0)) : 22 * OL, ex = b.x - o.x, ey = (b.y - o.y) * 1.3, uz = Math.hypot(ex, ey), min = L * 0.55 + r + 6 * OL;
     if (uz < min && uz > 0.1) { const g = (min - uz) / min; itX += ex / uz * g * 1.3; itY += ey / uz * g * 1.3; }
