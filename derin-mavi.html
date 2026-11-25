@@ -1429,7 +1429,7 @@ function balikGuncelle(b, dt) {
   if (b.ben && KUMANDA.aktif > 0) { KUMANDA.aktif -= dt; b.tx = kis(KUMANDA.x, A.x1, A.x2); b.ty = kis(KUMANDA.y, A.y1, A.y2); hiz = Math.max(hiz * (b.uyku ? 1.2 : 2.8), (b.uyku ? 50 : 115) * OL); b.yt = 4; if (Math.hypot(b.tx - b.x, b.ty - b.y) < 8 && !KUMANDA.basili) KUMANDA.aktif = Math.min(KUMANDA.aktif, 1.5); }
   else if (eh) { b.tx = eh.x; b.ty = eh.y; hiz *= 1.7; b.yt = 2; }
   else if (hedefYem) { b.tx = hedefYem.x; b.ty = hedefYem.y; hiz *= 2.6; }
-  else if (gc && b.ben && !geceGezi(b, dt)) { const m = magara(); b.tx = m.x; b.ty = SAHNE.kumY - 22 * OL; b.yt = 3; if (Math.hypot(b.tx - b.x, b.ty - b.y) < 30) b.geceUyku = true; }
+  else if (gc && b.ben && !geceGezi(b, dt)) { const m = magara(), h = (tohumRnd('uyku' + (b.k || 'ben'))() - 0.5); b.tx = m.x + h * 90 * OL; b.ty = SAHNE.kumY - (22 + Math.abs(h) * 50) * OL; b.yt = 3; if (Math.hypot(b.tx - b.x, b.ty - b.y) < 30 + b.L * 0.5) b.geceUyku = true; }
   else if (b.tx == null || b.yt <= 0 || Math.hypot(b.tx - b.x, b.ty - b.y) < 16) {
     b.tx = rnd(A.x1 + L, A.x2 - L);
     const yy = b.uyku ? [0.82, 0.97] : gc ? [0.5, 0.95] : tm; b.ty = A.y1 + (A.y2 - A.y1) * rnd(yy[0], yy[1]); if (gc) hiz *= 0.6;
@@ -1441,6 +1441,16 @@ function balikGuncelle(b, dt) {
   const dx = b.tx - b.x, dy = b.ty - b.y, d = Math.hypot(dx, dy) || 1;
   const yav = Math.min(1, d / 60);
   b.vx += (dx / d * hiz * yav - b.vx) * Math.min(1, dt * 1.6); b.vy += (dy / d * hiz * yav * 0.7 - b.vy) * Math.min(1, dt * 1.6);
+  /* birbirinin içine girmesinler: çok yaklaşan balıklar yumuşakça ayrılır (dikeyde daha çok, yan yana dizilmek yerine üst üste sıralanır) */
+  let itX = 0, itY = 0;
+  for (const o of BAL.values()) {
+    if (o === b || !o.L || !o.d || (o.d.a | 0) === 0 && (b.d.a | 0) !== 0 && o.L < L * 0.4) continue;
+    const ex = b.x - o.x, ey = (b.y - o.y) * 1.5, uz = Math.hypot(ex, ey), min = (L + o.L) * 0.55 + 8 * OL;
+    if (uz >= min) continue;
+    const g = (min - uz) / min, nx = uz > 0.5 ? ex / uz : (b.k > o.k ? 1 : -1) * 0.3, ny = uz > 0.5 ? ey / uz : (b.k > o.k ? 1 : -1);
+    itX += nx * g; itY += ny * g;
+  }
+  if (itX || itY) { const k = (60 + L * 1.6) * OL; b.vx += itX * k * dt * 3; b.vy += itY * k * dt * 4.5; b.x += itX * k * 0.9 * dt; b.y += itY * k * 1.3 * dt; }
   const ox = b.x, oy = b.y;
   b.x = kis(b.x + b.vx * dt, A.x1, A.x2); b.y = kis(b.y + b.vy * dt, A.y1, A.y2);
   if (b.ben && S && (KUMANDA.aktif > 0 || KUMANDA.atil > 0 || ESLIK)) hareketAcik(Math.hypot(b.x - ox, b.y - oy) / OL * (KUMANDA.atil > 0 ? 2.5 : 1));
@@ -4873,7 +4883,7 @@ else if (!S) { girisGoster(); yerliKur(); }
 else { ilerlet(); gunlukGorevler(); gorevKontrol(); basarimKontrol(); kaydet(false); panelAc(); if (olumKontrol()) { } else if (bekleyenSecim()) setTimeout(secimAc, 700); else if (!S.kumandaOgrendi) setTimeout(() => duyur(T('👆 Yeni: suya dokun, balığın oraya yüzsün. Parlayan planktonları ye!', '👆 New: tap the water and your fish swims there. Eat the glowing plankton!'), 1), 1200); }
 NET.baslat().then(() => { if (S && !girisAcik) agKur(); else uiGuncelle(); });
 requestAnimationFrame(kare);
-window.DM = { durum: () => ({ S, BAL, NET, AV, ALAN, PLK, YIR, CNL, GZ, SAHNE, INS, DENIZ }), eko: o => { Object.assign(ekoS(), o); }, ekoIleri: h => ekoIlerlet(h), deniz: v => { DENIZ.sabit = v == null ? null : kis(+v, 0, 1); DENIZ.d = DENIZ.sabit ?? DENIZ.d; }, kazan: m => { kazan(m, { sinirsiz: true, tokBagimsiz: true }); kaydet(); uiGuncelle(); }, avBitir, gz: k => { GZ.o = null; gzBaslat(k); }, ins: k => { INS.o = null; INS.tak = null; insBaslat(k); }, sifirla: () => { localStorage.removeItem(KEY); location.reload(); } };
+window.DM = { durum: () => ({ S, BAL, NET, AV, ALAN, PLK, YIR, CNL, GZ, SAHNE, INS, DENIZ }), eko: o => { Object.assign(ekoS(), o); }, kalabalik: n => { demoBaliklar = new Map(Array.from({ length: n }, (_, i) => [`t${i}`, { ad: 'Test' + i, d: { a: 3, tr: ['palyaco', 'cerrah', 'melek'][i % 3], al: 'resif', r: 0, z: [] }, gun: 3, id: 't' + i }])); balikSenk(); }, ekoIleri: h => ekoIlerlet(h), deniz: v => { DENIZ.sabit = v == null ? null : kis(+v, 0, 1); DENIZ.d = DENIZ.sabit ?? DENIZ.d; }, kazan: m => { kazan(m, { sinirsiz: true, tokBagimsiz: true }); kaydet(); uiGuncelle(); }, avBitir, gz: k => { GZ.o = null; gzBaslat(k); }, ins: k => { INS.o = null; INS.tak = null; insBaslat(k); }, sifirla: () => { localStorage.removeItem(KEY); location.reload(); } };
 })();
 </script>
 <script data-goatcounter="https://erdevelop.goatcounter.com/count" async src="//gc.zgo.at/count.js"></script>
