@@ -544,6 +544,7 @@ export async function kur3D({ tuval, kalite }) {
           c.yaw = c.yaw == null ? hedef : c.yaw + (hedef - c.yaw) * Math.min(1, dt * 3);
           c.g.rotation.set(o.tur === 'top' ? 0.3 : 0, c.yaw, o.tur === 'top' ? -o.don : 0);
           yuzenOyna(c.g, o.tur, o, t);
+          if (o.sak != null) { /* orfoz oyuğunda: gövde gölgede kararır */ const k = 1 - Math.min(1, o.sak) * 0.7; if (c.sakK !== k) { c.sakK = k; c.g.traverse(m => { if (!m.isMesh || !m.material || !m.material.color) return; const ms = Array.isArray(m.material) ? m.material : [m.material]; for (const mt of ms) { if (!mt.userData.renk0) mt.userData.renk0 = mt.color.clone(); mt.color.copy(mt.userData.renk0).multiplyScalar(k); } }); } }
         }
         for (const [id, c] of YZN) if (!gor.has(id)) { sahne.remove(c.g); YZN.delete(id); }
       }
