@@ -912,7 +912,7 @@ async function g3Baslat() {
 function g3Durum() {
   const L = [];
   for (const [id, b] of BAL) { if (!b.d || (b.d.a | 0) === 0 || !b.L) continue; L.push({ id, tur: b.d.a >= 2 && b.d.tr ? b.d.tr : 'yavru', x: b.x, y: b.y, L: b.L, yon: b.yon, faz: b.faz, vx: b.vx, vy: b.vy, uyku: b.uyku || b.geceUyku, der: b.der || 0, dans: b._dans }); }
-  return { baliklar: L, gece: geceDegeri(), isik: typeof havaIsik === 'function' ? havaIsik(zaman) : 1, akinti: typeof HV !== 'undefined' ? HV.akinti : 1, deniz: DENIZ.d, dalgaA: dalgaGenlik(), sy: insSY(), eko: S && S.eko ? { beyaz: S.eko.beyaz, buyume: S.eko.buyume, koloni: S.eko.koloni } : null, canlilar: g3Canlilar(), yuzenler: g3Yuzenler(), insan: g3Insan() };
+  return { baliklar: L, gece: geceDegeri(), isik: typeof havaIsik === 'function' ? havaIsik(zaman) : 1, akinti: typeof HV !== 'undefined' ? HV.akinti : 1, deniz: DENIZ.d, dalgaA: dalgaGenlik(), sy: insSY(), eko: S && S.eko ? { beyaz: S.eko.beyaz, buyume: S.eko.buyume, koloni: S.eko.koloni, cayir: S.eko.cayir, yosun: S.eko.yosun, gun: ekoGun() } : null, canlilar: g3Canlilar(), yuzenler: g3Yuzenler(), insan: g3Insan() };
 }
 let W = 0, H = 0, DPR = 1, OL = 1, ALAN = { x1: 0, x2: 0, y1: 0, y2: 0, kum: 0 };
 let SAHNE = null, zaman = 0;
@@ -1167,9 +1167,10 @@ function mercanCiz(c, m, y, tm) {
   c.restore();
 }
 /* canlı: yapraklı yosun */
-function yosunCiz(c, y, t, kumY) {
+function yosunCiz(c, y, t, kumY, olc = 1, sol = 0) {
+  if (sol > 0) y = { ...y, c: karis(y.c, '#8A7444', sol * 0.85) };
   for (let k = 0; k < y.k; k++) {
-    const bx = y.x + k * 9 * OL, hh = y.h * (1 - k * 0.22), pts = [];
+    const bx = y.x + k * 9 * OL, hh = y.h * olc * (1 - k * 0.22), pts = [];
     for (let i = 0; i <= 10; i++) { const u = i / 10; pts.push([bx + Math.sin(t * 0.8 + y.faz + u * 2.6 + k) * 16 * (0.75 + HV.akinti * 0.4) * u * u * OL + Math.sin(t * 1.7 + u * 6) * 2 * u, kumY + 6 - hh * u]); }
     c.strokeStyle = koyu(y.c, 0.25 + k * 0.1); c.lineWidth = (2.6 - k * 0.6) * OL; c.lineCap = 'round'; c.beginPath(); pts.forEach((p, i) => i ? c.lineTo(p[0], p[1]) : c.moveTo(p[0], p[1])); c.stroke();
     for (let i = 1; i < pts.length; i++) {
@@ -1181,9 +1182,10 @@ function yosunCiz(c, y, t, kumY) {
     }
   }
 }
-function cimCiz(c, m, t, kumY) {
+function cimCiz(c, m, t, kumY, olc = 1, sol = 0) {
+  if (sol > 0) m = { ...m, c: karis(m.c, '#9A8650', sol * 0.85) };
   for (let i = 0; i < m.n; i++) {
-    const bx = m.x + (i - m.n / 2) * 3 * OL, h = m.h * (0.7 + ((i * 37) % 10) / 25), sw = Math.sin(t * 1.1 + m.faz + i * 0.7) * 8 * OL;
+    const bx = m.x + (i - m.n / 2) * 3 * OL, h = m.h * olc * (0.7 + ((i * 37) % 10) / 25) * (1 - sol * 0.25), sw = Math.sin(t * 1.1 + m.faz + i * 0.7) * 8 * OL;
     c.strokeStyle = i % 2 ? m.c : koyu(m.c, 0.18); c.lineWidth = 1.6 * OL; c.beginPath(); c.moveTo(bx, kumY + 5); c.quadraticCurveTo(bx + sw * 0.3, kumY + 5 - h * 0.6, bx + sw, kumY + 5 - h); c.stroke();
   }
 }
@@ -1253,11 +1255,11 @@ function arkaPlan(c, t) {
   gzArkaCiz(c);
   hedefSusleri(c, t, 'arka');
   /* yosunlar (kökleri kumun arkasında kalır) */
-  for (const y of SAHNE.yosun) yosunCiz(c, y, t, kumY);
+  { const gun = ekoGun(), e = S && S.eko; SAHNE.yosun.forEach((y, i) => { const [o, sl] = e ? bitkiYasam(gun, i * 7.31 + 1, [10, 24], e.yosun) : [1, 0]; y.olc = o; if (o > 0.03) yosunCiz(c, y, t, kumY, o, sl); }); }
   if (SAHNE.zemin) { c.drawImage(SAHNE.zemin, 0, 0, W, H); ekoZeminCiz(c, t); }
   else { c.fillStyle = A.kum; c.fillRect(0, kumY, W, H - kumY); }
   kostikCiz(c, t);
-  for (const m of SAHNE.cim) cimCiz(c, m, t, kumY);
+  { const gun = ekoGun(), e = S && S.eko; SAHNE.cim.forEach((m, i) => { const [o, sl] = e ? bitkiYasam(gun, i * 3.17 + 2, [5, 13], e.cayir) : [1, 0]; if (o > 0.03) cimCiz(c, m, t, kumY, o, sl); }); }
   for (const a of SAHNE.anemon) anemonCiz(c, a, t, kumY);
   { const bz = S && S.eko ? S.eko.beyaz : 0; if (bz > 0.05) c.filter = `saturate(${(1 - bz * 0.85).toFixed(2)}) brightness(${(1 + bz * 0.3).toFixed(2)})`; duvarCanliCiz(c, t); c.filter = 'none'; }
   sakliCiz(c);
@@ -3235,7 +3237,7 @@ function yirticiKare(c, dt) {
     for (const x of BAL.values()) if (!x.ben && Math.abs(x.x - YIR.x) < 200) { x.ty = ALAN.y2; x.yt = 2; }
     if (b && !YIR.kontrol && Math.abs(YIR.x - b.x) < 30) {
       YIR.kontrol = true;
-      const m = magara(), yosunda = SAHNE.yosun.some(y => Math.abs(y.x - b.x) < 34 * OL && b.y > SAHNE.kumY - y.h * 0.95), magarada = Math.hypot(m.x - b.x, SAHNE.kumY - 30 * OL - b.y) < 100 * OL || (SAHNE.duvar && Math.hypot(SAHNE.duvar.mg.x - b.x, SAHNE.kumY - SAHNE.duvar.mg.h * 0.4 - b.y) < SAHNE.duvar.mg.w * 1.6);
+      const m = magara(), yosunda = SAHNE.yosun.some(y => (y.olc ?? 1) > 0.3 && Math.abs(y.x - b.x) < 34 * OL && b.y > SAHNE.kumY - y.h * (y.olc ?? 1) * 0.95), magarada = Math.hypot(m.x - b.x, SAHNE.kumY - 30 * OL - b.y) < 100 * OL || (SAHNE.duvar && Math.hypot(SAHNE.duvar.mg.x - b.x, SAHNE.kumY - SAHNE.duvar.mg.h * 0.4 - b.y) < SAHNE.duvar.mg.w * 1.6);
       const g = gunVeri(); g.sakla = (g.sakla || 0);
       if (yosunda || magarada) { g.sakla++; istArt('sakla'); mutluEkle(2); if (g.sakla <= 5) { S.inci += 3; yaziUcur(b.x, b.y - 30, '🫧 +3'); } SES.basari(); duyur(T('😮‍💨 Saklandın, köpekbalığı seni görmedi! +3 inci', '😮‍💨 You hid and the shark missed you! +3 pearls'), 1); kaydet(false); }
       else { b.sersem = 1.2; mutluEkle(-3); duyur(T('😅 Köpekbalığı seni gördü ama aç değildi. Bir dahakine saklan!', '😅 The shark saw you but wasn’t hungry. Hide next time!')); }
@@ -4135,9 +4137,23 @@ ALBUM.push(
    Sayfa kapalıyken geçen zaman da hesaplanır (en çok 30 gün). Deneme: DM.eko({...}), DM.ekoIleri(saat)
    ===================================================================== */
 const EKO_KOL_MAX = 24;
+/* bitkilerin yaşam döngüsü (çayır ve yosun): her bitkinin kendi ömrü var; tohumdan filizlenir, büyür, olgunlaşır,
+   yaşlanınca sararıp eğilir, ölür ve bir süre sonra yerinde yenisi doğar. Kaplama (ekosistemden) kaç bitkinin
+   yaşayabileceğini belirler: ilkbahar-yaz çoğalır, kış ve fırtına seyreltir, kirli ve bulanık su zayıflatır.
+   döner: [boy 0..1, solma 0..1] */
+const frk = v => v - Math.floor(v);
+function bitkiYasam(gun, tohum, per, kaplama) {
+  const r1 = frk(Math.sin(tohum * 12.9898) * 43758.5453), r2 = frk(Math.sin(tohum * 78.233) * 12345.678), r3 = frk(Math.sin(tohum * 39.425) * 24634.633);
+  const P = per[0] + r1 * (per[1] - per[0]), a = frk(gun / P + r2);
+  let olc, sol = 0;
+  if (a < 0.08) olc = 0; else if (a < 0.35) { const k = (a - 0.08) / 0.27; olc = k * k * (3 - 2 * k); } else if (a < 0.85) olc = 1; else { const k = (a - 0.85) / 0.15; olc = 1 - k * 0.65; sol = k; }
+  return [olc * kis((kaplama - r3 * 0.97) / 0.06, 0, 1), sol];
+}
+const ekoGun = () => ekoSaat() / 864e5;
 function ekoS() {
   if (!S) return null;
   if (!S.eko) S.eko = { saglik: 0.8, buyume: 0.35, beyaz: 0, plk: 1, suru: 9, koloni: 3, kolY: 0, kolO: 0, olayK: '' };
+  if (S.eko.cayir == null) { S.eko.cayir = 0.85; S.eko.yosun = 0.85; }
   return S.eko;
 }
 const EKO_OLAY = {
@@ -4170,6 +4186,11 @@ function ekoAdim(h, sessiz) {
   e.buyume = kis(e.buyume + h * (e.saglik > 0.6 ? 0.0025 * (e.saglik - 0.6) / 0.4 : 0) - h * (e.beyaz > 0.6 ? 0.003 : 0), 0, 1);
   e.kolY += h * Math.max(0, e.saglik - 0.6) / 14; while (e.kolY >= 1) { e.kolY -= 1; if (e.koloni < EKO_KOL_MAX) e.koloni++; }
   if (e.beyaz > 0.8) { e.kolO += h / 48; if (e.kolO >= 1) { e.kolO = 0; if (e.koloni > 0) e.koloni--; } } else e.kolO = Math.max(0, e.kolO - h / 96);
+  /* çayır ve yosun kaplaması: mevsim, su temizliği, bulanıklık ve fırtına */
+  { const mvC = { ilkbahar: 0.95, yaz: 1, sonbahar: 0.7, kis: 0.42 }[mv] ?? 0.8, mvY = { ilkbahar: 0.85, yaz: 1, sonbahar: 0.62, kis: 0.38 }[mv] ?? 0.8;
+    const isik = e.plk > 1.7 ? 0.85 : 1, fir = HV.h === 'firtina';
+    const hc = kis(mvC * (0.35 + 0.65 * su) * isik, 0.05, 1), hy = kis(mvY * (0.35 + 0.65 * su) * isik * (fir ? 0.7 : 1), 0.05, 1);
+    e.cayir += (hc - e.cayir) * Math.min(1, h * (hc > e.cayir ? 0.012 : 0.02)); e.yosun += (hy - e.yosun) * Math.min(1, h * (hy > e.yosun ? 0.01 : fir ? 0.05 : 0.02)); }
   const sH2 = kis(3 + 15 * Math.min(1.6, e.plk) / 1.6 * (0.45 + 0.55 * e.saglik), 3, 22);
   e.suru += kis(sH2 - e.suru, -h * 0.6, h * 0.6);
   if (sessiz) return;
@@ -4206,7 +4227,7 @@ function ekoHiz(n) {
 }
 function ekoDurum() {
   const e = ekoS(); if (!e) return null; const ol = ekoOlay();
-  return { 'hız': EKO_HIZ + '×', 'sanal tarih': new Date(ekoSaat()).toLocaleString('tr-TR'), 'mevsim': HV.m, 'su temizliği': Math.round(S.su) + '%', 'resif sağlığı': Math.round(e.saglik * 100) + '%', 'beyazlama': Math.round(e.beyaz * 100) + '%', 'büyüme': Math.round(e.buyume * 100) + '%', 'koloni': e.koloni, 'plankton': +e.plk.toFixed(2), 'sardalya hedefi': Math.round(e.suru), 'sardalya şu an': YERLI.suru.length, 'olay': ol ? ol.tur : '-' };
+  return { 'hız': EKO_HIZ + '×', 'sanal tarih': new Date(ekoSaat()).toLocaleString('tr-TR'), 'mevsim': HV.m, 'su temizliği': Math.round(S.su) + '%', 'resif sağlığı': Math.round(e.saglik * 100) + '%', 'beyazlama': Math.round(e.beyaz * 100) + '%', 'büyüme': Math.round(e.buyume * 100) + '%', 'koloni': e.koloni, 'çayır': Math.round(e.cayir * 100) + '%', 'yosun': Math.round(e.yosun * 100) + '%', 'plankton': +e.plk.toFixed(2), 'sardalya hedefi': Math.round(e.suru), 'sardalya şu an': YERLI.suru.length, 'olay': ol ? ol.tur : '-' };
 }
 function ekoKare(dt) {
   if (!S || girisAcik) return;
@@ -4215,7 +4236,7 @@ function ekoKare(dt) {
     S.su = Math.max(0, (S.su ?? 100) - 0.22 * Math.max(0, EKO_HIZ - 1) * dt / 3600); /* hızlanan zamanda su da kirlenir */
     ekoZ += dt; if (ekoZ >= 0.5) { ekoAdim(ekoZ * EKO_HIZ / 3600); ekoZ = 0; }
     const el = $('ekoHizG'), e = ekoS(), ol = ekoOlay();
-    if (el && (el._t = (el._t || 0) - dt) <= 0) { el._t = 0.25; el.textContent = `⏩ ${EKO_HIZ}× · ${new Date(ekoSaat()).toLocaleString(T('tr-TR', 'en-GB'), { day: '2-digit', month: 'short', hour: '2-digit', minute: '2-digit' })}${ol ? ' · ' + EKO_OLAY[ol.tur].e + ' ' + T(EKO_OLAY[ol.tur].ad[0], EKO_OLAY[ol.tur].ad[1]) : ''}\n🪸 ${Math.round(e.saglik * 100)}%  🤍 ${Math.round(e.beyaz * 100)}%  🌿 ${Math.round(e.buyume * 100)}%  🆕 ${e.koloni}  🦠 ${e.plk.toFixed(2)}  🐟 ${YERLI.suru.length}  💧 ${Math.round(S.su)}%`; }
+    if (el && (el._t = (el._t || 0) - dt) <= 0) { el._t = 0.25; el.textContent = `⏩ ${EKO_HIZ}× · ${new Date(ekoSaat()).toLocaleString(T('tr-TR', 'en-GB'), { day: '2-digit', month: 'short', hour: '2-digit', minute: '2-digit' })}${ol ? ' · ' + EKO_OLAY[ol.tur].e + ' ' + T(EKO_OLAY[ol.tur].ad[0], EKO_OLAY[ol.tur].ad[1]) : ''}\n🪸 ${Math.round(e.saglik * 100)}%  🤍 ${Math.round(e.beyaz * 100)}%  🌿 ${Math.round(e.buyume * 100)}%  🆕 ${e.koloni}  🌾 ${Math.round(e.cayir * 100)}%  🦠 ${e.plk.toFixed(2)}  🐟 ${YERLI.suru.length}  💧 ${Math.round(S.su)}%`; }
   } else { ekoZ += dt; if (ekoZ >= 5) { ekoAdim(ekoZ / 3600); ekoZ = 0; } }
   const ol = ekoOlay(), e = ekoS();
   if (ol && e.olayK !== ol.k) { e.olayK = ol.k; const O = EKO_OLAY[ol.tur]; duyur(`${O.e} ${T(O.ad[0], O.ad[1])}: ${T(O.d[0], O.d[1])}`, 1); kaydet(false); }
@@ -4274,6 +4295,7 @@ function ekoAc() {
     ${cubuk('🤍 ' + T('Beyazlama', 'Bleaching'), e.beyaz, '#E8E4DA', e.beyaz < 0.1 ? T('yok', 'none') : Math.round(e.beyaz * 100) + '%')}
     ${cubuk('🌿 ' + T('Mercan büyümesi', 'Coral growth'), e.buyume, '#FF8FB1', Math.round(e.buyume * 100) + '%')}
     ${cubuk('🆕 ' + T('Yeni koloniler', 'New colonies'), e.koloni / EKO_KOL_MAX, '#B98CFF', e.koloni + ' / ' + EKO_KOL_MAX)}
+    ${cubuk('🌾 ' + T('Deniz çayırı ve yosun', 'Seagrass and kelp'), (e.cayir + e.yosun) / 2, '#7CC96B', Math.round((e.cayir + e.yosun) * 50) + '%')}
     ${cubuk('🦠 ' + T('Plankton', 'Plankton'), e.plk / 2.2, '#7FE0FF', plkAd)}
     ${cubuk('🐟 ' + T('Sardalya sürüsü', 'Sardine school'), sr / 22, '#B8CCDA', sr + T(' balık', ' fish'))}
     <p style="margin-top:12px"><b>${T('Bu hafta', 'This week')}:</b> ${O ? `${O.e} ${T(O.ad[0], O.ad[1])}. ${T(O.d[0], O.d[1])}` : T('Sakin bir hafta.', 'A quiet week.')}</p>

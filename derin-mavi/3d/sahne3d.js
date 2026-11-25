@@ -188,16 +188,34 @@ export async function kur3D({ tuval, kalite }) {
     sahne.add(PARCA);
   }
 
+  /* bitki yaşam döngüsü (2D ile aynı formül): boyu ve rengi ekosistem gününe ve kaplamaya göre */
+  const frk = v => v - Math.floor(v), kahve = new THREE.Color('#8A7444'), tc = new THREE.Color();
+  function bitkiYasam(gun, tohum, per, kaplama) {
+    const r1 = frk(Math.sin(tohum * 12.9898) * 43758.5453), r2 = frk(Math.sin(tohum * 78.233) * 12345.678), r3 = frk(Math.sin(tohum * 39.425) * 24634.633);
+    const P = per[0] + r1 * (per[1] - per[0]), a = frk(gun / P + r2); let olc, sol = 0;
+    if (a < 0.08) olc = 0; else if (a < 0.35) { const k = (a - 0.08) / 0.27; olc = k * k * (3 - 2 * k); } else if (a < 0.85) olc = 1; else { const k = (a - 0.85) / 0.15; olc = 1 - k * 0.65; sol = k; }
+    return [olc * THREE.MathUtils.clamp((kaplama - r3 * 0.97) / 0.06, 0, 1), sol];
+  }
+  function bitkiGuncelle(me, gun, kaplama, per) {
+    const B = me && me.userData.bitki; if (!B) return; const p = me.geometry.attributes.position, c = me.geometry.attributes.color;
+    for (const [y0, h, b, n, tohum] of B.yap) { const [o, sl] = bitkiYasam(gun, tohum, per, kaplama), hh = h * Math.max(0.001, o) * (1 - sl * 0.2);
+      for (let v = 0; v < n; v++) { const i = b + v, u = (v >> 1) / (n / 2 - 1); p.setY(i, y0 + u * hh); tc.setRGB(B.renk[i * 3], B.renk[i * 3 + 1], B.renk[i * 3 + 2]).lerp(kahve, sl * 0.8); c.setXYZ(i, tc.r, tc.g, tc.b); } }
+    p.needsUpdate = true; c.needsUpdate = true; me.geometry.computeBoundingSphere();
+  }
+  let CAYIR3 = null, YOSUN3 = null, bitkiSon = '', bitkiT = 0;
+
   /* ---------- çayır ve yosun ---------- */
   function cayir(adet, alan, boy, gen, renk1, renk2, tohum) {
     let s = tohum; const rnd = () => (s = (s * 16807) % 2147483647) / 2147483647;
-    const pos = [], boyA = [], fazA = [], col = [], idx = []; const c1 = new THREE.Color(renk1), c2 = new THREE.Color(renk2);
+    const pos = [], boyA = [], fazA = [], col = [], idx = [], yap = []; const c1 = new THREE.Color(renk1), c2 = new THREE.Color(renk2);
     for (let k = 0; k < adet; k++) {
       const x = alan[0] + rnd() * (alan[1] - alan[0]), z = alan[2] + rnd() * (alan[3] - alan[2]), y0 = zeminY(x, z) - 0.05, h = boy * (0.5 + rnd() * 0.8), a = rnd() * Math.PI, ca = Math.cos(a) * gen, sa = Math.sin(a) * gen, f = rnd() * 9, n = 10, b = pos.length / 3;
       for (let i = 0; i <= n; i++) { const u = i / n, w = 1 - u * 0.7; pos.push(x - ca * w, y0 + u * h, z - sa * w, x + ca * w, y0 + u * h, z + sa * w); boyA.push(u, u); fazA.push(f, f); const c = c1.clone().lerp(c2, u); col.push(c.r, c.g, c.b, c.r, c.g, c.b); if (i < n) idx.push(b + i * 2, b + i * 2 + 1, b + i * 2 + 2, b + i * 2 + 1, b + i * 2 + 3, b + i * 2 + 2); }
+      yap.push([y0, h, b, (n + 1) * 2, k * 1.913 + tohum]);
     }
     const g = new THREE.BufferGeometry(); g.setAttribute('position', new THREE.Float32BufferAttribute(pos, 3)); g.setAttribute('aBoy', new THREE.Float32BufferAttribute(boyA, 1)); g.setAttribute('aFaz', new THREE.Float32BufferAttribute(fazA, 1)); g.setAttribute('color', new THREE.Float32BufferAttribute(col, 3)); g.setIndex(idx); g.computeVertexNormals();
-    const me = new THREE.Mesh(g, yama(new THREE.MeshStandardMaterial({ vertexColors: true, side: THREE.DoubleSide, roughness: 0.75 }), { salin: 1 })); me.castShadow = true; me.receiveShadow = true; return me;
+    const me = new THREE.Mesh(g, yama(new THREE.MeshStandardMaterial({ vertexColors: true, side: THREE.DoubleSide, roughness: 0.75 }), { salin: 1 })); me.castShadow = true; me.receiveShadow = true;
+    me.userData.bitki = { yap, renk: col.slice() }; return me;
   }
 
   /* ---------- modeller ---------- */
@@ -289,8 +307,8 @@ export async function kur3D({ tuval, kalite }) {
     for (let i = 0; i < Math.round(VW / 2.5); i++) koy(kayalar[i % 4], ara(-yarim - 4, yarim + 4), ara(-20, -11), ara(1.2, 2.6), r() * 6.28);
     for (let i = 0; i < Math.round((VW * 2.2 + 14) * cok); i++) { const k = mercanlar[Math.floor(r() * mercanlar.length)]; koy(k, ara(-yarim - 5, yarim + 5), ara(-21, -10), (k.startsWith('masa') ? ara(0.6, 1.1) : ara(0.9, 1.7)), k.startsWith('yelpaze') ? ara(-0.5, 0.5) : r() * 6.28); }
     for (let i = 0; i < Math.max(2, Math.round(VW / 7)); i++) koy(i % 2 ? 'anemon_1' : 'anemon_0', ara(-yarim + 2, yarim - 2), ara(-4, -1.6), ara(0.9, 1.2), r() * 6);
-    ORTAM.add(cayir(Math.round(VW * 9), [-yarim, yarim, 0.6, 4], 0.55, 0.022, '#3f7a2e', '#9bc45a', 7));
-    ORTAM.add(cayir(Math.round(VW * 2.4), [-yarim, yarim, -13, -6], 4.2, 0.16, '#2f5a26', '#87a84a', 11));
+    CAYIR3 = cayir(Math.round(VW * 9), [-yarim, yarim, 0.6, 4], 0.55, 0.022, '#3f7a2e', '#9bc45a', 7); ORTAM.add(CAYIR3);
+    YOSUN3 = cayir(Math.round(VW * 2.4), [-yarim, yarim, -13, -6], 4.2, 0.16, '#2f5a26', '#87a84a', 11); ORTAM.add(YOSUN3); bitkiSon = '';
     for (const h of HUZME) h.position.set(-VW / 2 + h.userData.ux * VW + (Math.random() - 0.5), 6, -9 + Math.random() * 7);
   }
 
@@ -389,6 +407,8 @@ export async function kur3D({ tuval, kalite }) {
       /* ekosistem: beyazlama, büyüme ve yeni koloniler */
       if (d.eko) {
         const e = d.eko; U.agar.value += (e.beyaz * 0.85 - U.agar.value) * Math.min(1, dt * 2);
+        if (e.gun != null) { const bk = (e.gun * 40).toFixed(0) + '|' + e.cayir.toFixed(2) + '|' + e.yosun.toFixed(2); /* günün 1/40'ında bir güncelle */
+          if (bk !== bitkiSon && performance.now() - (bitkiT || 0) > 250) { bitkiSon = bk; bitkiT = performance.now(); bitkiGuncelle(CAYIR3, e.gun, e.cayir, [5, 13]); bitkiGuncelle(YOSUN3, e.gun, e.yosun, [10, 24]); } }
         const anah = e.buyume.toFixed(2) + '|' + e.koloni + '|' + MERCAN3.length;
         if (anah !== ekoSon) { ekoSon = anah; const bf = 0.85 + 0.3 * e.buyume;
           for (const o of MERCAN3) o.scale.setScalar(o.userData.s0 * bf);
