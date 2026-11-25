@@ -333,6 +333,19 @@ export async function kur3D({ tuval, kalite }) {
     return { o, yuz };
   }
   const YZN = new Map(); let INS3 = null;
+  /* parçacıklar: 0 kabarcık (halka, parlak kenar), 1 yem (dolu kahve), 2 plankton (yumuşak parıltı), 3 altın kabarcık, 4 altın plankton */
+  const PMAX = 600, pPos = new Float32Array(PMAX * 3), pBoy = new Float32Array(PMAX), pTur = new Float32Array(PMAX);
+  const pGeo = new THREE.BufferGeometry(); pGeo.setAttribute('position', new THREE.BufferAttribute(pPos, 3)); pGeo.setAttribute('aBoy', new THREE.BufferAttribute(pBoy, 1)); pGeo.setAttribute('aTur', new THREE.BufferAttribute(pTur, 1));
+  const pMat = new THREE.ShaderMaterial({ transparent: true, depthWrite: false, uniforms: { uPR: { value: 1 }, uGece: { value: 0 } },
+    vertexShader: 'attribute float aBoy; attribute float aTur; uniform float uPR; varying float vTur; void main(){ vTur = aTur; vec4 mv = modelViewMatrix * vec4(position, 1.0); gl_Position = projectionMatrix * mv; gl_PointSize = aBoy * uPR * (aTur > 1.5 && aTur != 3.0 ? 5.6 : 2.4); }',
+    fragmentShader: `varying float vTur; uniform float uGece; void main(){ vec2 q = gl_PointCoord * 2.0 - 1.0; float r = length(q); if (r > 1.0) discard; vec4 c;
+      if (vTur < 0.5 || abs(vTur - 3.0) < 0.5) { /* kabarcık: ince parlak kenar, içi hafif, üstte ışık lekesi */
+        vec3 k = abs(vTur - 3.0) < 0.5 ? vec3(1.0, 0.85, 0.35) : vec3(0.92, 0.98, 1.0); float kenar = smoothstep(0.62, 0.9, r) * (1.0 - smoothstep(0.9, 1.0, r)); float lek = smoothstep(0.35, 0.0, length(q - vec2(-0.35, 0.4)));
+        c = vec4(k, kenar * 0.75 + lek * 0.7 + 0.06); }
+      else if (vTur < 1.5) { float a = 1.0 - smoothstep(0.75, 1.0, r); vec3 k = mix(vec3(0.9, 0.62, 0.33), vec3(1.0, 0.85, 0.6), smoothstep(0.6, -0.4, q.x + q.y)); c = vec4(k, a); }
+      else { float a = exp(-r * r * 4.0); vec3 k = vTur > 3.5 ? vec3(1.0, 0.86, 0.38) : vec3(0.62, 1.0, 0.9); c = vec4(k * (1.0 + uGece * 0.6), a * (0.85 + uGece * 0.3)); }
+      gl_FragColor = c; }` });
+  const PNOK = new THREE.Points(pGeo, pMat); PNOK.frustumCulled = false; PNOK.renderOrder = 5; sahne.add(PNOK);
 
   /* ---------- son işlem ---------- */
   const komp = new EffectComposer(R);
@@ -373,7 +386,7 @@ export async function kur3D({ tuval, kalite }) {
     yuzey.position.y = Hc + (H / 2) * k + 0.6;
     if (yeniden) ortamKur(VW, magX);
   }
-  let berrakP = 0.8;
+  let berrakP = 0.8, gunesAci = { x: 18, sic: 0, yuk: 1 };
   const CAN = new Map(), MERCAN_K = new Set(), KOL_MAX = 24; let MERCAN3 = [], KOLONI3 = [], ekoSon = '';
   const dunya = (x, y) => new THREE.Vector3((x - M.W / 2) * M.k, M.Hc + (M.H / 2 - y) * M.k, 0);
 
@@ -394,7 +407,11 @@ export async function kur3D({ tuval, kalite }) {
       /* gece ve hava: ışık, sis ve renkler */
       gecePay += ((d.gece || 0) - gecePay) * Math.min(1, dt * 0.5);
       const g = gecePay, isik = d.isik == null ? 1 : d.isik;
-      gunes.intensity = 3.3 * (1 - 0.85 * g) * Math.min(1.35, isik); ay.intensity = 0.9 * g; hemi.intensity = 1.15 * (1 - 0.6 * g) * (0.75 + 0.25 * Math.min(1.2, isik));
+      /* güneşin günlük yolu: sabah soldan alçak ve turuncu, öğlen tepeden beyaz, akşam sağdan alçak ve kızıl */
+      { const sa = d.saat == null ? 12 : d.saat, u = THREE.MathUtils.clamp((sa - 6) / 12, 0, 1), yuk = Math.sin(Math.PI * u);
+        gunes.position.set(-30 + u * 60, 18 + yuk * 42, 14).normalize().multiplyScalar(32); const sic = 1 - THREE.MathUtils.smoothstep(yuk, 0.15, 0.6);
+        gunes.color.set('#ffffff').lerp(tmp.set('#ffae6a'), sic * 0.85); gunesAci = { x: -30 + u * 60, sic, yuk }; }
+      gunes.intensity = 3.3 * (1 - 0.85 * g) * Math.min(1.35, isik) * (0.55 + 0.45 * gunesAci.yuk); ay.intensity = 0.9 * g; hemi.intensity = 1.15 * (1 - 0.6 * g) * (0.75 + 0.25 * Math.min(1.2, isik));
       U.kostikGuc.value = KAL[kalite].kostik * (1 - 0.85 * g) * Math.min(1.35, isik);
       SIS.copy(SIS_G).lerp(SIS_N, g * 0.85);
       /* su berraklığı: yaz berrak (sis seyrek), plankton yeşili ya da fırtına kumu bulanıklaştırır */
@@ -461,6 +478,10 @@ export async function kur3D({ tuval, kalite }) {
         }
         for (const [id, c] of YZN) if (!gor.has(id)) { sahne.remove(c.g); YZN.delete(id); }
       }
+      /* kabarcık, yem ve plankton: 2D'deki yerlerinde 3D parçacık olarak */
+      if (d.parca) { const L = d.parca, n = Math.min(PMAX, L.length / 4);
+        for (let i = 0; i < n; i++) { const p = dunya(L[i * 4], L[i * 4 + 1]); pPos[i * 3] = p.x; pPos[i * 3 + 1] = p.y; pPos[i * 3 + 2] = 0.3; pBoy[i] = L[i * 4 + 2]; pTur[i] = L[i * 4 + 3]; }
+        pGeo.setDrawRange(0, n); pGeo.attributes.position.needsUpdate = true; pGeo.attributes.aBoy.needsUpdate = true; pGeo.attributes.aTur.needsUpdate = true; pMat.uniforms.uPR.value = R.getPixelRatio(); pMat.uniforms.uGece.value = gecePay; }
       /* yüzeyden gelenler: tekneler, dalgıçlar, denizaltı, robot */
       { const o = d.insan;
         if (!o) { if (INS3) { sahne.remove(INS3.g); INS3 = null; } }
@@ -504,7 +525,7 @@ export async function kur3D({ tuval, kalite }) {
         f.g.visible = true;
       }
       for (const [id, f] of BAL) if (!gorulen.has(id)) { sahne.remove(f.g); BAL.delete(id); }
-      if (KAL[kalite].post) { gunesUzak.set(kam.position.x + 18, 60, kam.position.z - 30).project(kam); huzmePass.uniforms.uGunes.value.set(gunesUzak.x * 0.5 + 0.5, Math.min(1.6, gunesUzak.y * 0.5 + 0.5)); huzmePass.uniforms.uGuc.value = 0.55 * (1 - g); komp.render(); }
+      if (KAL[kalite].post) { gunesUzak.set(kam.position.x + gunesAci.x * 0.6, 60, kam.position.z - 30).project(kam); huzmePass.uniforms.uGunes.value.set(gunesUzak.x * 0.5 + 0.5, Math.min(1.6, gunesUzak.y * 0.5 + 0.5)); huzmePass.uniforms.uGuc.value = 0.55 * (1 - g); komp.render(); }
       else R.render(sahne, kam);
     },
     /* fotoğraf için: hemen yeniden çiz ve tuvali döndür (çizim tamponu aynı görevde okunabilir) */

@@ -868,6 +868,14 @@ let G3 = null;
 const G3_CANLI = { yildiz: [11, 1], salyangoz: [8, 1], ermit: [9, 1], ahtapot: [14, 1], karides: [7, 0], dvatoz: [26, 1] };
 const G3_YUZEN = { balon: 2, kalamar: 1.8 }; /* 2D boyutu (s) → 3D model ölçeği */
 let g3Sira = 0;
+/* 3D parçacıklar: kabarcık, yem ve plankton (ekrandaki yerleri, piksel boyları ve türleri) */
+function g3Parca() {
+  const L = [];
+  for (const b of SAHNE.bks) L.push(b.x + Math.sin(b.f) * 4, b.y, b.r, b.altin ? 3 : 0);
+  for (const p of YEM) L.push(p.x, p.y, 3.4 * OL, 1);
+  for (const p of PLK) L.push(p.x, p.y, (p.a ? 5.5 : 4.2) * OL * Math.min(1, p.yas * 2), p.a ? 4 : 2);
+  return L;
+}
 function g3Insan() {
   const o = INS.o; if (!o || (o.tur === 'balikci' && o.uzak)) return null;
   o._g3 = o._g3 || ++g3Sira; const tekne = o.tur === 'balikci' || o.tur === 'yelkenli' || o.tur === 'surat';
@@ -912,7 +920,7 @@ async function g3Baslat() {
 function g3Durum() {
   const L = [];
   for (const [id, b] of BAL) { if (!b.d || (b.d.a | 0) === 0 || !b.L) continue; L.push({ id, tur: b.d.a >= 2 && b.d.tr ? b.d.tr : 'yavru', x: b.x, y: b.y, L: b.L, yon: b.yon, faz: b.faz, vx: b.vx, vy: b.vy, uyku: b.uyku || b.geceUyku, der: b.der || 0, dans: b._dans }); }
-  return { baliklar: L, gece: geceDegeri(), isik: typeof havaIsik === 'function' ? havaIsik(zaman) : 1, akinti: typeof HV !== 'undefined' ? HV.akinti : 1, deniz: DENIZ.d, dalgaA: dalgaGenlik(), sy: insSY(), eko: S && S.eko ? { berrak: S.eko.berrak ?? 0.8, bulanNeden: S.eko.bulanNeden, beyaz: S.eko.beyaz, buyume: S.eko.buyume, koloni: ekoKoloniGorunen(), cayir: S.eko.cayir, yosun: S.eko.yosun, gun: ekoGun() } : null, canlilar: g3Canlilar(), yuzenler: g3Yuzenler(), insan: g3Insan() };
+  return { baliklar: L, gece: geceDegeri(), isik: typeof havaIsik === 'function' ? havaIsik(zaman) : 1, akinti: typeof HV !== 'undefined' ? HV.akinti : 1, deniz: DENIZ.d, dalgaA: dalgaGenlik(), sy: insSY(), eko: S && S.eko ? { berrak: S.eko.berrak ?? 0.8, bulanNeden: S.eko.bulanNeden, beyaz: S.eko.beyaz, buyume: S.eko.buyume, koloni: ekoKoloniGorunen(), cayir: S.eko.cayir, yosun: S.eko.yosun, gun: ekoGun() } : null, canlilar: g3Canlilar(), yuzenler: g3Yuzenler(), insan: g3Insan(), parca: g3Parca(), saat: (() => { const d = new Date(simdi()); return d.getHours() + d.getMinutes() / 60; })() };
 }
 let W = 0, H = 0, DPR = 1, OL = 1, ALAN = { x1: 0, x2: 0, y1: 0, y2: 0, kum: 0 };
 let SAHNE = null, zaman = 0;
@@ -1233,11 +1241,11 @@ function arkaPlan(c, t) {
   c.save(); c.globalCompositeOperation = 'lighter';
   /* ışık hüzmeleri: ekranın üstündeki güneşten yelpaze gibi açılır, yavaşça salınır ve nefes alır */
   if (SAHNE.huzme) {
-    const kx = W * 0.56 + Math.sin(t * 0.05) * W * 0.04, ky = -H * 0.32, boy = Math.hypot(W, H) * 1.15;
+    const gd = gunesDurum(), kx = W * (0.18 + gd.u * 0.64) + Math.sin(t * 0.05) * W * 0.04, ky = -H * (0.22 + gd.yuk * 0.1), boy = Math.hypot(W, H) * 1.15;
     for (const h of SAHNE.hzm) {
       const al = havaIsik(t) * (derin ? 0.05 : 0.16) * Math.max(0, 0.45 + 0.55 * Math.sin(t * h.v + h.f)), gen = (60 + h.w * 90) * OL * (0.8 + 0.2 * Math.sin(t * h.v * 1.7 + h.f));
       if (al < 0.004) continue;
-      c.globalAlpha = al; c.save(); c.translate(kx, ky); c.rotate(h.a + Math.sin(t * 0.07 + h.f) * 0.03 * (1 + DENIZ.d * 2) + Math.sin(t * 0.8 + h.f * 3) * 0.012 * DENIZ.d); c.drawImage(SAHNE.huzme, -gen / 2, 0, gen, boy); c.restore();
+      c.globalAlpha = al; c.save(); c.translate(kx, ky); c.rotate(h.a + (0.5 - gd.u) * 0.5 + Math.sin(t * 0.07 + h.f) * 0.03 * (1 + DENIZ.d * 2) + Math.sin(t * 0.8 + h.f * 3) * 0.012 * DENIZ.d); c.drawImage(SAHNE.huzme, -gen / 2, 0, gen, boy); c.restore();
     }
     c.globalAlpha = 1;
   }
@@ -1523,10 +1531,10 @@ function ciz(dt) {
   yerliCiz(c); ekCanliGuncelleCiz(c, dt); if (!G3) geceCiz(c); canliCiz(c, true); plkGuncelleCiz(c, dt); ygGuncelleCiz(c, dt); topGuncelleCiz(c, dt);
   /* kabarcıklar */
   c.strokeStyle = 'rgba(255,255,255,.5)'; c.lineWidth = 1;
-  for (let i = SAHNE.bks.length - 1; i >= 0; i--) { const b = SAHNE.bks[i]; b.y -= (30 + b.r * 8) * dt; b.f += dt * 3; const x = b.x + Math.sin(b.f) * 4; if (b.y < 0) { SAHNE.bks.splice(i, 1); continue; } c.strokeStyle = b.altin ? 'rgba(255,215,90,.95)' : 'rgba(255,255,255,.5)'; c.lineWidth = b.altin ? 2 : 1; c.beginPath(); c.arc(x, b.y, b.r, 0, TAU); c.stroke(); }
+  for (let i = SAHNE.bks.length - 1; i >= 0; i--) { const b = SAHNE.bks[i]; b.y -= (30 + b.r * 8) * dt; b.f += dt * 3; const x = b.x + Math.sin(b.f) * 4; if (b.y < 0) { SAHNE.bks.splice(i, 1); continue; } if (G3) continue; c.strokeStyle = b.altin ? 'rgba(255,215,90,.95)' : 'rgba(255,255,255,.5)'; c.lineWidth = b.altin ? 2 : 1; c.beginPath(); c.arc(x, b.y, b.r, 0, TAU); c.stroke(); }
   /* yemler */
   for (let i = YEM.length - 1; i >= 0; i--) { const p = YEM[i]; if (p.y < SAHNE.kumY - 3) { p.y += 34 * dt; p.x += Math.sin(zaman * 3 + p.f) * 10 * dt; } else { p.yer = (p.yer || 0) + dt; if (p.yer > 6) { YEM.splice(i, 1); continue; } }
-    c.fillStyle = '#E5A35A'; c.beginPath(); c.arc(p.x, p.y, 3.2 * OL, 0, TAU); c.fill(); c.fillStyle = '#FFD9A0'; c.beginPath(); c.arc(p.x - 1, p.y - 1, 1.3 * OL, 0, TAU); c.fill(); }
+    if (!G3) { c.fillStyle = '#E5A35A'; c.beginPath(); c.arc(p.x, p.y, 3.2 * OL, 0, TAU); c.fill(); c.fillStyle = '#FFD9A0'; c.beginPath(); c.arc(p.x - 1, p.y - 1, 1.3 * OL, 0, TAU); c.fill(); } }
   /* balıklar: küçükler önde */
   const liste = [...BAL.values()].sort((a, b) => (b.L || 0) - (a.L || 0));
   for (const b of liste) balikGuncelle(b, dt);
@@ -2265,7 +2273,7 @@ function plkGuncelleCiz(c, dt) {
     if (DONMA > 0 && p.kac) { c.strokeStyle = 'rgba(200,240,255,.8)'; c.lineWidth = 1.2; c.beginPath(); c.arc(p.x, p.y, 9 * OL, 0, TAU); c.stroke(); }
     const r = (p.a ? 5.5 : 4.2) * OL, gr = c.createRadialGradient(p.x, p.y, 0, p.x, p.y, r * 2.8), gun = Math.min(1, p.yas * 2);
     gr.addColorStop(0, p.a ? 'rgba(255,243,176,' + gun + ')' : 'rgba(230,255,248,' + gun + ')'); gr.addColorStop(0.4, p.a ? 'rgba(255,210,80,' + 0.7 * gun + ')' : 'rgba(140,255,230,' + 0.6 * gun + ')'); gr.addColorStop(1, 'rgba(140,255,230,0)');
-    c.fillStyle = gr; c.beginPath(); c.arc(p.x, p.y, r * 2.8, 0, TAU); c.fill();
+    if (!G3) { c.fillStyle = gr; c.beginPath(); c.arc(p.x, p.y, r * 2.8, 0, TAU); c.fill(); }
   }
   /* dokunulan yerde halka */
   for (let i = KUMANDA.iz.length - 1; i >= 0; i--) { const z = KUMANDA.iz[i]; z.t -= dt; if (z.t <= 0) { KUMANDA.iz.splice(i, 1); continue; } c.strokeStyle = `rgba(255,255,255,${z.t})`; c.lineWidth = 2; c.beginPath(); c.arc(z.x, z.y, (0.7 - z.t) * 40 + 6, 0, TAU); c.stroke(); }
@@ -2823,6 +2831,8 @@ function oksaHareket(x, y) {
   }
 }
 let GECE_ZORLA = null;
+/* güneşin günlük yolu (2D): sabah soldan, akşam sağdan; alçakken ışık turuncuya döner */
+function gunesDurum() { const d = new Date(simdi()), sa = d.getHours() + d.getMinutes() / 60, u = kis((sa - 6) / 12, 0, 1), yuk = Math.sin(Math.PI * u); return { u, yuk, sic: 1 - Math.min(1, Math.max(0, (yuk - 0.15) / 0.45)) }; }
 const geceDegeri = () => { if (GECE_ZORLA != null) return GECE_ZORLA; const d = new Date(simdi()), s = d.getHours() + d.getMinutes() / 60; if (s >= 21 || s < 5) return 1; if (s >= 19) return (s - 19) / 2; if (s < 7) return 1 - (s - 5) / 2; return 0; };
 let mutluBalonZ = 30;
 
@@ -4828,6 +4838,8 @@ function havaCiz(c, t, dt) {
   if (!SAHNE || !HV.h) return;
   const derin = SAHNE.tm === 'derin', sy = typeof insSY === 'function' ? insSY() : 30, gece = geceDegeri();
   c.save();
+  /* sabah ve akşam ışığı: güneş alçakken su altı turuncuya ve altına döner */
+  { const gd = gunesDurum(), a = gd.sic * (1 - gece) * (derin ? 0.3 : 1) * Math.min(1.2, havaIsik(t)); if (a > 0.03) { c.globalCompositeOperation = 'soft-light'; const g = c.createLinearGradient(gd.u < 0.5 ? 0 : W, 0, gd.u < 0.5 ? W : 0, H * 0.6); g.addColorStop(0, `rgba(255,150,70,${(a * 0.55).toFixed(3)})`); g.addColorStop(1, `rgba(255,190,120,${(a * 0.15).toFixed(3)})`); c.fillStyle = g; c.fillRect(0, 0, W, H); c.globalCompositeOperation = 'source-over'; } }
   /* ayaz: yüzeyde ince buz, çatlaklardan ışık */
   if (HV.h === 'ayaz' && !derin) {
     const g = c.createLinearGradient(0, 0, 0, sy + 10 * OL); g.addColorStop(0, 'rgba(235,248,255,.55)'); g.addColorStop(1, 'rgba(210,235,250,.12)'); c.fillStyle = g; c.fillRect(0, 0, W, sy + 10 * OL);
