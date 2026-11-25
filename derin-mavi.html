@@ -1421,6 +1421,10 @@ const KS_TUR = {
 };
 /* avcı oyuncu türleri: bunlar yaklaşınca küçük sürüler kaçışır */
 const AVCI_TUR = new Set(['orkinos', 'yelken', 'lambuka', 'engerek', 'fener', 'uskumru']);
+/* küçük sürülerin yaşam koşulu: plankton (besin), resif sağlığı ve mevsim; 0.6 civarı iyi bir resif */
+const ksIyi = e => !e ? 0.6 : Math.min(e.plk ?? 1, 1.4) / 1.4 * (0.35 + 0.65 * (e.saglik ?? 0.8)) * ({ kis: 0.6, ilkbahar: 1.25 }[HV.m] || 1);
+/* yeni balık katılma aralığı (gerçek saniye): iyi koşulda 4-6 dk; koşul kötüleştikçe uzar, çok kötüyse neredeyse durur */
+const ksKatilim = e => rnd(240, 360) / kis(ksIyi(e) / 0.6, 0.12, 1.3);
 const ksTurler = tm => Object.keys(KS_TUR).filter(k => !KS_TUR[k].avci && KS_TUR[k].alan.includes(tm)).slice(0, 3);
 const KS = { g: [], z: 0, duyuruT: -999, ahtT: 0, yirGecis: 0 };
 const ORF = { o: null };
@@ -1461,7 +1465,14 @@ function ksGuncelle(dt) {
   const A = ALAN, gece = geceDegeri(), e = S && S.eko, tehdit = ksTehdit();
   /* ekosistemdeki sayıyla eşitle: yeni doğan yavaşça belirir, eksilen sessizce ayrılır */
   KS.z -= dt; if (KS.z <= 0) { KS.z = 0.8; for (const g of KS.g) { const n = e && e.ks && e.ks[g.tur] != null ? e.ks[g.tur] : KS_TUR[g.tur].n; if (g.uy.length < n) g.uy.push(ksUye(g, g.x + rnd(-30, 30), g.y + rnd(-15, 15), true)); else if (g.uy.length > n) g.uy.pop(); } }
+  const hk = Math.min(6, Math.sqrt(EKO_HIZ || 1));
   for (const g of KS.g) {
+    /* katılım: eksik sürüye ekranın kenarından yeni bir balık gelip katılır (avlananların yeri böyle dolar) */
+    const tamam = KS_TUR[g.tur].n, sayi = e && e.ks && e.ks[g.tur] != null ? e.ks[g.tur] : tamam;
+    if (g.katZ == null) g.katZ = ksKatilim(e);
+    if (sayi < tamam) { g.katZ -= dt * hk; if (g.katZ <= 0 && e) { g.katZ = ksKatilim(e); e.ks = e.ks || {}; e.ks[g.tur] = sayi + 1;
+      const sol = Math.random() < 0.5, u = ksUye(g, sol ? ALAN.x1 - 50 : ALAN.x2 + 50, kis(g.y + rnd(-40, 40), ALAN.y1, SAHNE.kumY - 20 * OL)); u.yeni = 1; g.uy.push(u); } }
+    else g.katZ = Math.max(g.katZ, 60);
     const t = KS_TUR[g.tur], yuk = t.yuk, gy1 = A.y1 + (A.y2 - A.y1) * Math.min(0.95, yuk[0] + gece * 0.2), gy2 = A.y1 + (A.y2 - A.y1) * Math.min(0.97, yuk[1] + gece * 0.05);
     const uyur = gece > 0.6 && g.tur !== 'kardinal' && SAHNE.tm !== 'derin', hiz = t.hiz * OL * (uyur ? 0.35 : 1) * (g.kac > 0 ? 3.2 : 1);
     g.t -= dt; if (g.t <= 0 || Math.hypot(g.tx - g.x, g.ty - g.y) < 20) { g.tx = rnd(A.x1 + 30, A.x2 - 30); g.ty = rnd(gy1, gy2); g.t = rnd(5, 12); }
@@ -1476,7 +1487,8 @@ function ksGuncelle(dt) {
       u.vx += ((hx - u.x) * 1.6 - u.vx) * Math.min(1, dt * 2.2); u.vy += ((hy - u.y) * 1.6 - u.vy) * Math.min(1, dt * 2.2);
       /* tehditlerden ve diğer balıklardan kaç, kayaya girme */
       for (const [x, y, R] of tehdit) { const dx = u.x - x, dy = u.y - y, dd = Math.hypot(dx, dy); if (dd < R * 0.7 && dd > 1) { const k = (1 - dd / (R * 0.7)) * 520 * OL; u.vx += dx / dd * k * dt; u.vy += dy / dd * k * dt; } }
-      u.x = kis(u.x + u.vx * dt, A.x1 - 40, A.x2 + 40); u.y = kis(u.y + u.vy * dt, A.y1, SAHNE.kumY - 10 * OL);
+      { const vm = t.hiz * OL * (g.kac > 0 ? 5 : 3.2), v = Math.hypot(u.vx, u.vy); if (v > vm) { u.vx *= vm / v; u.vy *= vm / v; } } /* kenardan gelen yeni balık süzülerek yetişsin */
+      u.x = kis(u.x + u.vx * dt, A.x1 - 60, A.x2 + 60); u.y = kis(u.y + u.vy * dt, A.y1, SAHNE.kumY - 10 * OL);
       magaraDuvar(u, u.L * OL); u.f += dt * (8 + Math.hypot(u.vx, u.vy) / (12 * OL));
       u.yon = Math.abs(u.vx) > 6 ? (u.vx > 0 ? 1 : -1) : g.yon;
     }
@@ -4510,13 +4522,14 @@ function ekoAdim(h, sessiz) {
   e.buyume = kis(e.buyume + h * (e.saglik > 0.6 ? 0.0025 * (e.saglik - 0.6) / 0.4 : 0) - h * (e.beyaz > 0.6 ? 0.003 : 0), 0, 1);
   e.kolY += h * Math.max(0, e.saglik - 0.6) / 14; while (e.kolY >= 1) { e.kolY -= 1; if (e.koloni < EKO_KOL_MAX) e.koloni++; }
   if (e.beyaz > 0.8) { e.kolO += h / 48; if (e.kolO >= 1) { e.kolO = 0; if (e.koloni > 0) e.koloni--; } } else e.kolO = Math.max(0, e.kolO - h / 96);
-  /* küçük sürüler: plankton bol ve resif sağlıklıysa yavrularla çoğalır (avlananların yeri böyle dolar); uzaktayken avcılar da az az avlar */
+  /* küçük sürüler: oyun açıkken av ve kenardan katılım gerçek zamanlı işler (ksGuncelle). Oyun kapalıyken ikisinin
+     dengesi hesaplanır: sayı, koşulların taşıyabileceği düzeye (iyi resifte tam sürü, kötüde az) birkaç saatte yaklaşır. */
   { e.ks = e.ks || {}; e.ksY = e.ksY || {};
     for (const k of ksTurler(tm)) { const mx = KS_TUR[k].n; if (e.ks[k] == null) e.ks[k] = mx;
-      const iyi = Math.min(e.plk, 1.4) / 1.4 * (0.35 + 0.65 * e.saglik) * (mv === 'kis' ? 0.5 : mv === 'ilkbahar' ? 1.4 : 1);
-      e.ksY[k] = (e.ksY[k] || 0) + h * iyi / 16 - (sessiz ? h * 0.012 * e.ks[k] : 0);
-      while (e.ksY[k] >= 1) { e.ksY[k] -= 1; if (e.ks[k] < mx) e.ks[k]++; }
-      while (e.ksY[k] <= -1) { e.ksY[k] += 1; if (e.ks[k] > 1) e.ks[k]--; } } }
+      if (!sessiz) continue;
+      const den = Math.round(mx * kis((ksIyi(e) - 0.1) / 0.45, 0, 1)), fark = den - e.ks[k];
+      e.ksY[k] = (e.ksY[k] || 0) + h * Math.sign(fark) / 2.5; /* ~2,5 saatte bir adım */
+      if (fark > 0 && e.ksY[k] >= 1) { e.ksY[k] = 0; e.ks[k]++; } else if (fark < 0 && e.ksY[k] <= -1) { e.ksY[k] = 0; e.ks[k]--; } else if (!fark) e.ksY[k] = 0; } }
   /* çayır ve yosun kaplaması: mevsim, su temizliği, bulanıklık ve fırtına */
   { const mvC = { ilkbahar: 0.95, yaz: 1, sonbahar: 0.7, kis: 0.42 }[mv] ?? 0.8, mvY = { ilkbahar: 0.85, yaz: 1, sonbahar: 0.62, kis: 0.38 }[mv] ?? 0.8;
     const isik = e.plk > 1.7 ? 0.85 : 1, fir = HV.h === 'firtina';
