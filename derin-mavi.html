@@ -3183,9 +3183,25 @@ function siteFb() {
   return siteHazir;
 }
 const yerelTarih = () => { const d = new Date(simdi()); return d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0') + '-' + String(d.getDate()).padStart(2, '0'); };
+/* doğa olaylarının gerçek takvimdeki tarihi (bildirim için): mercan yumurtlama gecesi ve haftalık ekosistem olayının başladığı gün */
+function mevsimTarih(d) { let sec = ''; try { sec = localStorage.getItem('derin-mevsim') || ''; } catch (e) { } if (sec in MEVSIMLER) return sec; const ay = d.getMonth(); return ay === 11 || ay < 2 ? 'kis' : ay < 5 ? 'ilkbahar' : ay < 8 ? 'yaz' : 'sonbahar'; }
+const tarihStr = d => d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0') + '-' + String(d.getDate()).padStart(2, '0');
+function mercanSonraki() {
+  if (SAHNE && SAHNE.tm === 'derin') return '';
+  for (let i = 0; i < 45; i++) { const d = new Date(); d.setDate(d.getDate() + i); d.setHours(21, 30, 0, 0); const mv = mevsimTarih(d), a = frk(((d.getTime() - Date.UTC(2000, 0, 6, 18, 14)) / 864e5) / 29.530589) * 29.530589;
+    if ((mv === 'ilkbahar' || mv === 'yaz') && a > 17.2 && a < 21.5) return tarihStr(d); }
+  return '';
+}
+function olaySonraki() {
+  for (let i = 0; i < 8; i++) { const d = new Date(); d.setDate(d.getDate() + i); d.setHours(12, 0, 0, 0); const gun = Math.floor((d.getTime() + 3 * 3.6e6) / 864e5), gk = ((gun + 3) % 7 + 7) % 7; if (gk !== 1) continue;
+    const hafta = Math.floor((gun + 3) / 7), r = tohumRnd('eko' + hafta)(), mv = mevsimTarih(d);
+    const tur = mv === 'ilkbahar' ? (r < 0.75 ? 'plankton' : null) : mv === 'yaz' ? (r < 0.45 ? 'meduz' : r < 0.75 ? 'sicak' : null) : mv === 'sonbahar' ? (r < 0.7 ? 'goc' : null) : (r < 0.7 ? 'derin' : null);
+    return tur ? { g: tarihStr(d), t: tur } : null; }
+  return null;
+}
 function bildirimVeri() {
   const saat = Math.max(0, S.tok - 30) / (TOK_HIZ * (has('tok') ? 0.65 : 1));
-  return { ad: S.ad, ac: Math.round(simdi() + saat * 3.6e6), seri: S.seri.n || 0, done: S.seri.g === bugun() ? yerelTarih() : '', saat: S.bildirim.saat || '20:30', dil: EN() ? 'en' : 'tr', sefer: S.sefer ? S.sefer.bit : 0, olum: S.acSifir ? S.acSifir + OLUM_GUN * 864e5 : 0, upd: new Date().toISOString() };
+  return { ad: S.ad, ac: Math.round(simdi() + saat * 3.6e6), seri: S.seri.n || 0, done: S.seri.g === bugun() ? yerelTarih() : '', saat: S.bildirim.saat || '20:30', dil: EN() ? 'en' : 'tr', sefer: S.sefer ? S.sefer.bit : 0, olum: S.acSifir ? S.acSifir + OLUM_GUN * 864e5 : 0, doga: S.bildirim.doga !== false, mercan: mercanSonraki(), olayG: (olaySonraki() || {}).g || '', olayT: (olaySonraki() || {}).t || '', upd: new Date().toISOString() };
 }
 let bildirimSon = 0;
 async function bildirimGuncelle(zorla) {
@@ -3193,12 +3209,14 @@ async function bildirimGuncelle(zorla) {
   try { const { app, u } = await siteFb(); if (!u) return; await firebase.firestore(app).collection('push').doc(u.uid + '_balik').set(bildirimVeri(), { merge: true }); } catch (e) { }
 }
 async function bildirimAc() {
-  const ic = modal(`<h2>🔔 ${T('Bildirimler', 'Notifications')}</h2><p class="alt">${T('Balığın acıktığında ve serin bozulmak üzereyken telefonuna haber verelim.', 'Get a ping when your fish is hungry and when your streak is about to break.')}</p>
+  const ic = modal(`<h2>🔔 ${T('Bildirimler', 'Notifications')}</h2><p class="alt">${T('Balığın acıktığında, serin bozulmak üzereyken ve denizde özel bir şey olacağı zaman telefonuna haber verelim.', 'Get a ping when your fish is hungry, when your streak is about to break and when something special happens in the sea.')}</p>
     <div class="liste"><div class="satir"><div class="orta"><b>🍽 ${T('Balığım acıkınca', 'When my fish is hungry')}</b><small>${T('09.00–22.00 arası, en çok bir kez', 'Between 09:00 and 22:00, at most once')}</small></div></div>
+    <div class="satir"><div class="orta"><b>🪸 ${T('Doğa olayları', 'Nature events')}</b><small>${T('Mercan yumurtlama gecesi (19.00’da), göç ve plankton patlaması gibi haftalık olaylar (sabah 10.00’da)', 'Coral spawning night (at 19:00) and weekly events like migrations and plankton blooms (at 10:00)')}${mercanSonraki() ? ' · ' + T('sıradaki mercan gecesi: ', 'next coral night: ') + mercanSonraki().split('-').reverse().join('.') : ''}</small></div><input type="checkbox" id="bDoga" ${S.bildirim.doga !== false ? 'checked' : ''} style="width:22px;height:22px"></div>
     <div class="satir"><div class="orta"><b>🔥 ${T('Seri hatırlatıcısı', 'Streak reminder')}</b><small>${T('O gün hiç gelmediysen, şu saatte:', 'If you haven’t come that day, at:')}</small></div><input type="time" id="bSaat" value="${esc(S.bildirim.saat || '20:30')}" style="font:inherit;padding:6px;border-radius:10px;border:1px solid var(--line);background:rgba(0,0,0,.25);color:inherit"></div></div>
     <button class="ana" type="button" id="bAc">${S.bildirim.on ? T('Bildirimleri kapat', 'Turn notifications off') : T('Bildirimleri aç', 'Turn notifications on')}</button>
     <p class="kucuk" id="bNot">${T('Bildirimler için sitede hesabınla giriş yapmış olman gerekir. iPhone’da önce siteyi ana ekrana ekle.', 'You need to be signed in on the site. On iPhone, add the site to your home screen first.')}</p>`);
   const not = ic.querySelector('#bNot'), btn = ic.querySelector('#bAc');
+  ic.querySelector('#bDoga').onchange = e => { S.bildirim.doga = e.target.checked; kaydet(false); bildirimGuncelle(true); };
   btn.onclick = async () => {
     btn.disabled = true;
     try {
@@ -3210,7 +3228,7 @@ async function bildirimAc() {
       if (await Notification.requestPermission() !== 'granted') throw new Error(T('Bildirim izni verilmedi.', 'Notification permission was not granted.'));
       const reg = await navigator.serviceWorker.register('/sw.js'); await navigator.serviceWorker.ready;
       let sub = await reg.pushManager.getSubscription(); if (!sub) sub = await reg.pushManager.subscribe({ userVisibleOnly: true, applicationServerKey: Uint8Array.from(atob(PUSH_PUB.replace(/-/g, '+').replace(/_/g, '/')), c => c.charCodeAt(0)) });
-      const j = sub.toJSON(); S.bildirim = { on: true, saat: ic.querySelector('#bSaat').value || '20:30' };
+      const j = sub.toJSON(); S.bildirim = { on: true, saat: ic.querySelector('#bSaat').value || '20:30', doga: ic.querySelector('#bDoga').checked };
       await ref.set(Object.assign({ on: true, page: 'balik', sub: { endpoint: j.endpoint, keys: j.keys }, tz: Intl.DateTimeFormat().resolvedOptions().timeZone || 'Europe/Istanbul', err: '' }, bildirimVeri()), { merge: true });
       kaydet(false); SES.basari(); duyur(T('🔔 Bildirimler açık', '🔔 Notifications on'), 1); modalKapat();
     } catch (e) { not.textContent = '⚠ ' + (e && e.code === 'permission-denied' ? T('Sunucu kaydı kabul etmedi (izin kuralı).', 'The server refused the record (rules).') : (e && e.message) || e); }

@@ -89,7 +89,7 @@ export function message(d, ORN = {}, now = new Date()) {
     body: x ? x + (mean ? (y ? '\n' + y : '') : '\nAnlamı için dokun.') : mean ? 'Dokun, kartı aç.' : 'Anlamını hatırlıyor musun? Dokun ve kontrol et.',
     url: P.url + '?k=' + encodeURIComponent(w.e) + '#kelime', tag: P.tag };
 }
-/* Derin Mavi: balık acıkınca (ac: o anın zamanı, ms) bir kez; seri varken o gün gelinmediyse akşam d.saat'te bir kez.
+/* Derin Mavi: balık acıkınca (ac: o anın zamanı, ms) bir kez; mercan gecesi ve haftalık doğa olayı günü bir kez; seri varken o gün gelinmediyse akşam d.saat'te bir kez.
    Yalnız 09.00–22.00 arası gönderilir. Dönen upd belgeye yazılır (aynı bildirim ikinci kez gitmesin). */
 export function balikMesaj(d, now = new Date()) {
   const { date, min } = localNow(d.tz, now); if (min < 540 || min > 1320) return null;
@@ -101,6 +101,17 @@ export function balikMesaj(d, now = new Date()) {
     return { msg: { title: en ? `🐟 ${ad} is hungry` : `🐟 ${ad} acıktı`, body: en ? 'Drop some food so it keeps growing. The plankton hunt and today’s surprise are waiting too.' : 'Biraz yem at da büyümeye devam etsin. Plankton avı ve günün sürprizi de seni bekliyor.', url: P.url, tag: P.tag }, upd: { lastAc: +d.ac } };
   if (+d.sefer && now.getTime() >= +d.sefer && String(d.lastSefer || '') !== String(d.sefer))
     return { msg: { title: en ? '🧭 Your explorer is back' : '🧭 Kâşif denizatı döndü', body: en ? `It brought loot for ${ad}. Come and collect it!` : `${ad} için ganimet getirdi. Gel ve topla!`, url: P.url, tag: P.tag + '-sefer' }, upd: { lastSefer: +d.sefer } };
+  /* doğa olayları (oyun tarihlerini kendisi hesaplayıp yazar): mercan gecesi akşam 19.00'dan sonra, haftalık olay sabah 10.00'dan sonra */
+  if (d.doga !== false && d.mercan === date && min >= 1140 && d.lastMercan !== date)
+    return { msg: { title: en ? '🪸 Coral spawning tonight' : '🪸 Bu gece mercan yumurtlaması var', body: en ? `A few nights after the full moon the corals release millions of pink eggs. Come and watch with ${ad}; the octopus goes hunting too.` : `Dolunaydan birkaç gece sonra mercanlar suya milyonlarca pembe yumurta bırakır. ${ad} ile birlikte izlemeye gel; ahtapot da avlanmaya çıkacak.`, url: P.url, tag: P.tag + '-mercan' }, upd: { lastMercan: date } };
+  const OLAY = { plankton: ['🌱 Plankton patlaması başladı', 'Su planktonla doldu; sardalya sürüsü büyüyecek, manta ve balina köpekbalığı uğrayabilir.', '🌱 A plankton bloom has begun', 'The water is full of plankton; the sardines will multiply and mantas or whale sharks may drop by.'],
+    meduz: ['🪼 Denizanası patlaması', 'Ilık suda denizanaları çoğaldı. Bu hafta resif biraz kalabalık!', '🪼 Jellyfish bloom', 'Jellyfish multiplied in the warm water. The reef is busy this week!'],
+    sicak: ['🌡️ Sıcak dalgası geliyor', 'Su ısınıyor; mercanlar strese girip ağarabilir. Resifin nasıl dayandığına bir bak.', '🌡️ A marine heatwave is coming', 'The water is warming; corals may get stressed and bleach. Check how the reef is holding up.'],
+    goc: ['🐟 Göç mevsimi başladı', 'Kalabalık sürüler bu hafta resifin önünden geçiyor.', '🐟 Migration season has begun', 'Big schools are passing the reef this week.'],
+    derin: ['🐋 Kış göçü başladı', 'Kambur balinalar yolda; bu hafta derinlerde de canlılık artıyor.', '🐋 The winter migration has begun', 'Humpbacks are on the move, and the deep gets livelier this week.'] };
+  const ol2 = OLAY[d.olayT];
+  if (d.doga !== false && ol2 && d.olayG === date && min >= 600 && d.lastOlay !== date + d.olayT)
+    return { msg: { title: en ? ol2[2] : ol2[0], body: en ? ol2[3] : ol2[1], url: P.url, tag: P.tag + '-olay' }, upd: { lastOlay: date + d.olayT } };
   const s = +d.seri || 0;
   if (s >= 2 && d.done !== date && min >= toMin(d.saat || '20:30') && d.lastSeri !== date)
     return { msg: { title: en ? `🔥 Keep your ${s}-day streak` : `🔥 ${s} günlük serin bozulmasın`, body: en ? `${ad} is waiting. One feed today is enough.` : `${ad} seni bekliyor. Bugün bir kez yem atman yeterli.`, url: P.url, tag: P.tag + '-seri' }, upd: { lastSeri: date } };
