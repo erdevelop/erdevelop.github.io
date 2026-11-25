@@ -1204,15 +1204,20 @@ function karaDelik(tm) {
 const KODUL = { g: 800, s: 40, p: 15, k: 40 };
 const odYaz = o => o > 1 ? ` · <span style="color:var(--altin)">+${SAYI(o)} 💰</span>` : '';
 function kesifEkle(k) { if (KESIF.has(k)) return 0; KESIF.add(k); kesifSayYaz(); bilimEkle({ g: 12, s: 2, p: 1, k: 2 }[k[0]] || 0); const o = KODUL[k[0]] || 0; kazan(o); gorevKesif(k); return o || 1; }
+function galKesif(g, gk) { if (!KESIF.has('g:' + gk)) defter('🌌 ' + g.ad[0] + '’na ilk kez girdim.', '🌌 Entered ' + g.ad[1] + ' for the first time.'); const o = kesifEkle('g:' + gk); duyur('🌌 ' + esc(L(g.ad)), 'galaksi', (o ? T('Yeni galaksi keşfedildi', 'New galaxy discovered') : T('Galaksiye girdin', 'You entered the galaxy')) + (IRK[g.irk] ? ` · ${IRK[g.irk].e} ${T('Burada ' + IRK[g.irk].ad[0] + ' uygarlığı yaşıyor', 'Home of the ' + IRK[g.irk].ad[1] + ' civilisation')} (${L(IRK[g.irk].ne)})` : '') + odYaz(o)); if (o) SES.galaksi();  }
+/* yalnızca gidilen yer keşfedilir: warp sırasında ya da hızla geçip giderken keşif sayılmaz */
+const KESIF_V = 900; let kesifIpT = -1e9;
+function kesifIpucu() { const n = performance.now(); if (n - kesifIpT < 600000) return; kesifIpT = n; duyur('🔭 ' + T('Hızla geçtiğin yerler keşif sayılmaz', 'Places you rush past are not discovered'), 'kesif', T('Bir sistemi ya da gezegeni keşfetmek için yanında yavaşla', 'Slow down near a system or planet to discover it')); }
 function kesifKontrol(t) {
   if (!oyunda) return;
+  const yavas = SH.warp < 0.05 && Math.hypot(SH.vx, SH.vy) < KESIF_V;
   const [gx, gy] = galHucre(SH.x, SH.y), g = galaksi(gx, gy), ic = Math.hypot(SH.x - g.x, SH.y - g.y) < g.R;
   const gk = ic ? g.k : null;
   if (gk !== sonGal) {
-    if (gk && (sonGal !== undefined || !KESIF.has('g:' + gk))) { if (!KESIF.has('g:' + gk)) defter('🌌 ' + g.ad[0] + '’na ilk kez girdim.', '🌌 Entered ' + g.ad[1] + ' for the first time.'); const o = kesifEkle('g:' + gk); duyur('🌌 ' + esc(L(g.ad)), 'galaksi', (o ? T('Yeni galaksi keşfedildi', 'New galaxy discovered') : T('Galaksiye girdin', 'You entered the galaxy')) + (IRK[g.irk] ? ` · ${IRK[g.irk].e} ${T('Burada ' + IRK[g.irk].ad[0] + ' uygarlığı yaşıyor', 'Home of the ' + IRK[g.irk].ad[1] + ' civilisation')} (${L(IRK[g.irk].ne)})` : '') + odYaz(o)); if (o) SES.galaksi(); }
+    if (gk && (sonGal !== undefined || !KESIF.has('g:' + gk))) { if (!KESIF.has('g:' + gk) && !yavas) duyur('🌌 ' + esc(L(g.ad)), 'galaksi', T('İçinden geçiyorsun · keşfetmek için galakside yavaşla', 'Passing through · slow down inside the galaxy to discover it')); else galKesif(g, gk); }
     else if (!gk && sonGal) duyur('✦ ' + T('Galaksiler arası boşluk', 'Intergalactic void'), 'galaksi', T('Burada yıldız çok seyrek', 'Stars are very sparse here'));
     sonGal = gk;
-  }
+  } else if (gk && yavas && !KESIF.has('g:' + gk)) galKesif(g, gk);
   const nb = nebulaIc(SH.x, SH.y);
   if (nb !== nebSon) { if (nb) duyur('🌫 ' + T('Nebula: ', 'Nebula: ') + '<b>' + esc(nb.ad) + '</b>', 'galaksi', T('Görüş ve radar zayıf. Yavaşlarsan nadir nebula özü toplayabilirsin.', 'Low visibility and radar. Slow down to collect rare nebula essence.')); nebSon = nb; }
   hikKontrol(t);
@@ -1222,7 +1227,8 @@ function kesifKontrol(t) {
     const tm = temel(ssx + i, ssy + j); if (!tm) continue;
     const d = Math.hypot(tm.x - SH.x, tm.y - SH.y); if (d > 9500) continue;
     const s = sistem(tm.sx, tm.sy);
-    if (d < s.R + 900 * tk) {
+    if (d < s.R + 900 * tk && !yavas && !KESIF.has('s:' + tm.k)) kesifIpucu();
+    if (d < s.R + 900 * tk && yavas) {
       const o = kesifEkle('s:' + tm.k); if (o && s.Y.kd) ST.kd++;
       if (o) AG.ilkKesif(tm.k).then(f => { if (f) setTimeout(() => { duyur('🏆 ' + T('Bu sistemi evrende ilk sen keşfettin!', 'You are the first in the universe to discover this system!'), 'galaksi', esc(tm.ad) + T(' · adın haritada kalacak', ' · your name stays on it')); SES.galaksi(); }, 1500); });
       if (o) { const kn = s.gez.length; duyur('✨ ' + T('Yeni yıldız sistemi: ', 'New star system: ') + '<b>' + esc(tm.ad) + '</b>', 'kesif', L(s.Y.ad) + (kn ? ' · ' + kn + T(' gezegen', kn > 1 ? ' planets' : ' planet') : '') + (s.kusak ? T(' · asteroit kuşağı', ' · asteroid belt') : '') + odYaz(o)); SES.kesif(); }
@@ -1230,7 +1236,7 @@ function kesifKontrol(t) {
     if (wp && wp.k === tm.k && d < s.R) { duyur('🏁 ' + T('Rotaya vardın: ', 'Arrived: ') + esc(tm.ad), 'kesif'); wp = null; }
     for (const p of s.gez) {
       const [px, py] = gezPos(p, t); const dp = Math.hypot(px - SH.x, py - SH.y);
-      if (dp < p.r + 650 * tk) {
+      if (dp < p.r + 650 * tk && yavas) {
         const o = kesifEkle('p:' + p.id); if (!o) continue;
         if (p.kol) { const o2 = kesifEkle('k:' + p.id); duyur('🏙 ' + T('Koloni: ', 'Colony: ') + '<b>' + esc(kolAd(p)) + '</b>', 'koloni', esc(p.ad) + ' · ' + L(p.kol.tip) + ' · ' + nufYaz(p.kol.nuf) + T(' kişi', ' people') + odYaz(o + o2)); SES.koloni(); }
         else { duyur('🪐 ' + T('Gezegen keşfedildi: ', 'Planet discovered: ') + '<b>' + esc(p.ad) + '</b>', 'kesif', L(p.P.ad) + T(' gezegeni', ' planet') + (p.halka ? T(' · halkalı', ' · ringed') : '') + (p.ay.length ? ' · ' + p.ay.length + T(' uydu', p.ay.length > 1 ? ' moons' : ' moon') : '') + odYaz(o)); SES.kesif(); }
@@ -5195,7 +5201,7 @@ addEventListener('resize', () => { try { rehKonum(); } catch (e) { } });
 const REHA = [
   [['Gemini uçur', 'Fly your ship'], ['W A S D ile uç. Telefonda “Sürüş” modunda ekrana dokunup yönlendir.', 'Fly with W A S D. On a phone, touch and steer in “Drive” mode.'], () => yol > 1500, 100],
   [['Haritayı aç', 'Open the map'], ['M tuşuna ya da sağ üstteki 🗺 düğmesine bas.', 'Press M or the 🗺 button at the top right.'], () => !!ST.rHarita, 100],
-  [['Yeni bir sistem keşfet', 'Discover a new system'], ['Haritada bir yıldıza dokun, sonra Boşluk tuşu ya da 🌀 düğmesiyle warp yap.', 'Tap a star on the map, then warp with Space or the 🌀 button.'], () => sayK('s') >= 2, 200],
+  [['Yeni bir sistem keşfet', 'Discover a new system'], ['Haritada bir yıldıza dokun, Boşluk ya da 🌀 ile warp yap. Varınca yavaşla: hızla geçtiğin yerler keşif sayılmaz.', 'Tap a star on the map and warp with Space or 🌀. Slow down when you arrive: places you rush past are not discovered.'], () => sayK('s') >= 2, 200],
   [['Bir koloniye yanaş', 'Dock at a colony'], ['Bir koloniye yaklaş ve gemi yanındaki “Yanaş” düğmesine bas.', 'Fly up to a colony and press “Dock” by your ship.'], () => ST.yanas >= 1, 200],
   [['Pazarda bir şey sat', 'Sell something at the market'], ['Ucuz olduğu yerden al, pahalı olduğu yerde sat. Fiyat etiketlerine bak.', 'Buy where it is cheap, sell where it is dear. Watch the price tags.'], () => ((ST.gk || {}).ticaret || 0) > 0, 200],
   [['Bir görev tamamla', 'Complete a mission'], ['Limanda 📋 Görevler sekmesinden bir iş al.', 'Take a job from the 📋 Missions tab at a port.'], () => ST.gorev >= 1, 300],
