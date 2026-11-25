@@ -56,7 +56,7 @@ registerGame({
       if (st.cev.length >= S.length) {
         const d = dogruSay(), msg = E('div', { class: 'g-msg' }, d === 3 ? 'Üçü de doğru! 🎉 Yarın yeni terimler.' : d + '/3 doğru · yarın yeni terimler.');
         const pay = E('button', { class: 'g-btn', style: { display: 'block', margin: '8px auto 0' } }, 'Sonucu kopyala');
-        pay.onclick = () => { const s = 'Günün Cephe Terimi #' + (N + 1) + ' ' + d + '/3' + (window.Seri ? ' · 🔥' + Seri.ozet('cepheterim').seri : '') + '\n' + S.map((q, i) => st.cev[i] === q.dogru ? '🟩' : '🟥').join('') + '\nerdevelop.github.io/oyunlar/#o/cepheterim'; navigator.clipboard && navigator.clipboard.writeText(s).then(() => api.toast && api.toast('Kopyalandı')); };
+        pay.onclick = () => { const s = 'Günün Cephe Terimi #' + (N + 1) + ' ' + d + '/3' + (window.Seri ? ' · 🔥' + Seri.ozet('cepheterim').seri : '') + '\n' + S.map((q, i) => st.cev[i] === q.dogru ? '🟩' : '🟥').join('') + '\nerdevelop.com/oyunlar/#o/cepheterim'; navigator.clipboard && navigator.clipboard.writeText(s).then(() => api.toast && api.toast('Kopyalandı')); };
         alan.append(msg, pay);
       }
     }

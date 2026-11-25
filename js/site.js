@@ -232,7 +232,7 @@ html[data-mode=light] #er-ara .bx{background:#fff;color:#1a2233;border-color:rgb
      ekran genişliği ve tarayıcıda tutulan rastgele ziyaretçi/oturum kodu. Sayfa görünür kaldıkça kalma süresi güncellenir.
      Hesabım > "bu tarayıcıyı sayma" (skipgc) açıksa hiçbir şey gönderilmez. Panel: /ozelaraclar/istatistik.html */
   (function () {
-    if (location.hostname !== 'erdevelop.github.io' || navigator.webdriver || /^\/ozelaraclar\/istatistik/.test(location.pathname)) return;
+    if (!/^(www\.)?erdevelop\.com$|^erdevelop\.github\.io$/.test(location.hostname) || navigator.webdriver || /^\/ozelaraclar\/istatistik/.test(location.pathname)) return;
     try { if (localStorage.getItem('skipgc') === 't') return; } catch (e) { return; }
     if (!window.fetch || !window.crypto || !crypto.getRandomValues) return;
     const PRJ = 'oyun-bahcesi-62633', KEY = 'AIzaSyBtNow8j7AZQO2sWCiXb1WbOT261wJUGRU';

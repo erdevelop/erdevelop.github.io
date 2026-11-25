@@ -6,7 +6,7 @@ import { readFileSync, writeFileSync, readdirSync, statSync, existsSync } from '
 import { execFileSync } from 'node:child_process';
 import { join } from 'node:path';
 
-const SITE = 'https://erdevelop.github.io';
+const SITE = 'https://erdevelop.com';
 const ROOT = process.cwd();
 const ATLA = /^(\.|node_modules|araclar\/lib|oyunlar\/games|apps\/.*\/assets)|google[0-9a-f]+\.html$|^404\.html$|^privacyPolicy/;
 
@@ -141,7 +141,7 @@ writeFileSync(join(ROOT, 'feed.xml'), `<?xml version="1.0" encoding="UTF-8"?>
   <title>erdevelop · Yenilikler</title>
   <link>${SITE}/yenilikler.html</link>
   <atom:link href="${SITE}/feed.xml" rel="self" type="application/rss+xml"/>
-  <description>erdevelop.github.io'ya eklenen yeni araçlar, eğitimler, oyunlar ve güncellemeler.</description>
+  <description>erdevelop.com'ya eklenen yeni araçlar, eğitimler, oyunlar ve güncellemeler.</description>
   <language>tr</language>
   <lastBuildDate>${yen[0] ? rfc(yen[0].d) : new Date().toUTCString()}</lastBuildDate>
 ${items}

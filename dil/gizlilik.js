@@ -86,7 +86,7 @@ erDil.kalip({
 "Oyun Bahçesi ve dil kulüplerinde hesap açmak isteğe bağlıdır. {n} yaşından küçükler hesabı bir velinin bilgisiyle açmalıdır. Hesap açmadan da oyunlar oynanabilir.": "Creating an account in Game Garden and the language clubs is optional. Under-{n}s should create an account with a parent's knowledge. Games can be played without an account.",
 "Sitenin kendisi çerez kullanmaz; ziyaretçi sayacı da çerezsizdir. Reklamların olduğu sayfalarda Google çerez kullanabilir; bunun için onay sorulur (aşağıda {n}. madde).": "The site itself uses no cookies; the visitor counter is cookie-free too. On pages with ads, Google may use cookies; consent is asked for this (see section {n} below).",
 "adresine e-posta gönderebilirsin; en geç {n} gün içinde yanıtlanır.": "; replies within {n} days at the latest.",
-"erdevelop.github.io sitesinde hangi verilerin nerede tutulduğu, kimlerle paylaşıldığı ve bu veriler üzerindeki hakların. Son güncelleme: {n} Kasım {n}.": "Which data is kept where on erdevelop.github.io, who it is shared with and your rights over it. Last updated: {n} November {n}.",
+"erdevelop.com sitesinde hangi verilerin nerede tutulduğu, kimlerle paylaşıldığı ve bu veriler üzerindeki hakların. Son güncelleme: {n} Kasım {n}.": "Which data is kept where on erdevelop.com, who it is shared with and your rights over it. Last updated: {n} November {n}.",
 "{n}. Değişiklikler": "{n}. Changes",
 "{n}. Hakların": "{n}. Your rights",
 "{n}. Hangi veriler, nerede tutuluyor?": "{n}. What data is kept, and where?",

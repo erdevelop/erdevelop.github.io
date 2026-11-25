@@ -3,13 +3,13 @@
 Telefon uyumlu, sade bir mini oyun portalı. Hesapla girince en iyi skorlar
 kullanıcıyla birlikte (bulut modunda her cihazda) gelir.
 
-## 1) Siteyi yayınlama (erdevelop.github.io)
+## 1) Siteyi yayınlama (erdevelop.com)
 
 Bu klasörün tamamını kendi deposuna koy. İki yaygın yol:
 
 - **Ayrı adres olarak:** depoda `oyunlar/` adında klasör aç, bu dosyaları içine
-  at. Yayınlandıktan sonra adres: `https://erdevelop.github.io/oyunlar/`
-- **Ana sayfa olarak:** dosyaları deponun köküne koyarsan `erdevelop.github.io`
+  at. Yayınlandıktan sonra adres: `https://erdevelop.com/oyunlar/`
+- **Ana sayfa olarak:** dosyaları deponun köküne koyarsan `erdevelop.com`
   doğrudan açılır.
 
 Hiçbir kurulum gerekmez; saf HTML/CSS/JS. Çift tıklayıp `index.html`'i tarayıcıda
@@ -26,7 +26,7 @@ tarayıcıda durur. Her cihazdan giriş için (ücretsiz, ~5 dk):
 3. **Build → Firestore Database → Veritabanı oluştur** → *Production mode*
 4. **Proje ayarları (⚙️) → Uygulamalarım → Web (`</>`)** ekle. Sana verilen
    `firebaseConfig` değerlerini `assets/config.js` içine yapıştır.
-5. **Authentication → Settings → Authorized domains** → `erdevelop.github.io`
+5. **Authentication → Settings → Authorized domains** → `erdevelop.com`
    ekle (yerelde denerken `localhost` zaten ekli).
 
 Doldurunca site otomatik bulut moduna geçer.

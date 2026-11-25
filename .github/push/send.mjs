@@ -12,14 +12,14 @@ import crypto from 'node:crypto';
 import { pathToFileURL } from 'node:url';
 
 export const VAPID_PUBLIC = 'BGPY6KZFQc8GQbAQQiw-0CBI8X6mrn9VHS7yC8fU8Lbw3Ep5H1OyBLXl6ADn_vGn2fp6F64JL1cMdIFhooZM_BQ';
-const SUBJECT = process.env.VAPID_SUBJECT || 'https://erdevelop.github.io';
-const SITE = 'https://erdevelop.github.io/ingilizce.html';
+const SUBJECT = process.env.VAPID_SUBJECT || 'https://erdevelop.com';
+const SITE = 'https://erdevelop.com/ingilizce.html';
 /* hangi kulübün sayfası: push belgesindeki page alanı (yoksa İngilizce) */
-const PAGES = { ingilizce: { url: SITE, icon: '📚', tag: 'eng-kelime' }, fransizca: { url: 'https://erdevelop.github.io/fransizca.html', icon: '🇫🇷', tag: 'fra-kelime' },
-  almanca: { url: 'https://erdevelop.github.io/almanca.html', icon: '🇩🇪', tag: 'deu-kelime' },
-  seri: { url: 'https://erdevelop.github.io/oyunlar/', icon: '🔥', tag: 'ob-seri' },
-  zeki: { url: 'https://erdevelop.github.io/yapay-zeki/', icon: '⏰', tag: 'zeki-hatirlat' },
-  balik: { url: 'https://erdevelop.github.io/derin-mavi.html', icon: '🐟', tag: 'derin-mavi' } };
+const PAGES = { ingilizce: { url: SITE, icon: '📚', tag: 'eng-kelime' }, fransizca: { url: 'https://erdevelop.com/fransizca.html', icon: '🇫🇷', tag: 'fra-kelime' },
+  almanca: { url: 'https://erdevelop.com/almanca.html', icon: '🇩🇪', tag: 'deu-kelime' },
+  seri: { url: 'https://erdevelop.com/oyunlar/', icon: '🔥', tag: 'ob-seri' },
+  zeki: { url: 'https://erdevelop.com/yapay-zeki/', icon: '⏰', tag: 'zeki-hatirlat' },
+  balik: { url: 'https://erdevelop.com/derin-mavi.html', icon: '🐟', tag: 'derin-mavi' } };
 const b64u = b => Buffer.from(b).toString('base64url');
 const unb64u = s => Buffer.from(String(s), 'base64url');
 const hmac = (key, data) => crypto.createHmac('sha256', key).update(data).digest();
@@ -193,7 +193,7 @@ export async function zekiUyarilar(L, now = new Date(), tz = 'Europe/Istanbul', 
 }
 
 /* sitedeki örnek cümleler; alınamazsa boş (bildirim cümlesiz gider) */
-export async function loadOrnek(url = 'https://erdevelop.github.io/js/ornek-en.js') {
+export async function loadOrnek(url = 'https://erdevelop.com/js/ornek-en.js') {
   try { const r = await fetch(url); if (!r.ok) return {}; const t = await r.text(); return JSON.parse(t.slice(t.indexOf('{'), t.lastIndexOf('}') + 1)); } catch (e) { return {}; }
 }
 

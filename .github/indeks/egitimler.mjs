@@ -7,7 +7,7 @@ import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 
 const KOK = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '../..');
-const SITE = 'https://erdevelop.github.io/';
+const SITE = 'https://erdevelop.com/';
 const GRUPLAR = ['facadeedu', 'edu', 'ai', 'code', 'plang', 'lang'];
 const KISA = { facadeedu: 'Cephe', edu: 'CAD ve BIM', ai: 'Yapay zekâ', code: 'Yazılım', plang: 'Programlama dilleri', lang: 'Dil öğrenme' };
 

@@ -222,7 +222,7 @@
 
   /* ---------------- dil modeli (isteğe bağlı) ---------------- */
   const LLM = { durum: 'yok', isci: null, bekleyen: {}, sira: 0, model: null, gecmis: [] };
-  const SISTEM = () => `Sen "Yapay Zeki" adında, erdevelop.github.io sitesinde yaşayan sevimli ve yardımsever bir robot arkadaşsın. Kullanıcıyla sesli konuşuyorsun; bu yüzden cevapların Türkçe, kısa (en çok 2-3 cümle), samimi ve doğal olsun. Madde işareti, başlık, emoji ya da kod kullanma. Emin olmadığın bilgiyi uydurma; bilmiyorsan "bundan emin değilim" de. Bugün ${new Date().toLocaleDateString('tr-TR', { day: 'numeric', month: 'long', year: 'numeric' })}.${HAFIZA.ad ? ' Kullanıcının adı ' + HAFIZA.ad + '.' : ''}${window.Beyin && Beyin.kisilikIstem ? ' ' + Beyin.kisilikIstem() : ''}`;
+  const SISTEM = () => `Sen "Yapay Zeki" adında, erdevelop.com sitesinde yaşayan sevimli ve yardımsever bir robot arkadaşsın. Kullanıcıyla sesli konuşuyorsun; bu yüzden cevapların Türkçe, kısa (en çok 2-3 cümle), samimi ve doğal olsun. Madde işareti, başlık, emoji ya da kod kullanma. Emin olmadığın bilgiyi uydurma; bilmiyorsan "bundan emin değilim" de. Bugün ${new Date().toLocaleDateString('tr-TR', { day: 'numeric', month: 'long', year: 'numeric' })}.${HAFIZA.ad ? ' Kullanıcının adı ' + HAFIZA.ad + '.' : ''}${window.Beyin && Beyin.kisilikIstem ? ' ' + Beyin.kisilikIstem() : ''}`;
   function llmIsci() {
     if (LLM.isci) return LLM.isci;
     LLM.isci = new Worker(new URL('llm-worker.js', KAYNAK), { type: 'module' });

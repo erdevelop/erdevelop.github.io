@@ -136,7 +136,7 @@
     g.fillStyle = '#2f6fb5'; g.font = '700 54px "Chakra Petch", "Segoe UI", sans-serif'; g.fillText(title, W / 2, 800);
     g.fillStyle = '#74838f'; g.font = '400 26px "IBM Plex Mono", Consolas, monospace';
     g.fillText(`${days.length} gün · ${boxes.length} kontrol · ${new Date().toLocaleDateString('tr-TR', { day: 'numeric', month: 'long', year: 'numeric' })}`, W / 2, 870);
-    g.fillText('erdevelop.github.io' + location.pathname.replace(/index\.html$/, ''), W / 2, 1000);
+    g.fillText('erdevelop.com' + location.pathname.replace(/index\.html$/, ''), W / 2, 1000);
     g.font = '400 20px "IBM Plex Sans", "Segoe UI", sans-serif'; g.fillText('Kendi kendine çalışma programıdır; resmi bir sertifika değildir.', W / 2, 1040);
     cv.toBlob(b => { const a = document.createElement('a'); a.href = URL.createObjectURL(b); a.download = `belge-${SLUG}.png`; document.body.appendChild(a); a.click(); a.remove(); setTimeout(() => URL.revokeObjectURL(a.href), 3000); say('Belge indirildi'); }, 'image/png');
   });

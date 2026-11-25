@@ -149,7 +149,7 @@ kg = m2 * kalinlik_mm * 2.5
 \`\`\`
 
 ---
-[erdevelop](https://erdevelop.github.io)
+[erdevelop](https://erdevelop.com)
 ` },
 { n: 'README şablonu', d: 'proje açıklaması iskeleti', c: `# Proje adı
 

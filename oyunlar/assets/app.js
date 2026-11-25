@@ -186,7 +186,7 @@
     if(!currentGame) return;
     const best=(window.Store && window.Store.getBest(currentGame.id))||0;
     let url;
-    try{ url=location.origin+location.pathname+'#o/'+currentGame.id; }catch(e){ url='https://erdevelop.github.io/oyunlar/'; }
+    try{ url=location.origin+location.pathname+'#o/'+currentGame.id; }catch(e){ url='https://erdevelop.com/oyunlar/'; }
     const text = best>0
       ? 'Oyun Bahçesi\'nde "'+currentGame.title+'" oynadım, en iyi skorum '+best+'! Geçebilir misin?'
       : 'Oyun Bahçesi\'nde "'+currentGame.title+'" oynuyorum. Sen de dene!';

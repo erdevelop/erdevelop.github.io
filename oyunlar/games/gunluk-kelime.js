@@ -80,7 +80,7 @@ registerGame({
         if (st.bitti) {
           const ok = st.tahmin[st.tahmin.length - 1] === kelime;
           const paylas = E('button', { class: 'g-btn', style: { margin: '8px auto 0', display: 'block' } }, 'Sonucu kopyala');
-          paylas.onclick = () => { const s = M.baslik + ' #' + (N + 1) + ' ' + (ok ? st.tahmin.length : 'X') + '/6' + (window.Seri ? ' · 🔥' + Seri.ozet(M.id).seri : '') + '\n' + st.tahmin.map(t => puan([...t]).map(c => ({ y: '🟩', s: '🟨', g: '⬜' })[c]).join('')).join('\n') + '\nerdevelop.github.io/oyunlar/' + (mod !== 'tr' ? '?kelime=' + mod : '') + '#o/gunlukkelime'; navigator.clipboard && navigator.clipboard.writeText(s).then(() => api.toast && api.toast('Kopyalandı')); };
+          paylas.onclick = () => { const s = M.baslik + ' #' + (N + 1) + ' ' + (ok ? st.tahmin.length : 'X') + '/6' + (window.Seri ? ' · 🔥' + Seri.ozet(M.id).seri : '') + '\n' + st.tahmin.map(t => puan([...t]).map(c => ({ y: '🟩', s: '🟨', g: '⬜' })[c]).join('')).join('\n') + '\nerdevelop.com/oyunlar/' + (mod !== 'tr' ? '?kelime=' + mod : '') + '#o/gunlukkelime'; navigator.clipboard && navigator.clipboard.writeText(s).then(() => api.toast && api.toast('Kopyalandı')); };
           ek.append(paylas);
         }
       }

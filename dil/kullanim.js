@@ -28,7 +28,7 @@ erDil.dict({
 "Uygulamaya esas hesaplar": "Design calculations",
 "adresine yazabilirsin; düzeltilir.": "; it will be fixed.",
 "bilgi amaçlı": "for information",
-"erdevelop.github.io, Erdal Üstünol'un kişisel sitesidir. Buradaki araçlar, hesaplayıcılar, eğitimler, dil kulüpleri ve oyunlar ücretsizdir; öğrenmek, denemek ve fikir edinmek için hazırlanmıştır. Site herhangi bir meslek odası, kurum ya da firma adına yayın yapmaz.": "erdevelop.github.io is Erdal Üstünol's personal site. The tools, calculators, courses, language clubs and games here are free; they are made for learning, trying things out and getting ideas. The site does not publish on behalf of any professional chamber, institution or company.",
+"erdevelop.com, Erdal Üstünol'un kişisel sitesidir. Buradaki araçlar, hesaplayıcılar, eğitimler, dil kulüpleri ve oyunlar ücretsizdir; öğrenmek, denemek ve fikir edinmek için hazırlanmıştır. Site herhangi bir meslek odası, kurum ya da firma adına yayın yapmaz.": "erdevelop.com is Erdal Üstünol's personal site. The tools, calculators, courses, language clubs and games here are free; they are made for learning, trying things out and getting ideas. The site does not publish on behalf of any professional chamber, institution or company.",
 "eğitim, deneme ve ön bilgi amaçlıdır": "for education, trial and preliminary information",
 "hesap yapar. Vergi ve fon oranları (KDV, KKDF, BSMV, stopaj), faiz ve kurlar mevzuat ve piyasayla değişir; araçlardaki varsayılan değerler örnektir.": ". Tax and fund rates (VAT, KKDF, BSMV, withholding), interest and exchange rates change with legislation and the market; default values in the tools are examples.",
 "kendi sorumluluğunda": "at their own responsibility",

@@ -617,7 +617,7 @@ dialog.tanit .hd small{display:block;font-weight:400;color:var(--muted);font-siz
       x.textAlign = 'right'; x.fillStyle = FG; x.font = `800 42px ${FB}`; x.fillText('%' + v.pct, W - P, y + 14); x.textAlign = 'left'; y += 80; });
     x.fillStyle = 'rgba(255,255,255,.14)'; x.fillRect(P, H - 150, W - 2 * P, 2);
     x.font = `800 36px ${FD}`; x.fillStyle = FG; x.fillText(`${D.dilAd} Kulübü`, P, H - 88);
-    x.font = `500 28px ${FB}`; x.fillStyle = MU; x.textAlign = 'right'; x.fillText('erdevelop.github.io' + location.pathname.replace(/\.html$/, ''), W - P, H - 88); x.textAlign = 'left';
+    x.font = `500 28px ${FB}`; x.fillStyle = MU; x.textAlign = 'right'; x.fillText('erdevelop.com' + location.pathname.replace(/\.html$/, ''), W - P, H - 88); x.textAlign = 'left';
     return { cv, c };
   }
   function svPaylas() {
@@ -675,7 +675,7 @@ dialog.tanit .hd small{display:block;font-weight:400;color:var(--muted);font-siz
     if (o.satir.length > rows.length) { x.fillStyle = MU; x.font = `500 32px ${FB}`; x.fillText(`+${o.satir.length - rows.length} kişi daha`, P + 110, y + 34); }
     x.fillStyle = 'rgba(255,255,255,.14)'; x.fillRect(P, H - 150, W - 2 * P, 2);
     x.font = `800 36px ${FD}`; x.fillStyle = FG; x.fillText(`${D.dilAd} Kulübü`, P, H - 88);
-    x.font = `500 28px ${FB}`; x.fillStyle = MU; x.textAlign = 'right'; x.fillText('erdevelop.github.io' + location.pathname.replace(/\.html$/, ''), W - P, H - 88); x.textAlign = 'left';
+    x.font = `500 28px ${FB}`; x.fillStyle = MU; x.textAlign = 'right'; x.fillText('erdevelop.com' + location.pathname.replace(/\.html$/, ''), W - P, H - 88); x.textAlign = 'left';
     return c;
   }
   function skorPaylas(o) {

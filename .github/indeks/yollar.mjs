@@ -7,7 +7,7 @@ import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 
 const KOK = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '../..');
-const SITE = 'https://erdevelop.github.io/';
+const SITE = 'https://erdevelop.com/';
 
 /* s: eğitim klasörü, x: seçmeli (true), n: kısa not */
 const YOLLAR = [

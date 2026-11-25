@@ -32,7 +32,7 @@ const TM = {
     if (pj === null) return; store.set('erdevelop-proje', pj);
     let h = document.getElementById('rph'); if (!h) { h = document.createElement('div'); h.id = 'rph'; h.className = 'rph'; const m = document.querySelector('main') || document.body; m.insertBefore(h, m.firstChild); }
     const d = new Date().toLocaleString('tr-TR', { dateStyle: 'long', timeStyle: 'short' });
-    h.innerHTML = `<div><b>${esc(title)}</b>${pj ? `<span>${esc(pj)}</span>` : ''}</div><div class="rpm">${esc(d)}<br>Erdal Üstünol · erdevelop.github.io</div>`;
+    h.innerHTML = `<div><b>${esc(title)}</b>${pj ? `<span>${esc(pj)}</span>` : ''}</div><div class="rpm">${esc(d)}<br>Erdal Üstünol · erdevelop.com</div>`;
     const was = TM.mode; if (was === 'dark') { TM.mode = 'light'; TM.apply(); }
     setTimeout(() => { window.print(); if (was === 'dark') { TM.mode = was; TM.apply(); } }, 120);
   },
