@@ -114,7 +114,7 @@ const grup = id => G.find(x => x.id === id);
 const kart = (it, ton) => {
   const tg = tag(it.tag);
   return `<a class="kart" href="${esc(href(it.f))}"${ton ? ` style="--ton:${ton}"` : ''} data-s="${esc(fold(it.t.tr + ' ' + en(it.t) + ' ' + (it.d ? it.d.tr + ' ' + en(it.d) : '') + ' ' + it.f))}">
-  <span class="ico"><svg viewBox="0 0 32 32" aria-hidden="true">${ICON[it.i] || ''}</svg></span>
+  ${it.logo ? `<span class="ico logo"><img src="../${esc(it.logo)}" alt="" loading="lazy" width="46" height="46"></span>` : `<span class="ico"><svg viewBox="0 0 32 32" aria-hidden="true">${ICON[it.i] || ''}</svg></span>`}
   <h3${en(it.t) && en(it.t) !== it.t.tr ? ` data-en="${esc(en(it.t))}"` : ''}>${esc(it.t.tr)}</h3>
   ${it.d ? `<p${en(it.d) ? ` data-en="${esc(en(it.d))}"` : ''}>${esc(it.d.tr)}</p>` : ''}
   ${tg ? `<span class="alt" data-en="${esc(tg.en)}">${esc(tg.tr)}</span>` : ''}
