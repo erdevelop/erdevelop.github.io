@@ -93,6 +93,7 @@ a{color:var(--mavi)}
 .kart li{margin:3px 0}
 .kart details{margin-top:10px;border-top:1px solid var(--line);padding-top:8px}
 .kart summary{cursor:pointer;font-weight:900;color:var(--mute)}
+.kapat.geri{right:auto;left:10px;font-size:20px;line-height:1}
 .kapat{position:absolute;top:10px;right:10px;width:34px;height:34px;border-radius:11px;border:1px solid var(--line);background:rgba(0,0,0,.2);font-weight:900}
 .ana{display:block;width:100%;margin-top:14px;padding:13px;border-radius:16px;border:0;background:linear-gradient(180deg,var(--acc),var(--acc2));color:#3A2400;font-weight:900;font-size:17px;box-shadow:0 6px 20px rgba(242,169,59,.3)}
 .ana:active{transform:translateY(1px)}
@@ -2421,12 +2422,16 @@ function panelResim(dt) {
 let modalKapanis = null;
 function modal(html, o = {}) {
   const m = $('modal'), ic = $('modalIc');
-  ic.innerHTML = (o.kapat === false ? '' : `<button class="kapat" type="button" data-kapat aria-label="${T('Kapat', 'Close')}">✕</button>`) + html;
+  /* menüden açılan pencerelerde (ve onların açtığı alt pencerelerde) sol üstte "geri" düğmesi: menüye döner */
+  const geri = MENU_GERI.acik && !o.menu && o.kapat !== false && (!m.hidden || performance.now() - MENU_GERI.t < 600); if (!o.menu) MENU_GERI.acik = geri;
+  ic.innerHTML = (o.kapat === false ? '' : `<button class="kapat" type="button" data-kapat aria-label="${T('Kapat', 'Close')}">✕</button>`) + (geri ? `<button class="kapat geri" type="button" data-menu-geri title="${T('Menüye dön', 'Back to menu')}" aria-label="${T('Menüye dön', 'Back to menu')}">‹</button>` : '') + html;
+  const gb = ic.querySelector('[data-menu-geri]'); if (gb) gb.onclick = () => { modalKapat(); menuAc(); };
   m.hidden = false; m.scrollTop = 0; modalKapanis = o.kapanis || null; m.dataset.kapanabilir = o.kapat === false ? '0' : '1';
   ic.querySelectorAll('[data-kapat]').forEach(b => b.onclick = modalKapat);
   return ic;
 }
-function modalKapat() { $('modal').hidden = true; $('modalIc').innerHTML = ''; const f = modalKapanis; modalKapanis = null; if (f) f(); }
+const MENU_GERI = { acik: false, t: 0 };
+function modalKapat() { MENU_GERI.t = performance.now(); $('modal').hidden = true; $('modalIc').innerHTML = ''; const f = modalKapanis; modalKapanis = null; if (f) f(); }
 $('modal').addEventListener('click', e => { if (e.target === $('modal') && $('modal').dataset.kapanabilir === '1') modalKapat(); });
 addEventListener('keydown', e => { if (e.key === 'Escape') { if (!$('modal').hidden && $('modal').dataset.kapanabilir === '1') modalKapat(); else kartKapat(); } });
 
@@ -2766,9 +2771,9 @@ function menuAc() {
     <button type="button" data-m="nasil"><span>❔</span>${T('Nasıl oynanır?', 'How to play')}</button>
     </details>
     </div>
-    <p class="kucuk">${T('Balığın bu tarayıcıda saklanır. <a href="/hesap.html">Hesabınla giriş yapıp</a> senkronu açarsan diğer cihazlarına da gelir.', 'Your fish is stored in this browser. <a href="/hesap.html">Sign in</a> and turn on sync to bring it to your other devices.')}</p>`);
+    <p class="kucuk">${T('Balığın bu tarayıcıda saklanır. <a href="/hesap.html">Hesabınla giriş yapıp</a> senkronu açarsan diğer cihazlarına da gelir.', 'Your fish is stored in this browser. <a href="/hesap.html">Sign in</a> and turn on sync to bring it to your other devices.')}</p>`, { menu: 1 });
   ic.querySelectorAll('details[data-g]').forEach(d => d.ontoggle = () => { MG[d.dataset.g] = d.open ? 1 : 0; ls.set('derin-menu-grup', MG); });
-  ic.querySelectorAll('[data-m]').forEach(b => b.onclick = () => ({ dil: () => { modalKapat(); document.querySelector('#ust [data-dil-btn]').click(); }, tam: () => { modalKapat(); $('tamBtn').click(); }, izle: () => { modalKapat(); setTimeout(() => $('izleBtn').click(), 60); }, d3: () => { kaydet(false); try { localStorage.setItem('derin-gorunum', G3 ? '2d' : '3d'); } catch (e) { } location.href = '/derin-mavi.html'; }, mevsim: mevsimAc, eko: ekoAc, yedek: yedekAc, hafta: () => haftaAc(false), fps: () => { fpsAcik = !fpsAcik; try { localStorage.setItem('derin-fps', fpsAcik ? '1' : '0'); } catch (e) { } menuEmYaz('fps', fpsAcik); }, vital: () => { vitalAcik = !vitalAcik; try { localStorage.setItem('derin-vital', vitalAcik ? '1' : '0'); } catch (e) { } menuEmYaz('vital', vitalAcik); }, akv: akvListeAc, hedef: hedefAc, dukkan: dukkanAc, bas: basarimAc, rekor: rekorAc, sohret: sohretAc, reklam: reklamTeklif, paylas, tasi: tasiAc, nasil: nasilAc, gunluk: gunlukAc, sefer: seferAc, okul: okulAc, unvan: unvanAc, foto: fotoAc, ansik: ansikAc, rehber: () => { S.rehber = 0; S.rb = Object.fromEntries(Object.entries(S.rb).filter(([k]) => k.startsWith('u_'))); S.kumandaOgrendi = 0; kaydet(false); modalKapat(); }, ark: arkadaslarAc, sezon: sezonAc, album: albumAc, etk: etkinlikAc, bild: bildirimAc, oy: oylamaAc })[b.dataset.m]());
+  ic.querySelectorAll('[data-m]').forEach(b => b.onclick = () => (MENU_GERI.acik = true, { dil: () => { modalKapat(); document.querySelector('#ust [data-dil-btn]').click(); }, tam: () => { modalKapat(); $('tamBtn').click(); }, izle: () => { modalKapat(); setTimeout(() => $('izleBtn').click(), 60); }, d3: () => { kaydet(false); try { localStorage.setItem('derin-gorunum', G3 ? '2d' : '3d'); } catch (e) { } location.href = '/derin-mavi.html'; }, mevsim: mevsimAc, eko: ekoAc, yedek: yedekAc, hafta: () => haftaAc(false), fps: () => { fpsAcik = !fpsAcik; try { localStorage.setItem('derin-fps', fpsAcik ? '1' : '0'); } catch (e) { } menuEmYaz('fps', fpsAcik); }, vital: () => { vitalAcik = !vitalAcik; try { localStorage.setItem('derin-vital', vitalAcik ? '1' : '0'); } catch (e) { } menuEmYaz('vital', vitalAcik); }, akv: akvListeAc, hedef: hedefAc, dukkan: dukkanAc, bas: basarimAc, rekor: rekorAc, sohret: sohretAc, reklam: reklamTeklif, paylas, tasi: tasiAc, nasil: nasilAc, gunluk: gunlukAc, sefer: seferAc, okul: okulAc, unvan: unvanAc, foto: fotoAc, ansik: ansikAc, rehber: () => { S.rehber = 0; S.rb = Object.fromEntries(Object.entries(S.rb).filter(([k]) => k.startsWith('u_'))); S.kumandaOgrendi = 0; kaydet(false); modalKapat(); }, ark: arkadaslarAc, sezon: sezonAc, album: albumAc, etk: etkinlikAc, bild: bildirimAc, oy: oylamaAc })[b.dataset.m]());
 }
 /* HAFTALIK ÖZET: pazartesiden pazara karşılaşılan canlılar, albüme yeni girenler, büyüme ve yem; paylaşılabilir görsel kart */
 const haftaKey = t => Math.floor((t + 3 * 3.6e6 + 3 * 864e5) / (7 * 864e5)); /* Türkiye saatiyle pazartesi başlar */
@@ -4371,10 +4376,19 @@ const ANSIK = {
   vatoz: [['🐟', 'Manta vatozu', 'Manta ray'], ['Kanat açıklığı 7 metreye ulaşabilir; buna rağmen sadece plankton yer.', 'Its wingspan can reach 7 m, yet it eats only plankton.']],
   kaplumbaga: [['🐢', 'Deniz kaplumbağası', 'Sea turtle'], ['Onlarca yıl yaşar; dişiler yumurtlamak için çoğu zaman doğdukları kumsala döner.', 'Lives for decades; females often return to the beach where they hatched to lay eggs.']]
 };
+/* sonradan eklenen balık türlerinin ansiklopedi yazıları (eksik olunca ansiklopedi hiç açılmıyordu) */
+const ANSIK_EK = {
+  mandarin: ['Batı Pasifik resiflerinde, mercan molozlarının arasında yaşar; yalnızca 6 cm olur. Pulu yoktur: derisi kötü kokulu, acı bir mukusla kaplıdır ve parlak renkleri bunu avcılara haber verir. Mavisi boyadan gelir; omurgalılarda gerçek mavi pigment taşıyan çok az hayvandan biridir.', 'Lives among coral rubble on western Pacific reefs and grows to only 6 cm. It has no scales: its skin is coated in a foul, bitter mucus, and its bright colours advertise that to predators. Its blue comes from pigment — one of very few vertebrates with a true blue pigment.'],
+  papagan: ['Kaynaşıp gagaya dönüşmüş dişleriyle mercanı kemirir, içindeki algi yer ve öğüttüğü kireci ince kum olarak geri bırakır; büyük bir papağan balığı yılda yüzlerce kilo kum üretir. Birçok türü gece, kokusunu gizleyen mukustan bir kozanın içinde uyur.', 'Its teeth are fused into a beak that scrapes coral; it eats the algae inside and passes the ground-up limestone as fine sand — a large parrotfish makes hundreds of kilos of sand a year. Many species sleep at night inside a mucus cocoon that hides their scent.'],
+  lambuka: ['Ilık açık denizlerin hızlı avcısıdır; uçan balıkları ve kalamarları kovalar. Çok hızlı büyür: bir yılda bir metreyi geçebilir, ama ömrü yalnız birkaç yıldır. Canlıyken altın, yeşil ve mavi parlar; sudan çıkınca renkleri dakikalar içinde solar.', 'A fast hunter of warm open seas that chases flying fish and squid. It grows very quickly — over a metre in a year — but lives only a few years. Alive it shimmers gold, green and blue; out of the water its colours fade within minutes.'],
+  uskumru: ['Yüzme kesesi yoktur; batmamak ve solungaçlarından su geçirmek için hiç durmadan yüzer. Binlerce balıklık sık sürüler kurar; sırtındaki dalgalı çizgiler yukarıdan bakan avcıya karşı sürüyü su parıltısına karıştırır. Yaklaşık 30 cm olur.', 'It has no swim bladder, so it swims non-stop to keep from sinking and to push water over its gills. It forms dense schools of thousands; the wavy bars on its back blend the school into the shimmer of the water for predators looking down. About 30 cm long.'],
+  engerek: ['Derin denizin 200–1500 metreleri arasında yaşar. Dişleri öyle uzundur ki ağzına sığmaz, gözlerinin yanından yukarı kıvrılır. Sırt yüzgecinin ucundaki ışıklı uzantıyı olta gibi sallayıp avını yaklaştırır; geceleri beslenmek için daha sığ sulara çıkar.', 'Lives between 200 and 1,500 m in the deep sea. Its teeth are so long they don’t fit in its mouth and curve up past its eyes. It dangles a glowing lure on the tip of its dorsal fin like a fishing line, and rises to shallower water at night to feed.'],
+  isikli: ['Derin denizin en kalabalık balıklarındandır. Karnı ve yanları boyunca dizili ışık organları, aşağıdan bakan avcıya karşı gölgesini siler; her türün ışık dizilişi farklıdır. Her gece yüzeye doğru yüzlerce metre çıkıp sabah geri iner: gezegendeki en büyük göç budur.', 'Among the most numerous fish in the deep sea. Rows of light organs along its belly and sides erase its shadow from predators below, and each species has its own light pattern. Every night it climbs hundreds of metres toward the surface and sinks back at dawn — the largest migration on Earth.']
+};
 function ansikAc() {
-  const turlar = Object.keys(TURLER), canli = ['sardalya', 'yengec', 'meduz', 'denizati', 'vatoz', 'kaplumbaga', ...Object.keys(CANLI_BILGI)];
+  const turYazi = k => ANSIK_EK[k] || (ANSIK[k] && Array.isArray(ANSIK[k][0]) && ANSIK[k][0].length === 2 ? ANSIK[k][0] : null), turlar = Object.keys(TURLER).filter(turYazi), canli = ['sardalya', 'yengec', 'meduz', 'denizati', 'vatoz', 'kaplumbaga', ...Object.keys(CANLI_BILGI)].filter(k => ANSIK[k] && ANSIK[k][0] && ANSIK[k][0].length === 3 && ANSIK[k][1]);
   const ic = modal(`<h2>📚 ${T('Balık ansiklopedisi', 'Fish encyclopaedia')}</h2><p class="alt">${T('Oyundaki canlıların gerçek hayattaki hâlleri', 'The real-life creatures behind the game')}</p><div class="liste">
-    ${turlar.map(k => `<div class="satir" style="align-items:flex-start"><canvas width="108" height="72" data-t="${k}"></canvas><div class="orta"><b>${esc(L2(TURLER[k].ad))}${S.alb['tur:' + k] ? ' ✓' : ''}</b><small style="white-space:normal">${esc(L2(ANSIK[k][0]))}</small></div></div>`).join('')}
+    ${turlar.map(k => `<div class="satir" style="align-items:flex-start"><canvas width="108" height="72" data-t="${k}"></canvas><div class="orta"><b>${esc(L2(TURLER[k].ad))}${S.alb['tur:' + k] ? ' ✓' : ''}</b><small style="white-space:normal">${esc(L2(turYazi(k)))}</small></div></div>`).join('')}
     ${canli.map(k => `<div class="satir" style="align-items:flex-start"><span style="font-size:30px;width:54px;text-align:center">${ANSIK[k][0][0]}</span><div class="orta"><b>${esc(T(ANSIK[k][0][1], ANSIK[k][0][2]))}${S.alb['canli:' + k] ? ' ✓' : ''}</b><small style="white-space:normal">${esc(L2(ANSIK[k][1]))}</small></div></div>`).join('')}
   </div>`);
   ic.querySelectorAll('canvas[data-t]').forEach(c => onizlemeEkle(c, { a: 3, tr: c.dataset.t, al: TURLER[c.dataset.t].alan, r: 0 }, { seffaf: 1 }));
