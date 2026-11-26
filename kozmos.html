@@ -5399,6 +5399,32 @@ function evYaz() {
 }
 setInterval(() => { try { evAdim(); } catch (e) { } }, 5000);
 
+/* ================= anonim kullanım sayaçları (kimlik yok, sadece günlük toplamlar) ================= */
+const AN = (() => { const o = ls.get('kozmos-an', null); return o && typeof o === 'object' ? Object.assign({ g: '', d: [], o: [], s: 0, yeni: null, q: [] }, o) : { g: '', d: [], o: [], s: 0, yeni: null, q: [] }; })();
+let anSonT = performance.now(), anGid = 0;
+const anGun = () => gunAnah().replace(/-/g, '');
+function an(olay, omur) {
+  const L2 = omur ? AN.o : AN.d; if (L2.includes(olay)) return; L2.push(olay); AN.q.push([anGun(), olay]); if (AN.q.length > 60) AN.q.splice(0, AN.q.length - 60);
+}
+function anAdim() {
+  const g = gunAnah(); if (AN.g !== g) { AN.g = g; AN.d = []; AN.s = 0; }
+  const n = performance.now(); if (oyunda && !document.hidden) AN.s += Math.min(30, (n - anSonT) / 1000); anSonT = n;
+  an('acilis'); an(DOKUN ? 'mobil' : 'masaustu'); if (PWA && PWA.kurulu) an('uygulama'); an('dil_' + (EN() ? 'en' : 'tr'));
+  if (oyunda) {
+    an('ucus'); if (PIL.acik) an('pil'); if (AN.s >= 300) an('dk5'); if (AN.s >= 900) an('dk15'); if (AN.s >= 3600) an('dk60');
+    if (AN.yeni === null) AN.yeni = sayK('s') <= 1 && !(ST.korsan > 0) && !(ST.yanas > 0);
+    if (AN.yeni) {
+      an('y_basla', 1); if (!REH.kapali || REH.i) an('y_reh' + Math.min(REH.bitti ? 14 : REH.i, 14), 1);
+      const F = { liman: ST.yanas > 0, korsan: ST.korsan > 0, gorev: ST.gorev > 0, kesif3: sayK('s') >= 3, kesif10: sayK('s') >= 10, uret: (ST.uret || 0) + (ST.isle || 0) > 0, yaris: ST.yaris > 0, hack: ST.hack > 0, koloni: !!KOL, istasyon: !!istnObj, foto: ST.foto > 0, lonca: !!ST.lonca, gunluk: GUN.L.some(x => x.ok), prestij: PRS > 0 };
+      for (const k in F) if (F[k]) an('y_' + k, 1);
+    }
+    if (PRS > 0) an('prestijli');
+  }
+  if (AN.q.length && AG.durum() === 'acik' && !anGid) { anGid = 1; const P = AN.q.slice(0, 4); Promise.all(P.map(([gg, o]) => AG.say(gg, o))).then(R => { let k = 0; while (k < R.length && R[k]) k++; AN.q.splice(0, k); ls.set('kozmos-an', AN); anGid = 0; }); }
+  ls.set('kozmos-an', AN);
+}
+setInterval(() => { try { anAdim(); } catch (e) { } }, 4000);
+
 /* ================= prestij: Yeni Oyun+ ================= */
 const prsUygun = () => PRS < 10 && (!!HIK.son4 || (sayK('s') >= 150 && ST.kazanc >= 500000));
 function prsYaz() {
@@ -5723,10 +5749,11 @@ const AG = (() => {
   async function pKoy(m, a, f) { if (!db || !uid) return false; try { await db.ref('kozmos/p').push({ s: uid, n: pilotAd(), m, a, f, t: firebase.database.ServerValue.TIMESTAMP }); return true; } catch (e) { return false; } }
   async function pAl(id) { if (!db || !uid) return false; try { const r = await db.ref('kozmos/p/' + id).transaction(c => c && !c.b && c.s !== uid ? Object.assign({}, c, { b: uid, bn: pilotAd() }) : undefined); return r.committed; } catch (e) { return false; } }
   async function pSil(id) { if (!db) return false; try { await db.ref('kozmos/p/' + id).remove(); return true; } catch (e) { return false; } }
+  function say(gun, olay) { if (!db || !uid || durum !== 'acik') return Promise.resolve(false); return db.ref('kozmos/an/' + gun + '/' + olay).transaction(c => (+c || 0) + 1).then(r => !!r.committed).catch(() => false); }
   async function evOku(hk) { if (!db) return null; try { const [a, b] = await Promise.all([db.ref('kozmos/ev/' + hk + '/t').once('value'), db.ref('kozmos/ev/' + hk + '/k').orderByChild('d').limitToLast(5).once('value')]); const L2 = []; b.forEach(c => { const v = c.val(); if (v && typeof v.d === 'number') L2.push(Object.assign({ id: c.key }, v)); }); return { t: +a.val() || 0, top: L2.reverse() }; } catch (e) { return null; } }
   async function evEkle(hk, n, top) { if (!db || !uid || durum !== 'acik' || n <= 0) return false; try { const r = await db.ref('kozmos/ev/' + hk + '/t').transaction(c => (+c || 0) + Math.min(100, n)); if (!r.committed) return false; await db.ref('kozmos/ev/' + hk + '/k/' + uid).set({ n: pilotAd(), d: top }); return true; } catch (e) { return false; } }
   function sil() { if (benRef) benRef.remove().catch(() => { }); }
-  return { evOku, evEkle, baslat, gonder, tur, UZAK, ilkKesif, ilkAd, siraGonder, sira, sil, simdi, balon, mesaj, kkOku, hafta, odulKontrol, sohBaslat, sohGonder, bulutYaz, bulutOku, yrGonder, yrSira, fotoGonder, fotoOku, fotoBegen, izOku, izYaz, izAl, izBegen, bossBaslat, bossVur, bossSira, lOku, lKur, lKatil, lAyril, lBagis, pOku, pKoy, pAl, pSil, durum: () => durum, uid: () => uid };
+  return { say, evOku, evEkle, baslat, gonder, tur, UZAK, ilkKesif, ilkAd, siraGonder, sira, sil, simdi, balon, mesaj, kkOku, hafta, odulKontrol, sohBaslat, sohGonder, bulutYaz, bulutOku, yrGonder, yrSira, fotoGonder, fotoOku, fotoBegen, izOku, izYaz, izAl, izBegen, bossBaslat, bossVur, bossSira, lOku, lKur, lKatil, lAyril, lBagis, pOku, pKoy, pAl, pSil, durum: () => durum, uid: () => uid };
 })();
 let siraAlan = 's';
 async function siraYaz() {
