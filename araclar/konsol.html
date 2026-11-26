@@ -450,7 +450,7 @@ const HELP = [
     ['cig 22 50 [yüzey °C]', T('çiğ noktası ve yoğuşma / küf riski', 'dew point and condensation / mould risk')],
     ['arac [kelime]', T('sitedeki 170+ aracı listele, ara ve aç (ör. arac rüzgar)', 'list, search and open the site\'s 170+ tools')]]],
   [T('Oyunlar', 'Games'), [
-    ['tetris', T('Tetris (← → ↓, ↑ döndür, boşluk bırak)', 'Tetris (← → ↓, ↑ rotate, space drop)')],
+    ['bloklar', T('Bloklar: düşen parçaları diz (← → ↓, ↑ döndür, boşluk bırak)', 'Blocks: stack the falling pieces (← → ↓, ↑ rotate, space drop)')],
     ['yilan', T('yılan oyunu (ok tuşları ya da kaydır)', 'snake (arrow keys or swipe)')],
     ['mayin [kolay|orta|zor]', T('mayın tarlası (dokun: aç, basılı tut ya da F: bayrak)', 'minesweeper (tap: open, long-press or F: flag)')]]],
   [T('Bilgi', 'Info'), [
@@ -834,7 +834,7 @@ const CMDS = {
     hits.slice(0, 25).forEach(x => c.out([C(String(A.items.indexOf(x) + 1).padStart(3), 'c-m'), '  ', C(x.t, 'c-a'), C(' — ' + x.d.slice(0, 80) + (x.d.length > 80 ? '…' : ''), 'c-m')]));
     c.out(T(`${hits.length} sonuç. Açmak için: arac <no>`, `${hits.length} results. Open with: arac <no>`), 'c-m');
   },
-  tetris(c) { oyunBaslat('tetris'); },
+  bloklar(c) { oyunBaslat('bloklar'); },
   yilan(c) { oyunBaslat('yilan'); },
   mayin(c) { const z = trNorm(c.args[0] || 'kolay'); oyunBaslat('mayin', z.startsWith('z') || z.startsWith('h') ? 'zor' : z.startsWith('o') || z.startsWith('m') ? 'orta' : 'kolay'); },
   async pip(c) { if (c.args[0] !== 'install' || !c.args[1]) { c.err(T('kullanım: pip install paket', 'usage: pip install package')); return 1; } await loadPy(c); await PY.loadPackage('micropip'); const mp = PY.pyimport('micropip'); for (const p of c.args.slice(1)) { c.out(T('yükleniyor: ', 'installing: ') + p, 'c-m'); try { await mp.install(p); c.out(T('tamam: ', 'done: ') + p, 'c-a'); } catch (e) { c.err(String(e.message || e).split('\n').slice(-2).join(' ')); return 1; } } },
@@ -920,7 +920,7 @@ const GS = (() => {
     genlesme: { kat: 'cephe', f: [f('s', 'mal', 'Malzeme', 'Material', { o: [['al', T('Alüminyum', 'Aluminium')], ['st', T('Çelik', 'Steel')], ['ss', T('Paslanmaz', 'Stainless')], ['gl', T('Cam', 'Glass')], ['acp', T('Kompozit', 'ACP')], ['cu', T('Bakır', 'Copper')]], v: 'al' }), f('np', 'boy', 'Boy (mm)', 'Length (mm)', { v: 6000, z: 1 }), f('np', 'tmax', 'En yüksek °C', 'Max °C', { v: 80 }), f('np', 'tmin', 'En düşük °C', 'Min °C', { v: -20 }), f('np', 'tm', 'Montaj °C', 'Install °C', { v: 15 })] },
     cig: { kat: 'cephe', f: [f('np', 't', 'İç sıcaklık °C', 'Indoor °C', { v: 22, z: 1 }), f('np', 'rh', 'Bağıl nem %', 'Humidity %', { v: 50, z: 1 }), f('np', 'ys', 'Yüzey sıcaklığı °C', 'Surface °C', {})] },
     arac: { kat: 'cephe', f: [f('y', 'q', 'Aranan araç', 'Search tools', { ph: T('rüzgar', 'wind'), tam: 1 })] },
-    tetris: { kat: 'oyun', f: [] }, yilan: { kat: 'oyun', f: [] },
+    bloklar: { kat: 'oyun', f: [] }, yilan: { kat: 'oyun', f: [] },
     mayin: { kat: 'oyun', f: [f('s', 'z', 'Zorluk', 'Difficulty', { o: [['kolay', T('kolay', 'easy')], ['orta', T('orta', 'medium')], ['zor', T('zor', 'hard')]], v: 'kolay' })] },
     cowsay: { kat: 'oyun', f: [f('y', 'metin', 'İnek ne desin?', 'What should the cow say?', { ph: 'Mööö!', tam: 1 })] }, fortune: { kat: 'oyun', f: [] }, matrix: { kat: 'oyun', f: [] },
     alias: { kat: 'kabuk', liste: 1, ozel: v => v.ad ? [`${v.ad}=${gq(v.komut || '')}`] : [], f: [f('y', 'ad', 'Kısa ad', 'Short name', { ph: 'll', z: 1 }), f('y', 'komut', 'Yerine geçeceği komut', 'Command it stands for', { ph: 'ls -l -a', z: 1 })] },
@@ -1337,16 +1337,17 @@ byId('winKb').addEventListener('keydown', e => { if (!WIN) return; const m = { E
 byId('screen_container').addEventListener('click', () => { if (WIN && WIN.booted && WIN.kind !== 'dos' && !matchMedia('(pointer:coarse)').matches && !document.pointerLockElement) { try { WIN.emu.lock_mouse(); } catch (e) { } } });
 addEventListener('resize', winFit);
 
-/* ---------------- oyunlar: tetris, yılan, mayın tarlası ---------------- */
+/* ---------------- oyunlar: bloklar, yılan, mayın tarlası ---------------- */
 let OY = null;
+try { const eski = LS.get('konsol:rekor:tetris'); if (eski && !LS.get('konsol:rekor:bloklar')) LS.set('konsol:rekor:bloklar', eski); } catch (e) { }   /* eski kayıt adından taşı */
 const oyRekor = (k, v) => { const key = 'konsol:rekor:' + k; const r = +(LS.get(key) || 0); if (v != null && v > r) { LS.set(key, String(v)); return v; } return r; };
 const sp = (txt, col, cls) => `<span${cls ? ` class="${cls}"` : ''}${col ? ` style="color:${col}"` : ''}>${txt}</span>`;
 function oyFit() { if (!OY) return; const a = byId('oyAlan'), pre = byId('oyPre'), cols = OY.cols || 40, rows = OY.rows || 22; const fs = Math.max(8, Math.min(a.clientWidth / (cols * 0.61), a.clientHeight / (rows * 1.13), 30)); pre.style.fontSize = fs.toFixed(1) + 'px'; }
 function oyunBaslat(tur, opt) {
   oyunKapat(true);
-  const G = { tetris: oyTetris, yilan: oyYilan, mayin: oyMayin }[tur]();
+  const G = { bloklar: oyBloklar, yilan: oyYilan, mayin: oyMayin }[tur]();
   OY = Object.assign(G, { tur, opt, dur: false, son: false });
-  byId('oyAd').textContent = { tetris: '🧱 Tetris', yilan: '🐍 ' + T('Yılan', 'Snake'), mayin: '💣 ' + T('Mayın tarlası', 'Minesweeper') }[tur];
+  byId('oyAd').textContent = { bloklar: '🧱 ' + T('Bloklar', 'Blocks'), yilan: '🐍 ' + T('Yılan', 'Snake'), mayin: '💣 ' + T('Mayın tarlası', 'Minesweeper') }[tur];
   byId('oyBar').innerHTML = OY.tuslar.map(([k, l]) => `<button type="button" data-k="${k}">${l}</button>`).join('');
   byId('oyun').hidden = false; CMD.blur(); OY.yeni(opt); oyFit(); oyCiz();
 }
@@ -1355,14 +1356,14 @@ function oyCiz() { if (!OY) return; byId('oyPre').innerHTML = OY.ciz(); byId('oy
 function oyTus(k) { if (!OY) return; if (k === 'Escape') return oyunKapat(); if (k === 'p' || k === 'P') { if (!OY.son) { OY.dur = !OY.dur; oyCiz(); } return; } if (k === 'r' || k === 'R') { OY.yeni(OY.opt); oyCiz(); return; } if (OY.son && (k === ' ' || k === 'Enter')) { OY.yeni(OY.opt); oyCiz(); return; } if (!OY.dur || OY.tur === 'mayin') OY.tus(k); oyCiz(); }
 document.addEventListener('keydown', e => { if (!OY || byId('oyun').hidden) return; const k = e.key; if (['ArrowLeft', 'ArrowRight', 'ArrowUp', 'ArrowDown', ' ', 'Enter', 'Escape', 'p', 'P', 'r', 'R', 'f', 'F'].includes(k)) { e.preventDefault(); e.stopPropagation(); oyTus(k); } }, true);
 byId('oyX').onclick = () => oyunKapat(); byId('oyY').onclick = () => oyTus('r'); byId('oyP').onclick = () => oyTus('p');
-byId('oyBar').addEventListener('pointerdown', e => { const b = e.target.closest('[data-k]'); if (!b) return; e.preventDefault(); const k = b.dataset.k; if (k === 'bayrak') { OY.bayrakKip = !OY.bayrakKip; b.classList.toggle('on', OY.bayrakKip); return; } oyTus(k); if (/Arrow(Left|Right|Down)/.test(k) && OY && OY.tur === 'tetris') { clearInterval(OY.tekrar); const t0 = setTimeout(() => { OY.tekrar = setInterval(() => oyTus(k), 70); }, 220); const bit = () => { clearTimeout(t0); clearInterval(OY && OY.tekrar); removeEventListener('pointerup', bit); removeEventListener('pointercancel', bit); }; addEventListener('pointerup', bit); addEventListener('pointercancel', bit); } });
-/* kaydırma (yılan ve tetris) */
+byId('oyBar').addEventListener('pointerdown', e => { const b = e.target.closest('[data-k]'); if (!b) return; e.preventDefault(); const k = b.dataset.k; if (k === 'bayrak') { OY.bayrakKip = !OY.bayrakKip; b.classList.toggle('on', OY.bayrakKip); return; } oyTus(k); if (/Arrow(Left|Right|Down)/.test(k) && OY && OY.tur === 'bloklar') { clearInterval(OY.tekrar); const t0 = setTimeout(() => { OY.tekrar = setInterval(() => oyTus(k), 70); }, 220); const bit = () => { clearTimeout(t0); clearInterval(OY && OY.tekrar); removeEventListener('pointerup', bit); removeEventListener('pointercancel', bit); }; addEventListener('pointerup', bit); addEventListener('pointercancel', bit); } });
+/* kaydırma (yılan ve bloklar) */
 (() => { let x0 = 0, y0 = 0, t0 = 0; const a = byId('oyAlan');
   a.addEventListener('pointerdown', e => { x0 = e.clientX; y0 = e.clientY; t0 = performance.now(); });
-  a.addEventListener('pointerup', e => { if (!OY || OY.tur === 'mayin') return; const dx = e.clientX - x0, dy = e.clientY - y0, ad = Math.max(Math.abs(dx), Math.abs(dy)); if (ad < 24) { if (OY.tur === 'tetris' && performance.now() - t0 < 300) oyTus('ArrowUp'); return; } oyTus(Math.abs(dx) > Math.abs(dy) ? (dx > 0 ? 'ArrowRight' : 'ArrowLeft') : (dy > 0 ? (OY.tur === 'tetris' ? ' ' : 'ArrowDown') : 'ArrowUp')); }); })();
+  a.addEventListener('pointerup', e => { if (!OY || OY.tur === 'mayin') return; const dx = e.clientX - x0, dy = e.clientY - y0, ad = Math.max(Math.abs(dx), Math.abs(dy)); if (ad < 24) { if (OY.tur === 'bloklar' && performance.now() - t0 < 300) oyTus('ArrowUp'); return; } oyTus(Math.abs(dx) > Math.abs(dy) ? (dx > 0 ? 'ArrowRight' : 'ArrowLeft') : (dy > 0 ? (OY.tur === 'bloklar' ? ' ' : 'ArrowDown') : 'ArrowUp')); }); })();
 addEventListener('resize', oyFit);
 
-function oyTetris() {
+function oyBloklar() {
   const W = 10, H = 20, RENK = { I: '#4fd1e8', O: '#f2c94c', T: '#b07cf2', S: '#6fcf6f', Z: '#ef6b6b', J: '#5b8def', L: '#f2994a' };
   const SEK = { I: [[0, 1], [1, 1], [2, 1], [3, 1]], O: [[1, 0], [2, 0], [1, 1], [2, 1]], T: [[1, 0], [0, 1], [1, 1], [2, 1]], S: [[1, 0], [2, 0], [0, 1], [1, 1]], Z: [[0, 0], [1, 0], [1, 1], [2, 1]], J: [[0, 0], [0, 1], [1, 1], [2, 1]], L: [[2, 0], [0, 1], [1, 1], [2, 1]] };
   const G = { cols: 35, rows: 22, tuslar: [['ArrowLeft', '←'], ['ArrowUp', '⟳'], ['ArrowDown', '↓'], ['ArrowRight', '→'], [' ', '⤓']] };
@@ -1370,7 +1371,7 @@ function oyTetris() {
   const cek = () => { if (!torba.length) torba = shuffle(Object.keys(SEK)); return torba.pop(); };
   const hucre = (t, r = 0) => SEK[t].map(([x, y]) => { const n = t === 'O' ? 0 : r; let a = x, b = y; const m = t === 'I' ? 3 : 2; for (let i = 0; i < n; i++) [a, b] = [m - b, a]; return [a, b]; });
   const sigar = (q) => q.h.every(([x, y]) => { const X = q.x + x, Y = q.y + y; return X >= 0 && X < W && Y < H && (Y < 0 || !tah[Y][X]); });
-  const yeniParca = () => { const t = sira; sira = cek(); p = { t, r: 0, x: 3, y: -1, h: hucre(t) }; if (!sigar(p)) { G.son = true; clearInterval(G.iv); oyRekor('tetris', puan); } };
+  const yeniParca = () => { const t = sira; sira = cek(); p = { t, r: 0, x: 3, y: -1, h: hucre(t) }; if (!sigar(p)) { G.son = true; clearInterval(G.iv); oyRekor('bloklar', puan); } };
   const hiz = () => Math.max(70, 800 - (sev - 1) * 75);
   const zaman = () => { clearInterval(G.iv); G.iv = setInterval(() => { if (!G.dur && !G.son) { asagi(); oyCiz(); } }, hiz()); };
   const kilitle = () => { p.h.forEach(([x, y]) => { if (p.y + y >= 0) tah[p.y + y][p.x + x] = p.t; }); let n = 0; for (let y = H - 1; y >= 0; y--) if (tah[y].every(Boolean)) { tah.splice(y, 1); tah.unshift(Array(W).fill(0)); n++; y++; } if (n) { puan += [0, 100, 300, 500, 800][n] * sev; satir += n; const s2 = Math.floor(satir / 10) + 1; if (s2 !== sev) { sev = s2; zaman(); } } yeniParca(); };
@@ -1385,7 +1386,7 @@ function oyTetris() {
   G.ciz = () => {
     let gy = p.y; while (sigar({ ...p, y: gy + 1 })) gy++;
     const izd = new Set(p.h.map(([x, y]) => (gy + y) * W + p.x + x)), par = new Set(p.h.map(([x, y]) => (p.y + y) * W + p.x + x));
-    const sag = [sp(T('SIRADAKİ', 'NEXT'), '', 'c-m'), '', '', '', '', sp(T('PUAN', 'SCORE'), '', 'c-m'), sp(String(puan), '', 'c-w c-b'), '', sp(T('SATIR', 'LINES'), '', 'c-m'), String(satir), '', sp(T('SEVİYE', 'LEVEL'), '', 'c-m'), String(sev), '', sp(T('REKOR', 'BEST'), '', 'c-m'), String(Math.max(oyRekor('tetris'), puan)), '', G.son ? sp(T('OYUN BİTTİ', 'GAME OVER'), '', 'c-e c-b') : G.dur ? sp(T('DURAKLATILDI', 'PAUSED'), '', 'c-w') : '', G.son ? sp(T('boşluk: yeniden', 'space: again'), '', 'c-m') : ''];
+    const sag = [sp(T('SIRADAKİ', 'NEXT'), '', 'c-m'), '', '', '', '', sp(T('PUAN', 'SCORE'), '', 'c-m'), sp(String(puan), '', 'c-w c-b'), '', sp(T('SATIR', 'LINES'), '', 'c-m'), String(satir), '', sp(T('SEVİYE', 'LEVEL'), '', 'c-m'), String(sev), '', sp(T('REKOR', 'BEST'), '', 'c-m'), String(Math.max(oyRekor('bloklar'), puan)), '', G.son ? sp(T('OYUN BİTTİ', 'GAME OVER'), '', 'c-e c-b') : G.dur ? sp(T('DURAKLATILDI', 'PAUSED'), '', 'c-w') : '', G.son ? sp(T('boşluk: yeniden', 'space: again'), '', 'c-m') : ''];
     const sh = hucre(sira); for (let r = 0; r < 2; r++) { let l = ''; for (let c2 = 0; c2 < 4; c2++) l += sh.some(([x, y]) => x === c2 && y === r) ? sp('██', RENK[sira]) : '  '; sag[2 + r] = l; }
     let o = sp('╔' + '══'.repeat(W) + '╗', '', 'c-m') + '\n';
     for (let y = 0; y < H; y++) { let l = sp('║', '', 'c-m'); for (let x = 0; x < W; x++) { const i = y * W + x; if (par.has(i) && !G.son) l += sp('██', RENK[p.t]); else if (tah[y][x]) l += sp('██', RENK[tah[y][x]]); else if (izd.has(i) && !G.son) l += sp('░░', RENK[p.t]); else l += sp(' ·', '', 'c-m'); } o += l + sp('║', '', 'c-m') + '  ' + (sag[y] || '') + '\n'; }
