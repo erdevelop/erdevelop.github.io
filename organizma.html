@@ -1556,6 +1556,7 @@ function agGonder(dt) {
 }
 AG.olayda(v => {
   if (v && v.tip === 'davet') { davetGeldi(v); return; }
+  if (v && v.tip === 'konj') { konjAl(v); return; }
   if (v && v.tip === 'dev') { const b = DEVB.b; if (b && b.ortak && b.slot === v.s) { b.can -= Math.max(0, Math.min(400, +v.d || 0)); P.push({ x: b.x + rnd(-b.r, b.r) * 0.7, y: b.y + rnd(-b.r, b.r) * 0.7, vx: 0, vy: 0, r: 12, o: 0.8, t: 0, s: 0.35, tip: 2, h: DEVLER[b.tip].hue }); } return; }
   if (!v || !oyuncu || oyuncu.olu) return;
   if (v.tip !== 'ye') return;
@@ -3340,6 +3341,7 @@ function ciz(t) {
     if (o === oyuncu || (o.uzak && o.sus)) susCiz(o, z, t);
     if (o.altin && !o.olu) altinCiz(o.x, o.y, o.rr || o.r, z, t);
     orgCiz(g, o, z, t);
+    if (o === oyuncu && KONJ.p && KONJ.t > 0 && !o.olu) { const q = KONJ.p, p2 = Math.min(1, KONJ.t / 3); g.strokeStyle = `rgba(160,255,220,${0.25 + 0.45 * p2})`; g.lineWidth = Math.max(2 / z, Math.min(o.r, q.r) * (0.25 + 0.35 * p2)); g.lineCap = 'round'; g.beginPath(); g.moveTo(o.x, o.y); g.lineTo(q.x, q.y); g.stroke(); g.lineCap = 'butt'; g.strokeStyle = 'rgba(200,255,235,.8)'; g.lineWidth = Math.max(1.5 / z, 2.5 / z); g.beginPath(); g.arc((o.x + q.x) / 2, (o.y + q.y) / 2, Math.min(o.r, q.r) * 0.7, -Math.PI / 2, -Math.PI / 2 + TAU * p2); g.stroke(); }
     if (o.kistZ > 0 && !o.olu) { const r = (o.rr || o.r) * 1.08, p2 = 1 - o.kistZ / 3; g.strokeStyle = `rgba(225,200,140,${0.35 + 0.55 * p2})`; g.lineWidth = Math.max(2 / z, r * (0.05 + 0.18 * p2)); g.beginPath(); g.arc(o.x, o.y, r, 0, TAU); g.stroke(); g.fillStyle = `rgba(180,150,90,${0.35 * p2})`; g.fill(); }
     if (o.endo && o.endo.length && !o.olu) { const r = o.rr || o.r; for (const e of o.endo) { const a = e.a + t * 0.25, px = o.x + Math.cos(a) * r * e.d, py = o.y + Math.sin(a) * r * e.d, rr = Math.max(1.6 / z, r * 0.1); g.fillStyle = `hsla(${e.h},62%,${e.kal ? 38 : 48}%,.85)`; g.beginPath(); g.ellipse(px, py, rr, rr * 0.62, a, 0, TAU); g.fill(); g.strokeStyle = e.kal ? 'rgba(200,255,190,.75)' : 'rgba(200,255,190,.35)'; g.lineWidth = Math.max(0.7 / z, r * 0.012); g.stroke(); if (rr * z > 4) { g.strokeStyle = 'rgba(20,70,25,.5)'; g.beginPath(); g.moveTo(px - Math.cos(a) * rr * 0.6, py - Math.sin(a) * rr * 0.6); g.lineTo(px + Math.cos(a) * rr * 0.6, py + Math.sin(a) * rr * 0.6); g.stroke(); } } }
   }
@@ -3440,7 +3442,7 @@ let hudZ = 0, miniZ = 0;
 function hud(dt) {
   hudZ -= dt; miniZ -= dt;
   if (IZLE) izleTik(dt);
-  dostOkGuncelle(); mkOlcekGuncelle(dt); gunGuncelle(dt); kistTik(dt); kistIpucu(dt); window.olcumTik && olcumTik(dt); window.konsolTik && konsolTik(dt);
+  dostOkGuncelle(); mkOlcekGuncelle(dt); gunGuncelle(dt); kistTik(dt); kistIpucu(dt); konjTik(dt); window.olcumTik && olcumTik(dt); window.konsolTik && konsolTik(dt);
   yasamGuncelle(dt); nufusGuncelle(dt);
   if (hudZ <= 0) {
     hudZ = 0.25;
@@ -4410,6 +4412,41 @@ function kistIpucu(dt) {
   const zor = (o.osmo || 0) > 0.5 || (o.o2 != null && o.o2 < 0.3) || ((o.tok || 0) < 0.01 && o.m < 70);
   o.kistZor = zor ? (o.kistZor || 0) + dt : 0;
   if (o.kistZor > 6) { o.kistIp = 1; duyur(T('🥚 Zor durumdasın: K tuşuyla (ya da ☰ → Kist ol) kabuğuna çekilip bu hayatı bir sonraki oyuna saklayabilirsin.', '🥚 Tough spot: press K (or ☰ → Encyst) to withdraw into a cyst and save this life for your next game.'), '', 7); }
+}
+
+/* ================= konjugasyon: aynı türden, boyca denk iki hücre yan yana durunca gen değiş tokuş eder ================= */
+const KONJ = { p: null, t: 0, son: new Map() };
+const konjGenler = o => (o.gen || []).map(q => q.k);
+function konjAl(v) {   // çevrimiçi eşimizden gelen genler
+  const o = oyuncu; if (!o || o.olu || IZLE || !Array.isArray(v.g)) return;
+  let n = 0; for (const q of v.g.slice(0, 3)) { const k = String(q.k || ''), h = +q.h || 0; if (!GEN_AD_VAR(k) || o.gen.some(x => x.k === k)) continue; genYe(o, k, h); if (++n >= 2) break; }
+  duyurHtml(T(`🤝 <b>${esc(String(v.n || '?').slice(0, 16))}</b> ile konjugasyon: ${n ? n + ' yeni gen aldın' : 'yeni gen yoktu, ama bağ kuruldu'}.`, `🤝 Conjugation with <b>${esc(String(v.n || '?').slice(0, 16))}</b>: ${n ? 'you got ' + n + ' new genes' : 'no new genes, but you bonded'}.`), 'iyi', 5);
+}
+let GEN_KUME = null; const GEN_AD_VAR = k => (GEN_KUME || (GEN_KUME = new Set(GEN_GRUP.flatMap(([gr]) => genAnahtarlar(gr))))).has(k);
+function konjTik(dt) {
+  const o = oyuncu; if (!oyunda || IZLE || !o || o.olu || o.kistZ > 0 || o.dogum < 1) { KONJ.p = null; return; }
+  let es = null;
+  for (const p of O) {
+    if (p === o || p.olu || p.parca || p.dost || p.sahip || p.dogum < 1 || p.tur !== o.tur) continue;
+    const dx = p.x - o.x, dy = p.y - o.y, lim = (o.r + p.r) * 1.08; if (dx > lim || dx < -lim || dy > lim || dy < -lim) continue;
+    if (Math.hypot(dx, dy) > lim || Math.max(o.m, p.m) / Math.min(o.m, p.m) >= YEME) continue;
+    const anahtar = p.netId || p.id; if (zaman - (KONJ.son.get(anahtar) || -999) < 90) continue;
+    es = p; break;
+  }
+  if (!es) { KONJ.p = null; KONJ.t = 0; return; }
+  if (KONJ.p !== es) { KONJ.p = es; KONJ.t = 0; duyur(T('🤝 Konjugasyon başlıyor: yan yana kal…', '🤝 Conjugation starting: stay side by side…'), '', 2.5); }
+  KONJ.t += dt; if (KONJ.t < 3) return;
+  KONJ.son.set(es.netId || es.id, zaman); KONJ.p = null; KONJ.t = 0; olcum('konjugasyon');
+  if (es.uzak && es.netId) {   // çevrimiçi: bizim genlerimizden bir örnek gönder; onlarınki kendi taraflarında gelir
+    const L = o.gen.slice().sort(() => Math.random() - 0.5).slice(0, 3).map(q => ({ k: q.k, h: Math.round(q.h || 0) }));
+    AG.olay(es.netId, { tip: 'konj', g: L, n: o.nick });
+    duyurHtml(T(`🤝 <b>${esc(es.nick)}</b> ile çekirdek parçası değiş tokuş ettiniz. Terliksi hayvanlar da tam böyle yapar: <b>konjugasyon</b>.`, `🤝 You swapped nuclear material with <b>${esc(es.nick)}</b>. Paramecia do exactly this: <b>conjugation</b>.`), 'iyi', 6);
+  } else {   // yapay zekâ hücresi: türün mikro dünyasından rastgele 1–2 yeni gen
+    const havuz = GEN_GRUP.flatMap(([gr]) => genAnahtarlar(gr)).filter(k => /^[mp]/.test(k) && !o.gen.some(q => q.k === k));
+    let n = 0; for (let i = 0; i < 2 && havuz.length; i++) { const k = havuz.splice((Math.random() * havuz.length) | 0, 1)[0]; genYe(o, k, Math.random() * 360); n++; }
+    duyurHtml(T(`🤝 <b>${esc(es.nick || T(TURLER[es.tur].ad[0], ''))}</b> ile konjugasyon: ${n} yeni gen. Aynı türden iki hücre yan yana gelip çekirdek parçası değiş tokuş eder; terliksi hayvanlar böyle yapar.`, `🤝 Conjugation with <b>${esc(es.nick || TURLER[es.tur].ad[1])}</b>: ${n} new genes. Two cells of the same species swap nuclear material side by side, as paramecia do.`), 'iyi', 6);
+  }
+  SES.basari(); for (let i = 0; i < 2; i++) P.push({ x: (o.x + es.x) / 2, y: (o.y + es.y) / 2, vx: 0, vy: 0, r: (o.r + es.r) * (0.5 + i * 0.4), o: 0.8, t: 0, s: 0.8 + i * 0.3, tip: 2, h: 160 });
 }
 
 /* ================= döngü ================= */
