@@ -114,6 +114,7 @@ details ul{padding-left:18px;margin:6px 0}
 .gorev span,.gorev em{position:relative}.gorev em{font-style:normal;color:var(--mute);white-space:nowrap;font-weight:800}
 .gorev.ok{border-color:rgba(95,211,184,.5)}.gorev.ok em{color:#BFF3E4}
 .sirada{margin:7px 0 0;font-size:12px;color:var(--mute);font-weight:700;text-align:center}
+#sezonBilgi{font-size:12px;color:var(--mute);margin:2px 0 6px;line-height:1.5}#sezonBilgi b{color:var(--ink)}#sezonBilgi .rz{display:inline-block;margin:2px 4px 0 0;padding:1px 7px;border-radius:999px;border:1px solid var(--line);background:rgba(255,255,255,.05);color:var(--ink)}
 .sek{border:1px solid var(--line);background:rgba(0,0,0,.2);border-radius:9px;padding:2px 9px;font-size:11.5px;font-weight:800;color:var(--mute);margin-left:4px;letter-spacing:0}
 .sek.sec{border-color:var(--acc);color:var(--ink)}
 #ortakListe{margin:0;padding:0;list-style:none;font-size:13px}
@@ -421,7 +422,7 @@ try { adConfig({ preloadAdBreaks: 'on', sound: 'on' }); } catch (e) { }</script>
     <div class="rekor" id="rekor"></div>
     <div id="agMenu"></div>
     <div id="gorevKutu"></div>
-    <div id="ortakKutu" hidden><div class="gBas"><span data-en="SHARED RECORDS">ORTAK REKORLAR</span><span><button type="button" class="sek" id="ortakG" data-en="Today">Bugün</button><button type="button" class="sek" id="ortakT" data-en="All time">Tüm zamanlar</button><button type="button" class="sek" id="ortakM" data-en="Challenge">📅 Meydan</button><button type="button" class="sek" id="ortakS" data-en="Lineage (week)">🌳 Soy</button></span></div><ol id="ortakListe"></ol></div>
+    <div id="ortakKutu" hidden><div class="gBas"><span data-en="SHARED RECORDS">ORTAK REKORLAR</span><span><button type="button" class="sek" id="ortakG" data-en="Today">Bugün</button><button type="button" class="sek" id="ortakT" data-en="All time">Tüm zamanlar</button><button type="button" class="sek" id="ortakM" data-en="Challenge">📅 Meydan</button><button type="button" class="sek" id="ortakS" data-en="Lineage (week)">🌳 Soy</button><button type="button" class="sek" id="ortakZ" data-en="Season">🏆 Sezon</button></span></div><div id="sezonBilgi" hidden></div><ol id="ortakListe"></ol></div>
     <details><summary id="basOzet">Başarımlar</summary><div id="basarimlar"></div></details>
     <details>
       <summary data-en="How to play">Nasıl oynanır?</summary>
@@ -888,6 +889,11 @@ const AG = (() => {
     const u = uid(); if (!db || !u || durum !== 'acik') return;
     for (const k of ['g' + gun(), 'tum']) db.ref(KOK + '/r/' + k + '/' + u).set(v).catch(() => { });
   }
+  function rekorIlk(k, cb) {   // tablonun birincisi ve kimliği (sezon şampiyonu için)
+    if (bc) { const d = ls.get('organizma-rekor-deneme', {})[k] || {}, L = Object.values(d).sort((a, b) => b.s - a.s); cb(L[0] ? { u: L[0].n, v: L[0] } : null); return; }
+    if (!db || durum !== 'acik') { cb(undefined); return; }
+    db.ref(KOK + '/r/' + k).orderByChild('s').limitToLast(1).once('value').then(s => { let r = null; s.forEach(c => { r = { u: c.key, v: c.val() }; }); cb(r); }).catch(() => cb(undefined));
+  }
   function rekorOku(k, cb) {
     if (bc) { const d = ls.get('organizma-rekor-deneme', {})[k] || {}; cb(Object.values(d).sort((a, b) => b.s - a.s).slice(0, 10)); return; }
     if (!db || durum !== 'acik') { cb(null); return; }
@@ -896,7 +902,7 @@ const AG = (() => {
   /* uzun süre güncellenmeyenleri at (onDisconnect çalışmamış olabilir) */
   setInterval(() => { const n = performance.now(); for (const [id, u] of uzak) if (n - u.alindi > (u.detay ? 8000 : 13000)) uzak.delete(id); }, 2000);
   addEventListener('pagehide', ayril);
-  return { baslat, katil, gonder, ayril, olay, uzak, durum: () => durum, olayda: f => olayCb = f, simdi, gun, rekorYaz, rekorYazK, rekorOku, hata: () => ({ eski, hucrem, komsu: [...komsu], dinlenen: [...dinlenen.keys()], uzak: [...uzak].map(([id, u]) => [id.slice(0, 4), u.detay, Math.round(u.v.x), Math.round(u.v.y), Math.round(performance.now() - u.alindi)]) }) };
+  return { rekorIlk, benKim: () => bc ? null : uid(), baslat, katil, gonder, ayril, olay, uzak, durum: () => durum, olayda: f => olayCb = f, simdi, gun, rekorYaz, rekorYazK, rekorOku, hata: () => ({ eski, hucrem, komsu: [...komsu], dinlenen: [...dinlenen.keys()], uzak: [...uzak].map(([id, u]) => [id.slice(0, 4), u.detay, Math.round(u.v.x), Math.round(u.v.y), Math.round(performance.now() - u.alindi)]) }) };
 })();
 
 /* ================= varlıklar ================= */
@@ -2832,6 +2838,8 @@ function oyuncuOldu(yiyen) {
   $('oRekor').innerHTML = yeniU ? `<span class="yeniRekor">🏆 ${T('Yeni hayatta kalma rekoru!', 'New survival record!')}</span>` : (yeniB ? `<span class="yeniRekor">🏆 ${T('Yeni kütle rekoru!', 'New mass record!')}</span>` : '');
   { const nk = oyuncu.nick, hf = hafta(), sh = KAYIT.soyHafta && KAYIT.soyHafta.h === hf ? KAYIT.soyHafta : (KAYIT.soyHafta = { h: hf, p: 0 }); sh.p += soyPuani(oyuncu).n;
     if (sh.p > 0) AG.rekorYazK('sh' + hf, { n: nk, s: sh.p, m: Math.round(KAYIT.enDerin || 0), k: AGC().p });
+    { sezonKapat(); const sn = sezonNo(), sz = KAYIT.sezon && KAYIT.sezon.no === sn ? KAYIT.sezon : (KAYIT.sezon = { no: sn, p: 0 }); sz.p += soyPuani(oyuncu).n;
+      if (sz.p > 0) AG.rekorYazK('sz' + sn, { n: nk, s: Math.min(86400, sz.p), m: Math.round(KAYIT.enDerin || 0), k: AGC().p }); }
     if (GM) { const p = gmPuan(oyuncu), eski = KAYIT.gm && KAYIT.gm.gun === GM.gun ? KAYIT.gm.en : 0; KAYIT.gm = { gun: GM.gun, en: Math.max(eski, p) }; AG.rekorYazK('gm' + GM.gun, { n: nk, s: p, m: Math.round(oyuncu.enBuyuk), k: oyuncu.kusak });
       $('oGm').innerHTML = `<span class="yeniRekor" style="background:rgba(255,226,154,.14);color:#FFE9B0">📅 ${T('Günlük puan', 'Daily score')}: <b>${p}</b>${p > eski ? ' · ' + T('bugünkü en iyin!', 'your best today!') : ` · ${T('en iyin', 'best')} ${eski}`}</span>`; }
     else $('oGm').innerHTML = ''; }
@@ -2907,6 +2915,7 @@ $('ortakG').onclick = () => { ortakTur = 0; ortakYukle(); };
 $('ortakT').onclick = () => { ortakTur = 1; ortakYukle(); };
 $('ortakM').onclick = () => { ortakTur = 2; ortakYukle(); };
 $('ortakS').onclick = () => { ortakTur = 3; ortakYukle(); };
+$('ortakZ').onclick = () => { ortakTur = 4; ortakYukle(); };
 /* tam ekran */
 (() => {
   const el = document.documentElement, ac = el.requestFullscreen || el.webkitRequestFullscreen, kapat = document.exitFullscreen || document.webkitExitFullscreen;
@@ -3633,12 +3642,12 @@ function basYaz() {
 }
 function ortakYukle() {
   ortakYuk = performance.now();
-  ['ortakG', 'ortakT', 'ortakM', 'ortakS'].forEach((id, i) => $(id).classList.toggle('sec', ortakTur === i));
-  const puanMi = ortakTur >= 2;
-  AG.rekorOku([ 'g' + AG.gun(), 'tum', 'gm' + AG.gun(), 'sh' + hafta()][ortakTur] || 'tum', L => {
+  ['ortakG', 'ortakT', 'ortakM', 'ortakS', 'ortakZ'].forEach((id, i) => $(id).classList.toggle('sec', ortakTur === i));
+  const puanMi = ortakTur >= 2; sezonBilgiYaz();
+  AG.rekorOku([ 'g' + AG.gun(), 'tum', 'gm' + AG.gun(), 'sh' + hafta(), 'sz' + sezonNo()][ortakTur] || 'tum', L => {
     if (!L) { $('ortakKutu').hidden = true; return; }
     $('ortakKutu').hidden = false;
-    $('ortakListe').innerHTML = L.length ? L.map((v, i) => `<li><em>${i + 1}.</em><b>${esc(String(v.n).slice(0, 16))}</b>${puanMi ? `<em>🏅 ${Math.round(+v.s || 0)}</em>${ortakTur === 3 ? (+v.m ? `<em>🌑 ${Math.round(+v.m)} m</em>` : '') : `<em>⚖ ${Math.round(+v.m || 0)}</em>`}` : `<em>⏱ ${dkYaz(+v.s || 0)}</em><em>⚖ ${Math.round(+v.m || 0)}</em>`}${+v.k > 1 ? `<em>🧬 ${romaYaz(Math.min(99, +v.k | 0))}</em>` : ''}</li>`).join('') : `<li class="bos2">${T('Henüz kayıt yok — ilk sen ol!', 'No records yet — be the first!')}</li>`;
+    $('ortakListe').innerHTML = L.length ? L.map((v, i) => `<li><em>${i + 1}.</em><b>${esc(String(v.n).slice(0, 16))}</b>${puanMi ? `<em>🏅 ${Math.round(+v.s || 0)}</em>${ortakTur >= 3 ? (+v.m ? `<em>🌑 ${Math.round(+v.m)} m</em>` : '') : `<em>⚖ ${Math.round(+v.m || 0)}</em>`}` : `<em>⏱ ${dkYaz(+v.s || 0)}</em><em>⚖ ${Math.round(+v.m || 0)}</em>`}${+v.k > 1 ? `<em>🧬 ${romaYaz(Math.min(99, +v.k | 0))}</em>` : ''}</li>`).join('') : `<li class="bos2">${T('Henüz kayıt yok — ilk sen ol!', 'No records yet — be the first!')}</li>`;
   });
 }
 function kilitUyar(k) { duyur(T(`🔒 ${k} DNA gerekir (sende ${KAYIT.dna}). Görev ve başarımlarla DNA kazanırsın.`, `🔒 Needs ${k} DNA (you have ${KAYIT.dna}). Earn DNA from quests and achievements.`), '', 3.5); }
@@ -4784,6 +4793,45 @@ function kolonCiz(x, o, r, t, al) {
   }
   x.globalAlpha = 1;
 }
+
+/* ================= sezonlar: 4 haftalık soy puanı yarışı =================
+   Her hayatın soy puanı hem haftalık hem sezon tablosuna eklenir. Sezon bitince puanına göre rozet ve DNA alırsın;
+   tablonun birincisi "Sezon şampiyonu" olur ve bir sonraki sezon boyunca menüde adıyla anılır. */
+const SEZON_BAS = 742;   // 2026 Kasım: 1. sezon
+const sezonNo = () => Math.floor(+hafta() / 4);
+const sezonGor = n => n - SEZON_BAS + 1;
+const sezonKalan = () => { const bit = (sezonNo() + 1) * 4 * 7 - 3, gun = AG.simdi() / 864e5 + 3 / 24; return Math.max(0, Math.ceil(bit - gun)); };
+const SEZON_RZ = [[60, '🥇', ['Altın', 'Gold'], 50], [25, '🥈', ['Gümüş', 'Silver'], 25], [8, '🥉', ['Bronz', 'Bronze'], 10]];
+let sezonKapaniyor = false;
+function sezonKapat() {   // geçmiş sezon kaydı varsa: rozeti ver, şampiyonluğu kontrol et
+  sampiyonDene(); const z = KAYIT.sezon; if (!z || z.no >= sezonNo() || sezonKapaniyor) return;
+  const R2 = SEZON_RZ.find(r => z.p >= r[0]); KAYIT.sezonRz = KAYIT.sezonRz || [];
+  const kayit = { no: z.no, p: z.p, t: R2 ? R2[1] : null }; KAYIT.sezonRz.push(kayit); KAYIT.sezon = { no: sezonNo(), p: 0 }; kayitKirli = true;
+  if (R2) { dnaEkle(R2[3]); duyur(T(`${R2[1]} ${sezonGor(z.no)}. sezon bitti: ${z.p} soy puanıyla ${R2[2][0]} rozet ve +${R2[3]} DNA kazandın!`, `${R2[1]} Season ${sezonGor(z.no)} is over: with ${z.p} lineage points you earned a ${R2[2][1]} badge and +${R2[3]} DNA!`), 'iyi', 8); }
+  if (z.p > 0) KAYIT.sezonBekle = z.no; kaydet(); sampiyonDene();
+}
+function sampiyonDene() {   // çevrimdışıysa sonra yeniden dener
+  const no = KAYIT.sezonBekle; if (no == null || sezonKapaniyor) return; sezonKapaniyor = true;
+  AG.rekorIlk('sz' + no, r => {
+    sezonKapaniyor = false; if (r === undefined) return; KAYIT.sezonBekle = null; kayitKirli = true; const ben = AG.benKim() || (AG.durum && null);
+    const kayit = (KAYIT.sezonRz || []).find(q => q.no === no);
+    if (r && ((ben && r.u === ben) || (!AG.benKim() && r.v && r.v.n === (KAYIT.nick || '')))) { if (kayit) kayit.s = 1; dnaEkle(100); kaydet(); duyur(T(`🏆 ${sezonGor(no)}. sezonun ŞAMPİYONUSUN! +100 DNA. Adın bu sezon boyunca menüde.`, `🏆 You are the CHAMPION of season ${sezonGor(no)}! +100 DNA. Your name stays on the menu all season.`), 'iyi', 10); SES.basari(); }
+  });
+}
+let sampiyonBelli = { no: -1, ad: null };
+function sezonBilgiYaz() {
+  const el = $('sezonBilgi'); el.hidden = ortakTur !== 4; if (el.hidden) return;
+  const n = sezonNo(), z = KAYIT.sezon && KAYIT.sezon.no === n ? KAYIT.sezon.p : 0, rz = (KAYIT.sezonRz || []).filter(r => r.t || r.s);
+  const yaz = () => {
+    el.innerHTML = `<b>🏆 ${T(`${sezonGor(n)}. sezon`, `Season ${sezonGor(n)}`)}</b> · ${T(`${sezonKalan()} gün kaldı`, `${sezonKalan()} days left`)} · ${T('puanın', 'your points')} <b>${z}</b>`
+      + `<br>${T('Rozetler', 'Badges')}: 🥉 8 · 🥈 25 · 🥇 60 ${T('puan', 'pts')} · 🏆 ${T('birinci', 'first place')}`
+      + (sampiyonBelli.ad ? `<br>👑 ${T('Geçen sezonun şampiyonu', 'Last season\'s champion')}: <b>${esc(String(sampiyonBelli.ad).slice(0, 16))}</b>` : '')
+      + (rz.length ? `<br>${T('Senin rozetlerin', 'Your badges')}: ${rz.map(r => `<span class="rz">${r.s ? '🏆' : ''}${r.t || ''} S${sezonGor(r.no)}</span>`).join('')}` : '');
+  };
+  yaz();
+  if (sampiyonBelli.no !== n - 1) { sampiyonBelli.no = n - 1; AG.rekorIlk('sz' + (n - 1), r => { sampiyonBelli.ad = r && r.v ? r.v.n : null; yaz(); }); }
+}
+setTimeout(() => { try { sezonKapat(); } catch (e) { } }, 4000);
 
 /* ================= döngü ================= */
 let son = performance.now(), izle = null, izleZ = 0;
