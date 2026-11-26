@@ -257,8 +257,8 @@
       "hata": {
         ".read": "auth != null && auth.token.email == 'erdalustunol@gmail.com' && auth.token.email_verified == true",
         "$id": {
-          ".write": "!data.exists() || (auth != null && auth.token.email == 'erdalustunol@gmail.com' && auth.token.email_verified == true && !newData.exists())",
-          ".validate": "newData.hasChildren(['m','t','v']) && newData.child('m').isString() && newData.child('m').val().length <= 500 && newData.child('t').isNumber() && newData.child('t').val() <= now + 60000",
+          ".write": "(!data.exists() && newData.exists() && newData.parent().parent().child('hataS').val() == now) || (auth != null && auth.token.email == 'erdalustunol@gmail.com' && auth.token.email_verified == true && !newData.exists())",
+          ".validate": "$id.length <= 40 && newData.hasChildren(['m','t','v']) && newData.child('m').isString() && newData.child('m').val().length <= 500 && newData.child('t').isNumber() && newData.child('t').val() <= now + 60000",
           "m": {
             ".validate": true
           },
@@ -297,7 +297,7 @@
           ".read": "auth != null",
           "t": {
             ".write": "auth != null",
-            ".validate": "newData.isNumber() && newData.val() >= 0 && newData.val() <= (data.exists() ? data.val() : 0) + 100"
+            ".validate": "newData.isNumber() && newData.val() > (data.exists() ? data.val() : 0) && newData.val() - (data.exists() ? data.val() : 0) == newData.parent().child('k/' + auth.uid + '/d').val() - (data.parent().child('k/' + auth.uid + '/d').exists() ? data.parent().child('k/' + auth.uid + '/d').val() : 0)"
           },
           "k": {
             ".indexOn": [
@@ -305,7 +305,19 @@
             ],
             "$uid": {
               ".write": "auth != null && auth.uid === $uid",
-              ".validate": "newData.hasChildren(['n','d']) && newData.child('n').isString() && newData.child('n').val().length <= 20 && newData.child('d').isNumber() && newData.child('d').val() >= 0 && newData.child('d').val() <= 1000000"
+              ".validate": "newData.hasChildren(['n','d','z'])",
+              "n": {
+                ".validate": "newData.isString() && newData.val().length <= 20"
+              },
+              "d": {
+                ".validate": "newData.isNumber() && newData.val() <= 1500 && newData.val() > (data.exists() ? data.val() : 0) && newData.val() - (data.exists() ? data.val() : 0) <= 40 && newData.val() - (data.exists() ? data.val() : 0) == newData.parent().parent().parent().child('t').val() - (data.parent().parent().parent().child('t').exists() ? data.parent().parent().parent().child('t').val() : 0)"
+              },
+              "z": {
+                ".validate": "newData.val() == now && (!data.exists() || now - data.val() >= 45000)"
+              },
+              "$x": {
+                ".validate": false
+              }
             }
           },
           "$x": {
@@ -319,7 +331,7 @@
           ".validate": "$gun.length == 8",
           "$olay": {
             ".write": "auth != null",
-            ".validate": "$olay.length <= 24 && newData.isNumber() && newData.val() == (data.exists() ? data.val() : 0) + 1"
+            ".validate": "$olay.length <= 24 && newData.isNumber() && newData.val() == (data.exists() ? data.val() : 0) + 1 && (newData.parent().parent().parent().child('anu/' + auth.uid + '/c').val() != root.child('kozmos/anu/' + auth.uid + '/c').val() || newData.parent().parent().parent().child('anu/' + auth.uid + '/b').val() != root.child('kozmos/anu/' + auth.uid + '/b').val())"
           }
         }
       },
@@ -328,7 +340,7 @@
         "$hk": {
           "$k": {
             ".write": "auth != null",
-            ".validate": "($k == 'birlik' || $k == 'tuccar' || $k == 'klan') && newData.isNumber() && newData.val() >= (data.exists() ? data.val() : 0) && newData.val() <= (data.exists() ? data.val() : 0) + 50"
+            ".validate": "($k == 'birlik' || $k == 'tuccar' || $k == 'klan') && newData.isNumber() && newData.val() > (data.exists() ? data.val() : 0) && newData.val() - (data.exists() ? data.val() : 0) == newData.parent().parent().parent().child('fru/' + $hk + '/' + auth.uid + '/' + $k).val() - (root.child('kozmos/fru/' + $hk + '/' + auth.uid + '/' + $k).exists() ? root.child('kozmos/fru/' + $hk + '/' + auth.uid + '/' + $k).val() : 0)"
           }
         }
       },
@@ -412,6 +424,41 @@
             ".validate": false
           }
         }
+      },
+      "anu": {
+        "$uid": {
+          ".read": "auth != null && auth.uid === $uid",
+          ".write": "auth != null && auth.uid === $uid",
+          ".validate": "newData.hasChildren(['b','c'])",
+          "b": {
+            ".validate": "newData.isNumber() && ((data.parent().child('b').exists() && now - data.parent().child('b').val() <= 86400000) ? newData.val() == data.val() : newData.val() == now)"
+          },
+          "c": {
+            ".validate": "newData.isNumber() && newData.val() <= 60 && ((data.parent().child('b').exists() && now - data.parent().child('b').val() <= 86400000) ? newData.val() == (data.exists() ? data.val() : 0) + 1 : newData.val() == 1)"
+          },
+          "$x": {
+            ".validate": false
+          }
+        }
+      },
+      "fru": {
+        "$hk": {
+          "$uid": {
+            ".read": "auth != null && auth.uid === $uid",
+            ".write": "auth != null && auth.uid === $uid",
+            ".validate": "newData.hasChildren(['z'])",
+            "z": {
+              ".validate": "newData.val() == now && (!data.exists() || now - data.val() >= 45000)"
+            },
+            "$k": {
+              ".validate": "($k == 'birlik' || $k == 'tuccar' || $k == 'klan') && newData.isNumber() && newData.val() >= (data.exists() ? data.val() : 0) && newData.val() - (data.exists() ? data.val() : 0) <= 50 && newData.val() <= 1000"
+            }
+          }
+        }
+      },
+      "hataS": {
+        ".write": true,
+        ".validate": "newData.val() == now && (!data.exists() || now - data.val() >= 5000)"
       }
     }
   }
