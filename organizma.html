@@ -4674,17 +4674,16 @@ $('kartBtn').onclick = () => { kartPaylas().catch(() => { }); };
    yoğunluk artıyorsa düz gider, azalıyorsa dönüp yön değiştirir (yanlı rastgele yürüyüş). Burada ortalamadan zengin besin
    bölgeleri yeşil bir sis olarak görünür; karanlıkta ve derinde de işe yarar. Soy ağacındaki Kemoreseptör onu güçlendirir. */
 const DUSUK = { get acik() { return KALITE.q === 0; } };   // zayıf cihaz modu: düşük grafik kalitesinde ağır efektler (koku sisi, video kaydı) kapanır
-const KOKU = { cv: null, L: null, GW: 36, GH: 24, t: -9, okT: -9, ok: null, x0: 0, y0: 0, cw: 1, ch: 1 };
+const KOKU = { cv: null, H: new Map(), cell: 120, t: -9, okT: -9, ok: null };
 function kokuCiz(z) {
   const o = oyuncu; if (!o || o.olu || !oyunda || IZLE || ogGizli.includes('koku') || DUSUK.acik) return;
   const lv = agacLv('koku'), guc = [0.55, 0.85, 1][Math.min(2, lv)] * (o.mut ? kis(1 + (o.mut.duyu || 0) / 40, 0.4, 1.5) : 1);
   if (!KAYIT.kokuIpucu && (o.yas || 0) > 25 && (KAYIT.oyun | 0) >= 2) { KAYIT.kokuIpucu = 1; kayitKirli = true; duyur(T('👃 Hafif yeşil sis besin kokusu: tek hücreler besini kimyasal izle bulur (kemotaksis). Sis koyulaştıkça besin artar; karanlıkta da işe yarar. Soy ağacındaki Kemoreseptör onu güçlendirir.', '👃 The faint green haze is food scent: single cells find food by chemical trails (chemotaxis). Denser haze means more food, even in the dark. The Chemoreceptor in the lineage tree makes it stronger.'), '', 9); }
-  if (!KOKU.cv) { const c = KOKU.cv = document.createElement('canvas'); c.width = c.height = 64; const x = c.getContext('2d'), gr = x.createRadialGradient(32, 32, 0, 32, 32, 32); gr.addColorStop(0, 'rgba(150,255,185,1)'); gr.addColorStop(0.45, 'rgba(150,255,185,.45)'); gr.addColorStop(1, 'rgba(150,255,185,0)'); x.fillStyle = gr; x.fillRect(0, 0, 64, 64); }
-  if (zaman - KOKU.t > 0.3) {
-    KOKU.t = zaman; const GW = KOKU.GW, GH = KOKU.GH, vw = W / z * 1.1, vh = H / z * 1.1, x0 = kamera.x - vw / 2, y0 = kamera.y - vh / 2, cw = vw / GW, ch = vh / GH;
-    KOKU.x0 = x0; KOKU.y0 = y0; KOKU.cw = cw; KOKU.ch = ch;
+  if (!KOKU.cv) { const c = KOKU.cv = document.createElement('canvas'); c.width = c.height = 64; const x = c.getContext('2d'), gr = x.createRadialGradient(32, 32, 0, 32, 32, 32); gr.addColorStop(0, 'rgba(150,255,185,1)'); gr.addColorStop(0.35, 'rgba(150,255,185,.62)'); gr.addColorStop(0.7, 'rgba(150,255,185,.2)'); gr.addColorStop(1, 'rgba(150,255,185,0)'); x.fillStyle = gr; x.fillRect(0, 0, 64, 64); }
+  if (zaman - KOKU.t > 0.35) {   // dünyaya sabitlenmiş ızgara: kamera hareket edince lekeler kaymaz, titremez
+    KOKU.t = zaman; const c = KOKU.cell, vw = W / z + 2 * c, vh = H / z + 2 * c, i0 = Math.floor((kamera.x - vw / 2) / c), j0 = Math.floor((kamera.y - vh / 2) / c), GW = Math.ceil(vw / c) + 1, GH = Math.ceil(vh / c) + 1;
     let a = new Float32Array(GW * GH), top = 0;
-    const ekle = (x, y, m) => { const i = ((x - x0) / cw) | 0, j = ((y - y0) / ch) | 0; if (i < 0 || j < 0 || i >= GW || j >= GH) return; a[j * GW + i] += m; top += m; };
+    const ekle = (x, y, m) => { const i = Math.floor(x / c) - i0, j = Math.floor(y / c) - j0; if (i < 0 || j < 0 || i >= GW || j >= GH) return; a[j * GW + i] += m; top += m; };
     for (const f of Y) if (!f.yendi && f.b > 0.6) ekle(f.x, f.y, f.m * f.b);
     for (const m of M) if (!m.olu && m.m < o.m * 0.8) ekle(m.x, m.y, 3 + (m.m || 2));
     for (let gec = 0; gec < 2; gec++) {   // kutu bulanıklığı: koku yayılır
@@ -4692,8 +4691,14 @@ function kokuCiz(z) {
       for (let j = 0; j < GH; j++) for (let i = 0; i < GW; i++) { let s2 = 0, n = 0; for (let dj = -1; dj <= 1; dj++) for (let di = -1; di <= 1; di++) { const ii = i + di, jj = j + dj; if (ii >= 0 && jj >= 0 && ii < GW && jj < GH) { s2 += a[jj * GW + ii]; n++; } } b2[j * GW + i] = s2 / n; }
       a = b2;
     }
-    const ort = top / (GW * GH) || 1; KOKU.L = [];
-    for (let k = 0; k < GW * GH; k++) { const v = kis((a[k] / ort - 1.15) / 2.2, 0, 1); if (v > 0.03) KOKU.L.push(x0 + (k % GW + 0.5) * cw, y0 + ((k / GW | 0) + 0.5) * ch, Math.pow(v, 1.2) * 0.26 * guc); }
+    const ort = top / (GW * GH) || 1, gece = 0.55 + 0.45 * GUN.isik;   // gece koyu zeminde daha parlak göründüğü için kısılır
+    for (const q of KOKU.H.values()) q.h = 0;
+    for (let k = 0; k < GW * GH; k++) {
+      const v = kis((a[k] / ort - 1.2) / 2, 0, 1); if (v <= 0.05) continue;
+      const ci = i0 + k % GW, cj = j0 + (k / GW | 0), key = ci + ',' + cj; let q = KOKU.H.get(key);
+      if (!q) KOKU.H.set(key, q = { x: (ci + 0.5) * c, y: (cj + 0.5) * c, a: 0, h: 0 });
+      q.h = Math.pow(v, 1.15) * 0.2 * guc * gece;
+    }
   }
   if (lv >= 2 && zaman - KOKU.okT > 0.6) {   // uzak koku: 8 yönde 2400 µm'ye kadar besin, uzaklıkla zayıflar
     KOKU.okT = zaman; const yon = new Float32Array(8);
@@ -4701,9 +4706,13 @@ function kokuCiz(z) {
     let en = 0, ei = 0, top2 = 0; for (let i = 0; i < 8; i++) { top2 += yon[i]; if (yon[i] > en) { en = yon[i]; ei = i; } }
     KOKU.ok = en > top2 / 8 * 1.35 ? { a: ei / 8 * TAU, g: kis((en / (top2 / 8) - 1.35) / 1.5, 0.25, 1) } : null;
   }
-  const L = KOKU.L; if (L && L.length) {
-    g.save(); g.globalCompositeOperation = 'screen'; const s2 = Math.max(KOKU.cw, KOKU.ch) * z * 2.6;
-    for (let i = 0; i < L.length; i += 3) { g.globalAlpha = Math.min(1, L[i + 2]); g.drawImage(KOKU.cv, (L[i] - kamera.x) * z + W / 2 - s2 / 2, (L[i + 1] - kamera.y) * z + H / 2 - s2 / 2, s2, s2); }
+  if (KOKU.H.size) {   // çok hafif, yumuşak geçişli sis: her leke hedef değerine yavaşça yaklaşır (ani yanıp sönme yok)
+    g.save(); g.globalCompositeOperation = 'screen'; const s2 = KOKU.cell * z * 3.4;
+    for (const [key, q] of KOKU.H) {
+      q.a += (q.h - q.a) * 0.05; if (q.h === 0 && q.a < 0.003) { KOKU.H.delete(key); continue; }
+      const sx = (q.x - kamera.x) * z + W / 2, sy = (q.y - kamera.y) * z + H / 2; if (sx < -s2 || sy < -s2 || sx > W + s2 || sy > H + s2) continue;
+      g.globalAlpha = Math.min(0.12, q.a); g.drawImage(KOKU.cv, sx - s2 / 2, sy - s2 / 2, s2, s2);
+    }
     g.restore();
   }
   if (lv >= 2 && KOKU.ok) {
