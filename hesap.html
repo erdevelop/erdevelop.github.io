@@ -51,6 +51,7 @@
 <main class="wrap">
   <header class="head"><h1>Hesabım</h1><p>Tüm site için tek hesabın (eğitimler, İngilizce, Fransızca ve Almanca kulüpleri, Oyun Bahçesi): adını ve şifreni değiştir, bildirimleri ve odaları yönet, verilerini indir ya da hesabını tamamen sil.</p></header>
 
+<div id="geriBar" class="card" hidden style="margin-bottom:14px"></div>
 <div id="app"><p class="muted">Yükleniyor…</p></div>
 <p class="note" style="margin-top:18px">Hesap açmadan kullandığın özelliklerin verileri yalnızca bu tarayıcıda durur. Aşağıdaki <b>Bu tarayıcı</b> bölümünden onları da indirebilir ya da silebilirsin. Hangi verinin nerede tutulduğunu <a href="gizlilik.html">Gizlilik</a> sayfası anlatır.</p>
 <section class="card" id="sayac" style="margin-top:16px">
@@ -101,7 +102,18 @@ const clubStats = () => CLUBS.map(([k, ad, url, lang]) => { let S = {}; try { S 
   return { ad, url, xp: Math.max(S.xp || 0, roomXp), learned, seen: L.length, my: (S.my || []).length }; });
 const nameOf = () => (A.user.displayName || A.info.name || (A.user.email || '').split('@')[0] || '?');
 
+/* başka bir sayfadan (ör. Derin Mavi'nin "Hesabımla yedekle" düğmesi) gelindiyse: ne yapılacağını anlatır, senkron bölümünü gösterir ve geri döndürür */
+const GERI = (() => { const g = new URLSearchParams(location.search).get('geri') || ''; return /^\/(?!\/)[\w\-./]*$/.test(g) ? g : ''; })();
+const GERI_AD = { '/derin-mavi.html': "Derin Mavi'ye" }[GERI] || 'geldiğin sayfaya';
+function geriGoster() {
+  const b = $('geriBar'); if (!GERI || !b) return; b.hidden = false; const on = syAcik();
+  b.innerHTML = !A.user ? `<b>🔐 Yedeklemek için önce giriş yap</b><p class="d" style="margin:6px 0 10px">Hesabın yoksa aşağıdan ücretsiz açabilirsin. Girişten sonra <b>Cihazlar arası senkron</b> bölümünde otomatik senkronu aç; kaydın hesabına yedeklenir.</p><a class="btn" href="${esc(GERI)}">← ${esc(GERI_AD)} dön</a>`
+    : on ? `<b>✅ Senkron bu cihazda açık</b><p class="d" style="margin:6px 0 10px">Kaydın hesabına yedekleniyor; diğer cihazlarda da aynı hesapla girip senkronu açman yeterli.</p><a class="btn pri" href="${esc(GERI)}">← ${esc(GERI_AD)} dön</a>`
+    : `<b>Son adım: senkronu aç</b><p class="d" style="margin:6px 0 10px">Aşağıdaki <b>Cihazlar arası senkron</b> bölümünde “Bu cihazda otomatik senkron” kutusunu işaretle.</p><a class="btn" href="${esc(GERI)}">← ${esc(GERI_AD)} dön</a>`;
+  const sk = $('senkron'); if (A.user && sk) { sk.style.outline = on ? '' : '2px solid #5fd38a'; sk.style.outlineOffset = '3px'; if (!geriGoster.kaydi) { geriGoster.kaydi = 1; setTimeout(() => sk.scrollIntoView({ behavior: 'smooth', block: 'center' }), 300); } }
+}
 function paint() {
+  setTimeout(geriGoster, 0);
   if (!A.user) {
     app.innerHTML = `<div class="grid2"><section class="card"><h2>Giriş yap</h2><p class="d">Sitenin herhangi bir yerinde (eğitimler, dil kulüpleri, Oyun Bahçesi) açtığın hesabın e-posta ve şifresi.</p>
       <form id="lf"><div class="fd"><label for="lm">E-posta</label><input class="inp" id="lm" type="email" required autocomplete="email"></div>
@@ -191,7 +203,7 @@ function senkronKur() {
   if (!window.erSenkron || !$('syOn')) return;
   $('syOn').checked = syAcik(); syBilgi();
   $('syOn').onchange = () => { try { $('syOn').checked ? localStorage.setItem('erdevelop-sync', '1') : localStorage.removeItem('erdevelop-sync'); } catch (e) { }
-    TM.toast($('syOn').checked ? 'Otomatik senkron bu cihazda açık' : 'Otomatik senkron bu cihazda kapalı'); if ($('syOn').checked) syCalis(); };
+    TM.toast($('syOn').checked ? 'Otomatik senkron bu cihazda açık' : 'Otomatik senkron bu cihazda kapalı'); if ($('syOn').checked) syCalis(); geriGoster(); };
   $('syNow').onclick = () => syCalis();
   $('syDel').onclick = async () => { if (!confirm('Hesabındaki senkron kopyası silinsin mi? Bu cihazdaki ve diğer cihazlardaki veriler silinmez; yalnızca bulut yedeği kalkar.')) return;
     try { await erSenkron.bulutuSil(A.db, A.user.uid); try { localStorage.removeItem('erdevelop-sync'); } catch (e) { } $('syOn').checked = false; syBilgi(); msg('symsg', 'Buluttaki kopya silindi; bu cihazda otomatik senkron kapatıldı.', true); } catch (x) { msg('symsg', errTr(x)); } };
@@ -257,7 +269,7 @@ function locInfo() { let n = 0, sz = 0; try { for (let i = 0; i < localStorage.l
 $('locDl').onclick = () => TM.download('erdevelop-tarayici-verileri.json', new Blob([JSON.stringify({ olusturuldu: new Date().toISOString(), tarayici: localData() }, null, 2)], { type: 'application/json' }));
 $('locDel').onclick = () => { if (!confirm('Bu tarayıcıdaki tüm site verileri (tema, ilerleme, listeler, ayarlar, taslaklar) silinsin mi? Hesabın etkilenmez.')) return;
   try { const keep = localStorage.getItem('erdevelop-key'), skip = localStorage.getItem('skipgc'); localStorage.clear(); if (keep) localStorage.setItem('erdevelop-key', keep); if (skip) localStorage.setItem('skipgc', skip); } catch (e) { } locInfo(); TM.toast('Bu tarayıcıdaki veriler silindi'); };
-locInfo(); boot();
+locInfo(); geriGoster(); boot();
 
 </script>
 <script data-goatcounter="https://erdevelop.goatcounter.com/count" async src="//gc.zgo.at/count.js"></script>

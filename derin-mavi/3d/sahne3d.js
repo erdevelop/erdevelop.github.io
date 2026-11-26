@@ -47,6 +47,13 @@ export async function kur3D({ tuval, kalite }) {
   R.shadowMap.type = THREE.PCFSoftShadowMap;
   const sahne = new THREE.Scene();
   const SIS_G = new THREE.Color('#1a7d99'), SIS_N = new THREE.Color('#071e30'), SIS = SIS_G.clone();
+  /* sahne temaları: 2D'deki resif / açık deniz / derin su ayrımının 3D karşılığı */
+  const TEMA = {
+    resif: { sis: '#1a7d99', ust: '#b4f3ff', alt: '#06324a', hemi: ['#8fe8ff', '#c9b68c'], isik: 1, kost: 1, huzme: 1, yuzey: true, kum: '#d2c29e', kaya: 1, mk: 1, cay: 1, sisK: 1, kar: 0.55 },
+    acik: { sis: '#1d6aa6', ust: '#c4e9ff', alt: '#0a2a55', hemi: ['#9fd2ff', '#b7b49c'], isik: 1.05, kost: 1.1, huzme: 1.25, yuzey: true, kum: '#cfc8b0', kaya: 0.92, mk: 0.22, cay: 0.55, sisK: 0.8, kar: 0.5 },
+    derin: { sis: '#05172a', ust: '#0d2742', alt: '#01070f', hemi: ['#2b5585', '#15171f'], isik: 0.1, kost: 0, huzme: 0, yuzey: false, kum: '#5d5c69', kaya: 0.42, mk: 0, cay: 0, sisK: 1.55, kar: 0.9 }
+  };
+  let tmAd = 'resif', TM = TEMA.resif, KUM_M = null;
   sahne.fog = new THREE.FogExp2(SIS, 0.04);
   const kam = new THREE.PerspectiveCamera(50, 1, 0.1, 220);
   const U = { zaman: { value: 0 }, kostikGuc: { value: 1 }, agar: { value: 0 }, kostikMod: { value: 1 }, gunesYon: { value: new THREE.Vector3(0.2, 1, 0.3).normalize() }, kostikHiz: { value: 1 }, kostikNet: { value: 0 }, kostikRenk: { value: new THREE.Color(1, 1, 1) } };
@@ -190,7 +197,7 @@ export async function kur3D({ tuval, kalite }) {
     for (const t of [ta, tb]) { t.wrapS = t.wrapT = THREE.RepeatWrapping; t.repeat.set(26, 26); t.anisotropy = 4; }
     const g = new THREE.PlaneGeometry(160, 160, 220, 220); g.rotateX(-Math.PI / 2);
     const p = g.attributes.position; for (let i = 0; i < p.count; i++) p.setY(i, zeminY(p.getX(i), p.getZ(i))); g.computeVertexNormals();
-    const z = new THREE.Mesh(g, yama(new THREE.MeshStandardMaterial({ map: ta, normalMap: tb, normalScale: new THREE.Vector2(0.9, 0.9), roughness: 0.96, color: '#d2c29e' })));
+    KUM_M = yama(new THREE.MeshStandardMaterial({ map: ta, normalMap: tb, normalScale: new THREE.Vector2(0.9, 0.9), roughness: 0.96, color: '#d2c29e' })); const z = new THREE.Mesh(g, KUM_M);
     z.receiveShadow = true; sahne.add(z);
   }
 
@@ -235,7 +242,7 @@ export async function kur3D({ tuval, kalite }) {
     const n = KAL[kalite].parca, g = new THREE.BufferGeometry(), p = new Float32Array(n * 3);
     for (let i = 0; i < n; i++) { p[i * 3] = (Math.random() - 0.5) * 40; p[i * 3 + 1] = Math.random() * 14; p[i * 3 + 2] = -14 + Math.random() * 24; }
     g.setAttribute('position', new THREE.BufferAttribute(p, 3));
-    PARCA = new THREE.Points(g, new THREE.PointsMaterial({ size: 0.07, map: yuvarlak, transparent: true, depthWrite: false, opacity: 0.55, color: '#dff6ff', blending: THREE.AdditiveBlending }));
+    PARCA = new THREE.Points(g, new THREE.PointsMaterial({ size: tmAd === 'derin' ? 0.09 : 0.07, map: yuvarlak, transparent: true, depthWrite: false, opacity: TM.kar, color: '#dff6ff', blending: THREE.AdditiveBlending }));
     sahne.add(PARCA);
   }
 
@@ -339,6 +346,13 @@ export async function kur3D({ tuval, kalite }) {
     return z;
   }
   const ISIN = new THREE.Raycaster();
+  let HUZME_G = 1;
+  function temaUygula() {
+    SIS_G.set(TM.sis); RENK.ust.set(TM.ust); RENK.alt.set(TM.alt); hemi.color.set(TM.hemi[0]); hemi.groundColor.set(TM.hemi[1]);
+    if (KUM_M) KUM_M.color.set(TM.kum); yuzey.visible = TM.yuzey;
+    for (const k of ['kaya_0', 'kaya_1', 'kaya_2', 'kaya_3', 'duvar']) P[k] && P[k].traverse(m => { if (m.isMesh) [].concat(m.material).forEach(mt => { if (mt.userData.mercan || !mt.color) return; if (!mt.userData.renk0) mt.userData.renk0 = mt.color.clone(); mt.color.copy(mt.userData.renk0).multiplyScalar(TM.kaya); }); });
+    if (PARCA) { PARCA.material.opacity = TM.kar; PARCA.material.size = tmAd === 'derin' ? 0.09 : 0.07; }
+  }
   function ortamKur(VW, magX) {
     ORTAM.clear(); MERCAN3 = []; KOLONI3 = []; ekoSon = "";
     let s = 9137; const r = () => (s = (s * 16807) % 2147483647) / 2147483647, ara = (a, b) => a + r() * (b - a);
@@ -361,10 +375,11 @@ export async function kur3D({ tuval, kalite }) {
     for (const k of [...mercanlar, 'dalli_2', 'dalli_3']) { MERCAN_K.add(k); P[k] && P[k].traverse(m => { if (m.isMesh) [].concat(m.material).forEach(mt => { mt.userData.mercan = true; }); }); }
     /* yeni koloniler: resif sağlıklıyken zamanla birer birer belirir ve büyür */
     { let s2 = 4241; const r2 = () => (s2 = (s2 * 16807) % 2147483647) / 2147483647;
-      for (let i = 0; i < KOL_MAX; i++) { const k = mercanlar[Math.floor(r2() * mercanlar.length)], x = (r2() - 0.5) * VW * 0.95, z = -0.6 - r2() * 5.5;
+      for (let i = 0; i < (TM.mk >= 1 ? KOL_MAX : 0); i++) { const k = mercanlar[Math.floor(r2() * mercanlar.length)], x = (r2() - 0.5) * VW * 0.95, z = -0.6 - r2() * 5.5;
         const o = P[k].clone(true); const sc = k.startsWith('masa') ? 0.55 : k.startsWith('yelpaze') ? 1 : 0.8; o.userData.s0 = sc; o.rotation.y = r2() * 6.28; o.position.set(x, zeminY(x, z) - 0.04, z); o.visible = false; ORTAM.add(o); KOLONI3.push(o); } }
-    for (let i = 0; i < Math.round(VW * 3) + 10; i++) { const k = mercanlar[Math.floor(r() * mercanlar.length)], z = ara(-10, -1.4); koy(k, ara(-yarim, yarim), z, (k.startsWith('yelpaze') ? ara(0.8, 1.4) : k.startsWith('masa') ? ara(0.45, 0.8) : ara(0.5, 1.1)) * (z > -3 ? 0.65 : 1), k.startsWith('yelpaze') ? ara(-0.4, 0.4) : r() * 6.28); }
-    for (let i = 0; i < 14; i++) { const k = mercanlar[Math.floor(r() * mercanlar.length)]; koy(k, magX - 1.8 * ds + ara(-7, 7) * ds, ara(-8, -2) * ds, ara(0.45, 0.9) * ds * 1.4, r() * 6.28, true); }
+    const mk = TM.mk;
+    for (let i = 0; i < Math.round((VW * 3 + 10) * mk); i++) { const k = mercanlar[Math.floor(r() * mercanlar.length)], z = ara(-10, -1.4); koy(k, ara(-yarim, yarim), z, (k.startsWith('yelpaze') ? ara(0.8, 1.4) : k.startsWith('masa') ? ara(0.45, 0.8) : ara(0.5, 1.1)) * (z > -3 ? 0.65 : 1), k.startsWith('yelpaze') ? ara(-0.4, 0.4) : r() * 6.28); }
+    for (let i = 0; i < Math.round(14 * mk); i++) { const k = mercanlar[Math.floor(r() * mercanlar.length)]; koy(k, magX - 1.8 * ds + ara(-7, 7) * ds, ara(-8, -2) * ds, ara(0.45, 0.9) * ds * 1.4, r() * 6.28, true); }
     const cok = KAL[kalite].cok || 1;
     /* sol tepecik: iri kayalardan bir resif tümseği, üstü ve eteği mercan dolu */
     const SOL = new THREE.Group(); ORTAM.add(SOL);
@@ -377,17 +392,18 @@ export async function kur3D({ tuval, kalite }) {
     SOL.updateMatrixWorld(true);
     engelKur([DUVAR, SOL], -yarim - 1, yarim + 1, -13, 3);
     TUNEL = { x: magX, y: -0.05 + 0.4 * ds, z: -0.1 * ds, rx: 1.5 * ds, ry: 2.2 * ds, rz: 4.2 * ds };
-    for (let i = 0; i < Math.round(34 * cok); i++) { const k = mercanlar[Math.floor(r() * mercanlar.length)]; koy(k, solX + ara(-4.5, 4.5), ara(-8.5, -3), (k.startsWith('masa') ? ara(0.5, 0.8) : k.startsWith('yelpaze') ? ara(1, 1.5) : ara(0.7, 1.2)), k.startsWith('yelpaze') ? ara(-0.5, 0.5) : r() * 6.28, SOL); }
-    for (let i = 0; i < Math.round(26 * cok); i++) { const k = mercanlar[Math.floor(r() * mercanlar.length)], z = ara(-7, -1.5); koy(k, solX + ara(-6, 6.5), z, ara(0.5, 1.05) * (z > -3 ? 0.7 : 1), k.startsWith('yelpaze') ? ara(-0.4, 0.4) : r() * 6.28); }
-    for (let i = 0; i < 3; i++) koy(i % 2 ? 'anemon_0' : 'anemon_1', solX + ara(-5, 5), ara(-3.5, -1.7), ara(0.9, 1.2), r() * 6);
+    for (let i = 0; i < Math.round(34 * cok * mk); i++) { const k = mercanlar[Math.floor(r() * mercanlar.length)]; koy(k, solX + ara(-4.5, 4.5), ara(-8.5, -3), (k.startsWith('masa') ? ara(0.5, 0.8) : k.startsWith('yelpaze') ? ara(1, 1.5) : ara(0.7, 1.2)), k.startsWith('yelpaze') ? ara(-0.5, 0.5) : r() * 6.28, SOL); }
+    for (let i = 0; i < Math.round(26 * cok * mk); i++) { const k = mercanlar[Math.floor(r() * mercanlar.length)], z = ara(-7, -1.5); koy(k, solX + ara(-6, 6.5), z, ara(0.5, 1.05) * (z > -3 ? 0.7 : 1), k.startsWith('yelpaze') ? ara(-0.4, 0.4) : r() * 6.28); }
+    for (let i = 0; i < (mk >= 1 ? 3 : 0); i++) koy(i % 2 ? 'anemon_0' : 'anemon_1', solX + ara(-5, 5), ara(-3.5, -1.7), ara(0.9, 1.2), r() * 6);
     /* derinlik: arka planda sise gömülen ikinci bir resif sırtı ve sık mercan bahçeleri */
     const ARKA = P.duvar.clone(true); const as = ds * 1.7; ARKA.scale.set(as, as * 0.85, as); ARKA.position.set(-VW * 0.18, -0.3, -19); ARKA.rotation.y = 0.25; ORTAM.add(ARKA); ARKA.updateMatrixWorld(true);
-    for (let i = 0; i < Math.round(30 * cok); i++) { const k = mercanlar[Math.floor(r() * mercanlar.length)]; koy(k, -VW * 0.18 + ara(-11, 11) * as, -19 + ara(-5, 4) * as, ara(0.6, 1.2) * as * 1.3, r() * 6.28, ARKA); }
+    for (let i = 0; i < Math.round(30 * cok * mk); i++) { const k = mercanlar[Math.floor(r() * mercanlar.length)]; koy(k, -VW * 0.18 + ara(-11, 11) * as, -19 + ara(-5, 4) * as, ara(0.6, 1.2) * as * 1.3, r() * 6.28, ARKA); }
     for (let i = 0; i < Math.round(VW / 2.5); i++) koy(kayalar[i % 4], ara(-yarim - 4, yarim + 4), ara(-20, -11), ara(1.2, 2.6), r() * 6.28);
-    for (let i = 0; i < Math.round((VW * 2.2 + 14) * cok); i++) { const k = mercanlar[Math.floor(r() * mercanlar.length)]; koy(k, ara(-yarim - 5, yarim + 5), ara(-21, -10), (k.startsWith('masa') ? ara(0.6, 1.1) : ara(0.9, 1.7)), k.startsWith('yelpaze') ? ara(-0.5, 0.5) : r() * 6.28); }
-    for (let i = 0; i < Math.max(2, Math.round(VW / 7)); i++) koy(i % 2 ? 'anemon_1' : 'anemon_0', ara(-yarim + 2, yarim - 2), ara(-4, -1.6), ara(0.9, 1.2), r() * 6);
-    CAYIR3 = cayir(Math.round(VW * 9), [-yarim, yarim, 0.6, 4], 0.55, 0.022, '#3f7a2e', '#9bc45a', 7); ORTAM.add(CAYIR3);
-    YOSUN3 = cayir(Math.round(VW * 2.4), [-yarim, yarim, -13, -6], 4.2, 0.16, '#2f5a26', '#87a84a', 11); ORTAM.add(YOSUN3); bitkiSon = '';
+    for (let i = 0; i < Math.round((VW * 2.2 + 14) * cok * mk); i++) { const k = mercanlar[Math.floor(r() * mercanlar.length)]; koy(k, ara(-yarim - 5, yarim + 5), ara(-21, -10), (k.startsWith('masa') ? ara(0.6, 1.1) : ara(0.9, 1.7)), k.startsWith('yelpaze') ? ara(-0.5, 0.5) : r() * 6.28); }
+    for (let i = 0; i < (mk >= 1 ? Math.max(2, Math.round(VW / 7)) : 0); i++) koy(i % 2 ? 'anemon_1' : 'anemon_0', ara(-yarim + 2, yarim - 2), ara(-4, -1.6), ara(0.9, 1.2), r() * 6);
+    CAYIR3 = YOSUN3 = null; bitkiSon = '';
+    if (TM.cay > 0) { CAYIR3 = cayir(Math.round(VW * 9 * TM.cay), [-yarim, yarim, 0.6, 4], 0.55, 0.022, '#3f7a2e', '#9bc45a', 7); ORTAM.add(CAYIR3);
+      YOSUN3 = cayir(Math.round(VW * 2.4 * TM.cay), [-yarim, yarim, -13, -6], 4.2, 0.16, '#2f5a26', '#87a84a', 11); ORTAM.add(YOSUN3); }
     for (const h of HUZME) h.position.set(-VW / 2 + h.userData.ux * VW + (Math.random() - 0.5), 6, -9 + Math.random() * 7);
   }
 
@@ -501,6 +517,8 @@ export async function kur3D({ tuval, kalite }) {
               if (dprCarp < 1) { dprCarp = Math.min(1, dprCarp + 0.15); boyut(M.W, M.H, M.kumY, { x: M.magX / M.k + M.W / 2 }); }
               else if (i < sira.length - 1 && i < sira.indexOf(cihaz.seviye) + 1 && !(FG.ust && sira.indexOf(FG.ust.s) <= i + 1 && simd - FG.ust.t < 90000)) { kalite = sira[i + 1]; kaliteUygula(); FG.degisti && FG.degisti(); } }
           } } }
+      /* sahne teması değişti: renkler, ışık ve dekor yeniden kurulur */
+      if (d.tm && d.tm !== tmAd && TEMA[d.tm]) { tmAd = d.tm; TM = TEMA[d.tm]; temaUygula(); ortamKur(M.VW, M.magX); }
       /* gece ve hava: ışık, sis ve renkler */
       gecePay += ((d.gece || 0) - gecePay) * Math.min(1, dt * 0.5);
       const g = gecePay, isik = d.isik == null ? 1 : d.isik;
@@ -508,20 +526,21 @@ export async function kur3D({ tuval, kalite }) {
       { const sa = d.saat == null ? 12 : d.saat, u = THREE.MathUtils.clamp((sa - 6) / 12, 0, 1), yuk = Math.sin(Math.PI * u);
         gunes.position.set(-30 + u * 60, 18 + yuk * 42, 14).normalize().multiplyScalar(32); const sic = 1 - THREE.MathUtils.smoothstep(yuk, 0.15, 0.6);
         gunes.color.set('#ffffff').lerp(tmp.set('#ffae6a'), sic * 0.85); gunesAci = { x: -30 + u * 60, sic, yuk }; }
-      gunes.intensity = 3.3 * (1 - 0.85 * g) * Math.min(1.35, isik) * (0.55 + 0.45 * gunesAci.yuk); ay.intensity = 0.9 * g; hemi.intensity = 1.15 * (1 - 0.6 * g) * (0.75 + 0.25 * Math.min(1.2, isik));
-      U.kostikGuc.value = KAL[kalite].kostik * (1 - 0.9 * g) * Math.min(1.35, isik) * (0.45 + 0.55 * gunesAci.yuk) * (0.55 + 0.45 * Math.min(1, berrakP / 0.9));
+      gunes.intensity = 3.3 * TM.isik * (1 - 0.85 * g) * Math.min(1.35, isik) * (0.55 + 0.45 * gunesAci.yuk); ay.intensity = 0.9 * g * (tmAd === 'derin' ? 0.3 : 1); hemi.intensity = 1.15 * (tmAd === 'derin' ? 0.55 : 1) * (1 - 0.6 * g) * (0.75 + 0.25 * Math.min(1.2, isik));
+      U.kostikGuc.value = KAL[kalite].kostik * TM.kost * (1 - 0.9 * g) * Math.min(1.35, isik) * (0.45 + 0.55 * gunesAci.yuk) * (0.55 + 0.45 * Math.min(1, berrakP / 0.9));
       U.kostikMod.value = KAL[kalite].kostikIslem ? 1 : 0;
       U.gunesYon.value.copy(gunes.position).normalize(); U.kostikRenk.value.copy(gunes.color).lerp(tmp.set('#bff4ff'), 0.35);
       { const dz = d.deniz == null ? 0.3 : d.deniz; U.kostikHiz.value = 0.7 + dz * 1.1; U.kostikNet.value = Math.max(0, dz - 0.45) * 1.6; } /* fırtınada ağ hızlanır ve dağılır */
-      SIS.copy(SIS_G).lerp(SIS_N, g * 0.85);
+      SIS.copy(SIS_G).lerp(SIS_N, g * 0.85); if (d.hava === 'firtina' || d.hava === 'yagmur') SIS.lerp(tmp.set('#4c6670'), d.hava === 'firtina' ? 0.3 : 0.15);
       /* su berraklığı: yaz berrak (sis seyrek), plankton yeşili ya da fırtına kumu bulanıklaştırır */
       { const br = d.eko && d.eko.berrak != null ? d.eko.berrak : 0.8; berrakP += (br - berrakP) * Math.min(1, dt * 0.6);
-        sahne.fog.density = 0.04 * (0.42 + (1 - berrakP) * 1.9); /* berrak suda uzak resif de seçilir */
+        sahne.fog.density = 0.04 * TM.sisK * (0.42 + (1 - berrakP) * 1.9) * (d.hava === 'firtina' ? 1.35 : d.hava === 'yagmur' ? 1.12 : 1); /* berrak suda uzak resif de seçilir */
         SIS.lerp(tmp.set(d.eko && d.eko.bulanNeden === 'kum' ? '#8c8a6c' : '#4f8a66'), Math.max(0, 0.8 - berrakP) * 0.9); }
       sahne.fog.color.copy(SIS);
       kubbeMat.uniforms.uUst.value.copy(RENK.ust).lerp(tmp.set('#24486e'), g * 0.85); kubbeMat.uniforms.uOrta.value.copy(SIS); kubbeMat.uniforms.uAlt.value.copy(RENK.alt).lerp(SIS_N, g);
       R.toneMappingExposure = 1.12 * (1 - 0.25 * g);
-      for (const h of HUZME) { h.material.uniforms.uGuc.value = 0.11 * (1 - g) * Math.min(1.3, isik); h.scale.x = 0.75 + 0.35 * Math.sin(t * h.userData.v + h.userData.f); h.lookAt(kam.position.x, h.position.y, kam.position.z); h.rotateZ(h.userData.a + Math.sin(t * 0.07 + h.userData.f) * 0.04); }
+      const hz = TM.huzme * (1 - g) * Math.pow(THREE.MathUtils.clamp((isik - 0.5) / 0.8, 0, 1.15), 1.6) * (0.4 + 0.6 * gunesAci.yuk) * (0.6 + 0.4 * Math.min(1, berrakP / 0.85)); HUZME_G = hz;
+      for (const h of HUZME) { h.visible = hz > 0.01; h.material.uniforms.uGuc.value = 0.16 * hz; h.scale.x = 0.75 + 0.35 * Math.sin(t * h.userData.v + h.userData.f); h.lookAt(kam.position.x, h.position.y, kam.position.z); h.rotateZ(h.userData.a + Math.sin(t * 0.07 + h.userData.f) * 0.04); }
       yuzeyDoku.offset.set(t * 0.01, t * 0.007);
       { const dz = d.deniz == null ? 0.2 : d.deniz; DZ.uT.value = t; DZ.uD.value = dz; DZ.uQ.value = 0.35 + dz * 0.45; DZ.uA.value = Math.max(0.02, (d.dalgaA || 4) * M.k * 0.7);
         yuzeyMat.opacity = 0.2 + dz * 0.12; if (d.sy != null) yuzey.position.y = M.Hc + (M.H / 2 - d.sy) * M.k; }
@@ -531,7 +550,7 @@ export async function kur3D({ tuval, kalite }) {
       if (d.eko) {
         const e = d.eko; U.agar.value += (e.beyaz * 0.85 - U.agar.value) * Math.min(1, dt * 2);
         if (e.gun != null) { const bk = (e.gun * 40).toFixed(0) + '|' + e.cayir.toFixed(2) + '|' + e.yosun.toFixed(2); /* günün 1/40'ında bir güncelle */
-          if (bk !== bitkiSon && performance.now() - (bitkiT || 0) > 250) { bitkiSon = bk; bitkiT = performance.now(); bitkiGuncelle(CAYIR3, e.gun, e.cayir, [5, 13]); bitkiGuncelle(YOSUN3, e.gun, e.yosun, [10, 24]); } }
+          if (bk !== bitkiSon && performance.now() - (bitkiT || 0) > 250) { bitkiSon = bk; bitkiT = performance.now(); if (CAYIR3) bitkiGuncelle(CAYIR3, e.gun, e.cayir, [5, 13]); if (YOSUN3) bitkiGuncelle(YOSUN3, e.gun, e.yosun, [10, 24]); } }
         const anah = e.buyume.toFixed(2) + '|' + e.koloni + '|' + MERCAN3.length;
         if (anah !== ekoSon) { ekoSon = anah; const bf = 0.85 + 0.3 * e.buyume;
           for (const o of MERCAN3) o.scale.setScalar(o.userData.s0 * bf);
@@ -545,7 +564,7 @@ export async function kur3D({ tuval, kalite }) {
           if (!c || c.tur !== o.tur) { if (c) sahne.remove(c.g); c = { tur: o.tur, g: canliUret(o.tur, m => yama(m, {}), o) }; sahne.add(c.g); CAN.set(o.id, c); }
           const p = dunya(o.x, o.y), sc = Math.max(0.02, (o.s || 10) * M.k);
           if (o.zemin) p.y = zeminY(p.x, 0); c.g.position.copy(p); c.g.scale.setScalar(sc);
-          c.g.rotation.y = o.tur === 'yengec' ? -Math.PI / 2 + (o.d || 1) * 0.25 : o.tur === 'yildiz' || o.tur === 'istiridye' || o.tur === 'kumyilan' || o.tur === 'baca' || o.tur === 'kestane' ? 0 : (o.d || 1) > 0 ? -0.45 : Math.PI + 0.45;
+          c.g.rotation.y = o.tur === 'yengec' ? -Math.PI / 2 + (o.d || 1) * 0.25 : o.tur === 'yildiz' || o.tur === 'istiridye' || o.tur === 'kumyilan' || o.tur === 'baca' || o.tur === 'kestane' || o.tur === 'beyin' || o.tur === 'iz' ? 0 : (o.d || 1) > 0 ? -0.45 : Math.PI + 0.45;
           if (o.tur === 'istiridye') c.g.scale.setScalar(sc * (o.nab || 1));
           canliOyna(c.g, o.tur, o, t); c.g.visible = !o.gizli;
         }
@@ -640,7 +659,7 @@ export async function kur3D({ tuval, kalite }) {
         f.g.visible = true;
       }
       for (const [id, f] of BAL) if (!gorulen.has(id)) { sahne.remove(f.g); BAL.delete(id); }
-      if (KAL[kalite].post) { gunesUzak.set(kam.position.x + gunesAci.x * 0.6, 60, kam.position.z - 30).project(kam); huzmePass.uniforms.uGunes.value.set(gunesUzak.x * 0.5 + 0.5, Math.min(1.6, gunesUzak.y * 0.5 + 0.5)); huzmePass.uniforms.uGuc.value = 0.55 * (1 - g); komp.render(); }
+      if (KAL[kalite].post) { gunesUzak.set(kam.position.x + gunesAci.x * 0.6, 60, kam.position.z - 30).project(kam); huzmePass.uniforms.uGunes.value.set(gunesUzak.x * 0.5 + 0.5, Math.min(1.6, gunesUzak.y * 0.5 + 0.5)); huzmePass.uniforms.uGuc.value = 0.55 * Math.min(1.25, HUZME_G * 1.1 + 0.15 * TM.huzme * (1 - g)); komp.render(); }
       else R.render(sahne, kam);
     },
     /* fotoğraf için: hemen yeniden çiz ve tuvali döndür (çizim tamponu aynı görevde okunabilir) */

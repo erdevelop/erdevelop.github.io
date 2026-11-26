@@ -108,7 +108,9 @@ export function balikMesaj(d, now = new Date()) {
     meduz: ['🪼 Denizanası patlaması', 'Ilık suda denizanaları çoğaldı. Bu hafta resif biraz kalabalık!', '🪼 Jellyfish bloom', 'Jellyfish multiplied in the warm water. The reef is busy this week!'],
     sicak: ['🌡️ Sıcak dalgası geliyor', 'Su ısınıyor; mercanlar strese girip ağarabilir. Resifin nasıl dayandığına bir bak.', '🌡️ A marine heatwave is coming', 'The water is warming; corals may get stressed and bleach. Check how the reef is holding up.'],
     goc: ['🐟 Göç mevsimi başladı', 'Kalabalık sürüler bu hafta resifin önünden geçiyor.', '🐟 Migration season has begun', 'Big schools are passing the reef this week.'],
-    derin: ['🐋 Kış göçü başladı', 'Kambur balinalar yolda; bu hafta derinlerde de canlılık artıyor.', '🐋 The winter migration has begun', 'Humpbacks are on the move, and the deep gets livelier this week.'] };
+    derin: ['🐋 Kış göçü başladı', 'Kambur balinalar yolda; bu hafta derinlerde de canlılık artıyor.', '🐋 The winter migration has begun', 'Humpbacks are on the move, and the deep gets livelier this week.'],
+    kaplumbaga: ['🐢 Kaplumbağa yavruları denizde', 'Bu hafta yavrular yüzeye yakın geçiyor; akvaryumda gözün yukarıda olsun.', '🐢 Turtle hatchlings at sea', 'This week hatchlings pass near the surface; keep an eye up in the aquarium.'],
+    orfozBul: ['🐟 Orfoz buluşması', 'Bu hafta geceleri orfozlar resifte toplanıp yumurta bırakıyor.', '🐟 Grouper spawning', 'This week groupers gather on the reef at night to spawn.'] };
   const ol2 = OLAY[d.olayT];
   if (d.doga !== false && ol2 && d.olayG === date && min >= 600 && d.lastOlay !== date + d.olayT)
     return { msg: { title: en ? ol2[2] : ol2[0], body: en ? ol2[3] : ol2[1], url: P.url, tag: P.tag + '-olay' }, upd: { lastOlay: date + d.olayT } };
