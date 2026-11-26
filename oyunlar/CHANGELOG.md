@@ -68,3 +68,10 @@
 - Sıradaki satır ve kutu işaretli, kalan deneme sayısı görünür, 5 harf dolunca GİR tuşu yanar; eksik ya da tekrar kelimede açık uyarı.
 - İpucu: Türkçede bir harf açılır, yabancı dillerde Türkçe anlamı gösterilir (−50 puan).
 - Sonuç kartı: kelime, anlamı, yeni kelimeye geri sayım, diğer dillerin günlük kelimelerine geçiş.
+
+## Beş yeni oyun — 26 Kasım 2026
+- **Blok Bulmaca:** 8×8 tahtaya parça sürükle, dolan satır ve sütunlar silinir; seri çarpanı, klasik mod ve günün oyunu.
+- **Solitaire:** Klondike; her dağıtım çözücüyle sınanır (çözülebilir), dokun ya da sürükle, sınırsız geri al, ipucu, otomatik bitirme, günün dağıtımı.
+- **Mayın Tarlası:** güvenli ilk dokunuş, tahmin gerektirmeyen tahtalar, Aç/Bayrak modu ve uzun basma, mantığını gösteren ipucu, günün tahtası.
+- **2048:** akıcı kayma ve birleşme animasyonu, üç geri alma hakkı, kaldığın yerden devam.
+- **Nonogram:** tek çözümlü kare karalamaca; 5/8/10/12 boyları, sürükleyerek boyama, satır ipucu, günün bulmacası.

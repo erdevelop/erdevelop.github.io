@@ -59,7 +59,7 @@ const CSS = `
 .my-mod{flex:1;display:flex;gap:4px;background:var(--bg2);padding:4px;border-radius:14px}
 .my-mod button{flex:1;padding:11px 6px;border-radius:11px;font-weight:800;font-size:15px;color:var(--ink-soft)}.my-mod button.on{background:var(--accent);color:#fff}
 .my-b{padding:10px 14px;border-radius:12px;background:var(--accent-soft);color:var(--accent-ink);font-weight:800;font-size:14px;white-space:nowrap}.my-b.ana{background:var(--accent);color:#fff}
-.my-bilgi{font-size:13px;font-weight:700;color:var(--ink-soft);text-align:center;min-height:19px;line-height:1.35}.my-bilgi b{color:var(--ink)}
+.my-bilgi{font-size:13px;font-weight:700;color:var(--ink-soft);text-align:center;height:36px;display:grid;place-items:center;line-height:1.35;overflow:hidden}.my-bilgi b{color:var(--ink)}
 .my-son{position:absolute;left:50%;top:50%;transform:translate(-50%,-50%);z-index:6;background:var(--card);border-radius:18px;padding:16px 18px;box-shadow:0 12px 40px rgba(0,0,0,.3);text-align:center;display:flex;flex-direction:column;gap:8px;width:min(270px,86%);animation:mySon .3s .35s both}
 @keyframes mySon{from{opacity:0;transform:translate(-50%,-40%)}}
 .my-son h3{margin:0;font-size:20px;font-weight:800}.my-son p{margin:0;font-size:14px;font-weight:700;color:var(--ink-soft)}
@@ -83,11 +83,11 @@ registerGame({
       <div class="my-alt"><div class="my-mod"><button data-mod="a">👆 Aç</button><button data-mod="b">🚩 Bayrak</button></div><button class="my-b" data-a="ipucu">💡 İpucu</button><button class="my-b" data-a="yeni">↻</button></div>`;
     const q = s => kok.querySelector(s), T = q('#my-t'); let H = [];
     const sure = () => { const t = O.t | 0; return ((t / 60) | 0) + ':' + String(t % 60).padStart(2, '0'); };
-    const bilgi = m => { q('#my-b').innerHTML = m || ''; };
+    const bilgi = m => { q('#my-b').innerHTML = '<span>' + (m || '') + '</span>'; };
     function kaydet(hemen) { if (O && O.basladi && !O.bitti) { O.mayin = mayin.join(''); O.dur = dur.join(''); D.o = O; } else D.o = null; clearTimeout(kT); const f = () => { try { api.saveState && api.saveState(D); } catch (e) { } }; if (hemen) f(); else kT = setTimeout(f, 500); }
     function kur() {
       ({ w, h } = ZOR[O.z]); K = komsu(w, h);
-      const c = Math.floor(Math.max(22, Math.min(44, ((kok.clientWidth || 360) - 10 - (w - 1) * 2) / w, (innerHeight - 250 - (h - 1) * 2) / h)));
+      const c = Math.floor(Math.max(22, Math.min(44, ((kok.clientWidth || 360) - 10 - (w - 1) * 2) / w, (innerHeight - 268 - (h - 1) * 2) / h)));
       T.style.setProperty('--c', c + 'px'); T.style.gridTemplateColumns = `repeat(${w},${c}px)`; T.innerHTML = '';
       for (let i = 0; i < w * h; i++) { const e = E('div', { class: 'my-h' }); e.dataset.i = i; T.append(e); } H = [...T.children];
       const s = q('.my-son'); if (s) s.remove();
