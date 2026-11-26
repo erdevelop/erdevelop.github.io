@@ -1,8 +1,8 @@
 /* erdevelop · site geneli service worker
    Strateji: sayfalar her zaman önce ağdan alınır (güncel kalır), ağ yoksa son kaydedilen kopya açılır.
    Değişmeyen kütüphaneler (CDN, yazı tipleri) önbellekten verilir. Büyük dosyalar ve kendi service worker'ı olan klasörler önbelleğe alınmaz. */
-const V = 'erdevelop-v3', PAGES = V + '-sayfa', LIBS = V + '-kutup';
-const CORE = ['/', '/Tools.html', '/404.html', '/favicon.svg', '/kesif/tema.css', '/kesif/tema.js',
+const V = 'erdevelop-v4', PAGES = V + '-sayfa', LIBS = V + '-kutup';
+const CORE = ['/', '/css/portal.css', '/css/kabuk.css', '/js/portal.js', '/js/site.js', '/js/harita.json', '/dil.js', '/araclar/', '/muhendislik/', '/ogren/', '/tarayici-oyunlari/', '/Tools.html', '/404.html', '/favicon.svg', '/kesif/tema.css', '/kesif/tema.js',
   '/kesif/ruzgar.html', '/kesif/cam.html', '/kesif/kar.html', '/kesif/profil.html', '/kesif/genlesme.html', '/kesif/yogusma.html', '/kesif/ucw.html', '/kesif/ral.html', '/kesif/gunes.html',
   '/derin-mavi.html', '/derin-mavi/3d/sahne3d.js', '/derin-mavi/3d/uretec.js', '/derin-mavi/3d/yukleyici.js', '/derin-mavi/3d/addons/libs/meshopt_decoder.module.js', '/derin-mavi/3d/three.module.min.js', '/arac_kutusu.html', '/YakitHesapla.html', '/cam-agirlik.html', '/cephe-bolme.html'];
 const SKIP = [/^\/oyunlar\//, /^\/cephex\/pyodide\//, /^\/_/, /\.(zip|mp4|webm|mov|pdf)$/i, /^\/araclar\/lib\/(reactos|v86\/ubuntu)\//, /\.(wasm|bin|zst)$/i];
@@ -21,7 +21,7 @@ self.addEventListener('fetch', e => {
     if (SKIP.some(x => x.test(u.pathname))) return;
     const net = r.mode === 'navigate' ? fetch(r.url, { cache: 'no-cache', credentials: 'same-origin' }) : FRESH.test(u.pathname) ? fetch(r, { cache: 'no-cache' }) : fetch(r);
     e.respondWith(net.then(res => { if (small(res, u.pathname) && res.type === 'basic') { const cp = res.clone(); caches.open(PAGES).then(c => c.put(r, cp)); } return res; })
-      .catch(() => caches.match(r, { ignoreSearch: r.mode === 'navigate' }).then(m => m || (r.mode === 'navigate' ? caches.match('/Tools.html') : Response.error()))));
+      .catch(() => caches.match(r, { ignoreSearch: r.mode === 'navigate' }).then(m => m || (r.mode === 'navigate' ? caches.match('/') : Response.error()))));
     return;
   }
   if (/\/@ffmpeg\/core@/.test(u.pathname)) return; /* ses/video motoru (32 MB) sayfanın kendi önbelleğinde tutulur, burada ikinci kez saklanmaz */
