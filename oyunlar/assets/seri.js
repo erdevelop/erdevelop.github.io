@@ -90,7 +90,7 @@
 
   /* ---- seri hatırlatıcısı: push/{uid}_seri belgesi; sunucu (.github/push/send.mjs) her akşam bugünün bulmacası çözülmediyse bildirir ---- */
   const PUSH_PUB = 'BGPY6KZFQc8GQbAQQiw-0CBI8X6mrn9VHS7yC8fU8Lbw3Ep5H1OyBLXl6ADn_vGn2fp6F64JL1cMdIFhooZM_BQ', HK = 'ob_seri_hatirlat';
-  const GUNLUK = ['gunlukkelime', 'gunlukkelime-en', 'gunlukkelime-fr', 'gunlukkelime-de', 'sudoku', 'blok', 'solitaire'];
+  const GUNLUK = ['gunlukkelime', 'gunlukkelime-en', 'gunlukkelime-fr', 'gunlukkelime-de', 'sudoku', 'blok', 'solitaire', 'mayin'];
   const bugunTarih = () => { const d = new Date(); return d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0') + '-' + String(d.getDate()).padStart(2, '0'); };
   const ozetHepsi = () => { const z = GUNLUK.map(id => Seri.ozet(id)); return { seri: Math.max(0, ...z.map(x => x.seri)), bugun: z.some(x => x.bugun && x.bugun.ok) }; };
   const hOku = () => { try { return JSON.parse(localStorage.getItem(HK)) || null; } catch (e) { return null; } };
