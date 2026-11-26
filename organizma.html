@@ -508,6 +508,9 @@ const PARAM = new URLSearchParams(location.search);
 
 /* ================= dünya ve kurallar ================= */
 const R = 4200;                         // petri kabının yarıçapı (dünya birimi)
+/* gerçek zamanlı gün–gece: İstanbul saati, herkes için aynı (ortak saat) */
+const GUN = { isik: 1, saat: 12, z: 0, evre: null };
+const GOC_MIKRO = new Set([8, 27, 28, 32, 33]);   // kopepod, efira, ostrakod, su piresi yavrusu, nauplius
 const YEMEK_N = 2300, NPC_N = 165, MIKRO_N = 340;
 const yaricap = m => 4 * Math.sqrt(m);
 const hizi = r => 430 / Math.pow(r, 0.42);       // küçük olan daha hızlı
@@ -1003,6 +1006,7 @@ function mikroGuncelle(dt) {
     const v = a.hiz * a.gaz, k = Math.min(1, dt * 2);
     a.vx += (Math.cos(a.ang) * v - a.vx) * k; a.vy += (Math.sin(a.ang) * v - a.vy) * k;
     a.x += a.vx * dt; a.y += a.vy * dt; akintiIt(a, dt);
+    if (GOC_MIKRO.has(a.tip)) { const dd = Math.hypot(a.x, a.y) || 1, yn = GUN.isik < 0.35 ? -1 : GUN.isik > 0.8 ? 1 : 0; a.x += a.x / dd * yn * 10 * dt; a.y += a.y / dd * yn * 10 * dt; }   // günlük dikey göç: gece sığa, gündüz derine
     const d = Math.hypot(a.x, a.y); if (d > R - 30) { a.x *= (R - 30) / d; a.y *= (R - 30) / d; a.yon = Math.atan2(-a.y, -a.x) + rnd(-0.6, 0.6); }
     yakinYemek(a.x, a.y, a.r, f => {
       if (f.b < 1 || f.yendi) return; const dx = f.x - a.x, dy = f.y - a.y; if (dx * dx + dy * dy > a.r * a.r) return;
@@ -1438,7 +1442,7 @@ function guncelle(dt) {
     if (f.yendi) { if (f.gecici) { Y[i] = Y[Y.length - 1]; Y.pop(); continue; } f.yendi = false; yemekYeri(f); }
     f.x += f.vx * dt; f.y += f.vy * dt; f.vx *= 0.995; f.vy *= 0.995; akintiIt(f, dt);
     if (!f.gecici && Math.random() < dt * 0.3) { f.vx += rnd(-4, 4); f.vy += rnd(-4, 4); }
-    if (f.b < 1) f.b = Math.min(1, f.b + dt * 0.8);
+    if (f.b < 1) f.b = Math.min(1, f.b + dt * 0.8 * (f.baca || f.gecici ? 1 : 0.25 + 0.75 * GUN.isik));   // algler ışıkla büyür: gece yavaş
     if (f.gecici) { f.gecici -= dt; if (f.gecici <= 0) { Y[i] = Y[Y.length - 1]; Y.pop(); continue; } }
     const d2 = f.x * f.x + f.y * f.y; if (d2 > (R - 20) * (R - 20)) { f.vx = -f.x * 0.01; f.vy = -f.y * 0.01; }
   }
@@ -3248,7 +3252,7 @@ function ciz(t) {
   g.fillStyle = window.__isik.lg;
   for (let i = 0; i < 3; i++) {
     const cx = W * (0.16 + i * 0.33) + Math.sin(t * 0.06 + i * 1.9) * W * 0.05, w = W * (0.035 + 0.02 * ((i * 7) % 3)), sk = H * 0.45;
-    g.globalAlpha = 0.65 + 0.35 * Math.sin(t * 0.25 + i * 2.3); g.beginPath(); g.moveTo(cx - w, 0); g.lineTo(cx + w, 0); g.lineTo(cx + w * 2.6 + sk, H); g.lineTo(cx - w * 2.6 + sk, H); g.closePath(); g.fill();
+    g.globalAlpha = (0.65 + 0.35 * Math.sin(t * 0.25 + i * 2.3)) * (0.08 + 0.92 * GUN.isik); g.beginPath(); g.moveTo(cx - w, 0); g.lineTo(cx + w, 0); g.lineTo(cx + w * 2.6 + sk, H); g.lineTo(cx - w * 2.6 + sk, H); g.closePath(); g.fill();
   }
   g.globalAlpha = 1; g.restore();
   }
@@ -3368,6 +3372,7 @@ function ciz(t) {
     }
   }
   derinKaranlik(z);
+  if (GUN.isik < 0.999) { g.fillStyle = `rgba(2,6,24,${((1 - GUN.isik) * 0.36).toFixed(3)})`; g.fillRect(0, 0, W, H); }   // gerçek saatle akşam ve gece
   if (OLAY.g > 0.01) {   // gece: yalnızca yakın çevre görünür
     const ben = oyuncu && !oyuncu.olu && !(IZLE && IZD.sahne), cx = ben ? (oyuncu.x - kamera.x) * z + W / 2 : W / 2, cy = ben ? (oyuncu.y - kamera.y) * z + H / 2 : H / 2, m = Math.min(W, H);
     const gk = ben ? [1, 1.6, 2.3][Math.min(2, SOY(oyuncu).isik)] : 1, ng = g.createRadialGradient(cx, cy, m * 0.15 * gk, cx, cy, m * 0.52 * gk); ng.addColorStop(0, 'rgba(1,5,9,0)'); ng.addColorStop(1, `rgba(1,5,9,${0.94 * OLAY.g})`); g.fillStyle = ng; g.fillRect(0, 0, W, H);
@@ -3391,7 +3396,7 @@ let hudZ = 0, miniZ = 0;
 function hud(dt) {
   hudZ -= dt; miniZ -= dt;
   if (IZLE) izleTik(dt);
-  dostOkGuncelle(); mkOlcekGuncelle(dt); window.olcumTik && olcumTik(dt); window.konsolTik && konsolTik(dt);
+  dostOkGuncelle(); mkOlcekGuncelle(dt); gunGuncelle(dt); window.olcumTik && olcumTik(dt); window.konsolTik && konsolTik(dt);
   yasamGuncelle(dt); nufusGuncelle(dt);
   if (hudZ <= 0) {
     hudZ = 0.25;
@@ -3647,6 +3652,7 @@ function yasamGuncelle(dt) {
         if (o.virus > 0) h += yasamSatir('🦠', T('Enfeksiyon', 'Infection'), o.virus + '/3', 'kotu', o.virus / 3, '#FF7FCF');
         if (o.zehir > 0) h += yasamSatir('☠', T('Zehir', 'Toxin'), o.zehir.toFixed(1) + ' ' + T('sn', 's'), 'kotu', o.zehir / 5, '#B98AFF');
         if (o.kalkan > 0) h += yasamSatir('🛡', T('Kalkan', 'Shield'), o.kalkan.toFixed(1) + ' ' + T('sn', 's'), 'iyi', o.kalkan / 6, '#8FF0B8');
+        { const hh = Math.floor(GUN.saat), dd = Math.floor((GUN.saat - hh) * 60); h += yasamSatir(GUN.isik > 0.5 ? '☀️' : GUN.isik > 0.03 ? '🌅' : '🌙', T('Gün ışığı', 'Daylight'), `${String(hh).padStart(2, '0')}:${String(dd).padStart(2, '0')} · %${Math.round(GUN.isik * 100)}`, '', GUN.isik, '#FFD27A', true); }
         h += yasamSatir('🧂', T('Tuzluluk', 'Salinity'), `${Math.round(tk * 35)}‰ · ${tuzAd(tk)}`, osm > 0.25 ? 'kotu' : '', osm > 0.05 ? osm : null, '#FF9A7A');
         if (osm > 0.05) h += yasamSatir('⚡', T('Osmotik stres', 'Osmotic stress'), suT === 'T' ? T('su kaybediyor', 'losing water') : T('şişiyor', 'swelling'), 'kotu');
         h += yasamSatir('💧', T('Kontraktil koful', 'Contractile vacuole'), YS.kofYok ? T('yok · deniz canlısı', 'none · marine') : YS.hedefBpm < 1 ? T('neredeyse durdu', 'almost stopped') : Math.round(YS.bpm) + T(' atım/dk', ' beats/min'), '', null, null, true);
@@ -4291,6 +4297,24 @@ function mkOlcekGuncelle(dt) {   // dünya birimi ≈ µm: ekranda 70–150 piks
   el.firstChild.style.width = px + 'px'; el.children[1].textContent = L >= 1000 ? (L / 1000) + ' mm' : L + ' µm'; el.lastChild.textContent = '≈ ×' + Math.max(10, Math.round(z * 100 / 10) * 10);
 }
 mkUygula();
+
+function gunGuncelle(dt) {
+  if ((GUN.z -= dt) > 0) return; GUN.z = 4;
+  let h = ((AG.simdi() + 3 * 3600e3) / 3600e3) % 24; if (PARAM.has('saat')) h = (+PARAM.get('saat') || 0) % 24;
+  GUN.saat = h; const yum = x => x * x * (3 - 2 * x);
+  GUN.isik = h < 5.5 || h >= 20.5 ? 0 : h < 7.5 ? yum((h - 5.5) / 2) : h > 18.5 ? yum((20.5 - h) / 2) : 1;
+  const evre = GUN.isik > 0.97 ? 'gun' : GUN.isik < 0.03 ? 'gece' : h < 12 ? 'safak' : 'aksam';
+  if (GUN.evre && evre !== GUN.evre) {
+    const M2 = {
+      aksam: ['🌅 Akşam oluyor: kopepodlar ve su pireleri karanlıkta beslenmek için yüzeye (ortaya) çıkıyor. Bu, her gece tekrarlanan, gezegendeki en büyük hayvan göçü.', '🌅 Dusk: copepods and water fleas rise to the surface (the middle) to feed in the dark — the largest animal migration on Earth, every night.'],
+      gece: ['🌙 Gece: fotosentez durdu, algler yavaş büyüyor. Besin azalır, Noctiluca\'lar parıldar.', '🌙 Night: photosynthesis has stopped and algae grow slowly. Food gets scarce; Noctiluca glows.'],
+      safak: ['🌄 Şafak: ışık geri geliyor. Zooplankton avcılardan saklanmak için derine iniyor.', '🌄 Dawn: light returns. Zooplankton sinks to the depths to hide from hunters.'],
+      gun: ['☀️ Gündüz: algler ışıkla hızla çoğalıyor; besin bol.', '☀️ Day: algae multiply fast in the light; food is plentiful.']
+    }[evre];
+    if (IZLE) anlat(T(M2[0], M2[1]), 8); else if (oyunda) duyur(T(M2[0], M2[1]), '', 7);
+  }
+  GUN.evre = evre;
+}
 
 /* ================= döngü ================= */
 let son = performance.now(), izle = null, izleZ = 0;
