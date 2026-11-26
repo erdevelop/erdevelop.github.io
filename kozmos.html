@@ -232,6 +232,7 @@ details{margin-top:12px;color:var(--mute);font-size:13.5px}summary{cursor:pointe
   </div>
 </div>
 
+<div class="perde" id="ortakPen" hidden><div class="kart" style="text-align:center"><h2 id="ortBas" style="margin:0 0 8px;font-size:20px;font-weight:900"></h2><div id="ortMet"></div><div style="display:flex;gap:8px;margin-top:14px"><button class="ana" id="ortEvet" type="button" data-en="Accept">Kabul et</button><button class="ikincil" id="ortHayir" type="button" data-en="Not now" style="margin:0">Şimdi değil</button></div></div></div>
 <div class="perde" id="bilPen" hidden><div class="kart"><div id="bilIc"></div><button class="ana" id="bilKapat" type="button" data-en="Close" style="margin-top:12px">Kapat</button></div></div>
 <div id="sagMenu" role="menu" hidden></div>
 <div id="fpsG" hidden></div>
@@ -1154,7 +1155,7 @@ function mesafeYaz(d) { const km = d * 1000; if (km >= 1e9) return SAYI(km / 1e9
 
 /* ================= güncelle ================= */
 function guncelle(dt, t) {
-  kareNo++; isikGuncelle(); rcsAdim(dt); fxAdim(dt); SARS *= Math.exp(-dt * 4.5);
+  kareNo++; isikGuncelle(); rcsAdim(dt); fxAdim(dt); ortAdim(dt); SARS *= Math.exp(-dt * 4.5);
   for (let i = DUMAN.length - 1; i >= 0; i--) { const d = DUMAN[i]; d.o += dt; d.x += d.vx * dt; d.y += d.vy * dt; d.vx *= 0.985; d.vy *= 0.985; if (d.o > d.w) DUMAN.splice(i, 1); }
   // dokular: kare başına bir tane
   for (let n = 0; n < 1 && KUYRUK.length; n++) { const p = KUYRUK.shift(); p._kuy = 0; if (!DOKU.has(p.id)) dokuUret(p); }
@@ -1932,6 +1933,7 @@ function ciz(t) {
     ctx.globalCompositeOperation = 'source-over';
   }
   tecCiz(t);
+  ortCiz();
   gemiCiz(t);
   fxCiz();
   cam.x -= sxo; cam.y -= syo;
@@ -4896,6 +4898,7 @@ function oyHediye() {
   ST.hediye = (ST.hediye || 0) + 1; duyur('🎁 ' + T('Hediye gönderildi: ', 'Gift sent to ') + '<b>' + esc(String(oy.e.v.n || '?').slice(0, 20)) + '</b>', 'koloni', `-${SAYI(HED_K)} 💰`); basarimKontrol(); kaydet();
 }
 function oyGelen(v) {
+  if (typeof v.e === 'string' && v.e.startsWith('🤝')) { ortakMesaj(v); return; }
   const ad = esc(String(v.n || '?').slice(0, 20)), k = Math.max(0, Math.min(5000, +v.k || 0));
   for (const [, e] of AG.UZAK) if (e.v && e.v.n === v.n) e.bub = { e: v.e, t: performance.now() };
   if (k > 0) { kazan(k, 'hediye'); duyur('🎁 ' + ad + T(' sana hediye gönderdi!', ' sent you a gift!'), 'galaksi', `+${SAYI(k)} 💰`); SES.galaksi(); kaydet(); }
@@ -5428,10 +5431,11 @@ function pilotYaz() {
   const el = $('pilotIc'); if (!el) return; const ac = AG.durum() === 'acik', L2 = [...AG.UZAK].map(([id, e]) => ({ id, e, d: Math.hypot(e.cx - SH.x, e.cy - SH.y) })).sort((a, b) => a.d - b.d).slice(0, 12);
   $('pilotOz').textContent = '🛰 ' + T('Çevrimiçi pilotlar', 'Online pilots') + (ac ? ` (${L2.length})` : '');
   el.innerHTML = !ac ? `<div class="alt">${T('Görmek için çevrimiçi olmalısın.', 'You need to be online to see them.')}</div>` : !L2.length ? `<div class="alt">${T('Şu an senden başka uçan yok. Biri girince haber veririz.', 'Nobody else is flying right now. We will let you know when someone joins.')}</div>`
-    : L2.map(({ id, e, d }) => `<div style="display:flex;align-items:center;gap:8px;margin:6px 0"><div style="flex:1;min-width:0"><b>🛰 ${esc(String(e.v.n || '?').slice(0, 20))}</b><div class="alt" style="font-size:12px">${mesafeYaz(d)} · ${T('Sektör', 'Sector')} ${Math.floor(e.cx / SEK)}:${Math.floor(e.cy / SEK)}</div></div><button class="kb" type="button" data-pgit="${esc(id)}">📍 ${T('Git', 'Go')}</button><button class="kb" type="button" data-pselam="${esc(id)}">👋</button></div>`).join('') + `<div class="alt" style="font-size:12px">${T('Yanına varınca ifade ve hediye gönderebilirsin.', 'Once you are close you can send emotes and gifts.')}</div>`;
+    : L2.map(({ id, e, d }) => `<div style="display:flex;align-items:center;gap:8px;margin:6px 0"><div style="flex:1;min-width:0"><b>🛰 ${esc(String(e.v.n || '?').slice(0, 20))}</b><div class="alt" style="font-size:12px">${mesafeYaz(d)} · ${T('Sektör', 'Sector')} ${Math.floor(e.cx / SEK)}:${Math.floor(e.cy / SEK)}</div></div><button class="kb" type="button" data-pgit="${esc(id)}">📍 ${T('Git', 'Go')}</button><button class="kb" type="button" data-pselam="${esc(id)}">👋</button>${d < SEK * 2 ? `<button class="kb" type="button" data-portak="${esc(id)}" title="${T('Ortak görev öner', 'Offer a joint mission')}">🤝</button>` : ''}</div>`).join('') + `<div class="alt" style="font-size:12px">${T('Yanına varınca ifade ve hediye gönderebilirsin; 2 sektör içindeyken 🤝 ile ortak görev önerebilirsin.', 'Once you are close you can send emotes and gifts; within 2 sectors you can offer a joint mission with 🤝.')}</div>`;
 }
 $('pilotIc') && $('pilotIc').addEventListener('click', e => {
-  const g = e.target.closest('[data-pgit]'), sl = e.target.closest('[data-pselam]');
+  const g = e.target.closest('[data-pgit]'), sl = e.target.closest('[data-pselam]'), ob = e.target.closest('[data-portak]');
+  if (ob) { $('menu').hidden = true; ortakOner(ob.dataset.portak); SES.tik(); return; }
   if (g) { const o = AG.UZAK.get(g.dataset.pgit); if (!o) return; const ad = String(o.v.n || '?').slice(0, 20); if (mod !== 'oto') modDegis(); wp = { x: o.cx, y: o.cy, k: '', ad: '🛰 ' + ad }; oto = { x: o.cx, y: o.cy, dur: 500, ad }; $('menu').hidden = true; if (!oyunda) basla(); duyur('🤖 ' + T('Otopilot: ', 'Autopilot: ') + esc(ad), 'kesif', T('Pilot hareket ediyorsa yaklaşınca yeniden hedefle', 'If the pilot moves, re-target when you get close')); SES.tik(); }
   else if (sl) { const o = AG.UZAK.get(sl.dataset.pselam); if (!o) return; AG.mesaj(sl.dataset.pselam, '👋', 0); benBalon = { e: '👋', t: performance.now() }; AG.balon('👋'); duyur('👋 ' + T('Selam gönderildi: ', 'Said hi to ') + esc(String(o.v.n || '?').slice(0, 20)), 'kesif'); SES.tik(); }
 });
@@ -5497,6 +5501,62 @@ function anAdim() {
   ls.set('kozmos-an', AN);
 }
 setInterval(() => { try { anAdim(); } catch (e) { } }, 4000);
+
+/* ================= ortak (eşli) görevler ================= */
+const ORTT = {
+  cek: { e: '🛸', ad: ['Dev enkazı birlikte çek', 'Tow the giant wreck together'], ac: ['İkiniz de enkazın yanında kaldıkça çekme ilerler (45 sn).', 'Towing progresses while you both stay by the wreck (45 s).'], sure: 45 },
+  savun: { e: '📡', ad: ['İşaret kulesini birlikte savun', 'Defend the beacon together'], ac: ['İkiniz de kulenin yanında kalın; korsan dalgaları gelecek (60 sn).', 'Both stay by the beacon; pirate waves are coming (60 s).'], sure: 60 }
+};
+let ORT = null; const ORT_YAKIN = new Set(); let ortDavet = null;
+function ortakOner(id) {
+  const o = AG.UZAK.get(id); if (!o) return; if (ORT) { duyur('🤝 ' + T('Zaten ortak görevdesin', 'You are already on a joint mission'), 'kesif'); return; }
+  const tur = Math.random() < 0.5 ? 'cek' : 'savun', a = Math.random() * TAU, x = Math.round((SH.x + o.cx) / 2 + Math.cos(a) * 1800), y = Math.round((SH.y + o.cy) / 2 + Math.sin(a) * 1800);
+  AG.ortakYaz({ b: id, x, y, tur }).then(ok => { if (!ok) { duyur('🤝 ' + T('Davet gönderilemedi', 'Invite could not be sent'), 'uyari'); return; } AG.mesaj(id, '🤝?', 0); ortDavet = { id, x, y, tur, t: Date.now() }; duyur('🤝 ' + T('Ortak görev daveti gönderildi: ', 'Joint mission invite sent to ') + esc(String(o.v.n || '?').slice(0, 20)), 'kesif', T('Kabul ederse görev ikinizde birden başlar', 'If they accept, the mission starts for both of you')); });
+}
+async function ortakMesaj(v) {
+  const ad = esc(String(v.n || '?').slice(0, 20));
+  if (v.e === '🤝?') {
+    const d = await AG.ortakOku(v.f); if (!d || d.b !== AG.benimId() || !ORTT[d.tur] || Date.now() - (d.t || 0) > 180000 || ORT) return;
+    $('ortBas').textContent = '🤝 ' + T('Ortak görev daveti', 'Joint mission invite');
+    $('ortMet').innerHTML = `<b>${ad}</b> ${T('seninle birlikte bir görev yapmak istiyor:', 'wants to do a mission with you:')}<br><br>${ORTT[d.tur].e} <b>${L(ORTT[d.tur].ad)}</b><br><span class="alt">${L(ORTT[d.tur].ac)} ${T('Ödül ikinize de', 'Reward for both')}: ~${SAYI(ortOdul())} 💰</span>`;
+    $('ortakPen').hidden = false; SES.galaksi();
+    $('ortEvet').onclick = async () => { $('ortakPen').hidden = true; if (await AG.ortakKabul(v.f)) { AG.mesaj(v.f, '🤝✓', 0); ortBasla({ ort: v.f, ad: String(v.n || '?').slice(0, 20), x: d.x, y: d.y, tur: d.tur }); } else duyur('🤝 ' + T('Kabul gönderilemedi', 'Could not accept'), 'uyari'); };
+    $('ortHayir').onclick = () => { $('ortakPen').hidden = true; AG.mesaj(v.f, '🤝✗', 0); };
+  } else if (v.e === '🤝✓') { if (ortDavet && ortDavet.id === v.f && !ORT) { ortBasla({ ort: v.f, ad: String(v.n || '?').slice(0, 20), x: ortDavet.x, y: ortDavet.y, tur: ortDavet.tur }); ortDavet = null; } }
+  else if (v.e === '🤝✗') { if (ortDavet && ortDavet.id === v.f) { ortDavet = null; AG.ortakSil(); duyur('🤝 ' + ad + T(' daveti şimdilik geri çevirdi', ' declined for now'), 'kesif'); } }
+  else if (v.e === '🤝★') { if (ORT && ORT.ort === v.f && ORT.il < ORTT[ORT.tur].sure) { ORT.il = ORTT[ORT.tur].sure; ortAdim(0); } }
+}
+const ortOdul = () => Math.round(2500 + 1500 * Math.min(3, sayK('s') / 30));
+function ortBasla(o) {
+  ORT = Object.assign({ il: 0, t0: performance.now(), son: performance.now(), dalga: 0 }, o); wp = { x: o.x, y: o.y, k: '', ad: ORTT[o.tur].e + ' ' + L(ORTT[o.tur].ad) };
+  duyur('🤝 ' + T('Ortak görev başladı: ', 'Joint mission started: ') + ORTT[o.tur].e + ' ' + L(ORTT[o.tur].ad), 'galaksi', T('Ortağın: ', 'Partner: ') + esc(o.ad) + ' · ' + L(ORTT[o.tur].ac)); SES.galaksi(); an('ortak_bas');
+}
+function ortBitir(ok) {
+  if (!ORT) return; const o = ORT; ORT = null; AG.ortakSil(); if (wp && wp.ad && wp.ad.startsWith(ORTT[o.tur].e)) wp = null;
+  if (ok) { const od = ortOdul(); kazan(od, 'gorev'); sezXp(120); frEkle('birlik', 3); ST.ortak = (ST.ortak || 0) + 1; SES.galaksi(); AG.mesaj(o.ort, '🤝★', 0); duyur('🏅 ' + T('Ortak görev tamamlandı!', 'Joint mission complete!'), 'galaksi', '+' + SAYI(od) + ' 💰 · +120 ' + T('sezon puanı · ', 'season XP · ') + T('teşekkürler ', 'thanks to ') + esc(o.ad)); defter('🤝 ' + o.ad + ' ile ortak görev tamamlandı.', '🤝 Joint mission completed with ' + o.ad + '.'); an('ortak_bit'); }
+  else duyur('🤝 ' + T('Ortak görev bitti: ortağın ayrıldı ya da süre doldu', 'Joint mission ended: your partner left or time ran out'), 'uyari');
+}
+function ortAdim(dt) {
+  if (!ORT || !oyunda) return; const n = performance.now(), O = ORTT[ORT.tur], p = AG.UZAK.get(ORT.ort);
+  if (p) ORT.son = n; if (n - ORT.son > 60000 || n - ORT.t0 > 12 * 60000) { ortBitir(false); return; }
+  const ben = Math.hypot(SH.x - ORT.x, SH.y - ORT.y) < 900, o = p && Math.hypot(p.cx - ORT.x, p.cy - ORT.y) < 1100;
+  ORT.ben = ben; ORT.o = !!o;
+  if (ben && o) { ORT.il += dt; if (ORT.tur === 'savun' && ORT.il > 8 + ORT.dalga * 18 && ORT.dalga < 3 && !KORS.length) { ORT.dalga++; korsanCikar(); } }
+  if (ORT.il >= O.sure) ortBitir(true);
+}
+function ortCiz() {
+  if (!ORT) return; const [X, Y] = W2S(ORT.x, ORT.y), z = cam.z, O = ORTT[ORT.tur], t = performance.now() / 1000, f = Math.min(1, ORT.il / O.sure);
+  if (X < -200 || X > W + 200 || Y < -200 || Y > H + 200) return;
+  ctx.save(); ctx.strokeStyle = 'rgba(124,240,166,.35)'; ctx.setLineDash([8, 8]); ctx.lineWidth = 1.5; ctx.beginPath(); ctx.arc(X, Y, 900 * z, 0, TAU); ctx.stroke(); ctx.setLineDash([]);
+  ctx.lineWidth = 5; ctx.strokeStyle = 'rgba(255,255,255,.12)'; ctx.beginPath(); ctx.arc(X, Y, Math.max(26, 60 * z), 0, TAU); ctx.stroke(); ctx.strokeStyle = '#7CF0A6'; ctx.beginPath(); ctx.arc(X, Y, Math.max(26, 60 * z), -Math.PI / 2, -Math.PI / 2 + f * TAU); ctx.stroke();
+  ctx.font = `${Math.max(22, 54 * z)}px system-ui`; ctx.textAlign = 'center'; ctx.textBaseline = 'middle'; ctx.fillText(O.e, X, Y + Math.sin(t * 2) * 3);
+  ctx.font = '800 12px Nunito, system-ui, sans-serif'; ctx.fillStyle = ORT.ben && ORT.o ? '#7CF0A6' : '#FFD36B';
+  ctx.fillText(ORT.ben && ORT.o ? T('Birlikte! ', 'Together! ') + Math.round(100 * f) + '%' : !ORT.ben ? T('Hedefe gel', 'Come to the target') : T('Ortağını bekle: ', 'Waiting for ') + ORT.ad, X, Y + Math.max(26, 60 * z) + 16); ctx.restore();
+}
+setInterval(() => { try {
+  if (!oyunda || AG.durum() !== 'acik') return;
+  for (const [id, e] of AG.UZAK) if (!ORT_YAKIN.has(id) && Math.hypot(e.cx - SH.x, e.cy - SH.y) < SEK * 1.5) { ORT_YAKIN.add(id); duyur('🤝 ' + esc(String(e.v.n || '?').slice(0, 20)) + T(' yakınında', ' is nearby'), 'kesif', T('Menü → 🌐 Topluluk → çevrimiçi pilotlar: 🤝 ile ortak görev önerebilirsin', 'Menu → 🌐 Community → online pilots: offer a joint mission with 🤝')); }
+} catch (e) { } }, 4000);
 
 /* ================= prestij: Yeni Oyun+ ================= */
 const prsUygun = () => PRS < 10 && (!!HIK.son4 || (sayK('s') >= 150 && ST.kazanc >= 500000));
@@ -5822,13 +5882,18 @@ const AG = (() => {
   async function pKoy(m, a, f) { if (!db || !uid) return false; try { await db.ref('kozmos/p').push({ s: uid, n: pilotAd(), m, a, f, t: firebase.database.ServerValue.TIMESTAMP }); return true; } catch (e) { return false; } }
   async function pAl(id) { if (!db || !uid) return false; try { const r = await db.ref('kozmos/p/' + id).transaction(c => c && !c.b && c.s !== uid ? Object.assign({}, c, { b: uid, bn: pilotAd() }) : undefined); return r.committed; } catch (e) { return false; } }
   async function pSil(id) { if (!db) return false; try { await db.ref('kozmos/p/' + id).remove(); return true; } catch (e) { return false; } }
+  async function ortakYaz(o) { if (!db || !uid || durum !== 'acik') return false; try { await db.ref('kozmos/ortak/' + uid).set(Object.assign({ t: firebase.database.ServerValue.TIMESTAMP, n: pilotAd() }, o)); return true; } catch (e) { return false; } }
+  async function ortakOku(id) { if (!db) return null; try { return (await db.ref('kozmos/ortak/' + id).once('value')).val(); } catch (e) { return null; } }
+  async function ortakKabul(id) { if (!db || !uid) return false; try { await db.ref('kozmos/ortak/' + id + '/k').set(uid); return true; } catch (e) { return false; } }
+  function ortakSil() { if (db && uid) db.ref('kozmos/ortak/' + uid).remove().catch(() => { }); }
+  const benimId = () => uid;
   async function frOku(hk) { if (!db) return null; try { return (await db.ref('kozmos/fr/' + hk).once('value')).val() || {}; } catch (e) { return null; } }
   function frEkleU(hk, k, n) { if (!db || !uid || durum !== 'acik') return Promise.resolve(false); return db.ref('kozmos/fr/' + hk + '/' + k).transaction(c => (+c || 0) + Math.min(50, n)).then(r => !!r.committed).catch(() => false); }
   function say(gun, olay) { if (!db || !uid || durum !== 'acik') return Promise.resolve(false); return db.ref('kozmos/an/' + gun + '/' + olay).transaction(c => (+c || 0) + 1).then(r => !!r.committed).catch(() => false); }
   async function evOku(hk) { if (!db) return null; try { const [a, b] = await Promise.all([db.ref('kozmos/ev/' + hk + '/t').once('value'), db.ref('kozmos/ev/' + hk + '/k').orderByChild('d').limitToLast(5).once('value')]); const L2 = []; b.forEach(c => { const v = c.val(); if (v && typeof v.d === 'number') L2.push(Object.assign({ id: c.key }, v)); }); return { t: +a.val() || 0, top: L2.reverse() }; } catch (e) { return null; } }
   async function evEkle(hk, n, top) { if (!db || !uid || durum !== 'acik' || n <= 0) return false; try { const r = await db.ref('kozmos/ev/' + hk + '/t').transaction(c => (+c || 0) + Math.min(100, n)); if (!r.committed) return false; await db.ref('kozmos/ev/' + hk + '/k/' + uid).set({ n: pilotAd(), d: top }); return true; } catch (e) { return false; } }
   function sil() { if (benRef) benRef.remove().catch(() => { }); }
-  return { frOku, frEkle: frEkleU, say, evOku, evEkle, baslat, gonder, tur, UZAK, ilkKesif, ilkAd, siraGonder, sira, sil, simdi, balon, mesaj, kkOku, hafta, odulKontrol, sohBaslat, sohGonder, bulutYaz, bulutOku, yrGonder, yrSira, fotoGonder, fotoOku, fotoBegen, izOku, izYaz, izAl, izBegen, bossBaslat, bossVur, bossSira, lOku, lKur, lKatil, lAyril, lBagis, pOku, pKoy, pAl, pSil, durum: () => durum, uid: () => uid };
+  return { ortakYaz, ortakOku, ortakKabul, ortakSil, benimId, frOku, frEkle: frEkleU, say, evOku, evEkle, baslat, gonder, tur, UZAK, ilkKesif, ilkAd, siraGonder, sira, sil, simdi, balon, mesaj, kkOku, hafta, odulKontrol, sohBaslat, sohGonder, bulutYaz, bulutOku, yrGonder, yrSira, fotoGonder, fotoOku, fotoBegen, izOku, izYaz, izAl, izBegen, bossBaslat, bossVur, bossSira, lOku, lKur, lKatil, lAyril, lBagis, pOku, pKoy, pAl, pSil, durum: () => durum, uid: () => uid };
 })();
 let siraAlan = 's';
 async function siraYaz() {
@@ -6180,7 +6245,7 @@ function kare(now) {
 }
 kayitOnar(); try { kilitIlk(); } catch (e) { } try { menuSekmeKur(); } catch (e) { console.warn(e); } boyutla(); kesifSayYaz(); menuKur(); radarKur(); gorevYaz();
 requestAnimationFrame(kare);
-window.KOZ = { GRAF, haftaK, bolgeFr, frEkle, get BOLGE() { return BOLGE; }, DUMAN, KIV, get GUN() { return GUN; }, gunKontrol, PRS, prsBasla, HIK, BIL, bilAc, duyur, ACL, KILIT, acikMi, kilitKontrol, get oto() { return oto; }, parkur, yarisBasla, get YR() { return YR; }, get SEZ() { return SEZ; }, sezXp, KOZM, kayitPaket, kayitUygula, bulutKaydet, galeriYukle, fotoGoster,  get yol() { return yol; }, REH, rehKontrol, rehYaz, hikAdim, hik4Son, diyalogSec,  get KOL() { return KOL; }, set KOL(v) { KOL = v; }, kolKur, kolAc, kolIsle, EKIP, huyOf, ekipYarala, HUY, get kaynP() { return kaynP; },  GUC, gucVer, ASTD, ROTA, devAst, astPos, astCan, kasaAc, hackAc, rotaBaslat, rotaPanel, get HK() { return HK; }, get astYakin() { return astYakin; }, get madenLazer() { return madenLazer; }, set madenLazer(v) { madenLazer = v; }, PARCA, get rotaAktif() { return rotaAktif; },  KOD, kodAc, kodKontrol, IZ, izPen, izEnkaz, get INS() { return INS; }, get izYakin() { return izYakin; },  PZ, BES, MODS, YER, besLv, pzKat, isle, tasarimAc, mSay,  get kdIc() { return kdIc; }, get iyonIc() { return iyonIc; }, SILAHLAR, ESK, iyonAc, meteorAc, skListe, skEs, skGec, penrose, get silahS() { return silahS; }, set silahS(v) { silahS = v; }, get kredi2() { return kredi; }, set kredi2(v) { kredi = v; }, get skYakin() { return skYakin; },  KOLOS, kolosPos, kolosBagla, profilCiz, haberUret,  DIP, dipEkle, yanBasla, gunOlay,  get istn() { return istnObj; }, istnKur, istnAc, istnIsle, get moral() { return MORAL; }, set ekOlayT(v) { ekOlayT = v; }, fiyat,  get sapanDbg() { return [sapanEn, sapanHedef && sapanHedef.ad, sapanHedef && sapanHedef.v]; }, TEKNO, MODUL, bilimEkle, tamirAc, get sapanBoost() { return sapanBoost; },  HURDA, ARSIV, hurdaCikar, arsivBul, ambarAc,  sagAc, sagHedefler,  gezPos, simT, patlamaEkle, SOH, LON, PAZ, tpAc, sohGeldi,  fotoAc, fpAc, inisAc, inisKapat, get INS() { return INS; }, DEFTER, defter,  zulaYakin, snBasla, solucanAc, istilaBasla, istPos, istAc, mezarPos, mezar, OLAY2: () => OLAY,  EKIP, FR, KERVAN, ZIY, DOST, kervanAdim, kvPos, borsaAc, korsanLimanPos, frEkle, adaylar,  SARF, TLV, sarfKullan,  get kapsul() { return kapsul; }, get oks() { return oks; }, set oks(v) { oks = v; }, PLANLAR, KIY, KIYS, bankaAc, bankaPos, planVer, get sigorta() { return sigorta; },  OKK, oyuncuYakin, oyGelen, haftaK,  devCikar, kalintiBul,  TEKS, get TAK() { return TAK; }, set TAK(v) { TAK = v; }, arananlar, patlamaKullan,  IRK, piyasaOlay, balinaSuru, yakinBalinalar, bulmacaAc, get BLM() { return BLM; },  kapiPos, golgeCikar,  get nabiz() { return nabiz; }, get isi() { return isi; },  AG, bolgeBul,  KORS, OLAY, HIK, ST, BAS, get can() { return can; }, set can(v) { can = v; }, korsanCikar, hikAdim, hikBasla, kuyruk, kuyrukPos, nebulaB, nebulaIc, get gemiTip() { return gemiTip; }, KARAKOL: () => KARAKOL, olayZorla: () => { olayT = 0; },  get kaynP() { return kaynP; }, get kazP() { return kazP; }, KARGO, get kredi() { return kredi; }, set kredi(v) { kredi = v; }, get yakit() { return yakit; }, set yakit(v) { yakit = v; }, GOREV: () => GOREV, YUK, limanAc, get limanP() { return limanP; }, get yanasP() { return yanasP; }, SH, cam, temel, sistem, galaksi, KESIF, basla, haritaAc, haritaKapat, set zoom(v) { zKul = v; }, DOKU };
+window.KOZ = { GRAF, oyGelen, ORT: () => ORT, KORS, haftaK, bolgeFr, frEkle, get BOLGE() { return BOLGE; }, DUMAN, KIV, get GUN() { return GUN; }, gunKontrol, PRS, prsBasla, HIK, BIL, bilAc, duyur, ACL, KILIT, acikMi, kilitKontrol, get oto() { return oto; }, parkur, yarisBasla, get YR() { return YR; }, get SEZ() { return SEZ; }, sezXp, KOZM, kayitPaket, kayitUygula, bulutKaydet, galeriYukle, fotoGoster,  get yol() { return yol; }, REH, rehKontrol, rehYaz, hikAdim, hik4Son, diyalogSec,  get KOL() { return KOL; }, set KOL(v) { KOL = v; }, kolKur, kolAc, kolIsle, EKIP, huyOf, ekipYarala, HUY, get kaynP() { return kaynP; },  GUC, gucVer, ASTD, ROTA, devAst, astPos, astCan, kasaAc, hackAc, rotaBaslat, rotaPanel, get HK() { return HK; }, get astYakin() { return astYakin; }, get madenLazer() { return madenLazer; }, set madenLazer(v) { madenLazer = v; }, PARCA, get rotaAktif() { return rotaAktif; },  KOD, kodAc, kodKontrol, IZ, izPen, izEnkaz, get INS() { return INS; }, get izYakin() { return izYakin; },  PZ, BES, MODS, YER, besLv, pzKat, isle, tasarimAc, mSay,  get kdIc() { return kdIc; }, get iyonIc() { return iyonIc; }, SILAHLAR, ESK, iyonAc, meteorAc, skListe, skEs, skGec, penrose, get silahS() { return silahS; }, set silahS(v) { silahS = v; }, get kredi2() { return kredi; }, set kredi2(v) { kredi = v; }, get skYakin() { return skYakin; },  KOLOS, kolosPos, kolosBagla, profilCiz, haberUret,  DIP, dipEkle, yanBasla, gunOlay,  get istn() { return istnObj; }, istnKur, istnAc, istnIsle, get moral() { return MORAL; }, set ekOlayT(v) { ekOlayT = v; }, fiyat,  get sapanDbg() { return [sapanEn, sapanHedef && sapanHedef.ad, sapanHedef && sapanHedef.v]; }, TEKNO, MODUL, bilimEkle, tamirAc, get sapanBoost() { return sapanBoost; },  HURDA, ARSIV, hurdaCikar, arsivBul, ambarAc,  sagAc, sagHedefler,  gezPos, simT, patlamaEkle, SOH, LON, PAZ, tpAc, sohGeldi,  fotoAc, fpAc, inisAc, inisKapat, get INS() { return INS; }, DEFTER, defter,  zulaYakin, snBasla, solucanAc, istilaBasla, istPos, istAc, mezarPos, mezar, OLAY2: () => OLAY,  EKIP, FR, KERVAN, ZIY, DOST, kervanAdim, kvPos, borsaAc, korsanLimanPos, frEkle, adaylar,  SARF, TLV, sarfKullan,  get kapsul() { return kapsul; }, get oks() { return oks; }, set oks(v) { oks = v; }, PLANLAR, KIY, KIYS, bankaAc, bankaPos, planVer, get sigorta() { return sigorta; },  OKK, oyuncuYakin, oyGelen, haftaK,  devCikar, kalintiBul,  TEKS, get TAK() { return TAK; }, set TAK(v) { TAK = v; }, arananlar, patlamaKullan,  IRK, piyasaOlay, balinaSuru, yakinBalinalar, bulmacaAc, get BLM() { return BLM; },  kapiPos, golgeCikar,  get nabiz() { return nabiz; }, get isi() { return isi; },  AG, bolgeBul,  KORS, OLAY, HIK, ST, BAS, get can() { return can; }, set can(v) { can = v; }, korsanCikar, hikAdim, hikBasla, kuyruk, kuyrukPos, nebulaB, nebulaIc, get gemiTip() { return gemiTip; }, KARAKOL: () => KARAKOL, olayZorla: () => { olayT = 0; },  get kaynP() { return kaynP; }, get kazP() { return kazP; }, KARGO, get kredi() { return kredi; }, set kredi(v) { kredi = v; }, get yakit() { return yakit; }, set yakit(v) { yakit = v; }, GOREV: () => GOREV, YUK, limanAc, get limanP() { return limanP; }, get yanasP() { return yanasP; }, SH, cam, temel, sistem, galaksi, KESIF, basla, haritaAc, haritaKapat, set zoom(v) { zKul = v; }, DOKU };
 })();
 </script>
 <script data-goatcounter="https://erdevelop.goatcounter.com/count" async src="//gc.zgo.at/count.js"></script>
