@@ -250,6 +250,10 @@ const ogrenSayfa = () => {
     <h1 data-en="${esc(h.ad[1])}">${esc(h.ad[0])}</h1>
     <p class="lead" data-en="${esc(h.aciklama[1])}">${esc(h.aciklama[0])}</p>
   </div></div>
+  <section class="p wrap" id="p-devam" aria-labelledby="h-devam" data-kurs="8" data-arac="0" hidden>
+    <div class="p-sh"><h2 id="h-devam" data-en="Courses in progress">Devam ettiğin eğitimler</h2><a href="../egitimler/panom/" data-en="My dashboard →">Panom →</a></div>
+    <div class="hizli"></div>
+  </section>
   <section class="p wrap">
     <div class="genis">
 ${h.buyuk.filter(b => fs.existsSync(path.join(KOK, b.u, 'index.html'))).map(b => `      <a href="../${b.u}" style="--ton:${b.ton}"><b data-en="${esc(b.t[1])}">${esc(b.t[0])}</b><span data-en="${esc(b.d[1])}">${esc(b.d[0])}</span><u data-en="${esc(b.c[1])}">${esc(b.c[0])}</u></a>`).join('\n')}

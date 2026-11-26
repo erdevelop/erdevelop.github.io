@@ -70,4 +70,29 @@
       + '<a class="l" href="/gizlilik.html" data-en="Privacy">Gizlilik</a><a class="l" href="/kullanim.html" data-en="Terms of use">Kullanım koşulları</a></div>'
       + '</div><div class="wrap p-telif"><span>© ' + new Date().getFullYear() + ' erdevelop</span><span data-en="Calculations are for educational and preliminary purposes only.">Hesaplar eğitim ve ön bilgi amaçlıdır.</span><a href="/feed.xml" style="margin-left:auto">RSS</a></div>';
   }
+  /* ---- "Kaldığın yerden devam et": yarım kalan eğitimler (erdevelop-egitim-ozet) ve son açılan araçlar (erdevelop-son) ----
+     Sayfada <section id="p-devam" hidden data-arac="6" data-kurs="2"> varsa doldurur; kayıt yoksa bölüm gizli kalır.
+     Her şey bu tarayıcıda saklanır, bir yere gönderilmez. */
+  var kutu = D.getElementById('p-devam');
+  if (kutu && window.fetch) {
+    var oku = function (k, bos) { try { var v = JSON.parse(localStorage.getItem(k) || 'null'); return v && typeof v === 'object' ? v : bos; } catch (x) { return bos; } };
+    var ozet = oku('erdevelop-egitim-ozet', {}), son = oku('erdevelop-son', []);
+    var kurs = {}; Object.keys(ozet).forEach(function (k) { var m = /^\/(egitimler\/[^/]+\/)(en\/)?$/.exec(k), v = ozet[k]; if (!m || !v) return; var y = Math.min(100, +v.p || 0); if (!kurs[m[1]] || y > kurs[m[1]].p) kurs[m[1]] = { p: y, t: Math.max(+v.t || 0, kurs[m[1]] ? kurs[m[1]].t : 0) }; });
+    var yarim = Object.keys(kurs).filter(function (f) { return kurs[f].p > 0 && kurs[f].p < 100; }).sort(function (a, b) { return kurs[b].t - kurs[a].t; });
+    if ((yarim.length || (Array.isArray(son) && son.length)) ) fetch('/js/harita.json').then(function (r) { return r.ok ? r.json() : null; }).then(function (h) {
+      if (!h) return;
+      var ad = {}; Object.keys(h.o).forEach(function (g) { h.o[g].forEach(function (x) { if (!ad[x[0]]) ad[x[0]] = [x[1], x[2], g]; }); });
+      var nK = +kutu.getAttribute('data-kurs') || 0, nA = +kutu.getAttribute('data-arac') || 0;
+      var ciz = function () {
+        var E = window.erDil && window.erDil.lang === 'en', out = [];
+        yarim.filter(function (f) { return ad[f]; }).slice(0, nK).forEach(function (f) {
+          out.push('<a href="/' + e(f) + '" style="--ton:var(--amber)"><i><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M2 9l10-5 10 5-10 5z"/><path d="M6 11v5c3 2.5 9 2.5 12 0v-5"/></svg></i><span>' + e(ad[f][E ? 1 : 0]) + '<small>%' + Math.round(kurs[f].p) + (E ? ' done' : ' tamamlandı') + '</small><em><b style="width:' + Math.round(kurs[f].p) + '%"></b></em></span></a>'); });
+        (Array.isArray(son) ? son : []).filter(function (x) { return x && ad[x[0]]; }).slice(0, nA).forEach(function (x) { var a = ad[x[0]], g = h.g[a[2]], oy = g.k === 'oyunlar';
+          out.push('<a href="/' + e(x[0]) + '" style="--ton:var(--' + (oy ? 'violet' : g.k === 'muhendislik' ? 'green' : 'blue') + ')"><i><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">' + (oy ? '<path d="M8 5.500v13l11-6.500z"/>' : '<circle cx="12" cy="12" r="8.500"/><path d="M12 7.500V12l3 2"/>') + '</svg></i><span>' + e(a[E ? 1 : 0]) + '<small>' + e(g.t[E ? 1 : 0]) + '</small></span></a>'); });
+        if (!out.length) { kutu.hidden = true; return; }
+        kutu.querySelector('.hizli').innerHTML = out.join(''); kutu.hidden = false;
+      };
+      ciz(); if (window.erDil && window.erDil.on) window.erDil.on(ciz);
+    }).catch(function () { });
+  }
 })();

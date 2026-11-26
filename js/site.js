@@ -10,6 +10,24 @@
   const norm = s => String(s || '').toLocaleLowerCase('tr').replace(/[ışğüöçâîûéèêàäß]/g, c => TRM[c]).normalize('NFD').replace(/[̀-ͯ]/g, '');
   const en = (D.documentElement.lang || '').startsWith('en');
 
+  /* sayfa → grup haritası (tek sefer yüklenir) */
+  let haritaP = null;
+  const harita = () => haritaP || (haritaP = fetch('/js/harita.json').then(r => r.ok ? r.json() : null).catch(() => null));
+
+  /* ---------------- son kullanılanlar: açılan araç ve oyunlar bu tarayıcıda hatırlanır (erdevelop-son) ----------------
+     Ana sayfadaki "Kaldığın yerden devam et" satırı bunu okur (js/portal.js). Eğitimlerin ilerlemesi ayrı tutulur (erdevelop-egitim-ozet). */
+  (function () {
+    if (D.documentElement.hasAttribute('data-portal') || window.top !== window || /[?&]gom=1/.test(location.search)) return;
+    let s = yol.replace(/^\//, '').replace(/(^|\/)index\.html$/, '$1'); try { s = decodeURIComponent(s); } catch (e) { }
+    harita().then(h => {
+      if (!h) return;
+      const kok = s.split('/').slice(0, 2).join('/') + '/', f = h.s[s] ? s : h.s[kok] ? kok : null;
+      if (!f || !h.g[h.s[f]] || h.g[h.s[f]].k === 'ogren') return;
+      try { let L = JSON.parse(localStorage.getItem('erdevelop-son') || '[]'); if (!Array.isArray(L)) L = [];
+        localStorage.setItem('erdevelop-son', JSON.stringify([[f, Date.now()]].concat(L.filter(x => x && x[0] !== f)).slice(0, 12))); } catch (e) { }
+    });
+  })();
+
   /* ---------------- kabuk: yol çubuğu ve "benzer araçlar" (araç, eğitim, rehber sayfaları) ----------------
      Görünüm /css/kabuk.css; sayfa → grup haritası /js/harita.json (.github/indeks/kategoriler.mjs üretir).
      Portal sayfaları (data-portal), oyunlar ve gömülü (iframe, ?gom=1) açılışlar atlanır. */
@@ -28,7 +46,7 @@
     const ON = [[/^hesapla\//, 'calc'], [/^komutlar\//, 'cad']];
     const SABIT = [[/^egitimler\//, ['Eğitimler', 'Courses'], '/egitimler/'], [/^rehber\/dil-kulupleri\//, ['Dil kulüpleri', 'Language clubs'], '/rehber/dil-kulupleri/'], [/^rehber\//, ['Rehberler', 'Guides'], '/rehber/'],
       [/^(mikro-dunya|micro-world)\//, ['Mikro Dünya', 'Micro World'], '/mikro-dunya/'], [/^yapay-zeka\//, ['Yapay zekâ', 'AI'], '/yapay-zeka/'], [/^Tools\.html$/, ['Tüm araçlar', 'All tools'], '/Tools.html', 'araclar']];
-    fetch('/js/harita.json').then(r => r.ok ? r.json() : null).then(h => {
+    harita().then(h => {
       if (!h) return;
       const kok = sayfa.split('/').slice(0, 2).join('/') + '/';
       let gid = h.s[sayfa] || h.s[kok] || null; if (!gid) { const o = ON.find(x => x[0].test(sayfa)); if (o) gid = o[1]; }
