@@ -234,6 +234,22 @@ export function canliUret(tur, malz, o = {}) {
       A.av = []; for (const zz of [-1, 1]) { const k = ekle(new THREE.CylinderGeometry(0.008, 0.012, 0.6, 5).rotateZ(-Math.PI / 2).translate(0.3, 0, 0), M('#E8C7B0'), A.kol); k.position.z = zz * 0.02; k.visible = false; A.av.push(k); }
       break;
     }
+    case 'iz': { /* kumda iz: çukur (vatoz, tetik yuvası) ya da deniz hıyarının kum halkaları */
+      A.mat = []; const mk = (r, ek) => { const m = new THREE.MeshStandardMaterial(Object.assign({ color: r, roughness: 1, transparent: true, depthWrite: false, polygonOffset: true, polygonOffsetFactor: -2 }, ek)); A.mat.push([m, m.opacity]); return malz(m); };
+      if (o.iz === 'hiyar') { for (const dx of [-0.8, 0.6]) for (let k = 0; k < 3; k++) { const t = ekle(new THREE.TorusGeometry(0.35 - k * 0.1, 0.07, 5, 14), mk('#e6dcc0')); t.rotation.x = -Math.PI / 2; t.position.set(dx, 0.05 + k * 0.05, 0); } break; }
+      const yv = o.iz === 'yuva', c1 = ekle(new THREE.CircleGeometry(1, 28), mk('#6e5f45', { opacity: 0.55 })); c1.rotation.x = -Math.PI / 2; c1.scale.set(yv ? 1.25 : 1.1, yv ? 0.9 : 0.6, 1); c1.position.y = 0.03;
+      const c2 = ekle(new THREE.CircleGeometry(1, 24), mk('#4a3f2e', { opacity: 0.35 })); c2.rotation.x = -Math.PI / 2; c2.scale.set(yv ? 0.7 : 0.6, yv ? 0.5 : 0.33, 1); c2.position.y = 0.035;
+      const hl = ekle(new THREE.TorusGeometry(1, 0.08, 4, 32), mk('#efe3c4', { opacity: 0.8 })); hl.rotation.x = -Math.PI / 2; hl.scale.set(yv ? 1.25 : 1.1, yv ? 0.9 : 0.6, 1); hl.position.y = 0.04;
+      if (yv) for (let j = 0; j < 9; j++) { const a = j / 9 * Math.PI * 2, t = ekle(new THREE.DodecahedronGeometry(0.08 + (j % 3) * 0.03), mk('#e8ddd0', { transparent: false })); t.position.set(Math.cos(a) * 1.3, 0.04, Math.sin(a) * 0.95); }
+      break;
+    }
+    case 'beyin': { /* beyin mercanı: kıvrım kıvrım oluklu kubbe */
+      const g = new THREE.SphereGeometry(1, 72, 36, 0, Math.PI * 2, 0, Math.PI / 2); const p = g.attributes.position, v = new THREE.Vector3(), C = [], ac = new THREE.Color('#D49A78'), ko = new THREE.Color('#7E4A38'), cc = new THREE.Color();
+      for (let i = 0; i < p.count; i++) { v.fromBufferAttribute(p, i); const ol = Math.sin(v.x * 11 + Math.sin(v.z * 7 + v.y * 3) * 2.2 + Math.cos(v.z * 13) * 0.6), d = Math.pow(Math.abs(ol), 0.6);
+        const k = 1 - (1 - d) * 0.06 * Math.min(1, v.y * 4 + 0.2); v.multiplyScalar(k); p.setXYZ(i, v.x, v.y * 0.85, v.z * 0.92); cc.copy(ko).lerp(ac, d); C.push(cc.r, cc.g, cc.b); }
+      g.setAttribute('color', new THREE.Float32BufferAttribute(C, 3)); g.computeVertexNormals(); ekle(g, M('#ffffff', { vertexColors: true, roughness: 0.8 })).position.y = -0.06;
+      break;
+    }
     case 'baca': { /* hidrotermal baca: koyu mineral bacası, kızıl ağız; tüp solucanları ve beyaz yengeçler */
       const pr = [[0, 1.05], [0.12, 0.8], [0.32, 0.42], [0.55, 0.26], [0.9, 0.2], [1.2, 0.16], [1.53, 0.12], [1.54, 0.06]];
       const bg = new THREE.LatheGeometry(pr.map(([y, r]) => new THREE.Vector2(r, y)), 20); const pp = bg.attributes.position;
@@ -278,6 +294,7 @@ export function canliOyna(G, tur, o, t) {
     case 'karides': { A.halka.forEach((s, j) => { s.rotation.z = (j ? 0.32 : 0) + (o.zipla > 0 ? -0.4 : Math.sin(t * 3 + j) * 0.05); }); break; }
     case 'dvatoz': { const gom = o.gomulu && !(o.kalk > 0); G.position.y -= gom ? 0.15 * G.scale.y : 0; A.gov.scale.set(1, 1 + (gom ? 0 : Math.sin(t * 3) * 0.25), 1); A.mat.color.set(gom ? '#cdb994' : '#8C7B6B'); break; }
     case 'yengec': { const yur = !o.dur; for (const [g, i, z] of A.bacak) g.rotation.z = yur ? Math.sin(t * 14 + i * 1.6 + (z > 0 ? 0 : Math.PI)) * 0.35 : 0; A.k1.rotation.z = Math.sin(t * 2) * 0.2; A.k2.rotation.z = Math.sin(t * 2 + 1) * 0.2; break; }
+    case 'iz': { const a = o.a == null ? 1 : o.a; for (const [m, op] of A.mat) m.opacity = op * a; break; }
     case 'kumyilan': { const U = o.uy; A.uy.forEach(([ust, g], i) => { const u = U && U[i], h = u ? u[1] : 1, boy = u ? u[2] : 0.9 + (i % 3) * 0.1, f = u ? u[3] : t + i; if (u) ust.position.x = u[0];
       g.visible = h > 0.03; g.scale.set(1, Math.max(0.01, h) * boy, 1); g.position.y = -(1 - h) * 0.3; g.rotation.z = -(Math.sin(f * 0.9 + i * 0.8) * 0.22 + 0.12) * 0.6; }); break; }
     case 'nudibrans': { if (A.tuy) A.tuy.rotation.y = t * 0.6; A.gov.scale.set(1.05 + Math.sin(t * 3) * 0.03, 0.38, 0.42); break; }
@@ -661,10 +678,12 @@ export function yuzenUret(tur, malz, balik, o = {}) {
       break;
     }
   }
+  if (tur === 'kambur' && o.yavru) { const Y = yuzenUret('kambur', malz, balik, Object.assign({}, o, { yavru: 0 })); Y.scale.setScalar(0.4); Y.position.set(-0.1, -0.15, 0.14); G.add(Y); A.yavru = Y; } /* anne yanında yavru */
   G.userData.A = A; return G;
 }
 export function yuzenOyna(G, tur, o, t) {
   const A = G.userData.A, f = o.f || t;
+  if (A.yavru) yuzenOyna(A.yavru, tur, Object.assign({}, o, { yavru: 0, f: f + 0.7 }), t);
   switch (tur) {
     case 'balon': { const sis = o.sis || 0; G.scale.multiplyScalar(1 + sis * 0.9); A.gov.scale.set(1.15 - sis * 0.15, 0.8 + sis * 0.35, 0.8 + sis * 0.35); A.diken.visible = sis > 0.2; A.diken.scale.setScalar(0.85 + sis * 0.4); break; }
     case 'kalamar': case 'devkalamar': for (const [g, a, uzun] of A.kol) { g.rotation.z = Math.sin(f * 3 + a) * 0.25 + Math.cos(a) * 0.25; g.rotation.y = Math.sin(f * 2.4 + a * 2) * (uzun ? 0.5 : 0.3) + Math.sin(a) * 0.3; } A.yz.forEach((k, i) => k.rotation.z = Math.sin(f * 4 + i) * 0.4); break;
