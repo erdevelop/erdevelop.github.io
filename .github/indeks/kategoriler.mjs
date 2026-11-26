@@ -292,3 +292,28 @@ yaz(OGREN.yol, ogrenSayfa());
   fs.writeFileSync(path.join(KOK, 'js', 'harita.json'), JSON.stringify({ k: kapilar, g: gruplar, s: sayfalar, o: ogeler }));
 }
 console.log(`kapı ve kategori sayfaları: ${n}`);
+
+/* ---- populer.json: ana sayfadaki "En popüler araçlar" sırası (yalnızca POPULER=1 ile; haftalık iş akışı çalıştırır) ----
+   Kaynak: GoatCounter'ın herkese açık sayaç adresi (/counter/<yol>.json). Bunun çalışması için GoatCounter'da
+   Settings → "Allow adding visitor counts on your website" açık olmalı. Kapalıysa ya da yeterli veri yoksa dosyaya dokunulmaz
+   ve ana sayfa elle seçilmiş listeyi gösterir. Dosyaya ziyaret sayıları yazılmaz, yalnızca sıra yazılır. */
+if (process.env.POPULER === '1') {
+  const adaylar = [];
+  for (const h of KAPI) for (const id of h.alt) for (const it of grup(id).items) { if (!it.f.includes('#') && !/^https?:/.test(it.f) && !adaylar.some(a => a.f === it.f)) adaylar.push({ f: it.f, tr: it.t.tr, en: en(it.t) || it.t.tr, i: ICON[it.i] || '', k: h.id }); }
+  const bekle = ms => new Promise(r => setTimeout(r, ms));
+  let hata = 0;
+  for (const a of adaylar) {
+    try {
+      const r = await fetch('https://erdevelop.goatcounter.com/counter/' + encodeURIComponent('/' + a.f) + '.json?start=month', { headers: { 'User-Agent': 'erdevelop-populer/1' } });
+      if (r.status === 403) { console.log('populer: GoatCounter sayaç adresi kapalı (403); dosya değişmedi'); hata = 999; break; }
+      a.n = r.ok ? +String((await r.json()).count || '0').replace(/\D/g, '') : 0;
+    } catch (e) { a.n = 0; hata++; }
+    await bekle(260);
+  }
+  const sirali = adaylar.filter(a => a.n > 0).sort((x, y) => y.n - x.n).slice(0, 12);
+  if (hata < 20 && sirali.length >= 8) {
+    fs.writeFileSync(path.join(KOK, 'populer.json'), JSON.stringify({ v: new Date().toISOString().slice(0, 10), s: sirali.map(a => [a.f, a.tr, a.en, a.k, a.i]) }));
+    console.log('populer.json: ' + sirali.slice(0, 8).map(a => a.f).join(', '));
+  } else if (hata !== 999) console.log(`populer: yeterli veri yok (${sirali.length} sayfa, ${hata} hata); dosya değişmedi`);
+}
+

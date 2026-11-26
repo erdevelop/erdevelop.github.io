@@ -62,6 +62,30 @@
     }).catch(() => { });
   })();
 
+  /* ---------------- reklam alanları (AdSense onayından sonra açılır) ----------------
+     Şu an KAPALI: acik=false iken sayfalara hiçbir şey eklenmez, yer de ayrılmaz.
+     Açmak için: AdSense'te reklam birimi oluştur, numarasını (data-ad-slot) aşağıdaki yuva alanlarına yaz, acik=true yap.
+     Yerler: "alt" = içeriğin bittiği yer (benzer araçlar kutusunun üstü; portal sayfalarında alt bilgiden önce),
+             "ust" = yalnızca yazı sayfaları (rehber, eğitim) için başlık altı. Hesap kutularının üstüne ve oyunlara reklam konmaz. */
+  const REKLAM = { acik: false, yayinci: 'ca-pub-4775308844679394', yuva: { alt: '', ust: '' } };
+  (function () {
+    if (!REKLAM.acik || window.top !== window || /[?&]gom=1/.test(location.search) || /^\/(ozelaraclar|oyunlar)\//.test(yol)) return;
+    const portal = D.documentElement.hasAttribute('data-portal'), bar = D.querySelector('.topbar') || D.querySelector('body > header .back');
+    if (!portal && !bar) return; /* oyunlar ve tam ekran sayfalar */
+    try { if (/hidden|clip/.test(getComputedStyle(D.body).overflowY)) return; } catch (e) { }
+    const st = D.createElement('style');
+    st.textContent = '.er-rk{max-width:1160px;margin:28px auto;padding:0 16px;text-align:center;min-height:120px}.er-rk small{display:block;font:500 11px/1.4 system-ui,sans-serif;letter-spacing:.5px;text-transform:uppercase;opacity:.55;margin-bottom:6px}@media print{.er-rk{display:none}}';
+    D.head.appendChild(st);
+    const birim = slot => { const d = D.createElement('div'); d.className = 'er-rk';
+      d.innerHTML = '<small>' + (en ? 'Advertisement' : 'Reklam') + '</small><ins class="adsbygoogle" style="display:block" data-ad-client="' + REKLAM.yayinci + '" data-ad-slot="' + slot + '" data-ad-format="auto" data-full-width-responsive="true"></ins>'; return d; };
+    const goster = () => { try { (window.adsbygoogle = window.adsbygoogle || []).push({}); } catch (e) { } };
+    const kur = () => {
+      if (REKLAM.yuva.alt) { const hedef = D.getElementById('er-benzer') || D.getElementById('p-alt') || [...D.querySelectorAll('footer')].pop(); if (hedef) { hedef.insertAdjacentElement('beforebegin', birim(REKLAM.yuva.alt)); goster(); } }
+      if (REKLAM.yuva.ust && /^\/(rehber|egitimler)\/.+/.test(yol)) { const b = D.querySelector('main h1, header.head'); const yer = b && (b.closest('header') || b); if (yer) { yer.insertAdjacentElement('afterend', birim(REKLAM.yuva.ust)); goster(); } }
+    };
+    addEventListener('load', () => setTimeout(kur, 600));
+  })();
+
   /* ---------------- arama ---------------- */
   let veri = null, yen = null, dlg = null, sec = 0, son = [], tur = '';
   const getir = async u => { const r = await fetch(u, { cache: 'no-cache' }); if (!r.ok) throw new Error(r.status); return r.json(); };

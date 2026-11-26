@@ -113,7 +113,7 @@
 
   <section class="p wrap" aria-labelledby="h-pop">
     <div class="p-sh"><h2 id="h-pop" data-en="Most popular tools">En popüler araçlar</h2><a href="/Tools.html" data-en="See all →">Tümünü gör →</a></div>
-    <div class="hizli">
+    <div class="hizli" id="hizli">
       <a href="/hesapla/kdv-hesaplama.html" style="--ton:var(--blue)"><i><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M18 6 6 18"/><circle cx="7.500" cy="7.500" r="2.500"/><circle cx="16.500" cy="16.500" r="2.500"/></svg></i><span data-en="VAT calculator">KDV hesaplama</span></a>
       <a href="/hesapla/brut-net-maas-hesaplama.html" style="--ton:var(--green)"><i><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 7.500A2.500 2.500 0 0 1 6.500 5H17v3M4 7.500V17a2 2 0 0 0 2 2h13V8H6.500A2.500 2.500 0 0 1 4 7.500z"/><path d="M15.500 13.500h.01"/></svg></i><span data-en="Gross to net salary">Brüt net maaş</span></a>
       <a href="/hesapla/kira-artis-hesaplama.html" style="--ton:var(--amber)"><i><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 11l8-7 8 7v8a1 1 0 0 1-1 1h-4v-6h-6v6H5a1 1 0 0 1-1-1z"/></svg></i><span data-en="Rent increase">Kira artışı</span></a>
@@ -200,7 +200,15 @@
     $('yeni').innerHTML = L.map(x => { const d = new Date(x.d + 'T12:00:00'); return `<li><a href="${esc(x.u)}"><time datetime="${esc(x.d)}">${d.toLocaleDateString(loc, { day: 'numeric', month: 'short' })}</time><span>${esc(x.t)}</span></a></li>`; }).join('');
   };
   fetch('/yenilikler.json').then(r => r.ok ? r.json() : null).then(j => { if (j && j.s) { YN = j; yeni(); } }).catch(() => { });
-  if (window.erDil) erDil.on(() => { sayac(); yeni(); });
+  /* en popüler araçlar: populer.json (haftalık, gerçek ziyaretlere göre) varsa elle seçilmiş listenin yerini alır */
+  let PP = null;
+  const populer = () => {
+    if (!PP) return;
+    const E = window.erDil && erDil.lang === 'en';
+    $('hizli').innerHTML = PP.slice(0, 8).map(x => `<a href="/${esc(x[0])}" style="--ton:var(--${x[3] === 'muhendislik' ? 'green' : 'blue'})"><i><svg viewBox="0 0 32 32" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">${x[4]}</svg></i><span>${esc(E ? x[2] : x[1])}</span></a>`).join('');
+  };
+  fetch('/populer.json').then(r => r.ok ? r.json() : null).then(j => { if (j && Array.isArray(j.s) && j.s.length >= 8) { PP = j.s; populer(); } }).catch(() => { });
+  if (window.erDil) erDil.on(() => { sayac(); yeni(); populer(); });
 })();
 
 /* gizli ziyaret sayacı (Abacus): oturum başına bir kez sayılır; kimlik eski adla korunuyor */
