@@ -311,7 +311,10 @@ if (process.env.POPULER === '1') {
     await bekle(260);
   }
   const sirali = adaylar.filter(a => a.n > 0).sort((x, y) => y.n - x.n).slice(0, 12);
-  if (hata < 20 && sirali.length >= 8) {
+  /* veri azken sıra rastlantıya döner: 8. sıradaki araç ayda en az ESIK ziyaret almadıkça elle seçilmiş liste kalır */
+  const ESIK = 25;
+  if (hata < 20 && sirali.length >= 8 && sirali[7].n < ESIK) console.log(`populer: veri henüz az (8. sıra ${sirali[7].n} ziyaret, eşik ${ESIK}); dosya değişmedi`);
+  else if (hata < 20 && sirali.length >= 8) {
     fs.writeFileSync(path.join(KOK, 'populer.json'), JSON.stringify({ v: new Date().toISOString().slice(0, 10), s: sirali.map(a => [a.f, a.tr, a.en, a.k, a.i]) }));
     console.log('populer.json: ' + sirali.slice(0, 8).map(a => a.f).join(', '));
   } else if (hata !== 999) console.log(`populer: yeterli veri yok (${sirali.length} sayfa, ${hata} hata); dosya değişmedi`);
