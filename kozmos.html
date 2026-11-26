@@ -268,6 +268,8 @@ details{margin-top:12px;color:var(--mute);font-size:13.5px}summary{cursor:pointe
     <div class="yol" id="yolYaz"></div>
     <button class="ana" id="mBasla" type="button"></button>
     <div id="seriHesap" data-anahtar='{"z":"kozmos-kayit"}' data-ad='{"z":["Kozmos","Kozmos"]}' data-aciklama="Kozmos ilerlemen (keşifler, kredi, gemi, görevler) hesabına yedekleniyor|Your Kozmos progress (discoveries, credits, ship, missions) is backed up" data-link="0"></div>
+    <details id="gunDet" open><summary id="gunOz">📅 Günlük görevler</summary><div id="gunIc"></div></details>
+    <button class="ikincil" id="prsBtn" type="button" hidden style="border-color:rgba(255,215,120,.6)"></button>
     <button class="ikincil" id="mSifirla" type="button" hidden data-en="🔄 Start over (new game)">🔄 Baştan başla (yeni oyun)</button>
     <label class="secim"><input type="checkbox" id="dinKamSec"><span data-en="🎥 Speed-based camera (zooms out and leads ahead as you speed up)">🎥 Hıza göre kamera (hızlanınca uzaklaşır ve öne kayar)</span></label>
     <div class="secim" style="display:flex;align-items:center;gap:8px">🎨 <span data-en="Graphics quality">Grafik kalitesi</span> <select id="grafSec" style="margin-left:auto;font:inherit;font-weight:800;padding:4px 8px;border-radius:9px;border:1px solid var(--line);background:rgba(255,255,255,.06);color:var(--ink)"><option value="oto" data-en="Automatic">Otomatik</option><option value="yuksek" data-en="High">Yüksek</option><option value="orta" data-en="Medium">Orta</option><option value="dusuk" data-en="Low (weak phones)">Düşük (zayıf telefon)</option></select></div>
@@ -798,7 +800,7 @@ function kayitSuz(K) {
     say('yuk', ['motor', 'kargo', 'tank', 'tara', 'warp', 'kalkan', 'silah'], 0, 4); say('modul', ['motor', 'sensor', 'warp', 'silah'], 0, 100);
     say('dip', ['vel', 'krai', 'oru'], -100, 100); say('fr', ['birlik', 'tuccar', 'klan'], -100, 100);
     if (K.yuk) for (const k in K.yuk) K.yuk[k] = K.yuk[k] | 0;
-    for (const k of ['kiy', 'st', 'hik', 'kota', 'istn', 'kol', 'pz', 'bes', 'mods', 'yer', 'astd', 'reh', 'sez', 'kozm']) if (k in K && !obj(K[k])) delete K[k];
+    for (const k of ['gun', 'kiy', 'st', 'hik', 'kota', 'istn', 'kol', 'pz', 'bes', 'mods', 'yer', 'astd', 'reh', 'sez', 'kozm']) if (k in K && !obj(K[k])) delete K[k];
     for (const k of ['pz', 'astd', 'kota']) if (K[k]) for (const a in K[k]) if (!obj(K[k][a])) delete K[k][a];
     if (K.pz) for (const a in K.pz) if (!Number.isFinite(K.pz[a].d) || !Number.isFinite(K.pz[a].t)) delete K.pz[a];
     if (K.kiy) for (const a in K.kiy) if (K.kiy[a] != null && !str(K.kiy[a])) K.kiy[a] = null;
@@ -857,6 +859,7 @@ let SEZ = K.sez && K.sez.id === SEZ_ID() ? K.sez : { id: SEZ_ID(), xp: 0, al: []
 let YR = null;
 const DEV = { olumsuz: false, yakitsiz: false, cevrim: ls.get('kozmos-dev-cevrim', false) === true, log: [], gecmis: [], gi: -1 };
 const PIL = { acik: !!ls.get('kozmos-pil', false) };
+const PRS = Math.max(0, Math.min(10, K.prs | 0));
 let KOLOS = { can: 0, max: 0, hafta: null, yenildi: false, cevrim: false }, bossBirik = 0, bossGonT = 0;
 let sapanSonT = 0, sapanBoost = 0, sapanEn = Infinity, sapanHedef = null, gazToplama = 0;
 const ekipLv = r => { const v = EKIP.reduce((a, e) => e.rol === r && !(e.yara > Date.now()) ? Math.max(a, e.lv) : a, 0); return v ? Math.max(0.5, v + (MORAL >= 80 ? 1 : MORAL < 30 ? -1 : 0)) : 0; };
@@ -964,7 +967,7 @@ const KORS = [], MERMI = [], PATL = [], OLAY = [];
 let korsT = 70 + Math.random() * 60, olayT = 50 + Math.random() * 50, firtina = 0, firtS = null, nebSon = null, basT = 2, enkazP = null, imdatP = null, diyalogAcik = false;
 function haftaK(ms) { const d = new Date(ms); d.setUTCHours(0, 0, 0, 0); d.setUTCDate(d.getUTCDate() + 4 - (d.getUTCDay() || 7)); const y = d.getUTCFullYear(), w = Math.ceil(((d - Date.UTC(y, 0, 1)) / 864e5 + 1) / 7); return y + '-' + String(w).padStart(2, '0'); }
 function haftaKontrol() { let ms; try { ms = AG.simdi(); } catch (e) { ms = Date.now(); } const h = haftaK(ms); if (ST.hw !== h) { ST.hw = h; ST.hp = 0; } }
-function kazan(n, kat) { if (n > 0) sezXp(kat === 'gorev' ? 25 : kat === 'korsan' ? 8 : kat === 'kesif' ? 5 : kat === 'koloni' ? 10 : kat === 'ticaret' ? Math.min(20, n / 200) : 0); if (n > 0 && kat === 'kesif' && EKIP.some(e => huyOf(e) === 'sansli')) n = Math.round(n * 1.1); if (kat === 'kesif' && n > 0 && mSay('tarayici')) n = Math.round(n * (1 + 0.1 * mSay('tarayici'))); if (kat === 'kesif' && n > 0 && arsivTam('eski')) n = Math.round(n * 1.1); if (n > 0 && kat === 'kesif' && gOl('kesif')) n *= 2; if (n > 0 && kat === 'korsan' && gOl('korsan')) n = Math.round(n * 1.5); if (kat === 'kesif' && n > 0 && tek('t3')) n = Math.round(n * 1.15); if (n > 0 && benLonca() && lSv(benLonca()) >= 5) n = Math.round(n * 1.1); kredi += n; ST.kazanc += n; haftaKontrol(); ST.hp = (ST.hp || 0) + n; const gk = ST.gk = ST.gk || {}; kat = kat || 'diger'; gk[kat] = (gk[kat] || 0) + n; }
+function kazan(n, kat) { if (n > 0 && PRS) n = Math.round(n * (1 + 0.1 * PRS)); if (n > 0) sezXp(kat === 'gorev' ? 25 : kat === 'korsan' ? 8 : kat === 'kesif' ? 5 : kat === 'koloni' ? 10 : kat === 'ticaret' ? Math.min(20, n / 200) : 0); if (n > 0 && kat === 'kesif' && EKIP.some(e => huyOf(e) === 'sansli')) n = Math.round(n * 1.1); if (kat === 'kesif' && n > 0 && mSay('tarayici')) n = Math.round(n * (1 + 0.1 * mSay('tarayici'))); if (kat === 'kesif' && n > 0 && arsivTam('eski')) n = Math.round(n * 1.1); if (n > 0 && kat === 'kesif' && gOl('kesif')) n *= 2; if (n > 0 && kat === 'korsan' && gOl('korsan')) n = Math.round(n * 1.5); if (kat === 'kesif' && n > 0 && tek('t3')) n = Math.round(n * 1.15); if (n > 0 && benLonca() && lSv(benLonca()) >= 5) n = Math.round(n * 1.1); kredi += n; ST.kazanc += n; haftaKontrol(); ST.hp = (ST.hp || 0) + n; const gk = ST.gk = ST.gk || {}; kat = kat || 'diger'; gk[kat] = (gk[kat] || 0) + n; }
 function bolgeBul() {
   if (limanP) return 'liman'; if (KORS.length) return 'savas';
   const ssx = Math.floor(SH.x / SEK), ssy = Math.floor(SH.y / SEK);
@@ -5252,6 +5255,69 @@ setInterval(() => { try { kilitKontrol(); } catch (e) { } }, 2500);
 const KIL_SEK = { am: { bilim: 'bilim', kod: 'kod' }, tp: { yar: 'yaris', lon: 'lon', paz: 'paz', kol: 'kol' }, s: { uret: 'uret', elci: 'elci' } };
 function kilitIsaret() { for (const [a, M] of Object.entries(KIL_SEK)) for (const b of document.querySelectorAll(`[data-${a}]`)) { const k = M[b.dataset[a]]; b.classList.toggle('kilitB', !!k && !acikMi(k)); } for (const b of document.querySelectorAll('[data-eskal],[data-tsac]')) b.classList.toggle('kilitB', !acikMi(b.dataset.eskal ? 'eskort' : 'tasarim')); }
 { let bek = 0; const mo = new MutationObserver(() => { if (bek) return; bek = requestAnimationFrame(() => { bek = 0; try { kilitIsaret(); } catch (e) { } }); }); for (const id of ['ambar', 'topluluk', 'liman']) if ($(id)) mo.observe($(id), { childList: true, subtree: true }); }
+/* ================= günlük ve haftalık görevler ================= */
+const GUNH = {
+  korsan: { e: '☠', ad: ['korsan yen', 'pirates defeated'], f: () => ST.korsan, n: [3, 5, 8], h: [20, 35, 60] },
+  gorev: { e: '📋', ad: ['görev tamamla', 'missions completed'], f: () => ST.gorev, n: [1, 2, 3], h: [6, 10, 15] },
+  yanas: { e: '🏙', ad: ['kez koloniye yanaş', 'colony dockings'], f: () => ST.yanas, n: [2, 3, 5], h: [12, 20, 30] },
+  kesif: { e: '🔭', ad: ['yeni sistem keşfet', 'new systems discovered'], f: () => sayK('s'), n: [1, 2, 3], h: [8, 15, 25] },
+  gez: { e: '🪐', ad: ['gezegen keşfet', 'planets discovered'], f: () => sayK('p'), n: [2, 3, 5], h: [12, 20, 35] },
+  ticaret: { e: '💹', ad: ['kredi ticaretten kazan', 'credits earned by trading'], f: () => (ST.gk && ST.gk.ticaret) || 0, n: [1500, 4000, 8000], h: [12000, 30000, 60000] },
+  hurda: { e: '🛰', ad: ['enkaz topla', 'wrecks salvaged'], f: () => ST.hurda || 0, n: [2, 3, 5] },
+  ast: { e: '🪨', ad: ['asteroit kır', 'asteroids broken'], f: () => ST.astKir || 0, n: [3, 6, 10] },
+  uret: { e: '⚒', ad: ['kez üret ya da işle', 'crafts or refines'], f: () => (ST.uret || 0) + (ST.isle || 0), n: [1, 2, 3], k: 'uret' },
+  yaris: { e: '🏁', ad: ['yarış bitir', 'races finished'], f: () => ST.yaris || 0, n: [1, 2, 3], k: 'yaris' }
+};
+let GUN = Object.assign({ g: '', L: [], seri: 0, son: '', hf: '', H: null }, K.gun && typeof K.gun === 'object' ? K.gun : {});
+if (!Array.isArray(GUN.L)) GUN.L = []; GUN.L = GUN.L.filter(x => x && typeof x === 'object' && GUNH[x.k] && Number.isFinite(x.n) && Number.isFinite(x.b)); if (!(GUN.H && GUNH[GUN.H.k] && Number.isFinite(GUN.H.n) && Number.isFinite(GUN.H.b))) { GUN.H = null; GUN.hf = ''; } GUN.seri = Math.max(0, GUN.seri | 0); if (GUN.L.length < 3) GUN.g = '';
+const gunAnah = () => { const d = new Date(); return d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0') + '-' + String(d.getDate()).padStart(2, '0'); };
+const gunSv = () => { const s2 = sayK('s'); return s2 < 12 ? 0 : s2 < 45 ? 1 : 2; };
+function gunYenile() {
+  const g = gunAnah(), lv = gunSv();
+  if (GUN.g !== g) {
+    const dun = new Date(); dun.setDate(dun.getDate() - 1); const dk = dun.getFullYear() + '-' + String(dun.getMonth() + 1).padStart(2, '0') + '-' + String(dun.getDate()).padStart(2, '0');
+    if (GUN.son !== dk && GUN.son !== g) GUN.seri = 0;
+    const r = rng(h32(g.length * 7 + +g.slice(-2), +g.slice(5, 7), 4242 + (+g.slice(0, 4)))), aday = Object.keys(GUNH).filter(k => !GUNH[k].k || acikMi(GUNH[k].k)), sec = [];
+    while (sec.length < 3 && aday.length) sec.push(aday.splice((r() * aday.length) | 0, 1)[0]);
+    GUN.g = g; GUN.L = sec.map(k => ({ k, n: GUNH[k].n[lv], b: GUNH[k].f(), ok: 0 }));
+  }
+  const hk = haftaK(Date.now());
+  if (GUN.hf !== hk) { const r = rng(h32(+hk.slice(-2) * 13, +hk.slice(0, 4), 777)), aday = Object.keys(GUNH).filter(k => GUNH[k].h), k = aday[(r() * aday.length) | 0]; GUN.hf = hk; GUN.H = { k, n: GUNH[k].h[lv], b: GUNH[k].f(), ok: 0 }; }
+}
+const gunIl = x => Math.max(0, Math.min(x.n, GUNH[x.k] ? GUNH[x.k].f() - x.b : 0));
+function gunKontrol() {
+  if (!oyunda) return; gunYenile(); const lv = gunSv();
+  for (const x of GUN.L) if (!x.ok && GUNH[x.k] && gunIl(x) >= x.n) {
+    x.ok = 1; const od = 600 * (lv + 1); kazan(od, 'diger'); sezXp(40); SES.koloni();
+    duyur('✅ ' + T('Günlük görev tamam: ', 'Daily goal done: ') + GUNH[x.k].e + ' ' + SAYI(x.n) + ' ' + L(GUNH[x.k].ad), 'koloni', '+' + SAYI(od) + ' 💰 · +40 ' + T('sezon puanı', 'season XP'));
+    if (GUN.L.every(y => y.ok)) { GUN.seri = (GUN.son === gunAnah() ? GUN.seri : GUN.seri + 1); GUN.son = gunAnah(); const b = 1000 * Math.min(7, GUN.seri) * (lv + 1); kazan(b, 'diger'); sezXp(100); setTimeout(() => duyur('🔥 ' + T(`Günün üç görevi tamam! Seri: ${GUN.seri} gün`, `All three daily goals done! Streak: ${GUN.seri} days`), 'galaksi', '+' + SAYI(b) + ' 💰 · ' + T('Yarın da tamamlarsan seri ödülü büyür (7 güne kadar)', 'Finish tomorrow too and the streak bonus grows (up to 7 days)')), 900); defter('🔥 Günlük görevler tamam, seri ' + GUN.seri + ' gün.', '🔥 Daily goals done, streak ' + GUN.seri + ' days.'); }
+  }
+  const H = GUN.H; if (H && !H.ok && GUNH[H.k] && gunIl(H) >= H.n) { H.ok = 1; const od = 6000 * (lv + 1); kazan(od, 'diger'); sezXp(300); SES.galaksi(); duyur('🏆 ' + T('Haftalık görev tamam: ', 'Weekly goal done: ') + GUNH[H.k].e + ' ' + SAYI(H.n) + ' ' + L(GUNH[H.k].ad), 'galaksi', '+' + SAYI(od) + ' 💰 · +300 ' + T('sezon puanı', 'season XP')); defter('🏆 Haftalık görev tamamlandı.', '🏆 Weekly goal completed.'); }
+  gunYaz();
+}
+function gunYaz() {
+  const el = $('gunIc'); if (!el) return; if (!oyunda && !GUN.L.length) { el.innerHTML = `<div class="alt">${T('Uçuşa başlayınca bugünün görevleri belirir.', 'Today’s goals appear once you start flying.')}</div>`; return; } if (oyunda) gunYenile();
+  const sat = x => { const G = GUNH[x.k]; if (!G) return ''; const il = gunIl(x), y = Math.round(100 * il / x.n); return `<div style="margin:6px 0"><div style="display:flex;justify-content:space-between;gap:8px;font-weight:800;font-size:13.5px"><span>${x.ok ? '✅' : G.e} ${SAYI(x.n)} ${L(G.ad)}</span><span class="alt">${SAYI(il)}/${SAYI(x.n)}</span></div><div style="height:6px;border-radius:4px;background:rgba(255,255,255,.08);margin-top:4px;overflow:hidden"><div style="height:100%;width:${y}%;background:${x.ok ? '#7CF0A6' : 'var(--acc)'}"></div></div></div>`; };
+  const ok = GUN.L.filter(x => x.ok).length, lv = gunSv(), kal = (() => { const d = new Date(), y = new Date(d); y.setHours(24, 0, 0, 0); const m = Math.round((y - d) / 60000); return Math.floor(m / 60) + T(' sa ', ' h ') + (m % 60) + T(' dk', ' min'); })();
+  el.innerHTML = `<div class="alt" style="font-size:12px">${T('Her görev', 'Each goal')} +${SAYI(600 * (lv + 1))} 💰 · ${T('üçü birden: seri ödülü', 'all three: streak bonus')} · ${T('yenilenmeye', 'resets in')} ${kal}</div>${GUN.L.map(sat).join('')}<div class="alt" style="font-size:12.5px;margin-top:4px">🔥 ${T('Seri', 'Streak')}: <b>${GUN.seri}</b> ${T('gün', 'days')} · ${ok}/3</div>${GUN.H ? `<div style="margin-top:10px;font-weight:900">🏆 ${T('Haftalık', 'Weekly')} <span class="alt" style="font-weight:700;font-size:12px">+${SAYI(6000 * (lv + 1))} 💰</span></div>${sat(GUN.H)}` : ''}`;
+  const oz = $('gunOz'); if (oz) oz.textContent = '📅 ' + T('Günlük görevler', 'Daily goals') + ` (${ok}/3)`;
+}
+setInterval(() => { try { gunKontrol(); } catch (e) { } }, 3000);
+
+/* ================= prestij: Yeni Oyun+ ================= */
+const prsUygun = () => PRS < 10 && (!!HIK.son4 || (sayK('s') >= 150 && ST.kazanc >= 500000));
+function prsYaz() {
+  const b = $('prsBtn'); if (!b) return; b.hidden = !prsUygun(); delete b.dataset.emin; b.classList.remove('emin');
+  b.innerHTML = '⭐ ' + T('Yeni Oyun+ (prestij ', 'New Game+ (prestige ') + (PRS + 1) + ')<small style="display:block;font-weight:700;opacity:.8;font-size:12px">' + T(`Baştan başla; kazançlar kalıcı +%${(PRS + 1) * 10}, başlangıç ${SAYI(500 + 2500 * (PRS + 1))} 💰. Başarımlar, kozmetikler, kodeks ve açılan özellikler kalır.`, `Start over; earnings permanently +${(PRS + 1) * 10}%, ${SAYI(500 + 2500 * (PRS + 1))} 💰 to start. Achievements, cosmetics, codex and unlocks stay.`) + '</small>';
+}
+function prsBasla() {
+  window.__seriYukleniyor = true;
+  const yeni = { prs: PRS + 1, kr: 500 + 2500 * (PRS + 1), bas: [...BAS], kozm: KOZM, kod: [...KOD], acl: [...ACL], sez: SEZ, gun: GUN };
+  try { for (let i = localStorage.length - 1; i >= 0; i--) { const k = localStorage.key(i); if (/^kozmos-(yrh|yrb)-/.test(k) || k === 'kozmos-bil') localStorage.removeItem(k); } } catch (e) { }
+  ls.set(KAYIT, yeni); location.reload();
+}
+$('prsBtn').onclick = () => { const b = $('prsBtn'); SES.tik(); if (!b.dataset.emin) { b.dataset.emin = 1; b.classList.add('emin'); b.innerHTML = '⚠ ' + T('Emin misin? Gemin, kredin, keşiflerin, kolonin sıfırlanır. Tekrar bas', 'Sure? Your ship, credits, discoveries and colony are reset. Press again'); setTimeout(prsYaz, 6000); return; } b.textContent = T('Yeni Oyun+ başlıyor…', 'Starting New Game+…'); setTimeout(prsBasla, 300); };
+
 /* ================= Esc: en üstteki pencereyi kapat ================= */
 addEventListener('keydown', e => {
   if (e.key !== 'Escape' || e.defaultPrevented) return;
@@ -5805,17 +5871,18 @@ $('hEv').onclick = () => { const h = temel(0, 0); HM.x = h.x; HM.y = h.y; HM.z =
 $('hSil').onclick = () => { wp = null; haritaCiz(); kaydet(); };
 
 /* ================= menü, kayıt ================= */
-function kaydet(zorla) { if (window.__seriYukleniyor || (!oyunda && !zorla)) return; AG.siraGonder(); ls.set('kozmos-bil', BIL.slice(0, 40)); ls.set(KAYIT, { acl: [...ACL], x: SH.x, y: SH.y, a: SH.a, kesif: [...KESIF], acik: [...ACIK], wp, zu: zKul, yol, kr: kredi, yak: yakit, kargo: KARGO, gorev: GOREV, alinan: [...ALINAN].slice(-300), yuk: YUK, kota: KOTA, gemi: gemiTip, gemiler: [...GEMILER], renk: gemiRenk, gad: gemiAd, can, sl: sonLiman, st: ST, bas: [...BAS], itibar: ITIBAR, karakol: KARAKOL, hik: HIK, tek: [...TEKS], tak: TAK, kap: kapsul, oks, sig: sigorta, kiys: [...KIYS], kiy: KIY, plan: [...PLANLAR], sarf: SARF, tlv: TLV, ekip: EKIP, fr: FR, kervan: KERVAN, ziy: ZIY, defter: DEFTER, arsiv: [...ARSIV], tekno: [...TEKNO], modul: MODUL, istn: istnObj, moral: MORAL, dip: DIP, silahlar: [...SILAHLAR], silahS, esk: ESK.map(e => ({ t: e.t, can: Math.round(e.can), ad: e.ad })), eskEmir, kod: [...KOD], guc: GUC, kol: KOL, reh: REH, sez: SEZ, kozm: KOZM, astd: astdTemiz(), rota: ROTA, pz: pzTemiz(), bes: BES, mods: MODS, yer: YER, v: 1 }); }
+function kaydet(zorla) { if (window.__seriYukleniyor || (!oyunda && !zorla)) return; AG.siraGonder(); ls.set('kozmos-bil', BIL.slice(0, 40)); ls.set(KAYIT, { acl: [...ACL], gun: GUN, prs: PRS, x: SH.x, y: SH.y, a: SH.a, kesif: [...KESIF], acik: [...ACIK], wp, zu: zKul, yol, kr: kredi, yak: yakit, kargo: KARGO, gorev: GOREV, alinan: [...ALINAN].slice(-300), yuk: YUK, kota: KOTA, gemi: gemiTip, gemiler: [...GEMILER], renk: gemiRenk, gad: gemiAd, can, sl: sonLiman, st: ST, bas: [...BAS], itibar: ITIBAR, karakol: KARAKOL, hik: HIK, tek: [...TEKS], tak: TAK, kap: kapsul, oks, sig: sigorta, kiys: [...KIYS], kiy: KIY, plan: [...PLANLAR], sarf: SARF, tlv: TLV, ekip: EKIP, fr: FR, kervan: KERVAN, ziy: ZIY, defter: DEFTER, arsiv: [...ARSIV], tekno: [...TEKNO], modul: MODUL, istn: istnObj, moral: MORAL, dip: DIP, silahlar: [...SILAHLAR], silahS, esk: ESK.map(e => ({ t: e.t, can: Math.round(e.can), ad: e.ad })), eskEmir, kod: [...KOD], guc: GUC, kol: KOL, reh: REH, sez: SEZ, kozm: KOZM, astd: astdTemiz(), rota: ROTA, pz: pzTemiz(), bes: BES, mods: MODS, yer: YER, v: 1 }); }
 function menuKur() {
   const dene = f => { try { f(); } catch (e) { console.warn('menuKur', e); if (window.kozHataGonder) kozHataGonder('menuKur: ' + e.message, e.stack); } };
   try { $('mBasla').textContent = oyunda ? T('Uçuşa dön', 'Back to flight') : KESIF.size ? T('Kaldığın yerden devam et', 'Continue where you left off') : T('Uçuşa başla', 'Start flying'); } catch (e) { }
   let s = 0, p = 0, k = 0, g = 0; for (const x of KESIF) { if (x[0] === 's') s++; else if (x[0] === 'p') p++; else if (x[0] === 'k') k++; else if (x[0] === 'g') g++; }
   dene(radyoYaz); dene(bulYaz); dene(() => { $('frList').innerHTML = frYaz() + dipOzet(); }); dene(() => { $('takList').innerHTML = takvimHtml(); }); dene(() => { $('defList').innerHTML = defterHtml(); }); dene(() => { $('fpSec').checked = kokGor; });
   dene(() => { $('istat').innerHTML = [[s, T('Sistem', 'Systems')], [p, T('Gezegen', 'Planets')], [k, T('Koloni', 'Colonies')], [g, T('Galaksi', 'Galaxies')]].map(([n, a]) => `<div><b>${SAYI(n)}</b><span>${a}</span></div>`).join(''); });
-  dene(() => { $('yolYaz').textContent = (KOZM.sec.unvan && UNVAN[KOZM.sec.unvan] ? '🏷 ' + L(UNVAN[KOZM.sec.unvan]) + ' · ' : HIK.son4 ? SON4[HIK.son4].e + ' ' + L(SON4[HIK.son4].u) + ' · ' : HIK.a >= 15 ? '🌟 ' + T('Galaksilerin Koruyucusu', 'Guardian of the Galaxies') + ' · ' : '') + '💰 ' + SAYI(kredi) + T(' kredi', ' credits') + (yol > 10 ? ' · ' + T('Uçulan yol: ', 'Distance flown: ') + mesafeYaz(yol) : ''); });
+  dene(() => { $('yolYaz').textContent = (PRS ? '⭐ ' + T('Prestij ', 'Prestige ') + PRS + ' · ' : '') + (KOZM.sec.unvan && UNVAN[KOZM.sec.unvan] ? '🏷 ' + L(UNVAN[KOZM.sec.unvan]) + ' · ' : HIK.son4 ? SON4[HIK.son4].e + ' ' + L(SON4[HIK.son4].u) + ' · ' : HIK.a >= 15 ? '🌟 ' + T('Galaksilerin Koruyucusu', 'Guardian of the Galaxies') + ' · ' : '') + '💰 ' + SAYI(kredi) + T(' kredi', ' credits') + (yol > 10 ? ' · ' + T('Uçulan yol: ', 'Distance flown: ') + mesafeYaz(yol) : ''); });
   const var_ = KESIF.size > 0;
   $('mBasla').textContent = oyunda ? T('Uçuşa dön', 'Back to flight') : var_ ? T('Kaldığın yerden devam et', 'Continue where you left off') : T('Uçuşa başla', 'Start flying');
   dene(() => { $('basOz').textContent = T('🏅 Başarımlar', '🏅 Achievements') + ` (${BAS.size}/${BASARIM.length})`; $('basList').innerHTML = BASARIM.map(b => `<div class="${BAS.has(b[0]) ? 'ok' : ''}"><b>${b[1]} ${L(b[2])}</b>${L(b[3])}</div>`).join(''); });
+  dene(gunYaz); dene(prsYaz);
   const sb = $('mSifirla'); sb.hidden = !(var_ || oyunda); delete sb.dataset.emin; sb.classList.remove('emin'); sb.textContent = '🔄 ' + T('Baştan başla (yeni oyun)', 'Start over (new game)');
 }
 function basla() {
@@ -5840,7 +5907,7 @@ const MSEK = [['oyun', '🎮', ['Oyun', 'Game']], ['gor', '🎨', ['Görüntü',
 function menuSekmeKur() {
   const kart = $('menu').querySelector('.kart'), sec = id => $(id) && ($(id).closest('label.secim, div.secim') || $(id));
   const nasil = [...kart.querySelectorAll('details')].find(d => d.querySelector('summary[data-en="How to fly"]'));
-  const yer = { oyun: ['mSifirla', 'gunDet', 'prsBtn', 'rehBtn', 'bilBtn', 'profBtn', 'fotoBtn', 'kurBtn'].map($), gor: ['dinKamSec', 'grafSec', 'pilSec', 'fpsSec', 'kokSec', 'fpSec'].map(sec), kayit: ['seriHesap', 'bulDet'].map($), top: ['evDet', 'pilotDet', 'siraDet'].map($), def: ['basDet', 'defDet', 'radDet', 'takDet', 'frDet'].map($).concat([nasil]) };
+  const yer = { oyun: ['gunDet', 'prsBtn', 'rehBtn', 'bilBtn', 'profBtn', 'fotoBtn', 'kurBtn', 'mSifirla'].map($), gor: ['dinKamSec', 'grafSec', 'pilSec', 'fpsSec', 'kokSec', 'fpSec'].map(sec), kayit: ['seriHesap', 'bulDet'].map($), top: ['evDet', 'pilotDet', 'siraDet'].map($), def: ['basDet', 'defDet', 'radDet', 'takDet', 'frDet'].map($).concat([nasil]) };
   const bar = document.createElement('div'); bar.className = 'sekme'; bar.id = 'mSek';
   bar.innerHTML = MSEK.map(([k, e, a]) => `<button type="button" data-ms="${k}"><span>${e}</span><b data-en="${a[1]}">${a[0]}</b></button>`).join('');
   $('mBasla').after(bar); let son = bar;
@@ -5913,7 +5980,7 @@ function kare(now) {
 }
 kayitOnar(); try { kilitIlk(); } catch (e) { } try { menuSekmeKur(); } catch (e) { console.warn(e); } boyutla(); kesifSayYaz(); menuKur(); radarKur(); gorevYaz();
 requestAnimationFrame(kare);
-window.KOZ = { GRAF, BIL, bilAc, duyur, ACL, KILIT, acikMi, kilitKontrol, get oto() { return oto; }, parkur, yarisBasla, get YR() { return YR; }, get SEZ() { return SEZ; }, sezXp, KOZM, kayitPaket, kayitUygula, bulutKaydet, galeriYukle, fotoGoster,  get yol() { return yol; }, REH, rehKontrol, rehYaz, hikAdim, hik4Son, diyalogSec,  get KOL() { return KOL; }, set KOL(v) { KOL = v; }, kolKur, kolAc, kolIsle, EKIP, huyOf, ekipYarala, HUY, get kaynP() { return kaynP; },  GUC, gucVer, ASTD, ROTA, devAst, astPos, astCan, kasaAc, hackAc, rotaBaslat, rotaPanel, get HK() { return HK; }, get astYakin() { return astYakin; }, get madenLazer() { return madenLazer; }, set madenLazer(v) { madenLazer = v; }, PARCA, get rotaAktif() { return rotaAktif; },  KOD, kodAc, kodKontrol, IZ, izPen, izEnkaz, get INS() { return INS; }, get izYakin() { return izYakin; },  PZ, BES, MODS, YER, besLv, pzKat, isle, tasarimAc, mSay,  get kdIc() { return kdIc; }, get iyonIc() { return iyonIc; }, SILAHLAR, ESK, iyonAc, meteorAc, skListe, skEs, skGec, penrose, get silahS() { return silahS; }, set silahS(v) { silahS = v; }, get kredi2() { return kredi; }, set kredi2(v) { kredi = v; }, get skYakin() { return skYakin; },  KOLOS, kolosPos, kolosBagla, profilCiz, haberUret,  DIP, dipEkle, yanBasla, gunOlay,  get istn() { return istnObj; }, istnKur, istnAc, istnIsle, get moral() { return MORAL; }, set ekOlayT(v) { ekOlayT = v; }, fiyat,  get sapanDbg() { return [sapanEn, sapanHedef && sapanHedef.ad, sapanHedef && sapanHedef.v]; }, TEKNO, MODUL, bilimEkle, tamirAc, get sapanBoost() { return sapanBoost; },  HURDA, ARSIV, hurdaCikar, arsivBul, ambarAc,  sagAc, sagHedefler,  gezPos, simT, patlamaEkle, SOH, LON, PAZ, tpAc, sohGeldi,  fotoAc, fpAc, inisAc, inisKapat, get INS() { return INS; }, DEFTER, defter,  zulaYakin, snBasla, solucanAc, istilaBasla, istPos, istAc, mezarPos, mezar, OLAY2: () => OLAY,  EKIP, FR, KERVAN, ZIY, DOST, kervanAdim, kvPos, borsaAc, korsanLimanPos, frEkle, adaylar,  SARF, TLV, sarfKullan,  get kapsul() { return kapsul; }, get oks() { return oks; }, set oks(v) { oks = v; }, PLANLAR, KIY, KIYS, bankaAc, bankaPos, planVer, get sigorta() { return sigorta; },  OKK, oyuncuYakin, oyGelen, haftaK,  devCikar, kalintiBul,  TEKS, get TAK() { return TAK; }, set TAK(v) { TAK = v; }, arananlar, patlamaKullan,  IRK, piyasaOlay, balinaSuru, yakinBalinalar, bulmacaAc, get BLM() { return BLM; },  kapiPos, golgeCikar,  get nabiz() { return nabiz; }, get isi() { return isi; },  AG, bolgeBul,  KORS, OLAY, HIK, ST, BAS, get can() { return can; }, set can(v) { can = v; }, korsanCikar, hikAdim, hikBasla, kuyruk, kuyrukPos, nebulaB, nebulaIc, get gemiTip() { return gemiTip; }, KARAKOL: () => KARAKOL, olayZorla: () => { olayT = 0; },  get kaynP() { return kaynP; }, get kazP() { return kazP; }, KARGO, get kredi() { return kredi; }, set kredi(v) { kredi = v; }, get yakit() { return yakit; }, set yakit(v) { yakit = v; }, GOREV: () => GOREV, YUK, limanAc, get limanP() { return limanP; }, get yanasP() { return yanasP; }, SH, cam, temel, sistem, galaksi, KESIF, basla, haritaAc, haritaKapat, set zoom(v) { zKul = v; }, DOKU };
+window.KOZ = { GRAF, get GUN() { return GUN; }, gunKontrol, PRS, prsBasla, HIK, BIL, bilAc, duyur, ACL, KILIT, acikMi, kilitKontrol, get oto() { return oto; }, parkur, yarisBasla, get YR() { return YR; }, get SEZ() { return SEZ; }, sezXp, KOZM, kayitPaket, kayitUygula, bulutKaydet, galeriYukle, fotoGoster,  get yol() { return yol; }, REH, rehKontrol, rehYaz, hikAdim, hik4Son, diyalogSec,  get KOL() { return KOL; }, set KOL(v) { KOL = v; }, kolKur, kolAc, kolIsle, EKIP, huyOf, ekipYarala, HUY, get kaynP() { return kaynP; },  GUC, gucVer, ASTD, ROTA, devAst, astPos, astCan, kasaAc, hackAc, rotaBaslat, rotaPanel, get HK() { return HK; }, get astYakin() { return astYakin; }, get madenLazer() { return madenLazer; }, set madenLazer(v) { madenLazer = v; }, PARCA, get rotaAktif() { return rotaAktif; },  KOD, kodAc, kodKontrol, IZ, izPen, izEnkaz, get INS() { return INS; }, get izYakin() { return izYakin; },  PZ, BES, MODS, YER, besLv, pzKat, isle, tasarimAc, mSay,  get kdIc() { return kdIc; }, get iyonIc() { return iyonIc; }, SILAHLAR, ESK, iyonAc, meteorAc, skListe, skEs, skGec, penrose, get silahS() { return silahS; }, set silahS(v) { silahS = v; }, get kredi2() { return kredi; }, set kredi2(v) { kredi = v; }, get skYakin() { return skYakin; },  KOLOS, kolosPos, kolosBagla, profilCiz, haberUret,  DIP, dipEkle, yanBasla, gunOlay,  get istn() { return istnObj; }, istnKur, istnAc, istnIsle, get moral() { return MORAL; }, set ekOlayT(v) { ekOlayT = v; }, fiyat,  get sapanDbg() { return [sapanEn, sapanHedef && sapanHedef.ad, sapanHedef && sapanHedef.v]; }, TEKNO, MODUL, bilimEkle, tamirAc, get sapanBoost() { return sapanBoost; },  HURDA, ARSIV, hurdaCikar, arsivBul, ambarAc,  sagAc, sagHedefler,  gezPos, simT, patlamaEkle, SOH, LON, PAZ, tpAc, sohGeldi,  fotoAc, fpAc, inisAc, inisKapat, get INS() { return INS; }, DEFTER, defter,  zulaYakin, snBasla, solucanAc, istilaBasla, istPos, istAc, mezarPos, mezar, OLAY2: () => OLAY,  EKIP, FR, KERVAN, ZIY, DOST, kervanAdim, kvPos, borsaAc, korsanLimanPos, frEkle, adaylar,  SARF, TLV, sarfKullan,  get kapsul() { return kapsul; }, get oks() { return oks; }, set oks(v) { oks = v; }, PLANLAR, KIY, KIYS, bankaAc, bankaPos, planVer, get sigorta() { return sigorta; },  OKK, oyuncuYakin, oyGelen, haftaK,  devCikar, kalintiBul,  TEKS, get TAK() { return TAK; }, set TAK(v) { TAK = v; }, arananlar, patlamaKullan,  IRK, piyasaOlay, balinaSuru, yakinBalinalar, bulmacaAc, get BLM() { return BLM; },  kapiPos, golgeCikar,  get nabiz() { return nabiz; }, get isi() { return isi; },  AG, bolgeBul,  KORS, OLAY, HIK, ST, BAS, get can() { return can; }, set can(v) { can = v; }, korsanCikar, hikAdim, hikBasla, kuyruk, kuyrukPos, nebulaB, nebulaIc, get gemiTip() { return gemiTip; }, KARAKOL: () => KARAKOL, olayZorla: () => { olayT = 0; },  get kaynP() { return kaynP; }, get kazP() { return kazP; }, KARGO, get kredi() { return kredi; }, set kredi(v) { kredi = v; }, get yakit() { return yakit; }, set yakit(v) { yakit = v; }, GOREV: () => GOREV, YUK, limanAc, get limanP() { return limanP; }, get yanasP() { return yanasP; }, SH, cam, temel, sistem, galaksi, KESIF, basla, haritaAc, haritaKapat, set zoom(v) { zKul = v; }, DOKU };
 })();
 </script>
 <script data-goatcounter="https://erdevelop.goatcounter.com/count" async src="//gc.zgo.at/count.js"></script>
