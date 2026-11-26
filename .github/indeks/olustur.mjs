@@ -8,7 +8,8 @@ import { join } from 'node:path';
 
 const SITE = 'https://erdevelop.com';
 const ROOT = process.cwd();
-const ATLA = /^(\.|node_modules|araclar\/lib|oyunlar\/games|apps\/.*\/assets)|google[0-9a-f]+\.html$|^404\.html$|^privacyPolicy/;
+/* kişisel iş araçları (robots.txt'te de kapalı) site aramasına girmez */
+const ATLA = /^(\.|node_modules|araclar\/lib|oyunlar\/games|apps\/.*\/assets|hakedis\/|teklif\/|cephex\/|TheLine\/)|google[0-9a-f]+\.html$|^404\.html$|^privacyPolicy|^(Opti|Profil)\.html$/;
 
 const dosyalar = [];
 (function gez(d) {
