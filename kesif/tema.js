@@ -6,7 +6,7 @@ const nf = (n, d = 0) => n == null || !isFinite(n) ? '–' : Number(n).toLocaleS
 const store = { get(k, d = null) { try { const v = localStorage.getItem(k); return v == null ? d : v; } catch (e) { return d; } }, set(k, v) { try { localStorage.setItem(k, v); } catch (e) { } },
   json(k, d) { try { return JSON.parse(localStorage.getItem(k)) ?? d; } catch (e) { return d; } }, put(k, v) { try { localStorage.setItem(k, JSON.stringify(v)); } catch (e) { } } };
 const TM = {
-  mode: (() => { try { const m = localStorage.getItem('erdevelop-mode'), g = localStorage.getItem('erdevelop-mode-gun'), t = new Date(); if (m && g === t.toDateString()) return m; const h = t.getHours(); return h >= 7 && h < 19 ? 'light' : 'dark'; } catch (e) { return 'dark'; } })() /* gündüz açık, gece koyu; elle seçim o gün geçerli */, fns: [],
+  mode: (() => { try { const m = localStorage.getItem('erdevelop-mode'), g = localStorage.getItem('erdevelop-mode-gun'), t = new Date(); if (m && g === t.toDateString()) return m; return matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light'; } catch (e) { return 'dark'; } })() /* gündüz açık, gece koyu; elle seçim o gün geçerli */, fns: [],
   apply() { document.documentElement.dataset.mode = TM.mode; const b = $('modeBtn'); if (b) b.textContent = TM.mode === 'dark' ? 'LIGHT' : 'DARK'; TM.fns.forEach(f => f(TM.mode)); },
   onMode(f) { TM.fns.push(f); },
   css: k => getComputedStyle(document.documentElement).getPropertyValue(k).trim(),

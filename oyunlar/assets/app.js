@@ -16,13 +16,14 @@
   const THEME_KEY='ob_theme';
   function applyTheme(t){ document.documentElement.setAttribute('data-theme', t); }
   (function initTheme(){
-    const saved = localStorage.getItem(THEME_KEY);
+    let site=null; try{ if(localStorage.getItem('erdevelop-mode-gun')===new Date().toDateString()) site=localStorage.getItem('erdevelop-mode'); }catch(e){}
+    const saved = site || localStorage.getItem(THEME_KEY);   /* sitede bugün seçilen tema önce gelir */
     if(saved) applyTheme(saved);
     else if(window.matchMedia && matchMedia('(prefers-color-scheme: dark)').matches) applyTheme('dark');
   })();
   $('#themeBtn').addEventListener('click', ()=>{
     const cur = document.documentElement.getAttribute('data-theme')==='dark'?'light':'dark';
-    applyTheme(cur); localStorage.setItem(THEME_KEY, cur);
+    applyTheme(cur); localStorage.setItem(THEME_KEY, cur); try{ localStorage.setItem('erdevelop-mode', cur); localStorage.setItem('erdevelop-mode-gun', new Date().toDateString()); }catch(e){}
   });
 
   // ---------- Kategoriler + ızgara ----------

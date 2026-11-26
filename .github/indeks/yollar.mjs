@@ -284,7 +284,7 @@ const html = `<!doctype html>
 </style>
 <script type="application/ld+json">${JSON.stringify(ld)}</script>
 <script async src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-4775308844679394" crossorigin="anonymous"></script>
-<script>try{var d=new Date().toDateString();if(localStorage.getItem('erdevelop-mode-gun')!==d){localStorage.setItem('erdevelop-mode',matchMedia('(prefers-color-scheme: dark)').matches?'dark':'light');localStorage.setItem('erdevelop-mode-gun',d)}}catch(e){}</script>
+<script>(function(){var k=matchMedia('(prefers-color-scheme: dark)').matches?'dark':'light';try{var m=localStorage.getItem('erdevelop-mode'),g=localStorage.getItem('erdevelop-mode-gun');if(m&&g===new Date().toDateString())k=m}catch(e){}document.documentElement.setAttribute('data-mode',k)})()</script>
 <link rel="stylesheet" href="/css/kabuk.css">
 </head>
 <body>
@@ -394,7 +394,7 @@ const panom = `<!doctype html>
 .not button { font: 500 12px var(--f-mono); color: var(--muted); background: none; border: 1px solid var(--line); border-radius: 6px; padding: 5px 10px; cursor: pointer; margin-left: 6px; }
 </style>
 <script async src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-4775308844679394" crossorigin="anonymous"></script>
-<script>try{var d=new Date().toDateString();if(localStorage.getItem('erdevelop-mode-gun')!==d){localStorage.setItem('erdevelop-mode',matchMedia('(prefers-color-scheme: dark)').matches?'dark':'light');localStorage.setItem('erdevelop-mode-gun',d)}}catch(e){}</script>
+<script>(function(){var k=matchMedia('(prefers-color-scheme: dark)').matches?'dark':'light';try{var m=localStorage.getItem('erdevelop-mode'),g=localStorage.getItem('erdevelop-mode-gun');if(m&&g===new Date().toDateString())k=m}catch(e){}document.documentElement.setAttribute('data-mode',k)})()</script>
 <link rel="stylesheet" href="/css/kabuk.css">
 </head>
 <body>
