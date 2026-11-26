@@ -237,6 +237,21 @@ html[data-mode=light] #er-ara .bx{background:#fff;color:#1a2233;border-color:rgb
   }
   if (D.readyState === 'loading') D.addEventListener('DOMContentLoaded', dugme); else dugme();
 
+  /* ---------------- ana sayfa bağlantısı: sayfada yoksa üst çubuğa / geri okunun yanına ev düğmesi ---------------- */
+  function anaDugme() {
+    if (D.querySelector('.er-ana') || location.pathname === '/' || location.pathname === '/index.html' || window.top !== window) return;
+    const anaMi = a => { try { const u = new URL(a.href, location.href); return u.origin === location.origin && (u.pathname === '/' || u.pathname === '/index.html') && !u.hash; } catch (e) { return false; } };
+    if ([...D.querySelectorAll('a[href]')].some(x => !x.closest('#er-durum') && anaMi(x))) return;
+    const ev = '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-3px"><path d="M3 11.5 12 4l9 7.5"/><path d="M5.500 10v10h13V10"/><path d="M10 20v-6h4v6"/></svg>';
+    const a = D.createElement('a'); a.href = '/'; a.title = 'erdevelop ana sayfa'; a.setAttribute('aria-label', 'erdevelop ana sayfa'); a.innerHTML = ev;
+    const bar = D.querySelector('.topbar'), geri = D.querySelector('body > header .back, body > header .yuv');
+    if (bar) { const ara = bar.querySelector('.er-ara-btn'), ornek = bar.querySelector('.icon-btn, .tb'); a.className = (ornek ? ornek.className.replace(/\s*er-ara-btn/, '') : 'tb') + ' er-ana'; a.style.cssText = 'display:inline-grid;place-items:center;text-decoration:none';
+      if (ara && ara.parentNode) ara.parentNode.insertBefore(a, ara); else (bar.querySelector('.top-actions') || bar.querySelector('.wrap') || bar).appendChild(a); }
+    else if (geri) { a.className = geri.className + ' er-ana'; a.style.cssText = 'display:inline-grid;place-items:center;text-decoration:none;margin-left:6px'; geri.parentNode.insertBefore(a, geri.nextSibling); }
+  }
+  const anaKur = () => setTimeout(anaDugme, 0);
+  if (D.readyState === 'loading') D.addEventListener('DOMContentLoaded', anaKur); else anaKur();
+
   /* ---------------- eğitim ↔ araç bağlantıları (js/baglanti.js, .github/indeks/baglanti.mjs üretir) ---------------- */
   (function () {
     const m = yol.match(/^\/egitimler\/([a-z0-9-]+)\/(en\/)?(index\.html)?$/);
@@ -304,7 +319,7 @@ html[data-mode=light] #er-ara .bx{background:#fff;color:#1a2233;border-color:rgb
     function goster() {
       if (ac) { ac.remove(); ac = null; }
       bar = D.createElement('div'); bar.id = 'er-durum'; bar.setAttribute('aria-hidden', 'true');
-      bar.innerHTML = '<span>x <b data-k="x">–</b></span><span>y <b data-k="y">–</b></span><span class="bo"><span data-k="l"></span> <span data-k="s">–</span></span><span class="sp"></span><span class="bo" data-k="w"></span><button type="button" data-arti>+</button><button type="button" data-kapat title="' + t('Durum çubuğunu gizle', 'Hide status bar') + '">×</button>';
+      bar.innerHTML = (location.pathname === '/' || location.pathname === '/index.html' ? '' : '<a href="/" style="pointer-events:auto;color:#fff;text-decoration:none;font-weight:600">⌂ erdevelop</a>') + '<span>x <b data-k="x">–</b></span><span>y <b data-k="y">–</b></span><span class="bo"><span data-k="l"></span> <span data-k="s">–</span></span><span class="sp"></span><span class="bo" data-k="w"></span><button type="button" data-arti>+</button><button type="button" data-kapat title="' + t('Durum çubuğunu gizle', 'Hide status bar') + '">×</button>';
       bar.querySelector('[data-arti]').onclick = () => { arti = !arti; try { localStorage.setItem('erdevelop-arti', arti ? '1' : '0'); } catch (e) { } artiUygula(); };
       bar.querySelector('[data-kapat]').onclick = () => { try { localStorage.setItem('erdevelop-durum', '0'); } catch (e) { } kapat(); };
       D.body.appendChild(bar); D.body.classList.add('er-durumlu'); yaz(); artiUygula();
