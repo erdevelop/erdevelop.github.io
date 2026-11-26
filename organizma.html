@@ -511,6 +511,23 @@ const R = 4200;                         // petri kabının yarıçapı (dünya b
 /* gerçek zamanlı gün–gece: İstanbul saati, herkes için aynı (ortak saat) */
 const GUN = { isik: 1, saat: 12, z: 0, evre: null };
 const GOC_MIKRO = new Set([8, 27, 28, 32, 33]);
+/* endosimbiyoz: yutulan alg bazen sindirilmez, hücrenin içinde yaşayıp ışıktan besin üretir; 2 dakika sonra kalıcı kloroplast olur */
+const ALG_TIP = new Set([3, 5, 7, 9, 11, 14, 15, 23, 25, 30]), ENDO_MAX = 6, ENDO_KALICI = 120;
+function endoDene(o, b) {
+  if (o !== oyuncu || !ALG_TIP.has(b.tip)) return; const E = o.endo || (o.endo = []);
+  if (E.length >= ENDO_MAX || Math.random() > ((o.tok || 0) > 0.55 ? 0.16 : 0.06)) return;   // tokken sindirmeye acele etmez: alg canlı kalabilir
+  E.push({ t0: zaman, kal: false, h: (MIKRO_TUR[b.tip][0][0] + MIKRO_TUR[b.tip][0][1]) / 2, a: Math.random() * TAU, d: rnd(0.25, 0.62) });
+  if (!o.endoU) { o.endoU = 1; duyurHtml(T('🌿 <b>Endosimbiyoz!</b> Yuttuğun algi sindirmedin: artık içinde yaşayıp gündüz sana ışıktan besin üretiyor. 2 dakika tutarsan kalıcı kloroplast olur ve çoğalınca yavruna geçer. Kloroplastlar milyarlarca yıl önce böyle ortaya çıktı.', '🌿 <b>Endosymbiosis!</b> You did not digest the alga: it now lives inside you and makes food from light by day. Keep it 2 minutes and it becomes a permanent chloroplast passed to your offspring. Chloroplasts arose this way billions of years ago.'), 'iyi', 9); olcum('endosimbiyoz'); }
+  else duyur('🌿 ' + T('Bir alg daha içinde yaşıyor', 'Another alga now lives inside you') + ` (${E.length}/${ENDO_MAX})`, 'iyi', 3);
+}
+function endoGuncelle(o, dt) {
+  const E = o.endo; if (!E || !E.length) return;
+  let gec = 0; for (const e of E) { if (!e.kal && zaman - e.t0 > ENDO_KALICI) { e.kal = true; gec++; } }
+  if (gec && o === oyuncu) duyur(T('🌿 Ortakyaşar alg kalıcı kloroplasta dönüştü! Artık çoğalınca yavruna geçer.', '🌿 A symbiotic alga became a permanent chloroplast! It now passes to your offspring.'), 'iyi', 5);
+  o.endoKaz = E.length * 0.13 * GUN.isik * (1 - 0.7 * kis(derinK(o.x, o.y), 0, 1));   // ışık ve derinlikle fotosentez
+  o.m += o.endoKaz * dt;
+  if ((o.tok || 0) < 0.01) { o.acZ = (o.acZ || 0) + dt; if (o.acZ > 14) { o.acZ = 0; const i = E.findIndex(e => !e.kal); if (i >= 0) { E.splice(i, 1); o.m += 3; if (o === oyuncu) duyur(T('Açlıktan içindeki bir algi sindirdin', 'Starving, you digested one of your algae'), 'uyari', 3); } } } else o.acZ = 0;
+}
 /* çürüme ve oksijen: ölen hücreler bakterilere besin olur, bakteriler oksijeni tüketir (gerçek ölü bölgeler böyle oluşur) */
 const CURUK = [];
 function curukEkle(x, y, m) { if (CURUK.length > 24) CURUK.shift(); CURUK.push({ x, y, m: Math.min(m, 900), t: 0, sure: 50 + Math.min(80, m / 5), bz: 0 }); }
@@ -971,6 +988,7 @@ function yakinMikro(x, y, rad, fn) {
 function mikroYe(a, b) {   // a: organizma ya da mikro canlı; b: yenen mikro canlı
   const org = a.kon !== undefined;
   if (org && a.diyet) a.diyet.m += b.m;
+  if (org) endoDene(a.sahip || a, b);
   if (org) genYe(a, b.tip === MIKRO_TUR.length - 1 ? 'd1' : 'm' + b.tip, (MIKRO_TUR[b.tip][0][0] + MIKRO_TUR[b.tip][0][1]) / 2);
   if (org && b.altin && (a === oyuncu || a.sahip === oyuncu)) { genYe(a, 'n3', 48); dnaEkle(3); basarim('altin'); duyur(T('✨ Altın mikro canlı! Nadir gen + 3 DNA', '✨ Golden microbe! Rare gene + 3 DNA'), 'iyi', 4); }
   if (!(org && a.uzak)) { a.m = Math.min(org ? KUTLE_UST : MIKRO_UST + 3, a.m + b.m * 0.8 * (org ? besinK(a) : 1)); if (org) { a.enBuyuk = Math.max(a.enBuyuk, a.m); tokEkle(a.sahip || a, b.m); } }
@@ -1419,7 +1437,7 @@ function guncelle(dt) {
       o.yas += dt;
       if (o.m > 40) o.m -= (o.m - 40) * 0.0016 * dt;
       if (!o.uzak && !o.parca) { const os = osmoStres(o); o.osmo = os; if (os > 0.05 && o.m > 15) o.m -= o.m * 0.004 * os * dt; if (o === oyuncu) osmoUyar(o, os);
-        const ox = oksijen(o.x, o.y); o.o2 = ox; if (ox < 0.35 && o.m > 15) o.m -= o.m * 0.005 * (0.35 - ox) / 0.35 * dt; if (o === oyuncu) o2Uyar(o, ox); }
+        const ox = oksijen(o.x, o.y); o.o2 = ox; if (ox < 0.35 && o.m > 15) o.m -= o.m * 0.005 * (0.35 - ox) / 0.35 * dt; if (o === oyuncu) o2Uyar(o, ox); if (o.endo) endoGuncelle(o, dt); }
       if (o.npc && o.olum === 0 && o.yas > o.omur) yasliOlum(o);
       if (o.npc) o.form[o.ft] = Math.min(1, o.m / 380);   // bilgisayar organizmaları büyüdükçe kendi biçimini geliştirir
     }
@@ -2464,7 +2482,7 @@ const romaYaz = k => ROMA[k] || String(k);
 function cogalabilir() { const o = oyuncu; return !!o && !o.olu && o.dogum >= 1 && !(o.parca && !o.parca.olu) && o.m >= kusakEsik(o.kusak); }
 function oyuncuCogal() {
   const o = oyuncu; if (!cogalabilir()) return;
-  const eskiM = o.m; o.kusak++;
+  const eskiM = o.m; o.kusak++; if (o.endo) o.endo = o.endo.filter(e => e.kal);
   for (let i = 0; i < 6; i++) {   // yavrular: senin türünde ve renginde, kendi başlarına yaşarlar
     const a = i / 6 * TAU + Math.random(), y = yeniOrg({ x: o.x + Math.cos(a) * o.r * 0.5, y: o.y + Math.sin(a) * o.r * 0.5, m: rnd(10, 18), tur: o.tur, hue: o.hue, desen: o.desen, nick: (o.nick + T(' yavrusu', ' jr')).slice(0, 24), omur: rnd(3, 8) * 60, dogum: 1 });
     y.vx = Math.cos(a) * 260; y.vy = Math.sin(a) * 260; y.rr = y.r; y.koruma = 3; O.push(y);
@@ -3316,6 +3334,7 @@ function ciz(t) {
     if (o === oyuncu || (o.uzak && o.sus)) susCiz(o, z, t);
     if (o.altin && !o.olu) altinCiz(o.x, o.y, o.rr || o.r, z, t);
     orgCiz(g, o, z, t);
+    if (o.endo && o.endo.length && !o.olu) { const r = o.rr || o.r; for (const e of o.endo) { const a = e.a + t * 0.25, px = o.x + Math.cos(a) * r * e.d, py = o.y + Math.sin(a) * r * e.d, rr = Math.max(1.6 / z, r * 0.1); g.fillStyle = `hsla(${e.h},62%,${e.kal ? 38 : 48}%,.85)`; g.beginPath(); g.ellipse(px, py, rr, rr * 0.62, a, 0, TAU); g.fill(); g.strokeStyle = e.kal ? 'rgba(200,255,190,.75)' : 'rgba(200,255,190,.35)'; g.lineWidth = Math.max(0.7 / z, r * 0.012); g.stroke(); if (rr * z > 4) { g.strokeStyle = 'rgba(20,70,25,.5)'; g.beginPath(); g.moveTo(px - Math.cos(a) * rr * 0.6, py - Math.sin(a) * rr * 0.6); g.lineTo(px + Math.cos(a) * rr * 0.6, py + Math.sin(a) * rr * 0.6); g.stroke(); } } }
   }
   devCiz(z, t); yetDunyaCiz(z, t);
   /* sindirim kofulları: yutulan plankton zarla sarılır, kahverengileşip küçülerek erir */
@@ -3677,6 +3696,7 @@ function yasamGuncelle(dt) {
         if (o.zehir > 0) h += yasamSatir('☠', T('Zehir', 'Toxin'), o.zehir.toFixed(1) + ' ' + T('sn', 's'), 'kotu', o.zehir / 5, '#B98AFF');
         if (o.kalkan > 0) h += yasamSatir('🛡', T('Kalkan', 'Shield'), o.kalkan.toFixed(1) + ' ' + T('sn', 's'), 'iyi', o.kalkan / 6, '#8FF0B8');
         { const hh = Math.floor(GUN.saat), dd = Math.floor((GUN.saat - hh) * 60); h += yasamSatir(GUN.isik > 0.5 ? '☀️' : GUN.isik > 0.03 ? '🌅' : '🌙', T('Gün ışığı', 'Daylight'), `${String(hh).padStart(2, '0')}:${String(dd).padStart(2, '0')} · %${Math.round(GUN.isik * 100)}`, '', GUN.isik, '#FFD27A', true); }
+        if (o.endo && o.endo.length) { const k2 = o.endo.filter(e => e.kal).length; h += yasamSatir('🌿', T('Ortakyaşar alg', 'Symbiotic algae'), `${o.endo.length}${k2 ? ' (' + k2 + T(' kalıcı', ' permanent') + ')' : ''} · +${(o.endoKaz || 0).toFixed(2)}/${T('sn', 's')}`, (o.endoKaz || 0) > 0.05 ? 'iyi' : ''); }
         { const ox = o.o2 == null ? 1 : o.o2; h += yasamSatir('🫧', T('Oksijen', 'Oxygen'), (ox < 0.35 ? T('yetersiz · ', 'too low · ') : '') + '%' + Math.round(ox * 100), ox < 0.35 ? 'kotu' : ox < 0.55 ? 'dikkat' : '', ox, ox < 0.35 ? '#FF8A7A' : '#8FD8FF'); }
         h += yasamSatir('🧂', T('Tuzluluk', 'Salinity'), `${Math.round(tk * 35)}‰ · ${tuzAd(tk)}`, osm > 0.25 ? 'kotu' : '', osm > 0.05 ? osm : null, '#FF9A7A');
         if (osm > 0.05) h += yasamSatir('⚡', T('Osmotik stres', 'Osmotic stress'), suT === 'T' ? T('su kaybediyor', 'losing water') : T('şişiyor', 'swelling'), 'kotu');
