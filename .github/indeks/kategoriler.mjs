@@ -271,4 +271,24 @@ const yaz = (yolu, html) => { if (!html) return; fs.mkdirSync(path.join(KOK, yol
 for (const k of KATEGORI) yaz(k.yol, sayfa(k));
 for (const h of KAPI) yaz(h.yol, kapiSayfa(h));
 yaz(OGREN.yol, ogrenSayfa());
+
+/* ---- js/harita.json: sayfa → grup; site.js yol çubuğunu ve "benzer araçlar" kutusunu bundan kurar ---- */
+{
+  const temiz = f => f.replace(/[#?].*$/, '').replace(/(^|\/)index\.html$/, '$1');
+  const kapilar = { araclar: { t: KAPI[0].ad, u: '/araclar/' }, muhendislik: { t: KAPI[1].ad, u: '/muhendislik/' }, oyunlar: { t: ['Oyunlar', 'Games'], u: '/tarayici-oyunlari/' }, ogren: { t: OGREN.ad, u: '/ogren/' } };
+  const gruplar = {}, sayfalar = {}, ogeler = {};
+  for (const g of G) {
+    if (g.lock || !g.items) continue;
+    const k = katOf(g.id), kp = g.id === 'games' ? 'oyunlar' : (kapiOf(g.id) || {}).id || (OGREN.egitim.includes(g.id) ? 'ogren' : null);
+    if (!kp) continue;
+    gruplar[g.id] = { t: [g.h.tr, g.h.en], u: k ? '/' + k.yol + '/' : g.id === 'ai' ? '/yapay-zeka/' : '/egitimler/#' + g.id, k: kp };
+    ogeler[g.id] = [];
+    for (const it of g.items) {
+      const f = temiz(it.f); if (!f || /^https?:/.test(f) || /^(ozelaraclar|_arsiv)\//.test(f)) continue;
+      if (!(f in sayfalar)) sayfalar[f] = g.id;
+      if (!it.f.includes('#')) ogeler[g.id].push([f, it.t.tr, en(it.t) || it.t.tr]);
+    }
+  }
+  fs.writeFileSync(path.join(KOK, 'js', 'harita.json'), JSON.stringify({ k: kapilar, g: gruplar, s: sayfalar, o: ogeler }));
+}
 console.log(`kapı ve kategori sayfaları: ${n}`);

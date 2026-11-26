@@ -10,6 +10,58 @@
   const norm = s => String(s || '').toLocaleLowerCase('tr').replace(/[ışğüöçâîûéèêàäß]/g, c => TRM[c]).normalize('NFD').replace(/[̀-ͯ]/g, '');
   const en = (D.documentElement.lang || '').startsWith('en');
 
+  /* ---------------- kabuk: yol çubuğu ve "benzer araçlar" (araç, eğitim, rehber sayfaları) ----------------
+     Görünüm /css/kabuk.css; sayfa → grup haritası /js/harita.json (.github/indeks/kategoriler.mjs üretir).
+     Portal sayfaları (data-portal), oyunlar ve gömülü (iframe, ?gom=1) açılışlar atlanır. */
+  (function () {
+    const H = D.documentElement;
+    if (H.hasAttribute('data-portal') || window.top !== window || /[?&]gom=1/.test(location.search)) return;
+    const bar = D.querySelector('.topbar'), basB = !bar && D.querySelector('body > header .back') ? D.querySelector('body > header') : null;
+    if (!bar && !basB) return;
+    /* tam ekran uygulamalar (kod editörü, zihin haritası, DXF…): sayfa kaymıyorsa yerleşimi bozmamak için ekleme yapma */
+    try { if (/hidden|clip/.test(getComputedStyle(D.body).overflowY) || /hidden|clip/.test(getComputedStyle(H).overflowY)) return; } catch (e) { }
+    if (/^\/(Code|MindMap2?|Planla|Opti|Profil|dxf|cephe-bolme)\.html$|^\/(web_analiz|web_goruntuleme|oyunlar|ozelaraclar)\//.test(yol)) return;
+    if (!D.querySelector('link[href*="kabuk.css"]')) { const l = D.createElement('link'); l.rel = 'stylesheet'; l.href = '/css/kabuk.css'; D.head.appendChild(l); }
+    const br = bar && bar.querySelector('.brand'); if (br && /^\s*erdevelop_?\s*$/i.test(br.textContent)) br.innerHTML = '<span>er</span>develop';
+    const ing = () => window.erDil ? window.erDil.lang === 'en' : en;
+    let sayfa = yol.replace(/^\//, '').replace(/(^|\/)index\.html$/, '$1'); try { sayfa = decodeURIComponent(sayfa); } catch (e) { }
+    const ON = [[/^hesapla\//, 'calc'], [/^komutlar\//, 'cad']];
+    const SABIT = [[/^egitimler\//, ['Eğitimler', 'Courses'], '/egitimler/'], [/^rehber\/dil-kulupleri\//, ['Dil kulüpleri', 'Language clubs'], '/rehber/dil-kulupleri/'], [/^rehber\//, ['Rehberler', 'Guides'], '/rehber/'],
+      [/^(mikro-dunya|micro-world)\//, ['Mikro Dünya', 'Micro World'], '/mikro-dunya/'], [/^yapay-zeka\//, ['Yapay zekâ', 'AI'], '/yapay-zeka/'], [/^Tools\.html$/, ['Tüm araçlar', 'All tools'], '/Tools.html', 'araclar']];
+    fetch('/js/harita.json').then(r => r.ok ? r.json() : null).then(h => {
+      if (!h) return;
+      const kok = sayfa.split('/').slice(0, 2).join('/') + '/';
+      let gid = h.s[sayfa] || h.s[kok] || null; if (!gid) { const o = ON.find(x => x[0].test(sayfa)); if (o) gid = o[1]; }
+      const g = gid && h.g[gid], sb = !g && SABIT.find(x => x[0].test(sayfa));
+      const yolEl = D.createElement('div'); yolEl.id = 'er-yol';
+      const kutu = D.createElement('section'); kutu.id = 'er-benzer';
+      const ciz = () => {
+        const E = ing(), L = t => esc(t[E ? 1 : 0]);
+        const p = [['/', ['Ana sayfa', 'Home']]];
+        if (g) { const k = h.k[g.k]; p.push([k.u, k.t]); p.push([g.u, g.t]); }
+        else if (sb) { const k = h.k[sb[3] || 'ogren']; p.push([k.u, k.t]); p.push([sb[2], sb[1]]); }
+        const burasi = '/' + sayfa;
+        yolEl.innerHTML = '<div><ol>' + p.map(x => x[0] === burasi ? '<li aria-current="page">' + L(x[1]) + '</li>' : '<li><a href="' + x[0] + '">' + L(x[1]) + '</a></li>').join('') + '</ol>'
+          + '<nav aria-label="' + (E ? 'Sections' : 'Bölümler') + '">' + Object.keys(h.k).map(id => '<a href="' + h.k[id].u + '">' + L(h.k[id].t) + '</a>').join('') + '</nav></div>';
+        let ic = '';
+        const liste = g ? (h.o[gid] || []) : [];
+        if (liste.length > 1) {
+          const i = liste.findIndex(x => x[0] === sayfa || x[0] === kok), sira = [];
+          for (let j = 1; j < liste.length && sira.length < 6; j++) { const x = liste[((i < 0 ? 0 : i) + j) % liste.length]; if (x[0] !== sayfa && x[0] !== kok) sira.push(x); }
+          const ogr = g.k === 'ogren';
+          ic = '<h2>' + (E ? (ogr ? 'More like this' : 'Similar tools') : (ogr ? 'Benzer içerikler' : 'Benzer araçlar')) + '<a href="' + g.u + '">' + L(g.t) + ' →</a></h2>'
+            + '<div class="er-b">' + sira.map(x => '<a href="/' + esc(x[0]) + '">' + esc(x[E ? 2 : 1]) + '</a>').join('') + '</div>';
+        }
+        kutu.innerHTML = ic + '<div class="er-k">' + Object.keys(h.k).map(id => '<a href="' + h.k[id].u + '">' + L(h.k[id].t) + '</a>').join('') + '<a href="/Tools.html">' + (E ? 'All tools' : 'Tüm araçlar') + '</a></div>';
+      };
+      ciz();
+      (bar || basB).insertAdjacentElement('afterend', yolEl);
+      const alt = [...D.querySelectorAll('body > footer, body > .wrap > footer, footer')].pop(), ana = D.querySelector('main');
+      if (alt) alt.insertAdjacentElement('beforebegin', kutu); else if (ana) ana.insertAdjacentElement('afterend', kutu); else D.body.appendChild(kutu);
+      if (window.erDil && window.erDil.on) window.erDil.on(ciz);
+    }).catch(() => { });
+  })();
+
   /* ---------------- arama ---------------- */
   let veri = null, yen = null, dlg = null, sec = 0, son = [], tur = '';
   const getir = async u => { const r = await fetch(u, { cache: 'no-cache' }); if (!r.ok) throw new Error(r.status); return r.json(); };
