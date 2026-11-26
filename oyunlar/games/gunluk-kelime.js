@@ -15,7 +15,7 @@ const MOD = {
   de: { ad: 'Deutsch', bayrak: '🇩🇪', id: 'gunlukkelime-de', L: Object.keys(YD.de), up: s => s.toUpperCase(), harf: /^[A-ZÄÖÜ]$/, kb: ['QWERTZUIOPÜ', 'ASDFGHJKLÖÄ', '⏎YXCVBNM⌫'], baslik: 'Wort des Tages (DE)', kulup: '/almanca.html', kAd: 'Almanca', ses: 'de-DE' }
 };
 const MKEY = 'ob-gk-mod', YKEY = 'ob-gk-yardim';
-const GK_RENK = { y: '#2f9e6f', s: '#d7a514', g: '#7a7f86' };
+const GK_RENK = { y: '#3b6fe0', s: '#ef8a2b', g: '#7a7f86' };   /* mavi: doğru yer · turuncu: başka yerde · gri: yok */
 function gkKapak() {   /* kart kapağı: renkli harf kutuları */
   const S = [['K', 'g'], ['A', 's'], ['L', 'g'], ['E', 'y'], ['M', 'g']], Z = [['D', 'y'], ['E', 'y'], ['N', 'y'], ['İ', 'y'], ['Z', 'y']];
   const sat = (L, y) => L.map(([h, c], i) => `<rect x="${6 + i * 16}" y="${y}" width="14" height="14" rx="3" fill="${GK_RENK[c]}"/><text x="${13 + i * 16}" y="${y + 10.6}" text-anchor="middle" font-family="system-ui,sans-serif" font-size="9.5" font-weight="800" fill="#fff">${h}</text>`).join('');
@@ -85,7 +85,7 @@ const GK_CSS = `
 @media (max-width:600px){.gk-mount{padding:8px!important}.gk{gap:8px}.gk-kb button{height:44px}}
 `;
 registerGame({
-  id:'gunlukkelime', title:'Günlük Kelime', category:'Günlük', tags:'wordle kelime türkçe ingilizce english fransızca français almanca deutsch 5 harf günlük bulmaca seri',
+  id:'gunlukkelime', title:'Günlük Kelime', category:'Günlük', tags:'kelime tahmin türkçe ingilizce english fransızca français almanca deutsch 5 harf günlük bulmaca seri',
   gunluk:true, odak:true, noRestart:true,
   aciklama:'Günün 5 harfli gizli kelimesini 6 denemede bul. Her tahminde renkler ve kısa bir açıklama yol gösterir. Türkçe, İngilizce, Fransızca, Almanca.',
   cover: gkKapak(),
@@ -117,13 +117,13 @@ registerGame({
         <p>Her denemeden sonra harfler renklenir ve sana ipucu verir. Örnek: gizli kelime <b>DENİZ</b> olsun, sen <b>KALEM</b> yazdın:</p>
         <div class="gk-sat">${kutu('K', 'g')}${kutu('A', 'g')}${kutu('L', 'g')}${kutu('E', 's')}${kutu('M', 'g')}</div>
         <ul>
-          <li>${kutu('E', 's')}<span><b>Sarı:</b> E harfi kelimede var ama <b>yeri burası değil</b>.</span></li>
+          <li>${kutu('E', 's')}<span><b>Turuncu:</b> E harfi kelimede var ama <b>yeri burası değil</b>.</span></li>
           <li>${kutu('K', 'g')}<span><b>Gri:</b> K, A, L, M kelimede <b>hiç yok</b>. Bir daha kullanma.</span></li>
         </ul>
         <p>Sonra <b>DERİN</b> yazdın:</p>
         <div class="gk-sat">${kutu('D', 'y')}${kutu('E', 'y')}${kutu('R', 'g')}${kutu('İ', 'y')}${kutu('N', 's')}</div>
         <ul>
-          <li>${kutu('D', 'y')}<span><b>Yeşil:</b> D, E ve İ <b>tam yerinde</b>. N var ama yeri başka → cevap <b>DENİZ</b>.</span></li>
+          <li>${kutu('D', 'y')}<span><b>Mavi:</b> D, E ve İ <b>tam yerinde</b>. N var ama yeri başka → cevap <b>DENİZ</b>.</span></li>
         </ul>
         <p class="ad">BİLMEN GEREKENLER</p>
         <p>• Her gün <b>tek kelime</b> var, herkese aynı. Gece yarısı yenisi gelir.<br>• Üstten dili değiştirebilirsin: her dilin kendi günlük kelimesi var.<br>• Takılırsan ilk denemeden sonra <b>💡 İpucu</b> alabilirsin.</p>
@@ -203,7 +203,7 @@ registerGame({
         };
         k.append(b); if (!b.disabled) k.append(E('span', { style: { color: 'var(--ink-soft)' } }, '−50 puan'));
       }
-      function paylasMetni() { return M.baslik + ' #' + (N + 1) + ' ' + (bildi() ? st.tahmin.length : 'X') + '/6' + (seri() ? ' · 🔥' + seri() : '') + '\n' + st.tahmin.map(t => puan([...t]).map(c => ({ y: '🟩', s: '🟨', g: '⬜' })[c]).join('')).join('\n') + '\nerdevelop.com/oyunlar/' + (mod !== 'tr' ? '?kelime=' + mod : '') + '#o/gunlukkelime'; }
+      function paylasMetni() { return M.baslik + ' #' + (N + 1) + ' ' + (bildi() ? st.tahmin.length : 'X') + '/6' + (seri() ? ' · 🔥' + seri() : '') + '\n' + st.tahmin.map(t => puan([...t]).map(c => ({ y: '🟦', s: '🟧', g: '⬜' })[c]).join('')).join('\n') + '\nerdevelop.com/oyunlar/' + (mod !== 'tr' ? '?kelime=' + mod : '') + '#o/gunlukkelime'; }
       function altCiz() {
         const a = q('.gk-alt'); a.innerHTML = ''; clearInterval(sayac);
         if (!st.bitti) {

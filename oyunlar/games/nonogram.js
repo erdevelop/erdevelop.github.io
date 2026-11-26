@@ -79,7 +79,7 @@ const CSS = `
 .ng-ornek{display:flex;align-items:center;gap:8px;justify-content:center;font-weight:800}.ng-ornek i{display:inline-block;width:24px;height:24px;border-radius:4px;background:var(--bg2);margin-right:2px;vertical-align:middle;font-style:normal;text-align:center;line-height:24px;color:var(--ink-soft);font-size:13px}.ng-ornek i.d{background:var(--ink)}
 `;
 registerGame({
-  id: 'nonogram', title: 'Nonogram', category: 'Bulmaca', tags: 'nonogram kare karalamaca picross griddler sayı boyama mantık bulmaca', gunluk: true, odak: true, noRestart: true,
+  id: 'nonogram', title: 'Nonogram', category: 'Bulmaca', tags: 'nonogram kare karalamaca sayı boyama mantık bulmaca', gunluk: true, odak: true, noRestart: true,
   aciklama: 'Kare karalamaca: satır ve sütun başındaki sayılara bakarak gizli deseni boya. Her bulmaca yalnızca mantıkla çözülür. Dört boy, sırayla ilerleyen bulmacalar ve günün bulmacası.',
   cover: kapak(),
   icon: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round"><rect x="3" y="3" width="18" height="18" rx="2"/><path d="M9 3v18M15 3v18M3 9h18M3 15h18"/><rect x="9" y="9" width="6" height="6" fill="currentColor"/></svg>',

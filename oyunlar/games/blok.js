@@ -56,7 +56,7 @@ const CSS = `
 .bl-alt{display:flex;gap:8px;justify-content:center}
 `;
 registerGame({
-  id: 'blok', title: 'Blok Bulmaca', category: 'Bulmaca', tags: 'blok bulmaca block blast woodoku tetris parça yerleştir satır sütun', gunluk: true, odak: true, noRestart: true,
+  id: 'blok', title: 'Blok Bulmaca', category: 'Bulmaca', tags: 'blok bulmaca parça yerleştir satır sütun sil', gunluk: true, odak: true, noRestart: true,
   aciklama: 'Parçaları 8×8 tahtaya sürükle, satır ve sütunları doldurup sil. Üst üste silişler katlanarak puan kazandırır. Klasik mod ve herkese aynı parçalarla günün oyunu.',
   cover: kapak(),
   icon: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round"><rect x="3" y="3" width="8" height="8" rx="1.5"/><rect x="13" y="13" width="8" height="8" rx="1.5"/><rect x="13" y="3" width="8" height="8" rx="1.5"/></svg>',
