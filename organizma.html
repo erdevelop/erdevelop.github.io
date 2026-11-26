@@ -499,6 +499,7 @@ try { adConfig({ preloadAdBreaks: 'on', sound: 'on' }); } catch (e) { }</script>
     <div id="oReklam" hidden style="margin:10px 0 4px;min-height:90px"></div>
     <button class="ana" id="ikinciBtn" type="button" hidden style="background:linear-gradient(135deg,#FFD84D,#FF9F43);color:#2A1600">🎬 <span id="ikinciYazi">Reklam izle, aynı hücreyle devam et</span><small id="ikinciAlt" style="display:block;font-weight:600;opacity:.8;font-size:12px"></small></button>
     <button class="ana" id="yeniden" type="button" data-en="Be born again">Yeniden doğ</button>
+    <button class="ikinci" id="kartBtn" type="button" hidden>📸 <span id="kartYazi">Canlı kartını paylaş</span></button>
     <button class="ikinci" id="menuye" type="button" data-en="Menu">Menü</button>
   </div>
 </div>
@@ -2824,7 +2825,7 @@ function oyuncuOldu(yiyen) {
   $('oDna').innerHTML = hayatDna ? `<span class="yeniRekor" style="background:rgba(95,211,184,.16);color:#BFF3E4">🧬 +${hayatDna} DNA</span>` : '';
   if (s >= 20) { AG.rekorYaz({ n: oyuncu.nick, s: Math.round(s), m: Math.round(oyuncu.enBuyuk), k: oyuncu.kusak }); ortakYuk = -1e9; }
   if (s >= 30) reklamGoster();
-  ikinciHazirla();
+  ikinciHazirla(); kartHazirla(s);
   kaydet();
 }
 /* ölüm ekranı reklam alanı: AdSense reklam birimi kimliği (data-ad-slot) girilince çalışır.
@@ -4510,6 +4511,56 @@ $('ikinciBtn').onclick = () => { const g = IKS.goster; if (!g) return; $('ikinci
 
 const ansDil = () => { const a = $('ansLink'); if (a) a.href = EN() ? '/micro-world/' : '/mikro-dunya/'; };
 ansDil(); if (window.erDil && erDil.on) erDil.on(ansDil);
+
+/* ================= paylaşılabilir canlı kartı: ölüm ekranından 1080×1350 PNG ================= */
+const KART = { v: null };
+function kartHazirla(s) {
+  const o = oyuncu, b = $('kartBtn'); KART.v = null; b.hidden = true;
+  if (IZLE || !o || s < 20 || !katil || katil.nick === T('Kist', 'Cyst')) return;
+  KART.v = { o: Object.assign({}, o, { x: 0, y: 0, olum: 0, emil: null, alK: null, olu: false, ang: -0.6, vx: 40, vy: -28 }), s, m: Math.round(o.enBuyuk || o.m), yedi: o.yedigi | 0, gen: (o.gen || []).length, kusak: o.kusak || 1, katil: katil.nick || '?', gm: !!GM, t: Date.now() };
+  $('kartYazi').textContent = T('Canlı kartını paylaş', 'Share your creature card'); b.hidden = false;
+}
+function kartCiz() {
+  const K = KART.v; if (!K) return null;
+  const W2 = 1080, H2 = 1350, c = document.createElement('canvas'); c.width = W2; c.height = H2; const x = c.getContext('2d'), o = K.o, tr = TURLER[o.tur] || TURLER[0];
+  const yaz = (t, X, Y, f, renk, hiz) => { x.font = f; x.fillStyle = renk; x.textAlign = hiz || 'center'; x.fillText(t, X, Y); };
+  { const gr = x.createLinearGradient(0, 0, 0, H2); gr.addColorStop(0, '#0A2A31'); gr.addColorStop(1, '#041015'); x.fillStyle = gr; x.fillRect(0, 0, W2, H2); }
+  let tohum = (K.t % 9973) + 7; const r0 = () => (tohum = (tohum * 16807) % 2147483647) / 2147483647;
+  for (let i = 0; i < 90; i++) { x.fillStyle = `hsla(${150 + r0() * 60},70%,${55 + r0() * 20}%,${0.08 + r0() * 0.22})`; x.beginPath(); x.arc(r0() * W2, r0() * H2, 2 + r0() * 7, 0, TAU); x.fill(); }
+  // mikroskop alanı
+  const cx = W2 / 2, cy = 560, R2 = 360;
+  { const gr = x.createRadialGradient(cx, cy - 40, 40, cx, cy, R2); gr.addColorStop(0, '#15505C'); gr.addColorStop(1, '#072029'); x.fillStyle = gr; x.beginPath(); x.arc(cx, cy, R2, 0, TAU); x.fill();
+    x.lineWidth = 14; x.strokeStyle = 'rgba(150,220,215,.28)'; x.stroke(); x.lineWidth = 3; x.strokeStyle = 'rgba(95,211,184,.7)'; x.beginPath(); x.arc(cx, cy, R2 + 16, 0, TAU); x.stroke(); }
+  x.save(); x.beginPath(); x.arc(cx, cy, R2 - 4, 0, TAU); x.clip();
+  for (let i = 0; i < 26; i++) { x.fillStyle = `hsla(${90 + r0() * 80},60%,60%,.35)`; x.beginPath(); x.arc(cx + (r0() - 0.5) * 2 * R2, cy + (r0() - 0.5) * 2 * R2, 3 + r0() * 6, 0, TAU); x.fill(); }
+  const olc = (tr.hortum || tr.boynuz ? 170 : tr.gunes || tr.ig || tr.boru ? 185 : 205);
+  x.translate(cx, cy); x.scale(olc / 38, olc / 38); o.rr = 38; o.r = 38;
+  try { orgCiz(x, o, 6, zaman); } catch (e) { x.fillStyle = `hsl(${o.hue},65%,60%)`; x.beginPath(); x.arc(0, 0, 38, 0, TAU); x.fill(); }
+  x.restore();
+  yaz('ORGANIZMA', cx, 120, '900 64px Nunito, ui-rounded, system-ui, sans-serif', '#E4F3F2');
+  yaz(T('mikroskobik hayatta kalma oyunu', 'a microscopic survival game'), cx, 166, '700 30px Nunito, system-ui, sans-serif', '#9CC0BE');
+  yaz(String(o.nick || '?').slice(0, 16), cx, 1000, '900 72px Nunito, ui-rounded, system-ui, sans-serif', '#FFFFFF');
+  yaz(`${T(tr.ad[0], tr.ad[1])} · ${EN() ? 'Generation ' + romaYaz(K.kusak) : romaYaz(K.kusak) + '. kuşak'}${K.gm ? ' · 📅 ' + T('günlük', 'daily') : ''}`, cx, 1050, '800 34px Nunito, system-ui, sans-serif', '#5FD3B8');
+  const ist = [[dkYaz(K.s, true), T('yaşadı', 'survived')], [String(K.m), T('en büyük kütle', 'largest mass')], [String(K.yedi), T('yuttu', 'eaten')], [String(K.gen), T('gen', 'genes')]];
+  ist.forEach((q, i) => { const X = 150 + i * 260, Y = 1120; x.fillStyle = 'rgba(10,36,43,.92)'; x.strokeStyle = 'rgba(150,220,215,.22)'; x.lineWidth = 2; x.beginPath(); x.roundRect ? x.roundRect(X - 115, Y, 230, 120, 22) : x.rect(X - 115, Y, 230, 120); x.fill(); x.stroke();
+    yaz(q[0], X, Y + 62, '900 44px Nunito, system-ui, sans-serif', '#FFFFFF'); yaz(q[1], X, Y + 100, '700 24px Nunito, system-ui, sans-serif', '#9CC0BE'); });
+  yaz(`☠ ${T('Sonunda yutan', 'Finally eaten by')}: ${String(K.katil).slice(0, 20)}`, cx, 1290, '700 28px Nunito, system-ui, sans-serif', '#FF9C8F');
+  yaz(location.host ? location.host + '/organizma' : 'erdevelop.com/organizma', W2 - 40, 1330, '700 22px Nunito, system-ui, sans-serif', 'rgba(228,243,242,.55)', 'right');
+  yaz(T('Sen ne kadar yaşarsın?', 'How long can you survive?'), 40, 1330, '800 22px Nunito, system-ui, sans-serif', 'rgba(228,243,242,.55)', 'left');
+  return c;
+}
+async function kartPaylas() {
+  const c = kartCiz(); if (!c) return; olcum('kart-paylas');
+  const blob = await new Promise(r => c.toBlob(r, 'image/png')); if (!blob) return;
+  const ad = 'organizma-' + (KART.v.o.nick || 'canli').replace(/[^\p{L}\p{N}_-]+/gu, '').slice(0, 16) + '.png';
+  const metin = T(`Organizma'da ${dkYaz(KART.v.s, true)} hayatta kaldım, ${KART.v.m} kütleye ulaştım! Sen ne kadar yaşarsın?`, `I survived ${dkYaz(KART.v.s, true)} in Organizma and reached ${KART.v.m} mass! How long can you last?`);
+  const url = davetBagi() || location.origin + location.pathname;
+  try { const f = new File([blob], ad, { type: 'image/png' }); if (navigator.canShare && navigator.canShare({ files: [f] })) { await navigator.share({ files: [f], title: 'Organizma', text: metin + ' ' + url }); return; } } catch (e) { if (e && e.name === 'AbortError') return; }
+  const a = document.createElement('a'); a.href = URL.createObjectURL(blob); a.download = ad; document.body.appendChild(a); a.click(); setTimeout(() => { URL.revokeObjectURL(a.href); a.remove(); }, 1500);
+  try { await navigator.clipboard.writeText(metin + ' ' + url); } catch (e) { }
+  duyur(T('📸 Kart indirildi; paylaşım metni panoya kopyalandı.', '📸 Card downloaded; share text copied to the clipboard.'), 'iyi', 4);
+}
+$('kartBtn').onclick = () => { kartPaylas().catch(() => { }); };
 
 /* ================= döngü ================= */
 let son = performance.now(), izle = null, izleZ = 0;
