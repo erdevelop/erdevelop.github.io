@@ -52,7 +52,7 @@
   <div class="box"><h3>Altın hesapla</h3>
     <div class="row3">
       <div><label for="a-gram">Gram altın (24 ayar, ₺)</label><input id="a-gram" inputmode="decimal" placeholder="otomatik"></div>
-      <div><label for="a-tur">Altın türü</label><select id="a-tur"><option value="1|1">Gram altın (24 ayar)</option><option value="1|0.916">22 ayar bilezik (gram)</option><option value="1|0.585">14 ayar (gram)</option><option value="1.75|0.916">Çeyrek altın</option><option value="3.5|0.916">Yarım altın</option><option value="7.016|0.916">Tam altın</option><option value="7.216|0.916">Cumhuriyet altını</option><option value="17.54|0.916">Ata beşli</option></select></div>
+      <div><label for="a-tur">Altın türü</label><select id="a-tur"><option value="1|1">Gram altın (24 ayar)</option><option value="1|0.916">22 ayar bilezik (gram)</option><option value="1|0.585">14 ayar (gram)</option><option value="1.75|0.916">Çeyrek altın</option><option value="3.5|0.916">Yarım altın</option><option value="7.016|0.916">Tam altın</option><option value="7.216|0.916">Cumhuriyet altını</option><option value="17.54|0.916">Gremse (ikibuçukluk)</option><option value="35.08|0.916">Beşibiryerde (ziynet beşli)</option><option value="36.08|0.916">Ata beşli</option></select></div>
       <div><label for="a-adet">Adet / gram</label><input id="a-adet" inputmode="decimal" value="1"></div>
     </div>
     <div class="res" id="o-altin" aria-live="polite"></div>
@@ -107,9 +107,14 @@ async function kurAl() {
     const j = await (await fetch('https://open.er-api.com/v6/latest/USD', { signal: c.signal })).json();
     if (j.result !== 'success') throw 0;
     R = j.rates; T = j.time_last_update_unix * 1000;
+    /* ons altın: döviz kaynağında XAU yok, ayrı kaynaktan alınır (1 USD = 1/fiyat ons) */
+    if (!R.XAU) { let ons = NaN;
+      try { const c2 = new AbortController(); setTimeout(() => c2.abort(), 8000); const g = await (await fetch('https://api.gold-api.com/price/XAU', { signal: c2.signal })).json(); ons = +g.price; } catch (e) { }
+      if (!(ons > 0)) try { const c3 = new AbortController(); setTimeout(() => c3.abort(), 8000); const g = await (await fetch('https://cdn.jsdelivr.net/npm/@fawazahmed0/currency-api@latest/v1/currencies/xau.json', { signal: c3.signal })).json(); ons = +g.xau.usd; } catch (e) { }
+      if (ons > 0) R.XAU = 1 / ons; }
     try { localStorage.setItem('hesapla:doviz:cache', JSON.stringify({ R, T })); } catch (e) { }
   } catch (e) { try { const s = JSON.parse(localStorage.getItem('hesapla:doviz:cache')); if (s) { R = s.R; T = s.T; } } catch (x) { } }
-  byId('h-kur').textContent = R ? 'Kaynak: ExchangeRate-API (open.er-api.com) · güncelleme ' + new Date(T).toLocaleString('tr-TR') + '. Kurlar piyasa ortalamasıdır; banka alış-satış kurundan farklıdır.' : 'Kurlar alınamadı. İnternet bağlantını kontrol et.';
+  byId('h-kur').textContent = R ? 'Kaynak: ExchangeRate-API (open.er-api.com)' + (R.XAU ? ', ons altın gold-api.com' : '') + ' · güncelleme ' + new Date(T).toLocaleString('tr-TR') + '. Kurlar piyasa ortalamasıdır; banka alış-satış kurundan farklıdır.' : 'Kurlar alınamadı. İnternet bağlantını kontrol et.';
   hesapla();
 }
 const birim = c => R && R[c] ? R[c] : NaN; /* 1 USD = R[c] c */
@@ -118,7 +123,8 @@ const fx = (v, c) => c === 'XAU' ? fmt(v, 6) + ' ons' : v.toLocaleString('tr-TR'
 function hesapla() {
   if (!R) { show('o-doviz'); show('o-altin'); return; }
   const v = num('d-tut'), k = byId('d-k').value, h = byId('d-h').value;
-  if (v >= 0) show('o-doviz', fx(cevir(v, k, h), h), [['1 ' + k, fx(cevir(1, k, h), h)], ['1 ' + h, fx(cevir(1, h, k), k)]], fmt(v, 4) + ' ' + k + ' =');
+  if (v >= 0 && !(birim(k) > 0 && birim(h) > 0)) show('o-doviz', '', [], 'Bu birimin kuru şu an alınamadı.');
+  else if (v >= 0) show('o-doviz', fx(cevir(v, k, h), h), [['1 ' + k, fx(cevir(1, k, h), h)], ['1 ' + h, fx(cevir(1, h, k), k)]], fmt(v, 4) + ' ' + k + ' =');
   const otomatik = R.XAU ? cevir(1, 'XAU', 'TRY') / 31.1035 : NaN, gram = num('a-gram') > 0 ? num('a-gram') : otomatik;
   byId('a-gram').placeholder = isFinite(otomatik) ? 'otomatik: ' + fmt(otomatik, 2) : 'gram fiyatı yaz';
   const [w, ayar] = byId('a-tur').value.split('|').map(Number), adet = num('a-adet') || 0;
