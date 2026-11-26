@@ -2696,13 +2696,38 @@ function menuAc() {
     <p class="kucuk">${T('Balığın bu tarayıcıda saklanır. <a href="/hesap.html">Hesabınla giriş yapıp</a> senkronu açarsan diğer cihazlarına da gelir.', 'Your fish is stored in this browser. <a href="/hesap.html">Sign in</a> and turn on sync to bring it to your other devices.')}</p>`);
   ic.querySelectorAll('[data-m]').forEach(b => b.onclick = () => ({ d3: () => { kaydet(false); try { localStorage.setItem('derin-gorunum', G3 ? '2d' : '3d'); } catch (e) { } location.href = '/derin-mavi.html'; }, mevsim: mevsimAc, eko: ekoAc, yedek: yedekAc, fps: () => { fpsAcik = !fpsAcik; try { localStorage.setItem('derin-fps', fpsAcik ? '1' : '0'); } catch (e) { } menuEmYaz('fps', fpsAcik); }, vital: () => { vitalAcik = !vitalAcik; try { localStorage.setItem('derin-vital', vitalAcik ? '1' : '0'); } catch (e) { } menuEmYaz('vital', vitalAcik); }, akv: akvListeAc, hedef: hedefAc, dukkan: dukkanAc, bas: basarimAc, rekor: rekorAc, sohret: sohretAc, reklam: reklamTeklif, paylas, tasi: tasiAc, nasil: nasilAc, gunluk: gunlukAc, sefer: seferAc, okul: okulAc, unvan: unvanAc, foto: fotoAc, ansik: ansikAc, rehber: () => { S.rehber = 0; S.rb = Object.fromEntries(Object.entries(S.rb).filter(([k]) => k.startsWith('u_'))); S.kumandaOgrendi = 0; kaydet(false); modalKapat(); }, ark: arkadaslarAc, sezon: sezonAc, album: albumAc, etk: etkinlikAc, bild: bildirimAc, oy: oylamaAc })[b.dataset.m]());
 }
+/* HESAP YEDEĞİ HATIRLATMASI: balık birkaç gündür yaşıyorsa ve hesap senkronu kapalıysa nazikçe sorar
+   (ilk kez 2. günden sonra, sonra haftada bir, en çok 3 kez; "bir daha sorma" denirse hiç) */
+const senkronAcik = () => { try { return localStorage.getItem('erdevelop-sync') === '1'; } catch (e) { return false; } };
+const hesapYedekUrl = () => '/hesap.html?geri=' + encodeURIComponent('/derin-mavi.html') + '#senkron';
+const YH = { z: 25, bitti: false };
+function yedekHatirlat(dt) {
+  if (YH.bitti || !S || girisAcik) return; YH.z -= dt; if (YH.z > 0) return; YH.z = 30;
+  const h = S.yedekHat || (S.yedekHat = { n: 0, t: 0 }), gun = (simdi() - (S.dogum || simdi())) / 864e5;
+  if (senkronAcik() || h.n >= 3 || ziyaretModu() || (gun < 2 && (S.nesil || 1) < 2) || simdi() - h.t < 7 * 864e5) { YH.bitti = true; return; }
+  if (!$('modal').hidden || AV) return; /* başka bir pencere açıkken bekle */
+  YH.bitti = true; h.n++; h.t = simdi(); kaydet(false);
+  const g = Math.max(1, Math.floor(gun));
+  const ic = modal(`<h2>🔐 ${T(`${esc(S.ad)} ${g} gündür seninle`, `${esc(S.ad)} has been with you for ${g} day${g > 1 ? 's' : ''}`)}</h2>
+    <p class="alt">${T('Balığın şu an yalnız bu tarayıcıda duruyor. Tarayıcı verileri silinirse ya da cihaz değişirse kaybolabilir. Sitede hesabınla giriş yapıp senkronu açarsan balığın, albümün ve soy ağacın otomatik yedeklenir ve bütün cihazlarında seninle gelir.', 'Your fish lives only in this browser right now. If the browser data is cleared or you change device, it could be lost. Sign in on the site and turn on sync: your fish, album and family tree are backed up automatically and follow you to all your devices.')}</p>
+    <button type="button" class="ana" id="yhHesap">🔐 ${T('Hesabımla yedekle', 'Back up with my account')}</button>
+    <button type="button" class="ikinci" id="yhDosya">💾 ${T('Dosyaya yedekle', 'Back up to a file')}</button>
+    <button type="button" class="ikinci" id="yhSonra">${T('Sonra', 'Later')}</button>
+    <p class="kucuk" style="margin-top:10px;text-align:center"><a href="#" id="yhAsla">${T('Bir daha sorma', 'Don’t ask again')}</a></p>`);
+  ic.querySelector('#yhHesap').onclick = () => { kaydet(false); location.href = hesapYedekUrl(); };
+  ic.querySelector('#yhDosya').onclick = () => { modalKapat(); setTimeout(yedekAc, 50); };
+  ic.querySelector('#yhSonra').onclick = modalKapat;
+  ic.querySelector('#yhAsla').onclick = e => { e.preventDefault(); h.n = 99; kaydet(false); modalKapat(); };
+}
 /* KAYIT YEDEĞİ: balık, albüm, soy ağacı ve ekosistem bir dosyaya iner; başka cihazda ya da tarayıcıda geri yüklenir */
 const YEDEK_AYAR = ['derin-gorunum', 'derin3d-kalite2', 'derin-mavi-ses', 'derin-mevsim', 'derin-vital', 'derin-vital-kapali', 'derin-panel-kapali', 'derin-fps'];
 function yedekAc() {
   const ic = modal(`<h2>💾 ${T('Yedekle / geri yükle', 'Back up / restore')}</h2>
     <p class="alt">${T('Balığın, albümün, soy ağacın, ekosistemin ve ayarların tek bir dosyaya kaydedilir. Başka bir cihazda ya da tarayıcıda bu dosyayı yükleyerek kaldığın yerden devam edebilirsin.', 'Your fish, album, family tree, ecosystem and settings are saved to one file. Load it on another device or browser to carry on where you left off.')}</p>
+    ${senkronAcik() ? `<p style="margin:6px 0 12px;padding:10px 12px;border-radius:12px;background:rgba(95,211,138,.14)">✅ ${T('Hesap senkronu bu cihazda açık: balığın zaten otomatik olarak hesabına yedekleniyor. Dosya yedeği istersen ek bir kopya olarak kalsın.', 'Account sync is on for this device: your fish is already backed up to your account automatically. A file backup is an extra copy if you want one.')}</p>`
+      : `<p style="margin:6px 0 12px;padding:10px 12px;border-radius:12px;background:rgba(255,200,87,.12)">💡 ${T('Hesabınla giriş yapıp senkronu açarsan balığın otomatik yedeklenir ve bütün cihazlarında seninle gelir.', 'Sign in and turn on sync to back up your fish automatically and take it to all your devices.')}<br><a href="${hesapYedekUrl()}">🔐 ${T('Hesabımla yedekle', 'Back up with my account')} →</a></p>`}
     <button type="button" class="ana" id="yedekIndir">⬇️ ${T('Yedek dosyasını indir', 'Download backup file')}</button>
-    <button type="button" id="yedekYukle" style="margin-top:8px">⬆️ ${T('Yedekten geri yükle', 'Restore from backup')}</button>
+    <button type="button" class="ikinci" id="yedekYukle">⬆️ ${T('Yedekten geri yükle', 'Restore from backup')}</button>
     <input type="file" id="yedekDosya" accept=".json,application/json" hidden>
     <p class="kucuk" id="yedekBilgi" style="margin-top:10px">${T('Geri yüklemek bu tarayıcıdaki balığın yerine geçer.', 'Restoring replaces the fish in this browser.')}</p>`);
   ic.querySelector('#yedekIndir').onclick = () => {
@@ -2718,7 +2743,7 @@ function yedekAc() {
     const Y = v && v.uyg === 'derin-mavi' && v.S; if (!Y || Y.v !== 1 || !Y.id || !Y.ad) { $('yedekBilgi').textContent = T('❌ Bu bir Derin Mavi yedeği değil ya da dosya bozuk.', '❌ This is not a Derin Mavi backup, or the file is damaged.'); return; }
     const ic2 = modal(`<h2>⬆️ ${T('Geri yüklensin mi?', 'Restore this backup?')}</h2><p>${T(`Yedekteki balık: <b>${esc(Y.ad)}</b> · ${Y.nesil || 1}. nesil · ${new Date(v.tarih).toLocaleDateString('tr-TR')} tarihli.`, `Fish in the backup: <b>${esc(Y.ad)}</b> · generation ${Y.nesil || 1} · saved ${new Date(v.tarih).toLocaleDateString('en-GB')}.`)}</p>
       <p class="alt">${S ? T(`Bu tarayıcıdaki <b>${esc(S.ad)}</b> yerine geçecek.`, `It will replace <b>${esc(S.ad)}</b> in this browser.`) : ''}</p>
-      <button type="button" class="ana" id="yedekEvet">${T('Evet, geri yükle', 'Yes, restore')}</button><button type="button" id="yedekHayir" style="margin-top:8px">${T('Vazgeç', 'Cancel')}</button>`);
+      <button type="button" class="ana" id="yedekEvet">${T('Evet, geri yükle', 'Yes, restore')}</button><button type="button" class="ikinci" id="yedekHayir">${T('Vazgeç', 'Cancel')}</button>`);
     ic2.querySelector('#yedekHayir').onclick = modalKapat;
     ic2.querySelector('#yedekEvet').onclick = () => { try { ls.set(KEY, Y); for (const [k, x] of Object.entries(v.ayar || {})) if (YEDEK_AYAR.includes(k)) localStorage.setItem(k, x); } catch (e) { } S = null; location.reload(); };
   };
@@ -4353,7 +4378,7 @@ function canliGuncelle(dt) {
   }
   gzGuncelle(dt); yeniGuncelle(dt);
   insGuncelle(dt);
-  havaGuncelle(dt); denizGuncelle(dt); ekoKare(dt); uzakGuncelle(dt); nesilGuncelle(dt);
+  havaGuncelle(dt); denizGuncelle(dt); ekoKare(dt); yedekHatirlat(dt); uzakGuncelle(dt); nesilGuncelle(dt);
   /* yunus: arada bir yüzeyden geçer */
   if (SAHNE.tm !== 'derin') {
     if (!CNL.yunus) { CNL.yunusZ -= dt; if (CNL.yunusZ <= 0) { const d = Math.random() < 0.5 ? 1 : -1; CNL.yunus = { tur: 'yunus', x: d > 0 ? -150 : W + 150, y: A.y1 + 30 * OL, d, f: 0, bekle: 0, tepki: 0 }; CNL.yunusZ = rnd(150, 330); } }
@@ -5448,7 +5473,7 @@ function ekoAc() {
     <button type="button" class="ana" id="dikBtn" ${dikebilir() ? '' : 'disabled style="opacity:.55"'}>🪸 ${dikebilir() ? T('Bugünün mercanını dik', 'Plant today’s coral') : T('Bugün diktin — yarın yine', 'Planted today — again tomorrow')}</button>
     <h3 style="margin-top:12px">📈 ${T('Son günler', 'Recent days')}</h3>${ekoGrafik()}
     <h3 style="margin-top:12px">🐠 ${T('Tür sayıları', 'Species counts')}</h3>${ekoTurGrafik()}
-    <button type="button" id="agBtn" style="margin-top:10px">🕸️ ${T('Besin ağını göster', 'Show the food web')}</button>
+    <button type="button" class="ikinci" id="agBtn">🕸️ ${T('Besin ağını göster', 'Show the food web')}</button>
     <p style="margin-top:12px"><b>${T('Bu hafta', 'This week')}:</b> ${O ? `${O.e} ${T(O.ad[0], O.ad[1])}. ${T(O.d[0], O.d[1])}` : T('Sakin bir hafta.', 'A quiet week.')}</p>
     <p class="kucuk">${T('Besin zinciri: plankton → sardalya → barakuda. Plankton boluyken manta ve balina köpekbalığı da gelir. Akıntı suyu kendiliğinden tazeler; plankton patlamasının çürümesi ve sıcak dalgası suyu bozar, mercanları ağartabilir.', 'Food chain: plankton → sardines → barracuda. Mantas and whale sharks come when plankton is plentiful. Currents keep the water fresh; decaying plankton blooms and heatwaves spoil it and can bleach the corals.')}</p>`);
   const db = ic.querySelector('#dikBtn'); if (db) db.onclick = () => { mercanDik(); modalKapat(); setTimeout(ekoAc, 50); };
