@@ -1,5 +1,6 @@
-/* erdevelop · Kategori sayfaları üreticisi
-   Tools.html'deki araç gruplarını okuyup her grup için ayrı bir kategori sayfası üretir (ör. /hesaplama-araclari/).
+/* erdevelop · Kapı ve kategori sayfaları üreticisi
+   Tools.html'deki araç gruplarını okuyup her grup için ayrı bir kategori sayfası (ör. /hesaplama-araclari/) ve
+   üç kapı sayfası (/araclar/, /muhendislik/, /ogren/) üretir. Görünüm /css/portal.css, üst menü /js/portal.js.
    Tools.html'de bir araç eklenince ya da değişince bu sayfalar da güncellenir; site-indeks iş akışı her push'ta çalıştırır.
    Eğitimler (/egitimler/) ve yapay zekâ (/yapay-zeka/) sayfaları kendi üreticilerinde.
    Elle: node .github/indeks/kategoriler.mjs */
@@ -80,111 +81,194 @@ const href = f => '../' + f.replace(/(^|\/)index\.html(?=$|#)/, '$1');
 const tag = t => (t && typeof t === 'object') ? t : (t ? { tr: t, en: t } : null);
 const en = (o, k = 'en') => (o && o[k]) || '';
 
-const kart = it => {
+/* hangi kategori hangi kapının altında */
+const KAPI = [
+  { id: 'araclar', yol: 'araclar', ton: 'var(--blue)', ad: ['Araçlar', 'Tools'], alt: ['calc', 'docs', 'dev', 'device', 'daily'],
+    baslik: ['Ücretsiz Online Araçlar: Hesaplama, PDF, Dönüştürme', 'Free Online Tools: Calculators, PDF, Converters'],
+    aciklama: ['Hesaplama araçları, PDF ve belge araçları, geliştirici yardımcıları, telefon ve günlük araçlar. Hepsi ücretsiz, üyeliksiz ve tarayıcıda çalışır.', 'Calculators, PDF and document tools, developer helpers, phone and everyday tools. All free, no sign-up, running in your browser.'],
+    yazi: [['Araçlar bölümü, gün içinde hızlıca halletmek istediğin işleri tek yerde toplar: bir KDV ya da maaş hesabı, iki PDF’i birleştirmek, bir JSON’u düzenlemek, telefonu su terazisi olarak kullanmak. Her araç tek bir işi yapar, sonucu anında gösterir ve çoğu, hesabın nasıl yapıldığını da anlatır.', 'Araçların hepsi tarayıcında çalışır. Açtığın dosyalar ve girdiğin değerler cihazında kalır, bir sunucuya gönderilmez.'],
+      ['The Tools section gathers the jobs you want done quickly during the day: a VAT or salary sum, merging two PDFs, tidying a JSON file, using your phone as a spirit level. Each tool does one job, shows the result instantly and most of them explain how the calculation works.', 'Everything runs in your browser. The files you open and the values you type stay on your device and are not sent to a server.']] },
+  { id: 'muhendislik', yol: 'muhendislik', ton: 'var(--green)', ad: ['Mühendislik', 'Engineering'], alt: ['facade', 'tech', 'cad'],
+    baslik: ['Mühendislik Araçları: Cephe ve Cam Hesapları, Tasarım, CAD', 'Engineering Tools: Facade & Glass Calculations, Design, CAD'],
+    aciklama: ['Cephe ve cam için ön boyutlandırma hesapları, DXF ve RAL gibi tasarım araçları, AutoCAD, Revit, Rhino ve SolidWorks komut listeleri. Eğitim ve ön bilgi amaçlıdır.', 'Preliminary sizing for facades and glass, design tools such as DXF and RAL, and command lists for AutoCAD, Revit, Rhino and SolidWorks. For learning and early estimates.'],
+    yazi: [['Mühendislik bölümü cephe, cam ve imalat tasarımında çalışanlar için hazırlandı: rüzgâr yükü, cam kalınlığı, dikme sehimi ve ankraj gibi ön hesaplar; DXF görüntüleyici ve RAL kartelası gibi tasarım araçları; çizim programlarının komut ve kısayol listeleri.', 'Buradaki hesaplar eğitim ve ön boyutlandırma amaçlıdır; statik proje, tip testi ya da yetkin bir mühendisin hesabı yerine geçmez. Uygulama kararlarını yürürlükteki standartlara göre yapılmış proje hesabıyla ver.'],
+      ['The Engineering section is made for people working in facade, glass and fabrication design: preliminary calculations such as wind load, glass thickness, mullion deflection and anchors; design tools such as a DXF viewer and a RAL chart; and command and shortcut lists for drawing programs.', 'The calculations here are for learning and preliminary sizing only; they do not replace structural design, type testing or a qualified engineer. Base construction decisions on project calculations made to the applicable standards.']] },
+];
+const OGREN = { id: 'ogren', yol: 'ogren', ton: 'var(--amber)', ad: ['Öğren', 'Learn'], egitim: ['facadeedu', 'edu', 'code', 'plang', 'ai', 'lang'],
+  baslik: ['Öğren: Ücretsiz Eğitimler, Yapay Zekâ, Dil Kulüpleri, Rehberler', 'Learn: Free Courses, AI, Language Clubs, Guides'],
+  aciklama: ['Cephe, CAD/BIM, yazılım ve yapay zekâ üzerine adım adım ücretsiz eğitimler; yapay zekâ araçları, dil kulüpleri, hesap rehberleri ve Mikro Dünya ansiklopedisi.', 'Free step-by-step courses on facades, CAD/BIM, software and AI, plus AI tools, language clubs, how-to guides and the Micro World encyclopedia.'],
+  buyuk: [
+    { u: 'egitimler/', ton: 'var(--amber)', t: ['Eğitimler', 'Courses'], d: ['Cephe, CAD/BIM, yazılım ve yapay zekâ eğitimleri. Günde bir ders; ilerlemen bu tarayıcıda saklanır.', 'Facade, CAD/BIM, software and AI courses. One lesson a day; your progress is saved in this browser.'], c: ['Eğitimlere bak →', 'Browse courses →'] },
+    { u: 'yapay-zeka/', ton: 'var(--violet)', t: ['Yapay zekâ', 'AI'], d: ['Çevirmen, özetleyici, istem kütüphanesi, cihazında çalışan yapay zekâ ve sesli robot Yapay Zeki.', 'Translator, summariser, prompt library, on-device AI and Yapay Zeki, the voice robot.'], c: ['Dene →', 'Try them →'] },
+    { u: 'rehber/dil-kulupleri/', ton: 'var(--blue)', t: ['Dil kulüpleri', 'Language clubs'], d: ['İngilizce, Almanca ve daha fazlasını arkadaşlarınla birlikte çalış; kelime defteri tut.', 'Study English, German and more with friends; keep a word notebook.'], c: ['Katıl →', 'Join →'] },
+    { u: 'rehber/', ton: 'var(--green)', t: ['Rehberler', 'Guides'], d: ['“Nasıl hesaplanır?” yazıları: maaş, kira, KDV, rüzgâr yükü, cam kalınlığı ve daha fazlası, adım adım.', 'How-it’s-calculated articles: salary, rent, VAT, wind load, glass thickness and more, step by step.'], c: ['Oku →', 'Read →'] },
+    { u: 'mikro-dunya/', ton: 'var(--green)', t: ['Mikro Dünya', 'Micro World'], d: ['50 mikroskobik canlının ansiklopedisi, kendi su damlanı kurduğun laboratuvar ve bilgi yarışması.', 'An encyclopedia of 50 microscopic organisms, a lab where you build your own drop of water, and a quiz.'], c: ['Keşfet →', 'Explore →'] },
+    { u: 'egitimler/sozluk/', ton: 'var(--amber)', t: ['Terimler sözlüğü', 'Glossary'], d: ['Cephe, CAD ve yapay zekâ terimlerinin kısa ve anlaşılır açıklamaları.', 'Short, clear explanations of facade, CAD and AI terms.'], c: ['Aç →', 'Open →'] },
+  ],
+  yazi: [['Öğren bölümü sitedeki bütün öğrenme içeriğini bir araya getirir. Eğitimler kısa günlük derslerden oluşur ve çoğu bir hafta ile bir ay arasında sürer. Rehberler tek bir soruyu baştan sona anlatır ve ilgili hesap aracına bağlanır. Hepsi ücretsizdir, üyelik gerekmez.'],
+    ['The Learn section brings together all the learning content on the site. Courses are made of short daily lessons and most run from a week to a month. Guides answer one question from start to finish and link to the matching calculator. Everything is free, with no sign-up. Most content is in Turkish; a growing part is also in English.']] };
+const kapiOf = id => id === 'games' ? null : KAPI.find(h => h.alt.includes(id));
+const katOf = id => KATEGORI.find(k => k.id === id);
+const grup = id => G.find(x => x.id === id);
+
+const kart = (it, ton) => {
   const tg = tag(it.tag);
-  return `<a class="kart" href="${esc(href(it.f))}" data-s="${esc(fold(it.t.tr + ' ' + en(it.t) + ' ' + (it.d ? it.d.tr + ' ' + en(it.d) : '') + ' ' + it.f))}">
+  return `<a class="kart" href="${esc(href(it.f))}"${ton ? ` style="--ton:${ton}"` : ''} data-s="${esc(fold(it.t.tr + ' ' + en(it.t) + ' ' + (it.d ? it.d.tr + ' ' + en(it.d) : '') + ' ' + it.f))}">
   <span class="ico"><svg viewBox="0 0 32 32" aria-hidden="true">${ICON[it.i] || ''}</svg></span>
   <h3${en(it.t) && en(it.t) !== it.t.tr ? ` data-en="${esc(en(it.t))}"` : ''}>${esc(it.t.tr)}</h3>
   ${it.d ? `<p${en(it.d) ? ` data-en="${esc(en(it.d))}"` : ''}>${esc(it.d.tr)}</p>` : ''}
-  ${tg ? `<span class="alt"><b data-en="${esc(tg.en)}">${esc(tg.tr)}</b></span>` : ''}
+  ${tg ? `<span class="alt" data-en="${esc(tg.en)}">${esc(tg.tr)}</span>` : ''}
 </a>`;
 };
+/* oyun kartı: og/<ad>.jpg varsa görselli */
+const ogYol = f => { const m = /^([A-Za-z0-9_-]+)\.html$/.exec(f) || /^([a-z0-9-]+)\/(?:index\.html)?$/.exec(f); return m && fs.existsSync(path.join(KOK, 'og', m[1] + '.jpg')) ? `../og/${m[1]}.jpg` : null; };
+const vitrinKart = it => { const tg = tag(it.tag);
+  return `<a href="${esc(href(it.f))}" data-s="${esc(fold(it.t.tr + ' ' + en(it.t) + ' ' + (it.d ? it.d.tr + ' ' + en(it.d) : '')))}"><img src="${ogYol(it.f)}" alt="" loading="lazy" width="1200" height="630"><div>${tg ? `<i data-en="${esc(tg.en)}">${esc(tg.tr)}</i>` : ''}<b${en(it.t) && en(it.t) !== it.t.tr ? ` data-en="${esc(en(it.t))}"` : ''}>${esc(it.t.tr)}</b>${it.d ? `<span${en(it.d) ? ` data-en="${esc(en(it.d))}"` : ''}>${esc(it.d.tr)}</span>` : ''}</div></a>`; };
 
-const nav = aktif => `<nav class="katnav" aria-label="Kategoriler" data-en-aria="Categories">${KATEGORI.map(k => `<a href="../${k.yol}/"${k.id === aktif ? ' class="on" aria-current="page"' : ''} data-en="${esc(k.kisa[1])}">${esc(k.kisa[0])}</a>`).join('')}<a href="../egitimler/" data-en="Courses">Eğitimler</a><a href="../yapay-zeka/" data-en="AI">Yapay zekâ</a><a href="../Tools.html" data-en="All tools">Tümü</a></nav>`;
-
-const sayfa = k => {
-  const g = G.find(x => x.id === k.id);
-  if (!g) { console.warn('grup yok:', k.id); return null; }
-  const items = g.items;
-  const url = SITE + k.yol + '/';
-  const baslik = `${k.baslik[0]} | erdevelop`;
-  const ld = { '@context': 'https://schema.org', '@type': 'CollectionPage', name: g.h.tr, url, inLanguage: 'tr', description: k.aciklama[0],
-    isPartOf: { '@type': 'WebSite', name: 'erdevelop', url: SITE },
-    breadcrumb: { '@type': 'BreadcrumbList', itemListElement: [{ '@type': 'ListItem', position: 1, name: 'erdevelop', item: SITE }, { '@type': 'ListItem', position: 2, name: g.h.tr, item: url }] },
-    mainEntity: { '@type': 'ItemList', numberOfItems: items.length, itemListElement: items.map((it, i) => ({ '@type': 'ListItem', position: i + 1, name: it.t.tr, url: SITE + it.f.replace(/(^|\/)index\.html(?=$|#)/, '$1') })) } };
-  const ekLink = k.id === 'games' ? `<p><a href="../oyunlar/" data-en="Open the Game Garden →">Oyun Bahçesi’ni aç →</a></p>` : '';
-  return `<!doctype html>
-<html lang="tr" data-mode="dark">
+const TEMA = `<script>(function(){try{var m=localStorage.getItem('erdevelop-mode'),g=localStorage.getItem('erdevelop-mode-gun');document.documentElement.setAttribute('data-mode',(m&&g===new Date().toDateString())?m:(matchMedia('(prefers-color-scheme: dark)').matches?'dark':'light'))}catch(e){}})()</script>`;
+const kafa = ({ baslik, aciklama, url, ld }) => `<!doctype html>
+<html lang="tr" data-mode="light" data-portal>
 <head>
 <meta charset="utf-8">
+${TEMA}
 <script src="/dil.js"></script>
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <!-- Bu sayfa otomatik üretilir (.github/indeks/kategoriler.mjs). Elle değiştirme; araçları Tools.html'de, sayfa metnini üreticide düzenle. -->
 <title>${esc(baslik)}</title>
-<meta name="description" content="${esc(k.aciklama[0])}">
+<meta name="description" content="${esc(aciklama)}">
 <link rel="canonical" href="${url}">
-<meta property="og:type" content="website"><meta property="og:site_name" content="erdevelop"><meta property="og:title" content="${esc(baslik)}"><meta property="og:description" content="${esc(k.aciklama[0])}"><meta property="og:url" content="${url}"><meta property="og:image" content="${SITE}og/Tools.jpg">
+<meta property="og:type" content="website"><meta property="og:site_name" content="erdevelop"><meta property="og:title" content="${esc(baslik)}"><meta property="og:description" content="${esc(aciklama)}"><meta property="og:url" content="${url}"><meta property="og:image" content="${SITE}og/Tools.jpg">
 <meta name="twitter:card" content="summary_large_image">
-<link rel="manifest" href="/manifest.webmanifest"><meta name="theme-color" content="#0b1220"><link rel="icon" href="/favicon.svg" type="image/svg+xml"><link rel="icon" href="/favicon.ico" sizes="any"><link rel="apple-touch-icon" href="/apple-touch-icon.png">
-<link rel="preconnect" href="https://fonts.googleapis.com">
-<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Chakra+Petch:wght@600;700&family=IBM+Plex+Sans:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500&display=swap">
-<link rel="stylesheet" href="../kesif/tema.css">
-<style>
-.katnav { display: flex; gap: 6px; flex-wrap: wrap; margin: 18px 0 4px; }
-.katnav a { font: 500 12px var(--f-mono); color: var(--text); background: var(--panel); border: 1px solid var(--line); border-radius: 999px; padding: 6px 12px; text-decoration: none; }
-.katnav a:hover { border-color: var(--accent); color: var(--fg); }
-.katnav a.on { color: var(--on-accent, #fff); background: var(--accent); border-color: var(--accent); }
-.ara { display: flex; gap: 8px; flex-wrap: wrap; align-items: center; margin: 16px 0 18px; }
-.ara .inp { flex: 1; min-width: 220px; }
-.say { font: 400 12px var(--f-mono); color: var(--muted); margin-left: auto; }
-.izgara { display: grid; grid-template-columns: repeat(auto-fill, minmax(260px, 1fr)); gap: 12px; }
-.kart { display: grid; grid-template-columns: 46px 1fr; gap: 4px 12px; align-items: start; background: var(--panel); border: 1px solid var(--line); border-radius: 6px; padding: 13px; text-decoration: none; color: var(--fg); transition: border-color .15s, transform .15s; }
-.kart:hover { border-color: var(--accent); transform: translateY(-1px); }
-.kart .ico { grid-row: span 3; width: 46px; height: 46px; border-radius: 6px; background: var(--panel-2); border: 1px solid var(--line); color: var(--accent); display: grid; place-items: center; }
-.kart .ico svg { width: 27px; height: 27px; fill: none; stroke: currentColor; stroke-width: 1.4; stroke-linecap: round; stroke-linejoin: round; }
-.kart h3 { margin: 0; font: 600 1rem var(--f-body); }
-.kart p { margin: 0; color: var(--text); font-size: .86rem; line-height: 1.5; display: -webkit-box; -webkit-line-clamp: 3; -webkit-box-orient: vertical; overflow: hidden; }
-.kart .alt { font: 400 11px var(--f-mono); margin-top: 4px; }
-.kart .alt b { font-weight: 500; color: var(--accent); }
-.bos { color: var(--muted); padding: 20px 0; }
-.doc { max-width: 860px; margin-top: 40px; }
-.doc h2 { font: 700 1.2rem/1.3 var(--f-display); color: var(--fg); margin: 0 0 10px; }
-.doc p { color: var(--text); line-height: 1.65; }
-</style>
+<link rel="manifest" href="/manifest.webmanifest"><meta name="theme-color" content="#f5f7fd"><link rel="icon" href="/favicon.svg" type="image/svg+xml"><link rel="icon" href="/favicon.ico" sizes="any"><link rel="apple-touch-icon" href="/apple-touch-icon.png">
+<link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap">
+<link rel="stylesheet" href="/css/portal.css">
 <script type="application/ld+json">${JSON.stringify(ld)}</script>
 <script async src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-4775308844679394" crossorigin="anonymous"></script>
-</head>
-<body>
-<div class="bg" aria-hidden="true"></div>
-<div class="topbar"><div class="wrap">
-  <a class="brand" href="../">erdevelop<span>_</span></a><span class="crumb">/ ${esc(k.kisa[0].toLocaleLowerCase('tr'))}</span><span class="sp"></span>
-  <a class="tb" href="../Tools.html" data-en="Tools">Araçlar</a><button class="tb" type="button" data-dil-btn>EN</button><button class="tb" type="button" id="modeBtn">LIGHT</button>
-</div></div>
-<main class="wrap">
-  <header class="head"><h1 data-en="${esc(g.h.en)}">${esc(g.h.tr)}</h1><p data-en="${esc(k.aciklama[1])}">${esc(k.aciklama[0])}</p></header>
-  ${nav(k.id)}
-  <div class="ara"><input class="inp" id="q" type="search" placeholder="Bu kategoride ara…" data-en-ph="Search this category…" autocomplete="off" aria-label="Bu kategoride ara" data-en-aria="Search this category"><span class="say" id="say">${items.length}</span></div>
-  <div class="izgara" id="liste">
-${items.map(kart).join('\n')}
-  </div>
-  <p class="bos" id="bos" hidden><span data-en="Nothing here matches your search.">Aramana uyan araç yok.</span> <a href="../Tools.html" data-en="Search all tools">Tüm araçlarda ara</a></p>
-  <section class="doc" data-l="tr"><h2>${esc(g.h.tr)} hakkında</h2>${k.yazi[0].map(p => `<p>${esc(p)}</p>`).join('')}${ekLink}</section>
-  <section class="doc" data-l="en" hidden><h2>About ${esc(g.h.en.toLowerCase())}</h2>${k.yazi[1].map(p => `<p>${esc(p)}</p>`).join('')}${ekLink}</section>
-</main>
-<footer><div class="wrap"><span><a href="../hakkinda.html" data-en="About">Hakkında</a> · <a href="../gizlilik.html" data-en="Privacy">Gizlilik</a> · <a href="../kullanim.html" data-en="Terms">Kullanım şartları</a></span><a href="../Tools.html" data-en="← all tools">← tüm araçlar</a></div></footer>
-<script src="../kesif/tema.js"></script>
-<script>
+<script src="/js/site.js" defer></script>
+</head>`;
+const kuyruk = (ekJs = '') => `<footer id="p-alt"></footer>
+<script src="/js/portal.js"></script>
+${ekJs}<script data-goatcounter="https://erdevelop.goatcounter.com/count" async src="//gc.zgo.at/count.js"></script>
+</body>
+</html>
+`;
+const yol = parcalar => `<ol class="p-yol"><li><a href="../" data-en="Home">Ana sayfa</a></li>${parcalar.map(p => p.u ? `<li><a href="${p.u}" data-en="${esc(p.t[1])}">${esc(p.t[0])}</a></li>` : `<li aria-current="page" data-en="${esc(p.t[1])}">${esc(p.t[0])}</li>`).join('')}</ol>`;
+const ldYol = parcalar => ({ '@type': 'BreadcrumbList', itemListElement: [{ n: 'erdevelop', u: SITE }, ...parcalar].map((p, i) => ({ '@type': 'ListItem', position: i + 1, name: p.n, item: p.u })) });
+const doc = (ad, yazi, ek = '') => `<section class="p wrap"><div class="p-doc" data-l="tr"><h2>${esc(ad[0])} hakkında</h2>${yazi[0].map(p => `<p>${esc(p)}</p>`).join('')}${ek}</div><div class="p-doc" data-l="en" hidden><h2>About ${esc(ad[1].toLowerCase())}</h2>${yazi[1].map(p => `<p>${esc(p)}</p>`).join('')}${ek}</div></section>`;
+const SUZ = `<script>
 (() => {
   const $ = id => document.getElementById(id);
   const fold = s => String(s).toLocaleLowerCase('tr').replace(/ı/g, 'i').replace(/ş/g, 's').replace(/ğ/g, 'g').replace(/ü/g, 'u').replace(/ö/g, 'o').replace(/ç/g, 'c');
   $('q').addEventListener('input', () => {
     const qs = fold($('q').value.trim()).split(/\\s+/).filter(Boolean); let n = 0;
-    document.querySelectorAll('#liste .kart').forEach(k => { const ok = qs.every(w => k.dataset.s.includes(w)); k.hidden = !ok; if (ok) n++; });
+    document.querySelectorAll('#liste > a').forEach(k => { const ok = qs.every(w => k.dataset.s.includes(w)); k.hidden = !ok; if (ok) n++; });
     $('say').textContent = n; $('bos').hidden = !!n;
   });
 })();
 </script>
-<script data-goatcounter="https://erdevelop.goatcounter.com/count" async src="//gc.zgo.at/count.js"></script>
-<script src="/js/site.js" defer></script>
-</body>
-</html>
 `;
+
+/* ---- kategori sayfası ---- */
+const sayfa = k => {
+  const g = grup(k.id);
+  if (!g) { console.warn('grup yok:', k.id); return null; }
+  const items = g.items, kp = kapiOf(k.id), oyun = k.id === 'games';
+  const url = SITE + k.yol + '/', ton = oyun ? 'var(--violet)' : kp.ton, bolum = oyun ? 'oyunlar' : kp.id;
+  const baslik = `${k.baslik[0]} | erdevelop`;
+  const parca = kp ? [{ n: kp.ad[0], u: SITE + kp.yol + '/' }] : [];
+  const ld = { '@context': 'https://schema.org', '@type': 'CollectionPage', name: g.h.tr, url, inLanguage: 'tr', description: k.aciklama[0],
+    isPartOf: { '@type': 'WebSite', name: 'erdevelop', url: SITE }, breadcrumb: ldYol([...parca, { n: g.h.tr, u: url }]),
+    mainEntity: { '@type': 'ItemList', numberOfItems: items.length, itemListElement: items.map((it, i) => ({ '@type': 'ListItem', position: i + 1, name: it.t.tr, url: SITE + it.f.replace(/(^|\/)index\.html(?=$|#)/, '$1') })) } };
+  const kardes = kp ? `<nav class="p-kardes" aria-label="Kategoriler" data-en-aria="Categories">${kp.alt.map(id => { const kk = katOf(id); return `<a href="../${kk.yol}/"${id === k.id ? ' class="on" aria-current="page"' : ''}><span data-en="${esc(kk.kisa[1])}">${esc(kk.kisa[0])}</span><small>${grup(id).items.length}</small></a>`; }).join('')}<a href="../Tools.html" data-en="Full list">Tüm liste</a></nav>` : '';
+  const gorselli = oyun ? items.filter(it => ogYol(it.f)) : [], digerleri = oyun ? items.filter(it => !ogYol(it.f)) : items;
+  const bahce = oyun ? `<section class="p wrap"><div class="genis"><a href="../oyunlar/" style="--ton:var(--violet)"><b data-en="Game Garden">Oyun Bahçesi</b><span data-en="Short mini games and daily puzzles in one place.">Kısa mini oyunlar ve günlük bulmacalar tek yerde.</span><u data-en="Open →">Aç →</u></a></div></section>` : '';
+  return `${kafa({ baslik, aciklama: k.aciklama[0], url, ld })}
+<body data-bolum="${bolum}" style="--ton:${ton}">
+<header id="p-ust"></header>
+<main>
+  <div class="p-bas"><div class="wrap">
+    ${yol([...(kp ? [{ u: `../${kp.yol}/`, t: kp.ad }] : []), { t: [g.h.tr, g.h.en] }])}
+    <h1 data-en="${esc(g.h.en)}">${esc(g.h.tr)}</h1>
+    <p class="lead" data-en="${esc(k.aciklama[1])}">${esc(k.aciklama[0])}</p>
+    ${kardes}
+  </div></div>
+  <section class="p wrap">
+    <div class="p-suz"><input id="q" type="search" placeholder="Bu kategoride ara…" data-en-ph="Search this category…" autocomplete="off" aria-label="Bu kategoride ara" data-en-aria="Search this category"><span id="say">${items.length}</span></div>
+    <div id="liste" style="display:contents">
+    ${gorselli.length ? `<div class="vitrin" style="margin-bottom:18px;--ton:${ton}">\n${gorselli.map(vitrinKart).join('\n')}\n</div>` : ''}
+    <div class="kartlar">
+${digerleri.map(it => kart(it)).join('\n')}
+    </div>
+    </div>
+    <p class="p-bos" id="bos" hidden><span data-en="Nothing here matches your search.">Aramana uyan sonuç yok.</span> <a href="../Tools.html" data-en="Search all tools">Tüm araçlarda ara</a></p>
+  </section>
+  ${bahce}
+  ${doc([g.h.tr, g.h.en], k.yazi)}
+</main>
+${kuyruk(SUZ.replace("'#liste > a'", "'#liste .kartlar > a, #liste .vitrin > a'"))}`;
+};
+
+/* ---- kapı sayfası: alt kategoriler ve her birinden öne çıkanlar ---- */
+const kapiSayfa = h => {
+  const url = SITE + h.yol + '/', baslik = `${h.baslik[0]} | erdevelop`;
+  const toplam = h.alt.reduce((a, id) => a + grup(id).items.length, 0);
+  const ld = { '@context': 'https://schema.org', '@type': 'CollectionPage', name: h.ad[0], url, inLanguage: 'tr', description: h.aciklama[0], isPartOf: { '@type': 'WebSite', name: 'erdevelop', url: SITE }, breadcrumb: ldYol([{ n: h.ad[0], u: url }]),
+    hasPart: h.alt.map(id => ({ '@type': 'CollectionPage', name: grup(id).h.tr, url: SITE + katOf(id).yol + '/' })) };
+  return `${kafa({ baslik, aciklama: h.aciklama[0], url, ld })}
+<body data-bolum="${h.id}" style="--ton:${h.ton}">
+<header id="p-ust"></header>
+<main>
+  <div class="p-bas"><div class="wrap">
+    ${yol([{ t: h.ad }])}
+    <h1 data-en="${esc(h.ad[1])}">${esc(h.ad[0])}</h1>
+    <p class="lead" data-en="${esc(h.aciklama[1])}">${esc(h.aciklama[0])}</p>
+    <nav class="p-kardes" aria-label="Kategoriler" data-en-aria="Categories">${h.alt.map(id => { const kk = katOf(id); return `<a href="#${id}"><span data-en="${esc(kk.kisa[1])}">${esc(kk.kisa[0])}</span><small>${grup(id).items.length}</small></a>`; }).join('')}<a href="../Tools.html"><span data-en="Full list">Tüm liste</span><small>${toplam}</small></a></nav>
+  </div></div>
+${h.alt.map(id => { const g = grup(id), kk = katOf(id), n = g.items.length; return `  <section class="p wrap" id="${id}" style="scroll-margin-top:80px">
+    <div class="p-sh"><h2><span data-en="${esc(g.h.en)}">${esc(g.h.tr)}</span><small>${n}</small></h2><a href="../${kk.yol}/">${n > 6 ? `<span data-en="All ${n} →">${n} aracın hepsi →</span>` : `<span data-en="Open page →">Sayfayı aç →</span>`}</a></div>
+    <div class="kartlar">
+${g.items.slice(0, 6).map(it => kart(it)).join('\n')}
+    </div>
+  </section>`; }).join('\n')}
+  ${doc(h.ad, h.yazi)}
+</main>
+${kuyruk()}`;
+};
+
+/* ---- Öğren kapısı ---- */
+const ogrenSayfa = () => {
+  const h = OGREN, url = SITE + h.yol + '/', baslik = `${h.baslik[0]} | erdevelop`;
+  const ld = { '@context': 'https://schema.org', '@type': 'CollectionPage', name: h.ad[0], url, inLanguage: 'tr', description: h.aciklama[0], isPartOf: { '@type': 'WebSite', name: 'erdevelop', url: SITE }, breadcrumb: ldYol([{ n: h.ad[0], u: url }]) };
+  const gruplar = h.egitim.map(grup).filter(Boolean);
+  return `${kafa({ baslik, aciklama: h.aciklama[0], url, ld })}
+<body data-bolum="ogren" style="--ton:${h.ton}">
+<header id="p-ust"></header>
+<main>
+  <div class="p-bas"><div class="wrap">
+    ${yol([{ t: h.ad }])}
+    <h1 data-en="${esc(h.ad[1])}">${esc(h.ad[0])}</h1>
+    <p class="lead" data-en="${esc(h.aciklama[1])}">${esc(h.aciklama[0])}</p>
+  </div></div>
+  <section class="p wrap">
+    <div class="genis">
+${h.buyuk.filter(b => fs.existsSync(path.join(KOK, b.u, 'index.html'))).map(b => `      <a href="../${b.u}" style="--ton:${b.ton}"><b data-en="${esc(b.t[1])}">${esc(b.t[0])}</b><span data-en="${esc(b.d[1])}">${esc(b.d[0])}</span><u data-en="${esc(b.c[1])}">${esc(b.c[0])}</u></a>`).join('\n')}
+    </div>
+  </section>
+${gruplar.map(g => `  <section class="p wrap" id="${g.id}" style="scroll-margin-top:80px">
+    <div class="p-sh"><h2><span data-en="${esc(g.h.en)}">${esc(g.h.tr)}</span><small>${g.items.length}</small></h2><a href="../${g.id === 'ai' ? 'yapay-zeka/' : 'egitimler/#' + g.id}">${g.items.length > 6 ? `<span data-en="All ${g.items.length} →">${g.items.length} içeriğin hepsi →</span>` : `<span data-en="Open →">Aç →</span>`}</a></div>
+    <div class="kartlar">
+${g.items.slice(0, 6).map(it => kart(it)).join('\n')}
+    </div>
+  </section>`).join('\n')}
+  ${doc(h.ad, h.yazi)}
+</main>
+${kuyruk()}`;
 };
 
 let n = 0;
-for (const k of KATEGORI) {
-  const html = sayfa(k); if (!html) continue;
-  fs.mkdirSync(path.join(KOK, k.yol), { recursive: true });
-  fs.writeFileSync(path.join(KOK, k.yol, 'index.html'), html); n++;
-}
-console.log(`kategori sayfaları: ${n}`);
+const yaz = (yolu, html) => { if (!html) return; fs.mkdirSync(path.join(KOK, yolu), { recursive: true }); fs.writeFileSync(path.join(KOK, yolu, 'index.html'), html); n++; };
+for (const k of KATEGORI) yaz(k.yol, sayfa(k));
+for (const h of KAPI) yaz(h.yol, kapiSayfa(h));
+yaz(OGREN.yol, ogrenSayfa());
+console.log(`kapı ve kategori sayfaları: ${n}`);

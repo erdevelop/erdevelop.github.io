@@ -183,7 +183,7 @@ html[data-mode=light] #er-ara .bx{background:#fff;color:#1a2233;border-color:rgb
 
   /* ---------------- durum çubuğu: fare konumu (sadece fareli cihazlarda) ---------------- */
   (function () {
-    if (window.top !== window || !matchMedia('(hover:hover) and (pointer:fine)').matches) return;
+    if (window.top !== window || !matchMedia('(hover:hover) and (pointer:fine)').matches || D.documentElement.hasAttribute('data-portal')) return; /* portal sayfalarında (ana sayfa, kategori sayfaları) durum çubuğu ve artı imleç yok */
     let kapali = false; try { kapali = localStorage.getItem('erdevelop-durum') === '0'; } catch (e) { }
     /* artı imleç (AutoCAD gibi): varsayılan açık; bağlantı, düğme ve yazı kutularında normal imleç kalır */
     let arti = true; try { arti = localStorage.getItem('erdevelop-arti') !== '0'; } catch (e) { }
