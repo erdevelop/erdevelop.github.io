@@ -877,7 +877,7 @@ const PRS = Math.max(0, Math.min(10, K.prs | 0));
 let BOLGE = null;
 let KOLOS = { can: 0, max: 0, hafta: null, yenildi: false, cevrim: false }, bossBirik = 0, bossGonT = 0;
 let sapanSonT = 0, sapanBoost = 0, sapanEn = Infinity, sapanHedef = null, gazToplama = 0;
-const ekipLv = r => { const v = EKIP.reduce((a, e) => e.rol === r && !(e.yara > Date.now()) ? Math.max(a, e.lv) : a, 0); return v ? Math.max(0.5, v + (MORAL >= 80 ? 1 : MORAL < 30 ? -1 : 0)) : 0; };
+const ekipLv = r => { const v = EKIP.reduce((a, e) => e.rol === r && !(e.yara > Date.now()) ? Math.max(a, e.lv + (e.oz ? 1 : 0)) : a, 0); return v ? Math.max(0.5, v + (MORAL >= 80 ? 1 : MORAL < 30 ? -1 : 0)) : 0; };
 const KESIF = new Set(Array.isArray(K.kesif) ? K.kesif : []);
 const ACIK = new Set(Array.isArray(K.acik) ? K.acik : []);
 const HC = SEK / 2; // keşif sisi hücresi (yarım sektör)
@@ -4181,9 +4181,53 @@ function kervanAdim() {
 function kervanCiz(s) {
   for (const kv of KERVAN) { const ps = kvPos(kv); if (!ps) continue; const [X, Y] = W2S(ps[0], ps[1]); if (X < -40 || X > W + 40 || Y < -40 || Y > H + 40) continue; gemiCizGenel(X, Y, ps[2], s * 0.95, 'yuk', 0, 'kervan', { itki: 0.5, t: performance.now() / 1000, nav: true }); ctx.font = '800 11px Nunito, system-ui, sans-serif'; ctx.textAlign = 'center'; ctx.fillStyle = '#FFE3A6'; ctx.fillText('🚚 ' + T('Kervanın', 'Your convoy') + ' · ' + MAL[kv.m].e, X, Y - 22 * s); }
 }
+/* ================= mürettebat hikâyeleri ================= */
+const EHM = { s: () => sayK('s'), hurda: () => ST.hurda || 0, ast: () => ST.astKir || 0, korsan: () => ST.korsan || 0, yanas: () => ST.yanas || 0, gorev: () => ST.gorev || 0, tic: () => (ST.gk && ST.gk.ticaret) || 0 };
+const EHB = { s: ['yeni sistem keşfet', 'new systems discovered'], hurda: ['enkaz topla', 'wrecks salvaged'], ast: ['asteroit kır', 'asteroids broken'], korsan: ['korsan yen', 'pirates defeated'], yanas: ['koloniye yanaş', 'colony dockings'], gorev: ['görev bitir', 'missions done'], tic: ['kredi ticaretten kazan', 'credits from trading'] };
+const EHIK = {
+  pilot: { oz: ['Usta pilot', 'Ace pilot'], A: [
+    ['s', 2, ['{a} eski bir akademi rotasını anlatıyor: "Bu sektörlerin ötesini hiç görmedim."', '{a} talks about an old academy route: "I never saw past these sectors."']],
+    ['hurda', 1, ['{a}, kaybolan kanat arkadaşının gemisinin enkazını aramak istiyor.', '{a} wants to search for a lost wingmate’s wreck.']],
+    ['s', 3, ['Enkazda bir not bulundu: "Uçmaya devam et." {a} onun anısına uzaklara gitmek istiyor.', 'A note was found in the wreck: "Keep flying." {a} wants to fly far in their memory.']]] },
+  muhendis: { oz: ['Dâhi tamirci', 'Genius mechanic'], A: [
+    ['ast', 3, ['{a} yeni bir alaşım denemek istiyor; asteroitlerden örnek lazım.', '{a} wants to test a new alloy; asteroid samples needed.']],
+    ['hurda', 2, ['Alaşım tutuyor! {a} eski gemilerden parça toplamak istiyor.', 'The alloy holds! {a} wants parts from old wrecks.']],
+    ['korsan', 2, ['{a} taretleri yeniden ayarladı. Bir de gerçek bir çatışmada görmek istiyor.', '{a} retuned the turrets and wants to see them in a real fight.']]] },
+  doktor: { oz: ['Salgın uzmanı', 'Outbreak specialist'], A: [
+    ['yanas', 2, ['{a} kolonilerde tuhaf bir öksürük salgını duymuş; birkaç koloniye uğrayalım.', '{a} heard of a strange cough in the colonies; let’s visit a few.']],
+    ['gorev', 1, ['Örnekler toplandı. {a} ilaç dağıtımı için bir görev üstlenmek istiyor.', 'Samples collected. {a} wants to take a mission to deliver medicine.']],
+    ['yanas', 3, ['Aşı hazır! {a} onu kolonilere ulaştırmak istiyor.', 'The vaccine is ready! {a} wants to bring it to the colonies.']]] },
+  tuccar: { oz: ['Pazarlık ustası', 'Master haggler'], A: [
+    ['tic', 1500, ['{a} borcunu ödemek için bir ticaret serisi planlıyor.', '{a} plans a trading run to pay off an old debt.']],
+    ['yanas', 2, ['Alacaklı peşimizde! {a} farklı limanlarda iz kaybettirmek istiyor.', 'The creditor is after us! {a} wants to lose them across ports.']],
+    ['tic', 4000, ['Son bir büyük vurgun ve borç kapanacak.', 'One last big deal and the debt is settled.']]] },
+  topcu: { oz: ['Keskin nişancı', 'Sharpshooter'], A: [
+    ['korsan', 2, ['{a} köyünü yakan korsan çetesinin izini sürüyor.', '{a} is hunting the pirate gang that burned their village.']],
+    ['korsan', 3, ['Çetenin gözcülerini bulduk. {a} daha fazlasını istiyor.', 'We found the gang’s scouts. {a} wants more.']],
+    ['korsan', 5, ['Çetenin reisi yakında. {a} son hesaplaşmaya hazır.', 'The gang leader is close. {a} is ready for the reckoning.']]] }
+};
+function ekipHikAdim() {
+  if (!oyunda) return;
+  for (const e of EKIP) {
+    const H = EHIK[e.rol]; if (!H) continue;
+    if (!e.hk || typeof e.hk !== 'object' || !Number.isFinite(e.hk.a)) { e.hk = { a: 0, b: EHM[H.A[0][0]]() }; duyur('📖 ' + esc(e.ad) + ': ' + L(H.A[0][2]).replace('{a}', esc(e.ad)), 'kesif', T('Hikâye görevi: ', 'Story goal: ') + SAYI(H.A[0][1]) + ' ' + L(EHB[H.A[0][0]])); continue; }
+    if (e.hk.a >= H.A.length) continue;
+    const [m, n] = H.A[e.hk.a]; if (EHM[m]() - e.hk.b < n) continue;
+    e.hk.a++; ekipXp(e.rol, 20); moralEkle(5); SES.koloni();
+    if (e.hk.a < H.A.length) { const S = H.A[e.hk.a]; e.hk.b = EHM[S[0]](); duyur('📖 ' + esc(e.ad) + ': ' + L(S[2]).replace('{a}', esc(e.ad)), 'koloni', T('Sıradaki: ', 'Next: ') + SAYI(S[1]) + ' ' + L(EHB[S[0]])); }
+    else { e.oz = 1; defter('🌟 ' + e.ad + ' hikâyesini tamamladı: ' + H.oz[0], '🌟 ' + e.ad + ' finished their story: ' + H.oz[1]); diyalog([['🌟 ' + e.ad + ': ' + H.oz[0], '🌟 ' + e.ad + ': ' + H.oz[1]], [`${esc(e.ad)} ${T('hikâyesini tamamladı ve sana bağlılığını kanıtladı.', 'finished their story and proved their loyalty.')}<br><br>${ROL[e.rol].e} <b>${L(H.oz)}</b>: ${T('rolünün etkisi kalıcı olarak 1 seviye daha güçlü', 'their role’s effect is permanently one level stronger')} (${ROL[e.rol].ne(e.lv + 1)})`, `${esc(e.ad)} finished their story and proved their loyalty.<br><br>${ROL[e.rol].e} <b>${H.oz[1]}</b>: their role’s effect is permanently one level stronger (${ROL[e.rol].ne(e.lv + 1)})`]]); }
+  }
+}
+function ekipHikYaz(e) {
+  const H = EHIK[e.rol]; if (!H || !e.hk) return '';
+  if (e.oz) return `<br><b style="color:#FFE3A6">🌟 ${L(H.oz)}</b> <span class="alt">· ${T('+1 seviye etkisi', '+1 level effect')}</span>`;
+  const [m, n] = H.A[Math.min(e.hk.a, H.A.length - 1)], il = Math.max(0, Math.min(n, EHM[m]() - e.hk.b));
+  return `<br>📖 ${T('Hikâye', 'Story')} ${e.hk.a + 1}/3: ${SAYI(n)} ${L(EHB[m])} <b>(${SAYI(il)}/${SAYI(n)})</b>`;
+}
+setInterval(() => { try { ekipHikAdim(); } catch (e) { } }, 3000);
 function ekipYaz(p) {
   let h = `<div class="alt" style="margin:4px 0 0;font-weight:900;color:var(--ink)">👥 ${T('Mürettebat', 'Crew')} (${EKIP.length}/${EKIP_MAX()})</div>${EKIP.length ? `<div style="margin:6px 0 2px;font-size:13px;font-weight:900">${MORAL >= 80 ? '😄' : MORAL >= 50 ? '🙂' : MORAL >= 30 ? '😐' : '😟'} ${T('Moral', 'Morale')}: ${Math.round(MORAL)}/100 <span style="color:var(--mute);font-weight:800;font-size:11.5px">${MORAL >= 80 ? T('· keyifli: tüm bonuslar +1 seviye', '· happy: all bonuses +1 level') : MORAL < 30 ? T('· mutsuz: bonuslar −1 seviye', '· unhappy: bonuses −1 level') : ''}</span></div><div style="height:6px;border-radius:3px;background:rgba(255,255,255,.08);overflow:hidden"><i style="display:block;height:100%;width:${MORAL}%;background:${MORAL >= 80 ? '#9BE07A' : MORAL >= 30 ? '#FFC857' : '#FF5C6E'}"></i></div>` : ''}<div class="alt" style="margin:2px 0 0;font-size:12px">${T('Her 10 dakikada maaş öderler; uçtukça ve işlerini yaptıkça seviye atlarlar (en çok 5).', 'They are paid every 10 minutes and level up as you fly and they work (max 5).')}</div>`;
-  EKIP.forEach((e, i) => { h += `<div class="satir"><div>${ROL[e.rol].e} <b>${esc(e.ad)}</b> <span class="lv">${L(ROL[e.rol].ad)} · ${T('sv', 'lv')} ${e.lv}</span><small>${huyEt(e)} · ${ROL[e.rol].ne(e.lv)} · ${T('maaş', 'wage')} ${e.maas} 💰${e.yara > Date.now() ? ' · <b style="color:#FF9AA6">🤕 ' + T('yaralı', 'injured') + '</b>' : ''}</small>${xpBar(e)}</div><div class="dg">${e.lv < 5 ? `<button class="kb al" type="button" data-egit="${i}" ${e._eg === p.id || kredi < egitF(e) ? 'disabled' : ''} title="${T('Eğitim: deneyim kazandırır (limanda bir kez)', 'Training: grants XP (once per port)')}">🎓 ${SAYI(egitF(e))} 💰</button>` : ''}<button class="kb" type="button" data-kov="${i}">${T('Ayrıl', 'Dismiss')}</button></div></div>`; });
+  EKIP.forEach((e, i) => { h += `<div class="satir"><div>${ROL[e.rol].e} <b>${esc(e.ad)}</b>${e.oz ? ' 🌟' : ''} <span class="lv">${L(ROL[e.rol].ad)} · ${T('sv', 'lv')} ${e.lv}</span><small>${huyEt(e)} · ${ROL[e.rol].ne(e.lv + (e.oz ? 1 : 0))} · ${T('maaş', 'wage')} ${e.maas} 💰${ekipHikYaz(e)}${e.yara > Date.now() ? ' · <b style="color:#FF9AA6">🤕 ' + T('yaralı', 'injured') + '</b>' : ''}</small>${xpBar(e)}</div><div class="dg">${e.lv < 5 ? `<button class="kb al" type="button" data-egit="${i}" ${e._eg === p.id || kredi < egitF(e) ? 'disabled' : ''} title="${T('Eğitim: deneyim kazandırır (limanda bir kez)', 'Training: grants XP (once per port)')}">🎓 ${SAYI(egitF(e))} 💰</button>` : ''}<button class="kb" type="button" data-kov="${i}">${T('Ayrıl', 'Dismiss')}</button></div></div>`; });
   if (!EKIP.length) h += `<div class="alt">${T('Henüz mürettebatın yok.', 'No crew yet.')}</div>`;
   h += `<div class="alt" style="margin:10px 0 0;font-weight:900;color:#FFE3A6">🍸 ${T('Limandaki adaylar', 'Candidates at this port')}</div>`;
   const ad = adaylar(p).filter(a => !EKIP.some(e => e.id === a.id)); p._aday = ad;
