@@ -370,6 +370,8 @@ function kkInit() {
   // ayar: savaş sahnesi
   const am = $('ayMus'); if (am && !$('aySahne')) { const lb = document.createElement('label'); lb.className = 'kch'; lb.innerHTML = '<input type="checkbox" id="aySahne"> <span>Savaş sahnesini göster</span>'; am.closest('label').after(lb); const cb = $('aySahne'); cb.checked = kAyar.sahne !== false; cb.onchange = function () { kAyar.sahne = cb.checked; kSak(); }; }
   try { kkDuzenInit(); } catch (e) { console.error('kkDuzenInit', e); }
+  try { if (typeof savasInit === 'function') savasInit(); } catch (e) { console.error('savasInit', e); }
+  const hi = $('hedefInfo'); if (hi) hi.textContent = kkL('Bir hedefe dokun: ordu düşmana göre kendiliğinden ayarlanır, sana göndermek kalır.', 'Tap a target: the army is sized to the enemy automatically, you just send it.');
   dipTick();
   setInterval(kkTick, 2000);
   render();
@@ -390,7 +392,7 @@ function kkDuzenInit() {
     requestAnimationFrame(function () { const r = nav.getBoundingClientRect(); if (r.top > 1) return; const pane = document.querySelector('.pane:not(.hide)'); if (!pane) return; window.scrollTo(0, Math.max(0, pane.getBoundingClientRect().top + window.scrollY - r.height - 2)); });
   });
   const sk = $('strk'); if (sk) { const tg = function () { window.strkAcik = !window.strkAcik; if (typeof renderStreak === 'function') renderStreak(); }; sk.addEventListener('click', function (e) { if (e.target.closest('#strkL')) tg(); }); sk.addEventListener('keydown', function (e) { if ((e.key === 'Enter' || e.key === ' ') && e.target.id === 'strkL') { e.preventDefault(); tg(); const l = $('strkL'); if (l) l.focus(); } }); }
-  const ks = $('kmsel'); if (ks && !$('kkAcemiNot')) { const p = document.createElement('p'); p.id = 'kkAcemiNot'; p.className = 'eff hide'; p.style.margin = '8px 2px'; ks.parentNode.insertBefore(p, ks.nextSibling); }
+  const ks = $('hedefv') || $('kmsel'); if (ks && !$('kkAcemiNot')) { const p = document.createElement('p'); p.id = 'kkAcemiNot'; p.className = 'eff hide'; p.style.margin = '8px 2px'; ks.parentNode.insertBefore(p, ks.nextSibling); }
 }
 function kkDuzenRender() {
   const m = $('kkMini');
@@ -403,5 +405,5 @@ function kkDuzenRender() {
   if (lv) lv.classList.toggle('hide', ac);
   ['Dünya Kuşatması', 'Taktik', 'Savunma'].forEach(function (a) { kkSec('p-s', a).forEach(function (e) { e.classList.toggle('hide', ac); }); });
   const mis = $('misc'); kkSec('p-s', 'Misilleme').forEach(function (e) { e.classList.toggle('hide', ac || !mis || mis.classList.contains('hide')); });
-  if (not) { not.classList.toggle('hide', !ac); if (ac) { const t = kkL('🔒 Rakip lordlar, dünya kuşatması, taktik ve savunma ilk kışlanı kurup asker eğitince açılır.', '🔒 Rival lords, the world siege, tactics and defense open once you build your first barracks and train soldiers.'); if (not.textContent !== t) not.textContent = t; } }
+  if (not) { not.classList.toggle('hide', !ac); if (ac) { const t = kkL('🔒 Haydut kampları, lordlar, dünya kuşatması, taktik ve savunma ilk kışlanı kurup asker eğitince açılır.', '🔒 Bandit camps, lords, the world siege, tactics and defense open once you build your first barracks and train soldiers.'); if (not.textContent !== t) not.textContent = t; } }
 }
