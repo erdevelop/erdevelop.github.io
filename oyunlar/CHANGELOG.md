@@ -61,3 +61,10 @@
   Notlar, otomatik not, geri al, rakam kilidi, açıklamalı ipuçları (kilitli aday, açık/gizli çift, açık üçlü, X-kanat),
   isteğe bağlı 3 hata hakkı, dört tahta teması, klavye desteği, kaldığın yerden devam, istatistik.
 - Vitrin: kapak görselli oyun kartları; telefonda oyun açıkken üst çubuk gizlenir (odak modu).
+
+## Günlük Kelime yenilendi — 26 Kasım 2026
+- Yeniden vitrinde. İlk açılışta örnekli "Nasıl oynanır?" anlatımı; her tahminden sonra renklerin anlamı sözle yazılır
+  (hangi harf doğru yerde, hangisi başka yerde, hangisi yok).
+- Sıradaki satır ve kutu işaretli, kalan deneme sayısı görünür, 5 harf dolunca GİR tuşu yanar; eksik ya da tekrar kelimede açık uyarı.
+- İpucu: Türkçede bir harf açılır, yabancı dillerde Türkçe anlamı gösterilir (−50 puan).
+- Sonuç kartı: kelime, anlamı, yeni kelimeye geri sayım, diğer dillerin günlük kelimelerine geçiş.

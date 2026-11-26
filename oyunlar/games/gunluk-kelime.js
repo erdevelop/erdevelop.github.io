@@ -1,4 +1,5 @@
 /* Günlük Kelime — 5 harfli kelimeyi 6 denemede bul. Her gün herkese aynı kelime.
+   Her tahminden sonra renklerin anlamı sözle de yazılır; ilk açılışta örnekli anlatım.
    İki mod: Türkçe ve İngilizce (İngilizce kelimeler İngilizce Kulübü'nün kelime listelerinden; bitince anlamı, örnek cümlesi ve kulübe bağlantı).
    Seri ve istatistik: assets/seri.js (yalnızca bu cihazda). */
 (function(){
@@ -13,103 +14,260 @@ const MOD = {
   fr: { ad: 'Français', bayrak: '🇫🇷', id: 'gunlukkelime-fr', L: Object.keys(YD.fr), up: s => s.normalize('NFD').replace(/[\u0300-\u036f]/g, '').toUpperCase(), harf: /^[A-Z]$/, kb: ['AZERTYUIOP', 'QSDFGHJKLM', '⏎WXCVBN⌫'], baslik: 'Mot du jour (FR)', kulup: '/fransizca.html', kAd: 'Fransızca', ses: 'fr-FR', not: 'Aksanlar yok sayılır (É = E).' },
   de: { ad: 'Deutsch', bayrak: '🇩🇪', id: 'gunlukkelime-de', L: Object.keys(YD.de), up: s => s.toUpperCase(), harf: /^[A-ZÄÖÜ]$/, kb: ['QWERTZUIOPÜ', 'ASDFGHJKLÖÄ', '⏎YXCVBNM⌫'], baslik: 'Wort des Tages (DE)', kulup: '/almanca.html', kAd: 'Almanca', ses: 'de-DE' }
 };
-const MKEY = 'ob-gk-mod';
+const MKEY = 'ob-gk-mod', YKEY = 'ob-gk-yardim';
+const GK_RENK = { y: '#2f9e6f', s: '#d7a514', g: '#7a7f86' };
+function gkKapak() {   /* kart kapağı: renkli harf kutuları */
+  const S = [['K', 'g'], ['A', 's'], ['L', 'g'], ['E', 'y'], ['M', 'g']], Z = [['D', 'y'], ['E', 'y'], ['N', 'y'], ['İ', 'y'], ['Z', 'y']];
+  const sat = (L, y) => L.map(([h, c], i) => `<rect x="${6 + i * 16}" y="${y}" width="14" height="14" rx="3" fill="${GK_RENK[c]}"/><text x="${13 + i * 16}" y="${y + 10.6}" text-anchor="middle" font-family="system-ui,sans-serif" font-size="9.5" font-weight="800" fill="#fff">${h}</text>`).join('');
+  const bos = y => [0, 1, 2, 3, 4].map(i => `<rect x="${6.5 + i * 16}" y="${y + .5}" width="13" height="13" rx="3" fill="#f3f5fa" stroke="#d9deea"/>`).join('');
+  return `<svg viewBox="0 0 90 90" xmlns="http://www.w3.org/2000/svg"><rect width="90" height="90" fill="#fff"/>${sat(S, 14)}${sat(Z, 30)}${bos(46)}${bos(62)}</svg>`;
+}
+const GK_CSS = `
+.gk-mount{padding:12px!important;align-items:stretch!important;justify-content:flex-start!important;overflow:visible!important}
+.gk{--t:max(34px,min(58px,calc((100vw - 84px)/5),calc((100dvh - 452px)/6)));width:min(520px,100%);margin:0 auto;display:flex;flex-direction:column;gap:10px;position:relative;-webkit-user-select:none;user-select:none}
+.gk-ust{display:flex;align-items:center;gap:6px}
+.gk-dil{display:flex;gap:4px;flex:1;min-width:0;background:var(--bg2);padding:4px;border-radius:14px}
+.gk-dil button{flex:1;min-width:0;padding:7px 1px;border-radius:10px;font-weight:800;font-size:12.5px;letter-spacing:-.01em;color:var(--ink-soft);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.gk-dil button.on{background:var(--card);color:var(--ink);box-shadow:0 1px 4px rgba(0,0,0,.12)}
+.gk-dil button .tik{color:${GK_RENK.y};margin-left:2px}
+.gk-nasil{font-size:13px;font-weight:800;color:var(--accent-ink);text-decoration:underline;text-underline-offset:2px;padding:2px 4px}
+.gk-gorev{text-align:center}.gk-gorev b{display:block;font-size:18px;font-weight:800;letter-spacing:-.01em}
+.gk-gorev span{font-size:13px;font-weight:700;color:var(--ink-soft)}
+.gk-tahta{display:grid;gap:5px;justify-content:center}
+.gk-sat{display:grid;grid-template-columns:repeat(5,var(--t));gap:5px;position:relative}
+.gk-sat.aktif::before{content:'›';position:absolute;left:-16px;top:50%;transform:translateY(-52%);font-weight:800;font-size:20px;color:var(--accent)}
+.gk-k{width:var(--t);height:var(--t);display:grid;place-items:center;font-weight:800;font-size:calc(var(--t)*.5);border-radius:9px;border:2px solid var(--line);background:var(--bg2);color:var(--ink);text-transform:none}
+.gk-sat.aktif .gk-k{background:var(--card);border-color:color-mix(in srgb,var(--accent) 45%,var(--line))}
+.gk-sat.aktif .gk-k.dolu{border-color:var(--ink)}
+.gk-sat.aktif .gk-k.imlec{border-color:var(--accent);box-shadow:0 0 0 3px var(--accent-soft)}
+.gk-k.hayal{color:color-mix(in srgb,${GK_RENK.y} 55%,transparent)}
+.gk-k.y,.gk-k.s,.gk-k.g{border-color:transparent;color:#fff}.gk-k.y{background:${GK_RENK.y}}.gk-k.s{background:${GK_RENK.s}}.gk-k.g{background:${GK_RENK.g}}
+.gk-sat.yeni .gk-k{animation:gkDon .45s ease both}.gk-sat.yeni .gk-k:nth-child(2){animation-delay:.12s}.gk-sat.yeni .gk-k:nth-child(3){animation-delay:.24s}.gk-sat.yeni .gk-k:nth-child(4){animation-delay:.36s}.gk-sat.yeni .gk-k:nth-child(5){animation-delay:.48s}
+.gk-sat.salla{animation:gkSalla .35s}
+@keyframes gkDon{0%{transform:rotateX(90deg)}100%{transform:none}}
+@keyframes gkSalla{20%{transform:translateX(-6px)}40%{transform:translateX(6px)}60%{transform:translateX(-4px)}80%{transform:translateX(4px)}}
+.gk-yorum{min-height:44px;display:flex;flex-direction:column;justify-content:center;gap:3px;text-align:center;font-size:14px;font-weight:700;line-height:1.35;padding:8px 12px;border-radius:12px;background:var(--bg2)}
+.gk-yorum .st{display:flex;gap:6px;align-items:baseline;justify-content:center;flex-wrap:wrap}
+.gk-yorum i{font-style:normal;display:inline-block;min-width:20px;padding:0 5px;border-radius:5px;color:#fff;font-weight:800;margin:0 1px}
+.gk-yorum i.y{background:${GK_RENK.y}}.gk-yorum i.s{background:${GK_RENK.s}}.gk-yorum i.g{background:${GK_RENK.g}}
+.gk-yorum.uyari{background:color-mix(in srgb,var(--bad) 14%,var(--bg2))}
+.gk-ipu{display:flex;gap:8px;justify-content:center;align-items:center;flex-wrap:wrap;font-size:13px;font-weight:700}
+.gk-ipu button{padding:7px 12px;border-radius:10px;background:var(--accent-soft);color:var(--accent-ink);font-weight:800;font-size:13px}
+.gk-ipu button:disabled{opacity:.5;cursor:default}
+.gk-ipu .kutu{padding:7px 12px;border-radius:10px;background:color-mix(in srgb,${GK_RENK.s} 18%,var(--bg2))}
+.gk-kb{display:flex;flex-direction:column;gap:5px}
+.gk-kb div{display:flex;gap:4px;justify-content:center}
+.gk-kb button{flex:1;min-width:0;height:46px;border-radius:9px;background:var(--bg2);font-weight:800;font-size:15px;color:var(--ink);touch-action:manipulation}
+.gk-kb button:active{transform:scale(.94)}
+.gk-kb button.gen{flex:1.7;font-size:13px}
+.gk-kb button.y,.gk-kb button.s{color:#fff}.gk-kb button.y{background:${GK_RENK.y}}.gk-kb button.s{background:${GK_RENK.s}}
+.gk-kb button.g{background:transparent;color:var(--ink-soft);opacity:.45;text-decoration:line-through}
+.gk-kb button.hazir{background:var(--accent);color:#fff;animation:gkNabiz 1.1s ease-in-out infinite}
+@keyframes gkNabiz{50%{box-shadow:0 0 0 5px var(--accent-soft)}}
+.gk-son{padding:14px;border-radius:16px;background:var(--bg2);text-align:center;display:flex;flex-direction:column;gap:8px;align-items:center}
+.gk-son h3{margin:0;font-size:20px;font-weight:800}
+.gk-son .kel{font-size:22px;font-weight:800;letter-spacing:.06em}
+.gk-son .anl{font-size:15px;font-weight:700}.gk-son .orn{font-size:14px;font-style:italic}.gk-son .ornT{font-size:13px;color:var(--ink-soft)}
+.gk-son .say{font-size:13px;font-weight:700;color:var(--ink-soft)}.gk-son .say b{color:var(--ink);font-variant-numeric:tabular-nums}
+.gk-son .dug{display:flex;gap:8px;flex-wrap:wrap;justify-content:center}
+.gk-b{padding:10px 16px;border-radius:12px;background:var(--accent);color:#fff;font-weight:800;font-size:14px;text-decoration:none;display:inline-block}
+.gk-b.hafif{background:var(--accent-soft);color:var(--accent-ink)}
+.gk-perde{position:fixed;inset:0;z-index:60;background:rgba(20,24,34,.55);display:grid;place-items:center;padding:16px;animation:gkBelir .15s}
+@keyframes gkBelir{from{opacity:0}}
+.gk-yardim{width:min(420px,100%);max-height:calc(100dvh - 32px);overflow:auto;background:var(--card);border-radius:20px;padding:20px;display:flex;flex-direction:column;gap:12px;-webkit-user-select:text;user-select:text}
+.gk-yardim h3{margin:0;font-size:20px;font-weight:800}.gk-yardim p{margin:0;font-size:14.5px;font-weight:600;line-height:1.45}
+.gk-yardim .gk-sat{--t:44px;justify-content:center;margin:2px auto}
+.gk-yardim ul{margin:0;padding:0;list-style:none;display:flex;flex-direction:column;gap:8px}
+.gk-yardim li{display:flex;gap:10px;align-items:center;font-size:14px;font-weight:600;line-height:1.35}
+.gk-yardim li .gk-k{--t:34px;flex:none}
+.gk-yardim .ad{font-size:12px;font-weight:800;letter-spacing:.06em;color:var(--ink-soft)}
+@media (max-width:380px){.gk-dil button{font-size:11.5px;letter-spacing:-.03em}}
+@media (max-width:600px){.gk-mount{padding:8px!important}.gk{gap:8px}.gk-kb button{height:44px}}
+`;
 registerGame({
   id:'gunlukkelime', title:'Günlük Kelime', category:'Günlük', tags:'wordle kelime türkçe ingilizce english fransızca français almanca deutsch 5 harf günlük bulmaca seri',
-  gizli:true,   /* vitrinde görünmez; dil kulüplerindeki bağlantıdan açılır */
+  gunluk:true, odak:true, noRestart:true,
+  aciklama:'Günün 5 harfli gizli kelimesini 6 denemede bul. Her tahminde renkler ve kısa bir açıklama yol gösterir. Türkçe, İngilizce, Fransızca, Almanca.',
+  cover: gkKapak(),
   icon:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><rect x="2" y="7" width="6" height="6" rx="1"/><rect x="9" y="7" width="6" height="6" rx="1"/><rect x="16" y="7" width="6" height="6" rx="1"/><path d="M4 17h16"/></svg>',
+  shareText(){ return this._paylas || 'Günlük Kelime: günün 5 harfli kelimesini 6 denemede bul.'; },
   render(root, api){
-    const N = gun();
+    const oyun = this, N = gun();
+    if (!document.getElementById('gk-css')) { const s = document.createElement('style'); s.id = 'gk-css'; s.textContent = GK_CSS; document.head.appendChild(s); }
+    root.innerHTML = ''; root.classList.add('gk-mount');
     let ham = (api.loadState && api.loadState()) || {};
     if (ham.tahmin) ham = { tr: ham };                       /* eski kayıt biçimi */
-    const durumu = m => { const s = Object.assign({ tahmin: [], bitti: false }, ham[m] || {}); if (s.gun !== N) { s.gun = N; s.tahmin = []; s.bitti = false; s.ipucu = false; } return (ham[m] = s); };
+    const durumu = m => { if (ham[m] && ham[m].gun === N && Array.isArray(ham[m].tahmin)) return ham[m]; const s = Object.assign({ tahmin: [], bitti: false }, ham[m] || {}); if (s.gun !== N) { s.gun = N; s.tahmin = []; s.bitti = false; s.ipucu = false; s.acik = -1; } return (ham[m] = s); };
     const sakla = () => { if (api.saveState) api.saveState(ham); };
+    const ses = n => { try { if (api.sound) api.sound(n); } catch (e) { } };
     let mod = 'tr';
     try { const q = new URLSearchParams(location.search).get('kelime'); mod = MOD[q] ? q : localStorage.getItem(MKEY) || 'tr'; } catch (e) { }
     if (!MOD[mod]) mod = 'tr';
-    const sekme = E('div', { style: { display: 'flex', gap: '6px', justifyContent: 'center', flexWrap: 'wrap', margin: '0 0 10px' } });
-    root.append(sekme);
-    const alan = E('div'); root.append(alan);
-    let tus = () => {};
+    const kok = E('div', { class: 'gk' }); root.append(kok);
+    let tus = () => {}, perde = null, sayac = 0;
+    const DILAD = { tr: 'Türkçe', en: 'İngilizce', fr: 'Fransızca', de: 'Almanca' };
+    const kutu = (h, c) => `<div class="gk-k ${c || ''}">${h || ''}</div>`;
+
+    function yardim(ilk) {
+      if (perde) return;
+      perde = E('div', { class: 'gk-perde' });
+      perde.innerHTML = `<div class="gk-yardim" role="dialog" aria-label="Nasıl oynanır">
+        <h3>Nasıl oynanır?</h3>
+        <p>Bilgisayar <b>5 harfli bir kelime</b> tuttu. Sen kelimeler deneyerek onu bulacaksın. <b>6 deneme</b> hakkın var.</p>
+        <p>Her denemeden sonra harfler renklenir ve sana ipucu verir. Örnek: gizli kelime <b>DENİZ</b> olsun, sen <b>KALEM</b> yazdın:</p>
+        <div class="gk-sat">${kutu('K', 'g')}${kutu('A', 'g')}${kutu('L', 'g')}${kutu('E', 's')}${kutu('M', 'g')}</div>
+        <ul>
+          <li>${kutu('E', 's')}<span><b>Sarı:</b> E harfi kelimede var ama <b>yeri burası değil</b>.</span></li>
+          <li>${kutu('K', 'g')}<span><b>Gri:</b> K, A, L, M kelimede <b>hiç yok</b>. Bir daha kullanma.</span></li>
+        </ul>
+        <p>Sonra <b>DERİN</b> yazdın:</p>
+        <div class="gk-sat">${kutu('D', 'y')}${kutu('E', 'y')}${kutu('R', 'g')}${kutu('İ', 'y')}${kutu('N', 's')}</div>
+        <ul>
+          <li>${kutu('D', 'y')}<span><b>Yeşil:</b> D, E ve İ <b>tam yerinde</b>. N var ama yeri başka → cevap <b>DENİZ</b>.</span></li>
+        </ul>
+        <p class="ad">BİLMEN GEREKENLER</p>
+        <p>• Her gün <b>tek kelime</b> var, herkese aynı. Gece yarısı yenisi gelir.<br>• Üstten dili değiştirebilirsin: her dilin kendi günlük kelimesi var.<br>• Takılırsan ilk denemeden sonra <b>💡 İpucu</b> alabilirsin.</p>
+        <button class="gk-b" data-a="kapat">${ilk ? 'Anladım, başlayalım' : 'Tamam'}</button></div>`;
+      perde.onclick = e => { if (e.target === perde || e.target.dataset.a === 'kapat') yardimKapat(); };
+      document.body.appendChild(perde); try { localStorage.setItem(YKEY, '1'); } catch (e) { }
+    }
+    function yardimKapat() { if (perde) { perde.remove(); perde = null; } }
+
     function kur() {
       try { localStorage.setItem(MKEY, mod); } catch (e) { }
-      sekme.innerHTML = '';
-      Object.entries(MOD).forEach(([k, M]) => { const b = E('button', { class: 'g-btn' + (k === mod ? '' : ' ghost') }, M.bayrak + ' ' + M.ad); b.onclick = () => { if (k !== mod) { mod = k; kur(); } }; sekme.append(b); });
-      alan.innerHTML = '';
+      clearInterval(sayac);
       const M = MOD[mod], st = durumu(mod), CEVAP = [...sec(N, M.L)], kelime = CEVAP.join(''), bilgi = YD[mod] ? YD[mod][kelime] : null;
-      let yaz = [];
-      const hud = makeHUD(alan, [{ id: 'gun', label: 'Bulmaca', value: '#' + (N + 1) }, { id: 'den', label: 'Deneme', value: st.tahmin.length + '/6' }, { id: 'seri', label: 'Seri', value: window.Seri ? '🔥 ' + Seri.ozet(M.id).seri : '—' }]);
-      const grid = E('div', { style: { display: 'grid', gridTemplateRows: 'repeat(6,1fr)', gap: '6px', width: 'min(330px,100%)', margin: '0 auto 12px' } });
-      const msg = E('div', { class: 'g-msg' }), ek = E('div'), kb = E('div', { style: { display: 'flex', flexDirection: 'column', gap: '6px', margin: '10px auto 0', width: 'min(520px,100%)' } }), ist = E('div');
-      alan.append(grid, msg, ek, kb, ist);
-      const RENK = { y: 'var(--good,#2f9e6f)', s: '#d7a514', g: '#7a7f86' };
-      function puan(t) { const sonuc = Array(5).fill('g'), c = [...CEVAP];
+      let yaz = [], yeniSatir = -1, uyari = '';
+      const puan = t => { const sonuc = Array(5).fill('g'), c = [...CEVAP];
         t.forEach((h, i) => { if (h === CEVAP[i]) { sonuc[i] = 'y'; c[i] = null; } });
         t.forEach((h, i) => { if (sonuc[i] === 'y') return; const j = c.indexOf(h); if (j >= 0) { sonuc[i] = 's'; c[j] = null; } });
-        return sonuc; }
+        return sonuc; };
+      const bildi = () => st.tahmin[st.tahmin.length - 1] === kelime;
+      const seri = () => window.Seri ? Seri.ozet(M.id).seri : 0;
+      kok.innerHTML = `<div class="gk-ust"><div class="gk-dil" role="tablist" aria-label="Kelimenin dili"></div></div>
+        <div class="gk-gorev"><b></b><span></span> <button class="gk-nasil" data-a="yardim">Nasıl oynanır?</button></div><div class="gk-tahta"></div><div class="gk-yorum" aria-live="polite"></div><div class="gk-ipu"></div><div class="gk-kb"></div><div class="gk-alt"></div>`;
+      const q = s => kok.querySelector(s);
+      Object.entries(MOD).forEach(([k, D]) => { const s = durumu(k), b = E('button', { class: k === mod ? 'on' : '', title: DILAD[k] + ' kelime' }); b.innerHTML = D.bayrak + ' ' + DILAD[k] + (s.bitti ? '<span class="tik">✓</span>' : ''); b.onclick = () => { if (k !== mod) { mod = k; kur(); } }; q('.gk-dil').append(b); });
+      q('[data-a=yardim]').onclick = () => yardim(false);
+
+      /* son tahminin sözle açıklaması */
+      function yorumHTML() {
+        if (uyari) return uyari;
+        if (st.bitti) return bildi() ? '🎉 Tebrikler, kelimeyi buldun!' : 'Deneme hakkın bitti. Kelime aşağıda.';
+        const n = st.tahmin.length;
+        if (yaz.length === 5) return 'Hazır. Kelimeyi denemek için <b>GİR</b> tuşuna bas.';
+        if (yaz.length) return (5 - yaz.length) + ' harf daha yaz. Yanlış yazdıysan ⌫ ile sil.';
+        if (!n) return 'Aklına gelen <b>5 harfli bir ' + (mod === 'tr' ? '' : DILAD[mod] + ' ') + 'kelime</b> yaz, sonra <b>GİR</b>’e bas.<br>Renkler seni doğru kelimeye götürecek.';
+        const t = [...st.tahmin[n - 1]], p = puan(t), al = c => [...new Set(t.filter((h, i) => p[i] === c))], Y = al('y'), S = al('s'), G = al('g').filter(h => !Y.includes(h) && !S.includes(h));
+        const har = (L, c) => L.map(h => `<i class="${c}">${h}</i>`).join('');
+        const s = [];
+        if (Y.length) s.push(`<span class="st">${har(Y, 'y')} doğru yerde</span>`);
+        if (S.length) s.push(`<span class="st">${har(S, 's')} kelimede var, yeri başka</span>`);
+        if (G.length) s.push(`<span class="st">${har(G, 'g')} kelimede yok</span>`);
+        if (!Y.length && !S.length) s.push('<span class="st">Hiçbiri tutmadı. Bu harfleri ele, bambaşka bir kelime dene.</span>');
+        return s.join('');
+      }
       function ciz() {
-        grid.innerHTML = '';
-        for (let r = 0; r < 6; r++) { const row = E('div', { style: { display: 'grid', gridTemplateColumns: 'repeat(5,1fr)', gap: '6px' } });
-          const t = st.tahmin[r] ? [...st.tahmin[r]] : r === st.tahmin.length ? yaz : [], p = st.tahmin[r] ? puan(t) : null;
-          for (let i = 0; i < 5; i++) row.append(E('div', { style: { aspectRatio: '1', display: 'grid', placeItems: 'center', fontWeight: '800', fontSize: '24px', borderRadius: '8px', border: '2px solid ' + (p ? 'transparent' : t[i] ? 'var(--ink)' : 'var(--line)'), background: p ? RENK[p[i]] : 'var(--bg2)', color: p ? '#fff' : 'var(--ink)' } }, t[i] || ''));
-          grid.append(row); }
-        const durum = {}; st.tahmin.forEach(t => { const p = puan([...t]); [...t].forEach((h, i) => { const o = { y: 3, s: 2, g: 1 }[p[i]]; if (!durum[h] || durum[h] < o) durum[h] = o; }); });
-        kb.innerHTML = '';
-        M.kb.forEach(s => { const row = E('div', { style: { display: 'flex', gap: '4px', justifyContent: 'center' } });
-          [...s].forEach(h => { const d = durum[h], b = E('button', { class: 'g-btn ghost', style: { flex: h === '⏎' || h === '⌫' ? '1.6' : '1', padding: '12px 0', minWidth: '0', fontWeight: '700', background: d ? RENK[{ 3: 'y', 2: 's', 1: 'g' }[d]] : '', color: d ? '#fff' : '' } }, h === '⏎' ? 'GİR' : h);
-            b.onclick = () => tus(h); row.append(b); }); kb.append(row); });
-        hud.set('den', st.tahmin.length + '/6');
-        ekCiz();
-      }
-      function istCiz() { ist.innerHTML = ''; if (window.Seri) ist.append(Seri.panel(M.id, { baslik: M.baslik + ' · istatistik', etiketler: ['1', '2', '3', '4', '5', '6'], dagBaslik: 'Kaçıncı denemede', xEtiket: '✗', api })); hud.set('seri', window.Seri ? '🔥 ' + Seri.ozet(M.id).seri : '—'); }
-      function ekCiz() {
-        ek.innerHTML = '';
-        if (YD[mod] && bilgi) {
-          if (st.bitti || st.ipucu) {
-            const k = E('div', { style: { width: 'min(420px,100%)', margin: '8px auto 0', padding: '12px 14px', border: '1px solid var(--line)', borderRadius: '12px', background: 'var(--bg2)', textAlign: 'left' } });
-            const sesli = E('button', { class: 'g-btn ghost', style: { padding: '4px 10px', marginLeft: '8px' }, title: 'Dinle' }, '🔊');
-            sesli.onclick = () => { try { const u = new SpeechSynthesisUtterance(bilgi[0] + '. ' + (bilgi[2] || '')); u.lang = M.ses; speechSynthesis.cancel(); speechSynthesis.speak(u); } catch (e) { } };
-            k.append(E('div', { style: { fontWeight: '800', fontSize: '18px' } }, st.bitti ? bilgi[0] + ' — ' + bilgi[1] : 'İpucu: ' + bilgi[1], st.bitti ? sesli : ''));
-            if (st.bitti && bilgi[2]) k.append(E('div', { style: { marginTop: '6px', fontStyle: 'italic' } }, bilgi[2]), E('div', { style: { fontSize: '14px', color: 'var(--ink-soft,var(--muted))' } }, bilgi[3] || ''));
-            if (st.bitti) k.append(E('a', { href: M.kulup + '?k=' + encodeURIComponent(bilgi[0]), class: 'g-btn', style: { display: 'inline-block', marginTop: '10px', textDecoration: 'none' } }, M.bayrak + ' ' + M.kAd + ' Kulübü’nde çalış →'));
-            ek.append(k);
-          } else if (st.tahmin.length >= 3) {
-            const b = E('button', { class: 'g-btn ghost', style: { display: 'block', margin: '6px auto 0' } }, '💡 İpucu: Türkçe anlamını göster');
-            b.onclick = () => { st.ipucu = true; sakla(); ekCiz(); }; ek.append(b);
-          }
+        const n = st.tahmin.length, harfAd = { tr: 'Türkçe', en: 'İngilizce', fr: 'Fransızca', de: 'Almanca' }[mod];
+        q('.gk-gorev b').textContent = st.bitti ? 'Bugünün ' + harfAd + ' kelimesi' : '5 harfli ' + harfAd + ' kelimeyi bul';
+        q('.gk-gorev span').textContent = (st.bitti ? 'Bulmaca #' + (N + 1) : 'Kalan deneme: ' + (6 - n) + ' / 6') + (seri() > 0 ? ' · 🔥 ' + seri() + ' gün' : '') + (M.not && !st.bitti ? ' · ' + M.not : '');
+        let h = '';
+        for (let r = 0; r < 6; r++) {
+          const aktif = !st.bitti && r === n, t = st.tahmin[r] ? [...st.tahmin[r]] : aktif ? yaz : [], p = st.tahmin[r] ? puan(t) : null;
+          h += `<div class="gk-sat${aktif ? ' aktif' : ''}${r === yeniSatir ? ' yeni' : ''}">`;
+          for (let i = 0; i < 5; i++) { const hay = aktif && !t[i] && st.acik === i; h += kutu(t[i] || (hay ? CEVAP[i] : ''), p ? p[i] : (t[i] ? 'dolu' : hay ? 'hayal' : aktif && i === t.length ? 'imlec' : '')); }
+          h += '</div>';
         }
-        if (st.bitti) {
-          const ok = st.tahmin[st.tahmin.length - 1] === kelime;
-          const paylas = E('button', { class: 'g-btn', style: { margin: '8px auto 0', display: 'block' } }, 'Sonucu kopyala');
-          paylas.onclick = () => { const s = M.baslik + ' #' + (N + 1) + ' ' + (ok ? st.tahmin.length : 'X') + '/6' + (window.Seri ? ' · 🔥' + Seri.ozet(M.id).seri : '') + '\n' + st.tahmin.map(t => puan([...t]).map(c => ({ y: '🟩', s: '🟨', g: '⬜' })[c]).join('')).join('\n') + '\nerdevelop.com/oyunlar/' + (mod !== 'tr' ? '?kelime=' + mod : '') + '#o/gunlukkelime'; navigator.clipboard && navigator.clipboard.writeText(s).then(() => api.toast && api.toast('Kopyalandı')); };
-          ek.append(paylas);
-        }
+        q('.gk-tahta').innerHTML = h; yeniSatir = -1;
+        const y = q('.gk-yorum'); { const yh = yorumHTML(); y.innerHTML = yh.startsWith('<span class="st">') ? yh : '<div>' + yh + '</div>'; } y.classList.toggle('uyari', !!uyari);
+        const durum = {}; st.tahmin.forEach(t => { const p = puan([...t]); [...t].forEach((hh, i) => { const o = { y: 3, s: 2, g: 1 }[p[i]]; if (!durum[hh] || durum[hh] < o) durum[hh] = o; }); });
+        const kb = q('.gk-kb'); kb.innerHTML = ''; kb.hidden = st.bitti;
+        if (!st.bitti) M.kb.forEach(s => { const row = E('div');
+          [...s].forEach(hh => { const d = durum[hh], gen = hh === '⏎' || hh === '⌫', b = E('button', { class: (gen ? 'gen ' : '') + (d ? ({ 3: 'y', 2: 's', 1: 'g' })[d] : '') + (hh === '⏎' && yaz.length === 5 ? ' hazir' : '') }, hh === '⏎' ? 'GİR' : hh);
+            if (hh === '⌫') b.setAttribute('aria-label', 'Sil');
+            b.onclick = () => tus(hh); row.append(b); }); kb.append(row); });
+        ipuCiz(); altCiz();
       }
+      function ipuCiz() {
+        const k = q('.gk-ipu'); k.innerHTML = ''; if (st.bitti) return;
+        if (st.ipucu) {
+          k.append(E('span', { class: 'kutu' }, bilgi ? '💡 Türkçesi: ' + bilgi[1] : '💡 ' + (st.acik + 1) + '. harf: ' + CEVAP[st.acik]));
+          return;
+        }
+        const b = E('button', {}, bilgi ? '💡 İpucu: Türkçe anlamını göster' : '💡 İpucu: bir harf aç');
+        if (!st.tahmin.length) { b.disabled = true; b.textContent = '💡 İpucu (ilk denemeden sonra açılır)'; }
+        b.onclick = () => {
+          st.ipucu = true;
+          if (!bilgi) { const bulunan = new Set(); st.tahmin.forEach(t => [...t].forEach((hh, i) => { if (hh === CEVAP[i]) bulunan.add(i); })); const denenen = new Set(st.tahmin.join('')); let i = [0, 1, 2, 3, 4].find(x => !bulunan.has(x) && !denenen.has(CEVAP[x])); if (i === undefined) i = [0, 1, 2, 3, 4].find(x => !bulunan.has(x)) || 0; st.acik = i; }
+          sakla(); ses('click'); ciz();
+        };
+        k.append(b); if (!b.disabled) k.append(E('span', { style: { color: 'var(--ink-soft)' } }, '−50 puan'));
+      }
+      function paylasMetni() { return M.baslik + ' #' + (N + 1) + ' ' + (bildi() ? st.tahmin.length : 'X') + '/6' + (seri() ? ' · 🔥' + seri() : '') + '\n' + st.tahmin.map(t => puan([...t]).map(c => ({ y: '🟩', s: '🟨', g: '⬜' })[c]).join('')).join('\n') + '\nerdevelop.com/oyunlar/' + (mod !== 'tr' ? '?kelime=' + mod : '') + '#o/gunlukkelime'; }
+      function altCiz() {
+        const a = q('.gk-alt'); a.innerHTML = ''; clearInterval(sayac);
+        if (!st.bitti) {
+          const b = E('button', { class: 'gk-b hafif', style: { display: 'block', margin: '4px auto 0' } }, '📊 İstatistik ve seri');
+          b.onclick = () => { b.remove(); if (window.Seri) a.append(Seri.panel(M.id, { baslik: M.baslik + ' · istatistik', etiketler: ['1', '2', '3', '4', '5', '6'], dagBaslik: 'Kaçıncı denemede', xEtiket: '✗', api })); };
+          a.append(b); return;
+        }
+        const ok = bildi(); oyun._paylas = paylasMetni();
+        const k = E('div', { class: 'gk-son' });
+        k.append(E('h3', {}, ok ? '🎉 Bildin! ' + st.tahmin.length + '. denemede' : 'Bu sefer olmadı'));
+        k.append(E('div', { class: 'kel' }, bilgi ? bilgi[0] : kelime));
+        if (bilgi) {
+          const sesli = E('button', { class: 'gk-b hafif', style: { padding: '6px 12px' } }, '🔊 Dinle');
+          sesli.onclick = () => { try { const u = new SpeechSynthesisUtterance(bilgi[0] + '. ' + (bilgi[2] || '')); u.lang = M.ses; speechSynthesis.cancel(); speechSynthesis.speak(u); } catch (e) { } };
+          k.append(E('div', { class: 'anl' }, 'Türkçesi: ' + bilgi[1]));
+          if (bilgi[2]) k.append(E('div', { class: 'orn' }, bilgi[2])); if (bilgi[3]) k.append(E('div', { class: 'ornT' }, bilgi[3]));
+          k.append(sesli);
+        }
+        const say = E('div', { class: 'say' }); k.append(say);
+        const sayYaz = () => { const d = new Date(), y = new Date(d.getFullYear(), d.getMonth(), d.getDate() + 1), s = Math.max(0, Math.floor((y - d) / 1000)), p = x => String(x).padStart(2, '0'); say.innerHTML = 'Yeni kelime <b>' + p(Math.floor(s / 3600)) + ':' + p(Math.floor(s / 60) % 60) + ':' + p(s % 60) + '</b> sonra'; };
+        sayYaz(); sayac = setInterval(sayYaz, 1000);
+        const dug = E('div', { class: 'dug' });
+        const pay = E('button', { class: 'gk-b' }, 'Sonucu paylaş');
+        pay.onclick = () => { const s = paylasMetni(); if (navigator.share) navigator.share({ text: s }).catch(() => { }); else if (navigator.clipboard) navigator.clipboard.writeText(s).then(() => api.toast && api.toast('Kopyalandı')); };
+        dug.append(pay);
+        if (bilgi) dug.append(E('a', { href: M.kulup + '?k=' + encodeURIComponent(bilgi[0]), class: 'gk-b hafif' }, M.bayrak + ' ' + M.kAd + ' Kulübü’nde çalış →'));
+        k.append(dug);
+        const kalan = Object.keys(MOD).filter(x => x !== mod && !durumu(x).bitti);
+        if (kalan.length) { const d2 = E('div', { class: 'dug' }); d2.append(E('span', { class: 'say', style: { alignSelf: 'center' } }, 'Bugün bunlar da var:')); kalan.forEach(x => { const b = E('button', { class: 'gk-b hafif', style: { padding: '6px 12px' } }, MOD[x].bayrak + ' ' + DILAD[x]); b.onclick = () => { mod = x; kur(); }; d2.append(b); }); k.append(d2); }
+        a.append(k);
+        if (window.Seri) a.append(Seri.panel(M.id, { baslik: M.baslik + ' · istatistik', etiketler: ['1', '2', '3', '4', '5', '6'], dagBaslik: 'Kaçıncı denemede', xEtiket: '✗', api }));
+      }
+      function salla(m) { uyari = m; ciz(); const s = q('.gk-sat.aktif'); if (s) s.classList.add('salla'); ses('bad'); }
       tus = h => {
-        if (st.bitti) return;
-        if (h === '⌫' || h === 'BACKSPACE') { yaz.pop(); ciz(); return; }
+        if (st.bitti || perde) return;
+        if (h === '⌫' || h === 'BACKSPACE') { uyari = ''; yaz.pop(); ciz(); return; }
         if (h === '⏎' || h === 'ENTER') {
-          if (yaz.length < 5) { msg.textContent = '5 harf yazmalısın.'; return; }
-          st.tahmin.push(yaz.join('')); const ok = yaz.join('') === kelime; yaz = [];
+          if (yaz.length < 5) return salla(yaz.length ? 'Kelime 5 harfli olmalı: ' + (5 - yaz.length) + ' harf eksik.' : 'Önce 5 harfli bir kelime yaz.');
+          const w = yaz.join('');
+          if (st.tahmin.includes(w)) return salla('<b>' + w + '</b> kelimesini zaten denedin. Başka bir kelime yaz.');
+          uyari = ''; st.tahmin.push(w); yeniSatir = st.tahmin.length - 1; const ok = w === kelime; yaz = [];
           if (ok || st.tahmin.length >= 6) { st.bitti = true; const skor = ok ? (7 - st.tahmin.length) * 100 - (st.ipucu ? 50 : 0) : 0;
             if (window.Seri) Seri.kaydet(M.id, N, { ok, b: ok ? st.tahmin.length - 1 : 'x' });
-            const s = window.Seri ? Seri.ozet(M.id).seri : 0;
-            msg.textContent = ok ? 'Bildin! 🎉 ' + st.tahmin.length + '. denemede · ' + skor + ' puan' + (s > 1 ? ' · 🔥 ' + s + ' günlük seri' : '') : 'Kelime: ' + kelime + ' · yarın yeni kelime!';
-            if (api.sound) api.sound(ok ? 'win' : 'lose'); if (ok && skor > 0) api.submitScore(skor);
-            istCiz();
-          } else msg.textContent = '';
-          sakla(); ciz(); return; }
-        if (yaz.length < 5 && M.harf.test(h)) { yaz.push(h); ciz(); }
+            ses(ok ? 'win' : 'lose'); if (ok && skor > 0) api.submitScore(skor);
+            if (ok && api.toast) api.toast(skor + ' puan' + (seri() > 1 ? ' · 🔥 ' + seri() + ' günlük seri' : ''));
+            sakla(); kur(); const s = kok.querySelectorAll('.gk-sat')[st.tahmin.length - 1]; if (s) s.classList.add('yeni'); return;
+          }
+          ses('click'); sakla(); ciz(); return; }
+        if (yaz.length < 5 && M.harf.test(h)) { uyari = ''; yaz.push(h); ses('tap'); ciz(); }
       };
       /* daha önce bitmiş ama seriye yazılmamış gün (eski sürüm) */
-      if (st.bitti && window.Seri) Seri.kaydet(M.id, N, { ok: st.tahmin[st.tahmin.length - 1] === kelime, b: st.tahmin.length - 1 });
-      msg.textContent = st.bitti ? 'Bugünkü bulmacayı bitirdin. Yarın yeni kelime!' : mod !== 'tr' ? '5 harfli ' + M.kAd + ' kelimeyi bul · Yeşil: doğru yer · Sarı: kelimede var · Gri: yok' + (M.not ? ' · ' + M.not : '') : 'Yeşil: doğru yer · Sarı: kelimede var · Gri: yok';
+      if (st.bitti && window.Seri) Seri.kaydet(M.id, N, { ok: bildi(), b: bildi() ? st.tahmin.length - 1 : 'x' });
       ciz();
-      if (st.bitti) istCiz(); else { const b = E('button', { class: 'g-btn ghost', style: { display: 'block', margin: '12px auto 0' } }, '📊 İstatistik ve seri'); b.onclick = () => { b.remove(); istCiz(); }; ist.append(b); }
     }
-    const kl = e => { if (e.ctrlKey || e.metaKey || e.altKey) return; const k = e.key === 'Enter' ? 'ENTER' : e.key === 'Backspace' ? 'BACKSPACE' : MOD[mod].up(e.key); if (k.length === 1 || k === 'ENTER' || k === 'BACKSPACE') { e.preventDefault(); tus(mod === 'tr' && k === 'I' && e.key === 'ı' ? 'I' : k); } };
-    addEventListener('keydown', kl); if (api.onCleanup) api.onCleanup(() => removeEventListener('keydown', kl));
+    const kl = e => { if (e.ctrlKey || e.metaKey || e.altKey) return;
+      if (perde) { if (e.key === 'Enter' || e.key === 'Escape') { e.preventDefault(); yardimKapat(); } return; }
+      if (/^(INPUT|TEXTAREA|SELECT)$/.test((e.target && e.target.tagName) || '')) return;
+      const k = e.key === 'Enter' ? 'ENTER' : e.key === 'Backspace' ? 'BACKSPACE' : MOD[mod].up(e.key); if (k.length === 1 || k === 'ENTER' || k === 'BACKSPACE') { if (k === 'ENTER' && e.target && e.target.tagName === 'BUTTON') return; e.preventDefault(); tus(k); } };
+    addEventListener('keydown', kl);
+    if (api.onCleanup) api.onCleanup(() => { removeEventListener('keydown', kl); clearInterval(sayac); yardimKapat(); root.classList.remove('gk-mount'); });
     kur();
+    let gordu = false; try { gordu = localStorage.getItem(YKEY) === '1'; } catch (e) { }
+    if (!gordu && !durumu(mod).tahmin.length) yardim(true);
+    if (/[?&]gktest/.test(location.search)) window.__gk = { cevap: () => sec(N, MOD[mod].L), tus: h => tus(h), ham: () => ham };
   }
 });
 })();
