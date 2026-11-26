@@ -3,6 +3,12 @@
 <head>
 <meta charset="utf-8">
 <script src="/dil.js"></script>
+<script>/* 3D açıksa: modülleri ve modelleri sayfa açılırken paralel indir (zincirleme bekleme olmasın) */
+(function () { try { var q = new URLSearchParams(location.search).get('gorunum'), g = q || localStorage.getItem('derin-gorunum'); if (g !== '3d') return;
+  var K = '/derin-mavi/3d/', ek = function (rel, h, as) { var l = document.createElement('link'); l.rel = rel; l.href = K + h; if (as) { l.as = as; l.crossOrigin = 'anonymous'; } document.head.appendChild(l); };
+  ['sahne3d.js', 'three.module.min.js', 'uretec.js', 'yukleyici.js', 'addons/loaders/GLTFLoader.js', 'addons/libs/meshopt_decoder.module.js', 'addons/utils/BufferGeometryUtils.js', 'addons/postprocessing/EffectComposer.js', 'addons/postprocessing/RenderPass.js', 'addons/postprocessing/ShaderPass.js', 'addons/postprocessing/UnrealBloomPass.js', 'addons/postprocessing/OutputPass.js'].forEach(function (h) { ek('modulepreload', h); });
+  ['baliklar.glb', 'resif.glb'].forEach(function (h) { ek('preload', h, 'fetch'); });
+} catch (e) { } })();</script>
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover, user-scalable=no">
 <meta name="theme-color" content="#0B4A6B">
 <title>Derin Mavi – Balık Büyütme Oyunu (larvadan dev balığa, tarayıcıda ücretsiz) | erdevelop</title>
@@ -217,7 +223,7 @@ body.er-durumlu #panel{bottom:32px}
   <button class="yuv" data-dil-btn type="button">EN</button>
 </div>
 <div id="ziyaretBant" hidden></div>
-<div id="sesKutu" hidden><button type="button" id="sesSus" title="Sesi kapat/aç" data-en-title="Mute/unmute" aria-label="Sesi kapat/aç" data-en-aria="Mute/unmute">🔈</button><input id="sesKaydir" type="range" min="0" max="100" step="5" aria-label="Ses düzeyi" data-en-aria="Volume"><span id="sesYuzde"></span></div>
+<div id="sesKutu" hidden><button type="button" id="sesSus" title="Sesi kapat/aç" data-en-title="Mute/unmute" aria-label="Sesi kapat/aç" data-en-aria="Mute/unmute">🔈</button><input id="sesKaydir" type="range" min="0" max="100" step="5" aria-label="Ses düzeyi" data-en-aria="Volume"><span id="sesYuzde"></span><button type="button" id="muzikBtn" title="Müzik" data-en-title="Music" aria-label="Müzik" data-en-aria="Music">🎵</button></div>
 
 <div id="panel" hidden>
   <button type="button" id="panelKapa" title="Paneli gizle" data-en-title="Hide panel" aria-label="Paneli gizle" data-en-aria="Hide panel" aria-expanded="true">‹</button>
@@ -492,7 +498,18 @@ const yemMax = () => YEM_MAX + (has('yem') ? 1 : 0);
 const nesilCarpan = () => 1 + Math.min(0.5, (S.nesil - 1) * 0.1);
 const gunSiniri = () => GUN_SINIR + Math.min(30, (S.seri.n || 0) * 3);
 const altinSaat = () => { const t = trSaat(); return (t.g === 6 || t.g === 0) && t.s >= 20 && t.s < 22; };
-const kisMevsim = () => { const a = trSaat().ay; return a === 11 || a === 0 || a === 1; };
+/* MEVSİM SAATİ: varsayılan olarak mevsimler 15 dakikada bir döner (ilkbahar → yaz → sonbahar → kış).
+   'derin-mevsim' = 'takvim' gerçek aya, 'ilkbahar'… sabit bir mevsime bağlar. */
+const MEVSIM_SURE = 15 * 60 * 1000, MEVSIM_SIRA = ['ilkbahar', 'yaz', 'sonbahar', 'kis'];
+const mevsimSecim = () => { try { return localStorage.getItem('derin-mevsim') || ''; } catch (e) { return ''; } };
+const mevsimDongu = () => !mevsimSecim();
+const mevsimBlok = t => Math.floor(t / MEVSIM_SURE);
+const takvimMevsim = t => { const ay = new Date(t).getMonth(); return ay === 11 || ay < 2 ? 'kis' : ay < 5 ? 'ilkbahar' : ay < 8 ? 'yaz' : 'sonbahar'; };
+function mevsimAt(t) { const sec = mevsimSecim(); if (sec === 'takvim') return takvimMevsim(t); if (MEVSIM_SIRA.includes(sec)) return sec; return MEVSIM_SIRA[((mevsimBlok(t) % 4) + 4) % 4]; }
+/* oyun kuralları (kışa özel tür, mevsim etkinliği): döngüdeyken döngüyü, değilse gerçek takvimi izler */
+const kuralMevsim = () => { const t = simdi(); return mevsimDongu() ? mevsimAt(t) : takvimMevsim(t); };
+const mevsimKalan = () => MEVSIM_SURE - (simdi() % MEVSIM_SURE);
+const kisMevsim = () => kuralMevsim() === 'kis';
 function boyHesap(d) {
   const k = d.tur && TURLER[d.tur] ? TURLER[d.tur].k : 0.7;
   return Math.round((0.4 + Math.pow(Math.max(0, d.xp), 0.62) * 0.33 * Math.pow(k, 0.85) * (d.tur && TURLER[d.tur].oz === 'buyuk' ? 1.15 : 1)) * 10) / 10;
@@ -937,6 +954,25 @@ const SES = (() => {
     if (!bacaK) { const n = a.sampleRate * 2, b = a.createBuffer(1, n, a.sampleRate), d = b.getChannelData(0); let x = 0; for (let i = 0; i < n; i++) { x = (x + (Math.random() * 2 - 1) * 0.08) * 0.985; d[i] = x * 3; } for (let i = 0; i < 2000; i++) { const k = i / 2000; d[i] *= k; d[n - 1 - i] *= k; }
       const src = a.createBufferSource(), f = a.createBiquadFilter(); src.buffer = b; src.loop = true; f.type = 'lowpass'; f.frequency.value = 90; bacaK = a.createGain(); bacaK.gain.value = 0; src.connect(f).connect(bacaK).connect(ana); src.start(); }
     bacaK.gain.setTargetAtTime(v, a.currentTime, 1.5); }
+  /* UYUMLU MÜZİK: sentezlenen yumuşak çan ve pedler; gündüz resifte aydınlık (majör pentatonik), gece ve derinde
+     alçak ve yavaş (minör), fırtınada gergin. Notalar ölçek üzerinde rastgele yürür, ara ara uzun bir ped akoru gelir. */
+  let muzikAcik = ls.get('derin-muzik', 1) !== 0, muzikT = 0, muzikAdim = 4, muzikN = 0;
+  function ped(f, sure, v) { const a = hazir(); if (!a) return; const t = a.currentTime;
+    for (const [m, tp] of [[1, 'sine'], [1.5, 'sine'], [2.003, 'triangle']]) { const o = a.createOscillator(), k = a.createGain(), fl = a.createBiquadFilter(); o.type = tp; o.frequency.value = f * m; fl.type = 'lowpass'; fl.frequency.value = 900;
+      k.gain.setValueAtTime(0.0001, t); k.gain.linearRampToValueAtTime(v / m, t + sure * 0.4); k.gain.linearRampToValueAtTime(0.0001, t + sure); o.connect(fl).connect(k).connect(ana); o.start(t); o.stop(t + sure + 0.1); } }
+  function muzikTik(D) {
+    if (!muzikAcik || duzey <= 0 || document.hidden) return; const a = hazir(); if (!a || a.currentTime < muzikT) return;
+    const mod = D.firtina ? 'firtina' : D.derin ? 'derin' : D.gece ? 'gece' : D.kis ? 'kis' : 'gun';
+    const OLC = { gun: [0, 2, 4, 7, 9], kis: [0, 2, 4, 7, 11], gece: [0, 3, 5, 7, 10], derin: [0, 3, 5, 7, 10], firtina: [0, 1, 5, 7, 8] }[mod];
+    const kok = { gun: 261.63, kis: 293.66, gece: 220, derin: 146.83, firtina: 196 }[mod], tempo = { gun: 1.1, kis: 1.3, gece: 1.6, derin: 2.2, firtina: 0.85 }[mod];
+    muzikAdim = Math.max(0, Math.min(9, muzikAdim + [-2, -1, -1, 1, 1, 2][Math.floor(Math.random() * 6)]));
+    const yari = OLC[muzikAdim % 5] + 12 * Math.floor(muzikAdim / 5), f = kok * Math.pow(2, yari / 12), v = mod === 'derin' ? 0.007 : 0.009;
+    ton(f, f * 0.999, 2.4 * tempo, 'sine', v); ton(f * 2, f * 2, 0.9 * tempo, 'sine', v * 0.25); /* çan: temel + parlak üst ton */
+    if (++muzikN % 8 === 0) ped(kok / 2, 7 * tempo, mod === 'firtina' ? 0.006 : 0.009);
+    muzikT = a.currentTime + tempo * (Math.random() < 0.3 ? 2 : Math.random() < 0.15 ? 0.5 : 1);
+  }
+  const yakinGecis = balina => { hava(1.8, 0.09, 180); ton(72, 44, 2.2, 'sine', 0.06); if (balina) setTimeout(balinaSarki, 400); };
+  const muzik = v => { if (v != null) { muzikAcik = !!v; ls.set('derin-muzik', v ? 1 : 0); } return muzikAcik; };
   function ekoSesBasla() {
     if (ekoZam) return;
     ekoZam = setInterval(() => {
@@ -947,6 +983,7 @@ const SES = (() => {
       /* dalga uğultusu ve fırtına */
       if (ortamK) ortamK.gain.setTargetAtTime(0.03 + (D.deniz || 0) * 0.07 + (D.firtina ? 0.05 : 0), ac.currentTime, 2);
       if (D.yagmur && Math.random() < 0.9) for (let i = 0; i < 3; i++) setTimeout(() => cit(0.0025), Math.random() * 240);
+      muzikTik(D);
       /* derinliğe göre ortam: açık denizde daha aydınlık uğultu, derinde boğuk ve alçak; baca yakınsa derinden gürleme */
       if (ortamF) ortamF.frequency.setTargetAtTime(D.derin ? 150 : D.acik ? 420 : 300, ac.currentTime, 3);
       if (D.baca || bacaK) bacaUgultu(D.baca ? 0.05 : 0);
@@ -958,7 +995,7 @@ const SES = (() => {
     }, 250);
   }
   return {
-    ortam, kabarcik, durumAl: null, balinaSarki, orkaIslik, ispermecetTik, orfozGum, mantisVurus, puf, savur,
+    ortam, kabarcik, durumAl: null, balinaSarki, muzik, yakinGecis, orkaIslik, ispermecetTik, orfozGum, mantisVurus, puf, savur,
     yem: () => { hava(0.18, 0.06, 600); ton(180, 90, 0.18, 'sine', 0.05); setTimeout(() => kabarcik(0.01), 120); },
     lokma: () => ton(520 + Math.random() * 120, 260, 0.09, 'sine', 0.03),
     plankton: altin => altin ? (ton(880, 1320, 0.08, 'sine', 0.03), ton(1320, 1760, 0.1, 'sine', 0.025, 0.07)) : ton(900 + Math.random() * 300, 1500, 0.05, 'sine', 0.018),
@@ -1006,11 +1043,11 @@ function g3Yuzenler() {
   for (const o of CNL.L) { const k = G3_YUZEN[o.tur]; if (!k) continue; o._g3 = o._g3 || ++g3Sira;
     const sis = o.tur === 'balon' && o.sis > 0 ? Math.min(1, (3.2 - o.sis) * 4, o.sis * 2) : 0;
     L.push({ id: 'y' + o._g3, tur: o.tur, x: o.x, y: o.y, s: (o.tur === 'balon' ? 12 : 16) * OL * k, d: o.d || 1, f: o.f, sis, tepki: o.tepki }); }
-  const g = GZ.o; if (g) L.push({ id: 'gz' + g.tur + Math.round(g.yb), tur: g.tur, x: g.x, y: g.y, s: g.s, d: g.tur === 'dumbo' ? 1 : g.d, f: g.f, tepki: g.tepki, arka: !!GZ_TUR[g.tur].arka, yavru: g.yavru, savas: g.savas, savur: g.savur > 0 ? 1 : 0 });
+  const g = GZ.o; if (g) L.push({ id: 'gz' + g.tur + Math.round(g.yb), tur: g.tur, x: g.x, y: g.y, s: g.s, d: g.tur === 'dumbo' ? 1 : g.d, f: g.f, tepki: g.tepki, arka: !!GZ_TUR[g.tur].arka && !g.yakin, yakin: g.yakin, yavru: g.yavru, savas: g.savas, savur: g.savur > 0 ? 1 : 0 });
   YERLI.meduz.forEach((m, i) => L.push({ id: 'meduz' + i + m.c, tur: 'meduz', x: m.x, y: m.y, s: 32 * OL, d: 1, f: m.f, renk: m.c, derin: SAHNE.tm === 'derin' }));
   YERLI.suru.forEach((f, i) => L.push({ id: 'suru' + i, tur: 'sardalya1', x: f.x, y: f.y, s: 13 * OL, d: YERLI.lider.yon || 1, f: zaman + i }));
   if (GOC.o) GOC.o.b.forEach((f, i) => L.push({ id: 'goc' + i, tur: 'sardalya1', x: f.x, y: f.y, s: 13 * OL, d: GOC.o.d, f: zaman + i }));
-  if (UZAK.o) L.push({ id: 'uzak' + UZAK.o.tur + Math.round(UZAK.o.yb), tur: UZAK.o.tur, x: UZAK.o.x, y: UZAK.o.y, s: UZAK.o.s, d: UZAK.o.d, f: UZAK.o.f, uzak: true });
+  for (const u of UZAK.L) L.push({ id: 'uzak' + u.id + u.tur, tur: u.tur, x: u.x, y: u.y, s: u.s, d: u.d, f: u.f, uzak: true });
   if (YIR.durum === 'gec') L.push({ id: 'yirtici', tur: 'kopekbaligi', x: YIR.x, y: YIR.y, s: 170 * OL, d: YIR.d, f: zaman });
   g3Kucuk(L); g3Avci(L); g3Yeni(L); g3MevsimOlay(L);
   if (TOP.kur) L.push({ id: 'top', tur: 'top', x: TOP.x, y: TOP.y, s: TOP.r, d: 1, f: zaman, don: TOP.x / TOP.r * 0.5 });
@@ -1043,7 +1080,7 @@ async function g3Baslat() {
 function g3Durum() {
   const L = [];
   for (const [id, b] of BAL) { if (!b.d || (b.d.a | 0) === 0 || !b.L) continue; L.push({ id, tur: b.d.a >= 2 && b.d.tr ? b.d.tr : 'yavru', x: b.x, y: b.y, L: b.L, yon: b.yon, faz: b.faz, vx: b.vx, vy: b.vy, uyku: b.uyku || b.geceUyku, der: b.der || 0, dans: b._dans, renk: g3Renk(b.d) }); }
-  return { tm: SAHNE ? SAHNE.tm : 'resif', hava: typeof HV !== 'undefined' ? HV.tur : null, baliklar: L, gece: geceDegeri(), isik: typeof havaIsik === 'function' ? havaIsik(zaman) : 1, akinti: typeof HV !== 'undefined' ? HV.akinti : 1, deniz: DENIZ.d, dalgaA: dalgaGenlik(), sy: insSY(), eko: S && S.eko ? { berrak: S.eko.berrak ?? 0.8, bulanNeden: S.eko.bulanNeden, beyaz: S.eko.beyaz, buyume: S.eko.buyume, koloni: ekoKoloniGorunen(), cayir: S.eko.cayir, yosun: S.eko.yosun, gun: ekoGun() } : null, canlilar: g3Canlilar(), yuzenler: g3Yuzenler(), insan: g3Insan(), parca: g3Parca(), saat: (() => { const d = new Date(simdi()); return d.getHours() + d.getMinutes() / 60; })() };
+  return { ayIsik: ayIsik(), gelgit: gelgit().sev, tm: SAHNE ? SAHNE.tm : 'resif', hava: typeof HV !== 'undefined' ? HV.tur : null, baliklar: L, gece: geceDegeri(), isik: typeof havaIsik === 'function' ? havaIsik(zaman) : 1, akinti: typeof HV !== 'undefined' ? HV.akinti : 1, deniz: DENIZ.d, dalgaA: dalgaGenlik(), sy: insSY(), eko: S && S.eko ? { berrak: S.eko.berrak ?? 0.8, bulanNeden: S.eko.bulanNeden, beyaz: S.eko.beyaz, buyume: S.eko.buyume, koloni: ekoKoloniGorunen(), cayir: S.eko.cayir, yosun: S.eko.yosun, gun: ekoGun() } : null, canlilar: g3Canlilar(), yuzenler: g3Yuzenler(), insan: g3Insan(), parca: g3Parca(), saat: (() => { const d = new Date(simdi()); return d.getHours() + d.getMinutes() / 60; })() };
 }
 let W = 0, H = 0, DPR = 1, OL = 1, ALAN = { x1: 0, x2: 0, y1: 0, y2: 0, kum: 0 };
 let SAHNE = null, zaman = 0;
@@ -1454,6 +1491,11 @@ function hedefSusleri(c, t, kat) {
 /* ================= akvaryumdaki balıklar ================= */
 const BAL = new Map();     // anahtar → görünen balık
 let YEM = [], PARC = [], BALON = [];
+/* KARE HIZI KORUYUCU (2D katman, 3D'de de üstte çizilen efektler için): 2 saniyelik pencerelerde ölçer; yavaşsa parçacık
+   yoğunluğunu (kar, ışıltı, fırtına, yumurta) kısar, hızlanınca yavaşça geri açar */
+const PERF = { k: 1, s: 0, n: 0 };
+function perfOlc(dt) { if (dt > 0.5) return; PERF.s += dt; PERF.n++; if (PERF.s < 2) return; const fps = PERF.n / PERF.s; PERF.s = 0; PERF.n = 0;
+  if (fps < 38) PERF.k = Math.max(0.35, PERF.k - 0.15); else if (fps > 54) PERF.k = Math.min(1, PERF.k + 0.05); }
 let ortakHedef = 0;
 function hedefSeviye() { let s = 0; for (const h of HEDEF) if (ortakHedef >= h.n) s++; return s; }
 function benVeri() { return S ? { a: S.asama, al: S.alan, tr: S.tur, r: S.renk, z: S.giy, mz: S.melez ? S.melez.tr : null, h: S.hasta, gn: S.gen } : null; }
@@ -2253,11 +2295,12 @@ function ciz(dt) {
   /* derinlik: uzaktakiler önce çizilir ve biraz küçük görünür, yakına gelenler büyür */
   const cizL = [...liste].sort((a, b) => (a.der || 0) - (b.der || 0));
   for (const b of cizL) { const dd = dansDonusum(b, dt); b._dd = dd; b._dans = b.dans ? { tip: b.dans.tip, p: Math.min(1, b.dans.t / 1.3), oy: dd ? dd.oy : 0 } : null; if (G3 && b.d && (b.d.a | 0) > 0) continue; balikCiz(c, b.d, b.x, b.y + (dd ? dd.oy : 0), b.L * (1 + (b.der || 0) * (b.der > 0 ? 0.22 : 0.18)), b.faz, dd && dd.yon != null ? dd.yon : b.yon, { dunya: 1, t: zaman, uyku: b.uyku || b.geceUyku, solgun: b.solgun, aci: dd ? dd.aci : 0, alfa: b.sersem > 0 ? 0.6 + Math.sin(zaman * 30) * 0.3 : 1 }); }
-  nesilCiz(c);
+  nesilCiz(c); karCiz(c);
   if (!G3) onKatman(c, zaman);
   havaCiz(c, zaman, dt);
   insUstCiz(c);
   /* parçacıklar */
+  if (PARC.length > 500 * PERF.k) PARC.splice(0, PARC.length - Math.round(500 * PERF.k));
   for (let i = PARC.length - 1; i >= 0; i--) {
     const p = PARC[i]; p.t -= dt; if (p.t <= 0) { PARC.splice(i, 1); continue; }
     p.x += p.vx * dt; p.y += p.vy * dt; if (p.murekkep) { p.r += dt * 7; p.vx *= 0.96; p.vy *= 0.96; }
@@ -2377,7 +2420,7 @@ function yemAt() {
   S.yem--; if (S.yem === yemMax() - 1) S.yemT = simdi(); SES.yem(); S.su = Math.max(0, S.su - 0.25); sezonXp(2); mutluEkle(1);
   const b = BAL.get('ben'), x0 = b ? b.x : W / 2;
   for (let i = 0; i < 4; i++) YEM.push({ x: kis(x0 + rnd(-70, 70), 30, W - 30), y: rnd(30, 60), f: rnd(0, TAU) });
-  const g = gunVeri(); g.yem++; S.ist.yem++;
+  const g = gunVeri(); g.yem++; S.ist.yem++; haftaV().yem++;
   tokEkle(12); seriGuncelle();
   const k = kazan(5); mutasyonDene();
   hedefKatki(1);
@@ -2690,11 +2733,53 @@ function menuAc() {
     <button type="button" data-m="bild"><span>🔔</span>${T('Bildirimler', 'Notifications')}<em>${S.bildirim.on ? T('açık', 'on') : T('kapalı', 'off')}</em></button>
     <button type="button" data-m="reklam" ${reklamKalan() > 0 ? '' : 'disabled'}><span>📺</span>${T('Kısa reklam izle: +2 yem', 'Watch a short ad: +2 food')}<em>${reklamKalan()}/${REKLAM_GUN}</em></button>
     <button type="button" data-m="tasi" ${dur === 'acik' && S.akv && !ziyaretModu() ? '' : 'disabled'}><span>🚚</span>${T('Başka akvaryuma taşın', 'Move to another aquarium')}</button>
+    <button type="button" data-m="hafta"><span>📊</span>${T('Haftalık özet', 'Weekly summary')}</button>
     <button type="button" data-m="yedek"><span>💾</span>${T('Yedekle / geri yükle', 'Back up / restore')}</button>
     <button type="button" data-m="rehber"><span>🎓</span>${T('Rehberi baştan göster', 'Replay the tutorial')}</button>
     <button type="button" data-m="nasil"><span>❔</span>${T('Nasıl oynanır?', 'How to play')}</button></div>
     <p class="kucuk">${T('Balığın bu tarayıcıda saklanır. <a href="/hesap.html">Hesabınla giriş yapıp</a> senkronu açarsan diğer cihazlarına da gelir.', 'Your fish is stored in this browser. <a href="/hesap.html">Sign in</a> and turn on sync to bring it to your other devices.')}</p>`);
-  ic.querySelectorAll('[data-m]').forEach(b => b.onclick = () => ({ d3: () => { kaydet(false); try { localStorage.setItem('derin-gorunum', G3 ? '2d' : '3d'); } catch (e) { } location.href = '/derin-mavi.html'; }, mevsim: mevsimAc, eko: ekoAc, yedek: yedekAc, fps: () => { fpsAcik = !fpsAcik; try { localStorage.setItem('derin-fps', fpsAcik ? '1' : '0'); } catch (e) { } menuEmYaz('fps', fpsAcik); }, vital: () => { vitalAcik = !vitalAcik; try { localStorage.setItem('derin-vital', vitalAcik ? '1' : '0'); } catch (e) { } menuEmYaz('vital', vitalAcik); }, akv: akvListeAc, hedef: hedefAc, dukkan: dukkanAc, bas: basarimAc, rekor: rekorAc, sohret: sohretAc, reklam: reklamTeklif, paylas, tasi: tasiAc, nasil: nasilAc, gunluk: gunlukAc, sefer: seferAc, okul: okulAc, unvan: unvanAc, foto: fotoAc, ansik: ansikAc, rehber: () => { S.rehber = 0; S.rb = Object.fromEntries(Object.entries(S.rb).filter(([k]) => k.startsWith('u_'))); S.kumandaOgrendi = 0; kaydet(false); modalKapat(); }, ark: arkadaslarAc, sezon: sezonAc, album: albumAc, etk: etkinlikAc, bild: bildirimAc, oy: oylamaAc })[b.dataset.m]());
+  ic.querySelectorAll('[data-m]').forEach(b => b.onclick = () => ({ d3: () => { kaydet(false); try { localStorage.setItem('derin-gorunum', G3 ? '2d' : '3d'); } catch (e) { } location.href = '/derin-mavi.html'; }, mevsim: mevsimAc, eko: ekoAc, yedek: yedekAc, hafta: () => haftaAc(false), fps: () => { fpsAcik = !fpsAcik; try { localStorage.setItem('derin-fps', fpsAcik ? '1' : '0'); } catch (e) { } menuEmYaz('fps', fpsAcik); }, vital: () => { vitalAcik = !vitalAcik; try { localStorage.setItem('derin-vital', vitalAcik ? '1' : '0'); } catch (e) { } menuEmYaz('vital', vitalAcik); }, akv: akvListeAc, hedef: hedefAc, dukkan: dukkanAc, bas: basarimAc, rekor: rekorAc, sohret: sohretAc, reklam: reklamTeklif, paylas, tasi: tasiAc, nasil: nasilAc, gunluk: gunlukAc, sefer: seferAc, okul: okulAc, unvan: unvanAc, foto: fotoAc, ansik: ansikAc, rehber: () => { S.rehber = 0; S.rb = Object.fromEntries(Object.entries(S.rb).filter(([k]) => k.startsWith('u_'))); S.kumandaOgrendi = 0; kaydet(false); modalKapat(); }, ark: arkadaslarAc, sezon: sezonAc, album: albumAc, etk: etkinlikAc, bild: bildirimAc, oy: oylamaAc })[b.dataset.m]());
+}
+/* HAFTALIK ÖZET: pazartesiden pazara karşılaşılan canlılar, albüme yeni girenler, büyüme ve yem; paylaşılabilir görsel kart */
+const haftaKey = t => Math.floor((t + 3 * 3.6e6 + 3 * 864e5) / (7 * 864e5)); /* Türkiye saatiyle pazartesi başlar */
+function haftaV() {
+  const k = haftaKey(simdi()); let h = S.hafta;
+  if (!h || h.k !== k) { if (h && h.k === k - 1 && (h.g.length || h.yem)) { S.haftaOnce = h; S.haftaOnce.boy1 = boyHesap(S); S.haftaOnce.alb1 = Object.keys(S.alb).length; S.haftaOnce.bak = 0; }
+    h = S.hafta = { k, g: [], yem: 0, boy0: boyHesap(S), alb0: Object.keys(S.alb).length }; }
+  return h;
+}
+function haftaGor(tur) { if (!S || !CANLI_BILGI[tur] && !TURLER[tur]) return; const h = haftaV(); if (!h.g.includes(tur)) h.g.push(tur); }
+function haftaOzet(gecen) {
+  const h = gecen ? S.haftaOnce : haftaV(); if (!h) return null;
+  return { g: h.g.slice(), yem: h.yem, buyu: Math.max(0, (gecen ? h.boy1 : boyHesap(S)) - h.boy0), yeni: Math.max(0, (gecen ? h.alb1 : Object.keys(S.alb).length) - h.alb0) };
+}
+function haftaKart(o, gecen) {
+  const cv = document.createElement('canvas'); cv.width = 720; cv.height = 900; const c = cv.getContext('2d');
+  const g = c.createLinearGradient(0, 0, 0, 900); g.addColorStop(0, '#0c4f72'); g.addColorStop(0.6, '#08304d'); g.addColorStop(1, '#041a2c'); c.fillStyle = g; c.fillRect(0, 0, 720, 900);
+  c.globalAlpha = 0.12; c.fillStyle = '#bfefff'; for (let i = 0; i < 6; i++) { c.beginPath(); c.moveTo(120 + i * 110, 0); c.lineTo(160 + i * 110, 0); c.lineTo(60 + i * 140, 900); c.lineTo(20 + i * 140, 900); c.fill(); } c.globalAlpha = 1;
+  for (let i = 0; i < 40; i++) { c.fillStyle = `rgba(220,245,255,${0.15 + (i % 5) * 0.05})`; c.beginPath(); c.arc((i * 173) % 720, (i * 311) % 900, 1.5 + (i % 3), 0, TAU); c.fill(); }
+  c.fillStyle = '#ffd166'; c.font = '800 30px system-ui, sans-serif'; c.textAlign = 'center'; c.fillText(T(gecen ? 'GEÇEN HAFTANIN ÖZETİ' : 'BU HAFTANIN ÖZETİ', gecen ? "LAST WEEK'S SUMMARY" : "THIS WEEK'S SUMMARY"), 360, 70);
+  c.fillStyle = '#fff'; c.font = '900 64px system-ui, sans-serif'; c.fillText(S.ad, 360, 150);
+  try { balikCiz(c, S, 360, 300, 240, zaman * 9, 1, { t: zaman }); } catch (e) { }
+  const sat = [[`🐠 ${o.g.length}`, T('canlıyla karşılaştı', 'creatures met')], [`📏 +${o.buyu.toFixed(1)} cm`, T('büyüdü', 'grew')], [`📖 ${o.yeni}`, T('yeni albüm kaydı', 'new album entries')], [`🍤 ${o.yem}`, T('kez yem yedi', 'meals')]];
+  sat.forEach(([a, b], i) => { const x = 190 + (i % 2) * 340, y = 470 + Math.floor(i / 2) * 120; c.fillStyle = 'rgba(255,255,255,.08)'; c.beginPath(); c.roundRect(x - 160, y - 55, 320, 100, 22); c.fill(); c.fillStyle = '#fff'; c.font = '800 40px system-ui, sans-serif'; c.fillText(a, x, y); c.fillStyle = '#a9d8ea'; c.font = '600 22px system-ui, sans-serif'; c.fillText(b, x, y + 32); });
+  const em = o.g.map(t => (CANLI_BILGI[t] || [])[0]).filter(Boolean).slice(0, 12); c.font = '40px system-ui, sans-serif'; c.fillText(em.join(' '), 360, 760);
+  c.fillStyle = '#7fb8cf'; c.font = '600 22px system-ui, sans-serif'; c.fillText('erdevelop.com/derin-mavi', 360, 860);
+  return cv;
+}
+function haftaAc(gecen) {
+  const o = haftaOzet(gecen && S.haftaOnce); if (!o) return; const gc = gecen && S.haftaOnce; if (gc) { S.haftaOnce.bak = 1; kaydet(false); }
+  const cv = haftaKart(o, gc), url = cv.toDataURL('image/png');
+  const ic = modal(`<h2>📊 ${gc ? T('Geçen haftanın özeti', "Last week's summary") : T('Bu haftanın özeti', "This week's summary")}</h2>
+    <img src="${url}" alt="" style="width:100%;border-radius:16px;display:block">
+    <p class="kucuk" style="margin-top:8px">${o.g.length ? o.g.map(t => (CANLI_BILGI[t] || [])[0] ? `${CANLI_BILGI[t][0]} ${T(CANLI_BILGI[t][1], CANLI_BILGI[t][2])}` : '').filter(Boolean).join(' · ') : T('Bu hafta henüz bir canlıyla karşılaşmadın; dokunarak tanış!', 'You haven’t met any creatures this week yet; tap them to say hello!')}</p>
+    <button type="button" class="ana" id="hfPay">📤 ${T('Kartı paylaş', 'Share card')}</button>
+    ${S.haftaOnce && !gecen ? `<button type="button" class="ikinci" id="hfOnce">${T('Geçen haftaya bak', 'See last week')}</button>` : ''}`);
+  ic.querySelector('#hfPay').onclick = async () => {
+    const b = await new Promise(r => cv.toBlob(r, 'image/png')), ad = 'derin-mavi-hafta.png';
+    try { const fl = new File([b], ad, { type: 'image/png' }); if (navigator.canShare && navigator.canShare({ files: [fl] })) { await navigator.share({ files: [fl], title: 'Derin Mavi', text: T(`${S.ad} bu hafta ${o.g.length} canlıyla karşılaştı 🐟`, `${S.ad} met ${o.g.length} creatures this week 🐟`) }); return; } } catch (e) { if (e && e.name === 'AbortError') return; }
+    const a = document.createElement('a'); a.href = URL.createObjectURL(b); a.download = ad; document.body.appendChild(a); a.click(); setTimeout(() => { URL.revokeObjectURL(a.href); a.remove(); }, 500); };
+  const ob = ic.querySelector('#hfOnce'); if (ob) ob.onclick = () => { modalKapat(); setTimeout(() => haftaAc(true), 50); };
 }
 /* HESAP YEDEĞİ HATIRLATMASI: balık birkaç gündür yaşıyorsa ve hesap senkronu kapalıysa nazikçe sorar
    (ilk kez 2. günden sonra, sonra haftada bir, en çok 3 kez; "bir daha sorma" denirse hiç) */
@@ -2702,6 +2787,7 @@ const senkronAcik = () => { try { return localStorage.getItem('erdevelop-sync') 
 const hesapYedekUrl = () => '/hesap.html?geri=' + encodeURIComponent('/derin-mavi.html') + '#senkron';
 const YH = { z: 25, bitti: false };
 function yedekHatirlat(dt) {
+  if (S && !girisAcik && !YH.hf) { YH.hf = 1; haftaV(); if (S.haftaOnce && !S.haftaOnce.bak && !S.haftaOnce.duy) { S.haftaOnce.duy = 1; setTimeout(() => duyur(T('📊 Geçen haftanın özeti hazır! Menüden “Haftalık özet”e bak.', '📊 Last week’s summary is ready! See “Weekly summary” in the menu.'), 1), 4000); } }
   if (YH.bitti || !S || girisAcik) return; YH.z -= dt; if (YH.z > 0) return; YH.z = 30;
   const h = S.yedekHat || (S.yedekHat = { n: 0, t: 0 }), gun = (simdi() - (S.dogum || simdi())) / 864e5;
   if (senkronAcik() || h.n >= 3 || ziyaretModu() || (gun < 2 && (S.nesil || 1) < 2) || simdi() - h.t < 7 * 864e5) { YH.bitti = true; return; }
@@ -2720,7 +2806,7 @@ function yedekHatirlat(dt) {
   ic.querySelector('#yhAsla').onclick = e => { e.preventDefault(); h.n = 99; kaydet(false); modalKapat(); };
 }
 /* KAYIT YEDEĞİ: balık, albüm, soy ağacı ve ekosistem bir dosyaya iner; başka cihazda ya da tarayıcıda geri yüklenir */
-const YEDEK_AYAR = ['derin-gorunum', 'derin3d-kalite2', 'derin-mavi-ses', 'derin-mevsim', 'derin-vital', 'derin-vital-kapali', 'derin-panel-kapali', 'derin-fps'];
+const YEDEK_AYAR = ['derin-gorunum', 'derin3d-kalite2', 'derin-mavi-ses', 'derin-muzik', 'derin-mevsim', 'derin-vital', 'derin-vital-kapali', 'derin-panel-kapali', 'derin-fps'];
 function yedekAc() {
   const ic = modal(`<h2>💾 ${T('Yedekle / geri yükle', 'Back up / restore')}</h2>
     <p class="alt">${T('Balığın, albümün, soy ağacın, ekosistemin ve ayarların tek bir dosyaya kaydedilir. Başka bir cihazda ya da tarayıcıda bu dosyayı yükleyerek kaldığın yerden devam edebilirsin.', 'Your fish, album, family tree, ecosystem and settings are saved to one file. Load it on another device or browser to carry on where you left off.')}</p>
@@ -3267,6 +3353,7 @@ const ALBUM = [
   { k: 'bolge:volkan', grup: 'canli', e: '🌋', ad: ['Volkan bacası', 'Volcanic vent'], ip: ['Keşif seferi', 'Expedition'] }, { k: 'bolge:cukur', grup: 'canli', e: '🕳️', ad: ['Dipsiz çukur', 'Bottomless trench'], ip: ['Keşif seferi', 'Expedition'] }
 ];
 function albumEkle(k, sessiz) {
+  if (S && k.startsWith('canli:')) haftaGor(k.slice(6));
   if (!S || S.alb[k] || !ALBUM.some(a => a.k === k)) return;
   S.alb[k] = simdi(); const n = Object.keys(S.alb).length;
   if (sessiz) { kaydet(false); return; }
@@ -3552,7 +3639,7 @@ function siteFb() {
 }
 const yerelTarih = () => { const d = new Date(simdi()); return d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0') + '-' + String(d.getDate()).padStart(2, '0'); };
 /* doğa olaylarının gerçek takvimdeki tarihi (bildirim için): mercan yumurtlama gecesi ve haftalık ekosistem olayının başladığı gün */
-function mevsimTarih(d) { let sec = ''; try { sec = localStorage.getItem('derin-mevsim') || ''; } catch (e) { } if (sec in MEVSIMLER) return sec; const ay = d.getMonth(); return ay === 11 || ay < 2 ? 'kis' : ay < 5 ? 'ilkbahar' : ay < 8 ? 'yaz' : 'sonbahar'; }
+function mevsimTarih(d) { return mevsimAt(d.getTime()); }
 const tarihStr = d => d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0') + '-' + String(d.getDate()).padStart(2, '0');
 function mercanSonraki() {
   if (SAHNE && SAHNE.tm === 'derin') return '';
@@ -3561,6 +3648,7 @@ function mercanSonraki() {
   return '';
 }
 function olaySonraki() {
+  if (mevsimDongu()) return null; /* mevsimler 15 dakikada dönerken olay da mevsimle birlikte değişir; takvim bildirimi anlamsız */
   for (let i = 0; i < 8; i++) { const d = new Date(); d.setDate(d.getDate() + i); d.setHours(12, 0, 0, 0); const gun = Math.floor((d.getTime() + 3 * 3.6e6) / 864e5), gk = ((gun + 3) % 7 + 7) % 7; if (gk !== 1) continue;
     const hafta = Math.floor((gun + 3) / 7), r = tohumRnd('eko' + hafta)(), mv = mevsimTarih(d);
     const tur = olayTuru(r, mv);
@@ -3689,12 +3777,14 @@ function magaraCiz(c) {
 }
 function geceCiz(c) {
   const g = geceDegeri(); if (g <= 0) return;
-  c.fillStyle = `rgba(4,10,40,${0.36 * g})`; c.fillRect(0, 0, W, H);
-  /* ay ışığı */
-  const ay = c.createRadialGradient(W * 0.8, -40, 0, W * 0.8, -40, H * 0.6); ay.addColorStop(0, `rgba(190,210,255,${0.18 * g})`); ay.addColorStop(1, 'rgba(190,210,255,0)'); c.fillStyle = ay; c.fillRect(0, 0, W, H);
+  const ai = ayIsik(), derin = SAHNE && SAHNE.tm === 'derin';
+  c.fillStyle = `rgba(4,10,40,${0.36 * g * (1.1 - 0.2 * ai)})`; c.fillRect(0, 0, W, H);
+  /* ay ışığı: dolunayda güçlü, yeni ayda neredeyse yok; yüzeyden süzülen soluk bir parıltı */
+  if (!derin) { const ay = c.createRadialGradient(W * 0.8, -40, 0, W * 0.8, -40, H * 0.65); ay.addColorStop(0, `rgba(190,210,255,${0.26 * g * (0.15 + 0.85 * ai)})`); ay.addColorStop(1, 'rgba(190,210,255,0)'); c.fillStyle = ay; c.fillRect(0, 0, W, H);
+    if (ai > 0.55) { c.save(); c.globalCompositeOperation = 'lighter'; c.globalAlpha = 0.05 * g * (ai - 0.55) / 0.45; const sy = insSY(); for (let i = 0; i < 4; i++) { const x = W * 0.8 + Math.sin(zaman * 0.3 + i) * 40 - i * 60 * OL; c.fillStyle = '#cfe0ff'; c.beginPath(); c.moveTo(x - 8, sy); c.lineTo(x + 8, sy); c.lineTo(x - 60 + i * 30, H); c.lineTo(x - 120 + i * 30, H); c.fill(); } c.restore(); } }
   /* ışıldayan canlılar */
   c.save(); c.globalCompositeOperation = 'lighter';
-  for (let i = 0; i < 26; i++) { const x = (i * 137 + Math.sin(zaman * 0.2 + i) * 30) % W, y = ALAN.y1 + ((i * 89) % 1000) / 1000 * (SAHNE.kumY - ALAN.y1), a = (0.5 + 0.5 * Math.sin(zaman * 1.3 + i * 2)) * g; const gr = c.createRadialGradient(x, y, 0, x, y, 6); gr.addColorStop(0, `rgba(120,255,220,${0.55 * a})`); gr.addColorStop(1, 'rgba(120,255,220,0)'); c.fillStyle = gr; c.beginPath(); c.arc(x, y, 6, 0, TAU); c.fill(); }
+  for (let i = 0, n = Math.round(26 * PERF.k); i < n; i++) { const x = (i * 137 + Math.sin(zaman * 0.2 + i) * 30) % W, y = ALAN.y1 + ((i * 89) % 1000) / 1000 * (SAHNE.kumY - ALAN.y1), a = (0.5 + 0.5 * Math.sin(zaman * 1.3 + i * 2)) * g; const gr = c.createRadialGradient(x, y, 0, x, y, 6); gr.addColorStop(0, `rgba(120,255,220,${0.55 * a})`); gr.addColorStop(1, 'rgba(120,255,220,0)'); c.fillStyle = gr; c.beginPath(); c.arc(x, y, 6, 0, TAU); c.fill(); }
   c.restore();
 }
 
@@ -4134,7 +4224,7 @@ const MEVSIM = {
   yaz: { e: '☀️', ad: ['Yaz: plankton bolluğu', 'Summer: plenty of plankton'] },
   guz: { e: '🍂', ad: ['Sonbahar: yosunlar dökülüyor', 'Autumn: the kelp is shedding'] }
 };
-const mevsim = () => { const a = trSaat().ay; return a === 11 || a <= 1 ? 'kis' : a <= 4 ? 'bahar' : a <= 7 ? 'yaz' : 'guz'; };
+const mevsim = () => ({ ilkbahar: 'bahar', yaz: 'yaz', sonbahar: 'guz', kis: 'kis' })[kuralMevsim()];
 let MPAR = [];
 function mevsimCiz(c, dt) {
   const derin = SAHNE && SAHNE.tm === 'derin', m = derin ? 'kis' : mevsim(), hedef = m === 'yaz' ? 0 : 40; /* derinde mevsim yaprağı yok: yalnız deniz karı */
@@ -4359,7 +4449,7 @@ function canliGuncelle(dt) {
       case 'ermit': if (!o.sakli) { o.t -= dt; if (o.t <= 0) { o.d = Math.random() < 0.5 ? -1 : 1; o.t = rnd(2, 6); o.dur = Math.random() < 0.4; } if (!o.dur) o.x = kis(o.x + o.d * 14 * OL * dt, 30, W - 30); } break;
       case 'ahtapot': if (o.kac > 0) { o.kac -= dt; o.x = kis(o.x + o.kd * 160 * OL * dt, 30, W - 30); } else if (o.kovala) { o.x = kis(o.x + o.kovala * 62 * OL * dt, 30, W - 30); o.d = o.kovala; } else { const av = geceDegeri() > 0.6; o.x = kis(o.x + Math.sin(o.f * (av ? 0.35 : 0.2)) * (av ? 38 : 4) * OL * dt, 30, W - 30); } o.hue = (o.hue + dt * (o.tepki > 0 ? 6 : 12)) % 360; break; /* gece avlanmaya çıkar */
       case 'karides': if (o.zipla > 0) { o.zipla -= dt; o.x += o.zd * 220 * OL * dt; o.y = kis(o.y - 60 * dt, A.y1, kumY - 10); } else { const hx = o.ev != null ? o.ev : o.x; o.x += (hx + Math.sin(o.f * 0.7) * 22 - o.x) * dt * 0.8; o.y += (kumY - 30 * OL + Math.sin(o.f * 0.5) * 18 - o.y) * dt * 0.6; } break;
-      case 'balon': if (o.sis > 0) o.sis -= dt; else { o.x += Math.sin(o.f * 0.15) * 10 * dt + o.d * 6 * dt; o.y += Math.sin(o.f * 0.3) * 6 * dt; if (o.x < A.x1 + 30 || o.x > A.x2 - 30) o.d *= -1; }
+      case 'balon': if (o.sis > 0) o.sis -= dt; else { o.x += Math.sin(o.f * 0.15) * 10 * dt + o.d * 6 * dt; o.y += Math.sin(o.f * 0.3) * 6 * dt; if (o.x < A.x1 + 30 || o.x > A.x2 - 30) o.d *= -1; } o.y = Math.min(o.y, kumY - 34 * OL); /* kuma değmesin */
         /* balıklara çarpmasın: yakın balıktan yavaşça uzaklaşır */
         for (const b of BAL.values()) { if (!b.L) continue; const ex = o.x - b.x, ey = o.y - b.y, uz = Math.hypot(ex, ey), min = b.L * 0.55 + 18 * OL; if (uz < min && uz > 0.1) { const g = (min - uz) / min * 40 * OL * dt; o.x += ex / uz * g; o.y += ey / uz * g; } }
         o.x = kis(o.x, A.x1 + 20, A.x2 - 20); o.y = kis(o.y, A.y1, A.y2); break;
@@ -4378,7 +4468,7 @@ function canliGuncelle(dt) {
   }
   gzGuncelle(dt); yeniGuncelle(dt);
   insGuncelle(dt);
-  havaGuncelle(dt); denizGuncelle(dt); ekoKare(dt); yedekHatirlat(dt); uzakGuncelle(dt); nesilGuncelle(dt);
+  perfOlc(dt); havaGuncelle(dt); denizGuncelle(dt); ekoKare(dt); yedekHatirlat(dt); uzakGuncelle(dt); nesilGuncelle(dt); karGuncelle(dt);
   /* yunus: arada bir yüzeyden geçer */
   if (SAHNE.tm !== 'derin') {
     if (!CNL.yunus) { CNL.yunusZ -= dt; if (CNL.yunusZ <= 0) { const d = Math.random() < 0.5 ? 1 : -1; CNL.yunus = { tur: 'yunus', x: d > 0 ? -150 : W + 150, y: A.y1 + 30 * OL, d, f: 0, bekle: 0, tepki: 0 }; CNL.yunusZ = rnd(150, 330); } }
@@ -4477,6 +4567,7 @@ function gzBaslat(tur) {
   const yb = y1 + (kumY - y1) * (g.h[0] + Math.random() * (g.h[1] - g.h[0]));
   GZ.o = { tur, d, s, x: d > 0 ? -s * 0.9 : W + s * 0.9, y: yb, yb, f: Math.random() * 9, tepki: 0, bekle: 0, don: 0 };
   GZ.son = tur;
+  if (G3 && ['kambur', 'balinakb', 'ispermecet', 'orka', 'manta', 'mola', 'cekic', 'dugong'].includes(tur) && Math.random() < 0.3 && zaman - (GZ.yakinT || -999) > 300) { GZ.o.yakin = 1; GZ.yakinT = zaman; } /* yakın geçiş: kameranın yanından */
   if (tur === 'ispermecet' && tm === 'derin' && Math.random() < 0.35) { GZ.o.savas = 1; duyur(T('🐋🦑 Derinlerde bir savaş: ispermeçet balinası bir dev kalamarla boğuşuyor!', '🐋🦑 A battle in the deep: a sperm whale is wrestling a giant squid!'), 1); }
   const yeni = S && !S.alb['canli:' + tur];
   if (g.n >= 2 || yeni) duyur(T(`${g.e} ${g.ad[0]} geçiyor! ${yeni ? 'Yanına yüz, tanış' : 'Yanına yüz'}`, `${g.e} A ${g.ad[1].toLowerCase()} is passing by! Swim over${yeni ? ' and say hi' : ''}`), g.n >= 2);
@@ -4502,6 +4593,7 @@ function gzGuncelle(dt) {
   o.x += o.d * g.v * OL * dt * (agir ? 1 : 1 + o.tepki * 0.5);
   const dal = { orka: [18, 0.5], ispermecet: [8, 0.15], cekic: [10, 0.4], fok: [42, 0.9], dumbo: [16, 0.7], pelikan: [20, 0.4], manta: [14, 0.35], kambur: [10, 0.15], balinakb: [8, 0.2] }[o.tur] || [10, 0.5];
   o.y = o.yb + Math.sin(o.f * dal[1]) * dal[0] * OL;
+  if (o.yakin && !o.yakinD && Math.abs(o.x - W / 2) < W * 0.12) { o.yakinD = 1; SES.yakinGecis(/kambur|balinakb|ispermecet|orka/.test(o.tur)); duyur(T(`${g.e} ${g.ad[0]} hemen yanından geçti!`, `${g.e} The ${g.ad[1].toLowerCase()} swam right past you!`)); albumEkle('canli:' + o.tur); }
   if ((o.d > 0 && o.x > W + o.s) || (o.d < 0 && o.x < -o.s)) GZ.o = null;
   else if (!g.arka && canliYakin(o, Math.max(40, o.s * 0.35))) gzTepki(o);
 }
@@ -4837,21 +4929,28 @@ function gzCizO(c, o) {
 function gzCiz(c) { const o = GZ.o; if (o && !G3 && !GZ_TUR[o.tur].arka) gzCizO(c, o); }
 function gzArkaCiz(c) { const o = GZ.o; if (o && !G3 && GZ_TUR[o.tur].arka) gzCizO(c, o); uzakCiz(c); }
 /* uzaktan geçenler: ara ara sisin içinden, çok uzakta bir balina, manta, kaplumbağa ya da sürü süzülür (dokunulmaz, sadece manzara) */
-const UZAK = { o: null, z: 25 + Math.random() * 30 };
-const UZAK_TUR = { resif: ['kambur', 'balinakb', 'manta', 'dkaplumbaga', 'barakuda', 'mola'], acik: ['kambur', 'balinakb', 'manta', 'mola', 'barakuda', 'fok', 'dugong'], derin: ['devkalamar', 'sifonofor', 'kambur', 'pelikan'] };
+const UZAK = { L: [], n: 0, o: null, z: 12 + Math.random() * 15, canli: 0, canliZ: 120 + Math.random() * 120 };
+const UZAK_TUR = { resif: ['kambur', 'balinakb', 'manta', 'dkaplumbaga', 'barakuda', 'mola', 'cekic', 'papagan', 'kelebek'], acik: ['kambur', 'balinakb', 'manta', 'mola', 'barakuda', 'fok', 'dugong', 'orka', 'cekic', 'kilic', 'dkaplumbaga'], derin: ['devkalamar', 'sifonofor', 'kambur', 'pelikan', 'ispermecet', 'dumbo'] };
+/* uzaktan geçenler artık aynı anda birkaç tane olabilir; ara ara "hareketli an" başlar: bir süre arka planda
+   sürüler, balinalar, mantalar peş peşe geçer (bir sürü ya da göç dalgası gibi) */
 function uzakGuncelle(dt) {
   if (!SAHNE) return;
-  const o = UZAK.o;
-  if (o) { o.x += o.d * o.v * dt; o.f += dt; o.y = o.yb + Math.sin(o.f * 0.25) * 8 * OL; if ((o.d > 0 && o.x > W + o.s) || (o.d < 0 && o.x < -o.s)) UZAK.o = null; return; }
+  for (const o of UZAK.L) { o.x += o.d * o.v * dt; o.f += dt; o.y = o.yb + Math.sin(o.f * 0.25) * 8 * OL; }
+  UZAK.L = UZAK.L.filter(o => !((o.d > 0 && o.x > W + o.s) || (o.d < 0 && o.x < -o.s)));
+  UZAK.o = UZAK.L[0] || null;
+  UZAK.canliZ -= dt; if (UZAK.canli > 0) UZAK.canli -= dt;
+  if (UZAK.canliZ <= 0) { UZAK.canliZ = rnd(150, 300); UZAK.canli = rnd(35, 60); }
   UZAK.z -= dt; if (UZAK.z > 0) return;
-  UZAK.z = rnd(35, 80);
+  const canli = UZAK.canli > 0; UZAK.z = canli ? rnd(3, 7) : rnd(14, 35);
+  if (UZAK.L.length >= (canli ? 4 : 2)) return;
   const L = UZAK_TUR[SAHNE.tm] || UZAK_TUR.resif, tur = L[Math.floor(Math.random() * L.length)], g = GZ_TUR[tur]; if (!g) return;
-  const d = Math.random() < 0.5 ? 1 : -1, s = g.b * OL * (g.arka ? 0.6 : 0.75), yb = ALAN.y1 + (SAHNE.kumY - ALAN.y1) * rnd(0.12, 0.42);
-  UZAK.o = { tur, d, s, x: d > 0 ? -s : W + s, y: yb, yb, v: Math.max(14, g.v * 0.45) * OL, f: Math.random() * 9, tepki: 0, bekle: 0, don: 0 };
+  const d = canli && UZAK.L.length ? UZAK.L[UZAK.L.length - 1].d : Math.random() < 0.5 ? 1 : -1; /* hareketli anda hepsi aynı yöne akar */
+  const s = g.b * OL * (g.arka ? 0.6 : 0.75) * rnd(0.75, 1.1), yb = ALAN.y1 + (SAHNE.kumY - ALAN.y1) * rnd(0.1, 0.5);
+  UZAK.L.push({ id: ++UZAK.n, tur, d, s, x: d > 0 ? -s : W + s, y: yb, yb, v: Math.max(14, g.v * 0.45) * OL * rnd(0.8, 1.25), f: Math.random() * 9, tepki: 0, bekle: 0, don: 0, a: rnd(0.15, 0.26) });
 }
 function uzakCiz(c) {
-  const o = UZAK.o; if (!o || G3) return;
-  c.save(); c.globalAlpha = 0.22; try { c.filter = 'blur(1.6px) saturate(0.4)'; } catch (e) { } gzCizO(c, o); c.restore();
+  if (G3) return;
+  for (const o of UZAK.L) { c.save(); c.globalAlpha = o.a || 0.22; try { c.filter = 'blur(1.6px) saturate(0.4)'; } catch (e) { } gzCizO(c, o); c.restore(); }
 }
 /* =====================================================================
    SOL RESİF DUVARI: kumdan yükselen, mağaralı büyük kayalık.
@@ -5225,6 +5324,7 @@ const EKO_OLAY = {
   orfozBul: { e: '🐟', ad: ['Orfoz buluşması', 'Grouper spawning'], d: ['Bahar dolunayında orfozlar resifte toplanır; daireler çizip birlikte yükselir ve suya yumurta bulutu bırakırlar.', 'At the spring full moon groupers gather on the reef, circle, rise together and release a cloud of eggs.'] }
 };
 function ekoOlay() {
+  if (mevsimDongu()) { const b = mevsimBlok(simdi()), r = tohumRnd('eko-m' + b)(), tur = olayTuru(r, mevsimAt(simdi())); return tur ? { tur, k: 'm' + b + tur } : null; } /* her mevsimin kendi olayı */
   const gun = Math.floor((ekoSaat() + 3 * 3.6e6) / 864e5), hafta = Math.floor((gun + 3) / 7), gk = ((gun + 3) % 7 + 7) % 7;
   if (gk < 1 || gk > 5) return null; /* haftanın 2.–6. günleri sürer */
   const r = tohumRnd('eko' + hafta)(), mv = HV.m || 'sonbahar';
@@ -5395,7 +5495,7 @@ function mevsimOlay(dt, ol, zorla) {
   if (ol.tur === 'kaplumbaga' && SAHNE.tm !== 'derin') { MOL.z = rnd(110, 200); const d = Math.random() < 0.5 ? 1 : -1, n = 5 + Math.floor(Math.random() * 4);
     MOL.o = { tur: 'kaplumbaga', d, y: insSY() + 22 * OL, t: 0, f: 0, b: Array.from({ length: n }, (_, i) => ({ x: (d > 0 ? -30 : W + 30) - d * i * rnd(22, 46) * OL, oy: rnd(-8, 16), v: rnd(46, 66), f: rnd(0, TAU) })) };
     if (zaman - MOL.duy > 240) { MOL.duy = zaman; duyur(T('🐢 Kaplumbağa yavruları yüzeye yakın geçiyor! Kumsaldan denize inip ilk günlerini açık suda geçirirler.', '🐢 Turtle hatchlings are passing near the surface! After leaving the beach they spend their first days in open water.')); albumEkle('ozel:kaplumbaga_yavru'); } }
-  else if (ol.tur === 'orfozBul' && KS_TUR.orfoz.alan.includes(SAHNE.tm) && (zorla || geceDegeri() > 0.3)) { MOL.z = rnd(160, 280); const kY = SAHNE.kumY, cx = W * 0.55;
+  else if (ol.tur === 'orfozBul' && KS_TUR.orfoz.alan.includes(SAHNE.tm) && (zorla || geceDegeri() > 0.3)) { MOL.z = rnd(160, 280) * (1.4 - ayIsik() * 0.8); /* dolunaya yakın daha sık */ const kY = SAHNE.kumY, cx = W * 0.55;
     MOL.o = { tur: 'orfozBul', t: 0, f: 0, cx, cy: kY - 110 * OL, b: Array.from({ length: 4 }, (_, i) => { const x0 = i % 2 ? W + 60 : -60, y0 = kY - rnd(60, 160) * OL; return { x: x0, y: y0, x0, y0, yon: 1, f: rnd(0, 9), L: rnd(0.85, 1.1) }; }) };
     if (zaman - MOL.duy > 240) { MOL.duy = zaman; duyur(T('🐟 Orfozlar resifte toplanıyor: yumurtlama buluşması başlıyor!', '🐟 Groupers are gathering on the reef: the spawning meeting is starting!')); albumEkle('ozel:orfoz_bulusma'); } }
 }
@@ -5474,7 +5574,7 @@ function ekoAc() {
     <h3 style="margin-top:12px">📈 ${T('Son günler', 'Recent days')}</h3>${ekoGrafik()}
     <h3 style="margin-top:12px">🐠 ${T('Tür sayıları', 'Species counts')}</h3>${ekoTurGrafik()}
     <button type="button" class="ikinci" id="agBtn">🕸️ ${T('Besin ağını göster', 'Show the food web')}</button>
-    <p style="margin-top:12px"><b>${T('Bu hafta', 'This week')}:</b> ${O ? `${O.e} ${T(O.ad[0], O.ad[1])}. ${T(O.d[0], O.d[1])}` : T('Sakin bir hafta.', 'A quiet week.')}</p>
+    <p style="margin-top:12px"><b>${mevsimDongu() ? T('Bu mevsim', 'This season') : T('Bu hafta', 'This week')}:</b> ${O ? `${O.e} ${T(O.ad[0], O.ad[1])}. ${T(O.d[0], O.d[1])}` : T('Sakin bir hafta.', 'A quiet week.')}</p>
     <p class="kucuk">${T('Besin zinciri: plankton → sardalya → barakuda. Plankton boluyken manta ve balina köpekbalığı da gelir. Akıntı suyu kendiliğinden tazeler; plankton patlamasının çürümesi ve sıcak dalgası suyu bozar, mercanları ağartabilir.', 'Food chain: plankton → sardines → barracuda. Mantas and whale sharks come when plankton is plentiful. Currents keep the water fresh; decaying plankton blooms and heatwaves spoil it and can bleach the corals.')}</p>`);
   const db = ic.querySelector('#dikBtn'); if (db) db.onclick = () => { mercanDik(); modalKapat(); setTimeout(ekoAc, 50); };
   const ab = ic.querySelector('#agBtn'); if (ab) ab.onclick = () => { modalKapat(); setTimeout(besinAgiAc, 50); };
@@ -5487,6 +5587,11 @@ function ekoAc() {
      birkaç gece sonra mercanlar toplu yumurtlar (pembe-turuncu tanecikler suya yükselir); ahtapot avlanmaya çıkar.
    ===================================================================== */
 const NESIL = { yv: new Map(), parla: [], mercanY: [] };
+/* AY EVRESİ VE GELGİT: dolunayda geceler aydınlık, yeni ayda karanlık; gelgit yaklaşık 12 saat 25 dakikada bir döner,
+   yükselirken ve alçalırken akıntı güçlenir, dönüm anlarında (tam yüksek / tam alçak su) durulur */
+const ayIsik = () => 0.5 * (1 - Math.cos(ayYasi() / 29.530589 * TAU)); /* 0 yeni ay … 1 dolunay */
+const GELGIT_T = 12.4206 * 3.6e6;
+const gelgit = () => { const u = ((simdi() - Date.UTC(2000, 0, 6, 3, 0)) % GELGIT_T) / GELGIT_T * TAU; return { sev: Math.cos(u), hiz: Math.abs(Math.sin(u)), yuk: Math.sin(u) < 0 }; };
 function ayYasi() { return frk(((ekoSaat() - Date.UTC(2000, 0, 6, 18, 14)) / 864e5) / 29.530589) * 29.530589; }
 function mercanDogumu() { if (NESIL.zorla) return geceDegeri() > 0.6; const mv = HV.m, a = ayYasi(); return (mv === 'ilkbahar' || mv === 'yaz') && a > 17.2 && a < 21.5 && geceDegeri() > 0.6 && SAHNE && SAHNE.tm !== 'derin'; }
 function nesilGuncelle(dt) {
@@ -5512,14 +5617,41 @@ function nesilGuncelle(dt) {
   }
   /* biyolüminesans: gece hareket eden balıkların ardında mavi kıvılcımlar */
   const gece = geceDegeri();
-  if (gece > 0.55) for (const b of BAL.values()) { const v = Math.hypot(b.vx || 0, b.vy || 0); if (v > 18 && Math.random() < dt * v * 0.12 && NESIL.parla.length < 160) NESIL.parla.push({ x: b.x - (b.yon || 1) * (b.L || 30) * 0.45 + rnd(-6, 6), y: b.y + rnd(-6, 6), t: 1, r: rnd(1.2, 2.6) * OL }); }
+  if (gece > 0.55) for (const b of BAL.values()) { const v = Math.hypot(b.vx || 0, b.vy || 0); if (v > 18 && Math.random() < dt * v * 0.12 && NESIL.parla.length < 160 * PERF.k) NESIL.parla.push({ x: b.x - (b.yon || 1) * (b.L || 30) * 0.45 + rnd(-6, 6), y: b.y + rnd(-6, 6), t: 1, r: rnd(1.2, 2.6) * OL }); }
   for (let i = NESIL.parla.length - 1; i >= 0; i--) { const p = NESIL.parla[i]; p.t -= dt * 0.8; p.y -= 4 * dt; if (p.t <= 0) NESIL.parla.splice(i, 1); }
   /* mercan yumurtlaması */
   if (mercanDogumu()) {
     if (e.dogumK !== gn) { e.dogumK = gn; duyur(T('🌕 Mercanlar yumurtluyor! Dolunaydan birkaç gece sonra resifteki mercanlar aynı anda yumurta bırakır.', '🌕 The corals are spawning! A few nights after the full moon, the whole reef releases its eggs at once.'), 1); }
-    for (let k = 0; k < Math.min(6, Math.ceil(dt * 50)); k++) if (NESIL.mercanY.length < 260) NESIL.mercanY.push({ x: rnd(0, W), y: SAHNE.kumY - rnd(0, 70) * OL, v: rnd(10, 26) * OL, f: rnd(0, TAU), r: rnd(1.4, 2.8) * OL, c: Math.random() < 0.6 ? '#FFB3C7' : '#FFC98A' });
+    for (let k = 0; k < Math.min(6, Math.ceil(dt * 50)); k++) if (NESIL.mercanY.length < 260 * PERF.k) NESIL.mercanY.push({ x: rnd(0, W), y: SAHNE.kumY - rnd(0, 70) * OL, v: rnd(10, 26) * OL, f: rnd(0, TAU), r: rnd(1.4, 2.8) * OL, c: Math.random() < 0.6 ? '#FFB3C7' : '#FFC98A' });
   }
   for (let i = NESIL.mercanY.length - 1; i >= 0; i--) { const p = NESIL.mercanY[i]; p.y -= p.v * dt; p.x += Math.sin(zaman * 0.7 + p.f) * 8 * dt * (HV.akinti || 1); if (p.y < insSY()) NESIL.mercanY.splice(i, 1); }
+}
+/* SU ALTI KAR FIRTINASI: mercan yumurtlama gecesinde su yükselen pembe-turuncu yumurtalarla, plankton patlamasında
+   yeşilimsi deniz karıyla dolar. Derinlik katmanları var: uzaktakiler küçük ve soluk, yakındakiler iri ve parlak. */
+const KAR = { L: [], mod: null, hedef: 0, doruk: 0 };
+function karGuncelle(dt) {
+  if (!SAHNE) return; const ol = typeof ekoOlay === 'function' ? ekoOlay() : null;
+  const mod = mercanDogumu() ? 'mercan' : (HV.h === 'bulanik' || (ol && ol.tur === 'plankton')) && SAHNE.tm !== 'derin' ? 'plankton' : null;
+  if (mod && mod !== KAR.mod) KAR.doruk = mod === 'mercan' ? 40 : 0; /* yumurtlamanın ilk dakikası en yoğun */
+  KAR.mod = mod || KAR.mod; KAR.doruk = Math.max(0, KAR.doruk - dt);
+  KAR.hedef = !mod ? 0 : Math.round((mod === 'mercan' ? (KAR.doruk > 0 ? 900 : 520) : 380) * (typeof PERF !== 'undefined' ? PERF.k : 1));
+  const sy = insSY(), kY = SAHNE.kumY, ak = HV.akinti || 0.5;
+  if (KAR.L.length < KAR.hedef) for (let i = 0; i < Math.min(40, KAR.hedef - KAR.L.length); i++) { const z = Math.random();
+    KAR.L.push({ x: Math.random() * W, y: KAR.mod === 'mercan' ? kY - Math.random() * 40 * OL : sy + Math.random() * (kY - sy), z, f: Math.random() * TAU, a: 0, c: KAR.mod === 'mercan' ? (Math.random() < 0.6 ? '#FFB3C7' : '#FFC98A') : (Math.random() < 0.7 ? '#DDF5D8' : '#F4FFF0') }); }
+  const fazla = KAR.L.length - KAR.hedef;
+  for (let i = KAR.L.length - 1; i >= 0; i--) { const p = KAR.L[i], hz = 0.4 + p.z;
+    if (KAR.mod === 'mercan') { p.y -= (8 + p.z * 22) * OL * dt; p.x += (Math.sin(zaman * 0.7 + p.f) * 6 + ak * 6) * OL * dt * hz; }
+    else { p.y += (2 + p.z * 6) * OL * dt + Math.sin(zaman * 0.5 + p.f) * 4 * OL * dt; p.x += (Math.cos(zaman * 0.35 + p.f) * 8 + ak * 10) * OL * dt * hz; }
+    p.a = Math.min(1, p.a + dt * 0.8);
+    if (p.x < -10) p.x += W + 20; if (p.x > W + 10) p.x -= W + 20;
+    if (p.y < sy || p.y > kY + 10 || (fazla > 0 && i < fazla)) { if (fazla > 0 || !KAR.hedef) KAR.L.splice(i, 1); else { p.y = KAR.mod === 'mercan' ? kY - Math.random() * 20 * OL : sy + 2; p.a = 0; } } }
+  if (!KAR.hedef && !KAR.L.length) KAR.mod = null;
+}
+function karCiz(c) {
+  if (!KAR.L.length) return; c.save();
+  for (const p of KAR.L) { const r = (1.1 + p.z * 3.2) * OL; c.globalAlpha = p.a * (0.3 + p.z * 0.65); c.fillStyle = p.c;
+    if (r < 1.6) c.fillRect(p.x - r, p.y - r, r * 2, r * 2); else { c.beginPath(); c.arc(p.x, p.y, r, 0, TAU); c.fill(); } }
+  c.restore();
 }
 function nesilCiz(c) {
   if (!S || !SAHNE) return; const e = S.eko, gun = ekoGun();
@@ -5944,9 +6076,9 @@ var HAVALAR = {
 var HV = { m: null, h: null, anah: '', isik: 1, parlak: 0.05, gri: 0, yesil: 0, akinti: 0.4, renk: [120, 200, 230], guc: 0.08, simsek: 0, simsekZ: 6, gok: 0, damla: [], yaprak: [], bulut: [] };
 function havaHedef() {
   const d = new Date(simdi()), ay = d.getMonth(), q = new URLSearchParams(location.search);
-  let sec = ''; try { sec = localStorage.getItem('derin-mevsim') || ''; } catch (e) { }
-  const m = q.get('mevsim') in MEVSIMLER ? q.get('mevsim') : sec in MEVSIMLER ? sec : ay === 11 || ay < 2 ? 'kis' : ay < 5 ? 'ilkbahar' : ay < 8 ? 'yaz' : 'sonbahar';
-  const blok = Math.floor(d.getHours() / 6), anah = `${d.getFullYear()}-${ay}-${d.getDate()}-${blok}`;
+  const m = q.get('mevsim') in MEVSIMLER ? q.get('mevsim') : mevsimAt(d.getTime());
+  /* döngüde her 15 dakikalık mevsim kendi havasıyla gelir; takvim ya da sabit mevsimde hava günde dört kez değişir */
+  const blok = Math.floor(d.getHours() / 6), anah = mevsimDongu() ? 'm' + mevsimBlok(d.getTime()) : `${d.getFullYear()}-${ay}-${d.getDate()}-${blok}`;
   let h = HAVA_ZORLA || q.get('hava');
   if (!(h in HAVALAR)) { const ag = MEVSIMLER[m].ag, r = tohumRnd('hava' + anah)(); let top = Object.values(ag).reduce((a, b) => a + b, 0) * r; h = Object.keys(ag).find(k => (top -= ag[k]) < 0) || 'gunes'; }
   return { m, h, anah };
@@ -5956,16 +6088,20 @@ function havaGuncelle(dt) {
   if (hd.anah + hd.m + hd.h !== HV.anah) {
     const ilk = !HV.anah; HV.anah = hd.anah + hd.m + hd.h; HV.m = hd.m; HV.h = hd.h;
     if (ilk) { const H0 = HAVALAR[HV.h], M0 = MEVSIMLER[HV.m]; HV.isik = H0.isik; HV.parlak = H0.parlak + M0.parlak; HV.gri = H0.gri; HV.yesil = H0.yesil; HV.akinti = H0.akinti; HV.renk = M0.renk.slice(); HV.guc = M0.guc; }
-    else if (S && !girisAcik) { const H1 = HAVALAR[HV.h]; duyur(`${H1.e} ${T('Hava değişti: ' + H1.ad[0] + '. ' + H1.bilgi[0], 'The weather changed: ' + H1.ad[1] + '. ' + H1.bilgi[1])}`); }
+    else if (S && !girisAcik) { const H1 = HAVALAR[HV.h];
+      if (HV.m !== HV.oncekiM) { const M1 = MEVSIMLER[HV.m]; duyur(`${M1.e} ${T('Mevsim değişti: ' + M1.ad[0] + '. Hava: ' + H1.ad[0].toLocaleLowerCase('tr') + '.', 'The season changed: ' + M1.ad[1] + '. Weather: ' + H1.ad[1].toLowerCase() + '.')}`); }
+      else duyur(`${H1.e} ${T('Hava değişti: ' + H1.ad[0] + '. ' + H1.bilgi[0], 'The weather changed: ' + H1.ad[1] + '. ' + H1.bilgi[1])}`); }
+    HV.oncekiM = HV.m;
     havaCipYaz();
   }
   const H = HAVALAR[HV.h], M = MEVSIMLER[HV.m], k = Math.min(1, dt * 0.25);
-  HV.isik += (H.isik - HV.isik) * k; HV.parlak += (H.parlak + M.parlak - HV.parlak) * k; HV.gri += (H.gri - HV.gri) * k; HV.yesil += (H.yesil - HV.yesil) * k; HV.akinti += (H.akinti - HV.akinti) * k; HV.guc += (M.guc - HV.guc) * k;
+  HV.isik += (H.isik - HV.isik) * k; HV.parlak += (H.parlak + M.parlak - HV.parlak) * k; HV.gri += (H.gri - HV.gri) * k; HV.yesil += (H.yesil - HV.yesil) * k; HV.akinti += (H.akinti * (0.75 + 0.5 * gelgit().hiz) - HV.akinti) * k; HV.guc += (M.guc - HV.guc) * k;
   for (let i = 0; i < 3; i++) HV.renk[i] += (M.renk[i] - HV.renk[i]) * k;
 }
 function havaCipYaz() {
   const el = $('havaCip'); if (!el || !HV.h) return; const H = HAVALAR[HV.h], M = MEVSIMLER[HV.m];
-  el.textContent = `${H.e} ${T(M.ad[0], M.ad[1])}`; el.title = T(H.ad[0], H.ad[1]);
+  const ai = ayIsik(), gg = gelgit(), ayE = ai > 0.93 ? '🌕' : ai < 0.07 ? '🌑' : ayYasi() < 14.77 ? (ai < 0.5 ? '🌒' : '🌔') : (ai < 0.5 ? '🌘' : '🌖');
+  el.textContent = `${H.e} ${T(M.ad[0], M.ad[1])}${geceDegeri() > 0.5 ? ' ' + ayE : ''}`; el.title = `${T(H.ad[0], H.ad[1])} · ${ayE} · ${T(gg.yuk ? 'gelgit yükseliyor' : 'gelgit alçalıyor', gg.yuk ? 'tide rising' : 'tide falling')}`;
   el.hidden = !S || girisAcik;
 }
 /* bulut gölgeleri için ışık çarpanı: zamanla geçen bulutlar ışığı azaltıp artırır */
@@ -6000,13 +6136,13 @@ function havaCiz(c, t, dt) {
   if (HV.h === 'firtina' && !derin) {
     HV.kum = HV.kum || []; HV.ot = HV.ot || []; HV.kopuk = HV.kopuk || [];
     const kY = SAHNE.kumY, ak = HV.akinti;
-    if (HV.kum.length < 14 && Math.random() < dt * 3) HV.kum.push({ x: Math.random() * W, y: kY - rnd(0, 14) * OL, r: rnd(22, 50) * OL, t: 0, o: rnd(4, 7) });
+    if (HV.kum.length < 14 * PERF.k && Math.random() < dt * 3) HV.kum.push({ x: Math.random() * W, y: kY - rnd(0, 14) * OL, r: rnd(22, 50) * OL, t: 0, o: rnd(4, 7) });
     for (let i = HV.kum.length - 1; i >= 0; i--) { const p = HV.kum[i]; p.t += dt; if (p.t > p.o) { HV.kum.splice(i, 1); continue; } p.x += ak * 14 * OL * dt; p.y -= 3 * OL * dt; p.r += 6 * OL * dt;
       const a = 0.32 * Math.sin(Math.PI * p.t / p.o), g = c.createRadialGradient(p.x, p.y, 0, p.x, p.y, p.r); g.addColorStop(0, rgba(ALANLAR[SAHNE.tm].kum, a)); g.addColorStop(1, rgba(ALANLAR[SAHNE.tm].kum, 0)); c.fillStyle = g; c.fillRect(p.x - p.r, p.y - p.r, p.r * 2, p.r * 2); }
-    if (HV.ot.length < 7 && Math.random() < dt * 0.8) HV.ot.push({ x: -30, y: sy + rnd(0.15, 0.8) * (kY - sy), a: rnd(0, TAU), v: rnd(0.7, 1.3), L: rnd(10, 22) * OL, f: rnd(0, TAU), r: ['#4E7F34', '#6B8F3A', '#8A6A2E', '#3F6B3A'][Math.floor(Math.random() * 4)] });
+    if (HV.ot.length < 7 * PERF.k && Math.random() < dt * 0.8) HV.ot.push({ x: -30, y: sy + rnd(0.15, 0.8) * (kY - sy), a: rnd(0, TAU), v: rnd(0.7, 1.3), L: rnd(10, 22) * OL, f: rnd(0, TAU), r: ['#4E7F34', '#6B8F3A', '#8A6A2E', '#3F6B3A'][Math.floor(Math.random() * 4)] });
     for (let i = HV.ot.length - 1; i >= 0; i--) { const p = HV.ot[i]; p.f += dt; p.x += ak * 45 * OL * p.v * dt; p.y += Math.sin(p.f * 1.7) * 12 * OL * dt; p.a += dt * 1.6 * p.v; if (p.x > W + 40) { HV.ot.splice(i, 1); continue; }
       c.save(); c.translate(p.x, p.y); c.rotate(p.a); c.strokeStyle = p.r; c.lineWidth = 2.4 * OL; c.lineCap = 'round'; c.beginPath(); c.moveTo(-p.L / 2, 0); c.quadraticCurveTo(0, Math.sin(p.f * 4) * p.L * 0.35, p.L / 2, 0); c.stroke(); c.restore(); }
-    if (HV.kopuk.length < 10 && Math.random() < dt * 2) HV.kopuk.push({ x: Math.random() * W, w: rnd(30, 90) * OL, t: 0, o: rnd(3, 6) });
+    if (HV.kopuk.length < 10 * PERF.k && Math.random() < dt * 2) HV.kopuk.push({ x: Math.random() * W, w: rnd(30, 90) * OL, t: 0, o: rnd(3, 6) });
     c.strokeStyle = 'rgba(245,250,255,.0)';
     for (let i = HV.kopuk.length - 1; i >= 0; i--) { const p = HV.kopuk[i]; p.t += dt; if (p.t > p.o) { HV.kopuk.splice(i, 1); continue; } p.x += ak * 30 * OL * dt; const a = 0.5 * Math.sin(Math.PI * p.t / p.o);
       c.strokeStyle = `rgba(245,250,255,${a})`; c.lineWidth = 2 * OL; c.beginPath(); for (let u = 0; u <= 1; u += 0.1) { const x = p.x + (u - 0.5) * p.w, y = sy + 3 * OL + Math.sin(u * 9 + p.t * 3) * 1.5 * OL; u ? c.lineTo(x, y) : c.moveTo(x, y); } c.stroke(); }
@@ -6060,19 +6196,23 @@ function mevsimAc() {
   let sec = ''; try { sec = localStorage.getItem('derin-mevsim') || ''; } catch (e) { }
   const H = HAVALAR[HV.h] || HAVALAR.gunes;
   const kart = (k, e, ad, alt) => `<button class="secim${sec === k ? ' sec' : ''}" type="button" data-mv="${k}" style="${sec === k ? 'outline:3px solid #7fe0ff' : ''}"><span style="font-size:30px">${e}</span>${ad}<small>${alt}</small></button>`;
-  const ic = modal(`<h2>${T('Mevsim', 'Season')}</h2><p class="alt">${T('Şu an hava: ', 'Current weather: ')}${H.e} ${T(H.ad[0] + '. ' + H.bilgi[0], H.ad[1] + '. ' + H.bilgi[1])} ${T('Hava günde dört kez değişir.', 'The weather changes four times a day.')}</p><div class="secimler">
-    ${kart('', '📅', T('Takvime göre', 'By calendar'), T('Gerçek aya göre değişir', 'Follows the real month'))}
+  const dk = Math.max(1, Math.ceil(mevsimKalan() / 60000)), M0 = MEVSIMLER[HV.m] || MEVSIMLER.yaz, sonraki = MEVSIMLER[MEVSIM_SIRA[(MEVSIM_SIRA.indexOf(HV.m) + 1) % 4]] || M0;
+  const ic = modal(`<h2>${T('Mevsim', 'Season')}</h2><p class="alt">${M0.e} ${T(M0.ad[0], M0.ad[1])} · ${T('Şu an hava: ', 'Current weather: ')}${H.e} ${T(H.ad[0] + '. ' + H.bilgi[0], H.ad[1] + '. ' + H.bilgi[1])} ${mevsimDongu() ? T(`Sonraki mevsim (${sonraki.e} ${sonraki.ad[0]}) ${dk} dakika sonra.`, `Next season (${sonraki.e} ${sonraki.ad[1]}) in ${dk} min.`) : T('Hava günde dört kez değişir.', 'The weather changes four times a day.')}</p><p class="kucuk" style="margin:-4px 0 10px">${(() => { const ai = ayIsik(), gg = gelgit(); return T(`🌙 Ay: ${ai > 0.93 ? 'dolunay' : ai < 0.07 ? 'yeni ay' : '%' + Math.round(ai * 100) + ' dolu'} — geceler ${ai > 0.6 ? 'aydınlık' : ai < 0.25 ? 'karanlık' : 'loş'}. 🌊 Gelgit ${gg.yuk ? 'yükseliyor' : 'alçalıyor'}, akıntı ${gg.hiz > 0.7 ? 'güçlü' : gg.hiz < 0.3 ? 'durgun' : 'orta'}.`, `🌙 Moon: ${ai > 0.93 ? 'full' : ai < 0.07 ? 'new' : Math.round(ai * 100) + '% lit'} — nights are ${ai > 0.6 ? 'bright' : ai < 0.25 ? 'dark' : 'dim'}. 🌊 Tide ${gg.yuk ? 'rising' : 'falling'}, current ${gg.hiz > 0.7 ? 'strong' : gg.hiz < 0.3 ? 'slack' : 'moderate'}.`); })()}</p><div class="secimler">
+    ${kart('', '🔄', T('Döngü', 'Cycle'), T('Her 15 dakikada bir sonraki mevsim', 'A new season every 15 minutes'))}
+    ${kart('takvim', '📅', T('Takvime göre', 'By calendar'), T('Gerçek aya göre değişir', 'Follows the real month'))}
     ${kart('ilkbahar', '🌱', T('İlkbahar', 'Spring'), T('Yeşilimsi, planktonlu su', 'Greenish water, lots of plankton'))}
     ${kart('yaz', '🏖️', T('Yaz', 'Summer'), T('Berrak turkuaz, bol güneş', 'Clear turquoise, lots of sun'))}
     ${kart('sonbahar', '🍂', T('Sonbahar', 'Autumn'), T('Kehribar tonlu su, düşen yapraklar', 'Amber-tinted water, falling leaves'))}
     ${kart('kis', '❄️', T('Kış', 'Winter'), T('Soğuk mavi, arada buz', 'Cold blue, ice now and then'))}</div>
-    <p class="kucuk">${T('Seçim yalnızca görünümü değiştirir; kışa özel tür gibi oyun kuralları gerçek takvime bağlı kalır.', 'This only changes the look; game rules such as winter-only species still follow the real calendar.')}</p>`);
+    <p class="kucuk">${T('Döngüde mevsimin olayları ve kışa özel türler de döngüyü izler. Takvim ya da sabit bir mevsim seçince oyun kuralları gerçek takvime döner.', 'In the cycle, seasonal events and winter-only species follow the cycle too. With the calendar or a fixed season, game rules follow the real calendar.')}</p>`);
   ic.querySelectorAll('[data-mv]').forEach(b => b.onclick = () => { try { if (b.dataset.mv) localStorage.setItem('derin-mevsim', b.dataset.mv); else localStorage.removeItem('derin-mevsim'); } catch (e) { } HV.anah = ''; modalKapat(); havaGuncelle(0); const M = MEVSIMLER[HV.m]; duyur(`${M.e} ${T(M.ad[0], M.ad[1])}`); });
 }
 $('havaCip').onclick = () => { if (HV.h) mevsimAc(); };
 setInterval(havaCipYaz, 2000);
 const sesYaz = () => { const d = SES.duzey(); $('sesBtn').textContent = d <= 0 ? '🔇' : d < 0.5 ? '🔉' : '🔊'; $('sesSus').textContent = d <= 0 ? '🔇' : '🔈'; $('sesYuzde').textContent = '%' + Math.round(d * 100); };
 $('sesBtn').onclick = () => { $('sesKutu').hidden = !$('sesKutu').hidden; };
+const muzikYaz = () => { const b = $('muzikBtn'); if (!b) return; const m = SES.muzik(); b.style.opacity = m ? 1 : 0.4; b.title = T(m ? 'Müzik açık (kapatmak için dokun)' : 'Müzik kapalı (açmak için dokun)', m ? 'Music on (tap to turn off)' : 'Music off (tap to turn on)'); };
+$('muzikBtn').onclick = () => { SES.muzik(!SES.muzik()); muzikYaz(); duyur(SES.muzik() ? T('🎵 Müzik açık', '🎵 Music on') : T('🎵 Müzik kapalı', '🎵 Music off')); }; muzikYaz();
 $('sesKaydir').value = Math.round(SES.duzey() * 100);
 $('sesKaydir').addEventListener('input', e => { SES.ayarla(+e.target.value / 100); sesYaz(); });
 $('sesKaydir').addEventListener('change', () => SES.kabarcik(0.02));
@@ -6377,9 +6517,12 @@ function gelPanel() {
 setInterval(() => { if (PANEL.el && PANEL.yenile && !document.hidden) PANEL.yenile(); }, 1000);
 window.DM = { panel: () => gelPanel(),
   gen: g => { if (g === undefined) return S.gen; S.gen = Object.assign(S.gen || genIlk(), typeof g === 'string' ? { m: GEN_MUT[g] ? g : null } : g); kaydet(false); return S.gen; },
-  nesilDene: (n = 20) => { let g = S.gen || genIlk(); const L = []; for (let i = 1; i <= n; i++) { g = genCocuk(g); L.push({ nesil: S.nesil + i, ton: g.h, doygunluk: g.s, açıklık: g.l, 'nadir gen': g.m ? GEN_MUT[g.m].ad[0] : '' }); } console.table(L); return T('(yalnızca deneme; kayıt değişmedi)', '(simulation only; save unchanged)'); }, cihaz: () => G3 ? Object.assign({ kalite: G3.kalite(), otomatik: G3.oto(), fps: Math.round(G3.fps()) }, G3.cihaz()) : { mod: '2D', olcek: OLCEK2D }, durum: () => ({ S, BAL, NET, AV, ALAN, PLK, YIR, CNL, GZ, SAHNE, INS, DENIZ, KS, ORF, MUR, KUS, YERLI, TET, TMZ }), eko: o => { Object.assign(ekoS(), o); }, gece: v => { GECE_ZORLA = v == null ? null : kis(+v, 0, 1); }, mercanDogum: v => { NESIL.zorla = !!v; }, yumurtla: () => { const e = ekoS(); e.yum = e.yum || []; e.yum.push({ x: 0.6, g0: ekoGun() - 2.05, n: 16, id: Date.now() }); }, ay: () => ayYasi(), hiz: n => ekoHiz(n), ks: () => ({ gruplar: KS.g.map(g => ({ tur: g.tur, n: g.uy.length, eko: S.eko.ks && S.eko.ks[g.tur] })), orfoz: ORF.o && { tok: ORF.o.tok, hamle: ORF.o.hamle, mod: ORF.o.mod, sak: +ORF.o.sak.toFixed(2), siginak: ORF.o.ev.ad, konum: [Math.round(ORF.o.x), Math.round(ORF.o.y)], oyuk: [Math.round(ORF.o.ev.x), Math.round(ORF.o.ev.y)] } }), orfozTasi: i => { const o = ORF.o; if (!o || !ORF.sig) return; o.si = i == null ? (o.si + 1) % ORF.sig.length : i; o.ev = ORF.sig[o.si]; o.t = 0; o.sigT = rnd(180, 420); return o.ev.ad; }, orfozAc: () => { if (ORF.o) ORF.o.tok = 0; },
+  nesilDene: (n = 20) => { let g = S.gen || genIlk(); const L = []; for (let i = 1; i <= n; i++) { g = genCocuk(g); L.push({ nesil: S.nesil + i, ton: g.h, doygunluk: g.s, açıklık: g.l, 'nadir gen': g.m ? GEN_MUT[g.m].ad[0] : '' }); } console.table(L); return T('(yalnızca deneme; kayıt değişmedi)', '(simulation only; save unchanged)'); }, cihaz: () => G3 ? Object.assign({ kalite: G3.kalite(), otomatik: G3.oto(), fps: Math.round(G3.fps()) }, G3.cihaz()) : { mod: '2D', olcek: OLCEK2D }, durum: () => ({ S, BAL, NET, AV, ALAN, PLK, YIR, CNL, GZ, SAHNE, INS, DENIZ, KS, ORF, MUR, KUS, YERLI, TET, TMZ, KAR, UZAK, MOL, PERF }), eko: o => { Object.assign(ekoS(), o); }, gece: v => { GECE_ZORLA = v == null ? null : kis(+v, 0, 1); }, mercanDogum: v => { NESIL.zorla = !!v; }, yumurtla: () => { const e = ekoS(); e.yum = e.yum || []; e.yum.push({ x: 0.6, g0: ekoGun() - 2.05, n: 16, id: Date.now() }); }, ay: () => ayYasi(), hiz: n => ekoHiz(n), ks: () => ({ gruplar: KS.g.map(g => ({ tur: g.tur, n: g.uy.length, eko: S.eko.ks && S.eko.ks[g.tur] })), orfoz: ORF.o && { tok: ORF.o.tok, hamle: ORF.o.hamle, mod: ORF.o.mod, sak: +ORF.o.sak.toFixed(2), siginak: ORF.o.ev.ad, konum: [Math.round(ORF.o.x), Math.round(ORF.o.y)], oyuk: [Math.round(ORF.o.ev.x), Math.round(ORF.o.ev.y)] } }), orfozTasi: i => { const o = ORF.o; if (!o || !ORF.sig) return; o.si = i == null ? (o.si + 1) % ORF.sig.length : i; o.ev = ORF.sig[o.si]; o.t = 0; o.sigT = rnd(180, 420); return o.ev.ad; }, orfozAc: () => { if (ORF.o) ORF.o.tok = 0; },
   mevsimOlay: t => { if (!['kaplumbaga', 'orfozBul'].includes(t)) return "'kaplumbaga' ya da 'orfozBul'"; MOL.o = null; MOL.z = 0; mevsimOlay(0.01, { tur: t }, true); return MOL.o ? t + ' başladı' : 'bu sahnede olmaz'; },
   besinAgi: () => besinAgiAc(),
+  yakin: (t = 'kambur') => { GZ.o = null; DM.gz(t); if (!GZ.o) return 'bu sahnede gelmez'; GZ.o.yakin = 1; return t + ' kameranın yanından geçecek (3D)'; },
+  kar: () => { NESIL.zorla = 1; setTimeout(() => NESIL.zorla = 0, 60000); return 'mercan yumurtlaması 1 dakika (gece olmalı: DM.gece(1))'; },
+  uzakCanli: () => { UZAK.canli = 50; UZAK.z = 0; return 'arka planda hareketli an başladı (50 sn)'; },
   ses: ad => { const L = ['orkaIslik', 'ispermecetTik', 'orfozGum', 'mantisVurus', 'puf', 'savur', 'balinaSarki', 'sarki', 'gok']; if (!L.includes(ad)) return 'sesler: ' + L.join(', '); SES.ortam(); SES[ad](); return ad; },
   alan: a => { if (!ALANLAR[a]) return 'alanlar: ' + Object.keys(ALANLAR).join(', '); if (gorunenAkv()) return 'ortak akvaryumdayken alan akvaryuma bağlı'; S.alan = a; kaydet(); sahneKur(); yerliKur(); uiGuncelle(); return a + ' sahnesine geçildi'; },
   avci: ad => {

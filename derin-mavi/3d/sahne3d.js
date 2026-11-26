@@ -22,6 +22,7 @@ const KAT = new URL('./', import.meta.url).href;
 const ESLE = { palyaco: 'palyaco', cerrah: 'cerrah', melek: 'melek', orkinos: 'orkinos', yelken: 'yelken', ucan: 'ucan', fener: 'fener', balta: 'balta', kurdele: 'kurdele', buz: 'buz', mandarin: 'mandarin', papagan: 'papagan', lambuka: 'lambuka', uskumru: 'uskumru', engerek: 'engerek', isikli: 'isikli', yavru: 'sardalya' };
 
 export async function kur3D({ tuval, kalite }) {
+  const GLB_P = Promise.all([glbYukle(KAT + 'baliklar.glb'), glbYukle(KAT + 'resif.glb')]); /* modeller hemen inmeye başlasın; sahne kurulurken beklenmesin */
   const mobil = matchMedia('(pointer:coarse)').matches || Math.min(innerWidth, innerHeight) < 600 || /Android|iPhone|iPad|Mobile/i.test(navigator.userAgent);
   const R = new THREE.WebGLRenderer({ canvas: tuval, antialias: !mobil, powerPreference: 'high-performance' });
   /* CİHAZ SINIFI: ekran kartının adı, işlemci çekirdeği, bellek ve telefon olup olmadığına bakarak başlangıç kalitesi */
@@ -278,7 +279,7 @@ export async function kur3D({ tuval, kalite }) {
 
   /* ---------- modeller ---------- */
   const yukle = glbYukle; /* meshopt ile sıkıştırılmış modeller */
-  const [bg, rg] = await Promise.all([yukle(KAT + 'baliklar.glb'), yukle(KAT + 'resif.glb')]);
+  const [bg, rg] = await GLB_P;
   function malzHazirla(o, ek) {
     o.traverse(m => {
       if (!m.isMesh) return; m.castShadow = true; m.receiveShadow = true;
@@ -526,7 +527,7 @@ export async function kur3D({ tuval, kalite }) {
       { const sa = d.saat == null ? 12 : d.saat, u = THREE.MathUtils.clamp((sa - 6) / 12, 0, 1), yuk = Math.sin(Math.PI * u);
         gunes.position.set(-30 + u * 60, 18 + yuk * 42, 14).normalize().multiplyScalar(32); const sic = 1 - THREE.MathUtils.smoothstep(yuk, 0.15, 0.6);
         gunes.color.set('#ffffff').lerp(tmp.set('#ffae6a'), sic * 0.85); gunesAci = { x: -30 + u * 60, sic, yuk }; }
-      gunes.intensity = 3.3 * TM.isik * (1 - 0.85 * g) * Math.min(1.35, isik) * (0.55 + 0.45 * gunesAci.yuk); ay.intensity = 0.9 * g * (tmAd === 'derin' ? 0.3 : 1); hemi.intensity = 1.15 * (tmAd === 'derin' ? 0.55 : 1) * (1 - 0.6 * g) * (0.75 + 0.25 * Math.min(1.2, isik));
+      gunes.intensity = 3.3 * TM.isik * (1 - 0.85 * g) * Math.min(1.35, isik) * (0.55 + 0.45 * gunesAci.yuk); ay.intensity = 0.9 * g * (tmAd === 'derin' ? 0.3 : 1) * (0.3 + 0.95 * (d.ayIsik ?? 0.7)); hemi.intensity = 1.15 * (tmAd === 'derin' ? 0.55 : 1) * (1 - 0.6 * g) * (0.75 + 0.25 * Math.min(1.2, isik));
       U.kostikGuc.value = KAL[kalite].kostik * TM.kost * (1 - 0.9 * g) * Math.min(1.35, isik) * (0.45 + 0.55 * gunesAci.yuk) * (0.55 + 0.45 * Math.min(1, berrakP / 0.9));
       U.kostikMod.value = KAL[kalite].kostikIslem ? 1 : 0;
       U.gunesYon.value.copy(gunes.position).normalize(); U.kostikRenk.value.copy(gunes.color).lerp(tmp.set('#bff4ff'), 0.35);
@@ -584,15 +585,18 @@ export async function kur3D({ tuval, kalite }) {
           if (o.arka || o.uzak) { const z = o.uzak ? -16 : -12, k2 = (kam.position.z - z) / kam.position.z; p = kam.position.clone().add(p.sub(kam.position).multiplyScalar(k2)); sc *= k2 * (o.uzak ? 0.75 : 1); }
           /* derinlikte çapraz geçiş: köpekbalığı uzaktan gelip kameranın yanından geçer; ziyaretçiler de kendi derinlik yolunu izler.
              Ekrandaki yeri 2D ile aynı kalır, kamera ışını boyunca ileri-geri gider; yönü gerçek 3D hareketinden hesaplanır. */
-          const yol = o.id === 'yirtici' ? [-4.5, 2.2] : (o.id.startsWith('gz') && !o.arka) ? (() => { const h = [...o.id].reduce((a, ch) => (a * 31 + ch.charCodeAt(0)) % 9973, 7); return [-7 + (h % 70) / 10, -7 + ((h >> 3) % 85) / 10]; })() : null;
+          const yol = o.yakin ? [-6, -6] : o.id === 'yirtici' ? [-4.5, 2.2] : (o.id.startsWith('gz') && !o.arka) ? (() => { const h = [...o.id].reduce((a, ch) => (a * 31 + ch.charCodeAt(0)) % 9973, 7); return [-7 + (h % 70) / 10, -7 + ((h >> 3) % 85) / 10]; })() : null;
           let hedef = o.tur === 'top' ? 0 : o.d > 0 ? -0.35 : Math.PI + 0.35;
           if (yol) {
-            const u = THREE.MathUtils.clamp(o.d > 0 ? (o.x + o.s) / (M.W + 2 * o.s) : (M.W + o.s - o.x) / (M.W + 2 * o.s), 0, 1), z = yol[0] + (yol[1] - yol[0]) * (u * u * (3 - 2 * u)) + (o.id === 'yirtici' ? Math.sin(u * Math.PI * 2.4) * 1.8 : 0); /* köpekbalığı düz bir çizgide kaymaz: yaklaşıp uzaklaşarak kıvrılır */
+            const u = THREE.MathUtils.clamp(o.d > 0 ? (o.x + o.s) / (M.W + 2 * o.s) : (M.W + o.s - o.x) / (M.W + 2 * o.s), 0, 1), z = yol[0] + (yol[1] - yol[0]) * (u * u * (3 - 2 * u)) + (o.id === 'yirtici' ? Math.sin(u * Math.PI * 2.4) * 1.8 : 0) + (o.yakin ? 15 * Math.pow(Math.sin(u * Math.PI), 1.3) : 0); /* yakın geçiş: uzaktan gelir, kameranın yanından geçer, uzaklaşır */ /* köpekbalığı düz bir çizgide kaymaz: yaklaşıp uzaklaşarak kıvrılır */
             const k2 = (kam.position.z - z) / kam.position.z; p = kam.position.clone().add(p.sub(kam.position).multiplyScalar(k2));
             const taban = zeminY(p.x, p.z) + sc * 0.3; if (p.y < taban) p.y = taban;
             if (c.onceki) { const vx = p.x - c.onceki.x, vz = p.z - c.onceki.z; if (Math.hypot(vx, vz) > 1e-4) hedef = Math.atan2(-vz, vx); }
             c.onceki = p.clone();
           }
+          if (o.z == null && !yol && !o.arka && !o.uzak && o.tur !== 'top') { /* yüzen canlı (balon balığı, kalamar…) zemine ve tepeye gömülmesin */
+            const r = o.tur === 'balon' ? 1.15 * (1 + (o.sis || 0) * 0.9) : 0.6, taban = Math.max(zeminY(p.x, p.z), kayaY(p.x, p.z)) + sc * r;
+            c.ty = c.ty == null ? taban : c.ty + (taban - c.ty) * Math.min(1, dt * 4); if (p.y < c.ty) p.y = c.ty; }
           c.g.position.copy(p); c.g.scale.setScalar(sc);
           if (c.yaw != null) { let dy = hedef - c.yaw; while (dy > Math.PI) dy -= Math.PI * 2; while (dy < -Math.PI) dy += Math.PI * 2; hedef = c.yaw + dy; }
           c.yaw = c.yaw == null ? hedef : c.yaw + (hedef - c.yaw) * Math.min(1, dt * 3);
@@ -603,7 +607,8 @@ export async function kur3D({ tuval, kalite }) {
             c.yatis = (c.yatis || 0) + (THREE.MathUtils.clamp(-w * 1.1, -0.55, 0.55) - (c.yatis || 0)) * k;
             c.burun = (c.burun || 0) + (THREE.MathUtils.clamp(vy * 0.5, -0.3, 0.3) - (c.burun || 0)) * k;
             c.g.rotation.order = 'YZX'; c.g.rotation.x = c.yatis + (o.id === 'yirtici' ? Math.sin(t * 0.9) * 0.12 : 0); c.g.rotation.z = c.burun; }
-          yuzenOyna(c.g, o.tur, o, t);
+          const disarda = o.x < -o.s * 1.6 || o.x > M.W + o.s * 1.6; /* ekranın çok dışındayken yüzme hareketi hesaplanmaz */
+          if (!disarda || !c.oynadi) { yuzenOyna(c.g, o.tur, o, t); c.oynadi = 1; }
           if (o.sak != null) { /* orfoz oyuğunda: gövde gölgede kararır */ const k = 1 - Math.min(1, o.sak) * 0.7; if (c.sakK !== k) { c.sakK = k; c.g.traverse(m => { if (!m.isMesh || !m.material || !m.material.color) return; const ms = Array.isArray(m.material) ? m.material : [m.material]; for (const mt of ms) { if (!mt.userData.renk0) mt.userData.renk0 = mt.color.clone(); mt.color.copy(mt.userData.renk0).multiplyScalar(k); } }); } }
         }
         for (const [id, c] of YZN) if (!gor.has(id)) { sahne.remove(c.g); YZN.delete(id); }
