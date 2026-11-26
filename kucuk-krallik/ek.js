@@ -89,11 +89,14 @@ function kkHavaCiz(c, cw, ch, now, k, yog) {
     c.fillStyle = 'rgba(255,196,110,.10)'; c.fillRect(0, 0, cw, ch);
   }
 }
+function kkSure(ms) { const m = Math.max(1, Math.round(ms / 60000)), h = Math.floor(m / 60), r = m % 60; return kkL((h ? h + ' sa ' : '') + (r || !h ? r + ' dk' : ''), (h ? h + ' h ' : '') + (r || !h ? r + ' min' : '')).trim(); }
 function kkHavaSatir() {
-  const k = havaNow(), H = HAVA[k], nx = havaAt(Date.now() + HAVA_SURE), N = HAVA[nx], kl = tm(havaKalan() / 1000);
+  const k = havaNow(), H = HAVA[k], now = Date.now();
+  let nx = k, n = 0; for (n = 1; n <= 8; n++) { nx = havaAt(now + n * HAVA_SURE); if (nx !== k) break; }
+  const N = HAVA[nx], kl = kkSure(havaKalan() + (n - 1) * HAVA_SURE), ayni = nx === k;
   return kkL(
-    H.i + ' Hava: ' + H.n + (k === 'acik' ? '' : ' — ' + H.d) + ' · ' + kl + ' sonra ' + (nx === k ? 'de ' + H.n.toLocaleLowerCase('tr') : N.i + ' ' + N.n),
-    H.i + ' Weather: ' + H.ne + (k === 'acik' ? '' : ' — ' + H.de) + ' · ' + (nx === k ? 'still ' + H.ne.toLowerCase() + ' after ' + kl : N.i + ' ' + N.ne + ' in ' + kl));
+    H.i + ' Hava: ' + H.n + (k === 'acik' ? '' : ' — ' + H.d) + ' · ' + (ayni ? 'gün boyu böyle' : kl + ' sonra ' + N.i + ' ' + N.n),
+    H.i + ' Weather: ' + H.ne + (k === 'acik' ? '' : ' — ' + H.de) + ' · ' + (ayni ? 'all day' : N.i + ' ' + N.ne + ' in ' + kl));
 }
 
 /* ================= KOMUTAN YETENEKLERİ ================= */
@@ -119,12 +122,12 @@ function kkExtraMul() { return 1 + .06 * kkMuttefikSay(); }
 function yetHtml(k) {
   const sv = k.sv || 1, my = Array.isArray(k.yet) ? k.yet : [];
   const yn = function (x) { return kkL(YET[x].n, YET[x].ne); }, yd = function (x) { return kkL(YET[x].d, YET[x].de); };
-  let h = '<div style="margin-top:10px"><b style="font-size:13px">' + kkL('Yetenekler', 'Talents') + '</b><p class="eff" style="margin:2px 0 6px">' + kkL('Komutan belirli seviyelerde yeni bir yetenek yuvası açar. Bir kez seçilir; değiştirmek 100 altın.', 'The commander unlocks a new talent slot at certain levels. Chosen once; changing costs 100 gold.') + '</p>';
+  let h = '<div style="margin-top:10px"><b style="font-size:13px">' + kkL('Komutan ustalıkları', 'Commander masteries') + '</b><p class="eff" style="margin:2px 0 6px">' + kkL('Komutan belirli seviyelerde yeni bir ustalık yuvası açar. Bir kez seçilir; değiştirmek 100 altın.', 'The commander unlocks a new mastery slot at certain levels. Chosen once; changing costs 100 gold.') + '</p>';
   YET_SV.forEach(function (lv, i) {
     const id = my[i];
     if (sv < lv) { h += '<p class="eff" style="margin:4px 0">🔒 ' + kkL((i + 1) + '. yuva · Sv ' + lv + '\'te açılır', 'Slot ' + (i + 1) + ' · opens at Lv ' + lv) + '</p>'; return; }
     if (id && YET[id]) { h += '<div class="foot" style="margin:4px 0"><span>' + YET[id].i + ' <b>' + yn(id) + '</b> <small style="color:var(--mute)">' + yd(id) + '</small></span><button class="sm g" data-yetsil="' + i + '">' + kkL('Değiştir', 'Change') + '</button></div>'; return; }
-    h += '<p class="eff" style="margin:6px 0 4px">' + kkL((i + 1) + '. yuva boş — bir yetenek seç:', 'Slot ' + (i + 1) + ' is empty — pick a talent:') + '</p><div class="btns wrapb" style="gap:4px">' + Object.keys(YET).filter(function (x) { return my.indexOf(x) < 0; }).map(function (x) { return '<button class="sm g" data-yet="' + x + '" data-yi="' + i + '" title="' + kkEsc(yd(x)) + '">' + YET[x].i + ' ' + yn(x) + '</button>'; }).join('') + '</div>';
+    h += '<p class="eff" style="margin:6px 0 4px">' + kkL((i + 1) + '. yuva boş — bir ustalık seç:', 'Slot ' + (i + 1) + ' is empty — pick a mastery:') + '</p><div class="btns wrapb" style="gap:4px">' + Object.keys(YET).filter(function (x) { return my.indexOf(x) < 0; }).map(function (x) { return '<button class="sm g" data-yet="' + x + '" data-yi="' + i + '" title="' + kkEsc(yd(x)) + '">' + YET[x].i + ' ' + yn(x) + '</button>'; }).join('') + '</div>';
   });
   return h + '</div>';
 }
@@ -334,6 +337,7 @@ function kkIsHtml() {
 /* ================= ÇİZİM VE BAĞLANTILAR ================= */
 function kkRender() {
   try { kkIskele(); } catch (e) { }
+  try { kkDuzenRender(); } catch (e) { }
   const hv = $('kkHava'); if (hv) { const t = kkHavaSatir(); if (hv.textContent !== t) hv.textContent = t; }
   const is = $('kkIs'); if (is) { const h = kkIsHtml(); if (is._h !== h) { is._h = h; is.innerHTML = h; is.classList.toggle('hide', !h); } }
   if (kkPopK) kkPopYaz();
@@ -365,7 +369,39 @@ function kkInit() {
   document.addEventListener('visibilitychange', function () { if (!document.hidden && kkSahneBekleyen && kAyar.sahne !== false && typeof kkSahneOyna === 'function') { const d = kkSahneBekleyen; kkSahneBekleyen = null; setTimeout(function () { kkSahneOyna(d); }, 400); } });
   // ayar: savaş sahnesi
   const am = $('ayMus'); if (am && !$('aySahne')) { const lb = document.createElement('label'); lb.className = 'kch'; lb.innerHTML = '<input type="checkbox" id="aySahne"> <span>Savaş sahnesini göster</span>'; am.closest('label').after(lb); const cb = $('aySahne'); cb.checked = kAyar.sahne !== false; cb.onchange = function () { kAyar.sahne = cb.checked; kSak(); }; }
+  try { kkDuzenInit(); } catch (e) { console.error('kkDuzenInit', e); }
   dipTick();
   setInterval(kkTick, 2000);
   render();
+}
+
+/* ================= DÜZEN: sabit sekme çubuğu, mini kaynak satırı, acemi görünümü ================= */
+var kkMiniAcik = false;
+function kkAcemi() { return !(S.lv.inf || S.lv.spear || S.lv.arch || S.lv.cav || S.lv.cat) && kkTot(S.ar) < 1 && !(S.sefer || []).length; }
+function kkSec(pane, ad) { const h = document.querySelector('#' + pane + ' > h2[data-sec="' + ad + '"]'); if (!h) return []; const w = h.nextElementSibling; return w && w.classList.contains('accw') ? [h, w] : [h]; }
+function kkDuzenInit() {
+  const nav = $('tabs'); if (!nav) return;
+  if (!$('kkMini')) { const m = document.createElement('div'); m.id = 'kkMini'; m.className = 'hide'; m.setAttribute('aria-hidden', 'true'); nav.insertBefore(m, nav.firstChild); }
+  const res = document.querySelector('.res');
+  if (res && 'IntersectionObserver' in window) new IntersectionObserver(function (en) { kkMiniAcik = !en[0].isIntersecting && en[0].boundingClientRect.top < 0; kkDuzenRender(); }).observe(res);
+  // başka sekmeye geçince içerik sekme çubuğunun hemen altından başlasın
+  nav.addEventListener('click', function (e) {
+    if (!(e.target.closest && e.target.closest('.tab'))) return;
+    requestAnimationFrame(function () { const r = nav.getBoundingClientRect(); if (r.top > 1) return; const pane = document.querySelector('.pane:not(.hide)'); if (!pane) return; window.scrollTo(0, Math.max(0, pane.getBoundingClientRect().top + window.scrollY - r.height - 2)); });
+  });
+  const sk = $('strk'); if (sk) { const tg = function () { window.strkAcik = !window.strkAcik; if (typeof renderStreak === 'function') renderStreak(); }; sk.addEventListener('click', function (e) { if (e.target.closest('#strkL')) tg(); }); sk.addEventListener('keydown', function (e) { if ((e.key === 'Enter' || e.key === ' ') && e.target.id === 'strkL') { e.preventDefault(); tg(); const l = $('strkL'); if (l) l.focus(); } }); }
+  const ks = $('kmsel'); if (ks && !$('kkAcemiNot')) { const p = document.createElement('p'); p.id = 'kkAcemiNot'; p.className = 'eff hide'; p.style.margin = '8px 2px'; ks.parentNode.insertBefore(p, ks.nextSibling); }
+}
+function kkDuzenRender() {
+  const m = $('kkMini');
+  if (m) {
+    m.classList.toggle('hide', !kkMiniAcik);
+    if (kkMiniAcik) { let h = ''; document.querySelectorAll('.res .chip:not(.hide)').forEach(function (c) { const i = c.querySelector('i.ic'), v = c.querySelector('b span'); if (i && v) h += '<span><i class="' + i.className + '"></i>' + v.textContent + '</span>'; }); if (m._h !== h) { m._h = h; m.innerHTML = h; } }
+  }
+  const rs = document.querySelector('.res'); if (rs) rs.classList.toggle('uc', rs.querySelectorAll('.chip:not(.hide)').length >= 5);
+  const ac = kkAcemi(), lv = $('lordv'), not = $('kkAcemiNot');
+  if (lv) lv.classList.toggle('hide', ac);
+  ['Dünya Kuşatması', 'Taktik', 'Savunma'].forEach(function (a) { kkSec('p-s', a).forEach(function (e) { e.classList.toggle('hide', ac); }); });
+  const mis = $('misc'); kkSec('p-s', 'Misilleme').forEach(function (e) { e.classList.toggle('hide', ac || !mis || mis.classList.contains('hide')); });
+  if (not) { not.classList.toggle('hide', !ac); if (ac) { const t = kkL('🔒 Rakip lordlar, dünya kuşatması, taktik ve savunma ilk kışlanı kurup asker eğitince açılır.', '🔒 Rival lords, the world siege, tactics and defense open once you build your first barracks and train soldiers.'); if (not.textContent !== t) not.textContent = t; } }
 }
