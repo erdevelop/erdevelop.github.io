@@ -196,6 +196,8 @@ body.er-durumlu #panel{bottom:32px}
 @media (min-width:860px){
   #panel{right:auto;width:400px}
 }
+@media (max-width:480px){#ust #tamBtn,#ust #izleBtn,#ust [data-dil-btn]{display:none!important}#ust #ag span{display:none}#ust #ag{padding:0 13px}#ust{gap:5px;flex-wrap:nowrap}#ust .cip{padding:0 9px;min-width:0;overflow:hidden;text-overflow:ellipsis}}
+.menuL details{margin:0 0 6px}.menuL summary{list-style:none;cursor:pointer;display:flex;align-items:center;justify-content:space-between;padding:10px 4px 8px;font-size:12px;font-weight:900;letter-spacing:.06em;color:var(--mute)}.menuL summary::-webkit-details-marker{display:none}.menuL summary::after{content:'▾';font-size:14px}.menuL details[open] summary::after{content:'▴'}
 @media (max-height:560px) and (orientation:landscape){
   #panel{width:360px;right:auto;padding:8px 10px}
   .dugmeler button{padding:6px 4px}
@@ -1107,7 +1109,7 @@ function boyut() {
   alanHesap(); sahneKur();
 }
 function alanHesap() {
-  const p = $('panel'), genis = W >= 860, kum = Math.max(60, H * 0.13);
+  const p = $('panel'), genis = W >= 860 || (W > H * 1.25 && H < 560), kum = Math.max(60, H * 0.13);
   let kumY = H - kum, y2 = H - kum * 0.55;
   /* telefonda panel ekranın altını kaplar: kum zemini panelin hemen üstüne çıkar ki sürpriz ve süsler görünsün */
   if (!p.hidden && !genis) { const sb = $('secimBtn'), ph = p.offsetHeight - (sb.hidden ? 0 : sb.offsetHeight + 9) + 53; kumY = Math.min(kumY, H - ph - 14); y2 = kumY - 26; }
@@ -2331,7 +2333,23 @@ function ciz(dt) {
 
 /* ================= arayüz ================= */
 const duyuruKutu = $('duyuru');
-function duyur(m, iyi) { const d = document.createElement('div'); d.textContent = m; if (iyi) d.className = 'iyi'; duyuruKutu.appendChild(d); while (duyuruKutu.children.length > 4) duyuruKutu.firstChild.remove(); setTimeout(() => d.remove(), 3800); }
+/* rehber adımı ekrandayken duyurular bekler (yeni oyuncu aynı anda dört kutu görmesin); rehber kapanınca sırayla çıkar */
+const DUY_BEKLE = [];
+function duyur(m, iyi, simdiGoster) {
+  const rv = () => document.body.classList.contains('rehberVar'); if (rv()) duyur.gordu = 1;
+  /* rehber henüz bitmediyse beklet: rehber kutusu görününce onun kapanmasını bekler; hiç görünmezse 5 sn, en çok 20 sn sonra yine de çıkar */
+  let surer = false; try { surer = !!S && !girisAcik && S.rehber < REHBER.length && !ogModu; } catch (e) { } /* açılışta henüz tanımlanmamış olabilir */
+  if (!simdiGoster && surer && (rv() || !duyur.gordu)) {
+    DUY_BEKLE.push([m, iyi, performance.now()]); if (DUY_BEKLE.length > 3) DUY_BEKLE.shift();
+    if (!duyur.z) duyur.z = setInterval(() => { if (rv()) duyur.gordu = 1; const q = DUY_BEKLE[0], yas = q ? performance.now() - q[2] : 0;
+      if (q && ((!rv() && (duyur.gordu || yas > 5000)) || yas > 20000)) { DUY_BEKLE.shift(); duyur(q[0], q[1], true); }
+      if (!DUY_BEKLE.length) { clearInterval(duyur.z); duyur.z = 0; } }, 1600);
+    return; }
+  const d = document.createElement('div'); d.textContent = m; if (iyi) d.className = 'iyi'; duyuruKutu.appendChild(d);
+  const dar = innerWidth < 560, v = $('vital'); while (duyuruKutu.children.length > (dar ? 2 : 4)) duyuruKutu.firstChild.remove();
+  duyuruKutu.style.top = dar && v && !v.hidden && !document.body.classList.contains('rehberVar') ? Math.round(v.getBoundingClientRect().bottom + 6) + 'px' : ''; /* dar ekranda nabız göstergesini örtmesin */
+  setTimeout(() => d.remove(), 3800);
+}
 const sureYaz = ms => { const dk = Math.ceil(ms / 60e3); return dk >= 60 ? `${Math.floor(dk / 60)}${T('sa', 'h')} ${dk % 60}${T('dk', 'm')}` : `${dk}${T('dk', 'm')}`; };
 let ONZ = [];   // modallarda canlı önizlemeler
 function onizlemeEkle(cnv, d, o = {}) { ONZ.push({ cv: cnv, d, o, faz: Math.random() * 9 }); }
@@ -2703,42 +2721,54 @@ async function paylas() {
 function menuAc() {
   S.rb.menu = 1;
   const ak = gorunenAkv(), dur = NET.durum();
+  /* menü: sık kullanılanlar açık gelir; diğer bölümler dokununca açılır ve seçim hatırlanır */
+  const MG = ls.get('derin-menu-grup', {}), mg = (ad, vars) => (ad in MG ? MG[ad] : vars) ? 'open' : '';
   const ic = modal(`<h2>🐟 Derin Mavi</h2><div class="menuL">
-    <h3>${T('AKVARYUM', 'AQUARIUM')}</h3>
-    <button type="button" data-m="akv"><span>🐠</span>${T('Akvaryumdakiler', 'Who’s in the aquarium')}<em>${ak ? NET.uyeler().size + '/' + AKV_KAP : T('çevrimdışı', 'offline')}</em></button>
+    <details data-g="akv" ${mg('akv', 1)}><summary>${T('AKVARYUM', 'AQUARIUM')}</summary>
     <button type="button" data-m="gunluk"><span>📜</span>${T('Bugün', 'Today')}${gunlukBekleyen() ? `<em>${gunlukBekleyen()} ${T('bekliyor', 'waiting')}</em>` : ''}</button>
+    <button type="button" data-m="akv"><span>🐠</span>${T('Akvaryumdakiler', 'Who’s in the aquarium')}<em>${ak ? NET.uyeler().size + '/' + AKV_KAP : T('çevrimdışı', 'offline')}</em></button>
     <button type="button" data-m="sefer"><span>🧭</span>${T('Keşif seferleri', 'Expeditions')}<em>${S.sefer ? (simdi() >= S.sefer.bit ? '🎁' : sureYaz(S.sefer.bit - simdi())) : ''}</em></button>
     <button type="button" data-m="eko"><span>🌿</span>${T('Ekosistem', 'Ecosystem')}<em>${S && S.eko ? Math.round(S.eko.saglik * 100) + '%' : ''}</em></button>
     <button type="button" data-m="mevsim"><span>🍂</span>${T('Mevsim', 'Season')}<em>${HV.m ? T(MEVSIMLER[HV.m].ad[0], MEVSIMLER[HV.m].ad[1]) : ''}</em></button>
-    <button type="button" data-m="d3"><span>🧊</span>${T('3D görünüm', '3D view')}<em>${G3 ? T('açık', 'on') : T('kapalı', 'off')}</em></button>
     <button type="button" data-m="oy"><span>🗳️</span>${T('Haftanın balığı', 'Fish of the week')}${GECEN_KAZANAN ? '<em>🏅</em>' : ''}</button>
-    <h3>${T('ARKADAŞLAR', 'FRIENDS')}</h3>
+    </details>
+    <details data-g="balik" ${mg('balik', 1)}><summary>${T('BALIĞIM', 'MY FISH')}</summary>
+    <button type="button" data-m="dukkan"><span>🛍️</span>${T('Dükkân ve köşem', 'Shop & my corner')}<em>🫧 ${S.inci}</em></button>
+    <button type="button" data-m="album"><span>📖</span>${T('Koleksiyon albümü', 'Collection album')}<em>${Object.keys(S.alb).length}/${ALBUM.length}</em></button>
+    <button type="button" data-m="sohret"><span>🌳</span>${T('Soy ağacı', 'Family tree')}<em>${S.nesil}. ${T('nesil', 'gen')}</em></button>
+    <button type="button" data-m="hafta"><span>📊</span>${T('Haftalık özet', 'Weekly summary')}</button>
+    <button type="button" data-m="foto"><span>📸</span>${T('Fotoğraf modu', 'Photo mode')}</button>
+    <button type="button" data-m="unvan"><span>🏷️</span>${T('Unvanlar', 'Titles')}<em>${S.unvan ? esc(unvanAd(S.unvan)) : ''}</em></button>
+    </details>
+    <details data-g="kol" ${mg('kol', 0)}><summary>${T('KOLEKSİYON VE ÖDÜLLER', 'COLLECTION & REWARDS')}</summary>
+    <button type="button" data-m="sezon"><span>🎫</span>${T('Sezon kartı', 'Season pass')}<em>${sezonSeviye()}/${SEZON_SEV}${S.sezon.al.length < sezonSeviye() ? ' 🎁' : ''}</em></button>
+    <button type="button" data-m="bas"><span>🏅</span>${T('Başarımlar', 'Achievements')}<em>${Object.keys(S.bas).length}/${BASARIM.length}</em></button>
+    <button type="button" data-m="ansik"><span>📚</span>${T('Balık ansiklopedisi', 'Fish encyclopaedia')}</button>
+    <button type="button" data-m="rekor"><span>🏆</span>${T('En iri balıklar', 'Biggest fish')}</button>
+    </details>
+    <details data-g="ark" ${mg('ark', 0)}><summary>${T('ARKADAŞLAR', 'FRIENDS')}</summary>
     <button type="button" data-m="ark"><span>👥</span>${T('Arkadaşlar ve hediyeler', 'Friends & gifts')}<em>${Object.keys(S.arkadas).length}</em></button>
     <button type="button" data-m="okul"><span>🏫</span>${T('Okulum', 'My school')}<em>${S.okul ? esc(S.okul.e + ' ' + S.okul.ad) : ''}</em></button>
     <button type="button" data-m="paylas"><span>🔗</span>${T('Balığımı besle bağlantısı', 'Feed-my-fish link')}</button>
-    <h3>${T('BALIĞIM', 'MY FISH')}</h3>
-    <button type="button" data-m="dukkan"><span>🛍️</span>${T('Dükkân ve köşem', 'Shop & my corner')}<em>🫧 ${S.inci}</em></button>
-    <button type="button" data-m="unvan"><span>🏷️</span>${T('Unvanlar', 'Titles')}<em>${S.unvan ? esc(unvanAd(S.unvan)) : ''}</em></button>
-    <button type="button" data-m="foto"><span>📸</span>${T('Fotoğraf modu', 'Photo mode')}</button>
-    <h3>${T('KOLEKSİYON VE ÖDÜLLER', 'COLLECTION & REWARDS')}</h3>
-    <button type="button" data-m="sezon"><span>🎫</span>${T('Sezon kartı', 'Season pass')}<em>${sezonSeviye()}/${SEZON_SEV}${S.sezon.al.length < sezonSeviye() ? ' 🎁' : ''}</em></button>
-    <button type="button" data-m="album"><span>📖</span>${T('Koleksiyon albümü', 'Collection album')}<em>${Object.keys(S.alb).length}/${ALBUM.length}</em></button>
-    <button type="button" data-m="ansik"><span>📚</span>${T('Balık ansiklopedisi', 'Fish encyclopaedia')}</button>
-    <button type="button" data-m="bas"><span>🏅</span>${T('Başarımlar', 'Achievements')}<em>${Object.keys(S.bas).length}/${BASARIM.length}</em></button>
-    <button type="button" data-m="rekor"><span>🏆</span>${T('En iri balıklar', 'Biggest fish')}</button>
-    <button type="button" data-m="sohret"><span>🌳</span>${T('Soy ağacı', 'Family tree')}<em>${S.nesil}. ${T('nesil', 'gen')}</em></button>
-    <h3>${T('AYARLAR', 'SETTINGS')}</h3>
-    <button type="button" data-m="fps"><span>📈</span>${T('FPS göstergesi', 'FPS counter')}<em>${fpsAcik ? T('açık', 'on') : T('kapalı', 'off')}</em></button>
-    <button type="button" data-m="vital"><span>❤️</span>${T('Canlı veriler (nabız, ısı…)', 'Live vitals (heart rate, temp…)')}<em>${vitalAcik ? T('açık', 'on') : T('kapalı', 'off')}</em></button>
-    <button type="button" data-m="bild"><span>🔔</span>${T('Bildirimler', 'Notifications')}<em>${S.bildirim.on ? T('açık', 'on') : T('kapalı', 'off')}</em></button>
-    <button type="button" data-m="reklam" ${reklamKalan() > 0 ? '' : 'disabled'}><span>📺</span>${T('Kısa reklam izle: +2 yem', 'Watch a short ad: +2 food')}<em>${reklamKalan()}/${REKLAM_GUN}</em></button>
     <button type="button" data-m="tasi" ${dur === 'acik' && S.akv && !ziyaretModu() ? '' : 'disabled'}><span>🚚</span>${T('Başka akvaryuma taşın', 'Move to another aquarium')}</button>
-    <button type="button" data-m="hafta"><span>📊</span>${T('Haftalık özet', 'Weekly summary')}</button>
+    </details>
+    <details data-g="ayar" ${mg('ayar', 0)}><summary>${T('AYARLAR VE YARDIM', 'SETTINGS & HELP')}</summary>
+    <button type="button" data-m="d3"><span>🧊</span>${T('3D görünüm', '3D view')}<em>${G3 ? T('açık', 'on') : T('kapalı', 'off')}</em></button>
+    <button type="button" data-m="bild"><span>🔔</span>${T('Bildirimler', 'Notifications')}<em>${S.bildirim.on ? T('açık', 'on') : T('kapalı', 'off')}</em></button>
     <button type="button" data-m="yedek"><span>💾</span>${T('Yedekle / geri yükle', 'Back up / restore')}</button>
+    <button type="button" data-m="dil"><span>🌐</span>${T('Dil', 'Language')}<em>${T('Türkçe → English', 'English → Türkçe')}</em></button>
+    ${$('tamBtn').hidden ? '' : `<button type="button" data-m="tam"><span>⛶</span>${T('Tam ekran', 'Full screen')}</button>`}
+    <button type="button" data-m="izle"><span>👁️</span>${T('İzleme modu (arayüzü gizle)', 'Watch mode (hide the interface)')}</button>
+    <button type="button" data-m="vital"><span>❤️</span>${T('Canlı veriler (nabız, ısı…)', 'Live vitals (heart rate, temp…)')}<em>${vitalAcik ? T('açık', 'on') : T('kapalı', 'off')}</em></button>
+    <button type="button" data-m="fps"><span>📈</span>${T('FPS göstergesi', 'FPS counter')}<em>${fpsAcik ? T('açık', 'on') : T('kapalı', 'off')}</em></button>
+    <button type="button" data-m="reklam" ${reklamKalan() > 0 ? '' : 'disabled'}><span>📺</span>${T('Kısa reklam izle: +2 yem', 'Watch a short ad: +2 food')}<em>${reklamKalan()}/${REKLAM_GUN}</em></button>
     <button type="button" data-m="rehber"><span>🎓</span>${T('Rehberi baştan göster', 'Replay the tutorial')}</button>
-    <button type="button" data-m="nasil"><span>❔</span>${T('Nasıl oynanır?', 'How to play')}</button></div>
+    <button type="button" data-m="nasil"><span>❔</span>${T('Nasıl oynanır?', 'How to play')}</button>
+    </details>
+    </div>
     <p class="kucuk">${T('Balığın bu tarayıcıda saklanır. <a href="/hesap.html">Hesabınla giriş yapıp</a> senkronu açarsan diğer cihazlarına da gelir.', 'Your fish is stored in this browser. <a href="/hesap.html">Sign in</a> and turn on sync to bring it to your other devices.')}</p>`);
-  ic.querySelectorAll('[data-m]').forEach(b => b.onclick = () => ({ d3: () => { kaydet(false); try { localStorage.setItem('derin-gorunum', G3 ? '2d' : '3d'); } catch (e) { } location.href = '/derin-mavi.html'; }, mevsim: mevsimAc, eko: ekoAc, yedek: yedekAc, hafta: () => haftaAc(false), fps: () => { fpsAcik = !fpsAcik; try { localStorage.setItem('derin-fps', fpsAcik ? '1' : '0'); } catch (e) { } menuEmYaz('fps', fpsAcik); }, vital: () => { vitalAcik = !vitalAcik; try { localStorage.setItem('derin-vital', vitalAcik ? '1' : '0'); } catch (e) { } menuEmYaz('vital', vitalAcik); }, akv: akvListeAc, hedef: hedefAc, dukkan: dukkanAc, bas: basarimAc, rekor: rekorAc, sohret: sohretAc, reklam: reklamTeklif, paylas, tasi: tasiAc, nasil: nasilAc, gunluk: gunlukAc, sefer: seferAc, okul: okulAc, unvan: unvanAc, foto: fotoAc, ansik: ansikAc, rehber: () => { S.rehber = 0; S.rb = Object.fromEntries(Object.entries(S.rb).filter(([k]) => k.startsWith('u_'))); S.kumandaOgrendi = 0; kaydet(false); modalKapat(); }, ark: arkadaslarAc, sezon: sezonAc, album: albumAc, etk: etkinlikAc, bild: bildirimAc, oy: oylamaAc })[b.dataset.m]());
+  ic.querySelectorAll('details[data-g]').forEach(d => d.ontoggle = () => { MG[d.dataset.g] = d.open ? 1 : 0; ls.set('derin-menu-grup', MG); });
+  ic.querySelectorAll('[data-m]').forEach(b => b.onclick = () => ({ dil: () => { modalKapat(); document.querySelector('#ust [data-dil-btn]').click(); }, tam: () => { modalKapat(); $('tamBtn').click(); }, izle: () => { modalKapat(); setTimeout(() => $('izleBtn').click(), 60); }, d3: () => { kaydet(false); try { localStorage.setItem('derin-gorunum', G3 ? '2d' : '3d'); } catch (e) { } location.href = '/derin-mavi.html'; }, mevsim: mevsimAc, eko: ekoAc, yedek: yedekAc, hafta: () => haftaAc(false), fps: () => { fpsAcik = !fpsAcik; try { localStorage.setItem('derin-fps', fpsAcik ? '1' : '0'); } catch (e) { } menuEmYaz('fps', fpsAcik); }, vital: () => { vitalAcik = !vitalAcik; try { localStorage.setItem('derin-vital', vitalAcik ? '1' : '0'); } catch (e) { } menuEmYaz('vital', vitalAcik); }, akv: akvListeAc, hedef: hedefAc, dukkan: dukkanAc, bas: basarimAc, rekor: rekorAc, sohret: sohretAc, reklam: reklamTeklif, paylas, tasi: tasiAc, nasil: nasilAc, gunluk: gunlukAc, sefer: seferAc, okul: okulAc, unvan: unvanAc, foto: fotoAc, ansik: ansikAc, rehber: () => { S.rehber = 0; S.rb = Object.fromEntries(Object.entries(S.rb).filter(([k]) => k.startsWith('u_'))); S.kumandaOgrendi = 0; kaydet(false); modalKapat(); }, ark: arkadaslarAc, sezon: sezonAc, album: albumAc, etk: etkinlikAc, bild: bildirimAc, oy: oylamaAc })[b.dataset.m]());
 }
 /* HAFTALIK ÖZET: pazartesiden pazara karşılaşılan canlılar, albüme yeni girenler, büyüme ve yem; paylaşılabilir görsel kart */
 const haftaKey = t => Math.floor((t + 3 * 3.6e6 + 3 * 864e5) / (7 * 864e5)); /* Türkiye saatiyle pazartesi başlar */
@@ -6299,7 +6329,7 @@ function fpsKare(dt) {
   }
 }
 let vitalAcik = (() => { try { return localStorage.getItem('derin-vital') !== '0'; } catch (e) { return true; } })();
-let vitalKapali = (() => { try { const v = localStorage.getItem('derin-vital-kapali'); return v == null ? innerWidth < 560 : v === '1'; } catch (e) { return false; } })();
+let vitalKapali = (() => { try { const v = localStorage.getItem('derin-vital-kapali'); return v == null ? innerWidth < 560 || innerHeight < 560 : v === '1'; } catch (e) { return false; } })();
 const VT = { hr: 0, op: 0, govde: 0, su: 0, o2: 0, hiz: 0, der: 0, stres: 0, faz: 0, ekg: [], yaz: 0, vur: 0, ilk: true };
 const SU_ISI = { resif: 27, acik: 21, derin: 6 }, DERINLIK = { resif: [1, 18], acik: [2, 60], derin: [180, 700] };
 const MEV_ISI = { kis: -4, ilkbahar: -1.5, yaz: 2.2, sonbahar: 0.4 }, HAVA_ISI = { gunes: 0.6, bulut: 0, yagmur: -0.6, firtina: -1.2, bulanik: 0.3, ayaz: -2.2 };
