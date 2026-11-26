@@ -510,7 +510,22 @@ const PARAM = new URLSearchParams(location.search);
 const R = 4200;                         // petri kabının yarıçapı (dünya birimi)
 /* gerçek zamanlı gün–gece: İstanbul saati, herkes için aynı (ortak saat) */
 const GUN = { isik: 1, saat: 12, z: 0, evre: null };
-const GOC_MIKRO = new Set([8, 27, 28, 32, 33]);   // kopepod, efira, ostrakod, su piresi yavrusu, nauplius
+const GOC_MIKRO = new Set([8, 27, 28, 32, 33]);
+/* çürüme ve oksijen: ölen hücreler bakterilere besin olur, bakteriler oksijeni tüketir (gerçek ölü bölgeler böyle oluşur) */
+const CURUK = [];
+function curukEkle(x, y, m) { if (CURUK.length > 24) CURUK.shift(); CURUK.push({ x, y, m: Math.min(m, 900), t: 0, sure: 50 + Math.min(80, m / 5), bz: 0 }); }
+function oksijen(x, y) {
+  let o2 = (1 - 0.5 * kis(derinK(x, y), 0, 1)) * (0.86 + 0.14 * GUN.isik);
+  for (const b of BACA) { const d = Math.hypot(b.x - x, b.y - y); if (d < 420) o2 -= 0.45 * (1 - d / 420); }
+  for (const c of CURUK) { const rr = 130 + c.m * 0.3, dx = c.x - x, dy = c.y - y; if (dx > rr || dx < -rr || dy > rr || dy < -rr) continue; const d = Math.hypot(dx, dy); if (d < rr) o2 -= 0.75 * (1 - d / rr) * Math.min(1, c.t / 6) * (1 - c.t / c.sure); }
+  return kis(o2, 0, 1);
+}
+function curukGuncelle(dt) {
+  for (let i = CURUK.length - 1; i >= 0; i--) {
+    const c = CURUK[i]; c.t += dt; if (c.t > c.sure) { CURUK.splice(i, 1); continue; }
+    if ((c.bz -= dt) <= 0) { c.bz = 1.1; if (M.length < MIKRO_N * 1.35) { const tip = [0, 2, 6, 17][(Math.random() * 4) | 0], a = Math.random() * TAU, d = Math.random() * (50 + c.m * 0.15), b = mikroYeni(c.x + Math.cos(a) * d, c.y + Math.sin(a) * d, rnd(1.5, 3), tip); b.b = 0; M.push(b); } }
+  }
+}   // kopepod, efira, ostrakod, su piresi yavrusu, nauplius
 const YEMEK_N = 2300, NPC_N = 165, MIKRO_N = 340;
 const yaricap = m => 4 * Math.sqrt(m);
 const hizi = r => 430 / Math.pow(r, 0.42);       // küçük olan daha hızlı
@@ -1382,6 +1397,7 @@ function parcala(o) {   // yaşlılıktan ölünce besine dönüşür
     Y.push({ x: o.x + Math.cos(a) * d, y: o.y + Math.sin(a) * d, vx: Math.cos(a) * rnd(10, 50), vy: Math.sin(a) * rnd(10, 50), m: pm, k: 4, f: Math.random() * TAU, b: 1, gecici: rnd(35, 55) });
   }
   for (let i = 0; i < 14; i++) { const a = Math.random() * TAU; P.push({ x: o.x, y: o.y, vx: Math.cos(a) * rnd(20, 90), vy: Math.sin(a) * rnd(20, 90), r: o.r * rnd(0.04, 0.1), o: 0.8, t: 0, s: rnd(0.8, 1.6), tip: 1, h: o.hue }); }
+  curukEkle(o.x, o.y, o.m);
 }
 
 function guncelle(dt) {
@@ -1402,7 +1418,8 @@ function guncelle(dt) {
       hareket(o, dt);
       o.yas += dt;
       if (o.m > 40) o.m -= (o.m - 40) * 0.0016 * dt;
-      if (!o.uzak && !o.parca) { const os = osmoStres(o); o.osmo = os; if (os > 0.05 && o.m > 15) o.m -= o.m * 0.004 * os * dt; if (o === oyuncu) osmoUyar(o, os); }
+      if (!o.uzak && !o.parca) { const os = osmoStres(o); o.osmo = os; if (os > 0.05 && o.m > 15) o.m -= o.m * 0.004 * os * dt; if (o === oyuncu) osmoUyar(o, os);
+        const ox = oksijen(o.x, o.y); o.o2 = ox; if (ox < 0.35 && o.m > 15) o.m -= o.m * 0.005 * (0.35 - ox) / 0.35 * dt; if (o === oyuncu) o2Uyar(o, ox); }
       if (o.npc && o.olum === 0 && o.yas > o.omur) yasliOlum(o);
       if (o.npc) o.form[o.ft] = Math.min(1, o.m / 380);   // bilgisayar organizmaları büyüdükçe kendi biçimini geliştirir
     }
@@ -1436,7 +1453,7 @@ function guncelle(dt) {
     yakinYemek(o.x, o.y, rad, f => { const dx = o.x - f.x, dy = o.y - f.y, d = Math.hypot(dx, dy) || 1; if (d < rad) { f.x += dx / d * 150 * dt; f.y += dy / d * 150 * dt; } });
     if (SOY(o).akim) for (const a of M) { const dx = o.x - a.x, dy = o.y - a.y; if (dx > rad || dx < -rad || dy > rad || dy < -rad) continue; const d = Math.hypot(dx, dy) || 1; if (d < rad) { a.x += dx / d * 110 * dt; a.y += dy / d * 110 * dt; } }
   }
-  mikroGuncelle(dt); virusGuncelle(dt); suruGuncelle(dt); yetGuncelle(dt); devGuncelle(dt); derinGuncelle(dt);
+  mikroGuncelle(dt); curukGuncelle(dt); virusGuncelle(dt); suruGuncelle(dt); yetGuncelle(dt); devGuncelle(dt); derinGuncelle(dt);
   for (let i = Y.length - 1; i >= 0; i--) {
     const f = Y[i];
     if (f.yendi) { if (f.gecici) { Y[i] = Y[Y.length - 1]; Y.pop(); continue; } f.yendi = false; yemekYeri(f); }
@@ -2158,7 +2175,7 @@ function devIsir(b, o, dmg) {   // bir canlı deve hamleyle (ya da okla) zarar v
   if (o === oyuncu) { SES.isir(); titre(18); }
 }
 function devOl(b) {
-  const D = DEVLER[b.tip];
+  const D = DEVLER[b.tip]; curukEkle(b.x, b.y, 700);
   for (let i = 0; i < 60 && Y.length < YEMEK_N * 2.8; i++) { const a = Math.random() * TAU, d = Math.random() * b.r; Y.push({ x: b.x + Math.cos(a) * d, y: b.y + Math.sin(a) * d, vx: Math.cos(a) * rnd(30, 200), vy: Math.sin(a) * rnd(30, 200), m: rnd(2, 5), k: (Math.random() * 5) | 0, f: Math.random() * TAU, b: 1, gecici: rnd(45, 70) }); }
   for (let i = 0; i < 3; i++) P.push({ x: b.x, y: b.y, vx: 0, vy: 0, r: b.r * (0.6 + i * 0.5), o: 0.9, t: 0, s: 0.9 + i * 0.3, tip: 2, h: D.hue });
   if (b.hasar > 0 && oyuncu && !oyuncu.olu) {
@@ -3267,6 +3284,7 @@ function ciz(t) {
   g.strokeStyle = 'rgba(200,245,250,.35)'; g.lineWidth = 2.5 / z; g.stroke();
   /* bölgeler ve olay izleri */
   bolgeCiz(z, t, gx0, gx1, gy0, gy1, false);
+  for (const c of CURUK) { const rr = 130 + c.m * 0.3, al = Math.min(1, c.t / 6) * (1 - c.t / c.sure); if (al <= 0.01) continue; const cg = g.createRadialGradient(c.x, c.y, 0, c.x, c.y, rr); cg.addColorStop(0, `rgba(105,78,38,${0.5 * al})`); cg.addColorStop(0.6, `rgba(80,62,32,${0.24 * al})`); cg.addColorStop(1, 'rgba(60,50,30,0)'); g.fillStyle = cg; g.beginPath(); g.arc(c.x, c.y, rr, 0, TAU); g.fill(); g.fillStyle = `rgba(150,120,70,${0.45 * al})`; g.beginPath(); for (let k = 0; k < 14; k++) { const a = k * 2.4 + c.x, d = (k / 14) * rr * 0.55, px = c.x + Math.cos(a) * d, py = c.y + Math.sin(a) * d + Math.sin(t * 0.4 + k) * 3; g.moveTo(px + 2.5, py); g.arc(px, py, 2.5, 0, TAU); } g.fill(); }
   if (OLAY.tip === 'salgin') { const pg = g.createRadialGradient(OLAY.x, OLAY.y, 30, OLAY.x, OLAY.y, 460); pg.addColorStop(0, `rgba(255,120,220,${0.12 + 0.05 * Math.sin(t * 2)})`); pg.addColorStop(1, 'rgba(255,120,220,0)'); g.fillStyle = pg; g.beginPath(); g.arc(OLAY.x, OLAY.y, 460, 0, TAU); g.fill(); }
   if (OLAY.tip === 'patlama') { const pg = g.createRadialGradient(OLAY.x, OLAY.y, 30, OLAY.x, OLAY.y, 430); pg.addColorStop(0, `rgba(120,255,160,${0.13 + 0.04 * Math.sin(t * 2)})`); pg.addColorStop(1, 'rgba(120,255,160,0)'); g.fillStyle = pg; g.beginPath(); g.arc(OLAY.x, OLAY.y, 430, 0, TAU); g.fill(); }
   /* besinler */
@@ -3473,6 +3491,7 @@ function miniCiz() {
     else { x.fillStyle = b.tip === 'yosun' ? 'rgba(80,190,100,.3)' : b.tip === 'asit' ? 'rgba(215,235,60,.45)' : 'rgba(0,0,0,.5)'; x.fill(); }
   }
   const nb = 0.5 + 0.5 * Math.sin(performance.now() / 160);
+  for (const c of CURUK) { x.fillStyle = 'rgba(150,115,60,.7)'; x.beginPath(); x.arc(c.x * k, c.y * k, 2.5 + c.m / 300, 0, TAU); x.fill(); }
   if (OLAY.tip === 'salgin') { x.strokeStyle = `rgba(255,120,220,${0.5 + 0.5 * nb})`; x.lineWidth = 2; x.beginPath(); x.arc(OLAY.x * k, OLAY.y * k, 10 + nb * 3, 0, TAU); x.stroke(); }
   if (OLAY.tip === 'goc') { x.strokeStyle = `rgba(255,90,70,${0.5 + 0.5 * nb})`; x.lineWidth = 2; x.beginPath(); x.arc(OLAY.x * k, OLAY.y * k, 9 + nb * 3, 0, TAU); x.stroke(); }
   if (OLAY.tip === 'patlama' || OLAY.tip === 'damla') { x.strokeStyle = OLAY.tip === 'patlama' ? `rgba(120,255,160,${0.5 + 0.5 * nb})` : `rgba(255,180,90,${0.5 + 0.5 * nb})`; x.lineWidth = 3; x.beginPath(); x.arc(OLAY.x * k, OLAY.y * k, 9 + nb * 4, 0, TAU); x.stroke(); }
@@ -3570,6 +3589,11 @@ function menuAc() {
 }
 if (window.erDil && erDil.on) erDil.on(() => { menuKur(); liderCiz(); ortakYuk = -1e9; });
 
+/* ================= oksijen uyarısı ================= */
+function o2Uyar(o, ox) {
+  if (ox > 0.45) { o.o2U = 0; return; } if (ox > 0.35 || o.o2U || IZLE) return; o.o2U = 1;
+  duyur(T('🫧 Oksijen azaldı! Çürüyen hücreleri ayrıştıran bakteriler ve sıcak bacalar suyun oksijenini tüketiyor; burada küçülürsün. Kahverengi bulanık bölgeden uzaklaş.', '🫧 Oxygen is low! Bacteria breaking down dead cells and hot vents use up the oxygen; you shrink here. Leave the brown murky area.'), 'uyari', 6);
+}
 /* ================= tuzluluk uyarısı ================= */
 function osmoUyar(o, os) {
   if (os < 0.3) { if (os < 0.05) o.osmoU = 0; return; }
@@ -3653,6 +3677,7 @@ function yasamGuncelle(dt) {
         if (o.zehir > 0) h += yasamSatir('☠', T('Zehir', 'Toxin'), o.zehir.toFixed(1) + ' ' + T('sn', 's'), 'kotu', o.zehir / 5, '#B98AFF');
         if (o.kalkan > 0) h += yasamSatir('🛡', T('Kalkan', 'Shield'), o.kalkan.toFixed(1) + ' ' + T('sn', 's'), 'iyi', o.kalkan / 6, '#8FF0B8');
         { const hh = Math.floor(GUN.saat), dd = Math.floor((GUN.saat - hh) * 60); h += yasamSatir(GUN.isik > 0.5 ? '☀️' : GUN.isik > 0.03 ? '🌅' : '🌙', T('Gün ışığı', 'Daylight'), `${String(hh).padStart(2, '0')}:${String(dd).padStart(2, '0')} · %${Math.round(GUN.isik * 100)}`, '', GUN.isik, '#FFD27A', true); }
+        { const ox = o.o2 == null ? 1 : o.o2; h += yasamSatir('🫧', T('Oksijen', 'Oxygen'), (ox < 0.35 ? T('yetersiz · ', 'too low · ') : '') + '%' + Math.round(ox * 100), ox < 0.35 ? 'kotu' : ox < 0.55 ? 'dikkat' : '', ox, ox < 0.35 ? '#FF8A7A' : '#8FD8FF'); }
         h += yasamSatir('🧂', T('Tuzluluk', 'Salinity'), `${Math.round(tk * 35)}‰ · ${tuzAd(tk)}`, osm > 0.25 ? 'kotu' : '', osm > 0.05 ? osm : null, '#FF9A7A');
         if (osm > 0.05) h += yasamSatir('⚡', T('Osmotik stres', 'Osmotic stress'), suT === 'T' ? T('su kaybediyor', 'losing water') : T('şişiyor', 'swelling'), 'kotu');
         h += yasamSatir('💧', T('Kontraktil koful', 'Contractile vacuole'), YS.kofYok ? T('yok · deniz canlısı', 'none · marine') : YS.hedefBpm < 1 ? T('neredeyse durdu', 'almost stopped') : Math.round(YS.bpm) + T(' atım/dk', ' beats/min'), '', null, null, true);
@@ -3790,6 +3815,7 @@ function sahneBul() {
     }
   }
   if (enA) ad.push({ tip: 'av', p: 45 + Math.min(35, enP / 40), a: enA, q: enQ, m: T(`${bAd(enA)} adlı ${bTur(enA)}, bir ${bTur(enQ)} avının peşinde. `, `${bAd(enA)}, a ${bTur(enA)}, is chasing a ${bTur(enQ)}. `) + turBilgi(enA.tur), sure: 10 });
+  { let cb = null; for (const c of CURUK) if (c.m > 180 && c.t > 4 && c.t < c.sure * 0.7 && (!cb || c.m > cb.m)) cb = c; if (cb) ad.push({ tip: 'curuk', p: 38, x: cb.x, y: cb.y, rr: 110, m: T('Ölen bir hücre çöktü: bakteriler onu ayrıştırıyor ve bu sırada sudaki <b>oksijeni</b> tüketiyor. Gerçek göl ve denizlerdeki <b>ölü bölgeler</b> de böyle oluşur.', 'A dead cell has sunk: bacteria are breaking it down and using up the <b>oxygen</b>. Real <b>dead zones</b> in lakes and seas form the same way.'), sure: 10 }); }
   let buyuk = null; for (const q of O) if (!q.olu && q !== oyuncu && !q.uzak && q.m > 320 && (!buyuk || q.m > buyuk.m)) buyuk = q;
   if (buyuk) ad.push({ tip: 'buyuk', p: 30, n: buyuk, m: T(`Bölgenin en büyüğü: ${bAd(buyuk)}, ${Math.round(buyuk.m)} kütle. `, `The largest around: ${bAd(buyuk)}, mass ${Math.round(buyuk.m)}. `) + turBilgi(buyuk.tur), sure: 10 });
   const uy = ad.filter(a => a.tip !== IZD.sonTip).sort((a, b) => b.p - a.p);
