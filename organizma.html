@@ -519,6 +519,11 @@ const PARAM = new URLSearchParams(location.search);
 const R = 4200;                         // petri kabının yarıçapı (dünya birimi)
 /* gerçek zamanlı gün–gece: İstanbul saati, herkes için aynı (ortak saat) */
 const GUN = { isik: 1, saat: 12, z: 0, evre: null };
+/* mevsim: gerçek takvime (İstanbul) bağlı yüzey suyu sıcaklığı. Ilıman bir göl: şubatta ~6°C, ağustosta ~24°C; derin su ~4°C.
+   Sıcaklık metabolizmayı Q10≈2 kuralıyla değiştirir; algler ilkbaharda patlar; soğuk su daha çok oksijen tutar. */
+const MEVSIM = { gun: 180, suC: 15, ad: 'yaz', alg: 1, o2: 1, q: 1, hiz: 1, z: 0 };
+const suIsi = (x, y) => { const dk = Math.min(1, Math.max(0, derinK(x, y))); let t = MEVSIM.suC - (MEVSIM.suC - 4) * dk; for (const b of BACA) { const d = Math.hypot(b.x - x, b.y - y); if (d < 520) t += 72 * (1 - d / 520) ** 2; } return t; };
+const isiQ = (x, y) => kis(Math.pow(2, (suIsi(x, y) - 18) / 10), 0.45, 1.7);
 const GOC_MIKRO = new Set([8, 27, 28, 32, 33]);
 /* endosimbiyoz: yutulan alg bazen sindirilmez, hücrenin içinde yaşayıp ışıktan besin üretir; 2 dakika sonra kalıcı kloroplast olur */
 const ALG_TIP = new Set([3, 5, 7, 9, 11, 14, 15, 23, 25, 30]), ENDO_MAX = 6, ENDO_KALICI = 120;
@@ -541,7 +546,7 @@ function endoGuncelle(o, dt) {
 const CURUK = [];
 function curukEkle(x, y, m) { if (CURUK.length > 24) CURUK.shift(); CURUK.push({ x, y, m: Math.min(m, 900), t: 0, sure: 50 + Math.min(80, m / 5), bz: 0 }); }
 function oksijen(x, y) {
-  let o2 = (1 - 0.5 * kis(derinK(x, y), 0, 1)) * (0.86 + 0.14 * GUN.isik);
+  let o2 = (1 - 0.5 * kis(derinK(x, y), 0, 1)) * (0.86 + 0.14 * GUN.isik) * MEVSIM.o2;
   for (const b of BACA) { const d = Math.hypot(b.x - x, b.y - y); if (d < 420) o2 -= 0.45 * (1 - d / 420); }
   for (const c of CURUK) { const rr = 130 + c.m * 0.3, dx = c.x - x, dy = c.y - y; if (dx > rr || dx < -rr || dy > rr || dy < -rr) continue; const d = Math.hypot(dx, dy); if (d < rr) o2 -= 0.75 * (1 - d / rr) * Math.min(1, c.t / 6) * (1 - c.t / c.sure); }
   return kis(o2, 0, 1);
@@ -580,7 +585,7 @@ for (const t of TURLER) { t.hiz = t.hiz || 1; t.bekle = t.bekle || 1; t.agiz = t
 /* tür ve evrim özelliklerine göre kurallar */
 const BOS_EV = { menzil: 0, bekle: 0, hiz: 0, zar: 0, obur: 0, kamuflaj: 0, miknatis: 0 };
 const EV = o => o.ev || BOS_EV;
-const hizO = o => hizi(o.r) * TURLER[o.tur].hiz * (1 + 0.08 * EV(o).hiz) * (o.zehir > 0 ? 0.55 : 1) * (gmVar('hizli') ? 1.15 : 1) * (1 - 0.15 * derinK(o.x, o.y) * (o === oyuncu || o.sahip === oyuncu ? 1 - 0.5 * Math.min(1, agacLv('dalgic')) : 1));
+const hizO = o => hizi(o.r) * TURLER[o.tur].hiz * MEVSIM.hiz * (1 + 0.08 * EV(o).hiz) * (o.zehir > 0 ? 0.55 : 1) * (gmVar('hizli') ? 1.15 : 1) * (1 - 0.15 * derinK(o.x, o.y) * (o === oyuncu || o.sahip === oyuncu ? 1 - 0.5 * Math.min(1, agacLv('dalgic')) : 1));
 const menzilK = o => TURLER[o.tur].menzil * (1 + 0.22 * EV(o).menzil);
 const menzilO = o => MENZIL(o.r) * menzilK(o);
 const bekleO = o => HAMLE_BEKLE * TURLER[o.tur].bekle * (1 - 0.2 * EV(o).bekle);
@@ -1444,7 +1449,7 @@ function guncelle(dt) {
       if (o.npc) npcAkil(o, dt);
       hareket(o, dt);
       o.yas += dt;
-      if (o.m > 40) o.m -= (o.m - 40) * 0.0016 * dt;
+      if (o.m > 40) o.m -= (o.m - 40) * 0.0016 * dt * (o.uzak ? 1 : (o.qZ = (o.qZ || 0) - dt) > 0 ? o.q || 1 : (o.qZ = 1, o.q = isiQ(o.x, o.y)));   // sıcakta hızlı, soğukta yavaş yanar
       if (!o.uzak && !o.parca) { const os = osmoStres(o); o.osmo = os; if (os > 0.05 && o.m > 15) o.m -= o.m * 0.004 * os * dt; if (o === oyuncu) osmoUyar(o, os);
         const ox = oksijen(o.x, o.y); o.o2 = ox; if (ox < 0.35 && o.m > 15) o.m -= o.m * 0.005 * (0.35 - ox) / 0.35 * dt; if (o === oyuncu) o2Uyar(o, ox); if (o.endo) endoGuncelle(o, dt); }
       if (o.npc && o.olum === 0 && o.yas > o.omur) yasliOlum(o);
@@ -1486,7 +1491,7 @@ function guncelle(dt) {
     if (f.yendi) { if (f.gecici) { Y[i] = Y[Y.length - 1]; Y.pop(); continue; } f.yendi = false; yemekYeri(f); }
     f.x += f.vx * dt; f.y += f.vy * dt; f.vx *= 0.995; f.vy *= 0.995; akintiIt(f, dt);
     if (!f.gecici && Math.random() < dt * 0.3) { f.vx += rnd(-4, 4); f.vy += rnd(-4, 4); }
-    if (f.b < 1) f.b = Math.min(1, f.b + dt * 0.8 * (f.baca || f.gecici ? 1 : 0.25 + 0.75 * GUN.isik));   // algler ışıkla büyür: gece yavaş
+    if (f.b < 1) f.b = Math.min(1, f.b + dt * 0.8 * (f.baca || f.gecici ? 1 : (0.25 + 0.75 * GUN.isik) * MEVSIM.alg));   // algler ışıkla büyür: gece yavaş, ilkbaharda patlar, kışın durgun
     if (f.gecici) { f.gecici -= dt; if (f.gecici <= 0) { Y[i] = Y[Y.length - 1]; Y.pop(); continue; } }
     const d2 = f.x * f.x + f.y * f.y; if (d2 > (R - 20) * (R - 20)) { f.vx = -f.x * 0.01; f.vy = -f.y * 0.01; }
   }
@@ -3692,20 +3697,20 @@ function yasamGuncelle(dt) {
       const pr = o.parca && !o.parca.olu ? o.parca : null, mt = o.m + (pr ? pr.m : 0);
       YS.gecmis.push([zaman, mt]); while (YS.gecmis.length > 2 && zaman - YS.gecmis[0][0] > 5) YS.gecmis.shift();
       const g0 = YS.gecmis[0], net = zaman - g0[0] > 0.6 ? (mt - g0[1]) / (zaman - g0[0]) : 0;
-      const met = (o.m > 40 ? (o.m - 40) * 0.0016 : 0) + (o.zehir > 0 ? o.m * 0.06 : 0);
+      const met = (o.m > 40 ? (o.m - 40) * 0.0016 * (o.q || 1) : 0) + (o.zehir > 0 ? o.m * 0.06 : 0);
       const [tAd, tD] = yasamTehlike(o), tl = tD < 0 ? 1 : Math.max(0, 1 - tD / 600);
       const hiz = Math.min(1, Math.hypot(o.vx || 0, o.vy || 0) / 240);
       /* kontraktil koful: tatlı suda hücreye sürekli su girer, koful onu düzenli aralıklarla dışarı pompalar.
          Tuzlu suda neredeyse durur, sıcakta ve hareket ettikçe hızlanır; deniz canlılarında yoktur. */
       const suT = TURLER[o.tur].su, tk = tuzK(o.x, o.y), osm = osmoStres(o), dk0 = derinK(o.x, o.y);
-      let isi0 = 21 - 18 * Math.min(1, Math.max(0, dk0)); for (const b of BACA) { const d = Math.hypot(b.x - o.x, b.y - o.y); if (d < 520) isi0 += 72 * (1 - d / 520) ** 2; }
+      const isi0 = suIsi(o.x, o.y);
       YS.kofYok = suT === 'D';
       YS.hedefBpm = YS.kofYok ? 0 : 11 * Math.max(0.03, 1 - tk * 0.97) * (0.8 + 0.4 * hiz) * kis(0.45 + isi0 / 30, 0.5, 1.9);
       YS.renk = osm > 0.3 ? '#FF9A7A' : '#6FC8FF';
       const nb = $('yNabiz'); nb.textContent = YS.kofYok ? '💧 —' : '💧 ' + Math.round(YS.bpm) + T('/dk', '/min'); nb.className = osm > 0.3 ? 'yuksek' : tl > 0.6 ? 'orta' : '';
       if (!YS.kapali) {
         const mtr = metre(o.x, o.y), dk = derinK(o.x, o.y);
-        let isi = 21 - 18 * Math.min(1, Math.max(0, dk)); for (const b of BACA) { const d = Math.hypot(b.x - o.x, b.y - o.y); if (d < 520) isi += 72 * (1 - d / 520) ** 2; }
+        const isi = isi0;
         const tok = Math.min(1, o.tok || 0), bk = o.bekle > 0 ? 1 - o.bekle / bekleO(o) : 1, kof = (o.kof || []).length;
         const ok = net > 0.05 ? '▲' : net < -0.05 ? '▼' : '•', ns = (net >= 0 ? '+' : '−') + Math.abs(net).toFixed(Math.abs(net) < 10 ? 1 : 0);
         let h = yasamSatir('⚖', T('Kütle', 'Mass'), `${Math.round(mt)} <small style="opacity:.8">${ok} ${ns}/${T('sn', 's')}</small>`, net > 0.05 ? 'iyi' : net < -0.3 ? 'kotu' : '')
@@ -3717,6 +3722,7 @@ function yasamGuncelle(dt) {
         if (o.zehir > 0) h += yasamSatir('☠', T('Zehir', 'Toxin'), o.zehir.toFixed(1) + ' ' + T('sn', 's'), 'kotu', o.zehir / 5, '#B98AFF');
         if (o.kalkan > 0) h += yasamSatir('🛡', T('Kalkan', 'Shield'), o.kalkan.toFixed(1) + ' ' + T('sn', 's'), 'iyi', o.kalkan / 6, '#8FF0B8');
         { const hh = Math.floor(GUN.saat), dd = Math.floor((GUN.saat - hh) * 60); h += yasamSatir(GUN.isik > 0.5 ? '☀️' : GUN.isik > 0.03 ? '🌅' : '🌙', T('Gün ışığı', 'Daylight'), `${String(hh).padStart(2, '0')}:${String(dd).padStart(2, '0')} · %${Math.round(GUN.isik * 100)}`, '', GUN.isik, '#FFD27A', true); }
+        h += yasamSatir(MEVSIM_IKON[MEVSIM.ad], T('Mevsim', 'Season'), `${T(MEVSIM_AD[MEVSIM.ad][0], MEVSIM_AD[MEVSIM.ad][1])} · ${T('yüzey', 'surface')} ${Math.round(MEVSIM.suC)}°C${MEVSIM.alg > 1.25 ? T(' · alg patlaması', ' · algal bloom') : ''}`, MEVSIM.alg > 1.25 ? 'iyi' : MEVSIM.suC < 9 ? 'dikkat' : '', null, null, true);
         if (o.endo && o.endo.length) { const k2 = o.endo.filter(e => e.kal).length; h += yasamSatir('🌿', T('Ortakyaşar alg', 'Symbiotic algae'), `${o.endo.length}${k2 ? ' (' + k2 + T(' kalıcı', ' permanent') + ')' : ''} · +${(o.endoKaz || 0).toFixed(2)}/${T('sn', 's')}`, (o.endoKaz || 0) > 0.05 ? 'iyi' : ''); }
         { const ox = o.o2 == null ? 1 : o.o2; h += yasamSatir('🫧', T('Oksijen', 'Oxygen'), (ox < 0.35 ? T('yetersiz · ', 'too low · ') : '') + '%' + Math.round(ox * 100), ox < 0.35 ? 'kotu' : ox < 0.55 ? 'dikkat' : '', ox, ox < 0.35 ? '#FF8A7A' : '#8FD8FF'); }
         h += yasamSatir('🧂', T('Tuzluluk', 'Salinity'), `${Math.round(tk * 35)}‰ · ${tuzAd(tk)}`, osm > 0.25 ? 'kotu' : '', osm > 0.05 ? osm : null, '#FF9A7A');
@@ -4365,6 +4371,29 @@ function mkOlcekGuncelle(dt) {   // dünya birimi ≈ µm: ekranda 70–150 piks
 }
 mkUygula();
 
+const MEVSIM_AD = { kis: ['Kış', 'Winter'], ilkbahar: ['İlkbahar', 'Spring'], yaz: ['Yaz', 'Summer'], sonbahar: ['Sonbahar', 'Autumn'] }, MEVSIM_IKON = { kis: '❄️', ilkbahar: '🌱', yaz: '🌞', sonbahar: '🍂' };
+let mevsimDuyuruldu = false;
+function mevsimGuncelle() {
+  const tr = new Date(AG.simdi() + 3 * 3600e3); let gn = Math.floor((tr - Date.UTC(tr.getUTCFullYear(), 0, 1)) / 864e5) + 1;
+  if (PARAM.has('gunNo')) gn = kis(+PARAM.get('gunNo') || 1, 1, 366);
+  const ay = new Date(Date.UTC(2026, 0, gn)).getUTCMonth();
+  MEVSIM.gun = gn; MEVSIM.ad = ay === 11 || ay < 2 ? 'kis' : ay < 5 ? 'ilkbahar' : ay < 8 ? 'yaz' : 'sonbahar';
+  MEVSIM.suC = 15 + 9 * Math.cos(TAU * (gn - 215) / 365) + 1.5 * (GUN.isik - 0.5);
+  const bloom = 0.55 * Math.exp(-(((gn - 105) / 24) ** 2)) + 0.22 * Math.exp(-(((gn - 285) / 20) ** 2));   // ilkbahar ve (daha küçük) sonbahar alg patlaması
+  MEVSIM.alg = kis(0.55 + 0.45 * (MEVSIM.suC - 5) / 19, 0.5, 1) + bloom;
+  MEVSIM.o2 = kis(1.12 - 0.013 * (MEVSIM.suC - 6), 0.86, 1.12);
+  MEVSIM.q = kis(Math.pow(2, (MEVSIM.suC - 18) / 10), 0.45, 1.7); MEVSIM.hiz = 0.94 + 0.06 * Math.min(1.5, MEVSIM.q);
+  if (!mevsimDuyuruldu && (oyunda || IZLE)) {
+    mevsimDuyuruldu = true; const c = Math.round(MEVSIM.suC);
+    const M2 = {
+      kis: [`❄️ Kış: yüzey suyu ${c}°C. Soğukta metabolizma yavaşlar: hücreler daha az kütle yakar ama daha yavaş yüzer. Algler durgun, besin kıt; zor anda kist olmayı (K) unutma.`, `❄️ Winter: surface water ${c}°C. Cold slows metabolism: cells burn less mass but swim slower. Algae are dormant and food is scarce; remember you can encyst (K).`],
+      ilkbahar: [`🌱 İlkbahar: su ${c}°C ve ısınıyor. Göllerde her yıl yaşanan ilkbahar alg patlaması başladı: plankton bol, büyümek için en iyi zaman.`, `🌱 Spring: water ${c}°C and warming. The yearly spring algal bloom has begun: plankton is plentiful, the best time to grow.`],
+      yaz: [`🌞 Yaz: su ${c}°C. Sıcakta her şey hızlanır: daha hızlı yüzersin ama daha hızlı acıkırsın. Ilık su daha az oksijen tutar.`, `🌞 Summer: water ${c}°C. Warmth speeds everything up: you swim faster but get hungry faster. Warm water holds less oxygen.`],
+      sonbahar: [`🍂 Sonbahar: su ${c}°C ve soğuyor. Metabolizma yavaşlıyor; küçük bir sonbahar alg patlamasından sonra besin azalacak.`, `🍂 Autumn: water ${c}°C and cooling. Metabolism slows; after a small autumn bloom food will get scarcer.`]
+    }[MEVSIM.ad];
+    setTimeout(() => { if (IZLE) anlat(T(M2[0], M2[1]), 9); else if (oyunda) duyur(T(M2[0], M2[1]), '', 9); }, 15000);
+  }
+}
 function gunGuncelle(dt) {
   if ((GUN.z -= dt) > 0) return; GUN.z = 4;
   let h = ((AG.simdi() + 3 * 3600e3) / 3600e3) % 24; if (PARAM.has('saat')) h = (+PARAM.get('saat') || 0) % 24;
@@ -4380,7 +4409,7 @@ function gunGuncelle(dt) {
     }[evre];
     if (IZLE) anlat(T(M2[0], M2[1]), 8); else if (oyunda) duyur(T(M2[0], M2[1]), '', 7);
   }
-  GUN.evre = evre;
+  GUN.evre = evre; mevsimGuncelle();
 }
 
 /* ================= kist: zor durumda kabuğuna çekil, bir sonraki oyunda kaldığın yerden devam et ================= */
