@@ -16,7 +16,8 @@
 <link rel="canonical" href="https://erdevelop.com/kozmos.html">
 <link rel="icon" href="/favicon.svg" type="image/svg+xml">
 <link rel="manifest" href="/kozmos.webmanifest"><link rel="apple-touch-icon" href="/kozmos/apple-touch-icon.png"><meta name="apple-mobile-web-app-capable" content="yes"><meta name="mobile-web-app-capable" content="yes"><meta name="apple-mobile-web-app-status-bar-style" content="black-translucent"><meta name="apple-mobile-web-app-title" content="Kozmos">
-<link href="https://fonts.googleapis.com/css2?family=Nunito:wght@600;700;800;900&display=swap" rel="stylesheet">
+<link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin><link rel="preconnect" href="https://www.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Nunito:wght@600;700;800;900&display=swap" rel="stylesheet" media="print" onload="this.media='all'"><noscript><link href="https://fonts.googleapis.com/css2?family=Nunito:wght@600;700;800;900&display=swap" rel="stylesheet"></noscript>
 <style>
 :root{--ink:#E8EEFF;--mute:#97A5CA;--acc:#7FE3FF;--acc2:#3FA9F5;--altin:#FFC857;--mor:#B48CFF;--kart:rgba(8,12,30,.9);--line:rgba(150,180,255,.18);--kirmizi:#FF7B8A}
 *,*::before,*::after{box-sizing:border-box}
@@ -266,7 +267,7 @@ details{margin-top:12px;color:var(--mute);font-size:13.5px}summary{cursor:pointe
     <p class="alt" data-en="Fly your ship through a vast, deep universe: star systems, planets, colonies and galaxies.">Gemini uçsuz bucaksız, derin bir evrende uçur: yıldız sistemleri, gezegenler, koloniler ve galaksiler.</p>
     <div class="istat" id="istat"></div>
     <div class="yol" id="yolYaz"></div>
-    <button class="ana" id="mBasla" type="button"></button>
+    <button class="ana" id="mBasla" type="button">⏳</button>
     <div id="seriHesap" data-anahtar='{"z":"kozmos-kayit"}' data-ad='{"z":["Kozmos","Kozmos"]}' data-aciklama="Kozmos ilerlemen (keşifler, kredi, gemi, görevler) hesabına yedekleniyor|Your Kozmos progress (discoveries, credits, ship, missions) is backed up" data-link="0"></div>
     <details id="gunDet" open><summary id="gunOz">📅 Günlük görevler</summary><div id="gunIc"></div></details>
     <button class="ikincil" id="prsBtn" type="button" hidden style="border-color:rgba(255,215,120,.6)"></button>
@@ -1004,13 +1005,15 @@ function boyutla() {
   miniBoyut();
 }
 function katmanKur() {
-  KAT = [
-    { p: 0.025, ts: 512, seed: 11, v: [0, 1, 2].map(i => yildizKarosu(100 + i, 512, 260, [0.5, 1.2], 0.75)) },
-    { p: 0.07, ts: 512, seed: 22, v: [0, 1, 2].map(i => yildizKarosu(200 + i, 512, 80, [0.7, 1.8], 0.9)) },
-    { p: 0.16, ts: 640, seed: 33, v: [0, 1, 2].map(i => yildizKarosu(300 + i, 640, 26, [1, 2.8], 1)) },
-  ];
-  if (!NEB.length) for (let i = 0; i < 6; i++) NEB.push(nebulaSprite(9000 + i * 17));
-  if (!GSP.length) for (let i = 0; i < 8; i++) GSP.push(galaksiSprite(5000 + i * 31, i < 6 ? 'sarmal' : 'eliptik', 2 + (i % 3), i, 192));
+  /* açılışı hızlandırmak için önce her katmandan bir karo ve birkaç sprite; gerisi boşta üretilir */
+  const tanim = [[0.025, 512, 11, 100, 260, [0.5, 1.2], 0.75], [0.07, 512, 22, 200, 80, [0.7, 1.8], 0.9], [0.16, 640, 33, 300, 26, [1, 2.8], 1]];
+  KAT = tanim.map(([p, ts, seed, b, n, r, a]) => ({ p, ts, seed, v: [yildizKarosu(b, ts, n, r, a)] }));
+  const is = [];
+  tanim.forEach(([, ts, , b, n, r, a], k) => { for (let i = 1; i < 3; i++) is.push(() => { if (KAT[k]) KAT[k].v.push(yildizKarosu(b + i, ts, n, r, a)); }); });
+  if (!NEB.length) { NEB.push(nebulaSprite(9000)); for (let i = 1; i < 6; i++) is.push(() => NEB.push(nebulaSprite(9000 + i * 17))); }
+  if (!GSP.length) { GSP.push(galaksiSprite(5000, 'sarmal', 2, 0, 192)); for (let i = 1; i < 8; i++) is.push(() => GSP.push(galaksiSprite(5000 + i * 31, i < 6 ? 'sarmal' : 'eliptik', 2 + (i % 3), i, 192))); }
+  const sira = () => { const f = is.shift(); if (!f) return; try { f(); } catch (e) { } (window.requestIdleCallback || (c => setTimeout(c, 30)))(sira, { timeout: 400 }); };
+  setTimeout(sira, 250);
 }
 
 /* ================= giriş ================= */
