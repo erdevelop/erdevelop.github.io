@@ -274,6 +274,7 @@ details{margin-top:12px;color:var(--mute);font-size:13.5px}summary{cursor:pointe
     <div class="yol" id="yolYaz"></div>
     <button class="ana" id="mBasla" type="button">⏳</button>
     <div id="seriHesap" data-anahtar='{"z":"kozmos-kayit"}' data-ad='{"z":["Kozmos","Kozmos"]}' data-aciklama="Kozmos ilerlemen (keşifler, kredi, gemi, görevler) hesabına yedekleniyor|Your Kozmos progress (discoveries, credits, ship, missions) is backed up" data-link="0"></div>
+    <details id="mevDet" open><summary id="mevOz">📅 Mevsimlik etkinlik</summary><div id="mevIc"></div></details>
     <details id="gunDet" open><summary id="gunOz">📅 Günlük görevler</summary><div id="gunIc"></div></details>
     <button class="ikincil" id="prsBtn" type="button" hidden style="border-color:rgba(255,215,120,.6)"></button>
     <button class="ikincil" id="mSifirla" type="button" hidden data-en="🔄 Start over (new game)">🔄 Baştan başla (yeni oyun)</button>
@@ -1156,7 +1157,7 @@ function mesafeYaz(d) { const km = d * 1000; if (km >= 1e9) return SAYI(km / 1e9
 
 /* ================= güncelle ================= */
 function guncelle(dt, t) {
-  kareNo++; isikGuncelle(); rcsAdim(dt); fxAdim(dt); ortAdim(dt); SARS *= Math.exp(-dt * 4.5);
+  kareNo++; isikGuncelle(); rcsAdim(dt); fxAdim(dt); ortAdim(dt); mevAdim(dt); SARS *= Math.exp(-dt * 4.5);
   for (let i = DUMAN.length - 1; i >= 0; i--) { const d = DUMAN[i]; d.o += dt; d.x += d.vx * dt; d.y += d.vy * dt; d.vx *= 0.985; d.vy *= 0.985; if (d.o > d.w) DUMAN.splice(i, 1); }
   // dokular: kare başına bir tane
   for (let n = 0; n < 1 && KUYRUK.length; n++) { const p = KUYRUK.shift(); p._kuy = 0; if (!DOKU.has(p.id)) dokuUret(p); }
@@ -1934,7 +1935,7 @@ function ciz(t) {
     ctx.globalCompositeOperation = 'source-over';
   }
   tecCiz(t);
-  ortCiz();
+  ortCiz(); mevCiz(t);
   gemiCiz(t);
   fxCiz();
   cam.x -= sxo; cam.y -= syo;
@@ -5230,7 +5231,7 @@ function yarisSiraYukle() { if (AG.durum() !== 'acik') return; for (const P of [
 const SEZ_ODUL = [
   ['kredi', 500], ['desen', 'serit'], ['bilim', 10], ['iz', 'altin'], ['kredi', 1000], ['unvan', 'kasif'], ['desen', 'simsek'], ['iz', 'mor'], ['kredi', 2000], ['unvan', 'yildiz'], ['desen', 'toz'], ['iz', 'yesil'], ['kredi', 3000], ['bilim', 30], ['unvan', 'efsane'],
 ];
-const SEZ_XP = 250, DESEN = { serit: ['Yarış şeridi', 'Racing stripes'], simsek: ['Şimşek', 'Lightning'], toz: ['Yıldız tozu', 'Stardust'] }, IZR = { altin: '255,200,90', mor: '205,120,255', yesil: '120,255,170' }, IZAD = { altin: ['Altın alev', 'Golden flame'], mor: ['Mor plazma', 'Violet plasma'], yesil: ['Yeşil nebula', 'Green nebula'] }, UNVAN = { kasif: ['Sezon kâşifi', 'Season explorer'], yildiz: ['Sezon yıldızı', 'Season star'], efsane: ['Sezon efsanesi', 'Season legend'] };
+const SEZ_XP = 250, DESEN = { serit: ['Yarış şeridi', 'Racing stripes'], simsek: ['Şimşek', 'Lightning'], toz: ['Yıldız tozu', 'Stardust'] }, IZR = { altin: '255,200,90', mor: '205,120,255', yesil: '120,255,170', kar: '200,235,255', cicek: '255,150,205', meteor: '255,236,170', balkabagi: '255,140,40' }, IZAD = { altin: ['Altın alev', 'Golden flame'], mor: ['Mor plazma', 'Violet plasma'], yesil: ['Yeşil nebula', 'Green nebula'], kar: ['❄ Kar izi', '❄ Snow trail'], cicek: ['🌸 Çiçek izi', '🌸 Blossom trail'], meteor: ['🌠 Meteor izi', '🌠 Meteor trail'], balkabagi: ['🎃 Balkabağı alevi', '🎃 Pumpkin flame'] }, UNVAN = { kasif: ['Sezon kâşifi', 'Season explorer'], yildiz: ['Sezon yıldızı', 'Season star'], efsane: ['Sezon efsanesi', 'Season legend'], kis: ['Kış gezgini', 'Winter wanderer'], bahar: ['Bahar elçisi', 'Spring envoy'], meteorU: ['Meteor avcısı', 'Meteor hunter'], cadi: ['Cadı gecesi pilotu', 'Spooky-night pilot'] };
 function sezSv() { return Math.min(SEZ_ODUL.length, Math.floor((SEZ.xp || 0) / SEZ_XP)); }
 function sezXp(n) { if (!n || n <= 0) return; if (SEZ.id !== SEZ_ID()) SEZ = { id: SEZ_ID(), xp: 0, al: [] }; const once = sezSv(); SEZ.xp += n; const sv = sezSv(); if (sv > once) { setTimeout(() => duyur('🏆 ' + T('Sezon seviyesi ', 'Season level ') + sv, 'galaksi', T('Ödülünü üstteki 🏆’den al', 'Claim your reward from the 🏆 at the top')), 400); SES.galaksi(); basarimKontrol(); } sezCipYaz(); }
 function sezCipYaz() { const sv = sezSv(), bekle = SEZ_ODUL.some((_, i) => i < sv && !SEZ.al.includes(i)); $('sezSv').textContent = sv + (bekle ? ' !' : ''); $('sezCip').classList.toggle('var', bekle); }
@@ -5348,6 +5349,7 @@ const DEVK = {
   cevrimici: [[], ['Sıralamaya gönderimi aç/kapa', 'Toggle leaderboard submissions'], () => { DEV.cevrim = !DEV.cevrim; ls.set('kozmos-dev-cevrim', DEV.cevrim); return '🌐 ' + (DEV.cevrim ? T('gönderim açık', 'submissions on') : T('gönderim kapalı', 'submissions off')); }],
   kaydet: [[], ['Hemen kaydet', 'Save now'], () => { kaydet(true); return '💾 ✓'; }],
   durum: [[], ['Konum ve durum', 'Position and status'], () => devDurum().replace(/<br>/g, '\n')],
+  mevsim: [['kis|bahar|meteor|cadi|yok'], ['Mevsimlik etkinliği zorla (deneme)', 'Force a seasonal event (testing)'], a => { DEV.mevsim = a[0] && a[0] !== 'yok' ? a[0] : null; MEVP.length = 0; MEVZ = null; const m = mevsim(); return m ? m.e + ' ' + L(m.ad) : T('Takvime göre', 'By calendar'); }],
   kilit: [['ac|kapa'], ['Kilitli özellikleri aç / geri kilitle', 'Unlock all features / re-lock'], a => { if (a[0] === 'kapa') { DEV.kilitsiz = false; ACL.clear(); kilitIlk(); return T('Kilitler yeniden hesaplandı', 'Locks recomputed'); } DEV.kilitsiz = true; for (const k in KILIT) ACL.add(k); kilitHud(); return T('Tüm özellikler açık', 'All features unlocked'); }],
   hatalar: [[], ['Son yakalanan hatalar', 'Recently caught errors'], () => (ls.get('kozmos-hata', []).join('\n') || T('Kayıtlı hata yok', 'No errors logged'))],
   sifirla: [['evet'], ['Oyunu sıfırla (ilerleme silinir)', 'Reset the game (progress erased)'], a => { if (a[0] !== 'evet') return T('Emin misin? sifirla evet yaz', 'Sure? type: sifirla evet'); setTimeout(oyunSifirla, 300); return T('Sıfırlanıyor…', 'Resetting…'); }],
@@ -5628,6 +5630,43 @@ setInterval(() => { try {
   if (!oyunda || AG.durum() !== 'acik') return;
   for (const [id, e] of AG.UZAK) if (!ORT_YAKIN.has(id) && Math.hypot(e.cx - SH.x, e.cy - SH.y) < SEK * 1.5) { ORT_YAKIN.add(id); duyur('🤝 ' + esc(String(e.v.n || '?').slice(0, 20)) + T(' yakınında', ' is nearby'), 'kesif', T('Menü → 🌐 Topluluk → çevrimiçi pilotlar: 🤝 ile ortak görev önerebilirsin', 'Menu → 🌐 Community → online pilots: offer a joint mission with 🤝')); }
 } catch (e) { } }, 4000);
+
+/* ================= mevsimlik etkinlikler (gerçek takvim) ================= */
+const MEV = [
+  { k: 'kis', e: '❄', top: '❄️', ad: ['Kış Şenliği', 'Winter Festival'], ac: ['Uzayda süzülen kar kristallerini topla!', 'Collect the snow crystals drifting through space!'], bas: [12, 1], bit: [1, 7], renk: '200,235,255', iz: 'kar', unvan: 'kis' },
+  { k: 'bahar', e: '🌸', top: '🌸', ad: ['Bahar Çiçekleri', 'Spring Blossoms'], ac: ['Nebulalarda açan uzay çiçeklerini topla!', 'Collect the space blossoms opening in the nebulae!'], bas: [3, 15], bit: [4, 10], renk: '255,160,210', iz: 'cicek', unvan: 'bahar' },
+  { k: 'meteor', e: '🌠', top: '✨', ad: ['Meteor Yağmuru', 'Meteor Shower'], ac: ['Yıldız tozu her yerde: topla ve dilek tut!', 'Stardust everywhere: collect it and make a wish!'], bas: [8, 5], bit: [8, 25], renk: '255,236,170', iz: 'meteor', unvan: 'meteorU' },
+  { k: 'cadi', e: '🎃', top: '🎃', ad: ['Cadılar Gecesi', 'Spooky Night'], ac: ['Uzayda sahipsiz balkabakları uçuşuyor…', 'Stray pumpkins are floating in space…'], bas: [10, 25], bit: [11, 3], renk: '255,140,40', iz: 'balkabagi', unvan: 'cadi' }
+];
+const MEV_HEDEF = 30, MEVP = []; let MEVZ = null;
+function mevGun(d) { return (d.getMonth() + 1) * 100 + d.getDate(); }
+function mevsim(d) { d = d || new Date(); if (DEV.mevsim) return MEV.find(m => m.k === DEV.mevsim) || null; const g = mevGun(d); for (const m of MEV) { const a = m.bas[0] * 100 + m.bas[1], b = m.bit[0] * 100 + m.bit[1]; if (a <= b ? g >= a && g <= b : g >= a || g <= b) return m; } return null; }
+function mevYil(m, d) { d = d || new Date(); return m.k + (m.bas[0] > m.bit[0] && d.getMonth() + 1 <= m.bit[0] ? d.getFullYear() - 1 : d.getFullYear()); }
+function mevSonraki() { const d = new Date(); for (let i = 1; i < 370; i++) { const x = new Date(d); x.setDate(d.getDate() + i); const m = mevsim(x); if (m && m !== mevsim(d)) return [m, i]; } return null; }
+function mevAdim(dt) {
+  const m = mevsim(); if (!m || !oyunda || kapsul || HM.acik) { MEVP.length = m ? MEVP.length : 0; return; }
+  if (MEVZ !== m.k) { MEVZ = m.k; MEVP.length = 0; setTimeout(() => duyur(m.e + ' ' + L(m.ad) + T(' başladı!', ' has begun!'), 'galaksi', L(m.ac) + ' ' + T(`${MEV_HEDEF} tane topla: özel motor izi ve unvan.`, `Collect ${MEV_HEDEF}: a special engine trail and title.`)), 3000); }
+  while (MEVP.length < 6) { const a = Math.random() * TAU, r = 300 + Math.random() * 1300; MEVP.push({ x: SH.x + Math.cos(a) * r, y: SH.y + Math.sin(a) * r, f: Math.random() * TAU, vx: (Math.random() - 0.5) * 30, vy: (Math.random() - 0.5) * 30 }); }
+  const an2 = mevYil(m); ST.mev = ST.mev && typeof ST.mev === 'object' ? ST.mev : {};
+  for (let i = MEVP.length - 1; i >= 0; i--) { const q = MEVP[i]; q.x += q.vx * dt; q.y += q.vy * dt; q.f += dt; const d = Math.hypot(q.x - SH.x, q.y - SH.y);
+    if (d > 5200) { MEVP.splice(i, 1); continue; }
+    if (d < 70) { MEVP.splice(i, 1); const n = ST.mev[an2] = (ST.mev[an2] || 0) + 1, od = 120 + Math.round(Math.random() * 120); kazan(od, 'kesif'); SES.tik(); patlamaEkle(q.x, q.y, 18, m.renk);
+      if (n === MEV_HEDEF) { if (!KOZM.iz.includes(m.iz)) KOZM.iz.push(m.iz); if (!KOZM.unvan.includes(m.unvan)) KOZM.unvan.push(m.unvan); KOZM.sec.iz = m.iz; SES.galaksi(); duyur(m.e + ' ' + T('Etkinlik ödülü kazanıldı!', 'Event reward earned!'), 'galaksi', IZAD[m.iz][EN() ? 1 : 0] + ' · ' + T('unvan', 'title') + ': ' + L(UNVAN[m.unvan]) + ' · ' + T('🏆 menüsünden seçebilirsin', 'pick them in the 🏆 menu')); defter(m.e + ' ' + m.ad[0] + ' ödülü kazanıldı.', m.e + ' ' + m.ad[1] + ' reward earned.'); }
+      else if (n < MEV_HEDEF && n % 5 === 0) duyur(m.top + ' ' + SAYI(n) + '/' + MEV_HEDEF + ' · ' + L(m.ad), 'kesif', '+' + SAYI(od) + ' 💰'); }
+  }
+}
+function mevCiz(t) {
+  const m = mevsim(); if (!m || !MEVP.length) return; ctx.save(); ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+  let gor = false, en = null, ed = Infinity; for (const q of MEVP) { const d = Math.hypot(q.x - SH.x, q.y - SH.y); if (d < ed) { ed = d; en = q; } }
+  for (const q of MEVP) { const [X, Y] = W2S(q.x, q.y); if (X < -40 || X > W + 40 || Y < -40 || Y > H + 40) continue; gor = true; const s2 = Math.max(16, 34 * cam.z); const g = ctx.createRadialGradient(X, Y, 0, X, Y, s2 * 1.4); g.addColorStop(0, `rgba(${m.renk},.45)`); g.addColorStop(1, `rgba(${m.renk},0)`); ctx.fillStyle = g; ctx.beginPath(); ctx.arc(X, Y, s2 * 1.4, 0, TAU); ctx.fill(); ctx.font = `${s2 | 0}px system-ui`; ctx.fillText(m.top, X, Y + Math.sin(q.f * 2) * 4); }
+  if (!gor && en) { const [gx, gy] = W2S(SH.x, SH.y), aa = Math.atan2(en.y - SH.y, en.x - SH.x), X = gx + Math.cos(aa) * 110, Y = gy + Math.sin(aa) * 110; ctx.globalAlpha = 0.85; okCiz(X, Y, aa, 6, `rgba(${m.renk},.95)`); ctx.font = '15px system-ui'; ctx.fillText(m.top, X + Math.cos(aa) * 18, Y + Math.sin(aa) * 18); ctx.globalAlpha = 1; }
+  ctx.restore();
+}
+function mevYaz() {
+  const el = $('mevIc'); if (!el) return; const m = mevsim();
+  if (m) { const n = (ST.mev && ST.mev[mevYil(m)]) || 0; $('mevOz').textContent = m.e + ' ' + L(m.ad); el.innerHTML = `<div class="alt" style="font-size:12.5px">${L(m.ac)} ${T('Son gün', 'Last day')}: ${m.bit[1]}.${m.bit[0]}</div><div style="height:10px;border-radius:6px;background:rgba(255,255,255,.08);margin:8px 0 4px;overflow:hidden"><div style="height:100%;width:${Math.min(100, 100 * n / MEV_HEDEF)}%;background:rgb(${m.renk})"></div></div><div style="font-weight:800;font-size:13px">${m.top} ${SAYI(Math.min(n, MEV_HEDEF))}/${MEV_HEDEF} · ${T('ödül', 'reward')}: ${IZAD[m.iz][EN() ? 1 : 0]} + ${T('unvan', 'title')} “${L(UNVAN[m.unvan])}”${n >= MEV_HEDEF ? ' ✅' : ''}</div>`; }
+  else { const s2 = mevSonraki(); $('mevOz').textContent = '📅 ' + T('Mevsimlik etkinlik', 'Seasonal event'); el.innerHTML = `<div class="alt" style="font-size:12.5px">${s2 ? T('Yaklaşan', 'Coming up') + `: <b>${s2[0].e} ${L(s2[0].ad)}</b> · ${s2[1]} ${T('gün sonra', 'days from now')} (${s2[0].bas[1]}.${s2[0].bas[0]} – ${s2[0].bit[1]}.${s2[0].bit[0]})` : ''}<br>${T('Etkinlikler yılda dört kez gelir: kış, bahar, meteor yağmuru ve cadılar gecesi. Her birinde sınırlı süreli bir motor izi ve unvan kazanılır.', 'Events come four times a year: winter, spring, meteor shower and spooky night. Each has a limited-time engine trail and title.')}</div>`; }
+}
 
 /* ================= prestij: Yeni Oyun+ ================= */
 const prsUygun = () => PRS < 10 && (!!HIK.son4 || (sayK('s') >= 150 && ST.kazanc >= 500000));
@@ -6218,7 +6257,7 @@ function menuKur() {
   const var_ = KESIF.size > 0;
   $('mBasla').textContent = oyunda ? T('Uçuşa dön', 'Back to flight') : var_ ? T('Kaldığın yerden devam et', 'Continue where you left off') : T('Uçuşa başla', 'Start flying');
   dene(() => { $('basOz').textContent = T('🏅 Başarımlar', '🏅 Achievements') + ` (${BAS.size}/${BASARIM.length})`; $('basList').innerHTML = BASARIM.map(b => `<div class="${BAS.has(b[0]) ? 'ok' : ''}"><b>${b[1]} ${L(b[2])}</b>${L(b[3])}</div>`).join(''); });
-  dene(gunYaz); dene(prsYaz); dene(pilotYaz); dene(evYaz); if (AG.durum() === 'acik' && performance.now() - evOkT > 30000) dene(() => evYukle());
+  dene(mevYaz); dene(gunYaz); dene(prsYaz); dene(pilotYaz); dene(evYaz); if (AG.durum() === 'acik' && performance.now() - evOkT > 30000) dene(() => evYukle());
   const sb = $('mSifirla'); sb.hidden = !(var_ || oyunda); delete sb.dataset.emin; sb.classList.remove('emin'); sb.textContent = '🔄 ' + T('Baştan başla (yeni oyun)', 'Start over (new game)');
 }
 function basla() {
@@ -6243,7 +6282,7 @@ const MSEK = [['oyun', '🎮', ['Oyun', 'Game']], ['gor', '🎨', ['Görüntü',
 function menuSekmeKur() {
   const kart = $('menu').querySelector('.kart'), sec = id => $(id) && ($(id).closest('label.secim, div.secim') || $(id));
   const nasil = [...kart.querySelectorAll('details')].find(d => d.querySelector('summary[data-en="How to fly"]'));
-  const yer = { oyun: ['gunDet', 'prsBtn', 'rehBtn', 'bilBtn', 'profBtn', 'fotoBtn', 'kurBtn', 'mSifirla'].map($), gor: ['kontSec', 'kboySec', 'solakSec', 'dinKamSec', 'grafSec', 'pilSec', 'fpsSec', 'kokSec', 'fpSec'].map(sec), kayit: ['seriHesap', 'bulDet'].map($), top: ['evDet', 'pilotDet', 'siraDet'].map($), def: ['basDet', 'defDet', 'radDet', 'takDet', 'frDet'].map($).concat([nasil]) };
+  const yer = { oyun: ['mevDet', 'gunDet', 'prsBtn', 'rehBtn', 'bilBtn', 'profBtn', 'fotoBtn', 'kurBtn', 'mSifirla'].map($), gor: ['kontSec', 'kboySec', 'solakSec', 'dinKamSec', 'grafSec', 'pilSec', 'fpsSec', 'kokSec', 'fpSec'].map(sec), kayit: ['seriHesap', 'bulDet'].map($), top: ['evDet', 'pilotDet', 'siraDet'].map($), def: ['basDet', 'defDet', 'radDet', 'takDet', 'frDet'].map($).concat([nasil]) };
   const bar = document.createElement('div'); bar.className = 'sekme'; bar.id = 'mSek';
   bar.innerHTML = MSEK.map(([k, e, a]) => `<button type="button" data-ms="${k}"><span>${e}</span><b data-en="${a[1]}">${a[0]}</b></button>`).join('');
   $('mBasla').after(bar); let son = bar;
@@ -6316,7 +6355,7 @@ function kare(now) {
 }
 kayitOnar(); try { kilitIlk(); } catch (e) { } try { menuSekmeKur(); } catch (e) { console.warn(e); } boyutla(); kesifSayYaz(); menuKur(); radarKur(); gorevYaz();
 requestAnimationFrame(kare);
-window.KOZ = { GRAF, YBL: () => YBL, oyGelen, ORT: () => ORT, KORS, haftaK, bolgeFr, frEkle, get BOLGE() { return BOLGE; }, DUMAN, KIV, get GUN() { return GUN; }, gunKontrol, PRS, prsBasla, HIK, BIL, bilAc, duyur, ACL, KILIT, acikMi, kilitKontrol, get oto() { return oto; }, parkur, yarisBasla, get YR() { return YR; }, get SEZ() { return SEZ; }, sezXp, KOZM, kayitPaket, kayitUygula, bulutKaydet, galeriYukle, fotoGoster,  get yol() { return yol; }, REH, rehKontrol, rehYaz, hikAdim, hik4Son, diyalogSec,  get KOL() { return KOL; }, set KOL(v) { KOL = v; }, kolKur, kolAc, kolIsle, EKIP, huyOf, ekipYarala, HUY, get kaynP() { return kaynP; },  GUC, gucVer, ASTD, ROTA, devAst, astPos, astCan, kasaAc, hackAc, rotaBaslat, rotaPanel, get HK() { return HK; }, get astYakin() { return astYakin; }, get madenLazer() { return madenLazer; }, set madenLazer(v) { madenLazer = v; }, PARCA, get rotaAktif() { return rotaAktif; },  KOD, kodAc, kodKontrol, IZ, izPen, izEnkaz, get INS() { return INS; }, get izYakin() { return izYakin; },  PZ, BES, MODS, YER, besLv, pzKat, isle, tasarimAc, mSay,  get kdIc() { return kdIc; }, get iyonIc() { return iyonIc; }, SILAHLAR, ESK, iyonAc, meteorAc, skListe, skEs, skGec, penrose, get silahS() { return silahS; }, set silahS(v) { silahS = v; }, get kredi2() { return kredi; }, set kredi2(v) { kredi = v; }, get skYakin() { return skYakin; },  KOLOS, kolosPos, kolosBagla, profilCiz, haberUret,  DIP, dipEkle, yanBasla, gunOlay,  get istn() { return istnObj; }, istnKur, istnAc, istnIsle, get moral() { return MORAL; }, set ekOlayT(v) { ekOlayT = v; }, fiyat,  get sapanDbg() { return [sapanEn, sapanHedef && sapanHedef.ad, sapanHedef && sapanHedef.v]; }, TEKNO, MODUL, bilimEkle, tamirAc, get sapanBoost() { return sapanBoost; },  HURDA, ARSIV, hurdaCikar, arsivBul, ambarAc,  sagAc, sagHedefler,  gezPos, simT, patlamaEkle, SOH, LON, PAZ, tpAc, sohGeldi,  fotoAc, fpAc, inisAc, inisKapat, get INS() { return INS; }, DEFTER, defter,  zulaYakin, snBasla, solucanAc, istilaBasla, istPos, istAc, mezarPos, mezar, OLAY2: () => OLAY,  EKIP, FR, KERVAN, ZIY, DOST, kervanAdim, kvPos, borsaAc, korsanLimanPos, frEkle, adaylar,  SARF, TLV, sarfKullan,  get kapsul() { return kapsul; }, get oks() { return oks; }, set oks(v) { oks = v; }, PLANLAR, KIY, KIYS, bankaAc, bankaPos, planVer, get sigorta() { return sigorta; },  OKK, oyuncuYakin, oyGelen, haftaK,  devCikar, kalintiBul,  TEKS, get TAK() { return TAK; }, set TAK(v) { TAK = v; }, arananlar, patlamaKullan,  IRK, piyasaOlay, balinaSuru, yakinBalinalar, bulmacaAc, get BLM() { return BLM; },  kapiPos, golgeCikar,  get nabiz() { return nabiz; }, get isi() { return isi; },  AG, bolgeBul,  KORS, OLAY, HIK, ST, BAS, get can() { return can; }, set can(v) { can = v; }, korsanCikar, hikAdim, hikBasla, kuyruk, kuyrukPos, nebulaB, nebulaIc, get gemiTip() { return gemiTip; }, KARAKOL: () => KARAKOL, olayZorla: () => { olayT = 0; },  get kaynP() { return kaynP; }, get kazP() { return kazP; }, KARGO, get kredi() { return kredi; }, set kredi(v) { kredi = v; }, get yakit() { return yakit; }, set yakit(v) { yakit = v; }, GOREV: () => GOREV, YUK, limanAc, get limanP() { return limanP; }, get yanasP() { return yanasP; }, SH, cam, temel, sistem, galaksi, KESIF, basla, haritaAc, haritaKapat, set zoom(v) { zKul = v; }, DOKU };
+window.KOZ = { GRAF, MEVP, KOZM, YBL: () => YBL, oyGelen, ORT: () => ORT, KORS, haftaK, bolgeFr, frEkle, get BOLGE() { return BOLGE; }, DUMAN, KIV, get GUN() { return GUN; }, gunKontrol, PRS, prsBasla, HIK, BIL, bilAc, duyur, ACL, KILIT, acikMi, kilitKontrol, get oto() { return oto; }, parkur, yarisBasla, get YR() { return YR; }, get SEZ() { return SEZ; }, sezXp, KOZM, kayitPaket, kayitUygula, bulutKaydet, galeriYukle, fotoGoster,  get yol() { return yol; }, REH, rehKontrol, rehYaz, hikAdim, hik4Son, diyalogSec,  get KOL() { return KOL; }, set KOL(v) { KOL = v; }, kolKur, kolAc, kolIsle, EKIP, huyOf, ekipYarala, HUY, get kaynP() { return kaynP; },  GUC, gucVer, ASTD, ROTA, devAst, astPos, astCan, kasaAc, hackAc, rotaBaslat, rotaPanel, get HK() { return HK; }, get astYakin() { return astYakin; }, get madenLazer() { return madenLazer; }, set madenLazer(v) { madenLazer = v; }, PARCA, get rotaAktif() { return rotaAktif; },  KOD, kodAc, kodKontrol, IZ, izPen, izEnkaz, get INS() { return INS; }, get izYakin() { return izYakin; },  PZ, BES, MODS, YER, besLv, pzKat, isle, tasarimAc, mSay,  get kdIc() { return kdIc; }, get iyonIc() { return iyonIc; }, SILAHLAR, ESK, iyonAc, meteorAc, skListe, skEs, skGec, penrose, get silahS() { return silahS; }, set silahS(v) { silahS = v; }, get kredi2() { return kredi; }, set kredi2(v) { kredi = v; }, get skYakin() { return skYakin; },  KOLOS, kolosPos, kolosBagla, profilCiz, haberUret,  DIP, dipEkle, yanBasla, gunOlay,  get istn() { return istnObj; }, istnKur, istnAc, istnIsle, get moral() { return MORAL; }, set ekOlayT(v) { ekOlayT = v; }, fiyat,  get sapanDbg() { return [sapanEn, sapanHedef && sapanHedef.ad, sapanHedef && sapanHedef.v]; }, TEKNO, MODUL, bilimEkle, tamirAc, get sapanBoost() { return sapanBoost; },  HURDA, ARSIV, hurdaCikar, arsivBul, ambarAc,  sagAc, sagHedefler,  gezPos, simT, patlamaEkle, SOH, LON, PAZ, tpAc, sohGeldi,  fotoAc, fpAc, inisAc, inisKapat, get INS() { return INS; }, DEFTER, defter,  zulaYakin, snBasla, solucanAc, istilaBasla, istPos, istAc, mezarPos, mezar, OLAY2: () => OLAY,  EKIP, FR, KERVAN, ZIY, DOST, kervanAdim, kvPos, borsaAc, korsanLimanPos, frEkle, adaylar,  SARF, TLV, sarfKullan,  get kapsul() { return kapsul; }, get oks() { return oks; }, set oks(v) { oks = v; }, PLANLAR, KIY, KIYS, bankaAc, bankaPos, planVer, get sigorta() { return sigorta; },  OKK, oyuncuYakin, oyGelen, haftaK,  devCikar, kalintiBul,  TEKS, get TAK() { return TAK; }, set TAK(v) { TAK = v; }, arananlar, patlamaKullan,  IRK, piyasaOlay, balinaSuru, yakinBalinalar, bulmacaAc, get BLM() { return BLM; },  kapiPos, golgeCikar,  get nabiz() { return nabiz; }, get isi() { return isi; },  AG, bolgeBul,  KORS, OLAY, HIK, ST, BAS, get can() { return can; }, set can(v) { can = v; }, korsanCikar, hikAdim, hikBasla, kuyruk, kuyrukPos, nebulaB, nebulaIc, get gemiTip() { return gemiTip; }, KARAKOL: () => KARAKOL, olayZorla: () => { olayT = 0; },  get kaynP() { return kaynP; }, get kazP() { return kazP; }, KARGO, get kredi() { return kredi; }, set kredi(v) { kredi = v; }, get yakit() { return yakit; }, set yakit(v) { yakit = v; }, GOREV: () => GOREV, YUK, limanAc, get limanP() { return limanP; }, get yanasP() { return yanasP; }, SH, cam, temel, sistem, galaksi, KESIF, basla, haritaAc, haritaKapat, set zoom(v) { zKul = v; }, DOKU };
 })();
 </script>
 <script data-goatcounter="https://erdevelop.goatcounter.com/count" async src="//gc.zgo.at/count.js"></script>
