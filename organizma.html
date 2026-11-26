@@ -114,6 +114,7 @@ details ul{padding-left:18px;margin:6px 0}
 .gorev span,.gorev em{position:relative}.gorev em{font-style:normal;color:var(--mute);white-space:nowrap;font-weight:800}
 .gorev.ok{border-color:rgba(95,211,184,.5)}.gorev.ok em{color:#BFF3E4}
 .sirada{margin:7px 0 0;font-size:12px;color:var(--mute);font-weight:700;text-align:center}
+#agacIc .aileDavet{padding:10px 12px;border-radius:12px;border:1px solid rgba(143,240,184,.5);background:rgba(143,240,184,.1);margin:6px 0 10px;font-size:14px}#agacIc .aileDavet button{display:block;margin-top:8px}.aileForm{display:flex;gap:6px;margin:8px 0}.aileForm input{flex:1;min-width:0;font:inherit;padding:9px 10px;border-radius:10px;border:1px solid var(--line);background:rgba(0,0,0,.25);color:var(--ink)}.aileForm button{flex:none;padding:9px 14px;border-radius:10px;border:1px solid var(--line);background:rgba(255,255,255,.06);color:var(--ink);font:inherit;font-weight:800;cursor:pointer}.aileForm button.aileAna,.aileDavet button.aileAna{background:var(--acc);border-color:var(--acc);color:#04201A;padding:9px 14px;border-radius:10px;font:inherit;font-weight:900;cursor:pointer}.aileBas{display:flex;justify-content:space-between;align-items:baseline;gap:8px;font-size:16px;margin:4px 0}.aileBas span{font-size:12.5px;color:var(--mute)}.aileBas code{color:var(--ink);font-weight:800;letter-spacing:.08em}.aileAlt{display:block;margin:12px 0 4px;font-size:13px}.aileListe{margin:0;padding:0;list-style:none;font-size:13px}.aileListe li{display:flex;gap:8px;padding:4px 0;border-bottom:1px solid rgba(255,255,255,.06)}.aileListe li b{flex:1}.aileListe li em{font-style:normal;color:var(--mute)}.aileListe li.ben b{color:#9CF5B8}
 #sezonBilgi{font-size:12px;color:var(--mute);margin:2px 0 6px;line-height:1.5}#sezonBilgi b{color:var(--ink)}#sezonBilgi .rz{display:inline-block;margin:2px 4px 0 0;padding:1px 7px;border-radius:999px;border:1px solid var(--line);background:rgba(255,255,255,.05);color:var(--ink)}
 .sek{border:1px solid var(--line);background:rgba(0,0,0,.2);border-radius:9px;padding:2px 9px;font-size:11.5px;font-weight:800;color:var(--mute);margin-left:4px;letter-spacing:0}
 .sek.sec{border-color:var(--acc);color:var(--ink)}
@@ -412,6 +413,7 @@ try { adConfig({ preloadAdBreaks: 'on', sound: 'on' }); } catch (e) { }</script>
     <a id="quizLink" href="/mikro-dunya/quiz/" data-en="❓ Micro World Quiz: 10 questions, 8+ earns +20 DNA (Turkish)">❓ Mikro Dünya Quiz: 10 soru, 8+ yapana +20 DNA</a>
     <a id="gecisLink" href="/yaratik.html" hidden></a>
     <button class="ikinci" id="agacBtn" type="button">🌳 Soy ağacı</button>
+    <button class="ikinci" id="aileBtn" type="button" data-en="👨‍👩‍👧 Lineage family">👨‍👩‍👧 Soy ailesi</button>
     <button class="ikinci" id="dukkanBtn" type="button" data-en="🛍 DNA shop">🛍 DNA dükkânı</button>
     <button class="ikinci" id="rehberBtn" type="button" data-en="🧬 How do mutations work?">🧬 Mutasyon nasıl çalışır?</button>
     <div id="haftaKart"></div>
@@ -894,10 +896,11 @@ const AG = (() => {
     if (!db || durum !== 'acik') { cb(undefined); return; }
     db.ref(KOK + '/r/' + k).orderByChild('s').limitToLast(1).once('value').then(s => { let r = null; s.forEach(c => { r = { u: c.key, v: c.val() }; }); cb(r); }).catch(() => cb(undefined));
   }
-  function rekorOku(k, cb) {
-    if (bc) { const d = ls.get('organizma-rekor-deneme', {})[k] || {}; cb(Object.values(d).sort((a, b) => b.s - a.s).slice(0, 10)); return; }
+  function rekorOku(k, cb, n) {
+    n = n || 10;
+    if (bc) { const d = ls.get('organizma-rekor-deneme', {})[k] || {}; cb(Object.values(d).sort((a, b) => b.s - a.s).slice(0, n)); return; }
     if (!db || durum !== 'acik') { cb(null); return; }
-    db.ref(KOK + '/r/' + k).orderByChild('s').limitToLast(10).once('value').then(s => { const L = []; s.forEach(c => { L.push(c.val()); }); cb(L.reverse()); }).catch(() => cb(null));
+    db.ref(KOK + '/r/' + k).orderByChild('s').limitToLast(n).once('value').then(s => { const L = []; s.forEach(c => { L.push(c.val()); }); cb(L.reverse()); }).catch(() => cb(null));
   }
   /* uzun süre güncellenmeyenleri at (onDisconnect çalışmamış olabilir) */
   setInterval(() => { const n = performance.now(); for (const [id, u] of uzak) if (n - u.alindi > (u.detay ? 8000 : 13000)) uzak.delete(id); }, 2000);
@@ -1556,6 +1559,7 @@ function vekilleriEsle(dt) {
       o.nvx = (v.x - o.hx) / ara * 0.5 + (o.nvx || 0) * 0.5; o.nvy = (v.y - o.hy) / ara * 0.5 + (o.nvy || 0) * 0.5;
       o.hx = v.x; o.hy = v.y; o.alindi = u.alindi; o.m = v.m; o.yasRef = v.a; o.yasZ = zaman; o.hamle = v.d ? 0.2 : 0; o.koruma = v.k ? 0.5 : 0; o.gizliH = v.g ? 1 : 0; if (typeof v.h === 'number') o.hue = v.h;
       o.kusak = kis(v.ku | 0, 1, 99);
+      { const ai = typeof v.ai === 'string' ? v.ai.slice(0, 8) : ''; if (ai !== o.aile) { o.aile = ai; if (ai && KAYIT.aile && ai === KAYIT.aile.kod && oyunda) duyur(T(`🌳 Ailenden ${o.nick} oyunda! İsmi yeşil görünür.`, `🌳 ${o.nick} from your family is playing! Their name shows in green.`), 'iyi', 5); } }
       o.yol = { a: 'avci', k: 'koloni', s: 'simb' }[v.yl] || null;
       if (typeof v.sz === 'string' && v.sz !== o.szK) { o.szK = v.sz; const p = v.sz.split('.'); o.sus = { hale: p[0] || null, iz: p[1] || null, rozet: p[2] || null }; }
       if (typeof v.f === 'string' && /^\d{3}$/.test(v.f)) for (let i = 0; i < 3; i++) o.form[i] = +v.f[i] / 9;
@@ -1572,7 +1576,7 @@ function vekilleriEsle(dt) {
 }
 function agGonder(dt) {
   agZ -= dt; if (agZ > 0 || !oyuncu || oyuncu.olu || !oyuncu.netId) return; agZ = 0.3;
-  AG.gonder({ n: oyuncu.nick, s: oyuncu.tur, h: Math.round(oyuncu.hue), x: Math.round(oyuncu.x), y: Math.round(oyuncu.y), m: Math.round(oyuncu.m * 10) / 10, a: Math.round(oyuncu.yas), d: oyuncu.hamle > 0 ? 1 : 0, k: oyuncu.koruma > 0 ? 1 : 0, p: oyuncu.desen | 0, g: oyuncu.gizli > 0.5 ? 1 : 0, ku: oyuncu.kusak, f: oyuncu.form.map(v => Math.round(kis(v, 0, 1) * 9)).join(''), z: oyuncu.ev.zar, e: oyuncu.ifadeKod || 0, yl: oyuncu.yol ? oyuncu.yol[0] : '', sz: ['hale', 'iz', 'rozet'].map(k => DUK().sec[k] || '').join('.') });
+  AG.gonder({ n: oyuncu.nick, s: oyuncu.tur, h: Math.round(oyuncu.hue), x: Math.round(oyuncu.x), y: Math.round(oyuncu.y), m: Math.round(oyuncu.m * 10) / 10, a: Math.round(oyuncu.yas), d: oyuncu.hamle > 0 ? 1 : 0, k: oyuncu.koruma > 0 ? 1 : 0, p: oyuncu.desen | 0, g: oyuncu.gizli > 0.5 ? 1 : 0, ku: oyuncu.kusak, f: oyuncu.form.map(v => Math.round(kis(v, 0, 1) * 9)).join(''), z: oyuncu.ev.zar, e: oyuncu.ifadeKod || 0, yl: oyuncu.yol ? oyuncu.yol[0] : '', sz: ['hale', 'iz', 'rozet'].map(k => DUK().sec[k] || '').join('.'), ai: KAYIT.aile ? KAYIT.aile.kod : '' });
 }
 AG.olayda(v => {
   if (v && v.tip === 'davet') { davetGeldi(v); return; }
@@ -2840,6 +2844,7 @@ function oyuncuOldu(yiyen) {
     if (sh.p > 0) AG.rekorYazK('sh' + hf, { n: nk, s: sh.p, m: Math.round(KAYIT.enDerin || 0), k: AGC().p });
     { sezonKapat(); const sn = sezonNo(), sz = KAYIT.sezon && KAYIT.sezon.no === sn ? KAYIT.sezon : (KAYIT.sezon = { no: sn, p: 0 }); sz.p += soyPuani(oyuncu).n;
       if (sz.p > 0) AG.rekorYazK('sz' + sn, { n: nk, s: Math.min(86400, sz.p), m: Math.round(KAYIT.enDerin || 0), k: AGC().p }); }
+    if (KAYIT.aile) { const A = KAYIT.aile; A.p = (A.p || 0) + soyPuani(oyuncu).n; if (A.p > 0) AG.rekorYazK('a' + A.kod, { n: nk, s: Math.min(86400, A.p), m: Math.round(KAYIT.enDerin || 0), k: AGC().p, a: A.ad }); if (A.kur) setTimeout(aileToplam, 2500); }
     if (GM) { const p = gmPuan(oyuncu), eski = KAYIT.gm && KAYIT.gm.gun === GM.gun ? KAYIT.gm.en : 0; KAYIT.gm = { gun: GM.gun, en: Math.max(eski, p) }; AG.rekorYazK('gm' + GM.gun, { n: nk, s: p, m: Math.round(oyuncu.enBuyuk), k: oyuncu.kusak });
       $('oGm').innerHTML = `<span class="yeniRekor" style="background:rgba(255,226,154,.14);color:#FFE9B0">📅 ${T('Günlük puan', 'Daily score')}: <b>${p}</b>${p > eski ? ' · ' + T('bugünkü en iyin!', 'your best today!') : ` · ${T('en iyin', 'best')} ${eski}`}</span>`; }
     else $('oGm').innerHTML = ''; }
@@ -3430,8 +3435,8 @@ function ciz(t) {
     const ust = sy - rs * (TURLER[o.tur].diken ? 1.45 : 1.12) - 6;
     g.globalAlpha = al;
     g.font = `800 ${fs}px Nunito, system-ui, sans-serif`; g.lineWidth = 3.5; g.strokeStyle = 'rgba(2,14,18,.7)';
-    const kin = intikamMi(o), rz = o === oyuncu || o.uzak ? susSec('rozet', o) : null, ad = (kin ? '☠ ' : '') + (o.uzak ? '🌐 ' : '') + (rz ? rz[2] + ' ' : '') + o.nick + (o.kusak > 1 ? ' · ' + romaYaz(o.kusak) : '') + (o === oyuncu && SOY(o).yildiz ? ' ⭐' + SOY(o).yildiz : '');
-    g.strokeText(ad, sx, ust - fs * 0.95); g.fillStyle = o === oyuncu ? '#FFE29A' : kin ? '#FF9C8E' : '#F2FBFA'; g.fillText(ad, sx, ust - fs * 0.95);
+    const kin = intikamMi(o), rz = o === oyuncu || o.uzak ? susSec('rozet', o) : null, aileMi = o.uzak && o.aile && KAYIT.aile && o.aile === KAYIT.aile.kod, ad = (kin ? '☠ ' : '') + (aileMi ? '🌳 ' : o.uzak ? '🌐 ' : '') + (rz ? rz[2] + ' ' : '') + o.nick + (o.kusak > 1 ? ' · ' + romaYaz(o.kusak) : '') + (o === oyuncu && SOY(o).yildiz ? ' ⭐' + SOY(o).yildiz : '');
+    g.strokeText(ad, sx, ust - fs * 0.95); g.fillStyle = o === oyuncu ? '#FFE29A' : kin ? '#FF9C8E' : aileMi ? '#9CF5B8' : '#F2FBFA'; g.fillText(ad, sx, ust - fs * 0.95);
     g.font = `700 ${Math.round(fs * 0.78)}px Nunito, system-ui, sans-serif`; const yz2 = '⏱ ' + dkYaz(o.yas);
     g.strokeText(yz2, sx, ust); g.fillStyle = o.npc && o.yas > o.omur * 0.85 ? '#E9B8A8' : 'rgba(190,232,236,.95)'; g.fillText(yz2, sx, ust);
     if (o.ifade) { g.globalAlpha = al * Math.min(1, o.ifade.t * 3); g.font = `${Math.round(22 + fs * 0.5)}px system-ui, sans-serif`; g.fillText(o.ifade.c, sx, ust - fs * 2.25); }
@@ -4832,6 +4837,64 @@ function sezonBilgiYaz() {
   if (sampiyonBelli.no !== n - 1) { sampiyonBelli.no = n - 1; AG.rekorIlk('sz' + (n - 1), r => { sampiyonBelli.ad = r && r.v ? r.v.n : null; yaz(); }); }
 }
 setTimeout(() => { try { sezonKapat(); } catch (e) { } }, 4000);
+
+/* ================= soy aileleri: arkadaşlarla ortak soy =================
+   Bir aile kur ya da kodla katıl. Herkesin bu aileye kattığı soy puanı aile tablosunda (organizma/r/a<KOD>) birikir;
+   kurucu, aile toplamını aileler tablosuna (organizma/r/aileler) yazar. Oyunda aile üyelerinin adı yeşil ve 🌳 ile görünür. */
+const AILE_HARF = 'ABCDEFGHJKLMNPRSTUVYZ23456789';
+const aileKodTemiz = k => String(k || '').toUpperCase().replace(/[^A-Z0-9]/g, '').slice(0, 8);
+const AILE_DAVET = { kod: aileKodTemiz(PARAM.get('aile')), ad: (PARAM.get('an') || '').trim().slice(0, 16) };
+function aileLink() { const A = KAYIT.aile; return A ? `${location.origin}${location.pathname}?aile=${A.kod}&an=${encodeURIComponent(A.ad)}` : ''; }
+function aileAc() {
+  const A = KAYIT.aile, kapa = `<button type="button" class="gKapa" data-kapa aria-label="${T('Kapat', 'Close')}">✕</button>`;
+  let h = `<div class="gBas2"><b>👨‍👩‍👧 ${T('Soy ailesi', 'Lineage family')}</b><span></span>${kapa}</div>`;
+  if (!A) {
+    if (AILE_DAVET.kod) h += `<div class="aileDavet">🌳 ${T(`<b>${esc(AILE_DAVET.ad || AILE_DAVET.kod)}</b> ailesine davet edildin.`, `You were invited to the <b>${esc(AILE_DAVET.ad || AILE_DAVET.kod)}</b> family.`)}<button type="button" class="aileAna" data-ai="davet">${T('Aileye katıl', 'Join the family')}</button></div>`;
+    h += `<p class="gAc">${T('Arkadaşlarınla bir soy ailesi kur: her hayatın sonunda kazandığın soy puanı aile toplamına da eklenir. Aile üyeleri oyunda yeşil adla ve 🌳 ile görünür; aileler kendi aralarında sıralanır.', 'Found a lineage family with friends: the lineage points from every life also go to the family total. Family members show with a green name and 🌳 in game; families are ranked against each other.')}</p>`
+      + `<div class="aileForm"><input id="aileAdG" maxlength="16" placeholder="${T('Aile adı (ör. Kurtköy Amipleri)', 'Family name (e.g. Pond Amoebas)')}"><button type="button" class="aileAna" data-ai="kur">${T('Aile kur', 'Found family')}</button></div>`
+      + `<div class="aileForm"><input id="aileKodG" maxlength="8" placeholder="${T('Aile kodu', 'Family code')}" style="text-transform:uppercase"><button type="button" data-ai="katil">${T('Katıl', 'Join')}</button></div>`;
+  } else {
+    h += `<div class="aileBas"><b>🌳 ${esc(A.ad)}</b><span>${T('Kod', 'Code')}: <code>${A.kod}</code>${A.kur ? ' · ' + T('kurucu', 'founder') : ''}</span></div>`
+      + `<div class="aileForm"><input readonly value="${esc(aileLink())}" id="aileLinkG"><button type="button" class="aileAna" data-ai="paylas">${T('Davet et', 'Invite')}</button></div>`
+      + `<b class="aileAlt">${T('Üyeler', 'Members')}</b><ol class="aileListe" id="aileUye"><li>…</li></ol><p class="gAc" id="aileTop"></p>`
+      + `<b class="aileAlt">${T('Aileler sıralaması', 'Family ranking')}</b><ol class="aileListe" id="aileSira"><li>…</li></ol>`
+      + `<button type="button" class="ikinci" data-ai="ayril" style="margin-top:10px">${T('Aileden ayrıl', 'Leave family')}</button>`;
+  }
+  $('agacIc').innerHTML = h; $('agac').hidden = false;
+  $('agacIc').querySelectorAll('[data-ai]').forEach(b => b.onclick = () => aileEylem(b.dataset.ai));
+  if (A) aileYukle();
+}
+function aileEylem(e) {
+  const nk = ($('nick').value.trim() || KAYIT.nick || T('Hücre', 'Cell')).slice(0, 16);
+  if (e === 'kur') { const ad = ($('aileAdG').value || '').trim().slice(0, 16); if (ad.length < 2) { $('aileAdG').focus(); return; } const kod = Array.from({ length: 6 }, () => AILE_HARF[(Math.random() * AILE_HARF.length) | 0]).join(''); KAYIT.aile = { kod, ad, p: 0, kur: 1 }; olcum('aile-kur'); }
+  else if (e === 'katil' || e === 'davet') {
+    const kod = e === 'davet' ? AILE_DAVET.kod : aileKodTemiz($('aileKodG').value); if (kod.length < 4) { $('aileKodG').focus(); return; }
+    KAYIT.aile = { kod, ad: (e === 'davet' && AILE_DAVET.ad) || kod, p: 0, kur: 0 }; olcum('aile-katil');
+    AG.rekorOku('a' + kod, L => { const v = L && L.find(q => q.a); if (v && KAYIT.aile && KAYIT.aile.kod === kod) { KAYIT.aile.ad = String(v.a).slice(0, 16); kaydet(); aileAc(); } }, 5);
+  }
+  else if (e === 'ayril') { if (!confirm(T('Aileden ayrılmak istiyor musun? Puanların aile tablosunda kalır.', 'Leave the family? Your points stay in the family table.'))) return; KAYIT.aile = null; }
+  else if (e === 'paylas') { const u = aileLink(), t = T(`Organizma'da "${KAYIT.aile.ad}" soy aileme katıl!`, `Join my "${KAYIT.aile.ad}" lineage family in Organizma!`); (async () => { try { if (navigator.share) { await navigator.share({ title: 'Organizma', text: t, url: u }); return; } } catch (x) { if (x && x.name === 'AbortError') return; } try { await navigator.clipboard.writeText(t + ' ' + u); duyur(T('🔗 Davet bağlantısı kopyalandı.', '🔗 Invite link copied.'), 'iyi', 3); } catch (x) { $('aileLinkG').select(); } })(); return; }
+  if (KAYIT.aile && (e === 'kur' || e === 'katil' || e === 'davet')) { AG.rekorYazK('a' + KAYIT.aile.kod, { n: nk, s: 0.001, m: Math.round(KAYIT.enDerin || 0), k: AGC().p, a: KAYIT.aile.ad }); duyur(T(`🌳 "${KAYIT.aile.ad}" ailesindesin.`, `🌳 You are in the "${KAYIT.aile.ad}" family.`), 'iyi', 4); }
+  kayitKirli = true; kaydet(); aileAc();
+}
+function aileYukle() {
+  const A = KAYIT.aile; if (!A) return;
+  AG.rekorOku('a' + A.kod, L => {
+    const el = $('aileUye'); if (!el) return;
+    if (!L) { el.innerHTML = `<li class="bos2">${T('Çevrimdışı: üyeler görüntülenemiyor.', 'Offline: members cannot be shown.')}</li>`; return; }
+    const top = Math.round(L.reduce((a, v) => a + (+v.s || 0), 0));
+    el.innerHTML = L.length ? L.map((v, i) => `<li><em>${i + 1}.</em><b>${esc(String(v.n).slice(0, 16))}</b><em>🏅 ${Math.round(+v.s || 0)}</em>${+v.m ? `<em>🌑 ${Math.round(+v.m)} m</em>` : ''}</li>`).join('') : `<li class="bos2">${T('Henüz kimse puan kazanmadı.', 'No one has scored yet.')}</li>`;
+    $('aileTop').innerHTML = `${T('Aile toplamı', 'Family total')}: <b>${top}</b> ${T('soy puanı', 'lineage points')} · ${L.length} ${T('üye', 'members')}`;
+    if (A.kur && top > 0) AG.rekorYazK('aileler', { n: A.ad, s: Math.min(86400, top), m: L.length, kod: A.kod });
+  }, 50);
+  AG.rekorOku('aileler', L => {
+    const el = $('aileSira'); if (!el) return;
+    el.innerHTML = L && L.length ? L.map((v, i) => `<li class="${v.kod === A.kod ? 'ben' : ''}"><em>${i + 1}.</em><b>🌳 ${esc(String(v.n).slice(0, 16))}</b><em>🏅 ${Math.round(+v.s || 0)}</em><em>👥 ${+v.m | 0}</em></li>`).join('') : `<li class="bos2">${L ? T('Henüz sıralamada aile yok.', 'No families ranked yet.') : T('Çevrimdışı.', 'Offline.')}</li>`;
+  }, 10);
+}
+function aileToplam() { const A = KAYIT.aile; if (!A || !A.kur) return; AG.rekorOku('a' + A.kod, L => { if (!L) return; const top = Math.round(L.reduce((a, v) => a + (+v.s || 0), 0)); if (top > 0) AG.rekorYazK('aileler', { n: A.ad, s: Math.min(86400, top), m: L.length, kod: A.kod }); }, 50); }
+$('aileBtn').onclick = aileAc;
+if (AILE_DAVET.kod && !(KAYIT.aile && KAYIT.aile.kod === AILE_DAVET.kod) && !IZLE) setTimeout(() => { if (!oyunda) aileAc(); }, 900);
 
 /* ================= döngü ================= */
 let son = performance.now(), izle = null, izleZ = 0;
