@@ -75,3 +75,12 @@
 - **Mayın Tarlası:** güvenli ilk dokunuş, tahmin gerektirmeyen tahtalar, Aç/Bayrak modu ve uzun basma, mantığını gösteren ipucu, günün tahtası.
 - **2048:** akıcı kayma ve birleşme animasyonu, üç geri alma hakkı, kaldığın yerden devam.
 - **Nonogram:** tek çözümlü kare karalamaca; 5/8/10/12 boyları, sürükleyerek boyama, satır ipucu, günün bulmacası.
+
+## Dört yeni oyun ve çevrimiçi masalar — 26 Kasım 2026
+- **Balon Patlatma:** nişan al, aynı renkten üç balonu birleştir; bölüm bölüm ilerler, ıskaladıkça tavan iner.
+- **Renk Sıralama:** tüplerdeki renkleri ayır; her bölüm çözücüyle sınanır, geri al ve ipucu var.
+- **Tavla:** bilgisayara karşı (iki seviye) ya da çevrimiçi; yasal hamleler işaretlenir, geri alma, mars iki sayı.
+- **Okey:** dört kişilik; bilgisayara karşı (iki seviye) ya da çevrimiçi. Sürükle-bırak ıstaka, Seri diz / Çift diz, bitirme uyarısı, okey ve çift bitişi iki sayı.
+- **Çevrimiçi masa katmanı** (`assets/masa.js`): adla giriş, hızlı eşleşme, kodlu özel oda ve paylaşılabilir bağlantı. Okey'de boş koltuklara bilgisayar oturur;
+  kopan ya da uzun süre oynamayan oyuncunun hamlesini bilgisayar yapar. Sunucu tarafı yok: durum odadaki herkese açık durur (arkadaş arası oyun içindir).
+
