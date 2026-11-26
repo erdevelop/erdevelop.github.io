@@ -687,8 +687,9 @@ let mg = g;   // küçük resimler için mikro canlı, virüs ve yırtıcı çiz
 let W = 0, H = 0, DPR = 1;
 let IZLE = false;   // izleme (ekran koruyucu) modu
 /* grafik kalitesi: 0 düşük · 1 orta · 2 yüksek; 'oto' cihaza göre başlar, kare hızı düşerse kendiliğinden iner */
-const KALITE = { secim: (() => { try { return localStorage.getItem('organizma-kalite') || 'oto'; } catch (e) { return 'oto'; } })(), q: 2, fpsT: 0, fpsN: 0, dusuk: 0 };
+const KALITE = { secim: (() => { try { return localStorage.getItem('organizma-kalite') || 'oto'; } catch (e) { return 'oto'; } })(), q: 2, fpsT: 0, fpsN: 0, dusuk: 0, iyi: 0, ust: 2, uyardi: false };
 KALITE.q = KALITE.secim === 'oto' ? ((matchMedia('(pointer:coarse)').matches && (navigator.hardwareConcurrency || 4) <= 4) || (navigator.deviceMemory && navigator.deviceMemory <= 3) ? 1 : 2) : +KALITE.secim;
+KALITE.ust = KALITE.q;
 const KF = () => [0.5, 0.78, 1][KALITE.q];
 function boyutla() {
   /* tuvalin boyutunu CSS belirler (%100); buradan yalnızca ölçülür. Sabit piksel verilirse telefon döndürülünce
@@ -1539,7 +1540,7 @@ function guncelle(dt) {
   /* parçacıklar */
   for (const p of P) { p.t += dt / p.s; p.x += p.vx * dt; p.y += p.vy * dt; p.vx *= 0.97; p.vy *= 0.97; if (p.tip === 0) p.vy -= 8 * dt; }
   P = P.filter(p => p.t < 1);
-  if (P.length > 600) P.splice(0, P.length - 600);
+  { const pu = KALITE.q ? 600 : 220; if (P.length > pu) P.splice(0, P.length - pu); }   // zayıf cihazda daha az parçacık
   agGonder(dt);
 }
 const easeBack = t => { const c = 1.7; t -= 1; return 1 + t * t * ((c + 1) * t + c); };
@@ -4628,7 +4629,7 @@ $('kartBtn').onclick = () => { kartPaylas().catch(() => { }); };
    Gerçek tek hücreler besine gözle değil kimyasal izle gider: yüzeylerindeki reseptörler çevredeki madde yoğunluğunu ölçer,
    yoğunluk artıyorsa düz gider, azalıyorsa dönüp yön değiştirir (yanlı rastgele yürüyüş). Burada ortalamadan zengin besin
    bölgeleri yeşil bir sis olarak görünür; karanlıkta ve derinde de işe yarar. Soy ağacındaki Kemoreseptör onu güçlendirir. */
-const DUSUK = { acik: false };   // zayıf cihaz modu (aşağıda doldurulur)
+const DUSUK = { get acik() { return KALITE.q === 0; } };   // zayıf cihaz modu: düşük grafik kalitesinde ağır efektler (koku sisi, video kaydı) kapanır
 const KOKU = { cv: null, L: null, GW: 36, GH: 24, t: -9, okT: -9, ok: null, x0: 0, y0: 0, cw: 1, ch: 1 };
 function kokuCiz(z) {
   const o = oyuncu; if (!o || o.olu || !oyunda || IZLE || ogGizli.includes('koku') || DUSUK.acik) return;
@@ -4982,7 +4983,17 @@ function kare(ts) {
     const r = Math.max(14, hedef.rr || 20), hz = Math.min(W, H) / 640 * Math.pow(34 / r, 0.4) * (hedef === oyuncu ? 1 : 0.75) * (IZLE && hedef === oyuncu ? 0.85 : 1);
     kamera.z += (kis(hz, 0.12, 3) - kamera.z) * Math.min(1, dt * 2);
   }
-  if (KALITE.secim === 'oto' && oyunda) { KALITE.fpsT += dt; KALITE.fpsN++; if (KALITE.fpsT >= 3) { const fps = KALITE.fpsN / KALITE.fpsT; KALITE.fpsT = 0; KALITE.fpsN = 0; KALITE.dusuk = fps < 38 ? KALITE.dusuk + 1 : 0; if (KALITE.dusuk >= 2 && KALITE.q > 0) { KALITE.q--; KALITE.dusuk = 0; boyutla(); kaliteYaz(); } } }
+  if (KALITE.secim === 'oto' && (oyunda || IZLE) && !document.hidden) {   // kare hızı düşerse kaliteyi indir, uzun süre akıcı kalırsa geri yükselt
+    const simdiMs = performance.now(); if (!KALITE.fpsT || simdiMs - KALITE.fpsT > 10000) { KALITE.fpsT = simdiMs; KALITE.fpsN = 0; } KALITE.fpsN++;   // gerçek zamanla ölç (dt sınırlı olduğundan)
+    if (simdiMs - KALITE.fpsT >= 3000) {
+      const fps = KALITE.fpsN * 1000 / (simdiMs - KALITE.fpsT); KALITE.fpsT = simdiMs; KALITE.fpsN = 0;
+      KALITE.dusuk = fps < 38 ? KALITE.dusuk + 1 : 0; KALITE.iyi = fps > 56 ? KALITE.iyi + 1 : 0;
+      if (KALITE.dusuk >= 2 && KALITE.q > 0) {
+        KALITE.q--; KALITE.dusuk = 0; KALITE.iyi = -6; boyutla(); kaliteYaz();
+        if (KALITE.q === 0 && !KALITE.uyardi && oyunda) { KALITE.uyardi = true; duyur(T('⚡ Cihazın zorlanıyor: akıcı kalsın diye efektler azaltıldı (koku sisi, video kaydı, ayrıntılar). Menüdeki Grafik ayarından değiştirebilirsin.', '⚡ Your device is struggling: effects were reduced to keep things smooth (scent haze, video capture, details). You can change it in the Graphics setting.'), '', 7); }
+      } else if (KALITE.iyi >= 5 && KALITE.q < KALITE.ust) { KALITE.q++; KALITE.iyi = 0; boyutla(); kaliteYaz(); }
+    }
+  }
   ciz(zaman);
   hud(dt);
   if (!$('menu').hidden) onizlemeCiz(zaman);
