@@ -123,7 +123,7 @@ const kart = (it, ton) => {
 /* oyun kartı: og/<ad>.jpg varsa görselli */
 const ogYol = f => { const m = /^([A-Za-z0-9_-]+)\.html$/.exec(f) || /^([a-z0-9-]+)\/(?:index\.html)?$/.exec(f); return m && fs.existsSync(path.join(KOK, 'og', m[1] + '.jpg')) ? `../og/${m[1]}.jpg` : null; };
 const vitrinKart = it => { const tg = tag(it.tag);
-  return `<a href="${esc(href(it.f))}" data-s="${esc(fold(it.t.tr + ' ' + en(it.t) + ' ' + (it.d ? it.d.tr + ' ' + en(it.d) : '')))}"><img src="${ogYol(it.f)}" alt="" loading="lazy" width="1200" height="630"><div>${tg ? `<i data-en="${esc(tg.en)}">${esc(tg.tr)}</i>` : ''}<b${en(it.t) && en(it.t) !== it.t.tr ? ` data-en="${esc(en(it.t))}"` : ''}>${esc(it.t.tr)}</b>${it.d ? `<span${en(it.d) ? ` data-en="${esc(en(it.d))}"` : ''}>${esc(it.d.tr)}</span>` : ''}</div></a>`; };
+  return `<a href="${esc(href(it.f))}" data-s="${esc(fold(it.t.tr + ' ' + en(it.t) + ' ' + (it.d ? it.d.tr + ' ' + en(it.d) : '')))}"><img src="${ogYol(it.f)}" alt="" loading="lazy" width="1200" height="630"><div>${it.logo ? `<img class="vlogo" src="../${esc(it.logo)}" alt="" loading="lazy" width="44" height="44">` : ''}${tg ? `<i data-en="${esc(tg.en)}">${esc(tg.tr)}</i>` : ''}<b${en(it.t) && en(it.t) !== it.t.tr ? ` data-en="${esc(en(it.t))}"` : ''}>${esc(it.t.tr)}</b>${it.d ? `<span${en(it.d) ? ` data-en="${esc(en(it.d))}"` : ''}>${esc(it.d.tr)}</span>` : ''}</div></a>`; };
 
 const TEMA = `<script>(function(){try{var m=localStorage.getItem('erdevelop-mode'),g=localStorage.getItem('erdevelop-mode-gun');document.documentElement.setAttribute('data-mode',(m&&g===new Date().toDateString())?m:(matchMedia('(prefers-color-scheme: dark)').matches?'dark':'light'))}catch(e){}})()</script>`;
 const kafa = ({ baslik, aciklama, url, ld }) => `<!doctype html>
