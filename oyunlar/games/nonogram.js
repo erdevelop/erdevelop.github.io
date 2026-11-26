@@ -63,6 +63,7 @@ const CSS = `
 .ng-ki.ip,.ng-si.ip{background:#ffe680;color:#2b2f38;border-radius:5px}
 .ng-h{width:var(--c);height:var(--c);background:var(--bg2);border:1px solid var(--card);border-radius:3px;display:grid;place-items:center;cursor:pointer}
 .ng-h.s5{margin-left:2px;width:calc(var(--c) - 2px)}.ng-h.u5{margin-top:2px;height:calc(var(--c) - 2px)}
+:where(:root[data-theme="dark"]) .ng-h{background:#2c323e}:where(:root[data-theme="dark"]) .ng-t{background:#161920}:where(:root[data-theme="dark"]) .ng-h{border-color:#161920}
 .ng-h.d{background:var(--ink);animation:ngD .1s ease-out}@keyframes ngD{from{transform:scale(.6)}}
 .ng-h.x::after{content:'✕';font-size:calc(var(--c)*.5);font-weight:800;color:var(--ink-soft);opacity:.6}
 .ng-h.yan{background:var(--bad)!important}.ng-h.ipk{box-shadow:inset 0 0 0 2px #f0b400}

@@ -48,6 +48,8 @@ const CSS = `
 .my-h{width:var(--c);height:var(--c);border-radius:calc(var(--c)*.16);display:grid;place-items:center;font-weight:800;font-size:calc(var(--c)*.56);line-height:1;background:color-mix(in srgb,var(--accent) 62%,var(--card));box-shadow:inset 0 calc(var(--c)*-.08) 0 rgba(0,0,0,.14),inset 0 calc(var(--c)*.06) 0 rgba(255,255,255,.25);cursor:pointer;-webkit-tap-highlight-color:transparent}
 .my-h.a{background:var(--card);box-shadow:none;cursor:default;animation:myAc .16s ease-out}
 @keyframes myAc{from{transform:scale(.6);opacity:.4}}
+:where(:root[data-theme="dark"]) .my-h.a{background:#2a303c}:where(:root[data-theme="dark"]) .my-t{background:#14161c}
+:root[data-theme="dark"] .my-h.n1{color:#7fa8ff}:root[data-theme="dark"] .my-h.n2{color:#5fd39c}:root[data-theme="dark"] .my-h.n3{color:#ff7b7b}:root[data-theme="dark"] .my-h.n4{color:#b79bff}:root[data-theme="dark"] .my-h.n7{color:#ddd}
 .my-h.n1{color:#3b6fe0}.my-h.n2{color:#2f9e6f}.my-h.n3{color:#d64545}.my-h.n4{color:#7a4ce0}.my-h.n5{color:#b45f1d}.my-h.n6{color:#1f9aa8}.my-h.n7{color:#444}.my-h.n8{color:#888}
 .my-h.b::after{content:'🚩';font-size:calc(var(--c)*.5)}
 .my-h.m{background:var(--card)}.my-h.m::after{content:'💣';font-size:calc(var(--c)*.52)}

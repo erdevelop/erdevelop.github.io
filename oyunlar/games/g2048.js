@@ -1,6 +1,6 @@
 /* 2048 — kaydır, aynı sayılar birleşsin. Akıcı kayma/birleşme animasyonu, 3 geri alma hakkı, kaldığın yerden devam. */
 (function () {
-const RENK = { 2: ['#eef0f7', '#2b2f38'], 4: ['#dfe6ff', '#2b2f38'], 8: ['#ffd9a8', '#2b2f38'], 16: ['#ffbd7a', '#2b2f38'], 32: ['#ff9e7a', '#fff'], 64: ['#f0715f', '#fff'], 128: ['#f2cf5b', '#2b2f38'], 256: ['#f0c53a', '#2b2f38'], 512: ['#3bb27a', '#fff'], 1024: ['#22a6b3', '#fff'], 2048: ['#6c8cff', '#fff'], 4096: ['#9b6cff', '#fff'], 8192: ['#2b2f38', '#fff'] };
+const RENK = { 2: ['#a9dcff', '#1d3557'], 4: ['#74b3ff', '#fff'], 8: ['#ffcf8a', '#5a3a00'], 16: ['#ffab57', '#fff'], 32: ['#ff8a65', '#fff'], 64: ['#ee5a4a', '#fff'], 128: ['#f4d35e', '#5a4500'], 256: ['#e8b62c', '#fff'], 512: ['#3bb27a', '#fff'], 1024: ['#1f9aa8', '#fff'], 2048: ['#8b5cf6', '#fff'], 4096: ['#e0509b', '#fff'], 8192: ['#2b2f38', '#fff'] };
 function kapak() {
   const D = [[2, 4, 8, 16], [0, 32, 64, 128], [0, 0, 256, 512], [0, 0, 2, 2048]];
   let s = ''; D.forEach((row, r) => row.forEach((v, c) => { const k = RENK[v] || ['#e6e8f0', '#000']; s += `<rect x="${7 + c * 19.500}" y="${7 + r * 19.500}" width="17.500" height="17.500" rx="3.500" fill="${v ? k[0] : '#e6e8f0'}"/>`; if (v) s += `<text x="${15.75 + c * 19.5}" y="${18.6 + r * 19.5}" text-anchor="middle" font-family="system-ui,sans-serif" font-size="${v > 999 ? 6 : v > 99 ? 7.500 : 9}" font-weight="800" fill="${k[1]}">${v}</text>`; }));

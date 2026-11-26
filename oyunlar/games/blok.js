@@ -33,6 +33,7 @@ const CSS = `
 .bl-bilgi b{color:var(--ink)}
 .bl-tahta{display:grid;grid-template-columns:repeat(8,var(--c));grid-template-rows:repeat(8,var(--c));gap:0;padding:5px;border-radius:14px;background:var(--bg2);position:relative}
 .bl-h{margin:1.5px;border-radius:calc(var(--c)*.17);background:var(--card);box-shadow:inset 0 0 0 1px var(--line)}
+:where(:root[data-theme="dark"]) .bl-h{background:#2a303c;box-shadow:none}:where(:root[data-theme="dark"]) .bl-tahta{background:#14161c}
 .bl-h.d{box-shadow:inset 0 calc(var(--c)*-.09) 0 rgba(0,0,0,.18),inset 0 calc(var(--c)*.07) 0 rgba(255,255,255,.28)}
 .bl-h.on{opacity:.55;box-shadow:none}.bl-h.yok{background:color-mix(in srgb,var(--bad) 35%,var(--bg2))}
 .bl-h.sil{filter:brightness(1.35);box-shadow:0 0 0 2px #fff inset}
