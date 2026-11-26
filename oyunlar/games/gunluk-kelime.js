@@ -16,6 +16,7 @@ const MOD = {
 const MKEY = 'ob-gk-mod';
 registerGame({
   id:'gunlukkelime', title:'Günlük Kelime', category:'Günlük', tags:'wordle kelime türkçe ingilizce english fransızca français almanca deutsch 5 harf günlük bulmaca seri',
+  gizli:true,   /* vitrinde görünmez; dil kulüplerindeki bağlantıdan açılır */
   icon:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><rect x="2" y="7" width="6" height="6" rx="1"/><rect x="9" y="7" width="6" height="6" rx="1"/><rect x="16" y="7" width="6" height="6" rx="1"/><path d="M4 17h16"/></svg>',
   render(root, api){
     const N = gun();

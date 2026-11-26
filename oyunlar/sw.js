@@ -1,6 +1,6 @@
 /* Oyun Bahçesi — Service Worker (offline oynanabilirlik)
    Sürüm değişince eski önbellek silinir. Uygulama kabuğu + oyunlar + three.js önbelleğe alınır. */
-const VERSION = 'ob-v6';
+const VERSION = 'ob-v7';
 const CORE = [
   './',
   './index.html',
@@ -18,9 +18,7 @@ const CORE = [
   './assets/icon-192.png',
   './assets/icon-512.png',
   './games/_engine.js',
-  './games/3d-kosu.js','./games/3d-tugla.js','./games/3d-kule.js','./games/3d-karsiya.js',
-  './games/3d-top.js','./games/3d-labirent.js','./games/yilan.js','./games/mayin.js','./games/matematik.js',
-  './games/gunluk-kelime.js','./games/bir-islem.js','./games/sudoku.js','./games/terimler-veri.js','./games/cephe-terim.js'
+  './games/sudoku.js','./games/gunluk-kelime.js'
 ];
 
 self.addEventListener('install', e=>{

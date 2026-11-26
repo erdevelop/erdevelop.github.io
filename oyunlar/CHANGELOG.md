@@ -51,3 +51,13 @@
 - Seri bulutta: girişli kullanıcıda users/{uid}.seri; cihazlar birleştirilir
 - Akşam seri hatırlatıcısı: push/{uid}_seri belgesi, .github/push/send.mjs page=seri
 - sw.js ob-v6
+
+## Yeniden başlangıç — 26 Kasım 2026
+- Eski oyunlar vitrinden kaldırıldı (Yılan, Mayın Tarlası, Hızlı Matematik, Bir İşlem, Cephe Terimleri, altı 3B oyun);
+  hepsi git geçmişinde duruyor. Portal artık az ama özenli oyunlarla, birer birer büyüyecek.
+- Günlük Kelime gizli oyun olarak kaldı: vitrinde görünmez, dil kulüplerindeki bağlantıdan (`#o/gunlukkelime`) açılır.
+- **Sudoku (yeni):** her gün üç bulmaca (Kolay/Orta/Zor) ve gün serisi, 60 bölümlük yolculuk (yıldızlı),
+  beş zorlukta serbest oyun (Kolay → Şeytan). Bulmacalar tek çözümlü üretilir ve gereken tekniğe göre derecelendirilir.
+  Notlar, otomatik not, geri al, rakam kilidi, açıklamalı ipuçları (kilitli aday, açık/gizli çift, açık üçlü, X-kanat),
+  isteğe bağlı 3 hata hakkı, dört tahta teması, klavye desteği, kaldığın yerden devam, istatistik.
+- Vitrin: kapak görselli oyun kartları; telefonda oyun açıkken üst çubuk gizlenir (odak modu).

@@ -28,7 +28,8 @@
   // ---------- Kategoriler + ızgara ----------
   let activeCat = 'Tümü';
   let query = '';
-  const cats = ['Tümü', ...Array.from(new Set(games.map(g=>g.category)))];
+  const vitrin = games.filter(g=>!g.gizli);   /* gizli oyunlar yalnızca doğrudan bağlantıyla açılır */
+  const cats = ['Tümü', ...Array.from(new Set(vitrin.map(g=>g.category)))];
 
   function renderChips(){
     const nav = $('#categoryChips'); nav.innerHTML='';
@@ -67,14 +68,14 @@
   function renderGrid(){
     const grid = $('#gameGrid'); grid.innerHTML='';
     const bests = (window.Store && window.Store.allBests && window.Store.allBests()) || {};
-    const list = games.filter(g=>{
+    const list = vitrin.filter(g=>{
       const okCat = activeCat==='Tümü' || g.category===activeCat;
       const q = query.trim().toLowerCase();
       const okQ = !q || g.title.toLowerCase().includes(q) || (g.tags||'').toLowerCase().includes(q) || g.category.toLowerCase().includes(q);
       return okCat && okQ;
     });
     $('#emptyState').hidden = list.length>0;
-    function seriRozet(g){ if(g.category!=='Günlük'||!window.Seri) return '';
+    function seriRozet(g){ if(!(g.gunluk||g.category==='Günlük')||!window.Seri) return '';
       const z=[g.id].concat(g.id==='gunlukkelime'?['gunlukkelime-en','gunlukkelime-fr','gunlukkelime-de']:[]).map(id=>Seri.ozet(id));
       const seri=Math.max(...z.map(x=>x.seri)), bugun=z.some(x=>x.bugun);
       if(bugun) return seri? '<span class="card-seri">🔥 '+seri+'</span>':'';
@@ -84,7 +85,12 @@
       card.className='card card-in';
       card.style.animationDelay=(Math.min(i,10)*0.035)+'s';
       const best = bests[g.id];
-      card.innerHTML =
+      if(g.cover){ card.classList.add('card-kapak');
+        card.innerHTML = '<div class="kapak">'+g.cover+'</div>'+
+          '<div class="kapak-yazi"><div class="card-cat">'+g.category+'</div><div class="card-title">'+g.title+'</div>'+
+          (g.aciklama? '<div class="card-desc">'+g.aciklama+'</div>':'')+'<span class="card-oyna">Oyna ›</span></div>'+
+          (best? '<span class="card-best">★ '+best+'</span>':'')+seriRozet(g);
+      } else card.innerHTML =
         '<div class="card-icon">'+iconMarkup(g)+'</div>'+
         '<div><div class="card-title">'+g.title+'</div>'+
         '<div class="card-cat">'+g.category+'</div></div>'+
@@ -92,7 +98,9 @@
       card.onclick = ()=> openGame(g);
       grid.append(card);
     });
-    $('#gameCount').textContent = games.length+' seçme oyun';
+    $('#gameCount').textContent = vitrin.length<6 ? vitrin.length+' oyun · yenileri sırayla ekleniyor' : vitrin.length+' seçme oyun';
+    /* az oyun varken arama ve kategori satırı gereksiz */
+    const sb=document.querySelector('.searchbar'); if(sb) sb.hidden = vitrin.length<8; $('#categoryChips').hidden = cats.length<3;
   }
 
   $('#search').addEventListener('input', e=>{ query=e.target.value; renderGrid(); });
@@ -117,6 +125,7 @@
     runCleanup();
     currentGame=g;
     $('#home').hidden=true; $('#player').hidden=false; window.scrollTo(0,0);
+    document.body.classList.toggle('ob-odak', !!g.odak); $('#restartBtn').hidden=!!g.noRestart;
     $('#playerTitle').textContent=g.title;
     const best = (window.Store && window.Store.getBest(g.id)) || 0;
     const bb=$('#bestBadge'); if(best>0){ bb.hidden=false; bb.textContent='En iyi: '+best; } else bb.hidden=true;
@@ -172,7 +181,7 @@
   }
 
   function goHome(){
-    runCleanup(); currentGame=null;
+    runCleanup(); currentGame=null; document.body.classList.remove('ob-odak');
     $('#player').hidden=true; $('#home').hidden=false;
     renderGrid(); renderDaily();
     try{ if(location.hash) location.hash=''; }catch(e){}
@@ -187,7 +196,7 @@
     const best=(window.Store && window.Store.getBest(currentGame.id))||0;
     let url;
     try{ url=location.origin+location.pathname+'#o/'+currentGame.id; }catch(e){ url='https://erdevelop.com/oyunlar/'; }
-    const text = best>0
+    const text = currentGame.shareText ? currentGame.shareText() : best>0
       ? 'Oyun Bahçesi\'nde "'+currentGame.title+'" oynadım, en iyi skorum '+best+'! Geçebilir misin?'
       : 'Oyun Bahçesi\'nde "'+currentGame.title+'" oynuyorum. Sen de dene!';
     const data={ title:'Oyun Bahçesi', text, url };
@@ -283,7 +292,7 @@
       xpBlock='<div class="xp-card"><div class="xp-top"><span class="xp-lvl">Seviye '+s.level+'</span>'+
         (streak>0?'<span class="xp-streak">🔥 '+streak+' gün</span>':'')+'</div>'+
         '<div class="xp-bar"><i style="width:'+pct+'%"></i></div>'+
-        '<div class="xp-sub">'+s.into+' / '+s.need+' XP · '+s.distinct+'/'+games.length+' oyun denendi</div></div>';
+        '<div class="xp-sub">'+s.into+' / '+s.need+' XP</div></div>';
     }
     // Rozetler
     let badges='';

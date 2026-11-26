@@ -95,7 +95,7 @@ async function load() {
   for (const c of codes) { try { const r = await A.db.collection('rooms').doc(c).get(); if (!r.exists) continue; const m = await A.db.collection('rooms').doc(c).collection('members').doc(uid).get(); if (m.exists) A.rooms.push({ id: c, ...r.data(), me: m.data() }); } catch (e) { } }
 }
 const egList = () => Object.entries(A.info.egitim || {}).map(([k, e]) => { const c = Object.keys((e && e.done) || {}).length, n = (e && e.n) || 0; return [k, Object.assign({}, e, { c, p: n ? Math.min(100, Math.round(c * 100 / n)) : 0 })]; }).sort((a, b) => (b[1].t || 0) - (a[1].t || 0));
-const GAMES = { yilan: 'Yılan', mayin: 'Mayın Tarlası', kelime: 'Kelime Bul', matematik: 'Hızlı Matematik', karsiya3d: '3B Karşıya Geç', kosu3d: '3B Sonsuz Koşu', kule3d: '3B Kule', labirent3d: '3B Labirent', top3d: '3B Top Yuvarla', tugla3d: '3B Tuğla Kır', uzay3d: '3B Uzay' };
+const GAMES = { sudoku: 'Sudoku', gunlukkelime: 'Günlük Kelime' };   /* Oyun Bahçesi'nde yayında olan oyunlar */
 const CLUBS = [['erdevelop-eng', 'İngilizce', 'ingilizce.html', ''], ['erdevelop-fra', 'Fransızca', 'fransizca.html', 'fr'], ['erdevelop-deu', 'Almanca', 'almanca.html', 'de']];
 const clubStats = () => CLUBS.map(([k, ad, url, lang]) => { let S = {}; try { S = JSON.parse(localStorage.getItem(k)) || {}; } catch (e) { }
   const L = Object.values(S.leit || {}), learned = L.filter(x => x && x.box >= 3).length, roomXp = A.rooms.filter(r => (r.lang || '') === lang).reduce((t, r) => t + ((r.me && r.me.xp) || 0), 0);
@@ -138,7 +138,7 @@ function paint() {
     <section class="card full2"><div class="who"><div class="av">${esc(nm.charAt(0).toLocaleUpperCase('tr'))}</div><div><b>${esc(nm)}</b><span>${esc(u.email || '')}${created ? ' · üyelik: ' + esc(created) : ''}</span>
       <span>${egList().length} eğitim · ${scores} oyunda skor · ${A.rooms.length} oda · bildirimler ${pushOn || pushFrOn || pushDeOn ? 'açık' : 'kapalı'}</span></div><span style="flex:1"></span><button class="btn" type="button" id="out">Çıkış yap</button></div></section>
     ${(() => { const eg = egList(), egOn = eg.filter(([, e]) => e.p < 100), egDone = eg.filter(([, e]) => e.p === 100).length, cl = clubStats(), clXp = cl.reduce((t, c) => t + c.xp, 0), clW = cl.reduce((t, c) => t + c.learned, 0);
-      const sc = Object.entries(A.info.scores || {}).filter(([, v]) => v > 0).sort((a, b) => b[1] - a[1]);
+      const sc = Object.entries(A.info.scores || {}).filter(([k, v]) => v > 0 && GAMES[k]).sort((a, b) => b[1] - a[1]);
       const nx = [];
       egOn.slice(0, 2).forEach(([k, e]) => nx.push(`<a href="${esc(e.url || 'Tools.html')}"><span class="k">Eğitim</span><span>${esc(e.ad || k)} <span class="muted small">%${e.p}</span><div class="bar" style="width:140px"><i style="width:${e.p}%"></i></div></span><span class="g">Devam et →</span></a>`));
       cl.filter(c => c.seen || c.xp).slice(0, 2).forEach(c => nx.push(`<a href="${c.url}#kelime"><span class="k">${c.ad}</span><span>${c.learned} kelime öğrenildi · ${c.xp} XP</span><span class="g">Kelime çalış →</span></a>`));
