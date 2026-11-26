@@ -338,6 +338,9 @@ body.izle #mkOlcek{bottom:calc(120px + env(safe-area-inset-bottom,0px))}
 </style>
 <script type="application/ld+json">{"@context":"https://schema.org","@type":"VideoGame","name":"Organizma","url":"https://erdevelop.com/organizma.html","genre":["Action","Survival"],"gamePlatform":"Web browser","playMode":["SinglePlayer","MultiPlayer"],"inLanguage":["tr","en"],"isAccessibleForFree":true,"offers":{"@type":"Offer","price":"0","priceCurrency":"TRY"}}</script>
 <script async src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-4775308844679394" crossorigin="anonymous"></script>
+<script>/* AdSense H5 oyun reklamları (Ad Placement API): ödüllü reklam yalnızca site onaylıysa ve reklam hazırsa gösterilir */
+window.adsbygoogle = window.adsbygoogle || []; if (!window.adBreak) { window.adBreak = window.adConfig = function (o) { adsbygoogle.push(o); }; }
+try { adConfig({ preloadAdBreaks: 'on', sound: 'on' }); } catch (e) { }</script>
 </head>
 <body>
 <canvas id="c" aria-label="Oyun alanı" data-en-aria="Game area"></canvas>
@@ -494,6 +497,7 @@ body.izle #mkOlcek{bottom:calc(120px + env(safe-area-inset-bottom,0px))}
     <div id="oSoy"></div>
     <div id="oGm"></div>
     <div id="oReklam" hidden style="margin:10px 0 4px;min-height:90px"></div>
+    <button class="ana" id="ikinciBtn" type="button" hidden style="background:linear-gradient(135deg,#FFD84D,#FF9F43);color:#2A1600">🎬 <span id="ikinciYazi">Reklam izle, aynı hücreyle devam et</span><small id="ikinciAlt" style="display:block;font-weight:600;opacity:.8;font-size:12px"></small></button>
     <button class="ana" id="yeniden" type="button" data-en="Be born again">Yeniden doğ</button>
     <button class="ikinci" id="menuye" type="button" data-en="Menu">Menü</button>
   </div>
@@ -2365,7 +2369,8 @@ const agacBos = () => AGC().p - AGC().h;
 const agacFiyat = (d, lv) => d.f * (lv + 1);
 function soyPuani(o) {   // bu hayatta kazanılan soy puanı ve dökümü
   const d = [[T('kuşak', 'generations'), Math.max(0, (o.kusak || 1) - 1)], [T('her 5 dk', 'per 5 min'), Math.floor((o.yas || 0) / 300)], [T('dev', 'giants'), 2 * (o.devYen || 0)], [T('derinlik', 'depth'), Math.floor((o.enDerinH || 0) / 350)], [T('görev', 'quests'), o.kgSay || 0]];
-  return { n: d.reduce((a, q) => a + q[1], 0), d: d.filter(q => q[1] > 0) };
+  const ham = d.reduce((a, q) => a + q[1], 0);
+  return { n: Math.max(0, ham - (o.soyOnce || 0)), ham, d: d.filter(q => q[1] > 0) };
 }
 function agacAc() {
   const a = AGC();
@@ -2775,6 +2780,8 @@ function basla() {
     if (n && oyuncu.gen) { const kar = hz.slice(); for (let i = kar.length - 1; i > 0; i--) { const j = (Math.random() * (i + 1)) | 0;[kar[i], kar[j]] = [kar[j], kar[i]]; } for (const q of kar.slice(0, n)) if (!oyuncu.gen.some(x => x.k === q.k)) oyuncu.gen.push({ k: q.k, h: q.h, n: 1, z: 0, d: -99 }); }
   }
   if (KIST.ac && KAYIT.kist && !IZLE && !GM) { kistCik(); }
+  if (IKS.ac && IKS.k && !IZLE && !GM) ikinciCik();
+  IKS.ac = false; IKS.k = null; $('ikinciBtn').hidden = true;
   KIST.ac = false;
   O.push(oyuncu); kamera.x = x; kamera.y = y;
   if (!IZLE) AG.katil(oyuncu.netId);
@@ -2816,6 +2823,7 @@ function oyuncuOldu(yiyen) {
   $('oDna').innerHTML = hayatDna ? `<span class="yeniRekor" style="background:rgba(95,211,184,.16);color:#BFF3E4">🧬 +${hayatDna} DNA</span>` : '';
   if (s >= 20) { AG.rekorYaz({ n: oyuncu.nick, s: Math.round(s), m: Math.round(oyuncu.enBuyuk), k: oyuncu.kusak }); ortakYuk = -1e9; }
   if (s >= 30) reklamGoster();
+  ikinciHazirla();
   kaydet();
 }
 /* ölüm ekranı reklam alanı: AdSense reklam birimi kimliği (data-ad-slot) girilince çalışır.
@@ -4459,6 +4467,45 @@ setTimeout(function hediyeAl() {
   duyur(`🎁 ${String(H[0].ne || T('Hediye', 'Gift')).slice(0, 40)}: +${t} DNA`, 'iyi', 6); try { SES.basari(); } catch (e) { }
   for (const a of ACILIR) if (once < a[0] && KAYIT.dna >= a[0]) duyur('🔓 ' + T('Açıldı: ', 'Unlocked: ') + acilirAd(a), 'iyi', 5);
 }, 1500);
+
+/* ================= ikinci şans: ödüllü reklam izle, aynı hücreyle (kütlenin yarısı) devam et =================
+   AdSense H5 Games (Ad Placement API) onayı gerekir. Onay yoksa ya da o an reklam yoksa beforeReward çağrılmaz, düğme hiç görünmez.
+   Hayat başına bir kez; günlük meydan okumada, izleme modunda, kist olurken ve kendi isteğinle bitirince yok. */
+const IKS = { k: null, ac: false, goster: null, odul: false };
+function ikinciHazirla() {
+  const o = oyuncu, b = $('ikinciBtn'); b.hidden = true; IKS.k = null; IKS.goster = null; IKS.odul = false;
+  if (IZLE || GM || !o || o.ikinciKul || o.kistZ > 0 || (o.yas || 0) < 45 || !katil || katil.nick === T('Kendi isteğin', 'Your choice') || katil.nick === T('Kist', 'Cyst')) return;
+  if (typeof window.adBreak !== 'function') return;
+  const k = {}; for (const a of KIST.ALAN) if (o[a] !== undefined) k[a] = JSON.parse(JSON.stringify(o[a]));
+  k.m = Math.max(32 + 8 * agacLv('bas'), Math.round(Math.max(o.m || 0, (o.enBuyuk || 0) * 0.5) * 0.5)); k.endo = (o.endo || []).filter(e => e.kal); k.nick = o.nick;
+  k.enBuyuk = o.enBuyuk; k.soyOnce = soyPuani(o).ham; k.ikinciKul = 1; k.devYen = o.devYen; k.enDerinH = o.enDerinH;
+  IKS.k = k; const ben = k;
+  try {
+    window.adBreak({
+      type: 'reward', name: 'ikinci-sans',
+      beforeAd() { IKS.ses = SES.duzey(); if (IKS.ses > 0) SES.ayarla(0); },
+      afterAd() { if (IKS.ses > 0) SES.ayarla(IKS.ses); },
+      beforeReward(goster) {
+        if (IKS.k !== ben) return; IKS.goster = goster; b.hidden = false;
+        $('ikinciYazi').textContent = T('Reklam izle, aynı hücreyle devam et', 'Watch an ad, continue with the same cell');
+        $('ikinciAlt').textContent = `${ben.m} ${T('kütle', 'mass')} · ${(ben.gen || []).length} ${T('gen', 'genes')} · ${romaYaz(ben.kusak || 1)}. ${T('kuşak', 'gen')} · ${T('hayat başına bir kez', 'once per life')}`;
+        olcum('ikinci-teklif');
+      },
+      adDismissed() { IKS.odul = false; duyur(T('Reklam yarıda kaldı; ödül verilmedi.', 'The ad was skipped; no reward.'), 'uyari', 3); },
+      adViewed() { IKS.odul = true; },
+      adBreakDone(bilgi) {
+        b.hidden = true; IKS.goster = null;
+        if (IKS.odul && IKS.k === ben && !oyunda) { IKS.odul = false; IKS.ac = true; olcum('ikinci-izlendi'); GM = null; basla(); }
+      }
+    });
+  } catch (e) { }
+}
+function ikinciCik() {
+  const k = IKS.k, o = oyuncu; Object.assign(o, JSON.parse(JSON.stringify(k)));
+  o.nick = (($('nick').value.trim()) || k.nick || o.nick).slice(0, 16); o.r = yaricap(o.m); o.rr = o.r; o.dogum = 0;
+  setTimeout(() => duyur(T('🎬 İkinci şans! Hücren genleri, evrimleri ve kuşağıyla yeniden suda.', '🎬 Second chance! Your cell is back with its genes, evolutions and generation.'), 'iyi', 5), 400);
+}
+$('ikinciBtn').onclick = () => { const g = IKS.goster; if (!g) return; $('ikinciBtn').disabled = true; setTimeout(() => $('ikinciBtn').disabled = false, 1500); try { g(); } catch (e) { } };
 
 /* ================= döngü ================= */
 let son = performance.now(), izle = null, izleZ = 0;
