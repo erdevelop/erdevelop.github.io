@@ -505,6 +505,7 @@ try { adConfig({ preloadAdBreaks: 'on', sound: 'on' }); } catch (e) { }</script>
     <button class="ana" id="ikinciBtn" type="button" hidden style="background:linear-gradient(135deg,#FFD84D,#FF9F43);color:#2A1600">🎬 <span id="ikinciYazi">Reklam izle, aynı hücreyle devam et</span><small id="ikinciAlt" style="display:block;font-weight:600;opacity:.8;font-size:12px"></small></button>
     <button class="ana" id="yeniden" type="button" data-en="Be born again">Yeniden doğ</button>
     <button class="ikinci" id="kartBtn" type="button" hidden>📸 <span id="kartYazi">Canlı kartını paylaş</span></button>
+    <button class="ikinci" id="klipBtn" type="button" hidden>🎬 <span id="klipYazi">Son 10 saniyeni paylaş</span></button>
     <button class="ikinci" id="menuye" type="button" data-en="Menu">Menü</button>
   </div>
 </div>
@@ -2808,7 +2809,7 @@ function basla() {
   }
   if (KIST.ac && KAYIT.kist && !IZLE && !GM) { kistCik(); }
   if (IKS.ac && IKS.k && !IZLE && !GM) ikinciCik();
-  IKS.ac = false; IKS.k = null; $('ikinciBtn').hidden = true;
+  IKS.ac = false; IKS.k = null; $('ikinciBtn').hidden = true; klipSifirla(); $('klipBtn').hidden = true;
   KIST.ac = false;
   O.push(oyuncu); kamera.x = x; kamera.y = y;
   if (!IZLE) AG.katil(oyuncu.netId);
@@ -2853,7 +2854,7 @@ function oyuncuOldu(yiyen) {
   $('oDna').innerHTML = hayatDna ? `<span class="yeniRekor" style="background:rgba(95,211,184,.16);color:#BFF3E4">🧬 +${hayatDna} DNA</span>` : '';
   if (s >= 20) { AG.rekorYaz({ n: oyuncu.nick, s: Math.round(s), m: Math.round(oyuncu.enBuyuk), k: oyuncu.kusak }); ortakYuk = -1e9; }
   if (s >= 30) reklamGoster();
-  ikinciHazirla(); kartHazirla(s);
+  ikinciHazirla(); kartHazirla(s); klipHazirla(s);
   kaydet();
 }
 /* ölüm ekranı reklam alanı: AdSense reklam birimi kimliği (data-ad-slot) girilince çalışır.
@@ -3487,7 +3488,7 @@ let hudZ = 0, miniZ = 0;
 function hud(dt) {
   hudZ -= dt; miniZ -= dt;
   if (IZLE) izleTik(dt);
-  dostOkGuncelle(); mkOlcekGuncelle(dt); gunGuncelle(dt); secilimTik(dt); biyoGuncelle(dt); kolonTik(dt); kistTik(dt); kistIpucu(dt); konjTik(dt); window.olcumTik && olcumTik(dt); window.konsolTik && konsolTik(dt);
+  dostOkGuncelle(); mkOlcekGuncelle(dt); gunGuncelle(dt); klipTik(dt); secilimTik(dt); biyoGuncelle(dt); kolonTik(dt); kistTik(dt); kistIpucu(dt); konjTik(dt); window.olcumTik && olcumTik(dt); window.konsolTik && konsolTik(dt);
   yasamGuncelle(dt); nufusGuncelle(dt);
   if (hudZ <= 0) {
     hudZ = 0.25;
@@ -4895,6 +4896,60 @@ function aileYukle() {
 function aileToplam() { const A = KAYIT.aile; if (!A || !A.kur) return; AG.rekorOku('a' + A.kod, L => { if (!L) return; const top = Math.round(L.reduce((a, v) => a + (+v.s || 0), 0)); if (top > 0) AG.rekorYazK('aileler', { n: A.ad, s: Math.min(86400, top), m: L.length, kod: A.kod }); }, 50); }
 $('aileBtn').onclick = aileAc;
 if (AILE_DAVET.kod && !(KAYIT.aile && KAYIT.aile.kod === AILE_DAVET.kod) && !IZLE) setTimeout(() => { if (!oyunda) aileAc(); }, 900);
+
+/* ================= son 10 saniye klibi: ölünce "nasıl yutuldum" videosu =================
+   Oyun sırasında ekranın ortası (oyuncunun çevresi) saniyede 5 kez küçük bir kareye kopyalanır (son 10 sn, sabit bellek).
+   Ölüm ekranında bu kareler 2 kat hızla bir tuvalde oynatılıp MediaRecorder ile videoya (MP4 ya da WebM) kaydedilir. */
+const KLIP = { N: 50, B: 320, kare: [], i: 0, dolu: 0, z: 0, son: null, kayit: false };
+function klipSifirla() { KLIP.i = 0; KLIP.dolu = 0; KLIP.son = null; }
+function klipTik(dt) {
+  if (IZLE || DUSUK.acik || !oyunda || !oyuncu || typeof MediaRecorder === 'undefined') return;
+  if ((KLIP.z -= dt) > 0) return; KLIP.z = 0.2;
+  let c = KLIP.kare[KLIP.i]; if (!c) { c = KLIP.kare[KLIP.i] = document.createElement('canvas'); c.width = c.height = KLIP.B; }
+  const cv2 = $('c'), k = cv2.width / W, kenar = Math.min(W, H) * 0.82;
+  try { c.getContext('2d').drawImage(cv2, (W / 2 - kenar / 2) * k, (H / 2 - kenar / 2) * k, kenar * k, kenar * k, 0, 0, KLIP.B, KLIP.B); } catch (e) { return; }
+  KLIP.i = (KLIP.i + 1) % KLIP.N; KLIP.dolu = Math.min(KLIP.N, KLIP.dolu + 1);
+}
+function klipHazirla(s) {
+  const b = $('klipBtn'); b.hidden = true; KLIP.son = null;
+  if (IZLE || DUSUK.acik || typeof MediaRecorder === 'undefined' || !HTMLCanvasElement.prototype.captureStream || s < 12) return;
+  KLIP.son = { nick: oyuncu.nick, katil: katil && katil.nick || '?', s, m: Math.round(oyuncu.enBuyuk || oyuncu.m) };
+  setTimeout(() => { if (KLIP.son && KLIP.dolu >= 15) { $('klipYazi').textContent = T('Son 10 saniyeni paylaş (video)', 'Share your last 10 seconds (video)'); b.disabled = false; b.hidden = false; } }, 3200);
+}
+function klipTur() { for (const t of ['video/mp4;codecs=avc1', 'video/mp4', 'video/webm;codecs=vp9', 'video/webm;codecs=vp8', 'video/webm']) if (MediaRecorder.isTypeSupported && MediaRecorder.isTypeSupported(t)) return t; return ''; }
+async function klipYap() {
+  if (KLIP.kayit || !KLIP.son || KLIP.dolu < 5) return; KLIP.kayit = true; olcum('klip');
+  const b = $('klipBtn'), yazi = $('klipYazi'); b.disabled = true;
+  const S2 = 560, c = document.createElement('canvas'); c.width = c.height = S2; const x = c.getContext('2d'), K2 = KLIP.son;
+  const sira = []; for (let j = 0; j < KLIP.dolu; j++) sira.push(KLIP.kare[(KLIP.i - KLIP.dolu + j + KLIP.N) % KLIP.N]);
+  const ciz = (kare, ilerleme, son) => {
+    x.fillStyle = '#041015'; x.fillRect(0, 0, S2, S2); x.imageSmoothingEnabled = true; x.drawImage(kare, 0, 0, S2, S2);
+    const gr = x.createLinearGradient(0, 0, 0, 90); gr.addColorStop(0, 'rgba(2,10,14,.85)'); gr.addColorStop(1, 'rgba(2,10,14,0)'); x.fillStyle = gr; x.fillRect(0, 0, S2, 90);
+    x.font = '900 26px Nunito, system-ui, sans-serif'; x.fillStyle = '#E4F3F2'; x.textAlign = 'left'; x.fillText('ORGANIZMA', 18, 38);
+    x.font = '800 17px Nunito, system-ui, sans-serif'; x.fillStyle = '#FFE29A'; x.textAlign = 'right'; x.fillText(String(K2.nick || '').slice(0, 16) + ' · ' + dkYaz(K2.s, true), S2 - 18, 36);
+    x.fillStyle = 'rgba(95,211,184,.85)'; x.fillRect(0, S2 - 5, S2 * ilerleme, 5);
+    if (son > 0) { x.fillStyle = `rgba(4,12,16,${0.6 * son})`; x.fillRect(0, 0, S2, S2); x.globalAlpha = son; x.textAlign = 'center'; x.font = '900 40px Nunito, system-ui, sans-serif'; x.fillStyle = '#FF9C8F'; x.fillText(T('☠ Yutuldum!', '☠ Eaten!'), S2 / 2, S2 / 2 - 10); x.font = '800 22px Nunito, system-ui, sans-serif'; x.fillStyle = '#E4F3F2'; x.fillText(T('Yutan: ', 'By: ') + String(K2.katil).slice(0, 18), S2 / 2, S2 / 2 + 28); x.font = '700 17px Nunito, system-ui, sans-serif'; x.fillStyle = 'rgba(228,243,242,.7)'; x.fillText(T('Sen ne kadar yaşarsın? ', 'How long can you last? ') + (location.host || 'erdevelop.com') + '/organizma', S2 / 2, S2 - 26); x.globalAlpha = 1; }
+  };
+  ciz(sira[0], 0, 0);
+  const tur = klipTur(), akis = c.captureStream(30), rec = new MediaRecorder(akis, tur ? { mimeType: tur, videoBitsPerSecond: 2.2e6 } : undefined), par = [];
+  rec.ondataavailable = e => { if (e.data && e.data.size) par.push(e.data); };
+  const bitti = new Promise(r => rec.onstop = r); rec.start(250);
+  const fps = 10, sonK = 16;   // 5 kare/sn kayıt → 10 kare/sn oynatma (2 kat hız) + 1,6 sn kapanış
+  for (let j = 0; j < sira.length + sonK; j++) {
+    const kare = sira[Math.min(j, sira.length - 1)]; ciz(kare, Math.min(1, j / sira.length), j < sira.length ? 0 : Math.min(1, (j - sira.length + 1) / 6));
+    yazi.textContent = T(`Video hazırlanıyor… %${Math.round(j / (sira.length + sonK) * 100)}`, `Preparing video… ${Math.round(j / (sira.length + sonK) * 100)}%`);
+    await new Promise(r => setTimeout(r, 1000 / fps));
+  }
+  rec.stop(); await bitti; akis.getTracks().forEach(t => t.stop());
+  const tip = (tur || 'video/webm').split(';')[0], blob = new Blob(par, { type: tip }), ad = `organizma-son-anlar.${tip.includes('mp4') ? 'mp4' : 'webm'}`;
+  KLIP.kayit = false; b.disabled = false; yazi.textContent = T('Son 10 saniyeni paylaş (video)', 'Share your last 10 seconds (video)');
+  const metin = T(`Organizma'da böyle yutuldum 😱 Sen ne kadar yaşarsın?`, `This is how I got eaten in Organizma 😱 How long can you last?`), url = davetBagi() || location.origin + location.pathname;
+  try { const f = new File([blob], ad, { type: tip }); if (navigator.canShare && navigator.canShare({ files: [f] })) { await navigator.share({ files: [f], title: 'Organizma', text: metin + ' ' + url }); return; } } catch (e) { if (e && e.name === 'AbortError') return; }
+  const a = document.createElement('a'); a.href = URL.createObjectURL(blob); a.download = ad; document.body.appendChild(a); a.click(); setTimeout(() => { URL.revokeObjectURL(a.href); a.remove(); }, 3000);
+  try { await navigator.clipboard.writeText(metin + ' ' + url); } catch (e) { }
+  duyur(T('🎬 Video indirildi; paylaşım metni panoya kopyalandı.', '🎬 Video downloaded; share text copied to the clipboard.'), 'iyi', 4);
+}
+$('klipBtn').onclick = () => { klipYap().catch(() => { KLIP.kayit = false; $('klipBtn').disabled = false; }); };
 
 /* ================= döngü ================= */
 let son = performance.now(), izle = null, izleZ = 0;
