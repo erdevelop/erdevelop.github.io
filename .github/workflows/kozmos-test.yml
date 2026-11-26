@@ -1,0 +1,53 @@
+# Kozmos otomatik testleri: oyunla ilgili bir dosya değişince oyunu gerçek tarayıcıda açıp dener.
+# Yayını durdurmaz; bir şey bozulduysa GitHub e-postayla haber verir. Ayrıntı: testler/kozmos/OKUBENI.md
+# Elle: Actions → "Kozmos testleri" → Run workflow.
+name: Kozmos testleri
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'kozmos.html'
+      - 'kozmos/**'
+      - 'kozmos-yonetim.html'
+      - 'kozmos.webmanifest'
+      - 'testler/kozmos/**'
+      - 'firebase-kurallari-oyunlar.json'
+      - 'dil.js'
+      - 'js/site.js'
+      - 'js/seri-kayit.js'
+      - '.github/workflows/kozmos-test.yml'
+  workflow_dispatch:
+
+concurrency:
+  group: kozmos-test
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+      - name: Parçalar ile kozmos.html aynı mı
+        run: python3 kozmos/derle.py --kontrol
+      - name: Test araçlarını kur
+        working-directory: testler/kozmos
+        run: |
+          npm install --no-audit --no-fund
+          npx playwright install --with-deps chromium
+      - name: Testleri çalıştır
+        run: node testler/kozmos/calistir.mjs
+      - name: Başarısız testlerin ekran görüntüleri
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: kozmos-test-ekran
+          path: testler/kozmos/cikti/
+          if-no-files-found: ignore
