@@ -170,8 +170,8 @@ const SEZ_ID = () => { const d = new Date(); return d.getUTCFullYear() + '-' + S
 let SEZ = K.sez && K.sez.id === SEZ_ID() ? K.sez : { id: SEZ_ID(), xp: 0, al: [] }; const KOZM = Object.assign({ desen: [], iz: [], unvan: [], sec: {} }, K.kozm || {});
 let YR = null;
 const DEV = { olumsuz: false, yakitsiz: false, cevrim: ls.get('kozmos-dev-cevrim', false) === true, log: [], gecmis: [], gi: -1 };
-/* otopilot hızı: Sakin / Normal / Hızlı (eski davranış Hızlı) — v: azami hız, i: ivme, f: varışta yavaşlama, b: hız düğmesi */
-const OTO_HIZ = { sakin: { v: 0.55, i: 0.3, f: 500, b: 0.6 }, normal: { v: 0.75, i: 0.45, f: 700, b: 0.8 }, hizli: { v: 1, i: 1, f: 1100, b: 1 } };
+/* otopilot hızı: Sakin / Normal / Hızlı (elle uçuşun azami hızı 1300; Normal ≈ 585) — v: azami hız, i: ivme, f: varışta yavaşlama, b: hız düğmesi */
+const OTO_HIZ = { sakin: { v: 0.3, i: 0.13, f: 260, b: 0.45 }, normal: { v: 0.45, i: 0.2, f: 380, b: 0.6 }, hizli: { v: 0.75, i: 0.45, f: 700, b: 0.8 } };
 let otoHiz = OTO_HIZ[ls.get('kozmos-otohiz', 'normal')] ? ls.get('kozmos-otohiz', 'normal') : 'normal';
 const PIL = { acik: !!ls.get('kozmos-pil', false) };
 const PRS = Math.max(0, Math.min(10, K.prs | 0));
