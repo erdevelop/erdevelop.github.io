@@ -196,7 +196,7 @@ window.KULUP_EK = {
     /* telefon görüşmesi */
     ['hold on', 'bekleyin (hatta kalın)', 'Hold on a moment, please.', 1, 'telefon'],
     ['put through', 'bağlamak (telefon)', 'Could you put me through to the project manager?', 2, 'telefon'],
-    ['speaking', 'benim, buyurun (telefonda)', 'Hello, Erdal speaking.', 1, 'telefon'],
+    ['speaking', 'benim, buyurun (telefonda)', 'Hello, Ali speaking.', 1, 'telefon'],
     ['take a message', 'not almak', 'She\'s not here. Can I take a message?', 2, 'telefon'],
     ['call back', 'geri aramak', 'I\'ll call you back in ten minutes.', 1, 'telefon'],
     ['bad line', 'kötü bağlantı (hat)', 'Sorry, it\'s a bad line. Could you repeat that?', 2, 'telefon'],

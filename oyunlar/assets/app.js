@@ -233,7 +233,7 @@
       ? '<div class="auth-mode-note">☁️ Bulut hesabı: e-posta ve şifrenle <b>her cihazdan</b> girersin, skorların seninle gelir.</div>'
       : '<div class="auth-mode-note">📱 Yerel profil: bu cihazda saklanır. Her cihazdan giriş için site sahibinin Firebase ayarını yapması gerekir (OKUBENI.md).</div>';
     let f = note;
-    f += field('f_name', up?'İsim':'İsim / Kullanıcı', 'text', 'örn. Erdal');
+    f += field('f_name', up?'İsim':'İsim / Kullanıcı', 'text', 'örn. Ali');
     if(cloud) f += field('f_email','E-posta','email','ornek@mail.com');
     f += field('f_pass','Şifre','password', cloud?'en az 6 karakter':'(isteğe bağlı)');
     return '<h3 class="auth-h">'+(up?'Hesap oluştur':'Giriş yap')+'</h3>'+

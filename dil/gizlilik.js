@@ -18,7 +18,7 @@ erDil.dict({
 "Bildirim servisleri": "Notification services",
 "Bildirimleri kapat, odadan ayrıl": "Turn off notifications, leave a room",
 "Bu hizmetlerin bir kısmının sunucuları Türkiye dışındadır. Hesap açarak ve bu özellikleri kullanarak verilerinin bu hizmetler aracılığıyla yurt dışında işlenmesini kabul etmiş olursun. Kabul etmiyorsan hesap açmadan da sitenin büyük bölümünü kullanabilirsin.": "Some of these services have servers outside Türkiye. By creating an account and using these features you accept that your data is processed abroad through these services. If you don't accept, you can still use most of the site without an account.",
-"Bu site Erdal Üstünol'un kişisel sitesidir ve ticari bir hizmet değildir. Kişisel verilerle ilgili her türlü soru ve talep için": "This is Erdal Üstünol's personal site and not a commercial service. For any question or request about personal data",
+"Bu site bireysel olarak yürütülen bir sitedir ve ticari bir hizmet değildir. Kişisel verilerle ilgili her türlü soru ve talep için": "This is an independently run personal site and not a commercial service. For any question or request about personal data",
 "Bu tarayıcıdaki site verilerinin bir kopyası: dil kulübü kelime kutuları, Konsol dosyaları, oyun rekorları ve araç ayarları. Site kilidi anahtarı, tema seçimi ve geçici kayıtlar gönderilmez.": "A copy of this browser's site data: language club word boxes, Console files, game records and tool settings. The site lock key, theme choice and temporary records are not sent.",
 "Bunlar dışındaki talepler (ör. Sohbet Odası'ndaki bir mesajın silinmesi) için": "For other requests (e.g. deleting a message in the Chat Room)",
 "Cihazlar arası senkron": "Cross-device sync",

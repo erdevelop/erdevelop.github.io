@@ -197,7 +197,7 @@ window.KULUP_EK = {
     ['das Homeoffice', 'evden çalışma', 'Die Firma bietet zwei Tage Homeoffice an.', 2, 'mülakat'],
     ['einen Moment bitte', 'bir dakika lütfen', 'Einen Moment bitte, ich verbinde Sie.', 1, 'telefon'],
     ['verbinden', '(telefonda) bağlamak', 'Können Sie mich mit dem Projektleiter verbinden?', 2, 'telefon'],
-    ['am Apparat', 'telefonda, benim', 'Hier ist Erdal am Apparat.', 2, 'telefon'],
+    ['am Apparat', 'telefonda, benim', 'Hier ist Ali am Apparat.', 2, 'telefon'],
     ['etwas ausrichten', 'mesaj iletmek', 'Kann ich ihm etwas ausrichten?', 2, 'telefon'],
     ['zurückrufen', 'geri aramak', 'Ich rufe Sie in zehn Minuten zurück.', 1, 'telefon'],
     ['die Verbindung ist schlecht', 'bağlantı kötü', 'Entschuldigung, die Verbindung ist schlecht.', 2, 'telefon'],
