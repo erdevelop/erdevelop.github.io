@@ -1174,9 +1174,8 @@ def cam_uyarilari(detay, yapi):
         return [f"Detay DXF'i {kal0} mm cam için çizilmiş (girilen {yapi['kalinlik']:.2f} mm): kapak mesafesi "
                 f"ve izolatör boyu buna göre ölçeklendi, ancak izolatör/conta kesit şekilleri aynı. "
                 f"Kesin çizim için bu kalınlığa ait detayı kural tablosuna ekleyin."]
-    return [f"Detay DXF'i {kal0} mm cam için çizilmiş (girilen {yapi['kalinlik']:.2f} mm). Hiçbir parça ölçeklenmedi: "
-            f"kapak, baskı ve fitiller şekli bozulmadan cam farkı kadar ötelendi; kalan boşluk ya da binmeleri kesitte "
-            f"görürsünüz. Gerekirse parçayı elle oturtun (Shift+sürükle) ya da bu kalınlığa ait detayı kural tablosuna ekleyin."]
+    return [f"Şablon detayı {kal0} mm cama göre çizili; kapak, baskı ve dış fitiller {yapi['kalinlik']:.2f} mm cama göre "
+            f"kaydırıldı, ısı bariyeri cama göre seçildi. Çakışma kalırsa Kesit detayında uyarı çıkar."]
 
 
 def kesit_atalet(k):
@@ -7549,7 +7548,7 @@ def rapor_olustur(s, bilgi, yazi=None, kalin=None):
         for u in cam_secim_metni(s):
             cam_s += "\n" + u
         for u in cam_uyarilari(s.get("detay"), yp_):
-            cam_s += "\nUYARI: " + u
+            cam_s += "\nNot: " + u
         blok("Cam yapısı", cam_s)
     ag = s.get("agirlik")
     if ag:
@@ -8777,6 +8776,7 @@ class Uygulama(tk.Tk):
             if ad in ("yardim", "help", "?"):
                 self._log("\n".join([
                     "hesapla                      : yeniden hesapla",
+                    "referans | denetim           : DXF referans noktası düzenleyicisi / sistem-kütüphane denetimi",
                     "ozet                         : proje özeti",
                     "tipler                       : dikey/yatay tipler (kapaklı, silikon ...)",
                     "tip dikey|yatay|hepsi <ad>   : tüm sistemi bu tipe çevir (örn: tip hepsi silikon)",
@@ -8794,6 +8794,10 @@ class Uygulama(tk.Tk):
                     "temizle                      : günlüğü temizle"]))
             elif ad == "hesapla":
                 self.hesapla()
+            elif ad in ("referans", "ref"):
+                self._referans_editoru()
+            elif ad in ("denetim", "denetle"):
+                self._sistem_denetim_ac()
             elif ad == "temizle":
                 self._log_txt.configure(state="normal")
                 self._log_txt.delete("1.0", "end")
@@ -10005,18 +10009,18 @@ class Uygulama(tk.Tk):
         bf.pack(fill="x", pady=12)
         pf = ttk.Frame(bf)
         pf.pack(fill="x", pady=(0, 8))
-        ttk.Button(pf, text="Yeni proje (Ctrl+N)", command=self.yeni_proje).pack(side="left", padx=(0, 6))
-        ttk.Button(pf, text="Proje aç... (Ctrl+O)", command=self.proje_ac).pack(
+        ttk.Button(pf, text="Yeni proje", command=self.yeni_proje).pack(side="left", fill="x", expand=True, padx=(0, 6))
+        ttk.Button(pf, text="Aç...", command=self.proje_ac).pack(
             side="left", fill="x", expand=True)
         self._son_btn = ttk.Button(pf, text="▲", width=3, command=self._son_projeler_menu)
         self._son_btn.pack(side="left", padx=(2, 0))
-        ttk.Button(pf, text="Proje kaydet (Ctrl+S)", command=self.proje_kaydet).pack(
+        ttk.Button(pf, text="Kaydet", command=self.proje_kaydet).pack(
             side="left", fill="x", expand=True, padx=(6, 0))
-        ttk.Button(pf, text="Farklı kaydet...", command=lambda: self.proje_kaydet(farkli=True)).pack(
-            side="left", padx=(4, 0))
-        ttk.Button(pf, text="Sürümler...", command=self._surumler_ac).pack(side="left", padx=(4, 0))
-        ttk.Button(pf, text="Sistem denetimi...", command=self._sistem_denetim_ac).pack(side="left", padx=(4, 0))
-        ttk.Button(pf, text="Referans noktası...", command=self._referans_editoru).pack(side="left", padx=(4, 0))
+        pf2 = ttk.Frame(bf)                    # ikinci satır (tek satırda sol panele sığmıyordu)
+        pf2.pack(fill="x", pady=(0, 8))
+        ttk.Button(pf2, text="Farklı kaydet...", command=lambda: self.proje_kaydet(farkli=True)).pack(
+            side="left", fill="x", expand=True)
+        ttk.Button(pf2, text="Sürümler...", command=self._surumler_ac).pack(side="left", fill="x", expand=True, padx=(6, 0))
         def _kisa(geri):
             def f_(e):
                 if e.widget.winfo_class() in ("Text",):
@@ -10042,6 +10046,12 @@ class Uygulama(tk.Tk):
                    command=self.detay_kitapcigi_kaydet).pack(fill="x", pady=(6, 0))
         ttk.Button(bf, text="Siparişle karşılaştır...", style="Ana.TButton",
                    command=self._siparis_karsilastir_ac).pack(fill="x", pady=(6, 0))
+        kf_ = ttk.LabelFrame(sol, text=" Kütüphane ", padding=8)
+        kf_.pack(fill="x", pady=(0, 8))
+        ttk.Button(kf_, text="Referans noktası (DXF)...", style="Ana.TButton",
+                   command=self._referans_editoru).pack(fill="x")
+        ttk.Button(kf_, text="Sistem denetimi...", style="Ana.TButton",
+                   command=self._sistem_denetim_ac).pack(fill="x", pady=(6, 0))
 
         # Sağ: altta komut satırı / işlem günlüğü, üstte sekmeler
         self._konsol_kur(self._pw_v)
@@ -16565,10 +16575,10 @@ class Uygulama(tk.Tk):
         satir += cam_secim_metni(s)
         if getattr(self, "_kural_not", None):
             satir.append(self._kural_not)
+        satir += ["Not: " + u for u in cam_uyarilari(s.get("detay"), y)]
         self._cp_yapi.config(text=f"{y['ad']}  (PVB {self._pvb():g})")
         self._cp_bilgi.config(text="\n".join(satir))
-        uy = [u for u in cam_uyarilari(s.get("detay"), y)]
-        self._cp_uyari.config(text="\n".join("UYARI: " + u for u in uy))
+        self._cp_uyari.config(text="")
 
     def _cam_etiket_yaz(self):
         try:
@@ -16583,7 +16593,7 @@ class Uygulama(tk.Tk):
         if self._kural_not:
             satir.append(self._kural_not)
         satir += cam_secim_metni(self.sonuc)
-        satir += ["UYARI: " + u for u in cam_uyarilari(self.sonuc.get("detay"), y)]
+        satir += ["Not: " + u for u in cam_uyarilari(self.sonuc.get("detay"), y)]
         self.lbl_cam.config(text="\n".join(satir))
 
     def _ozet_yaz(self):
