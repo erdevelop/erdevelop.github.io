@@ -1,11 +1,9 @@
 /* Derin Mavi — canlı rehberi vitrini: albümdeki bir canlının 3D modelini küçük bir tuvalde döndürerek gösterir.
-   Balıklar baliklar.glb'den, diğer canlılar uretec.js'teki yordamsal modellerden gelir. */
+   Balıklar balik/<tür>.glb dosyalarından, diğer canlılar uretec.js'teki yordamsal modellerden gelir. */
 import * as THREE from './three.module.min.js';
-import { glbYukle as yukle } from './yukleyici.js';
+import { balikGlb } from './yukleyici.js';
 import { canliUret, canliOyna, yuzenUret, yuzenOyna } from './uretec.js';
 
-let GLB = null;
-const glbYukle = () => GLB || (GLB = yukle(new URL('./baliklar.glb', import.meta.url).href));
 const ZEMIN = ['yildiz', 'salyangoz', 'ermit', 'ahtapot', 'karides', 'dvatoz', 'yengec', 'istiridye', 'kumyilan', 'nudibrans', 'kestane', 'hiyar', 'mantis', 'murekkep', 'baca'];
 
 /* tur: { balik: 'palyaco' } ya da { canli: 'manta' } */
@@ -18,12 +16,14 @@ export async function vitrin(tuval, tur) {
   let obje, oyna = null;
   const malz = m => m;
   if (tur.balik) {
-    const gl = await glbYukle(); const kaynak = gl.scene.getObjectByName('balik_' + tur.balik) || gl.scene.getObjectByName('balik_sardalya');
+    const kaynak = (await balikGlb(tur.balik)) || (await balikGlb('sardalya'));
     obje = kaynak.clone(true); obje.position.set(0, 0, 0);
   } else if (ZEMIN.includes(tur.canli)) { obje = canliUret(tur.canli, malz, { renk: '#FF8A5B', hue: 20 }); oyna = t => canliOyna(obje, tur.canli, { f: t, hue: 20, aci: t * 0.1 }, t); }
   else {
-    const gl = await glbYukle().catch(() => null);
-    const balik = (k, ton) => { const o = (gl && (gl.scene.getObjectByName('balik_' + k) || gl.scene.getObjectByName('balik_sardalya')) || new THREE.Group()).clone(true); o.position.set(0, 0, 0); if (ton) { const c = new THREE.Color(ton); o.traverse(m => { if (m.isMesh) { m.material = m.material.clone(); m.material.color.multiply(c); } }); } return { o, yuz: { faz: { value: 0 }, genlik: { value: 1 } } }; };
+    /* önce hangi balık modellerine gerektiğini bul, hepsini indir, sonra asıl modeli kur */
+    const gerek = new Set(['sardalya']); try { yuzenUret(tur.canli, malz, k => { gerek.add(k); return { o: new THREE.Group(), yuz: { faz: { value: 0 }, genlik: { value: 1 } } }; }, { renk: '#F3B6E8' }); } catch (e) { }
+    const M = {}; await Promise.all([...gerek].map(async k => { M[k] = await balikGlb(k); }));
+    const balik = (k, ton) => { const o = (M[k] || M.sardalya || new THREE.Group()).clone(true); o.position.set(0, 0, 0); if (ton) { const c = new THREE.Color(ton); o.traverse(m => { if (m.isMesh) { m.material = m.material.clone(); m.material.color.multiply(c); } }); } return { o, yuz: { faz: { value: 0 }, genlik: { value: 1 } } }; };
     obje = yuzenUret(tur.canli, malz, balik, { renk: '#F3B6E8' }); oyna = t => yuzenOyna(obje, tur.canli, { f: t, sis: 0 }, t);
   }
   kok.add(obje);

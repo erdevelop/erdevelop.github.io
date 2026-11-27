@@ -4,7 +4,7 @@
    etiketler orada çizilmeye devam eder. Koordinatlar: ekrandaki (x, y) noktası z = 0 düzlemine
    izdüşürülür; kum çizgisi (kumY) dünyada y = 0'a denk gelir, böylece 2D ve 3D üst üste oturur. */
 import * as THREE from './three.module.min.js';
-import { glbYukle } from './yukleyici.js';
+import { glbYukle, balikGlb, MODEL } from './yukleyici.js';
 import { EffectComposer } from './addons/postprocessing/EffectComposer.js';
 import { RenderPass } from './addons/postprocessing/RenderPass.js';
 import { ShaderPass } from './addons/postprocessing/ShaderPass.js';
@@ -21,8 +21,8 @@ const KAL = {
 const KAT = new URL('./', import.meta.url).href;
 const ESLE = { palyaco: 'palyaco', cerrah: 'cerrah', melek: 'melek', orkinos: 'orkinos', yelken: 'yelken', ucan: 'ucan', fener: 'fener', balta: 'balta', kurdele: 'kurdele', buz: 'buz', mandarin: 'mandarin', papagan: 'papagan', lambuka: 'lambuka', uskumru: 'uskumru', engerek: 'engerek', isikli: 'isikli', yavru: 'sardalya' };
 
-export async function kur3D({ tuval, kalite }) {
-  const GLB_P = Promise.all([glbYukle(KAT + 'baliklar.glb'), glbYukle(KAT + 'resif.glb')]); /* modeller hemen inmeye başlasın; sahne kurulurken beklenmesin */
+export async function kur3D({ tuval, kalite, ilk = [] }) {
+  const GLB_P = Promise.all([balikGlb('sardalya'), glbYukle(KAT + 'resif.glb')]); for (const t of ilk) if (t && ESLE[t]) balikGlb(ESLE[t]); /* modeller hemen inmeye başlasın; sahne kurulurken beklenmesin */
   const mobil = matchMedia('(pointer:coarse)').matches || Math.min(innerWidth, innerHeight) < 600 || /Android|iPhone|iPad|Mobile/i.test(navigator.userAgent);
   const R = new THREE.WebGLRenderer({ canvas: tuval, antialias: !mobil, powerPreference: 'high-performance' });
   /* CİHAZ SINIFI: ekran kartının adı, işlemci çekirdeği, bellek ve telefon olup olmadığına bakarak başlangıç kalitesi */
@@ -279,7 +279,7 @@ export async function kur3D({ tuval, kalite }) {
 
   /* ---------- modeller ---------- */
   const yukle = glbYukle; /* meshopt ile sıkıştırılmış modeller */
-  const [bg, rg] = await GLB_P;
+  const [, rg] = await GLB_P;
   function malzHazirla(o, ek) {
     o.traverse(m => {
       if (!m.isMesh) return; m.castShadow = true; m.receiveShadow = true;
@@ -315,7 +315,8 @@ export async function kur3D({ tuval, kalite }) {
       const k = dk + '_t' + j; P[k] = o; YENI.push(k);
     });
   }
-  const B = {}; bg.scene.children.forEach(o => { if (o.name.startsWith('balik_')) B[o.name.slice(6)] = o; });
+  const B = MODEL; let YENI_MODEL = false, KLON_YT = false;
+  const iste = k => { if (MODEL[k] || !k) return; balikGlb(k).then(o => { if (o) YENI_MODEL = true; }); };
 
   /* ---------- yerleşim: ekran genişliğine göre kurulur ---------- */
   const ORTAM = new THREE.Group(); sahne.add(ORTAM);
@@ -411,19 +412,19 @@ export async function kur3D({ tuval, kalite }) {
   /* ---------- balıklar: 2D oyundaki her balığın 3D karşılığı ---------- */
   const BAL = new Map();
   function balikYap(tur) {
-    const kaynak = B[ESLE[tur] || 'sardalya'] || B.sardalya;
+    const k = ESLE[tur] || 'sardalya', yt = !B[k]; if (yt) iste(k); const kaynak = B[k] || B.sardalya;
     const o = kaynak.clone(true); o.position.set(0, 0, 0);
     const yuz = { faz: { value: 0 }, genlik: { value: 1 } }, renk = { v: { value: new THREE.Vector4(0, 1, 0, 0) }, t: { value: 0 } };
     malzHazirla(o, () => ({ yuz, renk }));
     const g = new THREE.Group(); g.add(o); sahne.add(g);
     /* modelin boyutları: kuma gömülmesin diye en alt noktası ve yarım boyu */
     const kutu = new THREE.Box3().setFromObject(o), bo = kutu.getSize(new THREE.Vector3());
-    return { g, yuz, renk, tur, yaw: null, pit: 0, alt: Math.max(0.05, -kutu.min.y, kutu.max.y, bo.y / 2), yarim: Math.max(bo.x, bo.z) / 2 };
+    return { g, yuz, renk, tur, yt, yaw: null, pit: 0, alt: Math.max(0.05, -kutu.min.y, kutu.max.y, bo.y / 2), yarim: Math.max(bo.x, bo.z) / 2 };
   }
 
   /* ziyaretçiler için hazır balık modelinden renklendirilmiş kopya */
   function balikKlon(k, ton) {
-    const o = (B[k] || B.sardalya).clone(true); o.position.set(0, 0, 0); const yuz = { faz: { value: 0 }, genlik: { value: 1 } };
+    if (!B[k]) { iste(k); KLON_YT = true; } const o = (B[k] || B.sardalya).clone(true); o.position.set(0, 0, 0); const yuz = { faz: { value: 0 }, genlik: { value: 1 } };
     malzHazirla(o, () => ({ yuz }));
     if (ton) { const c = new THREE.Color(ton); o.traverse(m => { if (m.isMesh) [].concat(m.material).forEach(mt => { if (mt.name !== 'goz') mt.color.multiply(c); }); }); }
     return { o, yuz };
@@ -522,6 +523,7 @@ export async function kur3D({ tuval, kalite }) {
     oto: () => oto, cihaz: () => cihaz, fps: () => FG.son,
     kare(dt, d) {
       U.zaman.value += dt; const t = U.zaman.value;
+      if (YENI_MODEL) { YENI_MODEL = false; for (const [id, f] of BAL) if (f.yt) { sahne.remove(f.g); BAL.delete(id); } for (const [id, c] of YZN) if (c.yt) { sahne.remove(c.g); YZN.delete(id); } }
       /* KARE HIZI YÖNETİCİSİ (otomatikte): 2 saniyelik pencerelerde ölçer; yavaşsa önce çözünürlüğü kısar, sonra seviyeyi indirir;
          uzun süre rahatsa bir basamak çıkar ama yakın zamanda zorlandığı seviyenin üstüne çıkmaz */
       { const simd = performance.now(); FG.n++; if (!FG.t0) FG.t0 = simd;
@@ -592,7 +594,7 @@ export async function kur3D({ tuval, kalite }) {
         const gor = new Set();
         for (const o of d.yuzenler) {
           gor.add(o.id); let c = YZN.get(o.id);
-          if (!c) { c = { g: yuzenUret(o.tur, (m, ek) => yama(m, ek || {}), balikKlon, o), yaw: null }; sahne.add(c.g); YZN.set(o.id, c); }
+          if (!c) { KLON_YT = false; c = { g: yuzenUret(o.tur, (m, ek) => yama(m, ek || {}), balikKlon, o), yaw: null }; c.yt = KLON_YT; sahne.add(c.g); YZN.set(o.id, c); }
           let p = dunya(o.x, o.y), sc = Math.max(0.02, o.s * M.k);
           if (o.z != null) { /* derinliği olan küçük sürü balıkları: ekrandaki yeri aynı, kamera ışını boyunca kendi derinliğinde; kayaya ve resife gömülmez */
             const p0 = p.clone(); let z = derZ(p0, o.z, sc); z = kayaZ(p0, z, sc * 0.22, sc * 0.42);

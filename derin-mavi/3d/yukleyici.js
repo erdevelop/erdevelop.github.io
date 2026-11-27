@@ -1,5 +1,5 @@
 /* Derin Mavi — model yükleyici.
-   baliklar.glb ve resif.glb meshopt ile sıkıştırılmış ve nicemlenmiş (KHR_mesh_quantization) gelir: dosyalar
+   balik/<tür>.glb ve resif.glb meshopt ile sıkıştırılmış ve nicemlenmiş (KHR_mesh_quantization) gelir: dosyalar
    yaklaşık 4 kat küçüktür, çözme çok hızlıdır. Nicemleme her parçaya bir ölçek/öteleme ekler; oyun parçaların
    yerel koordinatlarıyla çalıştığı için (yüzme kıvrımı, yerleşim, kaya yükseklikleri) yüklerken bu dönüşüm
    geometriye işlenir ve özellikler yeniden kayan noktalı sayıya çevrilir. Kaynak modellerde parçaların kendi
@@ -27,3 +27,8 @@ export function glbYukle(url) {
   const L = new GLTFLoader(); L.setMeshoptDecoder(MeshoptDecoder);
   return new Promise((ok, hata) => L.load(url, g => { duzle(g.scene); ok(g); }, undefined, hata));
 }
+
+/* BALIK MODELLERİ: her tür ayrı bir dosyada (balik/<tür>.glb). Yalnızca sahnede gerçekten görünen türler iner;
+   inene kadar yerine sardalya modeli durur, inince kendiliğinden değişir. */
+export const MODEL = {}; const MODEL_P = {};
+export function balikGlb(k) { return MODEL_P[k] || (MODEL_P[k] = glbYukle(new URL('./balik/' + k + '.glb', import.meta.url).href).then(g => { const o = g.scene.getObjectByName('balik_' + k) || g.scene.children[0]; if (o) MODEL[k] = o; return o || null; }).catch(() => null)); }

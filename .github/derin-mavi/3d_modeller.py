@@ -6,7 +6,8 @@ ya da bpy modülüyle: python 3d_modeller.py <çıktı klasörü>
 
 Çıktı: baliklar.glb, resif.glb ve düzenlemek için derin-mavi-3d.blend
 Sonra sitede kullanmadan önce sıkıştırılır (dosyalar ~4 kat küçülür; yükleyici: derin-mavi/3d/yukleyici.js):
-  npx @gltf-transform/cli meshopt baliklar.glb ../../derin-mavi/3d/baliklar.glb --quantize-color 12
+  npx @gltf-transform/cli meshopt baliklar.glb baliklar-sikis.glb --quantize-color 12
+  node balik_bol.mjs baliklar-sikis.glb ../../derin-mavi/3d/balik   (her tür ayrı dosya: balik/<tür>.glb; oyun yalnızca gerekenleri indirir)
   npx @gltf-transform/cli meshopt resif.glb ../../derin-mavi/3d/resif.glb --quantize-color 12
 Renkler köşe rengi (Col) olarak saklanır; doku dosyası yoktur.
 Eksenler (Blender): X = balığın boyu (baş +X), Y = yan, Z = yukarı.
