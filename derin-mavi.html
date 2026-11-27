@@ -1873,24 +1873,31 @@ const hkat = () => Math.min(6, Math.sqrt(EKO_HIZ || 1));
 const TET = { o: null, uyar: -999 };
 function tetikKur() {
   TET.o = null; if (!SAHNE || SAHNE.tm !== 'resif') return;
-  const x = YER.tet || W * 0.84, k = SAHNE.kumY;
+  const x = YER.tet || W * 0.52, k = SAHNE.kumY;
   TET.o = { x, y: k - 60 * OL, yuva: { x, y: k - 6 * OL }, L: KS_TUR.tetik.L * OL, f: 0, yon: -1, vx: 0, vy: 0, tx: x, ty: k - 60 * OL, t: 0, mod: 'devriye', mt: 0, kestT: rnd(60, 150), icT: 0, esele: 0, isir: 0 };
 }
 function tetikGuncelle(dt) {
   const o = TET.o; if (!o) return; const b = BAL.get('ben'), A = ALAN, k = SAHNE.kumY, R = 130 * OL;
   o.f += dt * (o.mod === 'kovala' ? 10 : 4); o.mt -= dt; o.kestT -= dt * hkat(); if (o.isir > 0) o.isir -= dt;
-  const bolgede = b && b.L && Math.abs(b.x - o.yuva.x) < R && b.y > k - 190 * OL;
+  /* bölge: yuvanın üstü; mağaranın ağzı hiçbir zaman bölge sayılmaz. Gece tetik balığı yuvasında uyur. */
+  const gece = geceDegeri() > 0.6, elle = KUMANDA.aktif > 0;
+  const bolgede = !gece && b && b.L && Math.abs(b.x - o.yuva.x) < R && b.y > k - 190 * OL && Math.abs(b.x - magara().x) > 90 * OL;
+  /* oyuncu yönlendirmiyorsa balık kendi kendine bölgeden uzaklaşır; tetik yalnızca bilerek oyalananı kovalar */
+  if (bolgede && !elle && b.ben) { const yan = Math.sign(b.x - o.yuva.x) || 1; b.tx = kis(o.yuva.x + yan * (R + 70 * OL), ALAN.x1, ALAN.x2); if (Math.abs(b.tx - o.yuva.x) < R) b.tx = kis(o.yuva.x - yan * (R + 70 * OL), ALAN.x1, ALAN.x2); b.ty = Math.min(b.y, k - 200 * OL); b.yt = 5; }
+  if (gece && o.mod !== 'devriye') o.mod = 'devriye';
   if (o.mod === 'devriye') {
-    o.icT = bolgede ? o.icT + dt : Math.min(0, o.icT + dt);
-    if (o.icT > 0.7) { o.mod = 'kovala'; o.mt = 3.2; if (zaman - TET.uyar > 120) { TET.uyar = zaman; duyur(T('🐟 Tetik balığı yuvasını koruyor! Yuvasının üstünde fazla oyalanma.', '🐟 The triggerfish is guarding its nest! Don’t linger above it.')); } }
+    if (gece) { o.tx = o.yuva.x; o.ty = o.yuva.y - 10 * OL; o.icT = 0; } else
+    { o.icT = bolgede && elle ? o.icT + dt : Math.min(0, o.icT + dt); }
+    if (gece) { /* yuvasında uyur */ }
+    else if (o.icT > 1.5) { o.mod = 'kovala'; o.mt = 3.2; if (zaman - TET.uyar > 120) { TET.uyar = zaman; duyur(T('🐟 Tetik balığı yuvasını koruyor! Yuvasının üstünde fazla oyalanma.', '🐟 The triggerfish is guarding its nest! Don’t linger above it.')); } }
     else if (o.kestT <= 0) { const kes = CNL.L.filter(q => q.tur === 'kestane' && !(q.yenik > 0)); if (kes.length) { o.hedef = kes.reduce((a, q) => Math.abs(q.x - o.x) < Math.abs(a.x - o.x) ? q : a); o.mod = 'kestane'; o.mt = 14; } else o.kestT = rnd(60, 120); }
     else { o.t -= dt; if (o.t <= 0) { o.tx = o.yuva.x + rnd(-R, R) * 0.8; o.ty = k - rnd(25, 110) * OL; o.t = rnd(3, 7); if (Math.random() < 0.25) { o.tx = o.yuva.x; o.ty = o.yuva.y - 14 * OL; o.esele = 2.5; } } }
   }
   if (o.mod === 'kovala') {
-    if (!b || (!bolgede && o.mt < 2.4) || o.mt <= 0) { o.mod = 'devriye'; o.icT = 0; o.t = 0; }
+    if (!b || ((!bolgede || !elle) && o.mt < 2.4) || o.mt <= 0) { o.mod = 'devriye'; o.icT = 0; o.t = 0; }
     else { o.tx = b.x; o.ty = b.y;
       if (Math.hypot(b.x - o.x, b.y - o.y) < o.L * 0.45 + b.L * 0.3 && o.isir <= 0) { /* ısırık: balığı bölgesinden dışarı iter */
-        o.isir = 1.2; b.sersem = 0.8; b.vx = (b.vx || 0) + Math.sign(b.x - o.yuva.x || 1) * 220; b.vy = (b.vy || 0) - 120; mutluEkle(-1); SES.carp(); yaziUcur(b.x, b.y - 24, '💢'); o.mod = 'devriye'; o.icT = -2.5; } }
+        o.isir = 1.2; b.sersem = 0.8; b.vx = (b.vx || 0) + Math.sign(b.x - o.yuva.x || 1) * 220; b.vy = (b.vy || 0) - 120; mutluEkle(-1); SES.carp(); yaziUcur(b.x, b.y - 24, '💢'); o.mod = 'devriye'; o.icT = -12; } }
   }
   if (o.mod === 'kestane') { const q = o.hedef;
     if (!q || q.yenik > 0 || o.mt <= 0) { o.mod = 'devriye'; o.kestT = rnd(90, 200); }
@@ -1955,7 +1962,7 @@ function canliYeniKur(ekle, tm, kx, r) {
   const bosX = rr => { for (let i = 0; i < 40; i++) { const q = x0 + rr + r() * (W - x0 - 40 - rr * 2); if (kumBos(q, rr, L)) return q; } return kx(); };
   for (const k in YER) delete YER[k];
   if (tm === 'derin') { ekle({ tur: 'baca', x: koy(W * 0.7, 70 * OL), y: kumY, duman: [], dz: 0, sol: Array.from({ length: 9 }, (_, i) => ({ ox: (i - 4) * 10 + rnd(-3, 3), h: 1, hed: 1, bek: 0, f: r() * 9, boy: rnd(0.7, 1.2) })), yen: [{ ox: -44, d: 1, f: 0 }, { ox: 50, d: -1, f: 2 }] }); return; }
-  if (tm === 'resif') YER.tet = koy(W * 0.86, 34 * OL);
+  if (tm === 'resif') YER.tet = koy(W * 0.52, 34 * OL); /* mağaradan (W·0,87) uzakta: balığın dinlendiği yerle çakışmasın */
   if (KS_TUR.temizlikci.alan.includes(tm)) { const x = koy(W * 0.67, 32 * OL); YER.tmz = x; ekle({ tur: 'beyin', x, y: kumY }); }
   ekle({ tur: 'kumyilan', x: koy(W * 0.42, 62 * OL), y: kumY, uy: Array.from({ length: 11 }, (_, i) => ({ ox: (i - 5) * 11 + rnd(-4, 4), h: 1, hed: 1, bek: 0, f: r() * TAU, boy: rnd(0.8, 1.15) })) });
   const kx0 = koy(W * 0.6, 40 * OL); for (let i = 0; i < 3; i++) ekle({ tur: 'kestane', x: kx0 + (i - 1) * 26 * OL + rnd(-6, 6), y: kumY - 3, yenik: 0, ters: 0 });
