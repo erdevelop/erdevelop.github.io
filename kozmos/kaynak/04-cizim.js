@@ -500,7 +500,13 @@ function yonCiz() {
   }
 }
 
-function gpKonum() { const g = $('gp'); if (!g.firstChild) return; const [X, Y] = W2S(SH.x, SH.y), s = Math.max(cam.z, 0.62); g.style.transform = `translate(${Math.round(kis(X, 120, W - 120))}px,${Math.round(kis(Y + 30 * s + 14, 70, H - 60))}px) translateX(-50%)`; }
+/* gemi yanı düğmeleri gemiyi izler ama alttaki göstergenin, mini haritanın ve kontrol düğmelerinin üstüne inmez */
+let gpAltT = 0, gpAlt = 1e9;
+function gpKonum() {
+  const g = $('gp'); if (!g.firstChild) return; const [X, Y] = W2S(SH.x, SH.y), s = Math.max(cam.z, 0.62), n = performance.now();
+  if (n - gpAltT > 500) { gpAltT = n; gpAlt = H - 60; const gw = g.offsetWidth || 200, x0 = kis(X, 120, W - 120) - gw / 2, x1 = x0 + gw; for (const id of ['gosterge', 'mini', 'kont', 'joy', 'yakin']) { const e = $(id); if (!e || e.hidden || !e.getClientRects().length) continue; const r = e.getBoundingClientRect(); if (r.width > 4 && r.right > x0 && r.left < x1 && r.top > H * 0.45) gpAlt = Math.min(gpAlt, r.top - 8 - (g.offsetHeight || 40)); } }
+  g.style.transform = `translate(${Math.round(kis(X, 120, W - 120))}px,${Math.round(kis(Y + 30 * s + 14, 70, Math.max(70, gpAlt)))}px) translateX(-50%)`;
+}
 function ciz(t) {
   ctx.setTransform(DPR, 0, 0, DPR, 0, 0); ctx.globalCompositeOperation = 'source-over'; ctx.globalAlpha = 1;
   if (kokGor && oyunda && !HM.acik && !fotoMod) { fpCiz(t); ustCiz(t); return; }

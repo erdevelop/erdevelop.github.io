@@ -257,9 +257,13 @@ function guncelle(dt, t) {
   const zHedef = fotoMod ? kis(zKul, 0.01, 2.4) : kis(zKul / (dinKam ? 1 + v / 1700 : 1) / (1 + SH.warp * (dinKam ? 6 : 3)), 0.022, 2.4);
   cam.z *= Math.exp((Math.log(zHedef) - Math.log(cam.z)) * Math.min(1, dt * 3));
   if (fotoMod) { bg.x += 0; } else {
-  const ox = cam.x, oy = cam.y, lead = dinKam ? 0.32 / (1 + SH.warp * 3) : 0, takip = dinKam ? 4.5 : 14;
-  const hx = SH.x + SH.vx * lead, hy = SH.y + SH.vy * lead;
-  cam.x += (hx - cam.x) * Math.min(1, dt * takip); cam.y += (hy - cam.y) * Math.min(1, dt * takip);
+  /* kamera gemiyi ortada tutar: izleme gecikmesi (hız / takip) hedefe eklenerek sıfırlanır; hıza göre kamera açıksa
+     gidiş yönünde ekranın en çok %12'si kadar öne bakar, warp'ta bu da azalır */
+  const ox = cam.x, oy = cam.y, takip = dinKam ? 4.5 : 8;
+  let lx = 0, ly = 0;
+  if (dinKam) { const l = 0.32 / (1 + SH.warp * 6), lm = Math.min(W, H) * 0.12 / cam.z; lx = SH.vx * l; ly = SH.vy * l; const lu = Math.hypot(lx, ly); if (lu > lm) { lx *= lm / lu; ly *= lm / lu; } }
+  const kf = Math.min(1, dt * takip), gec = kf > 0 ? dt * (1 - kf) / kf : 0, hx = SH.x + SH.vx * gec + lx, hy = SH.y + SH.vy * gec + ly;
+  cam.x += (hx - cam.x) * kf; cam.y += (hy - cam.y) * kf;
   if (Math.abs(cam.x - SH.x) * cam.z > W * 0.42) cam.x = SH.x + Math.sign(cam.x - SH.x) * W * 0.42 / cam.z;
   if (Math.abs(cam.y - SH.y) * cam.z > H * 0.42) cam.y = SH.y + Math.sign(cam.y - SH.y) * H * 0.42 / cam.z;
   bg.x += (cam.x - ox) * cam.z; bg.y += (cam.y - oy) * cam.z; }
