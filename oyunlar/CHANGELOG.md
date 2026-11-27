@@ -100,3 +100,8 @@
 - **Dama (Türk daması):** ileri ve yana gidiş, zorunlu ve en çok alma, uçan dama, art arda almada geri dönmeme; gidilebilecek kareler yeşil,
   alma hamleleri kırmızı halka. Bilgisayar alfa-beta aramasıyla oynar (kolay seviyesi de var), bilgisayara karşı geri alma. Çevrimiçi rövanş ve skor.
 
+## Satranç — 27 Kasım 2026
+- Tam kurallar: rok, geçerken alma, terfi (taş seçimi), şah, mat, pat, 50 hamle, üç kez tekrar, yetersiz taş. Hamle üreteci standart hamle sayımı testleriyle doğrulandı.
+- Özgün taş çizimleri; gidilebilecek kareler nokta, alınabilecek taşlar halka; son hamle ve şah çekilen şah işaretli; alınan taşlar ve malzeme farkı.
+- Bilgisayar: alfa-beta + sükûnet araması (normal ve kolay); beyaz, siyah ya da rastgele renk; ipucu, geri alma, pes etme. Çevrimiçi: rövanşta renkler değişir.
+
