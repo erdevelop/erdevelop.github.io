@@ -109,6 +109,8 @@ const gor = new Set(), yen = [];
 const bul = f => sayfalar[f] || null;
 for (const c of commits) {
   if (/^Merge|arama dizini|yenilikler listesi/i.test(c.s)) continue;
+  /* site sahibiyle ilgili (Hakkında, özgeçmiş, anonimlik) değişiklikler ziyaretçiye gösterilmez */
+  if (/^Hakkında:|^Site anonim|özgeçmiş|erdalustunol/i.test(c.s)) continue;
   if (/^Programlarım sayfası/i.test(c.s)) continue; /* kaldırılan sayfa */
   const iyi = c.s.length >= 22 && !KOT.test(c.s);
   /* yeni sayfalar: eğitim klasörü bir kez */
