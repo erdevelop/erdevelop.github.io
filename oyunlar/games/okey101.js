@@ -16,7 +16,7 @@ const O1 = (() => {
     const ok = { r: renk(gosterge), s: sayi(gosterge) % 13 + 1 }, el = [[], [], [], []];
     for (let p = 0; p < 4; p++) el[p] = D.splice(0, p === ilk ? 22 : 21);
     return { el, deste: D, atik: [[], [], [], []], gosterge, ok, ilk, sira: ilk, cekti: true, yan: -1, acti: [0, 0, 0, 0], acDeger: [0, 0, 0, 0], acH: [-1, -1, -1, -1], h: 0,
-      masa: [], ceza: [0, 0, 0, 0], bitti: null, elNo: o.elNo || 1, puan: o.puan ? o.puan.slice() : [0, 0, 0, 0], gecmis: o.gecmis ? o.gecmis.map(x => x.slice()) : [], tur: o.tur || 1, son: { i: 0 } };
+      masa: [], ceza: [0, 0, 0, 0], bitti: null, elNo: o.elNo || 1, puan: o.puan ? o.puan.slice() : [0, 0, 0, 0], gecmis: o.gecmis ? o.gecmis.map(x => x.slice()) : [], tur: o.tur || 1, mac: o.mac ? o.mac.slice() : [0, 0, 0, 0], son: { i: 0 } };
   }
   /* ---------- en yüksek değerli per dizilimi ----------
      opt: { zorunlu: taş (kullanılması şart), birak1: elde en az bir taş kalsın }  →  { deger, perler: [{ tip:'s', r, lo, t } | { tip:'k', s, t }], kalan } ya da null */
@@ -183,7 +183,8 @@ const O1 = (() => {
     b.m = m; S.sonuc = sonuc; S.gecmis.push(sonuc);
   }
   const macBitti = S => !!S.bitti && S.elNo >= MAC;
-  function sonraki(S) { const bitti = macBitti(S); return yeni((S.ilk + 1) % 4, bitti ? { tur: S.tur + 1 } : { elNo: S.elNo + 1, puan: S.puan, gecmis: S.gecmis, tur: S.tur + 1 }); }
+  const macKazanan = S => [0, 1, 2, 3].sort((a, b) => S.puan[a] - S.puan[b])[0];
+  function sonraki(S) { const bitti = macBitti(S), mac = (S.mac || [0, 0, 0, 0]).slice(); if (bitti) mac[macKazanan(S)]++; return yeni((S.ilk + 1) % 4, bitti ? { tur: S.tur + 1, mac } : { elNo: S.elNo + 1, puan: S.puan, gecmis: S.gecmis, tur: S.tur + 1, mac }); }
   /* ---------- bilgisayar ---------- */
   function botCek(S, p, sev) {
     const A = S.atik[onceki(p)]; if (!A.length) return 'd'; const t = A[A.length - 1];
@@ -471,16 +472,17 @@ registerGame({
       if (sayilan !== anahtar) { sayilan = anahtar;
         if (mod === 'yz') { if (mb) { D.mac++; if (lider === ben) { D.kaz++; api.submitScore(D.kaz); } } kaydet(); yerelKaydet(); } else { if (mb && lider === ben) { D.ag++; kaydet(); } if (oda && mb) oda.bitir(); }
         const iyi = b.k === ben || (mb && lider === ben); ses(iyi ? 'win' : b.k < 0 ? 'click' : 'lose'); if (iyi) { try { window.FX && FX.confetti && FX.confetti(); } catch (e) { } } }
+      if (mod === 'ag' && oda && window.Masa && Masa.sonuc && mb) Masa.sonuc(oda, lider === ben ? 1 : 0, 'm' + S.tur);
       oyun._paylas = '101 Okey: ' + (mb ? (lider === ben ? 'maçı kazandım!' : 'maç bitti.') : b.k === ben ? 'eli bitirdim!' : 'bir el daha oynadık.') + '\nerdevelop.com/oyunlar/#o/okey101';
       const e = q('.o1-son'); if (e) e.remove(); const s = E('div', { class: 'o1-son' });
       const nedeni = b.k < 0 ? 'Deste bitti; kimse bitiremedi.' : [b.okey && 'okeyle', b.cift && 'çiftle', b.elden && 'elden'].filter(Boolean).join(', ') + (b.m > 1 ? ` bitti · cezalar ×${b.m}` : 'Normal bitiş');
-      const sira = [0, 1, 2, 3].sort((a, c) => S.puan[a] - S.puan[c]);
+      const sira = [0, 1, 2, 3].sort((a, c) => S.puan[a] - S.puan[c]), MS = (S.mac || [0, 0, 0, 0]).slice(); if (mb) MS[lider]++;
       s.innerHTML = `<div><h3>${mb ? (lider === ben ? '🏆 Maçı kazandın!' : esc(ad(lider)) + ' maçı kazandı') : b.k < 0 ? 'Deste bitti' : b.k === ben ? '🎉 Bitirdin!' : esc(ad(b.k)) + ' bitirdi'}</h3>
         <p>${mb ? `${S.elNo} el oynandı · ` : `${S.elNo}. el / ${O1.MAC} · `}${esc(nedeni.charAt(0).toUpperCase() + nedeni.slice(1))}</p>
-        <table class="o1-tablo"><thead><tr><th></th>${S.gecmis.map((_, i) => `<th>${i + 1}.</th>`).join('')}<th>Toplam</th></tr></thead>
-        <tbody>${sira.map((p, k) => `<tr class="${p === ben ? 'ben' : ''}${k === 0 ? ' ilk' : ''}"><td>${botMu(p) ? '🤖 ' : ''}${esc(ad(p))}</td>${S.gecmis.map(g => `<td>${g[p]}</td>`).join('')}<td><b>${S.puan[p]}</b></td></tr>`).join('')}</tbody></table>
+        <table class="o1-tablo"><thead><tr><th></th>${S.gecmis.map((_, i) => `<th>${i + 1}.</th>`).join('')}<th>Toplam</th>${MS.some(Boolean) ? '<th>🏆</th>' : ''}</tr></thead>
+        <tbody>${sira.map((p, k) => `<tr class="${p === ben ? 'ben' : ''}${k === 0 ? ' ilk' : ''}"><td>${botMu(p) ? '🤖 ' : ''}${esc(ad(p))}</td>${S.gecmis.map(g => `<td>${g[p]}</td>`).join('')}<td><b>${S.puan[p]}</b></td>${MS.some(Boolean) ? `<td>${MS[p]}</td>` : ''}</tr>`).join('')}</tbody></table>
         <button class="o1-b ana" data-a="yine">${mb ? 'Yeni maç' : 'Sonraki el'}</button><button class="o1-b" data-a="menu">Menü</button></div>`;
-      kok.append(s);
+      if (mod === 'ag' && window.Masa && Masa.karsiYazi) { const kz = Masa.karsiYazi(oda); if (kz) { const p2 = document.createElement('p'); p2.className = 'ms-karsi'; p2.textContent = kz; const b1 = s.querySelector('button'); if (b1) b1.parentNode.insertBefore(p2, b1); } } kok.append(s);
     }
     /* ---------- kayıt / ağ ---------- */
     function yerelKaydet() { if (mod !== 'yz' || !S) return; D.o = S.bitti && O1.macBitti(S) ? '' : JSON.stringify({ S, raf, sev }); D.sev = sev; kaydet(); }

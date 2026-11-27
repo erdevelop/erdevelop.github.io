@@ -11,7 +11,7 @@ const BT = (() => {
   function yeni(dagitan, o) {
     o = o || {}; const D = kar(Array.from({ length: 52 }, (_, i) => i)), el = [0, 1, 2, 3].map(p => sirala(D.slice(p * 13, p * 13 + 13)));
     return { el, dagitan, sira: (dagitan + 1) % 4, asama: 'ihale', en: 0, kim: -1, teklif: [null, null, null, null], pas: [0, 0, 0, 0], koz: -1, masa: [], ilkAtan: -1, alinan: [0, 0, 0, 0],
-      oynanan: [], kozKirik: false, sonEl: null, bitti: null, elNo: o.elNo || 1, puan: o.puan ? o.puan.slice() : [0, 0, 0, 0], gecmis: o.gecmis ? o.gecmis.map(x => x.slice()) : [], tur: o.tur || 1, son: { i: 0 } };
+      oynanan: [], kozKirik: false, sonEl: null, bitti: null, elNo: o.elNo || 1, puan: o.puan ? o.puan.slice() : [0, 0, 0, 0], gecmis: o.gecmis ? o.gecmis.map(x => x.slice()) : [], tur: o.tur || 1, mac: o.mac ? o.mac.slice() : [0, 0, 0, 0], son: { i: 0 } };
   }
   const ileri = (S, p, t, c) => { S.son = { i: S.son.i + 1, p, t, c: c == null ? -1 : c }; };
   /* ---------- ihale ---------- */
@@ -52,7 +52,7 @@ const BT = (() => {
     S.bitti = { tuttu: S.alinan[S.kim] >= S.en }; S.sonuc = sonuc; S.gecmis.push(sonuc); sonuc.forEach((v, p) => S.puan[p] += v);
   }
   const macBitti = S => !!S.bitti && S.elNo >= MAC;
-  function sonraki(S) { const mb = macBitti(S); return yeni((S.dagitan + 1) % 4, mb ? { tur: S.tur + 1 } : { elNo: S.elNo + 1, puan: S.puan, gecmis: S.gecmis, tur: S.tur + 1 }); }
+  function sonraki(S) { const mb = macBitti(S), mac = (S.mac || [0, 0, 0, 0]).slice(); if (mb) mac[[0, 1, 2, 3].sort((a, b) => S.puan[b] - S.puan[a])[0]]++; return yeni((S.dagitan + 1) % 4, mb ? { tur: S.tur + 1, mac } : { elNo: S.elNo + 1, puan: S.puan, gecmis: S.gecmis, tur: S.tur + 1, mac }); }
   /* ---------- bilgisayar ---------- */
   function tahmin(el, koz) {
     let t = 0;
@@ -273,14 +273,15 @@ registerGame({
         if (mod === 'yz') { if (S.kim === ben && tuttu) D.tuttu++; if (mb) { D.mac++; if (lider === ben) { D.kaz++; api.submitScore(D.kaz); } } kaydet(); yerelKaydet(); }
         else { if (mb && lider === ben) { D.ag++; kaydet(); } if (oda && mb) oda.bitir(); }
         const iyi = (S.kim === ben && tuttu) || (mb && lider === ben); ses(iyi ? 'win' : S.kim === ben ? 'lose' : 'click'); if (iyi) { try { window.FX && FX.confetti && FX.confetti(); } catch (e) { } } }
+      if (mod === 'ag' && oda && window.Masa && Masa.sonuc && mb) Masa.sonuc(oda, lider === ben ? 1 : 0, 'm' + S.tur);
       oyun._paylas = 'Batak: ' + (mb ? (lider === ben ? 'maçı kazandım!' : 'maç bitti.') : S.kim === ben ? (tuttu ? S.en + ' ihaleyi tutturdum!' : 'battım :)') : 'bir el daha.') + '\nerdevelop.com/oyunlar/#o/batak';
-      const e = q('.bt-son'); if (e) e.remove(); const s = E('div', { class: 'bt-son' }), sira = [0, 1, 2, 3].sort((a, c) => S.puan[c] - S.puan[a]);
+      const e = q('.bt-son'); if (e) e.remove(); const s = E('div', { class: 'bt-son' }), sira = [0, 1, 2, 3].sort((a, c) => S.puan[c] - S.puan[a]), MS = (S.mac || [0, 0, 0, 0]).slice(); if (mb) MS[lider]++;
       s.innerHTML = `<div><h3>${mb ? (lider === ben ? '🏆 Maçı kazandın!' : esc(ad(lider)) + ' maçı kazandı') : S.kim === ben ? (tuttu ? '🎉 İhaleyi tutturdun!' : 'Battın') : esc(ad(S.kim)) + (tuttu ? ' ihaleyi tutturdu' : ' battı')}</h3>
         <p>${S.elNo}. el / ${BT.MAC} · ihale ${S.en} ${SEMBOL[S.koz]} · ${S.alinan[S.kim]} el aldı</p>
-        <table class="bt-tablo"><thead><tr><th></th>${S.gecmis.map((_, i) => `<th>${i + 1}.</th>`).join('')}<th>Toplam</th></tr></thead>
-        <tbody>${sira.map((p, k) => `<tr class="${p === ben ? 'ben' : ''}${k === 0 ? ' ilk' : ''}"><td>${botMu(p) ? '🤖 ' : ''}${esc(ad(p))}</td>${S.gecmis.map(g => `<td>${g[p]}</td>`).join('')}<td><b>${S.puan[p]}</b></td></tr>`).join('')}</tbody></table>
+        <table class="bt-tablo"><thead><tr><th></th>${S.gecmis.map((_, i) => `<th>${i + 1}.</th>`).join('')}<th>Toplam</th>${MS.some(Boolean) ? '<th>🏆</th>' : ''}</tr></thead>
+        <tbody>${sira.map((p, k) => `<tr class="${p === ben ? 'ben' : ''}${k === 0 ? ' ilk' : ''}"><td>${botMu(p) ? '🤖 ' : ''}${esc(ad(p))}</td>${S.gecmis.map(g => `<td>${g[p]}</td>`).join('')}<td><b>${S.puan[p]}</b></td>${MS.some(Boolean) ? `<td>${MS[p]}</td>` : ''}</tr>`).join('')}</tbody></table>
         <button class="bt-b ana" data-a="yine">${mb ? 'Yeni maç' : 'Sonraki el'}</button><button class="bt-b" data-a="menu">Menü</button></div>`;
-      kok.append(s);
+      if (mod === 'ag' && window.Masa && Masa.karsiYazi) { const kz = Masa.karsiYazi(oda); if (kz) { const p2 = document.createElement('p'); p2.className = 'ms-karsi'; p2.textContent = kz; const b1 = s.querySelector('button'); if (b1) b1.parentNode.insertBefore(p2, b1); } } kok.append(s);
     }
     /* ---------- kayıt / ağ ---------- */
     function yerelKaydet() { if (mod !== 'yz' || !S) return; D.o = S.bitti && BT.macBitti(S) ? '' : JSON.stringify({ S, sev }); D.sev = sev; kaydet(); }

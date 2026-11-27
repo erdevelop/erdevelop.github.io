@@ -340,6 +340,7 @@ registerGame({
       if (sayilan !== anahtar) { sayilan = anahtar;
         if (mod === 'yz') { D.el++; if (kazandim) { D.kaz++; api.submitScore(D.kaz); } D.o = ''; kaydet(); } else { if (kazandim) { D.ag++; kaydet(); } if (oda) oda.bitir(); }
         ses(kazandim ? 'win' : b.k < 0 ? 'click' : 'lose'); if (kazandim) { try { window.FX && FX.confetti && FX.confetti(); } catch (e) { } } }
+      if (mod === 'ag' && oda && window.Masa && Masa.sonuc) Masa.sonuc(oda, b.k < 0 ? .5 : kazandim ? 1 : 0, 'e' + S.tur);
       oyun._paylas = 'Okey: ' + (kazandim ? (b.tur === 'cift' ? 'çiftle bitirdim!' : b.okey ? 'okey atarak bitirdim!' : 'eli bitirdim.') : 'bu el olmadı.') + '\nerdevelop.com/oyunlar/#o/okey';
       const e = q('.ok-son'); if (e) e.remove(); const s = E('div', { class: 'ok-son' }); let elH = '';
       if (b.k >= 0) { const d = OK.diz(S.el[b.k], S.ok, b.tur === 'cift' ? 'cift' : 'per'), G = d.gruplar.slice(); if (d.artan.length) G.push(d.artan); elH = `<div class="ok-mini">${G.map(g => `<div>${g.map(t => tasHtml(t, S.ok)).join('')}</div>`).join('')}</div>`; }
@@ -348,7 +349,7 @@ registerGame({
         <p>${b.k < 0 ? 'Kimse bitiremedi; el berabere.' : (b.tur === 'cift' ? 'Yedi çiftle' : 'Perlerle') + (b.okey ? ', okeyi atarak' : '') + ` · <b>${b.sayi} sayı</b>`}</p>${elH}
         <div class="ok-puan">${sira.map(p => `<span class="${p === ben ? 'k' : ''}">${botMu(p) ? '🤖 ' : ''}${esc(ad(p))}</span><span>${S.puan[p]}</span>`).join('')}</div>
         <button class="ok-b ana" data-a="yine">Yeni el</button><button class="ok-b" data-a="menu">Menü</button></div>`;
-      kok.append(s);
+      if (mod === 'ag' && window.Masa && Masa.karsiYazi) { const kz = Masa.karsiYazi(oda); if (kz) { const p2 = document.createElement('p'); p2.className = 'ms-karsi'; p2.textContent = kz; const b1 = s.querySelector('button'); if (b1) b1.parentNode.insertBefore(p2, b1); } } kok.append(s);
     }
     /* ---------- kayıt / ağ ---------- */
     function yerelKaydet() { if (mod !== 'yz' || !S) return; D.o = S.bitti ? '' : JSON.stringify({ S, raf, sev }); D.sev = sev; kaydet(); }

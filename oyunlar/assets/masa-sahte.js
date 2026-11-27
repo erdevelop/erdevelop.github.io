@@ -19,5 +19,5 @@ window.__MASA_SAHTE = function () {
     tx: (p, f) => { const t = oku(), c = al(t, p), y = f(c == null ? null : JSON.parse(JSON.stringify(c))); if (y === undefined) return P({ ok: false, val: c }); koy(t, p, y); yaz(t); return P({ ok: true, val: y }); },
     on: (p, cb) => { const d = { p, cb, son: undefined }; D.push(d); setTimeout(() => { const v = al(oku(), p); d.son = JSON.stringify(v); cb(v); }, 0); return () => { const i = D.indexOf(d); if (i >= 0) D.splice(i, 1); }; },
     kopunca: (p, v) => { kop.push([p, v]); return P(); }, kopuncaIptal: p => { for (let i = kop.length - 1; i >= 0; i--) if (kop[i][0] === p) kop.splice(i, 1); return P(); },
-    acik: p => P(al(oku(), p) || {}), now: () => Date.now() };
+    acik: p => P(al(oku(), p) || {}), ilk: p => P(al(oku(), p) || {}), now: () => Date.now() };
 };

@@ -262,10 +262,11 @@ registerGame({
       if (mod === 'yz') { if (kazandim) { D.kaz++; if (S.mars) D.mars++; api.submitScore(D.kaz); } else D.kay++; D.o = ''; kaydet(); }
       else if (!S.sayildi) { S.sayildi = 1; skor[S.bitti] += sayi; S.skor = skor.slice(); gonder(); if (kazandim) { D.ag++; kaydet(); } if (oda) oda.bitir(); }
       ses(kazandim ? 'win' : 'lose'); if (kazandim) { try { window.FX && FX.confetti && FX.confetti(); } catch (e) { } }
+      if (mod === 'ag' && oda && window.Masa && Masa.sonuc) Masa.sonuc(oda, kazandim ? 1 : 0, S.tur + ':' + (S.son ? S.son.i : 0) + ':' + S.cik.join('-'));
       oyun._paylas = 'Tavla: ' + (kazandim ? (S.mars ? 'mars ettim!' : 'kazandım.') : 'bu sefer olmadı.') + '\nerdevelop.com/oyunlar/#o/tavla';
       const e = q('.tv-son'); if (e) e.remove(); const s = E('div', { class: 'tv-son' });
       s.innerHTML = `<div><h3>${kazandim ? (S.mars ? '🏆 Mars!' : '🎉 Kazandın!') : S.mars ? 'Mars oldun' : 'Kaybettin'}</h3><p>${esc(adlar[S.bitti])} ${sayi} sayı aldı${mod === 'ag' ? ` · ${esc(adlar[0])} ${skor[0]} – ${skor[1]} ${esc(adlar[1])}` : ''}</p><button class="tv-b ana" data-a="yine">${mod === 'ag' ? 'Rövanş' : 'Yeni oyun'}</button><button class="tv-b" data-a="menu">Menü</button></div>`;
-      kok.append(s); ust();
+      if (mod === 'ag' && window.Masa && Masa.karsiYazi) { const kz = Masa.karsiYazi(oda); if (kz) { const p2 = document.createElement('p'); p2.className = 'ms-karsi'; p2.textContent = kz; const b1 = s.querySelector('button'); if (b1) b1.parentNode.insertBefore(p2, b1); } } kok.append(s); ust();
     }
     /* ---------- kayıt / ağ ---------- */
     function yerelKaydet() { if (mod !== 'yz' || !S) return; D.o = S.bitti == null ? JSON.stringify({ S, sev }) : ''; D.sev = sev; kaydet(); }

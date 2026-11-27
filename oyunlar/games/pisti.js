@@ -13,7 +13,7 @@ const PI = (() => {
     if (sayi(yer[3]) === VALE) { const i = D.findIndex(c => sayi(c) !== VALE); [yer[3], D[i]] = [D[i], yer[3]]; }
     const el = [D.splice(-4), D.splice(-4)];
     return { el, deste: D, yer, gizli: 3, alinan: [[], []], pisti: [0, 0], vpisti: [0, 0], sonAlan: -1, dagitan, sira: 1 - dagitan, gor: [yer[3]], bitti: null,
-      elNo: o.elNo || 1, puan: o.puan ? o.puan.slice() : [0, 0], gecmis: o.gecmis ? o.gecmis.map(x => Object.assign({}, x)) : [], tur: o.tur || 1, son: { i: 0 } };
+      elNo: o.elNo || 1, puan: o.puan ? o.puan.slice() : [0, 0], gecmis: o.gecmis ? o.gecmis.map(x => Object.assign({}, x)) : [], tur: o.tur || 1, mac: o.mac ? o.mac.slice() : [0, 0], son: { i: 0 } };
   }
   const alabilir = (S, c) => S.yer.length > 0 && (sayi(c) === VALE || sayi(c) === sayi(S.yer[S.yer.length - 1]));
   function oyna(S, p, c) {
@@ -37,7 +37,7 @@ const PI = (() => {
   }
   function skorla(S) { const H = [hesap(S, 0), hesap(S, 1)]; H.forEach((h, p) => S.puan[p] += h.top); S.gecmis.push({ a: H[0].top, b: H[1].top }); S.bitti = { H }; }
   const macBitti = S => !!S.bitti && Math.max(...S.puan) >= HEDEF && S.puan[0] !== S.puan[1];
-  function sonraki(S) { const mb = macBitti(S); return yeni(1 - S.dagitan, mb ? { tur: S.tur + 1 } : { elNo: S.elNo + 1, puan: S.puan, gecmis: S.gecmis, tur: S.tur + 1 }); }
+  function sonraki(S) { const mb = macBitti(S), mac = (S.mac || [0, 0]).slice(); if (mb) mac[S.puan[0] > S.puan[1] ? 0 : 1]++; return yeni(1 - S.dagitan, mb ? { tur: S.tur + 1, mac } : { elNo: S.elNo + 1, puan: S.puan, gecmis: S.gecmis, tur: S.tur + 1, mac }); }
   /* ---------- bilgisayar ---------- */
   function gorulmemis(S, p, s) { let n = 4; for (const c of S.gor) if (sayi(c) === s) n--; for (const c of S.el[p]) if (sayi(c) === s) n--; return Math.max(0, n); }
   function botOyna(S, p, sev) {
@@ -203,18 +203,19 @@ registerGame({
       return `<table class="pi-tablo"><thead><tr><th>Bu el</th><th>${esc(ad(ben))}</th><th>${esc(ad(r))}</th></tr></thead><tbody>
         <tr><td>Kart (${H[ben].n} – ${H[r].n})</td><td>${H[ben].cok}</td><td>${H[r].cok}</td></tr><tr><td>As, vale, ♣2, ♦10</td><td>${H[ben].kart}</td><td>${H[r].kart}</td></tr>
         <tr><td>Pişti</td><td>${H[ben].pisti}</td><td>${H[r].pisti}</td></tr><tr><td><b>El toplamı</b></td><td><b>${H[ben].top}</b></td><td><b>${H[r].top}</b></td></tr></tbody>
-        <tfoot><tr><td>Maç (${PI.HEDEF}’e)</td><td><b>${S.puan[ben]}</b></td><td><b>${S.puan[r]}</b></td></tr></tfoot></table>`;
+        <tfoot><tr><td>Maç (${PI.HEDEF}’e)</td><td><b>${S.puan[ben]}</b></td><td><b>${S.puan[r]}</b></td></tr>${(() => { const M = (S.mac || [0, 0]).slice(); if (PI.macBitti(S)) M[S.puan[0] > S.puan[1] ? 0 : 1]++; return M[0] + M[1] ? `<tr><td>Kazanılan maç</td><td><b>${M[ben]}</b></td><td><b>${M[r]}</b></td></tr>` : ''; })()}</tfoot></table>`;
     }
     function bitti() {
       clearTimeout(surT); const mb = PI.macBitti(S), anahtar = mod + ':' + S.tur + ':' + (oda ? oda.kod : ''), lider = S.puan[0] > S.puan[1] ? 0 : 1, H = S.bitti.H, r = 1 - ben;
       if (sayilan !== anahtar) { sayilan = anahtar;
         if (mod === 'yz') { if (mb) { D.mac++; if (lider === ben) { D.kaz++; api.submitScore(D.kaz); } } kaydet(); yerelKaydet(); } else { if (mb && lider === ben) { D.ag++; kaydet(); } if (oda && mb) oda.bitir(); }
         const iyi = mb ? lider === ben : H[ben].top > H[r].top; ses(iyi ? 'win' : 'lose'); if (mb && iyi) { try { window.FX && FX.confetti && FX.confetti(); } catch (e) { } } }
+      if (mod === 'ag' && oda && window.Masa && Masa.sonuc && mb) Masa.sonuc(oda, lider === ben ? 1 : 0, 'm' + S.tur);
       oyun._paylas = 'Pişti: ' + (mb ? (lider === ben ? `maçı ${S.puan[ben]}–${S.puan[r]} kazandım!` : 'maç bitti.') : 'bir el daha.') + '\nerdevelop.com/oyunlar/#o/pisti';
       const e = q('.pi-son'); if (e) e.remove(); const s = E('div', { class: 'pi-son' });
       s.innerHTML = `<div><h3>${mb ? (lider === ben ? '🏆 Maçı kazandın!' : esc(ad(lider)) + ' maçı kazandı') : H[ben].top > H[r].top ? '👍 Eli kazandın' : H[ben].top < H[r].top ? 'Eli kaybettin' : 'El berabere'}</h3>${tablo()}
         <button class="pi-b ana" data-a="yine">${mb ? 'Yeni maç' : 'Sonraki el'}</button><button class="pi-b" data-a="menu">Menü</button></div>`;
-      kok.append(s);
+      if (mod === 'ag' && window.Masa && Masa.karsiYazi) { const kz = Masa.karsiYazi(oda); if (kz) { const p2 = document.createElement('p'); p2.className = 'ms-karsi'; p2.textContent = kz; const b1 = s.querySelector('button'); if (b1) b1.parentNode.insertBefore(p2, b1); } } kok.append(s);
     }
     function yerelKaydet() { if (mod !== 'yz' || !S) return; D.o = S.bitti && PI.macBitti(S) ? '' : JSON.stringify({ S, sev }); D.sev = sev; kaydet(); }
     function gonder() {

@@ -26,6 +26,7 @@ async function gercek() {
     on: (p, cb) => { const r = db.ref(p), h = r.on('value', s => cb(s.val()), () => cb(null, true)); return () => r.off('value', h); },
     kopunca: (p, v) => v === null ? db.ref(p).onDisconnect().remove() : db.ref(p).onDisconnect().update(v), kopuncaIptal: p => db.ref(p).onDisconnect().cancel(),
     acik: p => db.ref(p).orderByChild('t').limitToLast(30).once('value').then(s => s.val() || {}),
+    ilk: (p, alan, n) => db.ref(p).orderByChild(alan).limitToLast(n).once('value').then(s => s.val() || {}),
     now: () => Date.now() + fark };
 }
 function baglan() {
@@ -104,6 +105,38 @@ async function hizli(oyun, koltuk, ad) {
   return kur(oyun, koltuk, true, ad);
 }
 
+/* ---------- haftalık sıralama ve karşılıklı skor ----------
+   masa_sira/<yıl-hafta>/<uid> = { n: ad, g: galibiyet, o: oyun, t }  (yalnız en az iki kişinin oynadığı çevrimiçi oyunlar sayılır)
+   Karşılıklı skor bu cihazda tutulur: aynı rakiple (anonim kimliğiyle) tüm zamanlar. */
+const ADLAR_OYUN = { tavla: 'Tavla', okey: 'Okey', okey101: '101 Okey', batak: 'Batak', pisti: 'Pişti', dama: 'Dama', satranc: 'Satranç' };
+function hafta(d) { d = d || new Date(); const t = new Date(Date.UTC(d.getFullYear(), d.getMonth(), d.getDate())), g = t.getUTCDay() || 7; t.setUTCDate(t.getUTCDate() + 4 - g); const y = t.getUTCFullYear(), w = Math.ceil(((t - Date.UTC(y, 0, 1)) / 864e5 + 1) / 7); return y + '-' + String(w).padStart(2, '0'); }
+function haftaAraligi() { const d = new Date(), g = (d.getDay() + 6) % 7, a = new Date(d.getFullYear(), d.getMonth(), d.getDate() - g), b = new Date(a.getFullYear(), a.getMonth(), a.getDate() + 6), f = x => x.toLocaleDateString('tr-TR', { day: 'numeric', month: 'long' }); return f(a) + ' – ' + f(b); }
+const KARSI = 'ob-masa-karsi', SAYILAN = 'ob-masa-sayilan';
+const karsiOku = () => { try { return JSON.parse(localStorage.getItem(KARSI) || '{}'); } catch (e) { return {}; } };
+function karsi(oyun, uid) { return karsiOku()[oyun + ':' + uid] || null; }
+function karsiYazi(oda) {
+  if (!oda) return ''; const K = oda.koltuklar(); if (K.length !== 2) return ''; const r = K.find(x => x && x.uid !== oda.uid); if (!r) return '';
+  const k = karsi(oda.oyun, r.uid); if (!k || !(k.g + k.k + k.b)) return '';
+  return `${r.n} ile tüm zamanlar: ${k.g} galibiyet · ${k.k} yenilgi${k.b ? ' · ' + k.b + ' berabere' : ''}`;
+}
+/* r: 1 galibiyet, 0 yenilgi, 0.5 berabere; anahtar: aynı sonucun iki kez sayılmaması için */
+function sonuc(oda, r, anahtar) {
+  if (!oda || !DB) return; const k = oda.oyun + ':' + oda.kod + ':' + anahtar; let L = [];
+  try { L = JSON.parse(sessionStorage.getItem(SAYILAN) || '[]'); } catch (e) { } if (L.includes(k)) return; L.push(k); try { sessionStorage.setItem(SAYILAN, JSON.stringify(L.slice(-200))); } catch (e) { }
+  const K = oda.koltuklar(), insan = K.filter(Boolean);
+  if (K.length === 2) { const x = K.find(y => y && y.uid !== UID); if (x) { const O = karsiOku(), a = oda.oyun + ':' + x.uid, v = O[a] || { g: 0, k: 0, b: 0 }; v.n = x.n; v.t = Date.now(); if (r === 1) v.g++; else if (r === 0) v.k++; else v.b++; O[a] = v;
+    const anah = Object.keys(O); if (anah.length > 300) anah.sort((p, q) => O[p].t - O[q].t).slice(0, anah.length - 300).forEach(z => delete O[z]); try { localStorage.setItem(KARSI, JSON.stringify(O)); } catch (e) { } } }
+  if (insan.length < 2) return;
+  const ad = (K.find(x => x && x.uid === UID) || {}).n || adAl() || '?';
+  DB.tx('masa_sira/' + hafta() + '/' + UID, c => { c = c || {}; const simdi = DB.now(); if (simdi < (c.t || 0) + 10000) return; return { n: ad.slice(0, 16), g: (c.g || 0) + (r === 1 ? 1 : 0), o: (c.o || 0) + 1, t: simdi }; }).catch(() => { });
+}
+async function siralama() {
+  await baglan(); const L = await DB.ilk('masa_sira/' + hafta(), 'g', 60);
+  const A = Object.entries(L || {}).map(([u, v]) => Object.assign({ u }, v)).filter(x => x && x.o > 0).sort((a, b) => b.g - a.g || a.o - b.o || a.t - b.t);
+  let ben = A.find(x => x.u === UID) || null; if (!ben) { const v = await DB.get('masa_sira/' + hafta() + '/' + UID).catch(() => null); if (v) ben = Object.assign({ u: UID }, v); }
+  return { liste: A.slice(0, 30), ben, sira: A.findIndex(x => x.u === UID) + 1 };
+}
+
 /* ---------- ortak lobi arayüzü ---------- */
 const CSS = `
 .ms{display:flex;flex-direction:column;gap:10px;width:min(440px,100%);margin:0 auto}
@@ -116,6 +149,10 @@ const CSS = `
 .ms-o{display:flex;flex-direction:column;gap:6px}.ms-o div{display:flex;align-items:center;gap:8px;padding:9px 12px;border-radius:12px;background:var(--bg2);font-weight:800}
 .ms-o div i{font-style:normal;margin-left:auto;font-size:12px;color:var(--ink-soft)}.ms-o div.bos{opacity:.55;font-weight:700}
 .ms-hata{color:var(--bad);font-weight:800;font-size:13.5px;min-height:18px}
+.ms-sira{display:flex;flex-direction:column;gap:3px;max-height:52vh;overflow:auto}.ms-sira div{display:grid;grid-template-columns:30px 1fr auto auto;gap:8px;align-items:center;padding:8px 10px;border-radius:10px;background:var(--bg2);font-weight:800;font-size:14px}
+.ms-sira div i{font-style:normal;color:var(--ink-soft);font-size:12.5px;text-align:right}.ms-sira div b{font-variant-numeric:tabular-nums}.ms-sira div.sen{box-shadow:inset 0 0 0 2px var(--accent)}.ms-sira div span{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.ms-sira .bos{display:block;text-align:center;color:var(--ink-soft);font-weight:700}
+.ms-karsi{font-size:12.5px!important;font-weight:800!important;color:var(--accent-ink)!important;margin:0}
 `;
 /* lobi(kok, { oyun, koltuk, baslik, enAz, botlu, onOda(oda), onGeri() }) : oda kurulup oyun başlayınca onOda çağrılır */
 function lobi(kok, o) {
@@ -129,8 +166,16 @@ function lobi(kok, o) {
       <button class="ms-b ana" data-a="hizli">⚡ Hızlı eşleş</button>
       <div class="ms-sat"><button class="ms-b" data-a="kur">🔒 Özel oda kur</button><button class="ms-b" data-a="kodla">🔑 Koda katıl</button></div>
       <div class="ms-sat" id="ms-kodsat" hidden><input id="ms-kod" maxlength="5" placeholder="KOD" autocomplete="off" style="text-transform:uppercase;letter-spacing:.2em;text-align:center"><button class="ms-b ana" data-a="katil" style="flex:.6">Katıl</button></div>
-      <div class="ms-hata"></div><button class="ms-b" data-a="geri">‹ Geri</button>`;
+      <div class="ms-hata"></div><button class="ms-b" data-a="sira">🏆 Haftanın sıralaması</button><button class="ms-b" data-a="geri">‹ Geri</button>`;
     const m = new URLSearchParams(location.search).get('masa'); if (m && !lobi._kullanildi) { lobi._kullanildi = true; q('#ms-kodsat').hidden = false; q('#ms-kod').value = m.toUpperCase().slice(0, 5); if (adAl()) is('katil'); else hata('Adını yazıp Katıl’a bas.'); }
+  }
+  async function siraGoster() {
+    el.innerHTML = `<h3>🏆 Haftanın sıralaması</h3><p>${haftaAraligi()} · Çevrimiçi masa oyunlarında en az iki kişinin oynadığı oyunlardaki galibiyetler. Pazartesi sıfırlanır.</p><div class="ms-sira"><div class="bos">Yükleniyor…</div></div><p id="ms-ben"></p><button class="ms-b" data-a="girisDon">‹ Geri</button>`;
+    try {
+      const R = await siralama(); if (!el.querySelector('.ms-sira')) return;
+      el.querySelector('.ms-sira').innerHTML = R.liste.length ? R.liste.map((x, i) => `<div class="${x.u === UID ? 'sen' : ''}"><b>${i < 3 ? ['🥇', '🥈', '🥉'][i] : i + 1}</b><span>${esc(x.n || '?')}${x.u === UID ? ' (sen)' : ''}</span><b>${x.g}</b><i>${x.o} oyun</i></div>`).join('') : '<div class="bos">Bu hafta henüz kimse kazanmadı. İlk sen ol!</div>';
+      el.querySelector('#ms-ben').innerHTML = R.ben ? `Sen bu hafta: <b>${R.ben.g}</b> galibiyet, <b>${R.ben.o}</b> oyun${R.sira ? ` · <b>${R.sira}.</b> sıradasın` : ''}.` : 'Bu hafta henüz çevrimiçi oyun bitirmedin.';
+    } catch (e) { const x = el.querySelector('.ms-sira'); if (x) x.innerHTML = '<div class="bos">Sıralama yüklenemedi. İnternetini kontrol et.</div>'; }
   }
   async function is(a) {
     const ad = adKoy(q('#ms-ad') ? q('#ms-ad').value : adAl()); if (!ad) { hata('Önce bir ad yaz.'); const i = q('#ms-ad'); if (i) i.focus(); return; }
@@ -146,7 +191,7 @@ function lobi(kok, o) {
       el.innerHTML = `<h3>${v.a ? '⚡ Rakip aranıyor…' : '🔒 Özel oda'}</h3><div class="ms-kod">${oda.kod}</div>
         <p>${v.a ? 'Biri gelince oyun başlar. Kodu arkadaşına da verebilirsin.' : 'Bu kodu ya da bağlantıyı arkadaşına gönder.'}</p>
         <div class="ms-sat"><button class="ms-b" data-a="kopya">🔗 Bağlantıyı kopyala</button>${navigator.share ? '<button class="ms-b" data-a="paylas">📤 Paylaş</button>' : ''}</div>
-        <div class="ms-o">${K.map((x, i) => x ? `<div>${x.uid === oda.uid ? '🟢' : '🔵'} ${esc(x.n)}${x.uid === oda.uid ? ' (sen)' : ''}<i>${i === 0 ? 'kurucu' : ''}</i></div>` : `<div class="bos">⚪ ${o.botlu ? 'boş (başlayınca bilgisayar oturur)' : 'bekleniyor…'}</div>`).join('')}</div>
+        <div class="ms-o">${K.map((x, i) => x ? `<div>${x.uid === oda.uid ? '🟢' : '🔵'} ${esc(x.n)}${x.uid === oda.uid ? ' (sen)' : ''}<i>${(() => { const k = x.uid !== oda.uid && karsi(o.oyun, x.uid), P = []; if (k && (k.g + k.k + k.b)) P.push(`aranızda ${k.g}–${k.k}${k.b ? '–' + k.b : ''}`); if (i === 0) P.push('kurucu'); return P.join(' · '); })()}</i></div>` : `<div class="bos">⚪ ${o.botlu ? 'boş (başlayınca bilgisayar oturur)' : 'bekleniyor…'}</div>`).join('')}</div>
         ${yon ? `<button class="ms-b ana" data-a="baslat" ${n >= o.enAz ? '' : 'disabled'}>${n >= o.koltuk ? 'Başlat' : o.botlu && n >= o.enAz ? 'Boş koltuklara bilgisayar otursun, başlat' : 'Oyuncu bekleniyor…'}</button>` : '<p style="text-align:center">Kurucunun başlatması bekleniyor…</p>'}
         <div class="ms-hata"></div><button class="ms-b" data-a="cik">‹ Odadan çık</button>`;
       el._link = link;
@@ -154,7 +199,7 @@ function lobi(kok, o) {
     });
   }
   el.addEventListener('click', e => { const b = e.target.closest('button'); if (!b || b.disabled) return; const a = b.dataset.a;
-    if (a === 'geri') { kapat(); o.onGeri && o.onGeri(); } else if (a === 'kodla') { q('#ms-kodsat').hidden = false; q('#ms-kod').focus(); }
+    if (a === 'geri') { kapat(); o.onGeri && o.onGeri(); } else if (a === 'sira') siraGoster(); else if (a === 'girisDon') giris(); else if (a === 'kodla') { q('#ms-kodsat').hidden = false; q('#ms-kod').focus(); }
     else if (a === 'hizli' || a === 'kur' || a === 'katil') is(a);
     else if (a === 'kopya') { try { navigator.clipboard.writeText(el._link); b.textContent = '✓ Kopyalandı'; } catch (x) { hata(el._link); } }
     else if (a === 'paylas') navigator.share({ text: o.baslik + ' oynayalım mı? Kod: ' + oda.kod, url: el._link }).catch(() => { });
@@ -200,5 +245,5 @@ function sohbet(oda, o) {
   const birak = oda.mesajDinle(balon);
   return { kapat() { birak(); kapatPano(); d.remove(); document.removeEventListener('pointerdown', disari, true); } };
 }
-window.Masa = { baglan, kur, katil, hizli, lobi, sohbet, IFADE, adAl, adKoy, get uid() { return UID; } };
+window.Masa = { baglan, kur, katil, hizli, lobi, sohbet, IFADE, adAl, adKoy, sonuc, karsi, karsiYazi, siralama, hafta, ADLAR_OYUN, get uid() { return UID; } };
 })();

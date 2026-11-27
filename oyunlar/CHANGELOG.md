@@ -111,3 +111,12 @@
   not modu, geri al, ipucu, hatalı rakamlar kırmızı, klavyeyle de oynanır.
 - **Boru Bağla:** 5×5, 7×7, 9×9 ve günün bulmacası; dokun-döndür, uzun basınca kilit, suyun ulaştığı borular boyanır, en az hamle sayısı gösterilir.
 
+## Haftalık sıralama ve karşılıklı skor — 28 Kasım 2026
+- **Haftanın sıralaması:** çevrimiçi masa oyunlarının (Tavla, Okey, 101, Batak, Pişti, Dama, Satranç) lobisinde 🏆 düğmesi; en az iki kişinin oynadığı
+  oyunlardaki galibiyetler, ilk 30 ve senin sıran. Pazartesi sıfırlanır. Bilgisayarla tek başına oynanan masalar sayılmaz.
+  Sayılanlar: Tavla, Dama, Satranç oyunları; Okey elleri; 101, Batak ve Pişti maçları.
+- **Karşılıklı skor:** iki kişilik oyunlarda aynı rakiple tüm zamanların sonucu bitiş ekranında ("Bora ile tüm zamanlar: 3 galibiyet · 2 yenilgi")
+  ve bekleme odasında ("aranızda 3–2"). Bu cihazda tutulur.
+- **Maç serisi:** Pişti, 101 ve Batak’ta aynı odada art arda oynanan maçların galibiyetleri tabloda (🏆 sütunu / "Kazanılan maç").
+- Firebase kuralları: `masa_sira` (her oyuncu yalnız kendi kaydını yazar; bir yazışta en çok bir oyun ve bir galibiyet, iki yazış arası en az 10 sn).
+

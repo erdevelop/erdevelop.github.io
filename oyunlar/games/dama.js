@@ -253,11 +253,12 @@ registerGame({
       if (sayilan !== anahtar) { sayilan = anahtar;
         if (mod === 'yz') { if (b.k < 0) D.ber++; else if (kaz) { D.kaz++; api.submitScore(D.kaz); } else D.kay++; D.o = ''; kaydet(); } else { if (kaz) { D.ag++; kaydet(); } if (oda) oda.bitir(); }
         ses(kaz ? 'win' : b.k < 0 ? 'click' : 'lose'); if (kaz) { try { window.FX && FX.confetti && FX.confetti(); } catch (e) { } } }
+      if (mod === 'ag' && oda && window.Masa && Masa.sonuc) Masa.sonuc(oda, b.k < 0 ? .5 : kaz ? 1 : 0, S.tur + ':' + S.hamle);
       oyun._paylas = 'Dama: ' + (kaz ? 'kazandım!' : b.k < 0 ? 'berabere.' : 'bu sefer olmadı.') + '\nerdevelop.com/oyunlar/#o/dama';
       const e = q('.dm-son'); if (e) e.remove(); const s = E('div', { class: 'dm-son' });
       s.innerHTML = `<div><h3>${b.k < 0 ? '🤝 Berabere' : kaz ? '🎉 Kazandın!' : 'Kaybettin'}</h3><p>${b.k < 0 ? (b.neden === '50 hamle' ? '50 hamledir alma olmadı.' : 'Tek dama tek damaya karşı.') : b.neden === 'kapandı' ? (kaz ? 'Rakibin hamlesiz kaldı.' : 'Hamlen kalmadı.') : (kaz ? 'Rakibin bütün taşlarını aldın.' : 'Bütün taşların alındı.')}${mod === 'ag' ? ` · ${esc(ad(ben))} ${S.skor[ben]} – ${S.skor[1 - ben]} ${esc(ad(1 - ben))}` : ''}</p>
         <button class="dm-b ana" data-a="yine">${mod === 'ag' ? 'Rövanş' : 'Yeni oyun'}</button><button class="dm-b" data-a="menu">Menü</button></div>`;
-      kok.append(s);
+      if (mod === 'ag' && window.Masa && Masa.karsiYazi) { const kz = Masa.karsiYazi(oda); if (kz) { const p2 = document.createElement('p'); p2.className = 'ms-karsi'; p2.textContent = kz; const b1 = s.querySelector('button'); if (b1) b1.parentNode.insertBefore(p2, b1); } } kok.append(s);
     }
     function yerelKaydet() { if (mod !== 'yz' || !S) return; D.o = S.bitti ? '' : JSON.stringify({ S, sev }); D.sev = sev; kaydet(); }
     function gonder() {

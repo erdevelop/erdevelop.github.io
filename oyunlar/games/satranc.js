@@ -332,11 +332,12 @@ registerGame({
       if (sayilan !== anahtar) { sayilan = anahtar;
         if (mod === 'yz') { if (b.k < 0) D.ber++; else if (kaz) { D.kaz++; api.submitScore(D.kaz); } else D.kay++; D.o = ''; kaydet(); } else { if (kaz) { D.ag++; kaydet(); } if (oda) oda.bitir(); }
         ses(kaz ? 'win' : b.k < 0 ? 'click' : 'lose'); if (kaz) { try { window.FX && FX.confetti && FX.confetti(); } catch (e) { } } }
+      if (mod === 'ag' && oda && window.Masa && Masa.sonuc) Masa.sonuc(oda, b.k < 0 ? .5 : kaz ? 1 : 0, S.tur + ':' + S.son.i);
       oyun._paylas = 'Satranç: ' + (kaz ? (b.neden === 'mat' ? 'mat ettim!' : 'kazandım!') : b.k < 0 ? 'berabere.' : 'bu sefer olmadı.') + '\nerdevelop.com/oyunlar/#o/satranc';
       const e = q('.st-son'); if (e) e.remove(); const s = E('div', { class: 'st-son' });
       s.innerHTML = `<div><h3>${b.k < 0 ? '🤝 Berabere' : kaz ? (b.neden === 'mat' ? '🏆 Mat ettin!' : '🎉 Kazandın!') : b.neden === 'mat' ? 'Mat oldun' : 'Kaybettin'}</h3><p>${NEDEN[b.neden] || ''}${mod === 'ag' ? ` · ${esc(ad(br))} ${S.skor[br]} – ${S.skor[1 - br]} ${esc(ad(1 - br))}` : ''}</p>
         <button class="st-b ana" data-a="yine">${mod === 'ag' ? 'Rövanş (renkler değişir)' : 'Yeni oyun'}</button><button class="st-b" data-a="incele">Tahtaya bak</button><button class="st-b" data-a="menu">Menü</button></div>`;
-      kok.append(s);
+      if (mod === 'ag' && window.Masa && Masa.karsiYazi) { const kz = Masa.karsiYazi(oda); if (kz) { const p2 = document.createElement('p'); p2.className = 'ms-karsi'; p2.textContent = kz; const b1 = s.querySelector('button'); if (b1) b1.parentNode.insertBefore(p2, b1); } } kok.append(s);
     }
     function yerelKaydet() { if (mod !== 'yz' || !S) return; D.o = S.bitti ? '' : JSON.stringify({ S, sev, ben }); D.sev = sev; kaydet(); }
     function gonder() {
