@@ -424,6 +424,35 @@ export function yuzenUret(tur, malz, balik, o = {}) {
       ekle(new THREE.ConeGeometry(0.025, 0.08, 8).rotateZ(Math.PI / 2), M('#6E7049'), A.gov).position.set(-0.45, -0.005, 0);
       break;
     }
+    case 'atik': { /* deniz atığı: poşet, şişe, teneke kutu, ip */
+      const c = o.cesit;
+      if (c === 'poset') { const g = new THREE.SphereGeometry(0.5, 14, 10); const p = g.attributes.position; for (let i = 0; i < p.count; i++) { const y = p.getY(i); p.setXYZ(i, p.getX(i) * (1 + 0.25 * Math.sin(y * 9)), y * 1.1, p.getZ(i) * 0.35); } g.computeVertexNormals();
+        A.p = ekle(g, M('#F2F6F8', { transparent: true, opacity: 0.6, roughness: 0.3, side: THREE.DoubleSide })); for (const z of [-1, 1]) ekle(new THREE.TorusGeometry(0.12, 0.03, 4, 10), M('#F2F6F8', { transparent: true, opacity: 0.6 })).position.set(z * 0.22, 0.58, 0); }
+      else if (c === 'sise') { const g = new THREE.LatheGeometry([[0, -0.5], [0.16, -0.5], [0.17, 0.1], [0.07, 0.28], [0.06, 0.5], [0, 0.5]].map(([x, y]) => new THREE.Vector2(x, y)), 14); g.rotateZ(Math.PI / 2); ekle(g, M('#4C9A62', { transparent: true, opacity: 0.8, roughness: 0.1, metalness: 0.1 })); }
+      else if (c === 'kutu') { const g = new THREE.CylinderGeometry(0.2, 0.2, 0.6, 16); ekle(g, M('#B9C2C8', { metalness: 0.6, roughness: 0.35 })); ekle(new THREE.CylinderGeometry(0.205, 0.205, 0.3, 16), M('#D94A3A', { roughness: 0.5 })); }
+      else { const yol = new THREE.CatmullRomCurve3(Array.from({ length: 8 }, (_, i) => new THREE.Vector3(-0.6 + i * 0.17, Math.sin(i * 1.3) * 0.12, Math.cos(i * 0.9) * 0.1))); ekle(new THREE.TubeGeometry(yol, 30, 0.035, 6), M('#E08A2E', { roughness: 0.8 })); }
+      break;
+    }
+    case 'hayaletAg': { /* hayalet ağ: dalgalı ip ızgarası; kesildikçe ipler kopar */
+      const m = M('#4A5A52', { roughness: 0.9 }); A.ip = [];
+      for (let i = 0; i <= 6; i++) for (const yon of [0, 1]) { const u = i / 6 - 0.5, P = []; for (let k = 0; k <= 10; k++) { const t = k / 10 - 0.5; P.push(yon ? new THREE.Vector3(u * 0.9 + Math.sin(t * 5 + i) * 0.03, t * 0.7, Math.sin(t * 4 + i) * 0.08) : new THREE.Vector3(t * 0.9, u * 0.7 + Math.sin(t * 6 + i) * 0.03, Math.cos(t * 5 + i) * 0.08)); }
+        const tb = ekle(new THREE.TubeGeometry(new THREE.CatmullRomCurve3(P), 16, 0.008, 4), m); A.ip.push([tb, i]); }
+      break;
+    }
+    case 'denizati': { /* denizatı: boğum boğum dik gövde, at başı gibi burun, kıvrık kuyruk, titreşen sırt yüzgeci */
+      const R = '#F5A65B', K = '#D9863E', gm = M(R, { roughness: 0.55 }), km = M(K, { roughness: 0.6 });
+      const yol = new THREE.CatmullRomCurve3([[0.12, 0.36], [0.04, 0.24], [0.09, 0.06], [0.11, -0.1], [0.04, -0.27], [-0.05, -0.4], [-0.03, -0.53], [0.06, -0.58], [0.1, -0.51], [0.04, -0.47]].map(([x, y]) => new THREE.Vector3(x, y, 0)));
+      const yr = u => u < 0.12 ? 0.075 : u < 0.4 ? 0.075 + 0.035 * Math.sin((u - 0.12) / 0.28 * Math.PI) : Math.max(0.012, 0.085 * (1 - (u - 0.4) / 0.6) ** 1.3);
+      A.govde = new THREE.Group(); G.add(A.govde);
+      for (let i = 0; i <= 26; i++) { const u = i / 26, p = yol.getPointAt(u), r = yr(u); const seg = ekle(new THREE.SphereGeometry(1, 10, 8), i % 2 ? km : gm, A.govde); seg.position.copy(p); seg.scale.set(r, r * 0.8, r * 0.85); }
+      const bas = ekle(new THREE.SphereGeometry(1, 14, 10), gm, A.govde); bas.position.set(0.16, 0.42, 0); bas.scale.set(0.1, 0.085, 0.07); bas.rotation.z = -0.4;
+      const burun = ekle(new THREE.CylinderGeometry(0.022, 0.03, 0.17, 8), gm, A.govde); burun.rotation.z = Math.PI / 2 + 0.35; burun.position.set(0.3, 0.38, 0);
+      const tac = ekle(new THREE.ConeGeometry(0.035, 0.08, 6), km, A.govde); tac.position.set(0.12, 0.52, 0);
+      for (const z of [-1, 1]) { const g = ekle(new THREE.SphereGeometry(0.022, 10, 8), M('#1B1B1B', { roughness: 0.1 }), A.govde); g.position.set(0.19, 0.44, z * 0.055); }
+      const fs = new THREE.Shape(); fs.moveTo(0, 0); fs.quadraticCurveTo(-0.1, 0.06, -0.12, -0.12); fs.lineTo(0, -0.14); fs.closePath();
+      A.yuz = ekle(new THREE.ShapeGeometry(fs), M('#FFD6A0', { side: THREE.DoubleSide, transparent: true, opacity: 0.75 }), A.govde); A.yuz.position.set(-0.04, 0.02, 0);
+      break;
+    }
     case 'manta': { /* manta: gövdeden yumuşakça incelen kanatlar (üstü koyu, omuzlarında açık leke; altı beyaz), kıvrık ağız yüzgeçleri, ince kuyruk.
                        Kanatlar katı levha değil: kökten uca dalga gibi bükülerek çırpar (yuzenOyna). */
       const c2 = new THREE.Color(), DS = { side: THREE.DoubleSide };
@@ -715,6 +744,9 @@ export function yuzenOyna(G, tur, o, t) {
       A.ar.forEach(([g, z]) => { g.rotation.y = -z * (0.5 + Math.sin(v * 0.5 + z) * 0.15); g.rotation.x = -z * 0.1; });
       A.gov.position.y = -st * 0.02; A.gov.rotation.z = Math.cos(v) * 0.03; A.bas.rotation.z = Math.sin(v * 0.5) * 0.08; break;
     }
+    case 'atik': { G.rotation.z += o.don || 0; if (A.p) A.p.scale.y = 1 + Math.sin(f * 3) * 0.08; break; }
+    case 'hayaletAg': { const k = o.kes || 0; A.ip.forEach(([t, i]) => t.visible = i <= 6 - k); G.rotation.x = Math.sin(f * 0.7) * 0.15; G.rotation.y = Math.sin(f * 0.4) * 0.2; break; }
+    case 'denizati': { A.govde.position.y = Math.sin(f * 1.6) * 0.03; A.govde.rotation.z = Math.sin(f * 0.9) * 0.08; A.yuz.scale.x = 1 + Math.sin(f * 30) * 0.25; break; }
     case 'manta': { /* hafif yatık (sırtı görünsün) ama asla yan yatmaz; kanatlar kökten uca dalgalanarak çırpar */
       G.rotation.x = 0.3 * Math.cos(G.rotation.y) + THREE.MathUtils.clamp(G.rotation.x, -0.5, 0.5) * 0.3; /* sırt hep kameraya dönük eğilir: sola giderken de (önceden karnını gösterip dikleşiyordu) */
       for (const [k, z, g] of A.k) { const p = g.attributes.position, y0 = g.userData.y0, S0 = g.userData.s, faz = f * 1.3;

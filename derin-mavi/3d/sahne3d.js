@@ -595,7 +595,7 @@ export async function kur3D({ tuval, kalite }) {
             c.onceki = p.clone();
           }
           if (o.z == null && !yol && !o.arka && !o.uzak && o.tur !== 'top') { /* yüzen canlı (balon balığı, kalamar…) zemine ve tepeye gömülmesin */
-            const r = o.tur === 'balon' ? 1.15 * (1 + (o.sis || 0) * 0.9) : 0.6, taban = Math.max(zeminY(p.x, p.z), kayaY(p.x, p.z)) + sc * r;
+            const r = o.tur === 'balon' ? 1.15 * (1 + (o.sis || 0) * 0.9) : o.tur === 'atik' ? 0.2 : 0.6, taban = Math.max(zeminY(p.x, p.z), kayaY(p.x, p.z)) + sc * r;
             c.ty = c.ty == null ? taban : c.ty + (taban - c.ty) * Math.min(1, dt * 4); if (p.y < c.ty) p.y = c.ty; }
           c.g.position.copy(p); c.g.scale.setScalar(sc);
           if (c.yaw != null) { let dy = hedef - c.yaw; while (dy > Math.PI) dy -= Math.PI * 2; while (dy < -Math.PI) dy += Math.PI * 2; hedef = c.yaw + dy; }
