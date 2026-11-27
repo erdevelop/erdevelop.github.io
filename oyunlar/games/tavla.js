@@ -131,6 +131,7 @@ registerGame({
     let D = Object.assign({ v: 1, kaz: 0, kay: 0, mars: 0, ag: 0, o: '', sev: 1 }, (api.loadState && api.loadState()) || {});
     const kaydet = () => { try { api.saveState && api.saveState(D); } catch (e) { } };
     const kok = E('div', { class: 'tv' }); root.append(kok);
+    let sohbetK = null;
     let S = null, ben = 0, mod = 'yz', sev = 1, oda = null, odaBirak = null, lobi = null, adlar = ['Sen', 'Bilgisayar'], skor = [0, 0], gecmis = [], secili = null, mesaj = '', kilit = false, bitT = 0, raf = 0, anim = null, yaziSurum = 0, sonI = 0, yazSira = Promise.resolve(), cv = null, cx = null, geo = null, yokT = 0, canli = true;
 
     /* ---------- menü ---------- */
@@ -271,7 +272,7 @@ registerGame({
     function gonder() { if (mod !== 'ag' || !oda || !S) return; const kopya = JSON.parse(JSON.stringify(S)); kopya.skor = skor.slice(); yazSira = yazSira.then(async () => { const b = oda.surum(); const ok = await oda.yaz(kopya, b).catch(() => false); if (ok) yaziSurum = b + 1; }); }
     function yzBasla(s, eski) { temizle(); mod = 'yz'; ben = 0; sev = s; adlar = ['Sen', sev ? 'Bilgisayar' : 'Bilgisayar (kolay)']; skor = [0, 0]; S = eski || TV.yeni(Math.random() < .5 ? 0 : 1); sonI = S.son ? S.son.i : 0; gecmis = []; secili = null; mesaj = eski ? 'Kaldığın yerden devam.' : S.sira === ben ? 'İlk zar senin.' : ''; kilit = false; ekran(); ust(); yerelKaydet(); if (S.sira !== ben) yzOyna(); else if (S.zar && !TV.yasal(S).length) sonra(); }
     function agBasla(o) {
-      temizle(); mod = 'ag'; oda = o; ben = Math.max(0, o.ben); S = null; gecmis = []; secili = null; mesaj = ''; kilit = false; yaziSurum = 0; ekran();
+      temizle(); mod = 'ag'; oda = o; ben = Math.max(0, o.ben); S = null; gecmis = []; secili = null; mesaj = ''; kilit = false; yaziSurum = 0; ekran(); sohbetK = window.Masa && Masa.sohbet ? Masa.sohbet(o, { yer: q('.tv-alt'), sonra: q('[data-a=cik]'), koltuk: p => q(p === ben ? '#tv-k0' : '#tv-k1') }) : null;
       odaBirak = oda.dinle(v => {
         if (!v) { mesaj = 'Oda kapandı.'; return ust(); }
         const K = oda.koltuklar(); adlar = [0, 1].map(i => K[i] ? K[i].n : 'Rakip'); const d = oda.durum(), sur = oda.surum(); if (!d) return;
@@ -291,7 +292,7 @@ registerGame({
         ust();
       });
     }
-    function temizle() { clearTimeout(bitT); clearTimeout(yokT); cancelAnimationFrame(raf); anim = null; if (lobi) { const x = lobi.kapat(); lobi = null; if (x) x.ayril(); } if (odaBirak) odaBirak(); odaBirak = null; if (oda) { oda.ayril(); oda = null; } cv = null; }
+    function temizle() { if (sohbetK) { sohbetK.kapat(); sohbetK = null; } clearTimeout(bitT); clearTimeout(yokT); cancelAnimationFrame(raf); anim = null; if (lobi) { const x = lobi.kapat(); lobi = null; if (x) x.ayril(); } if (odaBirak) odaBirak(); odaBirak = null; if (oda) { oda.ayril(); oda = null; } cv = null; }
     kok.addEventListener('click', e => { const b = e.target.closest('button'); if (!b || b.closest('.ms')) return; const a = b.dataset.a;
       if (a === 'yz') yzBasla(+b.dataset.s, null); else if (a === 'devam') { try { const o = JSON.parse(D.o); yzBasla(o.sev == null ? 1 : o.sev, o.S); } catch (x) { menu(); } }
       else if (a === 'ag') agLobi(); else if (a === 'nasil') nasil(); else if (a === 'menu') { yerelKaydet(); S = null; menu(); }

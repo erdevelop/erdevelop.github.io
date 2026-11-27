@@ -44,7 +44,7 @@ const yol = (oyun, kod) => 'masa/' + oyun + '/oda/' + kod;
 
 /* oda nesnesi */
 function odaAc(oyun, kod) {
-  const kok = yol(oyun, kod), dinleyen = new Set(); let veri = null, kapat = null, nabiz = 0, ayrildi = false;
+  const kok = yol(oyun, kod), dinleyen = new Set(), mesajcilar = new Set(), gorulen = {}; let veri = null, kapat = null, nabiz = 0, ayrildi = false, ilkVeri = true;
   const oda = {
     oyun, kod, get uid() { return UID; }, get veri() { return veri; },
     get ben() { return veri && veri.o && veri.o[UID] ? veri.o[UID].k : -1; },
@@ -59,13 +59,21 @@ function odaAc(oyun, kod) {
     async yaz(s, beklenen) { const b = beklenen == null ? oda.surum() : beklenen, m = JSON.stringify(s); const r = await DB.tx(kok + '/g', c => { const v = (c && c.v) || 0; if (v !== b) return; return { v: v + 1, s: m }; }); return r.ok; },
     async baslat(s) { const m = JSON.stringify(s); const r = await DB.tx(kok + '/g', c => c ? undefined : { v: 1, s: m }); if (r.ok) { await DB.update(kok, { d: 1 }); DB.remove('masa/' + oyun + '/acik/' + kod).catch(() => { }); } return r.ok; },
     bitir() { return DB.update(kok, { d: 2 }).catch(() => { }); },
+    /* hazır ifadeler: masa/<oyun>/oda/<kod>/m/<uid> = { i, t } */
+    mesaj(i) { return DB.set(kok + '/m/' + UID, { i, t: DB.now() }).catch(() => { }); },
+    mesajDinle(f) { mesajcilar.add(f); return () => mesajcilar.delete(f); },
     yeniden(s) { return DB.update(kok, { d: 1, g: { v: oda.surum() + 1, s: JSON.stringify(s) } }); },
     async ayril() { if (ayrildi) return; ayrildi = true; clearInterval(nabiz); if (kapat) kapat(); dinleyen.clear();
       try { await DB.kopuncaIptal(kok + '/o/' + UID); const bekliyor = veri && veri.d === 0, tek = veri && veri.o && Object.keys(veri.o).filter(u => u !== UID && !veri.o[u].x).length === 0;
         if (tek) { await DB.remove(kok); await DB.remove('masa/' + oyun + '/acik/' + kod); } else if (bekliyor) { await DB.remove(kok + '/o/' + UID); dizin(veri, true); } else await DB.update(kok + '/o/' + UID, { x: DB.now() }); } catch (e) { } },
   };
   function dizin(v, benYok) { if (!v || !v.a || v.d !== 0) return; const n = Object.keys(v.o || {}).filter(u => !(benYok && u === UID)).length; DB.update('masa/' + oyun + '/acik/' + kod, { t: DB.now(), u: v.h, n: (v.o && v.o[v.h] && v.o[v.h].n) || '?', b: Math.max(0, (v.k || 2) - n) }).catch(() => { }); }
-  kapat = DB.on(kok, (v, hata) => { if (ayrildi) return; veri = v; dinleyen.forEach(f => { try { f(v, hata); } catch (e) { console.error(e); } }); });
+  kapat = DB.on(kok, (v, hata) => {
+    if (ayrildi) return; veri = v;
+    const M = (v && v.m) || {}, simdi = DB.now();
+    for (const u in M) { const m = M[u]; if (!m || gorulen[u] === m.t) continue; gorulen[u] = m.t; if (!ilkVeri && simdi - m.t < 15000) mesajcilar.forEach(f => { try { f(u, m.i); } catch (e) { } }); }
+    ilkVeri = false; dinleyen.forEach(f => { try { f(v, hata); } catch (e) { console.error(e); } });
+  });
   /* kopunca işaretle; geri gelince işareti sil */
   const benYol = kok + '/o/' + UID;
   const hazirla = () => { DB.kopunca(benYol, { x: DB.now() }).catch(() => { }); DB.kopunca('masa/' + oyun + '/acik/' + kod, null).catch(() => { }); };
@@ -157,5 +165,40 @@ function lobi(kok, o) {
   giris();
   return { kapat() { bitti = true; const x = oda; kapat(); return x; } };
 }
-window.Masa = { baglan, kur, katil, hizli, lobi, adAl, adKoy, get uid() { return UID; } };
+/* ---------- masa içi hazır ifadeler ---------- */
+const IFADE = ['Selam! 👋', 'İyi oyunlar 🍀', 'Güzel hamle 👏', 'Hadi ama 😄', 'Şanslısın 😏', 'Biraz hızlı 🙏', 'Bekle, düşünüyorum 🤔', 'Hay aksi 😅', 'Tebrikler 🎉', 'Rövanş? 🔁', 'Teşekkürler 🙂', '👍', '😂', '😮'];
+const SCSS = `
+.ms-sb{flex:none!important;width:44px;padding:11px 0!important;border-radius:13px;background:var(--accent-soft);color:var(--accent-ink);font-size:18px;line-height:1;text-align:center}
+.ms-sp{position:fixed;z-index:70;display:grid;grid-template-columns:1fr 1fr;gap:6px;padding:10px;width:min(320px,92vw);border-radius:16px;background:var(--card);box-shadow:0 12px 40px rgba(0,0,0,.3);animation:msA .15s}
+.ms-sp button{padding:10px 8px;border-radius:11px;background:var(--bg2);color:var(--ink);font-weight:800;font-size:14px;text-align:center}
+.ms-bal{position:fixed;z-index:65;max-width:200px;padding:7px 11px;border-radius:14px;background:#fff;color:#1f2328;font-weight:800;font-size:14px;box-shadow:0 6px 18px rgba(0,0,0,.3);pointer-events:none;transform:translate(-50%,-100%);animation:msB 3.2s forwards;white-space:nowrap}
+.ms-bal::after{content:'';position:absolute;left:50%;bottom:-6px;margin-left:-6px;border:6px solid transparent;border-bottom:0;border-top-color:#fff}
+.ms-bal.alt{transform:translate(-50%,0)}.ms-bal.alt::after{bottom:auto;top:-6px;border:6px solid transparent;border-top:0;border-bottom-color:#fff}
+@keyframes msA{from{opacity:0;transform:translateY(6px)}}@keyframes msB{0%{opacity:0;margin-top:6px}8%{opacity:1;margin-top:0}85%{opacity:1}100%{opacity:0}}
+`;
+/* sohbet(oda, { yer: düğmenin ekleneceği öğe, sonra: bu öğeden sonra ekle, koltuk: koltuk no → balonun çıkacağı öğe }) */
+function sohbet(oda, o) {
+  if (!oda || !o.yer) return { kapat() { } };
+  if (!document.getElementById('ms-scss')) { const st = document.createElement('style'); st.id = 'ms-scss'; st.textContent = SCSS; document.head.appendChild(st); }
+  const d = document.createElement('button'); d.className = 'ms-sb'; d.type = 'button'; d.textContent = '💬'; d.setAttribute('aria-label', 'Hazır mesaj gönder');
+  if (o.sonra && o.sonra.parentNode === o.yer) o.sonra.after(d); else o.yer.appendChild(d);
+  let pano = null, son = 0;
+  const kapatPano = () => { if (pano) { pano.remove(); pano = null; } };
+  const disari = e => { if (pano && !pano.contains(e.target) && e.target !== d) kapatPano(); };
+  d.addEventListener('click', e => { e.stopPropagation(); if (pano) return kapatPano();
+    pano = document.createElement('div'); pano.className = 'ms-sp'; pano.innerHTML = IFADE.map((x, i) => `<button type="button" data-i="${i}">${esc(x)}</button>`).join('');
+    document.body.appendChild(pano); const r = d.getBoundingClientRect(), w = pano.offsetWidth; pano.style.left = Math.max(8, Math.min(innerWidth - w - 8, r.left + r.width / 2 - w / 2)) + 'px'; pano.style.bottom = (innerHeight - r.top + 8) + 'px';
+    pano.addEventListener('click', ev => { ev.stopPropagation(); const b = ev.target.closest('button'); if (!b) return; const simdi = Date.now(); if (simdi - son < 2500) return; son = simdi; oda.mesaj(+b.dataset.i); kapatPano(); }); });
+  document.addEventListener('pointerdown', disari, true);
+  function balon(uid, i) {
+    const K = oda.koltuklar(), k = K.findIndex(x => x && x.uid === uid); if (k < 0 || !IFADE[i]) return;
+    const el = o.koltuk && o.koltuk(k); if (!el || !el.isConnected) return; const r = el.getBoundingClientRect(), b = document.createElement('div');
+    document.querySelectorAll('.ms-bal').forEach(x => { if (x.dataset.u === uid) x.remove(); }); b.className = 'ms-bal'; b.dataset.u = uid; b.textContent = IFADE[i]; let y = r.top - 6; if (y < 70) { y = r.bottom + 6; b.classList.add('alt'); }
+    b.style.left = Math.max(70, Math.min(innerWidth - 70, r.left + r.width / 2)) + 'px'; b.style.top = y + 'px'; document.body.appendChild(b); setTimeout(() => b.remove(), 3300);
+    try { if (uid !== oda.uid && navigator.vibrate) navigator.vibrate(15); } catch (e) { }
+  }
+  const birak = oda.mesajDinle(balon);
+  return { kapat() { birak(); kapatPano(); d.remove(); document.removeEventListener('pointerdown', disari, true); } };
+}
+window.Masa = { baglan, kur, katil, hizli, lobi, sohbet, IFADE, adAl, adKoy, get uid() { return UID; } };
 })();

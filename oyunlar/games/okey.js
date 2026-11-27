@@ -214,6 +214,7 @@ registerGame({
     let D = Object.assign({ v: 1, el: 0, kaz: 0, ag: 0, o: '', sev: 1 }, (api.loadState && api.loadState()) || {});
     const kaydet = () => { try { api.saveState && api.saveState(D); } catch (e) { } };
     const kok = E('div', { class: 'ok' }); root.append(kok);
+    let sohbetK = null;
     let S = null, ben = 0, mod = 'yz', sev = 1, oda = null, odaBirak = null, lobi = null, raf = new Array(YUVA).fill(null), rafTur = -1, secili = null, mesaj = '', mesajT = 0, yeniTas = null, gorulenI = -1,
       surT = 0, sur = null, cizBekle = false, canli = true, sayilan = '', yerelSur = 0, sonMetin = '', bekleyen = 0, vekil = '', yazSira = Promise.resolve();
     const q = s => kok.querySelector(s), kopya = s => JSON.parse(JSON.stringify(s));
@@ -367,13 +368,13 @@ registerGame({
       ekran(); ciz(); yerelKaydet(); surucu();
     }
     function agBasla(o) {
-      temizle(); mod = 'ag'; oda = o; ben = Math.max(0, o.ben); S = null; secili = null; mesaj = ''; rafTur = -1; gorulenI = -1; yerelSur = 0; sonMetin = ''; bekleyen = 0; ekran();
+      temizle(); mod = 'ag'; oda = o; ben = Math.max(0, o.ben); S = null; secili = null; mesaj = ''; rafTur = -1; gorulenI = -1; yerelSur = 0; sonMetin = ''; bekleyen = 0; ekran(); sohbetK = window.Masa && Masa.sohbet ? Masa.sohbet(o, { yer: q('.ok-alt'), sonra: q('[data-a=cik]'), koltuk: p => p === ben ? q('#ok-ben') : q(`.ok-oy.k${(p - ben + 4) % 4}`) }) : null;
       odaBirak = oda.dinle(v => {
         if (!v) { if (S) mesajVer('Oda kapandı.', 60000); return; } const d = oda.durum(); if (!d) return; ben = Math.max(0, oda.ben);
         if (!bekleyen) al(d); if (S && !S.bitti) { ciz(); surucu(); }
       });
     }
-    function temizle() { clearTimeout(surT); clearTimeout(mesajT); if (sur && sur.h) sur.h.remove(); sur = null; if (lobi) { const x = lobi.kapat(); lobi = null; if (x) x.ayril(); } if (odaBirak) odaBirak(); odaBirak = null; if (oda) { oda.ayril(); oda = null; } }
+    function temizle() { if (sohbetK) { sohbetK.kapat(); sohbetK = null; } clearTimeout(surT); clearTimeout(mesajT); if (sur && sur.h) sur.h.remove(); sur = null; if (lobi) { const x = lobi.kapat(); lobi = null; if (x) x.ayril(); } if (odaBirak) odaBirak(); odaBirak = null; if (oda) { oda.ayril(); oda = null; } }
     kok.addEventListener('click', e => {
       const b = e.target.closest('button'); if (b && b.closest('.ms')) return;
       if (!b) { if (!S || !q('#ok-m')) return; if (e.target.closest('.ok-deste')) return cekDene('d'); const a = e.target.closest('.ok-atik'); if (!a) return;

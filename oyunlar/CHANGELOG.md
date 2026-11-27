@@ -84,3 +84,13 @@
 - **Çevrimiçi masa katmanı** (`assets/masa.js`): adla giriş, hızlı eşleşme, kodlu özel oda ve paylaşılabilir bağlantı. Okey'de boş koltuklara bilgisayar oturur;
   kopan ya da uzun süre oynamayan oyuncunun hamlesini bilgisayar yapar. Sunucu tarafı yok: durum odadaki herkese açık durur (arkadaş arası oyun içindir).
 
+## 101 Okey, Batak ve masa içi mesajlar — 27 Kasım 2026
+- **101 Okey:** dört kişilik; 101 ile ya da beş çiftle açma, sonraki turlarda per indirme ve masadaki perlere işleme, masadaki okeyi değiştirme,
+  yandan alınan taşı kullanma zorunluluğu, işlek taş ve okey atma cezası (atmadan önce uyarı), okeyle/çiftle/elden bitişte iki kat, beş ellik maç.
+  Bilgi satırı açışa ne kadar kaldığını gösterir (ör. 87/101 · 3/5 çift). Bilgisayara karşı (iki seviye) ya da çevrimiçi.
+- **Batak:** ihaleli, dört kişilik; koz seçimi, renk izleme ve büyütme zorunluluğu, koz kırılmadan kozla açılmaz; dört ellik maç.
+  Atılabilecek kartlar parlak görünür, atılamayanda nedeni yazar; son eli görme. Bilgisayara karşı (iki seviye) ya da çevrimiçi.
+- **Masa içi hazır mesajlar** (Tavla, Okey, 101 Okey, Batak): 💬 düğmesiyle "Selam!", "Güzel hamle 👏", "Rövanş? 🔁" gibi on dört ifade;
+  gönderenin koltuğunda balon olarak çıkar. Serbest yazı yok; iki buçuk saniyede bir mesaj.
+- Firebase kuralları: masa oyunları için oyun adı listesi yerine kısa küçük harf ad kuralı (yeni oyunlarda kural güncellemesi gerekmez) ve mesaj alanı.
+
