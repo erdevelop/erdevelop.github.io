@@ -94,3 +94,9 @@
   gönderenin koltuğunda balon olarak çıkar. Serbest yazı yok; iki buçuk saniyede bir mesaj.
 - Firebase kuralları: masa oyunları için oyun adı listesi yerine kısa küçük harf ad kuralı (yeni oyunlarda kural güncellemesi gerekmez) ve mesaj alanı.
 
+## Pişti ve Dama — 27 Kasım 2026
+- **Pişti:** iki kişilik; pişti (10) ve vale piştisi (20) gösterisi, alınabilecek kartlar yeşil çerçeveli, el sonu puan tablosu, maç 101’e.
+  Bilgisayar gördüğü kartları sayar (kolay seviyesi de var). Çevrimiçi: iki kişi, oda kodu ya da hızlı eşleşme.
+- **Dama (Türk daması):** ileri ve yana gidiş, zorunlu ve en çok alma, uçan dama, art arda almada geri dönmeme; gidilebilecek kareler yeşil,
+  alma hamleleri kırmızı halka. Bilgisayar alfa-beta aramasıyla oynar (kolay seviyesi de var), bilgisayara karşı geri alma. Çevrimiçi rövanş ve skor.
+
