@@ -2307,6 +2307,22 @@ def takoz_sec(kurallar, panel_kg):
     return None
 
 
+def ana_sablon_secimi(kut):
+    """Kullanıcının seçtiği ana şablonlar: {"dikey": dosya adı (küçük harf), "yatay": ...}. Kayıt, bu kütüphaneyi kullanan
+    sistemin ayarındadır (cephe_ayar.json › sistemler › <sistem> › ana_sablon)."""
+    try:
+        hedef = os.path.normcase(os.path.abspath(kut))
+        for ad, kay in (_ayar_db().get("sistemler") or {}).items():
+            if not isinstance(kay, dict) or not kay.get("ana_sablon"):
+                continue
+            kk = kutuphane_klasoru(os.path.join(uygulama_klasoru(), "sistemler", ad))
+            if kk and os.path.normcase(os.path.abspath(kk)) == hedef:
+                return {t: str(v).lower() for t, v in kay["ana_sablon"].items() if v}
+    except Exception:
+        pass
+    return {}
+
+
 def kutuphane_sablonlari(kut, profiller, uyari=None):
     """Kütüphanenin SISTEM klasöründeki örnek sistem DXF'leri. Dosya adında DUSEY/DIKEY geçen düşey, YATAY geçen
     yatay şablondur; ana profil, içindeki DIKME/YATAY kütüphane profilinin INSERT'idir.
@@ -2339,8 +2355,12 @@ def kutuphane_sablonlari(kut, profiller, uyari=None):
         tip = re.sub(r"(?i)(^|_)(sistem|dusey|d\u00fc\u015fey|dikey|yatay)(?=_|$)", "", ad).strip("_ ")
         tip = re.sub(r"^[A-Za-z]+\d+_?", "", tip).strip("_ ") or ad
         out[tur].append((yol, ana, tip.upper()))
+    secim = ana_sablon_secimi(kut)
     for t in out:
         out[t].sort(key=lambda x: (0 if "KAPAK" in x[2] else 1, x[0]))
+        i_ = next((i for i, x in enumerate(out[t]) if os.path.basename(x[0]).lower() == secim.get(t)), None)
+        if i_:                                   # kullanıcının seçtiği ana şablon başa
+            out[t].insert(0, out[t].pop(i_))
     return out
 
 
@@ -3047,16 +3067,18 @@ def _dxf_varliklar_yol(yol):
         ham = dm
     # taşıyıcı: iki şablonda da olan, fitil/bariyer (01./02.) olmayan parça (baskı plakası, kapak ...). Düşeydeki yeri
     # -90° döndürülüp yataydakiyle karşılaştırılır; kalınlık eksenindeki (x) fark eklenen fitillere uygulanır.
+    def ekesiz(a_):
+        return _sade(re.sub(r"(?i)[_\- ][dy]$", "", a_))
     yat_ins = {}
     for e in model:
         if e["tur"] == "INSERT":
-            yat_ins.setdefault(_sade(adi(e)), e)
+            yat_ins.setdefault(ekesiz(adi(e)), e)
     fark, en_az = None, None
     for e, e0 in zip(dm, ham):
         if e["tur"] != "INSERT":
             continue
         ad0 = adi(e0) if e0["tur"] == "INSERT" else adi(e)
-        s_ = _sade(adi(e))
+        s_ = ekesiz(adi(e))
         if s_ not in yat_ins or re.match(r"^0[12]\.", ad0):
             continue
         b1, b2 = _yerel_bbox([e], db, dt), _yerel_bbox([yat_ins[s_]], bloklar, taban)
@@ -4382,6 +4404,191 @@ def _yerel_bbox(ents, bloklar, taban):
     return [round(v, 1) for v in b] if b else None
 
 
+SABLON_HAM_TUR = ("HATCH", "LWPOLYLINE", "POLYLINE", "VERTEX", "SEQEND", "LINE", "ARC", "CIRCLE", "ELLIPSE",
+                  "SPLINE", "SOLID", "INSERT")
+
+
+def _katman_tablosu(cift):
+    """DXF LAYER tablosu: {katman adı: {"62": renk, "420": gerçek renk, "6": çizgi tipi}}."""
+    out, ent = {}, None
+    for k, v in cift:
+        if k == "0":
+            if ent is not None and ent.get("2"):
+                out[ent["2"]] = ent
+            t = v.strip()
+            ent = {} if t == "LAYER" else None
+            if t == "ENDSEC" and out:
+                break
+        elif ent is not None and k in ("2", "62", "420", "6"):
+            ent.setdefault(k, v.strip())
+    if ent is not None and ent.get("2"):
+        out[ent["2"]] = ent
+    return out
+
+
+def _blok_kapsami(bl, ad, out=None):
+    """Blok ve içindeki INSERT'lerin başvurduğu bloklar (şablona yazmak için): {ad: [varlık]}."""
+    out = {} if out is None else out
+    if ad in out or ad not in bl:
+        return out
+    out[ad] = [e for e in bl[ad] if e["tur"] in SABLON_HAM_TUR]
+    for e in out[ad]:
+        if e["tur"] == "INSERT":
+            _blok_kapsami(bl, next((v.strip() for k, v in e["kod"] if k == "2"), ""), out)
+    return out
+
+
+def parca_geo(yol=None, profil=False, ham=None):
+    """Şablon düzenleyicisi için parça geometrisi.
+    yol: kütüphane dosyası (profil=True ise referans, işaretli değilse burun ucundan bulunur);
+    ham: (blok adı, bloklar, tabanlar, katmanlar) — şablonun kendi bloğu (kütüphanede karşılığı yoksa).
+    Dönüş: {"kod", "yol", "blok", "dong" (referansa göre), "derin", "bloklar", "taban", "ref", "katman", "klasor"}."""
+    if yol:
+        _m, bl, tb = _dxf_duzlestir(yol, ham=True)
+        kod = os.path.splitext(os.path.basename(yol))[0]
+        ad = _referans_blok(bl, kod) or kod
+        kat = _katman_tablosu(_dxf_cift(yol))
+        klasor = os.path.basename(os.path.dirname(yol)).upper()
+    else:
+        ad, bl, tb, kat = ham
+        kod, klasor = ad, ""
+    if ad not in bl:
+        raise ValueError(f"{kod}: blok bulunamadı")
+    dong = _blok_donguler(bl[ad])
+    cizgi = []
+    if not dong:                                 # dolgusuz parça (yalnız çizgi: ör. aydınlatma, yardımcı çizim)
+        yeni_, say_ = [], {}
+        _varlik_prim({"tur": "INSERT", "kod": [("2", ad), ("10", "0"), ("20", "0")]}, _I, bl, tb, yeni_, say_, 0)
+        b0_ = tb.get(ad, (0.0, 0.0))
+        cizgi = [[(x + b0_[0], y + b0_[1]) for x, y in q[1]] for q in yeni_ if q[0] == "poly" and len(q[1]) >= 2]
+        cizgi += [[(x + b0_[0], y + b0_[1]) for x, y in lp] for q in yeni_ if q[0] == "fill" for lp in q[1]]
+        if not cizgi:
+            raise ValueError(f"{kod}: çizim yok")
+    ref = referans_oku(yol) if yol else None
+    if not ref and yol and profil:
+        o_ = profil_referans_oneri(_kesit_olustur(ad, dong))
+        ref = o_["nokta"] if o_ else None
+    if not ref:
+        ref = tuple(tb.get(ad, (0.0, 0.0)))
+    dl = _kopya_dongu_ele([[(x - ref[0], y - ref[1]) for x, y in lp] for lp in dong]) if dong else []
+    cl = [[(x - ref[0], y - ref[1]) for x, y in lp] for lp in cizgi]
+    return {"kod": kod, "yol": yol, "blok": ad, "dong": dl, "derin": _derinlikler(dl) if dl else [], "cizgi": cl,
+            "bloklar": _blok_kapsami(bl, ad),
+            "taban": {a: tuple(v) for a, v in tb.items()}, "ref": (float(ref[0]), float(ref[1])), "katman": kat,
+            "klasor": klasor}
+
+
+def _parca_donustur(lp, x, y, rot, ayna):
+    """INSERT dönüşümü (önce ayna: x -> -x, sonra döndürme, sonra öteleme)."""
+    c, s = math.cos(math.radians(rot)), math.sin(math.radians(rot))
+    sx = -1.0 if ayna else 1.0
+    return [(c * px * sx - s * py + x, s * px * sx + c * py + y) for px, py in lp]
+
+
+def _ham_satirlar(e):
+    """Varlığı DXF satırlarına çevirir (tutamaç, sahip, XDATA ve reaktör grupları atılır)."""
+    out = ["0", e["tur"]]
+    atla = False
+    for k, v in e["kod"]:
+        if k == "102":
+            atla = v.strip().startswith("{")
+            continue
+        if atla or k in ("5", "330", "360") or (k.isdigit() and int(k) >= 1000):
+            continue
+        out += [k, v.rstrip()]
+    return out
+
+
+def sablon_dxf_yaz(yol, parcalar):
+    """Şablon (montaj detayı) DXF'i yazar. parcalar: [{"geo", "x", "y", "rot", "ayna"}], ilk eleman ana profil.
+    Her parça bir blok (adı parça kodu, başlangıcı parçanın referans noktası) ve bir INSERT olur; parçaların çizimi
+    kütüphane dosyasından olduğu gibi kopyalanır."""
+    bloklar, katman = {}, {"0": {}}
+    for p in parcalar:
+        g = p["geo"]
+        katman.update(g["katman"])
+        if g["kod"] in bloklar:
+            continue
+        bloklar[g["kod"]] = (g["bloklar"].get(g["blok"], []), g["ref"])
+        for ad, ents in g["bloklar"].items():
+            if ad != g["blok"] and ad not in bloklar:
+                bloklar[ad] = (ents, tuple(g["taban"].get(ad, (0.0, 0.0))))
+    L = ["0", "SECTION", "2", "HEADER", "9", "$ACADVER", "1", "AC1009", "9", "$INSBASE", "10", "0.0", "20", "0.0", "30", "0.0",
+         "0", "ENDSEC", "0", "SECTION", "2", "TABLES", "0", "TABLE", "2", "LTYPE", "70", "1",
+         "0", "LTYPE", "2", "CONTINUOUS", "70", "0", "3", "Solid line", "72", "65", "73", "0", "40", "0.0", "0", "ENDTAB",
+         "0", "TABLE", "2", "LAYER", "70", str(len(katman))]
+    for ad, k in katman.items():
+        try:
+            renk = abs(int(k.get("62") or 7)) or 7
+        except ValueError:
+            renk = 7
+        L += ["0", "LAYER", "2", ad, "70", "0", "62", str(renk), "6", "CONTINUOUS"] + (["420", k["420"]] if k.get("420") else [])
+    L += ["0", "ENDTAB", "0", "ENDSEC", "0", "SECTION", "2", "BLOCKS"]
+    for ad, (ents, b) in bloklar.items():
+        L += ["0", "BLOCK", "8", "0", "2", ad, "70", "0", "10", repr(float(b[0])), "20", repr(float(b[1])), "30", "0.0", "3", ad]
+        for e in ents:
+            L += _ham_satirlar(e)
+        L += ["0", "ENDBLK", "8", "0"]
+    L += ["0", "ENDSEC", "0", "SECTION", "2", "ENTITIES"]
+    for p in parcalar:
+        L += ["0", "INSERT", "8", "0", "2", p["geo"]["kod"], "10", repr(round(float(p["x"]), 4)), "20", repr(round(float(p["y"]), 4)),
+              "30", "0.0", "41", "-1.0" if p.get("ayna") else "1.0", "42", "1.0", "43", "1.0", "50", repr(round(float(p.get("rot", 0.0)) % 360.0, 4))]
+    L += ["0", "ENDSEC", "0", "EOF"]
+    with open(yol, "w", encoding="utf-8", newline="\r\n") as f:
+        f.write("\n".join(L) + "\n")
+
+
+def sablon_parcalari_oku(yol, kut, tur):
+    """Mevcut şablon DXF'indeki INSERT'leri düzenleyici parçalarına çevirir. Kütüphanede aynı şekilli dosyası olan parça
+    kütüphaneden alınır (şablondaki blok başlangıcı farklı olsa da yeri korunur); olmayan ya da şekli farklı olan parça
+    şablondaki kendi çizimiyle gelir. Dönüş: (parçalar, notlar)."""
+    cift = _dxf_cift(yol)
+    model, bl, tb = _dxf_varliklar_ham(cift)
+    kat = _katman_tablosu(cift)
+    out, notlar = [], []
+    for e in model:
+        if e["tur"] != "INSERT":
+            continue
+        d = {}
+        for k, v in e["kod"]:
+            d.setdefault(k, v)
+        ad = d.get("2", "").strip()
+        if ad not in bl:
+            continue
+        x, y = float(d.get("10", 0)), float(d.get("20", 0))
+        rot = float(d.get("50", 0))
+        sx = float(d.get("41", 1))
+        sy = float(d.get("42", 1))                 # DXF varsayılanı 1 (41'den bağımsız)
+        ayna = (sx < 0) != (sy < 0)
+        if sy < 0:
+            rot += 180.0
+        try:
+            g_t = parca_geo(ham=(ad, bl, tb, kat))
+        except ValueError:
+            continue
+        lib = kutuphane_parca_bul(kut, ad) or _parca_bul_ekli(kut, ad, tur)
+        g = None
+        if lib:
+            try:
+                g = parca_geo(lib, profil=os.path.basename(os.path.dirname(lib)).upper() in ("DIKME", "YATAY"))
+            except (ValueError, OSError):
+                g = None
+        if g:
+            g = dict(g, kod=ad)                       # şablondaki adı korunur (metraj, katalog ve kurallar bu adla)
+            bt, bg = _prim_bbox([("fill", g_t["dong"])]), _prim_bbox([("fill", g["dong"])])
+            if bt and bg and abs((bt[2] - bt[0]) - (bg[2] - bg[0])) < 0.3 and abs((bt[3] - bt[1]) - (bg[3] - bg[1])) < 0.3:
+                ddx, ddy = bt[0] - bg[0], bt[1] - bg[1]            # şablon yereli = kütüphane yereli + fark
+                (vx, vy), = _parca_donustur([(ddx, ddy)], 0.0, 0.0, rot, ayna)
+                x, y = x + vx, y + vy
+            else:
+                notlar.append(f"{ad}: kütüphanedeki şekli şablondakinden farklı; şablondaki çizimi kullanıldı")
+                g = None
+        elif not re.match(r"^(G\$|A\$C|\*)", ad):
+            notlar.append(f"{ad}: kütüphanede dosyası yok; şablondaki çizimi kullanıldı")
+        out.append({"geo": g or g_t, "x": x, "y": y, "rot": rot % 360.0, "ayna": ayna})
+    return out, notlar
+
+
 def sistem_denetimi(sistem):
     """Sistem / kütüphane denetimi. Klasörler (DXF'e çevrilmemiş DWG), profiller, şablonlar (ana şablon, hangi cam
     kalınlığına göre çizildiği, adsız bloklar), şablondaki parçaların kütüphanede karşılığı, kurallar, öğrenilmiş
@@ -4464,8 +4671,8 @@ def sistem_denetimi(sistem):
             if i == 0:
                 sat.append(f"[OK] {tur} ANA şablon: {os.path.basename(y_)} (ana profil {ana})")
             else:
-                sat.append(f"[BİLGİ] {tur} ek şablon: {os.path.basename(y_)} (ana profil {ana}) — detay bundan kurulmaz; parça duruşu "
-                           f"öğrenmek ve karşılaştırma için okunur. Ana yapmak için adı alfabetik olarak öne alınır.")
+                sat.append(f"[BİLGİ] {tur} ek şablon: {os.path.basename(y_)} (ana profil {ana}) — detay bundan kurulmaz, parça duruşu "
+                           f"öğrenmek için okunur; ana şablon 'Şablon kur' penceresinin üstünden değiştirilir.")
     # 4) şablonların çizildiği cam kalınlığı
     try:
         cam_ayar = float(str(sistem_ayar(yol_).get("sablon_cam_kalinlik", 32)).replace(",", "."))
@@ -8776,7 +8983,7 @@ class Uygulama(tk.Tk):
             if ad in ("yardim", "help", "?"):
                 self._log("\n".join([
                     "hesapla                      : yeniden hesapla",
-                    "referans | denetim           : DXF referans noktası düzenleyicisi / sistem-kütüphane denetimi",
+                    "sablon | referans | denetim  : şablon kur (montaj detayı) / DXF referans noktası / sistem denetimi",
                     "ozet                         : proje özeti",
                     "tipler                       : dikey/yatay tipler (kapaklı, silikon ...)",
                     "tip dikey|yatay|hepsi <ad>   : tüm sistemi bu tipe çevir (örn: tip hepsi silikon)",
@@ -8796,6 +9003,8 @@ class Uygulama(tk.Tk):
                 self.hesapla()
             elif ad in ("referans", "ref"):
                 self._referans_editoru()
+            elif ad in ("sablon", "şablon"):
+                self._sablon_kur()
             elif ad in ("denetim", "denetle"):
                 self._sistem_denetim_ac()
             elif ad == "temizle":
@@ -10048,8 +10257,10 @@ class Uygulama(tk.Tk):
                    command=self._siparis_karsilastir_ac).pack(fill="x", pady=(6, 0))
         kf_ = ttk.LabelFrame(sol, text=" Kütüphane ", padding=8)
         kf_.pack(fill="x", pady=(0, 8))
+        ttk.Button(kf_, text="Şablon kur (montaj detayı)...", style="Ana.TButton",
+                   command=self._sablon_kur).pack(fill="x")
         ttk.Button(kf_, text="Referans noktası (DXF)...", style="Ana.TButton",
-                   command=self._referans_editoru).pack(fill="x")
+                   command=self._referans_editoru).pack(fill="x", pady=(6, 0))
         ttk.Button(kf_, text="Sistem denetimi...", style="Ana.TButton",
                    command=self._sistem_denetim_ac).pack(fill="x", pady=(6, 0))
 
@@ -12335,6 +12546,769 @@ class Uygulama(tk.Tk):
         for v_ in list(vs.values()) + [tol_v]:
             v_.trace_add("write", yenile)
         yenile()
+
+    def _kutuphane_tazele(self):
+        """Kütüphane / şablon değişince sistemi yeniden okur; profil seçimi korunur."""
+        _OTURT_ONB.clear()
+        self._tip_onb = {}
+        try:
+            kon = self.katalog_yol
+            dk, yk = self.cb["dikey"].get(), self.cb["yatay"].get()
+            self.katalog_yukle(kon)
+            for tur_, e_ in (("dikey", dk), ("yatay", yk)):
+                if e_ in self.cb[tur_].cget("values"):
+                    self.cb[tur_].set(e_)
+                    self._profil_sec(tur_)
+            self._kural_kal = None          # şablon değişti: kural yeniden uygulanır (boş yöne şablonun ana profili gelir)
+            self.hesapla()
+        except Exception as e:
+            self._log(f"Sistem yeniden okunamadı: {e}", "hata")
+
+    def _sablon_kur(self, ac_yol=None):
+        """Şablon kur: sistemin montaj detayını (SISTEM klasöründeki düşey / yatay şablon) program içinde kurar.
+        Ana profil seçilir, kütüphaneden fitil / bariyer / baskı / kapak eklenir, sürüklenip döndürülür ve 'Yasla' ile
+        komşusuna dayanır. Kaydet, SISTEM klasörüne DXF yazar; program detayları bundan kurar."""
+        sis = self._aktif_sistem()
+        sis_kl = os.path.join(uygulama_klasoru(), "sistemler", sis) if sis else ""
+        kut = kutuphane_klasoru(sis_kl) if sis else None
+        if not kut:
+            messagebox.showinfo("Şablon kur", "Bu sistem bir kütüphane klasöründen kurulu değil (Ayarlar: ayar kutuphane <yol>).")
+            return
+        sis_dir = _alt_klasor(kut, "SISTEM") or os.path.join(kut, "SISTEM")
+        ay = sistem_ayar(sis_kl)
+
+        def sayi_(k, v):
+            try:
+                return float(str(ay.get(k, v)).replace(",", "."))
+            except ValueError:
+                return v
+        try:
+            profiller = kutuphane_profilleri(sis_kl)
+        except Exception:
+            profiller = []
+        BG = "#1b1f24"
+        RENK = {"DIKME": "#9aa4ae", "YATAY": "#9aa4ae", "ISI_BARIYERI": "#c0392b", "FITIL": "#4d5560", "BASKI": "#4f8fb8",
+                "KAPAK": "#5b7fa8", "ADAPTOR": "#d29922", "CAM_TAKOZU": "#a371f7", "": "#7d8590"}
+        pen = tk.Toplevel(self)
+        pen.title(f"Şablon kur — {os.path.basename(kut)}")
+        pen.geometry("1420x880")
+        st = {"tur": "dikey", "p": [], "sec": None, "z": 3.0, "ox": 600.0, "oy": 420.0, "yol": None, "geri": [],
+              "onb": {}, "cy": -1, "suruk": None, "kirli": False}
+        v_tur = tk.StringVar(value="dikey")
+        v_tip = tk.StringVar(value="KAPAKLI")
+        v_ana = tk.StringVar()
+        v_cam = tk.StringVar(value=f"{sayi_('sablon_cam_kalinlik', 32.0):g}")
+        v_otur = tk.StringVar(value=f"{sayi_('sablon_oturma', 6.4):g}")
+        v_aks = tk.StringVar(value=f"{_CAM_UI['aks_d']:g}")
+        v_kil = tk.BooleanVar(value=True)
+        v_x, v_y, v_r = tk.StringVar(), tk.StringVar(), tk.StringVar()
+        v_mevcut = tk.StringVar()
+
+        # ---------------- arayüz
+        sol = ttk.Frame(pen, padding=6)
+        sol.pack(side="left", fill="y")
+        ttk.Label(sol, text="Kütüphane (çift tık: ekle)").pack(anchor="w")
+        tr = ttk.Treeview(sol, show="tree", height=34, selectmode="browse")
+        tr.column("#0", width=230)
+        tr.pack(fill="y", expand=True)
+        sag = ttk.Frame(pen, padding=(0, 6, 6, 6))
+        sag.pack(side="left", fill="both", expand=True)
+        u0 = ttk.Frame(sag)
+        u0.pack(fill="x", pady=(0, 6))
+        u1 = ttk.Frame(sag)
+        u1.pack(fill="x")
+        u2 = ttk.Frame(sag)
+        u2.pack(fill="x", pady=(4, 0))
+        u3 = ttk.Frame(sag)
+        u3.pack(fill="x", pady=(4, 0))
+        cv = tk.Canvas(sag, bg=BG, highlightthickness=0)
+        cv.pack(fill="both", expand=True, pady=4)
+        durum = ttk.Label(sag, text="", foreground="#7a858e", wraplength=1100, justify="left")
+        durum.pack(anchor="w")
+        ttk.Label(sag, foreground="#7a858e", wraplength=1100, justify="left",
+                  text="Sol tık: seç / sürükle · Yasla: parçayı o yönde komşusuna değene kadar iter · Ok tuşları: 0,1 mm (Shift: 1 mm) · "
+                       "R: 90° döndür · M: ayna · Del: sil · "
+                       "Ctrl+D: çoğalt · Ctrl+Z: geri · Tekerlek: yakınlaştır · Sağ tuş sürükle: kaydır · Çift tık boşluğa: sığdır. "
+                       "Isı bariyerinden bir tane koymak yeter: program cam kalınlığına göre bariyer zincirini kendisi seçer. "
+                       "Mavi: cam kılavuzu (cam, burun ucundan 'oturma payı' kadar içeriden başlar).").pack(anchor="w")
+
+        def X(x):
+            return st["ox"] + x * st["z"]
+
+        def Y(y):
+            return st["oy"] - y * st["z"]
+
+        def mm(px, py):
+            return (px - st["ox"]) / st["z"], (st["oy"] - py) / st["z"]
+
+        def geo(yol, profil=False):
+            k = (yol, profil)
+            if k not in st["onb"]:
+                st["onb"][k] = parca_geo(yol, profil=profil)
+            return st["onb"][k]
+
+        def dunya(p):
+            return [_parca_donustur(lp, p["x"], p["y"], p["rot"], p["ayna"]) for lp in p["geo"]["dong"]]
+
+        def dunya_c(p):
+            return [_parca_donustur(lp, p["x"], p["y"], p["rot"], p["ayna"]) for lp in p["geo"].get("cizgi") or []]
+
+        def tum(p):
+            return dunya(p) or dunya_c(p)
+
+        def kutu(lps):
+            xs = [q[0] for lp in lps for q in lp]
+            ys = [q[1] for lp in lps for q in lp]
+            return (min(xs), min(ys), max(xs), max(ys))
+
+        def P_(p, lps=None):
+            lps = lps or dunya(p)
+            return [(lps, p["geo"]["derin"], kutu(lps))] if lps else []
+
+        def kaydet_geri():
+            st["geri"].append([dict(p) for p in st["p"]])
+            del st["geri"][:-60]
+            st["kirli"] = True
+
+        def ax_d():
+            return 1 if st["tur"] == "dikey" else 0
+
+        def cam_olcu():
+            try:
+                cam, otur, eks = (float(v.get().replace(",", ".")) for v in (v_cam, v_otur, v_aks))
+            except ValueError:
+                cam, otur, eks = 32.0, 6.4, 9.5
+            g = st["cy"]
+            ti = -g * otur                            # cam iç yüzü: burun ucundan oturma payı kadar gövde tarafında
+            t0, t1 = sorted((ti, ti + g * cam))
+            return cam, ti, t0, t1, eks
+
+        def cam_kutular():
+            """Cam kılavuzunun iki cam paketi (x0, y0, x1, y1)."""
+            _c, _ti, t0, t1, eks = cam_olcu()
+            out = []
+            for s_ in (-1, 1):
+                l0, l1 = sorted((s_ * eks, s_ * (eks + 90)))
+                out.append((l0, t0, l1, t1) if ax_d() == 1 else (t0, l0, t1, l1))
+            return out
+
+        # ---------------- çizim
+        def ciz():
+            cv.delete("all")
+            W, H = max(cv.winfo_width(), 300), max(cv.winfo_height(), 300)
+            a = ax_d()
+            # aks çizgisi
+            if a == 1:
+                cv.create_line(X(0), 0, X(0), H, fill="#30363d", dash=(6, 4))
+            else:
+                cv.create_line(0, Y(0), W, Y(0), fill="#30363d", dash=(6, 4))
+            if v_kil.get() and st["p"]:
+                cam, ti, t0, t1, eks = cam_olcu()
+                for r_ in cam_kutular():
+                    cv.create_rectangle(X(r_[0]), Y(r_[1]), X(r_[2]), Y(r_[3]), fill="#1f6feb", stipple="gray25", outline="#58a6ff")
+                if a == 1:
+                    cv.create_line(0, Y(ti), W, Y(ti), fill="#58a6ff", dash=(2, 4))
+                    cv.create_text(X(eks + 92), Y((t0 + t1) / 2), text=f"cam {cam:g} mm", fill="#58a6ff", anchor="w")
+                else:
+                    cv.create_line(X(ti), 0, X(ti), H, fill="#58a6ff", dash=(2, 4))
+                    cv.create_text(X((t0 + t1) / 2), Y(eks + 92), text=f"cam {cam:g} mm", fill="#58a6ff", anchor="s")
+            for i, p in enumerate(st["p"]):
+                lps = dunya(p)
+                renk = RENK.get(p["geo"]["klasor"], "#3fb950")
+                tag = f"p{i}"
+                for lp in dunya_c(p):
+                    cv.create_line([c for q in lp for c in (X(q[0]), Y(q[1]))], fill="#ff9f1c" if i == st["sec"] else "#8b949e",
+                                   width=2 if i == st["sec"] else 1, tags=tag)
+                for lp, dr in sorted(zip(lps, p["geo"]["derin"]), key=lambda t: t[1]):
+                    if len(lp) < 3:
+                        continue
+                    cv.create_polygon([c for q in lp for c in (X(q[0]), Y(q[1]))], fill=renk if dr % 2 == 0 else BG,
+                                      outline="#ff9f1c" if i == st["sec"] else "#c9d1d9", width=2 if i == st["sec"] else 1, tags=tag)
+                b = kutu(lps or dunya_c(p))
+                if st["z"] > 2.0:
+                    cv.create_text(X(b[2]) + 4, Y(b[3]), text=p["geo"]["kod"], fill="#ff9f1c" if i == st["sec"] else "#8b949e",
+                                   anchor="nw", font=("Segoe UI", 8), tags=tag)
+            cv.create_line(X(0) - 10, Y(0), X(0) + 10, Y(0), fill="#3fb950", width=2)
+            cv.create_line(X(0), Y(0) - 10, X(0), Y(0) + 10, fill="#3fb950", width=2)
+
+        def sigdir():
+            if not st["p"]:
+                return
+            pts_ = [q for p in st["p"] for q in tum(p)]
+            if v_kil.get():                              # cam kılavuzunun kalınlık yönü de görünsün
+                _c, _ti, t0_, t1_, eks_ = cam_olcu()
+                pts_.append([(0.0, t0_), (0.0, t1_)] if ax_d() == 1 else [(t0_, 0.0), (t1_, 0.0)])
+            b = kutu(pts_)
+            W, H = max(cv.winfo_width(), 300), max(cv.winfo_height(), 300)
+            st["z"] = 0.85 * min(W / max(b[2] - b[0], 1.0), H / max(b[3] - b[1], 1.0))
+            st["ox"] = W / 2 - (b[0] + b[2]) / 2 * st["z"]
+            st["oy"] = H / 2 + (b[1] + b[3]) / 2 * st["z"]
+            ciz()
+
+        def cakisma(i):
+            if i is None or i >= len(st["p"]):
+                return []
+            Pi = P_(st["p"][i])
+            out = []
+            for j, q in enumerate(st["p"]):
+                if j == i or not Pi or not P_(q):
+                    continue
+                a_ = _ortusme(Pi, (0.0, 0.0), P_(q), (0.0, 0.0), adim=0.4)
+                if a_ > 0.5:
+                    out.append(f"{q['geo']['kod']} ~{a_:.0f} mm²")
+            return out
+
+        def yaz_durum(ek=""):
+            i = st["sec"]
+            if i is not None and i < len(st["p"]):
+                p = st["p"][i]
+                v_x.set(f"{p['x']:.2f}")
+                v_y.set(f"{p['y']:.2f}")
+                v_r.set(f"{p['rot']:g}")
+                c_ = cakisma(i)
+                ana_ = " (ana profil: yeri sabit, referansı burun ucu)" if i == 0 else ""
+                durum.config(text=f"Seçili: {p['geo']['kod']}{ana_}  x {p['x']:.2f}  y {p['y']:.2f}  açı {p['rot']:g}°"
+                                  f"{'  ayna' if p['ayna'] else ''}   |   "
+                                  + (("çakışma: " + ", ".join(c_)) if c_ else "çakışma yok") + (f"   |   {ek}" if ek else ""))
+            else:
+                v_x.set("")
+                v_y.set("")
+                v_r.set("")
+                hedef_ = hedef_yol()
+                durum.config(text=f"{len(st['p'])} parça   |   kayıt: {os.path.basename(hedef_)}" + (f"   |   {ek}" if ek else ""))
+
+        # ---------------- parça işlemleri
+        def ana_kur(kod):
+            pr = next((k for k in profiller if k["kod"] == kod and k["tur"] == st["tur"]), None)
+            if not pr:
+                return
+            g = geo(pr["dosya_yol"], profil=True)
+            a = ax_d()
+            rot = 0.0
+            for r_ in (0.0, 90.0, 180.0, 270.0):         # burun cam tarafına (-y düşey / -x yatay) bakacak duruş
+                b_ = profil_burun(_kesit_olustur("", [_parca_donustur(lp, 0, 0, r_, False) for lp in g["dong"]]), a)
+                if b_ and b_[0] == -1:
+                    rot = r_
+                    break
+            kaydet_geri()
+            yeni = {"geo": g, "x": 0.0, "y": 0.0, "rot": rot, "ayna": False}
+            if st["p"]:
+                st["p"][0] = yeni
+            else:
+                st["p"].append(yeni)
+            st["cy"] = -1
+            st["sec"] = None
+            sigdir()
+            yaz_durum()
+
+        def ekle(yol):
+            if not st["p"]:
+                messagebox.showinfo("Şablon kur", "Önce ana profili seçin.", parent=pen)
+                return
+            try:
+                g = geo(yol, profil=os.path.basename(os.path.dirname(yol)).upper() in ("DIKME", "YATAY"))
+            except (ValueError, OSError) as e:
+                messagebox.showwarning("Şablon kur", f"{os.path.basename(yol)}: {e}", parent=pen)
+                return
+            kisa_ = re.sub(r"(?i)[_\- ][dy]$", "", g["kod"])
+            if kisa_ != g["kod"]:
+                g = dict(g, kod=kisa_)       # R50P01_D / _Y -> R50P01: şablonda ürün koduyla; dosya yöne göre bulunur
+            W, H = max(cv.winfo_width(), 300), max(cv.winfo_height(), 300)
+            cx, cy_ = mm(W / 2, H / 2)
+            b = kutu(g["dong"] or g["cizgi"])
+            kaydet_geri()
+            yeni_p = {"geo": g, "x": round(cx - (b[0] + b[2]) / 2, 2), "y": round(cy_ - (b[1] + b[3]) / 2, 2), "rot": 0.0, "ayna": False}
+            ek_ = "sürükleyip yerine götürün; 'Yasla' ile komşusuna dayayın"
+            if g["klasor"] == "ISI_BARIYERI" and g["dong"]:
+                # ısı bariyeri: boyu derinlik ekseninde, burnun içine katalog geçme boyu (BARIYER_UC) kadar girmiş, aksta
+                a = ax_d()
+                if (b[2] - b[0] > b[3] - b[1]) != (a == 0):
+                    yeni_p["rot"] = 90.0
+                yeni_p["x"] = yeni_p["y"] = 0.0
+                bb = kutu(dunya(yeni_p))
+                orta = (bb[1 - a] + bb[3 - a]) / 2
+                uc = bb[a + 2] if st["cy"] < 0 else bb[a]          # profile bakan uç
+                hedef = -st["cy"] * BARIYER_UC
+                d_ = [0.0, 0.0]
+                d_[a], d_[1 - a] = hedef - uc, -orta
+                yeni_p["x"], yeni_p["y"] = round(d_[0], 4), round(d_[1], 4)
+                ek_ = f"ısı bariyeri burna {BARIYER_UC:g} mm geçmiş olarak yerleştirildi (zinciri program cam kalınlığına göre kurar)"
+            st["p"].append(yeni_p)
+            st["sec"] = len(st["p"]) - 1
+            ciz()
+            yaz_durum(ek_)
+
+        def tasi(i, dx, dy, geri_=True):
+            if i is None or i == 0 or i >= len(st["p"]):
+                return
+            if geri_:
+                kaydet_geri()
+            st["p"][i]["x"] = round(st["p"][i]["x"] + dx, 4)
+            st["p"][i]["y"] = round(st["p"][i]["y"] + dy, 4)
+
+        def dondur(i=None, aci=90.0):
+            i = st["sec"] if i is None else i
+            if i is None or i == 0:
+                return
+            p = st["p"][i]
+            b0 = kutu(tum(p))
+            kaydet_geri()
+            p["rot"] = (p["rot"] + aci) % 360.0
+            b1 = kutu(tum(p))                         # kutunun ortası yerinde kalsın
+            p["x"] += (b0[0] + b0[2]) / 2 - (b1[0] + b1[2]) / 2
+            p["y"] += (b0[1] + b0[3]) / 2 - (b1[1] + b1[3]) / 2
+            ciz()
+            yaz_durum()
+
+        def aynala(i=None):
+            i = st["sec"] if i is None else i
+            if i is None or i == 0:
+                return
+            p = st["p"][i]
+            b0 = kutu(tum(p))
+            kaydet_geri()
+            p["ayna"] = not p["ayna"]
+            p["rot"] = (-p["rot"]) % 360.0               # ayna, dünya x eksenine göre olsun (görünen sol-sağ çevrilir)
+            b1 = kutu(tum(p))
+            p["x"] += (b0[0] + b0[2]) / 2 - (b1[0] + b1[2]) / 2
+            p["y"] += (b0[1] + b0[3]) / 2 - (b1[1] + b1[3]) / 2
+            ciz()
+            yaz_durum()
+
+        def sil():
+            i = st["sec"]
+            if i is None or i == 0:
+                return
+            kaydet_geri()
+            del st["p"][i]
+            st["sec"] = None
+            ciz()
+            yaz_durum()
+
+        def cogalt():
+            i = st["sec"]
+            if i is None or i == 0:
+                return
+            kaydet_geri()
+            q = dict(st["p"][i])
+            st["p"].append(q)
+            st["sec"] = len(st["p"]) - 1
+            ciz()
+            yaz_durum("kopya aynı yerde: sürükleyin ya da ok tuşlarıyla taşıyın")
+
+        def geri():
+            if st["geri"]:
+                st["p"] = st["geri"].pop()
+                if st["sec"] is not None and st["sec"] >= len(st["p"]):
+                    st["sec"] = None
+                ciz()
+                yaz_durum("geri alındı")
+
+        def yasla(dx, dy, i=None):
+            """Seçili parçayı (dx, dy) yönünde, başka bir parçaya değene kadar iter."""
+            i = st["sec"] if i is None else i
+            if i is None or i == 0:
+                return None
+            p = st["p"][i]
+            lps = dunya(p)
+            if not lps:
+                yaz_durum("çizgi parçası (dolgusuz): yaslanamaz, ok tuşlarıyla taşıyın")
+                return None
+            Pi = P_(p, lps)
+            bi = Pi[0][2]
+            digerleri = [P_(q) for j, q in enumerate(st["p"]) if j != i and q["geo"]["dong"]]
+            if v_kil.get():                             # cam kılavuzu da engeldir: fitil cama yaslanabilir
+                for r_ in cam_kutular():
+                    lp_ = [(r_[0], r_[1]), (r_[2], r_[1]), (r_[2], r_[3]), (r_[0], r_[3])]
+                    digerleri.append([([lp_], [0], r_)])
+
+            def alan(s):
+                d_ = (dx * s, dy * s)
+                b_ = (bi[0] + d_[0], bi[1] + d_[1], bi[2] + d_[0], bi[3] + d_[1])
+                top = 0.0
+                for Q in digerleri:
+                    k_ = Q[0][2]
+                    if b_[0] > k_[2] or k_[0] > b_[2] or b_[1] > k_[3] or k_[1] > b_[3]:
+                        continue
+                    top += _ortusme(Pi, d_, Q, (0.0, 0.0), adim=0.25)
+                return top
+            # geçme mantığı (program bariyer/adaptör oturtmasında da böyle yapar): küçük tırnak girişimi (≤ 1,5 mm²)
+            # geçilir, gövdeler dayanınca durulur; dönen konum, o ana kadarki çakışmasız en derin yerdir
+            SERBEST, TIRNAK = 0.08, 1.5
+            a0 = alan(0.0)
+            s, derin, dayandi = 0.25, 0.0, False
+            while s <= 120.0:
+                a = alan(s) - a0
+                if a > TIRNAK:
+                    dayandi = True
+                    break
+                if a <= SERBEST:
+                    derin = s
+                s += 0.25
+            if not dayandi:
+                yaz_durum("bu yönde dayanacak parça yok (120 mm)")
+                return None
+            s2 = derin + 0.05
+            while s2 < derin + 0.25 - 1e-9 and alan(s2) - a0 <= SERBEST:
+                s2 += 0.05
+            derin = s2 - 0.05
+            tasi(i, dx * derin, dy * derin)
+            ciz()
+            yaz_durum(f"{derin:.2f} mm yaslandı")
+            return derin
+
+        # ---------------- dosya
+        def sablon_dosyalari():
+            if not os.path.isdir(sis_dir):
+                return []
+            return sorted(f for f in os.listdir(sis_dir) if f.lower().endswith(".dxf")
+                          and any(k in _norm(f) for k in ("dusey", "dikey", "yatay")))
+
+        def tip_temiz():
+            return re.sub(r"[^A-Za-z0-9]+", "_", _norm(v_tip.get()).upper()).strip("_") or "KAPAKLI"
+
+        def hedef_yol():
+            if st["yol"] and st.get("ac_tip") == (tip_temiz(), st["tur"]):
+                return st["yol"]                       # açılan şablon: aynı dosyanın üzerine
+            onek = Counter(m_.group(1).upper() for m_ in (re.match(r"^([A-Za-z]+\d+)_", f_) for f_ in sablon_dosyalari()) if m_)
+            onek = onek.most_common(1)[0][0] if onek else re.sub(r"[^A-Za-z0-9]+", "_", os.path.basename(kut)).upper()
+            return os.path.join(sis_dir, f"{onek}_{tip_temiz()}_SISTEM_{'DUSEY' if st['tur'] == 'dikey' else 'YATAY'}.dxf")
+
+        def ac(yol):
+            n_ = _norm(os.path.basename(yol))
+            tur = "yatay" if "yatay" in n_ else "dikey"
+            try:
+                parca, notlar = sablon_parcalari_oku(yol, kut, tur)
+            except (ValueError, OSError) as e:
+                messagebox.showwarning("Şablon kur", f"Açılamadı: {e}", parent=pen)
+                return
+            adlar = {_sade(k["kod"]) for k in profiller if k["tur"] == tur}
+            ana_i = next((i for i, p in enumerate(parca) if _sade(p["geo"]["kod"]) in adlar), None)
+            if ana_i is None:
+                messagebox.showwarning("Şablon kur", "Şablonda ana profil (DIKME / YATAY klasöründeki bir profil) yok.", parent=pen)
+                return
+            parca.insert(0, parca.pop(ana_i))
+            a0 = parca[0]
+            if a0["geo"]["yol"] is None:
+                notlar.insert(0, "ana profilin şablondaki çizimi kütüphanedekinden farklı")
+            ox_, oy_ = a0["x"], a0["y"]
+            for p in parca:                              # ana profilin referansı (burun ucu) başlangıç noktasına
+                p["x"], p["y"] = p["x"] - ox_, p["y"] - oy_
+            st.update({"tur": tur, "p": parca, "sec": None, "yol": yol, "geri": [], "kirli": False})
+            v_tur.set(tur)
+            v_mevcut.set(os.path.basename(yol))
+            tip = re.sub(r"(?i)(^|_)(sistem|dusey|düşey|dikey|yatay)(?=_|$)", "", os.path.splitext(os.path.basename(yol))[0]).strip("_ ")
+            tip = re.sub(r"^[A-Za-z]+\d+_?", "", tip).strip("_ ")
+            v_tip.set(tip.upper() or "KAPAKLI")
+            st["ac_tip"] = (tip_temiz(), tur)
+            ana_listesi()
+            v_ana.set(a0["geo"]["kod"])
+            b_ = profil_burun(_kesit_olustur("", dunya(parca[0])), ax_d())
+            st["cy"] = b_[0] if b_ else -1
+            cam_ = (_SABLON_BILGI.get(os.path.abspath(yol)) or {}).get("cam")
+            if cam_:
+                v_cam.set(f"{cam_:g}")
+            sigdir()
+            yaz_durum(("Not: " + "; ".join(notlar[:4])) if notlar else f"{os.path.basename(yol)} açıldı")
+
+        def kaydet(yol=None, sor=True):
+            if len(st["p"]) < 2:
+                messagebox.showinfo("Şablon kur", "Ana profile en az bir parça ekleyin.", parent=pen)
+                return None
+            yol = yol or hedef_yol()
+            # cam tarafı denetimi: program cam tarafını, ana profilden en çok taşan parçaların yönünden bulur
+            a = ax_d()
+            bp = kutu(dunya(st["p"][0]))
+            ba = kutu([q for p in st["p"] for q in tum(p)])
+            tas_ = (bp[a] - ba[a]) if st["cy"] < 0 else (ba[a + 2] - bp[a + 2])
+            ters_ = (ba[a + 2] - bp[a + 2]) if st["cy"] < 0 else (bp[a] - ba[a])
+            if sor and tas_ < ters_ and not messagebox.askyesno(
+                    "Şablon kur", "Cam tarafında ana profilden taşan parça (baskı / kapak) yok ya da öbür taraftakinden kısa.\n"
+                                  "Program cam tarafını buradan bulur; yanlış tarafı seçebilir. Yine de kaydedilsin mi?", parent=pen):
+                return None
+            if os.path.exists(yol):
+                if sor and not messagebox.askyesno("Şablon kur", f"{os.path.basename(yol)} var. Üzerine yazılsın mı?\n"
+                                                                  f"(Eski hâli SISTEM\\_yedek klasörüne kopyalanır.)", parent=pen):
+                    return None
+                yd = os.path.join(os.path.dirname(yol), "_yedek")
+                os.makedirs(yd, exist_ok=True)
+                import shutil
+                shutil.copy2(yol, os.path.join(yd, f"{os.path.splitext(os.path.basename(yol))[0]}_"
+                                                   f"{datetime.datetime.now().strftime('%Y%m%d_%H%M%S')}.dxf"))
+            os.makedirs(os.path.dirname(yol), exist_ok=True)
+            try:
+                sablon_dxf_yaz(yol, st["p"])
+            except OSError as e:
+                messagebox.showwarning("Şablon kur", f"Yazılamadı: {e}", parent=pen)
+                return None
+            # ilk şablonsa cam kalınlığı / oturma payı sistemin ayarı olur
+            digerleri = [f for f in sablon_dosyalari() if os.path.join(sis_dir, f).lower() != yol.lower()]
+            notlar = []
+            try:
+                cam_, otur_ = float(v_cam.get().replace(",", ".")), float(v_otur.get().replace(",", "."))
+                if not digerleri:
+                    kay = sistem_kaydi(sis, True)
+                    if kay is not None:
+                        kay["sablon_cam_kalinlik"], kay["sablon_oturma"] = f"{cam_:g}", f"{otur_:g}"
+                        ayar_kaydet()
+                elif abs(cam_ - sayi_("sablon_cam_kalinlik", 32.0)) > 0.05:
+                    notlar.append(f"sistemin şablon cam kalınlığı {sayi_('sablon_cam_kalinlik', 32.0):g} mm; bu şablon {cam_:g} mm'ye göre "
+                                  f"çizildi — program farkı diğer şablonlarla ortak dış parçadan (baskı) bulur")
+            except ValueError:
+                pass
+            st["yol"], st["kirli"], st["ac_tip"] = yol, False, (tip_temiz(), st["tur"])
+            mevcut_listesi()
+            self._kutuphane_tazele()
+            try:
+                sab_ = kutuphane_sablonlari(kut, kutuphane_profilleri(sis_kl))
+                sira = next((i for i, x in enumerate(sab_.get(st["tur"]) or []) if os.path.abspath(x[0]) == os.path.abspath(yol)), None)
+                rol = "ANA şablon (detaylar bundan kurulur)" if sira == 0 else "ek şablon (ana şablon başka dosya)" if sira else "şablon"
+            except Exception:
+                rol = "şablon"
+            self._log(f"Şablon kaydedildi: {os.path.basename(yol)} — {st['tur']} {rol}.", "bilgi")
+            yaz_durum(f"kaydedildi: {os.path.basename(yol)} — {rol}" + (("; " + "; ".join(notlar)) if notlar else ""))
+            return yol
+
+        def yeni():
+            if st["kirli"] and st["p"] and not messagebox.askyesno("Şablon kur", "Kaydedilmemiş değişiklikler silinsin mi?", parent=pen):
+                v_tur.set(st["tur"])
+                return
+            st.update({"tur": v_tur.get(), "p": [], "sec": None, "yol": None, "geri": [], "kirli": False, "cy": -1})
+            ana_listesi()
+            if v_ana.get():
+                ana_kur(v_ana.get())
+                st["kirli"] = False
+            else:
+                ciz()
+                yaz_durum()
+
+        def ana_listesi():
+            kodlar = [k["kod"] for k in profiller if k["tur"] == st["tur"]]
+            cb_ana.config(values=kodlar)
+            if v_ana.get() not in kodlar:
+                v_ana.set(kodlar[0] if kodlar else "")
+
+        def mevcut_listesi():
+            cb_mev.config(values=sablon_dosyalari())
+            ana_tazele()
+
+        def ana_tazele():
+            try:
+                sab_ = kutuphane_sablonlari(kut, kutuphane_profilleri(sis_kl))
+            except Exception:
+                sab_ = {"dikey": [], "yatay": []}
+            for t_, cb_ in (("dikey", cb_ana_d), ("yatay", cb_ana_y)):
+                adlar_ = [os.path.basename(x[0]) for x in sab_.get(t_) or []]
+                cb_.config(values=adlar_)
+                cb_.set(adlar_[0] if adlar_ else "(şablon yok)")
+
+        def ana_sec(tur, ad):
+            """Seçilen dosyayı bu yönün ana şablonu yapar: detaylar bundan kurulur, diğerleri ek tip olur."""
+            if not ad or ad.startswith("("):
+                return
+            kay = sistem_kaydi(sis, True)
+            if kay is None:
+                return
+            kay.setdefault("ana_sablon", {})[tur] = ad.lower()
+            ayar_kaydet()
+            self._kutuphane_tazele()
+            ana_tazele()
+            self._log(f"{'Düşey' if tur == 'dikey' else 'Yatay'} ana şablon: {ad}", "bilgi")
+            yaz_durum(f"{'düşey' if tur == 'dikey' else 'yatay'} ana şablon: {ad} — detaylar bundan kuruluyor")
+
+        # ---------------- üst çubuklar
+        ttk.Label(u0, text="Ana şablon   Düşey").pack(side="left")
+        cb_ana_d = ttk.Combobox(u0, width=38, state="readonly")
+        cb_ana_d.pack(side="left", padx=(4, 0))
+        cb_ana_d.bind("<<ComboboxSelected>>", lambda _e: ana_sec("dikey", cb_ana_d.get()))
+        ttk.Label(u0, text="   Yatay").pack(side="left")
+        cb_ana_y = ttk.Combobox(u0, width=38, state="readonly")
+        cb_ana_y.pack(side="left", padx=(4, 0))
+        cb_ana_y.bind("<<ComboboxSelected>>", lambda _e: ana_sec("yatay", cb_ana_y.get()))
+        ttk.Label(u0, foreground="#7a858e", text="   detaylar ana şablondan kurulur").pack(side="left")
+        ttk.Separator(sag, orient="horizontal").pack(fill="x", pady=(0, 6), before=u1)
+        ttk.Label(u1, text="Yön").pack(side="left")
+        for t_, a_ in (("dikey", "Düşey"), ("yatay", "Yatay")):
+            ttk.Radiobutton(u1, text=a_, value=t_, variable=v_tur, command=yeni).pack(side="left", padx=(4, 0))
+        ttk.Label(u1, text="   Tip").pack(side="left")
+        e_tip = ttk.Entry(u1, textvariable=v_tip, width=12)
+        e_tip.pack(side="left", padx=(4, 0))
+        ttk.Label(u1, text="   Ana profil").pack(side="left")
+        cb_ana = ttk.Combobox(u1, textvariable=v_ana, width=14, state="readonly")
+        cb_ana.pack(side="left", padx=(4, 0))
+        cb_ana.bind("<<ComboboxSelected>>", lambda _e: ana_kur(v_ana.get()))
+        ttk.Button(u1, text="Yeni", command=yeni).pack(side="left", padx=(8, 0))
+        ttk.Label(u1, text="   Mevcut şablon").pack(side="left")
+        cb_mev = ttk.Combobox(u1, textvariable=v_mevcut, width=34, state="readonly")
+        cb_mev.pack(side="left", padx=(4, 0))
+        ttk.Button(u1, text="Aç", command=lambda: ac(os.path.join(sis_dir, v_mevcut.get())) if v_mevcut.get() else None).pack(
+            side="left", padx=(4, 0))
+        ttk.Button(u1, text="Kaydet", style="Ana.TButton", command=kaydet).pack(side="left", padx=(12, 0))
+
+        ttk.Label(u2, text="Seçili parça  X").pack(side="left")
+        for v_, w_ in ((v_x, 9), (v_y, 9), (v_r, 6)):
+            if v_ is v_y:
+                ttk.Label(u2, text="Y").pack(side="left", padx=(6, 0))
+            if v_ is v_r:
+                ttk.Label(u2, text="Açı").pack(side="left", padx=(6, 0))
+            e_ = ttk.Entry(u2, textvariable=v_, width=w_)
+            e_.pack(side="left", padx=(4, 0))
+            e_.bind("<Return>", lambda _e: elle_gir())
+        for txt_, cmd_ in (("⟲ 90°", lambda: dondur()), ("⇋ Ayna", lambda: aynala()), ("Çoğalt", cogalt), ("Sil", sil),
+                           ("↶ Geri", geri), ("Sığdır", sigdir)):
+            ttk.Button(u2, text=txt_, width=8, command=cmd_).pack(side="left", padx=(8 if txt_ == "⟲ 90°" else 3, 0))
+        ttk.Label(u2, text="   Yasla").pack(side="left")
+        for txt_, a_, b_ in (("←", -1, 0), ("→", 1, 0), ("↑", 0, 1), ("↓", 0, -1)):
+            ttk.Button(u2, text=txt_, width=3, command=lambda a=a_, b=b_: yasla(a, b)).pack(side="left", padx=(3, 0))
+
+        ttk.Label(u3, text="Cam kılavuzu:").pack(side="left")
+        ttk.Checkbutton(u3, variable=v_kil, command=ciz).pack(side="left")
+        for ad_, v_ in (("cam kalınlığı (şablonun çizildiği)", v_cam), ("oturma payı", v_otur), ("cam–aks", v_aks)):
+            ttk.Label(u3, text=f"  {ad_}").pack(side="left")
+            e_ = ttk.Entry(u3, textvariable=v_, width=6)
+            e_.pack(side="left", padx=(4, 0))
+            e_.bind("<Return>", lambda _e: ciz())
+            e_.bind("<FocusOut>", lambda _e: ciz())
+        ttk.Label(u3, foreground="#7a858e", text="  mm").pack(side="left")
+
+        def elle_gir():
+            i = st["sec"]
+            if i is None:
+                return
+            try:
+                x_, y_, r_ = (float(v.get().replace(",", ".")) for v in (v_x, v_y, v_r))
+            except ValueError:
+                return
+            p = st["p"][i]
+            kaydet_geri()
+            if i != 0:
+                p["x"], p["y"] = x_, y_
+            p["rot"] = r_ % 360.0
+            ciz()
+            yaz_durum()
+
+        # ---------------- kütüphane ağacı
+        for d in sorted(os.listdir(kut)):
+            alt = os.path.join(kut, d)
+            if not os.path.isdir(alt) or _norm(d) == "sistem" or d.startswith(("_", ".")):
+                continue
+            ds = sorted(f for f in os.listdir(alt) if f.lower().endswith(".dxf"))
+            if not ds:
+                continue
+            k_ = tr.insert("", "end", text=d, open=False)
+            for f in ds:
+                tr.insert(k_, "end", iid=os.path.join(alt, f), text=os.path.splitext(f)[0])
+        tr.bind("<Double-1>", lambda _e: ekle(tr.selection()[0]) if tr.selection() and os.path.isfile(tr.selection()[0]) else None)
+        ttk.Button(sol, text="Ekle →", command=lambda: ekle(tr.selection()[0])
+                   if tr.selection() and os.path.isfile(tr.selection()[0]) else None).pack(fill="x", pady=(4, 0))
+
+        # ---------------- fare / klavye
+        def bul(px, py):
+            x_, y_ = mm(px, py)
+            aday = []
+            for i, p in enumerate(st["p"]):
+                lps = dunya(p)
+                b = kutu(lps or dunya_c(p))
+                if b[0] - 0.5 <= x_ <= b[2] + 0.5 and b[1] - 0.5 <= y_ <= b[3] + 0.5 and (not lps or _nokta_konturlarda((x_, y_), lps)):
+                    aday.append(((b[2] - b[0]) * (b[3] - b[1]), -i, i))
+            return min(aday)[2] if aday else None
+
+        def bas(e):
+            cv.focus_set()
+            i = bul(e.x, e.y)
+            st["sec"] = i
+            st["suruk"] = (e.x, e.y, False) if (i is not None and i != 0) else None
+            ciz()
+            yaz_durum()
+
+        def surukle(e):
+            s_ = st["suruk"]
+            if not s_ or st["sec"] is None:
+                return
+            if not s_[2]:
+                kaydet_geri()
+            dxp, dyp = e.x - s_[0], e.y - s_[1]
+            tasi(st["sec"], dxp / st["z"], -dyp / st["z"], geri_=False)
+            cv.move(f"p{st['sec']}", dxp, dyp)
+            st["suruk"] = (e.x, e.y, True)
+
+        def birak(_e):
+            if st["suruk"] and st["suruk"][2]:
+                ciz()
+                yaz_durum()
+            st["suruk"] = None
+
+        def teker(e, f=None):
+            f = f or (1.2 if e.delta > 0 else 1 / 1.2)
+            vx, vy = mm(e.x, e.y)
+            st["z"] = max(0.2, min(400.0, st["z"] * f))
+            st["ox"], st["oy"] = e.x - vx * st["z"], e.y + vy * st["z"]
+            ciz()
+
+        def kaydir_bas(e):
+            st["pan"] = (e.x, e.y)
+
+        def kaydir(e):
+            if st.get("pan"):
+                st["ox"] += e.x - st["pan"][0]
+                st["oy"] += e.y - st["pan"][1]
+                st["pan"] = (e.x, e.y)
+                ciz()
+
+        def cift(e):
+            if bul(e.x, e.y) is None:
+                sigdir()
+
+        def tus(e, dx, dy):
+            if e.widget.winfo_class() in ("Entry", "TEntry", "TCombobox"):
+                return None
+            adim = 1.0 if (e.state & 0x1) else 0.1
+            tasi(st["sec"], dx * adim, dy * adim)
+            ciz()
+            yaz_durum()
+            return "break"
+
+        def kisayol(e, f):
+            if e.widget.winfo_class() in ("Entry", "TEntry", "TCombobox"):
+                return None
+            f()
+            return "break"
+        cv.bind("<Button-1>", bas)
+        cv.bind("<B1-Motion>", surukle)
+        cv.bind("<ButtonRelease-1>", birak)
+        cv.bind("<Double-Button-1>", cift)
+        cv.bind("<MouseWheel>", teker)
+        cv.bind("<Button-4>", lambda e: teker(e, 1.2))
+        cv.bind("<Button-5>", lambda e: teker(e, 1 / 1.2))
+        for b_ in ("<ButtonPress-3>", "<ButtonPress-2>"):
+            cv.bind(b_, kaydir_bas)
+        for b_ in ("<B3-Motion>", "<B2-Motion>"):
+            cv.bind(b_, kaydir)
+        cv.bind("<Configure>", lambda _e: ciz())
+        for k_, dx_, dy_ in (("Left", -1, 0), ("Right", 1, 0), ("Up", 0, 1), ("Down", 0, -1)):
+            for m_ in ("", "Shift-"):
+                pen.bind(f"<{m_}{k_}>", lambda e, a=dx_, b=dy_: tus(e, a, b))
+        for k_, f_ in (("<Delete>", sil), ("<r>", lambda: dondur()), ("<R>", lambda: dondur()), ("<m>", lambda: aynala()),
+                       ("<M>", lambda: aynala()), ("<Control-d>", cogalt), ("<Control-z>", geri)):
+            pen.bind(k_, lambda e, f=f_: kisayol(e, f))
+        pen.bind("<Escape>", lambda _e: (st.update(sec=None), ciz(), yaz_durum()))
+
+        def kapat():
+            if st["kirli"] and st["p"] and not messagebox.askyesno("Şablon kur", "Kaydedilmemiş değişiklikler var. Kapatılsın mı?", parent=pen):
+                return
+            pen.destroy()
+        pen.protocol("WM_DELETE_WINDOW", kapat)
+
+        mevcut_listesi()
+        if ac_yol:
+            pen.after(50, lambda: ac(ac_yol))
+        else:
+            ana_listesi()
+            pen.after(50, lambda: (ana_kur(v_ana.get()) if v_ana.get() else None, st.update(kirli=False)))
+        self._sablon_pen = (pen, st, {"ac": ac, "kaydet": kaydet, "ekle": ekle, "yasla": yasla, "tasi": tasi, "dondur": dondur,
+                                      "aynala": aynala, "ana_kur": ana_kur, "yeni": yeni, "ciz": ciz, "sigdir": sigdir,
+                                      "cakisma": cakisma, "hedef_yol": hedef_yol, "v_tip": v_tip, "v_tur": v_tur, "dunya": dunya,
+                                      "ana_sec": ana_sec, "cb_ana": (cb_ana_d, cb_ana_y)})
 
     def _referans_editoru(self):
         """Kütüphanedeki parça DXF'ini açar; referans (base) noktası tıklanarak işaretlenir (köşe / kenar ortası / kutu
