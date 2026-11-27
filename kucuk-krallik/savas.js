@@ -3,7 +3,6 @@
    Bir hedefe dokununca kartı açılır; ordu düşmana göre kendiliğinden ayarlanır ve oradan sefer gönderilir.
    Kart, haritadaki hedef kartıyla aynıdır (w2Card); böylece harita ve sekme aynı şekilde çalışır. */
 
-window._kkYeniSavas = true; // eski küçük harita kartı (renderKSel) artık kullanılmıyor
 
 function hedefYolda(kind, target) { return (S.sefer || []).some(function (m) { return m.ph === 'go' && m.kind === kind && (target == null || m.target === target); }); }
 function hedefPil(e) {
@@ -16,6 +15,7 @@ function hedefSatir(e, ic, title, sub, pill) {
   return '<button class="hrow" data-hk="' + e.k + '" data-hid="' + kkEsc(id) + '"><span class="hic">' + ic + '</span><span class="hmid"><b>' + title + '</b><small>' + sub + '</small></span>' + (pill || '') + '<span class="hch" aria-hidden="true">›</span></button>';
 }
 function hedefHtml() {
+  ensureLords(); bossSeason(); ensureMapObj(); // lordlar, kuşatma ve harita nesneleri güncel kalsın
   const E = wEnts(), now = Date.now(), ac = kkAcemi(), secili = E.find(wSelIs);
   const say = function (X) { return fmt(Math.round(kkTot(X))); };
   const yol = function (kind, target) { return hedefYolda(kind, target) ? ' · ⚔️ ' + kkL('yolda', 'on the way') : ''; };
@@ -54,7 +54,7 @@ function hedefHtml() {
     E.filter(function (e) { return e.k === 'lord'; }).forEach(function (e) {
       const l = e.l, d = dipAktif(l);
       const pill = l.beaten ? '<span class="hpill hpn">⏳ ' + tm(Math.max(0, (l.e - now) / 1000)) + '</span>' : d ? '<span class="hpill hpn">' + (d.t === 'ittifak' ? '🛡️ ' + kkL('müttefik', 'ally') : '🤝 ' + kkL('ticaret', 'trade')) + '</span>' : hedefPil(e);
-      g3.push(koy(e, hedefSatir(e, '<span style="color:' + l.col + '">' + (l.cr || '👑') + '</span>', kkEsc(l.ad), kkL('Lord · Kademe ', 'Lord · Tier ') + (l.tier || 1) + (l.beaten ? kkL(' · yenildi, daha güçlü dönecek', ' · defeated, will return stronger') : ' · ' + say(l.ordu) + kkL(' asker', ' soldiers') + (l.kin ? ' · 😠' : '') + yol('lord', l.id)), pill)));
+      g3.push(koy(e, hedefSatir(e, '<span style="color:' + l.col + '">' + (l.cr || '👑') + '</span>', kkEsc(kkT(l.ad)), kkL('Lord · Kademe ', 'Lord · Tier ') + (l.tier || 1) + (l.beaten ? kkL(' · yenildi, daha güçlü dönecek', ' · defeated, will return stronger') : ' · ' + say(l.ordu) + kkL(' asker', ' soldiers') + (l.kin ? ' · 😠' : '') + yol('lord', l.id)), pill)));
     });
     const bs = E.find(function (e) { return e.k === 'boss'; });
     if (bs && S.boss) {
@@ -68,7 +68,7 @@ function hedefHtml() {
 function renderHedef() {
   const el = $('hedefv'); if (!el || !el._bag) return; // oyun hazır olmadan çizme
   if (window.mapOpen) { if (el._h !== '') { el.innerHTML = ''; el._h = ''; } return; } // harita açıkken aynı kart orada gösterilir
-  const ae = document.activeElement; if (ae && el.contains(ae) && ae.type === 'range') return;
+  const ae = document.activeElement; if (ae && el.contains(ae) && (ae.type === 'range' || ae.type === 'number')) return;
   let h = ''; try { h = hedefHtml(); } catch (e) { console.error('hedef', e); return; }
   if (el._h !== h) { el.innerHTML = h; el._h = h; }
   const ss = $('sonSavas');

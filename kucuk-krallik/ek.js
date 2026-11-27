@@ -144,7 +144,7 @@ function dipGelir(l) { const t = l.tier || 1; return { w: 6 * t, s: 5 * t, f: 4 
 function dipHtml(l) {
   if (!l || l.beaten) return '';
   const d = dipAktif(l), now = Date.now();
-  if (l.kin) return '<p class="eff" style="margin:6px 0 0">😠 ' + kkL('Anlaşmayı bozdun; ' + kkEsc(l.ad) + ' kinli. Ordusu %25 güçlü, yenilene kadar anlaşma yapmaz.', 'You broke the pact; ' + kkEsc(l.ad) + ' holds a grudge. Army 25% stronger, no deals until defeated.') + '</p>';
+  if (l.kin) return '<p class="eff" style="margin:6px 0 0">😠 ' + kkL('Anlaşmayı bozdun; ' + kkEsc(kkT(l.ad)) + ' kinli. Ordusu %25 güçlü, yenilene kadar anlaşma yapmaz.', 'You broke the pact; ' + kkEsc(kkT(l.ad)) + ' holds a grudge. Army 25% stronger, no deals until defeated.') + '</p>';
   if (d) {
     const gl = dipGelir(l), alli = d.t === 'ittifak';
     let h = '<p class="eff" style="margin:6px 0 0">' + (alli ? kkL('🛡️ <b>Müttefik</b> · savaş gücün +%6', '🛡️ <b>Ally</b> · combat power +6%') : kkL('🤝 <b>Ticaret anlaşması</b>', '🤝 <b>Trade pact</b>')) + kkL(' · kervan dakikada +' + gl.w + ' odun, +' + gl.s + ' taş, +' + gl.f + ' yemek · ' + tm((d.e - now) / 1000) + ' kaldı', ' · caravan per minute +' + gl.w + ' wood, +' + gl.s + ' stone, +' + gl.f + ' food · ' + tm((d.e - now) / 1000) + ' left') + '</p>';
@@ -161,7 +161,7 @@ function dipYap(id, t) {
   S.g -= c; const now = Date.now();
   if (t === 'ticaret') l.dip = { t: 'ticaret', e: now + DIP_SURE, lt: now };
   else { dipTick(); l.dip = { t: 'ittifak', e: now + DIP_SURE, lt: now }; }
-  toast(t === 'ticaret' ? '🤝 ' + kkL(l.ad + ' ile ticaret anlaşması yapıldı', 'Trade pact made with ' + l.ad) : '🛡️ ' + kkL(l.ad + ' artık müttefikin', l.ad + ' is now your ally')); sfx('coin'); save(); render();
+  toast(t === 'ticaret' ? '🤝 ' + kkL(kkT(l.ad) + ' ile ticaret anlaşması yapıldı', 'Trade pact made with ' + l.ad) : '🛡️ ' + kkL(kkT(l.ad) + ' artık müttefikin', kkT(l.ad) + ' is now your ally')); sfx('coin'); save(); render();
 }
 /* anlaşmalı lorda saldırma: ilk basışta uyar, 6 sn içinde ikinci basışta boz */
 var kkBozOnay = null;
@@ -169,9 +169,9 @@ function dipSaldiriIzni(id) {
   const l = (S.lords || []).find(function (x) { return x.id === id; }); if (!l || !dipAktif(l)) return true;
   if (kkBozOnay && kkBozOnay.id === id && kkBozOnay.t > Date.now()) {
     kkBozOnay = null; dipTick(); l.dip = null; l.kin = 1; for (const k in l.ordu) l.ordu[k] = Math.ceil(l.ordu[k] * 1.25);
-    S.dipCeza = Date.now() + 2 * 3600e3; toast(kkL('Anlaşma bozuldu! ' + l.ad + ' kinli, diğer lordlar sana güvenmiyor.', 'Pact broken! ' + l.ad + ' holds a grudge and the other lords distrust you.')); return true;
+    S.dipCeza = Date.now() + 2 * 3600e3; toast(kkL('Anlaşma bozuldu! ' + kkT(l.ad) + ' kinli, diğer lordlar sana güvenmiyor.', 'Pact broken! ' + kkT(l.ad) + ' holds a grudge and the other lords distrust you.')); return true;
   }
-  kkBozOnay = { id: id, t: Date.now() + 6000 }; toast(kkL(l.ad + ' ile anlaşman var. Bozup saldırmak için tekrar bas.', 'You have a pact with ' + l.ad + '. Press again to break it and attack.')); return false;
+  kkBozOnay = { id: id, t: Date.now() + 6000 }; toast(kkL(kkT(l.ad) + ' ile anlaşman var. Bozup saldırmak için tekrar bas.', 'You have a pact with ' + kkT(l.ad) + '. Press again to break it and attack.')); return false;
 }
 /* ticaret geliri; çevrimdışı süreyi de kapsar */
 function dipTick() {
@@ -371,6 +371,7 @@ function kkInit() {
   const am = $('ayMus'); if (am && !$('aySahne')) { const lb = document.createElement('label'); lb.className = 'kch'; lb.innerHTML = '<input type="checkbox" id="aySahne"> <span>Savaş sahnesini göster</span>'; am.closest('label').after(lb); const cb = $('aySahne'); cb.checked = kAyar.sahne !== false; cb.onchange = function () { kAyar.sahne = cb.checked; kSak(); }; }
   try { kkDuzenInit(); } catch (e) { console.error('kkDuzenInit', e); }
   try { if (typeof savasInit === 'function') savasInit(); } catch (e) { console.error('savasInit', e); }
+  try { if (typeof sistemInit === 'function') sistemInit(); } catch (e) { console.error('sistemInit', e); }
   const hi = $('hedefInfo'); if (hi) hi.textContent = kkL('Bir hedefe dokun: ordu düşmana göre kendiliğinden ayarlanır, sana göndermek kalır.', 'Tap a target: the army is sized to the enemy automatically, you just send it.');
   dipTick();
   setInterval(kkTick, 2000);
@@ -391,6 +392,7 @@ function kkDuzenInit() {
     if (!(e.target.closest && e.target.closest('.tab'))) return;
     requestAnimationFrame(function () { const r = nav.getBoundingClientRect(); if (r.top > 1) return; const pane = document.querySelector('.pane:not(.hide)'); if (!pane) return; window.scrollTo(0, Math.max(0, pane.getBoundingClientRect().top + window.scrollY - r.height - 2)); });
   });
+  const sh = document.querySelector('#scout > h2'); if (sh) { const sc = $('scout'), key = 'acc2:p-o:Keşif'; try { if (localStorage.getItem(key) === '1') sc.classList.add('kapali'); } catch (e) { } sh.classList.add('acch'); sh.setAttribute('role', 'button'); sh.tabIndex = 0; const tg = function () { const c = sc.classList.toggle('kapali'); sh.classList.toggle('col', c); try { localStorage.setItem(key, c ? '1' : '0'); } catch (e) { } }; sh.classList.toggle('col', sc.classList.contains('kapali')); sh.addEventListener('click', tg); sh.addEventListener('keydown', function (e) { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); tg(); } }); }
   const sk = $('strk'); if (sk) { const tg = function () { window.strkAcik = !window.strkAcik; if (typeof renderStreak === 'function') renderStreak(); }; sk.addEventListener('click', function (e) { if (e.target.closest('#strkL')) tg(); }); sk.addEventListener('keydown', function (e) { if ((e.key === 'Enter' || e.key === ' ') && e.target.id === 'strkL') { e.preventDefault(); tg(); const l = $('strkL'); if (l) l.focus(); } }); }
   const ks = $('hedefv') || $('kmsel'); if (ks && !$('kkAcemiNot')) { const p = document.createElement('p'); p.id = 'kkAcemiNot'; p.className = 'eff hide'; p.style.margin = '8px 2px'; ks.parentNode.insertBefore(p, ks.nextSibling); }
 }
