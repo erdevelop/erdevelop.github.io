@@ -171,6 +171,7 @@ let SEZ = K.sez && K.sez.id === SEZ_ID() ? K.sez : { id: SEZ_ID(), xp: 0, al: []
 let YR = null;
 const DEV = { olumsuz: false, yakitsiz: false, cevrim: ls.get('kozmos-dev-cevrim', false) === true, log: [], gecmis: [], gi: -1 };
 /* otopilot hızı: Sakin / Normal / Hızlı (elle uçuşun azami hızı 1300; Normal ≈ 585) — v: azami hız, i: ivme, f: varışta yavaşlama, b: hız düğmesi */
+const OTO_TAU = 2.4, OTO_WARP_SON = 0.75;
 const OTO_HIZ = { sakin: { v: 0.3, i: 0.13, f: 260, b: 0.45 }, normal: { v: 0.45, i: 0.2, f: 380, b: 0.6 }, hizli: { v: 0.75, i: 0.45, f: 700, b: 0.8 } };
 let otoHiz = OTO_HIZ[ls.get('kozmos-otohiz', 'normal')] ? ls.get('kozmos-otohiz', 'normal') : 'normal';
 const PIL = { acik: !!ls.get('kozmos-pil', false) };
