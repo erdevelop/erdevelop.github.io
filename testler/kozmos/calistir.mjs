@@ -277,6 +277,27 @@ test('sanal joystick: sürükleyince gemi o yöne gidiyor', async () => {
   dogru(s[1] > 50 && acıFark(s[0], -Math.PI / 4) < 0.5, 'joystick çalışmadı: ' + JSON.stringify(s));
 });
 
+test('otopilot: warp ile uzak gezegene hedefi geçmeden varıyor (3 hız ayarı)', async () => {
+  for (const h of ['sakin', 'normal', 'hizli']) {
+    const pg = await sayfa(TEL, { once: `localStorage.setItem('kozmos-mod', '"oto"'); localStorage.setItem('kozmos-otohiz', '"${h}"');` }); await basla(pg);
+    const r = await pg.evaluate(async () => {
+      document.querySelectorAll('.perde').forEach(p => p.hidden = true); KOZ.yakit = 999;
+      let s = null; for (let x = 3; x < 12 && !s; x++) { const q = KOZ.sistem(x, 2); if (q && q.gez.length) s = q; }
+      const p = s.gez[0]; KOZ.otoSec(innerWidth / 2, 120); const o = KOZ.oto; delete o.tm; delete o.x; delete o.y; o.p = p; o.ad = p.ad;
+      const t0 = performance.now(); let warpd = false, gecis = 0, onceki = Infinity;
+      while (performance.now() - t0 < 45000) {
+        await new Promise(r => setTimeout(r, 200));
+        if (!KOZ.oto) return { ok: warpd && gecis === 0, warpd, gecis, sn: Math.round((performance.now() - t0) / 1000) };
+        const [px, py] = KOZ.gezPos(p, KOZ.simT()), d = Math.hypot(px - KOZ.SH.x, py - KOZ.SH.y);
+        if (!warpd && d > 80000 && performance.now() - t0 > 1500) { KOZ.oto.warp = true; warpd = true; }
+        if (d > onceki + 50 && d < 20000) gecis++; onceki = d;
+      }
+      return { ok: false, warpd, gecis, sn: 'varamadı' };
+    });
+    dogru(r.ok, h + ': ' + JSON.stringify(r));
+  }
+});
+
 test('mevsimlik etkinlik: zorlanınca parçalar çıkıyor ve toplanıyor', async () => {
   const pg = await sayfa(MASA); await basla(pg); await pg.evaluate(() => dev.run('mevsim kis'));
   await pg.waitForFunction(() => KOZ.MEVP.length > 0, null, { timeout: 5000 });
