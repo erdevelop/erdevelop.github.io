@@ -25,6 +25,7 @@ const MASA = { w: 1280, h: 720 }, TEL = { w: 390, h: 844, mob: true }, YATAY = {
 const TESTLER = [];
 const test = (ad, f) => TESTLER.push([ad, f]);
 const esit = (a, b, ne) => { if (JSON.stringify(a) !== JSON.stringify(b)) throw new Error(`${ne}: beklenen ${JSON.stringify(b)}, gelen ${JSON.stringify(a)}`); };
+const acıFark = (a, b) => Math.abs(Math.atan2(Math.sin(a - b), Math.cos(a - b)));
 const dogru = (k, ne) => { if (!k) throw new Error(ne); };
 let ACIK = [];
 async function sayfa({ w, h, mob } = MASA, { dil = 'tr', ek = '', once, git = true } = {}) {
@@ -257,7 +258,7 @@ test('oyun kolu ve titreşim', async () => {
   const pad = (ax, bt = []) => pg.evaluate(([ax, bt]) => { window.__pad = { connected: true, mapping: 'standard', axes: [ax[0], ax[1], 0, 0], buttons: Array.from({ length: 17 }, (_, i) => ({ pressed: bt.includes(i), value: bt.includes(i) ? 1 : 0 })) }; }, [ax, bt]);
   await pad([0, 0], [0]); await pg.waitForFunction(() => document.getElementById('menu').hidden, null, { timeout: 5000 }); await pad([0, 0]); await bekle(pg, 300);
   await pg.evaluate(() => { document.getElementById('diyalog').hidden = true; KOZ.SH.vx = KOZ.SH.vy = 0; }); await pad([0.7, -0.7]); await bekle(pg, 1500);
-  dogru(await pg.evaluate(() => Math.hypot(KOZ.SH.vx, KOZ.SH.vy) > 50 && Math.abs(KOZ.SH.a + Math.PI / 4) < 0.5), 'çubukla uçulamadı');
+  dogru(await pg.evaluate(() => Math.hypot(KOZ.SH.vx, KOZ.SH.vy) > 50 && Math.abs(Math.atan2(Math.sin(KOZ.SH.a + Math.PI / 4), Math.cos(KOZ.SH.a + Math.PI / 4))) < 0.5), 'çubukla uçulamadı');
   await pad([1, 0], [7]); await pg.waitForFunction(() => KOZ.SH.warp > 0.25, null, { timeout: 8000 });
   await pad([0, 0], [9]); await bekle(pg, 200); await pad([0, 0]); await bekle(pg, 300); esit(await pencereler(pg), ['menu'], 'Start menüyü açmalı');
   await pad([0, 0], [1]); await bekle(pg, 200); await pad([0, 0]); await bekle(pg, 300); esit(await pencereler(pg), [], 'B menüyü kapatmalı');
@@ -273,7 +274,7 @@ test('sanal joystick: sürükleyince gemi o yöne gidiyor', async () => {
   for (let i = 1; i <= 8; i++) { await cdp.send('Input.dispatchTouchEvent', { type: 'touchMove', touchPoints: [{ x: r[0] + i * 6, y: r[1] - i * 6, id: 1 }] }); await bekle(pg, 30); }
   await bekle(pg, 1000); const s = await pg.evaluate(() => [KOZ.SH.a, Math.hypot(KOZ.SH.vx, KOZ.SH.vy)]);
   await cdp.send('Input.dispatchTouchEvent', { type: 'touchEnd', touchPoints: [] });
-  dogru(s[1] > 50 && Math.abs(s[0] + Math.PI / 4) < 0.5, 'joystick çalışmadı: ' + JSON.stringify(s));
+  dogru(s[1] > 50 && acıFark(s[0], -Math.PI / 4) < 0.5, 'joystick çalışmadı: ' + JSON.stringify(s));
 });
 
 test('mevsimlik etkinlik: zorlanınca parçalar çıkıyor ve toplanıyor', async () => {
