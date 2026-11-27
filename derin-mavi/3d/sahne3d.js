@@ -320,6 +320,8 @@ export async function kur3D({ tuval, kalite, ilk = [] }) {
 
   /* ---------- yerleşim: ekran genişliğine göre kurulur ---------- */
   const ORTAM = new THREE.Group(); sahne.add(ORTAM);
+  /* yalnızca takip kamerasında görünen dekor: yan görünümün önünü ve kenarlarını kapatmasın diye ayrı grup */
+  const TAKIP = new THREE.Group(); TAKIP.visible = false; sahne.add(TAKIP); let SURU3 = null;
   let DUVAR = null, TUNEL = null;
   /* kaya engeli: mağaralı duvarın ve sol tepeciğin üst yüzeyi bir yükseklik ızgarasına çıkarılır (köşe noktalarından, ışın atmadan ucuzca).
      Mağaranın tüneli ayrıca bir elipsoitle tanımlanır: içi boştur, balık girebilir. */
@@ -362,11 +364,12 @@ export async function kur3D({ tuval, kalite, ilk = [] }) {
     /* mağaralı kayalık: mağara ağzı 2D'deki uyku mağarasının üstüne gelir */
     const ds = THREE.MathUtils.clamp(VW / 42, 0.3, 0.48);
     DUVAR = P.duvar.clone(true); DUVAR.scale.setScalar(ds); DUVAR.position.set(magX - 1.8 * ds, -0.05, -4.3 * ds); DUVAR.rotation.y = 0; ORTAM.add(DUVAR); DUVAR.updateMatrixWorld(true);
-    const koy = (k, x, z, sc, rot, ustte) => {
+    TAKIP.clear(); SURU3 = null;
+    const koy = (k, x, z, sc, rot, ustte, grup) => {
       const o = P[k].clone(true); o.scale.setScalar(sc); o.rotation.y = rot;
       let y = zeminY(x, z) - 0.05 * sc;
       if (ustte) { ISIN.set(new THREE.Vector3(x, 40, z), new THREE.Vector3(0, -1, 0)); const h = ISIN.intersectObject(ustte === true ? DUVAR : ustte, true)[0]; if (!h) return; y = h.point.y - 0.05; }
-      o.position.set(x, y, z); ORTAM.add(o);
+      o.position.set(x, y, z); (grup || ORTAM).add(o);
       if (MERCAN_K.has(k)) { o.userData.s0 = o.scale.x; MERCAN3.push(o); }
       return o;
     };
@@ -407,6 +410,30 @@ export async function kur3D({ tuval, kalite, ilk = [] }) {
     if (TM.cay > 0) { CAYIR3 = cayir(Math.round(VW * 9 * TM.cay), [-yarim, yarim, 0.6, 4], 0.55, 0.022, '#3f7a2e', '#9bc45a', 7); ORTAM.add(CAYIR3);
       YOSUN3 = cayir(Math.round(VW * 2.4 * TM.cay), [-yarim, yarim, -13, -6], 4.2, 0.16, '#2f5a26', '#87a84a', 11); ORTAM.add(YOSUN3); }
     for (const h of HUZME) h.position.set(-VW / 2 + h.userData.ux * VW + (Math.random() - 0.5), 6, -9 + Math.random() * 7);
+    /* TAKİP KAMERASI DEKORU: yan görünümde kameranın önü (z > 0) ve ekranın iki yanı boş kalır; balığın arkasından bakınca
+       buralar görünür. Kayalar, mercan öbekleri, anemonlar, çayır lekeleri ve uzakta iri kaya tepeleri. */
+    { const T = TAKIP, dis = yarim + 16, ic = (x, z) => z < -1.2 && Math.abs(x) < yarim; /* yan görünüm dekorunun olduğu yere girme */
+      const yakin = (x, z) => Math.abs(x) < yarim + 4 && z > -1.2 && z < 6;
+      const rast = (n, f) => { for (let i = 0, d = 0; i < n && d < n * 6; d++) { const x = ara(-dis, dis), z = ara(-15, 10); if (ic(x, z)) continue; f(x, z); i++; } };
+      rast(Math.round(VW * 1.6 + 30), (x, z) => koy(kayalar[Math.floor(r() * 4)], x, z, yakin(x, z) ? ara(0.25, 0.55) : ara(0.45, 1.4), r() * 6.28, null, T)); /* balığın yüzdüğü şeritte alçak kalır, kamerayı kapatmaz */
+      if (mk > 0) { rast(Math.round((VW * 3.5 + 40) * cok * mk), (x, z) => { const k = mercanlar[Math.floor(r() * mercanlar.length)]; const o = koy(k, x, z, (k.startsWith('yelpaze') ? ara(0.7, 1.3) : k.startsWith('masa') ? ara(0.4, 0.75) : ara(0.45, 1)), r() * 6.28, null, T); if (o) { const i = MERCAN3.indexOf(o); if (i >= 0) MERCAN3.splice(i, 1); } });
+        rast(Math.round(8 * mk), (x, z) => koy(r() < 0.5 ? 'anemon_0' : 'anemon_1', x, z, ara(0.8, 1.2), r() * 6, null, T)); }
+      /* uzakta, sisin içinde iri kaya tepeleri: ufuk boş görünmesin */
+      for (let i = 0; i < 6; i++) { const yan = i % 2 ? 1 : -1, o = P[kayalar[i % 4]].clone(true), sc = ara(3, 5.5); o.scale.set(sc, sc * ara(0.8, 1.4), sc); o.rotation.y = r() * 6.28; const x = yan * (dis + ara(-2, 6)), z = ara(-14, 8); o.position.set(x, zeminY(x, z) - 0.3 * sc, z); T.add(o); }
+      if (TM.cay > 0) for (let i = 0; i < 7; i++) { const x = ara(-dis, dis), z = ara(1, 9), w = ara(2.5, 5); T.add(cayir(Math.round(w * w * 9 * TM.cay), [x - w / 2, x + w / 2, z - w / 3, z + w / 3], ara(0.5, 1.1), 0.03, '#3f7a2e', '#9bc45a', 20 + i)); }
+      T.userData.dis = dis; }
+  }
+  /* takip kamerasında dolaşan küçük sürüler (yalnızca o kamerada görünür, oyunun 2D dünyasına karışmaz) */
+  function suruKur() {
+    if (!B.sardalya) return; SURU3 = []; const dis = TAKIP.userData.dis || 20;
+    for (let k = 0; k < 4; k++) { const n = 6 + (k % 3) * 2, m = { cx: (k - 1.5) * dis * 0.45, cz: [-4, 6, 3, -8][k], R: 4 + k * 1.5, h: 1 + (k % 2) * 1.6, a: k * 1.7, v: (k % 2 ? 1 : -1) * (0.09 + k * 0.02), b: [] };
+      for (let i = 0; i < n; i++) { const f = balikKlon('sardalya', ['#ffffff', '#ffe9a8', '#bfe6ff', '#ffd0c0'][k]); const sc = 0.22 + Math.random() * 0.08; f.o.scale.setScalar(sc); TAKIP.add(f.o); m.b.push({ ...f, ox: (Math.random() - 0.5) * 1.4, oy: (Math.random() - 0.5) * 0.7, oz: (Math.random() - 0.5) * 1.4, ph: Math.random() * 6 }); }
+      SURU3.push(m); }
+  }
+  function suruKare(dt, t) {
+    if (!SURU3) suruKur(); if (!SURU3) return;
+    for (const m of SURU3) { m.a += m.v * dt; const x = m.cx + Math.cos(m.a) * m.R, z = m.cz + Math.sin(m.a) * m.R, yaw = Math.atan2(-(Math.cos(m.a) * m.v), -Math.sin(m.a) * m.v);
+      for (const f of m.b) { const yy = zeminY(x, z) + m.h + f.oy + Math.sin(t * 1.3 + f.ph) * 0.12; f.o.position.set(x + f.ox + Math.sin(t * 0.7 + f.ph) * 0.2, yy, z + f.oz); f.o.rotation.set(0, yaw, 0); f.yuz.faz.value += dt * 9; } }
   }
 
   /* ---------- balıklar: 2D oyundaki her balığın 3D karşılığı ---------- */
@@ -451,7 +478,8 @@ export async function kur3D({ tuval, kalite, ilk = [] }) {
      göre hesaplanmaya devam eder; yalnızca çizim bu ikinci kamerayla yapılır. */
   const kamT = new THREE.PerspectiveCamera(58, 1, 0.03, 220), TK = { a: false, p: 0, ang: null, poz: new THREE.Vector3(), bak: new THREE.Vector3(), bak0: new THREE.Vector3(), ilk: true }, tkV = new THREE.Vector3();
   function takipKare(dt) {
-    TK.p += ((TK.a ? 1 : 0) - TK.p) * Math.min(1, dt * 2.2); if (TK.p < 0.003) { TK.p = 0; TK.ilk = true; return kam; }
+    TK.p += ((TK.a ? 1 : 0) - TK.p) * Math.min(1, dt * 2.2); TAKIP.visible = TK.p > 0.02; if (TK.p < 0.003) { TK.p = 0; TK.ilk = true; return kam; }
+    if (TAKIP.visible) suruKare(dt, U.zaman.value);
     const f = BAL.get('ben'); if (!f || !f.g.visible) return kam;
     const s = f.g.scale.x, fp = f.g.position, yaw = f.yaw || 0;
     if (TK.ang == null || TK.ilk) TK.ang = yaw; let da = yaw - TK.ang; while (da > Math.PI) da -= Math.PI * 2; while (da < -Math.PI) da += Math.PI * 2; TK.ang += da * Math.min(1, dt * 1.4); /* yön değişince yavaşça etrafından döner */
