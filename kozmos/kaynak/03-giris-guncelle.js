@@ -76,6 +76,7 @@ function joyGor() {
 }
 setInterval(() => { try { joyGor(); } catch (e) { } }, 300);
 addEventListener('resize', () => setTimeout(() => { try { kontYerles(); } catch (e) { } }, 60));
+$('otoHizSec').value = otoHiz; $('otoHizSec').addEventListener('change', e => { otoHiz = OTO_HIZ[e.target.value] ? e.target.value : 'normal'; ls.set('kozmos-otohiz', otoHiz); SES.tik(); });
 $('kontSec').value = KONT.tip; $('kboySec').value = KONT.boy; $('solakSec').checked = KONT.solak;
 $('kontSec').addEventListener('change', e => { KONT.tip = e.target.value; ls.set('kozmos-kont', KONT.tip); SES.tik(); if (KONT.tip === 'joy' && mod !== 'surus') modDegis(); duyur('🕹 ' + (KONT.tip === 'joy' ? T('Sanal joystick açık', 'Virtual joystick on') : T('Ekrana dokunarak yönlendirme', 'Tap-to-steer')), 'kesif', KONT.tip === 'joy' ? T('Sol alttaki çubuğu sürükle; ne kadar uzağa çekersen o kadar hızlanırsın', 'Drag the stick at the bottom left; the further you pull, the faster you go') : ''); });
 $('kboySec').addEventListener('change', e => { KONT.boy = e.target.value; ls.set('kozmos-kboy', KONT.boy); kontYerles(); SES.tik(); });
@@ -215,11 +216,11 @@ function guncelle(dt, t) {
     SH.vx += (cx * hz - SH.vx) * Math.min(1, dt * 1.6); SH.vy += (cy * hz - SH.vy) * Math.min(1, dt * 1.6);
     SH.itki += (1 - SH.itki) * Math.min(1, dt * 6);
   } else if (otoV) {
-    const vmax = (boost ? 3200 : 1300) * motorK(), vd = Math.min(vmax, Math.sqrt(2 * 1100 * Math.max(0, otoV.kal))), ux = otoV.ux, uy = otoV.uy;
+    const OH = OTO_HIZ[otoHiz] || OTO_HIZ.normal, vmax = (boost ? 3200 * OH.b : 1300 * OH.v) * motorK(), vd = Math.min(vmax, Math.sqrt(2 * OH.f * Math.max(0, otoV.kal))), ux = otoV.ux, uy = otoV.uy;
     // önce gemi hedefe dönsün, sonra hızlansın
     let fa = Math.atan2(uy, ux) - SH.a; fa = Math.abs(Math.atan2(Math.sin(fa), Math.cos(fa)));
     const hiz = fa > 1.2 ? Math.min(vd, 150) : vd;
-    const dvx = ux * hiz - SH.vx, dvy = uy * hiz - SH.vy, m = Math.hypot(dvx, dvy), amax = (boost ? 2600 : 1400) * motorK(), k = Math.min(1, amax * dt / (m || 1));
+    const dvx = ux * hiz - SH.vx, dvy = uy * hiz - SH.vy, m = Math.hypot(dvx, dvy), amax = (boost ? 2600 * OH.b : 1400 * OH.i) * motorK(), k = Math.min(1, amax * dt / (m || 1));
     SH.vx += dvx * k; SH.vy += dvy * k;
     SH.itki += (kis(m / 500, 0, 1) * (boost ? 1 : 0.75) - SH.itki) * Math.min(1, dt * 8);
   } else {
