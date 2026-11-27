@@ -445,7 +445,23 @@ export async function kur3D({ tuval, kalite }) {
 
   /* ---------- son işlem ---------- */
   const komp = new EffectComposer(R);
-  komp.addPass(new RenderPass(sahne, kam));
+  const rpGec = new RenderPass(sahne, kam); komp.addPass(rpGec);
+  /* TAKİP KAMERASI: yan görünümün yerine balığın arkasından ve yakından izler. Sahnedeki her şeyin yeri yan kameraya (kam)
+     göre hesaplanmaya devam eder; yalnızca çizim bu ikinci kamerayla yapılır. */
+  const kamT = new THREE.PerspectiveCamera(58, 1, 0.03, 220), TK = { a: false, p: 0, ang: null, poz: new THREE.Vector3(), bak: new THREE.Vector3(), bak0: new THREE.Vector3(), ilk: true }, tkV = new THREE.Vector3();
+  function takipKare(dt) {
+    TK.p += ((TK.a ? 1 : 0) - TK.p) * Math.min(1, dt * 2.2); if (TK.p < 0.003) { TK.p = 0; TK.ilk = true; return kam; }
+    const f = BAL.get('ben'); if (!f || !f.g.visible) return kam;
+    const s = f.g.scale.x, fp = f.g.position, yaw = f.yaw || 0;
+    if (TK.ang == null || TK.ilk) TK.ang = yaw; let da = yaw - TK.ang; while (da > Math.PI) da -= Math.PI * 2; while (da < -Math.PI) da += Math.PI * 2; TK.ang += da * Math.min(1, dt * 1.4); /* yön değişince yavaşça etrafından döner */
+    const fx = Math.cos(TK.ang), fz = -Math.sin(TK.ang), uz = THREE.MathUtils.clamp(s * 3.4, 0.55, 4.5), yk = uz * 0.32;
+    tkV.set(fp.x - fx * uz, fp.y + yk, fp.z - fz * uz); tkV.y = Math.max(tkV.y, zeminY(tkV.x, tkV.z) + 0.25, kayaY(tkV.x, tkV.z) + 0.25); tkV.y = Math.min(tkV.y, M.Hc + (M.H / 2) * M.k + 0.3);
+    if (TK.ilk) { TK.poz.copy(tkV); TK.bak.copy(fp); TK.ilk = false; } else { TK.poz.lerp(tkV, Math.min(1, dt * 3)); TK.bak.lerp(tkV.set(fp.x + fx * s * 1.2, fp.y + s * 0.1, fp.z + fz * s * 1.2), Math.min(1, dt * 5)); }
+    const e = TK.p * TK.p * (3 - 2 * TK.p);
+    kamT.aspect = kam.aspect; kamT.fov = kam.fov + (58 - kam.fov) * e; kamT.updateProjectionMatrix();
+    kamT.position.lerpVectors(kam.position, TK.poz, e); TK.bak0.set(kam.position.x, kam.position.y, 0).lerp(TK.bak, e); kamT.lookAt(TK.bak0);
+    return kamT;
+  }
   const huzmePass = new ShaderPass({
     uniforms: { tDiffuse: { value: null }, uGunes: { value: new THREE.Vector2(0.55, 1.3) }, uGuc: { value: 0.55 } },
     vertexShader: 'varying vec2 vUv; void main(){ vUv = uv; gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0); }',
@@ -541,7 +557,7 @@ export async function kur3D({ tuval, kalite }) {
       kubbeMat.uniforms.uUst.value.copy(RENK.ust).lerp(tmp.set('#24486e'), g * 0.85); kubbeMat.uniforms.uOrta.value.copy(SIS); kubbeMat.uniforms.uAlt.value.copy(RENK.alt).lerp(SIS_N, g);
       R.toneMappingExposure = 1.12 * (1 - 0.25 * g);
       const hz = TM.huzme * (1 - g) * Math.pow(THREE.MathUtils.clamp((isik - 0.5) / 0.8, 0, 1.15), 1.6) * (0.4 + 0.6 * gunesAci.yuk) * (0.6 + 0.4 * Math.min(1, berrakP / 0.85)); HUZME_G = hz;
-      for (const h of HUZME) { h.visible = hz > 0.01; h.material.uniforms.uGuc.value = 0.16 * hz; h.scale.x = 0.75 + 0.35 * Math.sin(t * h.userData.v + h.userData.f); h.lookAt(kam.position.x, h.position.y, kam.position.z); h.rotateZ(h.userData.a + Math.sin(t * 0.07 + h.userData.f) * 0.04); }
+      for (const h of HUZME) { h.visible = hz > 0.01; h.material.uniforms.uGuc.value = 0.16 * hz; h.scale.x = 0.75 + 0.35 * Math.sin(t * h.userData.v + h.userData.f); h.lookAt(rpGec.camera.position.x, h.position.y, rpGec.camera.position.z); h.rotateZ(h.userData.a + Math.sin(t * 0.07 + h.userData.f) * 0.04); }
       yuzeyDoku.offset.set(t * 0.01, t * 0.007);
       { const dz = d.deniz == null ? 0.2 : d.deniz; DZ.uT.value = t; DZ.uD.value = dz; DZ.uQ.value = 0.35 + dz * 0.45; DZ.uA.value = Math.max(0.02, (d.dalgaA || 4) * M.k * 0.7);
         yuzeyMat.opacity = 0.2 + dz * 0.12; if (d.sy != null) yuzey.position.y = M.Hc + (M.H / 2 - d.sy) * M.k; }
@@ -664,11 +680,15 @@ export async function kur3D({ tuval, kalite }) {
         f.g.visible = true;
       }
       for (const [id, f] of BAL) if (!gorulen.has(id)) { sahne.remove(f.g); BAL.delete(id); }
-      if (KAL[kalite].post) { gunesUzak.set(kam.position.x + gunesAci.x * 0.6, 60, kam.position.z - 30).project(kam); huzmePass.uniforms.uGunes.value.set(gunesUzak.x * 0.5 + 0.5, Math.min(1.6, gunesUzak.y * 0.5 + 0.5)); huzmePass.uniforms.uGuc.value = 0.55 * Math.min(1.25, HUZME_G * 1.1 + 0.15 * TM.huzme * (1 - g)); komp.render(); }
-      else R.render(sahne, kam);
+      const CK = takipKare(dt); rpGec.camera = CK;
+      if (KAL[kalite].post) { gunesUzak.set(CK.position.x + gunesAci.x * 0.6, 60, CK.position.z - 30).project(CK); huzmePass.uniforms.uGunes.value.set(gunesUzak.x * 0.5 + 0.5, Math.min(1.6, gunesUzak.y * 0.5 + 0.5)); huzmePass.uniforms.uGuc.value = 0.55 * Math.min(1.25, HUZME_G * 1.1 + 0.15 * TM.huzme * (1 - g)); komp.render(); }
+      else R.render(sahne, CK);
     },
+    /* takip kamerası aç/kapa; değer verilmezse durumu döndürür */
+    takip(v) { if (v != null) TK.a = !!v; return TK.a; },
+    takipPay: () => TK.p,
     /* fotoğraf için: hemen yeniden çiz ve tuvali döndür (çizim tamponu aynı görevde okunabilir) */
-    anlik() { if (KAL[kalite].post) komp.render(); else R.render(sahne, kam); return R.domElement; },
+    anlik() { if (KAL[kalite].post) komp.render(); else R.render(sahne, rpGec.camera || kam); return R.domElement; },
     kapat() { R.dispose(); }
   };
   kaliteUygula();

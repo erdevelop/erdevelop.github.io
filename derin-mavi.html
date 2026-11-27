@@ -167,6 +167,8 @@ body.foto #ust,body.foto #panel,body.foto #sohbetBtn,body.foto #beceriBtn,body.f
 @keyframes gel{from{opacity:0;transform:translateY(-8px)}}
 #ziyaretBant{position:fixed;left:50%;top:calc(52px + env(safe-area-inset-top,0px));transform:translateX(-50%);z-index:5;padding:7px 12px;border-radius:13px;background:rgba(5,30,45,.8);border:1px solid rgba(255,200,87,.5);font-weight:800;font-size:13px;white-space:nowrap}
 #ziyaretBant a{color:#FFE29A;margin-left:6px}
+#kamera3.on{background:rgba(255,211,107,.25);border-color:#FFD36B}
+#c{transition:opacity .6s}
 #ziyaretBant button{margin-left:8px;padding:3px 9px;border-radius:9px;border:1px solid rgba(255,226,154,.6);background:rgba(255,226,154,.12);color:#FFE29A;font:inherit;cursor:pointer}
 .defterNot{display:grid;grid-template-columns:1fr 1fr;gap:6px;margin:8px 0}.defterNot button{padding:8px 6px;border-radius:10px;border:1px solid rgba(255,255,255,.18);background:rgba(255,255,255,.06);color:inherit;font:inherit;font-size:13px;cursor:pointer}.defterNot button.on{border-color:#FFD36B;background:rgba(255,211,107,.18)}
 .defterSat{display:flex;gap:8px;align-items:baseline;padding:6px 0;border-top:1px solid rgba(255,255,255,.08);font-size:13px}.defterSat small{opacity:.6;margin-left:auto;white-space:nowrap}
@@ -234,6 +236,7 @@ body.er-durumlu #panel{bottom:32px}
   <button type="button" class="cip" id="fenerCip" hidden title="Gece feneri" data-en-title="Night lamp" aria-label="Gece feneri" data-en-aria="Night lamp">🔦</button>
   <div class="bos"></div>
   <button class="yuv" id="izleBtn" type="button" hidden title="İzleme modu: arayüzü gizle, sadece akvaryumu izle" data-en-title="Watch mode: hide the interface and just watch the aquarium" aria-label="İzleme modu" data-en-aria="Watch mode"><svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="4" width="20" height="13" rx="2"/><path d="M8 21h8M12 17v4"/><path d="M6 13c2-3 4-3 6 0s4 3 6 0" stroke-width="1.6"/></svg></button>
+  <button class="yuv" id="kamera3" type="button" hidden title="Kamera: yan görünüm / balığını takip et" data-en-title="Camera: side view / follow your fish">🎥</button>
   <button class="yuv" id="kalite3" type="button" hidden title="3D görüntü kalitesi" data-en-title="3D graphics quality"></button>
   <div class="cip" id="ag" title="Çevrimiçi durum" data-en-title="Online status"><i></i><span></span></div>
   <button class="yuv" id="sesBtn" type="button" title="Ses" data-en-title="Sound" aria-label="Ses" data-en-aria="Sound">🔊</button>
@@ -1112,6 +1115,9 @@ async function g3Baslat() {
     const AD = { tasarruf: T('Pil dostu', 'Battery saver'), dusuk: T('Düşük', 'Low'), orta: T('Orta', 'Medium'), yuksek: T('Yüksek', 'High') };
     const kb = $('kalite3'), yaz = () => { const ad = AD[G3.kalite()], o = G3.oto(); kb.textContent = innerWidth < 560 ? (o ? '⚙️A' : '⚙️') : '⚙️ ' + (o ? T('Otomatik', 'Auto') + ' · ' + ad : ad); kb.title = T('3D kalite: ', '3D quality: ') + (o ? T('Otomatik — cihaza ve kare hızına göre ayarlanır (şu an ', 'Auto — adapts to the device and frame rate (now ') + ad + ')' : ad) + T('. Değiştirmek için dokun.', '. Tap to change.'); };
     kb.hidden = false; yaz(); G3.degisince(yaz);
+    const kmb = $('kamera3'); kmb.hidden = false;
+    kmb.onclick = () => { const a = G3.takip(!G3.takip()); kmb.classList.toggle('on', a); document.body.classList.toggle('takip3', a); cv.style.opacity = a ? '0' : ''; KUMANDA.aktif = 0;
+      duyur(a ? T('🎥 Takip kamerası: balığının arkasındasın. Ok tuşlarıyla yönlendirebilir, 🎥 ile yan görünüme dönebilirsin.', '🎥 Follow camera: you are right behind your fish. Steer with the arrow keys; tap 🎥 to return to the side view.') : T('🎥 Yan görünüm', '🎥 Side view')); };
     kb.onclick = () => { const k = G3.kaliteDegis(); try { localStorage.setItem('derin3d-kalite2', k); } catch (e) { } yaz(); duyur(k === 'oto' ? T('⚙️ Otomatik: cihazına ve akıcılığa göre kendini ayarlar', '⚙️ Auto: adapts to your device and smoothness') : '⚙️ ' + AD[k] + (k === 'tasarruf' ? T(' — en akıcı, pili korur', ' — smoothest, saves battery') : k === 'yuksek' ? T(' — en güzel görüntü, güçlü cihazlar için', ' — best looks, for powerful devices') : '')); };
   } catch (e) { console.error(e); t3.remove(); G3 = null; duyur(T('3D görünüm bu cihazda açılamadı, 2D ile devam ediliyor.', '3D view could not start on this device; continuing in 2D.')); }
 }
@@ -2711,6 +2717,7 @@ addEventListener('keydown', e => { if (e.code === 'KeyE' && !(e.target && /INPUT
 function klavyeYuz() { if (!TUS.size || !S || girisAcik) return; const b = BAL.get('ben'); if (!b) return; const dx = (TUS.has('r') ? 1 : 0) - (TUS.has('l') ? 1 : 0), dy = (TUS.has('d') ? 1 : 0) - (TUS.has('u') ? 1 : 0); if (dx || dy) { KUMANDA.x = b.x + dx * 90; KUMANDA.y = b.y + dy * 90; KUMANDA.aktif = 0.4; ilkKumanda(); } }
 cv.addEventListener('pointerdown', e => {
   if (girisAcik || !$('modal').hidden) return;
+  if (G3 && G3.takip && G3.takip()) return; /* takip kamerasında ekran noktaları yan görünümle örtüşmez */
   $('sohbetKutu').hidden = true;
   const x = e.clientX, y = e.clientY; let en = null, enD = 1e9;
   if (insDokun(x, y)) return;
