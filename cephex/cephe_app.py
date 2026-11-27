@@ -13725,6 +13725,7 @@ class Uygulama(tk.Tk):
         v_res = tk.BooleanVar(value=True)            # resim altlığı görünsün
         v_alfa = tk.DoubleVar(value=55.0)            # altlık belirginliği (%)
         v_aday = tk.StringVar()
+        v_tasi = tk.BooleanVar(value=False)          # resmi taşı modu
         st.update({"res": None, "mod": None, "mod_v": []})
 
         # ---------------- arayüz
@@ -13866,9 +13867,11 @@ class Uygulama(tk.Tk):
             if st.get("mod") == "alan" and len(st["mod_v"]) == 2:
                 (a0_, b0_), (a1_, b1_) = st["mod_v"]
                 cv.create_rectangle(a0_, b0_, a1_, b1_, outline="#d29922", dash=(6, 3), width=2)
-            if st.get("mod") == "olcek":
+            if st.get("mod") in ("olcek", "hizala"):
                 for q in st["mod_v"]:
                     cv.create_oval(X(q[0]) - 5, Y(q[1]) - 5, X(q[0]) + 5, Y(q[1]) + 5, outline="#d29922", width=2)
+                    cv.create_line(X(q[0]) - 9, Y(q[1]), X(q[0]) + 9, Y(q[1]), fill="#d29922")
+                    cv.create_line(X(q[0]), Y(q[1]) - 9, X(q[0]), Y(q[1]) + 9, fill="#d29922")
 
         def sigdir():
             if not st["p"]:
@@ -13936,6 +13939,8 @@ class Uygulama(tk.Tk):
                     rot = r_
                     break
             kaydet_geri()
+            if v_ana.get() != kod:
+                v_ana.set(kod)
             yeni = {"geo": g, "x": 0.0, "y": 0.0, "rot": rot, "ayna": False}
             if st["p"]:
                 st["p"][0] = yeni
@@ -14051,17 +14056,96 @@ class Uygulama(tk.Tk):
             resim_kur(gri, "pano", rid=rid)
 
         def resim_kaldir():
+            if v_tasi.get():
+                v_tasi.set(False)
+                tasi_modu()
             st["res"], st["mod"], st["mod_v"] = None, None, []
             ciz()
             yaz_durum("resim kaldırıldı")
+
+        IPUCU = {"alan": "resimde detayın çevresine bir çerçeve çizin (sürükleyin)",
+                 "olcek": "ölçüsünü bildiğiniz iki noktaya tıklayın (ör. 50 mm profil genişliğinin iki ucu)",
+                 "hizala": "resmi yerine oturtun: önce RESİMDE bir noktaya (ör. profilin burun ucu ya da bir köşesi), sonra "
+                           "ÇİZİMDE karşılığına tıklayın (çizimdeki köşelere yapışır) — Esc: vazgeç"}
 
         def mod_ac(m):
             if not st.get("res"):
                 messagebox.showinfo("Şablon kur", "Önce resmi yapıştırın (Ctrl+V) ya da açın.", parent=pen)
                 return
+            if v_tasi.get():
+                v_tasi.set(False)
+                tasi_modu()
             st["mod"], st["mod_v"] = m, []
-            yaz_durum("resimde detayın çevresine bir çerçeve çizin (sürükleyin)" if m == "alan" else
-                      "ölçüsünü bildiğiniz iki noktaya tıklayın (ör. 50 mm profil genişliğinin iki ucu)")
+            ciz()
+            yaz_durum(IPUCU[m])
+
+        def resim_kaydir(dx, dy):
+            """Resmi şablon düzleminde (dx, dy) mm taşır."""
+            r = st.get("res")
+            if not r:
+                return
+            d0 = r["don"]
+            Ri = _dm_ters(d0.R)
+            du, dv = Ri[0][0] * dx + Ri[0][1] * dy, Ri[1][0] * dx + Ri[1][1] * dy
+            r["don"] = ResimDonusum(d0.s, d0.xr - du * d0.s, d0.yr + dv * d0.s, d0.R)
+
+        def resim_dondur(ayna=False):
+            """Resmi görünen ortasının çevresinde 90° (saat yönü tersine) döndürür ya da sağ-sol aynalar."""
+            r = st.get("res")
+            if not r:
+                messagebox.showinfo("Şablon kur", "Önce resmi yapıştırın (Ctrl+V) ya da açın.", parent=pen)
+                return
+            W, H = max(cv.winfo_width(), 300), max(cv.winfo_height(), 300)
+            c = mm(W / 2, H / 2)
+            d0 = r["don"]
+            q = d0.resme(*c)
+            R2 = _dm_carp(_dm(0, True) if ayna else _dm(90, False), d0.R)
+            Ri = _dm_ters(R2)
+            u, v = Ri[0][0] * c[0] + Ri[0][1] * c[1], Ri[1][0] * c[0] + Ri[1][1] * c[1]
+            r["don"] = ResimDonusum(d0.s, q[0] - u * d0.s, q[1] + v * d0.s, R2)
+            ciz()
+            yaz_durum("resim aynalandı" if ayna else "resim 90° döndürüldü")
+
+        def tasi_modu():
+            if v_tasi.get():
+                if not st.get("res"):
+                    v_tasi.set(False)
+                    messagebox.showinfo("Şablon kur", "Önce resmi yapıştırın (Ctrl+V) ya da açın.", parent=pen)
+                    return
+                st["mod"], st["mod_v"], st["sec"] = "tasi", [], None
+                try:
+                    cv.config(cursor="fleur")
+                except tk.TclError:
+                    pass
+                ciz()
+                yaz_durum("resmi sürükleyerek taşıyın (ok tuşları: 0,1 mm, Shift: 1 mm); bitince 'Resmi taşı'yı kapatın ya da Esc")
+            else:
+                if st.get("mod") == "tasi":
+                    st["mod"] = None
+                try:
+                    cv.config(cursor="")
+                except tk.TclError:
+                    pass
+                yaz_durum()
+
+        def yakala(px, py, esik=10.0):
+            """Tuvaldeki noktayı çizimdeki en yakın köşeye (parça konturu, aks başlangıcı) yapıştırır (esik piksel)."""
+            x_, y_ = mm(px, py)
+            en = (esik / st["z"], (x_, y_))
+            adaylar = [(0.0, 0.0)] + [q for p in st["p"] for lp in tum(p) for q in lp]
+            for q in adaylar:
+                d_ = math.hypot(q[0] - x_, q[1] - y_)
+                if d_ < en[0]:
+                    en = (d_, (float(q[0]), float(q[1])))
+            return en[1]
+
+        def esc(_e=None):
+            st.update(sec=None, mod=None, mod_v=[])
+            if v_tasi.get():
+                v_tasi.set(False)
+                tasi_modu()
+            ciz()
+            yaz_durum()
 
         def olcek_bitir():
             r = st["res"]
@@ -14083,8 +14167,9 @@ class Uygulama(tk.Tk):
             u1, v1 = Ri[0][0] * p1[0] + Ri[0][1] * p1[1], Ri[1][0] * p1[0] + Ri[1][1] * p1[1]
             r["don"] = ResimDonusum(s_, q1[0] - u1 * s_, q1[1] + v1 * s_, d0.R)
             r["olcek_sabit"] = s_
+            st["mod"], st["mod_v"] = "hizala", []          # ölçekten sonra yerine oturtma
             ciz()
-            yaz_durum(f"ölçek: {s_:.3f} piksel/mm — 'Resimden tanı' bu ölçekle arar")
+            yaz_durum(f"ölçek {s_:.3f} piksel/mm. Şimdi " + IPUCU["hizala"])
 
         def ilerleme(f, ne=""):
             durum.config(text=f"Resimden tanınıyor… %{int(max(0.0, min(1.0, f)) * 100)} {ne}")
@@ -14641,16 +14726,17 @@ class Uygulama(tk.Tk):
         cb_aday.bind("<<ComboboxSelected>>", lambda _e: aday_sec())
 
         ttk.Label(u4, text="Resim:").pack(side="left")
-        for txt_, cmd_ in (("Yapıştır (Ctrl+V)", resim_yapistir), ("Aç...", resim_ac), ("Alan seç", lambda: mod_ac("alan")),
-                           ("Ölçek (2 nokta)", lambda: mod_ac("olcek"))):
-            ttk.Button(u4, text=txt_, command=cmd_).pack(side="left", padx=(4, 0))
-        ttk.Button(u4, text="Resimden tanı", style="Ana.TButton", command=resimden_tani).pack(side="left", padx=(8, 0))
-        ttk.Button(u4, text="Kaldır", command=resim_kaldir).pack(side="left", padx=(4, 0))
-        ttk.Checkbutton(u4, text="göster", variable=v_res, command=ciz).pack(side="left", padx=(10, 0))
-        ttk.Label(u4, text="belirginlik").pack(side="left", padx=(8, 0))
-        ttk.Scale(u4, from_=10, to=100, variable=v_alfa, orient="horizontal", length=110,
+        for txt_, cmd_, w_ in (("Yapıştır", resim_yapistir, 9), ("Aç...", resim_ac, 5), ("Alan seç", lambda: mod_ac("alan"), 8),
+                               ("Ölçek (2 nokta)", lambda: mod_ac("olcek"), 14), ("Hizala (2 nokta)", lambda: mod_ac("hizala"), 14)):
+            ttk.Button(u4, text=txt_, width=w_, command=cmd_).pack(side="left", padx=(4, 0))
+        ttk.Checkbutton(u4, text="Resmi taşı", variable=v_tasi, command=tasi_modu).pack(side="left", padx=(8, 0))
+        ttk.Button(u4, text="⟲ 90°", width=6, command=lambda: resim_dondur(False)).pack(side="left", padx=(4, 0))
+        ttk.Button(u4, text="⇋", width=3, command=lambda: resim_dondur(True)).pack(side="left", padx=(3, 0))
+        ttk.Button(u4, text="Resimden tanı", width=13, style="Ana.TButton", command=resimden_tani).pack(side="left", padx=(8, 0))
+        ttk.Button(u4, text="Kaldır", width=7, command=resim_kaldir).pack(side="left", padx=(4, 0))
+        ttk.Checkbutton(u4, text="göster", variable=v_res, command=ciz).pack(side="left", padx=(8, 0))
+        ttk.Scale(u4, from_=10, to=100, variable=v_alfa, orient="horizontal", length=90,
                   command=lambda _v: ciz()).pack(side="left", padx=(4, 0))
-        ttk.Label(u4, foreground="#7a858e", text="  katalogdaki kesitin ekran görüntüsü: program ana profili, ölçeği ve parçaları bulur").pack(side="left")
 
         ttk.Label(u3, text="Cam kılavuzu:").pack(side="left")
         ttk.Checkbutton(u3, variable=v_kil, command=ciz).pack(side="left")
@@ -14715,16 +14801,43 @@ class Uygulama(tk.Tk):
                 if len(st["mod_v"]) >= 2:
                     olcek_bitir()
                 return
+            if st.get("mod") == "hizala":
+                if not st["mod_v"]:
+                    st["mod_v"].append(mm(e.x, e.y))
+                    ciz()
+                    yaz_durum("şimdi ÇİZİMDE karşılığına tıklayın (köşelere yapışır) — Esc: vazgeç")
+                    return
+                p1, p2 = st["mod_v"][0], yakala(e.x, e.y)
+                st["mod"], st["mod_v"] = None, []
+                resim_kaydir(p2[0] - p1[0], p2[1] - p1[1])
+                ciz()
+                yaz_durum(f"resim {p2[0] - p1[0]:+.2f}, {p2[1] - p1[1]:+.2f} mm kaydırıldı; ince ayar: 'Resmi taşı' + ok tuşları")
+                return
+            if st.get("mod") == "tasi":
+                st["suruk_r"] = (e.x, e.y)
+                return
             i = bul(e.x, e.y)
             st["sec"] = i
             st["suruk"] = (e.x, e.y, False) if (i is not None and i != 0) else None
             ciz()
             yaz_durum()
 
+        def ciz_sonra():
+            if not st.get("ciz_bekle"):
+                st["ciz_bekle"] = True
+                pen.after(15, lambda: (st.update(ciz_bekle=False), ciz()))
+
         def surukle(e):
             if st.get("mod") == "alan" and st["mod_v"]:
                 st["mod_v"][1] = (e.x, e.y)
                 ciz()
+                return
+            if st.get("mod") == "tasi":
+                if st.get("suruk_r"):
+                    x0_, y0_ = st["suruk_r"]
+                    resim_kaydir((e.x - x0_) / st["z"], -(e.y - y0_) / st["z"])
+                    st["suruk_r"] = (e.x, e.y)
+                    ciz_sonra()
                 return
             s_ = st["suruk"]
             if not s_ or st["sec"] is None:
@@ -14737,6 +14850,9 @@ class Uygulama(tk.Tk):
             st["suruk"] = (e.x, e.y, True)
 
         def birak(_e):
+            if st.get("mod") == "tasi":
+                st["suruk_r"] = None
+                return
             if st.get("mod") == "alan" and len(st["mod_v"]) == 2:
                 (a0_, b0_), (a1_, b1_) = st["mod_v"]
                 st["mod"], st["mod_v"] = None, []
@@ -14777,6 +14893,10 @@ class Uygulama(tk.Tk):
             if e.widget.winfo_class() in ("Entry", "TEntry", "TCombobox"):
                 return None
             adim = 1.0 if (e.state & 0x1) else 0.1
+            if st.get("mod") == "tasi":
+                resim_kaydir(dx * adim, dy * adim)
+                ciz()
+                return "break"
             tasi(st["sec"], dx * adim, dy * adim)
             ciz()
             yaz_durum()
@@ -14808,7 +14928,7 @@ class Uygulama(tk.Tk):
             kisayollar += [("<Control-v>", resim_yapistir), ("<Control-V>", resim_yapistir)]
         for k_, f_ in kisayollar:
             pen.bind(k_, lambda e, f=f_: kisayol(e, f))
-        pen.bind("<Escape>", lambda _e: (st.update(sec=None, mod=None, mod_v=[]), ciz(), yaz_durum()))
+        pen.bind("<Escape>", esc)
 
         def kapat():
             if st["kirli"] and st["p"] and not messagebox.askyesno("Şablon kur", "Kaydedilmemiş değişiklikler var. Kapatılsın mı?", parent=pen):
@@ -14833,7 +14953,9 @@ class Uygulama(tk.Tk):
                                       "cakisma": cakisma, "hedef_yol": hedef_yol, "v_tip": v_tip, "v_tur": v_tur, "dunya": dunya,
                                       "ana_sec": ana_sec, "cb_ana": (cb_ana_d, cb_ana_y), "resim_ac": resim_ac,
                                       "resim_pil": resim_pil, "resimden_tani": resimden_tani, "aday_sec": aday_sec,
-                                      "v_cam": v_cam, "v_otur": v_otur, "v_ana": v_ana, "mod_ac": mod_ac, "resim_web": resim_web})
+                                      "v_cam": v_cam, "v_otur": v_otur, "v_ana": v_ana, "mod_ac": mod_ac, "resim_web": resim_web,
+                                      "resim_kaydir": resim_kaydir, "resim_dondur": resim_dondur, "v_tasi": v_tasi,
+                                      "tasi_modu": tasi_modu, "X": X, "Y": Y, "mm": mm})
         if WEB:
             try:
                 import webtk

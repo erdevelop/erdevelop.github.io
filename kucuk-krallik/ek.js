@@ -332,7 +332,7 @@ function kkIsHtml() {
   for (const k in (S.tr || {})) { const t = S.tr[k]; if (!t || !t.n) continue; const u = U[k] || (typeof SC !== 'undefined' ? SC : { n: k }); rows.push({ t: t.e, h: '⚔️ ' + fmt(t.n) + ' ' + kkEsc(kkT(u.n)) + kkL(' eğitimde', ' in training'), k: null }); }
   if (!rows.length) return '';
   rows.sort(function (a, b) { return a.t - b.t; });
-  return '<div class="top"><h3>⏳ ' + kkL('İş sırası', 'Work queue') + '</h3><span class="lv">' + rows.length + kkL(' iş', ' jobs') + '</span></div>' + rows.map(function (r) { return '<div class="foot" style="margin:4px 0 0"><span class="eff" style="margin:0">' + r.h + '</span><small style="color:var(--mute);font-variant-numeric:tabular-nums">' + tm(Math.max(0, (r.t - now) / 1000)) + '</small></div>'; }).join('') + '<p class="eff" style="margin:8px 0 0"><small>' + kkL('Binalarda "+sıra" ile 5 seviyeye kadar sıraya koyabilirsin; eğitimde aynı birimden istediğin kadar sırala.', 'Use "+queue" on buildings to queue up to 5 levels; in training you can queue as many units as you like.') + '</small></p>';
+  return '<div class="top"><h3>⏳ ' + kkL('İş sırası', 'Work queue') + '</h3><span class="lv">' + rows.length + kkL(' iş', ' jobs') + '</span></div><div class="kkisl' + (rows.length > 5 ? ' kay' : '') + '">' + rows.map(function (r) { return '<div class="foot" style="margin:4px 0 0"><span class="eff" style="margin:0">' + r.h + '</span><small style="color:var(--mute);font-variant-numeric:tabular-nums">' + tm(Math.max(0, (r.t - now) / 1000)) + '</small></div>'; }).join('') + '</div>' + (rows.length > 5 ? '<p class="eff kkisa"><small>' + kkL('Diğer ' + (rows.length - 5) + ' iş için listeyi kaydır', 'Scroll the list for ' + (rows.length - 5) + ' more jobs') + '</small></p>' : '') + '<p class="eff" style="margin:8px 0 0"><small>' + kkL('Binalarda "+sıra" ile 5 seviyeye kadar sıraya koyabilirsin; eğitimde aynı birimden istediğin kadar sırala.', 'Use "+queue" on buildings to queue up to 5 levels; in training you can queue as many units as you like.') + '</small></p>';
 }
 
 /* ================= ÇİZİM VE BAĞLANTILAR ================= */
@@ -340,7 +340,7 @@ function kkRender() {
   try { kkIskele(); } catch (e) { }
   try { kkDuzenRender(); } catch (e) { }
   const hv = $('kkHava'); if (hv) { const t = kkHavaSatir(); if (hv.textContent !== t) hv.textContent = t; }
-  const is = $('kkIs'); if (is) { const h = kkIsHtml(); if (is._h !== h) { is._h = h; is.innerHTML = h; is.classList.toggle('hide', !h); } }
+  const is = $('kkIs'); if (is) { const h = kkIsHtml(); if (is._h !== h) { const l0 = is.querySelector('.kkisl'), st = l0 ? l0.scrollTop : 0; is._h = h; is.innerHTML = h; is.classList.toggle('hide', !h); const l1 = is.querySelector('.kkisl'); if (l1 && st) l1.scrollTop = st; } } // her saniye yenilenir; kaydırma yeri korunur
   if (kkPopK) kkPopYaz();
   const ko = $('komv'); if (ko && S.komutan) { const h = yetHtml(S.komutan); let y = $('kkYet'); if (!y) { y = document.createElement('div'); y.id = 'kkYet'; } if (y.parentNode !== ko) ko.appendChild(y); if (y._h !== h) { y._h = h; y.innerHTML = h; } }
 }
@@ -356,6 +356,7 @@ function kkInit() {
   document.head.appendChild(st);
   const sea = $('sea'); if (sea && !$('kkHava')) { const p = document.createElement('p'); p.id = 'kkHava'; sea.parentNode.insertBefore(p, sea.nextSibling); }
   const off = $('offsum'); if (off && !$('kkIs')) { const a = document.createElement('article'); a.id = 'kkIs'; a.className = 'card hide'; a.style.marginBottom = '10px'; off.parentNode.insertBefore(a, off.nextSibling); }
+  const kis = $('kkIs'); if (kis) kis.addEventListener('scroll', function (e) { const l = e.target; if (l.classList && l.classList.contains('kkisl')) l.classList.toggle('son', l.scrollTop + l.clientHeight >= l.scrollHeight - 2); }, true);
   const sc = document.querySelector('svg.scene'); if (sc) sc.addEventListener('click', kkSahneTik);
   document.addEventListener('click', function (e) {
     const p = $('kkPop'); if (p && !p.classList.contains('hide') && !p.contains(e.target) && !(e.target.closest && e.target.closest('svg.scene'))) kkPopKapat();

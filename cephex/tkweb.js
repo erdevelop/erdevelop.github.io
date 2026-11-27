@@ -595,6 +595,8 @@ T.text_end = (id) => { const w = W.get(id); w.inp.scrollTop = w.inp.scrollHeight
 function build_canvas(w) {
   const el = mk('div', 'tk-canvas'); const cv = mk('canvas'); const layer = mk('div', 'tk-cvwin'); el.append(cv, layer);
   w.box = el; w.cv = cv; w.layer = layer; w.items = new Map(); w.order = []; w.ox = 0; w.oy = 0; w.dirty = false; w.tagb = new Set(); w.sr = null;
+  el.tabIndex = -1; el.style.outline = 'none';            // focus_set ve tıklama klavyeyi tuvale versin (ok tuşları, Esc)
+  el.addEventListener('mousedown', () => { if (document.activeElement !== el) el.focus({ preventScroll: true }); });
   const ro = new ResizeObserver(() => { canvasSize(w); fire(w, '<Configure>', { width: Math.round(el.clientWidth), height: Math.round(el.clientHeight) }); }); ro.observe(el);
 }
 function canvasSize(w) {
