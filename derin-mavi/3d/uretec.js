@@ -424,14 +424,36 @@ export function yuzenUret(tur, malz, balik, o = {}) {
       ekle(new THREE.ConeGeometry(0.025, 0.08, 8).rotateZ(Math.PI / 2), M('#6E7049'), A.gov).position.set(-0.45, -0.005, 0);
       break;
     }
-    case 'manta': { /* manta: geniş baklava kanatlar, ağız yüzgeçleri, ince kuyruk */
-      const ust = M('#2C3440', { roughness: 0.6 }), alt = M('#E9EDF0', { roughness: 0.6 });
-      ekle(new THREE.SphereGeometry(0.18, 16, 10), ust).scale.set(1.6, 0.45, 1.2);
-      A.k = [1, -1].map(z => { const g = new THREE.Group(); G.add(g); const ss = new THREE.Shape(); ss.moveTo(0.24, 0); ss.quadraticCurveTo(0.12, z * 0.5, -0.04, z * 0.66); ss.quadraticCurveTo(-0.12, z * 0.42, -0.26, z * 0.08); ss.lineTo(-0.26, 0); ss.closePath();
-        const sh = new THREE.ExtrudeGeometry(ss, { depth: 0.02, bevelEnabled: true, bevelThickness: 0.02, bevelSize: 0.015, bevelSegments: 2, curveSegments: 10 }); sh.translate(0, 0, -0.01); sh.rotateX(Math.PI / 2); const m = ekle(sh, ust, g); const m2 = ekle(sh.clone(), alt, g); m2.position.y = -0.03; return [g, z]; });
-      for (const z of [-0.12, 0.12]) { const c = ekle(new THREE.CylinderGeometry(0.02, 0.035, 0.16, 6), ust); c.rotation.z = Math.PI / 2; c.position.set(0.32, -0.01, z); }
-      const ku = ekle(new THREE.CylinderGeometry(0.004, 0.012, 0.5, 4), ust); ku.rotation.z = Math.PI / 2; ku.position.x = -0.45;
-      goz(0.24, 0.02, -0.16, 0.022); goz(0.24, 0.02, 0.16, 0.022);
+    case 'manta': { /* manta: gövdeden yumuşakça incelen kanatlar (üstü koyu, omuzlarında açık leke; altı beyaz), kıvrık ağız yüzgeçleri, ince kuyruk.
+                       Kanatlar katı levha değil: kökten uca dalga gibi bükülerek çırpar (yuzenOyna). */
+      const c2 = new THREE.Color(), DS = { side: THREE.DoubleSide };
+      const gm = M('#ffffff', Object.assign({ vertexColors: true, roughness: 0.55 }, DS));
+      /* gövde: yassı, önü küt */
+      const pr = profil([[0, 0.25], [0.15, 0.6], [0.4, 0.95], [0.62, 1], [0.85, 0.85], [0.97, 0.55], [1, 0.35]]);
+      ekle(govdeLoft({ X0: -0.3, X1: 0.3, NX: 40, NA: 24, ry: u => 0.075 * pr(u), rz: u => 0.17 * pr(u), us: () => 2.4, renk: (u, sn, cs, col) => col.set('#262D37').lerp(c2.set('#EEF1F3'), yumusak(-sn, -0.05, 0.35)) }), gm);
+      /* kanat: kökten uca ve önden arkaya incelen kalınlık, uca doğru hafif yukarı kıvrım */
+      const NS = 26, NC = 14, kanatG = z => {
+        const P = [], C = [], I = [], S0 = [], col = new THREE.Color(), kk = new THREE.Color('#232A34'), ak = new THREE.Color('#8C99A4'), bb = new THREE.Color('#F0F3F4'), kn = new THREE.Color('#3B4450');
+        for (const yz of [1, -1]) for (let i = 0; i <= NS; i++) { const s = i / NS, xl = 0.27 - 0.33 * Math.pow(s, 0.8), xt = -0.27 + 0.25 * Math.pow(s, 1.7);
+          for (let jj = 0; jj <= NC; jj++) { const c = jj / NC, x = xl + (xt - xl) * c, kal = 0.07 * Math.pow(1 - s, 1.4) * Math.pow(Math.sin(Math.PI * c), 0.6) + 0.003;
+            P.push(x, 0.05 * s * s + yz * kal * (yz > 0 ? 1 : 0.55), z * s * 0.6); S0.push(s);
+            if (yz > 0) { col.copy(kk); const om = Math.exp(-(((s - 0.28) / 0.14) ** 2 + ((c - 0.3) / 0.22) ** 2)); col.lerp(ak, om * 0.8); col.lerp(kk, yumusak(s, 0.85, 1) * 0.3); } /* omuz lekesi */
+            else { col.copy(bb); col.lerp(kn, Math.max(yumusak(s, 0.72, 0.97), yumusak(c, 0.82, 1) * 0.7)); } /* beyaz karın, koyu kenar */
+            C.push(col.r, col.g, col.b); } }
+        const R = NC + 1, H = (NS + 1) * R;
+        for (let i = 0; i < NS; i++) for (let jj = 0; jj < NC; jj++) { const a = i * R + jj, b = a + R; I.push(a, b, a + 1, b, b + 1, a + 1, H + a, H + a + 1, H + b, H + b, H + a + 1, H + b + 1); }
+        for (let i = 0; i < NS; i++) for (const jj of [0, NC]) { const a = i * R + jj, b = a + R; I.push(a, b, H + a, b, H + b, H + a); } /* ön ve arka kenarı kapat */
+        for (let jj = 0; jj < NC; jj++) { const a = NS * R + jj; I.push(a, a + 1, H + a, a + 1, H + a + 1, H + a); } /* uç */
+        const g = new THREE.BufferGeometry(); g.setAttribute('position', new THREE.Float32BufferAttribute(P, 3)); g.setAttribute('color', new THREE.Float32BufferAttribute(C, 3)); g.setIndex(I); g.computeVertexNormals();
+        g.userData.y0 = Float32Array.from(P.filter((_, k) => k % 3 === 1)); g.userData.s = Float32Array.from(S0); return g; };
+      A.k = [1, -1].map(z => { const k = new THREE.Group(); k.position.z = z * 0.12; G.add(k); const m = ekle(kanatG(z), gm, k); return [k, z, m.geometry]; });
+      /* ağız yüzgeçleri (sefalik loblar): öne uzanıp içe kıvrılır */
+      const lm = M('#2A313B', { roughness: 0.6 });
+      for (const z of [-1, 1]) { const yol = new THREE.CatmullRomCurve3([new THREE.Vector3(0.27, 0, z * 0.12), new THREE.Vector3(0.36, -0.005, z * 0.13), new THREE.Vector3(0.42, -0.02, z * 0.105), new THREE.Vector3(0.43, -0.035, z * 0.075)]);
+        const t = ekle(new THREE.TubeGeometry(yol, 12, 0.022, 7), lm); t.scale.set(1, 0.7, 1); }
+      ekle(new THREE.BoxGeometry(0.02, 0.025, 0.17), M('#15191F', { roughness: 0.9 })).position.set(0.3, -0.03, 0); /* geniş ağız */
+      const ku = ekle(new THREE.CylinderGeometry(0.003, 0.012, 0.45, 5), lm); ku.rotation.z = Math.PI / 2; ku.position.x = -0.5; A.ku = ku;
+      goz(0.27, 0.01, -0.17, 0.018); goz(0.27, 0.01, 0.17, 0.018);
       break;
     }
     case 'mola': { /* ay balığı: yassı yuvarlak gövde, uzun sırt ve karın yüzgeci, kesik arka */
@@ -693,7 +715,14 @@ export function yuzenOyna(G, tur, o, t) {
       A.ar.forEach(([g, z]) => { g.rotation.y = -z * (0.5 + Math.sin(v * 0.5 + z) * 0.15); g.rotation.x = -z * 0.1; });
       A.gov.position.y = -st * 0.02; A.gov.rotation.z = Math.cos(v) * 0.03; A.bas.rotation.z = Math.sin(v * 0.5) * 0.08; break;
     }
-    case 'manta': G.rotation.x += 0.45; A.k.forEach(([g, z]) => g.rotation.x = z * Math.sin(f * 1.4) * 0.35); break; /* hafif yatık: sırtı ve kanatları görünsün */
+    case 'manta': { /* hafif yatık (sırtı görünsün) ama asla yan yatmaz; kanatlar kökten uca dalgalanarak çırpar */
+      G.rotation.x = 0.3 * Math.cos(G.rotation.y) + THREE.MathUtils.clamp(G.rotation.x, -0.5, 0.5) * 0.3; /* sırt hep kameraya dönük eğilir: sola giderken de (önceden karnını gösterip dikleşiyordu) */
+      for (const [k, z, g] of A.k) { const p = g.attributes.position, y0 = g.userData.y0, S0 = g.userData.s, faz = f * 1.3;
+        k.rotation.x = z * Math.sin(faz) * 0.1;
+        for (let i = 0; i < p.count; i++) { const s = S0[i]; p.setY(i, y0[i] + Math.pow(s, 1.5) * 0.13 * Math.sin(faz - s * 1.6)); }
+        p.needsUpdate = true; g.computeVertexNormals(); }
+      if (A.ku) A.ku.rotation.y = Math.sin(f * 1.3 - 2) * 0.12;
+      break; }
     case 'mola': A.s.rotation.y = Math.sin(f * 2) * 0.5; A.k.rotation.y = -Math.sin(f * 2) * 0.5; break;
     case 'fok': case 'dugong': A.kuyruk.rotation.z = Math.sin(f * (tur === 'fok' ? 5 : 2)) * 0.35; A.y.forEach(([k, z]) => k.rotation.y = Math.sin(f * 2 + z) * 0.3); A.gov.rotation.z = Math.sin(f * (tur === 'fok' ? 5 : 2) - 1) * 0.05; break;
     case 'balinakb': case 'kambur': A.kuyruk.rotation[tur === 'kambur' ? 'z' : 'y'] = Math.sin(f * 1.2) * 0.3; A.y.forEach(([k, z]) => { k.rotation.x = z * ((tur === 'balinakb' ? 0.3 : 0.5) + Math.sin(f * 0.8 + z) * 0.12); }); break;
