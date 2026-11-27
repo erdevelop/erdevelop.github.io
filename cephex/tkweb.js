@@ -704,4 +704,141 @@ T.pick_file = (tur, oj) => { const o = JSON.parse(oj); const inp = document.crea
   if (exts.length) inp.accept = exts.join(',');
   inp.onchange = async () => { const f = inp.files[0]; if (!f) return; const buf = new Uint8Array(await f.arrayBuffer()); const FS = window.pyodide.FS; try { FS.mkdir('/tmp/yukle'); } catch (e) {} const p = '/tmp/yukle/' + f.name; FS.writeFile(p, buf); dlg(() => T.pyFile.call(null, tur, p)); flushDownloads(); };
   inp.click(); };
+
+/* ---------------- kütüphane klasörü
+   Chrome / Edge: File System Access API (klasör tarayıcıya okunur, program kütüphaneye yazınca dosya klasöre geri yazılır,
+   klasör IndexedDB'de hatırlanır). Öteki tarayıcılar: webkitdirectory (salt okunur; yazılanlar indirilir).
+   Yalnız metin dosyalarının (dxf, csv, json, txt) içeriği okunur; DWG, PDF vb. adıyla boş yer tutucu olur ve hiçbir
+   zaman klasöre geri yazılmaz. */
+const KUT = { h: null, ad: '', kok: '', salt: false, iz: new Map(), hatirla: null, bekleyen: '', sonHata: '' };
+const KUT_ICERIK = /\.(dxf|csv|json|txt)$/i;
+const KUT_SINIR = 64 * 1024 * 1024;
+const kmk = (FS, d) => { try { FS.mkdir(d); } catch (e) {} };
+function kutSil(FS, p) { try { const st = FS.stat(p); if (FS.isDir(st.mode)) { for (const n of FS.readdir(p)) if (n !== '.' && n !== '..') kutSil(FS, p + '/' + n); FS.rmdir(p); } else FS.unlink(p); } catch (e) {} }
+function kutKok(ad) { const FS = window.pyodide.FS; kutSil(FS, '/kut'); kmk(FS, '/kut'); const kok = '/kut/' + String(ad).replace(/[\\/:*?"<>|]/g, '_'); kmk(FS, kok); return kok; }   // tek klasör bağlı: öncekiler kaldırılır
+function idb() { return new Promise((ok, red) => { const r = indexedDB.open('cephe_kutuphane', 1); r.onupgradeneeded = () => r.result.createObjectStore('k'); r.onsuccess = () => ok(r.result); r.onerror = () => red(r.error); }); }
+async function idbAl(k) { try { const d = await idb(); return await new Promise((ok) => { const q = d.transaction('k').objectStore('k').get(k); q.onsuccess = () => ok(q.result || null); q.onerror = () => ok(null); }); } catch (e) { return null; } }
+async function idbKoy(k, v) { try { const d = await idb(); await new Promise((ok) => { const t = d.transaction('k', 'readwrite'); t.objectStore('k').put(v, k); t.oncomplete = ok; t.onerror = ok; }); } catch (e) {} }
+function kutIleti(t) {
+  const y = document.getElementById('ytxt'); if (y && document.getElementById('yukleme')) { y.textContent = t; return; }
+  let d = document.getElementById('kut-perde');
+  if (!d) { d = mk('div'); d.id = 'kut-perde'; d.style.cssText = 'position:fixed;left:50%;top:38%;transform:translate(-50%,-50%);z-index:9000;background:#1b2127;color:#dfe5ea;padding:14px 22px;border-radius:6px;font:14px "Segoe UI",sans-serif;box-shadow:0 8px 24px #0006'; document.body.appendChild(d); }
+  d.textContent = t;
+}
+function kutPerdeKapat() { const d = document.getElementById('kut-perde'); if (d) d.remove(); }
+function kutHata(e) { kutPerdeKapat(); console.error(e); window.alert('Kütüphane klasörü okunamadı: ' + ((e && e.message) || e)); }
+function kutDosya(FS, q, rel, veri, bos) { FS.writeFile(q, veri); KUT.iz.set(q, { m: FS.stat(q).mtime.getTime(), bos, rel }); }
+async function kutGez(h, q0, rel0, derin, say) {
+  const FS = window.pyodide.FS;
+  for await (const [ad, c] of h.entries()) {
+    if (ad.startsWith('.')) continue;
+    const q = q0 + '/' + ad, rel = rel0 ? rel0 + '/' + ad : ad;
+    if (c.kind === 'directory') {
+      if (derin <= 0 || /^_yedek$/i.test(ad)) continue;
+      kmk(FS, q); await kutGez(c, q, rel, derin - 1, say);
+    } else {
+      let veri = new Uint8Array(0), bos = true;
+      if (KUT_ICERIK.test(ad)) { const f = await c.getFile(); if (f.size <= KUT_SINIR) { veri = new Uint8Array(await f.arrayBuffer()); bos = false; } }
+      kutDosya(FS, q, rel, veri, bos);
+      if (++say.n % 20 === 0) kutIleti(`Kütüphane okunuyor… ${say.n} dosya`);
+    }
+  }
+}
+async function kutOku(h, sessiz) {
+  await kutSenkron();                         // önceki klasöre yazılmamış kayıt kalmasın
+  const kok = kutKok(h.name);
+  KUT.iz = new Map(); const say = { n: 0 };
+  kutIleti('Kütüphane okunuyor…');
+  try { await kutGez(h, kok, '', 4, say); } finally { kutPerdeKapat(); }
+  Object.assign(KUT, { h, ad: h.name, kok, salt: false, bekleyen: '', hatirla: h, sonHata: '' });
+  await idbKoy('son', h);
+  if (!sessiz) { dlg(() => T.pyKut.call(null, kok)); T.flush(); }
+}
+async function kutOkuListe(fl) {
+  const FS = window.pyodide.FS; const ad = fl[0].webkitRelativePath.split('/')[0] || 'kutuphane';
+  const kok = kutKok(ad); KUT.iz = new Map(); let n = 0;
+  kutIleti('Kütüphane okunuyor…');
+  try {
+    for (const f of fl) {
+      const r = f.webkitRelativePath.split('/').slice(1);
+      if (!r.length || r.length > 5 || r.some((x) => x.startsWith('.')) || r.slice(0, -1).some((x) => /^_yedek$/i.test(x))) continue;
+      let cur = kok; for (const x of r.slice(0, -1)) { cur += '/' + x; kmk(FS, cur); }
+      let veri = new Uint8Array(0), bos = true;
+      if (KUT_ICERIK.test(f.name) && f.size <= KUT_SINIR) { veri = new Uint8Array(await f.arrayBuffer()); bos = false; }
+      kutDosya(FS, kok + '/' + r.join('/'), r.join('/'), veri, bos);
+      if (++n % 20 === 0) kutIleti(`Kütüphane okunuyor… ${n} dosya`);
+    }
+  } finally { kutPerdeKapat(); }
+  Object.assign(KUT, { h: null, ad, kok, salt: true, bekleyen: '', sonHata: '' });
+  dlg(() => T.pyKut.call(null, kok)); T.flush();
+}
+T.kut_sec = () => {
+  if (window.showDirectoryPicker) {
+    window.showDirectoryPicker({ id: 'cephe-kutuphane', mode: 'readwrite' })
+      .then((h) => kutOku(h, false)).catch((e) => { if (!e || e.name !== 'AbortError') kutHata(e); });
+    return;
+  }
+  const inp = mk('input'); inp.type = 'file'; inp.webkitdirectory = true; inp.multiple = true;
+  inp.onchange = () => { const fl = Array.from(inp.files || []); if (fl.length) kutOkuListe(fl).catch(kutHata); };
+  inp.click();
+};
+T.kut_yeniden = () => {
+  const h = KUT.hatirla; if (!h) { T.kut_sec(); return; }
+  h.requestPermission({ mode: 'readwrite' }).then((p) => { if (p === 'granted') return kutOku(h, false); }).catch(kutHata);
+};
+T.kut_otomatik = async () => {                  // açılışta, program kurulmadan önce: izin hâlâ varsa hatırlanan klasörü oku
+  if (!window.showDirectoryPicker) return;
+  const h = await idbAl('son'); if (!h) return;
+  KUT.hatirla = h;
+  let p = 'prompt'; try { p = await h.queryPermission({ mode: 'readwrite' }); } catch (e) {}
+  if (p === 'granted') { try { await kutOku(h, true); return; } catch (e) { console.error(e); } }
+  KUT.bekleyen = h.name;
+};
+T.kut_durum = () => JSON.stringify({ ad: KUT.ad, kok: KUT.kok, salt: KUT.salt, bekleyen: KUT.kok ? '' : (KUT.bekleyen || '') });
+async function kutYaz(h, rel, veri) {
+  const p = rel.split('/'); let d = h;
+  for (const x of p.slice(0, -1)) d = await d.getDirectoryHandle(x, { create: true });
+  const f = await d.getFileHandle(p[p.length - 1], { create: true });
+  const w = await f.createWritable(); await w.write(veri); await w.close();
+}
+let kutZ = 0, kutMesgul = false;
+T.kut_kirli = () => { if (!KUT.kok) return; clearTimeout(kutZ); kutZ = setTimeout(() => { kutSenkron().catch(console.error); }, 600); };
+function kutDegisenler() {                  // programın kütüphane köküne yazdığı / değiştirdiği dosyalar: [[yol, mtime]]
+  const FS = window.pyodide && window.pyodide.FS; const deg = []; if (!FS || !KUT.kok) return deg;
+  const gez = (p) => {
+    let ls; try { ls = FS.readdir(p); } catch (e) { return; }
+    for (const n of ls) {
+      if (n === '.' || n === '..') continue;
+      const q = p + '/' + n; let st; try { st = FS.stat(q); } catch (e) { continue; }
+      if (FS.isDir(st.mode)) { gez(q); continue; }
+      const iz = KUT.iz.get(q), m = st.mtime.getTime();
+      if (!iz || (iz.m !== m && !(iz.bos && st.size === 0))) deg.push([q, m]);
+    }
+  };
+  gez(KUT.kok);
+  return deg;
+}
+async function kutSenkron() {
+  const FS = window.pyodide && window.pyodide.FS; if (!FS || !KUT.kok) return;
+  if (kutMesgul) { T.kut_kirli(); return; }
+  const deg = kutDegisenler();
+  if (!deg.length) return;
+  kutMesgul = true; const yazilan = [];
+  try {
+    for (const [q, m] of deg) {
+      const rel = q.slice(KUT.kok.length + 1);
+      if (KUT.salt) downloads.set(q, { name: rel.split('/').pop(), m: 0 });
+      else await kutYaz(KUT.h, rel, FS.readFile(q));
+      KUT.iz.set(q, { m, bos: false, rel }); yazilan.push(rel);
+    }
+    KUT.sonHata = '';
+  } catch (e) {
+    console.error(e); const t = 'Kütüphane klasörüne yazılamadı: ' + ((e && e.message) || e);
+    if (t !== KUT.sonHata) { KUT.sonHata = t; dlg(() => T.pyKutLog.call(null, t, 'hata')); }
+  } finally { kutMesgul = false; }
+  if (KUT.salt) flushDownloads();
+  if (yazilan.length) dlg(() => T.pyKutLog.call(null, (KUT.salt ? 'Bu tarayıcı klasöre yazamıyor; indirildi (kütüphanedeki yerine kopyalayın): '
+    : 'Kütüphane klasörüne yazıldı: ') + yazilan.join(', '), KUT.salt ? 'uyari' : ''));
+}
+window.addEventListener('beforeunload', (e) => { if (kutMesgul || kutDegisenler().length) { kutSenkron().catch(() => {}); e.preventDefault(); e.returnValue = ''; } });
 })();

@@ -205,6 +205,55 @@ def _bitir():
         _B.flush()
     except Exception:
         pass
+    try:
+        _B.kut_kirli()            # kütüphaneye yazılan dosyalar klasöre geri yazılsın (JS, gecikmeli)
+    except Exception:
+        pass
+
+
+# ----------------------------------------------------------------------------- kütüphane klasörü (tarayıcı)
+_KUT = {}
+
+
+def kutuphane_sec(geri, gunluk=None):
+    """Klasör seçicisini açar (düğme tıklamasının içinde çağrılmalı). Okuma bitince geri(kok) çalışır."""
+    _KUT["f"], _KUT["log"] = geri, gunluk
+    _B.kut_sec()
+
+
+def kutuphane_yeniden(geri, gunluk=None):
+    """Tarayıcının hatırladığı son klasöre yeniden izin ister ve okur."""
+    _KUT["f"], _KUT["log"] = geri, gunluk
+    _B.kut_yeniden()
+
+
+def kut_gunluk(f):
+    """Klasöre geri yazma iletileri bu işleve gider (f(ileti, tür))."""
+    _KUT["log"] = f
+
+
+def kut_durum():
+    """{"ad", "kok", "salt", "bekleyen"}: bağlı klasör ve izin bekleyen hatırlanan klasör."""
+    try:
+        return json.loads(str(_B.kut_durum()))
+    except Exception:
+        return {}
+
+
+def _kut_geldi(kok):
+    f = _KUT.get("f")
+    if f:
+        _calistir(lambda: f(str(kok)))
+
+
+def _kut_log(msg, tur=""):
+    f = _KUT.get("log")
+    if f:
+        try:
+            f(str(msg), str(tur or ""))
+        except Exception:
+            pass
+    _bitir()
 
 
 # ----------------------------------------------------------------------------- Misc
@@ -1814,6 +1863,8 @@ def kur():
     _B.pyMenu = create_proxy(lambda i, k: _W[int(i)]._item(k))
     _B.pyVar = create_proxy(lambda i, s: _var_js(int(i), s))
     _B.pyFile = create_proxy(_dosya_geldi)
+    _B.pyKut = create_proxy(_kut_geldi)
+    _B.pyKutLog = create_proxy(_kut_log)
     return tk
 
 

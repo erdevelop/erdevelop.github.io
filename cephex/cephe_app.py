@@ -27,6 +27,8 @@ import tkinter as tk
 from collections import Counter
 from tkinter import colorchooser, filedialog, messagebox, simpledialog, ttk
 
+WEB = sys.platform == "emscripten"            # tarayıcı sürümü (Pyodide + webtk)
+
 
 # ----------------------------------------------------------------- ÇEKİRDEK
 def parse_olculer(metin, ad="Ölçü"):
@@ -2091,6 +2093,89 @@ def kutuphane_klasoru(sistem_klasor):
         return None
     yol = yol if os.path.isabs(yol) or re.match(r"^[A-Za-z]:[\\/]", yol) else os.path.join(sistem_klasor, yol)
     return yol if os.path.isdir(yol) else None
+
+
+def kutuphane_mi(yol):
+    """Klasör bir kütüphane kökü mü (DIKME ya da YATAY alt klasörü var mı)."""
+    try:
+        return os.path.isdir(yol) and bool(_alt_klasor(yol, "DIKME") or _alt_klasor(yol, "YATAY"))
+    except OSError:
+        return False
+
+
+def kutuphane_ara(kok, derin=3):
+    """Seçilen klasördeki kütüphaneler: klasörün kendisi kütüphaneyse o; değilse alt klasörlerde (derin kadar aşağı)
+    DIKME / YATAY alt klasörü olanlar (ör. BLOCK_DWG seçilince E50, CW60). Dönüş: [yol]"""
+    if kutuphane_mi(kok):
+        return [kok]
+    out = []
+    if derin <= 0:
+        return out
+    try:
+        adlar = sorted(os.listdir(kok))
+    except OSError:
+        return out
+    for d in adlar:
+        p = os.path.join(kok, d)
+        if d.startswith((".", "_")) or not os.path.isdir(p):
+            continue
+        out += kutuphane_ara(p, derin - 1)
+    return out
+
+
+def kutuphane_sirala(kutler):
+    """Birden çok kütüphane bulununca önce kaydı (cephe_sistem.json) olanlar, sonra DXF profili olanlar gelir
+    (ör. BLOCK_DWG'de yalnız DWG'si olan CW60, E50'nin önüne geçmesin)."""
+    def dxf_var(k):
+        for a in ("DIKME", "YATAY"):
+            d = _alt_klasor(k, a)
+            try:
+                if d and any(f.lower().endswith(".dxf") for f in os.listdir(d)):
+                    return True
+            except OSError:
+                pass
+        return False
+    return sorted(kutler, key=lambda k: (not os.path.isfile(os.path.join(k, SISTEM_AYNA)), not dxf_var(k)))
+
+
+def _son_ad(yol):
+    return _norm(re.split(r"[\\/]", str(yol or "").rstrip("\\/"))[-1]) if yol else ""
+
+
+def kutuphane_sistem_kaydet(yol):
+    """Kütüphane klasörünü ayar dosyasına sistem olarak kaydeder (kaydetmez; ayar_kaydet çağıran yapar).
+    Aynı yol kayıtlıysa o sistem; aynı adlı bir kütüphane klasörü kayıtlı ama o yol bu bilgisayarda yoksa
+    (ör. masaüstündeki C:\\...\\E50 kaydı tarayıcıda) kaydın yolu güncellenir; yoksa klasör adıyla yeni sistem açılır.
+    Dönüş: sistem adı."""
+    db = _ayar_db()
+    ayna = sistem_aynasi_oku(yol)            # bu kütüphane için yazılmış sistem kaydı (masaüstü ya da tarayıcı)
+
+    def aynadan(ad_, v):
+        sistem_aynasi_esitle(ad_, v, "dosya")
+    yol_n = os.path.normcase(os.path.abspath(yol))
+    for k, v in db["sistemler"].items():
+        if v.get("kutuphane") and os.path.normcase(os.path.abspath(str(v["kutuphane"]))) == yol_n:
+            aynadan(k, v)
+            return k
+    ad_k = os.path.basename(os.path.normpath(yol))
+    for k, v in db["sistemler"].items():
+        if _son_ad(v.get("kutuphane")) == _norm(ad_k) and not os.path.isdir(str(v.get("kutuphane"))):
+            v["kutuphane"] = yol
+            aynadan(k, v)
+            return k
+    if ayna and str(ayna.get("sistem") or "").strip():
+        ad_k = str(ayna["sistem"]).strip()
+    kok_s = os.path.join(uygulama_klasoru(), "sistemler")
+    ad, n = ad_k, 2
+    while sistem_kaydi(ad) or os.path.isfile(os.path.join(kok_s, ad, "sistem.csv")) \
+            or os.path.isfile(os.path.join(kok_s, ad, "profil_katalogu.csv")):
+        ad, n = f"{ad_k}_{n}", n + 1
+    db["sistemler"][ad] = {"kutuphane": yol}
+    if ayna:                                 # yeni kayıt: kütüphanedeki kayıt (kurallar, öğrenilen duruşlar, ayarlar) alınır
+        sistem_aynasi_esitle(ad, db["sistemler"][ad], "dosya")
+    if ad in db["silinen"]:
+        db["silinen"].remove(ad)
+    return ad
 
 
 def _alt_klasor(kok, ad):
@@ -4208,11 +4293,77 @@ def _ayar_db():
 def ayar_kaydet():
     if _AYAR_DB is None:
         return
+    for ad_, kay_ in list(_AYAR_DB.get("sistemler", {}).items()):
+        sistem_aynasi_esitle(ad_, kay_, "yerel")
     try:
         with open(os.path.join(uygulama_klasoru(), AYAR_DOSYASI), "w", encoding="utf-8") as f:
             json.dump(_AYAR_DB, f, ensure_ascii=False, indent=1)
     except OSError:
         pass
+SISTEM_AYNA = "cephe_sistem.json"
+
+
+def _ayna_icerik(kay):
+    return {k: v for k, v in kay.items() if k not in ("kutuphane", "_ayna")}
+
+
+def _ayna_ozet(icerik):
+    m = json.dumps(icerik, ensure_ascii=False, sort_keys=True)
+    return f"{zlib.crc32(m.encode('utf-8')):08x}:{len(m)}"
+
+
+def sistem_aynasi_esitle(ad, kay, cakisma="dosya"):
+    """Kütüphane sisteminin kaydını (cam kuralları, öğrenilen parça duruşları, ayarlar) kütüphane kökündeki
+    cephe_sistem.json ile eşitler; masaüstü ve tarayıcı sürümü (ya da kütüphaneyi bağlayan başka bilgisayar) aynı
+    kaydı kullanır. kay["_ayna"] son eşitlemenin özetini ve dosyanın zamanını tutar:
+      dosya sonradan başkasınca değiştiyse, buradaki kayıt değişmediyse dosyadaki alınır;
+      buradaki kayıt değiştiyse dosyaya yazılır; ikisi de değiştiyse cakisma ("dosya" | "yerel") kazanır.
+    Dönüş: "alindi" | "yazildi" | ""."""
+    if not isinstance(kay, dict):
+        return ""
+    kut = str(kay.get("kutuphane") or "").strip().strip('"')
+    if not kut or not os.path.isdir(kut):
+        return ""
+    F = sistem_aynasi_oku(kut)
+    son = kay.get("_ayna") if isinstance(kay.get("_ayna"), dict) else {}
+    ic = _ayna_icerik(kay)
+    yerel = _ayna_ozet(ic) != son.get("ozet")
+    dosya = F is not None and F.get("zaman") != son.get("zaman")
+    if F is not None and not son:
+        # ilk eşitleme: boş kayıt dosyadakini alır; dolu kayıt boş dosyanın üstüne yazar; ikisi de doluysa masaüstünde
+        # buradaki, tarayıcıda dosyadaki kazanır (masaüstünün kuralları / öğrenilen duruşları hiçbir zaman boşla ezilmez)
+        al = (not ic) or (WEB and bool(F["ayar"]))
+    else:
+        al = dosya and (not yerel or cakisma == "dosya")
+    if al:
+        for k in list(ic):
+            kay.pop(k, None)
+        for k, v in F["ayar"].items():
+            if k not in ("kutuphane", "_ayna"):
+                kay[k] = copy.deepcopy(v)
+        kay["_ayna"] = {"ozet": _ayna_ozet(_ayna_icerik(kay)), "zaman": F.get("zaman")}
+        return "alindi"
+    if not yerel and F is not None:
+        return ""
+    z = round(time.time(), 3)
+    metin = json.dumps({"sistem": ad, "zaman": z, "ayar": ic}, ensure_ascii=False, indent=1, sort_keys=True)
+    try:
+        with open(os.path.join(kut, SISTEM_AYNA), "w", encoding="utf-8") as f:
+            f.write(metin)
+    except OSError:
+        return ""
+    kay["_ayna"] = {"ozet": _ayna_ozet(ic), "zaman": z}
+    return "yazildi"
+
+
+def sistem_aynasi_oku(kut):
+    """Kütüphane kökündeki cephe_sistem.json: {"sistem": ad, "ayar": {...}} ya da None."""
+    try:
+        with open(os.path.join(kut, SISTEM_AYNA), encoding="utf-8") as f:
+            v = json.load(f)
+    except (OSError, ValueError):
+        return None
+    return v if isinstance(v, dict) and isinstance(v.get("ayar"), dict) else None
 
 
 GENEL_VARSAYILAN = {"yon_merkez": False, "blok_renk": True, "renk": {}, "cephe_ayna": False, "kesit_ayna": False, "teker_ters": False, "parca_kod": True, "parca_olcu": True, "pdf_ac": True, "tema": "acik"}
@@ -8510,7 +8661,9 @@ class Uygulama(tk.Tk):
         else:
             self._acilis.t0 = time.time()           # animasyon, arayüz hazır olduktan sonra tam süre oynar
         self._tema_uygula()
-        self._otomatik_katalog()
+        tercih = self._web_kut_baslat() if WEB else None
+        self._otomatik_katalog(tercih)
+        self._kut_etiket_guncelle()
         self.hesapla()
 
     def _renk_t(self, anahtar):
@@ -10257,6 +10410,13 @@ class Uygulama(tk.Tk):
                    command=self._siparis_karsilastir_ac).pack(fill="x", pady=(6, 0))
         kf_ = ttk.LabelFrame(sol, text=" Kütüphane ", padding=8)
         kf_.pack(fill="x", pady=(0, 8))
+        self.lbl_kut = ttk.Label(kf_, text="", foreground="#6b7680", wraplength=330, justify="left")
+        self.lbl_kut.pack(fill="x", pady=(0, 6))
+        kr_ = ttk.Frame(kf_)
+        kr_.pack(fill="x", pady=(0, 6))
+        ttk.Button(kr_, text="Kütüphane klasörü seç...", style="Ana.TButton",
+                   command=self._kutuphane_sec).pack(side="left", fill="x", expand=True)
+        self._btn_kut_yeniden = ttk.Button(kr_, text="↻ Yeniden bağla", command=self._kutuphane_yeniden)
         ttk.Button(kf_, text="Şablon kur (montaj detayı)...", style="Ana.TButton",
                    command=self._sablon_kur).pack(fill="x")
         ttk.Button(kf_, text="Referans noktası (DXF)...", style="Ana.TButton",
@@ -11128,15 +11288,30 @@ class Uygulama(tk.Tk):
         return tr
 
     # --------------------------------------------------------- katalog
-    def _otomatik_katalog(self):
+    def _otomatik_katalog(self, tercih=None):
+        try:                                 # kütüphane kayıtları (cephe_sistem.json) açılışta eşitlenir: öbür sürümde
+            db_ = _ayar_db()                 # yapılan değişiklik alınır, burada olup dosyada olmayan yazılır
+            if any([sistem_aynasi_esitle(a_, k_, "dosya") == "alindi" for a_, k_ in list(db_["sistemler"].items())]):
+                ayar_kaydet()
+        except Exception as e:
+            self._log(f"Kütüphane kaydı eşitlenemedi: {e}", "uyari")
         self.sistem_yollari = sistem_klasorleri()
         if self.sistem_yollari:
-            ilk = "E50" if "E50" in self.sistem_yollari else next(iter(self.sistem_yollari))
+            sira = sorted(self.sistem_yollari, key=lambda a: (_norm(a) != _norm(tercih or ""), a != "E50"))
+            # kütüphanesi bu bilgisayarda (web'de: tarayıcıya bağlı) olmayan sistem açılışta seçilmez, uyarı çıkarmasın
+            ilk = next((a for a in sira if self._sistem_hazir(self.sistem_yollari[a])), sira[0])
             self.katalog_yukle(self.sistem_yollari[ilk])
             return
         yol = os.path.join(uygulama_klasoru(), "profil_katalogu.csv")      # eski düzen
         if os.path.isfile(yol):
             self.katalog_yukle(yol)
+
+    @staticmethod
+    def _sistem_hazir(yol):
+        """Sistem yüklenebilir mi: katalog CSV'si var ya da kütüphane klasörü yerinde."""
+        if os.path.basename(yol).lower() != "ayarlar.csv" and os.path.isfile(yol):
+            return True
+        return bool(kutuphane_klasoru(os.path.dirname(yol)))
 
     def katalog_yukle(self, yol=None):
         self._gecmis_sifirla()
@@ -11158,6 +11333,7 @@ class Uygulama(tk.Tk):
         self.katalog_yol = os.path.abspath(yol)
         self.lbl_katalog.config(
             text=f"{os.path.basename(yol)} ({len(self.katalog)} profil)")
+        self._kut_etiket_guncelle()
         klasor = os.path.dirname(os.path.abspath(yol))
         _EK_AYAR.clear()
         _EK_AYAR.update(sistem_ayar(klasor))
@@ -11188,6 +11364,8 @@ class Uygulama(tk.Tk):
                     messagebox.showwarning(f"{ad} okunamadı", str(e))
         _kut = kutuphane_klasoru(klasor)
         _kay = sistem_kaydi(os.path.basename(klasor))
+        if _kut and _kay and sistem_aynasi_esitle(os.path.basename(klasor), _kay, "dosya") == "alindi":
+            ayar_kaydet()                    # kütüphanedeki kayıt (öbür sürümde yapılan değişiklikler) alındı
         try:
             self._eski_kayma_n = kayma_eskileri_ayir(os.path.basename(klasor))
         except Exception:
@@ -12546,6 +12724,107 @@ class Uygulama(tk.Tk):
         for v_ in list(vs.values()) + [tol_v]:
             v_.trace_add("write", yenile)
         yenile()
+
+    def _kutuphane_sec(self):
+        """Kütüphane klasörünü seçtirir: DIKME, YATAY, SISTEM... alt klasörleri olan klasör ya da böyle klasörleri içeren
+        üst klasör (ör. BLOCK_DWG). Bulunan her kütüphane sistem olarak eklenir. Web'de klasör tarayıcıya okunur ve
+        programın kütüphaneye yazdıkları (şablon, referans noktaları) klasöre geri yazılır."""
+        if WEB:
+            import webtk
+            webtk.kutuphane_sec(self._kutuphane_baglandi, self._log)
+            return
+        bas = kutuphane_klasoru(os.path.dirname(self.katalog_yol)) if getattr(self, "katalog_yol", None) else None
+        yol = filedialog.askdirectory(title="Kütüphane klasörü (DIKME, YATAY, SISTEM... alt klasörleri olan)",
+                                      initialdir=os.path.dirname(bas) if bas else None)
+        if yol:
+            self._kutuphane_baglandi(os.path.normpath(yol))
+
+    def _kutuphane_yeniden(self):
+        """Web: tarayıcının hatırladığı son kütüphane klasörüne yeniden izin ister ve okur."""
+        if WEB:
+            import webtk
+            webtk.kutuphane_yeniden(self._kutuphane_baglandi, self._log)
+
+    def _kutuphane_baglandi(self, kok):
+        """Seçilen klasördeki kütüphaneleri sisteme ekler / yolunu günceller ve ilkini (ya da açık olanı) yükler."""
+        kutler = kutuphane_ara(kok)
+        if not kutler:
+            messagebox.showwarning("Kütüphane", f"'{os.path.basename(kok)}' içinde kütüphane bulunamadı.\n\n"
+                                   "DIKME, YATAY, SISTEM... alt klasörleri olan klasörü (ör. E50) ya da bu klasörleri "
+                                   "içeren üst klasörü (ör. BLOCK_DWG) seçin.")
+            self._kut_etiket_guncelle()
+            return
+        kutler = kutuphane_sirala(kutler)
+        adlar = [kutuphane_sistem_kaydet(k) for k in kutler]
+        ayar_kaydet()
+        self._ayar_sonrasi("sistem")
+        aktif = self._aktif_sistem()
+        sec = next((a for a in adlar if _norm(a) == _norm(aktif)), adlar[0])
+        yol = next((y for a, y in self.sistem_yollari.items() if _norm(a) == _norm(sec)), None)
+        if yol:
+            _OTURT_ONB.clear()
+            self._tip_onb = {}
+            self.cb["sistem"].set(next(a for a in self.sistem_yollari if _norm(a) == _norm(sec)))
+            self.katalog_yukle(yol)          # aynı sistem olsa da kütüphane yeniden okunur
+            self._kural_kal = None
+            self.hesapla()
+        self._log("Kütüphane bağlandı: " + ", ".join(f"{a} ({os.path.basename(k)})" for a, k in zip(adlar, kutler))
+                  + (f" — açık sistem: {sec}" if len(adlar) > 1 else ""))
+        self._kut_etiket_guncelle()
+
+    def _web_kut_baslat(self):
+        """Web açılışı (katalog yüklenmeden önce): tarayıcının hatırladığı kütüphane klasörü (izin varsa açılıştan önce
+        okunur) sistem olarak kaydedilir / masaüstünün kaydıyla (cephe_sistem.json) tazelenir; geri yazma iletileri
+        günlüğe bağlanır. Dönüş: açılışta yüklenecek sistemin adı ya da None."""
+        try:
+            import webtk
+            webtk.kut_gunluk(self._log)
+            d = webtk.kut_durum()
+        except Exception:
+            return None
+        kok = d.get("kok")
+        if not kok or not os.path.isdir(kok):
+            return None
+        adlar = [kutuphane_sistem_kaydet(k) for k in kutuphane_sirala(kutuphane_ara(kok))]
+        if adlar:
+            ayar_kaydet()
+        return adlar[0] if adlar else None
+
+    def _kut_etiket_guncelle(self):
+        """Sol paneldeki Kütüphane bölümünün durum yazısı (ve web'de 'Yeniden bağla' düğmesi)."""
+        lb = getattr(self, "lbl_kut", None)
+        if lb is None:
+            return
+        sis = self._aktif_sistem()
+        kut = kutuphane_klasoru(os.path.dirname(self.katalog_yol)) if getattr(self, "katalog_yol", None) else None
+        bekleyen = ""
+        if WEB:
+            try:
+                import webtk
+                d = webtk.kut_durum()
+            except Exception:
+                d = {}
+            bekleyen = d.get("bekleyen") or ""
+            if kut:
+                t = f"{sis}: '{d.get('ad') or os.path.basename(kut)}' klasörü tarayıcıya bağlı — " + (
+                    "şablon / referans kayıtları klasöre yazılır." if not d.get("salt")
+                    else "bu tarayıcı klasöre yazamıyor, kayıtlar indirilir.")
+            elif bekleyen:
+                t = f"Son kütüphane: '{bekleyen}'. Tarayıcı yeniden izin istiyor: 'Yeniden bağla'ya basın."
+            else:
+                t = "Kütüphane bağlı değil (açık sistem CSV'li). Kütüphane klasörünü seçin: DIKME, YATAY, SISTEM... alt klasörleri olan klasör."
+        else:
+            t = f"{sis}: {kut}" if kut else f"{sis}: kütüphaneden değil (CSV'li sistem)." if sis else "Sistem yüklenmedi."
+        lb.config(text=t)
+        bt = getattr(self, "_btn_kut_yeniden", None)
+        if bt is not None:
+            try:
+                if bekleyen and not kut:
+                    bt.pack(side="left", padx=(6, 0))
+                else:
+                    bt.pack_forget()
+            except tk.TclError:
+                pass
 
     def _kutuphane_tazele(self):
         """Kütüphane / şablon değişince sistemi yeniden okur; profil seçimi korunur."""
@@ -16014,6 +16293,12 @@ class Uygulama(tk.Tk):
                 if ad_ and _norm(sa_) == _norm(ad_):
                     kat = sy_
                     break
+            if not kat and ad_:                  # ör. masaüstünde E50_YENI, tarayıcıda E50: adı ötekiyle başlayan, yüklenebilir sistem
+                ben = [sy_ for sa_, sy_ in sorted((self.sistem_yollari or {}).items())
+                       if (_norm(ad_).startswith(_norm(sa_)) or _norm(sa_).startswith(_norm(ad_))) and self._sistem_hazir(sy_)]
+                if len(ben) == 1:
+                    kat = ben[0]
+                    uyari.append(f"Sistem '{ad_}' bulunamadı; '{os.path.basename(os.path.dirname(kat))}' kullanıldı.")
         if kat:
             if os.path.abspath(kat) != self.katalog_yol:
                 self.katalog_yukle(kat)
