@@ -167,6 +167,9 @@ body.foto #ust,body.foto #panel,body.foto #sohbetBtn,body.foto #beceriBtn,body.f
 @keyframes gel{from{opacity:0;transform:translateY(-8px)}}
 #ziyaretBant{position:fixed;left:50%;top:calc(52px + env(safe-area-inset-top,0px));transform:translateX(-50%);z-index:5;padding:7px 12px;border-radius:13px;background:rgba(5,30,45,.8);border:1px solid rgba(255,200,87,.5);font-weight:800;font-size:13px;white-space:nowrap}
 #ziyaretBant a{color:#FFE29A;margin-left:6px}
+#ziyaretBant button{margin-left:8px;padding:3px 9px;border-radius:9px;border:1px solid rgba(255,226,154,.6);background:rgba(255,226,154,.12);color:#FFE29A;font:inherit;cursor:pointer}
+.defterNot{display:grid;grid-template-columns:1fr 1fr;gap:6px;margin:8px 0}.defterNot button{padding:8px 6px;border-radius:10px;border:1px solid rgba(255,255,255,.18);background:rgba(255,255,255,.06);color:inherit;font:inherit;font-size:13px;cursor:pointer}.defterNot button.on{border-color:#FFD36B;background:rgba(255,211,107,.18)}
+.defterSat{display:flex;gap:8px;align-items:baseline;padding:6px 0;border-top:1px solid rgba(255,255,255,.08);font-size:13px}.defterSat small{opacity:.6;margin-left:auto;white-space:nowrap}
 /* plankton avı */
 #avKatman{position:fixed;inset:0;z-index:15;background:#0A3550}
 #av{position:absolute;inset:0;display:block;touch-action:none}
@@ -2910,6 +2913,7 @@ function akvListeAc() {
   const ic = modal(`<h2>🐠 ${gorunenAkv() ? T('Akvaryum', 'Aquarium') + ' #' + gorunenAkv().slice(1) : T('Akvaryum', 'Aquarium')}</h2><p class="alt">${NET.durum() === 'acik' ? T(`${NET.uyeler().size} balık · ${NET.cevrimici().size} kişi şu an burada`, `${NET.uyeler().size} fish · ${NET.cevrimici().size} here now`) : T('Çevrimdışısın; şimdilik akvaryumda yalnızsın.', 'You are offline; it is just you for now.')}</p><div class="liste">${L.map((b, i) => `<div class="satir"><canvas width="108" height="72"></canvas><div class="orta"><b>${b.cevrim && !b.ben ? '🟢 ' : ''}${esc(b.ad)}${b.ben ? ' ★' : ''}</b><small>${esc(L2(ASAMA[b.d.a]))} · ${b.ben ? boyHesap(S) : (b.v && b.v.b) || '?'} cm · ${b.gun}. ${T('gün', 'day')}</small></div>${b.ben ? '' : `<button type="button" data-k="${esc(b.k)}">${T('Bul', 'Find')}</button>`}</div>`).join('')}</div>`);
   ic.querySelectorAll('.satir canvas').forEach((c, i) => onizlemeEkle(c, L[i].d, { seffaf: 1, k: 1 }));
   ic.querySelectorAll('[data-k]').forEach(x => x.onclick = () => { const b = BAL.get(x.dataset.k); modalKapat(); if (b) { kartAc(b, b.x, b.y); } });
+  if (S && S.akv && !ziyaretModu()) { const d = document.createElement('div'); d.innerHTML = `<h3 style="margin:14px 0 4px">📖 ${T('Ziyaret defteri', 'Visitor book')}</h3><div id="defterListe">${defterHtml()}</div>`; ic.appendChild(d); defterYenile(); }
 }
 function hedefAc() {
   const s = hedefSeviye();
@@ -3099,6 +3103,17 @@ const NET = (() => {
     async okulUyeler(k) { if (!db || durum !== 'acik') return null; try { return (await db.ref(`${KOK}/o/${k}/u`).once('value')).val(); } catch (e) { return null; } },
     okulPuan(k, w, n) { if (db && durum === 'acik') db.ref(`${KOK}/op/w${w}/${k}`).transaction(c => (c || 0) + n).catch(() => { }); },
     async okulSira(w) { if (!db || durum !== 'acik') return null; try { const L = []; (await db.ref(`${KOK}/op/w${w}`).orderByValue().limitToLast(10).once('value')).forEach(c => { L.push({ id: c.key, p: c.val() }); }); L.reverse(); await Promise.all(L.map(async o => { const v = (await db.ref(`${KOK}/o/${o.id}`).once('value')).val() || {}; o.ad = v.ad; o.e = v.e; })); return L; } catch (e) { return null; } },
+    defterYaz(a, v) { if (db && durum === 'acik' && /^a\d{1,5}$/.test(a || '')) db.ref(`${KOK}/z/${a}`).push(Object.assign({}, v, { t: TS() })).catch(izinHata); },
+    async defterOku(a) {
+      if (!db || durum !== 'acik' || !/^a\d{1,5}$/.test(a || '')) return null;
+      try {
+        const L = []; (await db.ref(`${KOK}/z/${a}`).limitToLast(40).once('value')).forEach(c => { L.push(Object.assign({ k: c.key }, c.val())); });
+        /* 30 günden eski yazıları temizle (anahtarlar zamana göre sıralı: en eskilere bak) */
+        db.ref(`${KOK}/z/${a}`).limitToFirst(10).once('value').then(s => s.forEach(c => { const v = c.val(); if (!v || !v.t || simdi() - v.t > 30 * 864e5) c.ref.remove().catch(() => { }); })).catch(() => { });
+        return L.reverse();
+      } catch (e) { izinHata(e); return null; }
+    },
+    defterDinle(a, f) { if (!db || durum === 'kapali' || !/^a\d{1,5}$/.test(a || '')) return; on(db.ref(`${KOK}/z/${a}`).limitToLast(1), 'child_added', s => f(Object.assign({ k: s.key }, s.val()))); },
     async balikOku(a, id) { if (!db || durum !== 'acik' || !/^a\d{1,5}$/.test(a || '')) return null; try { return (await db.ref(`${KOK}/t/${a}/${id}`).once('value')).val(); } catch (e) { return null; } },
     hedefEkle(n) { if (db && durum === 'acik' && akv && !misafir) db.ref(`${KOK}/g/${akv}/w${hafta()}`).transaction(c => (c || 0) + n).catch(izinHata); },
     rekorYaz(v) { if (db && durum === 'acik' && ben) db.ref(`${KOK}/r/${ben}`).set(v).catch(izinHata); },
@@ -3128,11 +3143,13 @@ async function agKur() {
   if (pa && /^a\d{1,5}$/.test(pa) && S.akv && pa !== S.akv) {
     ziyaretAkv = pa;
     $('ziyaretBant').hidden = false;
-    $('ziyaretBant').innerHTML = `${T('Akvaryum', 'Aquarium')} #${esc(pa.slice(1))} ${T('ziyareti', 'visit')} <a href="/derin-mavi.html">${T('Kendi akvaryumuna dön', 'Back to yours')}</a>`;
+    $('ziyaretBant').innerHTML = `${T('Akvaryum', 'Aquarium')} #${esc(pa.slice(1))} ${T('ziyareti', 'visit')} <button type="button" id="defterYazBtn">📖 ${T('Deftere yaz', 'Sign the book')}</button><a href="/derin-mavi.html">${T('Kendi akvaryumuna dön', 'Back to yours')}</a>`;
+    $('defterYazBtn').onclick = defterYazAc;
   }
   const gor = gorunenAkv(); if (!gor) { uiGuncelle(); return; }
   NET.dinle(gor, S.id, ziyaretModu());
   NET.hediyeDinle(S.id);
+  defterBasla();
   sahneKur(); yerliKur();
   uyeYaz(true); NET.rekorYaz(rekorVeri());
   uiGuncelle(); setTimeout(arkadasKontrol, 4000); setTimeout(oyKazananKontrol, 2500); bildirimGuncelle(true);
@@ -3421,6 +3438,7 @@ const ALBUM = [
   { k: 'ozel:nadirkabuk', grup: 'sus', e: '🐚', ad: ['Nadir deniz kabuğu', 'Rare seashell'], ip: ['Kumu eşele', 'Dig in the sand'] },
   { k: 'ozel:sampiyon', grup: 'sus', e: '🏆', ad: ['Yağmur şampiyonu', 'Rain champion'], ip: ['Yem yağmurunda birinci ol', 'Win a food rain'] },
   { k: 'ozel:oy', grup: 'sus', e: '🏅', ad: ['Haftanın balığı', 'Fish of the week'], ip: ['Oylamada birinci ol', 'Win the weekly vote'] },
+  { k: 'ozel:birlikte', grup: 'sus', e: '🪸', ad: ['Birlikte izledik', 'Watched together'], ip: ['Ortak akvaryumda mercan yumurtlamasını başkalarıyla birlikte izle', 'Watch the coral spawn with others in a shared aquarium'] },
   { k: 'ozel:kurtarma', grup: 'sus', e: '🐢', ad: ['Kurtarıcı', 'Rescuer'], ip: ['Hayalet ağa takılan kaplumbağayı kurtar', 'Free a turtle from a ghost net'] },
   { k: 'ozel:cevreci', grup: 'sus', e: '♻️', ad: ['Çevreci', 'Eco hero'], ip: ['Denizden 10 atık topla', 'Collect 10 pieces of litter'] },
   { k: 'ozel:kaplumbaga_yavru', grup: 'sus', e: '🐢', ad: ['Kaplumbağa yavruları', 'Turtle hatchlings'], ip: ['Yaz haftalarında yüzeye yakın geçerler', 'They pass near the surface in summer weeks'] },
@@ -4259,13 +4277,14 @@ function beceriKare(c, dt) {
 /* ---------- 5) köpekbalığı ziyareti ---------- */
 const YIR = { durum: 'bekle', z: rnd(150, 300), x: 0, y: 0, d: 1, kontrol: false };
 function yirticiKare(c, dt) {
-  if (!S || girisAcik || ziyaretModu() || ogModu) return;
-  if (YIR.durum === 'bekle') { if (!$('modal').hidden || AV || document.hidden) return; YIR.z -= dt; if (YIR.z <= 0) { YIR.durum = 'uyari'; YIR.z = 5; SES.carp(); duyur(T('⚠️ Köpekbalığı geliyor! Yosunların arasına ya da mağaraya saklan', '⚠️ A shark is coming! Hide in the seaweed or the cave'), 1); } return; }
+  if (!S || girisAcik || ogModu || (ziyaretModu() && !ortakMi())) return;
+  if (YIR.durum === 'bekle') { if (ortakMi()) return; /* ortak akvaryumda zamanı ortakOlayKare belirler */ if (!$('modal').hidden || AV || document.hidden) return; YIR.z -= dt; if (YIR.z <= 0) { YIR.durum = 'uyari'; YIR.z = 5; SES.carp(); duyur(T('⚠️ Köpekbalığı geliyor! Yosunların arasına ya da mağaraya saklan', '⚠️ A shark is coming! Hide in the seaweed or the cave'), 1); } return; }
   const b = BAL.get('ben');
   if (YIR.durum === 'uyari') {
-    YIR.z -= dt; c.fillStyle = `rgba(160,20,20,${0.08 + 0.06 * Math.sin(zaman * 8)})`; c.fillRect(0, 0, W, H);
+    YIR.z -= dt; if (YIR.ortak) for (const x of BAL.values()) if (!x.ben && x.yirK !== YIR.ortak.k) { x.yirK = YIR.ortak.k; const m = magara(); x.tx = kis(m.x + rnd(-60, 60) * OL, 20, W - 20); x.ty = SAHNE.kumY - rnd(10, 40) * OL; x.yt = 7; }
+    c.fillStyle = `rgba(160,20,20,${0.08 + 0.06 * Math.sin(zaman * 8)})`; c.fillRect(0, 0, W, H);
     c.font = `900 ${Math.round(18 * OL)}px Nunito, sans-serif`; c.textAlign = 'center'; c.fillStyle = '#FFD6D0'; c.fillText(`⚠️ ${Math.ceil(YIR.z)}`, W / 2, ALAN.y1 + 10);
-    if (YIR.z <= 0) { YIR.durum = 'gec'; YIR.d = Math.random() < 0.5 ? 1 : -1; YIR.x = YIR.d > 0 ? -260 : W + 260; YIR.y = ALAN.y1 + (ALAN.y2 - ALAN.y1) * rnd(0.42, 0.68); /* orta-alt sularda geçer, yüzeyde değil */ YIR.kontrol = false; }
+    if (YIR.z <= 0) { YIR.durum = 'gec'; YIR.d = YIR.ortak ? YIR.ortak.d : Math.random() < 0.5 ? 1 : -1; YIR.x = YIR.d > 0 ? -260 : W + 260; YIR.y = ALAN.y1 + (ALAN.y2 - ALAN.y1) * (YIR.ortak ? YIR.ortak.y : rnd(0.42, 0.68)); /* orta-alt sularda geçer, yüzeyde değil */ YIR.kontrol = false; }
     return;
   }
   if (YIR.durum === 'gec') {
@@ -4283,14 +4302,14 @@ function yirticiKare(c, dt) {
       c.restore();
     }
     for (const x of BAL.values()) if (!x.ben && Math.abs(x.x - YIR.x) < 200) { x.ty = ALAN.y2; x.yt = 2; }
-    if (b && !YIR.kontrol && Math.abs(YIR.x - b.x) < 30) {
+    if (b && !YIR.kontrol && Math.abs(YIR.x - b.x) < 30 && $('modal').hidden) {
       YIR.kontrol = true;
       const m = magara(), yosunda = SAHNE.yosun.some(y => (y.olc ?? 1) > 0.3 && Math.abs(y.x - b.x) < 34 * OL && b.y > SAHNE.kumY - y.h * (y.olc ?? 1) * 0.95), magarada = Math.hypot(m.x - b.x, SAHNE.kumY - 30 * OL - b.y) < 100 * OL || (SAHNE.duvar && Math.hypot(SAHNE.duvar.mg.x - b.x, SAHNE.kumY - SAHNE.duvar.mg.h * 0.4 - b.y) < SAHNE.duvar.mg.w * 1.6);
       const g = gunVeri(); g.sakla = (g.sakla || 0);
       if (yosunda || magarada) { g.sakla++; istArt('sakla'); mutluEkle(2); if (g.sakla <= 5) { S.inci += 3; yaziUcur(b.x, b.y - 30, '🫧 +3'); } SES.basari(); duyur(T('😮‍💨 Saklandın, köpekbalığı seni görmedi! +3 inci', '😮‍💨 You hid and the shark missed you! +3 pearls'), 1); kaydet(false); }
       else { b.sersem = 1.2; mutluEkle(-3); duyur(T('😅 Köpekbalığı seni gördü ama aç değildi. Bir dahakine saklan!', '😅 The shark saw you but wasn’t hungry. Hide next time!')); }
     }
-    if ((YIR.d > 0 && YIR.x > W + 280) || (YIR.d < 0 && YIR.x < -280)) { YIR.durum = 'bekle'; YIR.z = rnd(240, 420); }
+    if ((YIR.d > 0 && YIR.x > W + 280) || (YIR.d < 0 && YIR.x < -280)) { YIR.durum = 'bekle'; YIR.z = rnd(240, 420); YIR.ortak = null; }
   }
 }
 
@@ -4554,7 +4573,7 @@ function canliGuncelle(dt) {
   }
   gzGuncelle(dt); yeniGuncelle(dt);
   insGuncelle(dt);
-  perfOlc(dt); atikGuncelle(dt); fenerGuncelle(dt); davranisKare(dt); havaGuncelle(dt); denizGuncelle(dt); ekoKare(dt); yedekHatirlat(dt); uzakGuncelle(dt); nesilGuncelle(dt); karGuncelle(dt);
+  perfOlc(dt); atikGuncelle(dt); fenerGuncelle(dt); davranisKare(dt); ortakOlayKare(); havaGuncelle(dt); denizGuncelle(dt); ekoKare(dt); yedekHatirlat(dt); uzakGuncelle(dt); nesilGuncelle(dt); karGuncelle(dt);
   /* yunus: arada bir yüzeyden geçer */
   if (SAHNE.tm !== 'derin') {
     if (!CNL.yunus) { CNL.yunusZ -= dt; if (CNL.yunusZ <= 0) { const d = Math.random() < 0.5 ? 1 : -1; CNL.yunus = { tur: 'yunus', x: d > 0 ? -150 : W + 150, y: A.y1 + 30 * OL, d, f: 0, bekle: 0, tepki: 0 }; CNL.yunusZ = rnd(150, 330); } }
@@ -6486,6 +6505,80 @@ function fenerCiz(c) {
   c.save(); c.globalCompositeOperation = 'lighter'; const g2 = c.createRadialGradient(x, y, 0, x, y, R); g2.addColorStop(0, `rgba(255,236,190,${0.34 * gc})`); g2.addColorStop(1, 'rgba(255,236,190,0)'); c.fillStyle = g2; c.beginPath(); c.arc(x, y, R, 0, TAU); c.fill(); c.restore();
 }
 /* =====================================================================
+   ZİYARET DEFTERİ: başka bir akvaryumu gezen, deftere kısa bir not (hazır cümlelerden) ve küçük bir hediye
+   (🐚 deniz kabuğu ya da 🍤 yem) bırakabilir; akvaryumun sahipleri kimlerin uğradığını görür.
+   ===================================================================== */
+const DEFTER_NOT = [['Çok güzel bir akvaryum! 🐠', 'What a lovely aquarium! 🐠'], ['Selam komşu 👋', 'Hello neighbour 👋'], ['Balıklarınız çok tatlı 💙', 'Your fish are so cute 💙'], ['Mercanlarınız harika 🪸', 'Your corals are amazing 🪸'], ['Yine geleceğim 🌊', 'I’ll be back 🌊'], ['Kolay gelsin, iyi yüzmeler 🫧', 'Happy swimming 🫧']];
+const DEFTER_HED = { kabuk: { e: '🐚', ad: ['Deniz kabuğu', 'Seashell'], fiyat: 3 }, yem: { e: '🍤', ad: ['Bir avuç yem', 'A handful of food'], fiyat: 0 } };
+const DEFTER = { L: null, yeni: 0 };
+const defterNot = v => v && v.m >= 0 && DEFTER_NOT[v.m] ? L2(DEFTER_NOT[v.m]) : '';
+function zamanOnce(t) { const d = Math.max(0, simdi() - (t || 0)) / 6e4; return d < 1 ? T('az önce', 'just now') : d < 60 ? T(`${Math.round(d)} dk önce`, `${Math.round(d)} min ago`) : d < 1440 ? T(`${Math.round(d / 60)} sa önce`, `${Math.round(d / 60)} h ago`) : T(`${Math.round(d / 1440)} gün önce`, `${Math.round(d / 1440)} d ago`); }
+function defterHtml() {
+  if (NET.durum() !== 'acik') return `<p class="kucuk">${T('Defteri görmek için çevrimiçi olmalısın.', 'Go online to see the visitor book.')}</p>`;
+  const L = (DEFTER.L || []).filter(v => v && v.f !== (S && S.id));
+  if (!DEFTER.L) return `<p class="kucuk">${T('Yükleniyor…', 'Loading…')}</p>`;
+  if (!L.length) return `<p class="kucuk">${T('Henüz kimse uğramadı. Arkadaşına akvaryum bağlantını gönder; gelen herkes buraya not bırakabilir.', 'No visitors yet. Send your aquarium link to a friend; every visitor can leave a note here.')}</p>`;
+  return L.slice(0, 25).map(v => `<div class="defterSat"><b>${esc(adTemizle(v.n) || '?')}</b><span>${v.m >= 0 ? '💬 ' + esc(defterNot(v)) : T('uğradı', 'dropped by')}${v.h && DEFTER_HED[v.h] ? ' · ' + DEFTER_HED[v.h].e : ''}</span><small>${zamanOnce(v.t)}</small></div>`).join('');
+}
+async function defterYenile() { if (!S || !S.akv) return; const L = await NET.defterOku(S.akv); if (L) DEFTER.L = L; const el = document.getElementById('defterListe'); if (el) el.innerHTML = defterHtml(); }
+/* sahibi için: yeni gelen yazılar → duyuru, ziyaretçi arkadaş listesine, hediyeler (günde en çok 8) */
+function defterGeldi(L, canli) {
+  if (!S || !L || !L.length) return; S.defterS = S.defterS || 0;
+  const yeni = L.filter(v => v && v.t && v.t > S.defterS && v.f && v.f !== S.id).sort((a, b) => a.t - b.t); if (!yeni.length) return;
+  S.defterS = Math.max(S.defterS, ...yeni.map(v => v.t));
+  const g = gunVeri(); let inci = 0, yem = 0;
+  for (const v of yeni) { arkadasEkle(v.f, v.n, v.a || ''); if (v.h && (g.defH || 0) < 8) { g.defH = (g.defH || 0) + 1; if (v.h === 'kabuk') inci += 2; else if (v.h === 'yem') yem++; } }
+  if (inci) S.inci += inci; if (yem) { tokEkle(6 * yem); const b = BAL.get('ben'); if (b) for (let i = 0; i < 3 * Math.min(3, yem); i++) YEM.push({ x: kis(b.x + rnd(-60, 60), 30, W - 30), y: rnd(30, 60), f: rnd(0, TAU) }); }
+  const ad = v => adTemizle(v.n) || T('Biri', 'Someone'), son = yeni[yeni.length - 1], hed = yeni.filter(v => v.h).map(v => (DEFTER_HED[v.h] || {}).e).join('');
+  const not = defterNot(son);
+  duyur(yeni.length === 1 ? T(`📖 ${ad(son)} akvaryumuna uğradı${not ? `: “${not}”` : ''}${hed ? ' ' + hed : ''}${inci ? ` +${inci} inci` : ''}`, `📖 ${ad(son)} visited your aquarium${not ? `: “${not}”` : ''}${hed ? ' ' + hed : ''}${inci ? ` +${inci} pearls` : ''}`)
+    : T(`📖 ${canli ? '' : 'Sen yokken '}${yeni.length} ziyaretçi uğradı (${[...new Set(yeni.map(ad))].slice(0, 3).join(', ')})${hed ? ' ' + hed : ''}${inci ? ` +${inci} inci` : ''}. Akvaryum listesinden defteri okuyabilirsin.`, `📖 ${yeni.length} visitors dropped by${canli ? '' : ' while you were away'} (${[...new Set(yeni.map(ad))].slice(0, 3).join(', ')})${hed ? ' ' + hed : ''}${inci ? ` +${inci} pearls` : ''}. Read the book from the aquarium list.`), 1);
+  if (hed) SES.hediye(); kaydet(); uiGuncelle();
+}
+function defterBasla() {
+  if (!S || NET.durum() === 'kapali') return;
+  if (ziyaretModu()) { /* ziyaretçi: günde bir kez sessizce “uğradı” yazısı */
+    const a = gorunenAkv(); S.defterY = S.defterY || {}; const k = 'u' + a;
+    if (S.defterY[k] !== bugun()) setTimeout(() => { if (NET.durum() !== 'acik') return; S.defterY[k] = bugun(); NET.defterYaz(a, { f: S.id, n: S.ad, a: S.akv || '', m: -1 }); kaydet(false); }, 8000);
+    return;
+  }
+  if (!S.akv) return;
+  setTimeout(async () => { const L = await NET.defterOku(S.akv); if (L) { DEFTER.L = L; defterGeldi(L, false); } NET.defterDinle(S.akv, v => { DEFTER.L = [v, ...(DEFTER.L || []).filter(x => x.k !== v.k)]; defterGeldi([v], true); }); }, 4000);
+}
+function defterYazAc() {
+  if (!S || !ziyaretModu()) return; const a = gorunenAkv(); S.defterY = S.defterY || {};
+  if (NET.durum() !== 'acik') { duyur(T('Deftere yazmak için çevrimiçi olmalısın.', 'You need to be online to sign the book.')); return; }
+  if (S.defterY['n' + a] === bugun()) { duyur(T('Bugün bu akvaryumun defterine zaten yazdın; yarın yine yazabilirsin.', 'You already signed this aquarium’s book today; come back tomorrow.')); return; }
+  let m = 0, h = '';
+  const ic = modal(`<h2>📖 ${T('Ziyaret defteri', 'Visitor book')} · #${esc(a.slice(1))}</h2><p class="alt">${T('Akvaryumun sahiplerine kısa bir not ve istersen küçük bir hediye bırak.', 'Leave a short note for the owners of this aquarium, and a small gift if you like.')}</p>
+    <div class="defterNot" id="dfN">${DEFTER_NOT.map((n, i) => `<button type="button" data-m="${i}" class="${i === m ? 'on' : ''}">${esc(L2(n))}</button>`).join('')}</div>
+    <div class="defterNot" id="dfH"><button type="button" data-h="" class="on">${T('Hediyesiz', 'No gift')}</button>${Object.entries(DEFTER_HED).map(([k, v]) => `<button type="button" data-h="${k}" ${v.fiyat > S.inci ? 'disabled' : ''}>${v.e} ${esc(L2(v.ad))}${v.fiyat ? ` · ${v.fiyat} ${T('inci', 'pearls')}` : ''}</button>`).join('')}</div>
+    <button type="button" class="ana" id="dfYaz">${T('Deftere yaz', 'Sign')}</button>`);
+  const sec = (sel, at, f) => ic.querySelectorAll(sel + ' button').forEach(b => b.onclick = () => { ic.querySelectorAll(sel + ' button').forEach(x => x.classList.toggle('on', x === b)); f(b.dataset[at]); });
+  sec('#dfN', 'm', v => { m = +v; }); sec('#dfH', 'h', v => { h = v; });
+  ic.querySelector('#dfYaz').onclick = () => {
+    const fy = (DEFTER_HED[h] || {}).fiyat || 0; if (fy > S.inci) return;
+    S.inci -= fy; S.defterY['n' + a] = bugun(); NET.defterYaz(a, Object.assign({ f: S.id, n: S.ad, a: S.akv || '', m }, h ? { h } : {}));
+    modalKapat(); SES.basari(); kazan(4); duyur(T(`📖 Deftere yazdın${h ? ' ve ' + DEFTER_HED[h].e + ' bıraktın' : ''}. Sahipleri bir sonraki girişlerinde görecek.`, `📖 You signed the book${h ? ' and left a ' + DEFTER_HED[h].e : ''}. The owners will see it next time they visit.`), 1); kaydet(); uiGuncelle();
+  };
+}
+/* =====================================================================
+   ORTAK OLAYLAR: ortak akvaryumda köpekbalığı herkes için aynı anda (sunucu saatine ve akvaryum numarasına bağlı
+   bir takvimle) geçer; herkesin balığı birlikte saklanır. Mercan yumurtlaması zaten herkeste aynı gecededir:
+   o gece akvaryumda başkaları da varsa birlikte izlendiği duyurulur.
+   ===================================================================== */
+const ORTAK_YIR_P = 330e3; /* yaklaşık 5,5 dakikada bir */
+const ortakMi = () => !!(S && gorunenAkv() && NET.durum() === 'acik' && !ogModu);
+function ortakYirPlan(t) { const a = gorunenAkv(), k = Math.floor(t / ORTAK_YIR_P), r = tohumRnd('yir' + a + k); return { k, bas: k * ORTAK_YIR_P + (20 + r() * (ORTAK_YIR_P / 1000 - 60)) * 1000, d: r() < 0.5 ? 1 : -1, y: 0.42 + r() * 0.26 }; }
+const ORTAK = { yirK: -1, mercan: '', dt: 0 /* yalnızca deneme kaydırması */ };
+function ortakOlayKare() {
+  if (!ortakMi()) return;
+  /* köpekbalığı: bu dilimin geçiş anı geldiyse uyarıyı başlat (5 sn uyarı + geçiş herkeste aynı) */
+  if (YIR.durum === 'bekle') { const t = simdi() + ORTAK.dt, p = ortakYirPlan(t); if (p.k !== ORTAK.yirK && t >= p.bas && t < p.bas + 4000) { ORTAK.yirK = p.k; YIR.ortak = p; YIR.durum = 'uyari'; YIR.z = 5 - (t - p.bas) / 1000; SES.carp(); const n = NET.cevrimici().size; duyur(n > 1 ? T(`⚠️ Köpekbalığı geliyor! Akvaryumdaki ${n} balık birlikte saklanıyor — sen de saklan!`, `⚠️ A shark is coming! All ${n} fish in the aquarium are hiding together — hide too!`) : T('⚠️ Köpekbalığı geliyor! Yosunların arasına ya da mağaraya saklan', '⚠️ A shark is coming! Hide in the seaweed or the cave'), 1); } }
+  /* mercan yumurtlaması birlikte */
+  if (mercanDogumu()) { const k = bugun() + gorunenAkv(); if (ORTAK.mercan !== k && NET.cevrimici().size > 1) { ORTAK.mercan = k; const g = gunVeri(); if (!g.ortakMercan) { g.ortakMercan = 1; S.inci += 5; albumEkle('ozel:birlikte'); kaydet(false); } duyur(T(`🪸 Akvaryumdaki ${NET.cevrimici().size} kişi mercan yumurtlamasını birlikte izliyor! +5 inci`, `🪸 ${NET.cevrimici().size} people in this aquarium are watching the coral spawn together! +5 pearls`), 1); } }
+}
+/* =====================================================================
    DAVRANIŞ GÜNLÜĞÜ: balığın günü — ne kadar yüzdü, en çok nerede durdu, kaç kez köpekbalığından kaçtı, ne kadar uyudu…
    ===================================================================== */
 const DV = { z: 0, yirOnce: 'bekle' };
@@ -6877,9 +6970,12 @@ function gelPanel() {
 setInterval(() => { if (PANEL.el && PANEL.yenile && !document.hidden) PANEL.yenile(); }, 1000);
 window.DM = { panel: () => gelPanel(),
   gen: g => { if (g === undefined) return S.gen; S.gen = Object.assign(S.gen || genIlk(), typeof g === 'string' ? { m: GEN_MUT[g] ? g : null } : g); kaydet(false); return S.gen; },
-  nesilDene: (n = 20) => { let g = S.gen || genIlk(); const L = []; for (let i = 1; i <= n; i++) { g = genCocuk(g); L.push({ nesil: S.nesil + i, ton: g.h, doygunluk: g.s, açıklık: g.l, 'nadir gen': g.m ? GEN_MUT[g.m].ad[0] : '' }); } console.table(L); return T('(yalnızca deneme; kayıt değişmedi)', '(simulation only; save unchanged)'); }, cihaz: () => G3 ? Object.assign({ kalite: G3.kalite(), otomatik: G3.oto(), fps: Math.round(G3.fps()) }, G3.cihaz()) : { mod: '2D', olcek: OLCEK2D }, durum: () => ({ S, BAL, NET, AV, ALAN, PLK, YIR, CNL, GZ, SAHNE, INS, DENIZ, KS, ORF, MUR, KUS, YERLI, TET, TMZ, KAR, UZAK, MOL, PERF, EKC, g3Yuzenler, ATIK, FENER, gunVeri, davranisHtml }), eko: o => { Object.assign(ekoS(), o); }, gece: v => { GECE_ZORLA = v == null ? null : kis(+v, 0, 1); }, mercanDogum: v => { NESIL.zorla = !!v; }, yumurtla: () => { const e = ekoS(); e.yum = e.yum || []; e.yum.push({ x: 0.6, g0: ekoGun() - 2.05, n: 16, id: Date.now() }); }, ay: () => ayYasi(), hiz: n => ekoHiz(n), ks: () => ({ gruplar: KS.g.map(g => ({ tur: g.tur, n: g.uy.length, eko: S.eko.ks && S.eko.ks[g.tur] })), orfoz: ORF.o && { tok: ORF.o.tok, hamle: ORF.o.hamle, mod: ORF.o.mod, sak: +ORF.o.sak.toFixed(2), siginak: ORF.o.ev.ad, konum: [Math.round(ORF.o.x), Math.round(ORF.o.y)], oyuk: [Math.round(ORF.o.ev.x), Math.round(ORF.o.ev.y)] } }), orfozTasi: i => { const o = ORF.o; if (!o || !ORF.sig) return; o.si = i == null ? (o.si + 1) % ORF.sig.length : i; o.ev = ORF.sig[o.si]; o.t = 0; o.sigT = rnd(180, 420); return o.ev.ad; }, orfozAc: () => { if (ORF.o) ORF.o.tok = 0; },
+  nesilDene: (n = 20) => { let g = S.gen || genIlk(); const L = []; for (let i = 1; i <= n; i++) { g = genCocuk(g); L.push({ nesil: S.nesil + i, ton: g.h, doygunluk: g.s, açıklık: g.l, 'nadir gen': g.m ? GEN_MUT[g.m].ad[0] : '' }); } console.table(L); return T('(yalnızca deneme; kayıt değişmedi)', '(simulation only; save unchanged)'); }, cihaz: () => G3 ? Object.assign({ kalite: G3.kalite(), otomatik: G3.oto(), fps: Math.round(G3.fps()) }, G3.cihaz()) : { mod: '2D', olcek: OLCEK2D }, durum: () => ({ S, BAL, NET, AV, ALAN, PLK, YIR, CNL, GZ, SAHNE, INS, DENIZ, KS, ORF, MUR, KUS, YERLI, TET, TMZ, KAR, UZAK, MOL, PERF, EKC, g3Yuzenler, ATIK, FENER, gunVeri, davranisHtml, DEFTER, ORTAK }), eko: o => { Object.assign(ekoS(), o); }, gece: v => { GECE_ZORLA = v == null ? null : kis(+v, 0, 1); }, mercanDogum: v => { NESIL.zorla = !!v; }, yumurtla: () => { const e = ekoS(); e.yum = e.yum || []; e.yum.push({ x: 0.6, g0: ekoGun() - 2.05, n: 16, id: Date.now() }); }, ay: () => ayYasi(), hiz: n => ekoHiz(n), ks: () => ({ gruplar: KS.g.map(g => ({ tur: g.tur, n: g.uy.length, eko: S.eko.ks && S.eko.ks[g.tur] })), orfoz: ORF.o && { tok: ORF.o.tok, hamle: ORF.o.hamle, mod: ORF.o.mod, sak: +ORF.o.sak.toFixed(2), siginak: ORF.o.ev.ad, konum: [Math.round(ORF.o.x), Math.round(ORF.o.y)], oyuk: [Math.round(ORF.o.ev.x), Math.round(ORF.o.ev.y)] } }), orfozTasi: i => { const o = ORF.o; if (!o || !ORF.sig) return; o.si = i == null ? (o.si + 1) % ORF.sig.length : i; o.ev = ORF.sig[o.si]; o.t = 0; o.sigT = rnd(180, 420); return o.ev.ad; }, orfozAc: () => { if (ORF.o) ORF.o.tok = 0; },
   mevsimOlay: t => { if (!['kaplumbaga', 'orfozBul'].includes(t)) return "'kaplumbaga' ya da 'orfozBul'"; MOL.o = null; MOL.z = 0; mevsimOlay(0.01, { tur: t }, true); return MOL.o ? t + ' başladı' : 'bu sahnede olmaz'; },
   besinAgi: () => besinAgiAc(),
+  test: { defterBasla, defterYazAc, akvListeAc, modalKapat, ortakYirPlan, simdi, zKay: ms => { ORTAK.dt += ms; }, ziyaret: a => { ziyaretAkv = a; } },
+  ortakYir: () => { const p = ortakYirPlan(simdi()); return { sonraki: Math.round((p.bas - simdi()) / 1000) + ' sn', yon: p.d }; },
+  defter: () => defterYazAc(),
   atik: () => { ATIK.z = 0; return 'bir atık yüzeyden süzülüyor'; },
   ag: () => { ATIK.ag = null; ATIK.agZ = 0; return 'hayalet ağa takılı kaplumbağa geliyor'; },
   dalis: al => { if (al) { S.asama = Math.max(S.asama, 3); geziKontrol(); geziGit(al); return al; } geziAc(); },
