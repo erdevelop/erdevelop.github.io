@@ -105,3 +105,9 @@
 - Özgün taş çizimleri; gidilebilecek kareler nokta, alınabilecek taşlar halka; son hamle ve şah çekilen şah işaretli; alınan taşlar ve malzeme farkı.
 - Bilgisayar: alfa-beta + sükûnet araması (normal ve kolay); beyaz, siyah ya da rastgele renk; ipucu, geri alma, pes etme. Çevrimiçi: rövanşta renkler değişir.
 
+## Kelime Avı, Kakuro, Boru Bağla — 27 Kasım 2026
+- **Kelime Avı:** 16 konu (hayvanlar, meyveler, şehirler, çalgılar…), kolay 8×8 (düz), orta 10×10 (çapraz), zor 12×12 (ters de); sürükleyerek seçim, ipucu, günün bulmacası ve seri.
+- **Kakuro:** 6×6, 8×8, 10×10 ve günün bulmacası; her bulmaca tek çözümlü (gerekirse birkaç rakam baştan verilir). Seçili karenin dizilerine uyan rakam toplulukları,
+  not modu, geri al, ipucu, hatalı rakamlar kırmızı, klavyeyle de oynanır.
+- **Boru Bağla:** 5×5, 7×7, 9×9 ve günün bulmacası; dokun-döndür, uzun basınca kilit, suyun ulaştığı borular boyanır, en az hamle sayısı gösterilir.
+
