@@ -41,22 +41,23 @@ function savTahmin(E) {
 }
 /* sığın: askerler savaşmaz (kayıp yok), köy yağmalanır */
 function kkSigin(auto, E0) {
-  const R = S.draid || { E: E0 || {} }; if (!S.draid && !E0) return;
+  const R = S.draid || { E: E0 || {} }; if (!S.draid && !E0) return; const r0 = kkRap0(), ad = kkL('Baskın: ', 'Raid: ') + kkT(raidName());
   const w = raidThreat(), pct = Math.max(5, 25 - (S.lv.wall || 0) * 4) / 100, st = [], pl = {};
   ['w', 's', 'g'].forEach(function (r) { const amt = Math.floor((S[r] || 0) * pct); if (amt > 0) { S[r] -= amt; pl[r] = amt; st.push(fmt(amt) + ' ' + ({ w: 'odun', s: 'taş', g: 'altın' }[r])); } });
   S.st.rl = (S.st.rl || 0) + 1;
   S.misilleme = { nm: raidName(), w: w, pl: pl, plt: (st.join(', ') || 'yok'), force: Object.assign({}, R.E), e: Date.now() + 1800000 };
   S.lr2 = 'Sığındın, asker kaybı yok. Köy yağmalandı: ' + (st.join(', ') || 'yok') + '. Peşlerine düş: Savaş sekmesinde Misilleme yap.';
   S.draidRep = null; S.draid = null; S.raidT = Date.now() + raidInterval();
+  try { kkRaporKaydet({ yer: 'siginma', kind: 'raid', ad: ad, win: false, A0: {}, A1: {}, E0: kkRapTam(R.E), E1: {}, loot: kkRapFark(r0), yarali: 0 }); } catch (e) { }
   if (!auto) { toast(kkL('🏚️ Sığındın: asker kaybı yok, köy yağmalandı', '🏚️ You took shelter: no soldiers lost, the village was plundered')); if (typeof sfx === 'function') sfx('lose'); save(); render(); }
   else kkOlay(kkL('🏚️ Baskında sığındın: asker kaybı yok, köy yağmalandı', '🏚️ You sheltered during a raid: no soldiers lost, village plundered'));
 }
 /* defend() sarmalayıcısı: emir "akıllı" ise kaybedilecek savaşta sığınır; görünürken savaş sahnesi oynatır */
 function kkSavun(E, auto) {
   if (S.savEmir === 'akil') { let t = null; try { t = savTahmin(E); } catch (e) { } if (t && !t.win) { kkSigin(auto, E); return false; } }
-  if (auto) return defend0(E, auto);
+  const r0 = kkRap0(), ad = kkL('Baskın: ', 'Raid: ') + kkT(raidName());
   const eski = window.kkCap; window.kkCap = {}; let win;
-  try { win = defend0(E, auto); } finally { const c = window.kkCap; window.kkCap = eski; if (c && c.A0) { try { kkSavasBitti(null, c, kkL('Baskın savunması', 'Raid defense')); } catch (e) { } } }
+  try { win = defend0(E, auto); } finally { const c = window.kkCap; window.kkCap = eski; if (c && c.A0) { try { if (auto) kkRaporSavas(null, c, ad, { r0: r0, yer: 'savunma' }); else kkSavasBitti(null, c, ad, { r0: r0, yer: 'savunma' }); } catch (e) { } } }
   return win;
 }
 function baskinSerit() {
@@ -121,7 +122,6 @@ function sistemRender() {
   try { seritRender(); } catch (e) { }
   try { ilkAdimRender(); } catch (e) { }
   const de = $('kkEmir'); if (de) { const h = raidActive() ? savEmirHtml() : ''; if (de._h !== h) { de._h = h; de.innerHTML = h; } }
-  const pt = document.querySelector('.tab[data-t="p"]'); if (pt) pt.classList.toggle('var', (S.mail || []).length > 0);
 }
 function sistemInit() {
   const nav = $('tabs');

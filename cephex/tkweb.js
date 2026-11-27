@@ -649,6 +649,13 @@ function paintCanvas(w) {
       case 'polygon': { if (c.length < 4) break; ctx.beginPath(); ctx.moveTo(c[0], c[1]); for (let i = 2; i < c.length; i += 2) ctx.lineTo(c[i], c[i + 1]); ctx.closePath();
         if (o.fill !== '' && o.fill != null) { ctx.fillStyle = resolveColor(o.fill); if (o.stipple) ctx.globalAlpha = 0.5; ctx.fill(); ctx.globalAlpha = 1; }
         if (o.outline) { stroke(); ctx.strokeStyle = resolveColor(o.outline); ctx.stroke(); } break; }
+      case 'image': { const im = o._rid && RESIM.get(o._rid); const m = o._m;
+        if (!im || !m) break;
+        if (!(im.complete && im.naturalWidth)) { im.addEventListener('load', () => paintCanvas(w), { once: true }); break; }
+        const det = m[0] * m[4] - m[1] * m[3]; if (!det) break;           // m: tuval -> resim pikseli; çizimde tersi
+        ctx.transform(m[4] / det, -m[3] / det, -m[1] / det, m[0] / det, (m[1] * m[5] - m[4] * m[2]) / det, (m[3] * m[2] - m[0] * m[5]) / det);
+        ctx.globalAlpha = Math.max(0.05, Math.min(1, +o._alfa || 0.55));
+        ctx.imageSmoothingEnabled = true; ctx.drawImage(im, 0, 0); break; }
       case 'text': { const f = fontCss(o.font) || fontCss(['Segoe UI', 9]); ctx.font = f.css; ctx.fillStyle = resolveColor(o.fill) || '#000'; let txt = String(o.text ?? ''); const an = o.anchor || 'center';
         const lines = txt.split('\n'); const lh = f.px * 1.25; const wmax = Math.max(...lines.map((l) => ctx.measureText(l).width)); const hh = lh * lines.length;
         ctx.translate(c[0], c[1]); if (o.angle) ctx.rotate(-(+o.angle) * Math.PI / 180);
@@ -841,4 +848,56 @@ async function kutSenkron() {
     : 'Kütüphane klasörüne yazıldı: ') + yazilan.join(', '), KUT.salt ? 'uyari' : ''));
 }
 window.addEventListener('beforeunload', (e) => { if (kutMesgul || kutDegisenler().length) { kutSenkron().catch(() => {}); e.preventDefault(); e.returnValue = ''; } });
+
+/* ---------------- resim altlığı (Şablon kur: katalog kesitinin ekran görüntüsü)
+   Resim tarayıcıda griye çevrilir (en çok 2600 px), /tmp/altlik.gri'ye yazılır, Python'a (genişlik, yükseklik, kimlik)
+   bildirilir; tuvalde kimlikle çizilir. Tanıma numpy ister: ilk kullanımda Pyodide paketinden yüklenir. */
+const RESIM = new Map(); let resimSay = 0, resimKanca = false;
+async function numpyHazir() {
+  if (T._numpy) return;
+  kutIleti('numpy yükleniyor (yalnız ilk kullanımda)…');
+  try { await window.pyodide.loadPackage('numpy'); T._numpy = true; } finally { kutPerdeKapat(); }
+}
+async function resimIsle(blob) {
+  try {
+    await numpyHazir();
+    kutIleti('Resim hazırlanıyor…');
+    const bmp = await createImageBitmap(blob);
+    const k = Math.min(1, 2600 / Math.max(bmp.width, bmp.height));
+    const w = Math.max(1, Math.round(bmp.width * k)), h = Math.max(1, Math.round(bmp.height * k));
+    const c = document.createElement('canvas'); c.width = w; c.height = h; const x = c.getContext('2d');
+    x.fillStyle = '#fff'; x.fillRect(0, 0, w, h); x.drawImage(bmp, 0, 0, w, h);
+    const d = x.getImageData(0, 0, w, h).data; const g = new Uint8Array(w * h);
+    for (let i = 0, j = 0; j < g.length; i += 4, j++) g[j] = (d[i] * 299 + d[i + 1] * 587 + d[i + 2] * 114) / 1000;
+    window.pyodide.FS.writeFile('/tmp/altlik.gri', g);
+    const gd = x.createImageData(w, h);            // gösterim: koyu zeminde açık çizgi (beyaz zemin saydam)
+    for (let j = 0, i = 0; j < g.length; j++, i += 4) { gd.data[i] = 208; gd.data[i + 1] = 215; gd.data[i + 2] = 222; gd.data[i + 3] = 255 - g[j]; }
+    x.clearRect(0, 0, w, h); x.putImageData(gd, 0, 0);
+    const rid = 'r' + (++resimSay); const im = new Image(); im.src = c.toDataURL('image/png'); RESIM.set(rid, im);
+    kutPerdeKapat();
+    dlg(() => T.pyResim.call(null, '/tmp/altlik.gri', w, h, rid)); T.flush();
+  } catch (e) { kutPerdeKapat(); console.error(e); window.alert('Resim okunamadı: ' + ((e && e.message) || e)); }
+}
+T.resim_iste = (kaynak) => {
+  if (kaynak === 'pano') {
+    if (navigator.clipboard && navigator.clipboard.read) {
+      navigator.clipboard.read().then(async (items) => {
+        for (const it of items) { const t = it.types.find((y) => y.startsWith('image/')); if (t) { await resimIsle(await it.getType(t)); return; } }
+        window.alert("Panoda resim yok. PDF'te detayı ekran görüntüsüyle alın (Windows: Win+Shift+S) ve tekrar deneyin.");
+      }).catch(() => window.alert("Pano okunamadı. Ctrl+V ile yapıştırın ya da 'Aç...' ile resim dosyası seçin."));
+    } else window.alert("Bu tarayıcı panoyu düğmeyle okumaya izin vermiyor: Ctrl+V ile yapıştırın ya da 'Aç...' ile dosya seçin.");
+    return;
+  }
+  const inp = mk('input'); inp.type = 'file'; inp.accept = 'image/*';
+  inp.onchange = () => { const f = inp.files && inp.files[0]; if (f) resimIsle(f); };
+  inp.click();
+};
+T.resim_kanca = (acik) => { resimKanca = !!acik; };
+document.addEventListener('paste', (e) => {
+  if (!resimKanca) return;
+  const t = e.target; if (t && (t.tagName === 'INPUT' || t.tagName === 'TEXTAREA' || t.isContentEditable)) return;
+  const items = (e.clipboardData && e.clipboardData.items) || [];
+  for (const it of items) if (it.kind === 'file' && it.type.startsWith('image/')) { e.preventDefault(); resimIsle(it.getAsFile()); return; }
+});
+T._resimIsle = resimIsle;
 })();

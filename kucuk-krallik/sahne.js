@@ -22,7 +22,7 @@ function kkSahneSiradaki() {
       const id = e.target.id;
       if (id === 'kksAtla') { if (kkSahneAkt) kkSahneAkt.t0 = performance.now() - kkSahneAkt.T * 1000; }
       else if (id === 'kksX' || id === 'kksOk' || (e.target === ov && kkSahneAkt && kkSahneAkt.bitti)) kkSahneKapat();
-      else if (id === 'kksRap') { kkSahneKapat(); kkSahneQ = []; const tb = document.querySelector('.tab[data-t="s"]'); if (typeof mapKapa === 'function' && window.mapOpen) mapKapa(); if (tb) tb.click(); try { repOpen = true; render(); const r = document.getElementById('rep'); if (r) r.scrollIntoView({ behavior: 'smooth', block: 'start' }); } catch (er) { } }
+      else if (id === 'kksRap') { const rid = kkSahneAkt && kkSahneAkt.d.rid; kkSahneKapat(); kkSahneQ = []; if (typeof mapKapa === 'function' && window.mapOpen) mapKapa(); try { kkRapGoster(rid); } catch (er) { } }
     });
     document.addEventListener('keydown', function (e) { if (e.key === 'Escape' && kkSahneAkt) kkSahneKapat(); });
   }

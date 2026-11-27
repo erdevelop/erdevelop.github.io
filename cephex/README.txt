@@ -8,3 +8,5 @@ ya da içindeki E50). Chrome / Edge klasörü okur; programın kütüphaneye yaz
 klasöre geri yazılır. Klasör hatırlanır; tarayıcı izni düşerse 'Yeniden bağla'. Firefox / Safari: salt okunur, yazılanlar indirilir.
 Program dosyaları her açılışta sunucuya sorularak yüklenir (önbellekte eski sürüm kalmaz). tkweb.js değişirse index.html'deki
 'tkweb.js?v=...' değerini değiştirin.
+Şablon kur › Resim: katalog kesitinin ekran görüntüsü Ctrl+V ile yapıştırılır (ya da 'Aç...'); 'Resimden tanı' numpy ister,
+ilk kullanımda Pyodide'den bir kez yüklenir (~10 MB).

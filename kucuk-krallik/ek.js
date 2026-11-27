@@ -185,7 +185,7 @@ function dipTick() {
   ['w', 's', 'f'].forEach(function (r) { const v = Math.floor(top[r]); if (v > 0) { S[r] = Math.min(c, (S[r] || 0) + v); any = true; } });
   S.dipG = (S.dipG || 0) + top.g; if (S.dipG >= 1) { const g = Math.floor(S.dipG); S.dipG -= g; S.g = (S.g || 0) + g; any = true; }
   if (any && Date.now() < kkBoot) { const o = kkOffSum(); o.tic = o.tic || { w: 0, s: 0, f: 0, g: 0 }; for (const r in top) o.tic[r] += top[r]; }
-  bit.forEach(function (n) { kkOlay('🤝 ' + kkL(n + ' ile anlaşma sona erdi', 'Pact with ' + n + ' has ended')); });
+  bit.forEach(function (n) { const t = '🤝 ' + kkL(n + ' ile anlaşma sona erdi', 'Pact with ' + n + ' has ended'); kkOlay(t); try { postaEkle('krallik', t, kkL('Yeniden anlaşmak için lordun kartından ticaret anlaşması yapabilirsin.', 'You can make a new trade pact from the lord’s card.')); } catch (e) { } });
   return any;
 }
 
@@ -250,11 +250,12 @@ function kkOlay(msg) {
   return 'live';
 }
 /* sefer savaşı bitti: sahne, rapor ya da bildirim */
-function kkSavasBitti(m, cap, ad) {
+function kkSavasBitti(m, cap, ad, ek) {
+  let rap = null; try { rap = kkRaporSavas(m, cap, ad, ek); } catch (e) { console.error('rapor', e); }
   const win = kkTot(cap.B1) < .5 && kkTot(cap.A1) >= .5, lost = Math.max(0, Math.round(kkTot(cap.A0) - kkTot(cap.A1)));
   const msg = (win ? '🏆 ' : '💀 ') + kkT(ad) + ': ' + (win ? kkL('zafer', 'victory') : kkL('yenilgi', 'defeat')) + kkL(' · kayıp ', ' · losses ') + fmt(lost);
   const w = kkOlay(msg);
-  const data = { ad: ad, kind: m ? m.kind : '', cap: cap, win: win, rep: m && (m.kind === 'wave' || m.kind === 'ter'), col: kkLordRenk(m) };
+  const data = { ad: ad, kind: m ? m.kind : '', cap: cap, win: win, rep: !!rap, rid: rap && rap.id, col: kkLordRenk(m) };
   if (w === 'hidden') kkSahneBekleyen = data;
   else if (w === 'live' && kAyar.sahne !== false && typeof kkSahneOyna === 'function') kkSahneOyna(data);
 }
@@ -372,6 +373,8 @@ function kkInit() {
   try { kkDuzenInit(); } catch (e) { console.error('kkDuzenInit', e); }
   try { if (typeof savasInit === 'function') savasInit(); } catch (e) { console.error('savasInit', e); }
   try { if (typeof sistemInit === 'function') sistemInit(); } catch (e) { console.error('sistemInit', e); }
+  try { if (typeof raporInit === 'function') raporInit(); } catch (e) { console.error('raporInit', e); }
+  try { if (typeof postaInit === 'function') postaInit(); } catch (e) { console.error('postaInit', e); }
   const hi = $('hedefInfo'); if (hi) hi.textContent = kkL('Bir hedefe dokun: ordu düşmana göre kendiliğinden ayarlanır, sana göndermek kalır.', 'Tap a target: the army is sized to the enemy automatically, you just send it.');
   dipTick();
   setInterval(kkTick, 2000);

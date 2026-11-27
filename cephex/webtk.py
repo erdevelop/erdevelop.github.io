@@ -227,6 +227,29 @@ def kutuphane_yeniden(geri, gunluk=None):
     _B.kut_yeniden()
 
 
+# ----------------------------------------------------------------------------- resim (Şablon kur altlığı)
+_RESIM = {}
+
+
+def resim_iste(kaynak, geri):
+    """kaynak: 'pano' (tarayıcı panosu) | 'dosya' (dosya seçici). Tarayıcı resmi griye çevirip dosyaya yazınca
+    geri(yol, genişlik, yükseklik, resim_kimliği) çalışır (numpy gerekirse önce yüklenir)."""
+    _RESIM["f"] = geri
+    _B.resim_iste(kaynak)
+
+
+def resim_kanca(geri):
+    """Sayfadaki Ctrl+V (paste) ile gelen resim bu işleve gider; geri None ise kapatılır."""
+    _RESIM["f"] = geri
+    _B.resim_kanca(geri is not None)
+
+
+def _resim_geldi(yol, w, h, rid):
+    f = _RESIM.get("f")
+    if f:
+        _calistir(lambda: f(str(yol), int(w), int(h), str(rid)))
+
+
 def kut_gunluk(f):
     """Klasöre geri yazma iletileri bu işleve gider (f(ileti, tür))."""
     _KUT["log"] = f
@@ -1864,6 +1887,7 @@ def kur():
     _B.pyVar = create_proxy(lambda i, s: _var_js(int(i), s))
     _B.pyFile = create_proxy(_dosya_geldi)
     _B.pyKut = create_proxy(_kut_geldi)
+    _B.pyResim = create_proxy(_resim_geldi)
     _B.pyKutLog = create_proxy(_kut_log)
     return tk
 

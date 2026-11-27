@@ -872,9 +872,12 @@ def cam_kurallari(sistem):
     for k in (kay or {}).get("cam_kurallari") or []:
         try:
             t_ = _norm(str(k.get("tur", "") or ""))
-            out.append({"min": float(k["min"]), "max": float(k["max"]),
-                        "bariyer": str(k.get("bariyer", "")).strip(), "not": str(k.get("not", "")),
-                        "tur": t_ if t_ in ("dikey", "yatay") else ""})
+            d_ = {"min": float(k["min"]), "max": float(k["max"]),
+                  "bariyer": str(k.get("bariyer", "")).strip(), "not": str(k.get("not", "")),
+                  "tur": t_ if t_ in ("dikey", "yatay") else ""}
+            if isinstance(k.get("fitil"), dict) and k["fitil"]:
+                d_["fitil"] = {str(a_): str(b_) for a_, b_ in k["fitil"].items()}   # aile -> kod (katalog cam tablosu)
+            out.append(d_)
         except (KeyError, ValueError, TypeError):
             continue
     return sorted(out, key=lambda k: (k["min"], k["max"]))
@@ -887,6 +890,100 @@ def cam_kurallari_yaz(sistem, liste):
     kay["cam_kurallari"] = [dict(k) for k in liste]
     ayar_kaydet()
     return True
+
+
+# ---------------------------------------------------------------- katalog cam tablosu (PDF'ten kopyalanan metin)
+CAM_TABLO_KOD = re.compile(r"(?<![\w.])(\d{2}\.\d{2}\.\d{2}(?:\.[A-Za-z]{1,3})?|[A-Za-z]\d{2}\s?[A-Za-z]{1,2}\s?\d{2,3})(?![\w.])")
+CAM_TABLO_MM = re.compile(r"(?<![\w.,])(\d{1,2}(?:[.,]\d{1,2})?)\s*mm\b", re.I)
+
+
+def cam_tablosu_coz(metin, kut):
+    """Katalogdaki cam tablosunun PDF'ten kopyalanmış metnini çözer. Her '<kalınlık> mm' bir satır başlatır; sonraki
+    kalınlığa kadar gelen kodlar o satırındır (PDF'te alta kayan kodlar da). Aynı kalınlık ikinci kez gelirse ya da satırda
+    'Alternatif' yazıyorsa satır alternatiftir (kural yapılmaz). Kodların türü kütüphaneden bulunur (ISI_BARIYERI,
+    ADAPTOR, FITIL, CAM_TAKOZU); kütüphanede olmayan kod adından tahmin edilir ve 'eksik' listesine girer.
+    Dönüş: [{"mm", "alternatif", "bariyer": [kod], "adaptor": [kod], "fitil": [kod], "takoz": [kod], "eksik": [kod]}]"""
+    sat = []
+    olaylar = []
+    for m in CAM_TABLO_MM.finditer(metin):
+        olaylar.append((m.start(), m.end(), "mm", float(m.group(1).replace(",", "."))))
+    for m in CAM_TABLO_KOD.finditer(metin):
+        olaylar.append((m.start(), m.end(), "kod", re.sub(r"\s+", "", m.group(1)).upper()))
+    for m in re.finditer(r"(?i)alternat", metin):
+        olaylar.append((m.start(), m.end(), "alt", None))
+    olaylar.sort()
+    tur_onb = {}
+
+    def tur_bul(kod):
+        if kod in tur_onb:
+            return tur_onb[kod]
+        yol = kutuphane_parca_bul(kut, kod) if kut else None
+        if yol:
+            t = os.path.basename(os.path.dirname(yol)).upper(), True
+        elif re.match(r"^02\.", kod):
+            t = "ISI_BARIYERI", False
+        elif re.match(r"^01\.", kod):
+            t = "FITIL", False
+        elif re.match(r"^[A-Z]\d{2}S\d", kod):
+            t = "CAM_TAKOZU", False
+        elif re.match(r"^[A-Z]\d{2}[A-Z]\d", kod):
+            t = "ADAPTOR", False
+        else:
+            t = "", False
+        tur_onb[kod] = t
+        return t
+    gorulen = set()
+    for bas, son, tur, deger in olaylar:
+        if tur == "mm":
+            alt = deger in gorulen
+            gorulen.add(deger)
+            sat.append({"mm": deger, "alternatif": alt, "bariyer": [], "adaptor": [], "fitil": [], "takoz": [], "eksik": []})
+        elif not sat:
+            continue
+        elif tur == "alt":
+            sat[-1]["alternatif"] = True
+        else:
+            if re.match(r"^\d\.\d+X\d+", deger or ""):
+                continue
+            kl, var = tur_bul(deger)
+            hedef = {"ISI_BARIYERI": "bariyer", "ADAPTOR": "adaptor", "FITIL": "fitil", "CAM_TAKOZU": "takoz"}.get(kl)
+            if not hedef:
+                continue
+            sat[-1][hedef].append(deger)
+            if not var and hedef != "takoz":
+                sat[-1]["eksik"].append(deger)
+    sat = [s for s in sat if s["bariyer"] or s["fitil"] or s["adaptor"]]
+    # PDF'in metin sırasında alt satıra taşan hücreler tablonun sonuna toplanabilir: son satırdaki bariyerler m kez
+    # yinelenen bir dizi ise ve hemen önceki m-1 satırda bariyer yoksa, dizi bu satırlara dağıtılır
+    for i, s in enumerate(sat):
+        B = s["bariyer"]
+        for p in range(1, len(B) // 2 + 1):
+            m = len(B) // p
+            if m < 2 or len(B) % p or B != B[:p] * m:
+                continue
+            onceki = sat[max(0, i - m + 1):i]
+            if len(onceki) == m - 1 and all(not o["bariyer"] for o in onceki):
+                for o in onceki + [s]:
+                    o["bariyer"] = list(B[:p])
+            break
+    return sat
+
+
+def cam_tablosu_kurallari(satirlar, fitil=True):
+    """Çözülmüş tablo satırlarından cam kuralları: her ana satır (alternatif olmayan), bir önceki satırın kalınlığından
+    büyük, kendi kalınlığına eşit ya da küçük camlar için (tablodaki 'kalınlığı karşılayan ilk satır' kuralı).
+    Bariyer zinciri: adaptör(ler) + bariyer(ler). fitil=True ise fitiller aile koduyla (01.02.24 -> '01.02') saklanır:
+    şablondaki aynı aileden fitil cam kalınlığına göre bu kodla değiştirilir."""
+    ana = sorted((s for s in satirlar if not s["alternatif"]), key=lambda s: s["mm"])
+    out, onceki = [], None
+    for s in ana:
+        k = {"min": round(onceki + 0.01, 2) if onceki is not None else max(0.0, s["mm"] - 2.0), "max": s["mm"],
+             "bariyer": "+".join(s["adaptor"] + s["bariyer"]), "not": f"katalog cam tablosu ({s['mm']:g} mm)", "tur": ""}
+        if fitil and s["fitil"]:
+            k["fitil"] = {f.rsplit(".", 1)[0]: f for f in s["fitil"] if f not in s["eksik"] and "." in f}
+        out.append(k)
+        onceki = s["mm"]
+    return out
 
 
 def kural_bariyer(kurallar, kalinlik, tur=""):
@@ -4738,6 +4835,623 @@ def sablon_parcalari_oku(yol, kut, tur):
             notlar.append(f"{ad}: kütüphanede dosyası yok; şablondaki çizimi kullanıldı")
         out.append({"geo": g or g_t, "x": x, "y": y, "rot": rot % 360.0, "ayna": ayna})
     return out, notlar
+
+
+# ---------------------------------------------------------------- resimden şablon tanıma (Şablon kur)
+# Katalogdan alınmış kesit görüntüsünde (ekran görüntüsü / resim dosyası) kütüphane parçalarını arar.
+# Yöntem: görüntünün koyu bölgelerinin kenarları çıkarılır; parçanın kontur noktaları belli ölçek ve 90°'lik
+# duruşlarda (aynalı / aynasız) kenar haritasıyla FFT korelasyonuyla karşılaştırılır (kontur noktalarının ne kadarı bir
+# kenara yakın). Önce ana profil bulunur (ölçek, yer ve duruş bundan çıkar), sonra parçalar aynı ölçekte aranır,
+# en iyi öneriler çakışmayacak şekilde açgözlü seçilir. numpy gerekir (yoksa özellik kapalıdır).
+
+RESIM_KLASORLER = ("FITIL", "ISI_BARIYERI", "BASKI", "KAPAK", "ADAPTOR", "CITA")
+RESIM_DONUS = tuple((r, a) for r in (0, 90, 180, 270) for a in (False, True))
+
+
+def _np():
+    try:
+        import numpy
+        return numpy
+    except ImportError:
+        return None
+
+
+def _hizli_boy(n):
+    """FFT için n'den büyük ya da eşit, yalnız 2, 3, 5 çarpanlı en küçük sayı."""
+    m = max(1, int(n))
+    while True:
+        k = m
+        for p in (2, 3, 5):
+            while k % p == 0:
+                k //= p
+        if k == 1:
+            return m
+        m += 1
+
+
+def _kaydir_or(np, M, r):
+    """İkili haritayı r yarıçaplı daire kadar genişletir (kaydırmaların VEYA'sı)."""
+    H, W = M.shape
+    out = M.copy()
+    ri = int(math.floor(r))
+    for dy in range(-ri, ri + 1):
+        for dx in range(-ri, ri + 1):
+            if (dx or dy) and dx * dx + dy * dy <= r * r + 1e-9:
+                y0, y1 = max(0, dy), H + min(0, dy)
+                x0, x1 = max(0, dx), W + min(0, dx)
+                out[y0:y1, x0:x1] |= M[y0 - dy:y1 - dy, x0 - dx:x1 - dx]
+    return out
+
+
+def resim_kenarlar(np, g, esik=0.55):
+    """Gri görüntü (0..1) -> koyu bölgelerin kenar pikselleri (ikili)."""
+    koyu = g < esik
+    ic = koyu.copy()
+    ic[1:, :] &= koyu[:-1, :]
+    ic[:-1, :] &= koyu[1:, :]
+    ic[:, 1:] &= koyu[:, :-1]
+    ic[:, :-1] &= koyu[:, 1:]
+    return koyu & ~ic
+
+
+def resim_kucult(np, g, f):
+    """Gri görüntüyü f katı küçültür (blok ortalaması)."""
+    if f <= 1:
+        return g
+    H, W = (g.shape[0] // f) * f, (g.shape[1] // f) * f
+    return g[:H, :W].reshape(H // f, f, W // f, f).mean(axis=(1, 3))
+
+
+def parca_noktalari(geo, adim=0.25):
+    """Parçanın kontur noktaları (mm, referansa göre), kenar boyunca 'adim' aralıkla. Çizgi parçalarında çizgiler."""
+    out = []
+    for lp in (geo.get("dong") or []) + (geo.get("cizgi") or []):
+        n = len(lp)
+        kapali = lp in (geo.get("dong") or [])
+        for i in range(n if kapali else n - 1):
+            (x0, y0), (x1, y1) = lp[i], lp[(i + 1) % n]
+            L = math.hypot(x1 - x0, y1 - y0)
+            k = max(1, int(L / adim))
+            for j in range(k):
+                t = j / k
+                out.append((x0 + (x1 - x0) * t, y0 + (y1 - y0) * t))
+    return out
+
+
+def _dondur_np(np, P, rot, ayna):
+    x = -P[:, 0] if ayna else P[:, 0]
+    y = P[:, 1]
+    c, s = round(math.cos(math.radians(rot))), round(math.sin(math.radians(rot)))
+    return np.stack([c * x - s * y, s * x + c * y], 1)
+
+
+class ResimEsle:
+    """Bir görüntü (ya da alanı) üzerinde parça arama. Görüntü koordinatı: piksel (x sağa, y aşağı)."""
+
+    def __init__(self, np, g, tol=1.6, pay=0.0):
+        """pay: görüntünün her kenarına eklenen boşluk (görüntü boyunun oranı) — parça görüntüden taşabilsin (kesilmiş
+        ekran görüntüsünde ana profil); taşan noktalar oranda sayılmaz (en az %60'ı görünür olmalı)."""
+        self.np, self.g = np, g
+        self.H, self.W = g.shape
+        self.kenar = resim_kenarlar(np, g)
+        self.yakin = _kaydir_or(np, self.kenar, tol).astype(np.float32)
+        self.py, self.px = int(self.H * pay), int(self.W * pay)
+        self.Hs, self.Ws = self.H + 2 * self.py, self.W + 2 * self.px
+        self._F = {}
+
+    def _ffts(self, s):
+        if s not in self._F:
+            np = self.np
+            A = np.zeros((self.Hs, self.Ws), np.float32)
+            A[self.py:self.py + self.H, self.px:self.px + self.W] = self.yakin
+            FI = None
+            if self.py or self.px:
+                I = np.zeros((self.Hs, self.Ws), np.float32)
+                I[self.py:self.py + self.H, self.px:self.px + self.W] = 1.0
+                FI = np.fft.rfft2(I, s)
+            self._F[s] = (np.fft.rfft2(A, s), FI)
+        return self._F[s]
+
+    def haritalar(self, P, olcek, donusler=RESIM_DONUS):
+        """Her duruş için puan haritası: [(R, mx, my, rot, ayna)]; R[ty, tx]: kontur noktalarının kenara yakın oranı."""
+        np = self.np
+        out = []
+        Pn = np.asarray(P, dtype=np.float64)
+        s = (_hizli_boy(self.Hs), _hizli_boy(self.Ws))
+        FA, FI = self._ffts(s)
+        n = float(len(Pn))
+        for rot, ayna in donusler:
+            Q = _dondur_np(np, Pn, rot, ayna) * olcek
+            Q[:, 1] = -Q[:, 1]
+            mx, my = Q[:, 0].min(), Q[:, 1].min()
+            ix = np.round(Q[:, 0] - mx).astype(int)
+            iy = np.round(Q[:, 1] - my).astype(int)
+            kh, kw = int(iy.max()) + 1, int(ix.max()) + 1
+            ny, nx = self.Hs - kh + 1, self.Ws - kw + 1
+            if ny < 1 or nx < 1:
+                continue
+            K = np.zeros((kh, kw), np.float32)
+            np.add.at(K, (iy, ix), 1.0)
+            FK = np.conj(np.fft.rfft2(K, s))
+            esl = np.fft.irfft2(FA * FK, s)[:ny, :nx]
+            if FI is not None:
+                gor = np.fft.irfft2(FI * FK, s)[:ny, :nx]
+                R = esl / np.maximum(gor, 0.6 * n)
+            else:
+                R = esl / n
+            out.append((R, mx + self.px, my + self.py, rot, ayna))
+        return out
+
+    @staticmethod
+    def en_iyiler(np, haritalar, n=1, ayri=8, esik=0.0):
+        """Haritalardan en iyi n yer (her duruş için ayrı ayrı yerel tepeler): [(oran, x, y, rot, ayna)] (x, y: referans
+        noktasının görüntüdeki yeri, piksel)."""
+        out = []
+        for R, mx, my, rot, ayna in haritalar:
+            R2 = R.copy()
+            for _ in range(n):
+                iy, ix = np.unravel_index(int(np.argmax(R2)), R2.shape)
+                v = float(R2[iy, ix])
+                if v < esik:
+                    break
+                out.append((v, ix - mx, iy - my, rot, ayna))
+                R2[max(0, iy - ayri):iy + ayri + 1, max(0, ix - ayri):ix + ayri + 1] = -1.0
+        return sorted(out, key=lambda t: -t[0])
+
+    def oran(self, P, olcek, x, y, rot, ayna):
+        """Verilen yerleşimde kontur noktalarının kenara yakın oranı (görünenler üzerinden) ve görünen oranı."""
+        np = self.np
+        Q = _dondur_np(np, np.asarray(P, dtype=np.float64), rot, ayna) * olcek
+        ix = np.round(Q[:, 0] + x).astype(int)
+        iy = np.round(-Q[:, 1] + y).astype(int)
+        ic = (ix >= 0) & (ix < self.W) & (iy >= 0) & (iy < self.H)
+        if not ic.any():
+            return 0.0, 0.0
+        return float(self.yakin[iy[ic], ix[ic]].mean()), float(ic.mean())
+
+
+def _simetrik_mi(np, P, tol=0.6):
+    """Parça kendi referansından geçen eksene göre (x -> -x) simetrik mi: aynalı duruşlar ayrıca denenmez."""
+    if len(P) < 4:
+        return False
+    A = np.round(P / tol).astype(int)
+    B = np.round(np.stack([-P[:, 0], P[:, 1]], 1) / tol).astype(int)
+    a = {tuple(r) for r in A.tolist()}
+    b = {tuple(r) for r in B.tolist()}
+    return len(a & b) >= 0.85 * len(a)
+
+
+def _donusler(np, P):
+    return tuple(d for d in RESIM_DONUS if not (d[1] and _simetrik_mi(np, P)))
+
+
+def resim_ana_bul(np, g, adaylar, sabit_olcek=None, ilerle=None):
+    """Ana profili ve görüntünün ölçeğini bulur. adaylar: [(kod, noktalar mm)].
+    1) Görüntü ~420 piksele küçültülür, geniş toleransla kaba arama (ölçek %5 adım, profil görüntünün en az dörtte biri
+       kadar; duruşlar: 4 açı × aynalı/aynasız, simetrik profilde aynalı atlanır).
+    2) En iyi 3 kaba aday, ölçeği ~3 px/mm olacak şekilde küçültülmüş görüntüde ±%5 (%1 adım) incelenir.
+    3) En iyisi tam çözünürlükte, profilin çevresi kırpılarak ±%1 (%0,25 adım) incelenir.
+    Dönüş: {"kod", "olcek" (px/mm), "x", "y" (referansın pikseli), "rot", "ayna", "oran"} | None"""
+    H, W = g.shape
+    f = max(1, int(round(max(H, W) / 420.0)))
+    gk = resim_kucult(np, g, f)
+    kaba = ResimEsle(np, gk, tol=2.3, pay=0.3)
+    nokta = {kod: np.asarray(P, dtype=np.float64) for kod, P in adaylar}
+    tum = []
+    for j, (kod, P) in enumerate(adaylar):
+        Pn = nokta[kod]
+        D = max(float(Pn[:, 0].max() - Pn[:, 0].min()), float(Pn[:, 1].max() - Pn[:, 1].min()), 1.0)
+        if sabit_olcek:
+            olcekler = [sabit_olcek / f * k for k in (0.97, 1.0, 1.03)]
+        else:
+            lo, hi = 0.25 * max(gk.shape) / D, 1.4 * min(gk.shape) / D
+            n = max(2, int(math.log(max(hi / lo, 1.01)) / math.log(1.05)) + 1)
+            olcekler = list(np.geomspace(lo, max(hi, lo * 1.01), n))
+        Ps = Pn[::max(1, len(Pn) // 700)]
+        don = _donusler(np, Pn)
+        for i, s in enumerate(olcekler):
+            if ilerle:
+                ilerle((j + i / len(olcekler)) / max(1, len(adaylar)) * 0.55)
+            for v, x, y, rot, ayna in ResimEsle.en_iyiler(np, kaba.haritalar(Ps, s, don), 1):
+                tum.append((v, kod, s * f, x * f, y * f, rot, ayna))
+    if not tum:
+        return None
+    tum.sort(key=lambda t: -t[0])
+    secilen, goruldu = [], set()
+    for t in tum:                                   # farklı (profil, duruş, ölçek bandı) en iyi 3 kaba aday
+        k_ = (t[1], t[5], t[6], int(math.log(t[2]) / math.log(1.15)))
+        if k_ not in goruldu:
+            goruldu.add(k_)
+            secilen.append(t)
+        if len(secilen) >= 3:
+            break
+
+    def dene(es, k, kod, rot, ayna, olcekler, x0=0, y0=0):
+        en_ = None
+        for s in olcekler:
+            for v, x, y, r_, a_ in ResimEsle.en_iyiler(np, es.haritalar(nokta[kod], s / k, ((rot, ayna),)), 1):
+                if en_ is None or v > en_["oran"]:
+                    en_ = {"kod": kod, "olcek": float(s), "x": float(x * k + x0), "y": float(y * k + y0),
+                           "rot": r_, "ayna": a_, "oran": v}
+        return en_
+    def puan(e_):                                   # farklı profiller arasında: kenara oturan kontur boyu − oturmayan
+        return (2.0 * e_["oran"] - 1.0) * len(nokta[e_["kod"]]) * 0.25
+    en, onb = None, {}
+    for i, (v0, kod, s0, x0, y0, rot, ayna) in enumerate(secilen):
+        if ilerle:
+            ilerle(0.55 + 0.3 * i / len(secilen))
+        k = max(1, int(s0 / 3.0))
+        if k not in onb:
+            onb[k] = ResimEsle(np, resim_kucult(np, g, k), tol=1.6, pay=0.3)
+        e_ = dene(onb[k], k, kod, rot, ayna, np.linspace(s0 * 0.95, s0 * 1.05, 11))
+        if e_ and (en is None or (puan(e_) > puan(en) if e_["kod"] != en["kod"] else e_["oran"] > en["oran"])):
+            en = e_
+    if en:                                          # tam çözünürlük, profilin çevresi: ±%1, %0,25 adım
+        if ilerle:
+            ilerle(0.88)
+        Q = _dondur_np(np, nokta[en["kod"]], en["rot"], en["ayna"]) * en["olcek"]
+        m = 0.12 * float(max(Q.max(0) - Q.min(0)))
+        x0 = int(max(0, en["x"] + Q[:, 0].min() - m))
+        x1 = int(min(W, en["x"] + Q[:, 0].max() + m))
+        y0 = int(max(0, en["y"] - Q[:, 1].max() - m))
+        y1 = int(min(H, en["y"] - Q[:, 1].min() + m))
+        es = ResimEsle(np, g[y0:y1, x0:x1], tol=1.6, pay=0.3)
+        e_ = dene(es, 1, en["kod"], en["rot"], en["ayna"], np.linspace(en["olcek"] * 0.99, en["olcek"] * 1.01, 9), x0, y0)
+        if e_ and e_["oran"] >= en["oran"] - 0.02:
+            en = e_
+    if en:
+        en["puan"] = puan(en)
+    return en
+
+
+def resim_ana_ayikla(np, g, ana, adaylar):
+    """Ana profil bulunduktan sonra aynı yön için kütüphanedeki diğer profilleri bulunan yerde dener (profillerin burnu
+    ortak: referans aynı yerde). Kısa bir profil uzun olanın parçasına da oturur; bu yüzden karşılaştırma, kenara oturan
+    kontur boyuyla (puan) yapılır. Dönüş: [(puan, oran, kod)] büyükten küçüğe."""
+    out = []
+    es = ResimEsle(np, g, tol=1.6)
+    for kod, P in adaylar:
+        Pn = np.asarray(P, dtype=np.float64)
+        Ps = Pn[::max(1, len(Pn) // 1500)]
+        L = len(Pn) * 0.25
+        en = None
+        for k in np.linspace(0.975, 1.025, 11):     # ölçek ±%2,5 (ölçeği bulan profil başka olabilir)
+            for dx in (-2, 0, 2):                    # küçük yer farkı
+                for dy in (-2, 0, 2):
+                    v, gor = es.oran(Ps, ana["olcek"] * k, ana["x"] + dx, ana["y"] + dy, ana["rot"], ana["ayna"])
+                    p = (2.0 * v - 1.0) * L * gor
+                    if en is None or p > en[0]:
+                        en = (p, v, kod, float(ana["olcek"] * k))
+        out.append(en)
+    return sorted(out, key=lambda t: -t[0])
+
+
+def resim_parcalari_bul(np, g, ana, parcalar, alan_mm=60.0, ilerle=None, esik=0.76, sinir=None):
+    """Ana profil bulunduktan sonra kütüphane parçalarını aynı ölçekte arar.
+    parcalar: [(kod, klasor, noktalar mm)]. Arama, ana profilin çevresinde (alan_mm pay) yapılır.
+    Dönüş: [(oran, kod, klasor, x, y, rot, ayna, puan_mm)] — puan: kenara oturan kontur boyu − oturmayan boyu (mm)."""
+    s = ana["olcek"]
+    Pa = _dondur_np(np, np.asarray(ana["P"], dtype=np.float64), ana["rot"], ana["ayna"]) * s
+    x0 = int(max(0, ana["x"] + Pa[:, 0].min() - alan_mm * s))
+    x1 = int(min(g.shape[1], ana["x"] + Pa[:, 0].max() + alan_mm * s))
+    y0 = int(max(0, ana["y"] - Pa[:, 1].max() - alan_mm * s))
+    y1 = int(min(g.shape[0], ana["y"] - Pa[:, 1].min() + alan_mm * s))
+    if sinir:                                       # kullanıcının seçtiği alan
+        x0, y0 = max(x0, int(sinir[0])), max(y0, int(sinir[1]))
+        x1, y1 = min(x1, int(sinir[2])), min(y1, int(sinir[3]))
+    es = ResimEsle(np, g[y0:y1, x0:x1], tol=1.6)
+    out = []
+    for i, (kod, kl, P) in enumerate(parcalar):
+        if ilerle:
+            ilerle(i / max(1, len(parcalar)))
+        if len(P) < 12:
+            continue
+        Pn = np.asarray(P, dtype=np.float64)
+        for v, x, y, rot, ayna in ResimEsle.en_iyiler(np, es.haritalar(Pn, s), 6, ayri=6, esik=esik):
+            out.append((v, kod, kl, x + x0, y + y0, rot, ayna))
+    return out, es, (x0, y0)
+
+
+class _Izgara:
+    """Şablon düzleminde (mm) ızgara: parça dolgularını (çift-tek kuralı, delikler boş) maske olarak tutar; çakışma alanı
+    hızlı bulunur."""
+
+    def __init__(self, np, kutu, res=0.25):
+        self.np, self.res = np, res
+        self.x0, self.y0 = kutu[0] - 1.0, kutu[1] - 1.0
+        self.w = int((kutu[2] - kutu[0] + 2.0) / res) + 1
+        self.h = int((kutu[3] - kutu[1] + 2.0) / res) + 1
+        self.dolu = np.zeros((self.h, self.w), bool)
+
+    def maske(self, lps):
+        np, r = self.np, self.res
+        xs_ = [q[0] for lp in lps for q in lp]
+        ys_ = [q[1] for lp in lps for q in lp]
+        j0 = max(0, int((min(xs_) - self.x0) / r))
+        j1 = min(self.w, int((max(xs_) - self.x0) / r) + 2)
+        i0 = max(0, int((min(ys_) - self.y0) / r))
+        i1 = min(self.h, int((max(ys_) - self.y0) / r) + 2)
+        if j1 <= j0 or i1 <= i0:
+            return (0, 0, np.zeros((0, 0), bool))
+        E = np.vstack([np.hstack([np.asarray(lp, float), np.roll(np.asarray(lp, float), -1, axis=0)]) for lp in lps if len(lp) >= 3])
+        x1, y1, x2, y2 = E[:, 0], E[:, 1], E[:, 2], E[:, 3]
+        xs = self.x0 + (np.arange(j0, j1) + 0.5) * r
+        M = np.zeros((i1 - i0, j1 - j0), bool)
+        for k, i in enumerate(range(i0, i1)):
+            y = self.y0 + (i + 0.5) * r
+            m = (y1 <= y) != (y2 <= y)
+            if not m.any():
+                continue
+            xc = np.sort(x1[m] + (y - y1[m]) * (x2[m] - x1[m]) / (y2[m] - y1[m]))
+            M[k] = (np.searchsorted(xc, xs) % 2) == 1
+        return (i0, j0, M)
+
+    def cakisma(self, mk, diger=None):
+        """mk'nin dolu alanla (ya da verilen maskeyle) çakışan alanı, mm²."""
+        i0, j0, M = mk
+        if M.size == 0:
+            return 0.0
+        D = self.dolu if diger is None else diger
+        return float((D[i0:i0 + M.shape[0], j0:j0 + M.shape[1]] & M).sum()) * self.res * self.res
+
+    def ekle(self, mk):
+        i0, j0, M = mk
+        if M.size:
+            self.dolu[i0:i0 + M.shape[0], j0:j0 + M.shape[1]] |= M
+
+
+def _dm(rot, ayna):
+    """(açı, ayna) -> 2x2 tamsayı matris (önce ayna x -> -x, sonra döndürme)."""
+    c, s = round(math.cos(math.radians(rot))), round(math.sin(math.radians(rot)))
+    sx = -1 if ayna else 1
+    return ((c * sx, -s), (s * sx, c))
+
+
+def _dm_carp(A, B):
+    return tuple(tuple(sum(A[i][k] * B[k][j] for k in range(2)) for j in range(2)) for i in range(2))
+
+
+def _dm_ters(A):
+    return ((A[0][0], A[1][0]), (A[0][1], A[1][1]))       # ortogonal: ters = devrik
+
+
+def _dm_coz(M):
+    """Matris -> (açı, ayna)."""
+    det = M[0][0] * M[1][1] - M[0][1] * M[1][0]
+    if det < 0:
+        r = math.degrees(math.atan2(-M[1][0], -M[0][0]))
+        return round(r) % 360, True
+    return round(math.degrees(math.atan2(M[1][0], M[0][0]))) % 360, False
+
+
+class ResimDonusum:
+    """Görüntü pikseli <-> şablon (mm) dönüşümü. Görüntü-mm: u = (px - xr)/s, v = -(py - yr)/s; şablon = R·(u, v).
+    R: 90°'lik döndürme / ayna (ana profilin görüntüdeki duruşundan şablondaki duruşuna)."""
+
+    def __init__(self, s, xr, yr, R=((1, 0), (0, 1))):
+        self.s, self.xr, self.yr, self.R = float(s), float(xr), float(yr), R
+
+    def sablona(self, px, py):
+        u, v = (px - self.xr) / self.s, -(py - self.yr) / self.s
+        return self.R[0][0] * u + self.R[0][1] * v, self.R[1][0] * u + self.R[1][1] * v
+
+    def resme(self, x, y):
+        Ri = _dm_ters(self.R)
+        u, v = Ri[0][0] * x + Ri[0][1] * y, Ri[1][0] * x + Ri[1][1] * y
+        return self.xr + u * self.s, self.yr - v * self.s
+
+    def afin_resme(self):
+        """Şablon (x, y) -> piksel: px = a x + b y + c, py = d x + e y + f."""
+        Ri = _dm_ters(self.R)
+        return (Ri[0][0] * self.s, Ri[0][1] * self.s, self.xr, -Ri[1][0] * self.s, -Ri[1][1] * self.s, self.yr)
+
+    def parca(self, x, y, rot, ayna):
+        """Görüntüde (referans pikseli, duruş) bulunan parçanın şablondaki (x, y, açı, ayna)'sı."""
+        sx, sy = self.sablona(x, y)
+        r, a = _dm_coz(_dm_carp(self.R, _dm(rot, ayna)))
+        return sx, sy, float(r), a
+
+    def resimde(self, x, y, rot, ayna):
+        """Şablondaki yerleşim -> görüntüdeki (referans pikseli, duruş)."""
+        px, py = self.resme(x, y)
+        r, a = _dm_coz(_dm_carp(_dm_ters(self.R), _dm(rot, ayna)))
+        return px, py, r, a
+
+
+def resim_ana_donusum(ana, rot0):
+    """Ana profilin görüntüdeki duruşundan (ana["rot"], ana["ayna"]) şablondaki duruşuna (rot0, aynasız) dönüşüm."""
+    R = _dm_carp(_dm(rot0, False), _dm_ters(_dm(ana["rot"], ana["ayna"])))
+    return ResimDonusum(ana["olcek"], ana["x"], ana["y"], R)
+
+
+def resim_parcalari_sec(np, es, kaba, don, P_ana, geolar, tur="dikey", esik=0.78, enaz_mm=18.0, cakisma_mm2=3.0, yan_pay=15.0,
+                        tercih=None):
+    """Ham adaylardan (resim_parcalari_bul) çakışmayan en iyi parçaları seçer; her seçilene aynı klasörden, aynı yerde
+    tutan diğer parçaları aday listesi olarak ekler. es: arama yapılan ResimEsle, kaba: ham adaylar, don: ResimDonusum,
+    P_ana: ana profilin şablondaki P_ (çakışma), geolar: {kod: geo}.
+    Dönüş: [{"kod", "klasor", "x", "y", "rot", "ayna", "oran", "puan", "adaylar": [...]}] (şablon koordinatı)."""
+    out_ = []
+    for v, kod, kl, x, y, rot, ayna in kaba:
+        g = geolar[kod]
+        L = g.get("_cevre") or 0.0
+        puan = (2.0 * v - 1.0) * L
+        if tercih and _sade(re.sub(r"(?i)[_\- ][dy]$", "", kod)) in tercih:
+            puan *= 1.08                             # sistemin mevcut şablonlarında kullanılan parça: benzer adaylara üstün
+        sx, sy, sr, sa = don.parca(x, y, rot, ayna)
+        lps = [_parca_donustur(lp, sx, sy, sr, sa) for lp in g["dong"]]
+        if not lps:
+            continue
+        xs = [q[0] for lp in lps for q in lp]
+        ys = [q[1] for lp in lps for q in lp]
+        out_.append({"kod": kod, "klasor": kl, "x": sx, "y": sy, "rot": sr, "ayna": sa, "oran": v, "puan": puan,
+                     "P": [(lps, g["derin"], (min(xs), min(ys), max(xs), max(ys)))],
+                     "m": ((min(xs) + max(xs)) / 2, (min(ys) + max(ys)) / 2)})
+    b_ = 0 if tur == "dikey" else 1                 # yanal eksen
+    pa_ = [q for lp in P_ana[0][0] for q in lp]
+    yan_s = max(abs(q[b_]) for q in pa_) + yan_pay if pa_ else 1e9
+    out_ = [d for d in out_ if abs(d["m"][b_]) <= yan_s]
+    out_.sort(key=lambda d: -d["puan"])
+    kutu_ = [P_ana[0][2]] + [d["P"][0][2] for d in out_]
+    iz = _Izgara(np, (min(k[0] for k in kutu_) - 30, min(k[1] for k in kutu_) - 30,
+                      max(k[2] for k in kutu_) + 30, max(k[3] for k in kutu_) + 30))
+    ana_m = iz.maske(P_ana[0][0])
+    ana_d = iz.np.zeros_like(iz.dolu)
+    i0, j0, M = ana_m
+    ana_d[i0:i0 + M.shape[0], j0:j0 + M.shape[1]] = M
+    secilen = []
+    for d in out_:
+        if d["oran"] < esik or d["puan"] < enaz_mm:
+            continue
+        mk = iz.maske(d["P"][0][0])
+        if iz.cakisma(mk, ana_d) > cakisma_mm2 or iz.cakisma(mk) > cakisma_mm2:
+            continue
+        iz.ekle(mk)
+        d["_mk"] = mk
+        secilen.append(d)
+    for d in secilen:
+        d["_iz"] = iz
+    for d in secilen:                                # aynı yerde tutan diğer parçalar (aday listesi)
+        def kisa(k):
+            return _sade(re.sub(r"(?i)[_\- ][dy]$", "", k))
+        gor, ad = {kisa(d["kod"])}, []
+        for e in out_:
+            if e["klasor"] != d["klasor"] or kisa(e["kod"]) in gor or e["puan"] < 0.55 * d["puan"]:
+                continue
+            if math.hypot(e["m"][0] - d["m"][0], e["m"][1] - d["m"][1]) > 2.5:
+                continue
+            gor.add(kisa(e["kod"]))
+            ad.append({k_: e[k_] for k_ in ("kod", "klasor", "x", "y", "rot", "ayna", "oran", "puan")})
+        d["adaylar"] = ad[:6]
+    if secilen:
+        secilen[0]["_ana_d"] = ana_d
+    return secilen
+
+
+def resim_cift_uyum(secilen, tur):
+    """Ana profilin iki yanında aynalı duran aynı klasör parçaları (ör. iki cam fitili) farklı kodla bulunduysa, iki
+    yanın toplam puanı en yüksek olan kod ikisine de konur (yerleri o kodun o yanda bulunduğu yerden)."""
+    b = 0 if tur == "dikey" else 1
+    for i, A in enumerate(secilen):
+        for B in secilen[i + 1:]:
+            if A["klasor"] != B["klasor"] or A["kod"] == B["kod"]:
+                continue
+            ma, mb = list(A["m"]), list(B["m"])
+            ma[b] = -ma[b]
+            if math.hypot(ma[0] - mb[0], ma[1] - mb[1]) > 2.0:
+                continue
+
+            def tablo(d):
+                t = {d["kod"]: (d["puan"], d)}
+                for a_ in d.get("adaylar") or []:
+                    t.setdefault(a_["kod"], (a_["puan"], a_))
+                return t
+            ta, tb = tablo(A), tablo(B)
+            en = max(set(ta) | set(tb), key=lambda k: ta.get(k, (0.0,))[0] + tb.get(k, (0.0,))[0])
+            for d, t in ((A, ta), (B, tb)):
+                if d["kod"] == en or en not in t:
+                    continue
+                yeni = t[en][1]
+                eski = {k_: d[k_] for k_ in ("kod", "klasor", "x", "y", "rot", "ayna", "oran", "puan")}
+                d["adaylar"] = [a_ for a_ in d.get("adaylar") or [] if a_["kod"] != en] + [eski]
+                for k_ in ("kod", "x", "y", "rot", "ayna", "oran", "puan"):
+                    d[k_] = yeni[k_]
+                d["uyum"] = True
+    return secilen
+
+
+def resim_simetri(np, es, ofs, don, secilen, geolar, P_ana, tur, cakisma_mm2=3.0, esik=0.45):
+    """Bir yanda bulunup ana profilin öbür yanında karşılığı olmayan parçaları aynalayarak önerir (katalogda tarama
+    altında kalan fitil vb.). Görüntüde o yerde kenarlarla en az 'esik' oranında örtüşmeli. Dönüş: eklenenler."""
+    ek = []
+    for d in list(secilen):
+        if tur == "dikey":
+            x, y, r, a = -d["x"], d["y"], (-d["rot"]) % 360.0, not d["ayna"]
+        else:
+            x, y, r, a = d["x"], -d["y"], (180.0 - d["rot"]) % 360.0, not d["ayna"]
+        g = geolar[d["kod"]]
+        lps = [_parca_donustur(lp, x, y, r, a) for lp in g["dong"]]
+        xs = [q[0] for lp in lps for q in lp]
+        ys = [q[1] for lp in lps for q in lp]
+        m = ((min(xs) + max(xs)) / 2, (min(ys) + max(ys)) / 2)
+        if math.hypot(m[0] - d["m"][0], m[1] - d["m"][1]) < 3.0:
+            continue                                  # eksen üzerindeki parça (bariyer, orta fitil)
+        if any(s_["klasor"] == d["klasor"] and math.hypot(s_["m"][0] - m[0], s_["m"][1] - m[1]) < 3.0 for s_ in secilen + ek):
+            continue
+        px, py, pr, pa = don.resimde(x, y, r, a)
+        v, gor = es.oran(g["_P"], don.s, px - ofs[0], py - ofs[1], pr, pa)
+        if gor < 0.6 or v < esik:
+            continue
+        P = [(lps, g["derin"], (min(xs), min(ys), max(xs), max(ys)))]
+        iz = secilen[0]["_iz"]
+        mk = iz.maske(lps)
+        if iz.cakisma(mk, secilen[0]["_ana_d"]) > cakisma_mm2 or iz.cakisma(mk) > cakisma_mm2:
+            continue
+        iz.ekle(mk)
+        ek.append({"kod": d["kod"], "klasor": d["klasor"], "x": x, "y": y, "rot": r, "ayna": a, "oran": v,
+                   "puan": (2 * v - 1) * (g.get("_cevre") or 0.0), "P": P, "m": m, "adaylar": [], "simetri": True})
+    return ek
+
+
+def resim_cam_olc(np, es, ofs, don, tur, cy, secilen, P_ana_lps):
+    """Görüntüden cam kalınlığını ölçer: ana profilin cam tarafındaki yüzü ile baskı / kapak arasında, baskının yanından
+    dışarı doğru uzanan uzun kenar çizgileri (cam yüzleri) aranır. Dönüş: {"cam", "ic", "dis", "cizgi"} | None
+    (ic / dis: cam yüzlerinin derinlik koordinatı, şablon mm)."""
+    a = 1 if tur == "dikey" else 0                    # derinlik ekseni
+    b = 1 - a                                         # yanal eksen
+    dis_p = [d for d in secilen if d["klasor"] in ("BASKI", "KAPAK")]
+    yan = [abs(q[b]) for d in dis_p for lp in d["P"][0][0] for q in lp]
+    pa = [q for lp in P_ana_lps for q in lp]
+    yan_ana = max(abs(q[b]) for q in pa) if pa else 25.0
+    la = (max(yan) if yan else yan_ana) + 2.0
+    lb = la + 45.0
+    # derinlik aralığı: profilin cam tarafı yüzü (eksenden uzak noktalarının cama en yakın olanı) ile baskının profile bakan yüzü
+    yuz = [q[a] for q in pa if abs(q[b]) > 0.25 * yan_ana]
+    if not yuz:
+        return None
+    t_prof = min(yuz) if cy < 0 else max(yuz)
+    if dis_p:
+        tb = [q[a] for d in dis_p for lp in d["P"][0][0] for q in lp]
+        t_bas = max(tb) if cy < 0 else min(tb)
+    else:
+        t_bas = t_prof + cy * 70.0
+    t0, t1 = sorted((t_prof, t_bas))
+    H, W = es.yakin.shape
+
+    def guc(t):
+        en = 0.0
+        for s_ in (-1, 1):
+            say = hit = 0
+            l = la
+            while l <= lb:
+                q = [0.0, 0.0]
+                q[a], q[b] = t, s_ * l
+                px, py = don.resme(q[0], q[1])
+                ix, iy = int(round(px - ofs[0])), int(round(py - ofs[1]))
+                if 0 <= ix < W and 0 <= iy < H:
+                    say += 1
+                    hit += es.yakin[iy, ix] > 0
+                l += 0.25
+            if say >= 32:
+                en = max(en, hit / say)
+        return en
+    cizgi, t, onceki = [], t0 + 0.2, None
+    while t <= t1 - 0.2:
+        if guc(t) >= 0.8:
+            if onceki is not None and t - onceki <= 0.35:
+                cizgi[-1].append(t)
+            else:
+                cizgi.append([t])
+            onceki = t
+        t += 0.1
+    cz = [float(sum(c) / len(c)) for c in cizgi]
+    if len(cz) < 2:
+        return None
+    ic_ = max(cz) if cy < 0 else min(cz)              # profile en yakın çizgi: camın iç yüzü
+    dis_ = min(cz) if cy < 0 else max(cz)
+    cam_ = abs(ic_ - dis_)
+    if not (10.0 <= cam_ <= 90.0) or abs(ic_) > 20.0:     # tek cam yüzü ya da başka çizgiler: güvenilmez
+        return None
+    return {"cam": cam_, "ic": ic_, "dis": dis_, "cizgi": cz}
 
 
 def sistem_denetimi(sistem):
@@ -11606,6 +12320,7 @@ class Uygulama(tk.Tk):
         self._kr_tr = tr
         bt = ttk.Frame(kf)
         bt.pack(fill="x", pady=(6, 0))
+        ttk.Button(bt, text="Katalogdan al (cam tablosu)...", style="Ana.TButton", command=self._cam_tablosu_al).pack(side="left", padx=(0, 12))
         ttk.Button(bt, text="Ekle...", command=self._kural_ekle).pack(side="left")
         ttk.Button(bt, text="Düzenle...", command=self._kural_duzenle).pack(side="left", padx=6)
         ttk.Button(bt, text="Sil", command=self._kural_sil).pack(side="left")
@@ -11652,7 +12367,8 @@ class Uygulama(tk.Tk):
                          else "boşluk aralık dışı")
             if k.get("tur"):
                 durum += " · yalnız " + ("düşey" if k["tur"] == "dikey" else "yatay")
-            tr.insert("", "end", iid=str(i), values=(f"{k['min']:g}", f"{k['max']:g}", k["bariyer"], bos, durum, k["not"]))
+            nt_ = k["not"] + (("   fitil: " + ", ".join(sorted(k["fitil"].values()))) if k.get("fitil") else "")
+            tr.insert("", "end", iid=str(i), values=(f"{k['min']:g}", f"{k['max']:g}", k["bariyer"], bos, durum, nt_))
         tr2 = self._kr_tr2
         tr2.delete(*tr2.get_children())
         for kal, kaynak, bar, bos, nt in kalinlik_tablosu(self.bariyerler, kurallar, [float(x) for x in range(16, 47)]):
@@ -11688,6 +12404,128 @@ class Uygulama(tk.Tk):
         except Exception:
             return {}
         return out
+
+    def _cam_tablosu_al(self):
+        """Katalogdaki cam tablosu (PDF'ten kopyalanıp yapıştırılan metin) -> bu sistemin cam kuralları: her cam kalınlığı
+        için ısı bariyeri zinciri (adaptör + bariyer) ve isteğe bağlı fitiller."""
+        sis = self._aktif_sistem()
+        if not sis:
+            messagebox.showinfo("Cam tablosu", "Önce bir sistem seçin.")
+            return
+        klasor = os.path.dirname(self.katalog_yol) if getattr(self, "katalog_yol", None) else ""
+        kut = kutuphane_klasoru(klasor) if klasor else None
+        pen = tk.Toplevel(self)
+        pen.title(f"Katalogdan cam tablosu — {sis}")
+        pen.geometry("1040x660")
+        ttk.Label(pen, wraplength=1000, justify="left", text=(
+            "Katalogdaki CAM TABLOSU'nu PDF'te fareyle seçip kopyalayın (Ctrl+C) ve aşağıya yapıştırın (Ctrl+V); bütün sayfayı "
+            "da yapıştırabilirsiniz. Her '<kalınlık> mm' bir satır başlatır, kodların ne olduğu kütüphaneden bulunur "
+            "(ISI_BARIYERI, ADAPTOR, FITIL). Aynı kalınlığın ikinci satırı ya da 'Alternatif' yazan satır kural yapılmaz. "
+            "Her satır, bir önceki kalınlıktan büyük ve kendi kalınlığına kadar olan camlar için kural olur.")).pack(anchor="w", padx=10, pady=(10, 4))
+        tx = tk.Text(pen, height=9, wrap="word", undo=True)
+        tx.pack(fill="x", padx=10)
+        bt = ttk.Frame(pen)
+        bt.pack(fill="x", padx=10, pady=6)
+        v_fitil = tk.BooleanVar(value=True)
+        v_mod = tk.StringVar(value="cakisan")
+        kol = ("Cam", "Aralık (mm)", "Bariyer zinciri", "Fitiller", "Durum")
+        tr = ttk.Treeview(pen, columns=kol, show="headings", height=14)
+        for k_, w_ in zip(kol, (110, 110, 200, 330, 250)):
+            tr.heading(k_, text=k_)
+            tr.column(k_, width=w_, anchor="w")
+        durum = ttk.Label(pen, text="", foreground="#7a858e")
+        st_ = {"kural": []}
+
+        def coz():
+            sat = cam_tablosu_coz(tx.get("1.0", "end"), kut)
+            kr = cam_tablosu_kurallari(sat, v_fitil.get())
+            st_["kural"] = kr
+            tr.delete(*tr.get_children())
+            ara = {k_["max"]: k_ for k_ in kr}
+            for s_ in sat:
+                k_ = None if s_["alternatif"] else ara.get(s_["mm"])
+                eksik = sorted(set(s_["eksik"]))
+                d_ = ("alternatif: kural yapılmaz" if s_["alternatif"] else
+                      ("kütüphanede yok: " + ", ".join(eksik) if eksik else "uygun"))
+                tr.insert("", "end", values=(f"{s_['mm']:g} mm" + (" (alt.)" if s_["alternatif"] else ""),
+                                             f"{k_['min']:g} – {k_['max']:g}" if k_ else "—",
+                                             "+".join(s_["adaptor"] + s_["bariyer"]) or "—",
+                                             ", ".join(s_["fitil"]) or "—", d_))
+            n_ek = sum(1 for s_ in sat if s_["eksik"] and not s_["alternatif"])
+            durum.config(text=(f"{len(kr)} kural çıkacak" + (f"; {n_ek} satırda kütüphanede olmayan parça var: kural yine "
+                                                               f"yazılır, parçanın DXF'i eklenene kadar o kalınlıkta bariyer "
+                                                               f"otomatik seçilir" if n_ek else "")) if kr else
+                         "Tabloda '<kalınlık> mm' ile başlayan satır bulunamadı.")
+
+        def kaydet():
+            if not st_["kural"]:
+                coz()
+            kr = st_["kural"]
+            if not kr:
+                return
+            lo, hi = min(k_["min"] for k_ in kr), max(k_["max"] for k_ in kr)
+            mevcut = cam_kurallari(sis)
+            if v_mod.get() == "hepsi":
+                kalan = []
+            else:
+                kalan = [k_ for k_ in mevcut if k_.get("tur") or k_["max"] < lo - 0.005 or k_["min"] > hi + 0.005]
+            self._kural_degisti(kalan + [dict(k_) for k_ in kr])
+            self._log(f"Cam tablosu katalogdan alındı ({sis}): {len(kr)} kural, {lo:g}–{hi:g} mm"
+                      + (f"; {len(mevcut) - len(kalan)} eski kural değişti" if len(mevcut) != len(kalan) else "")
+                      + ("; fitiller cam kalınlığına göre değişir" if any(k_.get("fitil") for k_ in kr) else ""), "bilgi")
+            pen.destroy()
+        ttk.Button(bt, text="Çözümle", command=coz).pack(side="left")
+        ttk.Checkbutton(bt, text="Fitilleri de cam kalınlığına göre değiştir", variable=v_fitil,
+                        command=lambda: coz() if tx.get("1.0", "end").strip() else None).pack(side="left", padx=12)
+        ttk.Radiobutton(bt, text="Çakışan mevcut kuralları değiştir", value="cakisan", variable=v_mod).pack(side="left", padx=(12, 0))
+        ttk.Radiobutton(bt, text="Tüm mevcut kuralları sil", value="hepsi", variable=v_mod).pack(side="left", padx=6)
+        tr.pack(fill="both", expand=True, padx=10)
+        alt = ttk.Frame(pen)
+        alt.pack(fill="x", padx=10, pady=8)
+        ttk.Button(alt, text="Kuralları kaydet", style="Ana.TButton", command=kaydet).pack(side="right")
+        ttk.Button(alt, text="Kapat", command=pen.destroy).pack(side="right", padx=6)
+        durum.pack(in_=alt, side="left")
+        tx.bind("<<Paste>>", lambda _e: pen.after(50, coz))
+        self._cam_tablo_pen = (pen, tx, coz, kaydet, tr, v_fitil, v_mod)
+
+    def _fitil_kural_uygula(self):
+        """Katalog cam tablosundan gelen kural fitil değiştiriyorsa (ör. 10 mm camda 01.02.24): şablondaki aynı aileden
+        fitiller (01.02.xx) bu kodla değiştirilir; sistemin elle yapılmış parça değişimleri önceliklidir. Değişim gerekiyorsa
+        detaylar yeniden üretilir. Dönüş: bilgi metni ya da ""."""
+        try:
+            klasor = os.path.dirname(self.katalog_yol)
+            kut = kutuphane_klasoru(klasor)
+        except Exception:
+            return ""
+        if not kut:
+            return ""
+        kay = sistem_kaydi(os.path.basename(klasor)) or {}
+        hedef = {_sade(a_): b_ for a_, b_ in (kay.get("degisim") or {}).items()}
+        elle = set(hedef)
+        kal = self._cam_kalinlik()
+        k = None
+        if kal is not None:
+            k = next((k_ for k_ in cam_kurallari(self._aktif_sistem()) if k_.get("fitil") and not k_.get("tur")
+                      and k_["min"] - 0.01 <= kal <= k_["max"] + 0.01), None)
+        bilgi = ""
+        if k:
+            fd = _alt_klasor(kut, "FITIL")
+            kodlar = [os.path.splitext(f)[0] for f in os.listdir(fd) if f.lower().endswith(".dxf")] if fd else []
+            for aile, yeni in k["fitil"].items():
+                for kod in kodlar:
+                    if "." in kod and kod.rsplit(".", 1)[0] == aile and _sade(kod) != _sade(yeni) and _sade(kod) not in elle:
+                        hedef[_sade(kod)] = yeni
+            bilgi = f"Fitiller katalog cam tablosuna göre ({k['min']:g}–{k['max']:g} mm): " + ", ".join(sorted(k["fitil"].values()))
+        if hedef == dict(_DEGISIM):
+            return bilgi
+        if bilgi or getattr(self, "_fitil_bilgi_son", ""):
+            self._log(bilgi or "Fitiller şablondaki gibi (cam tablosu kuralı yok)", "bilgi")
+        self._fitil_bilgi_son = bilgi
+        degisim_kur(kut, hedef, kay.get("yon"), kay.get("kayma"))
+        self._tip_onb = {}
+        for t in ("dikey", "yatay"):
+            self._detay_kaynaktan(t)
+        return bilgi
 
     def _kural_degisti(self, kurallar):
         cam_kurallari_yaz(self._aktif_sistem(), kurallar)
@@ -11994,6 +12832,8 @@ class Uygulama(tk.Tk):
         kurallar = cam_kurallari(self._aktif_sistem())
         yeni = self._kural_diyalog(kurallar[i])
         if yeni:
+            if kurallar[i].get("fitil") and "fitil" not in yeni:
+                yeni["fitil"] = kurallar[i]["fitil"]
             kurallar[i] = yeni
             self._kural_degisti(kurallar)
 
@@ -12882,6 +13722,10 @@ class Uygulama(tk.Tk):
         v_kil = tk.BooleanVar(value=True)
         v_x, v_y, v_r = tk.StringVar(), tk.StringVar(), tk.StringVar()
         v_mevcut = tk.StringVar()
+        v_res = tk.BooleanVar(value=True)            # resim altlığı görünsün
+        v_alfa = tk.DoubleVar(value=55.0)            # altlık belirginliği (%)
+        v_aday = tk.StringVar()
+        st.update({"res": None, "mod": None, "mod_v": []})
 
         # ---------------- arayüz
         sol = ttk.Frame(pen, padding=6)
@@ -12900,6 +13744,8 @@ class Uygulama(tk.Tk):
         u2.pack(fill="x", pady=(4, 0))
         u3 = ttk.Frame(sag)
         u3.pack(fill="x", pady=(4, 0))
+        u4 = ttk.Frame(sag)
+        u4.pack(fill="x", pady=(4, 0))
         cv = tk.Canvas(sag, bg=BG, highlightthickness=0)
         cv.pack(fill="both", expand=True, pady=4)
         durum = ttk.Label(sag, text="", foreground="#7a858e", wraplength=1100, justify="left")
@@ -12975,6 +13821,7 @@ class Uygulama(tk.Tk):
         def ciz():
             cv.delete("all")
             W, H = max(cv.winfo_width(), 300), max(cv.winfo_height(), 300)
+            altlik_ciz(W, H)
             a = ax_d()
             # aks çizgisi
             if a == 1:
@@ -12995,6 +13842,7 @@ class Uygulama(tk.Tk):
                 lps = dunya(p)
                 renk = RENK.get(p["geo"]["klasor"], "#3fb950")
                 tag = f"p{i}"
+                kenar_ = "#f0883e" if (p.get("tani") and not p["tani"].get("emin") and i != st["sec"]) else None
                 for lp in dunya_c(p):
                     cv.create_line([c for q in lp for c in (X(q[0]), Y(q[1]))], fill="#ff9f1c" if i == st["sec"] else "#8b949e",
                                    width=2 if i == st["sec"] else 1, tags=tag)
@@ -13002,13 +13850,25 @@ class Uygulama(tk.Tk):
                     if len(lp) < 3:
                         continue
                     cv.create_polygon([c for q in lp for c in (X(q[0]), Y(q[1]))], fill=renk if dr % 2 == 0 else BG,
-                                      outline="#ff9f1c" if i == st["sec"] else "#c9d1d9", width=2 if i == st["sec"] else 1, tags=tag)
+                                      outline="#ff9f1c" if i == st["sec"] else (kenar_ or "#c9d1d9"),
+                                      width=2 if (i == st["sec"] or kenar_) else 1, tags=tag)
                 b = kutu(lps or dunya_c(p))
                 if st["z"] > 2.0:
                     cv.create_text(X(b[2]) + 4, Y(b[3]), text=p["geo"]["kod"], fill="#ff9f1c" if i == st["sec"] else "#8b949e",
                                    anchor="nw", font=("Segoe UI", 8), tags=tag)
             cv.create_line(X(0) - 10, Y(0), X(0) + 10, Y(0), fill="#3fb950", width=2)
             cv.create_line(X(0), Y(0) - 10, X(0), Y(0) + 10, fill="#3fb950", width=2)
+            r_ = st.get("res")
+            if r_ and r_.get("alan"):                     # tanıma alanı (resim pikseli -> şablon)
+                a0_, b0_, a1_, b1_ = r_["alan"]
+                kose = [r_["don"].sablona(px_, py_) for px_, py_ in ((a0_, b0_), (a1_, b0_), (a1_, b1_), (a0_, b1_))]
+                cv.create_polygon([c for q in kose for c in (X(q[0]), Y(q[1]))], fill="", outline="#d29922", dash=(6, 3), width=2)
+            if st.get("mod") == "alan" and len(st["mod_v"]) == 2:
+                (a0_, b0_), (a1_, b1_) = st["mod_v"]
+                cv.create_rectangle(a0_, b0_, a1_, b1_, outline="#d29922", dash=(6, 3), width=2)
+            if st.get("mod") == "olcek":
+                for q in st["mod_v"]:
+                    cv.create_oval(X(q[0]) - 5, Y(q[1]) - 5, X(q[0]) + 5, Y(q[1]) + 5, outline="#d29922", width=2)
 
         def sigdir():
             if not st["p"]:
@@ -13046,15 +13906,21 @@ class Uygulama(tk.Tk):
                 v_r.set(f"{p['rot']:g}")
                 c_ = cakisma(i)
                 ana_ = " (ana profil: yeri sabit, referansı burun ucu)" if i == 0 else ""
+                tn_ = p.get("tani")
+                if tn_:
+                    tn_ = (f"   |   resimden: uyum %{tn_.get('oran', 0) * 100:.0f}" + (", simetriden" if tn_.get("simetri") else "")
+                           + ("" if tn_.get("emin") else " — emin değil, kontrol edin") +
+                           (f" (aday: {', '.join(a_['kod'] for a_ in tn_.get('adaylar') or [])})" if tn_.get("adaylar") else ""))
                 durum.config(text=f"Seçili: {p['geo']['kod']}{ana_}  x {p['x']:.2f}  y {p['y']:.2f}  açı {p['rot']:g}°"
                                   f"{'  ayna' if p['ayna'] else ''}   |   "
-                                  + (("çakışma: " + ", ".join(c_)) if c_ else "çakışma yok") + (f"   |   {ek}" if ek else ""))
+                                  + (("çakışma: " + ", ".join(c_)) if c_ else "çakışma yok") + (tn_ or "") + (f"   |   {ek}" if ek else ""))
             else:
                 v_x.set("")
                 v_y.set("")
                 v_r.set("")
                 hedef_ = hedef_yol()
                 durum.config(text=f"{len(st['p'])} parça   |   kayıt: {os.path.basename(hedef_)}" + (f"   |   {ek}" if ek else ""))
+            aday_tazele()
 
         # ---------------- parça işlemleri
         def ana_kur(kod):
@@ -13079,6 +13945,336 @@ class Uygulama(tk.Tk):
             st["sec"] = None
             sigdir()
             yaz_durum()
+
+        # ---------------- resim altlığı ve resimden tanıma
+        def altlik_ciz(W, H):
+            r = st.get("res")
+            if not r or not v_res.get():
+                return
+            a, b, c, d, e, f = r["don"].afin_resme()          # şablon (x, y) -> resim pikseli
+            z = st["z"]
+            # tuval (cx, cy) -> şablon ((cx - ox)/z, (oy - cy)/z) -> resim pikseli
+            m = (a / z, -b / z, c - a * st["ox"] / z + b * st["oy"] / z, d / z, -e / z, f - d * st["ox"] / z + e * st["oy"] / z)
+            alfa = max(0.05, min(1.0, v_alfa.get() / 100.0))
+            if WEB:
+                cv.create_image(0, 0, anchor="nw", _rid=r["rid"], _m=list(m), _alfa=alfa)
+                return
+            try:
+                from PIL import Image as _I, ImageTk as _IT
+                im = r["pil"].transform((W, H), _I.AFFINE, m, resample=_I.BILINEAR, fillcolor=255)
+                bg_, fg_ = (0x1b, 0x1f, 0x24), (0xd0, 0xd7, 0xde)
+                kan = [im.point([int(bg_[k] + (255 - v) / 255.0 * alfa * (fg_[k] - bg_[k])) for v in range(256)]) for k in range(3)]
+                r["ph"] = _IT.PhotoImage(_I.merge("RGB", kan), master=cv)
+                cv.create_image(0, 0, anchor="nw", image=r["ph"])
+            except Exception as e_:
+                durum.config(text=f"Resim çizilemedi: {e_}")
+
+        def resim_kur(gri, ad, pil=None, rid=None):
+            """Yeni altlık: resim tuvale sığacak ölçekte, ortada (ölçek ve yer, tanımadan ya da iki noktadan sonra kesinleşir)."""
+            H_, W_ = gri.shape
+            W, H = max(cv.winfo_width(), 300), max(cv.winfo_height(), 300)
+            s_ = max(W_ / (0.9 * W), H_ / (0.9 * H)) * st["z"]
+            cx, cy_ = mm(W / 2, H / 2)
+            st["res"] = {"g": gri, "pil": pil, "rid": rid, "ad": ad, "alan": None, "olcek_sabit": None,
+                         "don": ResimDonusum(s_, W_ / 2 - cx * s_, H_ / 2 + cy_ * s_)}
+            st["mod"], st["mod_v"] = None, []
+            v_res.set(True)
+            ciz()
+            yaz_durum(f"resim yüklendi ({W_}×{H_} px): 'Resimden tanı' ile parçaları bulun; gerekirse önce 'Alan seç' ile "
+                      f"detayı çerçeveleyin")
+
+        def resim_pil(im, ad):
+            np = _np()
+            if np is None:
+                messagebox.showwarning("Şablon kur", "Resim için numpy gerekli (pip install numpy).", parent=pen)
+                return
+            im = im.convert("L")
+            if max(im.size) > 2600:                      # çok büyük ekran görüntüsü: tanıma için yeterli çözünürlüğe indir
+                k_ = 2600.0 / max(im.size)
+                im = im.resize((int(im.size[0] * k_), int(im.size[1] * k_)))
+            resim_kur(np.asarray(im, dtype=np.float32) / 255.0, ad, pil=im)
+
+        def resim_yapistir():
+            if WEB:
+                import webtk
+                webtk.resim_iste("pano", resim_web)
+                return
+            try:
+                from PIL import Image as _I, ImageGrab as _IG
+            except ImportError:
+                messagebox.showwarning("Şablon kur", "Resim için Pillow gerekli (pip install pillow).", parent=pen)
+                return
+            try:
+                im = _IG.grabclipboard()
+            except Exception as e_:
+                im = None
+                yaz_durum(f"pano okunamadı: {e_}")
+            if isinstance(im, list):                     # panoda dosya (Gezgin'den kopyalanmış resim dosyası)
+                im = next((_I.open(f) for f in im if os.path.isfile(f) and
+                           f.lower().endswith((".png", ".jpg", ".jpeg", ".bmp", ".gif", ".tif", ".tiff", ".webp"))), None)
+            if im is None:
+                messagebox.showinfo("Şablon kur", "Panoda resim yok. PDF'te detayı ekran görüntüsüyle alın "
+                                                  "(Windows: Win+Shift+S) ve tekrar deneyin.", parent=pen)
+                return
+            resim_pil(im, "pano")
+
+        def resim_ac(yol=None):
+            if WEB and not yol:
+                import webtk
+                webtk.resim_iste("dosya", resim_web)
+                return
+            yol = yol or filedialog.askopenfilename(parent=pen, title="Kesit resmi", filetypes=[
+                ("Resim", "*.png *.jpg *.jpeg *.bmp *.gif *.tif *.tiff *.webp"), ("Tümü", "*.*")])
+            if not yol:
+                return
+            try:
+                from PIL import Image as _I
+            except ImportError:
+                messagebox.showwarning("Şablon kur", "Resim için Pillow gerekli (pip install pillow).", parent=pen)
+                return
+            try:
+                im = _I.open(yol)
+                im.load()
+            except Exception as e_:
+                messagebox.showwarning("Şablon kur", f"Resim açılamadı: {e_}", parent=pen)
+                return
+            resim_pil(im, os.path.basename(yol))
+
+        def resim_web(yol, w, h, rid):
+            """Web: tarayıcı resmi griye çevirip dosyaya yazdı (w×h bayt)."""
+            np = _np()
+            if np is None:
+                messagebox.showwarning("Şablon kur", "numpy yüklenemedi.", parent=pen)
+                return
+            with open(yol, "rb") as f_:
+                gri = np.frombuffer(f_.read(), dtype=np.uint8).reshape(int(h), int(w)).astype(np.float32) / 255.0
+            resim_kur(gri, "pano", rid=rid)
+
+        def resim_kaldir():
+            st["res"], st["mod"], st["mod_v"] = None, None, []
+            ciz()
+            yaz_durum("resim kaldırıldı")
+
+        def mod_ac(m):
+            if not st.get("res"):
+                messagebox.showinfo("Şablon kur", "Önce resmi yapıştırın (Ctrl+V) ya da açın.", parent=pen)
+                return
+            st["mod"], st["mod_v"] = m, []
+            yaz_durum("resimde detayın çevresine bir çerçeve çizin (sürükleyin)" if m == "alan" else
+                      "ölçüsünü bildiğiniz iki noktaya tıklayın (ör. 50 mm profil genişliğinin iki ucu)")
+
+        def olcek_bitir():
+            r = st["res"]
+            p1, p2 = st["mod_v"][:2]
+            st["mod"], st["mod_v"] = None, []
+            q1, q2 = r["don"].resme(*p1), r["don"].resme(*p2)
+            dpx = math.hypot(q2[0] - q1[0], q2[1] - q1[1])
+            if dpx < 5:
+                yaz_durum("noktalar çok yakın")
+                ciz()
+                return
+            olc = simpledialog.askfloat("Ölçek", "İki nokta arası gerçek ölçü (mm):", parent=pen, minvalue=0.1)
+            if not olc:
+                ciz()
+                return
+            s_ = dpx / olc
+            d0 = r["don"]
+            Ri = _dm_ters(d0.R)
+            u1, v1 = Ri[0][0] * p1[0] + Ri[0][1] * p1[1], Ri[1][0] * p1[0] + Ri[1][1] * p1[1]
+            r["don"] = ResimDonusum(s_, q1[0] - u1 * s_, q1[1] + v1 * s_, d0.R)
+            r["olcek_sabit"] = s_
+            ciz()
+            yaz_durum(f"ölçek: {s_:.3f} piksel/mm — 'Resimden tanı' bu ölçekle arar")
+
+        def ilerleme(f, ne=""):
+            durum.config(text=f"Resimden tanınıyor… %{int(max(0.0, min(1.0, f)) * 100)} {ne}")
+            try:
+                pen.update_idletasks()
+            except tk.TclError:
+                pass
+
+        def noktalar(yol, profil=False):
+            k = ("P", yol, profil)
+            if k not in st["onb"]:
+                g_ = geo(yol, profil=profil)
+                P_ = parca_noktalari(g_)
+                st["onb"][k] = (P_, len(P_) * 0.25)
+            return st["onb"][k]
+
+        def resimden_tani(sor=True):
+            """Resimde ana profili (ölçek, yer, duruş), sonra kütüphane parçalarını bulur, şablonu kurar ve cam
+            kalınlığını / oturma payını ölçer. Emin olunmayan parçalar turuncu çizilir; seçilince aday listesi gelir."""
+            r = st.get("res")
+            if not r:
+                messagebox.showinfo("Şablon kur", "Önce resmi yapıştırın (Ctrl+V) ya da açın.", parent=pen)
+                return None
+            np = _np()
+            if np is None:
+                messagebox.showwarning("Şablon kur", "Resimden tanıma için numpy gerekli (pip install numpy).", parent=pen)
+                return None
+            if not st["p"] and v_ana.get():
+                ana_kur(v_ana.get())
+            if not st["p"]:
+                messagebox.showinfo("Şablon kur", "Önce ana profili seçin.", parent=pen)
+                return None
+            g = r["g"]
+            x0 = y0 = 0
+            if r.get("alan"):
+                a0_, b0_, a1_, b1_ = (int(round(v)) for v in r["alan"])
+                a0_, b0_ = max(0, a0_), max(0, b0_)
+                a1_, b1_ = min(g.shape[1], a1_), min(g.shape[0], b1_)
+                if a1_ - a0_ >= 40 and b1_ - b0_ >= 40:
+                    g, x0, y0 = g[b0_:b1_, a0_:a1_], a0_, b0_
+            pr_ = {k["kod"]: k for k in profiller if k["tur"] == st["tur"]}
+            kod0 = v_ana.get() if v_ana.get() in pr_ else st["p"][0]["geo"]["kod"]
+            t0_ = time.time()
+            ana = None
+            if kod0 in pr_:
+                ana = resim_ana_bul(np, g, [(kod0, noktalar(pr_[kod0]["dosya_yol"], True)[0])], sabit_olcek=r.get("olcek_sabit"),
+                                    ilerle=lambda f: ilerleme(0.25 * f, f"(ana profil {kod0})"))
+            if not ana or ana["oran"] < 0.9:              # seçili profil tutmadı: bu yöndeki tüm profiller
+                tum_ = [(k_, noktalar(v_["dosya_yol"], True)[0]) for k_, v_ in pr_.items() if k_ != kod0]
+                if tum_:
+                    ana2 = resim_ana_bul(np, g, tum_, sabit_olcek=r.get("olcek_sabit"),
+                                         ilerle=lambda f: ilerleme(0.25 + 0.35 * f, "(ana profil: tüm profiller deneniyor)"))
+                    if ana2 and (not ana or ana2["oran"] > ana["oran"] + 0.02):
+                        ana = ana2
+            if ana and ana["oran"] >= 0.75 and len(pr_) > 1:
+                ilerleme(0.6, "(ana profil: diğer profiller karşılaştırılıyor)")
+                ay_ = resim_ana_ayikla(np, g, ana, [(k_, noktalar(v_["dosya_yol"], True)[0]) for k_, v_ in pr_.items()])
+                if ay_ and ay_[0][2] != ana["kod"] and ay_[0][1] >= 0.85:
+                    ana2 = resim_ana_bul(np, g, [(ay_[0][2], noktalar(pr_[ay_[0][2]]["dosya_yol"], True)[0])],
+                                         sabit_olcek=ay_[0][3])
+                    if ana2 and ana2["oran"] >= 0.85 and ana2.get("puan", 0) > ana.get("puan", 0):
+                        ana = ana2
+            if not ana or ana["oran"] < 0.75:
+                yaz_durum("ana profil bulunamadı")
+                messagebox.showwarning("Şablon kur", "Ana profil resimde bulunamadı.\n\n• Profilin tamamı görünmeli.\n"
+                                                     "• 'Alan seç' ile yalnız bu detayı çerçeveleyin.\n"
+                                                     "• 'Ölçek (2 nokta)' ile bilinen bir ölçüyü (ör. 50 mm) verin.", parent=pen)
+                return None
+            ana["x"] += x0
+            ana["y"] += y0
+            if ana["kod"] != st["p"][0]["geo"]["kod"]:
+                v_ana.set(ana["kod"])
+                ana_kur(ana["kod"])
+            P_ana_n = noktalar(pr_[ana["kod"]]["dosya_yol"], True)[0]
+            ana["P"] = P_ana_n
+            p0 = st["p"][0]
+            don = resim_ana_donusum(ana, p0["rot"])
+            geolar, parcalar, yollar = {}, [], {}
+            for d in sorted(os.listdir(kut)):
+                alt = os.path.join(kut, d)
+                if d.upper() not in RESIM_KLASORLER or not os.path.isdir(alt):
+                    continue
+                for f in sorted(os.listdir(alt)):
+                    if not f.lower().endswith(".dxf"):
+                        continue
+                    yol_ = os.path.join(alt, f)
+                    try:
+                        g_ = geo(yol_)
+                        Pn_, L_ = noktalar(yol_)
+                    except (ValueError, OSError):
+                        continue
+                    kod_ = os.path.splitext(f)[0]
+                    geolar[kod_] = dict(g_, _P=Pn_, _cevre=L_)
+                    yollar[kod_] = yol_
+                    parcalar.append((kod_, d.upper(), Pn_))
+            sinir = (x0, y0, x0 + g.shape[1], y0 + g.shape[0]) if r.get("alan") else None
+            kaba, es, ofs = resim_parcalari_bul(np, r["g"], ana, parcalar, sinir=sinir,
+                                                ilerle=lambda f: ilerleme(0.6 + 0.35 * f, "(parçalar)"))
+            lps_ana = dunya(p0)
+            P_ana = P_(p0, lps_ana)
+            tercih = set()
+            try:                                     # sistemin mevcut detayında kullanılan parçalar (benzer fitiller arasında öncelik)
+                for dt_ in (self.detay or {}).values():
+                    tercih |= {_sade(x_["kod"]) for x_ in detay_parca_listesi(dt_) if x_.get("kod")}
+            except Exception:
+                pass
+            sec = resim_parcalari_sec(np, es, kaba, don, P_ana, geolar, st["tur"], tercih=tercih)
+            resim_cift_uyum(sec, st["tur"])
+            ek_ = resim_simetri(np, es, ofs, don, sec, geolar, P_ana, st["tur"]) if sec else []
+            cam = resim_cam_olc(np, es, ofs, don, st["tur"], st["cy"], sec + ek_, lps_ana) if sec else None
+            ilerleme(1.0)
+            r["don"] = don
+            r["olcek_sabit"] = ana["olcek"]
+            if not sec:
+                ciz()
+                yaz_durum(f"ana profil bulundu ({ana['kod']}, uyum %{ana['oran'] * 100:.0f}) ama parça bulunamadı")
+                return []
+            if sor and len(st["p"]) > 1 and not messagebox.askyesno(
+                    "Şablon kur", "Şablondaki parçalar (ana profil dışında) resimden bulunanlarla değiştirilsin mi?", parent=pen):
+                ciz()
+                yaz_durum()
+                return None
+            kaydet_geri()
+            st["p"] = st["p"][:1]
+            for d in sec + ek_:
+                g_ = geolar[d["kod"]]
+                kisa_ = re.sub(r"(?i)[_\- ][dy]$", "", g_["kod"])
+                if kisa_ != g_["kod"]:
+                    g_ = dict(g_, kod=kisa_)
+                ad_ = [dict(a_, yol=yollar[a_["kod"]]) for a_ in d.get("adaylar") or []]
+                emin = (d["oran"] >= 0.85 and not d.get("simetri")
+                        and not any(a_["puan"] >= 0.9 * d["puan"] for a_ in ad_))
+                st["p"].append({"geo": g_, "x": round(float(d["x"]), 4), "y": round(float(d["y"]), 4),
+                                "rot": float(d["rot"]) % 360.0, "ayna": bool(d["ayna"]),
+                                "tani": {"oran": float(d["oran"]), "puan": float(d["puan"]), "adaylar": ad_,
+                                         "simetri": bool(d.get("simetri")), "emin": emin, "yol": yollar[d["kod"]]}})
+            not_ = []
+            if cam:
+                v_cam.set(f"{cam['cam']:.1f}".rstrip("0").rstrip("."))
+                v_otur.set(f"{-st['cy'] * cam['ic']:.1f}".rstrip("0").rstrip("."))
+                not_.append(f"cam {cam['cam']:.1f} mm, oturma {-st['cy'] * cam['ic']:.1f} mm (resimden ölçüldü)")
+            else:
+                not_.append("cam kalınlığı resimden ölçülemedi, elle girin")
+            st["sec"] = None
+            sigdir()
+            n_em = sum(1 for p in st["p"][1:] if not p["tani"]["emin"])
+            msg = (f"resimden {len(st['p']) - 1} parça bulundu (ana profil {ana['kod']}, uyum %{ana['oran'] * 100:.0f}, "
+                   f"{time.time() - t0_:.0f} sn); " + "; ".join(not_)
+                   + (f"; {n_em} parça turuncu: emin değil — seçip 'Aday' listesinden düzeltin ya da silin" if n_em else "")
+                   + "; Yasla ile oturtup Kaydedin")
+            yaz_durum(msg)
+            self._log(f"Şablon kur: {msg}", "bilgi")
+            return st["p"]
+
+        def aday_tazele():
+            i = st["sec"]
+            p = st["p"][i] if (i is not None and i < len(st["p"])) else None
+            tn_ = (p or {}).get("tani")
+            if tn_ and tn_.get("adaylar"):
+                cb_aday.config(values=[p["geo"]["kod"]] + [a_["kod"] for a_ in tn_["adaylar"]], state="readonly")
+                v_aday.set(p["geo"]["kod"])
+            else:
+                cb_aday.config(values=[], state="disabled")
+                v_aday.set("")
+
+        def aday_sec(kod=None):
+            """Seçili (resimden bulunmuş) parçayı aday listesindeki başka parçayla değiştirir (adayın resimde bulunduğu yerle)."""
+            i = st["sec"]
+            if i is None or i == 0 or i >= len(st["p"]):
+                return
+            p = st["p"][i]
+            tn_ = p.get("tani") or {}
+            kod = kod or v_aday.get()
+            a_ = next((x for x in tn_.get("adaylar") or [] if x["kod"] == kod), None)
+            if not a_:
+                return
+            kaydet_geri()
+            g_ = geo(a_["yol"])
+            kisa_ = re.sub(r"(?i)[_\- ][dy]$", "", g_["kod"])
+            if kisa_ != g_["kod"]:
+                g_ = dict(g_, kod=kisa_)
+            eski = {"kod": os.path.splitext(os.path.basename(tn_.get("yol") or ""))[0] or p["geo"]["kod"], "x": p["x"],
+                    "y": p["y"], "rot": p["rot"], "ayna": p["ayna"], "oran": tn_.get("oran", 0.0), "puan": tn_.get("puan", 0.0),
+                    "yol": tn_.get("yol"), "klasor": p["geo"].get("klasor", "")}
+            kalan = [x for x in tn_.get("adaylar") or [] if x["kod"] != kod] + ([eski] if eski.get("yol") else [])
+            st["p"][i] = {"geo": g_, "x": round(float(a_["x"]), 4), "y": round(float(a_["y"]), 4), "rot": float(a_["rot"]) % 360.0,
+                          "ayna": bool(a_["ayna"]), "tani": {"oran": a_.get("oran", 0.0), "puan": a_.get("puan", 0.0),
+                                                             "adaylar": kalan, "simetri": False, "emin": True, "yol": a_["yol"]}}
+            ciz()
+            yaz_durum(f"{eski['kod']} yerine {kod} kondu")
 
         def ekle(yol):
             if not st["p"]:
@@ -13439,6 +14635,22 @@ class Uygulama(tk.Tk):
         ttk.Label(u2, text="   Yasla").pack(side="left")
         for txt_, a_, b_ in (("←", -1, 0), ("→", 1, 0), ("↑", 0, 1), ("↓", 0, -1)):
             ttk.Button(u2, text=txt_, width=3, command=lambda a=a_, b=b_: yasla(a, b)).pack(side="left", padx=(3, 0))
+        ttk.Label(u2, text="   Aday").pack(side="left")
+        cb_aday = ttk.Combobox(u2, textvariable=v_aday, width=11, state="disabled")
+        cb_aday.pack(side="left", padx=(4, 0))
+        cb_aday.bind("<<ComboboxSelected>>", lambda _e: aday_sec())
+
+        ttk.Label(u4, text="Resim:").pack(side="left")
+        for txt_, cmd_ in (("Yapıştır (Ctrl+V)", resim_yapistir), ("Aç...", resim_ac), ("Alan seç", lambda: mod_ac("alan")),
+                           ("Ölçek (2 nokta)", lambda: mod_ac("olcek"))):
+            ttk.Button(u4, text=txt_, command=cmd_).pack(side="left", padx=(4, 0))
+        ttk.Button(u4, text="Resimden tanı", style="Ana.TButton", command=resimden_tani).pack(side="left", padx=(8, 0))
+        ttk.Button(u4, text="Kaldır", command=resim_kaldir).pack(side="left", padx=(4, 0))
+        ttk.Checkbutton(u4, text="göster", variable=v_res, command=ciz).pack(side="left", padx=(10, 0))
+        ttk.Label(u4, text="belirginlik").pack(side="left", padx=(8, 0))
+        ttk.Scale(u4, from_=10, to=100, variable=v_alfa, orient="horizontal", length=110,
+                  command=lambda _v: ciz()).pack(side="left", padx=(4, 0))
+        ttk.Label(u4, foreground="#7a858e", text="  katalogdaki kesitin ekran görüntüsü: program ana profili, ölçeği ve parçaları bulur").pack(side="left")
 
         ttk.Label(u3, text="Cam kılavuzu:").pack(side="left")
         ttk.Checkbutton(u3, variable=v_kil, command=ciz).pack(side="left")
@@ -13494,6 +14706,15 @@ class Uygulama(tk.Tk):
 
         def bas(e):
             cv.focus_set()
+            if st.get("mod") == "alan":
+                st["mod_v"] = [(e.x, e.y), (e.x, e.y)]
+                return
+            if st.get("mod") == "olcek":
+                st["mod_v"].append(mm(e.x, e.y))
+                ciz()
+                if len(st["mod_v"]) >= 2:
+                    olcek_bitir()
+                return
             i = bul(e.x, e.y)
             st["sec"] = i
             st["suruk"] = (e.x, e.y, False) if (i is not None and i != 0) else None
@@ -13501,6 +14722,10 @@ class Uygulama(tk.Tk):
             yaz_durum()
 
         def surukle(e):
+            if st.get("mod") == "alan" and st["mod_v"]:
+                st["mod_v"][1] = (e.x, e.y)
+                ciz()
+                return
             s_ = st["suruk"]
             if not s_ or st["sec"] is None:
                 return
@@ -13512,6 +14737,16 @@ class Uygulama(tk.Tk):
             st["suruk"] = (e.x, e.y, True)
 
         def birak(_e):
+            if st.get("mod") == "alan" and len(st["mod_v"]) == 2:
+                (a0_, b0_), (a1_, b1_) = st["mod_v"]
+                st["mod"], st["mod_v"] = None, []
+                if abs(a1_ - a0_) > 10 and abs(b1_ - b0_) > 10:
+                    k_ = [st["res"]["don"].resme(*mm(px_, py_)) for px_, py_ in ((a0_, b0_), (a1_, b1_))]
+                    st["res"]["alan"] = (min(k_[0][0], k_[1][0]), min(k_[0][1], k_[1][1]),
+                                         max(k_[0][0], k_[1][0]), max(k_[0][1], k_[1][1]))
+                    yaz_durum("alan seçildi: 'Resimden tanı' yalnız bu çerçevede arar")
+                ciz()
+                return
             if st["suruk"] and st["suruk"][2]:
                 ciz()
                 yaz_durum()
@@ -13567,14 +14802,23 @@ class Uygulama(tk.Tk):
         for k_, dx_, dy_ in (("Left", -1, 0), ("Right", 1, 0), ("Up", 0, 1), ("Down", 0, -1)):
             for m_ in ("", "Shift-"):
                 pen.bind(f"<{m_}{k_}>", lambda e, a=dx_, b=dy_: tus(e, a, b))
-        for k_, f_ in (("<Delete>", sil), ("<r>", lambda: dondur()), ("<R>", lambda: dondur()), ("<m>", lambda: aynala()),
-                       ("<M>", lambda: aynala()), ("<Control-d>", cogalt), ("<Control-z>", geri)):
+        kisayollar = [("<Delete>", sil), ("<r>", lambda: dondur()), ("<R>", lambda: dondur()), ("<m>", lambda: aynala()),
+                      ("<M>", lambda: aynala()), ("<Control-d>", cogalt), ("<Control-z>", geri)]
+        if not WEB:                                      # web: Ctrl+V tarayıcının 'paste' olayıyla gelir
+            kisayollar += [("<Control-v>", resim_yapistir), ("<Control-V>", resim_yapistir)]
+        for k_, f_ in kisayollar:
             pen.bind(k_, lambda e, f=f_: kisayol(e, f))
-        pen.bind("<Escape>", lambda _e: (st.update(sec=None), ciz(), yaz_durum()))
+        pen.bind("<Escape>", lambda _e: (st.update(sec=None, mod=None, mod_v=[]), ciz(), yaz_durum()))
 
         def kapat():
             if st["kirli"] and st["p"] and not messagebox.askyesno("Şablon kur", "Kaydedilmemiş değişiklikler var. Kapatılsın mı?", parent=pen):
                 return
+            if WEB:
+                try:
+                    import webtk
+                    webtk.resim_kanca(None)
+                except Exception:
+                    pass
             pen.destroy()
         pen.protocol("WM_DELETE_WINDOW", kapat)
 
@@ -13587,7 +14831,15 @@ class Uygulama(tk.Tk):
         self._sablon_pen = (pen, st, {"ac": ac, "kaydet": kaydet, "ekle": ekle, "yasla": yasla, "tasi": tasi, "dondur": dondur,
                                       "aynala": aynala, "ana_kur": ana_kur, "yeni": yeni, "ciz": ciz, "sigdir": sigdir,
                                       "cakisma": cakisma, "hedef_yol": hedef_yol, "v_tip": v_tip, "v_tur": v_tur, "dunya": dunya,
-                                      "ana_sec": ana_sec, "cb_ana": (cb_ana_d, cb_ana_y)})
+                                      "ana_sec": ana_sec, "cb_ana": (cb_ana_d, cb_ana_y), "resim_ac": resim_ac,
+                                      "resim_pil": resim_pil, "resimden_tani": resimden_tani, "aday_sec": aday_sec,
+                                      "v_cam": v_cam, "v_otur": v_otur, "v_ana": v_ana, "mod_ac": mod_ac, "resim_web": resim_web})
+        if WEB:
+            try:
+                import webtk
+                webtk.resim_kanca(resim_web)             # Ctrl+V tarayıcıda yakalanır (sayfa geneli 'paste')
+            except Exception:
+                pass
 
     def _referans_editoru(self):
         """Kütüphanedeki parça DXF'ini açar; referans (base) noktası tıklanarak işaretlenir (köşe / kenar ortası / kutu
@@ -17558,6 +18810,11 @@ class Uygulama(tk.Tk):
     def _hesapla_ic(self):
         try:
             self._kural_uygula()
+            try:
+                self._fitil_not = self._fitil_kural_uygula()
+            except Exception as e_:
+                self._fitil_not = ""
+                self._log(f"Fitil kuralı uygulanamadı: {e_}", "uyari")
             cols, rows, p, ek, tip = self._oku()
             parca = {t: self.parca[t] for t in ("dikey", "yatay") if self.parca.get(t)}
             self._adim("Girdiler okundu ve kurallar uygulandı",
