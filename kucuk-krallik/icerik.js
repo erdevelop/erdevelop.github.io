@@ -231,23 +231,26 @@ function achHtml() {
 }
 
 /* ================= İNŞAAT USTASI ================= */
-function kkBinaKeys() { return ORDER.filter(function (k) { const c = $('c-' + k); return c && c.parentNode && c.parentNode.id === 'list'; }); }
+function kkListeKeys(id) { return ORDER.filter(function (k) { const c = $('c-' + k); return c && c.parentNode && c.parentNode.id === id; }); }
+function kkBinaKeys() { return kkListeKeys('list'); }
 function kkBinaAcik(k) { return !((D[k].lock && stg(S.lv) < D[k].lock) || (D[k].req && !S.lv[D[k].req])); }
 function kkVar(c) { return S.w >= c.w && S.s >= c.s && S.g >= c.g && S.i >= c.i; }
 function kkCostTop(c) { return (c.w || 0) + (c.s || 0) + (c.g || 0) * 5 + (c.i || 0) * 2; }
 // her binaya bir seviye: boştaysa başlat, çalışıyorsa sıraya ekle; ucuzdan pahalıya
-function kkHepsineSira() {
+// liste: 'list' (binalar) ya da 'list4' (araştırmalar)
+function kkHepsineSira(liste) {
+  liste = liste || 'list'; const ar = liste === 'list4';
   S.upq = S.upq || {}; let n = 0, yok = 0;
-  const L = kkBinaKeys().filter(kkBinaAcik).map(function (k) { const q = S.up[k] ? (S.upq[k] || 0) : 0; return { k: k, q: q, c: cost(k, (S.lv[k] || 0) + q) }; })
+  const L = kkListeKeys(liste).filter(kkBinaAcik).map(function (k) { const q = S.up[k] ? (S.upq[k] || 0) : 0; return { k: k, q: q, c: cost(k, (S.lv[k] || 0) + q) }; })
     .filter(function (x) { return !(S.up[x.k] && x.q >= 5); }).sort(function (a, b) { return kkCostTop(a.c) - kkCostTop(b.c); });
   L.forEach(function (x) {
     const c = cost(x.k, (S.lv[x.k] || 0) + (S.up[x.k] ? (S.upq[x.k] || 0) : 0)); if (!kkVar(c)) { yok++; return; }
     S.w -= c.w; S.s -= c.s; S.g -= c.g; S.i -= c.i;
-    if (S.up[x.k]) S.upq[x.k] = (S.upq[x.k] || 0) + 1; else S.up[x.k] = Date.now() + T(S.lv[x.k] || 0) * 1000;
+    if (S.up[x.k]) S.upq[x.k] = (S.upq[x.k] || 0) + 1; else S.up[x.k] = Date.now() + T(S.lv[x.k] || 0) * 1000 * (D[x.k].req ? Math.pow(.97, S.lv.univ || 0) : 1);
     n++;
   });
-  if (n) { sfx('tap'); toast('🔨 ' + kkL(n + ' bina sıraya alındı', n + ' buildings queued') + (yok ? kkL(' · ' + yok + ' tanesine kaynak yetmedi', ' · not enough resources for ' + yok) : '')); save(); render(); }
-  else toast(kkL('Sıraya alınacak bina yok ya da kaynak yetmiyor', 'Nothing to queue or not enough resources'));
+  if (n) { sfx('tap'); toast((ar ? '📚 ' + kkL(n + ' araştırma sıraya alındı', n + ' research queued') : '🔨 ' + kkL(n + ' bina sıraya alındı', n + ' buildings queued')) + (yok ? kkL(' · ' + yok + ' tanesine kaynak yetmedi', ' · not enough resources for ' + yok) : '')); save(); render(); }
+  else toast(ar ? kkL('Sıraya alınacak araştırma yok ya da kaynak yetmiyor', 'No research to queue or not enough resources') : kkL('Sıraya alınacak bina yok ya da kaynak yetmiyor', 'Nothing to queue or not enough resources'));
 }
 // usta açıksa boştaki en ucuz binayı kendiliğinden yükseltir (oyun açıkken)
 function kkUstaTick() {
@@ -255,6 +258,11 @@ function kkUstaTick() {
   const L = kkBinaKeys().filter(function (k) { return !S.up[k] && kkBinaAcik(k); }).map(function (k) { return { k: k, c: cost(k, S.lv[k] || 0) }; }).filter(function (x) { return kkVar(x.c); })
     .sort(function (a, b) { return kkCostTop(a.c) - kkCostTop(b.c); });
   if (!L.length) return; upgrade(L[0].k);
+}
+function kkArasHtml() {
+  const K = kkListeKeys('list4').filter(kkBinaAcik); if (!K.length) return '';
+  const bos = K.filter(function (k) { return !S.up[k]; }).length;
+  return '<button class="sm" data-kkhs="list4" title="' + kkL('Her araştırmaya bir seviye: boştakileri başlatır, sürenleri sıraya ekler', 'One level for every research: starts idle ones, queues running ones') + '">📚 ' + kkL('Hepsine +1', 'All +1') + '</button><small>' + kkL(bos + ' araştırma boşta', bos + ' idle') + '</small>';
 }
 function kkUstaHtml() {
   if ((S.lv.main || 1) < 2) return '';
@@ -275,13 +283,14 @@ function kkPendToast(L) {
 /* ================= ÇİZİM ================= */
 function icerikRender() {
   try { etkEjder(); } catch (e) { }
+  const ua = $('kkUstaR'); if (ua) { const h = kkArasHtml(); if (ua._h !== h) { ua._h = h; ua.innerHTML = h; ua.classList.toggle('hide', !h); } }
   const u = $('kkUsta'); if (u) { const h = kkUstaHtml(); if (u._h !== h) { u._h = h; u.innerHTML = h; u.classList.toggle('hide', !h); } }
   const kv = $('kahv'); if (kv) { const h = kahKartHtml(); if (kv._h !== h) { kv._h = h; kv.innerHTML = h; } }
 }
 function icerikInit() {
   const st = document.createElement('style');
   st.textContent =
-    '#kkUsta{display:flex;flex-wrap:wrap;align-items:center;gap:6px 8px;margin:0 0 10px}#kkUsta button{padding:6px 12px;font-size:13.5px}#kkUsta small{color:var(--mute)}' +
+    '#kkUsta,#kkUstaR{display:flex;flex-wrap:wrap;align-items:center;gap:6px 8px;margin:0 0 10px}#kkUsta button,#kkUstaR button{padding:6px 12px;font-size:13.5px}#kkUsta small,#kkUstaR small{color:var(--mute)}' +
     '.kahsec{display:flex;flex-wrap:wrap;align-items:center;gap:4px 8px;margin:6px 0 2px;font-size:13px}.kahsec .kahet{flex-basis:100%;color:var(--mute)}' +
     '.kahrow{display:flex;align-items:center;gap:10px;padding:7px 0;border-top:1px solid var(--line)}.kahrow:first-of-type{border-top:0}.kahic{font-size:22px;width:28px;text-align:center}.kahmid{flex:1;min-width:0;display:flex;flex-direction:column;gap:2px}.kahmid small{color:var(--mute)}' +
     '.kahxp,.achp{display:block;height:5px;border-radius:3px;background:var(--line);overflow:hidden;margin:2px 0}.kahxp i,.achp i{display:block;height:100%;background:var(--acc2,var(--acc))}' +
@@ -291,8 +300,10 @@ function icerikInit() {
     '.achd{margin-top:8px}.achd summary{cursor:pointer;font-weight:700;font-size:13px;color:var(--mute);padding:4px 0}';
   document.head.appendChild(st);
   // inşaat ustası çubuğu: bina listesinin üstünde
-  const li = $('list'); if (li && !$('kkUsta')) { const d = document.createElement('div'); d.id = 'kkUsta'; d.className = 'hide'; li.parentNode.insertBefore(d, li); d.addEventListener('click', function (e) { const b = e.target.closest('button'); if (!b) return; if (b.dataset.kkhs) kkHepsineSira(); if (b.dataset.kkus) { S.usta = !S.usta; toast('🧑‍🔧 ' + (S.usta ? kkL('İnşaat ustası işe başladı', 'Builder started') : kkL('İnşaat ustası durdu', 'Builder stopped'))); save(); render(); } }); }
+  const li = $('list'); if (li && !$('kkUsta')) { const d = document.createElement('div'); d.id = 'kkUsta'; d.className = 'hide'; li.parentNode.insertBefore(d, li); d.addEventListener('click', function (e) { const b = e.target.closest('button'); if (!b) return; if (b.dataset.kkhs) kkHepsineSira('list'); if (b.dataset.kkus) { S.usta = !S.usta; toast('🧑‍🔧 ' + (S.usta ? kkL('İnşaat ustası işe başladı', 'Builder started') : kkL('İnşaat ustası durdu', 'Builder stopped'))); save(); render(); } }); }
   // kahramanlar kartı (Lord sekmesi, komutanın altında)
   const kv = $('kahv'); if (kv && !kv._bag) { kv._bag = 1; kv.addEventListener('click', function (e) { const b = e.target.closest('button'); if (!b || b.disabled) return; if (b.dataset.kaha) kahAl(b.dataset.kaha); if (b.dataset.kahe) kahEgit(b.dataset.kahe); }); }
+  // araştırma: Üniversite listesinin üstünde
+  const l4 = $('list4'); if (l4 && !$('kkUstaR')) { const d = document.createElement('div'); d.id = 'kkUstaR'; d.className = 'hide'; l4.parentNode.insertBefore(d, l4); d.addEventListener('click', function (e) { const b = e.target.closest('button[data-kkhs]'); if (b) kkHepsineSira('list4'); }); }
   setInterval(function () { try { kkUstaTick(); } catch (e) { } }, 2000);
 }
