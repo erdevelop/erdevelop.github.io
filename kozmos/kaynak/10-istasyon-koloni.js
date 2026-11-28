@@ -266,8 +266,8 @@ function modulHasar(n) {
 }
 function modulAdim(dt) { const ml = ekipLv('muhendis'); if (!ml || KORS.length) return; for (const k in MODUL) if (MODUL[k] < 100) MODUL[k] = Math.min(100, MODUL[k] + dt * 0.25 * ml * (tek('d2') ? 2 : 1)); }
 let TMR = null;
-function tamirAc(k) { if (!MODUL[k] && MODUL[k] !== 0) return; TMR = { k, deneme: 3, poz: 0, yon: 1, hiz: 1.1, bolge: [0.38 + Math.random() * 0.24, 0.12], son: '' }; tamirYaz(); $('tamir').hidden = false; SES.tik(); requestAnimationFrame(tamirKare); }
-function tamirYaz() { const k = TMR.k; $('tmBas').innerHTML = '🔧 ' + MODAD[k].e + ' ' + L(MODAD[k].ad) + ` · <span style="color:${MODUL[k] >= 70 ? '#9BE07A' : MODUL[k] >= 40 ? '#FFC857' : '#FF5C6E'}">${Math.round(MODUL[k])}%</span>`; $('tmYaz').textContent = T(`İbre yeşil bölgedeyken “Kaynak yap”a bas. Kalan deneme: ${TMR.deneme}`, `Press “Weld” while the needle is in the green zone. Attempts left: ${TMR.deneme}`) + (TMR.son ? ' · ' + TMR.son : ''); }
+function tamirAc(k) { if (k !== 'govde' && !MODUL[k] && MODUL[k] !== 0) return; if (k === 'govde') ST.gyT = Date.now() + 240000; TMR = { k, deneme: 3, poz: 0, yon: 1, hiz: 1.1, bolge: [0.38 + Math.random() * 0.24, 0.12], son: '' }; tamirYaz(); $('tamir').hidden = false; SES.tik(); requestAnimationFrame(tamirKare); }
+function tamirYaz() { const k = TMR.k, dv = tmDeger(k), MA = tmAd(k); $('tmBas').innerHTML = '🔧 ' + MA.e + ' ' + L(MA.ad) + ` · <span style="color:${dv >= 70 ? '#9BE07A' : dv >= 40 ? '#FFC857' : '#FF5C6E'}">${Math.round(dv)}%</span>`; $('tmYaz').textContent = T(`İbre yeşil bölgedeyken “Kaynak yap”a bas. Kalan deneme: ${TMR.deneme}`, `Press “Weld” while the needle is in the green zone. Attempts left: ${TMR.deneme}`) + (TMR.son ? ' · ' + TMR.son : ''); }
 function tamirKare() {
   if (!TMR || $('tamir').hidden) return; const c = $('tmC'), w = c.clientWidth, h = c.clientHeight; if (c.width !== Math.round(w * DPR)) { c.width = Math.round(w * DPR); c.height = Math.round(h * DPR); }
   const x = c.getContext('2d'); x.setTransform(DPR, 0, 0, DPR, 0, 0); TMR.poz += TMR.yon * 0.016 * TMR.hiz; if (TMR.poz > 1) { TMR.poz = 1; TMR.yon = -1; } if (TMR.poz < 0) { TMR.poz = 0; TMR.yon = 1; }
@@ -279,9 +279,9 @@ function tamirKare() {
 }
 function tamirVur() {
   if (!TMR || TMR.deneme <= 0) return; const [b0, bw0] = TMR.bolge, bw = bw0 * (tek('d2') ? 1.5 : 1), ok = TMR.poz >= b0 && TMR.poz <= b0 + bw, k = TMR.k; TMR.deneme--;
-  if (ok) { const merkez = 1 - Math.abs(TMR.poz - (b0 + bw / 2)) / (bw / 2), art = Math.round(20 + merkez * 20); MODUL[k] = Math.min(100, MODUL[k] + art); TMR.son = '✓ +' + art + '%'; SES.koloni(); patlamaEkle(SH.x, SH.y, 20, '255,220,140'); ST.tamir = (ST.tamir || 0) + 1; } else { TMR.son = T('✗ ıskaladın', '✗ missed'); SES.vur(); }
+  if (ok) { const merkez = 1 - Math.abs(TMR.poz - (b0 + bw / 2)) / (bw / 2), art = Math.round(20 + merkez * 20); tmEkle(k, art); TMR.son = '✓ +' + (k === 'govde' ? Math.round(art * 0.4) : art) + '%'; SES.koloni(); patlamaEkle(SH.x, SH.y, 20, '255,220,140'); ST.tamir = (ST.tamir || 0) + 1; } else { TMR.son = T('✗ ıskaladın', '✗ missed'); SES.vur(); }
   TMR.hiz += 0.25; TMR.bolge = [0.15 + Math.random() * 0.6, Math.max(0.07, TMR.bolge[1] - 0.015)];
-  if (TMR.deneme <= 0 || MODUL[k] >= 100) { TMR.son += ' · ' + T('tamir bitti', 'repair done'); setTimeout(() => { $('tamir').hidden = true; gpImza = ''; basarimKontrol(); kaydet(); }, 900); }
+  if (TMR.deneme <= 0 || tmDeger(k) >= 100) { TMR.son += ' · ' + T('tamir bitti', 'repair done'); setTimeout(() => { $('tamir').hidden = true; gpImza = ''; basarimKontrol(); kaydet(); }, 900); }
   tamirYaz();
 }
 $('tmVur').onclick = tamirVur;

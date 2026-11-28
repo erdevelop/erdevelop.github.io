@@ -31,6 +31,7 @@ PARCALAR = [
     ('14-hikaye-meta.js', 'Umut-7 hikâyesi'),
     ('15-gelistirici-canli.js', 'geliştirici konsolu'),
     ('16-rehber-ag.js', 'kaptan rehberi'),
+    ('16b-derinlik.js', 'derinlik: kontratlar, albüm, defter, gazete, zorluk'),
     ('17-harita-menu-dongu.js', 'liman sahnesi (iniş)'),
 ]
 DESEN = re.compile(r'<script>\n([\s\S]*?)</script>')

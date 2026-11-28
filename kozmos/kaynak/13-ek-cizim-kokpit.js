@@ -289,7 +289,7 @@ function ustCiz(t) {
     const f = 0.05 + 0.04 * Math.sin(t * 9) + (Math.random() < 0.05 ? 0.08 : 0); ctx.fillStyle = `rgba(255,140,60,${f.toFixed(3)})`; ctx.fillRect(0, 0, W, H);
     ctx.strokeStyle = 'rgba(255,220,180,.12)'; ctx.lineWidth = 1; for (let i = 0; i < 6; i++) { const y = Math.random() * H; ctx.beginPath(); ctx.moveTo(0, y); ctx.lineTo(W, y + (Math.random() - 0.5) * 20); ctx.stroke(); }
   }
-  if (hasarFlas > 0.03) { const g = ctx.createRadialGradient(W / 2, H / 2, Math.min(W, H) * 0.3, W / 2, H / 2, Math.max(W, H) * 0.7); g.addColorStop(0, 'rgba(255,40,60,0)'); g.addColorStop(1, `rgba(255,40,60,${(hasarFlas * 0.45).toFixed(2)})`); ctx.fillStyle = g; ctx.fillRect(0, 0, W, H); }
+  if (hasarFlas > 0.03) { const g = ctx.createRadialGradient(W / 2, H / 2, Math.min(W, H) * 0.3, W / 2, H / 2, Math.max(W, H) * 0.7); g.addColorStop(0, 'rgba(255,40,60,0)'); g.addColorStop(1, `rgba(255,40,60,${(hasarFlas * (AZ_HAREKET ? 0.15 : 0.45)).toFixed(2)})`); ctx.fillStyle = g; ctx.fillRect(0, 0, W, H); }
 }
 
 /* ================= karakollar ================= */

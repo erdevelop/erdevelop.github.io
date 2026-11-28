@@ -3,17 +3,17 @@ function hasar(n, sessiz, cevre) {
   if (DEV.olumsuz) return;
   if (!oyunda || limanP || n <= 0) return;
   if (bankaAcik || borsaAcik || istAcik || inisAcik || istnAcik) return; if (cevre && giyili('termal')) n *= 0.6; if (giyili('zgiysi')) n *= 0.9;
-  n *= (1 - YUK.kalkan * 0.08) * (tek('d3') ? 0.9 : 1) * (1.2 - 0.1 * GUC[2]); if (!cevre && !sessiz && n > 2 && !kapsul) modulHasar(n);
-  if (!cevre) titre(Math.round(Math.min(120, 25 + n * 3))); can -= n; if (!sessiz && !cevre && n >= 10 && EKIP.length && Math.random() < 0.12) ekipYarala(); hasarFlas = Math.min(1, hasarFlas + 0.3 + n / 40); SARS = Math.min(1, SARS + n / 22); if (!sessiz) SES.vur();
+  n *= (1 - YUK.kalkan * 0.08) * (tek('d3') ? 0.9 : 1) * (1.2 - 0.1 * GUC[2]) * (ST.zor ? zorH() : 1); if (!cevre && !sessiz && n > 2 && !kapsul) modulHasar(n);
+  if (!cevre) titre(Math.round(Math.min(120, 25 + n * 3))); can -= n; if (GOREV.length) kirilganHasar(n); if (!sessiz && !cevre && n >= 10 && EKIP.length && Math.random() < 0.12) ekipYarala(); hasarFlas = Math.min(1, hasarFlas + 0.3 + n / 40); SARS = Math.min(1, SARS + n / 22); if (!sessiz) SES.vur();
   if (can <= 0) olumBekle = true;
 }
 function patlamaEkle(x, y, r, renk) { { const d = Math.hypot(x - SH.x, y - SH.y); if (d < 900 && r >= 40) titre(Math.round(Math.min(90, r / 2))); if (d < 2600) SARS = Math.min(1, SARS + (r / 260) * (1 - d / 2600)); for (let i = 0, n = Math.ceil((2 + ((r / 45) | 0)) * GK().par); i < n && DUMAN.length < 70 * GK().par; i++) { const a = Math.random() * TAU, v = 10 + Math.random() * r * 0.4; DUMAN.push({ x, y, vx: Math.cos(a) * v, vy: Math.sin(a) * v, o: 0, w: 1.8 + Math.random() * 1.6, r: r * (0.25 + Math.random() * 0.3) }); } } const p = []; for (let i = 0, n = Math.ceil((10 + ((r / 6) | 0)) * GK().par); i < n; i++) { const a = Math.random() * TAU, v = 60 + Math.random() * r * 3; p.push([Math.cos(a) * v, Math.sin(a) * v]); } PATL.push({ x, y, r, o: 0, w: 0.7 + r / 150, c: renk || '255,170,80', p }); if (PATL.length > 40) PATL.shift(); }
 function patla() {
-  olumBekle = false; if (kapsul) { kurtar(T('Kapsülün de parçalandı.', 'Your capsule was destroyed too.')); return; }
+  olumBekle = false; if (ST.zor === 'demir' && !ST.demirOl) { ST.demirOl = 1; demirSon(); return; } if (kapsul) { kurtar(T('Kapsülün de parçalandı.', 'Your capsule was destroyed too.')); return; }
   patlamaEkle(SH.x, SH.y, 140, '255,190,110'); SES.patla();
   const yuk = Object.assign({}, KARGO); for (const k in KARGO) delete KARGO[k];
   if (Object.keys(yuk).length) { OLAY.push({ tip: 'enkaz', x: SH.x, y: SH.y, r0: Math.random() * TAU, ben: true, yuk, t: Date.now() }); izEnkaz(yuk); }
-  const kg = GOREV.filter(g => g.tip === 'teslim').length; GOREV = GOREV.filter(g => g.tip !== 'teslim');
+  const kg = GOREV.filter(g => g.yuk > 0 && TESLIM_T.includes(g.tip)).length; GOREV = GOREV.filter(g => !(g.yuk > 0 && TESLIM_T.includes(g.tip)));
   KORS.length = 0; MERMI.length = 0; MAYIN.length = 0; oto = null; kazP = null; SH.warp = 0; SH.sarj = 0;
   const eskiGemi = gemiTip; let kayipYaz = '';
   if (sigorta) { sigorta = false; kayipYaz = T('Sigortan gemini ve teçhizatını karşıladı.', 'Your insurance covered the ship and equipment.'); }

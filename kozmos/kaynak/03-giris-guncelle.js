@@ -291,7 +291,7 @@ function guncelle(dt, t) {
   hudT -= dt; if (hudT <= 0) { hudT = 0.16; hudYaz(v, t); }
   kayitT -= dt; if (kayitT <= 0) { kayitT = 4; kaydet(); }
   hedT = Math.max(0, hedT - dt); selT = Math.max(0, selT - dt);
-  gorevT -= dt; if (gorevT <= 0) { gorevT = 1; if (KERVAN.length && oyunda) kervanAdim(); if (GOREV.length) gorevYaz(); SES.bolge(bolgeBul()); AG.tur(); }
+  gorevT -= dt; if (gorevT <= 0) { gorevT = 1; derinAdim(); if (KERVAN.length && oyunda) kervanAdim(); if (GOREV.length) gorevYaz(); SES.bolge(bolgeBul()); AG.tur(); }
   AG.gonder();
   miniT -= dt; if (miniT <= 0) { miniT = 0.1; miniCiz(); }
   SES.guncelle(oyunda ? SH.itki : 0, v, SH.warp);

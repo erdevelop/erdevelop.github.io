@@ -67,7 +67,7 @@ function sagHedefler(px, py) {
   { const B = benLonca(); if (B) ekle('yer', '🏰', B.ad, B.x, B.y, { x: B.x, y: B.y, dur: 400, ad: B.ad }); }
   { const [gx, gy] = galHucre(SH.x, SH.y); let en = null, ed = Infinity; for (const k of skListe(gx, gy)) { const d = Math.hypot(k.x - SH.x, k.y - SH.y); if (d < ed) { ed = d; en = k; } } if (en) { const bil = KESIF.has('~sk:' + en.id), es = skEs(en); ekle('yer', '🌀', bil ? T('Geçit', 'Gate') + ' → ' + L(galaksi(es.gx, es.gy).ad) : T('Kararlı solucan deliği sinyali', 'Stable wormhole signal'), en.x, en.y, { x: en.x, y: en.y, dur: 300, ad: T('Kararlı solucan deliği', 'Stable wormhole') }); } }
   if (KOL) { const q = zGez(KOL.z); if (q) { const [x, y] = gezPos(q, t); ekle('yer', '🏠', KOL.ad, x, y, { p: q, ad: KOL.ad }); } }
-  for (const P of [parkur('ev'), parkur(galHucre(SH.x, SH.y))]) ekle('yer', '🏁', P.ad, P.x0, P.y0, { x: P.x0, y: P.y0, dur: 250, ad: P.ad });
+  for (const P of prkListe()) ekle('yer', '🏁', P.ad, P.x0, P.y0, { x: P.x0, y: P.y0, dur: 250, ad: P.ad });
   if (!KOLOS.yenildi) { const [x, y] = kolosPos(); ekle('yer', '👹', T('Kolos (haftalık boss)', 'Colossus (weekly boss)'), x, y, { x, y, dur: 2500, ad: T('Kolos', 'Colossus') }); }
   if (istnObj) ekle('yer', '🏗', istnObj.ad, istnObj.x, istnObj.y, { x: istnObj.x, y: istnObj.y, dur: 400, ad: istnObj.ad });
   else if (!kapsul) { const wx = cam.x + (px - W / 2) / cam.z, wy = cam.y + (py - H / 2) / cam.z; L2.push({ bolum: 'yer', e: '🏗', ad: T('İstasyon kur (buraya)', 'Build a station (here)') + ` · ${SAYI(ISTN_F)} 💰`, d: mz(wx, wy), x: wx, y: wy, kur: true }); }
@@ -127,7 +127,8 @@ function sohYaz() {
 }
 function tpYaz() {
   const ac = AG.durum() === 'acik';
-  let h = `<h2 style="margin:0 0 6px;font-size:21px;font-weight:900">🌐 ${T('Topluluk', 'Community')}</h2><div class="sekme">${[['soh', T('💬 Sohbet', '💬 Chat')], ['lon', T('🏰 Lonca', '🏰 Guild')], ['paz', T('🤝 Pilot pazarı', '🤝 Pilot market')], ['kol', T('👹 Kolos', '👹 Colossus')], ['yar', T('🏁 Yarış', '🏁 Racing')], ['gal', T('📸 Galeri', '📸 Gallery')]].map(([k, a]) => `<button type="button" data-tp="${k}" class="${tpSek === k ? 'on' : ''}">${a}</button>`).join('')}</div>`;
+  let h = `<h2 style="margin:0 0 6px;font-size:21px;font-weight:900">🌐 ${T('Topluluk', 'Community')}</h2><div class="sekme">${[['gaz', T('📰 Gazete', '📰 News')], ['soh', T('💬 Sohbet', '💬 Chat')], ['lon', T('🏰 Lonca', '🏰 Guild')], ['paz', T('🤝 Pilot pazarı', '🤝 Pilot market')], ['kol', T('👹 Kolos', '👹 Colossus')], ['yar', T('🏁 Yarış', '🏁 Racing')], ['gal', T('📸 Galeri', '📸 Gallery')]].map(([k, a]) => `<button type="button" data-tp="${k}" class="${tpSek === k ? 'on' : ''}">${a}</button>`).join('')}</div>`;
+  if (tpSek === 'gaz') { h += gazeteHtml(); $('tpIc').innerHTML = h; gazeteYukle(); return; }
   if (tpSek === 'yar') { h += yarisHtml(); $('tpIc').innerHTML = h; yarisSiraYukle(); return; }
   if (tpSek === 'gal') { h += galeriHtml(); $('tpIc').innerHTML = h; galeriYukle(); return; }
   if (tpSek === 'kol') { h += kolosHtml(); $('tpIc').innerHTML = h; if (ac) AG.bossSira(KOLOS.hafta).then(L2 => { const el = $('kolSira'); if (el && L2) el.innerHTML = L2.length ? L2.map((r, i) => `<div style="display:flex;justify-content:space-between;margin:3px 0;font-size:13px${r.id === AG.uid() ? ';color:var(--altin);font-weight:900' : ''}"><span>${i < 3 ? ['🥇', '🥈', '🥉'][i] : i + 1 + '.'} ${esc(String(r.n || '?').slice(0, 20))}</span><b>${SAYI(Math.round(r.d || 0))}</b></div>`).join('') : `<div class="alt">${T('Henüz kimse vurmadı — ilk sen ol!', 'Nobody has hit it yet — be the first!')}</div>`; }); return; }
@@ -182,7 +183,7 @@ $('topluluk').addEventListener('click', async e => {
   const b = e.target.closest('button'); if (!b || b.disabled) return;
   if (b.id === 'tpKapat') { tpKapat(); return; }
   if (b.dataset.tp) { if ({ yar: 'yaris', lon: 'lon', paz: 'paz', kol: 'kol' }[b.dataset.tp] && kilitli({ yar: 'yaris', lon: 'lon', paz: 'paz', kol: 'kol' }[b.dataset.tp])) return; tpAc(b.dataset.tp); return; }
-  if (b.dataset.ygit) { const P = parkur(b.dataset.ygit === 'ev' ? 'ev' : galHucre(SH.x, SH.y)); hedefGit({ h: { x: P.x0, y: P.y0, dur: 250, ad: P.ad }, ad: P.ad, x: P.x0, y: P.y0, d: Math.hypot(P.x0 - SH.x, P.y0 - SH.y) }); tpKapat(); return; }
+  if (b.dataset.ygit) { const P = b.dataset.ygit === 'h' ? haftaParkur() : parkur(b.dataset.ygit === 'ev' ? 'ev' : galHucre(SH.x, SH.y)); hedefGit({ h: { x: P.x0, y: P.y0, dur: 250, ad: P.ad }, ad: P.ad, x: P.x0, y: P.y0, d: Math.hypot(P.x0 - SH.x, P.y0 - SH.y) }); tpKapat(); return; }
   if (b.dataset.gtur) { galTur = b.dataset.gtur; tpYaz(); return; }
   if (b.dataset.gfoto) { fotoGoster(b.dataset.gfoto); return; }
   if (b.hasAttribute('data-kgit')) { const [x, y] = kolosPos(); hedefGit({ h: { x, y, dur: 2500, ad: T('Kolos', 'Colossus') }, ad: T('Kolos', 'Colossus'), x, y, d: Math.hypot(x - SH.x, y - SH.y) }); tpKapat(); return; }

@@ -239,6 +239,28 @@ test('kademeli açılma: kilitli sekme uyarır, sistem keşfedince açılır', a
   await pg.waitForFunction(() => KOZ.ACL.has('uret') && KOZ.ACL.has('maden') && !KOZ.ACL.has('hack'), null, { timeout: 8000 });
 });
 
+test('derinlik: kontrat zinciri, kırılgan/süreli işler, defter, koloni isteği, albüm, zorluk', async () => {
+  const pg = await sayfa(TEL); await basla(pg);
+  const r = await pg.evaluate(async () => {
+    const o = {}, S = ms => new Promise(r => setTimeout(r, ms)); document.querySelectorAll('.perde').forEach(p => p.hidden = true);
+    const p = KOZ.evGezegen(); KOZ.ST.gorev = 20; KOZ.kredi = 100000; const tek = KOZ.gorevTeklif(p), G = KOZ.GOREV();
+    o.seckin = tek.some(g => g.tip === 'seckin'); for (const g of tek.filter(g => g.sag != null)) { if (g.sure) g.son = Date.now() + 60000; G.push(g); }
+    KOZ.hasar(10); o.sag = G.filter(g => g.sag != null).every(g => g.sag < 100);
+    for (const g of G) if (g.son) g.son = Date.now() - 1; KOZ.gorevZaman(); o.sureBitti = !KOZ.GOREV().some(g => g.son);
+    KOZ.limanAc(p); await S(800); document.querySelector('#lmSek button[data-s="gorev"]').click(); await S(80); const kb = document.querySelector('[data-kon]'); if (kb) kb.click();
+    const kg = KOZ.GOREV().find(g => g.tip === 'kontrat'); o.kontrat = !!kg; const k0 = KOZ.kredi;
+    for (let i = 0; kg && i < 10 && KOZ.GOREV().includes(kg); i++) { const a = kg.adim[kg.a]; if (a.t === 'kesif') KOZ.kontratKesif(a.h); else { if (a.t === 'getir') KOZ.KARGO[a.m] = (KOZ.KARGO[a.m] || 0) + a.n; const s2 = KOZ.sistem(a.hs[0], a.hs[1]); KOZ.kontratLiman(s2.gez[a.hs[2]], true); } await S(1300); }
+    o.kontratBitti = kg && !KOZ.GOREV().includes(kg) && KOZ.kredi - k0 >= kg.odul;
+    document.querySelector('#lmSek button[data-s="pazar"]').click(); await S(80); document.querySelector('[data-al]').click(); o.defter = (KOZ.ST.tic || []).length === 1 && /Ticaret defteri|Trade log/.test(document.getElementById('liman').innerText);
+    document.getElementById('lmKalk').click(); await S(150);
+    const kk = { id: 'x', hs: [0, 0, 0], koloni: { ad: 'D', t0: Date.now(), vt: Date.now(), iT: Date.now() - 1 } }; KOZ.KARAKOL().push(kk); KOZ.kolIstekAdim(); const I = kk.koloni.ist; o.istek = !!I; if (I) { KOZ.KARGO[I.m] = I.n; KOZ.kolIstekVer(kk); o.mut = kk.koloni.mut === 80 && !kk.koloni.ist; } KOZ.KARAKOL().pop();
+    const kr = KOZ.kredi; for (let i = 0; i < 3; i++) KOZ.albumEkle('buz', i); o.albumOdul = KOZ.kredi - kr >= 1500;
+    o.hafta = KOZ.prkListe().some(P => P.haf); KOZ.ST.zor = 'rahat'; const c0 = KOZ.can; KOZ.hasar(10); o.rahat = c0 - KOZ.can < 9; KOZ.ST.zor = undefined;
+    return o;
+  });
+  for (const [k, v] of Object.entries(r)) dogru(v === true, 'derinlik: ' + k + ' = ' + v);
+});
+
 test('günlük görev: tamamlanınca ödül veriyor', async () => {
   const pg = await sayfa(TEL); await basla(pg);
   await pg.waitForFunction(() => KOZ.GUN.L.length === 3 && KOZ.GUN.H, null, { timeout: 8000 });
