@@ -172,3 +172,8 @@
 - Yeni ortak iki kişilik kabuk (assets/ikili.js): bilgisayara karşı 3 seviye, çevrimiçi, izleyici, teslim, rövanş, maç sayacı ve oyunu yeniden izleme
 - Mangala: tam kurallar (ilk taş aynı kuyuya, hazineye düşen son taşla tekrar, çift ve boş kuyu alma, taşları biten rakibin kuyularını alır), taş dağıtma animasyonu
 - Dokuz Taş: yerleştirme, sürme, üçte uçma, üçlüyle taş alma (üçlüdeki taş koruması), 50 hamle beraberlik
+
+## Amiral Battı
+- 10×10, 5 gemi (5-4-3-3-2), gemiler değmez; dokun-taşı-döndür ya da rastgele dizme; isabet eden bir daha atar
+- Çevrimiçide gemilerin yeri yalnız sahibinin cihazında; atış sonucunu hedefin cihazı bildirir
+- Bilgisayar: kolay (rastgele+takip), normal (satranç deseni + takip), zor (olasılık haritası)
