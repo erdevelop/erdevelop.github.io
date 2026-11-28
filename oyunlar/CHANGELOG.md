@@ -208,3 +208,4 @@
 - Bilgi yarışması: 12 soru (3 kolay, 3 orta, 3 zor, 3 çok zor), 500 ₺ → 1.000.000 ₺, 2.000 ve 15.000 barajları, çekilme hakkı
 - Jokerler: yarı yarıya, seyirci oylaması, telefon (zorluk arttıkça yanılma ihtimali artar); isteğe bağlı süre (30–60 sn)
 - 262 soruluk Türkçe havuz (genel kültür, tarih, coğrafya, bilim, edebiyat, sanat, spor); günün yarışması herkese aynı, seri ve dağılım
+- Milyon Merdiveni: soru havuzu 262'den 508'e çıktı (her zorlukta 115–140 soru); günün yarışmasında sorular ~40 gün tekrar etmez
