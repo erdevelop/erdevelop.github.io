@@ -10,6 +10,7 @@
 <link rel="manifest" href="/manifest.webmanifest"><meta name="theme-color" content="#0b1220"><link rel="icon" href="/favicon.svg" type="image/svg+xml"><link rel="icon" href="/favicon.ico" sizes="any">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Chakra+Petch:wght@600;700&family=IBM+Plex+Sans:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500&display=swap">
+
 <link rel="stylesheet" href="tema.css">
 <style>
 .gk-yer { display: inline-flex; align-items: center; gap: 8px; font: 500 13px var(--f-mono); color: var(--muted); }
@@ -92,6 +93,11 @@
     <div class="bu-saatler"><span>00:00</span><span>06:00</span><span>12:00</span><span>18:00</span><span>24:00</span></div>
     <div class="bu-liste" id="liste"></div>
     <p class="gk-not" data-en="The rising sign changes roughly every two hours, so even a 15-minute difference in birth time can change it near a boundary.">Yükselen burç yaklaşık iki saatte bir değişir; sınıra yakın saatlerde doğum saatindeki 15 dakikalık fark bile sonucu değiştirebilir.</p>
+  </div>
+
+  <div class="layer" id="ekK" hidden>
+    <div class="layer-head"><span class="swatch"></span><h2 data-en="Chinese zodiac and birthstone">Çin burcu ve doğum taşı</h2></div>
+    <div class="bu-uc" id="ek" style="grid-template-columns:repeat(auto-fit,minmax(240px,1fr))"></div>
   </div>
 
   <div class="layer" id="gezK" hidden>
@@ -183,8 +189,28 @@ function kart(ust, i, d, aciklama, ek) {
 }
 function bosKart(ust, baslik, metin) { return `<div class="bu-k" data-g="?"><div class="ust">${ust}</div><div class="ad">${baslik}</div><p>${metin}</p></div>`; }
 
+
+/* Çin burcu: Çin yeni yılı, kış gündönümünden sonraki ikinci yeni ay (Pekin saatiyle) */
+const CIN = [['Fare', 'Rat', '🐀', 'Zeki, uyanık ve becerikli; fırsatları herkesten önce görürsün.', 'Clever, alert and resourceful; you spot chances first.'], ['Öküz', 'Ox', '🐂', 'Sabırlı, güvenilir ve çalışkan; başladığın işi bitirirsin.', 'Patient, reliable and hard-working; you finish what you start.'], ['Kaplan', 'Tiger', '🐅', 'Cesur, tutkulu ve kendinden emin; meydan okumayı seversin.', 'Brave, passionate and confident; you love a challenge.'], ['Tavşan', 'Rabbit', '🐇', 'Nazik, zarif ve diplomatik; huzurlu ortamlarda parlarsın.', 'Gentle, elegant and diplomatic; you shine in calm places.'], ['Ejderha', 'Dragon', '🐉', 'Enerjik, karizmatik ve hırslı; doğuştan lider olarak görülürsün.', 'Energetic, charismatic and ambitious; seen as a born leader.'], ['Yılan', 'Snake', '🐍', 'Sezgili, bilge ve sakin; düşünmeden konuşmazsın.', 'Intuitive, wise and calm; you think before you speak.'], ['At', 'Horse', '🐎', 'Özgür ruhlu, neşeli ve hareketli; yerinde duramazsın.', 'Free-spirited, cheerful and active; you can’t sit still.'], ['Keçi', 'Goat', '🐐', 'Yaratıcı, şefkatli ve barışçıl; sanata yatkınsın.', 'Creative, caring and peaceful; drawn to the arts.'], ['Maymun', 'Monkey', '🐒', 'Esprili, meraklı ve pratik zekâlı; her soruna bir yol bulursun.', 'Witty, curious and quick; you find a way round every problem.'], ['Horoz', 'Rooster', '🐓', 'Dürüst, düzenli ve özenli; ayrıntılara önem verirsin.', 'Honest, organised and careful; details matter to you.'], ['Köpek', 'Dog', '🐕', 'Sadık, adil ve koruyucu; dostların sana güvenir.', 'Loyal, fair and protective; your friends rely on you.'], ['Domuz', 'Pig', '🐖', 'Cömert, iyi kalpli ve keyif ehli; hayatın tadını çıkarırsın.', 'Generous, kind-hearted and easy-going; you enjoy life.']];
+const CELEM = [['Ağaç', 'Wood'], ['Ateş', 'Fire'], ['Toprak', 'Earth'], ['Metal', 'Metal'], ['Su', 'Water']];
+const TAS = [['Lal (granat)', 'Garnet', '#9b1b30'], ['Ametist', 'Amethyst', '#9966cc'], ['Akuamarin', 'Aquamarine', '#7fd4e6'], ['Elmas', 'Diamond', '#e8f4ff'], ['Zümrüt', 'Emerald', '#1f9e5a'], ['İnci', 'Pearl', '#f2ece0'], ['Yakut', 'Ruby', '#d0103a'], ['Peridot', 'Peridot', '#a6c936'], ['Safir', 'Sapphire', '#1f4fbf'], ['Opal', 'Opal', '#c9e4f2'], ['Topaz', 'Topaz', '#f0a830'], ['Turkuaz', 'Turquoise', '#30c5c0']];
+const pekin = dt => new Date(dt.getTime() + 8 * 36e5).toISOString().slice(0, 10);
+function cinYeniYil(y) {
+  const gd = A.Seasons(y - 1).dec_solstice.date; let n = A.SearchMoonPhase(0, gd, 40);
+  if (pekin(n.date) <= pekin(gd)) n = A.SearchMoonPhase(0, new Date(n.date.getTime() + 864e5), 40);
+  return A.SearchMoonPhase(0, new Date(n.date.getTime() + 864e5), 40).date;
+}
+function ekler(dt, mo) {
+  let y = new Date(dt.getTime() + 8 * 36e5).getUTCFullYear(); if (pekin(dt) < pekin(cinYeniYil(y))) y--;
+  const i = ((y - 4) % 12 + 12) % 12, e = Math.floor(((y - 4) % 10 + 10) % 10 / 2), c = CIN[i], ts = TAS[mo - 1], yy = pekin(cinYeniYil(y)), ys = pekin(cinYeniYil(y + 1));
+  const tr = s => new Date(s + 'T12:00').toLocaleDateString(GK.LOC(), { day: 'numeric', month: 'long', year: 'numeric' });
+  $('ek').innerHTML = `<div class="bu-k" data-g="${c[2]}"><div class="ust">${t('🏮 Çin burcu', '🏮 Chinese zodiac')}</div><div class="ad"><i style="font-size:1.8rem">${c[2]}</i>${t(c[0], c[1])}</div><div class="der">${t(`${CELEM[e][0]} ${c[0]} · ${y % 2 ? 'Yin' : 'Yang'}`, `${CELEM[e][1]} ${c[1]} · ${y % 2 ? 'Yin' : 'Yang'}`)}</div><p>${t(c[3], c[4])}</p><p style="font-size:13px;color:var(--muted);margin-top:8px">${t(`Çin takviminde ${y} yılı ${tr(yy)} ile ${tr(ys)} arasıdır; Ocak ve Şubat başında doğanlar bir önceki yılın hayvanına düşebilir.`, `In the Chinese calendar the ${y} year runs from ${tr(yy)} to ${tr(ys)}; people born in January or early February may belong to the previous year’s animal.`)}</p></div>`
+    + `<div class="bu-k" data-g="💎"><div class="ust">${t('💎 Doğum taşı', '💎 Birthstone')}</div><div class="ad"><i style="display:inline-block;width:26px;height:26px;border-radius:6px;transform:rotate(45deg);background:${ts[2]};box-shadow:inset -4px -4px 8px rgba(0,0,0,.25),0 0 10px ${ts[2]}"></i>${t(ts[0], ts[1])}</div><div class="der">${new Date(2000, mo - 1, 1).toLocaleDateString(GK.LOC(), { month: 'long' })}</div><p>${t('Her ayın geleneksel bir taşı vardır; bu liste bugün en yaygın kullanılan modern listedir.', 'Each month has a traditional stone; this is the most widely used modern list.')}</p></div>`;
+  $('ekK').hidden = false;
+}
+
 function hesapla() {
-  if (!$('tarih').value) { $('sonuc').hidden = $('seritK').hidden = $('gezK').hidden = true; return; }
+  if (!$('tarih').value) { $('sonuc').hidden = $('seritK').hidden = $('gezK').hidden = $('ekK').hidden = true; return; }
   const [y, mo, d] = $('tarih').value.split('-').map(Number), bil = !$('bilmiyorum').checked, [h, mi] = ($('saat').value || '12:00').split(':').map(Number), k = yer();
   $('saat').disabled = !bil;
   const dt = GK.yerelden(y, mo, d, bil ? h : 12, bil ? mi : 0, k.tz), g0 = GK.yerelden(y, mo, d, 0, 0, k.tz), g1 = GK.yerelden(y, mo, d, 23, 59, k.tz);
@@ -199,7 +225,7 @@ function hesapla() {
   if (bil) { const yb = burcOf(yukselen(dt, k.lat, k.lon)); uc.push(kart(t('⬆️ Yükselen burç', '⬆️ Rising sign'), yb.i, yb.d, t('Dışarıya verdiğin ilk izlenimi anlattığı söylenir.', 'Said to describe the first impression you give.'))); }
   else uc.push(bosKart(t('⬆️ Yükselen burç', '⬆️ Rising sign'), t('Saat gerekli', 'Time needed'), t('Yükselen burç yaklaşık iki saatte bir değişir. Aşağıdaki şeritte o gün hangi saatlerde hangi burcun yükseldiğini görebilirsin; doğum belgende ya da annenin hatırında yaklaşık bir saat varsa ona bak.', 'The rising sign changes about every two hours. The strip below shows which sign was rising at each hour of that day; check your birth certificate or ask family for an approximate time.')));
   $('uc').innerHTML = uc.join(''); $('sonuc').hidden = false;
-  serit(y, mo, d, k, bil ? dt : null); gezegenler(dt, bil);
+  serit(y, mo, d, k, bil ? dt : null); gezegenler(dt, bil); ekler(dt, mo);
 }
 
 function serit(y, mo, d, k, an) {
