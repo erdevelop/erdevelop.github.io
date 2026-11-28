@@ -145,8 +145,30 @@ function sonuc(oda, r, anahtar) {
   if (insan.length < 2) return;
   try { if (window.Progress) { Progress.olay('online_oyna'); if (r === 1) Progress.olay('online_kazan'); } } catch (e) { }
   const ad = (K.find(x => x && x.uid === UID) || {}).n || adAl() || '?';
-  DB.tx('masa_sira/' + hafta() + '/' + UID, c => { c = c || {}; const simdi = DB.now(); if (simdi < (c.t || 0) + 10000) return; return { n: ad.slice(0, 16), g: (c.g || 0) + (r === 1 ? 1 : 0), o: (c.o || 0) + 1, t: simdi }; }).catch(() => { });
+  const ekle = c => { c = c || {}; const simdi = DB.now(); if (simdi < (c.t || 0) + 10000) return; return { n: ad.slice(0, 16), g: (c.g || 0) + (r === 1 ? 1 : 0), o: (c.o || 0) + 1, t: simdi }; };
+  DB.tx('masa_sira/' + hafta() + '/' + UID, ekle).catch(() => { });
+  const T = turnuva(); if (T.sayar) { DB.tx('masa_turnuva/' + T.anahtar + '/' + UID, ekle).catch(() => { }); try { window.Progress && Progress.olay('turnuva_oyna'); } catch (e) { } }
 }
+/* ---------- Cumartesi turnuvası ----------
+   Her cumartesi 20.00–23.00 (Türkiye saati, UTC+3). Bu saatlerde biten, en az iki kişinin oynadığı çevrimiçi masa oyunları
+   masa_turnuva/<yıl-ay-gün>/<uid> = { n, g, o, t } altına da yazılır (23.00'ten sonraki 10 dakika, süren oyunlar bitsin diye sayılır). */
+const TSI = 3 * 36e5, T_BAS = 20, T_SON = 23, T_PAY = 10 * 6e4, GUN = 864e5;
+const p2 = n => String(n).padStart(2, '0'), tsiGun = x => { const d = new Date(x + TSI); return d.getUTCFullYear() + '-' + p2(d.getUTCMonth() + 1) + '-' + p2(d.getUTCDate()); };
+function turnuva(now) {
+  now = now == null ? (DB ? DB.now() : Date.now()) : now;
+  const t = new Date(now + TSI), g = t.getUTCDay(), gece = Date.UTC(t.getUTCFullYear(), t.getUTCMonth(), t.getUTCDate()) - TSI;
+  let bas = gece + ((6 - g + 7) % 7) * GUN + T_BAS * 36e5, son = bas + (T_SON - T_BAS) * 36e5;
+  if (now >= son + T_PAY) { bas += 7 * GUN; son += 7 * GUN; }
+  if (/[?&]turnuvatest/.test(location.search)) { bas = now - 36e5; son = now + 2 * 36e5; }
+  const acik = now >= bas && now < son, sayar = now >= bas && now < son + T_PAY, onceki = now >= bas ? bas : bas - 7 * GUN;
+  return { acik, sayar, bas, son, kalan: acik ? son - now : sayar ? son + T_PAY - now : bas - now, anahtar: tsiGun(sayar ? bas : onceki), gosterilen: tsiGun(onceki), tarih: new Date(onceki).toLocaleDateString('tr-TR', { day: 'numeric', month: 'long' }) };
+}
+async function turnuvaSirala(anahtar) {
+  await baglan(); const L = await DB.ilk('masa_turnuva/' + anahtar, 'g', 60);
+  const A = Object.entries(L || {}).map(([u, v]) => Object.assign({ u }, v)).filter(x => x && x.o > 0).sort((a, b) => b.g - a.g || a.o - b.o || a.t - b.t);
+  return { liste: A.slice(0, 30), ben: A.find(x => x.u === UID) || null, sira: A.findIndex(x => x.u === UID) + 1 };
+}
+const sure = ms => { ms = Math.max(0, ms); const g = Math.floor(ms / GUN), s = Math.floor(ms / 36e5) % 24, d = Math.floor(ms / 6e4) % 60, n = Math.floor(ms / 1e3) % 60; return g ? `${g} gün ${s} sa` : s ? `${s} sa ${d} dk` : `${d} dk ${p2(n)} sn`; };
 async function siralama() {
   await baglan(); const L = await DB.ilk('masa_sira/' + hafta(), 'g', 60);
   const A = Object.entries(L || {}).map(([u, v]) => Object.assign({ u }, v)).filter(x => x && x.o > 0).sort((a, b) => b.g - a.g || a.o - b.o || a.t - b.t);
@@ -168,6 +190,8 @@ const CSS = `
 .ms-hata{color:var(--bad);font-weight:800;font-size:13.5px;min-height:18px}
 .ms-sira{display:flex;flex-direction:column;gap:3px;max-height:52vh;overflow:auto}.ms-sira div{display:grid;grid-template-columns:30px 1fr auto auto;gap:8px;align-items:center;padding:8px 10px;border-radius:10px;background:var(--bg2);font-weight:800;font-size:14px}
 .ms-sira div i{font-style:normal;color:var(--ink-soft);font-size:12.5px;text-align:right}.ms-sira div b{font-variant-numeric:tabular-nums}.ms-sira div.sen{box-shadow:inset 0 0 0 2px var(--accent)}.ms-sira div span{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.ms-tur{display:flex;flex-direction:column;gap:2px;text-align:left;padding:10px 14px;border-radius:13px;background:linear-gradient(135deg,#fef3c7,#fde68a);color:#78350f;font-size:13px}.ms-tur b{font-size:14.5px}.ms-tur span{font-weight:700;opacity:.85}
+.ms-tur.canli{background:linear-gradient(135deg,#fee2e2,#fecaca);color:#7f1d1d;animation:msTur 2s infinite}@keyframes msTur{50%{box-shadow:0 0 0 4px rgba(239,68,68,.25)}}
 .ms-sira .bos{display:block;text-align:center;color:var(--ink-soft);font-weight:700}
 .ms-izle-rozet{position:fixed;left:50%;top:calc(env(safe-area-inset-top) + 8px);transform:translateX(-50%);z-index:80;padding:5px 12px;border-radius:999px;background:#111827;color:#fff;font-weight:800;font-size:12.5px;box-shadow:0 4px 14px rgba(0,0,0,.3);pointer-events:none}
 .ms-izliyor [data-a=yine],.ms-izliyor [data-a=teslim],.ms-izliyor [data-a=bitir],.ms-izliyor [data-a=at],.ms-izliyor [data-a=ac],.ms-izliyor [data-a=geri],.ms-izliyor [data-a=ipucu]{display:none!important}
@@ -185,7 +209,9 @@ function lobi(kok, o) {
       <button class="ms-b ana" data-a="hizli">⚡ Hızlı eşleş</button>
       <div class="ms-sat"><button class="ms-b" data-a="kur">🔒 Özel oda kur</button><button class="ms-b" data-a="kodla">🔑 Koda katıl</button></div>
       <div class="ms-sat" id="ms-kodsat" hidden><input id="ms-kod" maxlength="5" placeholder="KOD" autocomplete="off" style="text-transform:uppercase;letter-spacing:.2em;text-align:center"><button class="ms-b ana" data-a="katil" style="flex:.6">Katıl</button></div>
-      <div class="ms-hata"></div><div class="ms-sat"><button class="ms-b" data-a="izleListe">👀 Masaları izle</button><button class="ms-b" data-a="sira">🏆 Sıralama</button></div><button class="ms-b" data-a="geri">‹ Geri</button>`;
+      <div class="ms-hata"></div><div class="ms-sat"><button class="ms-b" data-a="izleListe">👀 Masaları izle</button><button class="ms-b" data-a="sira">🏆 Sıralama</button></div>
+      <button class="ms-tur" data-a="turnuva" id="ms-tur"></button><button class="ms-b" data-a="geri">‹ Geri</button>`;
+    turSaat();
     const m = new URLSearchParams(location.search).get('masa'); if (m && !lobi._kullanildi) { lobi._kullanildi = true; q('#ms-kodsat').hidden = false; q('#ms-kod').value = m.toUpperCase().slice(0, 5); if (adAl()) is('katil'); else hata('Adını yazıp Katıl’a bas.'); }
   }
   async function izleGoster() {
@@ -197,6 +223,27 @@ function lobi(kok, o) {
   }
   async function izleBasla(kod) {
     try { const oda = await izle(o.oyun, kod); if (!o.onIzle) { oda.ayril(); return hata('Bu oyunda izleme yok.'); } bitti = true; kapat(); o.onIzle(oda); } catch (e) { hata(e.message || 'İzlenemedi.'); }
+  }
+  let turT = 0;
+  function turSaat() {
+    clearTimeout(turT); const x = q('#ms-tur'); if (!x || !el.isConnected) return; const T = turnuva();
+    x.classList.toggle('canli', T.acik);
+    x.innerHTML = T.acik ? `<b>🔴 Cumartesi Turnuvası sürüyor</b><span>Kazandığın her çevrimiçi oyun turnuvaya sayılır · bitimine ${sure(T.kalan)}</span>`
+      : T.sayar ? `<b>🏁 Cumartesi Turnuvası bitti</b><span>Süren oyunlar ${sure(T.kalan)} içinde biterse sayılır · tabloyu gör</span>`
+      : `<b>🏆 Cumartesi Turnuvası</b><span>Her cumartesi 20.00–23.00 · başlamasına ${sure(T.kalan)} · tabloyu gör</span>`;
+    turT = setTimeout(turSaat, 1000);
+  }
+  async function turnuvaGoster() {
+    const T = turnuva();
+    el.innerHTML = `<h3>🏆 Cumartesi Turnuvası</h3><p>${T.acik ? `<b>Şu an sürüyor!</b> Bitimine ${sure(T.kalan)}.` : T.sayar ? 'Turnuva bitti; son oyunlar sayılıyor.' : `${T.tarih} turnuvasının sonuçları. Sıradaki turnuva cumartesi 20.00’de, ${sure(T.kalan)} sonra.`}</p>
+      <p>Cumartesi 20.00–23.00 arasında biten, en az iki kişinin oynadığı bütün çevrimiçi masa oyunları (tavla, okey, 101, batak, king, pişti, dama, satranç) sayılır. En çok galibiyet alan birinci olur; eşitlikte daha az oyunla kazanan öne geçer.</p>
+      <div class="ms-sira"><div class="bos">Yükleniyor…</div></div><p id="ms-ben"></p>${T.acik ? '<button class="ms-b ana" data-a="hizli2">⚡ Hemen bir maça katıl</button>' : ''}<button class="ms-b" data-a="girisDon">‹ Geri</button>`;
+    try {
+      const R = await turnuvaSirala(T.sayar ? T.anahtar : T.gosterilen); if (!el.querySelector('.ms-sira')) return;
+      el.querySelector('.ms-sira').innerHTML = R.liste.length ? R.liste.map((x, i) => `<div class="${x.u === UID ? 'sen' : ''}"><b>${i < 3 ? ['🥇', '🥈', '🥉'][i] : i + 1}</b><span>${esc(x.n || '?')}${x.u === UID ? ' (sen)' : ''}</span><b>${x.g}</b><i>${x.o} oyun</i></div>`).join('') : `<div class="bos">${T.sayar ? 'Henüz biten oyun yok. İlk galibiyeti sen al!' : 'Bu turnuvada oyun bitmedi.'}</div>`;
+      el.querySelector('#ms-ben').innerHTML = R.ben ? `Sen: <b>${R.ben.g}</b> galibiyet, <b>${R.ben.o}</b> oyun${R.sira ? ` · <b>${R.sira}.</b> sıradasın` : ''}.` : T.sayar ? 'Turnuvada henüz oyun bitirmedin.' : '';
+      if (!T.sayar && R.liste.length) { const b1 = R.liste[0]; el.querySelector('#ms-ben').innerHTML = `👑 Birinci: <b>${esc(b1.n || '?')}</b> (${b1.g} galibiyet)` + (R.ben ? ` · sen ${R.sira}. oldun` : ''); }
+    } catch (e) { const x = el.querySelector('.ms-sira'); if (x) x.innerHTML = '<div class="bos">Tablo yüklenemedi. İnternetini kontrol et.</div>'; }
   }
   async function siraGoster() {
     el.innerHTML = `<h3>🏆 Haftanın sıralaması</h3><p>${haftaAraligi()} · Çevrimiçi masa oyunlarında en az iki kişinin oynadığı oyunlardaki galibiyetler. Pazartesi sıfırlanır.</p><div class="ms-sira"><div class="bos">Yükleniyor…</div></div><p id="ms-ben"></p><button class="ms-b" data-a="girisDon">‹ Geri</button>`;
@@ -228,6 +275,7 @@ function lobi(kok, o) {
     });
   }
   el.addEventListener('click', e => { const b = e.target.closest('button'); if (!b || b.disabled) return; const a = b.dataset.a;
+    if (a === 'turnuva') turnuvaGoster(); else if (a === 'hizli2') { giris(); is('hizli'); } else
     if (a === 'geri') { kapat(); o.onGeri && o.onGeri(); } else if (a === 'sira') siraGoster(); else if (a === 'izleListe') izleGoster(); else if (a === 'izleKod') izleBasla((q('#ms-ikod') || {}).value); else if (a === 'girisDon') giris(); else if (a === 'kodla') { q('#ms-kodsat').hidden = false; q('#ms-kod').focus(); }
     else if (a === 'hizli' || a === 'kur' || a === 'katil') is(a);
     else if (a === 'kopya') { try { navigator.clipboard.writeText(el._link); b.textContent = '✓ Kopyalandı'; } catch (x) { hata(el._link); } }
@@ -235,7 +283,7 @@ function lobi(kok, o) {
     else if (a === 'baslat') { b.disabled = true; o.baslat(oda); }
     else if (a === 'cik') { const x = oda; kapat(); if (x) x.ayril(); giris(); } });
   el.addEventListener('keydown', e => { if (e.key === 'Enter' && e.target.id === 'ms-kod') is('katil'); e.stopPropagation(); });
-  function kapat() { if (birak) birak(); birak = null; oda = null; }
+  function kapat() { clearTimeout(turT); if (birak) birak(); birak = null; oda = null; }
   giris();
   return { kapat() { bitti = true; const x = oda; kapat(); return x; } };
 }
@@ -274,5 +322,5 @@ function sohbet(oda, o) {
   const birak = oda.mesajDinle(balon);
   return { kapat() { birak(); kapatPano(); d.remove(); document.removeEventListener('pointerdown', disari, true); } };
 }
-window.Masa = { simdi: () => DB ? DB.now() : Date.now(), izle, canliListe, baglan, kur, katil, hizli, lobi, sohbet, IFADE, adAl, adKoy, sonuc, karsi, karsiYazi, siralama, hafta, ADLAR_OYUN, get uid() { return UID; } };
+window.Masa = { simdi: () => DB ? DB.now() : Date.now(), izle, canliListe, baglan, kur, katil, hizli, lobi, sohbet, IFADE, adAl, adKoy, sonuc, karsi, karsiYazi, siralama, hafta, turnuva, turnuvaSirala, ADLAR_OYUN, get uid() { return UID; } };
 })();

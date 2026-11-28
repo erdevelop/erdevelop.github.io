@@ -63,7 +63,9 @@
     B('solitaire5','Bulmaca','🂡','Sabırlı','5 solitaire açtır',5,s=>say(s,'solitaire')),
     B('online1','Çevrimiçi','🌐','İlk Masa','Çevrimiçi bir oyun bitir',1,s=>ol(s,'online_oyna')),
     B('onlinek1','Çevrimiçi','🤝','İlk Galibiyet','Çevrimiçi bir oyun kazan',1,s=>ol(s,'online_kazan')),
-    B('onlinek10','Çevrimiçi','🏆','Masanın Ustası','Çevrimiçi 10 oyun kazan',10,s=>ol(s,'online_kazan'))
+    B('onlinek10','Çevrimiçi','🏆','Masanın Ustası','Çevrimiçi 10 oyun kazan',10,s=>ol(s,'online_kazan')),
+    B('turnuva1','Çevrimiçi','🎪','Turnuvacı','Cumartesi turnuvasında bir oyun bitir',1,s=>ol(s,'turnuva_oyna')),
+    B('turnuva5','Çevrimiçi','🎖️','Turnuva Müdavimi','Cumartesi turnuvalarında 5 oyun bitir',5,s=>ol(s,'turnuva_oyna'))
   ];
   const hedefOf=b=>b.id==='hepsi'?Math.max(5,gorunur().length):b.hedef;
 

@@ -153,3 +153,8 @@
 - Renk izleme, kozda koz atma, cezada ceza kartı atma, kupa/koz kırılma, rıfkı ve kız düşürme zorunlulukları; ceza kartları bitince erken bitiş
 - Bilgisayara karşı (normal/kolay) ve çevrimiçi (boş koltuklara bilgisayar), izleyici modu, sohbet, puan tablosu, haftalık sıralama
 - Kart oyunlarında el sonu penceresinin elin altında kalması düzeltildi; King kural sayfası eklendi
+
+## Cumartesi Turnuvası
+- Her cumartesi 20.00–23.00 (TSİ): bu saatlerde biten, en az iki kişinin oynadığı çevrimiçi masa oyunları ayrı turnuva tablosuna yazılır (`masa_turnuva/<gün>/<uid>`); süren oyunlar için 10 dakika pay
+- Lobide geri sayımlı turnuva şeridi ve tablo (canlıyken anlık, sonra son turnuvanın birincisi); ana sayfada cumartesi günü turnuva şeridi
+- Rozetler: Turnuvacı, Turnuva Müdavimi. Firebase kuralı yalnız cumartesi 17.00–20.10 UTC arasında yazmaya izin verir

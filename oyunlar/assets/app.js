@@ -57,9 +57,16 @@
     const G=Progress.gorevler(), bitti=G.L.filter(x=>x.bitti).length;
     el.innerHTML='<div class="gorev-ust"><span class="gorev-baslik">GÜNLÜK GÖREVLER <small>'+bitti+'/3</small></span>'+(G.seri>0?'<span class="daily-streak">🔥 '+G.seri+' gün</span>':'')+'<button class="gorev-rozet" type="button" data-rozet>🏅 Rozetler</button></div>'+
       G.L.map(t=>'<button class="gorev'+(t.bitti?' ok':'')+'" type="button"'+(t.oyun?' data-oyun="'+t.oyun+'"':'')+'><span class="gorev-ik">'+(t.bitti?'✓':'')+'</span><span class="gorev-ad">'+t.metin+'</span><span class="gorev-say">'+(t.n>1?t.il+'/'+t.n:(t.bitti?'+30':'+30 XP'))+'</span></button>').join('')+
-      (G.tam?'<div class="gorev-tam">🎉 Bugünlük hepsi tamam. Yarın yeni görevler gelecek.</div>':'');
+      (G.tam?'<div class="gorev-tam">🎉 Bugünlük hepsi tamam. Yarın yeni görevler gelecek.</div>':'')+turnuvaSerit();
     el.querySelectorAll('[data-oyun]').forEach(b=> b.onclick=()=>{ const g=games.find(x=>x.id===b.dataset.oyun); if(g) openGame(g); });
     const rb=el.querySelector('[data-rozet]'); if(rb) rb.onclick=()=>openProfile();
+  }
+  function turnuvaSerit(){
+    if(!window.Masa || !Masa.turnuva) return ''; const T=Masa.turnuva(Date.now());
+    if(!T.acik && !(T.kalan<8*36e5 && !T.sayar)) return '';
+    const sa=Math.floor(T.kalan/36e5), dk=Math.floor(T.kalan/6e4)%60;
+    return '<div class="tur-serit'+(T.acik?' canli':'')+'"><b>'+(T.acik?'🔴 Cumartesi Turnuvası sürüyor':'🏆 Cumartesi Turnuvası bu akşam 20.00’de')+'</b><span>'+(T.acik?'Bitimine '+(sa?sa+' sa ':'')+dk+' dk · çevrimiçi kazandığın her oyun sayılır':'Başlamasına '+(sa?sa+' sa ':'')+dk+' dk · tavla, okey, batak, king ve diğer masa oyunları')+'</span>'+
+      '<div>'+['okey','tavla','batak','king'].map(id=>'<button type="button" data-oyun="'+id+'">'+({okey:'Okey',tavla:'Tavla',batak:'Batak',king:'King'})[id]+'</button>').join('')+'</div></div>';
   }
   window.addEventListener('ob-ilerleme', ()=>{ if(!$('#home').hidden) renderDaily(); });
 
