@@ -11794,6 +11794,35 @@ class Uygulama(tk.Tk):
                 self._tip_etkinlestir(kalan["ad"])
         self._tipler_yenile()
 
+    TIP_KURAL = ("Her tipe özel (tip değişince değişir):\n"
+                 "• aks ve kat ölçüleri, cam yapısı ve payları\n"
+                 "• sistem ile düşey / yatay profil seçimi ve kesitler\n"
+                 "• cephedeki bütün düzenlemeler: birleştirilen / kaldırılan elemanlar, hat zincirleri, elle kaydırılan ve "
+                 "çıkarılan parçalar, eleman tipleri\n"
+                 "• ek malzeme, çubuk stoğu, sipariş notu, montaj ilerlemesi\n\n"
+                 "Sistemin ayarı (o sistemi kullanan BÜTÜN tiplerde geçerli):\n"
+                 "• cam kuralları (katalogdan alınan cam tablosu dahil)\n"
+                 "• şablonlar, ana şablon seçimi, referans noktaları, kütüphane\n"
+                 "• öğrenilen parça konumları ve sistem geneli parça değişimleri\n\n"
+                 "Proje geneli: proje adı ve sipariş bilgileri.\n\n"
+                 "Yani tiplerin düşey / yatay profilleri aynı olmak zorunda değil; her tip kendi profilini ve hatta başka bir "
+                 "sistemi kullanabilir. Ama bir sistemin kuralını ya da şablonunu değiştirirseniz o sistemi kullanan bütün "
+                 "tipler etkilenir; bu durumda program günlüğe not düşer.")
+
+    def _tip_ortak_bildir(self, ne):
+        """Birden çok tip varken sistem düzeyindeki bir değişiklikte hangi tiplerin etkilendiğini günlüğe yazar."""
+        if len(getattr(self, "cephe_tipleri", []) or []) < 2:
+            return
+        sis = self._aktif_sistem()
+        ad_ = [t["ad"] for t in self.cephe_tipleri
+               if t["ad"] == self.aktif_tip or not t.get("veri") or (t["veri"].get("sistem_secimi") or "") in ("", sis)]
+        msg = f"Not: {ne} {sis} sisteminin ayarıdır; bu sistemi kullanan bütün tiplere geçerli ({', '.join(ad_)})."
+        son = getattr(self, "_tip_bildir_son", ("", 0.0))
+        if son[0] == msg and time.time() - son[1] < 60:
+            return
+        self._tip_bildir_son = (msg, time.time())
+        self._log(msg, "bilgi")
+
     def _tip_cubugu_kur(self, ana):
         """Sekmelerin üstünde: etkin cephe tipi seçimi. Seçilen tipin girdileri, cephesi ve kesitleri bütün sekmelerde görünür."""
         f = ttk.Frame(ana)
@@ -11805,7 +11834,8 @@ class Uygulama(tk.Tk):
         self._tip_cb.bind("<<ComboboxSelected>>", lambda _e: self._tip_etkinlestir(self._tip_v.get().split("  ×")[0]))
         for et_, kom_ in (("+ Yeni tip", self._tip_ekle),
                           ("Ad / adet...", lambda: self._tip_adet(self._tip_bul(self.aktif_tip)) if self.aktif_tip else None),
-                          ("Sil", lambda: self._tip_sil(self._tip_bul(self.aktif_tip)) if self.aktif_tip else None)):
+                          ("Sil", lambda: self._tip_sil(self._tip_bul(self.aktif_tip)) if self.aktif_tip else None),
+                          ("ⓘ Tipe özel / ortak", lambda: messagebox.showinfo("Cephe tipleri: neler tipe özel?", self.TIP_KURAL))):
             ttk.Button(f, text=et_, command=kom_).pack(side="left", padx=(6, 0))
         self._tip_lbl = ttk.Label(f, text="", foreground="#7a858e")
         self._tip_lbl.pack(side="left", padx=(12, 0))
@@ -12651,6 +12681,7 @@ class Uygulama(tk.Tk):
 
     def _kural_degisti(self, kurallar):
         cam_kurallari_yaz(self._aktif_sistem(), kurallar)
+        self._tip_ortak_bildir("Cam kuralları")
         self._kural_yenile()
         if self.sonuc:
             self.hesapla()
@@ -13790,6 +13821,7 @@ class Uygulama(tk.Tk):
 
     def _kutuphane_tazele(self):
         """Kütüphane / şablon değişince sistemi yeniden okur; profil seçimi korunur."""
+        self._tip_ortak_bildir("Şablonlar, ana şablon ve referans noktaları")
         _OTURT_ONB.clear()
         self._tip_onb = {}
         try:
@@ -15388,6 +15420,7 @@ class Uygulama(tk.Tk):
     def _ogrenilen_yaz(self, tur, blok, orn, deger):
         """Elle oturtulan konumu sistem kaydına da yazar: yeni projede ve diğer aks/hatlarda aynı parça aynı konumda gelir.
         deger None: öğrenileni siler."""
+        self._tip_ortak_bildir("Öğrenilen parça konumu")
         k = ogrenilen_anahtar(tur, blok, orn)
         if deger is None or (abs(deger[0]) < 1e-9 and abs(deger[1]) < 1e-9):
             _KAYMA.pop(k, None)
