@@ -222,6 +222,12 @@ body.er-durumlu #oyun{padding-bottom:calc(36px + env(safe-area-inset-bottom,0px)
 .kart.altink .resim.img{box-shadow:inset 0 0 0 2px var(--altin)}
 .birlik .bimg{width:calc(100% - 8px);aspect-ratio:1/.86;border-radius:9px;overflow:hidden;box-shadow:inset 0 0 0 1.5px color-mix(in srgb,var(--ink) 12%,transparent)}
 .birlik:has(.bimg){justify-content:flex-start;padding-top:4px}
+.ge{display:block;flex:none;overflow:hidden;border-radius:12px;background:var(--bg);box-shadow:inset 0 0 0 1.5px color-mix(in srgb,var(--ink) 12%,transparent)}.ge img{width:100%;height:100%;object-fit:cover;display:block;pointer-events:none}
+.kale .ge{width:42px;height:42px;border-radius:11px}
+.guc .ge{width:100%;height:100%;border-radius:50%}
+.kah .ge{width:46px;height:46px;margin:0 auto 4px;border-radius:12px}.kah.sec .ge{box-shadow:0 0 0 2px var(--acc)}
+.sdurak .ge{width:54px;height:54px;border-radius:14px}
+.hd .ge{width:40px;height:40px;border-radius:10px}.hd.gecti .ge{filter:saturate(.75)}
 .kart.altink::after{content:'🌟';position:absolute;bottom:14px;right:3px;font-size:10px}
 .kart.sikke .resim{background:radial-gradient(circle at 50% 35%,color-mix(in srgb,var(--altin) 60%,var(--kart)),color-mix(in srgb,var(--altin) 20%,var(--kart)))}
 .birlik.gizli{opacity:.62;border-style:dashed}
@@ -389,7 +395,10 @@ function sesDugme() { hizDugme(); const t = (KAYIT.ses ? '🔊 ' : '🔇 '); $('
 const ozSimge = k => (k.koruma ? '🛡' : '') + (k.kalkan ? '💠' : '') + (k.hucum ? '⚡' : '') + (k.menzil ? '🏹' : '') + (k.cal ? '🩸' : '') + (k.ofke ? '💢' : '') + (k.gizli ? '🌫' : '') + (k.delici ? '⛏' : '') + (k.olum ? '☠' : '') + (k.sonTur ? '⏳' : '');
 const sinifi = k => k.koleksiyonDisi ? 'buyu sikke' : k.tip === 'y' ? 'buyu' : (k.tek || k.m >= 6) ? 'nadir' : k.koruma ? 'savunma' : (k.hucum || k.menzil) ? 'hizli' : '';
 /* kart görselleri: img/kartlar/<id>.webp (256 px). Listede olmayan kart emojiyle görünür. */
-const RESIMLI = new Set(['koylu', 'oduncu', 'haberci', 'mizrakci', 'okcu', 'kalkanci', 'kurt', 'ciftci', 'suvari', 'demirci', 'sifaci', 'haydut', 'tasduvar']);
+const durakId = i => 'durak' + String(i + 1).padStart(2, '0');
+const RESIMLI = new Set([...Object.keys(K), ...KK.KAHRAMANLAR, ...SEFER.map((d, i) => durakId(i))]);
+/* küçük yuvarlak görsel (kahraman, durak, kale); görseli yoksa emoji */
+const gorselE = (id, e) => id && RESIMLI.has(id) ? `<span class="ge">${gorsel(id)}</span>` : `<span class="e">${e}</span>`;
 const gorsel = id => `<img src="/img/kartlar/${id}.webp" alt="" decoding="async" draggable="false">`;
 function kartHtml(id, sinif = '', ek = '') {
   const k = K[id];
@@ -429,14 +438,14 @@ function ciz() {
     else if (sec.t === 'guc') { const hs = KK.gucHedefleri(G, BEN); if (hs && !KK.gucEngel(G, BEN)) ekle(hs, kb.hedef); }
     else if (sec.t === 'b') ekle(KK.saldiriHedefleri(G, BEN, sec.uid), 'dusman');
   }
-  const kaleHtml = (p, e, ad) => `<span class="e">${e}</span><div><span class="can">❤ ${Math.max(0, G.p[p].can)}</span><small>${esc(ad)}</small></div>`;
-  $('kale1').innerHTML = kaleHtml(YZ, rakip.e, dil(rakip.ad)); $('kale0').innerHTML = kaleHtml(BEN, '🏰', T('Kalen', 'Your castle'));
+  const kaleHtml = (p, e, ad, g) => `${gorselE(g, e)}<div><span class="can">❤ ${Math.max(0, G.p[p].can)}</span><small>${esc(ad)}</small></div>`;
+  $('kale1').innerHTML = kaleHtml(YZ, rakip.e, dil(rakip.ad), rakip.g); $('kale0').innerHTML = kaleHtml(BEN, '🏰', T('Kalen', 'Your castle'));
   $('kale1').dataset.h = 'k' + YZ; $('kale0').dataset.h = 'k' + BEN;
   $('kale1').classList.toggle('hedef', hedef.has('k' + YZ)); $('kale0').classList.toggle('dhedef', dost.has('k' + BEN));
   $('sayac1').innerHTML = (kd ? `<span class="dguc ${D.guc ? 'kul' : ''}" data-dguc="1" title="${esc(dil(kd.guc) + ': ' + dil(kd.yazi))}">${kd.e} ${esc(dil(kd.guc))} 🪙${kd.m}</span>` : '') + `<span title="${T('Altın', 'Gold')}">🪙 ${D.altin}/${D.maxAltin}</span><span title="${T('Eldeki kart', 'Cards in hand')}">🂠 ${D.el.length}</span><span title="${T('Deste', 'Deck')}">📚 ${D.deste.length}</span>`;
   $('altin').innerHTML = Array.from({ length: Math.max(B.maxAltin, B.altin) }, (_, i) => `<i class="${i < B.altin ? 'dolu' : ''}"></i>`).join('') + `<b>🪙 ${B.altin}/${B.maxAltin}</b><span style="font-size:12px;font-weight:800;color:var(--mute);margin-left:6px" title="${T('Deste', 'Deck')}">📚 ${B.deste.length}</span>`;
   const gb = $('gucB');
-  if (kb) { const en = KK.gucEngel(G, BEN); gb.hidden = false; gb.className = 'guc' + (benimTur() && !en ? ' olur' : '') + (B.guc ? ' kul' : '') + (sec && sec.t === 'guc' ? ' sec' : ''); gb.innerHTML = `<span class="e">${kb.e}</span><small>${B.guc ? '✓' : '🪙' + kb.m}</small>`; gb.title = dil(kb.guc) + ': ' + dil(kb.yazi); } else gb.hidden = true;
+  if (kb) { const en = KK.gucEngel(G, BEN); gb.hidden = false; gb.className = 'guc' + (benimTur() && !en ? ' olur' : '') + (B.guc ? ' kul' : '') + (sec && sec.t === 'guc' ? ' sec' : ''); gb.innerHTML = `${gorselE(B.kah, kb.e)}<small>${B.guc ? '✓' : '🪙' + kb.m}</small>`; gb.title = dil(kb.guc) + ': ' + dil(kb.yazi); } else gb.hidden = true;
   const birlikHtml = (b, p) => {
     const k = K[b.id], hz = p === BEN && benimTur() && KK.saldirabilir(G, BEN, b);
     const s = ['birlik', gorulen.has(b.uid) ? '' : 'yeni', sinifi(k), b.koruma ? 'koruma' : '', b.kalkan ? 'zirh' : '', b.gizli ? 'gizli' : '', KAYIT.altinK.includes(b.id) ? 'altink' : '', b.donuk || (b.buz && G.tur === p) ? 'donuk' : '', hz ? 'hazir' : '', p === BEN && !hz && !b.sal && !b.hazir ? 'uyuyor' : '', sec && sec.t === 'b' && sec.uid === b.uid ? 'sec' : '', hedef.has('b' + b.uid) ? 'hedef' : '', dost.has('b' + b.uid) ? 'dhedef' : ''].join(' ');
@@ -684,14 +693,14 @@ function sahne() { gorulen.clear(); $('menu').hidden = true; $('oyun').hidden = 
 function basla(m, n) {
   if (typeof m === 'number') { n = m; m = 'serbest'; }
   mod = m; durak = n; sec = null; kilit = false; mesaj = ''; KAYITLAR = []; ist = { kale: 0, olen: 0, kayip: 0, guc: 0, kart: {}, aldi: 0, birlik: 0, turOlen: 0, enTur: 0 };
-  if (mod === 'sefer' || mod === 'zorlu') { const d = rakipOf(mod, n); rakip = d; zor = d.z; G = KK.yeniOyun({ desteler: [desteAl(), d.deste], can: [20, d.can], kah: [KAYIT.kah, d.kah || ''], bas: [[], d.bas || []], ekAltin: [0, d.ekAltin || 0], kural: d.kural }); if (d.not) mesaj = dil(d.not); }
+  if (mod === 'sefer' || mod === 'zorlu') { const d = rakipOf(mod, n); rakip = Object.assign({ g: durakId(n) }, d); zor = d.z; G = KK.yeniOyun({ desteler: [desteAl(), d.deste], can: [20, d.can], kah: [KAYIT.kah, d.kah || ''], bas: [[], d.bas || []], ekAltin: [0, d.ekAltin || 0], kural: d.kural }); if (d.not) mesaj = dil(d.not); }
   else { rakip = KK.DESTELER.rakip[n]; zor = n; G = KK.yeniOyun({ desteler: [desteAl(), rakip.deste], can: [20, rakip.can], kah: [KAYIT.kah, ''] }); KAYIT.m[n] = (KAYIT.m[n] || 0) + 1; kaydet(); }
   sahne(); macKaydet();
   if (!KAYIT.ogretildi) { KAYIT.ogretildi = 1; kaydet(); nasil(() => ilkTur()); } else ilkTur();
 }
 function devamEt() {
   const o = macOku(); if (!o) return menuCiz();
-  G = o.G; G.olay = []; zor = o.zor; mod = o.mod; durak = o.durak; ist = o.ist || { kale: 0, olen: 0, kayip: 0, guc: 0, kart: {} }; rakip = rakipOf(mod, durak); sec = null; kilit = false; mesaj = T('Kaldığın yerden devam.', 'Resumed where you left off.');
+  G = o.G; G.olay = []; zor = o.zor; mod = o.mod; durak = o.durak; ist = o.ist || { kale: 0, olen: 0, kayip: 0, guc: 0, kart: {} }; rakip = rakipOf(mod, durak); if (rakip && (mod === 'sefer' || mod === 'zorlu')) rakip = Object.assign({ g: durakId(durak) }, rakip); sec = null; kilit = false; mesaj = T('Kaldığın yerden devam.', 'Resumed where you left off.');
   sahne(); if (G.tur === YZ) yzTur();
 }
 function ilkTur() { if (!G) return; if (mod === 'cevrim') { pankart(G.tur === BEN ? T('Sen başlıyorsun', 'You go first') : T('Rakip başlıyor', 'Opponent goes first')); if (G.tur === BEN) SES.tur(); return ciz(); } if (G.tur === YZ) { pankart(T('Rakip başlıyor', 'Enemy goes first')); yzTur(); } else { pankart(T('Sen başlıyorsun', 'You go first')); SES.tur(); ciz(); } }
@@ -748,16 +757,16 @@ function menuCiz() {
   const s = KAYIT.sefer, N = SEFER.length, d = SEFER[Math.min(s, N - 1)];
   const zs = KAYIT.zs, zd = SEFER[Math.min(zs, N - 1)];
   $('seferK').innerHTML = `<div class="sbas"><h2>🗺️ ${T('Sefer', 'Campaign')}</h2><b>${s} / ${N} · <span class="yz">★ ${yildizTop(KAYIT.y)}/${N * 3}</span></b></div><div class="ilerleme"><i style="width:${s / N * 100}%"></i></div>
-    ${s < N ? `<div class="sdurak"><span class="e">${d.e}</span><div><b>${s + 1}. ${esc(dil(d.ad))}${d.patron ? ' · ' + T('Patron', 'Boss') : ''}</b><small>❤ ${d.can}${d.kah ? ' · ' + KH[d.kah].e + ' ' + esc(dil(KH[d.kah].guc)) : ''}${d.not ? ' · ' + esc(dil(d.not)) : ''}</small><small>${T('Ödül', 'Reward')}: ${d.odul.map(id => K[id].e + ' ' + esc(dil(K[id].ad))).join(', ')}${d.kahOdul ? ' + ' + KH[d.kahOdul].e + ' ' + esc(dil(KH[d.kahOdul].ad)) : ''}</small></div></div>` : `<p style="margin:10px 0 0;font-weight:800">👑 ${T('Seferi tamamladın. Durakları istediğin gibi yeniden oynayabilirsin.', 'Campaign complete. Replay any stop you like.')}</p>`}
+    ${s < N ? `<div class="sdurak">${gorselE(durakId(s), d.e)}<div><b>${s + 1}. ${esc(dil(d.ad))}${d.patron ? ' · ' + T('Patron', 'Boss') : ''}</b><small>❤ ${d.can}${d.kah ? ' · ' + KH[d.kah].e + ' ' + esc(dil(KH[d.kah].guc)) : ''}${d.not ? ' · ' + esc(dil(d.not)) : ''}</small><small>${T('Ödül', 'Reward')}: ${d.odul.map(id => K[id].e + ' ' + esc(dil(K[id].ad))).join(', ')}${d.kahOdul ? ' + ' + KH[d.kahOdul].e + ' ' + esc(dil(KH[d.kahOdul].ad)) : ''}</small></div></div>` : `<p style="margin:10px 0 0;font-weight:800">👑 ${T('Seferi tamamladın. Durakları istediğin gibi yeniden oynayabilirsin.', 'Campaign complete. Replay any stop you like.')}</p>`}
     <div class="satir" style="margin-bottom:0">${s < N ? `<button class="dugme ana" id="bSefer" type="button">⚔️ ${s ? T('Sefere devam', 'Continue') : T('Sefere başla', 'Start campaign')}</button>` : ''}<button class="dugme" id="bHarita" type="button">🗺️ ${T('Harita', 'Map')}</button></div>`
     + (s >= N ? `<div class="zorluK"><div class="sbas"><h2>🔥 ${T('Zorlu sefer', 'Hard campaign')}</h2><b>${zs} / ${N} · <span class="yz">★ ${yildizTop(KAYIT.zy)}/${N * 3}</span></b></div><div class="ilerleme"><i style="width:${zs / N * 100}%"></i></div>
       <p class="kucuk" style="margin:8px 0 0">${T('Aynı duraklar: rakiplerin canı %30 fazla, bir altın öndeler ve en zor yapay zekâyla oynarlar. Her durak, ödül kartlarının 🌟 altın sürümünü verir.', 'Same stops: enemies have 30% more health, start a gold ahead and play at the hardest level. Each stop gives golden 🌟 versions of its reward cards.')}</p>
-      ${zs < N ? `<div class="sdurak"><span class="e">${zd.e}</span><div><b>${zs + 1}. ${esc(dil(zd.ad))}</b><small>❤ ${zorluRakip(zs).can} · 🪙+1</small></div></div>` : `<p style="margin:10px 0 0;font-weight:800">🔥 ${T('Zorlu seferi de bitirdin!', 'You finished the hard campaign too!')}</p>`}
+      ${zs < N ? `<div class="sdurak">${gorselE(durakId(Math.min(zs, N - 1)), zd.e)}<div><b>${zs + 1}. ${esc(dil(zd.ad))}</b><small>❤ ${zorluRakip(zs).can} · 🪙+1</small></div></div>` : `<p style="margin:10px 0 0;font-weight:800">🔥 ${T('Zorlu seferi de bitirdin!', 'You finished the hard campaign too!')}</p>`}
       <div class="satir" style="margin-bottom:0">${zs < N ? `<button class="dugme ana" id="bZorlu" type="button">🔥 ${zs ? T('Zorlu sefere devam', 'Continue') : T('Zorlu sefere başla', 'Start hard campaign')}</button>` : ''}<button class="dugme" id="bZHarita" type="button">🗺️ ${T('Zorlu harita', 'Hard map')}</button></div></div>` : '');
   cevrimKart();
   /* kahraman */
   const KA = kahAcik();
-  $('kahSec').innerHTML = KK.KAHRAMANLAR.map(id => { const k = KH[id], ac = KA.includes(id), nerede = SEFER.findIndex(x => x.kahOdul === id); return `<button type="button" class="kah ${id === KAYIT.kah ? 'sec' : ''} ${ac ? '' : 'kilit'}" data-kah="${id}" ${ac ? '' : 'disabled'}><span class="e">${ac ? k.e : '🔒'}</span><b>${esc(dil(k.ad))}</b><small>${ac ? esc(dil(k.guc)) + ' · 🪙' + k.m : id === 'kralice' ? T('Krallık: ana bina ', 'Kingdom: town hall ') + KRALICE_SV : T('Sefer', 'Campaign') + ' ' + (nerede + 1) + '. ' + T('durak', 'stop')}</small></button>`; }).join('');
+  $('kahSec').innerHTML = KK.KAHRAMANLAR.map(id => { const k = KH[id], ac = KA.includes(id), nerede = SEFER.findIndex(x => x.kahOdul === id); return `<button type="button" class="kah ${id === KAYIT.kah ? 'sec' : ''} ${ac ? '' : 'kilit'}" data-kah="${id}" ${ac ? '' : 'disabled'}>${ac ? gorselE(id, k.e) : '<span class="e">🔒</span>'}<b>${esc(dil(k.ad))}</b><small>${ac ? esc(dil(k.guc)) + ' · 🪙' + k.m : id === 'kralice' ? T('Krallık: ana bina ', 'Kingdom: town hall ') + KRALICE_SV : T('Sefer', 'Campaign') + ' ' + (nerede + 1) + '. ' + T('durak', 'stop')}</small></button>`; }).join('');
   $('kahYazi').innerHTML = `<b>${KH[KAYIT.kah].e} ${esc(dil(KH[KAYIT.kah].guc))}</b> · ${T('her tur bir kez', 'once per turn')} · 🪙${KH[KAYIT.kah].m} · ${esc(dil(KH[KAYIT.kah].yazi))}`;
   /* serbest maç */
   const AD = [T('Kolay', 'Easy'), T('Orta', 'Medium'), T('Zor', 'Hard')];
@@ -790,7 +799,7 @@ function kapat() { const p = $('perde'); if (p) p.remove(); const f = kapaninca;
 function seferAc(zorlu) {
   const s = zorlu ? KAYIT.zs : KAYIT.sefer, Y = zorlu ? KAYIT.zy : KAYIT.y, yild = i => i < s || Y[i] ? `<span class="hy">${[1, 2, 3].map(k => `<i class="${k <= (Y[i] | 0) ? 'dolu' : ''}">★</i>`).join('')}</span>` : '';
   pencere(`<h2>${zorlu ? '🔥 ' + T('Zorlu sefer haritası', 'Hard campaign map') : '🗺️ ' + T('Sefer haritası', 'Campaign map')}</h2><p class="kucuk">${T('Durakları sırayla geç. Her durak yeni kart, patronlar yeni kahraman kazandırır. Geçtiğin durakları yeniden oynayabilirsin.', 'Clear the stops in order. Each gives new cards; bosses give new heroes. You can replay cleared stops.')}</p>
-    <div class="harita">${SEFER.map((d, i) => `${d.bolge ? `<h3>${esc(dil(d.bolge))}</h3>` : ''}<button type="button" class="hd ${i < s ? 'gecti' : i === s ? 'simdi' : 'kilit'} ${d.patron ? 'patron' : ''}" data-d="${i}" ${i > s ? 'disabled' : ''}><span class="no">${i < s ? '✓' : i + 1}</span><span class="e">${i > s ? '🔒' : d.e}</span><span class="y"><b>${esc(dil(d.ad))}${d.patron ? ' · ' + T('Patron', 'Boss') : ''}${yild(i)}</b><small>❤ ${zorlu ? zorluRakip(i).can + ' · 🪙+1' : d.can}${d.kah ? ' · ' + KH[d.kah].e + ' ' + esc(dil(KH[d.kah].guc)) : ''}${d.not ? ' · ' + esc(dil(d.not)) : ''}</small><small class="od">${i < s ? '✓ ' : zorlu ? '🌟 ' : '🎁 '}${d.odul.map(id => K[id].e + ' ' + esc(dil(K[id].ad))).join(', ')}${!zorlu && d.kahOdul ? ' + ' + KH[d.kahOdul].e + ' ' + esc(dil(KH[d.kahOdul].ad)) : ''}</small></span></button>`).join('')}</div>
+    <div class="harita">${SEFER.map((d, i) => `${d.bolge ? `<h3>${esc(dil(d.bolge))}</h3>` : ''}<button type="button" class="hd ${i < s ? 'gecti' : i === s ? 'simdi' : 'kilit'} ${d.patron ? 'patron' : ''}" data-d="${i}" ${i > s ? 'disabled' : ''}><span class="no">${i < s ? '✓' : i + 1}</span>${i > s ? '<span class="e">🔒</span>' : gorselE(durakId(i), d.e)}<span class="y"><b>${esc(dil(d.ad))}${d.patron ? ' · ' + T('Patron', 'Boss') : ''}${yild(i)}</b><small>❤ ${zorlu ? zorluRakip(i).can + ' · 🪙+1' : d.can}${d.kah ? ' · ' + KH[d.kah].e + ' ' + esc(dil(KH[d.kah].guc)) : ''}${d.not ? ' · ' + esc(dil(d.not)) : ''}</small><small class="od">${i < s ? '✓ ' : zorlu ? '🌟 ' : '🎁 '}${d.odul.map(id => K[id].e + ' ' + esc(dil(K[id].ad))).join(', ')}${!zorlu && d.kahOdul ? ' + ' + KH[d.kahOdul].e + ' ' + esc(dil(KH[d.kahOdul].ad)) : ''}</small></span></button>`).join('')}</div>
     <div class="satir"><button class="dugme" id="pKapat" type="button">${T('Kapat', 'Close')}</button></div>`, p => {
     p.querySelector('#pKapat').onclick = kapat;
     p.addEventListener('click', e => { const b = e.target.closest('[data-d]'); if (b && !b.disabled) { kapat(); basla(zorlu ? 'zorlu' : 'sefer', +b.dataset.d); } });
