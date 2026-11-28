@@ -302,7 +302,7 @@ export async function kur3D({ tuval, kalite, ilk = [] }) {
   /* yordamsal mercanlar: beş tür, her biri birkaç renk ve biçimde; ağaç gibi dallı mercanın renkli kopyaları */
   const YENI = [];
   { const hRef = new THREE.Box3().setFromObject(P.dalli_0).getSize(new THREE.Vector3()).y || 1;
-    const BOY = { geyik: 0.95, gorgon: 1.35, parmak: 0.7, kirbac: 1.7, karanfil: 1.05, mantar: 0.55, kabarcik: 0.7, sutun: 1.5, yaprak: 0.95, fici: 1.2, deri: 0.85, kup: 0.55 };
+    const BOY = { geyik: 0.95, gorgon: 1.35, parmak: 0.7, kirbac: 1.7, karanfil: 1.05, mantar: 0.55, kabarcik: 0.7, sutun: 1.5, yaprak: 0.95, fici: 1.2, deri: 0.85, kup: 0.55, kalem: 1.1, tuy: 0.5, ipsun: 1.4, topsun: 0.8, agac: 1.2, zoant: 0.55 };
     let tohum = 11;
     for (const tur in MERCAN_RENK) MERCAN_RENK[tur].forEach((renk, i) => {
       const { geo, salin } = mercanUret(tur, tohum += 17, renk); geo.scale(hRef * BOY[tur], hRef * BOY[tur], hRef * BOY[tur]);

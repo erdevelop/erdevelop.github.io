@@ -40,10 +40,16 @@ export const MERCAN_RENK = {
   yaprak: [['#3f5a26', '#b8e07a'], ['#5e4428', '#f0c07a'], ['#24525e', '#7ae0f0'], ['#5a2c4a', '#f08ac8']],
   fici: [['#5e3022', '#c8704a'], ['#4a2e5e', '#b07ad0'], ['#6a5a30', '#d8c070']],
   deri: [['#8c7f55', '#f0e6b8'], ['#748466', '#dff0c8'], ['#94728a', '#ffd8ee']],
-  kup: [['#8f3814', '#ffb030'], ['#861440', '#ff6aa0'], ['#7a6a10', '#ffe040']]
+  kup: [['#8f3814', '#ffb030'], ['#861440', '#ff6aa0'], ['#7a6a10', '#ffe040']],
+  kalem: [['#c8b8a0', '#ff9a5a'], ['#d8d0c0', '#ffe080'], ['#c0a8b8', '#f878c8']],
+  tuy: [['#c8b8a8', '#ff4a6a'], ['#c0c8c8', '#ffd040'], ['#b8c0d0', '#7a5aff'], ['#c8c0b0', '#3ad0b8']],
+  ipsun: [['#7a2a14', '#e8602a'], ['#4a2a6a', '#a86ae0'], ['#7a5a14', '#e8b030']],
+  topsun: [['#5a4a1a', '#c8a83a'], ['#6a2a2a', '#d85a4a'], ['#3a4a5a', '#8ab0c8']],
+  agac: [['#e8d8e0', '#ff3a8a'], ['#e8e0d0', '#ff8a2a'], ['#e0e0e8', '#c84aff'], ['#e8e8d8', '#ffd02a']],
+  zoant: [['#3a5a3a', '#7aff9a'], ['#4a3a2a', '#ffa84a'], ['#2a3a5a', '#5ae0ff']]
 };
 /* yassı/geniş yeni türler: boya göre değil, genişliğe göre ölçeklenir */
-const MERCAN_DUZ = new Set(['mantar', 'kabarcik', 'yaprak', 'kup', 'deri']);
+const MERCAN_DUZ = new Set(['mantar', 'kabarcik', 'yaprak', 'kup', 'deri', 'topsun', 'zoant', 'tuy']);
 /* dönen (lathe) bir profilden geometri; dalga: kenarı açıya göre oynatan işlev */
 function cevir(profil, seg, dalga) {
   const g = new THREE.LatheGeometry(profil.map(([x, y]) => new THREE.Vector2(Math.max(0.001, x), y)), seg);
@@ -126,7 +132,31 @@ export function mercanUret(tur, tohum, renk) {
     for (let i = 0; i < n; i++) { const a = r() * 6.28, u = Math.sqrt(r()) * 0.32, p0 = new THREE.Vector3(Math.cos(a) * u, 0, Math.sin(a) * u), h = ara(0.12, 0.3), d = new THREE.Vector3(Math.cos(a) * u, 1, Math.sin(a) * u).normalize(), p1 = p0.clone().addScaledVector(d, h), rr = ara(0.035, 0.055);
       parca.push(dal(p0, p1, rr * 0.8, rr * 1.15, 9), top(p1.clone().addScaledVector(d, -0.01), rr * 0.95, 8)); }
   }
-  const yMax = ({ kirbac: 1.2, mantar: 0.2, kabarcik: 0.42, yaprak: 0.32, deri: 0.42, kup: 0.3 })[tur] || 1;
+  else if (tur === 'kalem') { salin = true; /* deniz kalemi: kumdan çıkan sapın üstünde tüy gibi dizili yaprakçıklar */
+    const h = ara(0.75, 1), p0 = new THREE.Vector3(), p1 = new THREE.Vector3(ara(-0.05, 0.05), h, ara(-0.05, 0.05)); parca.push(dal(p0, p1, 0.035, 0.02, 7));
+    const n = 16; for (let i = 0; i < n; i++) { const u = 0.3 + 0.65 * i / n, p = p0.clone().lerp(p1, u), uz = 0.16 * Math.sin(Math.PI * (i + 1) / (n + 1)) + 0.04;
+      for (const yan of [-1, 1]) { const q = p.clone().add(new THREE.Vector3(yan * uz, uz * 0.35, yan * uz * 0.2)); parca.push(dal(p, q, 0.018, 0.008, 4)); } }
+  } else if (tur === 'tuy') { salin = true; /* tüy yıldızı solucanı: kumdan çıkan tüplerin ucunda sarmal, renkli dokunaç taçları */
+    const n = 3 + Math.floor(r() * 5);
+    for (let i = 0; i < n; i++) { const a = r() * 6.28, u = Math.sqrt(r()) * 0.3, p0 = new THREE.Vector3(Math.cos(a) * u, 0, Math.sin(a) * u), h = ara(0.06, 0.14), p1 = p0.clone().add(new THREE.Vector3(ara(-0.03, 0.03), h, ara(-0.03, 0.03)));
+      parca.push(dal(p0, p1, 0.03, 0.026, 6)); const m = 22; for (let j = 0; j < m; j++) { const b = j / m * 6.28 * 1.6, rr = 0.06 + 0.08 * j / m, q = p1.clone().add(new THREE.Vector3(Math.cos(b) * rr, 0.06 + 0.1 * j / m, Math.sin(b) * rr)); parca.push(dal(p1, q, 0.009, 0.004, 3)); } }
+  } else if (tur === 'ipsun') { /* halat süngeri: dipten kıvrılarak uzanan kalın, pürüzlü kollar */
+    const n = 3 + Math.floor(r() * 4);
+    for (let i = 0; i < n; i++) { let p = new THREE.Vector3(ara(-0.1, 0.1), 0, ara(-0.1, 0.1)); const d = new THREE.Vector3(ara(-0.4, 0.4), 1, ara(-0.4, 0.4)).normalize(), rr = ara(0.04, 0.06);
+      for (let k = 0; k < 6; k++) { const q = p.clone().addScaledVector(d, ara(0.13, 0.18)); d.x += ara(-0.3, 0.3); d.z += ara(-0.3, 0.3); d.normalize(); parca.push(dal(p, q, rr, rr * 0.95, 7), top(q, rr * 1.05, 7)); p = q; } }
+  } else if (tur === 'topsun') { /* top süngeri: yumru yumru iri bir küre, üstünde birkaç delik */
+    const g = new THREE.IcosahedronGeometry(0.4, 3), p = g.attributes.position, v = new THREE.Vector3(); for (let i = 0; i < p.count; i++) { v.fromBufferAttribute(p, i); const k = 1 + 0.12 * Math.sin(v.x * 18) * Math.sin(v.y * 16) * Math.sin(v.z * 17); v.multiplyScalar(k); p.setXYZ(i, v.x, v.y * 0.8 + 0.3, v.z); }
+    parca.push(g.toNonIndexed());
+  } else if (tur === 'agac') { salin = true; /* yumuşak ağaç mercanı (Dendronephthya): şeffaf dallarda küme küme renkli polip topları */
+    const kok = new THREE.Vector3(), govde = new THREE.Vector3(ara(-0.05, 0.05), 0.4, ara(-0.05, 0.05)); parca.push(dal(kok, govde, 0.09, 0.06, 8));
+    for (let i = 0; i < 9; i++) { const a = i * 2.4 + r(), q = govde.clone().add(new THREE.Vector3(Math.cos(a) * ara(0.15, 0.3), ara(0.1, 0.5), Math.sin(a) * ara(0.15, 0.3))); parca.push(dal(govde, q, 0.04, 0.025, 6));
+      for (let j = 0; j < 6; j++) parca.push(top(q.clone().add(new THREE.Vector3(ara(-0.08, 0.08), ara(-0.04, 0.08), ara(-0.08, 0.08))), ara(0.03, 0.05), 6)); }
+  } else if (tur === 'zoant') { /* zoantid halısı: kayayı örten minik disk polipler */
+    const n = 30 + Math.floor(r() * 25);
+    for (let i = 0; i < n; i++) { const a = r() * 6.28, u = Math.sqrt(r()) * 0.45, p0 = new THREE.Vector3(Math.cos(a) * u, 0, Math.sin(a) * u), h = ara(0.03, 0.07), p1 = p0.clone().add(new THREE.Vector3(0, h, 0));
+      parca.push(dal(p0, p1, 0.025, 0.028, 6)); const g = cevir([[0, 0.012], [0.03, 0.01], [0.045, 0]], 10); g.translate(p1.x, p1.y, p1.z); parca.push(g); }
+  }
+  const yMax = ({ kirbac: 1.2, mantar: 0.2, kabarcik: 0.42, yaprak: 0.32, deri: 0.42, kup: 0.3, tuy: 0.4, topsun: 0.62, zoant: 0.09, agac: 0.9, ipsun: 0.9 })[tur] || 1;
   const renkFn = tur === 'karanfil' ? ((v, col) => { const u = Math.min(1, Math.max(0, v.y) / 1.05); col.copy(ra).lerp(rb, Math.pow(u, 3) * 1.0); }) : renkY(yMax, tur === 'parmak' ? 2.2 : 1.5);
   const g = mergeGeometries(parca.map(p => boya(p.toNonIndexed ? p.toNonIndexed() : p, renkFn, v => Math.max(0, v.y) * (tur === 'kirbac' ? 0.35 : 0.12), r() * 6.28)));
   if (tur === 'karanfil') { /* polipler: üst bölgedeki küçük topları uç rengine boya */
