@@ -115,10 +115,10 @@ const YET_SV = [3, 6, 10, 15]; // yetenek yuvalarının açıldığı komutan se
 function yetVar(id) { const k = typeof S !== 'undefined' && S && S.komutan; return !!(k && Array.isArray(k.yet) && k.yet.indexOf(id) >= 0); }
 function kkYetW(u) { return (u === 'cav' && yetVar('suvari') ? 1.2 : 1) * (u === 'arch' && yetVar('ok') ? 1.2 : 1) * (u === 'spear' && yetVar('mizrak') ? 1.12 : 1) * (u === 'cat' && yetVar('kusatma') ? 1.25 : 1); }
 function kkYetA(u) { return (u === 'inf' && yetVar('kalkan') ? 1.25 : 1) * (u === 'spear' && yetVar('mizrak') ? 1.12 : 1); }
-function kkLootMul() { return yetVar('yagma') ? 1.1 : 1; }
+function kkLootMul() { return (yetVar('yagma') ? 1.1 : 1) * kkIcLoot(); }
 function kkWoundAdd() { return yetVar('hekim') ? .1 : 0; }
 /* savaş gücüne ek çarpan: müttefik lordlar */
-function kkExtraMul() { return 1 + .06 * kkMuttefikSay(); }
+function kkExtraMul() { return (1 + .06 * kkMuttefikSay()) * kkIcGuc(); }
 function yetHtml(k) {
   const sv = k.sv || 1, my = Array.isArray(k.yet) ? k.yet : [];
   const yn = function (x) { return kkL(YET[x].n, YET[x].ne); }, yd = function (x) { return kkL(YET[x].d, YET[x].de); };
@@ -191,10 +191,10 @@ function dipTick() {
 
 /* ================= SEFER TEKRARI VE SIRASI ================= */
 function kkHedefDusman(kind, target) {
-  if (kind === 'ter') { const lv = TR[target].lv; return [enemy(lv), 1 + .04 * (lv - 1)]; }
+  if (kind === 'ter') { const lv = TR[target].lv; return [enemyT(lv), 1 + .04 * (lv - 1)]; }
   if (kind === 'lord') { const l = (S.lords || []).find(function (x) { return x.id === target; }); return l ? [l.ordu, 1 + .05 * ((l.tier || 1) - 1)] : null; }
   if (kind === 'wave') { const w = S.wave || 1; return [enemyW(w), (1 + .04 * (w - 1)) * (w % 5 === 0 ? 1.3 : 1)]; }
-  if (kind === 'obj') { const o = (S.mobj || []).find(function (x) { return x.id === target; }); return o && o.k === 'camp' ? [enemy(o.lv), 1 + .04 * (o.lv - 1)] : null; }
+  if (kind === 'obj') { const o = (S.mobj || []).find(function (x) { return x.id === target; }); return o && o.k === 'camp' ? kkKampDusman(o) : null; }
   return null;
 }
 function kkHedefGecerli(q) {
@@ -332,7 +332,7 @@ function kkIsHtml() {
   for (const k in (S.tr || {})) { const t = S.tr[k]; if (!t || !t.n) continue; const u = U[k] || (typeof SC !== 'undefined' ? SC : { n: k }); rows.push({ t: t.e, h: '⚔️ ' + fmt(t.n) + ' ' + kkEsc(kkT(u.n)) + kkL(' eğitimde', ' in training'), k: null }); }
   if (!rows.length) return '';
   rows.sort(function (a, b) { return a.t - b.t; });
-  return '<div class="top"><h3>⏳ ' + kkL('İş sırası', 'Work queue') + '</h3><span class="lv">' + rows.length + kkL(' iş', ' jobs') + '</span></div><div class="kkisl' + (rows.length > 5 ? ' kay' : '') + '">' + rows.map(function (r) { return '<div class="foot" style="margin:4px 0 0"><span class="eff" style="margin:0">' + r.h + '</span><small style="color:var(--mute);font-variant-numeric:tabular-nums">' + tm(Math.max(0, (r.t - now) / 1000)) + '</small></div>'; }).join('') + '</div>' + (rows.length > 5 ? '<p class="eff kkisa"><small>' + kkL('Diğer ' + (rows.length - 5) + ' iş için listeyi kaydır', 'Scroll the list for ' + (rows.length - 5) + ' more jobs') + '</small></p>' : '') + '<p class="eff" style="margin:8px 0 0"><small>' + kkL('Binalarda "+sıra" ile 5 seviyeye kadar sıraya koyabilirsin; eğitimde aynı birimden istediğin kadar sırala.', 'Use "+queue" on buildings to queue up to 5 levels; in training you can queue as many units as you like.') + '</small></p>';
+  return '<div class="top"><h3>⏳ ' + kkL('İş sırası', 'Work queue') + '</h3><span class="lv">' + rows.length + kkL(' iş', ' jobs') + '</span></div><div class="kkisl' + (rows.length > 5 ? ' kay' : '') + '">' + rows.map(function (r) { return '<div class="foot" style="margin:4px 0 0"><span class="eff" style="margin:0">' + r.h + '</span><small style="color:var(--mute);font-variant-numeric:tabular-nums">' + tm(Math.max(0, (r.t - now) / 1000)) + '</small></div>'; }).join('') + '</div>' + (rows.length > 5 ? '<p class="eff kkisa"><small>' + kkL('Diğer ' + (rows.length - 5) + ' iş için listeyi kaydır', 'Scroll the list for ' + (rows.length - 5) + ' more jobs') + '</small></p>' : '') + '<p class="eff" style="margin:8px 0 0"><small>' + kkL('Binalarda "+sıra" ile 5 seviyeye kadar sıraya koyabilirsin; "Hepsine +1 seviye" her binayı bir kez sıraya alır.', 'Use "+queue" on buildings to queue up to 5 levels; "All +1 level" queues every building once.') + '</small></p>';
 }
 
 /* ================= ÇİZİM VE BAĞLANTILAR ================= */
@@ -376,6 +376,7 @@ function kkInit() {
   try { if (typeof sistemInit === 'function') sistemInit(); } catch (e) { console.error('sistemInit', e); }
   try { if (typeof raporInit === 'function') raporInit(); } catch (e) { console.error('raporInit', e); }
   try { if (typeof postaInit === 'function') postaInit(); } catch (e) { console.error('postaInit', e); }
+  try { if (typeof icerikInit === 'function') icerikInit(); } catch (e) { console.error('icerikInit', e); }
   const hi = $('hedefInfo'); if (hi) hi.textContent = kkL('Bir hedefe dokun: ordu düşmana göre kendiliğinden ayarlanır, sana göndermek kalır.', 'Tap a target: the army is sized to the enemy automatically, you just send it.');
   dipTick();
   setInterval(kkTick, 2000);

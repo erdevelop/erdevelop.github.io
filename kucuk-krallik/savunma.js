@@ -1,0 +1,56 @@
+/* Küçük Krallık · Savunma: düşman baskınları, savunma savaşı, misilleme, revir ve taktik.
+   Ana oyun betiğinden ayrıldı; ana betikten ÖNCE yüklenir ve yalnızca tanımlar içerir. */
+
+function raidName(){return RAIDN[S.draid&&S.draid.id?S.draid.id%RAIDN.length:(Math.random()*RAIDN.length)|0]}
+function raidActive(){return stg(S.lv)>=2&&((S.lv.inf||0)||(S.lv.spear||0)||(S.lv.arch||0)||(S.lv.cav||0))}
+function raidInterval(){return (7+Math.random()*6)*60000}
+function raidThreat(){return Math.max(1,Math.round((S.wave||1)*0.6+(S.lv.main||1)*0.5+Object.keys(S.ter||{}).length))}
+function raidForce(){const P=Object.keys(U).reduce((a,k)=>a+(S.ar[k]||0),0),w=raidThreat(),base=enemy(w),bt=tot(base)||1;
+ const target=Math.max(4,Math.round((P*0.7+w*3)*(0.8+Math.random()*0.4))),scale=target/bt,E={};
+ for(const k in base)E[k]=Math.max(1,Math.round(base[k]*scale));return E}
+function sparTahmin(opp){const A={};for(const k in U){const n=S.ar[k]||0;if(n>0)A[k]=n}if(tot(A)<1)return 'ordun yok';const B={};for(const k in (opp.ordu||{}))if(U[k]&&opp.ordu[k]>0)B[k]=opp.ordu[k];if(tot(B)<1)return 'rakip zay\u0131f';const oA=mA,oB=mB,oHA=hA,oHB=hB;const cm=(1+.02*Math.min(S.cr||0,60))*(1+.04*S.sk.war)*(1+.02*(S.rel||0))*(1+(S.won?(S.won.zafer||0)*.07:0))*(1+crB('savas'))*komMul();mA=(1+.08*S.lv.tatk)*(1+vb())*cm;hA=(1+.08*S.lv.tdef)*(1+vb())*cm;const ob=1+.03*Math.max(0,(opp.sv||1)-1);mB=ob;hB=ob;const lg={},fr=fight(Object.assign({},A),Object.assign({},B),lg),a=fr[0],b=fr[1];mA=oA;mB=oB;hA=oHA;hB=oHB;const sa=tot(a),sb=tot(b),win=sb<.5&&sa>=.5;if(win){const keep=sa/tot(A);return keep>.65?'kolay kazan\u0131rs\u0131n':'kazan\u0131rs\u0131n';}return sb<tot(B)*.35?'\u00e7ok zorlu':'kaybedersin';}
+function misilleme(){const _r0=kkRap0();window.kkCap={};const _nm=(S.misilleme||{}).nm;try{misilleme0()}finally{const c=window.kkCap;window.kkCap=null;if(c&&c.A0)kkSavasBitti(null,c,kkL('Misilleme','Retaliation')+(_nm?': '+kkT(_nm):''),{r0:_r0,yer:'misilleme'});}}
+function misilleme0(){const m=S.misilleme;if(!m)return;if(m.e&&m.e<Date.now()){S.misilleme=null;save();render();return toast('Misilleme s\u00fcresi doldu');}const A={};for(const k in U){const n=S.ar[k]||0;if(n>0)A[k]=n}if(tot(A)<1)return toast('\u00d6nce asker e\u011fit');const E=(m.force&&tot(m.force)>=1)?Object.assign({},m.force):raidForce();const oA=mA,oB=mB,oHA=hA,oHB=hB;const cm=(1+.02*Math.min(S.cr||0,60))*(1+.04*S.sk.war)*(1+.02*(S.rel||0))*(1+(S.won?(S.won.zafer||0)*.07:0))*(1+crB('savas'))*komMul();mA=(1+.08*S.lv.tatk)*(1+vb())*cm;hA=(1+.08*S.lv.tdef)*(1+vb())*cm;mB=hB=(1+.04*((m.w||1)-1));const lg={},fr=fight(Object.assign({},A),Object.assign({},E),lg),a=fr[0],b=fr[1],win=tot(b)<.5&&tot(a)>=.5;mA=oA;mB=oB;hA=oHA;hB=oHB;let dd=0,lost=[];for(const k in U){const n=A[k]||0,mm=n?(a[k]>=.5?Math.round(a[k]):0):0;if(n>mm){const ls=n-mm,wd=Math.floor(ls*woundFrac());dd+=ls-wd;if(wd>0){if(!S.revir)S.revir={};S.revir[k]=(S.revir[k]||0)+wd}lost.push(ls+' '+U[k].n)}S.ar[k]=(S.ar[k]||0)-n+mm}S.st.dead=(S.st.dead||0)+dd;S.val=(S.val||0)+dd;if(win){const c=cap(S.lv),pl=m.pl||{},bonus=Math.round((pl.g||0)*0.5+30+(m.w||1)*10);if(pl.w)S.w=Math.min(c,(S.w||0)+pl.w);if(pl.s)S.s=Math.min(c,(S.s||0)+pl.s);if(pl.g)S.g=(S.g||0)+pl.g;S.g=(S.g||0)+bonus;S.st.g=(S.st.g||0)+bonus;S.st.mw=(S.st.mw||0)+1;toast('Misilleme ba\u015far\u0131l\u0131! Ya\u011fmalanan geri + '+fmt(bonus)+' alt\u0131n. Kay\u0131p: '+(lost.join(', ')||'yok'));sfx('win');}else{toast('Misilleme ba\u015far\u0131s\u0131z \u2014 \u00e7ete g\u00fc\u00e7l\u00fcyd\u00fc. Kay\u0131p: '+(lost.join(', ')||'yok'));sfx('lose');}S.misilleme=null;save();render();}
+function renderMisilleme(){const el=$('misc');if(!el)return;try{void esc;}catch(e){return;}const now=Date.now();if(S.misilleme&&S.misilleme.e&&S.misilleme.e<now)S.misilleme=null;const m=S.misilleme;if(!m){el.classList.add('hide');return;}el.classList.remove('hide');const el2=$('misi');if(el2)el2.innerHTML='\u2694\ufe0f <b>'+esc(m.nm||'\u00c7ete')+'</b> k\u00f6y\u00fcn\u00fc ya\u011fmalad\u0131'+(m.plt?' ('+esc(m.plt)+')':'')+'. Pe\u015flerine d\u00fc\u015f \u2014 kazan\u0131rsan ya\u011fmalanan\u0131 + bonus geri al\u0131rs\u0131n (ordun kullan\u0131l\u0131r, kay\u0131p verebilir). Kalan s\u00fcre: '+tm((m.e-now)/1000);const b=$('misBtn');if(b)b.onclick=misilleme;}
+function tahminEt(B,def){const A={};for(const k in U){const n=S.ar[k]||0;if(n>0)A[k]=n}if(tot(A)<1)return 'ordun yok';const BB={};for(const k in (B||{}))if(U[k]&&B[k]>0)BB[k]=B[k];if(tot(BB)<1)return 'rakip zay\u0131f';const oA=mA,oB=mB,oHA=hA,oHB=hB;const cm=(1+.02*Math.min(S.cr||0,60))*(1+.04*S.sk.war)*(1+.02*(S.rel||0))*(1+(S.won?(S.won.zafer||0)*.07:0))*(1+crB('savas'))*komMul();mA=(1+.08*S.lv.tatk)*(1+vb())*cm;hA=(1+.08*S.lv.tdef)*(1+vb())*cm;mB=hB=def;const lg={},fr=fight(Object.assign({},A),Object.assign({},BB),lg),a=fr[0],b=fr[1];mA=oA;mB=oB;hA=oHA;hB=oHB;const sa=tot(a),sb=tot(b),win=sb<.5&&sa>=.5;if(win){const keep=sa/tot(A);return keep>.65?'kolay kazan\u0131rs\u0131n':'kazan\u0131rs\u0131n';}return sb<tot(BB)*.35?'\u00e7ok zorlu':'kaybedersin';}
+function defend(E,auto){return kkSavun(E,auto)}
+function defend0(E,auto){
+ const A={};for(const k in U){const n=S.ar[k]||0;if(n>0)A[k]=n}
+ const tv=Math.min(.4,(S.lv.tower||0)*0.05),E2={};for(const k in E)E2[k]=E[k]*(1-tv);
+ const cm=(1+.02*Math.min(S.cr||0,60))*(1+.04*S.sk.war)*(1+.02*(S.rel||0))*(1+(S.won?(S.won.zafer||0)*.07:0))*(1+crB('savas'))*komMul();
+ mA=(1+.08*S.lv.tatk)*(1+vb())*cm;hA=(1+.08*S.lv.tdef)*(1+vb())*cm*(1+(S.lv.wall||0)*0.12)*(1+(S.won?(S.won.kale||0)*.1:0));
+ const w=raidThreat();mB=hB=(1+.04*(w-1));
+ const lg={},fr=fight(Object.assign({},A),Object.assign({},E2),lg),a=fr[0],b=fr[1],win=tot(b)<.5;
+ const A1={},lost=[];let dd=0;for(const k in U){const n=A[k]||0,m=n?(a[k]>=.5?Math.round(a[k]):0):0;if(n>m){const ls=n-m,wd=Math.floor(ls*woundFrac());dd+=ls-wd;if(wd>0){if(!S.revir)S.revir={};S.revir[k]=(S.revir[k]||0)+wd}lost.push(ls+' '+U[k].n+(wd>0?' ('+wd+' yaralı)':''))}S.ar[k]=(S.ar[k]||0)-n+m;if(n)A1[k]=m}
+ const E1={};let esurv=0;for(const k in E){E1[k]=b[k]>=.5?Math.round(b[k]):0;esurv+=E1[k]}
+ S.st.dead+=dd;S.val+=dd;S.st.kill+=Math.max(0,tot(E)-esurv);
+ let t,plunder=null,gg=0;
+ if(win){gg=Math.round(6+w*3);S.g+=gg;S.st.g+=gg;S.st.rd=(S.st.rd||0)+1;t='Baskın püskürtüldü! +'+fmt(gg)+' altın'+(lost.length?'. Kayıp: '+lost.join(', '):'')}
+ else{const pct=Math.max(5,25-(S.lv.wall||0)*4)/100,st=[],pl={};['w','s','g'].forEach(r=>{const amt=Math.floor((S[r]||0)*pct);if(amt>0){S[r]-=amt;pl[r]=amt;st.push(fmt(amt)+' '+({w:'odun',s:'taş',g:'altın'}[r]))}});S.st.rl=(S.st.rl||0)+1;plunder=st;S.misilleme={nm:raidName(),w:w,pl:pl,plt:(st.join(', ')||'yok'),force:Object.assign({},E),e:Date.now()+1800000};t='Köy yağmalandı! Kaybettiğin: '+(st.join(', ')||'yok')+(lost.length?'. Asker kaybı: '+lost.join(', '):'')+'. Peşlerine düş: Savaş sekmesinde Misilleme yap.'}
+ S.draidRep={id:Date.now(),w:w,nm:raidName(),win:win,A0:A,E0:E,A1:A1,E1:E1,rounds:lg.rounds,mx:lg.mx,loot:win?[0,0,0,gg]:null,def:true,plunder:plunder};
+ S.lr2=t;S.draid=null;S.raidT=Date.now()+raidInterval();
+ if(!auto){toast(win?'Baskın püskürtüldü!':'Köy yağmalandı!');if(typeof sfx==='function')sfx(win?'win':'lose');save();render()}
+ return win}
+function raidTick(){const now=Date.now();
+ if(!raidActive()){S.raidT=now+raidInterval();return}
+ if(!S.raidT){S.raidT=now+raidInterval();return}
+ if(S.draid){if(now>=S.draid.dl)defend(S.draid.E,false);return}
+ if(now>=S.raidT){S.raidT=now;const warn=60000+(S.lv.tower||0)*15000;S.draid={E:raidForce(),dl:now+warn,id:now}}}
+function renderRaidAlert(){const el=$('draidc');if(!el)return;const R=S.draid;el.classList.toggle('hide',!R);if(!R){lastRaid=0;return}
+ const E=R.E,now=Date.now(),rem=Math.max(0,(R.dl-now)/1000);
+ if(lastRaid!==R.id){el.innerHTML='<div class="top"><h3>⚔️ Baskın geliyor!</h3><span class="lv" id="draidr"></span></div><p class="eff" id="draide"></p><div class="foot"><span class="eff" id="draidd"></span><span class="btns" style="gap:6px;flex:none"><button class="sm g" id="draids">'+kkL('Sığın','Shelter')+'</button><button id="draidb">Şimdi savun</button></span></div>';lastRaid=R.id;$('draidb').onclick=()=>{if(S.draid)defend(S.draid.E,false)};$('draids').onclick=()=>{if(S.draid)kkSigin(false)}}
+ $('draidr').textContent=tm(rem);
+ $('draide').textContent='Düşman: '+Object.entries(E).map(([k,n])=>Math.round(n)+' '+U[k].n).join(', ')+'. Ordun ve surların köyü savunacak.';
+ $('draidd').textContent='Hazırlan: asker eğit, surları yükselt. Süre bitince otomatik savunulur.';}
+function renderDefense(){const el=$('defi');if(!el)return;const P=Object.keys(U).reduce((a,k)=>a+(S.ar[k]||0),0);
+ const wallB=Math.round((S.lv.wall||0)*12),towerB=Math.round(Math.min(.4,(S.lv.tower||0)*0.05)*100),plun=Math.max(5,25-(S.lv.wall||0)*4);
+ const nx=raidActive()?(S.raidT?Math.max(0,(S.raidT-Date.now())/1000):0):null;
+ {const _h=kkL('Garnizon: <b>'+fmt(P)+'</b> asker. Surlar savunanların canını <b>%'+wallB+'</b> artırır; kaybedersen kaynaklarının <b>%'+plun+'</b> kadarı yağmalanır. Gözcü kulesi gelen düşmanı <b>%'+towerB+'</b> azaltır ve daha erken uyarır.','Garrison: <b>'+fmt(P)+'</b> soldiers. Walls raise defenders\' HP by <b>'+wallB+'%</b>; if you lose, <b>'+plun+'%</b> of your resources are plundered. The watchtower cuts the incoming enemy by <b>'+towerB+'%</b> and warns you earlier.')+(nx!=null?'<br>'+kkL('Sonraki baskın: ','Next raid: ')+(nx>0?'~'+tm(nx):kkL('yakında','soon')):'<br>'+kkL('Bir kışla kurup asker eğitince baskınlar başlar.','Raids begin once you build a barracks and train soldiers.'))+(S.lr2?'<br>'+kkL('Son: ','Last: ')+kkEsc(kkT(S.lr2)):'');if(el._h!==_h){el._h=_h;el.innerHTML=_h;}}
+ const dr=$('drep');if(dr){if(S.draidRep){dr.classList.remove('hide');if(dr.dataset.k!==String(S.draidRep.id)){dr.dataset.k=String(S.draidRep.id);dr.innerHTML=(S.draidRep.plunder&&S.draidRep.plunder.length?'<p class="eff" style="color:var(--lack);font-weight:700;margin:0 0 6px">Yağma: '+S.draidRep.plunder.join(', ')+'</p>':'')+repHTML(S.draidRep)}}else dr.classList.add('hide')}}
+function woundFrac(){return Math.min(.5,.12+(S.lv.revir||0)*.06)+kkWoundAdd()}
+function healTick(){if(!S.revir)return;let any=false;for(const k in S.revir){const w=S.revir[k]||0;if(w>=1){const h=Math.max(1,Math.floor(w*(.12+(S.lv.revir||0)*.04))),mv=Math.min(h,w);S.revir[k]=w-mv;S.ar[k]=(S.ar[k]||0)+mv;if(mv>0&&typeof bitti!=='undefined'&&bitti)bitti.push(mv+' '+U[k].n+' iyileşti');any=true}if((S.revir[k]||0)<1)delete S.revir[k]}if(any)save()}
+function renderTaktik(){const el=$('taktv');if(!el)return;if(typeof TAKT==='undefined')return;
+ if(!el.dataset.b){el.dataset.b='1';el.innerHTML=TAKT.map(t=>'<button class="sm g" data-tk="'+t[0]+'">'+t[1]+'</button>').join('');el.addEventListener('click',e=>{const b=e.target.closest('button[data-tk]');if(!b)return;S.taktik=b.dataset.tk;if(typeof sfx==='function')sfx('tap');save();renderTaktik()})}
+ [...el.children].forEach(b=>b.classList.toggle('g',b.dataset.tk!==(S.taktik||'dengeli')));
+ const cur=TAKT.find(t=>t[0]===(S.taktik||'dengeli'))||TAKT[0],woundN=S.revir?Object.values(S.revir).reduce((a,v)=>a+v,0):0;
+ const ti=$('taki');if(ti)ti.innerHTML='Saldırı ve savunmada ordun önce seçtiğin düşman türüne yüklenir (odaklı ateş). Seçili: <b>'+cur[1]+'</b>.'+(woundN>0?'<br>🩹 Revir: <b>'+Math.round(woundN)+'</b> yaralı iyileşiyor (oynarken toparlanır).':'')}

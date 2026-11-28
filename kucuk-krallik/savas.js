@@ -27,6 +27,15 @@ function hedefHtml() {
   const grup = function (ad, satirlar) { return satirlar.length ? '<p class="hgrp">' + ad + '</p>' + satirlar.join('') : ''; };
   let h = '';
 
+  // 0) haftalık etkinlik: ilerleme kartı ve (ejder haftasında) ejder ini
+  if (!ac) {
+    const ek = typeof etkHtml === 'function' ? etkHtml() : '';
+    const ej = E.find(function (e) { return e.k === 'obj' && e.o.ej; });
+    let er = '';
+    if (ej) { const o = ej.o, T = wTargetEnemy(ej); er = koy(ej, hedefSatir(ej, '🐉', kkL('Ejder İni · Sv ', 'Dragon’s Lair · Lv ') + o.lv, kkL('Düşman ', 'Enemy ') + say(T[0]) + kkL(' asker · büyük ganimet', ' soldiers · big loot') + yol('obj', o.id), hedefPil(ej))); }
+    if (ek) h += '<p class="hgrp">' + kkL('Haftalık etkinlik', 'Weekly event') + '</p>' + ek + er;
+  }
+
   // 1) ilerleme: dalga ve sıradaki bölge
   const g1 = [];
   const wv = E.find(function (e) { return e.k === 'wave'; });
@@ -38,7 +47,7 @@ function hedefHtml() {
 
   // 2) fırsatlar: kamplar ve kaynak noktaları
   const g2 = [];
-  E.filter(function (e) { return e.k === 'obj' && e.o.k === 'camp'; }).sort(function (a, b) { return a.o.lv - b.o.lv; }).forEach(function (e) {
+  E.filter(function (e) { return e.k === 'obj' && e.o.k === 'camp' && !e.o.ej; }).sort(function (a, b) { return a.o.lv - b.o.lv; }).forEach(function (e) {
     const o = e.o, T = wTargetEnemy(e);
     g2.push(koy(e, hedefSatir(e, '⛺', kkL('Haydut kampı · Sv ', 'Bandit camp · Lv ') + o.lv, kkL('Düşman ', 'Enemy ') + say(T[0]) + kkL(' asker · ganimet · ', ' soldiers · loot · ') + tm(Math.max(0, (o.e - now) / 1000)) + kkL(' sonra dağılır', ' until it disperses') + yol('obj', o.id), hedefPil(e))));
   });
@@ -62,6 +71,7 @@ function hedefHtml() {
       g3.push(koy(bs, hedefSatir(bs, '🏯', kkL('Dünya Kuşatması', 'World Siege') + (bitti ? '' : kkL(' · Kademe ', ' · Tier ') + (b.tier || 1)), bitti ? kkL('Kuşatma kırıldı · yenisi ', 'Siege broken · next in ') + tm(Math.max(0, (b.e - now) / 1000)) + kkL(' sonra', '') : kkL('Sur ', 'Walls ') + fmt(b.hp) + ' / ' + fmt(b.max) + kkL(' · birkaç seferde yıkılır', ' · falls after several marches') + yol('boss'), '<span class="hpill hpn">' + (bitti ? '⏳' : kkL('kuşat', 'siege')) + '</span>')));
     }
     h += grup(kkL('Lordlar ve kuşatma', 'Lords and siege'), g3);
+    if (g3.length && S.sancak) h += '<p class="eff" style="margin:2px 2px 6px"><small>🚩 ' + kkL(S.sancak + ' lord sancağı · bütün ganimet +%' + S.sancak, S.sancak + ' lord banners · all loot +' + S.sancak + '%') + kkL(' · 3. kademe ve üstü lordlar sancak düşürebilir', ' · lords of tier 3 and above can drop banners') + '</small></p>';
   }
   return h;
 }
@@ -86,6 +96,7 @@ function savasInit() {
     const row = ev.target.closest('.hrow');
     if (row) { const e = hedefBul(row.dataset.hk, row.dataset.hid); if (e) { wSelect(e); el._h = ''; renderHedef(); const c = el.querySelector('.hsel'); if (c) requestAnimationFrame(function () { const r = c.getBoundingClientRect(), nav = $('tabs'), top = nav ? nav.getBoundingClientRect().height + 6 : 0; if (r.top < top || r.bottom > window.innerHeight) window.scrollTo({ top: Math.max(0, r.top + window.scrollY - top - 34), behavior: 'smooth' }); }); } return; }
     const b = ev.target.closest('button'); if (!b) return;
+    if (b.dataset.etka != null) { etkAl(+b.dataset.etka); el._h = ''; return; }
     if (b.dataset.hx) { window.selKind = 'none'; window.w2AI = null; el._h = ''; render(); return; }
     if (b.dataset.hara) { mapAc(); setTimeout(function () { try { w2SearchOpen(); } catch (e) { } }, 120); return; }
     if (!b.disabled && (b.dataset.kt != null || b.dataset.lord || b.dataset.boss || b.dataset.kw || b.dataset.ko)) {
