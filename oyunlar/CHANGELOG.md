@@ -192,3 +192,7 @@
 
 ## Strateji rehberleri
 - Tavla açılış hamleleri, Okeyde taş sayma, King'de oyun seçimi (oyun-kurallari altında, site haritasında)
+
+## Tombala: masa büyüklüğü seçimi
+- Bilgisayarlarla oynarken masa 2–10 kişi (menüde − / +); çevrimiçide odayı kuran 2–10 arası seçer, boş koltuklara bilgisayar oturur
+- Masa katmanına `koltukSec` seçeneği; Firebase kuralı yalnız tombala için 10 koltuğa izin verir (öteki oyunlar 4)

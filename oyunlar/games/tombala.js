@@ -1,6 +1,6 @@
 /* Tombala — 90 sayı, her oyuncuya 3 satır × 9 sütunluk (satır başına 5 sayı) bir kart. Sayılar torbadan tek tek çekilir.
    İlk satırını tamamlayan "Çinko!" der (1. çinko, 10 puan), iki satırını tamamlayan 2. çinkoyu alır (20 puan), bütün kartını kapatan "Tombala!" der (50 puan) ve el biter.
-   Bilgisayara karşı ya da çevrimiçi (en çok 4 kişi, boş koltuklara bilgisayar oturur). Çekişi masadaki ilk bağlı oyuncu yürütür. */
+   Bilgisayarlarla ya da çevrimiçi (2–10 kişi, masayı kuran seçer; boş koltuklara bilgisayar oturur). Çekişi masadaki ilk bağlı oyuncu yürütür. */
 (function () {
 'use strict';
 const TB = (() => {
@@ -17,18 +17,18 @@ const TB = (() => {
     return K;
   }
   const ileri = (S, p, t, x) => { S.son = { i: S.son.i + 1, p, t, x: x == null ? -1 : x }; };
-  function yeni(o) { o = o || {}; return { kart: [0, 1, 2, 3].map(kart), cek: [], odul: { c1: -1, c2: -1, t: -1 }, puan: o.puan ? o.puan.slice() : [0, 0, 0, 0], tur: o.tur || 1, son: { i: 0 }, bitti: null }; }
+  function yeni(o) { o = o || {}; const n = Math.max(2, Math.min(10, o.n || (o.puan ? o.puan.length : 4))); return { kart: Array.from({ length: n }, kart), cek: [], odul: { c1: -1, c2: -1, t: -1 }, puan: o.puan ? o.puan.slice() : Array(n).fill(0), tur: o.tur || 1, son: { i: 0 }, bitti: null }; }
   const tamSatir = (S, p) => { const c = new Set(S.cek), K = S.kart[p]; return [0, 1, 2].filter(r => K.slice(r * 9, r * 9 + 9).every(n => !n || c.has(n))).length; };
   const kalan = (S, p) => { const c = new Set(S.cek); return S.kart[p].filter(n => n && !c.has(n)).length; };
   function haklar(S, p) { if (S.bitti) return []; const t = tamSatir(S, p), R = []; if (S.odul.c1 < 0 && t >= 1) R.push('c1'); if (S.odul.c1 >= 0 && S.odul.c2 < 0 && t >= 2) R.push('c2'); if (t === 3) R.push('t'); return R; }
   function iddia(S, p, tur) { if (!haklar(S, p).includes(tur)) return false; S.odul[tur] = p; S.puan[p] += PUAN[tur]; ileri(S, p, 'id', tur); if (tur === 't') S.bitti = { p }; return true; }
   function cek(S) { if (S.bitti || S.cek.length >= 90) return false; const k = new Set(S.cek), L = []; for (let n = 1; n <= 90; n++) if (!k.has(n)) L.push(n); const n = L[(Math.random() * L.length) | 0]; S.cek.push(n); ileri(S, -1, 'cek', n); return true; }
-  const sonraki = S => yeni({ puan: S.puan, tur: S.tur + 1 });
+  const sonraki = S => yeni({ puan: S.puan, tur: S.tur + 1, n: S.kart.length });
   return { PUAN, AD, kart, yeni, tamSatir, kalan, haklar, iddia, cek, sonraki };
 })();
 if (typeof module !== 'undefined' && module.exports) { module.exports = TB; return; }
 if (!window.registerGame) return;
-const BOT = ['Ada', 'Efe', 'Can', 'Naz'], esc = s => String(s).replace(/[&<>"]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
+const BOT = ['Ada', 'Efe', 'Can', 'Naz', 'Ece', 'Mert', 'Deniz', 'Eda', 'Kaan', 'Selin'], esc = s => String(s).replace(/[&<>"]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
 const RENK = n => ['#ef4444', '#f97316', '#eab308', '#22c55e', '#14b8a6', '#3b82f6', '#6366f1', '#a855f7', '#ec4899'][Math.min(8, Math.floor(n / 10))];
 function kapak() {
   const top = (x, y, n, r) => `<circle cx="${x}" cy="${y}" r="${r}" fill="${RENK(n)}"/><circle cx="${x}" cy="${y}" r="${r * .62}" fill="#fff"/><text x="${x}" y="${y + r * .3}" text-anchor="middle" font-family="Arial,sans-serif" font-weight="800" font-size="${r * .82}" fill="#1f2328">${n}</text>`;
@@ -40,14 +40,15 @@ const CSS = `
 .tb{width:min(540px,100%);margin:0 auto;display:flex;flex-direction:column;gap:8px;-webkit-user-select:none;user-select:none;position:relative}
 .tb h3{margin:0;font-size:19px;font-weight:800}.tb p{margin:0;font-size:13.5px;font-weight:700;color:var(--ink-soft);line-height:1.4}
 .tb-b{padding:11px 8px;border-radius:13px;background:var(--accent-soft);color:var(--accent-ink);font-weight:800;font-size:14.5px;text-align:center}.tb-b.ana{background:var(--accent);color:#fff}.tb-b:disabled{opacity:.35}
-.tb-sat{display:flex;gap:8px}.tb-sat>*{flex:1;min-width:0}.tb-menu{display:flex;flex-direction:column;gap:10px;width:min(460px,100%);margin:0 auto}
+.tb-sat{display:flex;gap:8px}.tb-sat>*{flex:1;min-width:0}.tb-ks{display:flex;align-items:center;justify-content:center;gap:10px;font-weight:800}.tb-ks .tb-b{width:46px;padding:8px 0;font-size:18px}.tb-ks b{min-width:70px;text-align:center;font-size:16px}
+.tb-menu{display:flex;flex-direction:column;gap:10px;width:min(460px,100%);margin:0 auto}
 .tb-ust{display:flex;align-items:center;gap:10px;padding:10px;border-radius:16px;background:linear-gradient(135deg,#9f1239,#be123c);color:#fff}
 .tb-top{--r:31px;width:calc(var(--r)*2);height:calc(var(--r)*2);border-radius:50%;background:var(--c,#ccc);display:grid;place-items:center;flex:none;box-shadow:inset -4px -6px 0 rgba(0,0,0,.18),0 3px 8px rgba(0,0,0,.25)}
 .tb-top b{width:64%;height:64%;border-radius:50%;background:#fff;color:#1f2328;display:grid;place-items:center;font-size:calc(var(--r)*.78);font-weight:900}
 .tb-top.yeni{animation:tbT .45s}@keyframes tbT{from{transform:scale(.3) rotate(-120deg)}}
 .tb-gec{display:flex;gap:5px;flex:1;flex-wrap:wrap;align-items:center}.tb-gec .tb-top{--r:14px}.tb-gec .tb-top b{font-size:11px}
 .tb-say{font-weight:800;font-size:12.5px;text-align:right;line-height:1.3}.tb-say b{font-size:18px}
-.tb-oy{display:grid;grid-template-columns:repeat(4,1fr);gap:5px}
+.tb-oy{display:grid;grid-template-columns:repeat(auto-fit,minmax(74px,1fr));gap:5px}
 .tb-oy>div{padding:5px 4px;border-radius:11px;background:var(--bg2);text-align:center;font-weight:800;font-size:12px;line-height:1.25;min-width:0}
 .tb-oy>div span{display:block;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}.tb-oy>div.ben{box-shadow:inset 0 0 0 2px var(--accent)}.tb-oy>div.yok{opacity:.5}
 .tb-oy small{color:var(--ink-soft);font-weight:800}.tb-oy .az{color:#be123c}
@@ -66,7 +67,7 @@ const CSS = `
 `;
 registerGame({
   id: 'tombala', title: 'Tombala', category: 'Masa', tags: 'tombala çinko yılbaşı tombalası torba sayı aile çevrimiçi online dört kişilik', odak: true, noRestart: true,
-  aciklama: 'Yılbaşı tombalası: torbadan çekilen sayıları kartında işaretle, ilk satırı bitirince Çinko!, kartı kapatınca Tombala! de. Bilgisayara karşı ya da arkadaşlarınla çevrimiçi.',
+  aciklama: 'Yılbaşı tombalası: torbadan çekilen sayıları kartında işaretle, ilk satırı bitirince Çinko!, kartı kapatınca Tombala! de. Bilgisayarlarla ya da 10 kişiye kadar arkadaşlarınla çevrimiçi.',
   cover: kapak(),
   icon: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="11" width="18" height="10" rx="2"/><path d="M3 16h18M9 11v10M15 11v10"/><circle cx="12" cy="6" r="3.500"/></svg>',
   shareText() { return this._paylas || 'Tombala: bilgisayara karşı ya da çevrimiçi.'; },
@@ -75,7 +76,7 @@ registerGame({
     if (!document.getElementById('tb-css')) { const s = document.createElement('style'); s.id = 'tb-css'; s.textContent = CSS; document.head.appendChild(s); }
     root.innerHTML = ''; root.classList.add('tb-mount');
     const ses = n => { try { api.sound && api.sound(n); } catch (e) { } };
-    let D = Object.assign({ v: 1, el: 0, tombala: 0, cinko: 0, oto: 1, sesli: 1, hiz: 1 }, (api.loadState && api.loadState()) || {});
+    let D = Object.assign({ v: 1, el: 0, tombala: 0, cinko: 0, oto: 1, sesli: 1, hiz: 1, n: 4 }, (api.loadState && api.loadState()) || {});
     const kaydet = () => { try { api.saveState && api.saveState(D); } catch (e) { } };
     const kok = E('div', { class: 'tb' }); root.append(kok);
     let S = null, ben = 0, mod = 'yz', oda = null, odaBirak = null, lobi = null, sohbetK = null, izle = false, canli = true, surT = 0, mesajT = 0, kilit = 0, isaret = new Set(), sayilan = '', yerelSur = 0, sonMetin = '', bekleyen = 0, yazSira = Promise.resolve(), sonCek = 0;
@@ -92,7 +93,8 @@ registerGame({
     function menu() {
       temizle();
       kok.innerHTML = `<div class="tb-menu"><h3>🎱 Tombala</h3><p>${D.el ? `<b>${D.el}</b> el oynadın · <b>${D.cinko}</b> çinko · <b>${D.tombala}</b> tombala` : 'Torbadan çekilen sayıları kartında işaretle. İlk satırını bitiren Çinko!, kartını kapatan Tombala! der.'}</p>
-        <button class="tb-b ana" data-a="yz">🤖 Bilgisayarlarla oyna</button><button class="tb-b" data-a="ag">🌐 Çevrimiçi oyna (en çok 4 kişi)</button><button class="tb-b" data-a="nasil">❓ Nasıl oynanır</button></div>`;
+        <div class="tb-ks"><span>Masada</span><button class="tb-b" data-a="n" data-d="-1">−</button><b>${D.n} kişi</b><button class="tb-b" data-a="n" data-d="1">+</button></div>
+        <button class="tb-b ana" data-a="yz">🤖 Bilgisayarlarla oyna (${D.n - 1} rakip)</button><button class="tb-b" data-a="ag">🌐 Çevrimiçi oyna (2–10 kişi)</button><button class="tb-b" data-a="nasil">❓ Nasıl oynanır</button></div>`;
       if (new URLSearchParams(location.search).get('masa') && /#o\/tombala/.test(location.hash) && !menu._bir) { menu._bir = true; agLobi(); }
     }
     function nasil() {
@@ -106,8 +108,8 @@ registerGame({
     }
     function agLobi() {
       temizle(); if (!window.Masa) { kok.innerHTML = '<div class="tb-menu"><p>Çevrimiçi bölüm yüklenemedi.</p><button class="tb-b" data-a="menu">‹ Geri</button></div>'; return; }
-      lobi = Masa.lobi(kok, { oyun: 'tombala', koltuk: 4, enAz: 1, botlu: true, baslik: 'Tombala', onGeri: menu, onIzle: o => { lobi = null; agBasla(o); },
-        baslat: o => o.baslat(TB.yeni()), onOda: o => { lobi = null; agBasla(o); } });
+      lobi = Masa.lobi(kok, { oyun: 'tombala', koltuk: Math.max(2, Math.min(10, D.n || 4)), koltukSec: [2, 10], enAz: 1, botlu: true, baslik: 'Tombala', onGeri: menu, onIzle: o => { lobi = null; agBasla(o); },
+        baslat: o => o.baslat(TB.yeni({ n: o.koltuklar().length })), onOda: o => { lobi = null; agBasla(o); } });
     }
     /* ---------- ekran ---------- */
     function ekran() {
@@ -123,7 +125,7 @@ registerGame({
       if (yeniSayi) { tp.classList.remove('yeni'); void tp.offsetWidth; tp.classList.add('yeni'); }
       q('#tb-gec').innerHTML = S.cek.slice(-6, -1).reverse().map(n => `<div class="tb-top" style="--c:${RENK(n)}"><b>${n}</b></div>`).join('');
       q('#tb-say').innerHTML = `<b>${S.cek.length}</b>/90<br>${S.odul.c1 < 0 ? '1. çinko' : S.odul.c2 < 0 ? '2. çinko' : 'tombala'} bekleniyor`;
-      q('#tb-oy').innerHTML = [0, 1, 2, 3].map(p => { const k = TB.kalan(S, p), od = ['c1', 'c2', 't'].filter(t => S.odul[t] === p).map(t => t === 't' ? '🎉' : t === 'c1' ? '①' : '②').join('');
+      q('#tb-oy').innerHTML = S.kart.map((_, p) => { const k = TB.kalan(S, p), od = ['c1', 'c2', 't'].filter(t => S.odul[t] === p).map(t => t === 't' ? '🎉' : t === 'c1' ? '①' : '②').join('');
         return `<div class="${p === ben && !izle ? 'ben' : ''}${kopuk(p) ? ' yok' : ''}"><span>${botMu(p) ? '🤖 ' : ''}${esc(ad(p))}</span><small class="${k <= 2 ? 'az' : ''}">${k} kaldı</small> ${od}<br><small>${S.puan[p]} puan</small></div>`; }).join('');
       const K = S.kart[ben], tam = [0, 1, 2].map(r => K.slice(r * 9, r * 9 + 9).every(n => !n || cekS.has(n)));
       q('#tb-k').innerHTML = K.map((n, i) => { if (!n) return '<i></i>'; const isl = D.oto ? cekS.has(n) : isaret.has(n); return `<i class="s${isl ? ' cik' : ''}${tam[Math.floor(i / 9)] && isl ? ' tam' : ''}${yeniSayi && n === son && isl ? ' yeni' : ''}" data-n="${n}">${n}</i>`; }).join('');
@@ -153,7 +155,7 @@ registerGame({
     function tik() {
       if (!S || S.bitti || !canli) return; const Y = kopya(S);
       /* bilgisayar oyuncuları: hakkı olan, bir önceki çekişten beri bekleyen bot çoğu zaman söyler */
-      for (let p = 0; p < 4; p++) { if (!botMu(p) || Y.bitti) continue; const H = TB.haklar(Y, p); if (H.length && Math.random() < .72) { const t = H.includes('t') ? 't' : H[0]; TB.iddia(Y, p, t); break; } }
+      for (let p = 0; p < Y.kart.length; p++) { if (!botMu(p) || Y.bitti) continue; const H = TB.haklar(Y, p); if (H.length && Math.random() < .72) { const t = H.includes('t') ? 't' : H[0]; TB.iddia(Y, p, t); break; } }
       if (!Y.bitti) TB.cek(Y); sonCek = Date.now(); uygula(Y);
     }
     function iddiaEt(tur, deneme) {
@@ -171,7 +173,7 @@ registerGame({
       if (sayilan !== anahtar) { sayilan = anahtar; if (!izle) { D.el++; if (p === ben) { D.tombala++; api.submitScore(D.tombala); } kaydet(); } ses(p === ben ? 'win' : 'click'); if (p === ben) { try { window.FX && FX.confetti && FX.confetti(); } catch (e) { } }
         if (mod === 'ag' && oda && window.Masa && Masa.sonuc && !izle) Masa.sonuc(oda, p === ben ? 1 : 0, 't' + S.tur); }
       oyun._paylas = 'Tombala: ' + (p === ben ? `${S.cek.length}. sayıda TOMBALA yaptım! 🎉` : `${S.puan[ben]} puan topladım.`) + '\nerdevelop.com/oyunlar/#o/tombala';
-      const e = q('.tb-son'); if (e) e.remove(); const s = E('div', { class: 'tb-son' }), sira = [0, 1, 2, 3].sort((a, b) => S.puan[b] - S.puan[a]);
+      const e = q('.tb-son'); if (e) e.remove(); const s = E('div', { class: 'tb-son' }), sira = S.kart.map((_, i) => i).sort((a, b) => S.puan[b] - S.puan[a]);
       s.innerHTML = `<div><h3>${p === ben && !izle ? '🎉 TOMBALA!' : `🎉 ${esc(ad(p))} tombala yaptı`}</h3><p>${S.cek.length} sayı çekildi · ${S.tur}. el</p>
         <p>${['c1', 'c2', 't'].map(t => `${TB.AD[t]}: <b>${S.odul[t] >= 0 ? esc(ad(S.odul[t])) : '–'}</b>`).join(' · ')}</p>
         <table class="tb-tablo">${sira.map(x => `<tr class="${x === ben ? 'ben' : ''}"><td>${botMu(x) ? '🤖 ' : ''}${esc(ad(x))}</td><td>${S.puan[x]} puan</td></tr>`).join('')}</table>
@@ -190,7 +192,7 @@ registerGame({
       ciz(onceki && S.cek.length > onceki.cek.length); if (onceki && S.tur === onceki.tur) sonDegisim(onceki);
       if (S.bitti) { if (!q('.tb-son')) bitti(); } else surucu();
     }
-    function yzBasla() { temizle(); izle = false; mod = 'yz'; ben = 0; isaret = new Set(); S = TB.yeni(); ekran(); ciz(); sonCek = Date.now() - 2500; mesaj('Torba karıştırıldı, ilk sayı geliyor…', 1800); surucu(); }
+    function yzBasla() { temizle(); izle = false; mod = 'yz'; ben = 0; isaret = new Set(); S = TB.yeni({ n: D.n }); ekran(); ciz(); sonCek = Date.now() - 2500; mesaj('Torba karıştırıldı, ilk sayı geliyor…', 1800); surucu(); }
     function agBasla(o) {
       temizle(); izle = !!o.izleyici; mod = 'ag'; oda = o; ben = Math.max(0, o.ben); S = null; isaret = new Set(); yerelSur = 0; sonMetin = ''; bekleyen = 0; ekran(); sonCek = Date.now();
       sohbetK = window.Masa && Masa.sohbet ? Masa.sohbet(o, { yer: q('.tb-ayar'), sonra: q('[data-a=cik]'), koltuk: p => q('#tb-oy').children[p] }) : null;
@@ -201,6 +203,7 @@ registerGame({
       const b = e.target.closest('button'); if (b && b.closest('.ms')) return;
       if (!b) { const c = e.target.closest('.tb-kart i.s'); if (c && S && !D.oto) { const n = +c.dataset.n; if (isaret.has(n)) isaret.delete(n); else if (S.cek.includes(n)) { isaret.add(n); ses('tap'); } else { ses('bad'); mesaj(`${n} daha çekilmedi.`, 1400); } ciz(); } return; }
       const a = b.dataset.a;
+      if (a === 'n') { D.n = Math.max(2, Math.min(10, (D.n || 4) + +b.dataset.d)); kaydet(); return menu(); }
       if (a === 'yz') yzBasla(); else if (a === 'ag') agLobi(); else if (a === 'nasil') nasil(); else if (a === 'menu') { S = null; menu(); }
       else if (a === 'cinko') iddiaEt('c'); else if (a === 'tombala') iddiaEt('t');
       else if (a === 'oto') { D.oto = D.oto ? 0 : 1; if (!D.oto && S) isaret = new Set(S.kart[ben].filter(n => n && S.cek.includes(n))); kaydet(); ciz(); }

@@ -252,6 +252,7 @@ const CSS = `
 .ms-sira div i{font-style:normal;color:var(--ink-soft);font-size:12.5px;text-align:right}.ms-sira div b{font-variant-numeric:tabular-nums}.ms-sira div.sen{box-shadow:inset 0 0 0 2px var(--accent)}.ms-sira div span{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 .ms-tur{display:flex;flex-direction:column;gap:2px;text-align:left;padding:10px 14px;border-radius:13px;background:linear-gradient(135deg,#fef3c7,#fde68a);color:#78350f;font-size:13px}.ms-tur b{font-size:14.5px}.ms-tur span{font-weight:700;opacity:.85}
 .ms-tur.canli{background:linear-gradient(135deg,#fee2e2,#fecaca);color:#7f1d1d;animation:msTur 2s infinite}@keyframes msTur{50%{box-shadow:0 0 0 4px rgba(239,68,68,.25)}}
+.ms-ks{display:flex;align-items:center;gap:8px;justify-content:center;font-weight:800}.ms-ks .ms-mini{width:38px;font-size:16px}.ms-ks b{min-width:64px;text-align:center}
 .ms-mini{flex:none;padding:5px 10px;border-radius:9px;background:var(--accent-soft);color:var(--accent-ink);font-weight:800;font-size:12.5px}.ms-mini.ana{background:var(--accent);color:#fff}.ms-mini:disabled{opacity:.6}
 .ms-sira .bos{display:block;text-align:center;color:var(--ink-soft);font-weight:700}
 .ms-izle-rozet{position:fixed;left:50%;top:calc(env(safe-area-inset-top) + 8px);transform:translateX(-50%);z-index:80;padding:5px 12px;border-radius:999px;background:#111827;color:#fff;font-weight:800;font-size:12.5px;box-shadow:0 4px 14px rgba(0,0,0,.3);pointer-events:none}
@@ -263,10 +264,12 @@ function lobi(kok, o) {
   if (!document.getElementById('ms-css')) { const s = document.createElement('style'); s.id = 'ms-css'; s.textContent = CSS; document.head.appendChild(s); }
   let oda = null, birak = null, bitti = false;
   const el = document.createElement('div'); el.className = 'ms'; kok.innerHTML = ''; kok.appendChild(el);
+  const KSK = 'ob-masa-koltuk-' + o.oyun, koltukSayi = () => { if (!o.koltukSec) return o.koltuk; let n = o.koltuk; try { n = +localStorage.getItem(KSK) || o.koltuk; } catch (e) { } return Math.max(o.koltukSec[0], Math.min(o.koltukSec[1], n)); };
   const q = s => el.querySelector(s), hata = m => { const h = q('.ms-hata'); if (h) h.textContent = m || ''; };
   function giris() {
     el.innerHTML = `<h3>🌐 ${esc(o.baslik)} · çevrimiçi</h3><p>Adını yaz; hızlı eşleş ya da bir arkadaşınla özel oda kur. Hesap gerekmez.</p>
       <input id="ms-ad" maxlength="14" placeholder="Adın" value="${esc(adAl())}" autocomplete="off">
+      ${o.koltukSec ? `<div class="ms-ks"><span>Masa</span><button class="ms-mini" data-ks="-1">−</button><b id="ms-ksn">${koltukSayi()} kişi</b><button class="ms-mini" data-ks="1">+</button></div>` : ''}
       <button class="ms-b ana" data-a="hizli">⚡ Hızlı eşleş</button>
       <div class="ms-sat"><button class="ms-b" data-a="kur">🔒 Özel oda kur</button><button class="ms-b" data-a="kodla">🔑 Koda katıl</button></div>
       <div class="ms-sat" id="ms-kodsat" hidden><input id="ms-kod" maxlength="5" placeholder="KOD" autocomplete="off" style="text-transform:uppercase;letter-spacing:.2em;text-align:center"><button class="ms-b ana" data-a="katil" style="flex:.6">Katıl</button></div>
@@ -335,7 +338,7 @@ function lobi(kok, o) {
   async function is(a) {
     const ad = adKoy(q('#ms-ad') ? q('#ms-ad').value : adAl()); if (!ad) { hata('Önce bir ad yaz.'); const i = q('#ms-ad'); if (i) i.focus(); return; }
     hata(''); el.querySelectorAll('button').forEach(b => b.disabled = true);
-    try { oda = a === 'hizli' ? await hizli(o.oyun, o.koltuk, ad) : a === 'kur' ? await kur(o.oyun, o.koltuk, false, ad) : await katil(o.oyun, q('#ms-kod').value, ad); bekle(); if (el._cagir) { el._cagir = false; el._odadan = false; setTimeout(() => { if (oda) arkadasGoster(true); }, 300); } }
+    const ks = koltukSayi(); try { oda = a === 'hizli' ? await hizli(o.oyun, ks, ad) : a === 'kur' ? await kur(o.oyun, ks, false, ad) : await katil(o.oyun, q('#ms-kod').value, ad); bekle(); if (el._cagir) { el._cagir = false; el._odadan = false; setTimeout(() => { if (oda) arkadasGoster(true); }, 300); } }
     catch (e) { el.querySelectorAll('button').forEach(b => b.disabled = false); hata(/yüklenemedi|network|Failed/i.test(e.message || '') ? 'Sunucuya bağlanılamadı. İnternetini kontrol et.' : /PERMISSION|permission/i.test(e.message || e.code || '') ? 'Sunucu izin vermedi (kurallar güncel değil).' : (e.message || 'Bir şey ters gitti.')); }
   }
   function bekle() {
@@ -347,13 +350,14 @@ function lobi(kok, o) {
         <p>${v.a ? 'Biri gelince oyun başlar. Kodu arkadaşına da verebilirsin.' : 'Bu kodu ya da bağlantıyı arkadaşına gönder.'}</p>
         <div class="ms-sat"><button class="ms-b" data-a="kopya">🔗 Bağlantıyı kopyala</button>${navigator.share ? '<button class="ms-b" data-a="paylas">📤 Paylaş</button>' : ''}</div>
         <div class="ms-o">${K.map((x, i) => x ? `<div>${x.uid === oda.uid ? '🟢' : '🔵'} ${esc(x.n)}${x.uid === oda.uid ? ' (sen)' : ''}<i>${(() => { const k = x.uid !== oda.uid && karsi(o.oyun, x.uid), P = []; if (k && (k.g + k.k + k.b)) P.push(`aranızda ${k.g}–${k.k}${k.b ? '–' + k.b : ''}`); if (i === 0) P.push('kurucu'); return P.join(' · '); })()}</i></div>` : `<div class="bos">⚪ ${o.botlu ? 'boş (başlayınca bilgisayar oturur)' : 'bekleniyor…'}</div>`).join('')}</div>
-        ${yon ? `<button class="ms-b ana" data-a="baslat" ${n >= o.enAz ? '' : 'disabled'}>${n >= o.koltuk ? 'Başlat' : o.botlu && n >= o.enAz ? 'Boş koltuklara bilgisayar otursun, başlat' : 'Oyuncu bekleniyor…'}</button>` : '<p style="text-align:center">Kurucunun başlatması bekleniyor…</p>'}
-        ${arkadaslar().length && n < o.koltuk ? '<button class="ms-b" data-a="cagirListe">👥 Arkadaşını çağır</button>' : ''}<div class="ms-hata"></div><button class="ms-b" data-a="cik">‹ Odadan çık</button>`;
+        ${yon ? `<button class="ms-b ana" data-a="baslat" ${n >= o.enAz ? '' : 'disabled'}>${n >= K.length ? 'Başlat' : o.botlu && n >= o.enAz ? 'Boş koltuklara bilgisayar otursun, başlat' : 'Oyuncu bekleniyor…'}</button>` : '<p style="text-align:center">Kurucunun başlatması bekleniyor…</p>'}
+        ${arkadaslar().length && n < K.length ? '<button class="ms-b" data-a="cagirListe">👥 Arkadaşını çağır</button>' : ''}<div class="ms-hata"></div><button class="ms-b" data-a="cik">‹ Odadan çık</button>`;
       el._link = link;
-      if (yon && !o.botlu && n >= o.koltuk && !bekle._b) { bekle._b = true; setTimeout(() => { bekle._b = false; if (!bitti) o.baslat(oda); }, 700); }
+      if (yon && !o.botlu && n >= K.length && !bekle._b) { bekle._b = true; setTimeout(() => { bekle._b = false; if (!bitti) o.baslat(oda); }, 700); }
     });
   }
   el.addEventListener('click', e => { const b = e.target.closest('button'); if (!b || b.disabled) return; const a = b.dataset.a;
+    if (b.dataset.ks) { const n = Math.max(o.koltukSec[0], Math.min(o.koltukSec[1], koltukSayi() + +b.dataset.ks)); try { localStorage.setItem(KSK, n); } catch (x) { } const z = q('#ms-ksn'); if (z) z.textContent = n + ' kişi'; return; }
     if (b.dataset.ekle) { const r = b.closest('[data-u]'); arkadasEkle(r.dataset.u, r.dataset.n); b.textContent = '✓'; b.disabled = true; return; }
     if (b.dataset.sil) { const r = b.closest('[data-u]'); arkadasSil(r.dataset.u); r.remove(); return; }
     if (b.dataset.cagir) { const r = b.closest('[data-u]'); if (!oda) return; davetEt(r.dataset.u, o.oyun, oda.kod).then(() => { b.textContent = '✓ Çağrıldı'; b.disabled = true; }).catch(() => hata('Çağrı gönderilemedi (kurallar güncel olmayabilir).')); return; }
