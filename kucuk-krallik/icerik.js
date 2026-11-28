@@ -181,7 +181,7 @@ function etkIlerle(t, n) {
   if (!etkAcik()) return; const e = etk(); if (e.t !== t) return; const T = etkTanim(), p0 = e.p;
   e.p = Math.min(T.h, e.p + n); if (e.p === p0) return;
   const es = etkEsik(T), i = es.findIndex(function (x) { return p0 < x && e.p >= x; });
-  if (i >= 0) { const m = T.i + ' ' + kkL(T.n + ': ' + (i + 1) + '. ödül hazır', T.ne + ': reward ' + (i + 1) + ' is ready'); kkOlay(m); try { postaEkle('krallik', m, kkL('Ödülü Savaş sekmesindeki etkinlik kartından al.', 'Claim it on the event card in the War tab.'), { ik: T.i }); } catch (x) { } }
+  if (i >= 0) { const m = T.i + ' ' + kkL(T.n + ': ' + (i + 1) + '. ödül hazır', T.ne + ': reward ' + (i + 1) + ' is ready'); kkOlay(m); try { postaEkle('krallik', m, kkL('Ödülü buradan ya da Savaş sekmesindeki etkinlik kartından alabilirsin.', 'Claim it here or on the event card in the War tab.'), { ik: T.i, od: { etk: i, k: e.k } }); } catch (x) { } }
 }
 function etkOdulMetin(i) {
   return [kkL('10 dakikalık odun üretimi kadar altın', 'Gold worth 10 minutes of wood output'),
@@ -266,7 +266,7 @@ function kkUstaHtml() {
 // birden çok olay aynı anda gelince ekranı kaplamasın: hepsi postaya gider, ekranda kısa not
 function kkPendToast(L) {
   if (!L.length) return;
-  L.forEach(function (m) { try { postaEkle('krallik', m, ''); } catch (e) { } });
+  L = L.map(function (x) { if (typeof x === 'string') { try { postaEkle('krallik', x, ''); } catch (e) { } return x; } try { postaEkle('krallik', x.b || x.m, x.o || '', x.od ? { od: x.od } : null); } catch (e) { } return x.m; });
   if (L.length === 1 && L[0].length <= 70) { toast(L[0]); return; }
   const t0 = kkT(L[0]), ilk = t0.length > 42 ? t0.slice(0, 40) + '…' : t0;
   toast('✉️ ' + kkL(L.length + ' yeni mektup · ', L.length + ' new letters · ') + ilk);
