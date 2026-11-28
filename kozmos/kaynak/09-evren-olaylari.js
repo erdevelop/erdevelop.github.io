@@ -86,7 +86,7 @@ function elciIslem(p, k) {
   else if (k === 'gorev' && !GOREV.some(x => x.tip === 'dip' && x.irk === irk)) {
     const G = galaksi(...galHucre(p.s.x, p.s.y)), [kx, ky] = kapiPos(G), L2 = koloniBul(Math.floor(p.s.x / SEK), Math.floor(p.s.y / SEK), 10).filter(q => yabanciMi(q) && q.kol.irk === irk && q !== p && Math.hypot(q.s.x - p.s.x, q.s.y - p.s.y) > 2 * SEK);
     if (!L2.length) { duyur('🕊 ' + T('Yakında başka bir koloni yok', 'No other colony nearby'), 'uyari'); return; } const q = L2[(Math.random() * L2.length) | 0];
-    GOREV.push({ id: 'dp' + Date.now(), tip: 'dip', irk, h: q.id, hs: [q.s.t.sx, q.s.t.sy, q.i], ad: kolAd(q), odul: 900 + Math.round(Math.hypot(q.s.x - p.s.x, q.s.y - p.s.y) / SEK * 90) }); SES.koloni(); gorevYaz();
+    GOREV.push({ id: 'dp' + Date.now(), tip: 'dip', irk, h: q.id, hs: [q.s.t.sx, q.s.t.sy, q.i], ad: kolAd(q), odul: odulK(900 + Math.hypot(q.s.x - p.s.x, q.s.y - p.s.y) / SEK * 90) }); SES.koloni(); gorevYaz();
   }
 }
 /* ================= kara kutu yan görevleri ================= */

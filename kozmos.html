@@ -2213,6 +2213,13 @@ function gorevMetin(g) {
   if (g.tip === 'yolcu') return T(`🧑‍🚀 <b>${g.kisi} yolcu</b> → ${esc(g.ad)}`, `🧑‍🚀 <b>${g.kisi} passengers</b> → ${esc(g.ad)}`) + yildiz + `<small>${esc(g.sis)}${T(' sistemi', ' system')} · ${sek}</small>`;
   return T(`🔭 <b>Yıldız sistemini keşfet</b>`, `🔭 <b>Discover the star system</b>`) + yildiz + `<small>${sek}</small>`;
 }
+/* pilot ünü: tamamlanan görev sayısı arttıkça limanlar daha değerli işler verir; ana sistemden uzaklaştıkça (tehlike) ek pay */
+const UN = [[0, 1, '🔰', ['Çaylak', 'Rookie']], [5, 1.4, '🎖', ['Tecrübeli', 'Seasoned']], [15, 2, '🏅', ['Usta', 'Veteran']], [35, 2.7, '🎗', ['Kıdemli', 'Elite']], [70, 3.5, '👑', ['Efsane', 'Legend']]];
+function pilotUn() { const n = ST.gorev || 0; let i = 0; while (i + 1 < UN.length && n >= UN[i + 1][0]) i++; return { i, n, k: UN[i][1], e: UN[i][2], ad: L(UN[i][3]), son: UN[i + 1] || null }; }
+const uzakPay = () => 1 + 0.6 * korsanGuc();
+function odulK(n, uzak) { return Math.round(n * pilotUn().k * (uzak === false ? 1 : uzakPay()) / 10) * 10; }
+function unKontrol() { const u = pilotUn(); if ((ST.unSv || 0) >= u.i) return; ST.unSv = u.i; setTimeout(() => { duyur(u.e + ' ' + T('Yeni rütbe: ', 'New rank: ') + '<b>' + u.ad + '</b>', 'galaksi', T('Görev ödülleri artık ×', 'Mission rewards now ×') + u.k.toFixed(1)); SES.galaksi(); }, 900); }
+function unSatir() { const u = pilotUn(), up = Math.round((uzakPay() - 1) * 100); return `<div class="alt" style="margin:6px 0 0">${u.e} ${T('Pilot ünü', 'Pilot rank')}: <b style="color:var(--ink)">${u.ad}</b> · ${T('görev ödülleri', 'mission rewards')} <b style="color:var(--altin)">×${u.k.toFixed(1)}</b>${up >= 5 ? ` · ${T('derin uzay', 'deep space')} +%${up}` : ''}${u.son ? `<br><small>${u.son[2]} ${L(u.son[3])} (×${u.son[1].toFixed(1)}) ${T('için', 'in')} ${u.son[0] - u.n} ${T('görev daha', 'more missions')}</small>` : ''}</div>`; }
 const odulYaz = g => g.odul ? `+${SAYI(g.odul)} 💰` : '⭐';
 function gorevTeklif(p) {
   const saat = Math.floor(Date.now() / 3.6e6), r = rng(h32(p.seed, saat, 31)), sx = p.s.t.sx, sy = p.s.t.sy, L2 = [];
@@ -2221,15 +2228,15 @@ function gorevTeklif(p) {
     const id = p.id + '@' + saat + '#' + j, tur = r(), yolcu = r() < 0.4;
     if (tur < 0.68 && kols.length) {
       const q = kols[(r() * kols.length) | 0], ds = Math.hypot(q.s.x - p.s.x, q.s.y - p.s.y) / SEK, yuk = yolcu ? 0 : 3 + ((r() * 10) | 0), kisi = 2 + ((r() * 24) | 0);
-      if (!ALINAN.has(id)) L2.push({ id, k: p.id, tip: yolcu ? 'yolcu' : 'teslim', h: q.id, hs: [q.s.t.sx, q.s.t.sy, q.i], ad: kolAd(q), sis: q.s.t.ad, yuk, kisi: yolcu ? kisi : 0, odul: Math.round((yolcu ? 60 + kisi * 4 : 80 + yuk * 7) + ds * 65 + r() * 40) });
+      if (!ALINAN.has(id)) L2.push({ id, k: p.id, tip: yolcu ? 'yolcu' : 'teslim', h: q.id, hs: [q.s.t.sx, q.s.t.sy, q.i], ad: kolAd(q), sis: q.s.t.ad, yuk, kisi: yolcu ? kisi : 0, odul: odulK((yolcu ? 60 + kisi * 4 : 80 + yuk * 7) + ds * 65 + r() * 40) });
     } else {
       let hd = null; for (let k = 0; k < 40 && !hd; k++) { const a = r() * TAU, dd = 3 + r() * 6, tm = temel(sx + Math.round(Math.cos(a) * dd), sy + Math.round(Math.sin(a) * dd)); if (tm && !KESIF.has('s:' + tm.k)) hd = tm; }
-      if (hd && !ALINAN.has(id)) { const ds = Math.hypot(hd.x - p.s.x, hd.y - p.s.y) / SEK; L2.push({ id, tip: 'kesif', h: 's:' + hd.k, hs: [hd.sx, hd.sy], ad: T('Sektör ', 'Sector ') + hd.sx + ' : ' + hd.sy, odul: Math.round(140 + ds * 45 + r() * 30), yuk: 0 }); }
+      if (hd && !ALINAN.has(id)) { const ds = Math.hypot(hd.x - p.s.x, hd.y - p.s.y) / SEK; L2.push({ id, tip: 'kesif', h: 's:' + hd.k, hs: [hd.sx, hd.sy], ad: T('Sektör ', 'Sector ') + hd.sx + ' : ' + hd.sy, odul: odulK(140 + ds * 45 + r() * 30), yuk: 0 }); }
     }
   }
   if (itSv(p) >= 2 && kols.length) {   // dost kolonilere özel iş
     const id = p.id + '@' + saat + '#oz', q = kols[(r() * kols.length) | 0], ds = Math.hypot(q.s.x - p.s.x, q.s.y - p.s.y) / SEK, yuk = 4 + ((r() * 8) | 0);
-    if (!ALINAN.has(id)) L2.unshift({ id, k: p.id, oz: 1, tip: 'teslim', h: q.id, hs: [q.s.t.sx, q.s.t.sy, q.i], ad: kolAd(q), sis: q.s.t.ad, yuk, kisi: 0, odul: Math.round((120 + yuk * 9 + ds * 90) * 1.6) });
+    if (!ALINAN.has(id)) L2.unshift({ id, k: p.id, oz: 1, tip: 'teslim', h: q.id, hs: [q.s.t.sx, q.s.t.sy, q.i], ad: kolAd(q), sis: q.s.t.ad, yuk, kisi: 0, odul: odulK((120 + yuk * 9 + ds * 90) * 1.6) });
   }
   return L2;
 }
@@ -2238,6 +2245,7 @@ function gorevKesif(k) {
 }
 let gorevAcik = !DOKUN;
 function gorevYaz() {
+  if (oyunda) unKontrol();
   $('gorevCip').hidden = !GOREV.length; $('gorevSay').textContent = GOREV.length;
   if (diyalogAcik) return;
   const P = $('gorevPanel'); P.hidden = !GOREV.length || !gorevAcik || !oyunda;
@@ -2305,6 +2313,7 @@ function limanYaz() {
   } else if (limanSek === 'gorev') {
     if (GOREV.length) { h += `<div class="alt" style="margin:6px 0 0;font-weight:900;color:var(--ink)">${T('Aldığın görevler', 'Your missions')} (${gSay()}/4)</div>`; GOREV.forEach((g, i) => { h += `<div class="satir"><div>${gorevMetin(g)}<small style="color:var(--altin)">${odulYaz(g)}</small></div><div class="dg">${g.tip === 'hikaye' ? '' : `<button class="kb" type="button" data-iptal="${i}">${T('Bırak', 'Drop')}</button>`}</div></div>`; }); }
     const tek = gorevTeklif(p);
+    h += unSatir();
     h += `<div class="alt" style="margin:12px 0 0;font-weight:900;color:var(--ink)">${T('Bu limandaki işler', 'Jobs at this port')}</div>`;
     if (!tek.length) h += `<div class="alt">${T('Şu an iş yok, sonra tekrar uğra.', 'No jobs right now, come back later.')}</div>`;
     const ar = arananlar(p);
@@ -3200,7 +3209,7 @@ function elciIslem(p, k) {
   else if (k === 'gorev' && !GOREV.some(x => x.tip === 'dip' && x.irk === irk)) {
     const G = galaksi(...galHucre(p.s.x, p.s.y)), [kx, ky] = kapiPos(G), L2 = koloniBul(Math.floor(p.s.x / SEK), Math.floor(p.s.y / SEK), 10).filter(q => yabanciMi(q) && q.kol.irk === irk && q !== p && Math.hypot(q.s.x - p.s.x, q.s.y - p.s.y) > 2 * SEK);
     if (!L2.length) { duyur('🕊 ' + T('Yakında başka bir koloni yok', 'No other colony nearby'), 'uyari'); return; } const q = L2[(Math.random() * L2.length) | 0];
-    GOREV.push({ id: 'dp' + Date.now(), tip: 'dip', irk, h: q.id, hs: [q.s.t.sx, q.s.t.sy, q.i], ad: kolAd(q), odul: 900 + Math.round(Math.hypot(q.s.x - p.s.x, q.s.y - p.s.y) / SEK * 90) }); SES.koloni(); gorevYaz();
+    GOREV.push({ id: 'dp' + Date.now(), tip: 'dip', irk, h: q.id, hs: [q.s.t.sx, q.s.t.sy, q.i], ad: kolAd(q), odul: odulK(900 + Math.hypot(q.s.x - p.s.x, q.s.y - p.s.y) / SEK * 90) }); SES.koloni(); gorevYaz();
   }
 }
 /* ================= kara kutu yan görevleri ================= */
@@ -4482,7 +4491,7 @@ function arananlar(p) {
   for (let i = 0; i < 2; i++) {
     const id = 'b' + p.id + '@' + gun + '#' + i; if (ALINAN.has(id)) continue;
     const a = r() * TAU, d = 4 + r() * 8, x = p.s.x + Math.cos(a) * d * SEK, y = p.s.y + Math.sin(a) * d * SEK, ad = ARANAN_AD[(r() * ARANAN_AD.length) | 0];
-    L2.push({ id, tip: 'kelle', x, y, hs: [Math.floor(x / SEK), Math.floor(y / SEK)], ad: L(ad), odul: Math.round((1500 + d * 260 + r() * 900) / 10) * 10, kc: Math.round(500 + d * 80 + korsanGuc() * 400) });
+    L2.push({ id, tip: 'kelle', x, y, hs: [Math.floor(x / SEK), Math.floor(y / SEK)], ad: L(ad), odul: odulK(1500 + d * 260 + r() * 900, false), kc: Math.round(500 + d * 80 + korsanGuc() * 400) });
   }
   return L2;
 }
@@ -4714,7 +4723,7 @@ function olaylar(dt, t) {
   if (r < 0.66) { const a = Math.atan2(SH.vy, SH.vx) + (Math.random() - 0.5) * 1.4, d = 1600 + Math.random() * 2200; OLAY.push({ tip: 'enkaz', x: SH.x + Math.cos(a) * d, y: SH.y + Math.sin(a) * d, r0: Math.random() * TAU }); duyur('📡 ' + T('Tarayıcı bir enkaz buldu', 'Scanner found a wreck'), 'kesif', T('Yakında: yaklaşıp topla', 'Nearby: get close to salvage')); SES.kesif(); return; }
   if (GOREV.some(g => g.tip === 'imdat')) return;
   const a = Math.random() * TAU, d = SEK * (1.3 + Math.random() * 1.7), x = SH.x + Math.cos(a) * d, y = SH.y + Math.sin(a) * d, ad = isim(Math.random, 2);
-  GOREV.push({ id: 'i' + Date.now(), tip: 'imdat', x, y, ad, odul: Math.round(180 + d / SEK * 80), hs: [Math.floor(x / SEK), Math.floor(y / SEK)] });
+  GOREV.push({ id: 'i' + Date.now(), tip: 'imdat', x, y, ad, odul: odulK(180 + d / SEK * 80), hs: [Math.floor(x / SEK), Math.floor(y / SEK)] });
   gorevYaz(); duyur('🆘 ' + T('İmdat çağrısı: ', 'Distress call: ') + '<b>' + esc(ad) + '</b>', 'uyari', T('Yakıtı biten bir gemi 5 yakıt istiyor · görevlere eklendi', 'A stranded ship needs 5 fuel · added to missions')); SES.uyari();
 }
 function enkazTopla(o) {
@@ -6498,7 +6507,7 @@ function kare(now) {
 }
 kayitOnar(); try { if (ST.devKul) devAgKoru(); } catch (e) { } try { yedekAl('gun'); } catch (e) { } try { kilitIlk(); } catch (e) { } try { menuSekmeKur(); } catch (e) { console.warn(e); } boyutla(); kesifSayYaz(); menuKur(); radarKur(); gorevYaz();
 requestAnimationFrame(kare);
-window.KOZ = { GRAF, otoSec, hasar, HM, PAD, MEVP, KOZM, YBL: () => YBL, oyGelen, ORT: () => ORT, KORS, haftaK, bolgeFr, frEkle, get BOLGE() { return BOLGE; }, DUMAN, KIV, get GUN() { return GUN; }, gunKontrol, PRS, prsBasla, HIK, BIL, bilAc, duyur, ACL, KILIT, acikMi, kilitKontrol, get oto() { return oto; }, parkur, yarisBasla, get YR() { return YR; }, get SEZ() { return SEZ; }, sezXp, KOZM, kayitPaket, kayitUygula, bulutKaydet, galeriYukle, fotoGoster,  get yol() { return yol; }, REH, rehKontrol, rehYaz, hikAdim, hik4Son, diyalogSec,  get KOL() { return KOL; }, set KOL(v) { KOL = v; }, kolKur, kolAc, kolIsle, EKIP, huyOf, ekipYarala, HUY, get kaynP() { return kaynP; },  GUC, gucVer, ASTD, ROTA, devAst, astPos, astCan, kasaAc, hackAc, rotaBaslat, rotaPanel, get HK() { return HK; }, get astYakin() { return astYakin; }, get madenLazer() { return madenLazer; }, set madenLazer(v) { madenLazer = v; }, PARCA, get rotaAktif() { return rotaAktif; },  KOD, kodAc, kodKontrol, IZ, izPen, izEnkaz, get INS() { return INS; }, get izYakin() { return izYakin; },  PZ, BES, MODS, YER, besLv, pzKat, isle, tasarimAc, mSay,  get kdIc() { return kdIc; }, get iyonIc() { return iyonIc; }, SILAHLAR, ESK, iyonAc, meteorAc, skListe, skEs, skGec, penrose, get silahS() { return silahS; }, set silahS(v) { silahS = v; }, get kredi2() { return kredi; }, set kredi2(v) { kredi = v; }, get skYakin() { return skYakin; },  KOLOS, kolosPos, kolosBagla, profilCiz, haberUret,  DIP, dipEkle, yanBasla, gunOlay,  get istn() { return istnObj; }, istnKur, istnAc, istnIsle, get moral() { return MORAL; }, set ekOlayT(v) { ekOlayT = v; }, fiyat,  get sapanDbg() { return [sapanEn, sapanHedef && sapanHedef.ad, sapanHedef && sapanHedef.v]; }, TEKNO, MODUL, bilimEkle, tamirAc, get sapanBoost() { return sapanBoost; },  HURDA, ARSIV, hurdaCikar, arsivBul, ambarAc,  sagAc, sagHedefler,  gezPos, simT, patlamaEkle, SOH, LON, PAZ, tpAc, sohGeldi,  fotoAc, fpAc, inisAc, inisKapat, get INS() { return INS; }, DEFTER, defter,  zulaYakin, snBasla, solucanAc, istilaBasla, istPos, istAc, mezarPos, mezar, OLAY2: () => OLAY,  EKIP, FR, KERVAN, ZIY, DOST, kervanAdim, kvPos, borsaAc, korsanLimanPos, frEkle, adaylar,  SARF, TLV, sarfKullan,  get kapsul() { return kapsul; }, get oks() { return oks; }, set oks(v) { oks = v; }, PLANLAR, KIY, KIYS, bankaAc, bankaPos, planVer, get sigorta() { return sigorta; },  OKK, oyuncuYakin, oyGelen, haftaK,  devCikar, kalintiBul,  TEKS, get TAK() { return TAK; }, set TAK(v) { TAK = v; }, arananlar, patlamaKullan,  IRK, piyasaOlay, balinaSuru, yakinBalinalar, bulmacaAc, get BLM() { return BLM; },  kapiPos, golgeCikar,  get nabiz() { return nabiz; }, get isi() { return isi; },  AG, bolgeBul,  KORS, OLAY, HIK, ST, BAS, get can() { return can; }, set can(v) { can = v; }, korsanCikar, hikAdim, hikBasla, kuyruk, kuyrukPos, nebulaB, nebulaIc, get gemiTip() { return gemiTip; }, KARAKOL: () => KARAKOL, olayZorla: () => { olayT = 0; },  get kaynP() { return kaynP; }, get kazP() { return kazP; }, KARGO, get kredi() { return kredi; }, set kredi(v) { kredi = v; }, get yakit() { return yakit; }, set yakit(v) { yakit = v; }, GOREV: () => GOREV, YUK, limanAc, get limanP() { return limanP; }, get yanasP() { return yanasP; }, SH, cam, temel, sistem, galaksi, KESIF, basla, haritaAc, haritaKapat, set zoom(v) { zKul = v; }, DOKU };
+window.KOZ = { GRAF, ST, pilotUn, gorevTeklif, unSatir, evGezegen, otoSec, hasar, HM, PAD, MEVP, KOZM, YBL: () => YBL, oyGelen, ORT: () => ORT, KORS, haftaK, bolgeFr, frEkle, get BOLGE() { return BOLGE; }, DUMAN, KIV, get GUN() { return GUN; }, gunKontrol, PRS, prsBasla, HIK, BIL, bilAc, duyur, ACL, KILIT, acikMi, kilitKontrol, get oto() { return oto; }, parkur, yarisBasla, get YR() { return YR; }, get SEZ() { return SEZ; }, sezXp, KOZM, kayitPaket, kayitUygula, bulutKaydet, galeriYukle, fotoGoster,  get yol() { return yol; }, REH, rehKontrol, rehYaz, hikAdim, hik4Son, diyalogSec,  get KOL() { return KOL; }, set KOL(v) { KOL = v; }, kolKur, kolAc, kolIsle, EKIP, huyOf, ekipYarala, HUY, get kaynP() { return kaynP; },  GUC, gucVer, ASTD, ROTA, devAst, astPos, astCan, kasaAc, hackAc, rotaBaslat, rotaPanel, get HK() { return HK; }, get astYakin() { return astYakin; }, get madenLazer() { return madenLazer; }, set madenLazer(v) { madenLazer = v; }, PARCA, get rotaAktif() { return rotaAktif; },  KOD, kodAc, kodKontrol, IZ, izPen, izEnkaz, get INS() { return INS; }, get izYakin() { return izYakin; },  PZ, BES, MODS, YER, besLv, pzKat, isle, tasarimAc, mSay,  get kdIc() { return kdIc; }, get iyonIc() { return iyonIc; }, SILAHLAR, ESK, iyonAc, meteorAc, skListe, skEs, skGec, penrose, get silahS() { return silahS; }, set silahS(v) { silahS = v; }, get kredi2() { return kredi; }, set kredi2(v) { kredi = v; }, get skYakin() { return skYakin; },  KOLOS, kolosPos, kolosBagla, profilCiz, haberUret,  DIP, dipEkle, yanBasla, gunOlay,  get istn() { return istnObj; }, istnKur, istnAc, istnIsle, get moral() { return MORAL; }, set ekOlayT(v) { ekOlayT = v; }, fiyat,  get sapanDbg() { return [sapanEn, sapanHedef && sapanHedef.ad, sapanHedef && sapanHedef.v]; }, TEKNO, MODUL, bilimEkle, tamirAc, get sapanBoost() { return sapanBoost; },  HURDA, ARSIV, hurdaCikar, arsivBul, ambarAc,  sagAc, sagHedefler,  gezPos, simT, patlamaEkle, SOH, LON, PAZ, tpAc, sohGeldi,  fotoAc, fpAc, inisAc, inisKapat, get INS() { return INS; }, DEFTER, defter,  zulaYakin, snBasla, solucanAc, istilaBasla, istPos, istAc, mezarPos, mezar, OLAY2: () => OLAY,  EKIP, FR, KERVAN, ZIY, DOST, kervanAdim, kvPos, borsaAc, korsanLimanPos, frEkle, adaylar,  SARF, TLV, sarfKullan,  get kapsul() { return kapsul; }, get oks() { return oks; }, set oks(v) { oks = v; }, PLANLAR, KIY, KIYS, bankaAc, bankaPos, planVer, get sigorta() { return sigorta; },  OKK, oyuncuYakin, oyGelen, haftaK,  devCikar, kalintiBul,  TEKS, get TAK() { return TAK; }, set TAK(v) { TAK = v; }, arananlar, patlamaKullan,  IRK, piyasaOlay, balinaSuru, yakinBalinalar, bulmacaAc, get BLM() { return BLM; },  kapiPos, golgeCikar,  get nabiz() { return nabiz; }, get isi() { return isi; },  AG, bolgeBul,  KORS, OLAY, HIK, ST, BAS, get can() { return can; }, set can(v) { can = v; }, korsanCikar, hikAdim, hikBasla, kuyruk, kuyrukPos, nebulaB, nebulaIc, get gemiTip() { return gemiTip; }, KARAKOL: () => KARAKOL, olayZorla: () => { olayT = 0; },  get kaynP() { return kaynP; }, get kazP() { return kazP; }, KARGO, get kredi() { return kredi; }, set kredi(v) { kredi = v; }, get yakit() { return yakit; }, set yakit(v) { yakit = v; }, GOREV: () => GOREV, YUK, limanAc, get limanP() { return limanP; }, get yanasP() { return yanasP; }, SH, cam, temel, sistem, galaksi, KESIF, basla, haritaAc, haritaKapat, set zoom(v) { zKul = v; }, DOKU };
 })();
 </script>
 <script data-goatcounter="https://erdevelop.goatcounter.com/count" async src="//gc.zgo.at/count.js"></script>

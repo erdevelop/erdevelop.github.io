@@ -448,7 +448,7 @@ function arananlar(p) {
   for (let i = 0; i < 2; i++) {
     const id = 'b' + p.id + '@' + gun + '#' + i; if (ALINAN.has(id)) continue;
     const a = r() * TAU, d = 4 + r() * 8, x = p.s.x + Math.cos(a) * d * SEK, y = p.s.y + Math.sin(a) * d * SEK, ad = ARANAN_AD[(r() * ARANAN_AD.length) | 0];
-    L2.push({ id, tip: 'kelle', x, y, hs: [Math.floor(x / SEK), Math.floor(y / SEK)], ad: L(ad), odul: Math.round((1500 + d * 260 + r() * 900) / 10) * 10, kc: Math.round(500 + d * 80 + korsanGuc() * 400) });
+    L2.push({ id, tip: 'kelle', x, y, hs: [Math.floor(x / SEK), Math.floor(y / SEK)], ad: L(ad), odul: odulK(1500 + d * 260 + r() * 900, false), kc: Math.round(500 + d * 80 + korsanGuc() * 400) });
   }
   return L2;
 }
@@ -680,7 +680,7 @@ function olaylar(dt, t) {
   if (r < 0.66) { const a = Math.atan2(SH.vy, SH.vx) + (Math.random() - 0.5) * 1.4, d = 1600 + Math.random() * 2200; OLAY.push({ tip: 'enkaz', x: SH.x + Math.cos(a) * d, y: SH.y + Math.sin(a) * d, r0: Math.random() * TAU }); duyur('📡 ' + T('Tarayıcı bir enkaz buldu', 'Scanner found a wreck'), 'kesif', T('Yakında: yaklaşıp topla', 'Nearby: get close to salvage')); SES.kesif(); return; }
   if (GOREV.some(g => g.tip === 'imdat')) return;
   const a = Math.random() * TAU, d = SEK * (1.3 + Math.random() * 1.7), x = SH.x + Math.cos(a) * d, y = SH.y + Math.sin(a) * d, ad = isim(Math.random, 2);
-  GOREV.push({ id: 'i' + Date.now(), tip: 'imdat', x, y, ad, odul: Math.round(180 + d / SEK * 80), hs: [Math.floor(x / SEK), Math.floor(y / SEK)] });
+  GOREV.push({ id: 'i' + Date.now(), tip: 'imdat', x, y, ad, odul: odulK(180 + d / SEK * 80), hs: [Math.floor(x / SEK), Math.floor(y / SEK)] });
   gorevYaz(); duyur('🆘 ' + T('İmdat çağrısı: ', 'Distress call: ') + '<b>' + esc(ad) + '</b>', 'uyari', T('Yakıtı biten bir gemi 5 yakıt istiyor · görevlere eklendi', 'A stranded ship needs 5 fuel · added to missions')); SES.uyari();
 }
 function enkazTopla(o) {
