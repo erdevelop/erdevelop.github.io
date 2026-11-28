@@ -13,7 +13,13 @@ function secim(r, haric) {   /* 12 soru: her kademeden 3 */
     L = L.map(x => [x, r()]).sort((a, b) => a[1] - b[1]).map(x => x[0]); S.push(...L.slice(0, 3)); }
   return S.map(x => { const sira = [0, 1, 2, 3].map(j => [j, r()]).sort((a, b) => a[1] - b[1]).map(z => z[0]); return { i: x.i, k: x.k, q: x.q, s: sira.map(j => x.c[j]), d: sira.indexOf(0) }; });
 }
-if (typeof module !== 'undefined' && module.exports) { module.exports = { HAVUZ, secim, ODUL, BARAJ }; return; }
+function gununSecimi(g) {   /* her kademe sabit bir karışık sırayla döner: havuz bitene kadar (~40 gün) aynı soru gelmez */
+  const r = rng(52000 + g * 131), S = [];
+  for (const k of [1, 2, 3, 4]) { const L = HAVUZ.filter(x => x.k === k).map(x => [x, rng(7700 + x.i * 31)()]).sort((a, b) => a[1] - b[1]).map(x => x[0]);
+    for (let j = 0; j < 3; j++) S.push(L[(g * 3 + j) % L.length]); }
+  return S.map(x => { const sira = [0, 1, 2, 3].map(j => [j, r()]).sort((a, b) => a[1] - b[1]).map(z => z[0]); return { i: x.i, k: x.k, q: x.q, s: sira.map(j => x.c[j]), d: sira.indexOf(0) }; });
+}
+if (typeof module !== 'undefined' && module.exports) { module.exports = { HAVUZ, secim, gununSecimi, ODUL, BARAJ }; return; }
 if (!window.registerGame) return;
 const gun = () => window.Seri ? Seri.bugun() : Math.floor(Date.now() / 864e5);
 const CSS = `
@@ -71,7 +77,7 @@ registerGame({
     }
     function basla(gunluk) {
       temizle(); const haric = new Set(D.gec || []);
-      const S = gunluk ? secim(rng(52000 + GN * 131), new Set()) : secim(Math.random, haric);
+      const S = gunluk ? gununSecimi(GN) : secim(Math.random, haric);
       O = { gunluk, S, n: 0, j: { y: 1, s: 1, t: 1 }, sec: -1, gizli: [], yuzde: null, not: '', bitti: false, cevaplar: [] };
       if (!gunluk) { D.gec = (D.gec || []).concat(S.map(x => x.i)).slice(-150); kaydet(); }
       soru();
