@@ -214,7 +214,7 @@ registerGame({
     let D = Object.assign({ v: 1, el: 0, kaz: 0, ag: 0, o: '', sev: 1 }, (api.loadState && api.loadState()) || {});
     const kaydet = () => { try { api.saveState && api.saveState(D); } catch (e) { } };
     const kok = E('div', { class: 'ok' }); root.append(kok);
-    let sohbetK = null;
+    let sohbetK = null, izle = false;
     let S = null, ben = 0, mod = 'yz', sev = 1, oda = null, odaBirak = null, lobi = null, raf = new Array(YUVA).fill(null), rafTur = -1, secili = null, mesaj = '', mesajT = 0, yeniTas = null, gorulenI = -1,
       surT = 0, sur = null, cizBekle = false, canli = true, sayilan = '', yerelSur = 0, sonMetin = '', bekleyen = 0, vekil = '', yazSira = Promise.resolve();
     const q = s => kok.querySelector(s), kopya = s => JSON.parse(JSON.stringify(s));
@@ -222,7 +222,7 @@ registerGame({
     const botMu = p => mod === 'yz' ? p !== ben : !(koltuklar()[p]);
     const kopuk = p => { const K = koltuklar(); return !!(K && K[p] && !K[p].var); };
     const ad = p => { if (mod === 'yz') return p === ben ? 'Sen' : BOT[p]; const K = koltuklar(); return K && K[p] ? K[p].n : BOT[p]; };
-    const benimSira = () => S && !S.bitti && S.sira === ben;
+    const benimSira = () => S && !S.bitti && S.sira === ben && !izle;
     function mesajVer(m, sure) { mesaj = m; clearTimeout(mesajT); mesajT = setTimeout(() => { mesaj = ''; ciz(); }, sure || 1800); ciz(); }
 
     /* ---------- menü ---------- */
@@ -250,7 +250,7 @@ registerGame({
     }
     function agLobi() {
       temizle(); if (!window.Masa) { kok.innerHTML = '<div class="ok-menu"><p>Çevrimiçi bölüm yüklenemedi.</p><button class="ok-b" data-a="menu">‹ Geri</button></div>'; return; }
-      lobi = Masa.lobi(kok, { oyun: 'okey', koltuk: 4, enAz: 1, botlu: true, baslik: 'Okey', onGeri: menu,
+      lobi = Masa.lobi(kok, { oyun: 'okey', koltuk: 4, enAz: 1, botlu: true, baslik: 'Okey', onGeri: menu, onIzle: o => { lobi = null; agBasla(o); },
         baslat: o => o.baslat(OK.yeni((Math.random() * 4) | 0, null, 1, !!D.esli)),
         onOda: o => { lobi = null; agBasla(o); } });
     }
@@ -328,6 +328,7 @@ registerGame({
     function uygula(Y) { S = Y; if (mod === 'ag') gonder(); else yerelKaydet(); ciz(); if (S.bitti) bitti(); else surucu(); }
     /* sıradaki koltuğu yürüt: bilgisayar koltukları, kopanlar ve uzun süre oynamayanlar */
     function surucu() {
+      if (izle) return;
       clearTimeout(surT); if (!S || S.bitti || !canli) return; const p = S.sira; let sure;
       if (mod === 'yz') { if (p === ben) return; sure = S.cekti ? 750 : 650; }
       else { const K = koltuklar(), bagli = K.map((x, i) => x && x.var ? i : -1).filter(i => i >= 0 && i !== p); if (!bagli.length || bagli[0] !== ben) return; sure = !K[p] || (vekil === p + ':' + S.tur + ':' + S.son.i) ? (S.cekti ? 800 : 700) : !K[p].var ? 12000 : 75000; }
@@ -367,12 +368,12 @@ registerGame({
       ciz(); if (S.bitti) { if (!q('.ok-son')) bitti(); } else surucu();
     }
     function yzBasla(s, eski) {
-      temizle(); mod = 'yz'; ben = 0; sev = s; secili = null; mesaj = ''; gorulenI = -1;
+      temizle(); izle = false; mod = 'yz'; ben = 0; sev = s; secili = null; mesaj = ''; gorulenI = -1;
       if (eski && eski.S) { S = eski.S; raf = Array.isArray(eski.raf) && eski.raf.length === YUVA ? eski.raf : new Array(YUVA).fill(null); rafTur = S.tur; } else { S = OK.yeni((Math.random() * 4) | 0, null, 1, !!D.esli); rafTur = -1; }
       ekran(); ciz(); yerelKaydet(); surucu();
     }
     function agBasla(o) {
-      temizle(); mod = 'ag'; oda = o; ben = Math.max(0, o.ben); S = null; secili = null; mesaj = ''; rafTur = -1; gorulenI = -1; yerelSur = 0; sonMetin = ''; bekleyen = 0; ekran(); sohbetK = window.Masa && Masa.sohbet ? Masa.sohbet(o, { yer: q('.ok-alt'), sonra: q('[data-a=cik]'), koltuk: p => p === ben ? q('#ok-ben') : q(`.ok-oy.k${(p - ben + 4) % 4}`) }) : null;
+      temizle(); izle = !!o.izleyici; mod = 'ag'; oda = o; ben = Math.max(0, o.ben); S = null; secili = null; mesaj = ''; rafTur = -1; gorulenI = -1; yerelSur = 0; sonMetin = ''; bekleyen = 0; ekran(); sohbetK = window.Masa && Masa.sohbet ? Masa.sohbet(o, { yer: q('.ok-alt'), sonra: q('[data-a=cik]'), koltuk: p => p === ben ? q('#ok-ben') : q(`.ok-oy.k${(p - ben + 4) % 4}`) }) : null;
       odaBirak = oda.dinle(v => {
         if (!v) { if (S) mesajVer('Oda kapandı.', 60000); return; } const d = oda.durum(); if (!d) return; ben = Math.max(0, oda.ben);
         if (!bekleyen) al(d); if (S && !S.bitti) { ciz(); surucu(); }

@@ -58,7 +58,7 @@ function odaAc(oyun, kod) {
     dinle(f) { dinleyen.add(f); if (veri) f(veri); return () => dinleyen.delete(f); },
     /* durumu yaz: beklenen sürüm değiştiyse yazmaz (başkası önce davranmış) */
     async yaz(s, beklenen) { const b = beklenen == null ? oda.surum() : beklenen, m = JSON.stringify(s); const r = await DB.tx(kok + '/g', c => { const v = (c && c.v) || 0; if (v !== b) return; return { v: v + 1, s: m }; }); return r.ok; },
-    async baslat(s) { const m = JSON.stringify(s); const r = await DB.tx(kok + '/g', c => c ? undefined : { v: 1, s: m }); if (r.ok) { await DB.update(kok, { d: 1 }); DB.remove('masa/' + oyun + '/acik/' + kod).catch(() => { }); } return r.ok; },
+    async baslat(s) { const m = JSON.stringify(s); const r = await DB.tx(kok + '/g', c => c ? undefined : { v: 1, s: m }); if (r.ok) { await DB.update(kok, { d: 1 }); canli(); } return r.ok; },
     bitir() { return DB.update(kok, { d: 2 }).catch(() => { }); },
     /* hazır ifadeler: masa/<oyun>/oda/<kod>/m/<uid> = { i, t } */
     mesaj(i) { return DB.set(kok + '/m/' + UID, { i, t: DB.now() }).catch(() => { }); },
@@ -68,6 +68,8 @@ function odaAc(oyun, kod) {
       try { await DB.kopuncaIptal(kok + '/o/' + UID); const bekliyor = veri && veri.d === 0, tek = veri && veri.o && Object.keys(veri.o).filter(u => u !== UID && !veri.o[u].x).length === 0;
         if (tek) { await DB.remove(kok); await DB.remove('masa/' + oyun + '/acik/' + kod); } else if (bekliyor) { await DB.remove(kok + '/o/' + UID); dizin(veri, true); } else await DB.update(kok + '/o/' + UID, { x: DB.now() }); } catch (e) { } },
   };
+  /* oynanan masa izleyicilere listelenir: açık dizinde b = 0 */
+  function canli() { if (!veri) return; const K = oda.koltuklar().filter(Boolean).map(x => x.n); DB.set('masa/' + oyun + '/acik/' + kod, { t: DB.now(), u: veri.h, n: K.join(', ').slice(0, 16) || '?', b: 0 }).catch(() => { }); }
   function dizin(v, benYok) { if (!v || !v.a || v.d !== 0) return; const n = Object.keys(v.o || {}).filter(u => !(benYok && u === UID)).length; DB.update('masa/' + oyun + '/acik/' + kod, { t: DB.now(), u: v.h, n: (v.o && v.o[v.h] && v.o[v.h].n) || '?', b: Math.max(0, (v.k || 2) - n) }).catch(() => { }); }
   kapat = DB.on(kok, (v, hata) => {
     if (ayrildi) return; veri = v;
@@ -78,10 +80,24 @@ function odaAc(oyun, kod) {
   /* kopunca işaretle; geri gelince işareti sil */
   const benYol = kok + '/o/' + UID;
   const hazirla = () => { DB.kopunca(benYol, { x: DB.now() }).catch(() => { }); DB.kopunca('masa/' + oyun + '/acik/' + kod, null).catch(() => { }); };
-  hazirla(); nabiz = setInterval(() => { if (veri && veri.o && veri.o[UID] && veri.o[UID].x) { DB.update(benYol, { x: null }).catch(() => { }); hazirla(); } if (veri && veri.d === 0 && oda.yonetici()) dizin(veri); }, 12000);
+  hazirla(); nabiz = setInterval(() => { if (veri && veri.o && veri.o[UID] && veri.o[UID].x) { DB.update(benYol, { x: null }).catch(() => { }); hazirla(); } if (veri && veri.d === 0 && oda.yonetici()) dizin(veri); else if (veri && veri.d >= 1 && oda.yonetici()) canli(); }, 12000);
   oda._dizin = () => dizin(veri);
   return oda;
 }
+function izleAc(oyun, kod) {
+  const kok = yol(oyun, kod), dinleyen = new Set(); let veri = null, kapat = null, rozet = null;
+  const oda = { oyun, kod, izleyici: true, get uid() { return UID; }, get veri() { return veri; }, get ben() { return -1; },
+    koltuklar() { const K = Array.from({ length: (veri && veri.k) || 2 }, () => null); if (veri && veri.o) for (const u in veri.o) { const o = veri.o[u]; if (o && o.k >= 0 && o.k < K.length) K[o.k] = { uid: u, n: o.n || '?', var: !o.x }; } return K; },
+    yonetici() { return false; }, durum() { try { return veri && veri.g && veri.g.s ? JSON.parse(veri.g.s) : null; } catch (e) { return null; } },
+    surum() { return (veri && veri.g && veri.g.v) || 0; }, dinle(f) { dinleyen.add(f); if (veri) f(veri); return () => dinleyen.delete(f); },
+    async yaz() { return false; }, async baslat() { return false; }, bitir() { }, mesaj() { }, mesajDinle() { return () => { }; }, yeniden() { return Promise.resolve(); },
+    async ayril() { if (kapat) kapat(); kapat = null; dinleyen.clear(); if (rozet) rozet.remove(); rozet = null; document.body.classList.remove('ms-izliyor'); } };
+  kapat = DB.on(kok, v => { veri = v; dinleyen.forEach(f => { try { f(v); } catch (e) { console.error(e); } }); });
+  rozet = document.createElement('div'); rozet.className = 'ms-izle-rozet'; rozet.textContent = '👀 İzliyorsun'; document.body.appendChild(rozet); document.body.classList.add('ms-izliyor');
+  return oda;
+}
+async function izle(oyun, kod) { await baglan(); kod = String(kod || '').toUpperCase().replace(/[^A-Z0-9]/g, '').slice(0, 5); const v = await DB.get(yol(oyun, kod)); if (!v) throw new Error('Bu kodla bir oda yok.'); if (!v.g) throw new Error('Bu odada oyun henüz başlamadı.'); return izleAc(oyun, kod); }
+async function canliListe(oyun) { await baglan(); const L = await DB.acik('masa/' + oyun + '/acik').catch(() => ({})), simdi = DB.now(); return Object.entries(L).filter(([, v]) => v && v.b === 0 && simdi - v.t < 90000).sort((a, b) => b[1].t - a[1].t).slice(0, 12).map(([kod, v]) => ({ kod, n: v.n })); }
 async function kur(oyun, koltuk, acik, ad) {
   await baglan(); let kod = '';
   for (let d = 0; d < 6; d++) { kod = kodUret(); const r = await DB.tx(yol(oyun, kod), c => c ? undefined : { h: UID, t: DB.now(), d: 0, k: koltuk, a: acik ? 1 : 0, o: { [UID]: { n: ad, k: 0 } } }); if (r.ok) break; kod = ''; }
@@ -115,13 +131,13 @@ const KARSI = 'ob-masa-karsi', SAYILAN = 'ob-masa-sayilan';
 const karsiOku = () => { try { return JSON.parse(localStorage.getItem(KARSI) || '{}'); } catch (e) { return {}; } };
 function karsi(oyun, uid) { return karsiOku()[oyun + ':' + uid] || null; }
 function karsiYazi(oda) {
-  if (!oda) return ''; const K = oda.koltuklar(); if (K.length !== 2) return ''; const r = K.find(x => x && x.uid !== oda.uid); if (!r) return '';
+  if (!oda || oda.izleyici) return ''; const K = oda.koltuklar(); if (K.length !== 2) return ''; const r = K.find(x => x && x.uid !== oda.uid); if (!r) return '';
   const k = karsi(oda.oyun, r.uid); if (!k || !(k.g + k.k + k.b)) return '';
   return `${r.n} ile tüm zamanlar: ${k.g} galibiyet · ${k.k} yenilgi${k.b ? ' · ' + k.b + ' berabere' : ''}`;
 }
 /* r: 1 galibiyet, 0 yenilgi, 0.5 berabere; anahtar: aynı sonucun iki kez sayılmaması için */
 function sonuc(oda, r, anahtar) {
-  if (!oda || !DB) return; const k = oda.oyun + ':' + oda.kod + ':' + anahtar; let L = [];
+  if (!oda || !DB || oda.izleyici) return; const k = oda.oyun + ':' + oda.kod + ':' + anahtar; let L = [];
   try { L = JSON.parse(sessionStorage.getItem(SAYILAN) || '[]'); } catch (e) { } if (L.includes(k)) return; L.push(k); try { sessionStorage.setItem(SAYILAN, JSON.stringify(L.slice(-200))); } catch (e) { }
   const K = oda.koltuklar(), insan = K.filter(Boolean);
   if (K.length === 2) { const x = K.find(y => y && y.uid !== UID); if (x) { const O = karsiOku(), a = oda.oyun + ':' + x.uid, v = O[a] || { g: 0, k: 0, b: 0 }; v.n = x.n; v.t = Date.now(); if (r === 1) v.g++; else if (r === 0) v.k++; else v.b++; O[a] = v;
@@ -153,6 +169,8 @@ const CSS = `
 .ms-sira{display:flex;flex-direction:column;gap:3px;max-height:52vh;overflow:auto}.ms-sira div{display:grid;grid-template-columns:30px 1fr auto auto;gap:8px;align-items:center;padding:8px 10px;border-radius:10px;background:var(--bg2);font-weight:800;font-size:14px}
 .ms-sira div i{font-style:normal;color:var(--ink-soft);font-size:12.5px;text-align:right}.ms-sira div b{font-variant-numeric:tabular-nums}.ms-sira div.sen{box-shadow:inset 0 0 0 2px var(--accent)}.ms-sira div span{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 .ms-sira .bos{display:block;text-align:center;color:var(--ink-soft);font-weight:700}
+.ms-izle-rozet{position:fixed;left:50%;top:calc(env(safe-area-inset-top) + 8px);transform:translateX(-50%);z-index:80;padding:5px 12px;border-radius:999px;background:#111827;color:#fff;font-weight:800;font-size:12.5px;box-shadow:0 4px 14px rgba(0,0,0,.3);pointer-events:none}
+.ms-izliyor [data-a=yine],.ms-izliyor [data-a=teslim],.ms-izliyor [data-a=bitir],.ms-izliyor [data-a=at],.ms-izliyor [data-a=ac],.ms-izliyor [data-a=geri],.ms-izliyor [data-a=ipucu]{display:none!important}
 .ms-karsi{font-size:12.5px!important;font-weight:800!important;color:var(--accent-ink)!important;margin:0}
 `;
 /* lobi(kok, { oyun, koltuk, baslik, enAz, botlu, onOda(oda), onGeri() }) : oda kurulup oyun başlayınca onOda çağrılır */
@@ -167,8 +185,18 @@ function lobi(kok, o) {
       <button class="ms-b ana" data-a="hizli">⚡ Hızlı eşleş</button>
       <div class="ms-sat"><button class="ms-b" data-a="kur">🔒 Özel oda kur</button><button class="ms-b" data-a="kodla">🔑 Koda katıl</button></div>
       <div class="ms-sat" id="ms-kodsat" hidden><input id="ms-kod" maxlength="5" placeholder="KOD" autocomplete="off" style="text-transform:uppercase;letter-spacing:.2em;text-align:center"><button class="ms-b ana" data-a="katil" style="flex:.6">Katıl</button></div>
-      <div class="ms-hata"></div><button class="ms-b" data-a="sira">🏆 Haftanın sıralaması</button><button class="ms-b" data-a="geri">‹ Geri</button>`;
+      <div class="ms-hata"></div><div class="ms-sat"><button class="ms-b" data-a="izleListe">👀 Masaları izle</button><button class="ms-b" data-a="sira">🏆 Sıralama</button></div><button class="ms-b" data-a="geri">‹ Geri</button>`;
     const m = new URLSearchParams(location.search).get('masa'); if (m && !lobi._kullanildi) { lobi._kullanildi = true; q('#ms-kodsat').hidden = false; q('#ms-kod').value = m.toUpperCase().slice(0, 5); if (adAl()) is('katil'); else hata('Adını yazıp Katıl’a bas.'); }
+  }
+  async function izleGoster() {
+    el.innerHTML = `<h3>👀 Oynanan masalar</h3><p>Şu an oynanan bir masayı seyret ya da arkadaşının oda kodunu yaz. İzlerken oyuna karışamazsın.</p><div class="ms-sira" id="ms-canli"><div class="bos">Yükleniyor…</div></div>
+      <div class="ms-sat"><input id="ms-ikod" maxlength="5" placeholder="KOD" autocomplete="off" style="text-transform:uppercase;letter-spacing:.2em;text-align:center"><button class="ms-b ana" data-a="izleKod" style="flex:.6">İzle</button></div><div class="ms-hata"></div><button class="ms-b" data-a="girisDon">‹ Geri</button>`;
+    try { const L = await canliListe(o.oyun), x = el.querySelector('#ms-canli'); if (!x) return;
+      x.innerHTML = L.length ? L.map(m => `<div data-izle="${esc(m.kod)}" style="cursor:pointer"><b>▶</b><span>${esc(m.n)}</span><b>${esc(m.kod)}</b><i>izle</i></div>`).join('') : '<div class="bos">Şu an oynanan açık masa yok.</div>';
+      x.querySelectorAll('[data-izle]').forEach(d => d.onclick = () => izleBasla(d.dataset.izle)); } catch (e) { const x = el.querySelector('#ms-canli'); if (x) x.innerHTML = '<div class="bos">Liste yüklenemedi.</div>'; }
+  }
+  async function izleBasla(kod) {
+    try { const oda = await izle(o.oyun, kod); if (!o.onIzle) { oda.ayril(); return hata('Bu oyunda izleme yok.'); } bitti = true; kapat(); o.onIzle(oda); } catch (e) { hata(e.message || 'İzlenemedi.'); }
   }
   async function siraGoster() {
     el.innerHTML = `<h3>🏆 Haftanın sıralaması</h3><p>${haftaAraligi()} · Çevrimiçi masa oyunlarında en az iki kişinin oynadığı oyunlardaki galibiyetler. Pazartesi sıfırlanır.</p><div class="ms-sira"><div class="bos">Yükleniyor…</div></div><p id="ms-ben"></p><button class="ms-b" data-a="girisDon">‹ Geri</button>`;
@@ -200,7 +228,7 @@ function lobi(kok, o) {
     });
   }
   el.addEventListener('click', e => { const b = e.target.closest('button'); if (!b || b.disabled) return; const a = b.dataset.a;
-    if (a === 'geri') { kapat(); o.onGeri && o.onGeri(); } else if (a === 'sira') siraGoster(); else if (a === 'girisDon') giris(); else if (a === 'kodla') { q('#ms-kodsat').hidden = false; q('#ms-kod').focus(); }
+    if (a === 'geri') { kapat(); o.onGeri && o.onGeri(); } else if (a === 'sira') siraGoster(); else if (a === 'izleListe') izleGoster(); else if (a === 'izleKod') izleBasla((q('#ms-ikod') || {}).value); else if (a === 'girisDon') giris(); else if (a === 'kodla') { q('#ms-kodsat').hidden = false; q('#ms-kod').focus(); }
     else if (a === 'hizli' || a === 'kur' || a === 'katil') is(a);
     else if (a === 'kopya') { try { navigator.clipboard.writeText(el._link); b.textContent = '✓ Kopyalandı'; } catch (x) { hata(el._link); } }
     else if (a === 'paylas') navigator.share({ text: o.baslik + ' oynayalım mı? Kod: ' + oda.kod, url: el._link }).catch(() => { });
@@ -224,7 +252,7 @@ const SCSS = `
 `;
 /* sohbet(oda, { yer: düğmenin ekleneceği öğe, sonra: bu öğeden sonra ekle, koltuk: koltuk no → balonun çıkacağı öğe }) */
 function sohbet(oda, o) {
-  if (!oda || !o.yer) return { kapat() { } };
+  if (!oda || !o.yer || oda.izleyici) return { kapat() { } };
   if (!document.getElementById('ms-scss')) { const st = document.createElement('style'); st.id = 'ms-scss'; st.textContent = SCSS; document.head.appendChild(st); }
   const d = document.createElement('button'); d.className = 'ms-sb'; d.type = 'button'; d.textContent = '💬'; d.setAttribute('aria-label', 'Hazır mesaj gönder');
   if (o.sonra && o.sonra.parentNode === o.yer) o.sonra.after(d); else o.yer.appendChild(d);
@@ -246,5 +274,5 @@ function sohbet(oda, o) {
   const birak = oda.mesajDinle(balon);
   return { kapat() { birak(); kapatPano(); d.remove(); document.removeEventListener('pointerdown', disari, true); } };
 }
-window.Masa = { baglan, kur, katil, hizli, lobi, sohbet, IFADE, adAl, adKoy, sonuc, karsi, karsiYazi, siralama, hafta, ADLAR_OYUN, get uid() { return UID; } };
+window.Masa = { simdi: () => DB ? DB.now() : Date.now(), izle, canliListe, baglan, kur, katil, hizli, lobi, sohbet, IFADE, adAl, adKoy, sonuc, karsi, karsiYazi, siralama, hafta, ADLAR_OYUN, get uid() { return UID; } };
 })();

@@ -135,3 +135,11 @@
   teklif verirken eşinin katkısını hesaba katar (ihale tutma oranı tekliyle aynı düzeyde, ~%70).
 - Çevrimiçinde odayı başlatan oyuncunun seçimi geçerli olur.
 
+## Satranç saati ve izleyici modu — 28 Kasım 2026
+- **Satranç saati:** menüde Süresiz / 3+2 / 5 dk / 10 dk. Saat beyazın ilk hamlesinden sonra işlemeye başlar; artırımlı sürede her hamle sonrası
+  süre eklenir; son 20 saniyede saat kırmızıya döner ve onda biri gösterilir. Süresi biten kaybeder. Çevrimiçinde sunucu saatiyle hesaplanır;
+  bilgisayara karşı oyuna ara verirsen geçen süre sayılmaz.
+- **İzleyici modu** (bütün çevrimiçi masa oyunları): lobide “👀 Masaları izle” ile şu an oynanan masaların listesi ya da oda koduyla izleme.
+  İzleyici oyuna karışamaz, mesaj gönderemez, sonuçları sıralamaya sayılmaz; ekranın üstünde “👀 İzliyorsun” yazar.
+  Başlayan odalar artık açık dizinde “oynanıyor” olarak kalır (hızlı eşleşme bunları atlar).
+
