@@ -150,6 +150,7 @@ registerGame({
         <p>• Rakibin <b>tek</b> duran pulunun üstüne gelirsen onu kırarsın; kırılan pul ortaya çıkar ve önce onu oyuna sokmak gerekir. İki ve daha fazla pulun olduğu haneye girilmez.</p>
         <p>• Bütün pulların evindeyken toplamaya başlarsın: pula dokun, sonra sağdaki <b>toplama hanesine</b> dokun.</p>
         <p>• Rakip hiç pul toplayamadan bitirirsen <b>mars</b> olur, iki sayı alırsın.</p>
+        <a class="tv-b" href="/oyun-kurallari/tavla/" style="text-decoration:none;display:block">📖 Ayrıntılı kurallar ve ipuçları</a>
         <button class="tv-b ana" data-a="menu">Tamam</button></div>`;
     }
     function agLobi() {

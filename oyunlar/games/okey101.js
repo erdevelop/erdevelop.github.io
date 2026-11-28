@@ -335,6 +335,7 @@ registerGame({
         <p>• İşlenebilecek bir taşı ya da okeyi atmak <b>101 ceza</b> yazar (atmadan önce uyarılırsın).</p>
         <p>• Son taşını atan eli bitirir: <b>−101</b> yazar. Açmayanlar <b>202</b>, açanlar elinde kalan taşların toplamını yazar (elde kalan okey 101). Okeyle, çiftle ya da tek turda açıp bitirmek cezaları ikiye katlar. Deste biterse kimse −101 almaz.</p>
         <p>• Maç beş el sürer; toplamı en düşük olan kazanır.</p>
+        <a class="o1-b" href="/oyun-kurallari/101-okey/" style="text-decoration:none;display:block">📖 Ayrıntılı kurallar ve ipuçları</a>
         <button class="o1-b ana" data-a="menu">Tamam</button></div>`;
     }
     function agLobi() {

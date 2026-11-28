@@ -188,6 +188,7 @@ registerGame({
         <p>• Koz bir kez atılmadan (koz kırılmadan) kozla el açılmaz; elinde yalnız koz kaldıysa açabilirsin.</p>
         <p>• En büyük koz, koz yoksa atılan rengin en büyüğü eli alır. Atabileceğin kartlar parlak görünür: karta dokun, oynamak için yeniden dokun.</p>
         <p>• İhaleyi tutturan aldığı el kadar puan yazar, tutturamayan <b>batar</b> ve ihale kadar eksi yazar. Diğerleri aldıkları el kadar yazar. Maç dört el; en yüksek toplam kazanır.</p>
+        <a class="bt-b" href="/oyun-kurallari/batak/" style="text-decoration:none;display:block">📖 Ayrıntılı kurallar ve ipuçları</a>
         <button class="bt-b ana" data-a="menu">Tamam</button></div>`;
     }
     function agLobi() {

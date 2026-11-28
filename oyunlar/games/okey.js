@@ -243,6 +243,7 @@ registerGame({
         <p>• Normal bitiş 1 sayı; çiftle ya da okeyi atarak bitiş 2 sayı. Deste biterse el berabere kalır.</p>
         <p>• Taşlarını sürükleyerek ya da dokunarak istediğin gibi diz; <b>Seri diz</b> ve <b>Çift diz</b> senin yerine dizer.</p>
         <p>• Çevrimiçinde boş koltuklara bilgisayar oturur. 75 saniye oynamayanın o hamlesini bilgisayar yapar.</p>
+        <a class="ok-b" href="/oyun-kurallari/okey/" style="text-decoration:none;display:block">📖 Ayrıntılı kurallar ve ipuçları</a>
         <button class="ok-b ana" data-a="menu">Tamam</button></div>`;
     }
     function agLobi() {

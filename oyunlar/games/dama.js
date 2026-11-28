@@ -190,6 +190,7 @@ registerGame({
         <p>• Önündeki ya da yanındaki rakip taşın arkası boşsa üstünden atlayıp onu <b>alırsın</b>. Almak <b>zorunludur</b>; birden çok yol varsa <b>en çok taş alan</b> yolu oynamalısın. Alınan taş hemen kalkar.</p>
         <p>• Karşı sıraya varan taş <b>dama</b> olur (👑): dört yöne istediği kadar gider, uzaktaki bir taşı atlayıp arkasındaki herhangi bir boş kareye konabilir. Art arda alırken geri dönemez.</p>
         <p>• Taşına dokun: gidebileceği kareler yeşil, alma hamlelerinde kırmızı halka çıkar. Hamlesi kalmayan kaybeder.</p>
+        <a class="dm-b" href="/oyun-kurallari/dama/" style="text-decoration:none;display:block">📖 Ayrıntılı kurallar ve ipuçları</a>
         <button class="dm-b ana" data-a="menu">Tamam</button></div>`;
     }
     function agLobi() {

@@ -146,6 +146,7 @@ registerGame({
         <p>• Yerde <b>tek kart</b> varken onu aynı sayıyla alırsan <b>pişti</b>: 10 puan. Tek valeyi valeyle alırsan <b>vale piştisi</b>: 20 puan.</p>
         <p>• Elin sonunda: her as ve vale 1, <b>sinek 2’si</b> 2, <b>karo 10’u</b> 3 puan; en çok kartı toplayan 3 puan. Deste bitince yerde kalanlar son alana gider.</p>
         <p>• Karta dokun, atmak için yeniden dokun. Maçı ilk 101’e ulaşan kazanır.</p>
+        <a class="pi-b" href="/oyun-kurallari/pisti/" style="text-decoration:none;display:block">📖 Ayrıntılı kurallar ve ipuçları</a>
         <button class="pi-b ana" data-a="menu">Tamam</button></div>`;
     }
     function agLobi() {

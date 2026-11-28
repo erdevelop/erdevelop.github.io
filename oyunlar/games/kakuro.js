@@ -201,7 +201,7 @@ registerGame({
         <p>• Beyaz karelere 1–9 yaz. Aynı dizide bir rakam <b>iki kez kullanılmaz</b>.</p>
         <p>• Bir kareye dokunduğunda altta o dizilere uyan rakam toplulukları yazar: ör. iki karede 17 yalnızca <b>8+9</b> olabilir. Oradan başla.</p>
         <p>• ✎ Not modunda küçük aday rakamlar yazabilirsin. Gri kareler baştan verilmiştir.</p>
-        <div class="sat"><button data-a="kapat">Başla</button></div></div>`;
+        <p><a href="/oyun-kurallari/kakuro/">📖 Tek yoldan yapılan toplamlar ve çözüm yöntemleri</a></p><div class="sat"><button data-a="kapat">Başla</button></div></div>`;
     }
     kok.addEventListener('click', e => {
       const c = e.target.closest('.kk-c'); if (c && c.dataset.i != null) { const i = +c.dataset.i; if (P.ver[i]) return; sec = sec === i ? -1 : i; ses('click'); return ciz(); }

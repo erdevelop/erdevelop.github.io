@@ -257,6 +257,7 @@ registerGame({
         ${t('P', '<b>Piyon</b>: bir kare ileri (ilk hamlede iki), çapraz alır. Son sıraya varınca istediğin taşa dönüşür. Geçerken alma da yapılabilir.')}
         <p>• <b>Rok</b>: şah ve kale hiç oynamadıysa, aradaki kareler boşsa ve şah tehdit altından geçmiyorsa şah iki kare kaleye doğru gider. Şahı kaleye doğru iki kare sürükle.</p>
         <p>• Taşına dokun: gidebileceği kareler noktayla, alabileceği taşlar halkayla gösterilir. Hamle kalmadığında şah tehdit altında değilse <b>pat</b> (berabere).</p>
+        <a class="st-b" href="/oyun-kurallari/satranc/" style="text-decoration:none;display:block">📖 Ayrıntılı kurallar ve ipuçları</a>
         <button class="st-b ana" data-a="menu">Tamam</button></div>`;
     }
     function agLobi() {
