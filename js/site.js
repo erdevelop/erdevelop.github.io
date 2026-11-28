@@ -405,7 +405,7 @@ html[data-mode=light] #er-ara .bx{background:#fff;color:#1a2233;border-color:rgb
     if (D.querySelector('script[src*="firebasejs"]') && !(window.firebase && firebase.apps && firebase.apps.length)) { for (let i = 0; i < 40 && !(window.firebase && firebase.apps && firebase.apps.length); i++) await bekle(500); }
     if (!window.firebase) await yukleJs(V + 'firebase-app-compat.js');
     for (const n of ['auth', 'firestore']) if (!firebase[n]) await yukleJs(V + `firebase-${n}-compat.js`);
-    if (!firebase.apps.length) firebase.initializeApp(FB);
+    if (!firebase.apps.some(a => a.name === '[DEFAULT]')) firebase.initializeApp(FB);   /* sayfanın kendi adlı uygulaması (ör. Krallık Kartları çevrimiçi) varsa da varsayılanı kur */
     if (!window.erSenkron) await yukleJs('/js/senkron.js');
     const auth = firebase.auth(); const u = await new Promise(r => { const off = auth.onAuthStateChanged(x => { off(); r(x); }); });
     return u ? { db: firebase.firestore(), uid: u.uid } : null;

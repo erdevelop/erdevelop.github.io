@@ -13,7 +13,7 @@
       ['Mühendislik ana sayfası', 'Engineering home', '/muhendislik/', 1]] },
     { id: 'oyunlar', tr: 'Oyunlar', en: 'Games', u: '/tarayici-oyunlari/' },
     { id: 'ogren', tr: 'Öğren', en: 'Learn', u: '/ogren/', alt: [
-      ['Eğitimler', 'Courses', '/egitimler/'], ['Yapay zekâ', 'AI', '/yapay-zeka/'], ['Dil kulüpleri', 'Language clubs', '/rehber/dil-kulupleri/'], ['Rehberler', 'Guides', '/rehber/'], ['Mikro Dünya', 'Micro World', '/mikro-dunya/'],
+      ['Eğitimler', 'Courses', '/egitimler/'], ['Yapay zekâ', 'AI', '/yapay-zeka/'], ['Dil kulüpleri', 'Language clubs', '/rehber/dil-kulupleri/'], ['Rehberler', 'Guides', '/rehber/'], ['Meraklılar Köşesi', 'Curious Corner', '/meraklilar-kosesi/'], ['Mikro Dünya', 'Micro World', '/mikro-dunya/'],
       ['Öğren ana sayfası', 'Learn home', '/ogren/', 1]] },
     { id: 'hakkinda', tr: 'Hakkında', en: 'About', u: '/hakkinda.html' }
   ];

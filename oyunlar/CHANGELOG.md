@@ -158,3 +158,12 @@
 - Her cumartesi 20.00–23.00 (TSİ): bu saatlerde biten, en az iki kişinin oynadığı çevrimiçi masa oyunları ayrı turnuva tablosuna yazılır (`masa_turnuva/<gün>/<uid>`); süren oyunlar için 10 dakika pay
 - Lobide geri sayımlı turnuva şeridi ve tablo (canlıyken anlık, sonra son turnuvanın birincisi); ana sayfada cumartesi günü turnuva şeridi
 - Rozetler: Turnuvacı, Turnuva Müdavimi. Firebase kuralı yalnız cumartesi 17.00–20.10 UTC arasında yazmaya izin verir
+
+## Tombala
+- 90 sayı, klasik 3×9 kart (satır başına 5 sayı, onluk sütunlar), 1. çinko / 2. çinko / tombala
+- Sesli okuma (tr-TR), otomatik ya da elle işaretleme, yanlış çinkoya 3 sn bekleme, çekilenler panosu, hız ayarı
+- Bilgisayarlarla ya da çevrimiçi (en çok 4 kişi, boş koltuğa bilgisayar); tombala kural sayfası
+
+## Bir İşlem
+- Altı sayı (beşi 1–9, biri 25/50/75/100) ve üç basamaklı hedef; dört işlem, tam bölme, geri al/baştan
+- Günün sorusu (kesin çözümlü, iki sayıyla çözülemez), serbest mod, yıldızlar, süre, seri ve olası çözüm gösterimi

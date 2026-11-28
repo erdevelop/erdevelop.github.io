@@ -124,7 +124,7 @@ async function hizli(oyun, koltuk, ad) {
 /* ---------- haftalık sıralama ve karşılıklı skor ----------
    masa_sira/<yıl-hafta>/<uid> = { n: ad, g: galibiyet, o: oyun, t }  (yalnız en az iki kişinin oynadığı çevrimiçi oyunlar sayılır)
    Karşılıklı skor bu cihazda tutulur: aynı rakiple (anonim kimliğiyle) tüm zamanlar. */
-const ADLAR_OYUN = { tavla: 'Tavla', okey: 'Okey', okey101: '101 Okey', batak: 'Batak', king: 'King', pisti: 'Pişti', dama: 'Dama', satranc: 'Satranç' };
+const ADLAR_OYUN = { tavla: 'Tavla', okey: 'Okey', okey101: '101 Okey', batak: 'Batak', king: 'King', tombala: 'Tombala', pisti: 'Pişti', dama: 'Dama', satranc: 'Satranç' };
 function hafta(d) { d = d || new Date(); const t = new Date(Date.UTC(d.getFullYear(), d.getMonth(), d.getDate())), g = t.getUTCDay() || 7; t.setUTCDate(t.getUTCDate() + 4 - g); const y = t.getUTCFullYear(), w = Math.ceil(((t - Date.UTC(y, 0, 1)) / 864e5 + 1) / 7); return y + '-' + String(w).padStart(2, '0'); }
 function haftaAraligi() { const d = new Date(), g = (d.getDay() + 6) % 7, a = new Date(d.getFullYear(), d.getMonth(), d.getDate() - g), b = new Date(a.getFullYear(), a.getMonth(), a.getDate() + 6), f = x => x.toLocaleDateString('tr-TR', { day: 'numeric', month: 'long' }); return f(a) + ' – ' + f(b); }
 const KARSI = 'ob-masa-karsi', SAYILAN = 'ob-masa-sayilan';
