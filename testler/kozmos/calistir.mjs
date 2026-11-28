@@ -56,7 +56,7 @@ test('kaynak: parçalar ile kozmos.html aynı, betikler sözdizimi hatasız', as
 
 test('kurallar: sayaçlar şişirilemez (benzetim)', async () => {
   kurallar(JSON.parse(fs.readFileSync(path.join(KOK, 'firebase-kurallari-oyunlar.json'), 'utf8')).rules);
-  let db = {}; const A = { uid: 'u1', token: {} }, B = { uid: 'u2', token: {} }, YON = { uid: 'adm', token: { email: 'erdalustunol@gmail.com', email_verified: true } }, T0 = 1795700000000, yanlis = [];
+  let db = { yoneticiler: { adm: true } }; const A = { uid: 'u1', token: {} }, B = { uid: 'u2', token: {} }, YON = { uid: 'adm', token: {} }, T0 = 1795700000000, yanlis = [];
   const dene = (ad, bek, g, auth, now) => { const r = kuralYaz(db, g, auth, now); if (r.ok) db = r.yeni; if (!!r.ok !== bek) yanlis.push(ad + ' → ' + (r.ok ? 'kabul edildi' : r)); };
   const v = p => p.split('/').reduce((n, k) => n == null ? null : n[k], db) ?? 0;
   const ev = (u, m, now, ek = {}) => ({ ['kozmos/ev/2026-48/t']: v('kozmos/ev/2026-48/t') + m, ['kozmos/ev/2026-48/k/' + u + '/d']: v('kozmos/ev/2026-48/k/' + u + '/d') + m, ['kozmos/ev/2026-48/k/' + u + '/n']: 'Pilot', ['kozmos/ev/2026-48/k/' + u + '/z']: now, ...ek });
@@ -100,6 +100,8 @@ test('kurallar: sayaçlar şişirilemez (benzetim)', async () => {
   dene('hata üstüne yazma', false, rap('h1', T0 + 30000), null, T0 + 30000);
   dene('hata başkası silemez', false, { 'kozmos/hata/h1': null }, A, T0 + 40000);
   dene('hata yönetici siler', true, { 'kozmos/hata/h1': null }, YON, T0 + 40000);
+  dene('yönetici olmayan e-postalı hesap silemez', false, { 'kozmos/hata/h1': null }, { uid: 'u3', token: { email: 'x@example.com', email_verified: true } }, T0 + 40000);
+  dene('yönetici listesine kimse yazamaz', false, { 'yoneticiler/u1': true }, A, T0 + 40000);
   dene('hata çok uzun', false, { ...rap('h9', T0 + 50000), 'kozmos/hata/h9': { m: 'x'.repeat(600), t: T0 + 50000, v: '1' } }, null, T0 + 50000);
   esit(yanlis, [], 'kural benzetimi');
 });
