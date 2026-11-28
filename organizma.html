@@ -367,6 +367,7 @@ body.izle #mkOlcek{bottom:calc(120px + env(safe-area-inset-bottom,0px))}
 window.adsbygoogle = window.adsbygoogle || []; if (!window.adBreak) { window.adBreak = window.adConfig = function (o) { adsbygoogle.push(o); }; }
 try { adConfig({ preloadAdBreaks: 'on', sound: 'on' }); } catch (e) { }</script>
 <script src="/js/sade.js"></script>
+<script src="/js/mevsim.js"></script>
 <script src="/js/profil-link.js" defer></script>
 </head>
 <body>
@@ -562,9 +563,10 @@ const PARAM = new URLSearchParams(location.search);
 const R = 4200;                         // petri kabının yarıçapı (dünya birimi)
 /* gerçek zamanlı gün–gece: İstanbul saati, herkes için aynı (ortak saat) */
 const GUN = { isik: 1, saat: 12, z: 0, evre: null };
-/* mevsim: gerçek takvime (İstanbul) bağlı yüzey suyu sıcaklığı. Ilıman bir göl: şubatta ~6°C, ağustosta ~24°C; derin su ~4°C.
+/* mevsim: ortak mevsim saatine (js/mevsim.js) bağlı yüzey suyu sıcaklığı: oyunda bir yıl 60 dk, her mevsim 15 dk, herkes için aynı.
+   Ilıman bir göl: kış sonunda ~6°C, yaz sonunda ~24°C; derin su ~4°C.
    Sıcaklık metabolizmayı Q10≈2 kuralıyla değiştirir; algler ilkbaharda patlar; soğuk su daha çok oksijen tutar. */
-const MEVSIM = { gun: 180, suC: 15, ad: 'yaz', alg: 1, o2: 1, q: 1, hiz: 1, z: 0 };
+const MEVSIM = { gun: 180, suC: 15, ad: 'yaz', alg: 1, o2: 1, q: 1, hiz: 1, z: 0, kalan: 15 };
 const suIsi = (x, y) => { const dk = Math.min(1, Math.max(0, derinK(x, y))); let t = MEVSIM.suC - (MEVSIM.suC - 4) * dk; for (const b of BACA) { const d = Math.hypot(b.x - x, b.y - y); if (d < 520) t += 72 * (1 - d / 520) ** 2; } return t; };
 const isiQ = (x, y) => kis(Math.pow(2, (suIsi(x, y) - 18) / 10), 0.45, 1.7);
 const GOC_MIKRO = new Set([8, 27, 28, 32, 33]);
@@ -3802,7 +3804,7 @@ function yasamGuncelle(dt) {
         if (o.zehir > 0) h += yasamSatir('☠', T('Zehir', 'Toxin'), o.zehir.toFixed(1) + ' ' + T('sn', 's'), 'kotu', o.zehir / 5, '#B98AFF');
         if (o.kalkan > 0) h += yasamSatir('🛡', T('Kalkan', 'Shield'), o.kalkan.toFixed(1) + ' ' + T('sn', 's'), 'iyi', o.kalkan / 6, '#8FF0B8');
         { const hh = Math.floor(GUN.saat), dd = Math.floor((GUN.saat - hh) * 60); h += yasamSatir(GUN.isik > 0.5 ? '☀️' : GUN.isik > 0.03 ? '🌅' : '🌙', T('Gün ışığı', 'Daylight'), `${String(hh).padStart(2, '0')}:${String(dd).padStart(2, '0')} · %${Math.round(GUN.isik * 100)}`, '', GUN.isik, '#FFD27A', true); }
-        h += yasamSatir(MEVSIM_IKON[MEVSIM.ad], T('Mevsim', 'Season'), `${T(MEVSIM_AD[MEVSIM.ad][0], MEVSIM_AD[MEVSIM.ad][1])} · ${Math.round(MEVSIM.suC)}°C${MEVSIM.alg > 1.25 ? ' · 🌿' : ''}`, MEVSIM.alg > 1.25 ? 'iyi' : MEVSIM.suC < 9 ? 'dikkat' : '', null, null, true);
+        h += yasamSatir(MEVSIM_IKON[MEVSIM.ad], T('Mevsim', 'Season'), `${T(MEVSIM_AD[MEVSIM.ad][0], MEVSIM_AD[MEVSIM.ad][1])} · ${Math.round(MEVSIM.suC)}°C${MEVSIM.alg > 1.25 ? ' · 🌿' : ''} · ${T(MEVSIM.kalan + ' dk', MEVSIM.kalan + ' min')}`, MEVSIM.alg > 1.25 ? 'iyi' : MEVSIM.suC < 9 ? 'dikkat' : '', null, null, true);
         if (o.biyo > 0) h += yasamSatir('🟫', T('Biyofilm', 'Biofilm'), T('otluyorsun', 'grazing'), 'iyi', null, null, true);
         if (o.kolon && o.kolon.length) h += yasamSatir('🔗', T('Koloni', 'Colony'), `${o.kolon.length + 1} ${T('hücre', 'cells')} · 🛡+${Math.round(o.kolon.length * 3.5)}%`, 'iyi', o.kolon.length / 6, '#8FF0B8', true);
         if (o.mut && Object.keys(o.mut).some(k => o.mut[k])) h += yasamSatir('🧬', T('Mutasyonlar', 'Mutations'), mutOzet(o.mut), '', null, null, true);
@@ -4455,26 +4457,29 @@ function mkOlcekGuncelle(dt) {   // dünya birimi ≈ µm: ekranda 70–150 piks
 mkUygula();
 
 const MEVSIM_AD = { kis: ['Kış', 'Winter'], ilkbahar: ['İlkbahar', 'Spring'], yaz: ['Yaz', 'Summer'], sonbahar: ['Sonbahar', 'Autumn'] }, MEVSIM_IKON = { kis: '❄️', ilkbahar: '🌱', yaz: '🌞', sonbahar: '🍂' };
-let mevsimDuyuruldu = false;
+let mevsimDuyuruldu = false, mevsimOnce = null;
 function mevsimGuncelle() {
-  const tr = new Date(AG.simdi() + 3 * 3600e3); let gn = Math.floor((tr - Date.UTC(tr.getUTCFullYear(), 0, 1)) / 864e5) + 1;
-  if (PARAM.has('gunNo')) gn = kis(+PARAM.get('gunNo') || 1, 1, 366);
-  const ay = new Date(Date.UTC(2026, 0, gn)).getUTCMonth();
-  MEVSIM.gun = gn; MEVSIM.ad = ay === 11 || ay < 2 ? 'kis' : ay < 5 ? 'ilkbahar' : ay < 8 ? 'yaz' : 'sonbahar';
+  const em = window.erMevsim ? erMevsim(AG.simdi()) : { gn: 180, ad: 'yaz', kalanDk: 15 };
+  let gn = em.gn, ad = em.ad; MEVSIM.kalan = em.kalanDk;
+  if (PARAM.has('gunNo')) { gn = kis(+PARAM.get('gunNo') || 1, 1, 366); const ay = new Date(Date.UTC(2026, 0, gn)).getUTCMonth(); ad = ay === 11 || ay < 2 ? 'kis' : ay < 5 ? 'ilkbahar' : ay < 8 ? 'yaz' : 'sonbahar'; }
+  MEVSIM.gun = gn; MEVSIM.ad = ad;
   MEVSIM.suC = 15 + 9 * Math.cos(TAU * (gn - 215) / 365) + 1.5 * (GUN.isik - 0.5);
   const bloom = 0.55 * Math.exp(-(((gn - 105) / 24) ** 2)) + 0.22 * Math.exp(-(((gn - 285) / 20) ** 2));   // ilkbahar ve (daha küçük) sonbahar alg patlaması
   MEVSIM.alg = kis(0.55 + 0.45 * (MEVSIM.suC - 5) / 19, 0.5, 1) + bloom;
   MEVSIM.o2 = kis(1.12 - 0.013 * (MEVSIM.suC - 6), 0.86, 1.12);
   MEVSIM.q = kis(Math.pow(2, (MEVSIM.suC - 18) / 10), 0.45, 1.7); MEVSIM.hiz = 0.94 + 0.06 * Math.min(1.5, MEVSIM.q);
+  const degisti = mevsimOnce && mevsimOnce !== MEVSIM.ad; mevsimOnce = MEVSIM.ad;
+  if (degisti) mevsimDuyuruldu = false;   // her 15 dakikada bir mevsim değişir: yenisi anlatılır
   if (!mevsimDuyuruldu && (IZLE || (oyunda && (KAYIT.oyun | 0) >= 3))) {   // yeni oyuncuya ilk iki oyunda mevsim anlatılmaz: önce temel oynanış
-    mevsimDuyuruldu = true; const c = Math.round(MEVSIM.suC);
+    mevsimDuyuruldu = true; const c = Math.round(MEVSIM.suC), gecik = degisti ? 300 : 15000;
     const M2 = {
       kis: [`❄️ Kış: yüzey suyu ${c}°C. Soğukta metabolizma yavaşlar: hücreler daha az kütle yakar ama daha yavaş yüzer. Algler durgun, besin kıt; zor anda kist olmayı (K) unutma.`, `❄️ Winter: surface water ${c}°C. Cold slows metabolism: cells burn less mass but swim slower. Algae are dormant and food is scarce; remember you can encyst (K).`],
       ilkbahar: [`🌱 İlkbahar: su ${c}°C ve ısınıyor. Göllerde her yıl yaşanan ilkbahar alg patlaması başladı: plankton bol, büyümek için en iyi zaman.`, `🌱 Spring: water ${c}°C and warming. The yearly spring algal bloom has begun: plankton is plentiful, the best time to grow.`],
       yaz: [`🌞 Yaz: su ${c}°C. Sıcakta her şey hızlanır: daha hızlı yüzersin ama daha hızlı acıkırsın. Ilık su daha az oksijen tutar.`, `🌞 Summer: water ${c}°C. Warmth speeds everything up: you swim faster but get hungry faster. Warm water holds less oxygen.`],
       sonbahar: [`🍂 Sonbahar: su ${c}°C ve soğuyor. Metabolizma yavaşlıyor; küçük bir sonbahar alg patlamasından sonra besin azalacak.`, `🍂 Autumn: water ${c}°C and cooling. Metabolism slows; after a small autumn bloom food will get scarcer.`]
     }[MEVSIM.ad];
-    setTimeout(() => { if (IZLE) anlat(T(M2[0], M2[1]), 9); else if (oyunda) duyur(T(M2[0], M2[1]), '', 9); }, 15000);
+    const m1 = M2[0].replace(':', ` (${MEVSIM.kalan} dk):`), m2 = M2[1].replace(':', ` (${MEVSIM.kalan} min):`);
+    const ad0 = MEVSIM.ad; setTimeout(() => { if (MEVSIM.ad !== ad0) return; if (IZLE) anlat(T(m1, m2), 9); else if (oyunda) duyur(T(m1, m2), '', 9); }, gecik);   // bu arada mevsim değiştiyse eski haber verilmez
   }
 }
 function gunGuncelle(dt) {
