@@ -157,7 +157,7 @@ const N = [
 ].map(([k, tr, en, s, src, w, h, kip, kat, lic, sahip, dosya]) => ({ k, tr, en, s, src, w, h, kip, kat, lic, sahip, dosya, L: s * kat }));
 /* yan yana dizilim: her cisim bir öncekinin hemen sağında */
 const X = []; N.forEach((o, i) => { X[i] = i ? X[i - 1] + (N[i - 1].L + o.L) * .58 : 0; });
-const LOG = N.map(o => Math.log10(o.s));
+const LOG = N.map(o => Math.log10(o.L));
 const boyut = m => { const a = Math.abs(m); if (a < 1e-6) return nf(m * 1e9, m * 1e9 < 10 ? 1 : 0) + ' nm'; if (a < 1e-3) return nf(m * 1e6, m * 1e6 < 10 ? 1 : 0) + ' µm'; if (a < 1e-2) return nf(m * 1e3, 1) + ' mm'; if (a < 1) return nf(m * 100, m * 100 < 10 ? 1 : 0) + ' cm'; if (a < 1e3) return nf(m, m < 10 ? 1 : 0) + ' m'; if (a < 1e9) return nf(m / 1e3) + ' km'; if (a < 1e12) return nf(m / 1e9, 1) + t(' milyon km', ' million km'); if (a < 5e15) return nf(m / 1e12, 1) + t(' milyar km', ' billion km'); const ly = m / 9.46e15; if (ly >= 1e9) return nf(ly / 1e9, 1) + t(' milyar ışık yılı', ' billion light years'); if (ly >= 1e6) return nf(ly / 1e6, 1) + t(' milyon ışık yılı', ' million light years'); return nf(ly, ly < 10 ? 2 : ly < 1000 ? 1 : 0) + t(' ışık yılı', ' light years'); };
 /* kalıcı öğeler: her karede yalnızca konum ve boyut değişir (görseller yeniden yüklenmez) */
 const ici = $('ici');
@@ -171,9 +171,11 @@ const ss = (a, b, x) => { const u = Math.min(1, Math.max(0, (x - a) / (b - a)));
 const kar = (c1, c2, u) => c1.map((v, i) => Math.round(v + (c2[i] - v) * u));
 const MIK = [9, 26, 32], ACIK = [236, 240, 246], UZAY = [5, 7, 15];
 function ciz() {
-  const W = $('sahne').clientWidth, H = $('sahne').clientHeight, V = 10 ** e, k = W / V, hedef = Math.log10(V * .3);
+  const W = $('sahne').clientWidth, H = $('sahne').clientHeight, V = 10 ** e, k = W / V, hedef = Math.log10(V * .45);
   let i = LOG.findIndex(l => l > hedef); if (i < 0) i = N.length - 1; const j = Math.max(0, i - 1), f = i === j ? 0 : Math.min(1, Math.max(0, (hedef - LOG[j]) / (LOG[i] - LOG[j])));
-  const cx = X[j] + (X[i] - X[j]) * f;
+  /* kamera: küçük cisim yavaşça sola kayar, büyük olan sığacak kadar büyüyünce ortaya gelir */
+  const ara = X[i] - X[j] || 1, w = Math.min(1, Math.max(f * f * f, .32 * f * V / ara));
+  const cx = X[j] + ara * w;
   /* zemin: mikroskop (koyu) → gündelik dünya (açık) → uzay (koyu) */
   const u1 = ss(-4.6, -3.4, e), u2 = ss(4.8, 6.2, e), bg = kar(kar(MIK, ACIK, u1), UZAY, u2), acik = u1 * (1 - u2) > .5, sh = $('sahne').style;
   sh.setProperty('--ev-bg', `rgb(${bg})`); sh.setProperty('--ev-yazi', acik ? '#1b2440' : '#e8ecff'); sh.setProperty('--ev-golge', acik ? 'rgba(255,255,255,.8)' : '#000'); sh.setProperty('--ev-vurgu', acik ? '#c0392b' : '#ffd36b'); sh.setProperty('--ev-vig', acik ? '.06' : '.4');
