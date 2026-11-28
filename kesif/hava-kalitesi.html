@@ -1,0 +1,268 @@
+<!doctype html>
+<html lang="tr" data-mode="dark">
+<head>
+<meta charset="utf-8">
+<script src="/dil.js"></script>
+<script src="/dil/ortak.js"></script>
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Hava Kalitesi ve Polen – Türkiye 81 İl Hava Kirliliği Haritası | erdevelop</title>
+<meta name="description" content="Türkiye’nin 81 ilinde şu anki hava kalitesi indeksi, PM2,5, PM10, azot dioksit ve ozonun Dünya Sağlık Örgütü sınırlarıyla karşılaştırması, 4 günlük tahmin, çöl tozu ve polen.">
+<link rel="manifest" href="/manifest.webmanifest"><meta name="theme-color" content="#0b1220"><link rel="icon" href="/favicon.svg" type="image/svg+xml"><link rel="icon" href="/favicon.ico" sizes="any">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Chakra+Petch:wght@600;700&family=IBM+Plex+Sans:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500&display=swap">
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.css" integrity="sha384-c6Rcwz4e4CITMbu/NBmnNS8yN2sC3cUElMEMfP3vqqKFp7GOYaaBBCqmaWBjmkjb" crossorigin="anonymous">
+<link rel="stylesheet" href="tema.css">
+<style>
+.gk-yer { display: inline-flex; align-items: center; gap: 8px; font: 500 13px var(--f-mono); color: var(--muted); }
+.gk-ust { display: flex; flex-wrap: wrap; gap: 10px; align-items: center; justify-content: space-between; margin: 4px 0 6px; }
+.gk-not { font-size: 13px; color: var(--muted); margin: 8px 0 0; }
+.gk-kart { display: grid; gap: 10px; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); }
+.gk-kart .stat b { white-space: normal; font-size: 1.25rem; }
+.gk-uyari { border: 1px solid color-mix(in srgb, var(--warn) 50%, var(--line)); background: color-mix(in srgb, var(--warn) 9%, var(--panel)); border-radius: 8px; padding: 10px 14px; font-size: 13.5px; color: var(--text); }
+.gk-tablo { width: 100%; border-collapse: collapse; font-size: 14px; }
+.gk-tablo th, .gk-tablo td { text-align: left; padding: 9px 8px; border-bottom: 1px solid var(--line); vertical-align: top; }
+.gk-tablo th { font: 500 11px var(--f-mono); color: var(--muted); text-transform: uppercase; letter-spacing: .5px; }
+.gk-tablo td small { display: block; color: var(--muted); font-size: 12px; }
+.gk-sar { overflow-x: auto; -webkit-overflow-scrolling: touch; }
+.gk-rozet { display: inline-block; font: 600 11px var(--f-mono); padding: 2px 8px; border-radius: 999px; background: var(--accent-dim); color: var(--accent); white-space: nowrap; }
+.gk-rozet.ok { background: color-mix(in srgb, var(--ok) 15%, transparent); color: var(--ok); }
+.gk-rozet.no { background: color-mix(in srgb, var(--muted) 15%, transparent); color: var(--muted); }
+.gk-baglar { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 10px; }
+.gk-sar .gk-tablo { min-width: 640px; }
+@media (max-width: 520px) { .gk-sar { margin: 0 -16px; padding: 0 16px; } }
+
+.hk-ust { display: grid; grid-template-columns: minmax(0, 360px) minmax(0, 1fr); gap: 0 16px; align-items: start; }
+.hk-ust > .layer { margin-top: 0; }
+#harita { height: min(58vh, 470px); border-radius: 12px; border: 1px solid var(--line); }
+.hk-kart h2 { margin: 0; font: 700 1.3rem var(--f-display); }
+.hk-buyuk { display: flex; align-items: center; gap: 14px; margin: 12px 0; }
+.hk-buyuk b { font: 700 54px/1 var(--f-display); min-width: 96px; height: 96px; border-radius: 50%; display: grid; place-items: center; color: #10162b; font-variant-numeric: tabular-nums; }
+.hk-buyuk span { font: 700 20px var(--f-display); display: block; }
+.hk-buyuk small { color: var(--muted); font-size: 13px; }
+.hk-kart p { line-height: 1.55; margin: 0 0 8px; }
+.hk-mini { display: grid; grid-template-columns: 1fr 1fr; gap: 6px; margin-top: 10px; }
+.hk-mini div { background: var(--accent-dim); border-radius: 8px; padding: 7px 9px; }
+.hk-mini span { display: block; font: 500 10.5px var(--f-mono); color: var(--muted); text-transform: uppercase; }
+.hk-mini b { font: 600 15px var(--f-mono); }
+.hk-et { background: #fff !important; color: #10162b !important; border: 0 !important; border-radius: 6px !important; font: 700 11px var(--f-mono) !important; padding: 1px 5px !important; box-shadow: 0 1px 4px rgba(0,0,0,.3) !important; }
+.hk-et::before { display: none !important; }
+.hk-lejant { display: flex; flex-wrap: wrap; gap: 4px 12px; margin-top: 8px; font: 400 11.5px var(--f-mono); color: var(--muted); }
+.hk-lejant span { display: inline-flex; align-items: center; gap: 5px; }
+.hk-lejant i { width: 11px; height: 11px; border-radius: 50%; }
+.hk-kirletici { display: grid; grid-template-columns: repeat(auto-fill, minmax(240px, 1fr)); gap: 12px; }
+.hk-k { border: 1px solid var(--line); border-radius: 10px; padding: 10px 12px; }
+.hk-k h3 { margin: 0; font: 600 14px var(--f-body, inherit); display: flex; justify-content: space-between; gap: 8px; }
+.hk-k h3 small { font: 500 11px var(--f-mono); color: var(--muted); }
+.hk-k .deger { font: 700 22px var(--f-mono); margin: 4px 0; font-variant-numeric: tabular-nums; }
+.hk-k .deger small { font-size: 12px; color: var(--muted); font-weight: 400; }
+.hk-cubuk { height: 8px; border-radius: 4px; background: var(--line); position: relative; overflow: hidden; }
+.hk-cubuk i { position: absolute; left: 0; top: 0; bottom: 0; border-radius: 4px; }
+.hk-cubuk::after { content: ''; position: absolute; left: 50%; top: -2px; bottom: -2px; width: 2px; background: var(--text); opacity: .5; }
+.hk-k p { margin: 6px 0 0; font-size: 12.5px; color: var(--muted); line-height: 1.45; }
+.hk-sira h3 { margin: 4px 0 6px; font: 600 11px var(--f-mono); color: var(--muted); text-transform: uppercase; letter-spacing: .4px; }
+.hk-sira ol { margin: 0 0 10px; padding-left: 22px; }
+.hk-sira li { padding: 4px 0; border-bottom: 1px solid var(--line); cursor: pointer; display: flex; justify-content: space-between; gap: 8px; }
+.hk-sira li b { font: 600 13px var(--f-mono); padding: 0 7px; border-radius: 5px; color: #10162b; }
+.hk-polen { display: grid; gap: 6px; }
+.hk-polen div { display: grid; grid-template-columns: 110px 1fr 70px; gap: 8px; align-items: center; font-size: 13px; }
+.hk-polen div span:last-child { text-align: right; font: 500 12px var(--f-mono); }
+@media (max-width: 860px) { .hk-ust { grid-template-columns: 1fr; } .hk-ust > .layer + .layer { margin-top: 16px; } }
+.ik-grafik { position: relative; width: 100%; }
+.ik-grafik svg { width: 100%; height: auto; display: block; overflow: visible; }
+.ik-grafik text { font: 400 11px var(--f-mono); fill: var(--muted); }
+.ik-ipucu { position: absolute; pointer-events: none; background: var(--panel); border: 1px solid var(--line); border-radius: 7px; padding: 6px 9px; font: 500 12px var(--f-mono); box-shadow: 0 4px 14px rgba(0,0,0,.15); white-space: nowrap; transform: translate(-50%, -110%); z-index: 3; }
+.ik-iki { display: grid; grid-template-columns: 1fr 1fr; gap: 0 16px; }
+.ik-iki > .layer { margin-top: 0; }
+@media (max-width: 760px) { .ik-iki { grid-template-columns: 1fr; } }
+
+</style>
+<!-- paylaşım, arama motoru ve reklam etiketleri -->
+<link rel="canonical" href="https://erdevelop.com/kesif/hava-kalitesi.html">
+<meta property="og:type" content="website"><meta property="og:site_name" content="erdevelop"><meta property="og:title" content="Hava Kalitesi ve Polen – Türkiye 81 İl Hava Kirliliği Haritası | erdevelop"><meta property="og:description" content="Türkiye’nin 81 ilinde şu anki hava kalitesi indeksi, PM2,5, PM10, azot dioksit ve ozonun Dünya Sağlık Örgütü sınırlarıyla karşılaştırması, 4 günlük tahmin, çöl tozu ve polen."><meta property="og:url" content="https://erdevelop.com/kesif/hava-kalitesi.html"><meta property="og:image" content="https://erdevelop.com/og/kesif-hava-kalitesi.jpg"><meta property="og:image:width" content="1200"><meta property="og:image:height" content="630"><meta property="og:locale" content="tr_TR"><meta name="twitter:card" content="summary_large_image">
+<script async src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-4775308844679394" crossorigin="anonymous"></script>
+<script type="application/ld+json">{"@context": "https://schema.org", "@type": "WebApplication", "name": "Hava kalitesi ve polen", "description": "Türkiye’nin 81 ilinde şu anki hava kalitesi indeksi, PM2,5, PM10, azot dioksit ve ozonun Dünya Sağlık Örgütü sınırlarıyla karşılaştırması, 4 günlük tahmin, çöl tozu ve polen.", "url": "https://erdevelop.com/kesif/hava-kalitesi.html", "applicationCategory": "EducationalApplication", "operatingSystem": "Any (web browser)", "inLanguage": "tr", "isAccessibleForFree": true, "offers": {"@type": "Offer", "price": "0", "priceCurrency": "TRY"}}</script>
+<script>(function(){var k=matchMedia('(prefers-color-scheme: dark)').matches?'dark':'light';try{var m=localStorage.getItem('erdevelop-mode'),g=localStorage.getItem('erdevelop-mode-gun');if(m&&g===new Date().toDateString())k=m}catch(e){}document.documentElement.setAttribute('data-mode',k)})()</script>
+<link rel="stylesheet" href="/css/kabuk.css">
+</head>
+<body>
+<div class="bg" aria-hidden="true"></div>
+<div class="topbar"><div class="wrap">
+  <a class="brand" href="../"><span>er</span>develop<span>_</span></a><span class="crumb">/ meraklılar / hava kalitesi</span><span class="sp"></span>
+  <a class="tb" href="../meraklilar-kosesi/" data-en="Curious">Meraklılar</a><button class="tb" type="button" data-dil-btn aria-label="Switch to English">EN</button><button class="tb" type="button" id="modeBtn">LIGHT</button>
+</div></div>
+<main class="wrap">
+  <header class="head"><h1 data-en="Air quality and pollen">Hava kalitesi ve polen</h1><p data-en="Current air quality across Turkey’s 81 provinces, the pollutants behind it compared with World Health Organization guidelines, a 4-day forecast, desert dust and pollen.">Türkiye’nin 81 ilinde şu anki hava kalitesi, kirliliğe neden olan maddelerin Dünya Sağlık Örgütü sınırlarıyla karşılaştırması, 4 günlük tahmin, çöl tozu ve polen.</p></header>
+  <div class="gk-ust"><div id="yer"></div><span class="meta" id="saatMeta"></span></div>
+  <div class="hk-ust">
+    <div class="layer hk-kart" id="kart"><p class="gk-not" data-en="Loading…">Yükleniyor…</p></div>
+    <div class="layer hk-harita-kap">
+      <div class="layer-head"><span class="swatch"></span><h2 data-en="Turkey right now">Türkiye şu an</h2></div>
+      <div id="harita"></div>
+      <div class="hk-lejant" id="lejant"></div>
+    </div>
+  </div>
+  <div class="layer">
+    <div class="layer-head"><span class="swatch"></span><h2 data-en="Pollutants vs WHO guidelines">Kirleticiler ve DSÖ sınırları</h2><span class="meta" data-en="current value / daily guideline">şu anki değer / günlük sınır</span></div>
+    <div class="hk-kirletici" id="kirletici"></div>
+  </div>
+  <div class="layer">
+    <div class="layer-head"><span class="swatch"></span><h2 data-en="Next 4 days">Önümüzdeki 4 gün</h2></div>
+    <div class="ik-grafik" id="tahmin"></div>
+  </div>
+  <div class="ik-iki">
+    <div class="layer"><div class="layer-head"><span class="swatch"></span><h2 data-en="Pollen">Polen</h2></div><div id="polen"></div></div>
+    <div class="layer"><div class="layer-head"><span class="swatch"></span><h2 data-en="Cleanest and most polluted now">Şu an en temiz ve en kirli</h2></div><div class="hk-sira" id="sira"></div></div>
+  </div>
+  <div class="layer"><div class="gk-baglar"><a class="btn" href="iklim.html" data-en="🌡️ Is your city getting warmer? →">🌡️ Şehrin ısınıyor mu? →</a><a class="btn" href="gunes-firtinasi.html" data-en="🌌 Solar storms →">🌌 Güneş fırtınası →</a><a class="btn" href="deniz.html" data-en="🌊 Sea temperature →">🌊 Deniz suyu sıcaklığı →</a></div></div>
+<style>
+.er-about{max-width:860px;margin:40px auto 28px;padding:20px 22px;border:1px solid var(--line,rgba(127,127,127,.3));border-radius:12px;line-height:1.65;font-size:15px;color:inherit;box-sizing:border-box;text-align:left;font-family:inherit}
+.er-about h2{font-size:1.15rem;line-height:1.3;margin:0 0 10px;color:inherit}
+.er-about h3{font-size:1rem;margin:18px 0 6px;color:inherit}
+.er-about p{margin:0 0 10px}.er-about p,.er-about li{opacity:.9}
+.er-about ol,.er-about ul{padding-left:22px;margin:6px 0}.er-about li{margin:4px 0}
+.er-about a{color:inherit;text-decoration:underline}
+@media (max-width:600px){.er-about{margin:28px 12px 20px;padding:16px;font-size:14.5px}}
+details.er-fab{position:fixed;left:12px;bottom:12px;z-index:2147483000;max-width:min(520px,calc(100vw - 24px));font:14px/1.6 system-ui,-apple-system,"Segoe UI",sans-serif}
+details.er-fab>summary{list-style:none;cursor:pointer;display:inline-block;padding:6px 12px;border-radius:999px;background:rgba(20,24,33,.82);color:#f2f4f8;border:1px solid rgba(255,255,255,.18);font-size:13px;backdrop-filter:blur(6px);-webkit-backdrop-filter:blur(6px);user-select:none}
+details.er-fab>summary::-webkit-details-marker{display:none}
+details.er-fab[open]>summary{margin-bottom:8px}
+details.er-fab .er-about{margin:0;max-height:min(70vh,560px);overflow:auto;background:rgba(20,24,33,.96);color:#eef1f6;border-color:rgba(255,255,255,.18);box-shadow:0 10px 40px rgba(0,0,0,.45)}
+</style>
+<section class="er-about" id="hakkinda" aria-labelledby="hakkinda-b">
+<div data-l="tr">
+<h2 id="hakkinda-b">Hava kalitesi indeksi nasıl okunur?</h2>
+<p>Burada Avrupa Hava Kalitesi İndeksi kullanılır. İndeks; ince partikül madde (PM2,5), partikül madde (PM10), azot dioksit, ozon ve kükürt dioksitin her biri için ayrı bir puan hesaplar ve en kötüsünü gösterir. 0–20 iyi, 20–40 makul, 40–60 orta, 60–80 kötü, 80–100 çok kötü, 100’ün üstü son derece kötü demektir. Değer yükseldikçe özellikle astım ve kalp hastaları, çocuklar ve yaşlılar dışarıdaki yoğun egzersizi azaltmalıdır.</p>
+<h3>PM2,5 neden önemli?</h3>
+<p>Çapı 2,5 mikrometreden küçük parçacıklar (bir saç telinin yaklaşık otuzda biri) akciğerlerin derinlerine, hatta kana kadar ulaşabilir. Dünya Sağlık Örgütü, hava kirliliğini en büyük çevresel sağlık riski olarak görür ve 2021’de önerdiği sınırları düşürdü: PM2,5 için günlük ortalama 15 µg/m³.</p>
+<h3>Bilmen gerekenler</h3><ul><li>Değerler Avrupa Birliği’nin Copernicus Atmosfer İzleme Servisi’nin (CAMS) model tahminleridir ve <a href="https://open-meteo.com/" rel="noopener">Open-Meteo</a> aracılığıyla alınır. Ölçüm istasyonu verisi değildir; yaklaşık 10–40 km’lik karelerin ortalamasıdır. Resmî istasyon ölçümleri için Çevre, Şehircilik ve İklim Değişikliği Bakanlığı’nın Ulusal Hava Kalitesi İzleme Ağı’na bakabilirsin.</li><li>Polen tahmini Avrupa bölgesi için yapılır ve yalnızca polen mevsiminde (genellikle şubat–eylül) değer gösterir. Doğu illerinin bir kısmı bu bölgenin dışında kalabilir.</li><li>Bu sayfa bilgi amaçlıdır; sağlık şikâyetin varsa doktoruna danış.</li></ul>
+</div>
+<div data-l="en" hidden>
+<h2>How to read the air quality index</h2>
+<p>This page uses the European Air Quality Index. It scores fine particles (PM2.5), particles (PM10), nitrogen dioxide, ozone and sulphur dioxide separately and shows the worst. 0–20 is good, 20–40 fair, 40–60 moderate, 60–80 poor, 80–100 very poor and above 100 extremely poor. As it rises, people with asthma or heart conditions, children and older people in particular should cut back on hard exercise outdoors.</p>
+<h3>Why does PM2.5 matter?</h3>
+<p>Particles smaller than 2.5 micrometres (about a thirtieth of a hair’s width) can reach deep into the lungs and even the blood. The World Health Organization calls air pollution the biggest environmental health risk and lowered its guidelines in 2021: a daily average of 15 µg/m³ for PM2.5.</p>
+<h3>Good to know</h3><ul><li>Values are model forecasts from the EU’s Copernicus Atmosphere Monitoring Service (CAMS), via <a href="https://open-meteo.com/" rel="noopener">Open-Meteo</a>. They are not station measurements but averages over squares roughly 10–40 km wide. For official station data, see the Turkish Ministry of Environment’s National Air Quality Monitoring Network.</li><li>The pollen forecast covers the European region and only shows values in pollen season (usually February–September). Some eastern provinces may fall outside it.</li><li>This page is for information only; if you have health concerns, talk to your doctor.</li></ul>
+</div>
+</section>
+
+</main>
+<footer><div class="wrap"><span data-en="Calculated in your browser · for learning and curiosity">Hesaplar tarayıcında yapılır · eğitim ve merak amaçlıdır</span><a href="../meraklilar-kosesi/" data-en="← Curious Corner">← Meraklılar Köşesi</a></div></footer>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.js" integrity="sha384-NElt3Op+9NBMCYaef5HxeJmU4Xeard/Lku8ek6hoPTvYkQPh3zLIrJP7KiRocsxO" crossorigin="anonymous"></script>
+<script src="tema.js"></script>
+<script src="gok.js"></script>
+<script>
+(() => {
+const t = GK.t, $ = id => document.getElementById(id);
+const esc = s => String(s).replace(/[&<>"]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
+const nf = (x, d = 0) => x == null ? '–' : (+x).toLocaleString(GK.LOC(), { maximumFractionDigits: d, minimumFractionDigits: d });
+const BANT = [[20, '#50f0e6', 'İyi', 'Good'], [40, '#50ccaa', 'Makul', 'Fair'], [60, '#f0e641', 'Orta', 'Moderate'], [80, '#ff5050', 'Kötü', 'Poor'], [100, '#c4204f', 'Çok kötü', 'Very poor'], [1e9, '#7d2181', 'Son derece kötü', 'Extremely poor']];
+const bant = v => v == null ? null : BANT.find(b => v <= b[0]);
+const renk = v => { const b = bant(v); return b ? b[1] : '#9aa3b2'; };
+const ad = v => { const b = bant(v); return b ? t(b[2], b[3]) : '–'; };
+const ONERI = [
+  ['Hava temiz. Dışarıda spor yapmak ve pencereleri açmak için iyi bir zaman.', 'The air is clean. A good time for outdoor exercise and airing your home.'],
+  ['Hava kabul edilebilir. Çok hassas kişiler dışında herkes için uygun.', 'Air quality is acceptable. Fine for everyone except very sensitive people.'],
+  ['Hassas kişiler (astım, kalp hastaları, çocuklar, yaşlılar) uzun süreli yoğun egzersizi azaltmayı düşünebilir.', 'Sensitive people (asthma, heart conditions, children, older people) may want to cut back on long, hard exercise outdoors.'],
+  ['Hassas kişiler dışarıda yoğun egzersizden kaçınmalı; herkes uzun süreli zorlayıcı etkinlikleri azaltmalı.', 'Sensitive people should avoid hard outdoor exercise; everyone should cut back on long, strenuous activity.'],
+  ['Herkes dışarıdaki yoğun etkinlikleri azaltmalı; hassas kişiler mümkünse içeride kalmalı.', 'Everyone should reduce hard outdoor activity; sensitive people should stay indoors if they can.'],
+  ['Dışarıda fiziksel etkinlikten kaçının; pencereleri kapalı tutun.', 'Avoid physical activity outdoors and keep windows closed.'],
+];
+const KIR = [
+  ['pm2_5', 'PM2,5', 'PM2.5', 15, 'µg/m³', ['İnce partikül: egzoz, ısınma, sanayi. Akciğerlerin derinine iner.', 'Fine particles: exhaust, heating, industry. Reach deep into the lungs.']],
+  ['pm10', 'PM10', 'PM10', 45, 'µg/m³', ['Toz, polen, inşaat ve yollardan kalkan iri parçacıklar.', 'Coarser particles from dust, pollen, building sites and roads.']],
+  ['nitrogen_dioxide', 'Azot dioksit (NO₂)', 'Nitrogen dioxide (NO₂)', 25, 'µg/m³', ['Çoğunlukla trafikten; yoğun caddelerde yükselir.', 'Mostly from traffic; highest along busy roads.']],
+  ['ozone', 'Ozon (O₃)', 'Ozone (O₃)', 100, 'µg/m³', ['Güneşli, sıcak günlerde egzoz gazlarından oluşur; öğleden sonra artar.', 'Forms from exhaust fumes on sunny, hot days; peaks in the afternoon.']],
+  ['sulphur_dioxide', 'Kükürt dioksit (SO₂)', 'Sulphur dioxide (SO₂)', 40, 'µg/m³', ['Kömür ve fuel-oil yakılmasından; kışın ısınmayla artabilir.', 'From burning coal and fuel oil; can rise with winter heating.']],
+  ['carbon_monoxide', 'Karbon monoksit (CO)', 'Carbon monoxide (CO)', 4000, 'µg/m³', ['Eksik yanmadan çıkar; trafik ve sobalar.', 'From incomplete burning: traffic and stoves.']],
+  ['dust', 'Çöl tozu', 'Desert dust', null, 'µg/m³', ['Afrika ve Orta Doğu’dan rüzgârla taşınan toz; gökyüzünü sarartabilir.', 'Dust carried on the wind from Africa and the Middle East; can turn the sky yellow.']],
+];
+const POLEN = [['alder_pollen', 'Kızılağaç', 'Alder'], ['birch_pollen', 'Huş', 'Birch'], ['grass_pollen', 'Çimen', 'Grass'], ['mugwort_pollen', 'Pelinotu', 'Mugwort'], ['olive_pollen', 'Zeytin', 'Olive'], ['ragweed_pollen', 'Yakupotu (ambrosia)', 'Ragweed']];
+const API = 'https://air-quality-api.open-meteo.com/v1/air-quality';
+const IL = GK.IL.map(([a, la, lo]) => ({ ad: a, lat: la, lon: lo }));
+let tum = null, detay = null;
+const map = TM.map('harita', { minZoom: 4, maxZoom: 10 }); map.fitBounds(IL.map(n => [n.lat, n.lon]), { padding: [16, 16] });
+const kat = L.layerGroup().addTo(map);
+map.on('zoomend', () => tum && haritaCiz());
+$('lejant').innerHTML = BANT.map((b, i) => `<span><i style="background:${b[1]}"></i>${i ? BANT[i - 1][0] : 0}${b[0] < 1e9 ? '–' + b[0] : '+'} ${t(b[2], b[3])}</span>`).join('');
+
+async function tumYukle() {
+  try {
+    const u = `${API}?latitude=${IL.map(n => n.lat).join(',')}&longitude=${IL.map(n => n.lon).join(',')}&current=european_aqi,pm2_5,pm10&timezone=auto`;
+    const j = await fetch(u).then(r => r.json());
+    tum = IL.map((n, i) => ({ ...n, c: (j[i] || j).current || {} }));
+    haritaCiz(); siraCiz();
+  } catch (e) { }
+}
+function haritaCiz() {
+  kat.clearLayers(); const z = map.getZoom(), sec = GK.konum().ad;
+  tum.forEach(n => {
+    const v = n.c.european_aqi;
+    L.circleMarker([n.lat, n.lon], { radius: n.ad === sec ? 10 : 7, color: '#fff', weight: n.ad === sec ? 3 : 1.5, fillColor: renk(v), fillOpacity: .95 })
+      .bindTooltip(`${z >= 7 ? '' : esc(n.ad) + ' '}${nf(v)}`, { permanent: z >= 7, direction: 'top', className: 'hk-et', offset: [0, -6] })
+      .on('click', () => ilSec(n.ad)).addTo(kat);
+  });
+}
+function siraCiz() {
+  const l = tum.filter(n => n.c.european_aqi != null).sort((a, b) => a.c.european_aqi - b.c.european_aqi);
+  const li = n => `<li data-ad="${esc(n.ad)}"><span>${esc(n.ad)}</span><b style="background:${renk(n.c.european_aqi)}">${nf(n.c.european_aqi)}</b></li>`;
+  $('sira').innerHTML = `<h3>${t('En temiz', 'Cleanest')}</h3><ol>${l.slice(0, 5).map(li).join('')}</ol><h3>${t('En kirli', 'Most polluted')}</h3><ol>${l.slice(-5).reverse().map(li).join('')}</ol>`;
+}
+$('sira').addEventListener('click', e => { const li = e.target.closest('li[data-ad]'); if (li) ilSec(li.dataset.ad); });
+function ilSec(a) { const i = GK.IL.findIndex(x => x[0] === a); if (i < 0) return; const sel = document.querySelector('#yer select'); if (sel) { sel.value = 'il:' + i; sel.dispatchEvent(new Event('change')); } }
+
+async function detayYukle() {
+  const k = GK.konum();
+  try {
+    const hourly = ['european_aqi', 'pm2_5', 'pm10', 'nitrogen_dioxide', 'ozone', 'dust', ...POLEN.map(p => p[0])].join(',');
+    const u = `${API}?latitude=${k.lat}&longitude=${k.lon}&current=european_aqi,${KIR.map(x => x[0]).join(',')},uv_index&hourly=${hourly}&forecast_days=4&timezone=auto`;
+    detay = await fetch(u).then(r => r.json());
+    detayCiz();
+  } catch (e) { $('kart').innerHTML = `<p class="gk-not">${t('Veri şu an alınamadı. Biraz sonra yeniden dene.', 'Could not load the data right now. Please try again shortly.')}</p>`; }
+  if (tum) haritaCiz();
+}
+function detayCiz() {
+  const k = GK.konum(), c = detay.current, v = c.european_aqi, bi = BANT.findIndex(b => v <= b[0]);
+  $('saatMeta').textContent = t(`Güncelleme: ${c.time.slice(11, 16)} (yerel saat)`, `Updated: ${c.time.slice(11, 16)} (local time)`);
+  $('kart').innerHTML = `<h2>${esc(k.ad)}</h2><div class="hk-buyuk"><b style="background:${renk(v)}">${nf(v)}</b><div><span>${ad(v)}</span><small>${t('Avrupa hava kalitesi indeksi', 'European air quality index')}</small></div></div>
+    <p>${esc(t(...ONERI[Math.max(0, bi)]))}</p>
+    <div class="hk-mini"><div><span>PM2,5</span><b>${nf(c.pm2_5, 1)}</b> <small>µg/m³</small></div><div><span>PM10</span><b>${nf(c.pm10, 1)}</b> <small>µg/m³</small></div><div><span>${t('Çöl tozu', 'Desert dust')}</span><b>${nf(c.dust)}</b> <small>µg/m³</small></div><div><span>${t('UV indeksi', 'UV index')}</span><b>${nf(c.uv_index, 1)}</b></div></div>`;
+  $('kirletici').innerHTML = KIR.map(([key, tr, en, sinir, bir, ack]) => {
+    const x = c[key], oran = sinir ? x / sinir : null, col = oran == null ? '#c9a45c' : oran <= .5 ? '#50ccaa' : oran <= 1 ? '#e6c229' : oran <= 2 ? '#ff7a50' : '#c4204f';
+    return `<div class="hk-k"><h3>${t(tr, en)}<small>${sinir ? t(`sınır ${nf(sinir)}`, `limit ${nf(sinir)}`) : ''}</small></h3><div class="deger">${nf(x, key === 'carbon_monoxide' ? 0 : 1)} <small>${bir}</small></div>
+      ${sinir ? `<div class="hk-cubuk" title="${t('Ortadaki çizgi DSÖ günlük sınırı', 'The middle line is the WHO daily guideline')}"><i style="width:${Math.min(100, oran * 50)}%;background:${col}"></i></div>` : ''}
+      <p>${sinir ? (oran <= 1 ? t(`Sınırın %${nf(oran * 100)}’i.`, `${nf(oran * 100)}% of the guideline.`) : t(`Sınırın ${nf(oran, 1)} katı.`, `${nf(oran, 1)} times the guideline.`)) + ' ' : ''}${esc(t(...ack))}</p></div>`;
+  }).join('');
+  tahminCiz(); polenCiz();
+}
+function tahminCiz() {
+  const h = detay.hourly, n = h.time.length, W = 820, H = 220, L = 34, R = 8, T = 12, B = 30;
+  const mx = Math.max(60, ...h.european_aqi.filter(x => x != null)) * 1.08, bw = (W - L - R) / n, Yp = v => T + (1 - v / mx) * (H - T - B);
+  const simdi = detay.current.time;
+  let g = `<svg viewBox="0 0 ${W} ${H}">`;
+  [20, 40, 60, 80, 100].filter(v => v < mx).forEach(v => { g += `<line x1="${L}" x2="${W - R}" y1="${Yp(v)}" y2="${Yp(v)}" stroke="var(--line)"/><text x="${L - 5}" y="${Yp(v) + 4}" text-anchor="end">${v}</text>`; });
+  h.european_aqi.forEach((v, i) => { if (v == null) return; g += `<rect x="${(L + i * bw).toFixed(1)}" y="${Yp(v).toFixed(1)}" width="${Math.max(1, bw - 1).toFixed(1)}" height="${(H - B - Yp(v)).toFixed(1)}" fill="${renk(v)}" rx="1"/>`; });
+  h.time.forEach((tm, i) => { if (tm.endsWith('T00:00')) { const x = L + i * bw; g += `<line x1="${x}" x2="${x}" y1="${T}" y2="${H - B}" stroke="var(--muted)" opacity=".35"/><text x="${x + 4}" y="${H - 10}">${new Date(tm + ':00').toLocaleDateString(GK.LOC(), { weekday: 'short', day: 'numeric' })}</text>`; } if (tm.slice(0, 13) === simdi.slice(0, 13)) g += `<line x1="${L + i * bw}" x2="${L + i * bw}" y1="${T}" y2="${H - B}" stroke="var(--text)" stroke-width="2" stroke-dasharray="3 3"/><text x="${L + i * bw + 4}" y="${T + 10}" style="fill:var(--text)">${t('şimdi', 'now')}</text>`; });
+  g += `<rect x="${L}" y="${T}" width="${W - L - R}" height="${H - T - B}" fill="transparent" id="tRect"/></svg>`;
+  $('tahmin').innerHTML = g;
+  const r = $('tRect'), goster = e => { const b = r.getBoundingClientRect(), i = Math.floor((e.clientX - b.left) / b.width * n); if (i < 0 || i >= n) return; const v = h.european_aqi[i], kr = $('tahmin').getBoundingClientRect(); tip(((L + (i + .5) * bw) / W) * kr.width, (Yp(v || 0) / H) * kr.height, `<b>${new Date(h.time[i] + ':00').toLocaleString(GK.LOC(), { weekday: 'short', hour: '2-digit', minute: '2-digit' })}</b> · ${nf(v)} ${ad(v)} · PM2,5 ${nf(h.pm2_5[i], 1)}`); };
+  r.addEventListener('pointermove', goster); r.addEventListener('pointerdown', goster); r.addEventListener('pointerleave', () => tip(0, 0, null));
+}
+function tip(x, y, html) { const kap = $('tahmin'); let el = kap.querySelector('.ik-ipucu'); if (!el) { el = document.createElement('div'); el.className = 'ik-ipucu'; kap.appendChild(el); } if (html == null) { el.hidden = true; return; } el.hidden = false; el.innerHTML = html; el.style.left = x + 'px'; el.style.top = y + 'px'; }
+function polenCiz() {
+  const h = detay.hourly, var_ = POLEN.map(([k]) => h[k] && h[k].some(v => v != null)).some(Boolean);
+  if (!var_) { $('polen').innerHTML = `<p class="gk-not">${t('Bu konum için polen tahmini yok. Polen tahmini Avrupa bölgesini kapsar.', 'No pollen forecast for this location. The forecast covers the European region.')}</p>`; return; }
+  const maks = POLEN.map(([k, tr, en]) => [t(tr, en), Math.max(0, ...h[k].filter(v => v != null))]);
+  const hepsi0 = maks.every(([, v]) => v < 1);
+  const seviye = v => v < 1 ? t('yok', 'none') : v < 10 ? t('düşük', 'low') : v < 50 ? t('orta', 'moderate') : v < 200 ? t('yüksek', 'high') : t('çok yüksek', 'very high');
+  $('polen').innerHTML = (hepsi0 ? `<p class="gk-not">${t('Önümüzdeki 4 günde polen beklenmiyor; şu an polen mevsimi değil.', 'No pollen expected in the next 4 days; it is not pollen season right now.')}</p>` : '') + `<div class="hk-polen">${maks.map(([n, v]) => `<div><span>${esc(n)}</span><div class="hk-cubuk"><i style="width:${Math.min(100, v / 2)}%;background:${v < 10 ? '#50ccaa' : v < 50 ? '#e6c229' : v < 200 ? '#ff7a50' : '#c4204f'}"></i></div><span>${seviye(v)}</span></div>`).join('')}</div><p class="gk-not">${t('4 gün içindeki en yüksek değer (tane/m³).', 'Highest value over 4 days (grains/m³).')}</p>`;
+}
+GK.secici('yer', () => detayYukle());
+detayYukle(); tumYukle();
+if (window.erDil) erDil.on(() => { if (detay) detayCiz(); if (tum) { haritaCiz(); siraCiz(); } $('lejant').innerHTML = BANT.map((b, i) => `<span><i style="background:${b[1]}"></i>${i ? BANT[i - 1][0] : 0}${b[0] < 1e9 ? '–' + b[0] : '+'} ${t(b[2], b[3])}</span>`).join(''); });
+})();
+
+</script>
+<script data-goatcounter="https://erdevelop.goatcounter.com/count" async src="//gc.zgo.at/count.js"></script>
+<script src="/js/site.js" defer></script>
+</body>
+</html>
