@@ -24,6 +24,7 @@ button,input{font:inherit;color:inherit}button{cursor:pointer}[hidden]{display:n
 #c{position:fixed;left:0;top:0;width:100%;height:100%;display:block;touch-action:none;cursor:crosshair}
 #ust{position:fixed;left:0;right:0;top:0;display:flex;align-items:center;gap:6px;padding:calc(8px + env(safe-area-inset-top,0px)) 10px 0;pointer-events:none;z-index:11;flex-wrap:wrap}
 #ust>*{pointer-events:auto}
+@media (max-width:640px){#tur{top:calc(172px + env(safe-area-inset-top,0px))!important}}
 /* açılış ekranı açıkken üst çubuk (geri, ses…) perdenin üstünde ve tıklanabilir kalsın */
 body:has(#menu:not([hidden])) #ust{z-index:21}
 body:has(#menu:not([hidden])) #ust>#menuBtn{pointer-events:none;opacity:.3}.bos{flex:1}
@@ -108,6 +109,8 @@ details ul{margin:8px 0 0;padding-left:18px;font-size:13.5px}details li{margin:4
 @media (pointer:fine){#atilBtn{width:64px;height:64px;font-size:22px}}
 </style>
 <script type="application/ld+json">{"@context":"https://schema.org","@type":"VideoGame","name":"Yuva","url":"https://erdevelop.com/yuva.html","genre":["Tower defense","Action","Strategy"],"gamePlatform":"Web browser","playMode":["SinglePlayer"],"inLanguage":["tr","en"],"isAccessibleForFree":true,"offers":{"@type":"Offer","price":"0","priceCurrency":"TRY"}}</script>
+<script src="/js/sade.js"></script>
+<script src="/js/mevsim.js"></script>
 </head>
 <body>
 <canvas id="c" aria-label="Oyun alanı" data-en-aria="Game area"></canvas>
@@ -142,6 +145,7 @@ details ul{margin:8px 0 0;padding-left:18px;font-size:13.5px}details li{margin:4
     <a class="ana" id="kilitLink" href="/yaratik.html" hidden data-en="Go to Creature">Yaratık'a git</a>
     <button class="ana" id="mDevam" type="button"></button>
     <button class="ikincil" id="mYeni" type="button"></button>
+    <label class="sadeL"><input type="checkbox" data-sade><span><span data-en="👁 Calm visuals">👁 Sade görünüm</span><small data-en="Turns off glow, flashes and moving effects; shared by all games">Parlama, ışıltı ve hareketli efektleri kapatır; bütün oyunlarda geçerli</small></span></label>
     <a class="ana" id="kabileLink" href="/kabile.html" hidden data-en="🔥 Next life: Tribe">🔥 Sonraki yaşam: Kabile</a>
     <div id="seriHesap"></div>
     <p id="rekor"></p>
@@ -337,6 +341,20 @@ function yavrulariKur() {
   YV = []; const b = bosYavru();
   for (let i = 0; i < Math.min(b, 14); i++) { const a = rnd(0, TAU); YV.push({ x: NX + Math.cos(a) * 50, y: NY + Math.sin(a) * 40, a: rnd(0, TAU), t: rnd(0, 3), hx: 0, hy: 0 }); }
 }
+/* ortak mevsim saati (js/mevsim.js): her mevsim 15 dk. İlkbahar ve yazın çalılar dolu, kışın meyve kıt */
+let MV = window.erMevsim ? erMevsim() : { i: 1, ad: 'yaz', ik: '☀️', tr: 'Yaz', en: 'Summer', kalanDk: 15, bol: 1 }, mvOnce = null, mevZ = 0;
+const MV_MSJ = {
+  ilkbahar: ['🌱 İlkbahar: çalılar meyveye durdu! Gündüz topladığın 🫐 besin %30 daha bol. Yumurta için iyi zaman.', '🌱 Spring: the bushes are full of berries! Daytime 🫐 food is 30% more plentiful. A good time for eggs.'],
+  yaz: ['☀️ Yaz: bol meyve (🫐 +%10).', '☀️ Summer: plenty of berries (🫐 +10%).'],
+  sonbahar: ['🍂 Sonbahar: meyveler azalıyor (🫐 −%5). Kışa besin biriktir.', '🍂 Autumn: berries are thinning out (🫐 −5%). Store food for winter.'],
+  kis: ['❄️ Kış: çalılar çıplak, 🫐 besin %35 daha az. Biriktirdiğin besinle idare et; yavruların da daha az getirir.', '❄️ Winter: the bushes are bare, 🫐 food is 35% scarcer. Live on your stores; your young bring back less too.']
+};
+function mevsimTik(dt) {
+  if (!window.erMevsim || (mevZ -= dt) > 0) return; mevZ = 2; MV = erMevsim();
+  if (mvOnce !== MV.ad && oyunda) { const ilk = mvOnce === null; mvOnce = MV.ad; const m = MV_MSJ[MV.ad]; duyur(T(m[0].replace(':', ` (${MV.kalanDk} dk):`), m[1].replace(':', ` (${MV.kalanDk} min):`)), !ilk && MV.ad === 'kis' ? 'uyari' : '', ilk ? 6 : 8); }
+  arayuz();
+}
+const mevBesin = n => Math.max(1, Math.round(n * MV.bol));
 function kaynakSac() {
   const B = bolgeG(), n = 16 + O.bolge * 2;
   KY = [];
@@ -344,7 +362,7 @@ function kaynakSac() {
     let x, y, d = 0;
     do { x = rnd(80, DW - 80); y = rnd(80, DH - 80); d++; } while (d < 40 && (Math.hypot(x - NX, y - NY) < 170 || (B.deniz && x < 160) || ENG.some(e => Math.hypot(e.x - x, e.y - y) < e.r + 22)));
     const uz = Math.hypot(x - NX, y - NY) / 700, t = Math.random() < 0.38 ? 'b' : 'm';
-    KY.push({ x, y, t, n: Math.round((t === 'b' ? 4 : 3) + uz * 4 + Math.random() * 2), f: rnd(0, TAU) });
+    const n0 = Math.round((t === 'b' ? 4 : 3) + uz * 4 + Math.random() * 2); KY.push({ x, y, t, n: t === 'b' ? mevBesin(n0) : n0, f: rnd(0, TAU) });
   }
   BOC = []; for (let i = 0; i < 5 + O.bolge; i++) BOC.push({ x: rnd(100, DW - 100), y: rnd(100, DH - 100), a: rnd(0, TAU), hp: 8, t: rnd(0, 5) });
 }
@@ -391,7 +409,7 @@ function safak() {
   const B = bolgeG(), bolgeBitti = O.gece >= B.gece;
   /* boştaki yavrular getirir */
   const b = bosYavru(), kat = 1 + 0.5 * ev('depo') + 0.06 * mirasN();
-  const gb = Math.round(b * 2 * kat + (oz('yaprak') ? 4 : 0)), gm = Math.round(b * 4 * kat);
+  const gb = Math.round((b * 2 * kat + (oz('yaprak') ? 4 : 0)) * MV.bol), gm = Math.round(b * 4 * kat);
   O.besin += gb; O.malz += gm;
   O.yuvaHp = Math.min(yuvaMax(), O.yuvaHp + yuvaMax() * 0.5);
   for (const y of O.yapi) if (y && y.t === 'duvar') y.hp = Math.min(duvarMax(y), y.hp + duvarMax(y) * 0.25);
@@ -533,7 +551,7 @@ function olum(d) {
   if (D.patron) { duyur(T('🐻 Dağ ayısı yere serildi!', '🐻 The mountain bear is down!'), 'iyi', 4); efekt(d.x, d.y, '💥', 3); }
 }
 function guncelle(dt) {
-  zaman += dt; O.sure += dt; st = st || ST();
+  zaman += dt; O.sure += dt; st = st || ST(); mevsimTik(dt);
   /* yumurtalar */
   for (let i = O.yum.length - 1; i >= 0; i--) { O.yum[i] -= dt; if (O.yum[i] <= 0) { O.yum.splice(i, 1); O.pop++; SES.yumurta(); sayi(NX, NY - 30, T('🐣 yeni yavru', '🐣 new hatchling'), '#E2FBD2'); yavrulariKur(); arayuz(); } }
   if (evre === 'gunduz') {
@@ -1142,6 +1160,7 @@ function ciz() {
   }
   /* ekran dışındaki yırtıcılar için ok */
   g.setTransform(DPR, 0, 0, DPR, 0, 0);
+  if (MV.ad === 'kis' || MV.ad === 'sonbahar') { g.fillStyle = MV.ad === 'kis' ? 'rgba(215,230,250,.09)' : 'rgba(210,140,60,.05)'; g.fillRect(0, 0, EW, EH); }   // mevsim tonu
   if (evre === 'gece') { for (const d of E) { if (d.olu) continue; const sx = (d.x - kx) * zum, sy = (d.y - ky) * zum; if (sx > 0 && sx < EW && sy > 0 && sy < EH) continue; const x = kis(sx, 26, EW - 26), y = kis(sy, 70, EH - 26), a = Math.atan2(sy - y, sx - x); g.save(); g.translate(x, y); g.rotate(a); g.fillStyle = DUS[d.t].patron ? 'rgba(255,90,70,.95)' : d.tasi ? 'rgba(255,226,154,.95)' : 'rgba(255,140,110,.75)'; g.beginPath(); g.moveTo(12, 0); g.lineTo(-6, -8); g.lineTo(-6, 8); g.closePath(); g.fill(); g.restore(); } }
 }
 let gk = 0;
@@ -1156,7 +1175,7 @@ function arayuz() {
   $('cGen').innerHTML = `🦴 ${O.oldur} <small>${T('av', 'kills')}</small>`;
   const B = bolgeG();
   if (evre === 'gece' && dalga) { $('evreY').className = 'gece'; $('evreY').textContent = `${B.e} ${T(B.ad[0], B.ad[1])} · 🌙 ${O.gece + 1}/${B.gece} · ${T('kalan', 'left')} ${dalga.liste.length - dalga.i + E.filter(d => !d.olu).length}`; }
-  else { $('evreY').className = ''; $('evreY').textContent = `${B.e} ${T(B.ad[0], B.ad[1])} · ☀️ ${T('Gündüz', 'Day')} · ${T('gece', 'night')} ${O.gece + 1}/${B.gece}${gunKalan > 0 ? ' · ' + sureYaz(gunKalan) : ''}`; }
+  else { $('evreY').className = ''; $('evreY').textContent = `${B.e} ${T(B.ad[0], B.ad[1])} · ☀️ ${T('Gündüz', 'Day')} · ${T('gece', 'night')} ${O.gece + 1}/${B.gece}${gunKalan > 0 ? ' · ' + sureYaz(gunKalan) : ''} · ${MV.ik} ${MV.kalanDk}${T('dk', 'm')}`; }
   const ym = yuvaMax(); $('yuvaCb').querySelector('i').style.width = (kis(O.yuvaHp / ym, 0, 1) * 100) + '%'; $('yuvaCb').querySelector('span').textContent = `🪺 ${Math.ceil(Math.max(0, O.yuvaHp))}/${ym}`;
   if (P) { $('canCb').querySelector('i').style.width = (P.olu ? 0 : kis(P.hp / st.can, 0, 1) * 100) + '%'; $('canCb').querySelector('span').textContent = P.olu ? T(`kalkıyorsun… ${Math.ceil(P.olu)}`, `getting up… ${Math.ceil(P.olu)}`) : `❤️ ${Math.ceil(P.hp)}/${Math.ceil(st.can)}`; }
   const yer = O.pop + O.yum.length < popUst();

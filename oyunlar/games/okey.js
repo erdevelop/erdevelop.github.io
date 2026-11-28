@@ -11,11 +11,11 @@ const OK = (() => {
   const deger = (t, ok) => t >= SAHTE ? { r: ok.r, s: ok.s, sahte: 1 } : (renk(t) === ok.r && sayi(t) === ok.s) ? { j: 1 } : { r: renk(t), s: sayi(t) };
   const okeyMi = (t, ok) => t < SAHTE && renk(t) === ok.r && sayi(t) === ok.s;
   const kar = a => { for (let i = a.length - 1; i > 0; i--) { const j = (Math.random() * (i + 1)) | 0;[a[i], a[j]] = [a[j], a[i]]; } return a; };
-  function yeni(ilk, puan, tur) {
+  function yeni(ilk, puan, tur, esli) {
     const D = kar(Array.from({ length: 106 }, (_, i) => i)), gi = D.findIndex(t => t < SAHTE), gosterge = D.splice(gi, 1)[0];
     const ok = { r: renk(gosterge), s: sayi(gosterge) % 13 + 1 }, el = [[], [], [], []];
     for (let p = 0; p < 4; p++) el[p] = D.splice(0, p === ilk ? 15 : 14);
-    return { el, deste: D, atik: [[], [], [], []], gosterge, ok, ilk, sira: ilk, cekti: true, bitti: null, tur: tur || 1, puan: puan ? puan.slice() : [0, 0, 0, 0], son: { i: 0 } };
+    return { el, deste: D, atik: [[], [], [], []], gosterge, ok, ilk, sira: ilk, cekti: true, bitti: null, tur: tur || 1, esli: !!esli, puan: puan ? puan.slice() : [0, 0, 0, 0], son: { i: 0 } };
   }
   /* En çok taşı perlere yerleştiren dizilim. tam: yalnızca hepsi yerleşiyor mu diye bakar (erken çıkar).
      Dönen: { n: perlere giren düz taş sayısı, gercek: düz taş sayısı, j: okey sayısı, per: [[jeton…]…], artan: [jeton…] }  jeton: { r, s } ya da { j:1 } */
@@ -108,7 +108,7 @@ const OK = (() => {
   function at(S, p, tas) {
     if (S.bitti || S.sira !== p || !S.cekti) return false; const i = S.el[p].indexOf(tas); if (i < 0) return false;
     const kalan = S.el[p].slice(); kalan.splice(i, 1); const tur = kazanir(kalan, S.ok); S.el[p] = kalan;
-    if (tur) { const okey = okeyMi(tas, S.ok), sayi = (tur === 'cift' ? 2 : 1) * (okey ? 2 : 1); S.puan[p] += sayi; S.bitti = { k: p, tur, okey, tas, sayi }; S.son = { i: S.son.i + 1, p, t: 'b', tas }; return true; }
+    if (tur) { const okey = okeyMi(tas, S.ok), sayi = (tur === 'cift' ? 2 : 1) * (okey ? 2 : 1); S.puan[p] += sayi; if (S.esli) S.puan[(p + 2) % 4] += sayi; S.bitti = { k: p, tur, okey, tas, sayi }; S.son = { i: S.son.i + 1, p, t: 'b', tas }; return true; }
     S.atik[p].push(tas); S.son = { i: S.son.i + 1, p, t: 'at', tas };
     if (!S.deste.length) { S.bitti = { k: -1 }; return true; }
     S.sira = (p + 1) % 4; S.cekti = false; return true;
@@ -158,7 +158,7 @@ const CSS = `
 .ok-mount{padding:8px!important;align-items:stretch!important;justify-content:flex-start!important;overflow:visible!important}
 .ok{width:min(600px,100%);margin:0 auto;display:flex;flex-direction:column;gap:7px;-webkit-user-select:none;user-select:none;position:relative;--tw:32px}
 .ok h3{margin:0;font-size:19px;font-weight:800}.ok p{margin:0;font-size:13.5px;font-weight:700;color:var(--ink-soft);line-height:1.4}
-.ok-b{padding:12px 10px;border-radius:13px;background:var(--accent-soft);color:var(--accent-ink);font-weight:800;font-size:14.5px;text-align:center}.ok-b.ana{background:var(--accent);color:#fff}.ok-b:disabled{opacity:.4}
+.ok-b.sec{box-shadow:inset 0 0 0 2px var(--accent);background:var(--card)}.ok-b{padding:12px 10px;border-radius:13px;background:var(--accent-soft);color:var(--accent-ink);font-weight:800;font-size:14.5px;text-align:center}.ok-b.ana{background:var(--accent);color:#fff}.ok-b:disabled{opacity:.4}
 .ok-sat{display:flex;gap:8px}.ok-sat>*{flex:1;min-width:0}
 .ok-menu{display:flex;flex-direction:column;gap:10px;width:min(440px,100%);margin:0 auto}
 .ok-masa{position:relative;border-radius:14px;background:radial-gradient(ellipse at 50% 45%,#2c9160,#1b6b43);box-shadow:inset 0 0 0 4px #14532f,inset 0 0 30px rgba(0,0,0,.25);height:240px;flex:none}
@@ -172,7 +172,7 @@ const CSS = `
 .ok-oy{position:absolute;display:flex;flex-direction:column;align-items:center;gap:1px;padding:5px 10px;border-radius:11px;background:rgba(0,0,0,.28);color:#fff;font-weight:800;font-size:13px;max-width:34%;line-height:1.15}
 .ok-oy span{max-width:100%;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}.ok-oy small{font-size:11px;font-weight:800;opacity:.8}
 .ok-oy.k2{top:8px;left:50%;transform:translateX(-50%)}.ok-oy.k1{right:8px;top:50%;transform:translateY(-50%)}.ok-oy.k3{left:8px;top:50%;transform:translateY(-50%)}
-.ok-oy.sira{background:#fff;color:#14532f;box-shadow:0 0 0 3px #ffd34d;animation:okN 1.2s infinite alternate}@keyframes okN{to{box-shadow:0 0 0 3px rgba(255,211,77,.35)}}.ok-oy.yok{opacity:.55}
+.ok-oy.es{box-shadow:0 0 0 2px #7dd3fc}.ok-oy.sira{background:#fff;color:#14532f;box-shadow:0 0 0 3px #ffd34d;animation:okN 1.2s infinite alternate}@keyframes okN{to{box-shadow:0 0 0 3px rgba(255,211,77,.35)}}.ok-oy.yok{opacity:.55}
 .ok-atik{position:absolute;display:flex;align-items:center;gap:3px;padding:4px;border-radius:9px}
 .ok-atik em,.ok-deste em{font-style:normal;font-size:11px;font-weight:800;color:#fff;background:rgba(0,0,0,.35);border-radius:8px;padding:1px 5px}
 .ok-atik.k0{right:8px;bottom:8px;flex-direction:row-reverse}.ok-atik.k1{right:8px;top:8px;flex-direction:row-reverse}.ok-atik.k2{left:8px;top:8px}.ok-atik.k3{left:8px;bottom:8px}
@@ -190,7 +190,7 @@ const CSS = `
 .ok-hayalet{position:fixed;z-index:60;pointer-events:none;transform:translate(-50%,-70%) scale(1.15);box-shadow:0 10px 18px rgba(0,0,0,.4)}
 .ok-alt{display:flex;gap:7px}.ok-alt .ok-b{flex:1}.ok-alt .ok-b[data-a=cik]{flex:none;width:44px}
 .ok-bitir{padding:13px;border-radius:13px;background:#16a34a;color:#fff;font-weight:800;font-size:16px;animation:okB 0.8s infinite alternate}@keyframes okB{to{background:#22c55e;box-shadow:0 0 0 4px rgba(34,197,94,.3)}}
-.ok-son{position:absolute;inset:0;z-index:5;display:grid;place-items:center;background:color-mix(in srgb,var(--card) 80%,transparent);border-radius:14px;animation:okS .3s .25s both}@keyframes okS{from{opacity:0}}
+.ok-son{position:absolute;inset:0;z-index:40;display:grid;place-items:center;background:color-mix(in srgb,var(--card) 80%,transparent);border-radius:14px;animation:okS .3s .25s both}@keyframes okS{from{opacity:0}}
 .ok-son>div{display:flex;flex-direction:column;gap:9px;align-items:stretch;text-align:center;padding:16px;background:var(--card);border-radius:18px;box-shadow:0 12px 40px rgba(0,0,0,.3);width:min(360px,94%)}.ok-son h3{font-size:22px}
 .ok-mini{display:flex;flex-wrap:wrap;gap:4px 9px;justify-content:center;--tw:21px}.ok-mini>div{display:flex;gap:1.500px}
 .ok-puan{display:grid;grid-template-columns:1fr auto;gap:3px 12px;text-align:left;font-weight:800;font-size:14px;padding:8px 12px;border-radius:12px;background:var(--bg2)}.ok-puan .k{color:var(--accent-ink)}
@@ -214,7 +214,7 @@ registerGame({
     let D = Object.assign({ v: 1, el: 0, kaz: 0, ag: 0, o: '', sev: 1 }, (api.loadState && api.loadState()) || {});
     const kaydet = () => { try { api.saveState && api.saveState(D); } catch (e) { } };
     const kok = E('div', { class: 'ok' }); root.append(kok);
-    let sohbetK = null;
+    let sohbetK = null, izle = false;
     let S = null, ben = 0, mod = 'yz', sev = 1, oda = null, odaBirak = null, lobi = null, raf = new Array(YUVA).fill(null), rafTur = -1, secili = null, mesaj = '', mesajT = 0, yeniTas = null, gorulenI = -1,
       surT = 0, sur = null, cizBekle = false, canli = true, sayilan = '', yerelSur = 0, sonMetin = '', bekleyen = 0, vekil = '', yazSira = Promise.resolve();
     const q = s => kok.querySelector(s), kopya = s => JSON.parse(JSON.stringify(s));
@@ -222,7 +222,7 @@ registerGame({
     const botMu = p => mod === 'yz' ? p !== ben : !(koltuklar()[p]);
     const kopuk = p => { const K = koltuklar(); return !!(K && K[p] && !K[p].var); };
     const ad = p => { if (mod === 'yz') return p === ben ? 'Sen' : BOT[p]; const K = koltuklar(); return K && K[p] ? K[p].n : BOT[p]; };
-    const benimSira = () => S && !S.bitti && S.sira === ben;
+    const benimSira = () => S && !S.bitti && S.sira === ben && !izle;
     function mesajVer(m, sure) { mesaj = m; clearTimeout(mesajT); mesajT = setTimeout(() => { mesaj = ''; ciz(); }, sure || 1800); ciz(); }
 
     /* ---------- menü ---------- */
@@ -230,6 +230,7 @@ registerGame({
       temizle(); let eski = null; try { eski = D.o ? JSON.parse(D.o) : null; } catch (e) { } const var_ = eski && eski.S && !eski.S.bitti;
       kok.innerHTML = `<div class="ok-menu"><h3>🀄 Okey</h3><p>${D.el ? `Bilgisayara karşı <b>${D.el}</b> el, <b>${D.kaz}</b> bitiriş${D.ag ? ' · çevrimiçi ' + D.ag + ' bitiriş' : ''}` : 'Taşlarını perlere ayır, ilk bitiren sen ol.'}</p>
         ${var_ ? '<button class="ok-b ana" data-a="devam">▶ Yarım kalan ele devam</button>' : ''}
+        <div class="ok-sat"><button class="ok-b${D.esli ? '' : ' sec'}" data-esli="0">👤 Tekli</button><button class="ok-b${D.esli ? ' sec' : ''}" data-esli="1">👥 Eşli (2’ye 2)</button></div>
         <div class="ok-sat"><button class="ok-b ${var_ ? '' : 'ana'}" data-a="yz" data-s="1">🤖 Bilgisayara karşı</button><button class="ok-b" data-a="yz" data-s="0">🌱 Kolay</button></div>
         <button class="ok-b" data-a="ag">🌐 Çevrimiçi oyna</button><button class="ok-b" data-a="nasil">❓ Nasıl oynanır</button></div>`;
       if (new URLSearchParams(location.search).get('masa') && /#o\/okey/.test(location.hash) && !menu._bir) { menu._bir = true; agLobi(); }
@@ -242,13 +243,15 @@ registerGame({
         <p>• Elin bitecek duruma gelince yeşil <b>Bitir</b> düğmesi çıkar. Yedi çift toplamak da bitirir.</p>
         <p>• Normal bitiş 1 sayı; çiftle ya da okeyi atarak bitiş 2 sayı. Deste biterse el berabere kalır.</p>
         <p>• Taşlarını sürükleyerek ya da dokunarak istediğin gibi diz; <b>Seri diz</b> ve <b>Çift diz</b> senin yerine dizer.</p>
+        <p>• <b>Eşli (2’ye 2)</b> seçersen karşında oturan eşindir: ikinizden biri bitirince ikiniz de sayı alırsınız.</p>
         <p>• Çevrimiçinde boş koltuklara bilgisayar oturur. 75 saniye oynamayanın o hamlesini bilgisayar yapar.</p>
+        <a class="ok-b" href="/oyun-kurallari/okey/" style="text-decoration:none;display:block">📖 Ayrıntılı kurallar ve ipuçları</a>
         <button class="ok-b ana" data-a="menu">Tamam</button></div>`;
     }
     function agLobi() {
       temizle(); if (!window.Masa) { kok.innerHTML = '<div class="ok-menu"><p>Çevrimiçi bölüm yüklenemedi.</p><button class="ok-b" data-a="menu">‹ Geri</button></div>'; return; }
-      lobi = Masa.lobi(kok, { oyun: 'okey', koltuk: 4, enAz: 1, botlu: true, baslik: 'Okey', onGeri: menu,
-        baslat: o => o.baslat(OK.yeni((Math.random() * 4) | 0)),
+      lobi = Masa.lobi(kok, { oyun: 'okey', koltuk: 4, enAz: 1, botlu: true, baslik: 'Okey', onGeri: menu, onIzle: o => { lobi = null; agBasla(o); },
+        baslat: o => o.baslat(OK.yeni((Math.random() * 4) | 0, null, 1, !!D.esli)),
         onOda: o => { lobi = null; agBasla(o); } });
     }
     /* ---------- ekran ---------- */
@@ -281,7 +284,7 @@ registerGame({
       if (!S || !q('#ok-m')) return; if (sur && sur.h) { cizBekle = true; return; }
       olcu(); rafEsle(); const bS = benimSira(), B = bS && S.cekti ? OK.bitisler(S.el[ben], S.ok) : [], vurgu = S.son && S.son.i !== gorulenI ? S.son : null; gorulenI = S.son ? S.son.i : -1;
       let h = '';
-      for (const r of [1, 2, 3]) { const p = (ben + r) % 4; h += `<div class="ok-oy k${r}${S.sira === p && !S.bitti ? ' sira' : ''}${kopuk(p) ? ' yok' : ''}"><span>${botMu(p) ? '🤖 ' : ''}${esc(ad(p))}${kopuk(p) ? ' (ayrıldı)' : ''}</span><small>${S.puan[p]} sayı</small></div>`; }
+      for (const r of [1, 2, 3]) { const p = (ben + r) % 4; h += `<div class="ok-oy k${r}${S.esli && r === 2 ? ' es' : ''}${S.sira === p && !S.bitti ? ' sira' : ''}${kopuk(p) ? ' yok' : ''}"><span>${botMu(p) ? '🤖 ' : ''}${esc(ad(p))}${kopuk(p) ? ' (ayrıldı)' : ''}</span><small>${S.esli ? (r === 2 ? '👥 eşin' : 'rakip') + ' · ' : ''}${S.puan[p]} sayı</small></div>`; }
       for (const r of [0, 1, 2, 3]) { const p = (ben + r) % 4, A = S.atik[p], ust = A[A.length - 1], al = r === 3 && bS && !S.cekti && A.length, at = r === 0 && bS && S.cekti;
         h += `<div class="ok-atik k${r}${al ? ' al' : ''}${at ? ' at' : ''}" data-atik="${r}">${ust != null ? tasHtml(ust, S.ok, vurgu && vurgu.t === 'at' && vurgu.p === p ? 'yeni' : '') : '<div class="ok-t bos"></div>'}${A.length > 1 ? `<em>${A.length}</em>` : ''}</div>`; }
       h += `<div class="ok-orta"><div class="ok-deste${bS && !S.cekti ? ' al' : ''}" data-a="deste"><div class="ok-t arka"></div><em>${S.deste.length} taş</em></div><div class="ok-gost">${tasHtml(S.gosterge, S.ok)}<small>gösterge</small></div></div>`;
@@ -325,6 +328,7 @@ registerGame({
     function uygula(Y) { S = Y; if (mod === 'ag') gonder(); else yerelKaydet(); ciz(); if (S.bitti) bitti(); else surucu(); }
     /* sıradaki koltuğu yürüt: bilgisayar koltukları, kopanlar ve uzun süre oynamayanlar */
     function surucu() {
+      if (izle) return;
       clearTimeout(surT); if (!S || S.bitti || !canli) return; const p = S.sira; let sure;
       if (mod === 'yz') { if (p === ben) return; sure = S.cekti ? 750 : 650; }
       else { const K = koltuklar(), bagli = K.map((x, i) => x && x.var ? i : -1).filter(i => i >= 0 && i !== p); if (!bagli.length || bagli[0] !== ben) return; sure = !K[p] || (vekil === p + ':' + S.tur + ':' + S.son.i) ? (S.cekti ? 800 : 700) : !K[p].var ? 12000 : 75000; }
@@ -336,8 +340,8 @@ registerGame({
     }
     /* ---------- bitiş ---------- */
     function bitti() {
-      clearTimeout(surT); const b = S.bitti, anahtar = mod + ':' + S.tur + ':' + (oda ? oda.kod : ''), kazandim = b.k === ben;
-      if (sayilan !== anahtar) { sayilan = anahtar;
+      clearTimeout(surT); const b = S.bitti, anahtar = mod + ':' + S.tur + ':' + (oda ? oda.kod : ''), benBitirdim = b.k === ben, kazandim = S.esli ? b.k >= 0 && (b.k - ben + 4) % 2 === 0 : benBitirdim;
+      if (sayilan !== anahtar) { sayilan = anahtar; const PR = window.Progress; if (PR) { if (benBitirdim) { PR.olay('okey_bitir'); if (b.okey) PR.olay('okey_okeyle'); if (b.tur === 'cift') PR.olay('okey_cift'); } }
         if (mod === 'yz') { D.el++; if (kazandim) { D.kaz++; api.submitScore(D.kaz); } D.o = ''; kaydet(); } else { if (kazandim) { D.ag++; kaydet(); } if (oda) oda.bitir(); }
         ses(kazandim ? 'win' : b.k < 0 ? 'click' : 'lose'); if (kazandim) { try { window.FX && FX.confetti && FX.confetti(); } catch (e) { } } }
       if (mod === 'ag' && oda && window.Masa && Masa.sonuc) Masa.sonuc(oda, b.k < 0 ? .5 : kazandim ? 1 : 0, 'e' + S.tur);
@@ -345,9 +349,9 @@ registerGame({
       const e = q('.ok-son'); if (e) e.remove(); const s = E('div', { class: 'ok-son' }); let elH = '';
       if (b.k >= 0) { const d = OK.diz(S.el[b.k], S.ok, b.tur === 'cift' ? 'cift' : 'per'), G = d.gruplar.slice(); if (d.artan.length) G.push(d.artan); elH = `<div class="ok-mini">${G.map(g => `<div>${g.map(t => tasHtml(t, S.ok)).join('')}</div>`).join('')}</div>`; }
       const sira = [0, 1, 2, 3].sort((a, c) => S.puan[c] - S.puan[a]);
-      s.innerHTML = `<div><h3>${b.k < 0 ? 'Deste bitti' : kazandim ? '🎉 Bitirdin!' : esc(ad(b.k)) + ' bitirdi'}</h3>
+      s.innerHTML = `<div><h3>${b.k < 0 ? 'Deste bitti' : benBitirdim ? '🎉 Bitirdin!' : kazandim ? '🎉 Eşin bitirdi!' : esc(ad(b.k)) + ' bitirdi'}</h3>
         <p>${b.k < 0 ? 'Kimse bitiremedi; el berabere.' : (b.tur === 'cift' ? 'Yedi çiftle' : 'Perlerle') + (b.okey ? ', okeyi atarak' : '') + ` · <b>${b.sayi} sayı</b>`}</p>${elH}
-        <div class="ok-puan">${sira.map(p => `<span class="${p === ben ? 'k' : ''}">${botMu(p) ? '🤖 ' : ''}${esc(ad(p))}</span><span>${S.puan[p]}</span>`).join('')}</div>
+        <div class="ok-puan">${S.esli ? [ben, (ben + 1) % 4].map(p => `<span class="${p === ben ? 'k' : ''}">${p === ben ? 'Siz' : 'Rakipler'} (${esc(ad(p))} + ${esc(ad((p + 2) % 4))})</span><span>${S.puan[p]}</span>`).join('') : sira.map(p => `<span class="${p === ben ? 'k' : ''}">${botMu(p) ? '🤖 ' : ''}${esc(ad(p))}</span><span>${S.puan[p]}</span>`).join('')}</div>
         <button class="ok-b ana" data-a="yine">Yeni el</button><button class="ok-b" data-a="menu">Menü</button></div>`;
       if (mod === 'ag' && window.Masa && Masa.karsiYazi) { const kz = Masa.karsiYazi(oda); if (kz) { const p2 = document.createElement('p'); p2.className = 'ms-karsi'; p2.textContent = kz; const b1 = s.querySelector('button'); if (b1) b1.parentNode.insertBefore(p2, b1); } } kok.append(s);
     }
@@ -364,12 +368,12 @@ registerGame({
       ciz(); if (S.bitti) { if (!q('.ok-son')) bitti(); } else surucu();
     }
     function yzBasla(s, eski) {
-      temizle(); mod = 'yz'; ben = 0; sev = s; secili = null; mesaj = ''; gorulenI = -1;
-      if (eski && eski.S) { S = eski.S; raf = Array.isArray(eski.raf) && eski.raf.length === YUVA ? eski.raf : new Array(YUVA).fill(null); rafTur = S.tur; } else { S = OK.yeni((Math.random() * 4) | 0); rafTur = -1; }
+      temizle(); izle = false; mod = 'yz'; ben = 0; sev = s; secili = null; mesaj = ''; gorulenI = -1;
+      if (eski && eski.S) { S = eski.S; raf = Array.isArray(eski.raf) && eski.raf.length === YUVA ? eski.raf : new Array(YUVA).fill(null); rafTur = S.tur; } else { S = OK.yeni((Math.random() * 4) | 0, null, 1, !!D.esli); rafTur = -1; }
       ekran(); ciz(); yerelKaydet(); surucu();
     }
     function agBasla(o) {
-      temizle(); mod = 'ag'; oda = o; ben = Math.max(0, o.ben); S = null; secili = null; mesaj = ''; rafTur = -1; gorulenI = -1; yerelSur = 0; sonMetin = ''; bekleyen = 0; ekran(); sohbetK = window.Masa && Masa.sohbet ? Masa.sohbet(o, { yer: q('.ok-alt'), sonra: q('[data-a=cik]'), koltuk: p => p === ben ? q('#ok-ben') : q(`.ok-oy.k${(p - ben + 4) % 4}`) }) : null;
+      temizle(); izle = !!o.izleyici; mod = 'ag'; oda = o; ben = Math.max(0, o.ben); S = null; secili = null; mesaj = ''; rafTur = -1; gorulenI = -1; yerelSur = 0; sonMetin = ''; bekleyen = 0; ekran(); sohbetK = window.Masa && Masa.sohbet ? Masa.sohbet(o, { yer: q('.ok-alt'), sonra: q('[data-a=cik]'), koltuk: p => p === ben ? q('#ok-ben') : q(`.ok-oy.k${(p - ben + 4) % 4}`) }) : null;
       odaBirak = oda.dinle(v => {
         if (!v) { if (S) mesajVer('Oda kapandı.', 60000); return; } const d = oda.durum(); if (!d) return; ben = Math.max(0, oda.ben);
         if (!bekleyen) al(d); if (S && !S.bitti) { ciz(); surucu(); }
@@ -380,6 +384,7 @@ registerGame({
       const b = e.target.closest('button'); if (b && b.closest('.ms')) return;
       if (!b) { if (!S || !q('#ok-m')) return; if (e.target.closest('.ok-deste')) return cekDene('d'); const a = e.target.closest('.ok-atik'); if (!a) return;
         if (a.dataset.atik === '3') return cekDene('a'); if (a.dataset.atik === '0' && secili != null) return atDene(raf[secili]); return; }
+      if (b.dataset.esli != null) { D.esli = +b.dataset.esli; kaydet(); kok.querySelectorAll('[data-esli]').forEach(x => x.classList.toggle('sec', x === b)); return; }
       const a = b.dataset.a;
       if (a === 'yz') yzBasla(+b.dataset.s, null); else if (a === 'devam') { try { const o = JSON.parse(D.o); yzBasla(o.sev == null ? 1 : o.sev, o); } catch (x) { menu(); } }
       else if (a === 'ag') agLobi(); else if (a === 'nasil') nasil(); else if (a === 'menu') { yerelKaydet(); S = null; menu(); }
@@ -387,7 +392,7 @@ registerGame({
       else if (a === 'seri' || a === 'cift') { if (!S) return; secili = null; yerlestir(a); ses('click'); yerelKaydet(); ciz(); }
       else if (a === 'at') { if (secili != null) atDene(raf[secili]); }
       else if (a === 'bitir') { const B = benimSira() && S.cekti ? OK.bitisler(S.el[ben], S.ok) : []; if (!B.length) return; const sec = secili != null ? B.find(x => x.tas === raf[secili]) : null; atDene((sec || B[0]).tas); }
-      else if (a === 'yine') { const y = OK.yeni((S.ilk + 1) % 4, S.puan, S.tur + 1), e2 = q('.ok-son'); if (e2) e2.remove(); secili = null; if (mod === 'ag') { S = null; sonMetin = ''; oda.yeniden(y); } else { S = y; ciz(); yerelKaydet(); surucu(); } } });
+      else if (a === 'yine') { const y = OK.yeni((S.ilk + 1) % 4, S.puan, S.tur + 1, S.esli), e2 = q('.ok-son'); if (e2) e2.remove(); secili = null; if (mod === 'ag') { S = null; sonMetin = ''; oda.yeniden(y); } else { S = y; ciz(); yerelKaydet(); surucu(); } } });
     const boyutla = () => { if (S) ciz(); }; addEventListener('resize', boyutla); addEventListener('pointermove', oynat); addEventListener('pointerup', birak); addEventListener('pointercancel', birak);
     const sakla = () => yerelKaydet(); addEventListener('pagehide', sakla);
     api.onCleanup(() => { canli = false; yerelKaydet(); temizle(); removeEventListener('resize', boyutla); removeEventListener('pointermove', oynat); removeEventListener('pointerup', birak); removeEventListener('pointercancel', birak); removeEventListener('pagehide', sakla); root.classList.remove('ok-mount'); });

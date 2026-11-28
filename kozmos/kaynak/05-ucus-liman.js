@@ -45,7 +45,7 @@ function gpYaz() {
   }
   if (oyunda && !limanP && !HM.acik && istnObj && Math.hypot(istnObj.x - SH.x, istnObj.y - SH.y) < 650) h += `<button class="gpb y" type="button" data-g="istn">🏗 ${T('İstasyonuna yanaş', 'Dock at your station')}</button>`;
   if (oyunda && !limanP && !HM.acik) h += sarfGp();
-  if (oyunda && !limanP && !HM.acik && !kapsul && !KORS.length) { const mk = Object.keys(MODUL).filter(k => MODUL[k] < 95).sort((a, b) => MODUL[a] - MODUL[b])[0]; if (mk) h += `<button class="gpb ${MODUL[mk] < 40 ? 'y' : ''}" type="button" data-g="tamir" data-k="${mk}">🔧 ${T('Onar', 'Repair')}: ${MODAD[mk].e} ${L(MODAD[mk].ad)} ${Math.round(MODUL[mk])}%</button>`; }
+  if (oyunda && !limanP && !HM.acik && !kapsul && !KORS.length) { const mk = Object.keys(MODUL).filter(k => MODUL[k] < 95).sort((a, b) => MODUL[a] - MODUL[b])[0]; if (can < maxCan() * 0.6 && !((ST.gyT || 0) > Date.now())) h += `<button class="gpb y" type="button" data-g="tamir" data-k="govde">🩹 ${T('Gövde yaması', 'Hull patch')} · ${Math.round(can / maxCan() * 100)}%</button>`; if (mk) h += `<button class="gpb ${MODUL[mk] < 40 ? 'y' : ''}" type="button" data-g="tamir" data-k="${mk}">🔧 ${T('Onar', 'Repair')}: ${MODAD[mk].e} ${L(MODAD[mk].ad)} ${Math.round(MODUL[mk])}%</button>`; }
   if (oyunda && !limanP && !HM.acik && gazToplama > 0) h += `<button class="gpb" type="button" disabled style="opacity:1">⛽ ${T('Atmosferden yakıt toplanıyor', 'Scooping fuel from the atmosphere')} · ${Math.floor(yakit)}/${tank()}</button>`;
   if (oyunda && !limanP && !HM.acik && !kapsul && kaynP && kaynP.P && !['gaz', 'buzdevi'].includes(kaynP.tip) && !kazP) { const kal = inisKalan(kaynP); h += `<button class="gpb" type="button" data-g="inis" ${kal > 0 ? 'disabled' : ''}>🛬 ${kal > 0 ? T('Yüzey: ', 'Surface: ') + Math.ceil(kal / 60000) + T(' dk', ' min') : T('Yüzeye in', 'Land on the surface')}</button>`; }
   if (oyunda && !limanP && !HM.acik && benLonca() && lonYakin() === benLonca()) h += `<button class="gpb y" type="button" data-g="lonca">🏰 ${T('Lonca üssü', 'Guild base')}</button>`;
@@ -74,7 +74,7 @@ function gpYaz() {
         if (kk.sv >= 3 && yakit < tank() - 1) h += `<button class="gpb" type="button" data-g="kyak">⛽ ${T('Yakıt al', 'Refuel')}</button>`;
         if (kk.sv >= 5 && can < maxCan() - 1) h += `<button class="gpb" type="button" data-g="konar">🔧 ${T('Onar', 'Repair')}</button>`;
         if (kk.sv >= 5 && !kk.koloni) h += `<button class="gpb w" type="button" data-g="kkol" ${kredi < KOL_F ? 'disabled' : ''}>🏙 ${T('Koloniye dönüştür', 'Turn into a colony')} · ${SAYI(KOL_F)} 💰</button>`;
-        if (kk.koloni) { const vg = kkVergi(kk); h += `<button class="gpb y" type="button" data-g="kvergi" ${vg < 1 ? 'disabled' : ''}>🏙 ${esc(kk.koloni.ad)} · 👥 ${nufYaz(kkNufus(kk))} · ${T('vergi', 'taxes')} ${SAYI(vg)} 💰</button>`; if (Object.keys(KARGO).length) h += `<button class="gpb" type="button" data-g="ksat">📦 ${T('Kargoyu kolonine sat', 'Sell cargo to your colony')}</button>`; }
+        if (kk.koloni) { const vg = kkVergi(kk); h += `<button class="gpb y" type="button" data-g="kvergi" ${vg < 1 ? 'disabled' : ''}>🏙 ${esc(kk.koloni.ad)} ${kolYuz(kk)} · 👥 ${nufYaz(kkNufus(kk))} · ${T('vergi', 'taxes')} ${SAYI(vg)} 💰</button>` + kolIstekBtn(kk); if (Object.keys(KARGO).length) h += `<button class="gpb" type="button" data-g="ksat">📦 ${T('Kargoyu kolonine sat', 'Sell cargo to your colony')}</button>`; }
       } else if (KARAKOL.length < KK_MAX) h += `<button class="gpb" type="button" data-g="kkur" ${kredi < KK_F ? 'disabled' : ''}>🏗 ${T('Karakol kur', 'Build outpost')} · ${SAYI(KK_F)} 💰</button>`;
     }
   }
@@ -139,6 +139,7 @@ $('gp').addEventListener('click', e => {
   else if (g === 'kyak') { yakit = tank(); SES.tik(); duyur('⛽ ' + T('Karakoldan yakıt alındı', 'Refuelled at your outpost')); }
   else if (g === 'patla') patlamaKullan();
   else if (g === 'kkol' && kaynP) kkKoloni(kkBul(kaynP), kaynP);
+  else if (g === 'kistek' && kaynP) kolIstekVer(kkBul(kaynP));
   else if (g === 'kvergi' && kaynP) { const kk = kkBul(kaynP), vg = kkVergi(kk); if (vg > 0) { kazan(vg, 'koloni'); kk.koloni.vt = Date.now(); duyur('🏙 ' + T('Vergi toplandı', 'Taxes collected'), 'koloni', `+${SAYI(vg)} 💰`); SES.koloni(); } }
   else if (g === 'ksat') { let top = 0; for (const m in KARGO) { top += MAL[m].f * KARGO[m]; delete KARGO[m]; } top = Math.round(top * 1.1); kazan(top); duyur('🏙 ' + T('Kargo kolonine satıldı', 'Cargo sold to your colony'), 'koloni', `+${SAYI(top)} 💰`); SES.koloni(); }
   else if (g === 'konar') { can = maxCan(); SES.tik(); duyur('🔧 ' + T('Karakolda onarıldı', 'Repaired at your outpost')); }
@@ -168,6 +169,7 @@ function kazAdim(dt) {
 /* ================= görevler ================= */
 function koloniBul(sx, sy, R) { const L2 = []; for (let j = -R; j <= R; j++) for (let i = -R; i <= R; i++) { const s = sistem(sx + i, sy + j); if (!s) continue; for (const p of s.gez) if (p.kol) L2.push(p); } return L2; }
 function gorevHedef(g) {
+  if (g.tip === 'kontrat') return kontratHedef(g);
   if (g.tip === 'imdat') return { x: g.x, y: g.y, dur: 220, ad: g.ad };
   if ((g.tip === 'yan' || g.tip === 'dip') && g.hs) { const s2 = sistem(g.hs[0], g.hs[1]), q = s2 && s2.gez[g.hs[2]]; return q ? { p: q, ad: g.ad } : null; }
   if (g.tip === 'kelle' || g.tip === 'kervan' || g.tip === 'yan') return { x: g.x, y: g.y, dur: 0, ad: g.ad };
@@ -175,9 +177,10 @@ function gorevHedef(g) {
   if (g.tip === 'kesif') { const tm = temel(g.hs[0], g.hs[1]); return tm ? { tm, ad: g.ad } : null; }
   const s = sistem(g.hs[0], g.hs[1]); const p = s && s.gez[g.hs[2]]; return p ? { p, ad: g.ad } : null;
 }
-const gEm = g => ({ kesif: '🔭', yolcu: '🧑‍🚀', imdat: '🆘', hikaye: '⭐', kelle: '☠', kervan: '🚚', istila: '👾', yan: '📼', dip: '🕊' }[g.tip] || '📦');
-const gSay = () => GOREV.filter(g => g.tip !== 'imdat' && g.tip !== 'hikaye' && g.tip !== 'kervan' && g.tip !== 'istila' && g.tip !== 'yan').length;
+const gEm = g => ({ acil: '⏱', kirilgan: '🥚', vip: '🕴', seckin: '💎', kontrat: '📜', kesif: '🔭', yolcu: '🧑‍🚀', imdat: '🆘', hikaye: '⭐', kelle: '☠', kervan: '🚚', istila: '👾', yan: '📼', dip: '🕊' }[g.tip] || '📦');
+const gSay = () => GOREV.filter(g => g.tip !== 'imdat' && g.tip !== 'hikaye' && g.tip !== 'kervan' && g.tip !== 'istila' && g.tip !== 'yan' && g.tip !== 'kontrat').length;
 function gorevMetin(g) {
+  { const em = ekMetin(g); if (em) return em; }
   const sek = g.hs ? `${T('Sektör', 'Sector')} ${g.hs[0]} : ${g.hs[1]}` : '', yildiz = g.oz ? ' ⭐' : '';
   if (g.tip === 'hikaye' && g.a >= 16) return `📡 <b>${T('Yankı', 'Echo')} · ${T('Adım', 'Step')} ${g.a - 15}/3</b> — ${L(HIKM4[g.a === 16 ? 16 : HIK.yol + g.a])}<small>${esc(g.ad)}</small>`;
   if (g.tip === 'hikaye' && g.a >= 11) return `👁 <b>${T('Gölgeler', 'The Shadows')} · ${T('Adım', 'Step')} ${g.a - 10}/4</b> — ${L(HIKM3[g.a])}${g.a === 13 ? ` (${HIK.parca || 0}/3)` : ''}<small>${esc(g.ad)}</small>`;
@@ -192,6 +195,13 @@ function gorevMetin(g) {
   if (g.tip === 'yolcu') return T(`🧑‍🚀 <b>${g.kisi} yolcu</b> → ${esc(g.ad)}`, `🧑‍🚀 <b>${g.kisi} passengers</b> → ${esc(g.ad)}`) + yildiz + `<small>${esc(g.sis)}${T(' sistemi', ' system')} · ${sek}</small>`;
   return T(`🔭 <b>Yıldız sistemini keşfet</b>`, `🔭 <b>Discover the star system</b>`) + yildiz + `<small>${sek}</small>`;
 }
+/* pilot ünü: tamamlanan görev sayısı arttıkça limanlar daha değerli işler verir; ana sistemden uzaklaştıkça (tehlike) ek pay */
+const UN = [[0, 1, '🔰', ['Çaylak', 'Rookie']], [5, 1.4, '🎖', ['Tecrübeli', 'Seasoned']], [15, 2, '🏅', ['Usta', 'Veteran']], [35, 2.7, '🎗', ['Kıdemli', 'Elite']], [70, 3.5, '👑', ['Efsane', 'Legend']]];
+function pilotUn() { const n = ST.gorev || 0; let i = 0; while (i + 1 < UN.length && n >= UN[i + 1][0]) i++; return { i, n, k: UN[i][1], e: UN[i][2], ad: L(UN[i][3]), son: UN[i + 1] || null }; }
+const uzakPay = () => 1 + 0.6 * korsanGuc();
+function odulK(n, uzak) { return Math.round(n * pilotUn().k * (uzak === false ? 1 : uzakPay()) / 10) * 10; }
+function unKontrol() { const u = pilotUn(); if ((ST.unSv || 0) >= u.i) return; ST.unSv = u.i; setTimeout(() => { duyur(u.e + ' ' + T('Yeni rütbe: ', 'New rank: ') + '<b>' + u.ad + '</b>', 'galaksi', T('Görev ödülleri artık ×', 'Mission rewards now ×') + u.k.toFixed(1)); SES.galaksi(); }, 900); }
+function unSatir() { const u = pilotUn(), up = Math.round((uzakPay() - 1) * 100); return `<div class="alt" style="margin:6px 0 0">${u.e} ${T('Pilot ünü', 'Pilot rank')}: <b style="color:var(--ink)">${u.ad}</b> · ${T('görev ödülleri', 'mission rewards')} <b style="color:var(--altin)">×${u.k.toFixed(1)}</b>${up >= 5 ? ` · ${T('derin uzay', 'deep space')} +%${up}` : ''}${u.son ? `<br><small>${u.son[2]} ${L(u.son[3])} (×${u.son[1].toFixed(1)}) ${T('için', 'in')} ${u.son[0] - u.n} ${T('görev daha', 'more missions')}</small>` : ''}</div>`; }
 const odulYaz = g => g.odul ? `+${SAYI(g.odul)} 💰` : '⭐';
 function gorevTeklif(p) {
   const saat = Math.floor(Date.now() / 3.6e6), r = rng(h32(p.seed, saat, 31)), sx = p.s.t.sx, sy = p.s.t.sy, L2 = [];
@@ -200,23 +210,26 @@ function gorevTeklif(p) {
     const id = p.id + '@' + saat + '#' + j, tur = r(), yolcu = r() < 0.4;
     if (tur < 0.68 && kols.length) {
       const q = kols[(r() * kols.length) | 0], ds = Math.hypot(q.s.x - p.s.x, q.s.y - p.s.y) / SEK, yuk = yolcu ? 0 : 3 + ((r() * 10) | 0), kisi = 2 + ((r() * 24) | 0);
-      if (!ALINAN.has(id)) L2.push({ id, k: p.id, tip: yolcu ? 'yolcu' : 'teslim', h: q.id, hs: [q.s.t.sx, q.s.t.sy, q.i], ad: kolAd(q), sis: q.s.t.ad, yuk, kisi: yolcu ? kisi : 0, odul: Math.round((yolcu ? 60 + kisi * 4 : 80 + yuk * 7) + ds * 65 + r() * 40) });
+      if (!ALINAN.has(id)) L2.push({ id, k: p.id, tip: yolcu ? 'yolcu' : 'teslim', h: q.id, hs: [q.s.t.sx, q.s.t.sy, q.i], ad: kolAd(q), sis: q.s.t.ad, yuk, kisi: yolcu ? kisi : 0, odul: odulK((yolcu ? 60 + kisi * 4 : 80 + yuk * 7) + ds * 65 + r() * 40) });
     } else {
       let hd = null; for (let k = 0; k < 40 && !hd; k++) { const a = r() * TAU, dd = 3 + r() * 6, tm = temel(sx + Math.round(Math.cos(a) * dd), sy + Math.round(Math.sin(a) * dd)); if (tm && !KESIF.has('s:' + tm.k)) hd = tm; }
-      if (hd && !ALINAN.has(id)) { const ds = Math.hypot(hd.x - p.s.x, hd.y - p.s.y) / SEK; L2.push({ id, tip: 'kesif', h: 's:' + hd.k, hs: [hd.sx, hd.sy], ad: T('Sektör ', 'Sector ') + hd.sx + ' : ' + hd.sy, odul: Math.round(140 + ds * 45 + r() * 30), yuk: 0 }); }
+      if (hd && !ALINAN.has(id)) { const ds = Math.hypot(hd.x - p.s.x, hd.y - p.s.y) / SEK; L2.push({ id, tip: 'kesif', h: 's:' + hd.k, hs: [hd.sx, hd.sy], ad: T('Sektör ', 'Sector ') + hd.sx + ' : ' + hd.sy, odul: odulK(140 + ds * 45 + r() * 30), yuk: 0 }); }
     }
   }
   if (itSv(p) >= 2 && kols.length) {   // dost kolonilere özel iş
     const id = p.id + '@' + saat + '#oz', q = kols[(r() * kols.length) | 0], ds = Math.hypot(q.s.x - p.s.x, q.s.y - p.s.y) / SEK, yuk = 4 + ((r() * 8) | 0);
-    if (!ALINAN.has(id)) L2.unshift({ id, k: p.id, oz: 1, tip: 'teslim', h: q.id, hs: [q.s.t.sx, q.s.t.sy, q.i], ad: kolAd(q), sis: q.s.t.ad, yuk, kisi: 0, odul: Math.round((120 + yuk * 9 + ds * 90) * 1.6) });
+    if (!ALINAN.has(id)) L2.unshift({ id, k: p.id, oz: 1, tip: 'teslim', h: q.id, hs: [q.s.t.sx, q.s.t.sy, q.i], ad: kolAd(q), sis: q.s.t.ad, yuk, kisi: 0, odul: odulK((120 + yuk * 9 + ds * 90) * 1.6) });
   }
+  L2.push(...ekGorevler(p, r, saat, kols));
   return L2;
 }
 function gorevKesif(k) {
+  kontratKesif(k);
   for (const g of GOREV.slice()) if (g.tip === 'kesif' && g.h === k) { kazan(g.odul); ST.gorev++; GOREV = GOREV.filter(x => x !== g); setTimeout(() => { duyur('✅ ' + T('Keşif görevi tamamlandı', 'Exploration mission complete'), 'koloni', `+${SAYI(g.odul)} 💰`); SES.koloni(); }, 600); gorevYaz(); }
 }
 let gorevAcik = !DOKUN;
 function gorevYaz() {
+  if (oyunda) unKontrol();
   $('gorevCip').hidden = !GOREV.length; $('gorevSay').textContent = GOREV.length;
   if (diyalogAcik) return;
   const P = $('gorevPanel'); P.hidden = !GOREV.length || !gorevAcik || !oyunda;
@@ -241,12 +254,12 @@ function limanAc(p) {
   if (!ZIY.some(z => z[0] === p.s.t.sx && z[1] === p.s.t.sy && z[2] === p.i) && !ITIBAR[p.id]) defter((yabanciMi(p) ? IRK[p.kol.irk].e + ' ' : '🏙 ') + kolAd(p) + ' kolonisine ilk kez yanaştım.', (yabanciMi(p) ? IRK[p.kol.irk].e + ' ' : '🏙 ') + 'Docked at ' + kolAd(p) + ' for the first time.');
   sonLiman = [p.s.t.sx, p.s.t.sy, p.i]; ST.yanas++; { const zk = sonLiman.join(','); const zi = ZIY.findIndex(z => z.join(',') === zk); if (zi >= 0) ZIY.splice(zi, 1); ZIY.unshift(sonLiman.slice()); if (ZIY.length > 16) ZIY.length = 16; } kacakTara(p); if (yabanciMi(p)) ST.temas = (ST.temas || 0) + 1;
   let top = 0, n = 0;
-  for (const g of GOREV.slice()) if ((g.tip === 'teslim' || g.tip === 'yolcu') && g.h === p.id) { top += Math.round(g.odul * (g.tip === 'yolcu' ? 1 + 0.25 * mSay('kabin') : 1)); n++; GOREV = GOREV.filter(x => x !== g); if (g.k) itEkle(g.k, 3); }
+  for (const g of GOREV.slice()) if (TESLIM_T.includes(g.tip) && g.h === p.id) { top += Math.round(g.odul * (g.tip === 'yolcu' || g.tip === 'vip' ? 1 + 0.25 * mSay('kabin') : 1) * (g.sag != null ? Math.max(0.25, g.sag / 100) : 1)); if (g.tip === 'seckin') ST.seckin = (ST.seckin || 0) + 1; n++; GOREV = GOREV.filter(x => x !== g); if (g.k) itEkle(g.k, 3); }
   if (n) { kazan(top, 'gorev'); frEkle('birlik', n); ST.gorev += n; itEkle(p.id, 5 * n); setTimeout(() => { duyur('✅ ' + T(`${n} görev tamamlandı`, `${n} mission${n > 1 ? 's' : ''} complete`), 'koloni', `+${SAYI(top)} 💰`); SES.koloni(); }, 300); }
   if (wp && wp.k === p.s.t.k) wp = null;
   { let tm = 0; for (const k in MODUL) if (MODUL[k] < 100) { tm += 100 - MODUL[k]; MODUL[k] = 100; } if (tm > 5) setTimeout(() => duyur('🔧 ' + T('Liman ekibi gemi sistemlerini onardı', 'The dock crew repaired your ship systems'), 'koloni'), 500); }
   eskMaas(); ekipIyiles(); limanSek = kapsul ? 'gemi' : 'pazar'; limanYaz(); $('liman').hidden = false; limanSahne(p); gorevYaz(); SES.koloni(); basarimKontrol(); kaydet();
-  hikLiman(p); yanLiman(p); $('lmElci').hidden = !yabanciMi(p);
+  hikLiman(p); yanLiman(p); kontratLiman(p); $('lmElci').hidden = !yabanciMi(p);
 }
 function limanKapat() { if (!limanP) return; const p = limanP; limanP = null; $('liman').hidden = true; const [px, py] = gezPos(p, simT()), a = Math.atan2(SH.y - py, SH.x - px); SH.vx = Math.cos(a) * 120; SH.vy = Math.sin(a) * 120; kaydet(); SES.tik(); gorevYaz(); if (HIK.a === 0) setTimeout(hikBasla, 900); else if (HIK.a === 10) setTimeout(() => { if (HIK.a === 10 && !diyalogAcik) diyalog(HIKD3.c0, () => hikAdim(11)); }, 900); else if (HIK.a === 5) setTimeout(() => { if (HIK.a === 5 && !diyalogAcik) diyalog(HIKD2.b0, () => hikAdim(6)); }, 900); }
 const IT_SV = [0, 10, 30, 60], IT_AD = [['Yabancı', 'Stranger'], ['Tanıdık', 'Acquaintance'], ['Dost', 'Friend'], ['Müttefik', 'Ally']];
@@ -281,9 +294,11 @@ function limanYaz() {
       h += `<div class="satir"><div>${M.e} <b>${L(M.ad)}</b> ${et}${haber}${pzEt(p, m)}${fiyatGrafik(p, m)}<small>${!alinir ? '' : T('Al', 'Buy') + ' ' + SAYI(al) + ' · '}${T('Sat', 'Sell')} ${SAYI(sat)} 💰${var_ ? ' · ' + T('Ambarda', 'In hold') + ': <b style="color:var(--ink)">' + var_ + '</b>' : ''}</small></div>
         <div class="dg">${!alinir ? '' : `<button class="kb al" type="button" data-al="${m}" data-n="1" ${enCok < 1 ? 'disabled' : ''}>${T('Al', 'Buy')} 1</button><button class="kb al" type="button" data-al="${m}" data-n="${enCok}" ${enCok < 2 ? 'disabled' : ''}>${T('Al', 'Buy')} ${Math.max(enCok, 0)}</button>`}<button class="kb" type="button" data-sat="${m}" data-n="1" ${var_ < 1 ? 'disabled' : ''}>${T('Sat', 'Sell')} 1</button><button class="kb" type="button" data-sat="${m}" data-n="${var_}" ${var_ < 2 ? 'disabled' : ''}>${T('Hepsini sat', 'Sell all')}</button></div></div>`;
     }
+    h += ticDefterHtml();
   } else if (limanSek === 'gorev') {
     if (GOREV.length) { h += `<div class="alt" style="margin:6px 0 0;font-weight:900;color:var(--ink)">${T('Aldığın görevler', 'Your missions')} (${gSay()}/4)</div>`; GOREV.forEach((g, i) => { h += `<div class="satir"><div>${gorevMetin(g)}<small style="color:var(--altin)">${odulYaz(g)}</small></div><div class="dg">${g.tip === 'hikaye' ? '' : `<button class="kb" type="button" data-iptal="${i}">${T('Bırak', 'Drop')}</button>`}</div></div>`; }); }
     const tek = gorevTeklif(p);
+    h += unSatir() + kontratHtml(p);
     h += `<div class="alt" style="margin:12px 0 0;font-weight:900;color:var(--ink)">${T('Bu limandaki işler', 'Jobs at this port')}</div>`;
     if (!tek.length) h += `<div class="alt">${T('Şu an iş yok, sonra tekrar uğra.', 'No jobs right now, come back later.')}</div>`;
     const ar = arananlar(p);
@@ -343,9 +358,12 @@ $('liman').addEventListener('click', e => {
   const sv = itSv(p);
   if (b.hasAttribute('data-yakit')) { const yf = sv >= 3 ? Math.max(1, Math.ceil(yakitFiyat(p) / 2)) : yakitFiyat(p), n = Math.min(Math.ceil(tank() - yakit), Math.floor(kredi / yf)); if (n > 0) { kredi -= n * yf; yakit = Math.min(tank(), yakit + n); SES.tik(); } }
   else if (b.hasAttribute('data-onar')) { const f = sv >= 3 ? 0 : Math.ceil((maxCan() - can) * 1.5); if (kredi >= f) { kredi -= f; can = maxCan(); SES.koloni(); } }
-  else if (b.dataset.al) { const m = b.dataset.al, f = alF(p, m), n = Math.min(+b.dataset.n, kapasite() - kargoDolu(), Math.floor(kredi / f)); if (n > 0) { pzEkle(p, m, -n); const f1 = alF(p, m); kredi -= Math.min(kredi, Math.round(n * (f + f1) / 2)); KARGO[m] = (KARGO[m] || 0) + n; itEkle(p.id, 1); SES.tik(); } }
-  else if (b.dataset.sat) { const m = b.dataset.sat, n = Math.min(+b.dataset.n, KARGO[m] || 0); if (n > 0) { const f0 = satF(p, m); pzEkle(p, m, n); const f1 = satF(p, m); kazan(Math.round(n * (f0 + f1) / 2), 'ticaret'); besEkle(p, m, n); frEkle('tuccar', 0.3); if (yabanciMi(p)) dipEkle(p.kol.irk, 0.4); ekipXp('tuccar', 1); KARGO[m] -= n; if (!KARGO[m]) delete KARGO[m]; itEkle(p.id, 1); SES.tik(); } }
-  else if (b.dataset.kabul != null) { const g = (p._tek || [])[+b.dataset.kabul]; if (g && gSay() < 4 && kargoDolu() + (g.yuk || 0) <= kapasite()) { GOREV.push(g); ALINAN.add(g.id); SES.koloni(); gorevYaz(); } }
+  else if (b.dataset.al) { const m = b.dataset.al, f = alF(p, m), n = Math.min(+b.dataset.n, kapasite() - kargoDolu(), Math.floor(kredi / f)); if (n > 0) { pzEkle(p, m, -n); const f1 = alF(p, m); { const tut = Math.min(kredi, Math.round(n * (f + f1) / 2)); kredi -= tut; ticKay('al', p, m, n, tut); } KARGO[m] = (KARGO[m] || 0) + n; itEkle(p.id, 1); SES.tik(); } }
+  else if (b.dataset.sat) { const m = b.dataset.sat, n = Math.min(+b.dataset.n, KARGO[m] || 0); if (n > 0) { const f0 = satF(p, m); pzEkle(p, m, n); const f1 = satF(p, m); { const gel = Math.round(n * (f0 + f1) / 2); kazan(gel, 'ticaret'); ticKay('sat', p, m, n, gel); } besEkle(p, m, n); frEkle('tuccar', 0.3); if (yabanciMi(p)) dipEkle(p.kol.irk, 0.4); ekipXp('tuccar', 1); KARGO[m] -= n; if (!KARGO[m]) delete KARGO[m]; itEkle(p.id, 1); SES.tik(); } }
+  else if (b.dataset.kabul != null) { const g = (p._tek || [])[+b.dataset.kabul]; if (g && gSay() < 4 && kargoDolu() + (g.yuk || 0) <= kapasite()) { if (g.sure) g.son = Date.now() + g.sure * 1000; GOREV.push(g); ALINAN.add(g.id); SES.koloni(); gorevYaz(); } }
+  else if (b.hasAttribute('data-kon')) kontratKabul(p);
+  else if (b.hasAttribute('data-kontes')) kontratLiman(p, true);
+  else if (b.dataset.kvup != null) kvYukselt(+b.dataset.kvup);
   else if (b.dataset.kelle != null) { const g = (p._ar || [])[+b.dataset.kelle]; if (g && gSay() < 4) { GOREV.push(g); ALINAN.add(g.id); SES.koloni(); gorevYaz(); } }
   else if (b.dataset.iptal != null) { const g = GOREV[+b.dataset.iptal]; if (g && g.tip !== 'hikaye') GOREV.splice(+b.dataset.iptal, 1); SES.tik(); gorevYaz(); }
   else if (b.dataset.ters) { const u = TERS.find(x => x.k === b.dataset.ters), L0 = YUK[u.k]; if (L0 < 4) { const f = tersFiyat(u, L0); if (kredi >= f) { const oran = can / maxCan(); kredi -= f; YUK[u.k]++; if (u.k === 'tank') yakit = Math.min(tank(), yakit + (TANK[YUK.tank] - TANK[YUK.tank - 1])); if (u.k === 'kalkan') can = maxCan() * oran; SES.koloni(); duyur('🛠 ' + L(u.ad) + ' → ' + T('seviye ', 'level ') + (YUK[u.k] + 1), 'koloni', u.ne(YUK[u.k])); basarimKontrol(); } } }

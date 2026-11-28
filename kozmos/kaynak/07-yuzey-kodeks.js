@@ -34,7 +34,7 @@ function inisPoiAdim(I, dt, now) {
   for (const q of I.poi) { const d = Math.abs(q.x - I.x);
     if (q.t === 'damar' && !q.bitti && d < 32 && dur) { q.p += dt; I.matkap = q; if (q.p >= 1.6) { q.bitti = true; I.top += 3; I.dmr++; ST.damar = (ST.damar || 0) + 1; SES.koloni(); } }
     else if (q.t === 'kapsul' && !q.bitti && d < 28 && I.y < 40) { q.bitti = true; I.kps++; const r = Math.random(); if (r < 0.45) { const k = 200 + ((Math.random() * 400) | 0); kazan(k, 'kesif'); q.yaz = '+' + SAYI(k) + ' 💰'; } else if (r < 0.75 && kargoDolu() < kapasite()) { KARGO.hucre = (KARGO.hucre || 0) + 2; q.yaz = '🔋 +2'; } else { I.kal = Math.min(I.sure, I.kal + 15); q.yaz = '🔋 +15 s'; if (Math.random() < 0.4) planVer('inis'); } duyur('📦 ' + T('Terk edilmiş kapsül', 'Abandoned pod'), 'kesif', q.yaz); SES.koloni(); }
-    else if (q.t === 'yasam' && !q.bitti && d < 70) { q.p += dt; I.tara = q; if (q.p >= 1.3) { q.bitti = true; I.yas++; bilimEkle(5); ST.yasam = (ST.yasam || 0) + 1; kodAc('f:yasam'); duyur('🦠 ' + T('Yaşam formu tarandı', 'Life form scanned'), 'kesif', '🔬 +5'); SES.galaksi(); } }
+    else if (q.t === 'yasam' && !q.bitti && d < 70) { q.p += dt; I.tara = q; if (q.p >= 1.3) { q.bitti = true; I.yas++; bilimEkle(5); ST.yasam = (ST.yasam || 0) + 1; kodAc('f:yasam'); albumEkle(I.p.tip, q.tur); duyur('🦠 ' + T('Yaşam formu tarandı', 'Life form scanned'), 'kesif', '🔬 +5'); SES.galaksi(); } }
     else if (q.t === 'magara' && !q.bitti && d < 34 && dur) { q.p += dt; I.tara = q; if (q.p >= 1.5) { q.bitti = true; ST.magara = (ST.magara || 0) + 1; const r = Math.random(); if (r < 0.35) { const k = 300 + ((Math.random() * 500) | 0); kazan(k, 'kesif'); q.yaz = '+' + SAYI(k) + ' 💰'; } else if (r < 0.65) { bilimEkle(8); q.yaz = '🔬 +8'; } else if (r < 0.85 && kargoDolu() + 2 <= kapasite()) { KARGO.parca = (KARGO.parca || 0) + 2; q.yaz = '⚙ +2'; } else { I.kal = Math.min(I.sure, I.kal + 12); q.yaz = '🔋 +12 s'; } SES.galaksi(); duyur('🕳 ' + T('Mağara keşfedildi', 'Cave explored'), 'kesif', q.yaz + ' · ' + L(MAGARA_S[(Math.random() * MAGARA_S.length) | 0])); } }
     else if (q.t === 'us' && !q.bitti && !q.ac && d < 40 && dur) { q.p += dt; I.tara = q; if (q.p >= 1.2) { q.ac = true; yuzBulmaca(I, q); } }
     else if (q.t === 'gayzer') { const fz = (now / 1000 + q.faz) % 4; q.aktif = fz > 2.8; if (q.aktif && d < 34 && I.y < 80 && !I.bitti && (!q.vurT || now - q.vurT > 900)) { q.vurT = now; I.kal = Math.max(0, I.kal - 4); I.vy = 430; I.yer = false; SES.vur(); duyur('♨ ' + T('Gayzer! −4 sn batarya', 'Geyser! −4 s battery'), 'uyari'); } } }
@@ -112,7 +112,7 @@ const KODX = {
   'h:banka': ['tar', '🏦', ['Merkez Bankası', 'The Central Bank'], ['Bütün kazançların toplandığı, koloniler arası ticareti ayakta tutan dev istasyon.', 'The great station where all earnings gather, keeping trade between colonies alive.'], ['Merkez Bankası’na yanaş', 'Dock at the Central Bank']],
 };
 let kodT = 3;
-function kodAc(k) { if (!KODX[k] || KOD.has(k)) return; KOD.add(k); const E = KODX[k]; bilimEkle(1); duyur('📖 ' + T('Kodekse eklendi: ', 'New codex entry: ') + '<b>' + E[1] + ' ' + L(E[2]) + '</b>', 'kesif', T('Ambar → Kodeks', 'Hold → Codex')); basarimKontrol(); }
+function kodAc(k) { if (!KODX[k] || KOD.has(k)) return; KOD.add(k); kodBolum(k); const E = KODX[k]; bilimEkle(1); duyur('📖 ' + T('Kodekse eklendi: ', 'New codex entry: ') + '<b>' + E[1] + ' ' + L(E[2]) + '</b>', 'kesif', T('Ambar → Kodeks', 'Hold → Codex')); basarimKontrol(); }
 function kodKontrol() {
   if (!oyunda) return; const A = kodAc;
   if (limanP) A('i:' + (yabanciMi(limanP) ? limanP.kol.irk : 'insan'));
@@ -124,9 +124,9 @@ function kodKontrol() {
 function kodeksYaz() {
   const N = Object.keys(KODX).length; let h = `<div class="alt">${T('Keşfettikçe evrenin ansiklopedisi dolar. Her yeni kayıt 🔬 +1 bilim verir.', 'The encyclopedia of the universe fills as you explore. Each new entry gives 🔬 +1 science.')} <b>${KOD.size}/${N}</b></div>`;
   for (const kat in KOD_KAT) { const L2 = Object.keys(KODX).filter(k => KODX[k][0] === kat), n = L2.filter(k => KOD.has(k)).length;
-    h += `<div class="alt" style="margin:12px 0 2px;font-weight:900;color:var(--ink)">${L(KOD_KAT[kat])} <small style="color:var(--mute)">${n}/${L2.length}</small></div>`;
+    h += `<div class="alt" style="margin:12px 0 2px;font-weight:900;color:var(--ink)">${L(KOD_KAT[kat])} <small style="color:var(--mute)">${n}/${L2.length}${n === L2.length ? ' ✅' : ' · 🎁 ' + SAYI(2500) + ' 💰'}</small></div>`;
     for (const k of L2) { const E = KODX[k]; h += KOD.has(k) ? `<div class="satir"><div>${E[1]} <b>${L(E[2])}</b><small>${L(E[3])}</small></div></div>` : `<div class="satir" style="opacity:.55"><div>❔ <b>???</b><small>🔒 ${L(E[4])}</small></div></div>`; } }
-  return h;
+  return albumHtml() + h;
 }
 /* ================= pilot izleri (çevrimiçi) ================= */
 const IZ = new Map(); let izSk = null, izT = 0, izYakin = null, izSonT = 0;

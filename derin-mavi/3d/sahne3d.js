@@ -322,6 +322,7 @@ export async function kur3D({ tuval, kalite, ilk = [] }) {
   const ORTAM = new THREE.Group(); sahne.add(ORTAM);
   /* yalnızca takip kamerasında görünen dekor: yan görünümün önünü ve kenarlarını kapatmasın diye ayrı grup */
   const TAKIP = new THREE.Group(); TAKIP.visible = false; sahne.add(TAKIP); let SURU3 = null;
+  const ENGEL3 = []; /* takip kamerasının içinden geçmemesi gereken kaya ve mercanlar */
   let DUVAR = null, TUNEL = null;
   /* kaya engeli: mağaralı duvarın ve sol tepeciğin üst yüzeyi bir yükseklik ızgarasına çıkarılır (köşe noktalarından, ışın atmadan ucuzca).
      Mağaranın tüneli ayrıca bir elipsoitle tanımlanır: içi boştur, balık girebilir. */
@@ -358,7 +359,7 @@ export async function kur3D({ tuval, kalite, ilk = [] }) {
     if (PARCA) { PARCA.material.opacity = TM.kar; PARCA.material.size = tmAd === 'derin' ? 0.09 : 0.07; }
   }
   function ortamKur(VW, magX) {
-    ORTAM.clear(); MERCAN3 = []; KOLONI3 = []; ekoSon = "";
+    ORTAM.clear(); MERCAN3 = []; KOLONI3 = []; ekoSon = ""; ENGEL3.length = 0;
     let s = 9137; const r = () => (s = (s * 16807) % 2147483647) / 2147483647, ara = (a, b) => a + r() * (b - a);
     const yarim = VW / 2 + 3;
     /* mağaralı kayalık: mağara ağzı 2D'deki uyku mağarasının üstüne gelir */
@@ -369,7 +370,7 @@ export async function kur3D({ tuval, kalite, ilk = [] }) {
       const o = P[k].clone(true); o.scale.setScalar(sc); o.rotation.y = rot;
       let y = zeminY(x, z) - 0.05 * sc;
       if (ustte) { ISIN.set(new THREE.Vector3(x, 40, z), new THREE.Vector3(0, -1, 0)); const h = ISIN.intersectObject(ustte === true ? DUVAR : ustte, true)[0]; if (!h) return; y = h.point.y - 0.05; }
-      o.position.set(x, y, z); (grup || ORTAM).add(o);
+      o.position.set(x, y, z); (grup || ORTAM).add(o); if (!k.startsWith('anemon')) ENGEL3.push(o);
       if (MERCAN_K.has(k)) { o.userData.s0 = o.scale.x; MERCAN3.push(o); }
       return o;
     };
@@ -394,14 +395,14 @@ export async function kur3D({ tuval, kalite, ilk = [] }) {
       o.scale.set(sc, sc * (ust ? ara(1.1, 1.5) : ara(0.9, 1.3)), sc); o.rotation.y = r() * 6.28;
       o.position.set(solX + ara(-3, 3) * (ust ? 0.6 : 1), zeminY(solX, -5) - 0.2 * sc + (ust ? ara(0.9, 1.4) : 0), ara(-7.5, -3.5)); SOL.add(o);
     }
-    SOL.updateMatrixWorld(true);
+    SOL.updateMatrixWorld(true); ENGEL3.push(DUVAR, ...SOL.children);
     engelKur([DUVAR, SOL], -yarim - 1, yarim + 1, -13, 3);
     TUNEL = { x: magX, y: -0.05 + 0.4 * ds, z: -0.1 * ds, rx: 1.5 * ds, ry: 2.2 * ds, rz: 4.2 * ds };
     for (let i = 0; i < Math.round(34 * cok * mk); i++) { const k = mercanlar[Math.floor(r() * mercanlar.length)]; koy(k, solX + ara(-4.5, 4.5), ara(-8.5, -3), (k.startsWith('masa') ? ara(0.5, 0.8) : k.startsWith('yelpaze') ? ara(1, 1.5) : ara(0.7, 1.2)), k.startsWith('yelpaze') ? ara(-0.5, 0.5) : r() * 6.28, SOL); }
     for (let i = 0; i < Math.round(26 * cok * mk); i++) { const k = mercanlar[Math.floor(r() * mercanlar.length)], z = ara(-7, -1.5); koy(k, solX + ara(-6, 6.5), z, ara(0.5, 1.05) * (z > -3 ? 0.7 : 1), k.startsWith('yelpaze') ? ara(-0.4, 0.4) : r() * 6.28); }
     for (let i = 0; i < (mk >= 1 ? 3 : 0); i++) koy(i % 2 ? 'anemon_0' : 'anemon_1', solX + ara(-5, 5), ara(-3.5, -1.7), ara(0.9, 1.2), r() * 6);
     /* derinlik: arka planda sise gömülen ikinci bir resif sırtı ve sık mercan bahçeleri */
-    const ARKA = P.duvar.clone(true); const as = ds * 1.7; ARKA.scale.set(as, as * 0.85, as); ARKA.position.set(-VW * 0.18, -0.3, -19); ARKA.rotation.y = 0.25; ORTAM.add(ARKA); ARKA.updateMatrixWorld(true);
+    const ARKA = P.duvar.clone(true); const as = ds * 1.7; ARKA.scale.set(as, as * 0.85, as); ARKA.position.set(-VW * 0.18, -0.3, -19); ARKA.rotation.y = 0.25; ORTAM.add(ARKA); ARKA.updateMatrixWorld(true); ENGEL3.push(ARKA);
     for (let i = 0; i < Math.round(30 * cok * mk); i++) { const k = mercanlar[Math.floor(r() * mercanlar.length)]; koy(k, -VW * 0.18 + ara(-11, 11) * as, -19 + ara(-5, 4) * as, ara(0.6, 1.2) * as * 1.3, r() * 6.28, ARKA); }
     for (let i = 0; i < Math.round(VW / 2.5); i++) koy(kayalar[i % 4], ara(-yarim - 4, yarim + 4), ara(-20, -11), ara(1.2, 2.6), r() * 6.28);
     for (let i = 0; i < Math.round((VW * 2.2 + 14) * cok * mk); i++) { const k = mercanlar[Math.floor(r() * mercanlar.length)]; koy(k, ara(-yarim - 5, yarim + 5), ara(-21, -10), (k.startsWith('masa') ? ara(0.6, 1.1) : ara(0.9, 1.7)), k.startsWith('yelpaze') ? ara(-0.5, 0.5) : r() * 6.28); }
@@ -419,7 +420,7 @@ export async function kur3D({ tuval, kalite, ilk = [] }) {
       if (mk > 0) { rast(Math.round((VW * 3.5 + 40) * cok * mk), (x, z) => { const k = mercanlar[Math.floor(r() * mercanlar.length)]; const o = koy(k, x, z, (k.startsWith('yelpaze') ? ara(0.7, 1.3) : k.startsWith('masa') ? ara(0.4, 0.75) : ara(0.45, 1)), r() * 6.28, null, T); if (o) { const i = MERCAN3.indexOf(o); if (i >= 0) MERCAN3.splice(i, 1); } });
         rast(Math.round(8 * mk), (x, z) => koy(r() < 0.5 ? 'anemon_0' : 'anemon_1', x, z, ara(0.8, 1.2), r() * 6, null, T)); }
       /* uzakta, sisin içinde iri kaya tepeleri: ufuk boş görünmesin */
-      for (let i = 0; i < 6; i++) { const yan = i % 2 ? 1 : -1, o = P[kayalar[i % 4]].clone(true), sc = ara(3, 5.5); o.scale.set(sc, sc * ara(0.8, 1.4), sc); o.rotation.y = r() * 6.28; const x = yan * (dis + ara(-2, 6)), z = ara(-14, 8); o.position.set(x, zeminY(x, z) - 0.3 * sc, z); T.add(o); }
+      for (let i = 0; i < 6; i++) { const yan = i % 2 ? 1 : -1, o = P[kayalar[i % 4]].clone(true), sc = ara(3, 5.5); o.scale.set(sc, sc * ara(0.8, 1.4), sc); o.rotation.y = r() * 6.28; const x = yan * (dis + ara(-2, 6)), z = ara(-14, 8); o.position.set(x, zeminY(x, z) - 0.3 * sc, z); T.add(o); ENGEL3.push(o); }
       if (TM.cay > 0) for (let i = 0; i < 7; i++) { const x = ara(-dis, dis), z = ara(1, 9), w = ara(2.5, 5); T.add(cayir(Math.round(w * w * 9 * TM.cay), [x - w / 2, x + w / 2, z - w / 3, z + w / 3], ara(0.5, 1.1), 0.03, '#3f7a2e', '#9bc45a', 20 + i)); }
       T.userData.dis = dis; }
   }
@@ -457,6 +458,36 @@ export async function kur3D({ tuval, kalite, ilk = [] }) {
     return { o, yuz };
   }
   const YZN = new Map(); let INS3 = null;
+  /* İÇ İÇE GEÇMEYİ ÖNLEME: balıklar, yüzen canlılar (denizanası, balon balığı, ziyaretçiler…), kum canlıları ve dalgıç/denizaltı
+     birbirine girmesin. Her biri bir küreyle temsil edilir; çakışan çiftte daha hareketli olan, kamera ışını boyunca öne
+     (kameraya doğru, hep açık su olan tarafa) kaydırılır. Ekrandaki yeri değişmez, yalnızca derinliği; böylece 2D oyunla uyum
+     bozulmaz, yan görünümde biri ötekinin önünden geçer. Hedef kayma her karede ham konumlardan hesaplanır (titreme olmaz) ve yumuşatılır. */
+  const AY = [], ayU = new THREE.Vector3(), ayD = new THREE.Vector3(), ayK = new THREE.Box3(), ayS = new THREE.Vector3();
+  const yaricap = g => { if (g.userData.r0 == null) { const sc = g.scale.x || 1; ayK.setFromObject(g); ayK.getSize(ayS); g.userData.r0 = (ayS.x + ayS.y + ayS.z) / 6 * 1.05 / sc; } return g.userData.r0 * g.scale.x; };
+  function ayir(dt) {
+    AY.length = 0;
+    const ekle = (g, hz, s) => { if (!g || !g.visible) return; AY.push({ g, hz, s, r: yaricap(g), p: g.position, a: 0 }); };
+    for (const f of BAL.values()) ekle(f.g, 3);
+    for (const [id, c] of YZN) { if (/^(tmz|iz)/.test(id)) continue; /* temizlikçiler balığa değerek çalışır */ const su = /^(goc|ks|kpy|orb|suru)/.exec(id); ekle(c.g, id === 'yirtici' || id.startsWith('gz') ? 1 : c.zs != null ? 2 : 1.5, su ? su[1] : null); }
+    for (const c of CAN.values()) ekle(c.g, 0);
+    if (INS3) ekle(INS3.g, 0);
+    const kp = kam.position, n = AY.length;
+    for (const q of AY) { const u = q.g.userData; q.b = (u.ayB || (u.ayB = new THREE.Vector3())).copy(q.p); q.u = (u.ayU || (u.ayU = new THREE.Vector3())).subVectors(kp, q.p).normalize(); q.q = (u.ayQ || (u.ayQ = new THREE.Vector3())).copy(q.p); }
+    /* birkaç tur: öne çıkan biri başka birine değerse o da sıradaki turda hesaba katılır */
+    for (let tur = 0; tur < 3; tur++) { let degisti = false;
+      for (let i = 0; i < n; i++) for (let j = i + 1; j < n; j++) {
+        const A = AY[i], B = AY[j], R = A.r + B.r; if ((A.hz === 0 && B.hz === 0) || (A.s && A.s === B.s)) continue; /* sürü üyeleri birbirine sokulabilir */
+        if (Math.abs(A.q.x - B.q.x) > R || Math.abs(A.q.y - B.q.y) > R || Math.abs(A.q.z - B.q.z) > R + 4) continue;
+        if (A.q.distanceToSquared(B.q) >= R * R * 0.995) continue;
+        /* kim kayacak: daha hareketli olan; eşitse zaten kameraya yakın olan öne çıkar */
+        const m = A.hz > B.hz || (A.hz === B.hz && A.q.distanceToSquared(kp) < B.q.distanceToSquared(kp)) ? A : B, o = m === A ? B : A;
+        ayD.subVectors(o.q, m.b); const boy = ayD.dot(m.u), dik2 = Math.max(0, ayD.lengthSq() - boy * boy), ger = Math.min(4, boy + Math.sqrt(Math.max(0, R * R - dik2)) + 0.02);
+        if (ger > m.a) { m.a = ger; m.q.copy(m.b).addScaledVector(m.u, m.a); degisti = true; }
+      }
+      if (!degisti) break; }
+    for (const q of AY) { const u = q.g.userData; u.ayA = (u.ayA || 0) + (q.a - (u.ayA || 0)) * Math.min(1, dt * (q.a > (u.ayA || 0) ? 5 : 1.5));
+      if (u.ayA > 0.002) { ayU.subVectors(kp, q.p).normalize(); q.p.addScaledVector(ayU, u.ayA); } }
+  }
   /* parçacıklar: 0 kabarcık (halka, parlak kenar), 1 yem (dolu kahve), 2 plankton (yumuşak parıltı), 3 altın kabarcık, 4 altın plankton */
   const PMAX = 600, pPos = new Float32Array(PMAX * 3), pBoy = new Float32Array(PMAX), pTur = new Float32Array(PMAX);
   const pGeo = new THREE.BufferGeometry(); pGeo.setAttribute('position', new THREE.BufferAttribute(pPos, 3)); pGeo.setAttribute('aBoy', new THREE.BufferAttribute(pBoy, 1)); pGeo.setAttribute('aTur', new THREE.BufferAttribute(pTur, 1));
@@ -477,6 +508,24 @@ export async function kur3D({ tuval, kalite, ilk = [] }) {
   /* TAKİP KAMERASI: yan görünümün yerine balığın arkasından ve yakından izler. Sahnedeki her şeyin yeri yan kameraya (kam)
      göre hesaplanmaya devam eder; yalnızca çizim bu ikinci kamerayla yapılır. */
   const kamT = new THREE.PerspectiveCamera(58, 1, 0.03, 220), TK = { a: false, p: 0, ang: null, poz: new THREE.Vector3(), bak: new THREE.Vector3(), bak0: new THREE.Vector3(), ilk: true }, tkV = new THREE.Vector3();
+  /* kamera ile balık arasında kaya ya da mercan varsa kamera engelin bu yanına (balığa doğru) çekilir; çok yaklaşacaksa
+     önce biraz yukarıdan bakmayı dener. Böylece kamera resifin içine dalmaz, balık da arkada kaybolmaz. */
+  const kmR = new THREE.Raycaster(), kmY = new THREE.Vector3(), kmA = new THREE.Vector3(), kmL = [];
+  function serbest(fp, hedef) {
+    kmY.subVectors(hedef, fp); const uz = kmY.length(); if (uz < 1e-3) return uz; kmY.divideScalar(uz);
+    kmL.length = 0; for (const o of ENGEL3) { if (!o.parent || (o.parent === TAKIP && !TAKIP.visible)) continue; const r = (o.userData.kr ??= (() => { const b = new THREE.Box3().setFromObject(o); return b.getSize(new THREE.Vector3()).length() / 2; })()); if (o.getWorldPosition(kmA).distanceTo(fp) < uz + r + 0.5) kmL.push(o); }
+    if (!kmL.length) return uz;
+    kmR.set(fp, kmY); kmR.far = uz + 0.3; const h = kmR.intersectObjects(kmL, true)[0]; return h ? h.distance : uz;
+  }
+  const kmB = new THREE.Vector3();
+  function kameraEngel(fp, s) {
+    const uz = TK.poz.distanceTo(fp), pay = 0.22 + s * 0.3; let d = serbest(fp, TK.poz);
+    if (d >= uz) return;
+    /* yukarıdan dene */
+    kmB.copy(TK.poz); kmB.y += Math.max(0.6, uz * 0.7); const d2 = serbest(fp, kmB), uz2 = kmB.distanceTo(fp);
+    if (d2 >= uz2 || d2 > d + 0.4) { TK.poz.lerp(kmB, 0.25); d = serbest(fp, TK.poz); if (d >= TK.poz.distanceTo(fp)) return; }
+    const k = Math.max(s * 0.9, d - pay) / TK.poz.distanceTo(fp); TK.poz.sub(fp).multiplyScalar(Math.min(1, k)).add(fp);
+  }
   function takipKare(dt) {
     TK.p += ((TK.a ? 1 : 0) - TK.p) * Math.min(1, dt * 2.2); TAKIP.visible = TK.p > 0.02; if (TK.p < 0.003) { TK.p = 0; TK.ilk = true; return kam; }
     if (TAKIP.visible) suruKare(dt, U.zaman.value);
@@ -486,6 +535,7 @@ export async function kur3D({ tuval, kalite, ilk = [] }) {
     const fx = Math.cos(TK.ang), fz = -Math.sin(TK.ang), uz = THREE.MathUtils.clamp(s * 3.4, 0.55, 4.5), yk = uz * 0.32;
     tkV.set(fp.x - fx * uz, fp.y + yk, fp.z - fz * uz); tkV.y = Math.max(tkV.y, zeminY(tkV.x, tkV.z) + 0.25, kayaY(tkV.x, tkV.z) + 0.25); tkV.y = Math.min(tkV.y, M.Hc + (M.H / 2) * M.k + 0.3);
     if (TK.ilk) { TK.poz.copy(tkV); TK.bak.copy(fp); TK.ilk = false; } else { TK.poz.lerp(tkV, Math.min(1, dt * 3)); TK.bak.lerp(tkV.set(fp.x + fx * s * 1.2, fp.y + s * 0.1, fp.z + fz * s * 1.2), Math.min(1, dt * 5)); }
+    kameraEngel(fp, s);
     const e = TK.p * TK.p * (3 - 2 * TK.p);
     kamT.aspect = kam.aspect; kamT.fov = kam.fov + (58 - kam.fov) * e; kamT.updateProjectionMatrix();
     kamT.position.lerpVectors(kam.position, TK.poz, e); TK.bak0.set(kam.position.x, kam.position.y, 0).lerp(TK.bak, e); kamT.lookAt(TK.bak0);
@@ -693,8 +743,13 @@ export async function kur3D({ tuval, kalite, ilk = [] }) {
         const taban = zeminY(p.x, p.z) + s * (f.alt * 1.1 + f.yarim * Math.abs(Math.sin(f.pit)) + 0.04);
         const yakin = THREE.MathUtils.clamp((p.y - taban) / (s * f.alt * 2 + 0.01), 0, 1);
         if (p.y < taban) p.y = taban;
+        /* 3B hareket yönü: derinlikte öne-arkaya giderken balık o yöne döner (yalnızca yan dönmez) */
+        if (f.px != null && dt > 0) { const k = Math.min(1, dt * 4); f.v3x = (f.v3x || 0) + ((p.x - f.px) / dt - (f.v3x || 0)) * k; f.v3z = (f.v3z || 0) + ((p.z - f.pz) / dt - (f.v3z || 0)) * k; }
+        f.px = p.x; f.pz = p.z;
         f.g.position.copy(p);
-        const hedefYaw = b.yon > 0 ? -0.32 : Math.PI + 0.32;
+        let hedefYaw = b.yon > 0 ? -0.32 : Math.PI + 0.32;
+        if (!b.uyku && !dans) { const hs = Math.hypot(f.v3x || 0, f.v3z || 0), w = THREE.MathUtils.clamp((hs - s * 0.25) / (s * 0.8), 0, 1) * THREE.MathUtils.clamp(Math.abs(f.v3z || 0) / (hs + 1e-4) * 1.4, 0, 1);
+          if (w > 0.01) { let ym = Math.atan2(-(f.v3z || 0), f.v3x || 0), dd = ym - hedefYaw; while (dd > Math.PI) dd -= Math.PI * 2; while (dd < -Math.PI) dd += Math.PI * 2; if (Math.abs(dd) < 2.2) hedefYaw += dd * w * 0.85; } }
         if (f.yaw == null) f.yaw = hedefYaw;
         let dy = hedefYaw - f.yaw; while (dy > Math.PI) dy -= Math.PI * 2; while (dy < -Math.PI) dy += Math.PI * 2;
         f.yaw += dy * Math.min(1, dt * 5);
@@ -710,6 +765,7 @@ export async function kur3D({ tuval, kalite, ilk = [] }) {
         f.g.visible = true;
       }
       for (const [id, f] of BAL) if (!gorulen.has(id)) { sahne.remove(f.g); BAL.delete(id); }
+      ayir(dt);
       const CK = takipKare(dt); rpGec.camera = CK;
       if (KAL[kalite].post) { gunesUzak.set(CK.position.x + gunesAci.x * 0.6, 60, CK.position.z - 30).project(CK); huzmePass.uniforms.uGunes.value.set(gunesUzak.x * 0.5 + 0.5, Math.min(1.6, gunesUzak.y * 0.5 + 0.5)); huzmePass.uniforms.uGuc.value = 0.55 * Math.min(1.25, HUZME_G * 1.1 + 0.15 * TM.huzme * (1 - g)); komp.render(); }
       else R.render(sahne, CK);
@@ -717,6 +773,8 @@ export async function kur3D({ tuval, kalite, ilk = [] }) {
     /* takip kamerası aç/kapa; değer verilmezse durumu döndürür */
     takip(v) { if (v != null) TK.a = !!v; return TK.a; },
     takipPay: () => TK.p,
+    /* hata ayıklama: hâlâ iç içe olan çiftler */
+    cakisma: () => { const L = []; for (let i = 0; i < AY.length; i++) for (let j = i + 1; j < AY.length; j++) { const A = AY[i], B = AY[j]; if ((A.hz || B.hz) && !(A.s && A.s === B.s) && A.p.distanceTo(B.p) < (A.r + B.r) * 0.85) L.push([A.hz, B.hz, +A.p.distanceTo(B.p).toFixed(2), +(A.r + B.r).toFixed(2)]); } return { n: AY.length, L }; },
     /* fotoğraf için: hemen yeniden çiz ve tuvali döndür (çizim tamponu aynı görevde okunabilir) */
     anlik() { if (KAL[kalite].post) komp.render(); else R.render(sahne, rpGec.camera || kam); return R.domElement; },
     kapat() { R.dispose(); }

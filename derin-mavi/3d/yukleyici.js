@@ -31,4 +31,13 @@ export function glbYukle(url) {
 /* BALIK MODELLERİ: her tür ayrı bir dosyada (balik/<tür>.glb). Yalnızca sahnede gerçekten görünen türler iner;
    inene kadar yerine sardalya modeli durur, inince kendiliğinden değişir. */
 export const MODEL = {}; const MODEL_P = {};
-export function balikGlb(k) { return MODEL_P[k] || (MODEL_P[k] = glbYukle(new URL('./balik/' + k + '.glb', import.meta.url).href).then(g => { const o = g.scene.getObjectByName('balik_' + k) || g.scene.children[0]; if (o) MODEL[k] = o; return o || null; }).catch(() => null)); }
+/* yassı balıklar (melek, flama, tetik…) yandan bakınca kâğıt gibi görünmesin: gövde kalınlığı yüksekliğinin ~%36'sından
+   azsa enine (z) kalınlaştırılır; en çok 2,4 kat. Geometriye bir kez işlenir, bütün kopyalar paylaşır. */
+const KALIN = 0.36, KALIN_MAX = 2.4;
+function kalinlastir(o) {
+  const b = new THREE.Box3().setFromObject(o), s = b.getSize(new THREE.Vector3()); if (!(s.y > 0) || !(s.z > 0)) return;
+  const k = Math.min(KALIN_MAX, KALIN / (s.z / s.y)); if (k <= 1.05) return;
+  const cz = (b.min.z + b.max.z) / 2, M = new THREE.Matrix4().makeTranslation(0, 0, cz).multiply(new THREE.Matrix4().makeScale(1, 1, k)).multiply(new THREE.Matrix4().makeTranslation(0, 0, -cz));
+  const gor = new Set(); o.traverse(m => { if (m.isMesh && !gor.has(m.geometry)) { gor.add(m.geometry); m.geometry.applyMatrix4(M); m.geometry.computeBoundingBox(); m.geometry.computeBoundingSphere(); } });
+}
+export function balikGlb(k) { return MODEL_P[k] || (MODEL_P[k] = glbYukle(new URL('./balik/' + k + '.glb', import.meta.url).href).then(g => { const o = g.scene.getObjectByName('balik_' + k) || g.scene.children[0]; if (o) { kalinlastir(o); MODEL[k] = o; } return o || null; }).catch(() => null)); }

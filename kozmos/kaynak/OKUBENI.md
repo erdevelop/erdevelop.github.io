@@ -38,6 +38,7 @@ kendisinden sonra **çalışan** kod tarafından kullanılabilir. Açılışta �
 | 14-hikaye-meta | hikâye, yarışlar, sezon, galeri, kayıt/bulut/yedekler |
 | 15-gelistirici-canli | geliştirici konsolu, kademeli kilitler, günlük görevler, etkinlikler, sayaçlar, ortak görev, mevsimler, prestij, PWA |
 | 16-rehber-ag | kaptan rehberi, başarımlar, çevrimiçi katman (Firebase) |
+| 16b-derinlik | zorluk, kontratlar, acil/kırılgan/VIP/seçkin işler, tür albümü, ticaret defteri, koloni istekleri, kervan yükseltme, gazete, haftalık senaryo, erişilebilirlik, taşıma bağlantısı |
 | 17-harita-menu-dongu | liman sahnesi, mini harita, harita, menü, ana döngü |
 
 Yeni bir parça eklenecekse `kozmos/derle.py` içindeki `PARCALAR` listesine, o parçanın ilk satırındaki

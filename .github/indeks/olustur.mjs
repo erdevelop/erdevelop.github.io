@@ -30,6 +30,7 @@ const urlOf = p => '/' + p.replace(/(^|\/)index\.html$/, '$1');
 function tur(p) {
   if (/^yapay-zek[ai]\/|^egitimler\/(yapay-zeka|makine-ogrenmesi)|^ogrenme_labaratuvari\/|^araclar\/(arka-plan-silme|ses-yazi|ocr|belge-ara|kisisel-veri-maskele|token-sayaci|cevirmen|ozetleyici|istem-kutuphanesi)\./.test(p)) return 'Yapay zekâ';
   if (/^rehber\//.test(p)) return 'Rehber';
+  if (/^oyun-kurallari\//.test(p)) return 'Oyun kuralları';
   if (/^egitimler\//.test(p)) return 'Eğitim';
   if (/^kesif\//.test(p)) return 'Cephe';
   if (/^komutlar\//.test(p)) return 'Komutlar';
@@ -65,7 +66,7 @@ for (const p of dosyalar.sort()) {
 try {
   for (const n of readdirSync(join(ROOT, 'oyunlar/games'))) {
     const s = readFileSync(join(ROOT, 'oyunlar/games', n), 'utf8');
-    for (const m of s.matchAll(/id:'([a-z0-9]+)',\s*title:'([^']+)'(?:,\s*category:'([^']*)')?(?:,\s*tags:'([^']*)')?/g))
+    for (const m of s.matchAll(/id:\s*'([a-z0-9]+)',\s*title:\s*'([^']+)'(?:,\s*category:\s*'([^']*)')?(?:,\s*tags:\s*'([^']*)')?/g))
       kayitlar.push({ t: m[2], d: 'Oyun Bahçesi' + (m[3] ? ' · ' + m[3] : '') + ' — tarayıcıda oynanır.', u: '/oyunlar/#o/' + m[1], c: 'Oyun', k: m[4] || '' });
   }
 } catch (e) { }

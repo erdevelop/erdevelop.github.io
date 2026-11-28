@@ -120,3 +120,41 @@
 - **Maç serisi:** Pişti, 101 ve Batak’ta aynı odada art arda oynanan maçların galibiyetleri tabloda (🏆 sütunu / "Kazanılan maç").
 - Firebase kuralları: `masa_sira` (her oyuncu yalnız kendi kaydını yazar; bir yazışta en çok bir oyun ve bir galibiyet, iki yazış arası en az 10 sn).
 
+## Rozetler ve günlük görevler — 28 Kasım 2026
+- **40 rozet**, beş grupta (Genel, Günlük, Masa, Bulmaca, Çevrimiçi): Mars!, Şah Mat, Vale Piştisi, Okeyi Atan, Elden Bitti, İhaleci, Sudokucu, Tesisatçı, Masanın Ustası…
+  Kazanılmamış rozetlerde ilerleme çubuğu ve sayı (ör. 3/10) görünür.
+- **Günlük görevler:** her gün herkese aynı üç görev (bir kolay, bir masa oyunu, bir karışık); her biri 30 XP, üçü birden 50 XP bonus ve görev serisi.
+  Ana sayfada görev kartı; oyuna bağlı görevlere dokununca oyun açılır.
+- Eski “Günün meydan okuması” portaldan kaldırılmış eski oyunlara bağlıydı ve görünmüyordu; yerini görev kartı aldı.
+- Oyunlar artık pişti, mars, mat, okeyle/çiftle bitiş, 101’de açma ve elden bitiş, Batak’ta ihale tutturma, damada dama çıkarma ve çevrimiçi sonuçları bildiriyor.
+
+## Eşli Okey ve eşli Batak — 28 Kasım 2026
+- Menüde **Tekli / Eşli (2’ye 2)** seçimi. Karşılıklı oturanlar takım; eş üstte mavi çerçeveyle ve “👥 eşin” etiketiyle görünür.
+- Eşli Okey: biri bitirince iki eş de sayı alır; sonuç tablosu takım olarak.
+- Eşli Batak: ihale takımın; iki eşin aldığı eller toplanır, ikisi de aynı puanı yazar. Bilgisayar eşinin aldığı eli boşuna büyütmez,
+  teklif verirken eşinin katkısını hesaba katar (ihale tutma oranı tekliyle aynı düzeyde, ~%70).
+- Çevrimiçinde odayı başlatan oyuncunun seçimi geçerli olur.
+
+## Satranç saati ve izleyici modu — 28 Kasım 2026
+- **Satranç saati:** menüde Süresiz / 3+2 / 5 dk / 10 dk. Saat beyazın ilk hamlesinden sonra işlemeye başlar; artırımlı sürede her hamle sonrası
+  süre eklenir; son 20 saniyede saat kırmızıya döner ve onda biri gösterilir. Süresi biten kaybeder. Çevrimiçinde sunucu saatiyle hesaplanır;
+  bilgisayara karşı oyuna ara verirsen geçen süre sayılmaz.
+- **İzleyici modu** (bütün çevrimiçi masa oyunları): lobide “👀 Masaları izle” ile şu an oynanan masaların listesi ya da oda koduyla izleme.
+  İzleyici oyuna karışamaz, mesaj gönderemez, sonuçları sıralamaya sayılmaz; ekranın üstünde “👀 İzliyorsun” yazar.
+  Başlayan odalar artık açık dizinde “oynanıyor” olarak kalır (hızlı eşleşme bunları atlar).
+
+
+## Hafıza Kartları ve Kelime Türet
+- Hafıza Kartları: 5 deste (hayvan, meyve-sebze, taşıt, doğa, spor), 4 boy, iki kişilik mod, günün oyunu ve seri
+- Kelime Türet: harf çarkından kelime türetme, 247 bölüm, bonus kelimeler (her 5'i 1 ipucu), günün bölümü ve seri
+
+## King
+- Klasik King: 20 el, 6 ceza (el almaz, kupa almaz, erkek almaz, kız almaz, rıfkı, son iki) ve koz; herkes 3 ceza + 2 koz seçer
+- Renk izleme, kozda koz atma, cezada ceza kartı atma, kupa/koz kırılma, rıfkı ve kız düşürme zorunlulukları; ceza kartları bitince erken bitiş
+- Bilgisayara karşı (normal/kolay) ve çevrimiçi (boş koltuklara bilgisayar), izleyici modu, sohbet, puan tablosu, haftalık sıralama
+- Kart oyunlarında el sonu penceresinin elin altında kalması düzeltildi; King kural sayfası eklendi
+
+## Cumartesi Turnuvası
+- Her cumartesi 20.00–23.00 (TSİ): bu saatlerde biten, en az iki kişinin oynadığı çevrimiçi masa oyunları ayrı turnuva tablosuna yazılır (`masa_turnuva/<gün>/<uid>`); süren oyunlar için 10 dakika pay
+- Lobide geri sayımlı turnuva şeridi ve tablo (canlıyken anlık, sonra son turnuvanın birincisi); ana sayfada cumartesi günü turnuva şeridi
+- Rozetler: Turnuvacı, Turnuva Müdavimi. Firebase kuralı yalnız cumartesi 17.00–20.10 UTC arasında yazmaya izin verir

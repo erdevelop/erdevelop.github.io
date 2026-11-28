@@ -151,7 +151,7 @@ function fxAdim(dt) {
 }
 function fxCiz() {
   if (KIV.length) { ctx.globalCompositeOperation = 'lighter'; ctx.lineWidth = 1.6; for (const k of KIV) { const [X, Y] = W2S(k.x, k.y), f = 1 - k.o / k.w; ctx.strokeStyle = `rgba(255,${(180 + 60 * f) | 0},90,${f.toFixed(2)})`; ctx.beginPath(); ctx.moveTo(X, Y); ctx.lineTo(X - k.vx * 0.025 * cam.z, Y - k.vy * 0.025 * cam.z); ctx.stroke(); } ctx.globalCompositeOperation = 'source-over'; }
-  const d = (performance.now() - WFX.t) / 1000; if (d > 0.9) return;
+  const d = (performance.now() - WFX.t) / 1000; if (d > 0.9 || AZ_HAREKET) return;
   const [X, Y] = W2S(SH.x, SH.y); ctx.globalCompositeOperation = 'lighter';
   if (WFX.tur === 'gir' && d < 0.6) { const f = d / 0.6, R = Math.hypot(W, H); ctx.strokeStyle = `rgba(170,150,255,${((1 - f) * 0.6).toFixed(3)})`; ctx.lineWidth = 2; ctx.beginPath(); for (let i = 0; i < 48; i++) { const a = i / 48 * TAU + i * 0.37, r0 = 40 + f * R * 0.35, r1 = r0 + 60 + f * R * 0.5 * (0.5 + (i * 7 % 5) / 5); ctx.moveTo(X + Math.cos(a) * r0, Y + Math.sin(a) * r0); ctx.lineTo(X + Math.cos(a) * r1, Y + Math.sin(a) * r1); } ctx.stroke(); ctx.fillStyle = `rgba(190,170,255,${((1 - f) * 0.22).toFixed(3)})`; ctx.fillRect(0, 0, W, H); }
   if (WFX.tur === 'cik' && d < 0.8) { const f = d / 0.8; ctx.fillStyle = `rgba(255,255,255,${Math.max(0, 0.42 - f * 0.9).toFixed(3)})`; ctx.fillRect(0, 0, W, H); ctx.strokeStyle = `rgba(160,200,255,${((1 - f) * 0.8).toFixed(3)})`; ctx.lineWidth = 3 * (1 - f) + 1; ctx.beginPath(); ctx.arc(X, Y, 20 + f * Math.max(W, H) * 0.6, 0, TAU); ctx.stroke(); }
@@ -249,7 +249,7 @@ function trafikCiz(s, t) {
 }
 
 /* ================= gerçekçi çizim: ışık, gemi sprite'ları, kaya, sarsıntı ================= */
-const AZ_HAREKET = !!(window.matchMedia && matchMedia('(prefers-reduced-motion: reduce)').matches);
+let AZ_HAREKET = (() => { const v = ls.get('kozmos-azh', null); return typeof v === 'boolean' ? v : !!(window.matchMedia && matchMedia('(prefers-reduced-motion: reduce)').matches); })();
 const GISIK = { a: 0, k: 0.5, c: '255,240,220' }; let SARS = 0;
 function isikGuncelle() {
   const sx = Math.floor(SH.x / SEK), sy = Math.floor(SH.y / SEK); let en = null, ed = Infinity;
@@ -419,6 +419,7 @@ function gemiCiz(t) {
   ctx.globalCompositeOperation = 'source-over';
   rcsCiz();
   gemiCizGenel(X, Y, SH.a, s, kapsul ? 'kapsul' : gemiTip, gemiRenk, 'oyuncu', { itki: SH.itki, warp: SH.warp, t, nav: !kapsul, hasar: hasarFlas, iz: IZR[KOZM.sec.iz] });
+  if (oyunda && !kapsul && can < maxCan() * 0.6) govdeCatlak(X, Y, SH.a, s, can / maxCan(), t);
   if (!kapsul) { desenCiz(ctx, X, Y, SH.a, s, t); modCiz(ctx, X, Y, SH.a, s, gemiTip, t); }
 }
 

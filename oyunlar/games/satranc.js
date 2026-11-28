@@ -194,6 +194,7 @@ svg.bz .d{stroke:#2b2724}svg.sy .d{stroke:#e8e4dc;fill:#e8e4dc}svg.sy circle.d{s
 .st-kisi{display:flex;align-items:center;gap:8px;font-weight:800;font-size:14px;padding:5px 10px;border-radius:11px;background:var(--bg2);min-height:36px}
 .st-kisi .ad{white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:45%}.st-kisi .al{flex:1;display:flex;align-items:center;flex-wrap:wrap;min-width:0}
 .st-kisi .al svg{width:17px;height:17px;margin-right:-5px}.st-kisi .al b{margin-left:8px;font-size:12.5px;color:var(--ink-soft)}
+.st-kisi .saat{font:800 15px/1 ui-monospace,Menlo,monospace;padding:5px 8px;border-radius:8px;background:var(--card);color:var(--ink);font-variant-numeric:tabular-nums}.st-kisi .saat.isliyor{background:var(--accent);color:#fff}.st-kisi .saat.az{background:#dc2626;color:#fff}.st-kisi .saat:empty{display:none}
 .st-kisi small{font-weight:800;color:var(--ink-soft);white-space:nowrap}.st-kisi.sira{box-shadow:inset 0 0 0 2px var(--accent)}.st-kisi.yok .ad{opacity:.5}
 .st-tahta{position:relative;width:100%;aspect-ratio:1;border-radius:10px;overflow:hidden;box-shadow:0 4px 14px rgba(0,0,0,.25);align-self:center;touch-action:manipulation}
 .st-izgara{position:absolute;inset:0;display:grid;grid-template-columns:repeat(8,1fr);grid-template-rows:repeat(8,1fr)}
@@ -210,10 +211,13 @@ svg.bz .d{stroke:#2b2724}svg.sy .d{stroke:#e8e4dc;fill:#e8e4dc}svg.sy circle.d{s
 .st-bilgi{flex:1;font-size:13px;font-weight:700;color:var(--ink-soft);line-height:1.3}.st-bilgi b{color:var(--ink)}
 .st-terfi{position:absolute;inset:0;z-index:6;display:grid;place-items:center;background:rgba(0,0,0,.35);border-radius:10px}
 .st-terfi>div{display:flex;gap:6px;padding:10px;background:var(--card);border-radius:14px;box-shadow:0 10px 30px rgba(0,0,0,.35)}.st-terfi button{width:58px;height:58px;border-radius:10px;background:var(--bg2)}.st-terfi svg{width:46px;height:46px}
-.st-son{position:absolute;inset:0;z-index:5;display:grid;place-items:center;background:color-mix(in srgb,var(--card) 82%,transparent);border-radius:14px;animation:stS .3s .3s both}@keyframes stS{from{opacity:0}}
+.st-son{position:absolute;inset:0;z-index:40;display:grid;place-items:center;background:color-mix(in srgb,var(--card) 82%,transparent);border-radius:14px;animation:stS .3s .3s both}@keyframes stS{from{opacity:0}}
 .st-son>div{display:flex;flex-direction:column;gap:9px;text-align:center;padding:18px;background:var(--card);border-radius:18px;box-shadow:0 12px 40px rgba(0,0,0,.3);width:min(300px,88%)}.st-son h3{font-size:23px}
 `;
 const DEGER = { p: 1, n: 3, b: 3, r: 5, q: 9, k: 0 };
+const SURE = [null, [3, 2], [5, 0], [10, 0]], SURE_AD = ['Süresiz', '3+2', '5 dk', '10 dk'];
+const saatKur = i => SURE[i] ? { top: SURE[i][0] * 60000, ek: SURE[i][1] * 1000, k: [SURE[i][0] * 60000, SURE[i][0] * 60000], t: null } : null;
+const saatYaz = ms => { ms = Math.max(0, ms); const t = Math.ceil(ms / 1000); return t < 20 && ms > 0 ? (ms / 1000).toFixed(1) : ((t / 60) | 0) + ':' + String(t % 60).padStart(2, '0'); };
 registerGame({
   id: 'satranc', title: 'Satranç', category: 'Masa', tags: 'satranç satranc chess şah mat vezir at fil kale piyon iki kişilik çevrimiçi online', odak: true, noRestart: true,
   aciklama: 'Satranç: bilgisayara karşı (beyaz ya da siyah, iki seviye) ya da çevrimiçi. Yasal hamleler gösterilir; ipucu ve geri alma var.',
@@ -228,7 +232,7 @@ registerGame({
     let D = Object.assign({ v: 1, kaz: 0, kay: 0, ber: 0, ag: 0, o: '', sev: 1, renk: 0 }, (api.loadState && api.loadState()) || {});
     const kaydet = () => { try { api.saveState && api.saveState(D); } catch (e) { } };
     const kok = E('div', { class: 'st' }); root.append(kok);
-    let sohbetK = null;
+    let sohbetK = null, izle = false;
     let S = null, ben = 0, mod = 'yz', sev = 1, oda = null, odaBirak = null, lobi = null, secili = -1, mesaj = '', mesajT = 0, surT = 0, canli = true, sayilan = '', yerelSur = 0, sonMetin = '', bekleyen = 0, gecmis = [], kilit = false, ipucu = null, yazSira = Promise.resolve();
     const q = s => kok.querySelector(s), kopya = s => JSON.parse(JSON.stringify(s));
     const koltuklar = () => oda ? oda.koltuklar() : null;
@@ -236,13 +240,25 @@ registerGame({
     const koltukRenk = r => mod === 'yz' ? r : (r === 0 ? S.beyaz : 1 - S.beyaz);
     const kopuk = r => { const K = koltuklar(); if (!K) return false; const x = K[koltukRenk(r)]; return !!(x && !x.var); };
     const ad = r => { if (mod === 'yz') return r === benRenk() ? 'Sen' : sev ? 'Bilgisayar' : 'Bilgisayar (kolay)'; const K = koltuklar(), x = K && K[koltukRenk(r)]; return x ? x.n : 'Rakip'; };
-    const benimSira = () => S && !S.bitti && S.sira === benRenk() && !kilit;
+    const benimSira = () => S && !S.bitti && S.sira === benRenk() && !kilit && !izle;
     const gor = k => benRenk() === 0 ? k : 63 - k;
+    const zaman = () => mod === 'ag' && window.Masa && Masa.simdi ? Masa.simdi() : Date.now();
+    const kalan = r => !S || !S.saat ? 0 : S.saat.k[r] - (S.saat.t != null && !S.bitti && S.sira === r ? zaman() - S.saat.t : 0);
+    function saatCiz() {
+      if (!S || !q('#st-k0')) return; const br = benRenk();
+      for (const r of [0, 1]) { const e = q((r === br ? '#st-k0' : '#st-k1') + ' .saat'); if (!e) continue; if (!S.saat) { e.textContent = ''; continue; }
+        const k = kalan(r); e.textContent = saatYaz(k); e.classList.toggle('isliyor', !S.bitti && S.sira === r && S.saat.t != null); e.classList.toggle('az', k < 20000); }
+      if (S.saat && !S.bitti && S.saat.t != null && kalan(S.sira) <= 0 && !kilit && !izle && (mod === 'yz' || oda)) {
+        const Y = kopya(S), r = Y.sira; Y.saat.k[r] = 0; Y.saat.t = zaman(); Y.bitti = { k: 1 - r, neden: 'süre' }; Y.skor[1 - r]++; Y.son = Object.assign({}, Y.son, { i: Y.son.i + 1, sure: 1 });
+        S = Y; if (mod === 'ag') gonder(); else yerelKaydet(); ciz(); bitti(); }
+    }
+    const saatT = setInterval(saatCiz, 200);
     function mesajVer(m, sure) { mesaj = m; clearTimeout(mesajT); mesajT = setTimeout(() => { mesaj = ''; ust(); }, sure || 2400); ust(); }
     function menu() {
       temizle(); let eski = null; try { eski = D.o ? JSON.parse(D.o) : null; } catch (e) { } const var_ = eski && eski.S && !eski.S.bitti;
       kok.innerHTML = `<div class="st-menu"><h3>♞ Satranç</h3><p>${D.kaz + D.kay + D.ber ? `Bilgisayara karşı <b>${D.kaz}</b> galibiyet, ${D.kay} yenilgi, ${D.ber} beraberlik${D.ag ? ' · çevrimiçi ' + D.ag + ' galibiyet' : ''}` : 'Rakibin şahını mat et.'}</p>
         ${var_ ? '<button class="st-b ana" data-a="devam">▶ Yarım kalan oyuna devam</button>' : ''}
+        <small>Süre</small><div class="st-sat">${SURE_AD.map((x, i) => `<button class="st-b${(D.sure || 0) === i ? ' sec' : ''}" data-sure="${i}">${x}</button>`).join('')}</div>
         <small>Rengin</small><div class="st-sat">${['Beyaz', 'Siyah', 'Rastgele'].map((x, i) => `<button class="st-b${D.renk === i ? ' sec' : ''}" data-renk="${i}">${x}</button>`).join('')}</div>
         <div class="st-sat"><button class="st-b ${var_ ? '' : 'ana'}" data-a="yz" data-s="1">🤖 Bilgisayara karşı</button><button class="st-b" data-a="yz" data-s="0">🌱 Kolay</button></div>
         <button class="st-b" data-a="ag">🌐 Çevrimiçi oyna</button><button class="st-b" data-a="nasil">❓ Taşlar nasıl gider</button></div>`;
@@ -257,15 +273,16 @@ registerGame({
         ${t('P', '<b>Piyon</b>: bir kare ileri (ilk hamlede iki), çapraz alır. Son sıraya varınca istediğin taşa dönüşür. Geçerken alma da yapılabilir.')}
         <p>• <b>Rok</b>: şah ve kale hiç oynamadıysa, aradaki kareler boşsa ve şah tehdit altından geçmiyorsa şah iki kare kaleye doğru gider. Şahı kaleye doğru iki kare sürükle.</p>
         <p>• Taşına dokun: gidebileceği kareler noktayla, alabileceği taşlar halkayla gösterilir. Hamle kalmadığında şah tehdit altında değilse <b>pat</b> (berabere).</p>
+        <a class="st-b" href="/oyun-kurallari/satranc/" style="text-decoration:none;display:block">📖 Ayrıntılı kurallar ve ipuçları</a>
         <button class="st-b ana" data-a="menu">Tamam</button></div>`;
     }
     function agLobi() {
       temizle(); if (!window.Masa) { kok.innerHTML = '<div class="st-menu"><p>Çevrimiçi bölüm yüklenemedi.</p><button class="st-b" data-a="menu">‹ Geri</button></div>'; return; }
-      lobi = Masa.lobi(kok, { oyun: 'satranc', koltuk: 2, enAz: 2, botlu: false, baslik: 'Satranç', onGeri: menu, baslat: o => o.baslat(ST.yeni({ beyaz: Math.random() < .5 ? 0 : 1 })), onOda: o => { lobi = null; agBasla(o); } });
+      lobi = Masa.lobi(kok, { oyun: 'satranc', koltuk: 2, enAz: 2, botlu: false, baslik: 'Satranç', onGeri: menu, onIzle: o => { lobi = null; agBasla(o); }, baslat: o => o.baslat(Object.assign(ST.yeni({ beyaz: Math.random() < .5 ? 0 : 1 }), { saat: saatKur(D.sure || 0) })), onOda: o => { lobi = null; agBasla(o); } });
     }
     function ekran() {
-      kok.innerHTML = `<div class="st-kisi" id="st-k1"><span class="ad"></span><span class="al"></span><small></small></div><div class="st-tahta"><div class="st-izgara" id="st-i"></div></div>
-        <div class="st-kisi" id="st-k0"><span class="ad"></span><span class="al"></span><small></small></div>
+      kok.innerHTML = `<div class="st-kisi" id="st-k1"><span class="ad"></span><span class="al"></span><small></small><b class="saat"></b></div><div class="st-tahta"><div class="st-izgara" id="st-i"></div></div>
+        <div class="st-kisi" id="st-k0"><span class="ad"></span><span class="al"></span><small></small><b class="saat"></b></div>
         <div class="st-alt"><button class="st-b" data-a="cik">‹</button><div class="st-bilgi" id="st-b"></div><button class="st-b" data-a="ipucu" hidden>💡</button><button class="st-b" data-a="geri" hidden>↶</button><button class="st-b" data-a="teslim">⚑</button></div>`;
     }
     function izgara() {
@@ -299,7 +316,9 @@ registerGame({
       await bekle(110); if (a && a !== t) a.classList.add('git'); await bekle(110);
     }
     async function oyna(m) {
-      kilit = true; secili = -1; ipucu = null; const Y = kopya(S); if (!ST.oyna(Y, m)) { kilit = false; return; }
+      kilit = true; secili = -1; ipucu = null; const Y = kopya(S);
+      if (Y.saat) { const n = zaman(), r = Y.sira; if (Y.saat.t != null) Y.saat.k[r] = Y.saat.k[r] - (n - Y.saat.t) + Y.saat.ek; Y.saat.t = n; }
+      if (!ST.oyna(Y, m)) { kilit = false; return; }
       if (mod === 'yz' && m.oyuncu) gecmis.push(JSON.stringify(S));
       await canlandir(m); if (!canli) return; kilit = false; S = Y; ses(S.bitti ? 'win' : S.son.sah ? 'bad' : S.son.al ? 'score' : 'tap');
       if (mod === 'ag') gonder(); else yerelKaydet(); ciz(); if (S.bitti) bitti(); else surucu();
@@ -315,6 +334,7 @@ registerGame({
       secili = -1; ciz();
     }
     function surucu() {
+      if (izle) return;
       clearTimeout(surT); if (!S || S.bitti || !canli) return; const r = S.sira;
       if (mod === 'yz') { if (r === benRenk()) return; surT = setTimeout(() => { if (!S || S.bitti || S.sira !== r || kilit || !canli) return; const m = ST.botHamle(S, sev); if (m) oyna(m); }, 250); return; }
       const K = koltuklar(), x = K[koltukRenk(r)], bagli = K.map((y, i) => y && y.var ? i : -1).filter(i => i >= 0 && i !== koltukRenk(r)); if (!bagli.length || bagli[0] !== ben || !x || x.var) return;
@@ -326,10 +346,10 @@ registerGame({
       if (!S || S.bitti) return; const b = q('[data-a=teslim]'); if (!b.dataset.emin) { b.dataset.emin = 1; mesajVer('Pes etmek için ⚑’e yeniden bas.', 3000); setTimeout(() => { delete b.dataset.emin; }, 3000); return; }
       const Y = kopya(S); Y.bitti = { k: 1 - benRenk(), neden: 'pes' }; Y.skor[1 - benRenk()]++; Y.son = Object.assign({}, Y.son, { i: Y.son.i + 1 }); S = Y; if (mod === 'ag') gonder(); ciz(); bitti();
     }
-    const NEDEN = { mat: 'Şah mat.', pat: 'Pat: hamle yok ama şah tehdit altında değil.', '50 hamle': '50 hamledir taş alınmadı, piyon oynanmadı.', 'üç kez tekrar': 'Aynı konum üç kez tekrarlandı.', 'yetersiz taş': 'Mat etmeye yetecek taş kalmadı.', pes: 'Pes edildi.' };
+    const NEDEN = { 'süre': 'Süre doldu.', mat: 'Şah mat.', pat: 'Pat: hamle yok ama şah tehdit altında değil.', '50 hamle': '50 hamledir taş alınmadı, piyon oynanmadı.', 'üç kez tekrar': 'Aynı konum üç kez tekrarlandı.', 'yetersiz taş': 'Mat etmeye yetecek taş kalmadı.', pes: 'Pes edildi.' };
     function bitti() {
       clearTimeout(surT); const b = S.bitti, br = benRenk(), kaz = b.k === br, anahtar = mod + ':' + S.tur + ':' + (oda ? oda.kod : '') + ':' + S.son.i;
-      if (sayilan !== anahtar) { sayilan = anahtar;
+      if (sayilan !== anahtar) { sayilan = anahtar; const PR = window.Progress; if (PR) { if (kaz && b.neden === 'mat') PR.olay('st_mat'); if (kaz && mod === 'yz' && sev === 1) PR.olay('st_normal'); }
         if (mod === 'yz') { if (b.k < 0) D.ber++; else if (kaz) { D.kaz++; api.submitScore(D.kaz); } else D.kay++; D.o = ''; kaydet(); } else { if (kaz) { D.ag++; kaydet(); } if (oda) oda.bitir(); }
         ses(kaz ? 'win' : b.k < 0 ? 'click' : 'lose'); if (kaz) { try { window.FX && FX.confetti && FX.confetti(); } catch (e) { } } }
       if (mod === 'ag' && oda && window.Masa && Masa.sonuc) Masa.sonuc(oda, b.k < 0 ? .5 : kaz ? 1 : 0, S.tur + ':' + S.son.i);
@@ -347,16 +367,17 @@ registerGame({
     async function al(d) {
       const metin = (oda.veri && oda.veri.g && oda.veri.g.s) || ''; yerelSur = oda.surum(); if (metin === sonMetin && S) return; sonMetin = metin;
       const onceki = S; if (onceki && d.tur !== onceki.tur) { const e = q('.st-son'); if (e) e.remove(); secili = -1; S = d; ciz(); return surucu(); }
-      if (onceki && d.son && d.son.i === onceki.son.i + 1 && d.son.f != null && d.son.p !== benRenk() && !kilit && !d.son.pes) { kilit = true; await canlandir({ f: d.son.f, t: d.son.t, rok: d.son.rok, ep: d.son.ep }); kilit = false; }
+      if (onceki && d.son && d.son.i === onceki.son.i + 1 && d.son.f != null && d.son.p !== benRenk() && !kilit && !d.son.pes && !d.son.sure) { kilit = true; await canlandir({ f: d.son.f, t: d.son.t, rok: d.son.rok, ep: d.son.ep }); kilit = false; }
       S = d; ciz(); if (S.bitti) { if (!q('.st-son')) bitti(); } else surucu();
     }
     function yzBasla(s, eski) {
-      temizle(); mod = 'yz'; sev = s; secili = -1; ipucu = null; mesaj = ''; gecmis = []; kilit = false;
-      if (eski && eski.S) { S = eski.S; ben = eski.ben || 0; } else { S = ST.yeni(); ben = D.renk === 2 ? (Math.random() < .5 ? 0 : 1) : D.renk; }
+      temizle(); izle = false; mod = 'yz'; sev = s; secili = -1; ipucu = null; mesaj = ''; gecmis = []; kilit = false;
+      if (eski && eski.S) { S = eski.S; ben = eski.ben || 0; } else { S = ST.yeni(); S.saat = saatKur(D.sure || 0); ben = D.renk === 2 ? (Math.random() < .5 ? 0 : 1) : D.renk; }
+      if (S.saat && S.saat.t != null) S.saat.t = Date.now();   /* kaldığın yerden: ara verdiğin süre sayılmaz */
       ekran(); ciz(); yerelKaydet(); surucu();
     }
     function agBasla(o) {
-      temizle(); mod = 'ag'; oda = o; ben = Math.max(0, o.ben); S = null; secili = -1; mesaj = ''; yerelSur = 0; sonMetin = ''; bekleyen = 0; kilit = false; ekran();
+      temizle(); izle = !!o.izleyici; mod = 'ag'; oda = o; ben = Math.max(0, o.ben); S = null; secili = -1; mesaj = ''; yerelSur = 0; sonMetin = ''; bekleyen = 0; kilit = false; ekran();
       sohbetK = window.Masa && Masa.sohbet ? Masa.sohbet(o, { yer: q('.st-alt'), sonra: q('[data-a=cik]'), koltuk: p => q(p === ben ? '#st-k0' : '#st-k1') }) : null;
       odaBirak = oda.dinle(v => { if (!v) { if (S) mesajVer('Oda kapandı.', 60000); return; } const d = oda.durum(); if (!d) return; ben = Math.max(0, oda.ben); if (!bekleyen && !kilit) al(d); else if (S) ust(); if (S && !S.bitti) surucu(); });
     }
@@ -364,6 +385,7 @@ registerGame({
     kok.addEventListener('click', e => {
       const b = e.target.closest('button'); if (b && (b.closest('.ms') || b.closest('.st-terfi'))) return;
       if (!b) { if (e.target.closest('#st-i')) dokun(e); return; }
+      if (b.dataset.sure != null) { D.sure = +b.dataset.sure; kaydet(); kok.querySelectorAll('[data-sure]').forEach(x => x.classList.toggle('sec', x === b)); return; }
       if (b.dataset.renk != null) { D.renk = +b.dataset.renk; kaydet(); kok.querySelectorAll('[data-renk]').forEach(x => x.classList.toggle('sec', x === b)); return; }
       const a = b.dataset.a;
       if (a === 'yz') yzBasla(+b.dataset.s, null); else if (a === 'devam') { try { const o = JSON.parse(D.o); yzBasla(o.sev == null ? 1 : o.sev, o); } catch (x) { menu(); } }
@@ -371,10 +393,10 @@ registerGame({
       else if (a === 'cik') { if (mod === 'ag' && S && !S.bitti && !b.dataset.emin) { b.dataset.emin = 1; mesajVer('Çıkarsan oyunu bırakmış olursun. Çıkmak için ‹’ye yeniden bas.', 3000); setTimeout(() => { delete b.dataset.emin; }, 3000); return; } yerelKaydet(); S = null; menu(); }
       else if (a === 'geri') geriAl(); else if (a === 'ipucu') ipucuVer(); else if (a === 'teslim') teslim();
       else if (a === 'incele') { const e2 = q('.st-son'); if (e2) e2.remove(); mesajVer('Oyun bitti. Yeni oyun için ‹ ile menüye dön.', 6000); }
-      else if (a === 'yine') { const e2 = q('.st-son'); if (e2) e2.remove(); if (mod === 'ag') { const y = ST.yeni({ beyaz: 1 - S.beyaz, tur: S.tur + 1, skor: [S.skor[1], S.skor[0]] }); S = null; sonMetin = ''; oda.yeniden(y); } else { D.renk = D.renk === 2 ? 2 : 1 - ben; yzBasla(sev, null); } } });
+      else if (a === 'yine') { const e2 = q('.st-son'); if (e2) e2.remove(); if (mod === 'ag') { const y = Object.assign(ST.yeni({ beyaz: 1 - S.beyaz, tur: S.tur + 1, skor: [S.skor[1], S.skor[0]] }), { saat: S.saat ? { top: S.saat.top, ek: S.saat.ek, k: [S.saat.top, S.saat.top], t: null } : null }); S = null; sonMetin = ''; oda.yeniden(y); } else { D.renk = D.renk === 2 ? 2 : 1 - ben; yzBasla(sev, null); } } });
     const boyutla = () => { if (S) ciz(); }; addEventListener('resize', boyutla);
     const sakla = () => yerelKaydet(); addEventListener('pagehide', sakla);
-    api.onCleanup(() => { canli = false; yerelKaydet(); temizle(); removeEventListener('resize', boyutla); removeEventListener('pagehide', sakla); root.classList.remove('st-mount'); });
+    api.onCleanup(() => { clearInterval(saatT); canli = false; yerelKaydet(); temizle(); removeEventListener('resize', boyutla); removeEventListener('pagehide', sakla); root.classList.remove('st-mount'); });
     menu();
     if (/[?&]sttest/.test(location.search)) window.__st = { S: () => S, ben: () => ben, benRenk, ST, oyna, kilit: () => kilit, mod: () => mod };
   }

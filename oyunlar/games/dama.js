@@ -150,7 +150,7 @@ const CSS = `
 .dm-t.oyn{box-shadow:0 0 0 3px #16a34a}.dm-t.sec{box-shadow:0 0 0 3.500px #3b82f6}.dm-t.git{opacity:0;transform:scale(.4)!important;transition:opacity .25s,transform .25s}
 .dm-alt{display:flex;gap:8px;align-items:center;min-height:46px}.dm-alt .dm-b{flex:none;padding:11px 15px}
 .dm-bilgi{flex:1;font-size:13.5px;font-weight:700;color:var(--ink-soft);line-height:1.35}.dm-bilgi b{color:var(--ink)}
-.dm-son{position:absolute;inset:0;z-index:5;display:grid;place-items:center;background:color-mix(in srgb,var(--card) 82%,transparent);border-radius:14px;animation:dmS .3s .3s both}@keyframes dmS{from{opacity:0}}
+.dm-son{position:absolute;inset:0;z-index:40;display:grid;place-items:center;background:color-mix(in srgb,var(--card) 82%,transparent);border-radius:14px;animation:dmS .3s .3s both}@keyframes dmS{from{opacity:0}}
 .dm-son>div{display:flex;flex-direction:column;gap:9px;text-align:center;padding:18px;background:var(--card);border-radius:18px;box-shadow:0 12px 40px rgba(0,0,0,.3);width:min(300px,88%)}.dm-son h3{font-size:23px}
 `;
 registerGame({
@@ -167,13 +167,13 @@ registerGame({
     let D = Object.assign({ v: 1, kaz: 0, kay: 0, ber: 0, ag: 0, o: '', sev: 1 }, (api.loadState && api.loadState()) || {});
     const kaydet = () => { try { api.saveState && api.saveState(D); } catch (e) { } };
     const kok = E('div', { class: 'dm' }); root.append(kok);
-    let sohbetK = null;
+    let sohbetK = null, izle = false;
     let S = null, ben = 0, mod = 'yz', sev = 1, oda = null, odaBirak = null, lobi = null, secili = -1, mesaj = '', mesajT = 0, surT = 0, canli = true, sayilan = '', yerelSur = 0, sonMetin = '', bekleyen = 0, vekil = '', gecmis = [], kilit = false, yazSira = Promise.resolve();
     const q = s => kok.querySelector(s), kopya = s => JSON.parse(JSON.stringify(s));
     const koltuklar = () => oda ? oda.koltuklar() : null;
     const kopuk = p => { const K = koltuklar(); return !!(K && K[p] && !K[p].var); };
     const ad = p => { if (mod === 'yz') return p === ben ? 'Sen' : sev ? 'Bilgisayar' : 'Bilgisayar (kolay)'; const K = koltuklar(); return K && K[p] ? K[p].n : 'Rakip'; };
-    const benimSira = () => S && !S.bitti && S.sira === ben && !kilit;
+    const benimSira = () => S && !S.bitti && S.sira === ben && !kilit && !izle;
     const gor = k => ben === 0 ? k : 63 - k;   /* ekrandaki konum */
     function mesajVer(m, sure) { mesaj = m; clearTimeout(mesajT); mesajT = setTimeout(() => { mesaj = ''; ust(); }, sure || 2200); ust(); }
     function menu() {
@@ -190,11 +190,12 @@ registerGame({
         <p>• Önündeki ya da yanındaki rakip taşın arkası boşsa üstünden atlayıp onu <b>alırsın</b>. Almak <b>zorunludur</b>; birden çok yol varsa <b>en çok taş alan</b> yolu oynamalısın. Alınan taş hemen kalkar.</p>
         <p>• Karşı sıraya varan taş <b>dama</b> olur (👑): dört yöne istediği kadar gider, uzaktaki bir taşı atlayıp arkasındaki herhangi bir boş kareye konabilir. Art arda alırken geri dönemez.</p>
         <p>• Taşına dokun: gidebileceği kareler yeşil, alma hamlelerinde kırmızı halka çıkar. Hamlesi kalmayan kaybeder.</p>
+        <a class="dm-b" href="/oyun-kurallari/dama/" style="text-decoration:none;display:block">📖 Ayrıntılı kurallar ve ipuçları</a>
         <button class="dm-b ana" data-a="menu">Tamam</button></div>`;
     }
     function agLobi() {
       temizle(); if (!window.Masa) { kok.innerHTML = '<div class="dm-menu"><p>Çevrimiçi bölüm yüklenemedi.</p><button class="dm-b" data-a="menu">‹ Geri</button></div>'; return; }
-      lobi = Masa.lobi(kok, { oyun: 'dama', koltuk: 2, enAz: 2, botlu: false, baslik: 'Dama', onGeri: menu, baslat: o => o.baslat(DM.yeni(0)), onOda: o => { lobi = null; agBasla(o); } });
+      lobi = Masa.lobi(kok, { oyun: 'dama', koltuk: 2, enAz: 2, botlu: false, baslik: 'Dama', onGeri: menu, onIzle: o => { lobi = null; agBasla(o); }, baslat: o => o.baslat(DM.yeni(0)), onOda: o => { lobi = null; agBasla(o); } });
     }
     function ekran() {
       kok.innerHTML = `<div class="dm-kisi" id="dm-k1"><span class="t"></span><span class="ad"></span><small></small></div><div class="dm-tahta"><div class="dm-izgara" id="dm-i"></div></div>
@@ -231,7 +232,7 @@ registerGame({
     async function oyna(m, p) {
       kilit = true; secili = -1; const Y = kopya(S); if (!DM.uygula(Y, m)) { kilit = false; return; }
       if (mod === 'yz' && p === ben) gecmis.push(JSON.stringify(S));
-      await canlandir(m, p); if (!canli) return; kilit = false; S = Y; if (Y.son.terfi) ses('win');
+      await canlandir(m, p); if (!canli) return; kilit = false; S = Y; if (Y.son.terfi) { ses('win'); if (p === ben && window.Progress) Progress.olay('dm_dama'); }
       if (mod === 'ag') gonder(); else yerelKaydet(); ciz(); if (S.bitti) bitti(); else surucu();
     }
     function dokun(e) {
@@ -242,6 +243,7 @@ registerGame({
       secili = -1; ciz();
     }
     function surucu() {
+      if (izle) return;
       clearTimeout(surT); if (!S || S.bitti || !canli) return; const p = S.sira; let sure;
       if (mod === 'yz') { if (p === ben) return; sure = 350; }
       else { const K = koltuklar(), bagli = K.map((x, i) => x && x.var ? i : -1).filter(i => i >= 0 && i !== p); if (!bagli.length || bagli[0] !== ben || !K[p] || K[p].var) return; sure = 15000; }
@@ -271,9 +273,9 @@ registerGame({
       if (onceki && d.son && d.son.i === onceki.son.i + 1 && d.son.p !== ben && !kilit) { kilit = true; await canlandir({ yol: d.son.yol, al: d.son.al }, d.son.p); kilit = false; }
       S = d; ciz(); if (S.bitti) { if (!q('.dm-son')) bitti(); } else surucu();
     }
-    function yzBasla(s, eski) { temizle(); mod = 'yz'; ben = 0; sev = s; secili = -1; mesaj = ''; gecmis = []; kilit = false; S = eski && eski.S ? eski.S : DM.yeni(0); ekran(); ciz(); yerelKaydet(); surucu(); }
+    function yzBasla(s, eski) { temizle(); izle = false; mod = 'yz'; ben = 0; sev = s; secili = -1; mesaj = ''; gecmis = []; kilit = false; S = eski && eski.S ? eski.S : DM.yeni(0); ekran(); ciz(); yerelKaydet(); surucu(); }
     function agBasla(o) {
-      temizle(); mod = 'ag'; oda = o; ben = Math.max(0, o.ben); S = null; secili = -1; mesaj = ''; yerelSur = 0; sonMetin = ''; bekleyen = 0; kilit = false; ekran();
+      temizle(); izle = !!o.izleyici; mod = 'ag'; oda = o; ben = Math.max(0, o.ben); S = null; secili = -1; mesaj = ''; yerelSur = 0; sonMetin = ''; bekleyen = 0; kilit = false; ekran();
       sohbetK = window.Masa && Masa.sohbet ? Masa.sohbet(o, { yer: q('.dm-alt'), sonra: q('[data-a=cik]'), koltuk: p => q(p === ben ? '#dm-k0' : '#dm-k1') }) : null;
       odaBirak = oda.dinle(v => { if (!v) { if (S) mesajVer('Oda kapandı.', 60000); return; } const d = oda.durum(); if (!d) return; ben = Math.max(0, oda.ben); if (!bekleyen && !kilit) al(d); else if (S) ust(); if (S && !S.bitti) surucu(); });
     }

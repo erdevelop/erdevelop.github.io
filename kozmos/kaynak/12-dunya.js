@@ -227,7 +227,7 @@ function ekipAdim(dt) {
 const KV_F = 8000, KV_MAX = 3 + (tek('c3') ? 2 : 0), KV_YUK = 8, KV_HIZ = 600;
 function zGez(z) { const s2 = sistem(z[0], z[1]); return s2 && s2.gez[z[2]]; }
 const kvMax = () => 3 + (tek('c3') ? 2 : 0);
-function kvKar(a, b, m) { return Math.round(KV_YUK * (satFiyat(b, m) - fiyat(a, m)) * (FR.tuccar >= 60 ? 1.2 : 1) * (tek('c3') ? 1.2 : 1) - 100); }
+function kvKar(a, b, m, lv) { return Math.round(KV_YUKL[Math.max(0, Math.min(3, lv | 0))] * (satFiyat(b, m) - fiyat(a, m)) * (FR.tuccar >= 60 ? 1.2 : 1) * (tek('c3') ? 1.2 : 1) - 100); }
 function kvSure(kv) { const a = zGez(kv.a), b = zGez(kv.b); return a && b ? Math.max(60, Math.hypot(a.s.x - b.s.x, a.s.y - b.s.y) / KV_HIZ) : 600; }
 function kvPos(kv) { const a = zGez(kv.a), b = zGez(kv.b); if (!a || !b) return null; const t = simT(), [ax, ay] = gezPos(a, t), [bx, by] = gezPos(b, t), u = ((Date.now() - kv.t0) / 1000 / kvSure(kv)) % 2, f = u < 1 ? u : 2 - u, k = f * f * (3 - 2 * f); return [lerp(ax, bx, k), lerp(ay, by, k), Math.atan2(by - ay, bx - ax) + (u < 1 ? 0 : Math.PI)]; }
 function kervanAdim() {
@@ -236,8 +236,8 @@ function kervanAdim() {
     const dur = kvSure(kv), sefer = Math.floor((Date.now() - kv.t0) / 1000 / dur); if (sefer - kv.n > 4 * 3600 / dur) kv.n = sefer - Math.floor(4 * 3600 / dur);
     while (kv.n < sefer) {
       kv.n++; if (kv.durT > 0) { kv.durT--; continue; }
-      const a = zGez(kv.n % 2 ? kv.a : kv.b), b = zGez(kv.n % 2 ? kv.b : kv.a); if (!a || !b) continue; const kar = kv.n % 2 ? kvKar(a, b, kv.m) : Math.round(kvKar(a, b, kv.m) * 0.25); if (kar > 0) { top += kar; n++; }
-      if (sefer - kv.n < 1 && Math.random() < 0.07 && !GOREV.some(g => g.tip === 'kervan') && oyunda) { const ps = kvPos(kv); if (ps) { GOREV.push({ id: 'kv' + Date.now(), tip: 'kervan', ki: i, x: ps[0], y: ps[1], son: Date.now() + 300000, ad: kolAd(zGez(kv.a)) + ' ⇄ ' + kolAd(zGez(kv.b)), hs: [Math.floor(ps[0] / SEK), Math.floor(ps[1] / SEK)] }); gorevYaz(); duyur('🚚 ' + T('Kervanına korsan saldırısı!', 'Pirates are attacking your convoy!'), 'uyari', T('5 dakika içinde yetişirsen kurtarırsın · görevlere eklendi', 'Reach it within 5 minutes to save it · added to missions')); SES.uyari(); } }
+      const a = zGez(kv.n % 2 ? kv.a : kv.b), b = zGez(kv.n % 2 ? kv.b : kv.a); if (!a || !b) continue; const kar = kv.n % 2 ? kvKar(a, b, kv.m, kvLv(kv)) : Math.round(kvKar(a, b, kv.m, kvLv(kv)) * 0.25); if (kar > 0) { top += kar; n++; }
+      if (sefer - kv.n < 1 && Math.random() < 0.07 * (1 - 0.22 * kvLv(kv)) && !GOREV.some(g => g.tip === 'kervan') && oyunda) { const ps = kvPos(kv); if (ps) { GOREV.push({ id: 'kv' + Date.now(), tip: 'kervan', ki: i, x: ps[0], y: ps[1], son: Date.now() + 300000, ad: kolAd(zGez(kv.a)) + ' ⇄ ' + kolAd(zGez(kv.b)), hs: [Math.floor(ps[0] / SEK), Math.floor(ps[1] / SEK)] }); gorevYaz(); duyur('🚚 ' + T('Kervanına korsan saldırısı!', 'Pirates are attacking your convoy!'), 'uyari', T('5 dakika içinde yetişirsen kurtarırsın · görevlere eklendi', 'Reach it within 5 minutes to save it · added to missions')); SES.uyari(); } }
     }
   });
   if (top > 0) { kazan(top, 'kervan'); ST.kvSefer = (ST.kvSefer || 0) + n; duyur('🚚 ' + T(`Kervanların ${n} sefer yaptı`, `Your convoys made ${n} trip${n > 1 ? 's' : ''}`), 'koloni', `+${SAYI(top)} 💰`); }
@@ -298,7 +298,7 @@ function ekipYaz(p) {
   ad.forEach((a, i) => { h += `<div class="satir"><div>${ROL[a.rol].e} <b>${esc(a.ad)}</b> <span class="lv">${L(ROL[a.rol].ad)} · ${T('sv', 'lv')} ${a.lv}</span><small>${huyEt(a)} · ${ROL[a.rol].ne(a.lv)} · ${T('maaş', 'wage')} ${Math.round(a.maas * (HUY[huyOf(a)].maas || 1))} 💰</small></div><div class="dg"><button class="kb al" type="button" data-ise="${i}" ${EKIP.length >= EKIP_MAX() || kredi < a.f ? 'disabled' : ''}>${EKIP.length >= EKIP_MAX() ? T('Yer yok', 'No room') : T('İşe al', 'Hire') + ' · ' + SAYI(a.f) + ' 💰'}</button></div></div>`; });
   if (!ad.length) h += `<div class="alt">${T('Adaylar 2 saatte bir yenilenir.', 'New candidates every 2 hours.')}</div>`;
   h += `<div class="alt" style="margin:14px 0 0;font-weight:900;color:var(--ink)">🚚 ${T('Kervanlar', 'Convoys')} (${KERVAN.length}/${kvMax()})</div><div class="alt" style="margin:2px 0 0;font-size:12px">${T('Kervan iki kolonin arasında kendiliğinden mal taşır, kazancı bankana yatar. Bazen korsanlar saldırır: yetişirsen kurtarırsın.', 'A convoy carries goods between two colonies on its own; earnings go to your bank. Pirates sometimes attack: get there to save it.')}</div>`;
-  KERVAN.forEach((kv, i) => { const a = zGez(kv.a), b = zGez(kv.b); if (!a || !b) return; h += `<div class="satir"><div>🚚 <b>${esc(kolAd(a))} ⇄ ${esc(kolAd(b))}</b> <span class="lv">${MAL[kv.m].e} ${L(MAL[kv.m].ad)}</span><small>${T('Sefer başı', 'Per trip')} ~${SAYI(kvKar(a, b, kv.m))} 💰 · ${Math.round(kvSure(kv) / 60)} ${T('dk', 'min')}${kv.durT ? ' · ⚠ ' + T('yağmalandı', 'looted') : ''}</small></div><div class="dg"><button class="kb" type="button" data-kvsil="${i}">${T('Kapat', 'Close')}</button></div></div>`; });
+  KERVAN.forEach((kv, i) => { const a = zGez(kv.a), b = zGez(kv.b); if (!a || !b) return; const lv = kvLv(kv), uf = KV_UP[lv]; h += `<div class="satir"><div>🚚 <b>${esc(kolAd(a))} ⇄ ${esc(kolAd(b))}</b> <span class="lv">${MAL[kv.m].e} ${L(MAL[kv.m].ad)}</span> <span class="lv">${T('Sv', 'Lv')} ${lv}</span><small>${T('Sefer başı', 'Per trip')} ~${SAYI(kvKar(a, b, kv.m, lv))} 💰 · 📦 ${KV_YUKL[lv]} · ${Math.round(kvSure(kv) / 60)} ${T('dk', 'min')}${kv.durT ? ' · ⚠ ' + T('yağmalandı', 'looted') : ''}</small></div><div class="dg">${uf != null ? `<button class="kb al" type="button" data-kvup="${i}" ${kredi < uf ? 'disabled' : ''}>⬆ ${T('Sv', 'Lv')} ${lv + 1} · ${SAYI(uf)} 💰</button>` : ''}<button class="kb" type="button" data-kvsil="${i}">${T('Kapat', 'Close')}</button></div></div>`; });
   const hed = ZIY.filter(z => z.join(',') !== [p.s.t.sx, p.s.t.sy, p.i].join(',')).map(zGez).filter(q => q && q.kol);
   if (KERVAN.length < kvMax()) {
     if (!hed.length) h += `<div class="alt">${T('Kervan kurmak için önce başka bir koloniye de yanaşmış olmalısın.', 'Dock at another colony first to set up a convoy.')}</div>`;
@@ -448,7 +448,7 @@ function arananlar(p) {
   for (let i = 0; i < 2; i++) {
     const id = 'b' + p.id + '@' + gun + '#' + i; if (ALINAN.has(id)) continue;
     const a = r() * TAU, d = 4 + r() * 8, x = p.s.x + Math.cos(a) * d * SEK, y = p.s.y + Math.sin(a) * d * SEK, ad = ARANAN_AD[(r() * ARANAN_AD.length) | 0];
-    L2.push({ id, tip: 'kelle', x, y, hs: [Math.floor(x / SEK), Math.floor(y / SEK)], ad: L(ad), odul: Math.round((1500 + d * 260 + r() * 900) / 10) * 10, kc: Math.round(500 + d * 80 + korsanGuc() * 400) });
+    L2.push({ id, tip: 'kelle', x, y, hs: [Math.floor(x / SEK), Math.floor(y / SEK)], ad: L(ad), odul: odulK(1500 + d * 260 + r() * 900, false), kc: Math.round(500 + d * 80 + korsanGuc() * 400) });
   }
   return L2;
 }
@@ -475,7 +475,7 @@ function kelleKontrol() {
 /* ================= karakoldan koloniye ================= */
 const KOL_F = 15000;
 const kkNufus = k => Math.min(250000, Math.round(1000 + (Date.now() - k.koloni.t0) / 3.6e6 * 400));
-const kkVergi = k => Math.floor(Math.min(24, (Date.now() - k.koloni.vt) / 3.6e6) * (40 + kkNufus(k) / 1000));
+const kkVergi = k => Math.floor(Math.min(24, (Date.now() - k.koloni.vt) / 3.6e6) * (40 + kkNufus(k) / 1000) * (0.6 + kolMut(k) / 150));
 function kkKoloni(k, p) {
   if (!k || k.koloni || k.sv < 5 || kredi < KOL_F) return;
   let ad = null; try { ad = prompt(T('Kolonine bir ad ver:', 'Name your colony:'), (gemiAd || pilotAd()) + T(' Kolonisi', ' Colony')); } catch (e) { }
@@ -609,6 +609,7 @@ $('kapiSec').addEventListener('click', e => {
   }
 });
 function korsanCikar() {
+  if (ST.zor === 'rahat' && Math.random() < 0.4) return;
   const g = korsanGuc(), n = 1 + (Math.random() < 0.3 + g * 0.4 ? 1 : 0) + (g > 0.6 && Math.random() < 0.4 ? 1 : 0), a0 = Math.random() * TAU;
   for (let i = 0; i < n; i++) { const a = a0 + (i - n / 2) * 0.4, d = 2600 + Math.random() * 600, zr = Math.random() < 0.2 + g * 0.5 ? ['zirh', 'kalkan', 'hizli'][(Math.random() * 3) | 0] : null, mx = Math.round((40 + g * 140) * (zr === 'zirh' ? 1.35 : zr === 'hizli' ? 0.75 : 1)); const k = { x: SH.x + Math.cos(a) * d, y: SH.y + Math.sin(a) * d, vx: 0, vy: 0, a: a + Math.PI, can: mx, max: mx, atT: 1.6 + Math.random(), yon: Math.random() < 0.5 ? 1 : -1, zr }; if (zr === 'kalkan') k.kal = k.kalM = Math.round(mx * 0.7); KORS.push(k); }
   if (KORS.some(k => k.zr) && !ST.zrIp) { ST.zrIp = 1; setTimeout(() => duyur('🔫 ' + T('Farklı korsan türleri!', 'Different pirate types!'), 'kesif', T('⚙ zırhlı: plazma/ray · 🛡 kalkanlı: iyon · ⚡ hızlı: saçma. Silahları limanda Tersane’den alırsın.', '⚙ armoured: plasma/rail · 🛡 shielded: ion · ⚡ fast: scatter. Buy weapons at the Shipyard.')), 2500); }
@@ -680,7 +681,7 @@ function olaylar(dt, t) {
   if (r < 0.66) { const a = Math.atan2(SH.vy, SH.vx) + (Math.random() - 0.5) * 1.4, d = 1600 + Math.random() * 2200; OLAY.push({ tip: 'enkaz', x: SH.x + Math.cos(a) * d, y: SH.y + Math.sin(a) * d, r0: Math.random() * TAU }); duyur('📡 ' + T('Tarayıcı bir enkaz buldu', 'Scanner found a wreck'), 'kesif', T('Yakında: yaklaşıp topla', 'Nearby: get close to salvage')); SES.kesif(); return; }
   if (GOREV.some(g => g.tip === 'imdat')) return;
   const a = Math.random() * TAU, d = SEK * (1.3 + Math.random() * 1.7), x = SH.x + Math.cos(a) * d, y = SH.y + Math.sin(a) * d, ad = isim(Math.random, 2);
-  GOREV.push({ id: 'i' + Date.now(), tip: 'imdat', x, y, ad, odul: Math.round(180 + d / SEK * 80), hs: [Math.floor(x / SEK), Math.floor(y / SEK)] });
+  GOREV.push({ id: 'i' + Date.now(), tip: 'imdat', x, y, ad, odul: odulK(180 + d / SEK * 80), hs: [Math.floor(x / SEK), Math.floor(y / SEK)] });
   gorevYaz(); duyur('🆘 ' + T('İmdat çağrısı: ', 'Distress call: ') + '<b>' + esc(ad) + '</b>', 'uyari', T('Yakıtı biten bir gemi 5 yakıt istiyor · görevlere eklendi', 'A stranded ship needs 5 fuel · added to missions')); SES.uyari();
 }
 function enkazTopla(o) {

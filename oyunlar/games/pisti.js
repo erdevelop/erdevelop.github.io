@@ -103,7 +103,7 @@ const CSS = `
 .pi-el{display:flex;justify-content:center;gap:8px;min-height:calc(var(--cw)*1.42 + 16px);align-items:flex-end;padding-top:12px}
 .pi-el .pi-k{cursor:pointer;transition:transform .12s}.pi-el .pi-k.sec{transform:translateY(-12px);box-shadow:0 0 0 3px #3b82f6,0 8px 14px rgba(0,0,0,.3)}.pi-el .pi-k.alir{box-shadow:0 0 0 2.500px #16a34a,0 2px 5px rgba(0,0,0,.28)}
 .pi-el.bekle .pi-k{filter:brightness(.85)}
-.pi-son{position:absolute;inset:0;z-index:5;display:grid;place-items:center;background:color-mix(in srgb,var(--card) 80%,transparent);border-radius:14px;animation:piS .3s .25s both}@keyframes piS{from{opacity:0}}
+.pi-son{position:absolute;inset:0;z-index:40;display:grid;place-items:center;background:color-mix(in srgb,var(--card) 80%,transparent);border-radius:14px;animation:piS .3s .25s both}@keyframes piS{from{opacity:0}}
 .pi-son>div{display:flex;flex-direction:column;gap:9px;align-items:stretch;text-align:center;padding:16px;background:var(--card);border-radius:18px;box-shadow:0 12px 40px rgba(0,0,0,.3);width:min(360px,94%)}.pi-son h3{font-size:22px}
 .pi-tablo{width:100%;border-collapse:collapse;font-weight:800;font-size:13.5px;font-variant-numeric:tabular-nums}.pi-tablo th,.pi-tablo td{padding:4px 6px;text-align:right}.pi-tablo th:first-child,.pi-tablo td:first-child{text-align:left;color:var(--ink-soft)}
 .pi-tablo thead th{font-size:12px}.pi-tablo tfoot td{border-top:2px solid var(--line)}
@@ -123,13 +123,13 @@ registerGame({
     let D = Object.assign({ v: 1, mac: 0, kaz: 0, ag: 0, pisti: 0, o: '', sev: 1 }, (api.loadState && api.loadState()) || {});
     const kaydet = () => { try { api.saveState && api.saveState(D); } catch (e) { } };
     const kok = E('div', { class: 'pi' }); root.append(kok);
-    let sohbetK = null;
+    let sohbetK = null, izle = false;
     let S = null, ben = 0, mod = 'yz', sev = 1, oda = null, odaBirak = null, lobi = null, secili = -1, mesaj = '', mesajT = 0, surT = 0, canli = true, sayilan = '', yerelSur = 0, sonMetin = '', bekleyen = 0, vekil = '', gorulenI = -1, yazSira = Promise.resolve();
     const q = s => kok.querySelector(s), kopya = s => JSON.parse(JSON.stringify(s));
     const koltuklar = () => oda ? oda.koltuklar() : null;
     const kopuk = p => { const K = koltuklar(); return !!(K && K[p] && !K[p].var); };
     const ad = p => { if (mod === 'yz') return p === ben ? 'Sen' : sev ? 'Bilgisayar' : 'Bilgisayar (kolay)'; const K = koltuklar(); return K && K[p] ? K[p].n : 'Rakip'; };
-    const benimSira = () => S && !S.bitti && S.sira === ben;
+    const benimSira = () => S && !S.bitti && S.sira === ben && !izle;
     function mesajVer(m, sure) { mesaj = m; clearTimeout(mesajT); mesajT = setTimeout(() => { mesaj = ''; ciz(); }, sure || 2200); ciz(); }
     function menu() {
       temizle(); let eski = null; try { eski = D.o ? JSON.parse(D.o) : null; } catch (e) { } const var_ = eski && eski.S && !(eski.S.bitti && PI.macBitti(eski.S));
@@ -146,11 +146,12 @@ registerGame({
         <p>• Yerde <b>tek kart</b> varken onu aynı sayıyla alırsan <b>pişti</b>: 10 puan. Tek valeyi valeyle alırsan <b>vale piştisi</b>: 20 puan.</p>
         <p>• Elin sonunda: her as ve vale 1, <b>sinek 2’si</b> 2, <b>karo 10’u</b> 3 puan; en çok kartı toplayan 3 puan. Deste bitince yerde kalanlar son alana gider.</p>
         <p>• Karta dokun, atmak için yeniden dokun. Maçı ilk 101’e ulaşan kazanır.</p>
+        <a class="pi-b" href="/oyun-kurallari/pisti/" style="text-decoration:none;display:block">📖 Ayrıntılı kurallar ve ipuçları</a>
         <button class="pi-b ana" data-a="menu">Tamam</button></div>`;
     }
     function agLobi() {
       temizle(); if (!window.Masa) { kok.innerHTML = '<div class="pi-menu"><p>Çevrimiçi bölüm yüklenemedi.</p><button class="pi-b" data-a="menu">‹ Geri</button></div>'; return; }
-      lobi = Masa.lobi(kok, { oyun: 'pisti', koltuk: 2, enAz: 2, botlu: false, baslik: 'Pişti', onGeri: menu, baslat: o => o.baslat(PI.yeni((Math.random() * 2) | 0)), onOda: o => { lobi = null; agBasla(o); } });
+      lobi = Masa.lobi(kok, { oyun: 'pisti', koltuk: 2, enAz: 2, botlu: false, baslik: 'Pişti', onGeri: menu, onIzle: o => { lobi = null; agBasla(o); }, baslat: o => o.baslat(PI.yeni((Math.random() * 2) | 0)), onOda: o => { lobi = null; agBasla(o); } });
     }
     function ekran() {
       kok.innerHTML = `<div class="pi-masa" id="pi-m"></div><div class="pi-ben" id="pi-ben"><b></b><small></small><span class="pi-bilgi" id="pi-b"></span></div><div class="pi-el" id="pi-e"></div>
@@ -189,9 +190,10 @@ registerGame({
     function uygula(Y) { const onceki = S; S = Y; if (mod === 'ag') gonder(); else yerelKaydet(); goster(onceki); if (S.bitti) setTimeout(() => { if (S === Y) bitti(); }, 1100); else surucu(); }
     function kartDokun(c) {
       if (!S || S.bitti) return; if (!benimSira()) { secili = secili === c ? -1 : c; return ciz(); }
-      if (secili === c) { secili = -1; const Y = kopya(S); if (!PI.oyna(Y, ben, c)) return; if (mod === 'yz' && (Y.son.t === 'p' || Y.son.t === 'vp')) { D.pisti++; kaydet(); } uygula(Y); } else { secili = c; ses('click'); ciz(); }
+      if (secili === c) { secili = -1; const Y = kopya(S); if (!PI.oyna(Y, ben, c)) return; if (mod === 'yz' && (Y.son.t === 'p' || Y.son.t === 'vp')) { D.pisti++; kaydet(); } if (window.Progress && (Y.son.t === 'p' || Y.son.t === 'vp')) Progress.olay(Y.son.t === 'vp' ? 'vpisti' : 'pisti'); uygula(Y); } else { secili = c; ses('click'); ciz(); }
     }
     function surucu() {
+      if (izle) return;
       clearTimeout(surT); if (!S || S.bitti || !canli) return; const p = S.sira; let sure;
       if (mod === 'yz') { if (p === ben) return; sure = 950; }
       else { const K = koltuklar(), bagli = K.map((x, i) => x && x.var ? i : -1).filter(i => i >= 0 && i !== p); if (!bagli.length || bagli[0] !== ben) return; sure = vekil === p + ':' + S.tur + ':' + S.son.i ? 900 : !K[p] || !K[p].var ? 12000 : 60000; }
@@ -228,9 +230,9 @@ registerGame({
       if (onceki && S.son.i === onceki.son.i + 1) goster(onceki); else { gorulenI = S.son.i; ciz(); }
       if (S.bitti) { if (!q('.pi-son')) setTimeout(() => { if (S && S.bitti && !q('.pi-son')) bitti(); }, 1100); } else surucu();
     }
-    function yzBasla(s, eski) { temizle(); mod = 'yz'; ben = 0; sev = s; secili = -1; mesaj = ''; S = eski && eski.S ? eski.S : PI.yeni((Math.random() * 2) | 0); gorulenI = S.son.i; ekran(); ciz(); yerelKaydet(); if (S.bitti) bitti(); else surucu(); }
+    function yzBasla(s, eski) { temizle(); izle = false; mod = 'yz'; ben = 0; sev = s; secili = -1; mesaj = ''; S = eski && eski.S ? eski.S : PI.yeni((Math.random() * 2) | 0); gorulenI = S.son.i; ekran(); ciz(); yerelKaydet(); if (S.bitti) bitti(); else surucu(); }
     function agBasla(o) {
-      temizle(); mod = 'ag'; oda = o; ben = Math.max(0, o.ben); S = null; secili = -1; mesaj = ''; yerelSur = 0; sonMetin = ''; bekleyen = 0; ekran();
+      temizle(); izle = !!o.izleyici; mod = 'ag'; oda = o; ben = Math.max(0, o.ben); S = null; secili = -1; mesaj = ''; yerelSur = 0; sonMetin = ''; bekleyen = 0; ekran();
       sohbetK = window.Masa && Masa.sohbet ? Masa.sohbet(o, { yer: q('[data-a=cik]').parentNode, sonra: q('[data-a=cik]'), koltuk: p => p === ben ? q('#pi-ben') : q('.pi-ad') }) : null;
       odaBirak = oda.dinle(v => { if (!v) { if (S) mesajVer('Oda kapandı.', 60000); return; } const d = oda.durum(); if (!d) return; ben = Math.max(0, oda.ben); if (!bekleyen) al(d); if (S && !S.bitti) surucu(); });
     }

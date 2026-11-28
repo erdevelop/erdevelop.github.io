@@ -68,6 +68,22 @@ const SES = (() => {
     if (B.n && t >= nabizT) { vurus(t + 0.02, B.k); nabizT = t + (B.np || 0.25); }
   }
   setInterval(muzikAdim, 120);
+  /* gezegen ortam sesi: yaklaştığın dünyanın türüne göre süzülmüş gürültü + ara sıra küçük sesler */
+  let ortF = null, ortG = null, ortL = null, ortLf = null, ortTip = '', ortK = 0;
+  const ORT_P = { okyanus: { ty: 'lowpass', f: 520, q: 0.7, g: 0.1, lf: 0.11, lg: 0.07 }, orman: { ty: 'bandpass', f: 2400, q: 0.6, g: 0.03, lf: 0.3, lg: 0.012 }, buz: { ty: 'highpass', f: 4800, q: 1.5, g: 0.028, lf: 0.05, lg: 0.012 }, buzdevi: { ty: 'highpass', f: 3800, q: 1.2, g: 0.025, lf: 0.04, lg: 0.01 }, lav: { ty: 'lowpass', f: 130, q: 1, g: 0.18, lf: 0.07, lg: 0.08 }, zehir: { ty: 'bandpass', f: 900, q: 5, g: 0.05, lf: 0.55, lg: 0.03 }, col: { ty: 'bandpass', f: 1300, q: 0.6, g: 0.045, lf: 0.09, lg: 0.03 }, gaz: { ty: 'bandpass', f: 210, q: 3, g: 0.07, lf: 0.04, lg: 0.035 }, kaya: { ty: 'lowpass', f: 300, q: 0.8, g: 0.04, lf: 0.06, lg: 0.015 } };
+  function ortKur() { if (!ac || ortG) return; const s = ac.createBufferSource(); s.buffer = tampon(3); s.loop = true; ortF = ac.createBiquadFilter(); ortG = ac.createGain(); ortG.gain.value = 0; ortLf = ac.createOscillator(); ortL = ac.createGain(); ortL.gain.value = 0; ortLf.frequency.value = 0.1; ortLf.connect(ortL); ortL.connect(ortG.gain); s.connect(ortF); ortF.connect(ortG); ortG.connect(ana); s.start(); ortLf.start(); }
+  function ortam(tip, k) {
+    if (!ac || ac.state !== 'running') return; const P = ORT_P[tip]; if (!P) k = 0; if (!ortG && !k) return; ortKur(); const t = ac.currentTime;
+    if (P && tip !== ortTip) { ortTip = tip; ortF.type = P.ty; ortF.frequency.setTargetAtTime(P.f, t, 0.6); ortF.Q.setTargetAtTime(P.q, t, 0.6); ortLf.frequency.setTargetAtTime(P.lf, t, 0.6); }
+    ortK = k; ortG.gain.setTargetAtTime(P ? P.g * k : 0, t, 1.2); ortL.gain.setTargetAtTime(P ? P.lg * k : 0, t, 1.2);
+  }
+  const PENT = [523.3, 587.3, 659.3, 784, 880, 1046.5, 1174.7, 1318.5];
+  setInterval(() => { if (!ac || ac.state !== 'running' || duzey <= 0 || ortK < 0.25) return; const r = Math.random(), k = ortK;
+    if ((ortTip === 'buz' || ortTip === 'buzdevi') && r < 0.18) nota(PENT[(Math.random() * PENT.length) | 0] * 2, 0, 2.2, 'sine', 0.018 * k);
+    else if (ortTip === 'orman' && r < 0.22) { const f = 2200 + Math.random() * 1600; nota(f, 0, 0.07, 'triangle', 0.02 * k); nota(f * 1.12, 0.09, 0.07, 'triangle', 0.016 * k); }
+    else if ((ortTip === 'okyanus' || ortTip === 'zehir') && r < 0.2) nota(180 + Math.random() * 420, 0, 0.12, 'sine', 0.03 * k);
+    else if (ortTip === 'lav' && r < 0.1) nota(48 + Math.random() * 20, 0, 1.4, 'sawtooth', 0.025 * k);
+  }, 450);
   function patlamaSes() { if (!ac || duzey <= 0) return; const b = ac.createBufferSource(); b.buffer = tampon(1.2); const f = ac.createBiquadFilter(); f.type = 'lowpass'; f.frequency.value = 900; const g = ac.createGain(), t = ac.currentTime; g.gain.setValueAtTime(0.9, t); g.gain.exponentialRampToValueAtTime(0.001, t + 1.1); f.frequency.exponentialRampToValueAtTime(70, t + 1); b.connect(f); f.connect(g); g.connect(ana); b.start(t); b.stop(t + 1.2); }
   return {
     baslat, guncelle, patla: patlamaSes,
@@ -84,6 +100,7 @@ const SES = (() => {
     tik: () => nota(880, 0, 0.08, 'sine', 0.05),
     ayarla: v => { duzey = kis(v, 0, 1); ls.set('kozmos-ses', duzey); if (ana) ana.gain.value = duzey * 1.5; },
     duzey: () => duzey,
+    ortam,
   };
 })();
 
@@ -103,7 +120,7 @@ function kayitSuz(K) {
   const say = (k, anah, en, ey) => { if (!(k in K)) return; const o = {}; if (obj(K[k])) for (const [a, x] of Object.entries(K[k])) if (Number.isFinite(x) && (!anah || anah.includes(a))) o[a] = ey != null ? Math.max(en, Math.min(ey, x)) : x; K[k] = o; };
   try {
     for (const k of ['acl', 'kesif', 'acik', 'alinan', 'bas', 'tek', 'tak', 'kiys', 'plan', 'arsiv', 'tekno', 'silahlar', 'kod', 'gemiler']) dz(k, str);
-    dz('gorev', g => obj(g) && ['hikaye', 'yan', 'imdat', 'yolcu', 'teslim', 'kervan', 'kesif', 'kelle', 'istila', 'dip', 'sarmal', 'getir', 'git', 'ev', 'yuk'].includes(g.tip) && (['hikaye', 'yan'].includes(g.tip) || Array.isArray(g.hs))); dz('ekip', e => obj(e) && str(e.rol)); dz('karakol', k => obj(k) && uc(k.hs) && str(k.id));
+    dz('gorev', g => obj(g) && ['hikaye', 'yan', 'imdat', 'yolcu', 'teslim', 'kervan', 'kesif', 'kelle', 'istila', 'dip', 'sarmal', 'getir', 'git', 'ev', 'yuk', 'acil', 'kirilgan', 'vip', 'seckin', 'kontrat'].includes(g.tip) && (g.tip !== 'kontrat' || (Array.isArray(g.adim) && g.adim.length > 0 && Number.isFinite(g.a))) && (['hikaye', 'yan'].includes(g.tip) || Array.isArray(g.hs))); dz('ekip', e => obj(e) && str(e.rol)); dz('karakol', k => obj(k) && uc(k.hs) && str(k.id));
     dz('kervan', k => obj(k) && uc(k.a) && uc(k.b) && str(k.m)); dz('defter', d => obj(d) && Array.isArray(d.m)); dz('esk', e => obj(e) && str(e.t));
     dz('rota', r => obj(r) && Number.isFinite(r.x) && Number.isFinite(r.y)); dz('ziy', uc);
     if ('sl' in K && !uc(K.sl)) K.sl = null;
@@ -171,6 +188,7 @@ let SEZ = K.sez && K.sez.id === SEZ_ID() ? K.sez : { id: SEZ_ID(), xp: 0, al: []
 let YR = null;
 const DEV = { olumsuz: false, yakitsiz: false, cevrim: ls.get('kozmos-dev-cevrim', false) === true, log: [], gecmis: [], gi: -1 };
 /* otopilot hızı: Sakin / Normal / Hızlı (elle uçuşun azami hızı 1300; Normal ≈ 585) — v: azami hız, i: ivme, f: varışta yavaşlama, b: hız düğmesi */
+const OTO_TAU = 2.4, OTO_WARP_SON = 0.75;
 const OTO_HIZ = { sakin: { v: 0.3, i: 0.13, f: 260, b: 0.45 }, normal: { v: 0.45, i: 0.2, f: 380, b: 0.6 }, hizli: { v: 0.75, i: 0.45, f: 700, b: 0.8 } };
 let otoHiz = OTO_HIZ[ls.get('kozmos-otohiz', 'normal')] ? ls.get('kozmos-otohiz', 'normal') : 'normal';
 const PIL = { acik: !!ls.get('kozmos-pil', false) };
@@ -283,7 +301,7 @@ const KORS = [], MERMI = [], PATL = [], OLAY = [];
 let korsT = 70 + Math.random() * 60, olayT = 50 + Math.random() * 50, firtina = 0, firtS = null, nebSon = null, basT = 2, enkazP = null, imdatP = null, diyalogAcik = false;
 function haftaK(ms) { const d = new Date(ms); d.setUTCHours(0, 0, 0, 0); d.setUTCDate(d.getUTCDate() + 4 - (d.getUTCDay() || 7)); const y = d.getUTCFullYear(), w = Math.ceil(((d - Date.UTC(y, 0, 1)) / 864e5 + 1) / 7); return y + '-' + String(w).padStart(2, '0'); }
 function haftaKontrol() { let ms; try { ms = AG.simdi(); } catch (e) { ms = Date.now(); } const h = haftaK(ms); if (ST.hw !== h) { ST.hw = h; ST.hp = 0; } }
-function kazan(n, kat) { if (n > 0 && PRS) n = Math.round(n * (1 + 0.1 * PRS)); if (n > 0 && BOLGE) { if (kat === 'gorev' && BOLGE === 'birlik') n = Math.round(n * 1.1); else if (kat === 'korsan' && BOLGE === 'klan') n = Math.round(n * 1.25); } if (n > 0) sezXp(kat === 'gorev' ? 25 : kat === 'korsan' ? 8 : kat === 'kesif' ? 5 : kat === 'koloni' ? 10 : kat === 'ticaret' ? Math.min(20, n / 200) : 0); if (n > 0 && kat === 'kesif' && EKIP.some(e => huyOf(e) === 'sansli')) n = Math.round(n * 1.1); if (kat === 'kesif' && n > 0 && mSay('tarayici')) n = Math.round(n * (1 + 0.1 * mSay('tarayici'))); if (kat === 'kesif' && n > 0 && arsivTam('eski')) n = Math.round(n * 1.1); if (n > 0 && kat === 'kesif' && gOl('kesif')) n *= 2; if (n > 0 && kat === 'korsan' && gOl('korsan')) n = Math.round(n * 1.5); if (kat === 'kesif' && n > 0 && tek('t3')) n = Math.round(n * 1.15); if (n > 0 && benLonca() && lSv(benLonca()) >= 5) n = Math.round(n * 1.1); kredi += n; ST.kazanc += n; haftaKontrol(); ST.hp = (ST.hp || 0) + n; const gk = ST.gk = ST.gk || {}; kat = kat || 'diger'; gk[kat] = (gk[kat] || 0) + n; }
+function kazan(n, kat) { if (n > 0 && PRS) n = Math.round(n * (1 + 0.1 * PRS)); if (n > 0 && BOLGE) { if (kat === 'gorev' && BOLGE === 'birlik') n = Math.round(n * 1.1); else if (kat === 'korsan' && BOLGE === 'klan') n = Math.round(n * 1.25); } if (n > 0) sezXp(kat === 'gorev' ? 25 : kat === 'korsan' ? 8 : kat === 'kesif' ? 5 : kat === 'koloni' ? 10 : kat === 'ticaret' ? Math.min(20, n / 200) : 0); if (n > 0 && kat === 'kesif' && EKIP.some(e => huyOf(e) === 'sansli')) n = Math.round(n * 1.1); if (kat === 'kesif' && n > 0 && mSay('tarayici')) n = Math.round(n * (1 + 0.1 * mSay('tarayici'))); if (kat === 'kesif' && n > 0 && arsivTam('eski')) n = Math.round(n * 1.1); if (n > 0 && kat === 'kesif' && gOl('kesif')) n *= 2; if (n > 0 && kat === 'korsan' && gOl('korsan')) n = Math.round(n * 1.5); if (kat === 'kesif' && n > 0 && tek('t3')) n = Math.round(n * 1.15); if (n > 0 && benLonca() && lSv(benLonca()) >= 5) n = Math.round(n * 1.1); if (n > 0 && ST.zor) n = Math.round(n * zorO(kat)); kredi += n; ST.kazanc += n; haftaKontrol(); ST.hp = (ST.hp || 0) + n; const gk = ST.gk = ST.gk || {}; kat = kat || 'diger'; gk[kat] = (gk[kat] || 0) + n; }
 function bolgeBul() {
   if (limanP) return 'liman'; if (SH.warp > 0.4) return 'warp'; if (HIK.savas) return 'boss';
   try { if (KOLOS.can > 0) { const [kx, ky] = kolosPos(); if (Math.hypot(kx - SH.x, ky - SH.y) < 9000) return 'boss'; } } catch (e) { }

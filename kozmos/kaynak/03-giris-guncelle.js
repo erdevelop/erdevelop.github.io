@@ -187,14 +187,15 @@ function guncelle(dt, t) {
       const [tx, ty, dur] = otoPos(oto, t), dx = tx - SH.x, dy = ty - SH.y, d = Math.hypot(dx, dy) || 1, kal = d - dur, v0 = Math.hypot(SH.vx, SH.vy);
       if (kal < 40 && v0 < 90) { const ad = oto.p ? (oto.p.kol && KESIF.has('k:' + oto.p.id) ? kolAd(oto.p) : oto.p.ad) : oto.tm ? (oto.tm.ev ? 'Helios ⌂' : oto.tm.ad) : ''; duyur('🏁 ' + T('Vardın', 'Arrived') + (ad ? ': <b>' + esc(ad) + '</b>' : ''), 'kesif'); SES.tik(); if (wp && oto.tm && wp.k === oto.tm.k) wp = null; oto = null; SH.vx *= 0.3; SH.vy *= 0.3; if (rotaAktif) rotaVardi(); }
       else {
-        let ux = dx / d, uy = dy / d; const ox = Math.floor(SH.x / SEK), oy = Math.floor(SH.y / SEK);
+        let ux = dx / d, uy = dy / d, ys = Infinity; const ox = Math.floor(SH.x / SEK), oy = Math.floor(SH.y / SEK);
         for (let j = -1; j <= 1; j++) for (let i = -1; i <= 1; i++) {
-          const tm = temel(ox + i, oy + j); if (!tm || (oto.tm && oto.tm.k === tm.k && !YT[tm.yt].kd)) continue;
+          const tm = temel(ox + i, oy + j); if (!tm) continue; ys = Math.min(ys, Math.hypot(tm.x - SH.x, tm.y - SH.y) - tm.yr * (YT[tm.yt].kd ? 14 : 1.6));
+          if (oto.tm && oto.tm.k === tm.k && !YT[tm.yt].kd) continue;
           const sx_ = tm.x - SH.x, sy_ = tm.y - SH.y, pr = sx_ * ux + sy_ * uy; if (pr <= 0 || pr > d) continue;
           const qx = sx_ - pr * ux, qy = sy_ - pr * uy, q = Math.hypot(qx, qy), Rav = YT[tm.yt].kd ? tm.yr * 14 : tm.yr * 2.2 + 200;
           if (q < Rav) { const nx = q > 1 ? -qx / q : -uy, ny = q > 1 ? -qy / q : ux, w = (Rav - q) / Rav * 1.6; ux += nx * w; uy += ny * w; const l = Math.hypot(ux, uy); ux /= l; uy /= l; }
         }
-        otoV = { dx, dy, d, kal, ux, uy }; yonHedef = Math.atan2(uy, ux); if (oto.warp && (kal < 45000 || yakit <= 0)) oto.warp = false; warpTus = !!oto.warp; boost = !!oto.boost && kal > 2500; fren = false; guc = 0; }
+        otoV = { dx, dy, d, kal, ux, uy, ys }; yonHedef = Math.atan2(uy, ux); if (SH.warp > 0.05) oto.wsk = 1; if (oto.warp && (kal < Math.max(45000, Math.hypot(SH.vx, SH.vy) * (1 / OTO_WARP_SON + 0.9)) || yakit <= 0)) oto.warp = false; warpTus = !!oto.warp; boost = !!oto.boost && kal > 2500; fren = false; guc = 0; }
     }
   }
   const donHiz = SH.warp > 0.5 ? 1.1 : 3.4;
@@ -207,7 +208,8 @@ function guncelle(dt, t) {
   if (warpTus) { SH.sarj = Math.min(1, SH.sarj + dt / warpSure()); if (SH.sarj >= 1 && !SH._wd) { SH._wd = 1; duyur('🌀 Warp!', 'kesif'); } }
   else { SH.sarj = Math.max(0, SH.sarj - dt * 2.5); SH._wd = 0; }
   const warpHedef = warpTus && SH.sarj >= 1 ? 1 : 0;
-  SH.warp += (warpHedef - SH.warp) * Math.min(1, dt * (warpHedef ? 0.9 : 2.2));
+  /* otopilotta warp'tan çıkış yumuşak: warp daha yavaş söner, otopilot da bunu hesaba katıp erken çıkar */
+  SH.warp += (warpHedef - SH.warp) * Math.min(1, dt * (warpHedef ? 0.9 : otoV ? OTO_WARP_SON : 2.2));
   if (SH.warp < 0.002) SH.warp = 0;
   const cx = Math.cos(SH.a), cy = Math.sin(SH.a);
   let v = Math.hypot(SH.vx, SH.vy);
@@ -216,11 +218,16 @@ function guncelle(dt, t) {
     SH.vx += (cx * hz - SH.vx) * Math.min(1, dt * 1.6); SH.vy += (cy * hz - SH.vy) * Math.min(1, dt * 1.6);
     SH.itki += (1 - SH.itki) * Math.min(1, dt * 6);
   } else if (otoV) {
-    const OH = OTO_HIZ[otoHiz] || OTO_HIZ.normal, vmax = (boost ? 3200 * OH.b : 1300 * OH.v) * motorK(), vd = Math.min(vmax, Math.sqrt(2 * OH.f * Math.max(0, otoV.kal))), ux = otoV.ux, uy = otoV.uy;
+    /* varış eğrisi: uzaktayken hız mesafeyle orantılı azalır (kal / OTO_TAU: hedefe yaklaştıkça yumuşakça yavaşlar),
+       en sonda sabit yavaşlamayla durur. Gemi seyir hızından hızlı geliyorsa (warp sonrası) seyir hızına birden inmez, eğriyi izler. */
+    const OH = OTO_HIZ[otoHiz] || OTO_HIZ.normal, vmax = (boost ? 3200 * OH.b : 1300 * OH.v) * motorK(), kal0 = Math.max(0, otoV.kal), vSim = Math.hypot(SH.vx, SH.vy);
+    /* seyir hızı mesafeye göre: kısa yolda ayardaki hız, uzak hedefte kademeli olarak 4 katına kadar */
+    if (!oto.d0) oto.d0 = kal0; const vUzak = Math.min(vmax * 4, Math.max(vmax, oto.d0 / 12)), ust = oto.wsk ? Math.max(vUzak, vSim) : vUzak;
+    const egri = Math.max(Math.sqrt(2 * OH.f * kal0), kal0 / OTO_TAU), vd = Math.min(ust, egri, Math.max(vmax, kal0 / OTO_TAU), Math.max(vmax, Math.max(0, otoV.ys) / 1.2)), ux = otoV.ux, uy = otoV.uy;
     // önce gemi hedefe dönsün, sonra hızlansın
     let fa = Math.atan2(uy, ux) - SH.a; fa = Math.abs(Math.atan2(Math.sin(fa), Math.cos(fa)));
     const hiz = fa > 1.2 ? Math.min(vd, 150) : vd;
-    const dvx = ux * hiz - SH.vx, dvy = uy * hiz - SH.vy, m = Math.hypot(dvx, dvy), frenle = Math.hypot(SH.vx, SH.vy) > hiz + 30, amax = (frenle ? 2600 : boost ? 2600 * OH.b : 1400 * OH.i) * motorK(), k = Math.min(1, amax * dt / (m || 1));
+    const dvx = ux * hiz - SH.vx, dvy = uy * hiz - SH.vy, m = Math.hypot(dvx, dvy), frenle = vSim > hiz + 30, amax = (frenle ? Math.max(1800, vSim * 2.2) : boost ? 2600 * OH.b : 1400 * OH.i) * motorK(), k = Math.min(1, amax * dt / (m || 1));
     SH.vx += dvx * k; SH.vy += dvy * k;
     SH.itki += (kis(m / 500, 0, 1) * (boost ? 1 : 0.75) - SH.itki) * Math.min(1, dt * 8);
   } else {
@@ -284,7 +291,7 @@ function guncelle(dt, t) {
   hudT -= dt; if (hudT <= 0) { hudT = 0.16; hudYaz(v, t); }
   kayitT -= dt; if (kayitT <= 0) { kayitT = 4; kaydet(); }
   hedT = Math.max(0, hedT - dt); selT = Math.max(0, selT - dt);
-  gorevT -= dt; if (gorevT <= 0) { gorevT = 1; if (KERVAN.length && oyunda) kervanAdim(); if (GOREV.length) gorevYaz(); SES.bolge(bolgeBul()); AG.tur(); }
+  gorevT -= dt; if (gorevT <= 0) { gorevT = 1; derinAdim(); if (KERVAN.length && oyunda) kervanAdim(); if (GOREV.length) gorevYaz(); SES.bolge(bolgeBul()); AG.tur(); }
   AG.gonder();
   miniT -= dt; if (miniT <= 0) { miniT = 0.1; miniCiz(); }
   SES.guncelle(oyunda ? SH.itki : 0, v, SH.warp);
