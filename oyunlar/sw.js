@@ -1,6 +1,6 @@
 /* Oyun Bahçesi — Service Worker (offline oynanabilirlik)
    Sürüm değişince eski önbellek silinir. Uygulama kabuğu + oyunlar + three.js önbelleğe alınır. */
-const VERSION = 'ob-v29';
+const VERSION = 'ob-v30';
 const CORE = [
   './',
   './index.html',

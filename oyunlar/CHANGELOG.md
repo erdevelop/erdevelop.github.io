@@ -128,3 +128,10 @@
 - Eski “Günün meydan okuması” portaldan kaldırılmış eski oyunlara bağlıydı ve görünmüyordu; yerini görev kartı aldı.
 - Oyunlar artık pişti, mars, mat, okeyle/çiftle bitiş, 101’de açma ve elden bitiş, Batak’ta ihale tutturma, damada dama çıkarma ve çevrimiçi sonuçları bildiriyor.
 
+## Eşli Okey ve eşli Batak — 28 Kasım 2026
+- Menüde **Tekli / Eşli (2’ye 2)** seçimi. Karşılıklı oturanlar takım; eş üstte mavi çerçeveyle ve “👥 eşin” etiketiyle görünür.
+- Eşli Okey: biri bitirince iki eş de sayı alır; sonuç tablosu takım olarak.
+- Eşli Batak: ihale takımın; iki eşin aldığı eller toplanır, ikisi de aynı puanı yazar. Bilgisayar eşinin aldığı eli boşuna büyütmez,
+  teklif verirken eşinin katkısını hesaba katar (ihale tutma oranı tekliyle aynı düzeyde, ~%70).
+- Çevrimiçinde odayı başlatan oyuncunun seçimi geçerli olur.
+
