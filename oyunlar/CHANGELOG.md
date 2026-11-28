@@ -224,3 +224,8 @@
 - Lines 98 tadında 9×9 tahta: topu açık yoldan taşı, aynı renkten 5+ topu diz ve patlat
 - Patlatmayan her hamlede 3 yeni top (renkleri önceden görünür); kaldığın yerden devam
 - Günün oyunu (herkese aynı top sırası), seri ve rekor
+
+## Bombacı
+- Klasik labirentte bomba bırakma: kırılan kutular, zincirleme patlamalar, bomba/alev/hız güçlendiricileri
+- Bilgisayara karşı 1–3 rakip, üç zorluk; 2 dakikadan sonra kenarlardan duvar örülür, 3 tur alan maçı kazanır
+- Çevrimiçi 2–4 kişi (boş koltuklara bilgisayar oturur); dokunmatik kol ve bomba düğmesi, klavyede ok/WASD + boşluk
