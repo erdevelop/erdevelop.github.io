@@ -406,13 +406,18 @@ export async function kur3D({ tuval, kalite, ilk = [] }) {
     const ARKA = P.duvar.clone(true); const as = ds * 1.7; ARKA.scale.set(as, as * 0.85, as); ARKA.position.set(-VW * 0.18, -0.3, -19); ARKA.rotation.y = 0.25; ORTAM.add(ARKA); ARKA.updateMatrixWorld(true); ENGEL3.push(ARKA);
     for (let i = 0; i < Math.round(30 * cok * mk); i++) { const k = mercanlar[Math.floor(r() * mercanlar.length)]; koy(k, -VW * 0.18 + ara(-11, 11) * as, -19 + ara(-5, 4) * as, ara(0.6, 1.2) * as * 1.3, r() * 6.28, ARKA); }
     for (let i = 0; i < Math.round(VW / 2.5); i++) koy(kayalar[i % 4], ara(-yarim - 4, yarim + 4), ara(-20, -11), ara(1.2, 2.6), r() * 6.28);
-    /* UZAK DERİNLER: arkada ve iki yanda, sisin içinde iri resif sırtları; eteklerinde iri mercan öbekleri. Uzağa bakınca
-       boş kum düzlüğü yerine kat kat silüetler görünür. Yakın plandaki hiçbir şeyi kapatmaz (z < -21 ya da ekranın çok dışında). */
-    { const uzKaya = [], N = 16;
-      for (let i = 0; i < N; i++) { const a = -Math.PI * 0.95 + (i / (N - 1)) * Math.PI * 0.9 + ara(-0.06, 0.06), R = ara(26, 52), x = Math.cos(a) * R * 1.25, z = Math.sin(a) * R; /* yarım çember: arkada */
-        if (z > -21 && Math.abs(x) < yarim + 20) continue;
-        const o = P[kayalar[i % 4]].clone(true), sc = ara(4, 9.5); o.scale.set(sc * ara(1, 1.8), sc * ara(0.7, 1.5), sc); o.rotation.y = r() * 6.28; o.position.set(x, zeminY(x, z) - 0.35 * sc, z); ORTAM.add(o); uzKaya.push([x, z, sc]); }
-      if (mk > 0) for (const [x, z, sc] of uzKaya) for (let j = 0; j < Math.round(4 * mk * cok) + 1; j++) { const a = r() * 6.28, u = sc * ara(0.7, 1.4), k = mercanlar[Math.floor(r() * mercanlar.length)]; koy(k, x + Math.cos(a) * u, z + Math.sin(a) * u * 0.6, ara(1.4, 3.2), r() * 6.28); }
+    /* UZAK DERİNLER: sahnenin dört bir yanında (takip kamerası her yöne bakabilir) iki halka resif sırtı ve aralarında
+       dağınık kaya, mercan, çayır. Dış halka ufku kapatır (kumun bittiği yer görünmez), iç halka ve dağınık öbekler
+       aradaki kumu doldurur. Yan görünümün önündeki alana (kamera ile resif arası) hiçbir şey konmaz. */
+    { const onAlan = (x, z) => z > -21 && z < 16 && Math.abs(x) < yarim + 18, uzKaya = [];
+      const sirt = (x, z, sc, i) => { const o = P[kayalar[i % 4]].clone(true); o.scale.set(sc * ara(1, 1.9), sc * ara(0.6, 1.4), sc * ara(0.9, 1.4)); o.rotation.y = r() * 6.28; o.position.set(x, zeminY(x, z) - 0.38 * sc, z); ORTAM.add(o); };
+      for (let i = 0, N = 34; i < N; i++) { const a = (i / N) * 6.283 + ara(-0.08, 0.08), R = ara(46, 66), x = Math.cos(a) * R * 1.15, z = Math.sin(a) * R; if (onAlan(x, z)) continue; sirt(x, z, ara(8, 16), i); }
+      for (let i = 0, N = 42; i < N; i++) { const a = (i / N) * 6.283 + ara(-0.1, 0.1), R = ara(24, 40), x = Math.cos(a) * R * 1.15, z = Math.sin(a) * R; if (onAlan(x, z)) continue; const sc = ara(2.5, 6.5); sirt(x, z, sc, i + 1); uzKaya.push([x, z, sc]); }
+      if (mk > 0) for (const [x, z, sc] of uzKaya) for (let j = 0; j < Math.round(3 * mk * cok) + 1; j++) { const a = r() * 6.28, u = sc * ara(0.6, 1.3), k = mercanlar[Math.floor(r() * mercanlar.length)]; koy(k, x + Math.cos(a) * u, z + Math.sin(a) * u * 0.7, ara(1.3, 3), r() * 6.28); }
+      /* aradaki kum: dağınık küçük kayalar, mercan öbekleri ve çayır lekeleri */
+      for (let i = 0, n = Math.round(70 * Math.max(0.5, cok)); i < n; i++) { const a = r() * 6.283, R = ara(16, 44), x = Math.cos(a) * R * 1.15, z = Math.sin(a) * R; if (onAlan(x, z)) continue;
+        if (r() < 0.35) koy(kayalar[i % 4], x, z, ara(0.8, 2.4), r() * 6.28); else if (mk > 0) { const k = mercanlar[Math.floor(r() * mercanlar.length)]; for (let j = 0, m = 1 + Math.floor(r() * 3); j < m; j++) koy(k, x + ara(-1.2, 1.2), z + ara(-1.2, 1.2), ara(0.9, 2), r() * 6.28); } }
+      if (TM.cay > 0) for (let i = 0; i < 10; i++) { const a = r() * 6.283, R = ara(18, 40), x = Math.cos(a) * R * 1.15, z = Math.sin(a) * R; if (onAlan(x, z)) continue; const w = ara(3, 7); ORTAM.add(cayir(Math.round(w * w * 6 * TM.cay), [x - w / 2, x + w / 2, z - w / 3, z + w / 3], ara(0.6, 1.3), 0.035, '#3f7a2e', '#9bc45a', 40 + i)); }
     }
     for (let i = 0; i < Math.round((VW * 2.2 + 14) * cok * mk); i++) { const k = mercanlar[Math.floor(r() * mercanlar.length)]; koy(k, ara(-yarim - 5, yarim + 5), ara(-21, -10), (k.startsWith('masa') ? ara(0.6, 1.1) : ara(0.9, 1.7)), k.startsWith('yelpaze') ? ara(-0.5, 0.5) : r() * 6.28); }
     for (let i = 0; i < (mk >= 1 ? Math.max(2, Math.round(VW / 7)) : 0); i++) koy(i % 2 ? 'anemon_1' : 'anemon_0', ara(-yarim + 2, yarim - 2), ara(-4, -1.6), ara(0.9, 1.2), r() * 6);
@@ -438,7 +443,7 @@ export async function kur3D({ tuval, kalite, ilk = [] }) {
     const g = new THREE.ConeGeometry(0.09, 0.5, 5); g.rotateZ(-Math.PI / 2); const kuy = new THREE.ConeGeometry(0.08, 0.16, 3); kuy.rotateZ(Math.PI / 2); kuy.translate(-0.3, 0, 0);
     const geo = mergeGeometries([g.toNonIndexed(), kuy.toNonIndexed()]); geo.scale(1, 1, 0.45);
     const mat = new THREE.MeshStandardMaterial({ color: '#9fb8c8', roughness: 0.5, metalness: 0.35 });
-    const S = [[-30, -34, 9, 120, 0.11], [26, -40, 7, 90, -0.13], [-46, -12, 6, 70, 0.09], [44, -18, 8, 100, -0.1], [4, -55, 11, 140, 0.07]], top = S.reduce((a, q) => a + q[3], 0);
+    const S = [[-30, -34, 9, 120, 0.11], [26, -40, 7, 90, -0.13], [-46, -12, 6, 70, 0.09], [44, -18, 8, 100, -0.1], [4, -55, 11, 140, 0.07], [-36, 34, 8, 100, 0.1], [34, 38, 9, 110, -0.09], [0, 50, 10, 120, 0.08], [-56, 12, 7, 80, -0.12], [56, 8, 7, 80, 0.11]], top = S.reduce((a, q) => a + q[3], 0);
     const im = new THREE.InstancedMesh(geo, mat, top); im.frustumCulled = false; sahne.add(im);
     const Q = []; for (const [cx, cz, R, n, v] of S) for (let i = 0; i < n; i++) Q.push({ cx, cz, R, v, ph: Math.random() * 6.28, oy: Math.random(), or: (Math.random() - 0.5) * 2.2, oz: (Math.random() - 0.5) * 2.2, h: 3 + Math.random() * 5 });
     const m4 = new THREE.Matrix4(), q4 = new THREE.Quaternion(), e = new THREE.Euler(), p = new THREE.Vector3(), sc = new THREE.Vector3(1, 1, 1);
