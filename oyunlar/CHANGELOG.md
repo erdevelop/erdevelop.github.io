@@ -203,3 +203,8 @@
 - Kolay / normal / zor, her 50 puanda hızlanma, haftalık ve genel rekor; Three.js sitenin kökündeki three.min.js'den oyun açılınca yüklenir
 - Neon Yol: yumuşak pastel renkler (alacakaranlık gökyüzü, pembe bloklar, pastel tüneller); yol artık yokuşlu ve inişli (yumuşak eğim geçişleri, yokuşta yavaşlama, inişte hızlanma, kamera eğimi izler)
 - Neon Yol: sabit küpler yaklaşık üçte bire indi (100 satırda ~28 → ~11); yeni sağa sola kayan turuncu küpler (farklı hız ve genlik, zorlukla hızlanır)
+
+## Milyon Merdiveni
+- Bilgi yarışması: 12 soru (3 kolay, 3 orta, 3 zor, 3 çok zor), 500 ₺ → 1.000.000 ₺, 2.000 ve 15.000 barajları, çekilme hakkı
+- Jokerler: yarı yarıya, seyirci oylaması, telefon (zorluk arttıkça yanılma ihtimali artar); isteğe bağlı süre (30–60 sn)
+- 262 soruluk Türkçe havuz (genel kültür, tarih, coğrafya, bilim, edebiyat, sanat, spor); günün yarışması herkese aynı, seri ve dağılım
