@@ -2,6 +2,7 @@
    Kurallar: her oyuncunun kalesi (can), destesi, eli (en çok 8) ve sahası (en çok 5 birlik) var.
    Her tur altın bir artar (en çok 10), bir kart çekilir. Deste biterse her çekişte artan yorgunluk hasarı alınır.
    Özellikler: koruma (rakip önce buna saldırmak zorunda), hucum (geldiği tur saldırır), menzil (saldırırken karşılık almaz),
+   cal (verdiği hasar kadar kaleyi iyileştirir), ofke (hasar alıp sağ kalınca +2 saldırı), gizli (saldırana kadar hedef alınamaz), delici (Koruma'yı yok sayar),
    kalkan (zırh: aldığı ilk hasarı yok sayar), olum (ölünce etki), sonTur (tur sonunda etki), donuk (o tur saldıramaz).
    Kahramanlar (KH): her tur bir kez, altınla kullanılan güç. Sefer (SEFER): 15 duraklı yol, her durağın rakibi, kuralı ve ödülü.
    G.olay: arayüzün canlandırması için olay listesi. */
@@ -9,8 +10,11 @@
   'use strict';
   const T = (tr, en) => ({ tr, en });
   const EL_MAX = 8, SAHA_MAX = 5, ALTIN_MAX = 10, DESTE = 20;
-  const rast = a => a[Math.floor(Math.random() * a.length)];
-  const kar = a => { for (let i = a.length - 1; i > 0; i--) { const j = Math.floor(Math.random() * (i + 1)); [a[i], a[j]] = [a[j], a[i]]; } return a; };
+  /* tohumlu rastgelelik: G.rs varsa (çevrimiçi maç) iki cihaz aynı hamlelerle aynı sonucu bulur */
+  let RS = null;
+  const rnd = () => { if (RS == null) return Math.random(); RS = (RS + 0x6D2B79F5) | 0; let t = RS; t = Math.imul(t ^ (t >>> 15), t | 1); t ^= t + Math.imul(t ^ (t >>> 7), t | 61); return ((t ^ (t >>> 14)) >>> 0) / 4294967296; };
+  const rast = a => a[Math.floor(rnd() * a.length)];
+  const kar = a => { for (let i = a.length - 1; i > 0; i--) { const j = Math.floor(rnd() * (i + 1)); [a[i], a[j]] = [a[j], a[i]]; } return a; };
 
   /* m: altın bedeli · s: saldırı · c: can · e: simge */
   const K = {
@@ -48,7 +52,19 @@
     kraliyetmuhafizi: { m: 5, s: 3, c: 6, e: '🏵️', koruma: 1, kalkan: 1, ad: T('Kraliyet Muhafızı', 'Royal Guard') },
     kusatmakulesi: { m: 6, s: 4, c: 6, e: '🗼', ad: T('Kuşatma Kulesi', 'Siege Tower'), yazi: T('Turunun sonunda: en zayıf düşman birliğe 2 hasar.', 'At the end of your turn: 2 damage to the weakest enemy unit.'), sonTur: (G, p) => { const d = G.p[1 - p].saha.slice().sort((a, b) => a.c - b.c)[0]; if (d) hasarVer(G, { t: 'b', p: 1 - p, uid: d.uid }, 2); } },
     hukumdar: { m: 7, s: 5, c: 6, e: '🤴', tek: 1, ad: T('Hükümdar', 'Sovereign'), yazi: T('Turunun sonunda: bir Mızrakçı çağır.', 'At the end of your turn: summon a Spearman.'), sonTur: (G, p) => cagir(G, p, 'mizrakci') },
+    /* --- yeni özellikli birlikler --- */
+    yarasa: { m: 2, s: 1, c: 2, e: '🦇', hucum: 1, cal: 1, ad: T('Yarasa Sürüsü', 'Bat Swarm') },
+    yabandomuzu: { m: 2, s: 1, c: 3, e: '🐗', ofke: 1, ad: T('Yaban Domuzu', 'Wild Boar') },
+    casus: { m: 3, s: 3, c: 2, e: '🕵️', gizli: 1, ad: T('Casus', 'Spy'), yazi: T('Oynanınca: bir kart çek.', 'When played: draw a card.'), oyna: (G, p) => cek(G, p) },
+    ayi: { m: 4, s: 2, c: 6, e: '🐻', ofke: 1, koruma: 1, ad: T('Boz Ayı', 'Brown Bear') },
+    karasovalye: { m: 4, s: 3, c: 4, e: '🖤', cal: 1, ad: T('Kara Şövalye', 'Black Knight') },
+    kocbasi: { m: 5, s: 5, c: 4, e: '🐏', delici: 1, ad: T('Koçbaşı', 'Battering Ram') },
+    golgeusta: { m: 6, s: 5, c: 5, e: '🌑', gizli: 1, ofke: 1, ad: T('Gölge Ustası', 'Shadow Master') },
     /* büyüler */
+    sikke: { m: 0, e: '🪙', koleksiyonDisi: 1, ad: T('Sikke', 'The Coin'), yazi: T('Bu tur 1 altın kazan. (İkinci başlayana verilir.)', 'Gain 1 gold this turn. (Given to the player going second.)'), oyna: (G, p) => { G.p[p].altin += 1; G.olay.push({ t: 'altin', p, n: 1 }); } },
+    duman: { m: 1, e: '🌫️', hedef: 'dost', ad: T('Duman', 'Smoke'), yazi: T('Bir birliğine Gizlenme ver.', 'Give one of your units Stealth.'), oyna: (G, p, h) => { const b = bul(G, h.p, h.uid); if (b) { b.gizli = true; G.olay.push({ t: 'guc', h: 'b' + b.uid, s: 0, c: 0 }); } } },
+    kanayini: { m: 2, e: '🩸', hedef: 'dost', ad: T('Kan Ayini', 'Blood Rite'), yazi: T('Bir birliğine Can çalma ve +1 saldırı ver.', 'Give one of your units Lifesteal and +1 attack.'), oyna: (G, p, h) => { const b = bul(G, h.p, h.uid); if (b) { b.cal = true; guc(G, b, 1, 0); } } },
+    savasnarasi: { m: 3, e: '📣', ad: T('Savaş Narası', 'War Cry'), yazi: T('Bütün birliklerine +1 saldırı ve Öfke.', 'Your units get +1 attack and Rage.'), oyna: (G, p) => G.p[p].saha.forEach(x => { x.ofke = true; guc(G, x, 1, 0); }) },
     zirhla: { m: 1, e: '🔰', hedef: 'dost', ad: T('Zırhla', 'Armour Up'), yazi: T('Bir birliğine Zırh ve +1 can ver.', 'Give one of your units Armour and +1 health.'), oyna: (G, p, h) => { const b = bul(G, h.p, h.uid); if (b) { b.kalkan = true; guc(G, b, 0, 1); } } },
     vergi: { m: 1, e: '💰', ad: T('Vergi', 'Tax'), yazi: T('Bu tur 2 altın kazan.', 'Gain 2 gold this turn.'), oyna: (G, p) => { G.p[p].altin += 2; G.olay.push({ t: 'altin', p, n: 2 }); } },
     kis: { m: 3, e: '❄️', ad: T('Kış', 'Winter'), yazi: T('Bütün düşman birlikler bir tur saldıramaz.', 'All enemy units cannot attack for a turn.'), oyna: (G, p) => G.p[1 - p].saha.forEach(x => { x.donuk = 1; G.olay.push({ t: 'dondu', h: 'b' + x.uid }); }) },
@@ -69,17 +85,18 @@
   /* kahramanlar: m altın, tur başına bir kez. dusman: yalnızca rakipte (patron gücü) */
   const KH = {
     kral: { m: 2, e: '👑', saha: 1, ad: T('Kral', 'King'), guc: T('Halkı Topla', 'Rally'), yazi: T('Bir Köylü (1/2) çağır.', 'Summon a Villager (1/2).'), kullan: (G, p) => cagir(G, p, 'koylu') },
-    okcubasi: { m: 2, e: '🏹', hedef: 'dusman', ad: T('Okçubaşı', 'Master Archer'), guc: T('Keskin Ok', 'Sharp Arrow'), yazi: T('Bir düşmana 1 hasar.', '1 damage to an enemy.'), kullan: (G, p, h) => hasarVer(G, h, 1) },
-    demirciusta: { m: 2, e: '⚒️', hedef: 'dost', ad: T('Demirci Usta', 'Master Smith'), guc: T('Bileyle', 'Hone'), yazi: T('Bir birliğine +1 saldırı.', 'Give one of your units +1 attack.'), kullan: (G, p, h) => { const b = bul(G, h.p, h.uid); if (b) guc(G, b, 1, 0); } },
-    rahibe: { m: 2, e: '🌿', ad: T('Başrahibe', 'High Priestess'), guc: T('Şifa', 'Mend'), yazi: T('Kalene 2 can.', 'Restore 2 to your castle.'), kullan: (G, p) => iyilestir(G, p, 2) },
+    okcubasi: { m: 2, e: '🏹', hedef: 'dbirlik', ad: T('Okçubaşı', 'Master Archer'), guc: T('Keskin Ok', 'Sharp Arrow'), yazi: T('Bir düşman birliğe 1 hasar.', '1 damage to an enemy unit.'), kullan: (G, p, h) => hasarVer(G, h, 1) },
+    demirciusta: { m: 2, e: '⚒️', hedef: 'dost', ad: T('Demirci Usta', 'Master Smith'), guc: T('Bileyle', 'Hone'), yazi: T('Bir birliğine +1/+1.', 'Give one of your units +1/+1.'), kullan: (G, p, h) => { const b = bul(G, h.p, h.uid); if (b) guc(G, b, 1, 1); } },
+    rahibe: { m: 2, e: '🌿', ad: T('Başrahibe', 'High Priestess'), guc: T('Şifa', 'Mend'), yazi: T('Kalene 3 can.', 'Restore 3 to your castle.'), kullan: (G, p) => iyilestir(G, p, 3) },
+    kralice: { m: 3, e: '👸', ad: T('Kraliçe', 'Queen'), guc: T('Saray Emri', 'Royal Decree'), yazi: T('Bir kart çek.', 'Draw a card.'), kullan: (G, p) => cek(G, p) },
     haydutbasi: { m: 2, e: '💀', dusman: 1, ad: T('Haydut Başı', 'Bandit Chief'), guc: T('Pusu', 'Ambush'), yazi: T('Rastgele bir düşman birliğe 1 hasar.', '1 damage to a random enemy unit.'), kosul: (G, p) => G.p[1 - p].saha.length > 0, kullan: (G, p) => { const d = G.p[1 - p].saha; if (d.length) hasarVer(G, { t: 'b', p: 1 - p, uid: rast(d).uid }, 1); } },
     komutanK: { m: 2, e: '🎖️', dusman: 1, hedef: 'dost', ad: T('Kuzey Komutanı', 'Northern Commander'), guc: T('Emir', 'Command'), yazi: T('Bir birliğine +1 saldırı.', 'Give one of his units +1 attack.'), kullan: (G, p, h) => { const b = bul(G, h.p, h.uid); if (b) guc(G, b, 1, 0); } },
     buzcadisi: { m: 3, e: '🧙‍♀️', dusman: 1, hedef: 'dbirlik', ad: T('Buz Cadısı', 'Ice Witch'), guc: T('Dondur', 'Freeze'), yazi: T('Bir düşman birliği bir tur dondur.', 'Freeze an enemy unit for a turn.'), kullan: (G, p, h) => { const b = bul(G, h.p, h.uid); if (b) { b.donuk = 1; G.olay.push({ t: 'dondu', h: 'b' + b.uid }); } } },
     ejderlordu: { m: 4, e: '🐉', dusman: 1, ad: T('Ejder Lordu', 'Dragon Lord'), guc: T('Alev Nefesi', 'Fire Breath'), yazi: T('Bütün düşman birliklere 1 hasar.', '1 damage to all enemy units.'), kosul: (G, p) => G.p[1 - p].saha.length > 0, kullan: (G, p) => G.p[1 - p].saha.slice().forEach(x => hasarVer(G, { t: 'b', p: 1 - p, uid: x.uid }, 1)) },
   };
   for (const id in KH) KH[id].id = id;
-  const KAHRAMANLAR = ['kral', 'okcubasi', 'demirciusta', 'rahibe'];
-  const KILIT_SIRA = ['haberci', 'gozcu', 'bileme', 'fedai', 'zirhlipiyade', 'demirci', 'tasduvar', 'zirhla', 'sifaci', 'ustaokcu', 'rahip', 'vergi', 'kis', 'mancinik', 'takviye', 'bombaci', 'kalkanduvari', 'egitmen', 'paladin', 'komutan', 'agirsuvari', 'suikastci', 'mezarci', 'mancinikatis', 'idam', 'dev', 'kraliyetmuhafizi', 'deprem', 'kusatmakulesi', 'ejder', 'hukumdar'];
+  const KAHRAMANLAR = ['kral', 'okcubasi', 'demirciusta', 'rahibe', 'kralice'];
+  const KILIT_SIRA = ['haberci', 'gozcu', 'bileme', 'fedai', 'yabandomuzu', 'zirhlipiyade', 'demirci', 'yarasa', 'tasduvar', 'zirhla', 'duman', 'sifaci', 'ustaokcu', 'rahip', 'vergi', 'kis', 'casus', 'mancinik', 'takviye', 'bombaci', 'ayi', 'kanayini', 'kalkanduvari', 'egitmen', 'paladin', 'komutan', 'karasovalye', 'kocbasi', 'savasnarasi', 'agirsuvari', 'suikastci', 'mezarci', 'mancinikatis', 'idam', 'dev', 'kraliyetmuhafizi', 'deprem', 'kusatmakulesi', 'golgeusta', 'ejder', 'hukumdar'];
   const ac = o => Object.entries(o).flatMap(([id, n]) => Array(n).fill(id));
   const DESTELER = {
     baslangic: ac({ koylu: 2, oduncu: 2, mizrakci: 2, okcu: 2, kalkanci: 2, kurt: 1, ciftci: 1, suvari: 2, haydut: 1, sovalye: 2, muhafiz: 1, atesoku: 1, okyagmuru: 1 }),
@@ -93,25 +110,25 @@
   /* sefer: z = yapay zekâ düzeyi, bas = rakibin sahada başladığı birlikler, kural: 'tipi' (tur başında sırası gelenin birlikleri 1 hasar alır) */
   const SEFER = [
     { bolge: T('Sınır Köyleri', 'Border Villages'), ad: T('Tavuk Hırsızları', 'Chicken Thieves'), e: '🐔', can: 12, z: 0, deste: ac({ koylu: 2, oduncu: 2, mizrakci: 2, okcu: 2, kurt: 2, ciftci: 2, kalkanci: 2, haydut: 2, suvari: 2, kuyu: 2 }), odul: ['haberci', 'gozcu'] },
-    { ad: T('Haydut Çetesi', 'Bandit Gang'), e: '🗡️', can: 15, z: 0, deste: ac({ koylu: 2, oduncu: 2, fedai: 2, kurt: 2, haydut: 2, mizrakci: 2, okcu: 2, suvari: 2, sovalye: 2, atesoku: 2 }), odul: ['bileme', 'fedai'] },
-    { ad: T('Kurt Sürüsü', 'Wolf Pack'), e: '🐺', can: 13, z: 0, bas: ['kurt'], not: T('Rakip sahada bir Kurt ile başlar.', 'The enemy starts with a Wolf.'), deste: ac({ kurt: 2, oduncu: 2, fedai: 2, suvari: 2, haydut: 2, mizrakci: 2, koylu: 2, okcu: 2, sovalye: 2, atesoku: 2 }), odul: ['zirhlipiyade', 'demirci'] },
-    { ad: T('Orman Okçuları', 'Forest Archers'), e: '🏹', can: 14, z: 1, deste: ac({ okcu: 2, gozcu: 2, ustaokcu: 2, kalkanci: 2, mizrakci: 2, koylu: 2, okyagmuru: 2, atesoku: 2, suikastci: 1, sovalye: 2, hasat: 1 }), odul: ['tasduvar', 'zirhla'] },
+    { ad: T('Haydut Çetesi', 'Bandit Gang'), e: '🗡️', can: 15, z: 0, deste: ac({ koylu: 2, oduncu: 2, fedai: 2, kurt: 2, haydut: 2, mizrakci: 2, okcu: 2, suvari: 2, sovalye: 2, atesoku: 2 }), odul: ['bileme', 'fedai', 'yabandomuzu'] },
+    { ad: T('Kurt Sürüsü', 'Wolf Pack'), e: '🐺', can: 13, z: 0, bas: ['kurt'], not: T('Rakip sahada bir Kurt ile başlar.', 'The enemy starts with a Wolf.'), deste: ac({ kurt: 2, oduncu: 2, fedai: 2, suvari: 2, haydut: 2, mizrakci: 2, koylu: 2, okcu: 2, sovalye: 2, atesoku: 2 }), odul: ['zirhlipiyade', 'demirci', 'yarasa'] },
+    { ad: T('Orman Okçuları', 'Forest Archers'), e: '🏹', can: 14, z: 1, deste: ac({ okcu: 2, gozcu: 2, ustaokcu: 2, kalkanci: 2, mizrakci: 2, koylu: 2, okyagmuru: 2, atesoku: 2, suikastci: 1, sovalye: 2, hasat: 1 }), odul: ['tasduvar', 'zirhla', 'duman'] },
     { ad: T('Haydut Başı', 'Bandit Chief'), e: '💀', can: 18, z: 1, kah: 'haydutbasi', patron: 1, deste: ac({ fedai: 2, kurt: 2, haydut: 2, suvari: 2, zirhlipiyade: 2, bombaci: 2, sovalye: 2, suikastci: 2, agirsuvari: 1, atesoku: 2, bileme: 1 }), odul: ['sifaci'], kahOdul: 'okcubasi' },
     { bolge: T('Kuzey Yolu', 'Northern Road'), ad: T('Sınır Devriyesi', 'Border Patrol'), e: '🚩', can: 18, z: 1, deste: ac({ mizrakci: 2, kalkanci: 2, zirhlipiyade: 2, okcu: 2, suvari: 2, demirci: 1, sovalye: 2, muhafiz: 2, ustaokcu: 1, rahip: 1, atesoku: 2, kalkanduvari: 1 }), odul: ['ustaokcu', 'rahip'] },
-    { ad: T('Kış Geçidi', 'Winter Pass'), e: '❄️', can: 12, z: 0, kural: 'tipi', not: T('Tipi: her turun başında, sırası gelenin birlikleri 1 hasar alır.', 'Blizzard: at the start of each turn, the active side\'s units take 1 damage.'), deste: ac({ kalkanci: 2, tasduvar: 2, mizrakci: 2, rahip: 2, muhafiz: 2, sovalye: 2, paladin: 2, kis: 2, atesoku: 2, dev: 1, kuyu: 1 }), odul: ['vergi', 'kis'] },
-    { ad: T('Kuşatma Kampı', 'Siege Camp'), e: '🪨', can: 15, z: 1, bas: ['tasduvar'], not: T('Rakip bir Taş Duvar arkasında başlar; mancınıkları kaleni döver.', 'The enemy starts behind a Stone Wall; its catapults pound your castle.'), deste: ac({ kalkanci: 2, tasduvar: 2, muhafiz: 2, mancinik: 2, okcu: 2, zirhlipiyade: 2, bombaci: 2, sovalye: 2, mancinikatis: 1, atesoku: 2, takviye: 1 }), odul: ['mancinik', 'takviye', 'bombaci'] },
-    { ad: T('Paralı Askerler', 'Mercenaries'), e: '⚔️', can: 20, z: 2, deste: ac({ zirhlipiyade: 2, haydut: 2, suvari: 2, egitmen: 2, sovalye: 2, paladin: 2, suikastci: 2, agirsuvari: 2, vergi: 1, atesoku: 2, bileme: 1 }), odul: ['kalkanduvari', 'egitmen', 'paladin'] },
-    { ad: T('Kuzey Komutanı', 'Northern Commander'), e: '🎖️', can: 20, z: 1, kah: 'komutanK', patron: 1, deste: ac({ haberci: 2, zirhlipiyade: 2, okcu: 2, suvari: 2, demirci: 2, sovalye: 2, muhafiz: 2, komutan: 2, agirsuvari: 1, takviye: 1, atesoku: 1, mancinikatis: 1 }), odul: ['komutan'], kahOdul: 'demirciusta' },
-    { bolge: T('Ejder Dağı', 'Dragon Mountain'), ad: T('Dağ Eşkıyaları', 'Mountain Raiders'), e: '🏔️', can: 22, z: 2, deste: ac({ fedai: 2, gozcu: 2, suvari: 2, bombaci: 2, mezarci: 2, suikastci: 2, agirsuvari: 2, sovalye: 2, atesoku: 2, idam: 1, vergi: 1 }), odul: ['agirsuvari', 'suikastci', 'mezarci'] },
+    { ad: T('Kış Geçidi', 'Winter Pass'), e: '❄️', can: 12, z: 0, kural: 'tipi', not: T('Tipi: her turun başında, sırası gelenin birlikleri 1 hasar alır.', 'Blizzard: at the start of each turn, the active side\'s units take 1 damage.'), deste: ac({ kalkanci: 2, haydut: 2, mizrakci: 2, rahip: 1, muhafiz: 2, sovalye: 2, suvari: 2, paladin: 1, kis: 2, atesoku: 2, dev: 1, kuyu: 1 }), odul: ['vergi', 'kis', 'casus'] },
+    { ad: T('Kuşatma Kampı', 'Siege Camp'), e: '🪨', can: 14, z: 1, bas: ['tasduvar'], not: T('Rakip bir Taş Duvar arkasında başlar; mancınıkları kaleni döver.', 'The enemy starts behind a Stone Wall; its catapults pound your castle.'), deste: ac({ kalkanci: 2, tasduvar: 2, muhafiz: 2, mancinik: 2, okcu: 2, zirhlipiyade: 2, bombaci: 2, sovalye: 2, mancinikatis: 1, atesoku: 2, takviye: 1 }), odul: ['mancinik', 'takviye', 'bombaci', 'ayi'] },
+    { ad: T('Paralı Askerler', 'Mercenaries'), e: '⚔️', can: 20, z: 2, deste: ac({ zirhlipiyade: 2, haydut: 2, suvari: 2, egitmen: 2, sovalye: 2, paladin: 2, suikastci: 2, agirsuvari: 2, vergi: 1, atesoku: 2, bileme: 1 }), odul: ['kalkanduvari', 'egitmen', 'paladin', 'kanayini'] },
+    { ad: T('Kuzey Komutanı', 'Northern Commander'), e: '🎖️', can: 18, z: 1, kah: 'komutanK', patron: 1, deste: ac({ haberci: 2, zirhlipiyade: 2, okcu: 2, suvari: 2, demirci: 2, sovalye: 2, muhafiz: 2, komutan: 2, agirsuvari: 1, takviye: 1, atesoku: 1, mancinikatis: 1 }), odul: ['komutan', 'karasovalye'], kahOdul: 'demirciusta' },
+    { bolge: T('Ejder Dağı', 'Dragon Mountain'), ad: T('Dağ Eşkıyaları', 'Mountain Raiders'), e: '🏔️', can: 22, z: 2, deste: ac({ fedai: 2, gozcu: 2, suvari: 2, bombaci: 2, mezarci: 2, suikastci: 2, agirsuvari: 2, sovalye: 2, atesoku: 2, idam: 1, vergi: 1 }), odul: ['agirsuvari', 'suikastci', 'mezarci', 'kocbasi'] },
     { ad: T('Buz Cadısı', 'Ice Witch'), e: '🧙‍♀️', can: 16, z: 1, kah: 'buzcadisi', patron: 1, deste: ac({ gozcu: 2, kalkanci: 2, rahip: 2, tasduvar: 2, paladin: 2, ustaokcu: 2, kis: 2, mancinikatis: 2, okyagmuru: 1, kusatmakulesi: 1, dev: 1, hasat: 1 }), odul: ['mancinikatis', 'idam'], kahOdul: 'rahibe' },
-    { ad: T('Dev Mağarası', 'Giant\'s Cave'), e: '🗿', can: 18, z: 1, bas: ['tasduvar'], not: T('Rakip bir Taş Duvar ile başlar; arkasında devler bekler.', 'The enemy starts with a Stone Wall; giants wait behind it.'), deste: ac({ koylu: 2, kalkanci: 2, tasduvar: 2, muhafiz: 2, mizrakci: 2, kraliyetmuhafizi: 1, dev: 2, sovalye: 2, rahip: 2, kalkanduvari: 1, mancinikatis: 1, zirhla: 1 }), odul: ['dev', 'kraliyetmuhafizi'] },
-    { ad: T('Ejder Tapınağı', 'Dragon Temple'), e: '🔥', can: 20, z: 1, deste: ac({ haberci: 2, zirhlipiyade: 2, ustaokcu: 2, egitmen: 1, paladin: 2, komutan: 1, agirsuvari: 2, kusatmakulesi: 2, mancinik: 1, atesoku: 2, mancinikatis: 1, deprem: 1, idam: 1 }), odul: ['deprem', 'kusatmakulesi'] },
+    { ad: T('Dev Mağarası', 'Giant\'s Cave'), e: '🗿', can: 16, z: 1, bas: ['tasduvar'], not: T('Rakip bir Taş Duvar ile başlar; arkasında devler bekler.', 'The enemy starts with a Stone Wall; giants wait behind it.'), deste: ac({ koylu: 2, kalkanci: 2, tasduvar: 2, muhafiz: 2, mizrakci: 2, kraliyetmuhafizi: 1, dev: 1, okcu: 1, sovalye: 2, rahip: 2, kalkanduvari: 1, mancinikatis: 1, zirhla: 1 }), odul: ['dev', 'kraliyetmuhafizi', 'savasnarasi'] },
+    { ad: T('Ejder Tapınağı', 'Dragon Temple'), e: '🔥', can: 20, z: 1, deste: ac({ haberci: 2, zirhlipiyade: 2, ustaokcu: 2, egitmen: 1, paladin: 2, komutan: 1, agirsuvari: 2, kusatmakulesi: 2, mancinik: 1, atesoku: 2, mancinikatis: 1, deprem: 1, idam: 1 }), odul: ['deprem', 'kusatmakulesi', 'golgeusta'] },
     { ad: T('Ejder Lordu', 'Dragon Lord'), e: '🐉', can: 21, z: 2, kah: 'ejderlordu', patron: 1, deste: ac({ haberci: 2, gozcu: 2, koylu: 2, zirhlipiyade: 2, ustaokcu: 1, sovalye: 2, muhafiz: 2, komutan: 1, agirsuvari: 1, dev: 1, hukumdar: 1, ejder: 1, atesoku: 1, mancinikatis: 1 }), odul: ['ejder', 'hukumdar'] },
   ];
 
   /* ---------- temel işlemler ---------- */
   const bul = (G, p, uid) => G.p[p].saha.find(b => b.uid === uid);
-  function birlik(G, id) { const k = K[id]; return { uid: ++G.uid, id, s: k.s, c: k.c, mc: k.c, koruma: !!k.koruma, hucum: !!k.hucum, menzil: !!k.menzil, kalkan: !!k.kalkan, donuk: 0, buz: false, hazir: !!k.hucum, sal: false }; }
+  function birlik(G, id) { const k = K[id]; return { uid: ++G.uid, id, s: k.s, c: k.c, mc: k.c, koruma: !!k.koruma, hucum: !!k.hucum, menzil: !!k.menzil, kalkan: !!k.kalkan, cal: !!k.cal, ofke: !!k.ofke, gizli: !!k.gizli, delici: !!k.delici, donuk: 0, buz: false, hazir: !!k.hucum, sal: false }; }
   function cagir(G, p, id) { const P = G.p[p]; if (P.saha.length >= SAHA_MAX) return null; const b = birlik(G, id); P.saha.push(b); G.olay.push({ t: 'geldi', uid: b.uid }); return b; }
   function cek(G, p) {
     const P = G.p[p];
@@ -120,9 +137,12 @@
     if (P.el.length >= EL_MAX) G.olay.push({ t: 'yandi', p, id }); else { P.el.push(id); G.olay.push({ t: 'cek', p }); }
   }
   function hasarVer(G, h, n) {
-    if (!(n > 0)) return;
-    if (h.t === 'k') { G.p[h.p].can -= n; G.olay.push({ t: 'hasar', h: 'k' + h.p, n }); }
-    else { const b = bul(G, h.p, h.uid); if (!b) return; if (b.kalkan) { b.kalkan = false; G.olay.push({ t: 'kalkan', h: 'b' + b.uid }); return; } b.c -= n; G.olay.push({ t: 'hasar', h: 'b' + b.uid, n }); }
+    if (!(n > 0)) return 0;
+    if (h.t === 'k') { G.p[h.p].can -= n; G.olay.push({ t: 'hasar', h: 'k' + h.p, n }); return n; }
+    const b = bul(G, h.p, h.uid); if (!b) return 0; if (b.kalkan) { b.kalkan = false; G.olay.push({ t: 'kalkan', h: 'b' + b.uid }); return 0; }
+    b.c -= n; G.olay.push({ t: 'hasar', h: 'b' + b.uid, n });
+    if (b.ofke && b.c > 0) { b.s += 2; G.olay.push({ t: 'ofke', h: 'b' + b.uid }); }
+    return n;
   }
   function iyilestir(G, p, n) { const P = G.p[p], o = P.can; P.can = Math.min(P.mcan, P.can + n); if (P.can > o) G.olay.push({ t: 'iyi', h: 'k' + p, n: P.can - o }); }
   function guc(G, b, s, c) { b.s += s; b.c += c; b.mc += c; G.olay.push({ t: 'guc', h: 'b' + b.uid, s, c }); }
@@ -145,11 +165,14 @@
     cek(G, G.tur); temizle(G);
   }
   function yeniOyun(o) {
-    const G = { uid: 0, n: 1, tur: o.ilk != null ? o.ilk : (Math.random() < .5 ? 0 : 1), bitti: null, olay: [], p: [], ikinciAltin: o.ikinciAltin || 0, kural: o.kural || '' };
+    if (o.tohum != null) RS = o.tohum | 0;
+    const G = { uid: 0, n: 1, tur: o.ilk != null ? o.ilk : (rnd() < .5 ? 0 : 1), bitti: null, olay: [], p: [], ikinciAltin: o.ikinciAltin || 0, kural: o.kural || '' };
     for (const p of [0, 1]) { const can = (o.can && o.can[p]) || 20; G.p.push({ can, mcan: can, maxAltin: (o.ekAltin && o.ekAltin[p]) || 0, altin: 0, deste: kar(o.desteler[p].slice()), el: [], saha: [], yorgun: 0, kah: (o.kah && o.kah[p]) || '', guc: false }); }
     for (const p of [0, 1]) ((o.bas && o.bas[p]) || []).forEach(id => cagir(G, p, id));
-    for (const p of [0, 1]) { const n = p === G.tur ? 3 : 5; /* ikinci başlayan iki kart fazla alır (ilk başlama üstünlüğünü dengeler) */ for (let i = 0; i < n; i++) G.p[p].el.push(G.p[p].deste.pop()); }
+    for (const p of [0, 1]) { const n = p === G.tur ? 3 : 4; /* ikinci başlayan bir kart fazla ve Sikke alır (ilk başlama üstünlüğünü dengeler) */ for (let i = 0; i < n; i++) G.p[p].el.push(G.p[p].deste.pop()); }
+    if (o.sikke !== false) G.p[1 - G.tur].el.push('sikke');   /* ikinci başlayana Sikke (ilk başlama üstünlüğünü dengeler) */
     basla(G); G.olay = [];
+    if (o.tohum != null) { G.rs = RS; RS = null; }
     return G;
   }
 
@@ -160,7 +183,7 @@
   }
   function hedefListe(G, p, tip) {
     if (tip === 'dost') return G.p[p].saha.map(b => ({ t: 'b', p, uid: b.uid }));
-    const d = G.p[1 - p].saha.map(b => ({ t: 'b', p: 1 - p, uid: b.uid }));
+    const d = G.p[1 - p].saha.filter(b => !b.gizli).map(b => ({ t: 'b', p: 1 - p, uid: b.uid }));
     return tip === 'dbirlik' ? d : d.concat([{ t: 'k', p: 1 - p }]);
   }
   /* kahraman gücü */
@@ -201,15 +224,18 @@
   const saldirabilir = (G, p, b) => G.bitti == null && G.tur === p && b && b.hazir && !b.sal && b.s > 0;
   function saldiriHedefleri(G, p, uid) {
     const b = bul(G, p, uid); if (!saldirabilir(G, p, b)) return [];
-    const d = G.p[1 - p].saha, kor = d.filter(x => x.koruma);
+    const d = G.p[1 - p].saha.filter(x => !x.gizli), kor = b.delici ? [] : d.filter(x => x.koruma);
     if (kor.length) return kor.map(x => ({ t: 'b', p: 1 - p, uid: x.uid }));
     return d.map(x => ({ t: 'b', p: 1 - p, uid: x.uid })).concat([{ t: 'k', p: 1 - p }]);
   }
   function saldir(G, p, uid, hedef) {
     if (!saldiriHedefleri(G, p, uid).some(x => ayni(x, hedef))) return false;
-    const a = bul(G, p, uid); a.sal = true; G.olay.push({ t: 'saldir', uid, h: hedef.t === 'k' ? 'k' + hedef.p : 'b' + hedef.uid });
-    if (hedef.t === 'k') hasarVer(G, hedef, a.s);
-    else { const d = bul(G, hedef.p, hedef.uid), ds = d.s; hasarVer(G, hedef, a.s); if (!a.menzil) hasarVer(G, { t: 'b', p, uid }, ds); }
+    const a = bul(G, p, uid); a.sal = true; if (a.gizli) { a.gizli = false; G.olay.push({ t: 'goruldu', h: 'b' + uid }); }
+    G.olay.push({ t: 'saldir', uid, h: hedef.t === 'k' ? 'k' + hedef.p : 'b' + hedef.uid });
+    let ver = 0;
+    if (hedef.t === 'k') ver = hasarVer(G, hedef, a.s);
+    else { const d = bul(G, hedef.p, hedef.uid), ds = d.s; ver = hasarVer(G, hedef, a.s); if (!a.menzil) { const geri = hasarVer(G, { t: 'b', p, uid }, ds); if (d.cal && geri) iyilestir(G, hedef.p, geri); } }
+    if (a.cal && ver) iyilestir(G, p, ver);
     temizle(G); return true;
   }
   function bitir(G) {
@@ -226,11 +252,15 @@
     if (!gucEngel(G, p)) { const hs = gucHedefleri(G, p); if (hs) hs.forEach(h => E.push({ t: 'guc', h })); else E.push({ t: 'guc' }); }
     return E;
   }
-  function uygula(G, a) { return a.t === 'oyna' ? oyna(G, G.tur, a.i, a.h) : a.t === 'saldir' ? saldir(G, G.tur, a.uid, a.h) : a.t === 'guc' ? gucKullan(G, G.tur, a.h) : bitir(G); }
+  function uygula(G, a) {
+    if (G.rs != null) RS = G.rs;
+    try { return a.t === 'oyna' ? oyna(G, G.tur, a.i, a.h) : a.t === 'saldir' ? saldir(G, G.tur, a.uid, a.h) : a.t === 'guc' ? gucKullan(G, G.tur, a.h) : bitir(G); }
+    finally { if (G.rs != null) { G.rs = RS; } RS = null; }
+  }
   const kopya = G => { const o = G.olay; G.olay = []; const C = JSON.parse(JSON.stringify(G)); G.olay = o; return C; };
 
   /* ---------- bilgisayar oyuncusu ---------- */
-  const bDeger = b => b.s * 1.2 + b.c * .9 + (b.koruma ? 1 : 0) + (b.menzil ? .6 : 0) + (K[b.id].sonTur ? 2 : 0) + (b.kalkan ? 1.4 : 0) + (K[b.id].olum ? .7 : 0) - (b.donuk || b.buz ? b.s * .5 : 0);
+  const bDeger = b => b.s * 1.2 + b.c * .9 + (b.koruma ? 1 : 0) + (b.menzil ? .6 : 0) + (K[b.id].sonTur ? 2 : 0) + (b.kalkan ? 1.4 : 0) + (K[b.id].olum ? .7 : 0) + (b.cal ? b.s * .4 : 0) + (b.ofke ? .8 : 0) + (b.gizli ? 1 : 0) + (b.delici ? .6 : 0) - (b.donuk || b.buz ? b.s * .5 : 0);
   function deger(G, p, zor) {
     if (G.bitti === p) return 1e6; if (G.bitti != null) return -1e6;
     const B = G.p[p], D = G.p[1 - p]; let v = 0;
@@ -248,6 +278,10 @@
   /* zor: 0 kolay · 1 orta · 2 zor  →  tek eylem döndürür ({t:'bitir'} dahil) */
   function yzSec(G, p, zor) {
     const E = eylemler(G, p); if (!E.length) return { t: 'bitir' };
+    { /* Sikke: bir altın eksik kalan kartı oynatabiliyorsa kullan */
+      const P = G.p[p], si = P.el.indexOf('sikke');
+      if (si >= 0 && P.el.some((id, i) => i !== si && K[id].m === P.altin + 1 && !(K[id].tip === 'b' && P.saha.length >= SAHA_MAX))) return { t: 'oyna', i: si };
+    }
     if (zor === 0) { if (Math.random() < .1) return { t: 'bitir' }; if (Math.random() < .35) return rast(E); }
     if (zor === 1 && Math.random() < .08) return rast(E);
     const taban = deger(G, p, zor), gurultu = zor === 0 ? 3.5 : zor === 1 ? 2.6 : 0;
