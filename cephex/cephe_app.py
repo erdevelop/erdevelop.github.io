@@ -9364,6 +9364,7 @@ class Uygulama(tk.Tk):
         self.model = {"ek": [], "tip": [], "ytip": [], "hucre": {}, "dik_yok": set(), "yat_yok": set(), "yalanci": set(), "dik_gecis": set(), "dik_orta": set(), "kayma": {}, "zincir_hat": {},
                       "dtip": "", "dik_tip": {}, "yat_tip": {}, "parca_cikar": {}, "parca_grup": {}, "takoz_hat": {}, "ilerleme": set()}
         self.cephe_tipleri = []
+        self.aktif_tip = None             # etkin cephe tipinin adı: girdiler / sekmeler bu tipi gösterir, değişiklikler ona yazılır
         self.yatay_tipleri = list(YATAY_TIP_VARSAYILAN)
         self.dikey_tipleri = list(YATAY_TIP_VARSAYILAN)
         self._sec = set()                 # Ctrl ile seçilen cephe öğeleri: ("z",kat,bölge,aks) ("d",aks,kat) ("y",kat,hat,aralık)
@@ -11141,6 +11142,7 @@ class Uygulama(tk.Tk):
         # Sağ: altta komut satırı / işlem günlüğü, üstte sekmeler
         self._konsol_kur(self._pw_v)
         nb = self._nb
+        self._tip_cubugu_kur(ust_f)
         self._sekme_seridi = _SekmeSeridi(ust_f, nb)
         self._sekme_seridi.pack(fill="x", pady=(0, 4))
         nb.pack(fill="both", expand=True)
@@ -11379,9 +11381,11 @@ class Uygulama(tk.Tk):
         self.tr_tipler.pack(fill="x")
         bt_ = ttk.Frame(gt_)
         bt_.pack(fill="x", pady=(6, 0))
-        for et_, kom_ in (("Mevcut cepheyi tip olarak ekle", self._tip_ekle), ("Adedi değiştir", self._tip_adet),
-                          ("Sil", self._tip_sil), ("Toplamı Excel'e", lambda: self._excel_kaydet(toplam=True))):
+        for et_, kom_ in (("Yeni tip (mevcut cepheden)", self._tip_ekle), ("Etkinleştir", self._tip_sec_etkin),
+                          ("Ad / adet...", self._tip_adet), ("Sil", self._tip_sil),
+                          ("Toplamı Excel'e", lambda: self._excel_kaydet(toplam=True))):
             ttk.Button(bt_, text=et_, command=kom_).pack(side="left", padx=(0, 4))
+        self.tr_tipler.bind("<Double-1>", lambda _e: self._tip_sec_etkin())
         self.lbl_tipler = ttk.Label(gt_, text="", foreground="#7a858e", wraplength=620, justify="left")
         self.lbl_tipler.pack(anchor="w", pady=(4, 0))
         gl_ = ttk.LabelFrame(sr_, text=" Montaj ilerlemesi (modüle tıklayarak işaretleyin) ", padding=8)
@@ -11601,8 +11605,10 @@ class Uygulama(tk.Tk):
             messagebox.showinfo("Excel", "Önce Hesapla'ya basın.")
             return
         if toplam and not self.cephe_tipleri:
-            messagebox.showinfo("Excel", "Önce 'Mevcut cepheyi tip olarak ekle' ile en az bir cephe tipi ekleyin.")
+            messagebox.showinfo("Excel", "Önce '+ Yeni tip' ile en az bir cephe tipi ekleyin.")
             return
+        if toplam:
+            self._tip_esitle()
         yol = filedialog.asksaveasfilename(defaultextension=".xlsx", initialfile="cephe_toplam.xlsx" if toplam else "cephe_bom.xlsx",
                                            filetypes=[("Excel", "*.xlsx")], title="Excel kaydet")
         if not yol:
@@ -11662,62 +11668,178 @@ class Uygulama(tk.Tk):
         self.hesapla()
 
     # ---- cephe tipleri
-    def _tip_ekle(self):
+    def _tip_klasor(self):
+        return os.path.dirname(os.path.abspath(self.proje_yolu)) if self.proje_yolu else uygulama_klasoru()
+
+    def _tip_bul(self, ad):
+        return next((t for t in self.cephe_tipleri if t.get("ad") == ad), None)
+
+    def _tip_esitle(self, klasor=None):
+        """Etkin tipe ekrandaki cephenin güncel hâlini yazar: girdiler, çizim, kesitler (düzenlenebilir kayıt) ve metraj özeti."""
+        t = self._tip_bul(self.aktif_tip) if self.aktif_tip else None
         s = self.sonuc
-        if not s:
+        if not t or not s:
+            return
+        try:
+            veri = self.proje_verisi(klasor or self._tip_klasor())
+        except Exception:
+            return
+        for k_ in ("cephe_tipleri", "aktif_tip"):
+            veri.pop(k_, None)
+        o = s["ozet"]
+        t.update({"olcu": f"{o['olcu'][0] / 1000:.2f}×{o['olcu'][1] / 1000:.2f}",
+                  "cam_m2": round(o.get("cam_m2", 0), 2), "ana_kg": round(s["agirlik"]["alu_toplam_kg"], 1),
+                  "malzeme": [(b_, [list(map(str, r)) for r in sat]) for b_, sat, _t in malzeme_listesi(s)],
+                  "cam": [list(r) for r in s.get("cam") or []], "veri": veri})
+
+    def _tip_ekle(self):
+        """Yeni cephe tipi: ekrandaki cephenin kopyası olarak eklenir ve etkin tip olur (ilk tipte ekrandaki cephe o tiptir)."""
+        if not self.sonuc:
             messagebox.showinfo("Cephe tipi", "Önce Hesapla'ya basın.")
             return
-        ad = simpledialog.askstring("Cephe tipi", "Tip adı (örn. T1):", parent=self,
+        self._tip_esitle()
+        ad = simpledialog.askstring("Cephe tipi", ("Yeni tip adı (ekrandaki cephenin kopyası olarak açılır, sonra "
+                                                   "değiştirirsiniz):" if self.cephe_tipleri else
+                                                   "Ekrandaki cephe bu adla ilk tip olur:"), parent=self,
                                     initialvalue=f"T{len(self.cephe_tipleri) + 1}")
-        if not ad:
+        if not ad or not ad.strip():
             return
-        adet = simpledialog.askinteger("Cephe tipi", "Bu tipten kaç adet var?", parent=self, initialvalue=1, minvalue=1)
+        ad = ad.strip()
+        if self._tip_bul(ad):
+            messagebox.showwarning("Cephe tipi", f"'{ad}' adlı tip zaten var.")
+            return
+        adet = simpledialog.askinteger("Cephe tipi", f"{ad}: projede bu tipten kaç adet var?", parent=self,
+                                       initialvalue=1, minvalue=1)
         if not adet:
             return
-        o = s["ozet"]
-        tip = {"ad": ad.strip(), "adet": int(adet), "olcu": f"{o['olcu'][0] / 1000:.2f}×{o['olcu'][1] / 1000:.2f}",
-               "cam_m2": round(o.get("cam_m2", 0), 2), "ana_kg": round(s["agirlik"]["alu_toplam_kg"], 1),
-               "malzeme": [(b, [list(map(str, r)) for r in sat]) for b, sat, _t in malzeme_listesi(s)],
-               "cam": [list(r) for r in s.get("cam") or []]}
-        self.cephe_tipleri = [t for t in self.cephe_tipleri if t["ad"] != tip["ad"]] + [tip]
+        self.cephe_tipleri.append({"ad": ad, "adet": int(adet)})
+        self.aktif_tip = ad
+        self._tip_esitle()
         self._tipler_yenile()
-        self._log(f"Cephe tipi eklendi: {tip['ad']} × {tip['adet']}")
+        self._log(f"Cephe tipi eklendi ve etkin: {ad} × {adet}. Şimdi yapılan değişiklikler {ad}'e yazılır; "
+                  f"başka tipe üstteki 'Cephe tipi' listesinden geçin.")
+
+    def _tip_etkinlestir(self, ad):
+        """Tipi ekrana getirir: önce etkin tip güncellenir, sonra seçilen tipin girdileri, çizimi ve kesitleri yüklenir."""
+        if ad == self.aktif_tip:
+            return
+        t = self._tip_bul(ad)
+        if not t:
+            return
+        if not t.get("veri"):
+            messagebox.showinfo("Cephe tipi", f"'{ad}' eski sürümde eklenmiş: yalnız metrajı var, cephesi kayıtlı değil. "
+                                              "Düzenlemek için cepheyi yeniden çizip '+ Yeni tip' ile ekleyin, bunu silin.")
+            self._tipler_yenile()
+            return
+        self._tip_esitle()
+        tipler, eski = self.cephe_tipleri, self.aktif_tip
+        proje = {k_: v_.get() for k_, v_ in self.v.items() if k_ == "proje_adi" or k_.startswith("sip_")}
+        try:
+            uyari = self.proje_uygula(copy.deepcopy(t["veri"]), self._tip_klasor())
+        except (ValueError, KeyError, TypeError) as e:
+            self.cephe_tipleri, self.aktif_tip = tipler, eski
+            messagebox.showerror("Cephe tipi", f"{ad} açılamadı: {e}")
+            return
+        self.cephe_tipleri, self.aktif_tip = tipler, ad
+        for k_, v_ in proje.items():                  # proje geneli bilgiler tipten tipe değişmez
+            self.v[k_].set(v_)
+        self._tipler_yenile()
+        self._log(f"Etkin cephe tipi: {ad} (× {t.get('adet', 1)})" + ("; " + "; ".join(uyari) if uyari else ""),
+                  "uyari" if uyari else "")
 
     def _tip_secili(self):
         sec = self.tr_tipler.selection()
         if not sec:
+            if self.aktif_tip:
+                return self._tip_bul(self.aktif_tip)
             messagebox.showinfo("Cephe tipi", "Listeden bir tip seçin.")
             return None
-        ad = self.tr_tipler.item(sec[0], "values")[0]
-        return next((t for t in self.cephe_tipleri if t["ad"] == ad), None)
+        ad = self.tr_tipler.item(sec[0], "values")[0].lstrip("▶ ").strip()
+        return self._tip_bul(ad)
 
-    def _tip_adet(self):
-        t = self._tip_secili()
-        if not t:
-            return
-        n = simpledialog.askinteger("Cephe tipi", f"{t['ad']} adedi:", parent=self, initialvalue=t["adet"], minvalue=1)
-        if n:
-            t["adet"] = int(n)
-            self._tipler_yenile()
-
-    def _tip_sil(self):
+    def _tip_sec_etkin(self):
         t = self._tip_secili()
         if t:
-            self.cephe_tipleri = [x for x in self.cephe_tipleri if x is not t]
-            self._tipler_yenile()
+            self._tip_etkinlestir(t["ad"])
+
+    def _tip_adet(self, t=None):
+        t = t or self._tip_secili()
+        if not t:
+            return
+        ad = simpledialog.askstring("Cephe tipi", "Tip adı:", parent=self, initialvalue=t["ad"])
+        if not ad or not ad.strip():
+            return
+        ad = ad.strip()
+        if ad != t["ad"] and self._tip_bul(ad):
+            messagebox.showwarning("Cephe tipi", f"'{ad}' adlı tip zaten var.")
+            return
+        n = simpledialog.askinteger("Cephe tipi", f"{ad} adedi:", parent=self, initialvalue=t.get("adet", 1), minvalue=1)
+        if not n:
+            return
+        if self.aktif_tip == t["ad"]:
+            self.aktif_tip = ad
+        t["ad"], t["adet"] = ad, int(n)
+        self._tipler_yenile()
+
+    def _tip_sil(self, t=None):
+        t = t or self._tip_secili()
+        if not t or not messagebox.askyesno("Cephe tipi", f"'{t['ad']}' tipi silinsin mi?"):
+            return
+        aktif = t["ad"] == self.aktif_tip
+        self.cephe_tipleri = [x for x in self.cephe_tipleri if x is not t]
+        if aktif:
+            self.aktif_tip = None
+            kalan = next((x for x in self.cephe_tipleri if x.get("veri")), None)
+            if kalan:
+                self._tip_etkinlestir(kalan["ad"])
+        self._tipler_yenile()
+
+    def _tip_cubugu_kur(self, ana):
+        """Sekmelerin üstünde: etkin cephe tipi seçimi. Seçilen tipin girdileri, cephesi ve kesitleri bütün sekmelerde görünür."""
+        f = ttk.Frame(ana)
+        f.pack(fill="x", pady=(0, 4))
+        ttk.Label(f, text="Cephe tipi").pack(side="left")
+        self._tip_v = tk.StringVar()
+        self._tip_cb = ttk.Combobox(f, textvariable=self._tip_v, state="readonly", width=16)
+        self._tip_cb.pack(side="left", padx=(6, 0))
+        self._tip_cb.bind("<<ComboboxSelected>>", lambda _e: self._tip_etkinlestir(self._tip_v.get().split("  ×")[0]))
+        for et_, kom_ in (("+ Yeni tip", self._tip_ekle),
+                          ("Ad / adet...", lambda: self._tip_adet(self._tip_bul(self.aktif_tip)) if self.aktif_tip else None),
+                          ("Sil", lambda: self._tip_sil(self._tip_bul(self.aktif_tip)) if self.aktif_tip else None)):
+            ttk.Button(f, text=et_, command=kom_).pack(side="left", padx=(6, 0))
+        self._tip_lbl = ttk.Label(f, text="", foreground="#7a858e")
+        self._tip_lbl.pack(side="left", padx=(12, 0))
+        self._tipler_yenile()
 
     def _tipler_yenile(self):
+        cb = getattr(self, "_tip_cb", None)
+        if cb is not None:
+            ad_ = [f"{t['ad']}  × {t.get('adet', 1)}" + ("" if t.get("veri") else "  (eski kopya)") for t in self.cephe_tipleri]
+            try:
+                cb.config(values=ad_, state="readonly" if ad_ else "disabled")
+                t = self._tip_bul(self.aktif_tip) if self.aktif_tip else None
+                self._tip_v.set(f"{t['ad']}  × {t.get('adet', 1)}" if t else ("— tip seçilmedi —" if ad_ else "— tek cephe —"))
+                tc = sum(x.get("cam_m2", 0) * x.get("adet", 1) for x in self.cephe_tipleri)
+                ta = sum(x.get("ana_kg", 0) * x.get("adet", 1) for x in self.cephe_tipleri)
+                self._tip_lbl.config(text=(f"Proje: {len(self.cephe_tipleri)} tip, {sum(x.get('adet', 1) for x in self.cephe_tipleri)} "
+                                           f"cephe · cam {tc:.1f} m² · alüminyum {ta:.0f} kg   (değişiklikler etkin tipe yazılır)"
+                                           if self.cephe_tipleri else
+                                           "Projede birden çok cephe varsa '+ Yeni tip' ile ekleyin; tipler arasında buradan geçilir."))
+            except tk.TclError:
+                pass
         tr = getattr(self, "tr_tipler", None)
         if tr is None:
             return
-        sat = [(t["ad"], t["adet"], t["olcu"], f"{t['cam_m2']:.1f}", f"{t['ana_kg']:.0f}", f"{t['ana_kg'] * t['adet']:.0f}")
+        sat = [(("▶ " if t["ad"] == self.aktif_tip else "") + t["ad"], t.get("adet", 1), t.get("olcu", ""),
+                f"{t.get('cam_m2', 0):.1f}", f"{t.get('ana_kg', 0):.0f}", f"{t.get('ana_kg', 0) * t.get('adet', 1):.0f}")
                for t in self.cephe_tipleri]
         self._agac_doldur(tr, sat)
-        tc = sum(t["cam_m2"] * t["adet"] for t in self.cephe_tipleri)
-        ta = sum(t["ana_kg"] * t["adet"] for t in self.cephe_tipleri)
-        self.lbl_tipler.config(text=(f"Toplam: {sum(t['adet'] for t in self.cephe_tipleri)} cephe, cam {tc:.1f} m², alüminyum {ta:.0f} kg. "
-                                     "Her tip, eklendiği andaki hesabın kopyasıdır (cepheyi değiştirirseniz tipi yeniden ekleyin)."
-                                     if self.cephe_tipleri else "Henüz tip yok: bir cephe hesaplayıp 'Mevcut cepheyi tip olarak ekle'ye basın."))
+        tc = sum(t.get("cam_m2", 0) * t.get("adet", 1) for t in self.cephe_tipleri)
+        ta = sum(t.get("ana_kg", 0) * t.get("adet", 1) for t in self.cephe_tipleri)
+        self.lbl_tipler.config(text=(f"Toplam: {sum(t.get('adet', 1) for t in self.cephe_tipleri)} cephe, cam {tc:.1f} m², "
+                                     f"alüminyum {ta:.0f} kg. Etkin tip (▶) ekranda düzenlenen cephedir; değişiklikler ona "
+                                     f"kendiliğinden yazılır. Başka tipi düzenlemek için çift tıklayın ya da üstteki listeden seçin."
+                                     if self.cephe_tipleri else "Henüz tip yok: bir cephe hesaplayıp '+ Yeni tip'e basın."))
 
     # ---- montaj ilerlemesi
     def _ilerleme_geo(self):
@@ -17625,6 +17747,7 @@ class Uygulama(tk.Tk):
                 "zincir_hat": [list(k_) + [v_] for k_, v_ in sorted((self.model.get("zincir_hat") or {}).items(), key=str)],
                 "dtip": self.model.get("dtip") or "",
                 "cephe_tipleri": self.cephe_tipleri,
+                "aktif_tip": self.aktif_tip or "",
                 "ilerleme": sorted([j, i] for j, i in (self.model.get("ilerleme") or ())),
                 "dik_tip": [[i, j, t] for (i, j), t in sorted((self.model.get("dik_tip") or {}).items())],
                 "yat_tip": [[j, q, i, t] for (j, q, i), t in sorted((self.model.get("yat_tip") or {}).items())],
@@ -17758,6 +17881,7 @@ class Uygulama(tk.Tk):
             self.model["dtip"] = str(veri.get("dtip") or "")
             self.model["ilerleme"] = {(int(k_[0]), int(k_[1])) for k_ in veri.get("ilerleme") or []}
             self.cephe_tipleri = list(veri.get("cephe_tipleri") or [])
+            self.aktif_tip = veri.get("aktif_tip") if any(t.get("ad") == veri.get("aktif_tip") for t in self.cephe_tipleri) else None
             self.model["dik_tip"] = {(int(i), int(j)): str(t) for i, j, t in veri.get("dik_tip") or []}
             self.model["yat_tip"] = {(int(j), int(q), int(i)): str(t) for j, q, i, t in veri.get("yat_tip") or []}
             self.model["parca_cikar"] = {tuple([k[0]] + [int(x) for x in k[1:]]): set(map(str, v))
@@ -17793,6 +17917,7 @@ class Uygulama(tk.Tk):
             self.stoklar = [dict(e) for e in veri.get("cubuk_stok") or [] if isinstance(e, dict) and e.get("boy")]
         self._cubuk_yenile()
         self._ek_yenile()
+        self._tipler_yenile()
         self.hesapla()
         return uyari
 
@@ -17821,6 +17946,7 @@ class Uygulama(tk.Tk):
 
     def _proje_yaz(self, yol, sessiz=False):
         try:
+            self._tip_esitle(os.path.dirname(os.path.abspath(yol)))
             veri = self.proje_verisi(os.path.dirname(os.path.abspath(yol)))
             yeni_metin = json.dumps(veri, ensure_ascii=False, indent=1)
             self._surum_sakla(yol, yeni_metin)
@@ -18827,6 +18953,7 @@ class Uygulama(tk.Tk):
                            "dik_yok": set(), "yat_yok": set(), "yalanci": set(), "dik_gecis": set(), "dik_orta": set(), "kayma": {}, "zincir_hat": {}, "dtip": "", "dik_tip": {}, "yat_tip": {},
                            "parca_cikar": {}, "parca_grup": {}, "takoz_hat": {}, "ilerleme": set()})
         self.cephe_tipleri = []
+        self.aktif_tip = None
         self._aks_d = self._aks_h = None
         self._sec = set()
         self._secili = None
@@ -18843,6 +18970,7 @@ class Uygulama(tk.Tk):
             pass
         self._gecmis_sifirla()
         self._kural_kal = self._cam_kalinlik()
+        self._tipler_yenile()
         self.hesapla()
         self._log("Yeni proje başlatıldı.")
 
@@ -18924,6 +19052,13 @@ class Uygulama(tk.Tk):
         finally:
             if getattr(self, "_il_ab", (0.0, 1.0)) == (0.0, 1.0):
                 _ilerle_g(self, None)
+        if self.aktif_tip:
+            if getattr(self, "_tip_zam", None):
+                try:
+                    self.after_cancel(self._tip_zam)
+                except (tk.TclError, ValueError):
+                    pass
+            self._tip_zam = self.after(600, lambda: (self._tip_esitle(), self._tipler_yenile()))
         try:
             self._son_durum = self._durum_al()
         except (AttributeError, KeyError, tk.TclError):

@@ -561,3 +561,5 @@ erDil.dict({"Maks": "Max", "Kaynağın yettiği kadar": "As many as resources al
 erDil.kalip({"Ejder İni Sv {n}": "Dragon’s Lair Lv {n}", "Haydut kampı Sv {n}": "Bandit camp Lv {n}", "Sonraki ünvan için {n} puan daha": "{n} more points for the next title", "Başarım: {x} (+{n} altın)": "Achievement: {x} (+{n} gold)"});
 /* Parti Y2: posta ödülleri */
 erDil.kalip({"Başarım: {x}": "Achievement: {x}", "Ödül: +{n} altın": "Reward: +{n} gold", "Koleksiyon ödülü: {n} başarım": "Collection reward: {n} achievements", "Sezon ödül yolu: {n}. kademe": "Season reward path: tier {n}"});
+/* Parti Y3: ses penceresi, tam ekran */
+erDil.dict({"Ses": "Sound", "Tam ekran": "Full screen"});

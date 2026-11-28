@@ -3,7 +3,7 @@
 
 function beep(f,d,ty,v,sl){const a=ac();if(!a||!sesOn())return;const t=a.currentTime,o=a.createOscillator(),g=a.createGain();o.type=ty||'sine';o.frequency.setValueAtTime(f,t);if(sl)o.frequency.exponentialRampToValueAtTime(sl,t+d);g.gain.setValueAtTime(.0001,t);g.gain.exponentialRampToValueAtTime(Math.max(.0001,(v||.2)*(kAyar.sesVol==null?1:kAyar.sesVol)),t+.012);g.gain.exponentialRampToValueAtTime(.0001,t+d);o.connect(g);g.connect(a.destination);o.start(t);o.stop(t+d+.03)}
 function sfx(n){try{if(sesOn()&&SFX[n])SFX[n]()}catch(e){}}
-function sfxIcon(){const b=$('sfxBtn');if(b)b.textContent=sesOn()?'🔊':'🔇'}
+function sfxIcon(){const b=$('sfxBtn');if(b){b.textContent=sesIkon();b.title=kkL('Ses','Sound');b.setAttribute('aria-label',b.title)}}
 /* ---- Müzik: ortaçağ havasında, akorlu ve tekrar eden ezgili 4 parça ----
    Arp akor çözer, flüt ezgiyi çalar, alttan yumuşak bir bas ve fon sesi gelir; hafif yankı eklenir.
    Notalar rastgele değil: her parçanın akor dizisi ve ezgi kalıbı var, parçalar sırayla döner. */
@@ -54,4 +54,64 @@ function musStart(){const a=musInit();if(!a)return;if(a.state==='suspended')a.re
  musGain.gain.cancelScheduledValues(a.currentTime);musGain.gain.setTargetAtTime(.42*(kAyar.muzikVol==null?1:kAyar.muzikVol),a.currentTime,1.5);
  if(musNext<a.currentTime){musNext=a.currentTime+.15;if(!musBar)musSong=(Math.random()*MUS.length)|0}musTimer=setInterval(musStep,120);musStep()}
 function musStop(){if(musTimer){clearInterval(musTimer);musTimer=null}if(musGain){const a=ac();if(a)musGain.gain.setTargetAtTime(.0001,a.currentTime,.7)}}
-function muIcon(){const b=$('muBtn');if(!b)return;b.textContent='🎵';b.style.opacity=kAyar.muzik?'1':'.4'}
+function muIcon(){sfxIcon();sesPopCiz()}
+
+/* ---- Ses penceresi: 🔊 düğmesine basınca efekt ve müzik açma/kapama ile ses düzeyi ---- */
+function sesVol(k) { const v = kAyar[k]; return v == null ? 1 : v; }
+function sesIkon() { return sesOn() || kAyar.muzik ? (sesOn() && sesVol('sesVol') > 0 || kAyar.muzik && sesVol('muzikVol') > 0 ? '🔊' : '🔈') : '🔇'; }
+function sesPopHtml() {
+  const sat = function (ad, ik, acik, vk, id) {
+    const v = Math.round(sesVol(vk) * 100);
+    return '<div class="spr"><button class="sm' + (acik ? '' : ' g') + '" data-sp="' + id + '" aria-pressed="' + acik + '">' + ik + ' ' + ad + ': ' + (acik ? kkL('açık', 'on') : kkL('kapalı', 'off')) + '</button>' +
+      '<label class="spv"><input type="range" min="0" max="100" step="5" value="' + v + '" data-spv="' + vk + '" aria-label="' + ad + '"' + (acik ? '' : ' disabled') + '><b>' + v + '%</b></label></div>';
+  };
+  return '<div class="sph"><b>' + kkL('Ses', 'Sound') + '</b><button class="mini" data-spx="1" aria-label="' + kkL('Kapat', 'Close') + '">✕</button></div>' +
+    sat(kkL('Efektler', 'Effects'), '🔔', sesOn(), 'sesVol', 'ses') + sat(kkL('Müzik', 'Music'), '🎵', !!kAyar.muzik, 'muzikVol', 'muzik');
+}
+function sesPopCiz() { const p = $('sesPop'); if (p && !p.classList.contains('hide')) p.innerHTML = sesPopHtml(); }
+function sesPopAc() {
+  let p = $('sesPop');
+  if (!p) {
+    p = document.createElement('div'); p.id = 'sesPop'; p.className = 'hide'; p.setAttribute('role', 'dialog'); document.body.appendChild(p);
+    p.addEventListener('click', function (e) {
+      const b = e.target.closest('button'); if (!b) return;
+      if (b.dataset.spx) { sesPopKapat(); return; }
+      if (b.dataset.sp === 'ses') { kAyar.ses = !sesOn(); kSak(); if (sesOn()) sfx('tap'); }
+      if (b.dataset.sp === 'muzik') { kAyar.muzik = !kAyar.muzik; kSak(); if (kAyar.muzik) musStart(); else musStop(); }
+      sesGuncelle();
+    });
+    p.addEventListener('input', function (e) {
+      const r = e.target.closest('input[data-spv]'); if (!r) return; const k = r.dataset.spv, v = r.value / 100;
+      kAyar[k] = v; kSak(); const n = r.parentNode.querySelector('b'); if (n) n.textContent = r.value + '%';
+      if (k === 'muzikVol' && musGain) { const a = ac(); if (a) musGain.gain.setTargetAtTime(.42 * v, a.currentTime, .3); }
+      const s = $('sfxBtn'); if (s) s.textContent = sesIkon();
+      try { if (typeof ayYansit === 'function') ayYansit(); } catch (x) { }
+    });
+    p.addEventListener('change', function (e) { if (e.target.closest('input[data-spv="sesVol"]')) sfx('tap'); });
+    document.addEventListener('pointerdown', function (e) { const q = $('sesPop'); if (q && !q.classList.contains('hide') && !q.contains(e.target) && !e.target.closest('#sfxBtn')) sesPopKapat(); }, true);
+    document.addEventListener('keydown', function (e) { if (e.key === 'Escape') sesPopKapat(); });
+  }
+  if (!p.classList.contains('hide')) { sesPopKapat(); return; }
+  p.innerHTML = sesPopHtml(); p.classList.remove('hide');
+  const b = $('sfxBtn'); if (b) { const r = b.getBoundingClientRect(); p.style.top = Math.round(r.bottom + 8) + 'px'; const w = p.offsetWidth || 300; p.style.left = Math.round(Math.max(8, Math.min(window.innerWidth - w - 8, r.left + r.width / 2 - w / 2))) + 'px'; }
+}
+function sesPopKapat() { const p = $('sesPop'); if (p) p.classList.add('hide'); }
+function sesGuncelle() { sfxIcon(); sesPopCiz(); try { if (typeof ayYansit === 'function') ayYansit(); } catch (e) { } }
+
+/* ---- Tam ekran ---- */
+function tamEkranVar() { const d = document; return !!(d.fullscreenEnabled || d.webkitFullscreenEnabled); }
+function tamEkranMi() { const d = document; return !!(d.fullscreenElement || d.webkitFullscreenElement); }
+function tamEkran() {
+  const d = document, el = d.documentElement;
+  try {
+    if (tamEkranMi()) { (d.exitFullscreen || d.webkitExitFullscreen).call(d); }
+    else { const f = el.requestFullscreen || el.webkitRequestFullscreen; const r = f && f.call(el, { navigationUI: 'hide' }); if (r && r.catch) r.catch(function () { }); }
+  } catch (e) { }
+}
+function tamEkranIkon() { const b = $('fsBtn'); if (!b) return; const on = tamEkranMi(); b.textContent = on ? '🗗' : '⛶'; b.title = on ? kkL('Tam ekrandan çık', 'Exit full screen') : kkL('Tam ekran', 'Full screen'); b.setAttribute('aria-label', b.title); }
+function tamEkranInit() {
+  const b = $('fsBtn'); if (!b) return;
+  if (!tamEkranVar()) { b.remove(); return; } // iPhone Safari gibi desteklemeyen tarayıcılarda gizli
+  b.onclick = tamEkran; tamEkranIkon();
+  document.addEventListener('fullscreenchange', tamEkranIkon); document.addEventListener('webkitfullscreenchange', tamEkranIkon);
+}
