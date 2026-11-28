@@ -143,3 +143,7 @@
   İzleyici oyuna karışamaz, mesaj gönderemez, sonuçları sıralamaya sayılmaz; ekranın üstünde “👀 İzliyorsun” yazar.
   Başlayan odalar artık açık dizinde “oynanıyor” olarak kalır (hızlı eşleşme bunları atlar).
 
+
+## Hafıza Kartları ve Kelime Türet
+- Hafıza Kartları: 5 deste (hayvan, meyve-sebze, taşıt, doğa, spor), 4 boy, iki kişilik mod, günün oyunu ve seri
+- Kelime Türet: harf çarkından kelime türetme, 247 bölüm, bonus kelimeler (her 5'i 1 ipucu), günün bölümü ve seri
