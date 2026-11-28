@@ -131,6 +131,7 @@ registerGame({
     let D = Object.assign({ v: 1, kaz: 0, kay: 0, mars: 0, ag: 0, o: '', sev: 1 }, (api.loadState && api.loadState()) || {});
     const kaydet = () => { try { api.saveState && api.saveState(D); } catch (e) { } };
     const kok = E('div', { class: 'tv' }); root.append(kok);
+    const TK = window.Tekrar ? Tekrar() : null;
     let sohbetK = null, sayilanOlay = '', izle = false;
     let S = null, ben = 0, mod = 'yz', sev = 1, oda = null, odaBirak = null, lobi = null, adlar = ['Sen', 'Bilgisayar'], skor = [0, 0], gecmis = [], secili = null, mesaj = '', kilit = false, bitT = 0, raf = 0, anim = null, yaziSurum = 0, sonI = 0, yazSira = Promise.resolve(), cv = null, cx = null, geo = null, yokT = 0, canli = true;
 
@@ -219,7 +220,7 @@ registerGame({
       if (anim) { const k = Math.min(1, (t - anim.t0) / anim.sure), e = k < .5 ? 2 * k * k : 1 - Math.pow(-2 * k + 2, 2) / 2; anim.x = anim.x0 + (anim.x1 - anim.x0) * e; anim.y = anim.y0 + (anim.y1 - anim.y0) * e - Math.sin(k * Math.PI) * geo.r * 1.2; if (k >= 1) { const f = anim.bitince; anim = null; f && f(); } }
       ciz(); }
     function ust() {
-      if (!S || !q('#tv-k0')) return; const K = oda ? oda.koltuklar() : null;
+      if (!S || !q('#tv-k0')) return; if (TK) TK.kaydet(S); const K = oda ? oda.koltuklar() : null;
       for (const p of [0, 1]) { const e = q(p === ben ? '#tv-k0' : '#tv-k1'), yok = K && K[p] && !K[p].var; e.querySelector('.pul').className = 'pul' + (p ? ' k' : ''); e.querySelector('.ad').textContent = adlar[p] + (yok ? ' (ayrıldı)' : ''); e.querySelector('small').textContent = (mod === 'ag' ? skor[p] + ' sayı · ' : '') + 'kalan ' + TV.pip(S, p); e.classList.toggle('sira', S.bitti == null && S.sira === p); e.classList.toggle('yok', !!yok); }
       const benim = benimSira() && !kilit, z = q('[data-a=zar]'), g = q('[data-a=geri]'); z.hidden = !(benim && !S.zar && S.bitti == null); g.hidden = !(benim && S.zar && gecmis.length);
       q('#tv-b').innerHTML = mesaj || (S.bitti != null ? '' : benim ? (S.zar ? (TV.yasal(S).length ? 'Yeşil çerçeveli pula, sonra hedefe dokun.' : '') : 'Sıra sende.') : `<b>${esc(adlar[S.sira])}</b> oynuyor…`);
@@ -267,7 +268,7 @@ registerGame({
       if (mod === 'ag' && oda && window.Masa && Masa.sonuc) Masa.sonuc(oda, kazandim ? 1 : 0, S.tur + ':' + (S.son ? S.son.i : 0) + ':' + S.cik.join('-'));
       oyun._paylas = 'Tavla: ' + (kazandim ? (S.mars ? 'mars ettim!' : 'kazandım.') : 'bu sefer olmadı.') + '\nerdevelop.com/oyunlar/#o/tavla';
       const e = q('.tv-son'); if (e) e.remove(); const s = E('div', { class: 'tv-son' });
-      s.innerHTML = `<div><h3>${kazandim ? (S.mars ? '🏆 Mars!' : '🎉 Kazandın!') : S.mars ? 'Mars oldun' : 'Kaybettin'}</h3><p>${esc(adlar[S.bitti])} ${sayi} sayı aldı${mod === 'ag' ? ` · ${esc(adlar[0])} ${skor[0]} – ${skor[1]} ${esc(adlar[1])}` : ''}</p><button class="tv-b ana" data-a="yine">${mod === 'ag' ? 'Rövanş' : 'Yeni oyun'}</button><button class="tv-b" data-a="menu">Menü</button></div>`;
+      s.innerHTML = `<div><h3>${kazandim ? (S.mars ? '🏆 Mars!' : '🎉 Kazandın!') : S.mars ? 'Mars oldun' : 'Kaybettin'}</h3><p>${esc(adlar[S.bitti])} ${sayi} sayı aldı${mod === 'ag' ? ` · ${esc(adlar[0])} ${skor[0]} – ${skor[1]} ${esc(adlar[1])}` : ''}</p><button class="tv-b ana" data-a="yine">${mod === 'ag' ? 'Rövanş' : 'Yeni oyun'}</button>${TK && TK.var() ? '<button class="tv-b" data-a="tekrar">🎬 Yeniden izle</button>' : ''}<button class="tv-b" data-a="menu">Menü</button></div>`;
       if (mod === 'ag' && window.Masa && Masa.karsiYazi) { const kz = Masa.karsiYazi(oda); if (kz) { const p2 = document.createElement('p'); p2.className = 'ms-karsi'; p2.textContent = kz; const b1 = s.querySelector('button'); if (b1) b1.parentNode.insertBefore(p2, b1); } } kok.append(s); ust();
     }
     /* ---------- kayıt / ağ ---------- */
@@ -281,7 +282,7 @@ registerGame({
         const K = oda.koltuklar(); adlar = [0, 1].map(i => K[i] ? K[i].n : 'Rakip'); const d = oda.durum(), sur = oda.surum(); if (!d) return;
         if (!S || (sur > yaziSurum && !(benimSira() && kilit))) {
           const onceki = S, yeniMac = !onceki || d.tur < onceki.tur || (onceki.bitti != null && d.bitti == null);
-          if (yeniMac) { const e = q('.tv-son'); if (e) e.remove(); gecmis = []; }
+          if (yeniMac) { const e = q('.tv-son'); if (e) e.remove(); gecmis = []; if (TK) TK.sifirla(); }
           if (Array.isArray(d.skor)) skor = d.skor.slice();
           const uzak = !onceki || d.sira !== ben || onceki.sira !== ben;
           if (onceki && d.son && d.son.f !== undefined && d.son.i === sonI + 1 && d.son.p !== ben && !anim) { const [x0, y0] = yer(d.son.p, d.son.f, onceki); S = d; const [x1, y1] = yer(d.son.p, d.son.t); anim = { p: d.son.p, x0, y0, x1, y1, x: x0, y: y0, t0: performance.now(), sure: 230, gizle: { k: d.son.t, p: d.son.p }, bitince: null }; ses(d.son.v ? 'bad' : 'tap'); }
@@ -295,13 +296,13 @@ registerGame({
         ust();
       });
     }
-    function temizle() { if (sohbetK) { sohbetK.kapat(); sohbetK = null; } clearTimeout(bitT); clearTimeout(yokT); cancelAnimationFrame(raf); anim = null; if (lobi) { const x = lobi.kapat(); lobi = null; if (x) x.ayril(); } if (odaBirak) odaBirak(); odaBirak = null; if (oda) { oda.ayril(); oda = null; } cv = null; }
-    kok.addEventListener('click', e => { const b = e.target.closest('button'); if (!b || b.closest('.ms')) return; const a = b.dataset.a;
+    function temizle() { if (TK) { TK.kapat(); TK.sifirla(); } if (sohbetK) { sohbetK.kapat(); sohbetK = null; } clearTimeout(bitT); clearTimeout(yokT); cancelAnimationFrame(raf); anim = null; if (lobi) { const x = lobi.kapat(); lobi = null; if (x) x.ayril(); } if (odaBirak) odaBirak(); odaBirak = null; if (oda) { oda.ayril(); oda = null; } cv = null; }
+    kok.addEventListener('click', e => { const b = e.target.closest('button'); if (!b || b.closest('.ms') || b.closest('.tk-cubuk')) return; const a = b.dataset.a; if (a === 'tekrar' && TK) { const e2 = q('.tv-son'); if (e2) e2.remove(); const izl = izle; izle = true; TK.baslat({ kok, koy: Y => { S = Y; anim = null; ust(); }, bitince: () => { izle = izl; bitti(); } }); return; }
       if (a === 'yz') yzBasla(+b.dataset.s, null); else if (a === 'devam') { try { const o = JSON.parse(D.o); yzBasla(o.sev == null ? 1 : o.sev, o.S); } catch (x) { menu(); } }
       else if (a === 'ag') agLobi(); else if (a === 'nasil') nasil(); else if (a === 'menu') { yerelKaydet(); S = null; menu(); }
       else if (a === 'cik') { if (mod === 'ag' && S && S.bitti == null && !b.dataset.emin) { b.dataset.emin = 1; mesaj = 'Çıkarsan oyunu bırakmış olursun. Çıkmak için ‹’ye yeniden bas.'; ust(); setTimeout(() => { delete b.dataset.emin; }, 3000); return; } yerelKaydet(); S = null; menu(); }
       else if (a === 'zar') zarAt(); else if (a === 'geri') geriAl();
-      else if (a === 'yine') { const e2 = q('.tv-son'); if (e2) e2.remove(); if (mod === 'ag') { const y = TV.yeni(S.bitti === 0 ? 1 : 0); y.skor = skor.slice(); S = null; oda.yeniden(y); } else yzBasla(sev, null); } });
+      else if (a === 'yine') { if (TK) TK.sifirla(); const e2 = q('.tv-son'); if (e2) e2.remove(); if (mod === 'ag') { const y = TV.yeni(S.bitti === 0 ? 1 : 0); y.skor = skor.slice(); S = null; oda.yeniden(y); } else yzBasla(sev, null); } });
     const boyutla = () => boyut(); addEventListener('resize', boyutla);
     const sakla = () => yerelKaydet(); addEventListener('pagehide', sakla);
     api.onCleanup(() => { canli = false; yerelKaydet(); temizle(); removeEventListener('resize', boyutla); removeEventListener('pagehide', sakla); root.classList.remove('tv-mount'); });

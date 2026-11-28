@@ -63,10 +63,12 @@
   }
   function turnuvaSerit(){
     if(!window.Masa || !Masa.turnuva) return ''; const T=Masa.turnuva(Date.now());
-    if(!T.acik && !(T.kalan<8*36e5 && !T.sayar)) return '';
+    const C=Masa.sampiyon&&Masa.sampiyon(), ayAd=C?new Date(C.ay+'-15').toLocaleDateString('tr-TR',{month:'long'}):'';
+    const samp=C?'<div class="tur-samp">👑 '+ayAd+' şampiyonu: <b>'+String(C.n).replace(/[<>&"]/g,'')+'</b> ('+C.p+' puan)'+(C.ben?' · sensin! 🎉':'')+'</div>':'';
+    if(!T.acik && !(T.kalan<8*36e5 && !T.sayar)) return samp;
     const sa=Math.floor(T.kalan/36e5), dk=Math.floor(T.kalan/6e4)%60;
     return '<div class="tur-serit'+(T.acik?' canli':'')+'"><b>'+(T.acik?'🔴 Cumartesi Turnuvası sürüyor':'🏆 Cumartesi Turnuvası bu akşam 20.00’de')+'</b><span>'+(T.acik?'Bitimine '+(sa?sa+' sa ':'')+dk+' dk · çevrimiçi kazandığın her oyun sayılır':'Başlamasına '+(sa?sa+' sa ':'')+dk+' dk · tavla, okey, batak, king ve diğer masa oyunları')+'</span>'+
-      '<div>'+['okey','tavla','batak','king'].map(id=>'<button type="button" data-oyun="'+id+'">'+({okey:'Okey',tavla:'Tavla',batak:'Batak',king:'King'})[id]+'</button>').join('')+'</div></div>';
+      samp+'<div>'+['okey','tavla','batak','king'].map(id=>'<button type="button" data-oyun="'+id+'">'+({okey:'Okey',tavla:'Tavla',batak:'Batak',king:'King'})[id]+'</button>').join('')+'</div></div>';
   }
   window.addEventListener('ob-ilerleme', ()=>{ if(!$('#home').hidden) renderDaily(); });
 

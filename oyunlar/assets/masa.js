@@ -102,7 +102,7 @@ async function kur(oyun, koltuk, acik, ad) {
   await baglan(); let kod = '';
   for (let d = 0; d < 6; d++) { kod = kodUret(); const r = await DB.tx(yol(oyun, kod), c => c ? undefined : { h: UID, t: DB.now(), d: 0, k: koltuk, a: acik ? 1 : 0, o: { [UID]: { n: ad, k: 0 } } }); if (r.ok) break; kod = ''; }
   if (!kod) throw new Error('Oda kurulamadı.');
-  if (acik) await DB.set('masa/' + oyun + '/acik/' + kod, { t: DB.now(), u: UID, n: ad, b: koltuk - 1 }).catch(() => { });
+  if (acik) { const r = ELO_OYUN.includes(oyun) ? (await eloAl(oyun).catch(() => ({ r: 1200 }))).r : null; const dz = { t: DB.now(), u: UID, n: ad, b: koltuk - 1 }; await DB.set('masa/' + oyun + '/acik/' + kod, Object.assign({}, dz, r ? { r } : {})).catch(() => DB.set('masa/' + oyun + '/acik/' + kod, dz)).catch(() => { }); }
   return odaAc(oyun, kod);
 }
 async function katil(oyun, kod, ad) {
@@ -116,7 +116,8 @@ async function katil(oyun, kod, ad) {
 }
 async function hizli(oyun, koltuk, ad) {
   await baglan(); const L = await DB.acik('masa/' + oyun + '/acik').catch(() => ({})), simdi = DB.now();
-  const aday = Object.entries(L).filter(([, v]) => v && v.b > 0 && v.u !== UID && simdi - v.t < 40000).sort((a, b) => b[1].t - a[1].t);
+  const benR = ELO_OYUN.includes(oyun) ? (await eloAl(oyun).catch(() => ({ r: 1200 }))).r : 0;
+  const aday = Object.entries(L).filter(([, v]) => v && v.b > 0 && v.u !== UID && simdi - v.t < 40000).sort((a, b) => benR ? Math.abs((a[1].r || 1200) - benR) - Math.abs((b[1].r || 1200) - benR) || b[1].t - a[1].t : b[1].t - a[1].t);
   for (const [kod] of aday) { try { return await katil(oyun, kod, ad); } catch (e) { } }
   return kur(oyun, koltuk, true, ad);
 }
@@ -142,7 +143,9 @@ function sonuc(oda, r, anahtar) {
   const K = oda.koltuklar(), insan = K.filter(Boolean);
   if (K.length === 2) { const x = K.find(y => y && y.uid !== UID); if (x) { const O = karsiOku(), a = oda.oyun + ':' + x.uid, v = O[a] || { g: 0, k: 0, b: 0 }; v.n = x.n; v.t = Date.now(); if (r === 1) v.g++; else if (r === 0) v.k++; else v.b++; O[a] = v;
     const anah = Object.keys(O); if (anah.length > 300) anah.sort((p, q) => O[p].t - O[q].t).slice(0, anah.length - 300).forEach(z => delete O[z]); try { localStorage.setItem(KARSI, JSON.stringify(O)); } catch (e) { } } }
+  sonEkle(K, oda.oyun); try { if (K.some(x => x && x.uid !== UID && arkadasMi(x.uid)) && window.Progress) Progress.olay('arkadas_oyna'); } catch (e) { }
   if (insan.length < 2) return;
+  if (K.length === 2 && ELO_OYUN.includes(oda.oyun)) eloGuncelle(oda, r).catch(() => { });
   try { if (window.Progress) { Progress.olay('online_oyna'); if (r === 1) Progress.olay('online_kazan'); } } catch (e) { }
   const ad = (K.find(x => x && x.uid === UID) || {}).n || adAl() || '?';
   const ekle = c => { c = c || {}; const simdi = DB.now(); if (simdi < (c.t || 0) + 10000) return; return { n: ad.slice(0, 16), g: (c.g || 0) + (r === 1 ? 1 : 0), o: (c.o || 0) + 1, t: simdi }; };
@@ -169,6 +172,63 @@ async function turnuvaSirala(anahtar) {
   return { liste: A.slice(0, 30), ben: A.find(x => x.u === UID) || null, sira: A.findIndex(x => x.u === UID) + 1 };
 }
 const sure = ms => { ms = Math.max(0, ms); const g = Math.floor(ms / GUN), s = Math.floor(ms / 36e5) % 24, d = Math.floor(ms / 6e4) % 60, n = Math.floor(ms / 1e3) % 60; return g ? `${g} gün ${s} sa` : s ? `${s} sa ${d} dk` : `${d} dk ${p2(n)} sn`; };
+/* ---------- arkadaşlar ve davetler ----------
+   ob-arkadas (bu cihaz) = [{ u, n, t }] · ob-masa-son = son masa arkadaşları [{ u, n, o: oyun, t }]
+   durum/<uid> = { n, t } (son görülme) · davet/<alıcı>/<gönderen> = { n, o: oyun, k: oda kodu, t } */
+const ARK = 'ob-arkadas', SON = 'ob-masa-son';
+const jOku = k => { try { return JSON.parse(localStorage.getItem(k) || '[]'); } catch (e) { return []; } }, jYaz = (k, v) => { try { localStorage.setItem(k, JSON.stringify(v)); } catch (e) { } };
+const arkadaslar = () => jOku(ARK), arkadasMi = u => arkadaslar().some(x => x.u === u);
+function arkadasEkle(u, n) { if (!u || u === UID) return; const L = arkadaslar().filter(x => x.u !== u); L.unshift({ u, n: String(n || '?').slice(0, 16), t: Date.now() }); jYaz(ARK, L.slice(0, 60)); arkaPlan(); }
+function arkadasSil(u) { jYaz(ARK, arkadaslar().filter(x => x.u !== u)); }
+function sonRakipler() { const A = new Set(arkadaslar().map(x => x.u)); return jOku(SON).filter(x => !A.has(x.u)).slice(0, 20); }
+function sonEkle(K, oyun) { const L = jOku(SON); for (const x of K) { if (!x || x.uid === UID) continue; const i = L.findIndex(y => y.u === x.uid); if (i >= 0) L.splice(i, 1); L.unshift({ u: x.uid, n: x.n, o: oyun, t: Date.now() }); } jYaz(SON, L.slice(0, 30)); }
+async function durumlar(L) { await baglan(); const simdi = DB.now(), R = {}; await Promise.all(L.slice(0, 30).map(x => DB.get('durum/' + x.u).then(v => { R[x.u] = v && simdi - v.t < 150000; }).catch(() => { }))); return R; }
+async function davetEt(u, oyun, kod) { await baglan(); return DB.set('davet/' + u + '/' + UID, { n: (adAl() || '?').slice(0, 16), o: oyun, k: kod, t: DB.now() }); }
+let arkaBasladi = false, davetGor = {};
+const DCSS = `.ms-davet{position:fixed;left:50%;bottom:16px;transform:translateX(-50%);z-index:90;width:min(380px,94vw);padding:12px 14px;border-radius:16px;background:var(--card,#fff);color:var(--ink,#111);box-shadow:0 12px 40px rgba(0,0,0,.35);display:flex;flex-direction:column;gap:8px;font-weight:800;animation:msA .2s}
+.ms-davet div{display:flex;gap:8px}.ms-davet button{flex:1;padding:10px;border-radius:11px;font-weight:800;background:var(--accent-soft,#eef);color:var(--accent-ink,#223)}.ms-davet button.ana{background:var(--accent,#4f46e5);color:#fff}`;
+function davetGoster(g, v) {
+  if (davetGor[g + v.t]) return; davetGor[g + v.t] = 1; if (!document.getElementById('ms-dcss')) { const st = document.createElement('style'); st.id = 'ms-dcss'; st.textContent = DCSS; document.head.appendChild(st); }
+  const d = document.createElement('div'); d.className = 'ms-davet'; d.innerHTML = `<span>📨 <b>${esc(v.n)}</b> seni <b>${esc(ADLAR_OYUN[v.o] || v.o)}</b> masasına çağırıyor.</span><div><button data-x="hayir">Sonra</button><button class="ana" data-x="evet">Katıl</button></div>`;
+  document.body.appendChild(d); try { navigator.vibrate && navigator.vibrate([60, 40, 60]); } catch (e) { }
+  const kapa = () => { d.remove(); DB.remove('davet/' + UID + '/' + g).catch(() => { }); };
+  d.addEventListener('click', e => { const b = e.target.closest('[data-x]'); if (!b) return; kapa(); if (b.dataset.x === 'evet') location.href = location.pathname + '?masa=' + encodeURIComponent(v.k) + (/[?&]masasahte/.test(location.search) ? '&masasahte' : '') + '#o/' + v.o; });
+  setTimeout(() => { if (d.isConnected) d.remove(); }, 60000);
+}
+async function arkaPlan() {
+  if (arkaBasladi) return; arkaBasladi = true;
+  try { await baglan(); } catch (e) { arkaBasladi = false; return; }
+  const nabiz = () => { if (adAl()) DB.set('durum/' + UID, { n: adAl().slice(0, 16), t: DB.now() }).catch(() => { }); };
+  nabiz(); setInterval(nabiz, 60000);
+  DB.on('davet/' + UID, v => { if (!v) return; const simdi = DB.now(); for (const g in v) { const x = v[g]; if (!x || simdi - x.t > 5 * 60000) { DB.remove('davet/' + UID + '/' + g).catch(() => { }); continue; } davetGoster(g, x); } });
+  turnuvaOdul().catch(() => { });
+}
+setTimeout(() => { if (arkadaslar().length || jOku(SON).length) arkaPlan(); }, 2500);
+/* ---------- Elo puanı (iki kişilik oyunlar) ----------
+   elo/<oyun>/<uid> = { r, o: oyun sayısı, n, t } — herkes yalnız kendi puanını yazar; kural tek oyunda en çok 40 puan oynamaya izin verir. */
+const ELO_OYUN = ['tavla', 'satranc', 'dama', 'mangala', 'dokuztas', 'amiral', 'kelimemasasi'];
+async function eloAl(oyun, u) { await baglan(); const v = await DB.get('elo/' + oyun + '/' + (u || UID)).catch(() => null); return v || { r: 1200, o: 0 }; }
+async function eloGuncelle(oda, r) {
+  const K = oda.koltuklar(), x = K.find(y => y && y.uid !== UID); if (!x) return;
+  const [ben, o] = await Promise.all([eloAl(oda.oyun), eloAl(oda.oyun, x.uid)]); const e = 1 / (1 + Math.pow(10, (o.r - ben.r) / 400)), k = ben.o < 20 ? 32 : 20;
+  const yeniR = Math.round(Math.max(100, Math.min(3000, ben.r + Math.max(-40, Math.min(40, k * (r - e))))));
+  await DB.tx('elo/' + oda.oyun + '/' + UID, c => { c = c || { r: 1200, o: 0 }; const simdi = DB.now(); if (simdi < (c.t || 0) + 10000) return; return { r: Math.max(c.r - 40, Math.min(c.r + 40, yeniR)), o: (c.o || 0) + 1, n: (adAl() || '?').slice(0, 16), t: simdi }; }).catch(() => { });
+}
+async function eloSira(oyun) { await baglan(); const L = await DB.ilk('elo/' + oyun, 'r', 30); return Object.entries(L || {}).map(([u, v]) => Object.assign({ u }, v)).filter(x => x && x.o > 0).sort((a, b) => b.r - a.r); }
+/* ---------- turnuva madalyaları ve ayın şampiyonu ---------- */
+const MADALYA = 'ob-turnuva-madalya', SAMP = 'ob-turnuva-samp';
+async function turnuvaOdul() {
+  await baglan(); const T = turnuva(); if (T.sayar) return; const anah = T.gosterilen, M = jOku(MADALYA);
+  if (!M.includes(anah)) { const R = await turnuvaSirala(anah); const i = R.liste.slice(0, 3).findIndex(x => x.u === UID);
+    if (R.liste.length) { M.push(anah); jYaz(MADALYA, M.slice(-60)); } if (i >= 0) { try { window.Progress && Progress.olay('turnuva_' + (i + 1)); window.OB_bildir && OB_bildir(['🥇', '🥈', '🥉'][i] + ' Cumartesi turnuvasında ' + (i + 1) + '. oldun!'); } catch (e) { } } }
+  let c = null; try { c = JSON.parse(localStorage.getItem(SAMP) || 'null'); } catch (e) { }
+  const ay = anah.slice(0, 7); if (c && c.ay === ay && c.k === anah) return;
+  const gunler = []; for (let d = new Date(Date.UTC(+ay.slice(0, 4), +ay.slice(5, 7) - 1, 1)); d.getUTCMonth() === +ay.slice(5, 7) - 1; d.setUTCDate(d.getUTCDate() + 1)) { const k = d.toISOString().slice(0, 10); if (d.getUTCDay() === 6 && k <= anah) gunler.push(k); }
+  const P = {}; for (const g of gunler) { const R = await turnuvaSirala(g).catch(() => ({ liste: [] })); R.liste.slice(0, 3).forEach((x, i) => { const z = P[x.u] || (P[x.u] = { n: x.n, p: 0, g: 0 }); z.p += 3 - i; z.g += x.g; z.n = x.n; }); }
+  const en = Object.entries(P).sort((a, b) => b[1].p - a[1].p || b[1].g - a[1].g)[0];
+  try { localStorage.setItem(SAMP, JSON.stringify({ ay, k: anah, n: en ? en[1].n : '', p: en ? en[1].p : 0, u: en ? en[0] : '', ben: en ? en[0] === UID : false })); } catch (e) { }
+}
+function sampiyon() { try { const c = JSON.parse(localStorage.getItem(SAMP) || 'null'); return c && c.n ? c : null; } catch (e) { return null; } }
 async function siralama() {
   await baglan(); const L = await DB.ilk('masa_sira/' + hafta(), 'g', 60);
   const A = Object.entries(L || {}).map(([u, v]) => Object.assign({ u }, v)).filter(x => x && x.o > 0).sort((a, b) => b.g - a.g || a.o - b.o || a.t - b.t);
@@ -192,6 +252,7 @@ const CSS = `
 .ms-sira div i{font-style:normal;color:var(--ink-soft);font-size:12.5px;text-align:right}.ms-sira div b{font-variant-numeric:tabular-nums}.ms-sira div.sen{box-shadow:inset 0 0 0 2px var(--accent)}.ms-sira div span{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 .ms-tur{display:flex;flex-direction:column;gap:2px;text-align:left;padding:10px 14px;border-radius:13px;background:linear-gradient(135deg,#fef3c7,#fde68a);color:#78350f;font-size:13px}.ms-tur b{font-size:14.5px}.ms-tur span{font-weight:700;opacity:.85}
 .ms-tur.canli{background:linear-gradient(135deg,#fee2e2,#fecaca);color:#7f1d1d;animation:msTur 2s infinite}@keyframes msTur{50%{box-shadow:0 0 0 4px rgba(239,68,68,.25)}}
+.ms-mini{flex:none;padding:5px 10px;border-radius:9px;background:var(--accent-soft);color:var(--accent-ink);font-weight:800;font-size:12.5px}.ms-mini.ana{background:var(--accent);color:#fff}.ms-mini:disabled{opacity:.6}
 .ms-sira .bos{display:block;text-align:center;color:var(--ink-soft);font-weight:700}
 .ms-izle-rozet{position:fixed;left:50%;top:calc(env(safe-area-inset-top) + 8px);transform:translateX(-50%);z-index:80;padding:5px 12px;border-radius:999px;background:#111827;color:#fff;font-weight:800;font-size:12.5px;box-shadow:0 4px 14px rgba(0,0,0,.3);pointer-events:none}
 .ms-izliyor [data-a=yine],.ms-izliyor [data-a=teslim],.ms-izliyor [data-a=bitir],.ms-izliyor [data-a=at],.ms-izliyor [data-a=ac],.ms-izliyor [data-a=geri],.ms-izliyor [data-a=ipucu]{display:none!important}
@@ -209,9 +270,11 @@ function lobi(kok, o) {
       <button class="ms-b ana" data-a="hizli">⚡ Hızlı eşleş</button>
       <div class="ms-sat"><button class="ms-b" data-a="kur">🔒 Özel oda kur</button><button class="ms-b" data-a="kodla">🔑 Koda katıl</button></div>
       <div class="ms-sat" id="ms-kodsat" hidden><input id="ms-kod" maxlength="5" placeholder="KOD" autocomplete="off" style="text-transform:uppercase;letter-spacing:.2em;text-align:center"><button class="ms-b ana" data-a="katil" style="flex:.6">Katıl</button></div>
-      <div class="ms-hata"></div><div class="ms-sat"><button class="ms-b" data-a="izleListe">👀 Masaları izle</button><button class="ms-b" data-a="sira">🏆 Sıralama</button></div>
+      <div class="ms-hata"></div><div class="ms-sat"><button class="ms-b" data-a="arkadas">👥 Arkadaşlar</button><button class="ms-b" data-a="izleListe">👀 İzle</button><button class="ms-b" data-a="sira">🏆 Sıralama</button></div>
+      ${ELO_OYUN.includes(o.oyun) ? '<button class="ms-b" data-a="elo" id="ms-elo">🏅 Puanın yükleniyor…</button>' : ''}
       <button class="ms-tur" data-a="turnuva" id="ms-tur"></button><button class="ms-b" data-a="geri">‹ Geri</button>`;
-    turSaat();
+    turSaat(); arkaPlan();
+    if (ELO_OYUN.includes(o.oyun)) eloAl(o.oyun).then(v => { const x = q('#ms-elo'); if (x) x.innerHTML = `🏅 ${esc(ADLAR_OYUN[o.oyun] || '')} puanın: <b>${v.r}</b>${v.o ? ` · ${v.o} oyun` : ' · henüz oyun yok'} · puan tablosu`; }).catch(() => { const x = q('#ms-elo'); if (x) x.textContent = '🏅 Puan tablosu'; });
     const m = new URLSearchParams(location.search).get('masa'); if (m && !lobi._kullanildi) { lobi._kullanildi = true; q('#ms-kodsat').hidden = false; q('#ms-kod').value = m.toUpperCase().slice(0, 5); if (adAl()) is('katil'); else hata('Adını yazıp Katıl’a bas.'); }
   }
   async function izleGoster() {
@@ -245,6 +308,22 @@ function lobi(kok, o) {
       if (!T.sayar && R.liste.length) { const b1 = R.liste[0]; el.querySelector('#ms-ben').innerHTML = `👑 Birinci: <b>${esc(b1.n || '?')}</b> (${b1.g} galibiyet)` + (R.ben ? ` · sen ${R.sira}. oldun` : ''); }
     } catch (e) { const x = el.querySelector('.ms-sira'); if (x) x.innerHTML = '<div class="bos">Tablo yüklenemedi. İnternetini kontrol et.</div>'; }
   }
+  async function eloGoster() {
+    el.innerHTML = `<h3>🏅 ${esc(ADLAR_OYUN[o.oyun] || o.baslik)} puan tablosu</h3><p>Herkes 1200 puanla başlar. Güçlü rakibi yenmek çok, zayıfa yenilmek çok puan götürür (Elo). Hızlı eşleşme sana yakın puandaki rakibi önce dener.</p><div class="ms-sira"><div class="bos">Yükleniyor…</div></div><p id="ms-ben"></p><button class="ms-b" data-a="girisDon">‹ Geri</button>`;
+    try { const [L, ben] = await Promise.all([eloSira(o.oyun), eloAl(o.oyun)]); if (!el.querySelector('.ms-sira')) return;
+      el.querySelector('.ms-sira').innerHTML = L.length ? L.map((x, i) => `<div class="${x.u === UID ? 'sen' : ''}"><b>${i < 3 ? ['🥇', '🥈', '🥉'][i] : i + 1}</b><span>${esc(x.n || '?')}${x.u === UID ? ' (sen)' : ''}</span><b>${x.r}</b><i>${x.o} oyun</i></div>`).join('') : '<div class="bos">Henüz puanlı oyun yok.</div>';
+      el.querySelector('#ms-ben').innerHTML = `Senin puanın: <b>${ben.r}</b>${ben.o ? ` (${ben.o} oyun)` : ''}`;
+    } catch (e) { const x = el.querySelector('.ms-sira'); if (x) x.innerHTML = '<div class="bos">Tablo yüklenemedi.</div>'; }
+  }
+  async function arkadasGoster(odadan) {
+    const A = arkadaslar(), S2 = sonRakipler();
+    el.innerHTML = `<h3>👥 Arkadaşlar</h3><p>${odadan ? 'Çağırdığın arkadaşına bildirim gider; Katıl’a basınca bu odaya gelir.' : 'Son oynadığın kişileri ekle, sonra özel oda kurup tek dokunuşla çağır. Arkadaşların sitede açıkken çağrın anında görünür.'}</p>
+      <div class="ms-sira" id="ms-ark">${A.length ? A.map(x => `<div data-u="${esc(x.u)}"><b class="dot">⚪</b><span>${esc(x.n)}</span>${odadan ? '<button class="ms-mini ana" data-cagir="1">Çağır</button>' : '<button class="ms-mini" data-sil="1">✕</button>'}</div>`).join('') : '<div class="bos">Henüz arkadaşın yok. Aşağıdaki son rakiplerinden ekleyebilirsin.</div>'}</div>
+      ${!odadan && S2.length ? `<p><b>Son masa arkadaşların</b></p><div class="ms-sira">${S2.map(x => `<div data-u="${esc(x.u)}" data-n="${esc(x.n)}"><b>·</b><span>${esc(x.n)}</span><i>${esc(ADLAR_OYUN[x.o] || x.o)}</i><button class="ms-mini" data-ekle="1">⭐ Ekle</button></div>`).join('')}</div>` : ''}
+      ${!odadan && A.length ? '<button class="ms-b ana" data-a="kurCagir">🔒 Özel oda kur ve arkadaş çağır</button>' : ''}<div class="ms-hata"></div><button class="ms-b" data-a="${odadan ? 'odaDon' : 'girisDon'}">‹ Geri</button>`;
+    el._odadan = !!odadan;
+    if (A.length) durumlar(A).then(R => A.forEach(x => { const d = el.querySelector(`#ms-ark [data-u="${CSS.escape(x.u)}"] .dot`); if (d) { d.textContent = R[x.u] ? '🟢' : '⚪'; d.title = R[x.u] ? 'Çevrimiçi' : 'Çevrimdışı'; } })).catch(() => { });
+  }
   async function siraGoster() {
     el.innerHTML = `<h3>🏆 Haftanın sıralaması</h3><p>${haftaAraligi()} · Çevrimiçi masa oyunlarında en az iki kişinin oynadığı oyunlardaki galibiyetler. Pazartesi sıfırlanır.</p><div class="ms-sira"><div class="bos">Yükleniyor…</div></div><p id="ms-ben"></p><button class="ms-b" data-a="girisDon">‹ Geri</button>`;
     try {
@@ -256,12 +335,12 @@ function lobi(kok, o) {
   async function is(a) {
     const ad = adKoy(q('#ms-ad') ? q('#ms-ad').value : adAl()); if (!ad) { hata('Önce bir ad yaz.'); const i = q('#ms-ad'); if (i) i.focus(); return; }
     hata(''); el.querySelectorAll('button').forEach(b => b.disabled = true);
-    try { oda = a === 'hizli' ? await hizli(o.oyun, o.koltuk, ad) : a === 'kur' ? await kur(o.oyun, o.koltuk, false, ad) : await katil(o.oyun, q('#ms-kod').value, ad); bekle(); }
+    try { oda = a === 'hizli' ? await hizli(o.oyun, o.koltuk, ad) : a === 'kur' ? await kur(o.oyun, o.koltuk, false, ad) : await katil(o.oyun, q('#ms-kod').value, ad); bekle(); if (el._cagir) { el._cagir = false; el._odadan = false; setTimeout(() => { if (oda) arkadasGoster(true); }, 300); } }
     catch (e) { el.querySelectorAll('button').forEach(b => b.disabled = false); hata(/yüklenemedi|network|Failed/i.test(e.message || '') ? 'Sunucuya bağlanılamadı. İnternetini kontrol et.' : /PERMISSION|permission/i.test(e.message || e.code || '') ? 'Sunucu izin vermedi (kurallar güncel değil).' : (e.message || 'Bir şey ters gitti.')); }
   }
   function bekle() {
     birak = oda.dinle((v, h) => {
-      if (bitti) return; if (!v) { hata('Oda kapandı.'); return giris(); }
+      if (bitti || (el._odadan && !(v && v.d >= 1 && v.g))) return; if (!v) { hata('Oda kapandı.'); return giris(); }
       if (v.d >= 1 && v.g) { bitti = true; if (birak) birak(); return o.onOda(oda); }
       const K = oda.koltuklar(), n = K.filter(Boolean).length, yon = oda.yonetici(), link = location.origin + location.pathname + '?masa=' + oda.kod + '#o/' + o.oyun;
       el.innerHTML = `<h3>${v.a ? '⚡ Rakip aranıyor…' : '🔒 Özel oda'}</h3><div class="ms-kod">${oda.kod}</div>
@@ -269,12 +348,17 @@ function lobi(kok, o) {
         <div class="ms-sat"><button class="ms-b" data-a="kopya">🔗 Bağlantıyı kopyala</button>${navigator.share ? '<button class="ms-b" data-a="paylas">📤 Paylaş</button>' : ''}</div>
         <div class="ms-o">${K.map((x, i) => x ? `<div>${x.uid === oda.uid ? '🟢' : '🔵'} ${esc(x.n)}${x.uid === oda.uid ? ' (sen)' : ''}<i>${(() => { const k = x.uid !== oda.uid && karsi(o.oyun, x.uid), P = []; if (k && (k.g + k.k + k.b)) P.push(`aranızda ${k.g}–${k.k}${k.b ? '–' + k.b : ''}`); if (i === 0) P.push('kurucu'); return P.join(' · '); })()}</i></div>` : `<div class="bos">⚪ ${o.botlu ? 'boş (başlayınca bilgisayar oturur)' : 'bekleniyor…'}</div>`).join('')}</div>
         ${yon ? `<button class="ms-b ana" data-a="baslat" ${n >= o.enAz ? '' : 'disabled'}>${n >= o.koltuk ? 'Başlat' : o.botlu && n >= o.enAz ? 'Boş koltuklara bilgisayar otursun, başlat' : 'Oyuncu bekleniyor…'}</button>` : '<p style="text-align:center">Kurucunun başlatması bekleniyor…</p>'}
-        <div class="ms-hata"></div><button class="ms-b" data-a="cik">‹ Odadan çık</button>`;
+        ${arkadaslar().length && n < o.koltuk ? '<button class="ms-b" data-a="cagirListe">👥 Arkadaşını çağır</button>' : ''}<div class="ms-hata"></div><button class="ms-b" data-a="cik">‹ Odadan çık</button>`;
       el._link = link;
       if (yon && !o.botlu && n >= o.koltuk && !bekle._b) { bekle._b = true; setTimeout(() => { bekle._b = false; if (!bitti) o.baslat(oda); }, 700); }
     });
   }
   el.addEventListener('click', e => { const b = e.target.closest('button'); if (!b || b.disabled) return; const a = b.dataset.a;
+    if (b.dataset.ekle) { const r = b.closest('[data-u]'); arkadasEkle(r.dataset.u, r.dataset.n); b.textContent = '✓'; b.disabled = true; return; }
+    if (b.dataset.sil) { const r = b.closest('[data-u]'); arkadasSil(r.dataset.u); r.remove(); return; }
+    if (b.dataset.cagir) { const r = b.closest('[data-u]'); if (!oda) return; davetEt(r.dataset.u, o.oyun, oda.kod).then(() => { b.textContent = '✓ Çağrıldı'; b.disabled = true; }).catch(() => hata('Çağrı gönderilemedi (kurallar güncel olmayabilir).')); return; }
+    if (a === 'arkadas') arkadasGoster(false); else if (a === 'cagirListe') arkadasGoster(true); else if (a === 'odaDon') { el._odadan = false; const x = oda; if (birak) birak(); birak = null; oda = x; bekle(); }
+    else if (a === 'kurCagir') { el._cagir = true; is('kur'); } else if (a === 'elo') eloGoster(); else
     if (a === 'turnuva') turnuvaGoster(); else if (a === 'hizli2') { giris(); is('hizli'); } else
     if (a === 'geri') { kapat(); o.onGeri && o.onGeri(); } else if (a === 'sira') siraGoster(); else if (a === 'izleListe') izleGoster(); else if (a === 'izleKod') izleBasla((q('#ms-ikod') || {}).value); else if (a === 'girisDon') giris(); else if (a === 'kodla') { q('#ms-kodsat').hidden = false; q('#ms-kod').focus(); }
     else if (a === 'hizli' || a === 'kur' || a === 'katil') is(a);
@@ -322,5 +406,5 @@ function sohbet(oda, o) {
   const birak = oda.mesajDinle(balon);
   return { kapat() { birak(); kapatPano(); d.remove(); document.removeEventListener('pointerdown', disari, true); } };
 }
-window.Masa = { simdi: () => DB ? DB.now() : Date.now(), izle, canliListe, baglan, kur, katil, hizli, lobi, sohbet, IFADE, adAl, adKoy, sonuc, karsi, karsiYazi, siralama, hafta, turnuva, turnuvaSirala, ADLAR_OYUN, get uid() { return UID; } };
+window.Masa = { simdi: () => DB ? DB.now() : Date.now(), izle, canliListe, baglan, kur, katil, hizli, lobi, sohbet, IFADE, adAl, adKoy, sonuc, karsi, karsiYazi, siralama, hafta, turnuva, turnuvaSirala, arkadaslar, arkadasEkle, arkadasSil, sonRakipler, davetEt, durumlar, eloAl, eloSira, sampiyon, turnuvaOdul, ADLAR_OYUN, get uid() { return UID; } };
 })();

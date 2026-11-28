@@ -183,3 +183,9 @@
 - 102 bin kelimelik sözlük (dictionary-tr'den, MIT; veri/SOZLUK-LISANS.txt), oyun açılınca yüklenir; canlı puan önizlemesi ve geçersiz kelime uyarısı
 - Bilgisayar Appel–Jacobson hamle üretimi (kolay/normal/zor); çevrimiçi iki kişilik; tahta büyütme
 - Amiral Battı ve Kelime Masası kural sayfaları
+
+## Arkadaşlar, Elo, maç tekrarı, turnuva madalyaları
+- Arkadaş listesi (bu cihazda): son masa arkadaşlarından ⭐ ekle, çevrimiçi durumu (🟢), özel oda kurup tek dokunuşla çağır; çağrı alan kişide "Katıl" kutusu (`durum/`, `davet/`)
+- Elo puanı (tavla, satranç, dama, mangala, dokuz taş, amiral battı, kelime masası): lobide puanın ve puan tablosu, hızlı eşleşme yakın puanlı rakibi önce dener (`elo/<oyun>/<uid>`, oyun başına en çok ±40)
+- Satranç, dama ve tavlada bitişte "🎬 Yeniden izle" (assets/tekrar.js); ikili kabuğundaki oyunlarda zaten var
+- Cumartesi turnuvasında ilk üçe girene madalya rozetleri; ayın şampiyonu ana sayfadaki turnuva şeridinde; "Masa Arkadaşı" rozeti

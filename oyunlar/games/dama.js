@@ -167,6 +167,7 @@ registerGame({
     let D = Object.assign({ v: 1, kaz: 0, kay: 0, ber: 0, ag: 0, o: '', sev: 1 }, (api.loadState && api.loadState()) || {});
     const kaydet = () => { try { api.saveState && api.saveState(D); } catch (e) { } };
     const kok = E('div', { class: 'dm' }); root.append(kok);
+    const TK = window.Tekrar ? Tekrar() : null;
     let sohbetK = null, izle = false;
     let S = null, ben = 0, mod = 'yz', sev = 1, oda = null, odaBirak = null, lobi = null, secili = -1, mesaj = '', mesajT = 0, surT = 0, canli = true, sayilan = '', yerelSur = 0, sonMetin = '', bekleyen = 0, vekil = '', gecmis = [], kilit = false, yazSira = Promise.resolve();
     const q = s => kok.querySelector(s), kopya = s => JSON.parse(JSON.stringify(s));
@@ -206,7 +207,7 @@ registerGame({
     function tahtaBoy() { const t = q('.dm-tahta'); if (!t) return; const ust = t.getBoundingClientRect().top, kalan = innerHeight - ust - 46 - 46 - 24, W = kok.clientWidth; t.style.width = Math.max(240, Math.min(W, kalan)) + 'px'; t.style.alignSelf = 'center'; }
     function hedefler() { if (!benimSira() || secili < 0) return []; return DM.hamleler(S, ben).filter(m => m.yol[0] === secili); }
     function ciz() {
-      if (!S || !q('#dm-i')) return; tahtaBoy(); const L = benimSira() ? DM.hamleler(S, ben) : [], oyn = new Set(L.map(m => m.yol[0])), H = hedefler(), hs = new Map(H.map(m => [m.yol[m.yol.length - 1], m]));
+      if (!S || !q('#dm-i')) return; if (TK) TK.kaydet(S); tahtaBoy(); const L = benimSira() ? DM.hamleler(S, ben) : [], oyn = new Set(L.map(m => m.yol[0])), H = hedefler(), hs = new Map(H.map(m => [m.yol[m.yol.length - 1], m]));
       const sonK = new Set(S.son && S.son.yol ? S.son.yol : []);
       q('#dm-i').querySelectorAll('.dm-k').forEach(e => { const g = +e.dataset.k, k = gor(g); e.classList.toggle('son', sonK.has(k)); e.classList.toggle('hedef', hs.has(k)); e.classList.toggle('al', hs.has(k) && hs.get(k).al.length > 0); });
       const iz = q('#dm-i'); iz.querySelectorAll('.dm-t').forEach(x => x.remove());
@@ -259,7 +260,7 @@ registerGame({
       oyun._paylas = 'Dama: ' + (kaz ? 'kazandım!' : b.k < 0 ? 'berabere.' : 'bu sefer olmadı.') + '\nerdevelop.com/oyunlar/#o/dama';
       const e = q('.dm-son'); if (e) e.remove(); const s = E('div', { class: 'dm-son' });
       s.innerHTML = `<div><h3>${b.k < 0 ? '🤝 Berabere' : kaz ? '🎉 Kazandın!' : 'Kaybettin'}</h3><p>${b.k < 0 ? (b.neden === '50 hamle' ? '50 hamledir alma olmadı.' : 'Tek dama tek damaya karşı.') : b.neden === 'kapandı' ? (kaz ? 'Rakibin hamlesiz kaldı.' : 'Hamlen kalmadı.') : (kaz ? 'Rakibin bütün taşlarını aldın.' : 'Bütün taşların alındı.')}${mod === 'ag' ? ` · ${esc(ad(ben))} ${S.skor[ben]} – ${S.skor[1 - ben]} ${esc(ad(1 - ben))}` : ''}</p>
-        <button class="dm-b ana" data-a="yine">${mod === 'ag' ? 'Rövanş' : 'Yeni oyun'}</button><button class="dm-b" data-a="menu">Menü</button></div>`;
+        <button class="dm-b ana" data-a="yine">${mod === 'ag' ? 'Rövanş' : 'Yeni oyun'}</button>${TK && TK.var() ? '<button class="dm-b" data-a="tekrar">🎬 Yeniden izle</button>' : ''}<button class="dm-b" data-a="menu">Menü</button></div>`;
       if (mod === 'ag' && window.Masa && Masa.karsiYazi) { const kz = Masa.karsiYazi(oda); if (kz) { const p2 = document.createElement('p'); p2.className = 'ms-karsi'; p2.textContent = kz; const b1 = s.querySelector('button'); if (b1) b1.parentNode.insertBefore(p2, b1); } } kok.append(s);
     }
     function yerelKaydet() { if (mod !== 'yz' || !S) return; D.o = S.bitti ? '' : JSON.stringify({ S, sev }); D.sev = sev; kaydet(); }
@@ -269,7 +270,7 @@ registerGame({
     }
     async function al(d) {
       const metin = (oda.veri && oda.veri.g && oda.veri.g.s) || ''; yerelSur = oda.surum(); if (metin === sonMetin && S) return; sonMetin = metin;
-      const onceki = S; if (onceki && d.tur !== onceki.tur) { const e = q('.dm-son'); if (e) e.remove(); secili = -1; S = d; ciz(); return surucu(); }
+      const onceki = S; if (onceki && d.tur !== onceki.tur) { if (TK) TK.sifirla(); const e = q('.dm-son'); if (e) e.remove(); secili = -1; S = d; ciz(); return surucu(); }
       if (onceki && d.son && d.son.i === onceki.son.i + 1 && d.son.p !== ben && !kilit) { kilit = true; await canlandir({ yol: d.son.yol, al: d.son.al }, d.son.p); kilit = false; }
       S = d; ciz(); if (S.bitti) { if (!q('.dm-son')) bitti(); } else surucu();
     }
@@ -279,16 +280,16 @@ registerGame({
       sohbetK = window.Masa && Masa.sohbet ? Masa.sohbet(o, { yer: q('.dm-alt'), sonra: q('[data-a=cik]'), koltuk: p => q(p === ben ? '#dm-k0' : '#dm-k1') }) : null;
       odaBirak = oda.dinle(v => { if (!v) { if (S) mesajVer('Oda kapandı.', 60000); return; } const d = oda.durum(); if (!d) return; ben = Math.max(0, oda.ben); if (!bekleyen && !kilit) al(d); else if (S) ust(); if (S && !S.bitti) surucu(); });
     }
-    function temizle() { if (sohbetK) { sohbetK.kapat(); sohbetK = null; } clearTimeout(surT); clearTimeout(mesajT); if (lobi) { const x = lobi.kapat(); lobi = null; if (x) x.ayril(); } if (odaBirak) odaBirak(); odaBirak = null; if (oda) { oda.ayril(); oda = null; } }
+    function temizle() { if (TK) { TK.kapat(); TK.sifirla(); } if (sohbetK) { sohbetK.kapat(); sohbetK = null; } clearTimeout(surT); clearTimeout(mesajT); if (lobi) { const x = lobi.kapat(); lobi = null; if (x) x.ayril(); } if (odaBirak) odaBirak(); odaBirak = null; if (oda) { oda.ayril(); oda = null; } }
     kok.addEventListener('click', e => {
       const b = e.target.closest('button'); if (b && b.closest('.ms')) return;
       if (!b) { if (e.target.closest('#dm-i')) dokun(e); return; }
-      const a = b.dataset.a;
+      const a = b.dataset.a; if (a === 'tekrar' && TK) { const e2 = q('.dm-son'); if (e2) e2.remove(); const izl = izle; izle = true; TK.baslat({ kok, koy: Y => { S = Y; ciz(); }, bitince: () => { izle = izl; bitti(); } }); return; }
       if (a === 'yz') yzBasla(+b.dataset.s, null); else if (a === 'devam') { try { const o = JSON.parse(D.o); yzBasla(o.sev == null ? 1 : o.sev, o); } catch (x) { menu(); } }
       else if (a === 'ag') agLobi(); else if (a === 'nasil') nasil(); else if (a === 'menu') { yerelKaydet(); S = null; menu(); }
       else if (a === 'cik') { if (mod === 'ag' && S && !S.bitti && !b.dataset.emin) { b.dataset.emin = 1; mesajVer('Çıkarsan oyunu bırakmış olursun. Çıkmak için ‹’ye yeniden bas.', 3000); setTimeout(() => { delete b.dataset.emin; }, 3000); return; } yerelKaydet(); S = null; menu(); }
       else if (a === 'geri') geriAl();
-      else if (a === 'yine') { const e2 = q('.dm-son'); if (e2) e2.remove(); if (mod === 'ag') { const y = DM.yeni(S.bitti.k === 0 ? 1 : 0, { tur: S.tur + 1, skor: S.skor }); S = null; sonMetin = ''; oda.yeniden(y); } else yzBasla(sev, null); } });
+      else if (a === 'yine') { if (TK) TK.sifirla(); const e2 = q('.dm-son'); if (e2) e2.remove(); if (mod === 'ag') { const y = DM.yeni(S.bitti.k === 0 ? 1 : 0, { tur: S.tur + 1, skor: S.skor }); S = null; sonMetin = ''; oda.yeniden(y); } else yzBasla(sev, null); } });
     const boyutla = () => { if (S) ciz(); }; addEventListener('resize', boyutla);
     const sakla = () => yerelKaydet(); addEventListener('pagehide', sakla);
     api.onCleanup(() => { canli = false; yerelKaydet(); temizle(); removeEventListener('resize', boyutla); removeEventListener('pagehide', sakla); root.classList.remove('dm-mount'); });

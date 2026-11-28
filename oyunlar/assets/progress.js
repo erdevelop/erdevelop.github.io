@@ -65,6 +65,10 @@
     B('onlinek1','Çevrimiçi','🤝','İlk Galibiyet','Çevrimiçi bir oyun kazan',1,s=>ol(s,'online_kazan')),
     B('onlinek10','Çevrimiçi','🏆','Masanın Ustası','Çevrimiçi 10 oyun kazan',10,s=>ol(s,'online_kazan')),
     B('turnuva1','Çevrimiçi','🎪','Turnuvacı','Cumartesi turnuvasında bir oyun bitir',1,s=>ol(s,'turnuva_oyna')),
+    B('turnuva_1','Çevrimiçi','🥇','Turnuva Birincisi','Cumartesi turnuvasında birinci ol',1,s=>ol(s,'turnuva_1')),
+    B('turnuva_2','Çevrimiçi','🥈','Turnuva İkincisi','Cumartesi turnuvasında ilk ikiye gir',1,s=>ol(s,'turnuva_1')+ol(s,'turnuva_2')),
+    B('turnuva_3','Çevrimiçi','🥉','Kürsü','Cumartesi turnuvasında ilk üçe gir',1,s=>ol(s,'turnuva_1')+ol(s,'turnuva_2')+ol(s,'turnuva_3')),
+    B('arkadas1','Çevrimiçi','👥','Masa Arkadaşı','Çevrimiçi bir oyunda arkadaşınla oyna',1,s=>ol(s,'arkadas_oyna')),
     B('turnuva5','Çevrimiçi','🎖️','Turnuva Müdavimi','Cumartesi turnuvalarında 5 oyun bitir',5,s=>ol(s,'turnuva_oyna'))
   ];
   const hedefOf=b=>b.id==='hepsi'?Math.max(5,gorunur().length):b.hedef;
