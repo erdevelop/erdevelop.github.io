@@ -177,3 +177,9 @@
 - 10×10, 5 gemi (5-4-3-3-2), gemiler değmez; dokun-taşı-döndür ya da rastgele dizme; isabet eden bir daha atar
 - Çevrimiçide gemilerin yeri yalnız sahibinin cihazında; atış sonucunu hedefin cihazı bildirir
 - Bilgisayar: kolay (rastgele+takip), normal (satranç deseni + takip), zor (olasılık haritası)
+
+## Kelime Masası
+- 15×15 Türkçe tahta kelime oyunu: Türkçe taş dağılımı (100 taş, 2 boş), H²/H³/K²/K³ kareler, +50 bonus, değiştir/pas, bitiş puanları
+- 102 bin kelimelik sözlük (dictionary-tr'den, MIT; veri/SOZLUK-LISANS.txt), oyun açılınca yüklenir; canlı puan önizlemesi ve geçersiz kelime uyarısı
+- Bilgisayar Appel–Jacobson hamle üretimi (kolay/normal/zor); çevrimiçi iki kişilik; tahta büyütme
+- Amiral Battı ve Kelime Masası kural sayfaları
