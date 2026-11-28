@@ -7,7 +7,7 @@
    Yeni rozet ya da tamamlanan görev olunca window.OB_bildir(metin) ile haber verilir. */
 (function(){
   const KEY='ob_progress_v1';
-  const MASA=['tavla','okey','okey101','batak','king','tombala','pisti','dama','satranc'];
+  const MASA=['tavla','okey','okey101','batak','king','tombala','mangala','dokuztas','pisti','dama','satranc'];
   const BULMACA=['sudoku','kakuro','nonogram','kelimeavi','boru','mayin','solitaire','renksirala','gunlukkelime'];
   const REFLEKS=['balon','g2048','blok'];
 

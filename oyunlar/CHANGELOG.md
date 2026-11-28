@@ -167,3 +167,8 @@
 ## Bir İşlem
 - Altı sayı (beşi 1–9, biri 25/50/75/100) ve üç basamaklı hedef; dört işlem, tam bölme, geri al/baştan
 - Günün sorusu (kesin çözümlü, iki sayıyla çözülemez), serbest mod, yıldızlar, süre, seri ve olası çözüm gösterimi
+
+## Mangala ve Dokuz Taş
+- Yeni ortak iki kişilik kabuk (assets/ikili.js): bilgisayara karşı 3 seviye, çevrimiçi, izleyici, teslim, rövanş, maç sayacı ve oyunu yeniden izleme
+- Mangala: tam kurallar (ilk taş aynı kuyuya, hazineye düşen son taşla tekrar, çift ve boş kuyu alma, taşları biten rakibin kuyularını alır), taş dağıtma animasyonu
+- Dokuz Taş: yerleştirme, sürme, üçte uçma, üçlüyle taş alma (üçlüdeki taş koruması), 50 hamle beraberlik
