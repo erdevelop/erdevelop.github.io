@@ -693,8 +693,13 @@ export async function kur3D({ tuval, kalite, ilk = [] }) {
         const taban = zeminY(p.x, p.z) + s * (f.alt * 1.1 + f.yarim * Math.abs(Math.sin(f.pit)) + 0.04);
         const yakin = THREE.MathUtils.clamp((p.y - taban) / (s * f.alt * 2 + 0.01), 0, 1);
         if (p.y < taban) p.y = taban;
+        /* 3B hareket yönü: derinlikte öne-arkaya giderken balık o yöne döner (yalnızca yan dönmez) */
+        if (f.px != null && dt > 0) { const k = Math.min(1, dt * 4); f.v3x = (f.v3x || 0) + ((p.x - f.px) / dt - (f.v3x || 0)) * k; f.v3z = (f.v3z || 0) + ((p.z - f.pz) / dt - (f.v3z || 0)) * k; }
+        f.px = p.x; f.pz = p.z;
         f.g.position.copy(p);
-        const hedefYaw = b.yon > 0 ? -0.32 : Math.PI + 0.32;
+        let hedefYaw = b.yon > 0 ? -0.32 : Math.PI + 0.32;
+        if (!b.uyku && !dans) { const hs = Math.hypot(f.v3x || 0, f.v3z || 0), w = THREE.MathUtils.clamp((hs - s * 0.25) / (s * 0.8), 0, 1) * THREE.MathUtils.clamp(Math.abs(f.v3z || 0) / (hs + 1e-4) * 1.4, 0, 1);
+          if (w > 0.01) { let ym = Math.atan2(-(f.v3z || 0), f.v3x || 0), dd = ym - hedefYaw; while (dd > Math.PI) dd -= Math.PI * 2; while (dd < -Math.PI) dd += Math.PI * 2; if (Math.abs(dd) < 2.2) hedefYaw += dd * w * 0.85; } }
         if (f.yaw == null) f.yaw = hedefYaw;
         let dy = hedefYaw - f.yaw; while (dy > Math.PI) dy -= Math.PI * 2; while (dy < -Math.PI) dy += Math.PI * 2;
         f.yaw += dy * Math.min(1, dt * 5);
