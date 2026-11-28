@@ -330,7 +330,7 @@ registerGame({
     const NEDEN = { mat: 'Şah mat.', pat: 'Pat: hamle yok ama şah tehdit altında değil.', '50 hamle': '50 hamledir taş alınmadı, piyon oynanmadı.', 'üç kez tekrar': 'Aynı konum üç kez tekrarlandı.', 'yetersiz taş': 'Mat etmeye yetecek taş kalmadı.', pes: 'Pes edildi.' };
     function bitti() {
       clearTimeout(surT); const b = S.bitti, br = benRenk(), kaz = b.k === br, anahtar = mod + ':' + S.tur + ':' + (oda ? oda.kod : '') + ':' + S.son.i;
-      if (sayilan !== anahtar) { sayilan = anahtar;
+      if (sayilan !== anahtar) { sayilan = anahtar; const PR = window.Progress; if (PR) { if (kaz && b.neden === 'mat') PR.olay('st_mat'); if (kaz && mod === 'yz' && sev === 1) PR.olay('st_normal'); }
         if (mod === 'yz') { if (b.k < 0) D.ber++; else if (kaz) { D.kaz++; api.submitScore(D.kaz); } else D.kay++; D.o = ''; kaydet(); } else { if (kaz) { D.ag++; kaydet(); } if (oda) oda.bitir(); }
         ses(kaz ? 'win' : b.k < 0 ? 'click' : 'lose'); if (kaz) { try { window.FX && FX.confetti && FX.confetti(); } catch (e) { } } }
       if (mod === 'ag' && oda && window.Masa && Masa.sonuc) Masa.sonuc(oda, b.k < 0 ? .5 : kaz ? 1 : 0, S.tur + ':' + S.son.i);

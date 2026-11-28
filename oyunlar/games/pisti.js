@@ -190,7 +190,7 @@ registerGame({
     function uygula(Y) { const onceki = S; S = Y; if (mod === 'ag') gonder(); else yerelKaydet(); goster(onceki); if (S.bitti) setTimeout(() => { if (S === Y) bitti(); }, 1100); else surucu(); }
     function kartDokun(c) {
       if (!S || S.bitti) return; if (!benimSira()) { secili = secili === c ? -1 : c; return ciz(); }
-      if (secili === c) { secili = -1; const Y = kopya(S); if (!PI.oyna(Y, ben, c)) return; if (mod === 'yz' && (Y.son.t === 'p' || Y.son.t === 'vp')) { D.pisti++; kaydet(); } uygula(Y); } else { secili = c; ses('click'); ciz(); }
+      if (secili === c) { secili = -1; const Y = kopya(S); if (!PI.oyna(Y, ben, c)) return; if (mod === 'yz' && (Y.son.t === 'p' || Y.son.t === 'vp')) { D.pisti++; kaydet(); } if (window.Progress && (Y.son.t === 'p' || Y.son.t === 'vp')) Progress.olay(Y.son.t === 'vp' ? 'vpisti' : 'pisti'); uygula(Y); } else { secili = c; ses('click'); ciz(); }
     }
     function surucu() {
       clearTimeout(surT); if (!S || S.bitti || !canli) return; const p = S.sira; let sure;

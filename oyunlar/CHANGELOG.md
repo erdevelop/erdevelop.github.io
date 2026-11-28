@@ -120,3 +120,11 @@
 - **Maç serisi:** Pişti, 101 ve Batak’ta aynı odada art arda oynanan maçların galibiyetleri tabloda (🏆 sütunu / "Kazanılan maç").
 - Firebase kuralları: `masa_sira` (her oyuncu yalnız kendi kaydını yazar; bir yazışta en çok bir oyun ve bir galibiyet, iki yazış arası en az 10 sn).
 
+## Rozetler ve günlük görevler — 28 Kasım 2026
+- **40 rozet**, beş grupta (Genel, Günlük, Masa, Bulmaca, Çevrimiçi): Mars!, Şah Mat, Vale Piştisi, Okeyi Atan, Elden Bitti, İhaleci, Sudokucu, Tesisatçı, Masanın Ustası…
+  Kazanılmamış rozetlerde ilerleme çubuğu ve sayı (ör. 3/10) görünür.
+- **Günlük görevler:** her gün herkese aynı üç görev (bir kolay, bir masa oyunu, bir karışık); her biri 30 XP, üçü birden 50 XP bonus ve görev serisi.
+  Ana sayfada görev kartı; oyuna bağlı görevlere dokununca oyun açılır.
+- Eski “Günün meydan okuması” portaldan kaldırılmış eski oyunlara bağlıydı ve görünmüyordu; yerini görev kartı aldı.
+- Oyunlar artık pişti, mars, mat, okeyle/çiftle bitiş, 101’de açma ve elden bitiş, Batak’ta ihale tutturma, damada dama çıkarma ve çevrimiçi sonuçları bildiriyor.
+

@@ -127,6 +127,7 @@ function sonuc(oda, r, anahtar) {
   if (K.length === 2) { const x = K.find(y => y && y.uid !== UID); if (x) { const O = karsiOku(), a = oda.oyun + ':' + x.uid, v = O[a] || { g: 0, k: 0, b: 0 }; v.n = x.n; v.t = Date.now(); if (r === 1) v.g++; else if (r === 0) v.k++; else v.b++; O[a] = v;
     const anah = Object.keys(O); if (anah.length > 300) anah.sort((p, q) => O[p].t - O[q].t).slice(0, anah.length - 300).forEach(z => delete O[z]); try { localStorage.setItem(KARSI, JSON.stringify(O)); } catch (e) { } } }
   if (insan.length < 2) return;
+  try { if (window.Progress) { Progress.olay('online_oyna'); if (r === 1) Progress.olay('online_kazan'); } } catch (e) { }
   const ad = (K.find(x => x && x.uid === UID) || {}).n || adAl() || '?';
   DB.tx('masa_sira/' + hafta() + '/' + UID, c => { c = c || {}; const simdi = DB.now(); if (simdi < (c.t || 0) + 10000) return; return { n: ad.slice(0, 16), g: (c.g || 0) + (r === 1 ? 1 : 0), o: (c.o || 0) + 1, t: simdi }; }).catch(() => { });
 }

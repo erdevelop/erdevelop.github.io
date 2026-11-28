@@ -6,6 +6,7 @@
 
   // ---------- Toast ----------
   let toastT;
+  window.OB_bildir = msg => toast(msg);
   function toast(msg){
     const t = $('#toast'); t.textContent = msg; t.hidden = false;
     requestAnimationFrame(()=> t.classList.add('show'));
@@ -47,24 +48,20 @@
     return g.icon || '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><rect x="3" y="6" width="18" height="12" rx="3"/><path d="M8 12h2M9 11v2M15 11h.01M17 13h.01"/></svg>';
   }
 
-  // ---------- Günün Oyunu ----------
+  // ---------- Günlük görevler ----------
   function renderDaily(){
-    if(!window.Daily) return;
+    if(!window.Progress || !Progress.gorevler) return;
     let el=$('#dailyBanner');
-    if(!el){ el=document.createElement('button'); el.id='dailyBanner'; el.className='daily';
+    if(!el){ el=document.createElement('section'); el.id='dailyBanner'; el.className='gorev-kart';
       const chips=$('#categoryChips'); chips.parentNode.insertBefore(el, chips); }
-    const d=Daily.today(); const g=games.find(x=>x.id===d.gameId);
-    if(!g){ el.hidden=true; return; } el.hidden=false;
-    const flame = d.streak>0 ? '<span class="daily-streak">🔥 '+d.streak+'</span>' : '';
-    if(d.done){
-      el.innerHTML='<div class="daily-main"><span class="daily-eyebrow">GÜNÜN MEYDAN OKUMASI</span>'+
-        '<span class="daily-title">✓ Bugünlük tamam — '+g.title+'</span></div>'+flame;
-    } else {
-      el.innerHTML='<div class="daily-main"><span class="daily-eyebrow">GÜNÜN OYUNU · hedef '+d.target+'</span>'+
-        '<span class="daily-title">'+g.title+' — oynamak için dokun</span></div>'+flame;
-    }
-    el.onclick=()=>{ if(g) openGame(g); };
+    const G=Progress.gorevler(), bitti=G.L.filter(x=>x.bitti).length;
+    el.innerHTML='<div class="gorev-ust"><span class="gorev-baslik">GÜNLÜK GÖREVLER <small>'+bitti+'/3</small></span>'+(G.seri>0?'<span class="daily-streak">🔥 '+G.seri+' gün</span>':'')+'<button class="gorev-rozet" type="button" data-rozet>🏅 Rozetler</button></div>'+
+      G.L.map(t=>'<button class="gorev'+(t.bitti?' ok':'')+'" type="button"'+(t.oyun?' data-oyun="'+t.oyun+'"':'')+'><span class="gorev-ik">'+(t.bitti?'✓':'')+'</span><span class="gorev-ad">'+t.metin+'</span><span class="gorev-say">'+(t.n>1?t.il+'/'+t.n:(t.bitti?'+30':'+30 XP'))+'</span></button>').join('')+
+      (G.tam?'<div class="gorev-tam">🎉 Bugünlük hepsi tamam. Yarın yeni görevler gelecek.</div>':'');
+    el.querySelectorAll('[data-oyun]').forEach(b=> b.onclick=()=>{ const g=games.find(x=>x.id===b.dataset.oyun); if(g) openGame(g); });
+    const rb=el.querySelector('[data-rozet]'); if(rb) rb.onclick=()=>openProfile();
   }
+  window.addEventListener('ob-ilerleme', ()=>{ if(!$('#home').hidden) renderDaily(); });
 
   function renderGrid(){
     const grid = $('#gameGrid'); grid.innerHTML='';
@@ -125,6 +122,7 @@
   async function openGame(g){
     runCleanup();
     currentGame=g;
+    try{ window.Progress && Progress.onOpen(g.id); }catch(e){}
     $('#home').hidden=true; $('#player').hidden=false; window.scrollTo(0,0);
     document.body.classList.toggle('ob-odak', !!g.odak); $('#restartBtn').hidden=!!g.noRestart;
     $('#playerTitle').textContent=g.title;
@@ -159,14 +157,8 @@
           if(window.FX) FX.record();
           setTimeout(pulseShare, 400);
         }
-        // İlerleme: XP, seviye, rozetler
-        if(window.Progress){ const p=Progress.onGamePlayed(g.id, n, r.isNew);
-          if(p.levelUp) setTimeout(()=>{ toast('⭐ Seviye '+p.levelUp+'!'); if(window.FX) FX.record(); }, 900);
-          (p.badges||[]).forEach((b,i)=> setTimeout(()=> toast(b.emoji+' Rozet: '+b.name), 1200+i*1400)); }
-        // Günün meydan okuması
-        if(window.Daily){ const d=Daily.record(g.id, n);
-          if(d && d.completed){ setTimeout(()=>{ toast('🔥 Günün meydan okuması tamam! Seri: '+d.streak); if(window.FX) FX.record(); },700);
-            if(window.Progress){ const pd=Progress.onDailyDone(); if(pd.levelUp) setTimeout(()=>toast('⭐ Seviye '+pd.levelUp+'!'),1100); (pd.badges||[]).forEach((b,i)=>setTimeout(()=>toast(b.emoji+' Rozet: '+b.name),1500+i*1400)); } } }
+        // İlerleme: XP, seviye, rozetler, günlük görevler (bildirimleri Progress kendisi yapar)
+        if(window.Progress){ try{ Progress.onGamePlayed(g.id, n, r.isNew); }catch(e){} }
         return r;
       },
       saveState(obj){ return window.Store && window.Store.saveState(g.id, obj); },
@@ -295,11 +287,17 @@
         '<div class="xp-bar"><i style="width:'+pct+'%"></i></div>'+
         '<div class="xp-sub">'+s.into+' / '+s.need+' XP</div></div>';
     }
-    // Rozetler
+    // Günlük görevler + rozetler (kategoriye göre, ilerlemeyle)
     let badges='';
     if(window.Progress){ const s=Progress.state(); const got=s.badges.filter(b=>b.got).length;
-      badges='<div class="sect-h">Rozetler <small>'+got+'/'+s.badges.length+'</small></div><div class="badge-grid">'+
-        s.badges.map(b=>'<div class="badge'+(b.got?' got':'')+'" title="'+b.desc+'"><span class="badge-emoji">'+b.emoji+'</span><span class="badge-name">'+b.name+'</span></div>').join('')+'</div>';
+      if(Progress.gorevler){ const G=Progress.gorevler();
+        badges+='<div class="sect-h">Bugünün görevleri <small>'+G.L.filter(x=>x.bitti).length+'/3</small></div><div class="gorev-liste">'+
+          G.L.map(t=>'<div class="gorev'+(t.bitti?' ok':'')+'"><span class="gorev-ik">'+(t.bitti?'✓':'')+'</span><span class="gorev-ad">'+t.metin+'</span><span class="gorev-say">'+(t.n>1?t.il+'/'+t.n:(t.bitti?'✓':'+30'))+'</span></div>').join('')+'</div>'; }
+      badges+='<div class="sect-h">Rozetler <small>'+got+'/'+s.badges.length+'</small></div>';
+      ['Genel','Günlük','Masa','Bulmaca','Çevrimiçi'].forEach(k=>{ const L=s.badges.filter(b=>b.kat===k); if(!L.length) return;
+        badges+='<div class="badge-kat">'+k+' <small>'+L.filter(b=>b.got).length+'/'+L.length+'</small></div><div class="badge-grid">'+
+          L.map(b=>'<div class="badge'+(b.got?' got':'')+'" title="'+b.desc+'"><span class="badge-emoji">'+b.emoji+'</span><span class="badge-name">'+b.name+'</span>'+
+            '<span class="badge-desc">'+b.desc+'</span>'+(b.got?'':(b.hedef>1?'<span class="badge-bar"><i style="width:'+Math.round(b.il/b.hedef*100)+'%"></i></span><span class="badge-il">'+b.il+'/'+b.hedef+'</span>':''))+'</div>').join('')+'</div>'; });
     }
     const scores = '<div class="sect-h">En iyi skorların</div>'+
       (played.length? '<div class="score-list">'+rows+'</div>' : '<p class="auth-sub" style="margin:4px 0 0">Henüz skor yok — bir oyun oyna!</p>');

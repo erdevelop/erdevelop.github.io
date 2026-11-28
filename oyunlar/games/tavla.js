@@ -131,7 +131,7 @@ registerGame({
     let D = Object.assign({ v: 1, kaz: 0, kay: 0, mars: 0, ag: 0, o: '', sev: 1 }, (api.loadState && api.loadState()) || {});
     const kaydet = () => { try { api.saveState && api.saveState(D); } catch (e) { } };
     const kok = E('div', { class: 'tv' }); root.append(kok);
-    let sohbetK = null;
+    let sohbetK = null, sayilanOlay = '';
     let S = null, ben = 0, mod = 'yz', sev = 1, oda = null, odaBirak = null, lobi = null, adlar = ['Sen', 'Bilgisayar'], skor = [0, 0], gecmis = [], secili = null, mesaj = '', kilit = false, bitT = 0, raf = 0, anim = null, yaziSurum = 0, sonI = 0, yazSira = Promise.resolve(), cv = null, cx = null, geo = null, yokT = 0, canli = true;
 
     /* ---------- menü ---------- */
@@ -260,6 +260,7 @@ registerGame({
     /* ---------- bitiş ---------- */
     function bitti() {
       clearTimeout(bitT); const kazandim = S.bitti === ben, sayi = S.mars ? 2 : 1; ust();
+      { const tvA = mod + ':' + S.tur + ':' + (S.son ? S.son.i : 0) + ':' + S.cik.join('-'); if (window.Progress && kazandim && sayilanOlay !== tvA) { sayilanOlay = tvA; Progress.olay('tv_kazan'); if (S.mars) Progress.olay('tv_mars'); } }
       if (mod === 'yz') { if (kazandim) { D.kaz++; if (S.mars) D.mars++; api.submitScore(D.kaz); } else D.kay++; D.o = ''; kaydet(); }
       else if (!S.sayildi) { S.sayildi = 1; skor[S.bitti] += sayi; S.skor = skor.slice(); gonder(); if (kazandim) { D.ag++; kaydet(); } if (oda) oda.bitir(); }
       ses(kazandim ? 'win' : 'lose'); if (kazandim) { try { window.FX && FX.confetti && FX.confetti(); } catch (e) { } }

@@ -232,7 +232,7 @@ registerGame({
     async function oyna(m, p) {
       kilit = true; secili = -1; const Y = kopya(S); if (!DM.uygula(Y, m)) { kilit = false; return; }
       if (mod === 'yz' && p === ben) gecmis.push(JSON.stringify(S));
-      await canlandir(m, p); if (!canli) return; kilit = false; S = Y; if (Y.son.terfi) ses('win');
+      await canlandir(m, p); if (!canli) return; kilit = false; S = Y; if (Y.son.terfi) { ses('win'); if (p === ben && window.Progress) Progress.olay('dm_dama'); }
       if (mod === 'ag') gonder(); else yerelKaydet(); ciz(); if (S.bitti) bitti(); else surucu();
     }
     function dokun(e) {

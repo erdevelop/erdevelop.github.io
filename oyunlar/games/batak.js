@@ -270,7 +270,7 @@ registerGame({
     /* ---------- bitiş ---------- */
     function bitti() {
       clearTimeout(surT); const mb = BT.macBitti(S), anahtar = mod + ':' + S.tur + ':' + (oda ? oda.kod : ''), lider = [0, 1, 2, 3].sort((a, c) => S.puan[c] - S.puan[a])[0], tuttu = S.bitti.tuttu;
-      if (sayilan !== anahtar) { sayilan = anahtar;
+      if (sayilan !== anahtar) { sayilan = anahtar; const PR = window.Progress; if (PR) { if (S.kim === ben && tuttu) PR.olay('bt_tuttu'); }
         if (mod === 'yz') { if (S.kim === ben && tuttu) D.tuttu++; if (mb) { D.mac++; if (lider === ben) { D.kaz++; api.submitScore(D.kaz); } } kaydet(); yerelKaydet(); }
         else { if (mb && lider === ben) { D.ag++; kaydet(); } if (oda && mb) oda.bitir(); }
         const iyi = (S.kim === ben && tuttu) || (mb && lider === ben); ses(iyi ? 'win' : S.kim === ben ? 'lose' : 'click'); if (iyi) { try { window.FX && FX.confetti && FX.confetti(); } catch (e) { } } }

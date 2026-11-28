@@ -452,7 +452,7 @@ registerGame({
     }
     function acDene() {
       if (!benimSira() || !S.cekti) return; secili = null; uyari = -1;
-      if (!S.acti[ben]) { const A = O1.acis(S, ben), tur = A.seri ? 'seri' : A.cift ? 'cift' : ''; if (!tur) return; if (oyna(Y => O1.ac(Y, ben, tur), 'score')) { yerlestir(dizTur === 'seri' ? 'seri' : 'cift'); ciz(); } if (S.acti[ben]) mesajVer(tur === 'seri' ? `<b>${A.seri.deger}</b> ile açtın!` : `<b>${A.cift.ciftler.length} çift</b> ile açtın!`); }
+      if (!S.acti[ben]) { const A = O1.acis(S, ben), tur = A.seri ? 'seri' : A.cift ? 'cift' : ''; if (!tur) return; if (oyna(Y => O1.ac(Y, ben, tur), 'score')) { if (window.Progress) Progress.olay('o1_ac'); yerlestir(dizTur === 'seri' ? 'seri' : 'cift'); ciz(); } if (S.acti[ben]) mesajVer(tur === 'seri' ? `<b>${A.seri.deger}</b> ile açtın!` : `<b>${A.cift.ciftler.length} çift</b> ile açtın!`); }
       else if (oyna(Y => O1.indir(Y, ben), 'score')) { yerlestir('seri'); mesajVer('Perlerini indirdin.'); }
     }
     function uygula(Y) { S = Y; if (mod === 'ag') gonder(); else yerelKaydet(); ciz(); if (S.bitti) bitti(); else surucu(); }
@@ -470,7 +470,7 @@ registerGame({
     /* ---------- bitiş ---------- */
     function bitti() {
       clearTimeout(surT); const b = S.bitti, mb = O1.macBitti(S), anahtar = mod + ':' + S.tur + ':' + (oda ? oda.kod : ''), lider = [0, 1, 2, 3].sort((a, c) => S.puan[a] - S.puan[c])[0];
-      if (sayilan !== anahtar) { sayilan = anahtar;
+      if (sayilan !== anahtar) { sayilan = anahtar; const PR = window.Progress; if (PR) { if (b.k === ben && b.elden) PR.olay('o1_elden'); }
         if (mod === 'yz') { if (mb) { D.mac++; if (lider === ben) { D.kaz++; api.submitScore(D.kaz); } } kaydet(); yerelKaydet(); } else { if (mb && lider === ben) { D.ag++; kaydet(); } if (oda && mb) oda.bitir(); }
         const iyi = b.k === ben || (mb && lider === ben); ses(iyi ? 'win' : b.k < 0 ? 'click' : 'lose'); if (iyi) { try { window.FX && FX.confetti && FX.confetti(); } catch (e) { } } }
       if (mod === 'ag' && oda && window.Masa && Masa.sonuc && mb) Masa.sonuc(oda, lider === ben ? 1 : 0, 'm' + S.tur);

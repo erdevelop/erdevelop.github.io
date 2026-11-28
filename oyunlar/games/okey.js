@@ -338,7 +338,7 @@ registerGame({
     /* ---------- bitiş ---------- */
     function bitti() {
       clearTimeout(surT); const b = S.bitti, anahtar = mod + ':' + S.tur + ':' + (oda ? oda.kod : ''), kazandim = b.k === ben;
-      if (sayilan !== anahtar) { sayilan = anahtar;
+      if (sayilan !== anahtar) { sayilan = anahtar; const PR = window.Progress; if (PR) { if (kazandim) { PR.olay('okey_bitir'); if (b.okey) PR.olay('okey_okeyle'); if (b.tur === 'cift') PR.olay('okey_cift'); } }
         if (mod === 'yz') { D.el++; if (kazandim) { D.kaz++; api.submitScore(D.kaz); } D.o = ''; kaydet(); } else { if (kazandim) { D.ag++; kaydet(); } if (oda) oda.bitir(); }
         ses(kazandim ? 'win' : b.k < 0 ? 'click' : 'lose'); if (kazandim) { try { window.FX && FX.confetti && FX.confetti(); } catch (e) { } } }
       if (mod === 'ag' && oda && window.Masa && Masa.sonuc) Masa.sonuc(oda, b.k < 0 ? .5 : kazandim ? 1 : 0, 'e' + S.tur);
