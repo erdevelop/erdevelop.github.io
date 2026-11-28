@@ -202,3 +202,4 @@
 - Rastgele ama hep geçilebilir yol: blok alanları, boşluklu köprüler, dar yollar, kapılı duvarlar, hızlandırıcılı tüneller, zıplama rampası
 - Kolay / normal / zor, her 50 puanda hızlanma, haftalık ve genel rekor; Three.js sitenin kökündeki three.min.js'den oyun açılınca yüklenir
 - Neon Yol: yumuşak pastel renkler (alacakaranlık gökyüzü, pembe bloklar, pastel tüneller); yol artık yokuşlu ve inişli (yumuşak eğim geçişleri, yokuşta yavaşlama, inişte hızlanma, kamera eğimi izler)
+- Neon Yol: sabit küpler yaklaşık üçte bire indi (100 satırda ~28 → ~11); yeni sağa sola kayan turuncu küpler (farklı hız ve genlik, zorlukla hızlanır)

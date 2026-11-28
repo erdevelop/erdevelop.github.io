@@ -21,7 +21,7 @@ const NY = (() => {
     function acik(n) { for (let k = 0; k < n; k++) ekle(satir(1)); }
     function bloklar(n, d) {
       for (let k = 0; k < n; k++) { const i = R.length, eski = yol, y = kay(i); if (y != null) yol = y; const row = satir(1);
-        if (k % 2 === 0) for (let s = 0; s < S; s++) if (s !== yol && s !== eski && r() < .28 + .32 * d) row.l[s] = 2;
+        if (k % 3 === 0) { let n = 0; for (const s of [0, 1, 2, 3, 4].sort(() => r() - .5)) if (s !== yol && s !== eski && n < (d > .6 ? 2 : 1) + (r() < .3 ? 1 : 0) && r() < .3 + .25 * d) { row.l[s] = 2; n++; } }
         ekle(row); if (y != null) ekle(satir(1)); } }
     function bosluk(n, d) {
       const gen = d > .6 ? 1 : 2;
@@ -36,6 +36,10 @@ const NY = (() => {
     function duvar(n, d) {
       for (let k = 0; k < n; k++) { if (k % 7 !== 3) { ekle(satir(1)); continue; } const row = satir(3), kapi = Math.max(0, Math.min(S - 1, yol + ((r() * 5) | 0) - 2)), gen = d > .5 ? 1 : 2;
         for (let s = kapi; s < Math.min(S, kapi + gen); s++) row.l[s] = 1; yol = kapi; sonKay = R.length; ekle(row); } }
+    function kayan(n, d) {   /* sağa sola kayan küpler: m = { c: orta şerit, a: genlik, w: hız, p: evre } */
+      for (let k = 0; k < n; k++) { const row = satir(1);
+        if (k % 6 === 3) { const a = r() < .5 ? 2 : 1 + r(); row.m = { c: 2 + (r() - .5) * (4 - 2 * a), a, w: (1.3 + r() * 1.1) * (1 + d * .6), p: r() * 6.28 }; }
+        ekle(row); } yol = 2; sonKay = R.length; }
     function tunel(n) { ekle(satir(4, { y: 'hiz' })); for (let k = 0; k < n; k++) ekle(satir(1, { t: 1 })); }
     function rampa() { hedefEgim = 0; acik(2); ekle(satir(5)); for (let k = 0; k < 4; k++) ekle(satir(0)); acik(3); yol = 2; sonKay = R.length; }
     return {
@@ -46,12 +50,13 @@ const NY = (() => {
           if (R.length < 14) { acik(14); continue; }
           arazi(d); if (R.length % 3 === 0 && r() < .25) { const e = hedefEgim; hedefEgim = -e * .8; }
           if (desenSay % 9 === 0) { hedefEgim = 0; tunel(10 + ((r() * 8) | 0)); continue; }
-          if (x < .26) bloklar(10 + ((r() * 10) | 0), d);
-          else if (x < .46) bosluk(8 + ((r() * 8) | 0), d);
-          else if (x < .62) dar(10 + ((r() * 8) | 0), d);
-          else if (x < .76) duvar(14 + ((r() * 8) | 0), d);
-          else if (x < .86) rampa();
-          else acik(3 + ((r() * 4) | 0));
+          if (x < .2) bloklar(10 + ((r() * 8) | 0), d);
+          else if (x < .38) kayan(13 + ((r() * 12) | 0), d);
+          else if (x < .54) bosluk(8 + ((r() * 8) | 0), d);
+          else if (x < .68) dar(10 + ((r() * 8) | 0), d);
+          else if (x < .77) duvar(14 + ((r() * 8) | 0), d);
+          else if (x < .87) rampa();
+          else acik(4 + ((r() * 5) | 0));
           acik(d > .7 ? 1 : 2);
         }
       }
@@ -138,9 +143,11 @@ registerGame({
       const kupD = doku(128, 128, (g, w, h) => { g.fillStyle = '#cf7fb1'; g.fillRect(0, 0, w, h); g.strokeStyle = '#f8d3e8'; g.lineWidth = 7; g.strokeRect(4, 4, w - 8, h - 8); });
       const kupG = new THREE.BoxGeometry(.94, 1, .94), mK = new THREE.MeshStandardMaterial({ map: kupD, emissive: 0xffffff, emissiveMap: kupD, emissiveIntensity: .12, roughness: .7 });
       const kup = new THREE.InstancedMesh(kupG, mK, 260);
+      const kayD = doku(128, 128, (g, w, h) => { g.fillStyle = '#e9a77f'; g.fillRect(0, 0, w, h); g.strokeStyle = '#fde3cf'; g.lineWidth = 7; g.strokeRect(4, 4, w - 8, h - 8); g.fillStyle = '#fde3cf'; g.beginPath(); g.moveTo(22, 64); g.lineTo(44, 46); g.lineTo(44, 82); g.fill(); g.beginPath(); g.moveTo(106, 64); g.lineTo(84, 46); g.lineTo(84, 82); g.fill(); });
+      const kayK = new THREE.InstancedMesh(kupG, new THREE.MeshStandardMaterial({ map: kayD, emissive: 0xffffff, emissiveMap: kayD, emissiveIntensity: .12, roughness: .7 }), 40);
       const halkaG = new THREE.TorusGeometry(3.3, .14, 8, 28, Math.PI), mT = new THREE.MeshBasicMaterial({ color: 0xe8a9d6 }), halka = new THREE.InstancedMesh(halkaG, mT, 40);
       const tunelYanG = new THREE.PlaneGeometry(1, 2.4), mTy = new THREE.MeshBasicMaterial({ color: 0xb193d9, transparent: true, opacity: .35, side: THREE.DoubleSide }), tunelYan = new THREE.InstancedMesh(tunelYanG, mTy, 80);
-      [zemin, hizT, rampaT, kup, halka, tunelYan].forEach(m => { m.instanceMatrix.setUsage(THREE.DynamicDrawUsage); m.frustumCulled = false; sahne.add(m); });
+      [zemin, hizT, rampaT, kup, kayK, halka, tunelYan].forEach(m => { m.instanceMatrix.setUsage(THREE.DynamicDrawUsage); m.frustumCulled = false; sahne.add(m); });
       /* binalar */
       const binalar = [];
       for (let i = 0; i < 36; i++) { const g = new THREE.BoxGeometry(1, 1, 1), m = new THREE.Mesh(g, new THREE.MeshBasicMaterial({ map: binaD.clone() })); m.material.map.wrapS = m.material.map.wrapT = THREE.RepeatWrapping; sahne.add(m); binalar.push({ m, z: 0 }); }
@@ -153,11 +160,12 @@ registerGame({
       let O = null, durum = 'menu', hedefX = 0, tus = 0, surukle = null, yaziT = 0;
       function yeniOyun() {
         const u = NY.uretici(D.mod, (Math.random() * 2 ** 31) | 0);
-        O = { u, z: 0, x: 0, y: 0, vy: 0, hiz: MOD[D.mod].hiz, boost: 0, puan: 0, dus: false, rot: 0, sonHiz: 0, tunel: false };
+        O = { u, t: 0, z: 0, x: 0, y: 0, vy: 0, hiz: MOD[D.mod].hiz, boost: 0, puan: 0, dus: false, rot: 0, sonHiz: 0, tunel: false };
         hedefX = 0; u.doldur(GOR + 40, 0); kamY = 0; bakY = 0;
         binalar.forEach((b, i) => binaKur(b, (i >> 1) * 7 + Math.random() * 4, i % 2 === 0));
         q('#ny-m').textContent = MOD[D.mod].ad; q('#ny-h').textContent = D.h.s[D.mod]; q('#ny-p').textContent = '0';
       }
+      const kayX = m => Math.max(-2, Math.min(2, m.c - 2 + m.a * Math.sin(m.w * O.t + m.p)));
       const yuk = i => { const R = O.u.R[Math.max(0, i)]; return R ? R.h : 0; };
       const yolY = z => { const i = Math.floor(z), f = z - i; return yuk(i) * (1 - f) + yuk(i + 1) * f; };
       let kamY = 0, bakY = 0;
@@ -165,16 +173,17 @@ registerGame({
       const zeminMi = c => c === 1 || c === 2 || c === 4 || c === 5;
       function cizDunya() {
         const i0 = Math.max(0, Math.floor(O.z) - 6); O.u.doldur(i0 + GOR + 30, O.z);
-        let nz = 0, nh = 0, nr = 0, nk = 0, nt = 0, ny = 0;
+        let nz = 0, nh = 0, nr = 0, nk = 0, nt = 0, ny = 0, nm = 0;
         for (let k = 0; k < GOR; k++) { const i = i0 + k, R = O.u.R[i]; if (!R) break;
           const h0 = R.h, h1 = yuk(i + 1), dh = h1 - h0, yo = (h0 + h1) / 2, ac = Math.atan(dh), boy = Math.sqrt(1 + dh * dh);
           for (let s = 0; s < S; s++) { const c = R.l[s]; if (!c) continue; dm.position.set(s - 2, yo - .15, -(i + .5)); dm.scale.set(1, 1, boy); dm.rotation.set(ac, 0, 0); dm.updateMatrix();
             if (c === 4 && nh < 60) hizT.setMatrixAt(nh++, dm.matrix); else if (c === 5 && nr < 60) rampaT.setMatrixAt(nr++, dm.matrix); else zemin.setMatrixAt(nz++, dm.matrix);
             if ((c === 2 || c === 3) && nk < 260) { const h = c === 3 ? 2.6 : 1; dm.position.set(s - 2, yo + h / 2 - .02, -(i + .5)); dm.scale.set(1, h, 1); dm.rotation.set(0, 0, 0); dm.updateMatrix(); kup.setMatrixAt(nk++, dm.matrix); } }
+          if (R.m && nm < 40) { dm.position.set(kayX(R.m), yo + .48, -(i + .5)); dm.scale.set(1, 1, 1); dm.rotation.set(0, 0, 0); dm.updateMatrix(); kayK.setMatrixAt(nm++, dm.matrix); }
           if (R.t && nt < 40 && k % 2 === 0) { dm.position.set(0, yo, -(i + .5)); dm.scale.set(1, 1, 1); dm.rotation.set(0, 0, 0); dm.updateMatrix(); halka.setMatrixAt(nt++, dm.matrix);
             for (const sx of [-1, 1]) if (ny < 80) { dm.position.set(sx * 2.9, yo + 1.1, -(i + .5)); dm.rotation.set(0, Math.PI / 2, sx * .35); dm.scale.set(2, 1, 1); dm.updateMatrix(); tunelYan.setMatrixAt(ny++, dm.matrix); } } }
-        zemin.count = nz; hizT.count = nh; rampaT.count = nr; kup.count = nk; halka.count = nt; tunelYan.count = ny;
-        [zemin, hizT, rampaT, kup, halka, tunelYan].forEach(m => m.instanceMatrix.needsUpdate = true);
+        zemin.count = nz; hizT.count = nh; rampaT.count = nr; kup.count = nk; kayK.count = nm; halka.count = nt; tunelYan.count = ny;
+        [zemin, hizT, rampaT, kup, kayK, halka, tunelYan].forEach(m => m.instanceMatrix.needsUpdate = true);
         binalar.forEach(b => { if (b.z < O.z - 10) binaKur(b, b.z + 18 * 7 + Math.random() * 3, b.sol); });
         const yb = yolY(O.z); top.position.set(O.x, yb + O.y + .4, -O.z); top.rotation.x = -O.rot; golge.position.set(O.x, yb + .02, -O.z); golge.rotation.x = -Math.PI / 2 + Math.atan(yuk(Math.floor(O.z) + 1) - yuk(Math.floor(O.z))); golge.visible = !O.dus && O.y < 3; golge.scale.setScalar(Math.max(.3, 1 - O.y * .25));
         const hk = Math.max(yolY(O.z - 4.6), yb) , hb = yolY(O.z + 7); kamY += (hk - kamY) * .12; bakY += (hb - bakY) * .1;
@@ -184,7 +193,7 @@ registerGame({
       function adim(dt) {
         if (durum !== 'oyna') return;
         const eg = yuk(Math.floor(O.z) + 1) - yuk(Math.floor(O.z)), hiz = O.hiz * (O.boost > 0 ? 1.45 : 1) * Math.max(.82, Math.min(1.25, 1 - eg * .9)); O.boost = Math.max(0, O.boost - dt);
-        O.z += hiz * dt; O.rot += hiz * dt / .4;
+        O.z += hiz * dt; O.rot += hiz * dt / .4; O.t += dt;
         if (tus) hedefX += tus * 7.5 * dt; hedefX = Math.max(-3.2, Math.min(3.2, hedefX));
         O.x += (hedefX - O.x) * Math.min(1, dt * 16);
         const i = Math.floor(O.z), s = Math.round(O.x + 2), c = kod(i, s);
@@ -200,6 +209,8 @@ registerGame({
           const cc = kod(r, k); if (cc !== 2 && cc !== 3) continue; const h = cc === 3 ? 2.6 : 1; if (O.y > h - .05) continue;
           const bx = k - 2, bz = r + .5, dx = Math.max(Math.abs(O.x - bx) - .47, 0), dz = Math.max(Math.abs(O.z - bz) - .47, 0);
           if (dx * dx + dz * dz < .37 * .37) return carp(); }
+        for (let r = Math.floor(O.z - .45); r <= Math.floor(O.z + .45); r++) { const R = O.u.R[r]; if (!R || !R.m || O.y > .95) continue;
+          const bx = kayX(R.m), bz = r + .5, dx = Math.max(Math.abs(O.x - bx) - .47, 0), dz = Math.max(Math.abs(O.z - bz) - .47, 0); if (dx * dx + dz * dz < .37 * .37) return carp(); }
         const p = Math.floor(O.z / 4); if (p !== O.puan) { O.puan = p; q('#ny-p').textContent = p; if (p > 0 && p % 50 === 0) { O.hiz += .9; yazi('Hız arttı!'); ses('score'); } }
       }
       function yazi(t) { const y = q('#ny-y'); y.textContent = t; y.classList.add('ac'); clearTimeout(yaziT); yaziT = setTimeout(() => y.classList.remove('ac'), 1100); }
@@ -214,7 +225,7 @@ registerGame({
         if (yeniEn) { ses('win'); try { window.FX && FX.confetti && FX.confetti(); } catch (e) { } }
       }
       function ekran(h) { const e = q('#ny-e'); if (!h) { e.style.display = 'none'; e.innerHTML = ''; return; } e.style.display = ''; e.innerHTML = `<div>${h}</div>`; }
-      function menu() { durum = 'menu'; ekran(`<h2>Neon Yol</h2><p>Parmağını sağa sola kaydırarak topu yönlendir. Pembe bloklardan kaç, boşluklara düşme. Yokuşta yavaşlar, inişte hızlanırsın. <span style="color:#9de3d7">Turkuaz</span> şeritler hızlandırır, <span style="color:#f2dc8c">sarı</span> rampa zıplatır.</p>
+      function menu() { durum = 'menu'; ekran(`<h2>Neon Yol</h2><p>Parmağını sağa sola kaydırarak topu yönlendir. Pembe bloklardan ve sağa sola kayan <span style="color:#f3c3a3">turuncu</span> küplerden kaç, boşluklara düşme. Yokuşta yavaşlar, inişte hızlanırsın. <span style="color:#9de3d7">Turkuaz</span> şeritler hızlandırır, <span style="color:#f2dc8c">sarı</span> rampa zıplatır.</p>
         <div class="ny-mod">${MOD.map((x, i) => `<button data-mod="${i}" class="${i === D.mod ? 'ak' : ''}">${x.ad}<br><small>en iyi ${D.en[i]}</small></button>`).join('')}</div><button class="ana" data-a="basla">▶ Başla</button>`); }
       function basla() { yeniOyun(); durum = 'oyna'; ekran(''); son = performance.now(); }
       function duraklat() { if (durum !== 'oyna') return; durum = 'durdu'; ekran('<h2>Durdu</h2><button class="ana" data-a="devam">▶ Devam</button><button data-a="basla">↻ Baştan</button><button data-a="menu">Menü</button>'); }
@@ -235,7 +246,7 @@ registerGame({
       let son = performance.now();
       const dongu = t => { if (!canli) return; raf = requestAnimationFrame(dongu); const dt = Math.min(.05, (t - son) / 1000); son = t;
         if (durum === 'oyna') { const n = Math.ceil(dt / .012); for (let k = 0; k < n && durum === 'oyna'; k++) adim(dt / n); }
-        else if (durum === 'menu' && O) { O.z += 4 * dt; O.rot += 10 * dt; }
+        else if (durum === 'menu' && O) { O.z += 4 * dt; O.rot += 10 * dt; O.t += dt; }
         if (O) cizDunya(); };
       temizle = () => { removeEventListener('keydown', tusBas); removeEventListener('keyup', tusBirak); removeEventListener('resize', yeniBoyut); document.removeEventListener('visibilitychange', gorunur); try { renderer.dispose(); } catch (e) { } };
       yeniOyun(); menu(); raf = requestAnimationFrame(dongu);
