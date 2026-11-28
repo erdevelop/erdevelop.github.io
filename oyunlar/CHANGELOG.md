@@ -214,3 +214,13 @@
 - DX-Ball tarzı: raket, sürükleyerek/klavyeyle kontrol, dokununca fırlatma; 1–3 vuruşluk, metal ve patlayıcı tuğlalar
 - Güçlendiriciler: geniş/dar raket, üç top, lazer, yapışkan raket, ateş topu, yavaş/hızlı top, +1 can
 - 15 elle tasarlanmış bölüm, ardından sonsuz simetrik bölümler; kaldığın yerden devam, en yüksek puan
+
+## Düşen Bloklar
+- Klasik düşen blok oyunu: 10×20 kuyu, 7 parça, duvar tekmeli döndürme, gölge, saklama, sıradaki üç parça
+- Kaydırarak taşı, dokunarak döndür, hızla aşağı kaydırarak bırak; klavye desteği
+- Her 10 satırda seviye ve hız artar; günün oyunu (herkese aynı parça sırası) ve seri
+
+## Renkli Toplar
+- Lines 98 tadında 9×9 tahta: topu açık yoldan taşı, aynı renkten 5+ topu diz ve patlat
+- Patlatmayan her hamlede 3 yeni top (renkleri önceden görünür); kaldığın yerden devam
+- Günün oyunu (herkese aynı top sırası), seri ve rekor
