@@ -150,7 +150,7 @@ const CSS = `
 .dm-t.oyn{box-shadow:0 0 0 3px #16a34a}.dm-t.sec{box-shadow:0 0 0 3.500px #3b82f6}.dm-t.git{opacity:0;transform:scale(.4)!important;transition:opacity .25s,transform .25s}
 .dm-alt{display:flex;gap:8px;align-items:center;min-height:46px}.dm-alt .dm-b{flex:none;padding:11px 15px}
 .dm-bilgi{flex:1;font-size:13.5px;font-weight:700;color:var(--ink-soft);line-height:1.35}.dm-bilgi b{color:var(--ink)}
-.dm-son{position:absolute;inset:0;z-index:5;display:grid;place-items:center;background:color-mix(in srgb,var(--card) 82%,transparent);border-radius:14px;animation:dmS .3s .3s both}@keyframes dmS{from{opacity:0}}
+.dm-son{position:absolute;inset:0;z-index:40;display:grid;place-items:center;background:color-mix(in srgb,var(--card) 82%,transparent);border-radius:14px;animation:dmS .3s .3s both}@keyframes dmS{from{opacity:0}}
 .dm-son>div{display:flex;flex-direction:column;gap:9px;text-align:center;padding:18px;background:var(--card);border-radius:18px;box-shadow:0 12px 40px rgba(0,0,0,.3);width:min(300px,88%)}.dm-son h3{font-size:23px}
 `;
 registerGame({

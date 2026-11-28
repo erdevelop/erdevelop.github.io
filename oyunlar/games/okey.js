@@ -190,7 +190,7 @@ const CSS = `
 .ok-hayalet{position:fixed;z-index:60;pointer-events:none;transform:translate(-50%,-70%) scale(1.15);box-shadow:0 10px 18px rgba(0,0,0,.4)}
 .ok-alt{display:flex;gap:7px}.ok-alt .ok-b{flex:1}.ok-alt .ok-b[data-a=cik]{flex:none;width:44px}
 .ok-bitir{padding:13px;border-radius:13px;background:#16a34a;color:#fff;font-weight:800;font-size:16px;animation:okB 0.8s infinite alternate}@keyframes okB{to{background:#22c55e;box-shadow:0 0 0 4px rgba(34,197,94,.3)}}
-.ok-son{position:absolute;inset:0;z-index:5;display:grid;place-items:center;background:color-mix(in srgb,var(--card) 80%,transparent);border-radius:14px;animation:okS .3s .25s both}@keyframes okS{from{opacity:0}}
+.ok-son{position:absolute;inset:0;z-index:40;display:grid;place-items:center;background:color-mix(in srgb,var(--card) 80%,transparent);border-radius:14px;animation:okS .3s .25s both}@keyframes okS{from{opacity:0}}
 .ok-son>div{display:flex;flex-direction:column;gap:9px;align-items:stretch;text-align:center;padding:16px;background:var(--card);border-radius:18px;box-shadow:0 12px 40px rgba(0,0,0,.3);width:min(360px,94%)}.ok-son h3{font-size:22px}
 .ok-mini{display:flex;flex-wrap:wrap;gap:4px 9px;justify-content:center;--tw:21px}.ok-mini>div{display:flex;gap:1.500px}
 .ok-puan{display:grid;grid-template-columns:1fr auto;gap:3px 12px;text-align:left;font-weight:800;font-size:14px;padding:8px 12px;border-radius:12px;background:var(--bg2)}.ok-puan .k{color:var(--accent-ink)}

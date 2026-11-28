@@ -7,7 +7,7 @@
    Yeni rozet ya da tamamlanan görev olunca window.OB_bildir(metin) ile haber verilir. */
 (function(){
   const KEY='ob_progress_v1';
-  const MASA=['tavla','okey','okey101','batak','pisti','dama','satranc'];
+  const MASA=['tavla','okey','okey101','batak','king','pisti','dama','satranc'];
   const BULMACA=['sudoku','kakuro','nonogram','kelimeavi','boru','mayin','solitaire','renksirala','gunlukkelime'];
   const REFLEKS=['balon','g2048','blok'];
 
@@ -85,6 +85,7 @@
     T('satranc1','masa','Satrançta bir oyun kazan (kolay da olur)',1,e=>(e.t==='bitir'&&e.id==='satranc'),'satranc'),
     T('dama1','masa','Damada bir oyun kazan',1,e=>(e.t==='bitir'&&e.id==='dama'),'dama'),
     T('batak1','masa','Batak’ta bir ihale tuttur',1,e=>e.t==='olay'&&e.ad==='bt_tuttu','batak'),
+    T('king1','masa','King’de bir el oyna',1,e=>e.t==='olay'&&e.ad==='kg_el','king'),
     T('o1ac1','masa','101 Okey’de elini aç',1,e=>e.t==='olay'&&e.ad==='o1_ac','okey101')
   ];
   const bugun=()=>{ const d=new Date(); return d.getFullYear()+'-'+(d.getMonth()+1)+'-'+d.getDate(); };

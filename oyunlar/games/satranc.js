@@ -211,7 +211,7 @@ svg.bz .d{stroke:#2b2724}svg.sy .d{stroke:#e8e4dc;fill:#e8e4dc}svg.sy circle.d{s
 .st-bilgi{flex:1;font-size:13px;font-weight:700;color:var(--ink-soft);line-height:1.3}.st-bilgi b{color:var(--ink)}
 .st-terfi{position:absolute;inset:0;z-index:6;display:grid;place-items:center;background:rgba(0,0,0,.35);border-radius:10px}
 .st-terfi>div{display:flex;gap:6px;padding:10px;background:var(--card);border-radius:14px;box-shadow:0 10px 30px rgba(0,0,0,.35)}.st-terfi button{width:58px;height:58px;border-radius:10px;background:var(--bg2)}.st-terfi svg{width:46px;height:46px}
-.st-son{position:absolute;inset:0;z-index:5;display:grid;place-items:center;background:color-mix(in srgb,var(--card) 82%,transparent);border-radius:14px;animation:stS .3s .3s both}@keyframes stS{from{opacity:0}}
+.st-son{position:absolute;inset:0;z-index:40;display:grid;place-items:center;background:color-mix(in srgb,var(--card) 82%,transparent);border-radius:14px;animation:stS .3s .3s both}@keyframes stS{from{opacity:0}}
 .st-son>div{display:flex;flex-direction:column;gap:9px;text-align:center;padding:18px;background:var(--card);border-radius:18px;box-shadow:0 12px 40px rgba(0,0,0,.3);width:min(300px,88%)}.st-son h3{font-size:23px}
 `;
 const DEGER = { p: 1, n: 3, b: 3, r: 5, q: 9, k: 0 };

@@ -281,7 +281,7 @@ const CSS = `
 .o1-s.tasiniyor .o1-t{opacity:.25}.o1-s.hedef{background:rgba(255,255,255,.4)}
 .o1-hayalet{position:fixed;z-index:60;pointer-events:none;transform:translate(-50%,-70%) scale(1.15);box-shadow:0 10px 18px rgba(0,0,0,.4)}
 .o1-alt{display:flex;gap:6px;flex:none}.o1-alt .o1-b{flex:1}.o1-alt .o1-b[data-a=cik]{flex:none;width:42px}
-.o1-son{position:absolute;inset:0;z-index:5;display:grid;place-items:center;background:color-mix(in srgb,var(--card) 80%,transparent);border-radius:14px;animation:o1S .3s .25s both}@keyframes o1S{from{opacity:0}}
+.o1-son{position:absolute;inset:0;z-index:40;display:grid;place-items:center;background:color-mix(in srgb,var(--card) 80%,transparent);border-radius:14px;animation:o1S .3s .25s both}@keyframes o1S{from{opacity:0}}
 .o1-son>div{display:flex;flex-direction:column;gap:9px;align-items:stretch;text-align:center;padding:16px;background:var(--card);border-radius:18px;box-shadow:0 12px 40px rgba(0,0,0,.3);width:min(380px,94%);max-height:94%;overflow:auto}.o1-son h3{font-size:22px}
 .o1-tablo{width:100%;border-collapse:collapse;font-weight:800;font-size:13px;font-variant-numeric:tabular-nums}.o1-tablo th,.o1-tablo td{padding:4px 5px;text-align:right}.o1-tablo th:first-child,.o1-tablo td:first-child{text-align:left}
 .o1-tablo thead th{color:var(--ink-soft);font-size:11.5px}.o1-tablo tr.ben td{color:var(--accent-ink)}.o1-tablo tr.ilk td:first-child::after{content:' 👑'}.o1-tablo tfoot td{border-top:2px solid var(--line)}

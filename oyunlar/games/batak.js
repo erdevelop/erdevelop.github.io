@@ -148,7 +148,7 @@ const CSS = `
 .bt-panel{display:flex;flex-wrap:wrap;gap:6px;justify-content:center;min-height:46px;align-items:center}
 .bt-panel .bt-b{flex:1 1 15%;padding:10px 4px;min-width:44px}.bt-panel .bt-b.genis{flex:1 1 100%}.bt-panel .bt-b.koz{font-size:17px;padding:9px 4px}.bt-panel .bt-b.koz.kr{color:#d32f2f}.bt-panel .bt-b.koz small{display:block;font-size:11px;color:var(--ink-soft)}
 .bt-panel p{width:100%;text-align:center}
-.bt-son{position:absolute;inset:0;z-index:5;display:grid;place-items:center;background:color-mix(in srgb,var(--card) 80%,transparent);border-radius:14px;animation:btS .3s .25s both}@keyframes btS{from{opacity:0}}
+.bt-son{position:absolute;inset:0;z-index:40;display:grid;place-items:center;background:color-mix(in srgb,var(--card) 80%,transparent);border-radius:14px;animation:btS .3s .25s both}@keyframes btS{from{opacity:0}}
 .bt-son>div{display:flex;flex-direction:column;gap:9px;align-items:stretch;text-align:center;padding:16px;background:var(--card);border-radius:18px;box-shadow:0 12px 40px rgba(0,0,0,.3);width:min(360px,94%)}.bt-son h3{font-size:22px}
 .bt-tablo{width:100%;border-collapse:collapse;font-weight:800;font-size:13px;font-variant-numeric:tabular-nums}.bt-tablo th,.bt-tablo td{padding:4px 5px;text-align:right}.bt-tablo th:first-child,.bt-tablo td:first-child{text-align:left}
 .bt-tablo thead th{color:var(--ink-soft);font-size:11.5px}.bt-tablo tr.ben td{color:var(--accent-ink)}.bt-tablo tr.ilk td:first-child::after{content:' 👑'}

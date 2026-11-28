@@ -103,7 +103,7 @@ const CSS = `
 .pi-el{display:flex;justify-content:center;gap:8px;min-height:calc(var(--cw)*1.42 + 16px);align-items:flex-end;padding-top:12px}
 .pi-el .pi-k{cursor:pointer;transition:transform .12s}.pi-el .pi-k.sec{transform:translateY(-12px);box-shadow:0 0 0 3px #3b82f6,0 8px 14px rgba(0,0,0,.3)}.pi-el .pi-k.alir{box-shadow:0 0 0 2.500px #16a34a,0 2px 5px rgba(0,0,0,.28)}
 .pi-el.bekle .pi-k{filter:brightness(.85)}
-.pi-son{position:absolute;inset:0;z-index:5;display:grid;place-items:center;background:color-mix(in srgb,var(--card) 80%,transparent);border-radius:14px;animation:piS .3s .25s both}@keyframes piS{from{opacity:0}}
+.pi-son{position:absolute;inset:0;z-index:40;display:grid;place-items:center;background:color-mix(in srgb,var(--card) 80%,transparent);border-radius:14px;animation:piS .3s .25s both}@keyframes piS{from{opacity:0}}
 .pi-son>div{display:flex;flex-direction:column;gap:9px;align-items:stretch;text-align:center;padding:16px;background:var(--card);border-radius:18px;box-shadow:0 12px 40px rgba(0,0,0,.3);width:min(360px,94%)}.pi-son h3{font-size:22px}
 .pi-tablo{width:100%;border-collapse:collapse;font-weight:800;font-size:13.5px;font-variant-numeric:tabular-nums}.pi-tablo th,.pi-tablo td{padding:4px 6px;text-align:right}.pi-tablo th:first-child,.pi-tablo td:first-child{text-align:left;color:var(--ink-soft)}
 .pi-tablo thead th{font-size:12px}.pi-tablo tfoot td{border-top:2px solid var(--line)}

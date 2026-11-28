@@ -147,3 +147,9 @@
 ## Hafıza Kartları ve Kelime Türet
 - Hafıza Kartları: 5 deste (hayvan, meyve-sebze, taşıt, doğa, spor), 4 boy, iki kişilik mod, günün oyunu ve seri
 - Kelime Türet: harf çarkından kelime türetme, 247 bölüm, bonus kelimeler (her 5'i 1 ipucu), günün bölümü ve seri
+
+## King
+- Klasik King: 20 el, 6 ceza (el almaz, kupa almaz, erkek almaz, kız almaz, rıfkı, son iki) ve koz; herkes 3 ceza + 2 koz seçer
+- Renk izleme, kozda koz atma, cezada ceza kartı atma, kupa/koz kırılma, rıfkı ve kız düşürme zorunlulukları; ceza kartları bitince erken bitiş
+- Bilgisayara karşı (normal/kolay) ve çevrimiçi (boş koltuklara bilgisayar), izleyici modu, sohbet, puan tablosu, haftalık sıralama
+- Kart oyunlarında el sonu penceresinin elin altında kalması düzeltildi; King kural sayfası eklendi

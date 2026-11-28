@@ -114,7 +114,7 @@ const CSS = `
 .tv-c{display:block;width:100%;flex:none;border-radius:12px;touch-action:manipulation;cursor:pointer}
 .tv-alt{display:flex;gap:8px;align-items:center;min-height:48px}.tv-alt .tv-b{flex:none;padding:11px 16px}
 .tv-bilgi{flex:1;font-size:13.5px;font-weight:700;color:var(--ink-soft);line-height:1.35}.tv-bilgi b{color:var(--ink)}
-.tv-son{position:absolute;inset:0;z-index:5;display:grid;place-items:center;background:color-mix(in srgb,var(--card) 82%,transparent);border-radius:14px;animation:tvB .3s .3s both}@keyframes tvB{from{opacity:0}}
+.tv-son{position:absolute;inset:0;z-index:40;display:grid;place-items:center;background:color-mix(in srgb,var(--card) 82%,transparent);border-radius:14px;animation:tvB .3s .3s both}@keyframes tvB{from{opacity:0}}
 .tv-son>div{display:flex;flex-direction:column;gap:9px;align-items:stretch;text-align:center;padding:18px;background:var(--card);border-radius:18px;box-shadow:0 12px 40px rgba(0,0,0,.3);width:min(300px,88%)}.tv-son h3{font-size:23px}
 `;
 registerGame({
