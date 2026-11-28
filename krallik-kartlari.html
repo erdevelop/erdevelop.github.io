@@ -216,6 +216,12 @@ body.er-durumlu #oyun{padding-bottom:calc(36px + env(safe-area-inset-bottom,0px)
 .girdi.kod{flex:1;min-width:110px;width:auto;margin:0;text-transform:uppercase;letter-spacing:.3em;text-align:center;font-size:18px}
 .odaKod{font-size:42px;font-weight:900;letter-spacing:.25em;text-align:center;padding:10px;margin:6px 0;border-radius:16px;background:var(--bg);border:2px dashed var(--acc);color:var(--acc2);user-select:all}
 .bilgi-k.cevrimK{border-color:color-mix(in srgb,var(--mavi) 50%,var(--line))}.cevrimK .devam .dugme{min-width:0}
+.kart .resim.img{width:calc(100% - 10px);height:auto;aspect-ratio:1/.8;overflow:hidden;background:var(--bg)}
+.resim.img img,.bimg img{width:100%;height:100%;object-fit:cover;display:block;pointer-events:none;-webkit-user-drag:none}
+#onizle .kart .resim.img,#buyut .kart .resim.img{width:calc(100% - 14px);height:auto}
+.kart.altink .resim.img{box-shadow:inset 0 0 0 2px var(--altin)}
+.birlik .bimg{width:calc(100% - 8px);aspect-ratio:1/.86;border-radius:9px;overflow:hidden;box-shadow:inset 0 0 0 1.5px color-mix(in srgb,var(--ink) 12%,transparent)}
+.birlik:has(.bimg){justify-content:flex-start;padding-top:4px}
 .kart.altink::after{content:'🌟';position:absolute;bottom:14px;right:3px;font-size:10px}
 .kart.sikke .resim{background:radial-gradient(circle at 50% 35%,color-mix(in srgb,var(--altin) 60%,var(--kart)),color-mix(in srgb,var(--altin) 20%,var(--kart)))}
 .birlik.gizli{opacity:.62;border-style:dashed}
@@ -382,9 +388,12 @@ function sesDugme() { hizDugme(); const t = (KAYIT.ses ? '🔊 ' : '🔇 '); $('
 /* ---------- kart görünümü ---------- */
 const ozSimge = k => (k.koruma ? '🛡' : '') + (k.kalkan ? '💠' : '') + (k.hucum ? '⚡' : '') + (k.menzil ? '🏹' : '') + (k.cal ? '🩸' : '') + (k.ofke ? '💢' : '') + (k.gizli ? '🌫' : '') + (k.delici ? '⛏' : '') + (k.olum ? '☠' : '') + (k.sonTur ? '⏳' : '');
 const sinifi = k => k.koleksiyonDisi ? 'buyu sikke' : k.tip === 'y' ? 'buyu' : (k.tek || k.m >= 6) ? 'nadir' : k.koruma ? 'savunma' : (k.hucum || k.menzil) ? 'hizli' : '';
+/* kart görselleri: img/kartlar/<id>.webp (256 px). Listede olmayan kart emojiyle görünür. */
+const RESIMLI = new Set(['koylu', 'oduncu', 'haberci', 'mizrakci', 'okcu', 'kalkanci', 'kurt', 'ciftci', 'suvari', 'demirci', 'sifaci', 'haydut', 'tasduvar']);
+const gorsel = id => `<img src="/img/kartlar/${id}.webp" alt="" decoding="async" draggable="false">`;
 function kartHtml(id, sinif = '', ek = '') {
   const k = K[id];
-  return `<div class="kart ${sinifi(k)} ${KAYIT.altinK.includes(id) ? 'altink' : ''} ${sinif}" ${ek}><span class="m">${k.m}</span>${ozSimge(k) ? `<span class="oz">${ozSimge(k)}</span>` : ''}<span class="resim"><span class="e">${k.e}</span></span><span class="ad">${esc(dil(k.ad))}</span>${k.tip === 'b' ? `<span class="st s">${k.s}</span><span class="st c">${k.c}</span>` : ''}</div>`;
+  return `<div class="kart ${sinifi(k)} ${KAYIT.altinK.includes(id) ? 'altink' : ''} ${sinif}" ${ek}><span class="m">${k.m}</span>${ozSimge(k) ? `<span class="oz">${ozSimge(k)}</span>` : ''}<span class="resim${RESIMLI.has(id) ? ' img' : ''}">${RESIMLI.has(id) ? gorsel(id) : `<span class="e">${k.e}</span>`}</span><span class="ad">${esc(dil(k.ad))}</span>${k.tip === 'b' ? `<span class="st s">${k.s}</span><span class="st c">${k.c}</span>` : ''}</div>`;
 }
 function kartYazi(id) {
   const k = K[id], P = [];
@@ -432,7 +441,7 @@ function ciz() {
     const k = K[b.id], hz = p === BEN && benimTur() && KK.saldirabilir(G, BEN, b);
     const s = ['birlik', gorulen.has(b.uid) ? '' : 'yeni', sinifi(k), b.koruma ? 'koruma' : '', b.kalkan ? 'zirh' : '', b.gizli ? 'gizli' : '', KAYIT.altinK.includes(b.id) ? 'altink' : '', b.donuk || (b.buz && G.tur === p) ? 'donuk' : '', hz ? 'hazir' : '', p === BEN && !hz && !b.sal && !b.hazir ? 'uyuyor' : '', sec && sec.t === 'b' && sec.uid === b.uid ? 'sec' : '', hedef.has('b' + b.uid) ? 'hedef' : '', dost.has('b' + b.uid) ? 'dhedef' : ''].join(' ');
     const oz = (b.koruma ? '🛡' : '') + (b.kalkan ? '💠' : '') + (b.menzil ? '🏹' : '') + (b.cal ? '🩸' : '') + (b.ofke ? '💢' : '') + (b.gizli ? '🌫' : '') + (b.delici ? '⛏' : '') + (b.donuk || (b.buz && G.tur === p) ? '❄' : p === BEN && !b.hazir ? '💤' : '') + (k.olum ? '☠' : '') + (k.sonTur ? '⏳' : '');
-    return `<div class="${s}" data-h="b${b.uid}" data-p="${p}">${oz ? `<span class="rozet">${oz}</span>` : ''}<span class="e">${k.e}</span><span class="ad">${esc(dil(k.ad))}</span><span class="st s ${b.s > k.s ? 'arti' : ''}">${b.s}</span><span class="st c ${b.c < b.mc ? 'yarali' : b.mc > k.c ? 'arti' : ''}">${b.c}</span></div>`;
+    return `<div class="${s}" data-h="b${b.uid}" data-p="${p}">${oz ? `<span class="rozet">${oz}</span>` : ''}${RESIMLI.has(b.id) ? `<span class="bimg">${gorsel(b.id)}</span>` : `<span class="e">${k.e}</span>`}<span class="ad">${esc(dil(k.ad))}</span><span class="st s ${b.s > k.s ? 'arti' : ''}">${b.s}</span><span class="st c ${b.c < b.mc ? 'yarali' : b.mc > k.c ? 'arti' : ''}">${b.c}</span></div>`;
   };
   $('saha1').innerHTML = D.saha.map(b => birlikHtml(b, YZ)).join('') || `<span class="bos">${T('Rakip sahası boş', 'Enemy field is empty')}</span>`;
   $('saha0').innerHTML = B.saha.map(b => birlikHtml(b, BEN)).join('') || `<span class="bos">${birak ? T('Oynamak için buraya dokun', 'Tap here to play') : T('Birliklerin buraya iner', 'Your units land here')}</span>`;
@@ -1093,7 +1102,7 @@ try {
   const k = (new URLSearchParams(location.search).get('oda') || '').toUpperCase().replace(/[^A-Z0-9]/g, '').slice(0, 5);
   if (k) { history.replaceState(null, '', location.pathname + location.hash); const o = cevrimKayit(); setTimeout(() => o && o.kod === k ? cevrimDon() : cevrimAc(k), 300); }
 } catch (e) { }
-window.KKOyun = { durum: () => G, ben: () => BEN, mod: () => mod, ag: () => AG, basla, yap: a => oyuncu(a), kayit: () => KAYIT, kaydet, menuCiz, devamEt };
+window.KKOyun = { durum: () => G, ben: () => BEN, mod: () => mod, ag: () => AG, basla, yap: a => oyuncu(a), kayit: () => KAYIT, kaydet, menuCiz, devamEt, ciz: () => G && ciz() };
 })();
 </script>
 <script data-goatcounter="https://erdevelop.goatcounter.com/count" async src="//gc.zgo.at/count.js"></script>
