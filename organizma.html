@@ -226,6 +226,8 @@ body.er-durumlu #mini{bottom:32px}body.er-durumlu #dna{bottom:188px}
 @media (max-width:640px){#kgChip{top:auto;bottom:calc(176px + env(safe-area-inset-bottom,0px));left:10px;font-size:11.5px;max-width:calc(100% - 140px)}#evrim:not([hidden]) ~ #kgChip{visibility:hidden}}
 #yetBtn{position:fixed;left:24px;bottom:calc(122px + env(safe-area-inset-bottom,0px));width:66px;height:66px;border-radius:50%;border:2px solid rgba(255,220,140,.6);background:conic-gradient(rgba(255,215,130,.5) calc(var(--p,1) * 360deg),rgba(16,40,44,.7) 0);color:#FFF3D0;font-size:26px;z-index:6;touch-action:none;display:flex;align-items:center;justify-content:center;padding:0;box-shadow:0 0 14px rgba(255,210,120,.25)}
 #yetBtn[hidden]{display:none}#yetBtn.bekle{filter:saturate(.35) brightness(.85);box-shadow:none}#yetBtn small{position:absolute;top:100%;left:50%;transform:translateX(-50%);margin-top:3px;font-size:10.5px;font-weight:900;white-space:nowrap;color:#FFE9B0;text-shadow:0 1px 4px #02161b}
+@media (pointer:coarse){#liderKis{width:34px;height:30px}#yKis{width:32px;height:30px;font-size:13px}#ogrGec{min-width:32px;min-height:32px}}
+@media (max-height:520px) and (orientation:landscape){#mini{width:118px;height:118px}#duyuru>div:nth-last-child(n+3){display:none}#duyuru{max-width:calc(100% - 470px);font-size:13px}#ipucu{font-size:12px;max-width:calc(100% - 420px);white-space:normal;text-align:center}}
 @media (hover:hover) and (pointer:fine){#yetBtn{left:18px;bottom:calc(30px + env(safe-area-inset-bottom,0px))}}
 @media (max-width:640px){#kgChip{bottom:calc(214px + env(safe-area-inset-bottom,0px))}}
 #ortakKutu .gBas>span:last-child{display:flex;flex-wrap:wrap;gap:4px;justify-content:flex-end}
@@ -2981,7 +2983,7 @@ $('basla').onclick = () => { GM = null; basla(); };
 $('yeniden').onclick = basla;
 $('menuye').onclick = () => { $('olum').hidden = true; menuAc(); };
 let liderTur = 0; $('liderBas').onclick = () => { liderTur = 1 - liderTur; liderCiz(); };
-{ const kayitli = ls.get('organizma-lider-kis', null), kisMi = kayitli == null ? matchMedia('(max-width:640px)').matches : !!kayitli; $('lider').classList.toggle('kis', kisMi); $('liderKis').onclick = e => { e.stopPropagation(); ls.set('organizma-lider-kis', $('lider').classList.toggle('kis') ? 1 : 0); }; $('liderKis').addEventListener('pointerdown', e => e.stopPropagation()); }
+{ const kayitli = ls.get('organizma-lider-kis', null), kisMi = kayitli == null ? matchMedia('(max-width:640px), (max-height:520px)').matches : !!kayitli; $('lider').classList.toggle('kis', kisMi); $('liderKis').onclick = e => { e.stopPropagation(); ls.set('organizma-lider-kis', $('lider').classList.toggle('kis') ? 1 : 0); }; $('liderKis').addEventListener('pointerdown', e => e.stopPropagation()); }
 
 /* ================= çizim yardımcıları ================= */
 const MN = 36, MX = new Float32Array(MN), MY = new Float32Array(MN);
@@ -3744,15 +3746,15 @@ function yasamYer() {   // sıralamanın altına, sağa yaslı
   const Yp = $('yasam'), L = $('lider'), Lyok = L.hidden || !L.offsetWidth, ust = (IZLE ? 60 : 52) + (parseFloat(getComputedStyle(document.documentElement).getPropertyValue('--sat')) || 0);
   let top = Lyok ? ust : L.getBoundingClientRect().bottom + 8, sag = 10;
   let alt = innerHeight;
-  for (const id of ['diyetG', 'dna', 'mini']) { const e = $(id); if (!e || e.hidden || !e.offsetWidth) continue; const r = e.getBoundingClientRect(); if (r.right > innerWidth - Yp.offsetWidth - 20 && r.top > top - 4) alt = Math.min(alt, r.top); }
+  for (const id of ['diyetG', 'dna', 'mini', 'ipucu']) { const e = $(id); if (!e || e.hidden || !e.offsetWidth) continue; const r = e.getBoundingClientRect(); if (r.right > innerWidth - Yp.offsetWidth - 20 && r.top > top - 4) alt = Math.min(alt, r.top); }
   // sıralamanın altında, sağa yaslı kalır; sığmazsa kademeli sıkışır (az önemli satırlar, sonra ekosistem grafiği gizlenir)
   Yp.style.maxHeight = ''; let sev = 0;
   const dene = n => { Yp.classList.toggle('sik', n >= 1); Yp.classList.toggle('sik2', n >= 2); return top + Yp.offsetHeight <= alt - 8; };
   while (sev < 2 && !dene(sev)) sev++;
   if (sev === 2 && !dene(2)) {
-    if (innerWidth >= 900) {   // geniş ama alçak ekran: sol üste, hizalı bir sütun olarak
+    if (innerWidth >= 900 || (innerWidth >= 640 && innerHeight < 520)) {   // geniş ama alçak ekran (ya da yatay telefon): sol üste, hizalı bir sütun olarak
       const kg = $('kgChip'); top = ust; if (kg && !kg.hidden && kg.offsetWidth && kg.getBoundingClientRect().left < 240) top = Math.max(top, kg.getBoundingClientRect().bottom + 8);
-      alt = innerHeight - 64; sev = 0; while (sev < 2 && !dene(sev)) sev++; if (!dene(sev)) Yp.style.maxHeight = Math.max(90, alt - top) + 'px';
+      alt = innerHeight - 64; { const hb = $('hamleBtn'); if (hb && hb.offsetWidth) { const r = hb.getBoundingClientRect(); if (r.left < 240) alt = Math.min(alt, r.top - 8); } } sev = 0; while (sev < 2 && !dene(sev)) sev++; if (!dene(sev)) Yp.style.maxHeight = Math.max(90, alt - top) + 'px';
       Yp.style.top = top + 'px'; Yp.style.left = '10px'; Yp.style.right = 'auto'; return;
     }
     else Yp.style.maxHeight = Math.max(90, alt - 8 - top) + 'px';   // dar ekranda yerinde kalır, taşan kısım kırpılır
