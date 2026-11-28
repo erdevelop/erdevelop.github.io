@@ -46,7 +46,7 @@ erDil.dict({
 "sonucunu ve hangi bileşenin ne kadar kayıp yaptığını incele.": "result and how much each component loses.",
 "tek değişkenle": "with one variable",
 "· ψ ön değerleri tipiktir.": "· default ψ values are typical.",
-"Üretici ya da cephexThermal sonucu": "Manufacturer or cephexThermal result",
+"Üretici ya da ısı köprüsü hesabı sonucu": "Manufacturer or thermal bridge calculation result",
 "Üçlü cam (U": "Triple glazing (U",
 "Şartname değeri (isteğe bağlı)": "Specification value (optional)",
 "’yi ne kadar iyileştireceğini görmek için kullanılır.": "."
