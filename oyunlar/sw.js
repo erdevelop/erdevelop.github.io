@@ -1,6 +1,6 @@
 /* Oyun Bahçesi — Service Worker (offline oynanabilirlik)
    Sürüm değişince eski önbellek silinir. Uygulama kabuğu + oyunlar + three.js önbelleğe alınır. */
-const VERSION = 'ob-v42';
+const VERSION = 'ob-v43';
 const CORE = [
   './',
   './index.html',
@@ -18,7 +18,7 @@ const CORE = [
   './assets/icon-192.png',
   './assets/icon-512.png',
   './games/_engine.js',
-  './games/sudoku.js','./games/gunluk-kelime.js','./games/blok.js','./games/solitaire.js','./games/mayin.js','./games/g2048.js','./games/nonogram.js','./games/balon.js','./games/renksirala.js','./assets/masa.js','./assets/ikili.js','./assets/tekrar.js','./games/tavla.js','./games/okey.js','./games/okey101.js','./games/batak.js','./games/king.js','./games/tombala.js','./games/mangala.js','./games/dokuztas.js','./games/amiral.js','./games/kelimemasasi.js','./games/pisti.js','./games/dama.js','./games/satranc.js','./games/kelimeavi.js','./games/kakuro.js','./games/boru.js','./games/hafiza.js','./games/kelimeturet.js','./games/birislem.js'
+  './games/sudoku.js','./games/gunluk-kelime.js','./games/blok.js','./games/solitaire.js','./games/mayin.js','./games/g2048.js','./games/nonogram.js','./games/balon.js','./games/renksirala.js','./assets/masa.js','./assets/ikili.js','./assets/tekrar.js','./games/tavla.js','./games/okey.js','./games/okey101.js','./games/batak.js','./games/king.js','./games/tombala.js','./games/mangala.js','./games/dokuztas.js','./games/amiral.js','./games/kelimemasasi.js','./games/neonyol.js','./games/pisti.js','./games/dama.js','./games/satranc.js','./games/kelimeavi.js','./games/kakuro.js','./games/boru.js','./games/hafiza.js','./games/kelimeturet.js','./games/birislem.js'
 ];
 
 self.addEventListener('install', e=>{

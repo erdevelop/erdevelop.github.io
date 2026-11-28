@@ -196,3 +196,8 @@
 ## Tombala: masa büyüklüğü seçimi
 - Bilgisayarlarla oynarken masa 2–10 kişi (menüde − / +); çevrimiçide odayı kuran 2–10 arası seçer, boş koltuklara bilgisayar oturur
 - Masa katmanına `koltukSec` seçeneği; Firebase kuralı yalnız tombala için 10 koltuğa izin verir (öteki oyunlar 4)
+
+## Neon Yol
+- 3B sonsuz koşu: neon şehirde ızgaralı yolda yuvarlanan top; sürükleyerek ya da ← → ile yönlendirme
+- Rastgele ama hep geçilebilir yol: blok alanları, boşluklu köprüler, dar yollar, kapılı duvarlar, hızlandırıcılı tüneller, zıplama rampası
+- Kolay / normal / zor, her 50 puanda hızlanma, haftalık ve genel rekor; Three.js sitenin kökündeki three.min.js'den oyun açılınca yüklenir
