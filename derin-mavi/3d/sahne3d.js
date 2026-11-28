@@ -11,6 +11,7 @@ import { ShaderPass } from './addons/postprocessing/ShaderPass.js';
 import { UnrealBloomPass } from './addons/postprocessing/UnrealBloomPass.js';
 import { OutputPass } from './addons/postprocessing/OutputPass.js';
 import { mercanUret, MERCAN_RENK, canliUret, canliOyna, yuzenUret, yuzenOyna, insanUret, insanOyna } from './uretec.js';
+import { mergeGeometries } from './addons/utils/BufferGeometryUtils.js';
 
 const KAL = {
   tasarruf: { dpr: 0.85, golge: false, sm: 512, parca: 100, post: false, kostik: 0.7, cok: 0.35 },
@@ -301,7 +302,7 @@ export async function kur3D({ tuval, kalite, ilk = [] }) {
   /* yordamsal mercanlar: beş tür, her biri birkaç renk ve biçimde; ağaç gibi dallı mercanın renkli kopyaları */
   const YENI = [];
   { const hRef = new THREE.Box3().setFromObject(P.dalli_0).getSize(new THREE.Vector3()).y || 1;
-    const BOY = { geyik: 0.95, gorgon: 1.35, parmak: 0.7, kirbac: 1.7, karanfil: 1.05 };
+    const BOY = { geyik: 0.95, gorgon: 1.35, parmak: 0.7, kirbac: 1.7, karanfil: 1.05, mantar: 0.55, kabarcik: 0.7, sutun: 1.5, yaprak: 0.95, fici: 1.2, deri: 0.85, kup: 0.55 };
     let tohum = 11;
     for (const tur in MERCAN_RENK) MERCAN_RENK[tur].forEach((renk, i) => {
       const { geo, salin } = mercanUret(tur, tohum += 17, renk); geo.scale(hRef * BOY[tur], hRef * BOY[tur], hRef * BOY[tur]);
@@ -405,6 +406,14 @@ export async function kur3D({ tuval, kalite, ilk = [] }) {
     const ARKA = P.duvar.clone(true); const as = ds * 1.7; ARKA.scale.set(as, as * 0.85, as); ARKA.position.set(-VW * 0.18, -0.3, -19); ARKA.rotation.y = 0.25; ORTAM.add(ARKA); ARKA.updateMatrixWorld(true); ENGEL3.push(ARKA);
     for (let i = 0; i < Math.round(30 * cok * mk); i++) { const k = mercanlar[Math.floor(r() * mercanlar.length)]; koy(k, -VW * 0.18 + ara(-11, 11) * as, -19 + ara(-5, 4) * as, ara(0.6, 1.2) * as * 1.3, r() * 6.28, ARKA); }
     for (let i = 0; i < Math.round(VW / 2.5); i++) koy(kayalar[i % 4], ara(-yarim - 4, yarim + 4), ara(-20, -11), ara(1.2, 2.6), r() * 6.28);
+    /* UZAK DERİNLER: arkada ve iki yanda, sisin içinde iri resif sırtları; eteklerinde iri mercan öbekleri. Uzağa bakınca
+       boş kum düzlüğü yerine kat kat silüetler görünür. Yakın plandaki hiçbir şeyi kapatmaz (z < -21 ya da ekranın çok dışında). */
+    { const uzKaya = [], N = 16;
+      for (let i = 0; i < N; i++) { const a = -Math.PI * 0.95 + (i / (N - 1)) * Math.PI * 0.9 + ara(-0.06, 0.06), R = ara(26, 52), x = Math.cos(a) * R * 1.25, z = Math.sin(a) * R; /* yarım çember: arkada */
+        if (z > -21 && Math.abs(x) < yarim + 20) continue;
+        const o = P[kayalar[i % 4]].clone(true), sc = ara(4, 9.5); o.scale.set(sc * ara(1, 1.8), sc * ara(0.7, 1.5), sc); o.rotation.y = r() * 6.28; o.position.set(x, zeminY(x, z) - 0.35 * sc, z); ORTAM.add(o); uzKaya.push([x, z, sc]); }
+      if (mk > 0) for (const [x, z, sc] of uzKaya) for (let j = 0; j < Math.round(4 * mk * cok) + 1; j++) { const a = r() * 6.28, u = sc * ara(0.7, 1.4), k = mercanlar[Math.floor(r() * mercanlar.length)]; koy(k, x + Math.cos(a) * u, z + Math.sin(a) * u * 0.6, ara(1.4, 3.2), r() * 6.28); }
+    }
     for (let i = 0; i < Math.round((VW * 2.2 + 14) * cok * mk); i++) { const k = mercanlar[Math.floor(r() * mercanlar.length)]; koy(k, ara(-yarim - 5, yarim + 5), ara(-21, -10), (k.startsWith('masa') ? ara(0.6, 1.1) : ara(0.9, 1.7)), k.startsWith('yelpaze') ? ara(-0.5, 0.5) : r() * 6.28); }
     for (let i = 0; i < (mk >= 1 ? Math.max(2, Math.round(VW / 7)) : 0); i++) koy(i % 2 ? 'anemon_1' : 'anemon_0', ara(-yarim + 2, yarim - 2), ara(-4, -1.6), ara(0.9, 1.2), r() * 6);
     CAYIR3 = YOSUN3 = null; bitkiSon = '';
@@ -424,6 +433,18 @@ export async function kur3D({ tuval, kalite, ilk = [] }) {
       if (TM.cay > 0) for (let i = 0; i < 7; i++) { const x = ara(-dis, dis), z = ara(1, 9), w = ara(2.5, 5); T.add(cayir(Math.round(w * w * 9 * TM.cay), [x - w / 2, x + w / 2, z - w / 3, z + w / 3], ara(0.5, 1.1), 0.03, '#3f7a2e', '#9bc45a', 20 + i)); }
       T.userData.dis = dis; }
   }
+  /* UZAKTA DOLAŞAN SÜRÜLER: sisin içinde dönüp duran, yüzlerce balıktan oluşan sürüler (tek çizim çağrısı; her iki görünümde) */
+  const UZS = (() => {
+    const g = new THREE.ConeGeometry(0.09, 0.5, 5); g.rotateZ(-Math.PI / 2); const kuy = new THREE.ConeGeometry(0.08, 0.16, 3); kuy.rotateZ(Math.PI / 2); kuy.translate(-0.3, 0, 0);
+    const geo = mergeGeometries([g.toNonIndexed(), kuy.toNonIndexed()]); geo.scale(1, 1, 0.45);
+    const mat = new THREE.MeshStandardMaterial({ color: '#9fb8c8', roughness: 0.5, metalness: 0.35 });
+    const S = [[-30, -34, 9, 120, 0.11], [26, -40, 7, 90, -0.13], [-46, -12, 6, 70, 0.09], [44, -18, 8, 100, -0.1], [4, -55, 11, 140, 0.07]], top = S.reduce((a, q) => a + q[3], 0);
+    const im = new THREE.InstancedMesh(geo, mat, top); im.frustumCulled = false; sahne.add(im);
+    const Q = []; for (const [cx, cz, R, n, v] of S) for (let i = 0; i < n; i++) Q.push({ cx, cz, R, v, ph: Math.random() * 6.28, oy: Math.random(), or: (Math.random() - 0.5) * 2.2, oz: (Math.random() - 0.5) * 2.2, h: 3 + Math.random() * 5 });
+    const m4 = new THREE.Matrix4(), q4 = new THREE.Quaternion(), e = new THREE.Euler(), p = new THREE.Vector3(), sc = new THREE.Vector3(1, 1, 1);
+    return { im, kare(t) { Q.forEach((f, i) => { const a = t * f.v + f.ph * 0.15, x = f.cx + Math.cos(a) * (f.R + f.or) + Math.sin(t * 0.8 + f.ph) * 0.3, z = f.cz + Math.sin(a) * (f.R + f.oz) * 0.6, y = f.h + Math.sin(t * 0.5 + f.ph) * 0.6 + f.oy * 2;
+      p.set(x, y, z); e.set(0, Math.atan2(-Math.cos(a) * 0.6 * Math.sign(f.v), -Math.sin(a) * Math.sign(f.v)), Math.sin(t * 3 + f.ph) * 0.1); q4.setFromEuler(e); im.setMatrixAt(i, m4.compose(p, q4, sc)); }); im.instanceMatrix.needsUpdate = true; } };
+  })();
   /* takip kamerasında dolaşan küçük sürüler (yalnızca o kamerada görünür, oyunun 2D dünyasına karışmaz) */
   function suruKur() {
     if (!B.sardalya) return; SURU3 = []; const dis = TAKIP.userData.dis || 20;
@@ -507,7 +528,7 @@ export async function kur3D({ tuval, kalite, ilk = [] }) {
   const rpGec = new RenderPass(sahne, kam); komp.addPass(rpGec);
   /* TAKİP KAMERASI: yan görünümün yerine balığın arkasından ve yakından izler. Sahnedeki her şeyin yeri yan kameraya (kam)
      göre hesaplanmaya devam eder; yalnızca çizim bu ikinci kamerayla yapılır. */
-  const kamT = new THREE.PerspectiveCamera(58, 1, 0.03, 220), TK = { a: false, p: 0, ang: null, poz: new THREE.Vector3(), bak: new THREE.Vector3(), bak0: new THREE.Vector3(), ilk: true }, tkV = new THREE.Vector3();
+  const kamT = new THREE.PerspectiveCamera(58, 1, 0.03, 220), TK = { a: false, p: 0, ang: null, poz: new THREE.Vector3(), bak: new THREE.Vector3(), bak0: new THREE.Vector3(), son: new THREE.Vector3(), fp: new THREE.Vector3(), mes: 0, ilk: true }, tkV = new THREE.Vector3();
   /* kamera ile balık arasında kaya ya da mercan varsa kamera engelin bu yanına (balığa doğru) çekilir; çok yaklaşacaksa
      önce biraz yukarıdan bakmayı dener. Böylece kamera resifin içine dalmaz, balık da arkada kaybolmaz. */
   const kmR = new THREE.Raycaster(), kmY = new THREE.Vector3(), kmA = new THREE.Vector3(), kmL = [];
@@ -518,27 +539,35 @@ export async function kur3D({ tuval, kalite, ilk = [] }) {
     kmR.set(fp, kmY); kmR.far = uz + 0.3; const h = kmR.intersectObjects(kmL, true)[0]; return h ? h.distance : uz;
   }
   const kmB = new THREE.Vector3();
-  function kameraEngel(fp, s) {
-    const uz = TK.poz.distanceTo(fp), pay = 0.22 + s * 0.3; let d = serbest(fp, TK.poz);
-    if (d >= uz) return;
-    /* yukarıdan dene */
-    kmB.copy(TK.poz); kmB.y += Math.max(0.6, uz * 0.7); const d2 = serbest(fp, kmB), uz2 = kmB.distanceTo(fp);
-    if (d2 >= uz2 || d2 > d + 0.4) { TK.poz.lerp(kmB, 0.25); d = serbest(fp, TK.poz); if (d >= TK.poz.distanceTo(fp)) return; }
-    const k = Math.max(s * 0.9, d - pay) / TK.poz.distanceTo(fp); TK.poz.sub(fp).multiplyScalar(Math.min(1, k)).add(fp);
+  /* engel varsa kameranın gideceği yer (kmB) hesaplanır; kamera oraya ani değil, yumuşakça (içeri hızlı, dışarı yavaş) gider */
+  function kameraEngel(fp, s, dt) {
+    kmB.copy(TK.poz); let uz = kmB.distanceTo(fp); const pay = 0.22 + s * 0.3; let d = serbest(fp, kmB);
+    if (d < uz) { /* önce biraz yukarıdan bakmayı dene */
+      const yk = kmB.clone(); yk.y += Math.max(0.6, uz * 0.7); const d2 = serbest(fp, yk), uz2 = yk.distanceTo(fp);
+      if (d2 >= uz2) { kmB.copy(yk); uz = uz2; d = uz2; } else if (d2 > d + 0.4) { kmB.copy(yk); uz = uz2; d = d2; }
+    }
+    const izin = d >= uz ? uz : Math.max(s * 0.9, d - pay);
+    TK.mes += (izin - TK.mes) * Math.min(1, dt * (izin < TK.mes ? 5 : 1.1));
+    TK.mes = Math.min(TK.mes, d >= uz ? uz : d - pay * 0.3); /* yine de engelin içine hiç girmesin */
+    kmB.sub(fp).setLength(Math.max(s * 0.8, TK.mes)).add(fp);
+    TK.son.lerp(kmB, Math.min(1, dt * 3.5));
   }
   function takipKare(dt) {
     TK.p += ((TK.a ? 1 : 0) - TK.p) * Math.min(1, dt * 2.2); TAKIP.visible = TK.p > 0.02; if (TK.p < 0.003) { TK.p = 0; TK.ilk = true; return kam; }
     if (TAKIP.visible) suruKare(dt, U.zaman.value);
     const f = BAL.get('ben'); if (!f || !f.g.visible) return kam;
     const s = f.g.scale.x, fp = f.g.position, yaw = f.yaw || 0;
-    if (TK.ang == null || TK.ilk) TK.ang = yaw; let da = yaw - TK.ang; while (da > Math.PI) da -= Math.PI * 2; while (da < -Math.PI) da += Math.PI * 2; TK.ang += da * Math.min(1, dt * 1.4); /* yön değişince yavaşça etrafından döner */
+    if (TK.ang == null || TK.ilk) TK.ang = yaw; let da = yaw - TK.ang; while (da > Math.PI) da -= Math.PI * 2; while (da < -Math.PI) da += Math.PI * 2;
+    /* yön değişince sakin döner: küçük kıpırdanmaları yok sayar, dönüş hızı sınırlı */
+    if (Math.abs(da) > 0.12) TK.ang += THREE.MathUtils.clamp(da * Math.min(1, dt * 0.7), -0.75 * dt, 0.75 * dt);
     const fx = Math.cos(TK.ang), fz = -Math.sin(TK.ang), uz = THREE.MathUtils.clamp(s * 3.4, 0.55, 4.5), yk = uz * 0.32;
     tkV.set(fp.x - fx * uz, fp.y + yk, fp.z - fz * uz); tkV.y = Math.max(tkV.y, zeminY(tkV.x, tkV.z) + 0.25, kayaY(tkV.x, tkV.z) + 0.25); tkV.y = Math.min(tkV.y, M.Hc + (M.H / 2) * M.k + 0.3);
-    if (TK.ilk) { TK.poz.copy(tkV); TK.bak.copy(fp); TK.ilk = false; } else { TK.poz.lerp(tkV, Math.min(1, dt * 3)); TK.bak.lerp(tkV.set(fp.x + fx * s * 1.2, fp.y + s * 0.1, fp.z + fz * s * 1.2), Math.min(1, dt * 5)); }
-    kameraEngel(fp, s);
+    if (TK.ilk) { TK.poz.copy(tkV); TK.fp.copy(fp); TK.bak.copy(fp); TK.son.copy(tkV); TK.mes = tkV.distanceTo(fp); TK.ilk = false; }
+    else { TK.fp.lerp(fp, Math.min(1, dt * 3)); TK.poz.lerp(tkV, Math.min(1, dt * 1.6)); TK.bak.lerp(tkV.set(TK.fp.x + fx * s * 1.2, TK.fp.y + s * 0.1, TK.fp.z + fz * s * 1.2), Math.min(1, dt * 2.4)); }
+    kameraEngel(fp, s, dt);
     const e = TK.p * TK.p * (3 - 2 * TK.p);
     kamT.aspect = kam.aspect; kamT.fov = kam.fov + (58 - kam.fov) * e; kamT.updateProjectionMatrix();
-    kamT.position.lerpVectors(kam.position, TK.poz, e); TK.bak0.set(kam.position.x, kam.position.y, 0).lerp(TK.bak, e); kamT.lookAt(TK.bak0);
+    kamT.position.lerpVectors(kam.position, TK.son, e); TK.bak0.set(kam.position.x, kam.position.y, 0).lerp(TK.bak, e); kamT.lookAt(TK.bak0);
     return kamT;
   }
   const huzmePass = new ShaderPass({
@@ -765,7 +794,7 @@ export async function kur3D({ tuval, kalite, ilk = [] }) {
         f.g.visible = true;
       }
       for (const [id, f] of BAL) if (!gorulen.has(id)) { sahne.remove(f.g); BAL.delete(id); }
-      ayir(dt);
+      ayir(dt); UZS.kare(t);
       const CK = takipKare(dt); rpGec.camera = CK;
       if (KAL[kalite].post) { gunesUzak.set(CK.position.x + gunesAci.x * 0.6, 60, CK.position.z - 30).project(CK); huzmePass.uniforms.uGunes.value.set(gunesUzak.x * 0.5 + 0.5, Math.min(1.6, gunesUzak.y * 0.5 + 0.5)); huzmePass.uniforms.uGuc.value = 0.55 * Math.min(1.25, HUZME_G * 1.1 + 0.15 * TM.huzme * (1 - g)); komp.render(); }
       else R.render(sahne, CK);

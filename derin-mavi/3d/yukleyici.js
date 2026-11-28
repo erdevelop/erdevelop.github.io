@@ -31,13 +31,20 @@ export function glbYukle(url) {
 /* BALIK MODELLERİ: her tür ayrı bir dosyada (balik/<tür>.glb). Yalnızca sahnede gerçekten görünen türler iner;
    inene kadar yerine sardalya modeli durur, inince kendiliğinden değişir. */
 export const MODEL = {}; const MODEL_P = {};
-/* yassı balıklar (melek, flama, tetik…) yandan bakınca kâğıt gibi görünmesin: gövde kalınlığı yüksekliğinin ~%36'sından
-   azsa enine (z) kalınlaştırılır; en çok 2,4 kat. Geometriye bir kez işlenir, bütün kopyalar paylaşır. */
-const KALIN = 0.36, KALIN_MAX = 2.4;
+/* yassı balıklar (melek, flama, tetik…) yandan bakınca kâğıt gibi görünmesin: GÖVDE kalınlığı yüksekliğinin %42'sinden
+   azsa gövde enine (z) kalınlaştırılır (en çok 3 kat); gözler ve göğüs yüzgeçleri de gövdenin yeni yüzeyine taşınır.
+   Sırt, karın ve kuyruk yüzgeçleri ortada durduğu için olduğu gibi kalır. Geometriye bir kez işlenir, bütün kopyalar paylaşır. */
+const KALIN = 0.42, KALIN_MAX = 3;
 function kalinlastir(o) {
-  const b = new THREE.Box3().setFromObject(o), s = b.getSize(new THREE.Vector3()); if (!(s.y > 0) || !(s.z > 0)) return;
-  const k = Math.min(KALIN_MAX, KALIN / (s.z / s.y)); if (k <= 1.05) return;
+  let govde = null; o.traverse(m => { if (m.isMesh && /govde/.test(m.name)) govde = m; });
+  if (!govde) { o.traverse(m => { if (m.isMesh && (!govde || m.geometry.attributes.position.count > govde.geometry.attributes.position.count)) govde = m; }); }
+  if (!govde) return; govde.geometry.computeBoundingBox(); const b = govde.geometry.boundingBox, sy = b.max.y - b.min.y, sz = b.max.z - b.min.z;
+  if (!(sy > 0) || !(sz > 0)) return; const k = Math.min(KALIN_MAX, KALIN / (sz / sy)); if (k <= 1.05) return;
   const cz = (b.min.z + b.max.z) / 2, M = new THREE.Matrix4().makeTranslation(0, 0, cz).multiply(new THREE.Matrix4().makeScale(1, 1, k)).multiply(new THREE.Matrix4().makeTranslation(0, 0, -cz));
-  const gor = new Set(); o.traverse(m => { if (m.isMesh && !gor.has(m.geometry)) { gor.add(m.geometry); m.geometry.applyMatrix4(M); m.geometry.computeBoundingBox(); m.geometry.computeBoundingSphere(); } });
+  const gor = new Set(); o.traverse(m => { if (!m.isMesh || gor.has(m.geometry)) return; gor.add(m.geometry); const g = m.geometry;
+    if (m === govde) g.applyMatrix4(M);
+    else if (/goz|gogus/.test(m.name)) { g.computeBoundingBox(); const mz = (g.boundingBox.min.z + g.boundingBox.max.z) / 2; g.translate(0, 0, (mz - cz) * (k - 1)); }
+    else return;
+    g.computeBoundingBox(); g.computeBoundingSphere(); });
 }
 export function balikGlb(k) { return MODEL_P[k] || (MODEL_P[k] = glbYukle(new URL('./balik/' + k + '.glb', import.meta.url).href).then(g => { const o = g.scene.getObjectByName('balik_' + k) || g.scene.children[0]; if (o) { kalinlastir(o); MODEL[k] = o; } return o || null; }).catch(() => null)); }

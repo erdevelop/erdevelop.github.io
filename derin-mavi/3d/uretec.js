@@ -33,8 +33,23 @@ export const MERCAN_RENK = {
   gorgon: [['#8a1f2c', '#ff6b5e'], ['#a3561c', '#ffb347'], ['#5b2a86', '#d18cff'], ['#a88a12', '#fff06a'], ['#6e1f4f', '#ff7fc8']],
   parmak: [['#7d6a3c', '#f2e3a0'], ['#4f7a3a', '#c8f08a'], ['#6e4a7a', '#e2b8ff'], ['#7a5236', '#ffcf9a']],
   kirbac: [['#7a1d1d', '#ff5a4a'], ['#8f7a10', '#ffe24d'], ['#4b2577', '#c88cff'], ['#a04a14', '#ff9a3c']],
-  karanfil: [['#d8c9d2', '#ff4f8b'], ['#d6cfc2', '#ff7a3a'], ['#cfd2dc', '#a66bff'], ['#d9d2c8', '#ff3b5c'], ['#d3d8cf', '#ffd23f']]
+  karanfil: [['#d8c9d2', '#ff4f8b'], ['#d6cfc2', '#ff7a3a'], ['#cfd2dc', '#a66bff'], ['#d9d2c8', '#ff3b5c'], ['#d3d8cf', '#ffd23f']],
+  mantar: [['#6f9a48', '#e6ffa8'], ['#8a62a6', '#f8d8ff'], ['#3f8a9a', '#b8f6ff'], ['#a8743e', '#ffe0b0']],
+  kabarcik: [['#a8a184', '#f6f1d8'], ['#8aa594', '#e9fff2'], ['#ab93a4', '#ffe9f6']],
+  sutun: [['#7a6a48', '#efe2b0'], ['#68784c', '#d8f0a8'], ['#7a5a58', '#f6c8c0']],
+  yaprak: [['#3f5a26', '#b8e07a'], ['#5e4428', '#f0c07a'], ['#24525e', '#7ae0f0'], ['#5a2c4a', '#f08ac8']],
+  fici: [['#5e3022', '#c8704a'], ['#4a2e5e', '#b07ad0'], ['#6a5a30', '#d8c070']],
+  deri: [['#8c7f55', '#f0e6b8'], ['#748466', '#dff0c8'], ['#94728a', '#ffd8ee']],
+  kup: [['#8f3814', '#ffb030'], ['#861440', '#ff6aa0'], ['#7a6a10', '#ffe040']]
 };
+/* yassı/geniş yeni türler: boya göre değil, genişliğe göre ölçeklenir */
+const MERCAN_DUZ = new Set(['mantar', 'kabarcik', 'yaprak', 'kup', 'deri']);
+/* dönen (lathe) bir profilden geometri; dalga: kenarı açıya göre oynatan işlev */
+function cevir(profil, seg, dalga) {
+  const g = new THREE.LatheGeometry(profil.map(([x, y]) => new THREE.Vector2(Math.max(0.001, x), y)), seg);
+  if (dalga) { const p = g.attributes.position, v = new THREE.Vector3(); for (let i = 0; i < p.count; i++) { v.fromBufferAttribute(p, i); const a = Math.atan2(v.z, v.x), rr = Math.hypot(v.x, v.z); const [dr, dy] = dalga(a, rr, v.y); const k = rr > 1e-4 ? (rr + dr) / rr : 1; p.setXYZ(i, v.x * k, v.y + dy, v.z * k); } }
+  return g.toNonIndexed();
+}
 
 /* tur: 'geyik' | 'gorgon' | 'parmak' | 'kirbac' | 'karanfil'; hepsi yaklaşık 1 birim boyda */
 export function mercanUret(tur, tohum, renk) {
@@ -83,14 +98,42 @@ export function mercanUret(tur, tohum, renk) {
     };
     buyu(new THREE.Vector3(), Y.clone(), 0.42, 0.13, 1);
   }
-  const yMax = tur === 'kirbac' ? 1.2 : 1;
+  else if (tur === 'mantar') { /* mantar mercanı: kubbemsi disk, merkezden kenara ince ışınsal sırtlar; bazen 2-3 tanesi üst üste */
+    const n = r() < 0.5 ? 1 : 2 + Math.floor(r() * 2);
+    for (let i = 0; i < n; i++) { const rr = ara(0.28, 0.5), x = i ? ara(-0.35, 0.35) : 0, z = i ? ara(-0.35, 0.35) : 0, ex = ara(0.8, 1.25);
+      const g = cevir([[0, 0.2], [rr * 0.25, 0.19], [rr * 0.6, 0.13], [rr * 0.9, 0.05], [rr, 0.015], [rr * 0.97, 0], [0, 0]], 64, (a, q) => [0, Math.max(0, Math.cos(a * 30)) * 0.03 * Math.min(1, q / rr * 1.5)]); g.scale(1, 1, ex); g.translate(x, 0, z); parca.push(g); }
+  } else if (tur === 'kabarcik') { /* kabarcık mercanı: tümsek üstünde kümelenmiş, yarı saydam görünüşlü yuvarlak keseler */
+    const n = 14 + Math.floor(r() * 12);
+    for (let i = 0; i < n; i++) { const a = r() * 6.28, u = Math.sqrt(r()) * 0.42; const h = (1 - u / 0.42) * 0.28; parca.push(top(new THREE.Vector3(Math.cos(a) * u, 0.07 + h + ara(0, 0.06), Math.sin(a) * u), ara(0.07, 0.13), 9)); }
+  } else if (tur === 'sutun') { /* sütun mercanı: dipten yükselen kalın, tepesi yuvarlak sütunlar */
+    const n = 5 + Math.floor(r() * 7);
+    for (let i = 0; i < n; i++) { const a = r() * 6.28, u = Math.sqrt(r()) * 0.3, p0 = new THREE.Vector3(Math.cos(a) * u, 0, Math.sin(a) * u), h = ara(0.45, 1), rr = ara(0.09, 0.15), p1 = p0.clone().add(new THREE.Vector3(ara(-0.05, 0.05), h, ara(-0.05, 0.05)));
+      parca.push(dal(p0, p1, rr * 1.1, rr, 9), top(p1, rr, 9)); }
+  } else if (tur === 'yaprak') { /* marul/tabak mercanı: dalgalı kenarlı, kat kat açılan ince yapraklar */
+    const n = 4 + Math.floor(r() * 4);
+    for (let i = 0; i < n; i++) { const rr = ara(0.22, 0.42), h0 = ara(0.02, 0.22), don = r() * 6.28, f = ara(4, 7);
+      const g = cevir([[rr * 0.15, h0], [rr * 0.5, h0 + 0.05], [rr, h0 + 0.12], [rr * 1.02, h0 + 0.125], [rr * 0.52, h0 + 0.055], [rr * 0.16, h0 + 0.01]], 28, (a, q) => [0, Math.sin(a * f + don) * 0.05 * (q / rr) * (q / rr)]);
+      g.rotateY(r() * 6.28); g.translate(ara(-0.18, 0.18), 0, ara(-0.18, 0.18)); parca.push(g); }
+  } else if (tur === 'fici') { /* fıçı süngeri: içi oyuk, dikey sırtlı geniş vazo */
+    const rr = ara(0.26, 0.36), h = ara(0.7, 1);
+    parca.push(cevir([[0, 0], [rr * 0.7, 0.02], [rr, h * 0.35], [rr * 1.12, h * 0.8], [rr * 1.1, h], [rr * 0.88, h], [rr * 0.85, h * 0.8], [rr * 0.65, h * 0.35], [0, h * 0.2]], 36, (a) => [Math.max(0, Math.cos(a * 14)) * 0.025, 0]));
+  } else if (tur === 'deri') { salin = true; /* deri (mantar şapkalı) mercan: kalın sap, dalgalı geniş şapka */
+    const rr = ara(0.3, 0.45), h = ara(0.22, 0.35);
+    parca.push(dal(new THREE.Vector3(), new THREE.Vector3(0, h, 0), 0.12, 0.09, 10));
+    parca.push(cevir([[0, h + 0.06], [rr * 0.6, h + 0.05], [rr, h], [rr * 0.95, h - 0.03], [rr * 0.5, h - 0.01], [0.09, h - 0.02]], 36, (a, q) => [0, Math.sin(a * 5) * 0.05 * (q / rr)]));
+  } else if (tur === 'kup') { /* fincan/tüp mercanı kümesi: kısa, ağzı açık borular; içlerinde polip */
+    const n = 8 + Math.floor(r() * 10);
+    for (let i = 0; i < n; i++) { const a = r() * 6.28, u = Math.sqrt(r()) * 0.32, p0 = new THREE.Vector3(Math.cos(a) * u, 0, Math.sin(a) * u), h = ara(0.12, 0.3), d = new THREE.Vector3(Math.cos(a) * u, 1, Math.sin(a) * u).normalize(), p1 = p0.clone().addScaledVector(d, h), rr = ara(0.035, 0.055);
+      parca.push(dal(p0, p1, rr * 0.8, rr * 1.15, 9), top(p1.clone().addScaledVector(d, -0.01), rr * 0.95, 8)); }
+  }
+  const yMax = ({ kirbac: 1.2, mantar: 0.2, kabarcik: 0.42, yaprak: 0.32, deri: 0.42, kup: 0.3 })[tur] || 1;
   const renkFn = tur === 'karanfil' ? ((v, col) => { const u = Math.min(1, Math.max(0, v.y) / 1.05); col.copy(ra).lerp(rb, Math.pow(u, 3) * 1.0); }) : renkY(yMax, tur === 'parmak' ? 2.2 : 1.5);
   const g = mergeGeometries(parca.map(p => boya(p.toNonIndexed ? p.toNonIndexed() : p, renkFn, v => Math.max(0, v.y) * (tur === 'kirbac' ? 0.35 : 0.12), r() * 6.28)));
   if (tur === 'karanfil') { /* polipler: üst bölgedeki küçük topları uç rengine boya */
     const c = g.attributes.color, p = g.attributes.position; for (let i = 0; i < p.count; i++) { if (p.getY(i) > 0.62) { tmp.copy(rb).offsetHSL(0, 0, (Math.sin(i) * 0.06)); c.setXYZ(i, tmp.r, tmp.g, tmp.b); } }
   }
   g.computeVertexNormals(); g.computeBoundingBox();
-  const h = g.boundingBox.max.y || 1; g.scale(1 / h, 1 / h, 1 / h);
+  const bb = g.boundingBox, h = MERCAN_DUZ.has(tur) ? Math.max(bb.max.y, (bb.max.x - bb.min.x) * 0.5, (bb.max.z - bb.min.z) * 0.5) : (bb.max.y || 1); g.scale(1 / h, 1 / h, 1 / h);
   return { geo: g, salin };
 }
 
