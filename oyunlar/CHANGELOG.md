@@ -189,3 +189,6 @@
 - Elo puanı (tavla, satranç, dama, mangala, dokuz taş, amiral battı, kelime masası): lobide puanın ve puan tablosu, hızlı eşleşme yakın puanlı rakibi önce dener (`elo/<oyun>/<uid>`, oyun başına en çok ±40)
 - Satranç, dama ve tavlada bitişte "🎬 Yeniden izle" (assets/tekrar.js); ikili kabuğundaki oyunlarda zaten var
 - Cumartesi turnuvasında ilk üçe girene madalya rozetleri; ayın şampiyonu ana sayfadaki turnuva şeridinde; "Masa Arkadaşı" rozeti
+
+## Strateji rehberleri
+- Tavla açılış hamleleri, Okeyde taş sayma, King'de oyun seçimi (oyun-kurallari altında, site haritasında)
