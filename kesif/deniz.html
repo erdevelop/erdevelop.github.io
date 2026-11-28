@@ -1,0 +1,157 @@
+<!doctype html>
+<html lang="tr" data-mode="dark">
+<head>
+<meta charset="utf-8">
+<script src="/dil.js"></script>
+<script src="/dil/ortak.js"></script>
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Deniz Suyu Sıcaklığı – Türkiye Kıyıları, Dalga Yüksekliği | erdevelop</title>
+<meta name="description" content="Antalya, Bodrum, Çeşme, Fethiye, İstanbul ve diğer Türkiye kıyılarında güncel deniz suyu sıcaklığı, dalga yüksekliği ve 7 günlük tahmin.">
+<link rel="manifest" href="/manifest.webmanifest"><meta name="theme-color" content="#0b1220"><link rel="icon" href="/favicon.svg" type="image/svg+xml"><link rel="icon" href="/favicon.ico" sizes="any">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Chakra+Petch:wght@600;700&family=IBM+Plex+Sans:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500&display=swap">
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.css" integrity="sha384-c6Rcwz4e4CITMbu/NBmnNS8yN2sC3cUElMEMfP3vqqKFp7GOYaaBBCqmaWBjmkjb" crossorigin="anonymous">
+<link rel="stylesheet" href="tema.css">
+<style>
+.gk-yer { display: inline-flex; align-items: center; gap: 8px; font: 500 13px var(--f-mono); color: var(--muted); }
+.gk-ust { display: flex; flex-wrap: wrap; gap: 10px; align-items: center; justify-content: space-between; margin: 4px 0 6px; }
+.gk-not { font-size: 13px; color: var(--muted); margin: 8px 0 0; }
+.gk-kart { display: grid; gap: 10px; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); }
+.gk-kart .stat b { white-space: normal; font-size: 1.25rem; }
+.gk-uyari { border: 1px solid color-mix(in srgb, var(--warn) 50%, var(--line)); background: color-mix(in srgb, var(--warn) 9%, var(--panel)); border-radius: 8px; padding: 10px 14px; font-size: 13.5px; color: var(--text); }
+.gk-tablo { width: 100%; border-collapse: collapse; font-size: 14px; }
+.gk-tablo th, .gk-tablo td { text-align: left; padding: 9px 8px; border-bottom: 1px solid var(--line); vertical-align: top; }
+.gk-tablo th { font: 500 11px var(--f-mono); color: var(--muted); text-transform: uppercase; letter-spacing: .5px; }
+.gk-tablo td small { display: block; color: var(--muted); font-size: 12px; }
+.gk-sar { overflow-x: auto; -webkit-overflow-scrolling: touch; }
+.gk-rozet { display: inline-block; font: 600 11px var(--f-mono); padding: 2px 8px; border-radius: 999px; background: var(--accent-dim); color: var(--accent); white-space: nowrap; }
+.gk-rozet.ok { background: color-mix(in srgb, var(--ok) 15%, transparent); color: var(--ok); }
+.gk-rozet.no { background: color-mix(in srgb, var(--muted) 15%, transparent); color: var(--muted); }
+.gk-baglar { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 10px; }
+.gk-sar .gk-tablo { min-width: 640px; }
+@media (max-width: 520px) { .gk-sar { margin: 0 -16px; padding: 0 16px; } }
+
+.dz-ust { display: grid; grid-template-columns: minmax(0, 1.3fr) minmax(280px, 1fr); gap: 16px; }
+@media (max-width: 900px) { .dz-ust { grid-template-columns: 1fr; } }
+#harita { height: min(56vh, 480px); border-radius: 12px; border: 1px solid var(--line); }
+.dz-sec { border-radius: 14px; border: 1px solid var(--line); background: var(--panel); padding: 16px; }
+.dz-sec h2 { margin: 0; font: 700 1.4rem var(--f-display); }
+.dz-sec .buyuk { font: 800 3.2rem/1 var(--f-display); margin: 8px 0 2px; }
+.dz-sec svg { width: 100%; height: auto; display: block; margin-top: 10px; }
+.dz-sec svg text { font: 500 10px var(--f-mono); fill: var(--muted); }
+.dz-liste { display: grid; grid-template-columns: repeat(auto-fill, minmax(230px, 1fr)); gap: 8px; }
+.dz-liste h3 { grid-column: 1 / -1; margin: 12px 0 0; font: 700 1rem var(--f-display); }
+.dz-liste button { display: grid; grid-template-columns: 52px minmax(0, 1fr); gap: 10px; align-items: center; text-align: left; background: var(--panel); border: 1px solid var(--line); border-radius: 10px; padding: 8px 10px; cursor: pointer; color: var(--fg); font: inherit; }
+.dz-liste button.on { border-color: var(--accent); box-shadow: inset 0 0 0 1px var(--accent); }
+.dz-liste button b { font: 700 1.2rem var(--f-display); border-radius: 8px; padding: 6px 0; text-align: center; color: #10162b; }
+.dz-liste button span { font: 600 14px var(--f-body); }
+.dz-liste button small { display: block; color: var(--muted); font-size: 12px; }
+.dz-et { background: #fff !important; color: #10162b !important; border: 0 !important; border-radius: 6px !important; font: 700 11px var(--f-mono) !important; padding: 1px 5px !important; box-shadow: 0 1px 4px rgba(0,0,0,.3) !important; }
+.dz-et::before { display: none !important; }
+
+</style>
+<!-- paylaşım, arama motoru ve reklam etiketleri -->
+<link rel="canonical" href="https://erdevelop.com/kesif/deniz.html">
+<meta property="og:type" content="website"><meta property="og:site_name" content="erdevelop"><meta property="og:title" content="Deniz Suyu Sıcaklığı – Türkiye Kıyıları, Dalga Yüksekliği | erdevelop"><meta property="og:description" content="Antalya, Bodrum, Çeşme, Fethiye, İstanbul ve diğer Türkiye kıyılarında güncel deniz suyu sıcaklığı, dalga yüksekliği ve 7 günlük tahmin."><meta property="og:url" content="https://erdevelop.com/kesif/deniz.html"><meta property="og:image" content="https://erdevelop.com/og/kesif-deniz.jpg"><meta property="og:image:width" content="1200"><meta property="og:image:height" content="630"><meta property="og:locale" content="tr_TR"><meta name="twitter:card" content="summary_large_image">
+<script async src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-4775308844679394" crossorigin="anonymous"></script>
+<script type="application/ld+json">{"@context": "https://schema.org", "@type": "WebApplication", "name": "Deniz suyu sıcaklığı", "description": "Antalya, Bodrum, Çeşme, Fethiye, İstanbul ve diğer Türkiye kıyılarında güncel deniz suyu sıcaklığı, dalga yüksekliği ve 7 günlük tahmin.", "url": "https://erdevelop.com/kesif/deniz.html", "applicationCategory": "EducationalApplication", "operatingSystem": "Any (web browser)", "inLanguage": "tr", "isAccessibleForFree": true, "offers": {"@type": "Offer", "price": "0", "priceCurrency": "TRY"}}</script>
+<script>(function(){var k=matchMedia('(prefers-color-scheme: dark)').matches?'dark':'light';try{var m=localStorage.getItem('erdevelop-mode'),g=localStorage.getItem('erdevelop-mode-gun');if(m&&g===new Date().toDateString())k=m}catch(e){}document.documentElement.setAttribute('data-mode',k)})()</script>
+<link rel="stylesheet" href="/css/kabuk.css">
+</head>
+<body>
+<div class="bg" aria-hidden="true"></div>
+<div class="topbar"><div class="wrap">
+  <a class="brand" href="../"><span>er</span>develop<span>_</span></a><span class="crumb">/ meraklılar / deniz</span><span class="sp"></span>
+  <a class="tb" href="../meraklilar-kosesi/" data-en="Curious">Meraklılar</a><button class="tb" type="button" data-dil-btn aria-label="Switch to English">EN</button><button class="tb" type="button" id="modeBtn">LIGHT</button>
+</div></div>
+<main class="wrap">
+  <header class="head"><h1 data-en="Sea temperature">Deniz suyu sıcaklığı</h1><p data-en="Current sea surface temperature and waves along the Turkish coast, from the Black Sea to the Mediterranean, with a 7-day forecast. Tap a point on the map or the list.">Karadeniz’den Akdeniz’e Türkiye kıyılarında güncel deniz suyu sıcaklığı ve dalga yüksekliği, 7 günlük tahminle. Haritada ya da listede bir noktaya dokun.</p></header>
+  <div class="layer dz-ust" style="margin-top:12px">
+    <div id="harita" role="region" aria-label="Deniz sıcaklığı haritası" data-en-aria="Sea temperature map"></div>
+    <div class="dz-sec" id="sec"><span class="gk-not" data-en="Loading…">Yükleniyor…</span></div>
+  </div>
+  <div class="layer"><div class="dz-liste" id="liste"></div><p class="gk-not" data-en="Model data from Open-Meteo for a point a little offshore; the water at a beach can be a degree or two different, especially in shallow bays.">Veriler Open-Meteo’nun deniz modelinden, kıyının biraz açığındaki bir nokta içindir; sığ koylarda ve plajda su bir iki derece farklı olabilir.</p></div>
+  <div class="layer"><div class="gk-baglar"><a class="btn" href="../araclar/hava.html" data-en="🌤️ Weather →">🌤️ Hava durumu →</a><a class="btn" href="gun-isigi.html" data-en="🌅 Sunset times →">🌅 Gün batımı saatleri →</a></div></div>
+<style>
+.er-about{max-width:860px;margin:40px auto 28px;padding:20px 22px;border:1px solid var(--line,rgba(127,127,127,.3));border-radius:12px;line-height:1.65;font-size:15px;color:inherit;box-sizing:border-box;text-align:left;font-family:inherit}
+.er-about h2{font-size:1.15rem;line-height:1.3;margin:0 0 10px;color:inherit}
+.er-about h3{font-size:1rem;margin:18px 0 6px;color:inherit}
+.er-about p{margin:0 0 10px}.er-about p,.er-about li{opacity:.9}
+.er-about ol,.er-about ul{padding-left:22px;margin:6px 0}.er-about li{margin:4px 0}
+.er-about a{color:inherit;text-decoration:underline}
+@media (max-width:600px){.er-about{margin:28px 12px 20px;padding:16px;font-size:14.5px}}
+details.er-fab{position:fixed;left:12px;bottom:12px;z-index:2147483000;max-width:min(520px,calc(100vw - 24px));font:14px/1.6 system-ui,-apple-system,"Segoe UI",sans-serif}
+details.er-fab>summary{list-style:none;cursor:pointer;display:inline-block;padding:6px 12px;border-radius:999px;background:rgba(20,24,33,.82);color:#f2f4f8;border:1px solid rgba(255,255,255,.18);font-size:13px;backdrop-filter:blur(6px);-webkit-backdrop-filter:blur(6px);user-select:none}
+details.er-fab>summary::-webkit-details-marker{display:none}
+details.er-fab[open]>summary{margin-bottom:8px}
+details.er-fab .er-about{margin:0;max-height:min(70vh,560px);overflow:auto;background:rgba(20,24,33,.96);color:#eef1f6;border-color:rgba(255,255,255,.18);box-shadow:0 10px 40px rgba(0,0,0,.45)}
+</style>
+<section class="er-about" id="hakkinda" aria-labelledby="hakkinda-b">
+<div data-l="tr">
+<h2 id="hakkinda-b">Deniz suyu ne zaman ısınır?</h2>
+<p>Deniz karadan çok daha yavaş ısınır ve soğur. Türkiye kıyılarında suyun en sıcak olduğu dönem genellikle <b>Ağustos sonu ile Eylül başıdır</b>; en soğuk dönem ise Şubat–Mart’tır. Akdeniz kıyıları yazın 28–29 °C’ye kadar ısınırken Karadeniz ve Marmara birkaç derece serin kalır.</p>
+<h3>Denize girmek için</h3><ul><li><b>24 °C ve üstü</b>: çoğu kişi için rahat ve keyifli.</li><li><b>20–24 °C</b>: girişte serin, birkaç dakikada alışılır.</li><li><b>17–20 °C</b>: soğuk; kısa süreli yüzme.</li><li><b>17 °C altı</b>: çok soğuk; soğuk su şoku riski var, yalnızca alışkın yüzücüler için.</li><li>Dalga yüksekliği 1 metreyi geçince kıyıda akıntı ve çarpma riski artar; can kurtaranların uyarılarına uy.</li></ul>
+</div>
+<div data-l="en" hidden>
+<h2>When is the sea warmest?</h2>
+<p>The sea warms and cools much more slowly than the land. Along the Turkish coast the water is usually warmest in <b>late August and early September</b> and coldest in February–March. The Mediterranean reaches 28–29 °C in summer, while the Black Sea and the Sea of Marmara stay a few degrees cooler.</p>
+<h3>For swimming</h3><ul><li><b>24 °C and above</b>: comfortable for most people.</li><li><b>20–24 °C</b>: cool at first, fine after a few minutes.</li><li><b>17–20 °C</b>: cold; short swims.</li><li><b>Below 17 °C</b>: very cold; risk of cold-water shock, for experienced swimmers only.</li><li>Waves over 1 metre raise the risk of rip currents near the shore; follow lifeguards’ advice.</li></ul>
+</div>
+</section>
+
+</main>
+<footer><div class="wrap"><span data-en="Calculated in your browser · for learning and curiosity">Hesaplar tarayıcında yapılır · eğitim ve merak amaçlıdır</span><a href="../meraklilar-kosesi/" data-en="← Curious Corner">← Meraklılar Köşesi</a></div></footer>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.js" integrity="sha384-NElt3Op+9NBMCYaef5HxeJmU4Xeard/Lku8ek6hoPTvYkQPh3zLIrJP7KiRocsxO" crossorigin="anonymous"></script>
+<script src="tema.js"></script>
+<script src="gok.js"></script>
+<script>
+const t = GK.t;
+const P = [['Karadeniz', 'Black Sea', [['Kilyos (İstanbul)', 41.26, 29.03], ['Şile', 41.19, 29.62], ['Amasra', 41.76, 32.39], ['Sinop', 42.05, 35.17], ['Samsun', 41.36, 36.35], ['Trabzon', 41.03, 39.75]]],
+  ['Marmara', 'Sea of Marmara', [['Adalar (İstanbul)', 40.85, 29.1], ['Tekirdağ', 40.94, 27.53], ['Erdek', 40.42, 27.78]]],
+  ['Ege', 'Aegean', [['Çanakkale', 40.05, 26.15], ['Bozcaada', 39.83, 25.98], ['Ayvalık', 39.33, 26.62], ['Çeşme', 38.32, 26.25], ['Kuşadası', 37.86, 27.22], ['Didim', 37.33, 27.2], ['Bodrum', 37.01, 27.42], ['Datça', 36.7, 27.65]]],
+  ['Akdeniz', 'Mediterranean', [['Marmaris', 36.8, 28.3], ['Ölüdeniz (Fethiye)', 36.55, 29.1], ['Kaş', 36.18, 29.63], ['Kemer', 36.58, 30.6], ['Antalya', 36.85, 30.62], ['Side', 36.74, 31.38], ['Alanya', 36.52, 32.0], ['Mersin', 36.75, 34.7], ['İskenderun', 36.62, 36.12]]]];
+const NOK = P.flatMap(([d, de, L]) => L.map(n => ({ ad: n[0], lat: n[1], lon: n[2], deniz: [d, de] })));
+let veri = null, sec = 'Antalya';
+const renk = c => c == null ? '#999' : c < 12 ? '#3b6fd8' : c < 16 ? '#4fa3e8' : c < 20 ? '#59c9c0' : c < 24 ? '#8fd66b' : c < 27 ? '#f2c94c' : '#f2894c';
+const his = c => c == null ? '' : c >= 24 ? t('Denize girmek için harika', 'Great for swimming') : c >= 20 ? t('Serin ama girilir', 'Cool but fine') : c >= 17 ? t('Soğuk; kısa yüzme', 'Cold; short swims') : t('Çok soğuk', 'Very cold');
+const yon = d => d == null ? '' : GK.yon(d + 180);
+const map = TM.map('harita', { minZoom: 5, maxZoom: 10 }); map.fitBounds(NOK.map(n => [n.lat, n.lon]), { padding: [24, 24] });
+map.on('zoomend', () => veri && ciz());
+const kat = L.layerGroup().addTo(map);
+async function yukle() {
+  const u = 'https://marine-api.open-meteo.com/v1/marine?latitude=' + NOK.map(n => n.lat).join(',') + '&longitude=' + NOK.map(n => n.lon).join(',') + '&current=sea_surface_temperature,wave_height,wave_direction,wave_period&daily=wave_height_max&hourly=sea_surface_temperature&timezone=Europe%2FIstanbul&forecast_days=7';
+  try { const j = await TM.json(u, {}, 20000); veri = (Array.isArray(j) ? j : [j]); ciz(); }
+  catch (e) { $('sec').innerHTML = `<p class="gk-not" style="margin:0">${esc(e.message)}</p>`; }
+}
+function ciz() {
+  kat.clearLayers();
+  NOK.forEach((n, i) => { const c = veri[i] && veri[i].current || {}, s = c.sea_surface_temperature; n.v = veri[i];
+    L.circleMarker([n.lat, n.lon], { radius: n.ad === sec ? 11 : 8, color: '#fff', weight: 2, fillColor: renk(s), fillOpacity: 1 }).bindTooltip((map.getZoom() >= 7 ? '' : esc(n.ad) + ' ') + (s != null ? nf(s, 1) + '°' : '–'), { permanent: map.getZoom() >= 7, direction: 'top', className: 'dz-et', offset: [0, -8] }).on('click', () => { sec = n.ad; ciz(); }).addTo(kat); });
+  let h = '';
+  P.forEach(([d, de, L]) => { h += `<h3>${t(d, de)}</h3>`; L.forEach(([ad]) => { const n = NOK.find(x => x.ad === ad), c = (n.v && n.v.current) || {}; h += `<button type="button" data-ad="${esc(ad)}" class="${ad === sec ? 'on' : ''}"><b style="background:${renk(c.sea_surface_temperature)}">${c.sea_surface_temperature != null ? nf(c.sea_surface_temperature, 1) + '°' : '–'}</b><span>${esc(ad)}<small>${t('dalga', 'waves')} ${c.wave_height != null ? nf(c.wave_height, 1) + ' m' : '–'} · ${his(c.sea_surface_temperature)}</small></span></button>`; }); });
+  $('liste').innerHTML = h;
+  detay();
+}
+function detay() {
+  const n = NOK.find(x => x.ad === sec), v = n.v; if (!v) return;
+  const c = v.current || {}, H = v.hourly || {}, Dd = v.daily || {};
+  const st = (l, x, s) => `<div class="stat"><span>${l}</span><b style="font-size:1.1rem">${x}</b>${s ? `<small>${s}</small>` : ''}</div>`;
+  /* 7 günlük sıcaklık çizgisi */
+  const ys = (H.sea_surface_temperature || []).map(Number), ok = ys.filter(isFinite);
+  let svg = '';
+  if (ok.length > 4) {
+    const W = 340, Hh = 130, mn = Math.floor(Math.min(...ok) - .5), mx = Math.ceil(Math.max(...ok) + .5), gx = i => 28 + i / (ys.length - 1) * (W - 34), gy = y => 10 + (mx - y) / (mx - mn || 1) * (Hh - 34);
+    const yol = ys.map((y, i) => isFinite(y) ? `${gx(i).toFixed(1)},${gy(y).toFixed(1)}` : null).filter(Boolean).join(' ');
+    svg = `<svg viewBox="0 0 ${W} ${Hh}"><line x1="28" x2="${W - 6}" y1="${gy(mn)}" y2="${gy(mn)}" stroke="var(--line)"/><line x1="28" x2="${W - 6}" y1="${gy(mx)}" y2="${gy(mx)}" stroke="var(--line)"/><text x="24" y="${gy(mx) + 4}" text-anchor="end">${mx}°</text><text x="24" y="${gy(mn) + 4}" text-anchor="end">${mn}°</text><polyline points="${yol}" fill="none" stroke="var(--accent)" stroke-width="2"/>${(Dd.time || []).map((d, i) => `<text x="${gx(i * 24 + 12)}" y="${Hh - 6}" text-anchor="middle">${new Date(d + 'T12:00').toLocaleDateString(GK.LOC(), { weekday: 'short' })}</text><text x="${gx(i * 24 + 12)}" y="${Hh - 18}" text-anchor="middle">${Dd.wave_height_max && Dd.wave_height_max[i] != null ? nf(Dd.wave_height_max[i], 1) + 'm' : ''}</text>`).join('')}</svg><p class="gk-not" style="margin:2px 0 0">${t('7 günlük su sıcaklığı; alttaki sayılar günün en yüksek dalgası.', '7-day water temperature; numbers below are the day’s highest wave.')}</p>`;
+  }
+  $('sec').innerHTML = `<span class="gk-not" style="margin:0">${t(n.deniz[0], n.deniz[1])}</span><h2>${esc(n.ad)}</h2><div class="buyuk" style="color:${renk(c.sea_surface_temperature)}">${c.sea_surface_temperature != null ? nf(c.sea_surface_temperature, 1) + ' °C' : '–'}</div><b>${his(c.sea_surface_temperature)}</b><div class="gk-kart" style="margin-top:12px">${st(t('Dalga', 'Waves'), c.wave_height != null ? nf(c.wave_height, 1) + ' m' : '–', c.wave_direction != null ? t(`${yon(c.wave_direction).toLocaleLowerCase('tr')} yönüne`, `towards the ${yon(c.wave_direction)}`) : '')}${st(t('Dalga periyodu', 'Wave period'), c.wave_period != null ? nf(c.wave_period, 1) + ' sn' : '–')}</div>${svg}`;
+}
+$('liste').addEventListener('click', e => { const b = e.target.closest('button[data-ad]'); if (!b) return; sec = b.dataset.ad; ciz(); const n = NOK.find(x => x.ad === sec); map.panTo([n.lat, n.lon]); if (innerWidth < 900) $('sec').scrollIntoView({ behavior: 'smooth', block: 'center' }); });
+if (window.erDil) erDil.on(() => veri && ciz());
+yukle(); setInterval(() => { if (!document.hidden) yukle(); }, 30 * 6e4);
+
+</script>
+<script data-goatcounter="https://erdevelop.goatcounter.com/count" async src="//gc.zgo.at/count.js"></script>
+<script src="/js/site.js" defer></script>
+</body>
+</html>
